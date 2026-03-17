@@ -16,7 +16,12 @@ from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gate
 from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+    HOST_GATEWAY_LIGHT_GATE_PROFILE,
+    HOST_GATEWAY_LIGHT_OPERATIONS,
     HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+    HOST_GATEWAY_STRICT_GATE_PROFILE,
+    HOST_GATEWAY_STRICT_GATE_PROFILE_BY_OPERATION,
+    HOST_GATEWAY_STRICT_OPERATIONS,
 )
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from resolve_identity_context import resolve_identity
@@ -116,6 +121,82 @@ def _run(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
         passthrough_cwd=run_cwd,
     )
     return rc, (out or "").strip(), (err or "").strip()
+
+
+def _build_required_gate_bundle_cmd(
+    *,
+    catalog: str,
+    identity_id: str,
+    run_id: str,
+    send_time_gate_status: str,
+    outlet_bypass_detected: str,
+    final_emit_contract_status: str,
+    final_emit_policy_mode: str,
+    final_emit_schema_status: str,
+    actor_id: str,
+    resolved_work_layer: str,
+    resolved_source_layer: str,
+    lock_state: str,
+    surface_label: str,
+    operation: str,
+    target_name: str = "",
+    report_selected_path: str = "",
+    out_path: str = "",
+) -> list[str]:
+    operation_token = str(operation or "").strip().lower()
+    strict_profile_by_operation = {
+        str(key).strip().lower(): str(value).strip()
+        for key, value in HOST_GATEWAY_STRICT_GATE_PROFILE_BY_OPERATION.items()
+        if str(key).strip() and str(value).strip()
+    }
+    if operation_token in {str(item).strip().lower() for item in HOST_GATEWAY_STRICT_OPERATIONS}:
+        requested_gate_profile = strict_profile_by_operation.get(operation_token, HOST_GATEWAY_STRICT_GATE_PROFILE)
+    elif operation_token in {str(item).strip().lower() for item in HOST_GATEWAY_LIGHT_OPERATIONS}:
+        requested_gate_profile = HOST_GATEWAY_LIGHT_GATE_PROFILE
+    else:
+        requested_gate_profile = HOST_GATEWAY_STRICT_GATE_PROFILE
+    cmd = [
+        "python3",
+        REQUIRED_GATE_BUNDLE_SCRIPT,
+        "--catalog",
+        catalog,
+        "--identity-id",
+        identity_id,
+        "--run-id",
+        run_id,
+        "--send-time-gate-status",
+        send_time_gate_status,
+        "--outlet-bypass-detected",
+        outlet_bypass_detected,
+        "--final-emit-contract-status",
+        final_emit_contract_status,
+        "--final-emit-policy-mode",
+        final_emit_policy_mode,
+        "--final-emit-schema-status",
+        final_emit_schema_status,
+        "--actor-id",
+        actor_id,
+        "--resolved-work-layer",
+        resolved_work_layer,
+        "--resolved-source-layer",
+        resolved_source_layer,
+        "--lock-state",
+        lock_state,
+        "--surface-label",
+        surface_label,
+        "--operation",
+        operation,
+    ]
+    if requested_gate_profile:
+        cmd.extend(["--gate-profile", requested_gate_profile])
+    if target_name:
+        cmd.extend(["--target-name", target_name])
+    if report_selected_path:
+        cmd.extend(["--report-selected-path", report_selected_path])
+    if out_path:
+        cmd.extend(["--out", out_path])
+    cmd.append("--json-only")
+    return cmd
 
 
 def _derive_run_id_from_session_id(session_id: str) -> str:
@@ -2035,41 +2116,23 @@ def _instance_plane_status(
         or "LOCK_MATCH"
     ).strip()
     rc_required_bundle, out_required_bundle, err_required_bundle = _run(
-        [
-            "python3",
-            "scripts/required_gate_bundle_runner.py",
-            "--catalog",
-            args.catalog,
-            "--identity-id",
-            args.identity_id,
-            "--run-id",
-            bundle_run_token,
-            "--send-time-gate-status",
-            bundle_send_time_gate_status,
-            "--outlet-bypass-detected",
-            bundle_outlet_bypass_detected,
-            "--final-emit-contract-status",
-            bundle_final_emit_contract_status,
-            "--final-emit-policy-mode",
-            bundle_final_emit_policy_mode,
-            "--final-emit-schema-status",
-            bundle_final_emit_schema_status,
-            "--actor-id",
-            actor_id,
-            "--resolved-work-layer",
-            bundle_resolved_work_layer,
-            "--resolved-source-layer",
-            bundle_resolved_source_layer,
-            "--lock-state",
-            bundle_lock_state,
-            "--surface-label",
-            HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
-            "--operation",
-            "three-plane",
-            "--out",
-            required_gate_bundle_receipt,
-            "--json-only",
-        ]
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            out_path=required_gate_bundle_receipt,
+        )
     )
     required_bundle_payload = _parse_json_payload(out_required_bundle) or {}
     validators["required_gate_bundle_runner"] = {
@@ -2083,41 +2146,23 @@ def _instance_plane_status(
         hard_boundary = True
 
     rc_required_bundle_shadow, out_required_bundle_shadow, err_required_bundle_shadow = _run(
-        [
-            "python3",
-            "scripts/required_gate_bundle_runner.py",
-            "--catalog",
-            args.catalog,
-            "--identity-id",
-            args.identity_id,
-            "--run-id",
-            bundle_run_token,
-            "--send-time-gate-status",
-            bundle_send_time_gate_status,
-            "--outlet-bypass-detected",
-            bundle_outlet_bypass_detected,
-            "--final-emit-contract-status",
-            bundle_final_emit_contract_status,
-            "--final-emit-policy-mode",
-            bundle_final_emit_policy_mode,
-            "--final-emit-schema-status",
-            bundle_final_emit_schema_status,
-            "--actor-id",
-            actor_id,
-            "--resolved-work-layer",
-            bundle_resolved_work_layer,
-            "--resolved-source-layer",
-            bundle_resolved_source_layer,
-            "--lock-state",
-            bundle_lock_state,
-            "--surface-label",
-            HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
-            "--operation",
-            "scan",
-            "--out",
-            required_gate_bundle_receipt_shadow,
-            "--json-only",
-        ]
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="scan",
+            out_path=required_gate_bundle_receipt_shadow,
+        )
     )
     required_bundle_shadow_payload = _parse_json_payload(out_required_bundle_shadow) or {}
     validators["required_gate_bundle_runner_shadow"] = {
@@ -2181,43 +2226,24 @@ def _instance_plane_status(
         hard_boundary = True
 
     rc_cross_verify, out_cross_verify, err_cross_verify = _run(
-        [
-            "python3",
-            "scripts/required_gate_bundle_runner.py",
-            "--catalog",
-            args.catalog,
-            "--identity-id",
-            args.identity_id,
-            "--run-id",
-            bundle_run_token,
-            "--send-time-gate-status",
-            bundle_send_time_gate_status,
-            "--outlet-bypass-detected",
-            bundle_outlet_bypass_detected,
-            "--final-emit-contract-status",
-            bundle_final_emit_contract_status,
-            "--final-emit-policy-mode",
-            bundle_final_emit_policy_mode,
-            "--final-emit-schema-status",
-            bundle_final_emit_schema_status,
-            "--actor-id",
-            actor_id,
-            "--resolved-work-layer",
-            bundle_resolved_work_layer,
-            "--resolved-source-layer",
-            bundle_resolved_source_layer,
-            "--lock-state",
-            bundle_lock_state,
-            "--target-name",
-            "cross_verification_tracks",
-            "--surface-label",
-            HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
-            "--operation",
-            "three-plane",
-            "--report-selected-path",
-            str(report_path),
-            "--json-only",
-        ]
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="cross_verification_tracks",
+            report_selected_path=str(report_path),
+        )
     )
     cross_verify_payload = _parse_json_payload(out_cross_verify) or {}
     validators["cross_verification_tracks"] = {
@@ -2231,43 +2257,24 @@ def _instance_plane_status(
         hard_boundary = True
 
     rc_intake_quorum, out_intake_quorum, err_intake_quorum = _run(
-        [
-            "python3",
-            "scripts/required_gate_bundle_runner.py",
-            "--catalog",
-            args.catalog,
-            "--identity-id",
-            args.identity_id,
-            "--run-id",
-            bundle_run_token,
-            "--send-time-gate-status",
-            bundle_send_time_gate_status,
-            "--outlet-bypass-detected",
-            bundle_outlet_bypass_detected,
-            "--final-emit-contract-status",
-            bundle_final_emit_contract_status,
-            "--final-emit-policy-mode",
-            bundle_final_emit_policy_mode,
-            "--final-emit-schema-status",
-            bundle_final_emit_schema_status,
-            "--actor-id",
-            actor_id,
-            "--resolved-work-layer",
-            bundle_resolved_work_layer,
-            "--resolved-source-layer",
-            bundle_resolved_source_layer,
-            "--lock-state",
-            bundle_lock_state,
-            "--target-name",
-            "intake_evidence_quorum",
-            "--surface-label",
-            HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
-            "--operation",
-            "three-plane",
-            "--report-selected-path",
-            str(report_path),
-            "--json-only",
-        ]
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="intake_evidence_quorum",
+            report_selected_path=str(report_path),
+        )
     )
     intake_quorum_payload = _parse_json_payload(out_intake_quorum) or {}
     validators["intake_evidence_quorum"] = {
@@ -2281,41 +2288,23 @@ def _instance_plane_status(
         hard_boundary = True
 
     rc_route_pin, out_route_pin, err_route_pin = _run(
-        [
-            "python3",
-            "scripts/required_gate_bundle_runner.py",
-            "--catalog",
-            args.catalog,
-            "--identity-id",
-            args.identity_id,
-            "--run-id",
-            bundle_run_token,
-            "--send-time-gate-status",
-            bundle_send_time_gate_status,
-            "--outlet-bypass-detected",
-            bundle_outlet_bypass_detected,
-            "--final-emit-contract-status",
-            bundle_final_emit_contract_status,
-            "--final-emit-policy-mode",
-            bundle_final_emit_policy_mode,
-            "--final-emit-schema-status",
-            bundle_final_emit_schema_status,
-            "--actor-id",
-            actor_id,
-            "--resolved-work-layer",
-            bundle_resolved_work_layer,
-            "--resolved-source-layer",
-            bundle_resolved_source_layer,
-            "--lock-state",
-            bundle_lock_state,
-            "--target-name",
-            "route_version_pinning",
-            "--surface-label",
-            HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
-            "--operation",
-            "three-plane",
-            "--json-only",
-        ]
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="route_version_pinning",
+        )
     )
     route_pin_payload = _parse_json_payload(out_route_pin) or {}
     validators["route_version_pinning"] = {
@@ -2329,41 +2318,23 @@ def _instance_plane_status(
         hard_boundary = True
 
     rc_fallback_norm, out_fallback_norm, err_fallback_norm = _run(
-        [
-            "python3",
-            "scripts/required_gate_bundle_runner.py",
-            "--catalog",
-            args.catalog,
-            "--identity-id",
-            args.identity_id,
-            "--run-id",
-            bundle_run_token,
-            "--send-time-gate-status",
-            bundle_send_time_gate_status,
-            "--outlet-bypass-detected",
-            bundle_outlet_bypass_detected,
-            "--final-emit-contract-status",
-            bundle_final_emit_contract_status,
-            "--final-emit-policy-mode",
-            bundle_final_emit_policy_mode,
-            "--final-emit-schema-status",
-            bundle_final_emit_schema_status,
-            "--actor-id",
-            actor_id,
-            "--resolved-work-layer",
-            bundle_resolved_work_layer,
-            "--resolved-source-layer",
-            bundle_resolved_source_layer,
-            "--lock-state",
-            bundle_lock_state,
-            "--target-name",
-            "fallback_taxonomy_normalization",
-            "--surface-label",
-            HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
-            "--operation",
-            "three-plane",
-            "--json-only",
-        ]
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="fallback_taxonomy_normalization",
+        )
     )
     fallback_norm_payload = _parse_json_payload(out_fallback_norm) or {}
     validators["fallback_taxonomy_normalization"] = {
@@ -2377,41 +2348,23 @@ def _instance_plane_status(
         hard_boundary = True
 
     rc_dedup_mono, out_dedup_mono, err_dedup_mono = _run(
-        [
-            "python3",
-            "scripts/required_gate_bundle_runner.py",
-            "--catalog",
-            args.catalog,
-            "--identity-id",
-            args.identity_id,
-            "--run-id",
-            bundle_run_token,
-            "--send-time-gate-status",
-            bundle_send_time_gate_status,
-            "--outlet-bypass-detected",
-            bundle_outlet_bypass_detected,
-            "--final-emit-contract-status",
-            bundle_final_emit_contract_status,
-            "--final-emit-policy-mode",
-            bundle_final_emit_policy_mode,
-            "--final-emit-schema-status",
-            bundle_final_emit_schema_status,
-            "--actor-id",
-            actor_id,
-            "--resolved-work-layer",
-            bundle_resolved_work_layer,
-            "--resolved-source-layer",
-            bundle_resolved_source_layer,
-            "--lock-state",
-            bundle_lock_state,
-            "--target-name",
-            "dedup_monotonicity",
-            "--surface-label",
-            HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
-            "--operation",
-            "three-plane",
-            "--json-only",
-        ]
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="dedup_monotonicity",
+        )
     )
     dedup_mono_payload = _parse_json_payload(out_dedup_mono) or {}
     validators["dedup_monotonicity"] = {
@@ -2425,41 +2378,23 @@ def _instance_plane_status(
         hard_boundary = True
 
     rc_xwf_schema, out_xwf_schema, err_xwf_schema = _run(
-        [
-            "python3",
-            "scripts/required_gate_bundle_runner.py",
-            "--catalog",
-            args.catalog,
-            "--identity-id",
-            args.identity_id,
-            "--run-id",
-            bundle_run_token,
-            "--send-time-gate-status",
-            bundle_send_time_gate_status,
-            "--outlet-bypass-detected",
-            bundle_outlet_bypass_detected,
-            "--final-emit-contract-status",
-            bundle_final_emit_contract_status,
-            "--final-emit-policy-mode",
-            bundle_final_emit_policy_mode,
-            "--final-emit-schema-status",
-            bundle_final_emit_schema_status,
-            "--actor-id",
-            actor_id,
-            "--resolved-work-layer",
-            bundle_resolved_work_layer,
-            "--resolved-source-layer",
-            bundle_resolved_source_layer,
-            "--lock-state",
-            bundle_lock_state,
-            "--target-name",
-            "cross_workflow_schema",
-            "--surface-label",
-            HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
-            "--operation",
-            "three-plane",
-            "--json-only",
-        ]
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="cross_workflow_schema",
+        )
     )
     xwf_schema_payload = _parse_json_payload(out_xwf_schema) or {}
     validators["cross_workflow_schema"] = {
@@ -2473,41 +2408,23 @@ def _instance_plane_status(
         hard_boundary = True
 
     rc_skill_path, out_skill_path, err_skill_path = _run(
-        [
-            "python3",
-            "scripts/required_gate_bundle_runner.py",
-            "--catalog",
-            args.catalog,
-            "--identity-id",
-            args.identity_id,
-            "--run-id",
-            bundle_run_token,
-            "--send-time-gate-status",
-            bundle_send_time_gate_status,
-            "--outlet-bypass-detected",
-            bundle_outlet_bypass_detected,
-            "--final-emit-contract-status",
-            bundle_final_emit_contract_status,
-            "--final-emit-policy-mode",
-            bundle_final_emit_policy_mode,
-            "--final-emit-schema-status",
-            bundle_final_emit_schema_status,
-            "--actor-id",
-            actor_id,
-            "--resolved-work-layer",
-            bundle_resolved_work_layer,
-            "--resolved-source-layer",
-            bundle_resolved_source_layer,
-            "--lock-state",
-            bundle_lock_state,
-            "--target-name",
-            "skill_path_integrity",
-            "--surface-label",
-            HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
-            "--operation",
-            "three-plane",
-            "--json-only",
-        ]
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="skill_path_integrity",
+        )
     )
     skill_path_payload = _parse_json_payload(out_skill_path) or {}
     validators["skill_path_integrity"] = {
@@ -2521,41 +2438,23 @@ def _instance_plane_status(
         hard_boundary = True
 
     rc_exec_target_tuple, out_exec_target_tuple, err_exec_target_tuple = _run(
-        [
-            "python3",
-            "scripts/required_gate_bundle_runner.py",
-            "--catalog",
-            args.catalog,
-            "--identity-id",
-            args.identity_id,
-            "--run-id",
-            bundle_run_token,
-            "--send-time-gate-status",
-            bundle_send_time_gate_status,
-            "--outlet-bypass-detected",
-            bundle_outlet_bypass_detected,
-            "--final-emit-contract-status",
-            bundle_final_emit_contract_status,
-            "--final-emit-policy-mode",
-            bundle_final_emit_policy_mode,
-            "--final-emit-schema-status",
-            bundle_final_emit_schema_status,
-            "--actor-id",
-            actor_id,
-            "--resolved-work-layer",
-            bundle_resolved_work_layer,
-            "--resolved-source-layer",
-            bundle_resolved_source_layer,
-            "--lock-state",
-            bundle_lock_state,
-            "--target-name",
-            "execution_target_tuple_isolation",
-            "--surface-label",
-            HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
-            "--operation",
-            "three-plane",
-            "--json-only",
-        ]
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="execution_target_tuple_isolation",
+        )
     )
     exec_target_tuple_payload = _parse_json_payload(out_exec_target_tuple) or {}
     validators["execution_target_tuple_isolation"] = {
@@ -2571,43 +2470,24 @@ def _instance_plane_status(
         hard_boundary = True
 
     rc_multimodal_plugin, out_multimodal_plugin, err_multimodal_plugin = _run(
-        [
-            "python3",
-            "scripts/required_gate_bundle_runner.py",
-            "--catalog",
-            args.catalog,
-            "--identity-id",
-            args.identity_id,
-            "--run-id",
-            bundle_run_token,
-            "--send-time-gate-status",
-            bundle_send_time_gate_status,
-            "--outlet-bypass-detected",
-            bundle_outlet_bypass_detected,
-            "--final-emit-contract-status",
-            bundle_final_emit_contract_status,
-            "--final-emit-policy-mode",
-            bundle_final_emit_policy_mode,
-            "--final-emit-schema-status",
-            bundle_final_emit_schema_status,
-            "--actor-id",
-            actor_id,
-            "--resolved-work-layer",
-            bundle_resolved_work_layer,
-            "--resolved-source-layer",
-            bundle_resolved_source_layer,
-            "--lock-state",
-            bundle_lock_state,
-            "--target-name",
-            "multimodal_plugin_enforcement",
-            "--surface-label",
-            HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
-            "--operation",
-            "three-plane",
-            "--report-selected-path",
-            str(report_path),
-            "--json-only",
-        ]
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="multimodal_plugin_enforcement",
+            report_selected_path=str(report_path),
+        )
     )
     multimodal_plugin_payload = _parse_json_payload(out_multimodal_plugin) or {}
     validators["multimodal_plugin_enforcement"] = {
@@ -2623,43 +2503,24 @@ def _instance_plane_status(
         hard_boundary = True
 
     rc_reasoning_plugin, out_reasoning_plugin, err_reasoning_plugin = _run(
-        [
-            "python3",
-            "scripts/required_gate_bundle_runner.py",
-            "--catalog",
-            args.catalog,
-            "--identity-id",
-            args.identity_id,
-            "--run-id",
-            bundle_run_token,
-            "--send-time-gate-status",
-            bundle_send_time_gate_status,
-            "--outlet-bypass-detected",
-            bundle_outlet_bypass_detected,
-            "--final-emit-contract-status",
-            bundle_final_emit_contract_status,
-            "--final-emit-policy-mode",
-            bundle_final_emit_policy_mode,
-            "--final-emit-schema-status",
-            bundle_final_emit_schema_status,
-            "--actor-id",
-            actor_id,
-            "--resolved-work-layer",
-            bundle_resolved_work_layer,
-            "--resolved-source-layer",
-            bundle_resolved_source_layer,
-            "--lock-state",
-            bundle_lock_state,
-            "--target-name",
-            "reasoning_loop_failclose_enforcement",
-            "--surface-label",
-            HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
-            "--operation",
-            "three-plane",
-            "--report-selected-path",
-            str(report_path),
-            "--json-only",
-        ]
+        _build_required_gate_bundle_cmd(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            run_id=bundle_run_token,
+            send_time_gate_status=bundle_send_time_gate_status,
+            outlet_bypass_detected=bundle_outlet_bypass_detected,
+            final_emit_contract_status=bundle_final_emit_contract_status,
+            final_emit_policy_mode=bundle_final_emit_policy_mode,
+            final_emit_schema_status=bundle_final_emit_schema_status,
+            actor_id=actor_id,
+            resolved_work_layer=bundle_resolved_work_layer,
+            resolved_source_layer=bundle_resolved_source_layer,
+            lock_state=bundle_lock_state,
+            surface_label=HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            operation="three-plane",
+            target_name="reasoning_loop_failclose_enforcement",
+            report_selected_path=str(report_path),
+        )
     )
     reasoning_plugin_payload = _parse_json_payload(out_reasoning_plugin) or {}
     validators["reasoning_loop_failclose_enforcement"] = {
