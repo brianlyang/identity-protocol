@@ -207,11 +207,26 @@ HOST_VISIBLE_SEMANTIC_FREEZE_GOV_REQUIRED_TOKENS: tuple[str, ...] = (
     "host-direct output",
     "next-hop-admissible output",
     "inline/self-printed reply text is classified as `host_direct` and not next-hop admissible",
-    "display headstamp",
-    "canonical next-hop headstamp",
-    "authoritative identity precedence",
-    "AUTO_CORRECTED",
-    "display headstamp presence alone never proves next-hop admissibility",
+    "display_headstamp / machine_headstamp object split freeze",
+    "`display_headstamp` is a visibility-layer object.",
+    "`machine_headstamp` is a control-plane object.",
+    "display rights are delegated; truth rights stay machine-authoritative in the control plane.",
+    "`identity` owns display wiring; control plane owns truth and admission.",
+    "manual display is a render_origin of `display_headstamp`, not an automatic fail condition.",
+    "`display_headstamp` text must never become an authority source",
+    "`display_headstamp` presence is necessary for strict user-visible lanes, but never sufficient for admission.",
+    "fail-close + remediation lane processing freeze",
+    "business next hop must fail-close before remediation lane opens.",
+    "remediation lane is allowed only when truth is already resolved and remediation target is deterministic.",
+    "`v1.6.1` owns display entry; `v1.6.6` owns consistency, correction, and next-hop admissibility.",
+    "5.27 display declaration lineage + headstamp admission receipt freeze",
+    "`IDENTITY_PROMPT` declares display intent and schema, not final runtime display literals.",
+    "`CURRENT_TASK.json` carries the normalized runtime `display_headstamp` contract and is the runtime SSOT.",
+    "raw prompt text must never be consumed directly as the runtime `display_headstamp` object.",
+    "strict human-visible next hop requires `display_headstamp` present AND `headstamp_admission_receipt.next_hop_admission_status = PASS_REQUIRED`.",
+    "`manual_headstamp` is the human-facing shorthand for `display_headstamp.render_origin = manual`.",
+    "`manual_headstamp` is not a third truth object, authority source, or admission-proof class.",
+    "`headstamp_admission_receipt` minimum fields:",
 )
 HOST_VISIBLE_SEMANTIC_FREEZE_REVIEW_REQUIRED_TOKENS: tuple[str, ...] = (
     "26.37 Pre-95/Post-100 semantic freeze + serial-5 replay uplift",
@@ -234,10 +249,22 @@ HOST_VISIBLE_SEMANTIC_FREEZE_REVIEW_REQUIRED_TOKENS: tuple[str, ...] = (
     "host-direct output",
     "next-hop-admissible output",
     "assistant-visible self-printed headstamp is manual headstamp, not governed-output evidence.",
-    "display headstamp preserves usability",
-    "canonical next-hop headstamp preserves controlled-hop trust",
-    "mismatch is uniquely correctable",
-    "mismatch is not uniquely correctable",
+    "26.43 v1.6.6 display_headstamp / machine_headstamp split + remediation-lane freeze",
+    "display rights are delegated; truth rights stay machine-authoritative in the control plane.",
+    "`identity` owns display wiring; control plane owns truth and admission.",
+    "`v1.6.1` owns display entry; `v1.6.6` owns consistency, correction, and next-hop admissibility.",
+    "manual display is a render_origin of `display_headstamp`, not an automatic fail condition.",
+    "business next hop must fail-close before remediation lane opens.",
+    "remediation lane is allowed only when truth is already resolved and remediation target is deterministic.",
+    "`display_headstamp` may remain manual or host-direct as a visibility object; that alone does not decide admission.",
+    "manual display is normalized as `display_headstamp.render_origin`, not treated as a standalone semantic class that can override truth.",
+    "26.44 v1.6.6 display declaration lineage + headstamp admission receipt freeze",
+    "`IDENTITY_PROMPT` declares display intent and schema, not final runtime display literals.",
+    "`CURRENT_TASK.json` carries the normalized runtime `display_headstamp` contract and is the runtime SSOT.",
+    "strict human-visible next hop now requires `display_headstamp` present AND `headstamp_admission_receipt.next_hop_admission_status = PASS_REQUIRED`.",
+    "`manual_headstamp` is the human-facing shorthand for `display_headstamp.render_origin = manual`.",
+    "`manual_headstamp` is not a third truth object, authority source, or admission-proof class.",
+    "`headstamp_admission_receipt` minimum fields frozen:",
 )
 SUPER_LINTER_REQUIRED_TOKENS: tuple[str, ...] = (
     "name: super-linter",
@@ -1161,6 +1188,27 @@ def main() -> int:
                 "--json-only",
             )
         )
+        has_session_chain_seed_replay_probe = all(
+            token in text
+            for token in (
+                "run_probe session_chain_fresh_run_receipt_seed_replay_pass",
+                "python3 \"${SESSION_CHAIN_WRAPPER_PATH}\"",
+                "--run-id \"${SESSION_CHAIN_FRESH_RUN_ID}\"",
+                "host_visible_receipt_seed_attempted",
+                "host_visible_receipt_seed_replay_count",
+                "host_visible_receipt_seed_gate_status",
+            )
+        )
+        has_session_chain_seed_block_probe = all(
+            token in text
+            for token in (
+                "run_probe session_chain_receipt_seed_not_allowed_on_hard_prereq_failure",
+                "python3 \"${SESSION_CHAIN_SEED_BLOCK_INVOKER_PATH}\"",
+                "protocol_egress_wrapper_seed_block.py",
+                "host_visible_receipt_seed_blocked:reply_first_line_not_pass_required",
+                "host_visible_receipt_seed_gate_reason",
+            )
+        )
         has_session_chain_protocol_probe = all(
             token in text
             for token in (
@@ -1270,6 +1318,10 @@ def main() -> int:
             gateway_missing_tokens.append("gateway_egress_wrapper_direct_probe_invocation_missing")
         if not has_session_chain_headstamp_probe:
             gateway_missing_tokens.append("gateway_session_chain_headstamp_probe_invocation_missing")
+        if not has_session_chain_seed_replay_probe:
+            gateway_missing_tokens.append("gateway_session_chain_seed_replay_probe_invocation_missing")
+        if not has_session_chain_seed_block_probe:
+            gateway_missing_tokens.append("gateway_session_chain_seed_block_probe_invocation_missing")
         if not has_session_chain_protocol_probe:
             gateway_missing_tokens.append("gateway_session_chain_protocol_probe_invocation_missing")
         if not has_strict_default_first_line_probe:
@@ -1362,6 +1414,15 @@ def main() -> int:
                 "send_time_governed_pass_headstamp_required: chat_egress_uniqueness_status must be PASS_REQUIRED",
             )
         )
+        has_manual_reply_file_negative_probe = all(
+            token in text
+            for token in (
+                "run_probe send_time_manual_reply_file_without_live_receipt_blocked",
+                "send_time_manual_reply_file_without_live_receipt_blocked: next_hop_admission_status must be FAIL_REQUIRED",
+                "send_time_manual_reply_file_without_live_receipt_blocked: output_governance_mode must be manual_headstamp",
+                "send_time_manual_reply_file_without_live_receipt_blocked: reply_transport_binding_status must be FAIL_REQUIRED",
+            )
+        )
         has_post_check_blocker_probe = all(
             token in text
             for token in (
@@ -1395,6 +1456,10 @@ def main() -> int:
             host_visible_missing_tokens.append("host_visible_surface_commentary_session_binding_negative_probe_invocation_missing")
         if not has_send_time_positive_probe:
             host_visible_missing_tokens.append("host_visible_surface_send_time_positive_headstamp_probe_invocation_missing")
+        if not has_manual_reply_file_negative_probe:
+            host_visible_missing_tokens.append(
+                "host_visible_surface_manual_reply_file_negative_probe_invocation_missing"
+            )
         if not has_post_check_blocker_probe:
             host_visible_missing_tokens.append("host_visible_surface_post_check_blocker_chat_egress_probe_invocation_missing")
         if not has_post_check_state_missing_probe:

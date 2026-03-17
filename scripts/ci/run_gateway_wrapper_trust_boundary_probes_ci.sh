@@ -167,11 +167,15 @@ SESSION_ID="session-gateway-probe"
 SESSION_ID_FOREIGN="session-gateway-probe-foreign"
 SESSION_ID_CONFLICT="session-gateway-probe-conflict"
 SESSION_CHAIN_RUN_ID="probe-gateway-session-chain-headstamp"
+SESSION_CHAIN_FRESH_RUN_ID="probe-gateway-session-chain-fresh-seed"
+SESSION_CHAIN_SEED_BLOCK_RUN_ID="probe-gateway-session-chain-seed-blocked"
 INGRESS_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_ingress_wrapper.py"
 EGRESS_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_egress_wrapper.py"
 SESSION_CHAIN_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_session_chain_wrapper.py"
 SESSION_CHAIN_NON_JSON_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_session_chain_wrapper_non_json.py"
+SESSION_CHAIN_SEED_BLOCK_EGRESS_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_egress_wrapper_seed_block.py"
 GATEWAY_WRAPPER_INVOKER_PATH="${WORK_ROOT}/invoke_gateway_wrapper_final_emit_probe.py"
+SESSION_CHAIN_SEED_BLOCK_INVOKER_PATH="${WORK_ROOT}/invoke_session_chain_seed_block_probe.py"
 export IDENTITY_PROTOCOL_GATEWAY_SIGNING_SECRET_PROBE_GATEWAY="gateway-env-secret-only"
 
 python3 scripts/repair_contract_backfill.py \
@@ -361,6 +365,147 @@ if __name__ == "__main__":
 PY
 chmod +x "${GATEWAY_WRAPPER_INVOKER_PATH}"
 
+cat > "${SESSION_CHAIN_SEED_BLOCK_EGRESS_PATH}" <<'PY'
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Synthetic egress wrapper that blocks receipt seeding on hard prerequisites.")
+    ap.add_argument("--out-reply-file", default="")
+    ap.add_argument("--json-only", action="store_true")
+    args, _unknown = ap.parse_known_args()
+
+    out_reply = Path(str(args.out_reply_file or "").strip()).expanduser()
+    if str(out_reply):
+        out_reply.parent.mkdir(parents=True, exist_ok=True)
+        out_reply.write_text(
+            "display-only probe without canonical first line\\n",
+            encoding="utf-8",
+        )
+
+    payload = {
+        "protocol_egress_wrapper_status": "FAIL_REQUIRED",
+        "final_emit_guard_status": "FAIL_REQUIRED",
+        "send_time_gate_status": "PASS_REQUIRED",
+        "final_emit_contract_status": "PASS_REQUIRED",
+        "reply_first_line_status": "FAIL_REQUIRED",
+        "headstamp_consistency_status": "FAIL_REQUIRED",
+        "session_chain_parent_attestation_status": "PASS_REQUIRED",
+        "outlet_bypass_detected": False,
+        "error_code": "IP-HDSTAMP-003",
+        "stale_reasons": [
+            "synthetic_seed_hard_prereq_failure",
+            "reply_first_line_not_pass_required",
+        ],
+    }
+    if args.json_only:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+PY
+chmod +x "${SESSION_CHAIN_SEED_BLOCK_EGRESS_PATH}"
+
+cat > "${SESSION_CHAIN_SEED_BLOCK_INVOKER_PATH}" <<'PY'
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+
+def _write_json(path: Path, doc: dict) -> None:
+    path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def main() -> int:
+    if len(sys.argv) != 9:
+        raise SystemExit(
+            "usage: invoke_session_chain_seed_block_probe.py <repo_root> <catalog> <identity_id> <actor_id> <session_id> <run_id> <egress_wrapper_rel> <repo_catalog>"
+        )
+
+    repo_root = Path(sys.argv[1]).expanduser().resolve()
+    catalog_path = Path(sys.argv[2]).expanduser().resolve()
+    identity_id = str(sys.argv[3]).strip()
+    actor_id = str(sys.argv[4]).strip()
+    session_id = str(sys.argv[5]).strip()
+    run_id = str(sys.argv[6]).strip()
+    egress_wrapper_rel = str(sys.argv[7]).strip()
+    repo_catalog = str(sys.argv[8]).strip()
+
+    sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+    from tool_vendor_governance_common import load_json, resolve_pack_and_task  # type: ignore
+
+    pack_path, _task_path = resolve_pack_and_task(catalog_path, identity_id)
+    runtime_gate_root = Path(pack_path).resolve() / "runtime" / "gate"
+    contract_path = runtime_gate_root / "protocol_gateway_contract.json"
+    wrapper_path = runtime_gate_root / "protocol_session_chain_wrapper.py"
+    contract = load_json(contract_path)
+    if not isinstance(contract, dict):
+        raise SystemExit("protocol_gateway_contract_invalid")
+
+    original_egress_wrapper_path = str(contract.get("egress_wrapper_path", "")).strip()
+    contract["egress_wrapper_path"] = egress_wrapper_rel
+    _write_json(contract_path, contract)
+
+    cmd = [
+        sys.executable,
+        str(wrapper_path),
+        "--catalog",
+        str(catalog_path),
+        "--repo-catalog",
+        repo_catalog,
+        "--identity-id",
+        identity_id,
+        "--actor-id",
+        actor_id,
+        "--session-id",
+        session_id,
+        "--run-id",
+        run_id,
+        "--work-layer",
+        "instance",
+        "--source-layer",
+        "project",
+        "--operation",
+        "inspection",
+        "--message",
+        "session chain seed blocked by hard prerequisite probe",
+        "--json-only",
+    ]
+
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(repo_root))
+        if str(proc.stdout or "").strip():
+            print(str(proc.stdout).strip())
+        if str(proc.stderr or "").strip():
+            print(str(proc.stderr).strip(), file=sys.stderr)
+        return int(proc.returncode)
+    finally:
+        if original_egress_wrapper_path:
+            contract["egress_wrapper_path"] = original_egress_wrapper_path
+        else:
+            contract.pop("egress_wrapper_path", None)
+        _write_json(contract_path, contract)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+PY
+chmod +x "${SESSION_CHAIN_SEED_BLOCK_INVOKER_PATH}"
+
 run_probe() {
   local name="$1"
   shift
@@ -538,6 +683,51 @@ elif name == "session_chain_headstamp_first_line_required":
         raise SystemExit("session_chain_headstamp_first_line_required: sender consumption projection must be PASS_REQUIRED")
     if doc.get("next_hop_release_allowed") is not True:
         raise SystemExit("session_chain_headstamp_first_line_required: next_hop_release_allowed must be true")
+elif name == "session_chain_fresh_run_receipt_seed_replay_pass":
+    if rc != 0:
+        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected zero rc")
+    if str(doc.get("protocol_session_chain_wrapper_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected PASS_REQUIRED wrapper status")
+    if doc.get("host_visible_receipt_seed_attempted") is not True:
+        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected seed attempt")
+    if int(doc.get("host_visible_receipt_seed_replay_count") or 0) != 1:
+        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected replay count 1")
+    if str(doc.get("host_visible_receipt_seed_gate_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected PASS_REQUIRED seed gate status")
+    if str(doc.get("host_visible_receipt_seed_gate_reason", "")).strip() != "seed_eligible":
+        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected seed_eligible reason")
+    if str(doc.get("host_visible_surface_live_receipt_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected PASS_REQUIRED live receipt status")
+    if str(doc.get("reply_transport_binding_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected PASS_REQUIRED reply transport binding")
+    if doc.get("next_hop_release_allowed") is not True:
+        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: next_hop_release_allowed must be true")
+    preview = doc.get("reply_preview")
+    first_line = ""
+    if isinstance(preview, list) and preview:
+        first_line = str(preview[0] or "").strip()
+    if not first_line.startswith("Identity-Context:"):
+        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: missing Identity-Context first line")
+elif name == "session_chain_receipt_seed_not_allowed_on_hard_prereq_failure":
+    if rc == 0:
+        raise SystemExit("session_chain_receipt_seed_not_allowed_on_hard_prereq_failure: expected non-zero rc")
+    if str(doc.get("protocol_session_chain_wrapper_status", "")).strip().upper() != "FAIL_REQUIRED":
+        raise SystemExit("session_chain_receipt_seed_not_allowed_on_hard_prereq_failure: expected FAIL_REQUIRED wrapper status")
+    if doc.get("host_visible_receipt_seed_attempted") is not False:
+        raise SystemExit("session_chain_receipt_seed_not_allowed_on_hard_prereq_failure: seed attempt must remain false")
+    if int(doc.get("host_visible_receipt_seed_replay_count") or 0) != 0:
+        raise SystemExit("session_chain_receipt_seed_not_allowed_on_hard_prereq_failure: replay count must remain zero")
+    if str(doc.get("host_visible_receipt_seed_gate_status", "")).strip().upper() != "FAIL_REQUIRED":
+        raise SystemExit("session_chain_receipt_seed_not_allowed_on_hard_prereq_failure: expected FAIL_REQUIRED seed gate status")
+    if str(doc.get("host_visible_receipt_seed_gate_reason", "")).strip() != "reply_first_line_not_pass_required":
+        raise SystemExit("session_chain_receipt_seed_not_allowed_on_hard_prereq_failure: expected reply_first_line_not_pass_required reason")
+    if str(doc.get("send_time_gate_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_receipt_seed_not_allowed_on_hard_prereq_failure: send_time_gate_status must remain PASS_REQUIRED")
+    if str(doc.get("final_emit_contract_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_receipt_seed_not_allowed_on_hard_prereq_failure: final_emit_contract_status must remain PASS_REQUIRED")
+    reasons = stale_reasons(doc)
+    if "host_visible_receipt_seed_blocked:reply_first_line_not_pass_required" not in reasons:
+        raise SystemExit("session_chain_receipt_seed_not_allowed_on_hard_prereq_failure: expected explicit seed block stale reason")
 elif name == "session_chain_protocol_lane_explicit_context_pass":
     if rc != 0:
         raise SystemExit("session_chain_protocol_lane_explicit_context_pass: expected zero rc")
@@ -588,11 +778,17 @@ elif name == "protocol_work_layer_explicit_context_required":
     if mode != "protocol_lane_enforced":
         raise SystemExit("protocol_work_layer_explicit_context_required: expected protocol_lane_enforced mode")
 elif name == "quoted_foreign_identity_context_must_not_switch_identity":
-    if rc != 0:
-        raise SystemExit("quoted_foreign_identity_context_must_not_switch_identity: expected zero rc")
+    if rc == 0:
+        raise SystemExit("quoted_foreign_identity_context_must_not_switch_identity: expected non-zero rc because direct compose reply_file is not next-hop admissible without live receipt binding")
     status = str(doc.get("send_time_gate_status", "")).strip().upper()
     if status != "PASS_REQUIRED":
         raise SystemExit("quoted_foreign_identity_context_must_not_switch_identity: expected PASS_REQUIRED send-time gate")
+    if str(doc.get("output_governance_mode", "")).strip() != "manual_headstamp":
+        raise SystemExit("quoted_foreign_identity_context_must_not_switch_identity: expected manual_headstamp governance mode on direct compose path")
+    if str(doc.get("next_hop_admission_status", "")).strip().upper() != "FAIL_REQUIRED":
+        raise SystemExit("quoted_foreign_identity_context_must_not_switch_identity: expected FAIL_REQUIRED next-hop admission on direct compose path")
+    if str(doc.get("next_hop_admission_reason", "")).strip() != "manual_headstamp_not_next_hop_admissible":
+        raise SystemExit("quoted_foreign_identity_context_must_not_switch_identity: expected manual_headstamp_not_next_hop_admissible")
     if str(doc.get("identity_id", "")).strip() != "probe-gateway":
         raise SystemExit("quoted_foreign_identity_context_must_not_switch_identity: expected identity_id probe-gateway")
     if not bool(doc.get("quoted_identity_context_detected", False)):
@@ -948,6 +1144,31 @@ run_probe egress_wrapper_direct_call_blocked \
   --candidate-output "direct egress wrapper bypass probe" \
   --ingress-receipt "${FIXTURE_ROOT}/identity/probe-gateway/runtime/state/required_gate_bundle_entry.latest.json" \
   --json-only
+
+run_probe session_chain_fresh_run_receipt_seed_replay_pass \
+  python3 "${SESSION_CHAIN_WRAPPER_PATH}" \
+  --catalog "${CATALOG_PATH}" \
+  --repo-catalog identity/catalog/identities.yaml \
+  --identity-id "${IDENTITY_ID}" \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID}" \
+  --run-id "${SESSION_CHAIN_FRESH_RUN_ID}" \
+  --work-layer instance \
+  --source-layer project \
+  --operation inspection \
+  --message "session chain fresh run receipt seed replay probe" \
+  --json-only
+
+run_probe session_chain_receipt_seed_not_allowed_on_hard_prereq_failure \
+  python3 "${SESSION_CHAIN_SEED_BLOCK_INVOKER_PATH}" \
+  "${REPO_ROOT}" \
+  "${CATALOG_PATH}" \
+  "${IDENTITY_ID}" \
+  "${ACTOR_ID}" \
+  "${SESSION_ID}" \
+  "${SESSION_CHAIN_SEED_BLOCK_RUN_ID}" \
+  "identity/runtime/gate/protocol_egress_wrapper_seed_block.py" \
+  "identity/catalog/identities.yaml"
 
 python3 scripts/recover_host_visible_post_check_state.py \
   --catalog "${CATALOG_PATH}" \

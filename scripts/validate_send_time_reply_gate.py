@@ -6,6 +6,7 @@ import errno
 import json
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -21,11 +22,18 @@ from governed_reply_observability_common import build_headstamp_consistency_proj
 from protocol_infra_contract import (
     CHAT_EGRESS_POST_CHECK_STATE_UNAVAILABLE_ERROR_CODE,
     CHAT_EGRESS_RAW_BYPASS_ERROR_CODE,
+    HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS,
+    HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
+    HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
+    HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD,
     HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
+    HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS,
     HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
     HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_CONTRACT_ID,
     HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
     HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE,
+    HOST_VISIBLE_SURFACE_RUNTIME_ALLOWED_LIVE_RECEIPT_SOURCES,
+    HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS,
     PRIVILEGE_ESCALATION_ERROR_CODE,
     PRIVILEGE_ESCALATION_REASON_PREFIX,
     PRIVILEGE_ESCALATION_REMEDIATION_HINT,
@@ -76,6 +84,11 @@ HOST_VISIBLE_GOVERNED_CHANNELS = {
     if normalize_text(channel)
 }
 HOST_VISIBLE_GOVERNED_CHANNELS.add(normalize_text(FINAL_EMIT_CHANNEL_ID).lower())
+FIXTURE_ALLOWED_OPERATIONS = {
+    normalize_text(item).lower()
+    for item in HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS
+    if normalize_text(item)
+}
 SCRIPT_PATH = Path(__file__).resolve()
 SCRIPT_DIR = SCRIPT_PATH.parent
 REPO_ROOT = SCRIPT_DIR.parent
@@ -89,6 +102,200 @@ def _stale_reason_contains(stale_reasons: list[str] | tuple[str, ...], token: st
         if reason == needle or reason.startswith(f"{needle}:"):
             return True
     return False
+
+
+def _as_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _safe_int(value: Any, *, default: int = 0) -> int:
+    try:
+        return int(value)
+    except Exception:
+        return int(default)
+
+
+def _resolve_pack_relative_path(pack_path: Path, raw_path: str, fallback_rel: str) -> Path:
+    token = str(raw_path or "").strip()
+    if not token:
+        return (pack_path / fallback_rel).resolve()
+    p = Path(token).expanduser()
+    if p.is_absolute():
+        return p.resolve()
+    if token.startswith("identity/runtime/"):
+        return (pack_path / "runtime" / token[len("identity/runtime/") :]).resolve()
+    if token.startswith("runtime/"):
+        return (pack_path / token).resolve()
+    return (pack_path / token).resolve()
+
+
+def _load_reply_transport_binding(
+    *,
+    catalog_path: Path,
+    identity_id: str,
+    actor_id: str,
+    session_id: str,
+    operation: str,
+    evidence_mode: str,
+    strict_context: bool,
+    reply_transport_ref: str,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "reply_transport_binding_required": False,
+        "reply_transport_binding_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "reply_transport_binding_reason": "reply_transport_binding_not_required",
+        "reply_transport_binding_error_code": "",
+        "reply_transport_binding_receipt_paths": [],
+        "reply_transport_binding_allowed_sources": [],
+    }
+    normalized_mode = str(evidence_mode or "").strip().lower()
+    if not strict_context or normalized_mode not in {"reply_file", "reply_log"}:
+        return payload
+
+    payload["reply_transport_binding_required"] = True
+    allowed_sources = set(HOST_VISIBLE_SURFACE_RUNTIME_ALLOWED_LIVE_RECEIPT_SOURCES)
+    payload["reply_transport_binding_allowed_sources"] = sorted(source for source in allowed_sources if source)
+    if not str(reply_transport_ref or "").strip():
+        payload["reply_transport_binding_status"] = STATUS_FAIL_REQUIRED
+        payload["reply_transport_binding_reason"] = "reply_transport_ref_missing"
+        payload["reply_transport_binding_error_code"] = ERR_HDSTAMP_RECEIPT_MISSING
+        return payload
+
+    try:
+        pack_path, task_path = resolve_pack_and_task(catalog_path, identity_id)
+        task = load_json(task_path)
+    except Exception as exc:
+        payload["reply_transport_binding_status"] = STATUS_FAIL_REQUIRED
+        payload["reply_transport_binding_reason"] = f"reply_transport_binding_resolve_failed:{type(exc).__name__}"
+        payload["reply_transport_binding_error_code"] = (
+            PRIVILEGE_ESCALATION_ERROR_CODE if _is_privilege_escalation_error(exc) else ERR_HDSTAMP_RECEIPT_MISSING
+        )
+        return payload
+
+    host_visible_contract = task.get(HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY)
+    if not isinstance(host_visible_contract, dict) or host_visible_contract.get("required") is not True:
+        payload["reply_transport_binding_status"] = STATUS_FAIL_REQUIRED
+        payload["reply_transport_binding_reason"] = "host_visible_surface_contract_missing"
+        payload["reply_transport_binding_error_code"] = ERR_HDSTAMP_RECEIPT_MISSING
+        return payload
+
+    required_channels = _as_list(host_visible_contract.get("required_channels")) or list(
+        HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS
+    )
+    required_pass_status_fields = _as_list(
+        host_visible_contract.get("required_pass_status_fields")
+    ) or list(HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS)
+    receipt_pattern = (
+        str(host_visible_contract.get("runtime_receipt_pattern", "")).strip()
+        or HOST_VISIBLE_SURFACE_RECEIPT_PATTERN
+    )
+    runtime_live_sources = set(_as_list(host_visible_contract.get("runtime_live_receipt_sources")))
+    if not runtime_live_sources:
+        runtime_live_sources = set(HOST_VISIBLE_SURFACE_RUNTIME_ALLOWED_LIVE_RECEIPT_SOURCES)
+    allowed_sources = set(runtime_live_sources)
+    fixture_receipt_source = (
+        str(host_visible_contract.get("fixture_receipt_source", "")).strip()
+        or HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE
+    )
+    fixture_allowed_operations = {
+        normalize_text(item).lower()
+        for item in _as_list(host_visible_contract.get("fixture_allowed_operations"))
+        if normalize_text(item)
+    }
+    if not fixture_allowed_operations:
+        fixture_allowed_operations = set(FIXTURE_ALLOWED_OPERATIONS)
+    if normalize_text(operation).lower() in fixture_allowed_operations and fixture_receipt_source:
+        allowed_sources.add(fixture_receipt_source)
+    payload["reply_transport_binding_allowed_sources"] = sorted(source for source in allowed_sources if source)
+    runtime_receipt_max_age_seconds = _safe_int(
+        host_visible_contract.get("runtime_receipt_max_age_seconds"),
+        default=HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS,
+    )
+    if runtime_receipt_max_age_seconds <= 0:
+        runtime_receipt_max_age_seconds = int(HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS)
+
+    receipt_glob_path = _resolve_pack_relative_path(pack_path, receipt_pattern, HOST_VISIBLE_SURFACE_RECEIPT_PATTERN)
+    if receipt_glob_path.is_file():
+        receipt_files = [receipt_glob_path]
+    else:
+        try:
+            receipt_files = sorted(pack_path.glob(receipt_pattern), key=lambda item: item.stat().st_mtime)
+        except Exception as exc:
+            payload["reply_transport_binding_status"] = STATUS_FAIL_REQUIRED
+            payload["reply_transport_binding_reason"] = f"reply_transport_receipt_glob_failed:{type(exc).__name__}"
+            payload["reply_transport_binding_error_code"] = (
+                PRIVILEGE_ESCALATION_ERROR_CODE if _is_privilege_escalation_error(exc) else ERR_HDSTAMP_RECEIPT_MISSING
+            )
+            return payload
+    if not receipt_files:
+        payload["reply_transport_binding_status"] = STATUS_FAIL_REQUIRED
+        payload["reply_transport_binding_reason"] = "reply_transport_live_receipts_missing"
+        payload["reply_transport_binding_error_code"] = ERR_HDSTAMP_RECEIPT_MISSING
+        return payload
+
+    matched_by_channel: dict[str, tuple[Path, dict[str, Any]]] = {}
+    for receipt_path in receipt_files:
+        if not receipt_path.is_file():
+            continue
+        try:
+            receipt_doc = load_json(receipt_path)
+        except Exception:
+            continue
+        channel = str(receipt_doc.get("emit_channel_id", "")).strip()
+        if not channel or channel not in required_channels:
+            continue
+        if str(receipt_doc.get("identity_id", "")).strip() != str(identity_id).strip():
+            continue
+        if actor_id and str(receipt_doc.get("actor_id", "")).strip() != str(actor_id).strip():
+            continue
+        if session_id and str(receipt_doc.get("session_id", "")).strip() != str(session_id).strip():
+            continue
+        if str(receipt_doc.get("reply_transport_ref", "")).strip() != str(reply_transport_ref).strip():
+            continue
+        receipt_source = str(receipt_doc.get(HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD, "")).strip()
+        if receipt_source not in allowed_sources:
+            continue
+        previous = matched_by_channel.get(channel)
+        if previous is None or receipt_path.stat().st_mtime >= previous[0].stat().st_mtime:
+            matched_by_channel[channel] = (receipt_path, receipt_doc)
+
+    issues: list[str] = []
+    receipt_paths: list[str] = []
+    now_epoch = time.time()
+    for channel in sorted(set(required_channels)):
+        matched = matched_by_channel.get(channel)
+        if matched is None:
+            issues.append(f"reply_transport_live_receipt_missing:{channel}")
+            continue
+        receipt_path, receipt_doc = matched
+        receipt_paths.append(str(receipt_path))
+        age_seconds = max(0, int(now_epoch - receipt_path.stat().st_mtime))
+        if age_seconds > runtime_receipt_max_age_seconds:
+            issues.append(
+                "reply_transport_live_receipt_stale:"
+                f"{channel}:age_seconds={age_seconds}:max_age_seconds={runtime_receipt_max_age_seconds}"
+            )
+        source_value = str(receipt_doc.get(HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD, "")).strip()
+        if source_value not in allowed_sources:
+            issues.append(f"reply_transport_live_receipt_source_invalid:{channel}:{source_value or 'missing'}")
+        if str(receipt_doc.get("reply_transport_ref", "")).strip() != str(reply_transport_ref).strip():
+            issues.append(f"reply_transport_live_receipt_ref_mismatch:{channel}")
+        for field in sorted(set(required_pass_status_fields)):
+            if str(receipt_doc.get(field, "")).strip().upper() != STATUS_PASS_REQUIRED:
+                issues.append(f"reply_transport_live_receipt_status_not_pass:{channel}:{field}")
+
+    payload["reply_transport_binding_receipt_paths"] = sorted(receipt_paths)
+    if issues:
+        payload["reply_transport_binding_status"] = STATUS_FAIL_REQUIRED
+        payload["reply_transport_binding_reason"] = issues[0]
+        payload["reply_transport_binding_error_code"] = ERR_HDSTAMP_RECEIPT_MISSING
+        return payload
+
+    payload["reply_transport_binding_status"] = STATUS_PASS_REQUIRED
+    payload["reply_transport_binding_reason"] = "reply_transport_bound_to_host_visible_live_receipts"
+    return payload
 
 
 def _inject_chat_egress_uniqueness_fields(payload: dict[str, Any]) -> dict[str, Any]:
@@ -152,12 +359,15 @@ def _derive_output_governance_mode(payload: dict[str, Any]) -> str:
     outlet_channel_id = str(payload.get("outlet_channel_id", "")).strip()
     evidence_mode = str(payload.get("reply_evidence_mode", "")).strip().lower()
     reply_outlet_guard_applied = bool(payload.get("reply_outlet_guard_applied", False))
+    reply_transport_binding_status = str(payload.get("reply_transport_binding_status", "")).strip().upper()
     if evidence_mode == "reply_text":
         return OUTPUT_GOVERNANCE_MODE_HOST_DIRECT
     if evidence_mode in {"stamp_json", "stamp_json_composed_reply"}:
         return OUTPUT_GOVERNANCE_MODE_MANUAL_HEADSTAMP
     if evidence_mode in {"missing", "invalid_input"}:
         return OUTPUT_GOVERNANCE_MODE_NON_GOVERNED
+    if evidence_mode in {"reply_file", "reply_log"} and reply_transport_binding_status != STATUS_PASS_REQUIRED:
+        return OUTPUT_GOVERNANCE_MODE_MANUAL_HEADSTAMP
     if not _is_governed_outlet(outlet_channel_id) or not _is_host_visible_governed_channel(outlet_channel_id):
         return OUTPUT_GOVERNANCE_MODE_NON_GOVERNED
     if not reply_outlet_guard_applied:
@@ -177,6 +387,7 @@ def _inject_next_hop_admission_fields(payload: dict[str, Any]) -> dict[str, Any]
     outlet_channel_id = str(out.get("outlet_channel_id", "")).strip()
     reply_outlet_guard_applied = bool(out.get("reply_outlet_guard_applied", False))
     outlet_bypass_detected = bool(out.get("outlet_bypass_detected", False))
+    reply_transport_binding_status = str(out.get("reply_transport_binding_status", "")).strip().upper()
     output_governance_mode = _derive_output_governance_mode(out)
     out["output_governance_mode"] = output_governance_mode
 
@@ -191,6 +402,12 @@ def _inject_next_hop_admission_fields(payload: dict[str, Any]) -> dict[str, Any]
     elif outlet_bypass_detected:
         control_lane_attestation_status = STATUS_FAIL_REQUIRED
         control_lane_attestation_reason = "outlet_bypass_detected"
+    elif reply_transport_binding_status not in {"", STATUS_SKIPPED_NOT_REQUIRED, STATUS_PASS_REQUIRED}:
+        control_lane_attestation_status = STATUS_FAIL_REQUIRED
+        control_lane_attestation_reason = "reply_transport_binding_not_pass"
+    elif reply_transport_binding_status == STATUS_SKIPPED_NOT_REQUIRED and str(out.get("reply_evidence_mode", "")).strip().lower() in {"reply_file", "reply_log"}:
+        control_lane_attestation_status = STATUS_FAIL_REQUIRED
+        control_lane_attestation_reason = "reply_transport_binding_not_pass"
     elif final_emit_contract_status != STATUS_PASS_REQUIRED:
         control_lane_attestation_status = STATUS_FAIL_REQUIRED
         control_lane_attestation_reason = "final_emit_contract_not_pass"
@@ -224,6 +441,9 @@ def _inject_next_hop_admission_fields(payload: dict[str, Any]) -> dict[str, Any]
     if send_time_status == STATUS_SKIPPED_NOT_REQUIRED:
         next_hop_admission_status = STATUS_SKIPPED_NOT_REQUIRED
         next_hop_admission_reason = "send_time_gate_not_required"
+    elif post_check_blocker_status != STATUS_PASS_REQUIRED:
+        next_hop_admission_status = STATUS_FAIL_REQUIRED
+        next_hop_admission_reason = post_check_blocker_reason
     elif output_governance_mode == OUTPUT_GOVERNANCE_MODE_MANUAL_HEADSTAMP:
         next_hop_admission_status = STATUS_FAIL_REQUIRED
         next_hop_admission_reason = "manual_headstamp_not_next_hop_admissible"
@@ -233,9 +453,6 @@ def _inject_next_hop_admission_fields(payload: dict[str, Any]) -> dict[str, Any]
     elif output_governance_mode == OUTPUT_GOVERNANCE_MODE_NON_GOVERNED:
         next_hop_admission_status = STATUS_FAIL_REQUIRED
         next_hop_admission_reason = "non_governed_output_not_next_hop_admissible"
-    elif post_check_blocker_status != STATUS_PASS_REQUIRED:
-        next_hop_admission_status = STATUS_FAIL_REQUIRED
-        next_hop_admission_reason = post_check_blocker_reason
     elif control_lane_attestation_status != STATUS_PASS_REQUIRED:
         next_hop_admission_status = STATUS_FAIL_REQUIRED
         next_hop_admission_reason = "control_lane_attestation_not_pass"
@@ -532,7 +749,7 @@ def _is_final_emit_schema_pass(schema_status: str) -> bool:
     return normalize_status(schema_status) == STATUS_PASS_REQUIRED
 
 
-def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
+def _finalize_payload(payload: dict[str, Any]) -> dict[str, Any]:
     payload = _inject_chat_egress_uniqueness_fields(payload)
     payload = _inject_next_hop_admission_fields(payload)
     if not str(payload.get("headstamp_consistency_status", "")).strip():
@@ -556,7 +773,11 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
                 ).strip(),
             )
         )
-    payload = inject_legacy_error_fields(payload)
+    return inject_legacy_error_fields(payload)
+
+
+def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
+    payload = _finalize_payload(payload)
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
     else:
@@ -706,6 +927,16 @@ def main() -> int:
     strict_context = _is_strict_send_time_context(args.operation, args.enforce_send_time_gate)
     display_headstamp_identity_id = _extract_display_headstamp_identity(reply_text)
     reply_transport_ref = _reply_transport_ref(args, evidence_mode)
+    reply_transport_binding = _load_reply_transport_binding(
+        catalog_path=catalog_path,
+        identity_id=args.identity_id,
+        actor_id=str(args.actor_id or "").strip(),
+        session_id=str(args.session_id or "").strip(),
+        operation=args.operation,
+        evidence_mode=evidence_mode,
+        strict_context=strict_context,
+        reply_transport_ref=reply_transport_ref,
+    )
     outlet_channel_id = str(args.outlet_channel_id or "").strip() or FINAL_EMIT_CHANNEL_ID
     host_visible_governed_channel_ok = _is_host_visible_governed_channel(outlet_channel_id)
     governed_outlet = _is_governed_outlet(outlet_channel_id)
@@ -773,6 +1004,18 @@ def main() -> int:
             "reply_first_line_blocked_reason": "host_transport_post_check_state_unavailable",
             "reply_evidence_mode": evidence_mode,
             "reply_transport_ref": reply_transport_ref,
+            "reply_transport_binding_required": bool(reply_transport_binding.get("reply_transport_binding_required", False)),
+            "reply_transport_binding_status": str(reply_transport_binding.get("reply_transport_binding_status", "")).strip(),
+            "reply_transport_binding_reason": str(reply_transport_binding.get("reply_transport_binding_reason", "")).strip(),
+            "reply_transport_binding_error_code": str(
+                reply_transport_binding.get("reply_transport_binding_error_code", "")
+            ).strip(),
+            "reply_transport_binding_receipt_paths": list(
+                reply_transport_binding.get("reply_transport_binding_receipt_paths") or []
+            ),
+            "reply_transport_binding_allowed_sources": list(
+                reply_transport_binding.get("reply_transport_binding_allowed_sources") or []
+            ),
             "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
             "governed_outlet_enforced": strict_outlet_enforced,
             "outlet_channel_id": outlet_channel_id,
@@ -847,6 +1090,18 @@ def main() -> int:
             "reply_first_line_blocked_reason": "host_transport_post_check_blocker_active",
             "reply_evidence_mode": evidence_mode,
             "reply_transport_ref": reply_transport_ref,
+            "reply_transport_binding_required": bool(reply_transport_binding.get("reply_transport_binding_required", False)),
+            "reply_transport_binding_status": str(reply_transport_binding.get("reply_transport_binding_status", "")).strip(),
+            "reply_transport_binding_reason": str(reply_transport_binding.get("reply_transport_binding_reason", "")).strip(),
+            "reply_transport_binding_error_code": str(
+                reply_transport_binding.get("reply_transport_binding_error_code", "")
+            ).strip(),
+            "reply_transport_binding_receipt_paths": list(
+                reply_transport_binding.get("reply_transport_binding_receipt_paths") or []
+            ),
+            "reply_transport_binding_allowed_sources": list(
+                reply_transport_binding.get("reply_transport_binding_allowed_sources") or []
+            ),
             "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
             "governed_outlet_enforced": strict_outlet_enforced,
             "outlet_channel_id": outlet_channel_id,
@@ -1340,6 +1595,18 @@ def main() -> int:
         "reply_first_line_blocked_reason": first_line_blocked_reason,
         "reply_evidence_mode": evidence_mode,
         "reply_transport_ref": reply_transport_ref,
+        "reply_transport_binding_required": bool(reply_transport_binding.get("reply_transport_binding_required", False)),
+        "reply_transport_binding_status": str(reply_transport_binding.get("reply_transport_binding_status", "")).strip(),
+        "reply_transport_binding_reason": str(reply_transport_binding.get("reply_transport_binding_reason", "")).strip(),
+        "reply_transport_binding_error_code": str(
+            reply_transport_binding.get("reply_transport_binding_error_code", "")
+        ).strip(),
+        "reply_transport_binding_receipt_paths": list(
+            reply_transport_binding.get("reply_transport_binding_receipt_paths") or []
+        ),
+        "reply_transport_binding_allowed_sources": list(
+            reply_transport_binding.get("reply_transport_binding_allowed_sources") or []
+        ),
         "reply_evidence_ref": validator_payload.get("reply_evidence_ref", ""),
         "reply_sample_count": validator_payload.get("reply_sample_count", 0),
         "reply_first_line_missing_count": validator_payload.get("reply_first_line_missing_count", 0),
@@ -1411,7 +1678,13 @@ def main() -> int:
     if "blocker_receipt" in validator_payload:
         payload["blocker_receipt"] = validator_payload.get("blocker_receipt")
 
-    _emit(payload, json_only=args.json_only)
+    final_payload = _finalize_payload(payload)
+    if args.json_only:
+        print(json.dumps(final_payload, ensure_ascii=False))
+    else:
+        print(json.dumps(final_payload, ensure_ascii=False, indent=2))
+    if str(final_payload.get("next_hop_admission_status", "")).strip().upper() == STATUS_FAIL_REQUIRED:
+        return 1
     return 1 if p.returncode != 0 else 0
 
 

@@ -3408,6 +3408,7 @@ from typing import Any
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 DEFAULT_OPERATION = "inspection"
 DEFAULT_WORK_LAYER = "instance"
 DEFAULT_SOURCE_LAYER = "project"
@@ -3775,6 +3776,32 @@ def _record_host_visible_surface_receipts(
     if errors:
         return STATUS_FAIL_REQUIRED, str(state_path), receipt_paths, errors
     return STATUS_PASS_REQUIRED, str(state_path), receipt_paths, []
+
+
+def _evaluate_egress_payload_host_visible_receipt_seed(
+    *,
+    payload: dict[str, Any],
+    out_reply_file: Path,
+    session_chain_parent_status: str,
+) -> tuple[bool, str]:
+    if not isinstance(payload, dict) or not payload:
+        return False, "egress_payload_missing"
+    if not out_reply_file.exists():
+        return False, "reply_file_missing_after_failed_egress"
+    if session_chain_parent_status and session_chain_parent_status != STATUS_PASS_REQUIRED:
+        return False, "session_chain_parent_attestation_not_pass_required"
+    if str(payload.get("send_time_gate_status", "")).strip().upper() != STATUS_PASS_REQUIRED:
+        return False, "send_time_gate_not_pass_required"
+    if str(payload.get("final_emit_contract_status", "")).strip().upper() != STATUS_PASS_REQUIRED:
+        return False, "final_emit_contract_not_pass_required"
+    if str(payload.get("reply_first_line_status", "")).strip().upper() != STATUS_PASS_REQUIRED:
+        return False, "reply_first_line_not_pass_required"
+    consistency_status = str(payload.get("headstamp_consistency_status", "")).strip().upper()
+    if consistency_status not in {STATUS_PASS_REQUIRED, "AUTO_CORRECTED"}:
+        return False, "headstamp_consistency_not_seed_eligible"
+    if bool(payload.get("outlet_bypass_detected", False)):
+        return False, "outlet_bypass_detected"
+    return True, "seed_eligible"
 
 
 def _select_latest_identity_bound_session(
@@ -4170,23 +4197,56 @@ def main() -> int:
         egress_cmd.extend(["--repo-catalog", repo_catalog_path])
     egress_env = dict(os.environ)
     egress_env["IDENTITY_PROTOCOL_SESSION_CHAIN_WRAPPER_PATH"] = str(Path(__file__).resolve())
+    egress_receipt_seed_attempted = False
+    egress_receipt_seed_replay_count = 0
+    egress_receipt_seed_gate_status = STATUS_SKIPPED_NOT_REQUIRED
+    egress_receipt_seed_gate_reason = "initial_egress_pass_required"
     egress_proc = subprocess.run(egress_cmd, capture_output=True, text=True, env=egress_env)
     egress_payload = _parse_stdout_json(egress_proc.stdout)
-    if egress_proc.returncode != 0:
-        if egress_proc.stdout.strip():
-            print(egress_proc.stdout.strip())
-        if egress_proc.stderr.strip():
-            print(egress_proc.stderr.strip(), file=sys.stderr)
-        return egress_proc.returncode
-    if str(egress_payload.get("final_emit_guard_status", "")).strip().upper() != STATUS_PASS_REQUIRED:
-        return _fail(
-            error_code="IP-HDSTAMP-002",
-            stale_reason="egress_guard_not_pass_required",
-            json_only=args.json_only,
-        )
     session_chain_parent_status = str(
         egress_payload.get("session_chain_parent_attestation_status", "")
     ).strip().upper()
+    egress_guard_status = str(egress_payload.get("final_emit_guard_status", "")).strip().upper()
+    if egress_proc.returncode != 0:
+        seed_ready, egress_receipt_seed_gate_reason = _evaluate_egress_payload_host_visible_receipt_seed(
+            payload=egress_payload,
+            out_reply_file=out_reply_path,
+            session_chain_parent_status=session_chain_parent_status,
+        )
+        egress_receipt_seed_gate_status = (
+            STATUS_PASS_REQUIRED if seed_ready else STATUS_FAIL_REQUIRED
+        )
+        if not seed_ready:
+            if isinstance(egress_payload, dict) and egress_payload:
+                stale_reasons = [
+                    str(item).strip()
+                    for item in (egress_payload.get("stale_reasons") or [])
+                    if str(item).strip()
+                ]
+                stale_reasons.append(
+                    "host_visible_receipt_seed_blocked:" + str(egress_receipt_seed_gate_reason).strip()
+                )
+                seen_stale_reasons: set[str] = set()
+                deduped_stale_reasons: list[str] = []
+                for reason in stale_reasons:
+                    if reason in seen_stale_reasons:
+                        continue
+                    seen_stale_reasons.add(reason)
+                    deduped_stale_reasons.append(reason)
+                egress_payload["protocol_session_chain_wrapper_status"] = STATUS_FAIL_REQUIRED
+                egress_payload["stale_reasons"] = deduped_stale_reasons
+                if not str(egress_payload.get("error_code", "")).strip():
+                    egress_payload["error_code"] = "IP-HDSTAMP-002"
+                egress_payload["host_visible_receipt_seed_attempted"] = False
+                egress_payload["host_visible_receipt_seed_replay_count"] = 0
+                egress_payload["host_visible_receipt_seed_gate_status"] = egress_receipt_seed_gate_status
+                egress_payload["host_visible_receipt_seed_gate_reason"] = egress_receipt_seed_gate_reason
+                _emit(egress_payload, json_only=args.json_only)
+            elif egress_proc.stdout.strip():
+                print(egress_proc.stdout.strip())
+            if egress_proc.stderr.strip():
+                print(egress_proc.stderr.strip(), file=sys.stderr)
+            return egress_proc.returncode
     if session_chain_parent_status and session_chain_parent_status != STATUS_PASS_REQUIRED:
         return _fail(
             error_code="IP-GATE-ENTRY-002",
@@ -4284,6 +4344,26 @@ def main() -> int:
             stale_reason=reason,
             json_only=args.json_only,
         )
+    if egress_proc.returncode != 0 or egress_guard_status != STATUS_PASS_REQUIRED:
+        egress_receipt_seed_attempted = True
+        egress_receipt_seed_replay_count = 1
+        egress_receipt_seed_gate_status = STATUS_PASS_REQUIRED
+        egress_receipt_seed_gate_reason = "seed_eligible"
+        egress_proc = subprocess.run(egress_cmd, capture_output=True, text=True, env=egress_env)
+        egress_payload = _parse_stdout_json(egress_proc.stdout)
+        if egress_proc.returncode != 0:
+            if egress_proc.stdout.strip():
+                print(egress_proc.stdout.strip())
+            if egress_proc.stderr.strip():
+                print(egress_proc.stderr.strip(), file=sys.stderr)
+            return egress_proc.returncode
+        egress_guard_status = str(egress_payload.get("final_emit_guard_status", "")).strip().upper()
+        if egress_guard_status != STATUS_PASS_REQUIRED:
+            return _fail(
+                error_code="IP-HDSTAMP-002",
+                stale_reason="egress_guard_not_pass_required_after_host_visible_receipt_seed",
+                json_only=args.json_only,
+            )
     host_visible_receipt_source = _select_host_visible_receipt_source(str(args.operation).strip())
     _emit(
         {
@@ -4341,6 +4421,10 @@ def main() -> int:
             "host_visible_surface_state_file": host_visible_state_file,
             "host_visible_surface_live_receipt_paths": host_visible_receipt_paths,
             "host_visible_surface_live_receipt_source": host_visible_receipt_source,
+            "host_visible_receipt_seed_attempted": egress_receipt_seed_attempted,
+            "host_visible_receipt_seed_replay_count": egress_receipt_seed_replay_count,
+            "host_visible_receipt_seed_gate_status": egress_receipt_seed_gate_status,
+            "host_visible_receipt_seed_gate_reason": egress_receipt_seed_gate_reason,
             "emit_channel_id": final_emit_channel_id,
             "outlet_channel_id": outlet_channel_id,
             "outlet_preflight_receipt": outlet_preflight_receipt,

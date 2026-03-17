@@ -2863,3 +2863,101 @@ Checkpoint verdict:
 1. human-visible headstamp remains preserved as operator HUD.
 2. v1.6.6 next-hop admissibility remains stricter than visible display.
 3. mismatch between visible headstamp and authoritative identity is now governed by one correction-state model instead of ad hoc interpretation.
+
+### 26.43 v1.6.6 display_headstamp / machine_headstamp split + remediation-lane freeze (2026-03-17)
+
+Problem:
+
+1. the newer closure discussion no longer treats `manual_headstamp` as the primary verdict axis, but the review ledger still left room to misread manual display as automatic fail-close.
+2. the protocol still needed one explicit freeze that separates display ownership from truth ownership:
+   - display rights delegated to identity-owned display entry and wiring
+   - truth, correction, and admission stay machine-authoritative in the control plane
+3. failure handling also needed a clearer split between:
+   - original business next-hop admission
+   - post-block remediation lane work
+
+Fix frozen:
+
+1. protocol now freezes `display_headstamp` / `machine_headstamp` as the two top-level objects for this semantic split.
+2. display rights are delegated; truth rights stay machine-authoritative in the control plane.
+3. `identity` owns display wiring; control plane owns truth and admission.
+4. `v1.6.1` owns display entry; `v1.6.6` owns consistency, correction, and next-hop admissibility.
+5. manual display is a render_origin of `display_headstamp`, not an automatic fail condition.
+
+Processing freeze:
+
+1. identity-owned surfaces such as `IDENTITY_PROMPT` and `CURRENT_TASK` declare display policy and display wiring.
+2. `v1.6.1` display entry invokes the shared renderer and emits `display_headstamp`.
+3. control plane resolves authoritative identity and emits `machine_headstamp`.
+4. control plane compares `display_headstamp` with `machine_headstamp` and emits correction / blocker verdict.
+5. control plane decides whether the original governed business next hop may continue.
+6. if the original business next hop is blocked, a remediation lane may open for deterministic repair work only.
+
+Fail-close + remediation freeze:
+
+1. display contract failure, display wiring failure, correction failure, or truth absence must fail-close the original business next hop.
+2. business next hop must fail-close before remediation lane opens.
+3. remediation lane is allowed only when truth is already resolved and remediation target is deterministic.
+4. remediation is triggered by wiring / contract / truth failures, not merely by render origin being manual.
+5. remediation lane output never counts as business next-hop pass by itself; revalidation is mandatory before the governed business lane may reopen.
+
+Interpretation lock:
+
+1. `display_headstamp` may remain manual or host-direct as a visibility object; that alone does not decide admission.
+2. `machine_headstamp` remains the authoritative object for truth, correction, and next-hop legality.
+3. manual display is allowed, but unresolved truth, failed correction, or missing machine evidence still fail closed.
+4. the original business next hop and the remediation lane are separate lanes and must not be collapsed into one pass/fail surface.
+
+Checkpoint verdict:
+
+1. v1.6.6 now freezes the approved "display rights down, truth rights up" model directly in review wording.
+2. manual display is normalized as `display_headstamp.render_origin`, not treated as a standalone semantic class that can override truth.
+3. fail-close remains authoritative on the original business lane, while deterministic wiring remediation may still proceed on a separate remediation lane.
+
+### 26.44 v1.6.6 display declaration lineage + headstamp admission receipt freeze (2026-03-17)
+
+Problem:
+
+1. the object split and remediation freeze were in place, but the protocol still needed one explicit contract for how display declaration reaches runtime render.
+2. without that lineage freeze, `IDENTITY_PROMPT`, `CURRENT_TASK.json`, runtime gate, and the visible headstamp could still drift independently.
+3. the review wording also still needed a direct AND rule for strict human-visible next hop:
+   - display visible to humans
+   - machine admission pass for governed continuation
+4. `manual_headstamp` still needed a bridge sentence so readers do not reinterpret it as a third truth object.
+5. `headstamp_admission_receipt` minimum fields were not yet frozen in one place.
+
+Fix frozen:
+
+1. `IDENTITY_PROMPT` declares display intent and schema, not final runtime display literals.
+2. `CURRENT_TASK.json` carries the normalized runtime `display_headstamp` contract and is the runtime SSOT.
+3. `v1.6.1` gate/shared renderer consumes the normalized contract plus runtime tuple and produces the runtime `display_headstamp`.
+4. raw prompt text must never be consumed directly as the runtime `display_headstamp` object.
+5. strict human-visible next hop now requires `display_headstamp` present AND `headstamp_admission_receipt.next_hop_admission_status = PASS_REQUIRED`.
+
+Manual bridge freeze:
+
+1. `manual_headstamp` is the human-facing shorthand for `display_headstamp.render_origin = manual`.
+2. `manual_headstamp` is not a third truth object, authority source, or admission-proof class.
+3. manual render origin may remain visible, but it is still consumed through `machine_headstamp` plus `headstamp_admission_receipt` for truth and next-hop legality.
+
+`headstamp_admission_receipt` minimum fields frozen:
+
+1. `display_headstamp_identity_id`
+2. `authoritative_identity_id`
+3. `headstamp_consistency_status`
+4. `headstamp_consistency_mode`
+5. `headstamp_consistency_reason`
+6. `headstamp_correction_from`
+7. `headstamp_correction_to`
+8. `headstamp_correction_evidence_ref`
+9. `control_lane_attestation_status`
+10. `post_check_blocker_status`
+11. `next_hop_admission_status`
+12. `next_hop_admission_reason`
+13. `output_governance_mode`
+
+Checkpoint verdict:
+
+1. display declaration lineage is now frozen from declaration surface to runtime render surface.
+2. strict human-visible next hop is now explicitly an AND rule, not a text-presence heuristic.
+3. `manual_headstamp` is now pinned as render-origin shorthand only, while truth and admission stay with machine-controlled receipt fields.

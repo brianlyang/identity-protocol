@@ -1425,29 +1425,32 @@ Anti-forget enforcement:
 3. future validators/probes may extend v1.6.6 closure, but they must preserve these terms and finish-line definitions instead of introducing alternate wording.
 4. `scripts/ci/run_host_visible_surface_live_probes_ci.sh` must keep at least one negative probe proving inline/self-printed reply text is classified as `host_direct` and not next-hop admissible.
 
-### 5.25 Display headstamp consistency correction freeze (2026-03-17)
+### 5.25 display_headstamp / machine_headstamp object split freeze (2026-03-17)
 
-This checkpoint freezes the distinction between user-visible headstamp display and
-canonical next-hop admission semantics so v1.6.6 can preserve operator visibility
-without weakening controlled-hop closure.
+This checkpoint freezes the object split required to preserve human-visible identity
+signals without letting visibility text collapse back into truth or next-hop proof.
 
 Authoritative principle:
 
-1. user-visible replies may retain a display headstamp so humans can identify the current speaking identity.
-2. display headstamp is not itself sufficient to prove governed output or next-hop admissibility.
-3. canonical next-hop headstamp remains governed by v1.6.6 controlled-hop rules.
-4. v1.6.6 does **not** claim physical-layer `100%` host interception.
+1. `display_headstamp` is a visibility-layer object.
+2. `machine_headstamp` is a control-plane object.
+3. display rights are delegated; truth rights stay machine-authoritative in the control plane.
+4. `v1.6.1` owns display entry and shared renderer invocation.
+5. `v1.6.6` owns consistency review, correction semantics, and next-hop admissibility.
 
 Definitions (authoritative wording):
 
-1. display headstamp
-   - a user-visible identity headstamp shown for operator visibility.
-2. canonical next-hop headstamp
-   - the controlled headstamp used to determine whether output is next-hop-admissible.
-3. authoritative identity
-   - the identity resolved from protocol authority sources, never from manual/pasted/display headstamp text.
-4. headstamp consistency correction
-   - protocol action that compares display headstamp against authoritative identity and either passes, auto-corrects, or blocks.
+1. `display_headstamp`
+   - the user-visible headstamp object shown to humans.
+   - it may be gate-rendered, manual, or host-direct.
+   - manual display is a render_origin of `display_headstamp`, not an automatic fail condition.
+2. `machine_headstamp`
+   - the control-plane machine object that carries authoritative identity plus the tuple / lane / attestation facts used for admission.
+   - it is not a free-form display string and must never be inferred from pasted or manual display text.
+3. display wiring
+   - the identity-owned obligation to connect visible output into the declared display entry / wrapper surface.
+4. headstamp admission receipt
+   - the machine verdict that compares `display_headstamp` to `machine_headstamp` and decides pass / correction / block.
 
 Authoritative identity precedence:
 
@@ -1455,51 +1458,27 @@ Authoritative identity precedence:
 2. canonical session pointer
 3. single active runtime identity
 4. default runtime identity
-5. manual/pasted/display headstamp text must never become an authority source
+5. `display_headstamp` text must never become an authority source
+
+Required relations:
+
+1. `display_headstamp != machine_headstamp`.
+2. `display_headstamp` solves human visibility only.
+3. `machine_headstamp` solves truth and next-hop admissibility.
+4. `display_headstamp` presence is necessary for strict user-visible lanes, but never sufficient for admission.
+5. `identity` owns display wiring; control plane owns truth and admission.
+6. gate-rendered display remains a display object; it does not bypass consistency review or next-hop admission review.
 
 Consistency states (machine-authoritative):
 
 1. `PASS_REQUIRED`
-   - display headstamp matches authoritative identity exactly.
+   - `display_headstamp` identity claim matches `machine_headstamp.authoritative_identity_id`.
 2. `AUTO_CORRECTED`
-   - display headstamp does not match authoritative identity, but protocol can uniquely determine the authoritative identity and rewrites visible headstamp to the corrected authoritative identity.
+   - `display_headstamp` differs from `machine_headstamp`, the authoritative identity is uniquely resolved, the visible headstamp is actually rewritten, and correction evidence exists.
 3. `FAIL_REQUIRED`
-   - display headstamp does not match authoritative identity and protocol cannot uniquely determine a single authoritative correction target, or a binding / tuple / lane conflict remains active.
+   - `display_headstamp` differs from `machine_headstamp` and no authoritative rewrite actually happened, or tuple / lane / authority conflict remains active.
 
-Required relations:
-
-1. display headstamp must remain visible to human operators whenever user-visible output is emitted.
-2. display headstamp != canonical next-hop headstamp.
-3. display headstamp presence alone never proves next-hop admissibility.
-4. canonical next-hop admissibility must be decided from:
-   - authoritative identity
-   - tuple continuity
-   - lane/source continuity
-   - control-lane attestation
-   - blocker evidence
-   - post-check authority
-5. manual headstamp and host-direct output may remain user-visible, but they never become next-hop-admissible output by text presence alone.
-
-Correction rules:
-
-1. if display headstamp matches authoritative identity:
-   - `headstamp_consistency_status = PASS_REQUIRED`
-   - visible headstamp remains unchanged
-   - next hop may continue through normal governed evaluation.
-2. if display headstamp differs from authoritative identity but authoritative identity is uniquely resolvable and the protocol actually rewrites the visible headstamp to the authoritative identity:
-   - `headstamp_consistency_status = AUTO_CORRECTED`
-   - `headstamp_consistency_mode = auto_corrected`
-   - corrected visible headstamp must carry the authoritative identity
-   - correction evidence must be persisted in machine-readable form
-   - next hop may proceed only on corrected authoritative headstamp
-3. if display headstamp differs from authoritative identity and no authoritative rewrite was actually performed:
-   - mismatch is not uniquely correctable for admission purposes
-   - `headstamp_consistency_status = FAIL_REQUIRED`
-   - next hop must fail-close
-   - blocker evidence is mandatory
-4. manual/pasted/display headstamp text must never override authoritative identity precedence.
-
-Minimum machine contract fields:
+Current machine projection fields:
 
 1. `display_headstamp_identity_id`
 2. `authoritative_identity_id`
@@ -1513,7 +1492,93 @@ Minimum machine contract fields:
 
 Interpretation lock:
 
-1. display headstamp preserves human visibility.
-2. canonical next-hop headstamp preserves controlled-hop trust and controlled-hop admissibility.
-3. these layers must be named separately and validated separately.
-4. no validator or governance stream may collapse them back into one ambiguous notion of "headstamp present".
+1. `display_headstamp` and `machine_headstamp` are the only two authoritative top-level objects for this semantic split.
+2. `manual_headstamp` is no longer a parallel top-level concept; it survives only as `display_headstamp.render_origin = manual`.
+3. no validator or governance stream may collapse these layers back into one ambiguous notion of "headstamp present".
+
+### 5.26 fail-close + remediation lane processing freeze (2026-03-17)
+
+This checkpoint freezes the processing model that follows the two-object split.
+
+Processing phases:
+
+1. Display declaration
+   - `identity` declares display policy and display wiring through identity-owned surfaces such as `IDENTITY_PROMPT` and `CURRENT_TASK`.
+2. Display render
+   - `v1.6.1` display entry invokes shared renderer and emits `display_headstamp`.
+3. Machine truth resolve
+   - control plane resolves authoritative identity and emits `machine_headstamp`.
+4. Consistency review
+   - control plane compares `display_headstamp` with `machine_headstamp` and emits correction / blocker verdict.
+5. Business next-hop admission
+   - control plane decides whether the original governed business lane may continue.
+6. Remediation lane
+   - if business next hop is blocked, control plane may open a separate remediation lane for wiring or correction work.
+
+Fail-close rule:
+
+1. display contract failure, display wiring failure, correction failure, or truth absence must fail-close the original business next hop.
+2. business next hop must fail-close before remediation lane opens.
+3. fail-close on the business lane does not imply that all remediation activity is forbidden.
+
+Remediation lane rule:
+
+1. remediation lane is allowed only when truth is already resolved and remediation target is deterministic.
+2. wiring / wrapper hookup defects may enter remediation lane.
+3. authority ambiguity, unresolved truth, or conflicting machine evidence must escalate instead of self-remediate.
+4. remediation lane output never counts as business next-hop pass by itself.
+5. remediation must be followed by revalidation before business next hop may reopen.
+
+Interpretation lock:
+
+1. `display_headstamp` may be normal even when rendered manually, as long as display contract holds and control-plane truth review passes.
+2. remediation is triggered by wiring / contract / truth failures, not merely by render origin being manual.
+3. `v1.6.1` owns display entry; `v1.6.6` owns consistency, correction, and next-hop admissibility.
+
+### 5.27 display declaration lineage + headstamp admission receipt freeze (2026-03-17)
+
+This checkpoint freezes the declaration chain, the strict human-visible consumption rule,
+and the minimum machine receipt fields so the protocol cannot drift back into
+"someone printed a headstamp line, therefore next hop may continue."
+
+Display declaration lineage:
+
+1. `IDENTITY_PROMPT` declares display intent and schema, not final runtime display literals.
+2. `CURRENT_TASK.json` carries the normalized runtime `display_headstamp` contract and is the runtime SSOT.
+3. `v1.6.1` gate/shared renderer consumes the normalized `CURRENT_TASK.json` contract plus runtime tuple and produces the runtime `display_headstamp` object.
+4. raw prompt text must never be consumed directly as the runtime `display_headstamp` object.
+
+Strict human-visible consumption and admission rule:
+
+1. humans consume `display_headstamp`.
+2. control plane consumes `machine_headstamp` and `headstamp_admission_receipt`.
+3. strict human-visible next hop requires `display_headstamp` present AND `headstamp_admission_receipt.next_hop_admission_status = PASS_REQUIRED`.
+4. `display_headstamp` present + machine admission fail means visibility may remain for operator clarity, but the governed business next hop must still fail-close.
+
+Manual bridge sentence:
+
+1. `manual_headstamp` is the human-facing shorthand for `display_headstamp.render_origin = manual`.
+2. `manual_headstamp` is not a third truth object, authority source, or admission-proof class.
+3. manual render origin is reviewed by control plane together with lane attestation, blocker evidence, and next-hop admission tuple; it never overrides them.
+
+`headstamp_admission_receipt` minimum fields:
+
+1. `display_headstamp_identity_id`
+2. `authoritative_identity_id`
+3. `headstamp_consistency_status`
+4. `headstamp_consistency_mode`
+5. `headstamp_consistency_reason`
+6. `headstamp_correction_from`
+7. `headstamp_correction_to`
+8. `headstamp_correction_evidence_ref`
+9. `control_lane_attestation_status`
+10. `post_check_blocker_status`
+11. `next_hop_admission_status`
+12. `next_hop_admission_reason`
+13. `output_governance_mode`
+
+Interpretation lock:
+
+1. declaration/render/wiring ownership remains with `v1.6.1`.
+2. truth/consistency/admission/remediation ownership remains with `v1.6.6`.
+3. no future wording may collapse `display_headstamp`, runtime render output, `machine_headstamp`, and `headstamp_admission_receipt` into one undifferentiated "headstamp present" concept.

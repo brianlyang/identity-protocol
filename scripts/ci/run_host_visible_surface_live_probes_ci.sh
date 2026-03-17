@@ -93,6 +93,7 @@ PY
 CATALOG_PATH="${FIXTURE_ROOT}/catalog.yaml"
 IDENTITY_ID="probe-visible"
 SEND_TIME_REPLY_FILE="${FIXTURE_ROOT}/send-time-governed-reply.txt"
+MANUAL_REPLY_FILE="${FIXTURE_ROOT}/manual-display-only-reply.txt"
 
 python3 scripts/repair_contract_backfill.py \
   --catalog "${CATALOG_PATH}" \
@@ -101,8 +102,13 @@ python3 scripts/repair_contract_backfill.py \
   --json-only >/dev/null
 
 cat >"${SEND_TIME_REPLY_FILE}" <<'EOF'
-Identity-Context: actor_id=assistant:codex; identity_id=probe-visible; scope=USER; lock=LOCK_MATCH; source=project | Layer-Context: work_layer=protocol; source_layer=project
+Identity-Context: actor_id=assistant:ci-probe; identity_id=probe-visible; scope=USER; lock=LOCK_MATCH; source=project | Layer-Context: work_layer=protocol; source_layer=project
 SEND_TIME_GATE_PROBE_BODY
+EOF
+
+cat >"${MANUAL_REPLY_FILE}" <<'EOF'
+Identity-Context: actor_id=assistant:ci-probe; identity_id=probe-visible; scope=USER; lock=LOCK_MATCH; source=project | Layer-Context: work_layer=protocol; source_layer=project
+MANUAL_DISPLAY_ONLY_BODY
 EOF
 
 run_probe() {
@@ -197,12 +203,36 @@ elif name == "send_time_governed_pass_headstamp_required":
     control_lane_attestation_status = str(doc.get("control_lane_attestation_status", "")).strip().upper()
     if control_lane_attestation_status != "PASS_REQUIRED":
         raise SystemExit("send_time_governed_pass_headstamp_required: control_lane_attestation_status must be PASS_REQUIRED")
+    reply_transport_binding_status = str(doc.get("reply_transport_binding_status", "")).strip().upper()
+    if reply_transport_binding_status != "PASS_REQUIRED":
+        raise SystemExit("send_time_governed_pass_headstamp_required: reply_transport_binding_status must be PASS_REQUIRED")
     headstamp_consistency_status = str(doc.get("headstamp_consistency_status", "")).strip().upper()
     if headstamp_consistency_status != "PASS_REQUIRED":
         raise SystemExit("send_time_governed_pass_headstamp_required: headstamp_consistency_status must be PASS_REQUIRED")
     headstamp_consistency_mode = str(doc.get("headstamp_consistency_mode", "")).strip()
     if headstamp_consistency_mode != "exact_match":
         raise SystemExit("send_time_governed_pass_headstamp_required: headstamp_consistency_mode mismatch")
+elif name == "send_time_manual_reply_file_without_live_receipt_blocked":
+    if rc == 0:
+        raise SystemExit("send_time_manual_reply_file_without_live_receipt_blocked: expected non-zero rc")
+    gate_status = str(doc.get("send_time_gate_status", "")).strip().upper()
+    if gate_status != "PASS_REQUIRED":
+        raise SystemExit("send_time_manual_reply_file_without_live_receipt_blocked: send_time_gate_status must stay PASS_REQUIRED")
+    next_hop_admission_status = str(doc.get("next_hop_admission_status", "")).strip().upper()
+    if next_hop_admission_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_manual_reply_file_without_live_receipt_blocked: next_hop_admission_status must be FAIL_REQUIRED")
+    output_governance_mode = str(doc.get("output_governance_mode", "")).strip()
+    if output_governance_mode != "manual_headstamp":
+        raise SystemExit("send_time_manual_reply_file_without_live_receipt_blocked: output_governance_mode must be manual_headstamp")
+    control_lane_attestation_status = str(doc.get("control_lane_attestation_status", "")).strip().upper()
+    if control_lane_attestation_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_manual_reply_file_without_live_receipt_blocked: control_lane_attestation_status must be FAIL_REQUIRED")
+    reply_transport_binding_status = str(doc.get("reply_transport_binding_status", "")).strip().upper()
+    if reply_transport_binding_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_manual_reply_file_without_live_receipt_blocked: reply_transport_binding_status must be FAIL_REQUIRED")
+    next_hop_admission_reason = str(doc.get("next_hop_admission_reason", "")).strip()
+    if next_hop_admission_reason != "manual_headstamp_not_next_hop_admissible":
+        raise SystemExit("send_time_manual_reply_file_without_live_receipt_blocked: unexpected next_hop_admission_reason")
 elif name == "send_time_inline_reply_text_host_direct_blocked":
     if rc == 0:
         raise SystemExit("send_time_inline_reply_text_host_direct_blocked: expected non-zero rc")
@@ -248,9 +278,15 @@ elif name == "send_time_next_hop_blocked_by_post_check":
     next_hop_admission_reason = str(doc.get("next_hop_admission_reason", "")).strip()
     if next_hop_admission_reason != "post_check_blocker_active":
         raise SystemExit("send_time_next_hop_blocked_by_post_check: unexpected next_hop_admission_reason")
+    reply_transport_binding_status = str(doc.get("reply_transport_binding_status", "")).strip().upper()
+    if reply_transport_binding_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: reply_transport_binding_status must be FAIL_REQUIRED")
     output_governance_mode = str(doc.get("output_governance_mode", "")).strip()
-    if output_governance_mode != "governed":
-        raise SystemExit("send_time_next_hop_blocked_by_post_check: output_governance_mode must be governed")
+    if output_governance_mode != "manual_headstamp":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: output_governance_mode must be manual_headstamp after transport binding fail-close")
+    control_lane_attestation_status = str(doc.get("control_lane_attestation_status", "")).strip().upper()
+    if control_lane_attestation_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: control_lane_attestation_status must be FAIL_REQUIRED")
     headstamp_consistency_status = str(doc.get("headstamp_consistency_status", "")).strip().upper()
     if headstamp_consistency_status != "PASS_REQUIRED":
         raise SystemExit("send_time_next_hop_blocked_by_post_check: headstamp_consistency_status must be PASS_REQUIRED")
@@ -360,7 +396,7 @@ run_probe host_visible_contract_static \
     --operation ci \
     --json-only
 
-python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
+python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}" "${SEND_TIME_REPLY_FILE}"
 from __future__ import annotations
 
 import json
@@ -376,6 +412,7 @@ from tool_vendor_governance_common import resolve_pack_and_task
 
 catalog_path = Path(sys.argv[1]).resolve()
 identity_id = sys.argv[2]
+reply_transport_ref = str(Path(sys.argv[4]).resolve())
 pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
 receipt_dir = pack_path / "runtime" / "reports" / "host-visible-surface"
 receipt_dir.mkdir(parents=True, exist_ok=True)
@@ -386,6 +423,7 @@ fields = {
     "headstamp_first_line_status": "PASS_REQUIRED",
     "send_time_gate_status": "PASS_REQUIRED",
     "final_emit_contract_status": "PASS_REQUIRED",
+    "reply_transport_ref": reply_transport_ref,
 }
 timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 actor_id = "assistant:ci-probe"
@@ -438,6 +476,7 @@ for idx, channel in enumerate(("commentary", "approval", "status", "final"), sta
         "emit_channel_id": channel,
         "created_at_utc": timestamp,
         "receipt_source": "ci_fixture",
+        "identity_id": identity_id,
         "actor_id": actor_id,
         "session_id": session_id,
         "run_id": run_id,
@@ -473,14 +512,35 @@ run_probe send_time_governed_pass_headstamp_required \
     --identity-id "${IDENTITY_ID}" \
     --catalog "${CATALOG_PATH}" \
     --repo-catalog identity/catalog/identities.yaml \
-    --actor-id assistant:codex \
-    --operation validate \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --operation ci \
     --expected-work-layer protocol \
     --expected-source-layer project \
     --layer-intent-text "work_layer=protocol source_layer=project" \
     --force-check \
     --enforce-send-time-gate \
     --reply-file "${SEND_TIME_REPLY_FILE}" \
+    --reply-transport-ref "${SEND_TIME_REPLY_FILE}" \
+    --outlet-channel-id commentary \
+    --reply-outlet-guard-applied \
+    --json-only
+
+run_probe send_time_manual_reply_file_without_live_receipt_blocked \
+  python3 scripts/validate_send_time_reply_gate.py \
+    --identity-id "${IDENTITY_ID}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --operation ci \
+    --expected-work-layer protocol \
+    --expected-source-layer project \
+    --layer-intent-text "work_layer=protocol source_layer=project" \
+    --force-check \
+    --enforce-send-time-gate \
+    --reply-file "${MANUAL_REPLY_FILE}" \
+    --reply-transport-ref "${MANUAL_REPLY_FILE}" \
     --outlet-channel-id commentary \
     --reply-outlet-guard-applied \
     --json-only
@@ -523,10 +583,13 @@ run_probe send_time_next_hop_blocked_on_missing_post_check_state \
     --identity-id "${IDENTITY_ID}" \
     --catalog "${CATALOG_PATH}" \
     --repo-catalog identity/catalog/identities.yaml \
-    --operation validate \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --operation ci \
     --force-check \
     --enforce-send-time-gate \
     --reply-file "${SEND_TIME_REPLY_FILE}" \
+    --reply-transport-ref "${SEND_TIME_REPLY_FILE}" \
     --outlet-channel-id commentary \
     --reply-outlet-guard-applied \
     --json-only
@@ -693,10 +756,13 @@ run_probe send_time_next_hop_blocked_by_post_check \
     --identity-id "${IDENTITY_ID}" \
     --catalog "${CATALOG_PATH}" \
     --repo-catalog identity/catalog/identities.yaml \
-    --operation validate \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --operation ci \
     --force-check \
     --enforce-send-time-gate \
     --reply-file "${SEND_TIME_REPLY_FILE}" \
+    --reply-transport-ref "${SEND_TIME_REPLY_FILE}" \
     --outlet-channel-id commentary \
     --reply-outlet-guard-applied \
     --json-only
