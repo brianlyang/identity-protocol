@@ -1606,3 +1606,38 @@ Interpretation lock:
 
 1. “seed replay available” does not mean “seed replay always mandatory”.
 2. `v1.6.6` owns the admission rule and the probe wording must follow the runtime contract, not the older expectation.
+
+### 5.29 current-surface transport attestation closes first-pass admission circularity (2026-03-17)
+
+Problem:
+
+1. send-time validation originally treated `reply_file` evidence as admissible only after host-visible live receipts already existed.
+2. during the very first governed egress of a clean session-chain round, those live receipts do not exist yet because they are written by the wrapper immediately after egress succeeds.
+3. this created an artificial circularity:
+   - first pass = governed output already written
+   - send-time validator still downgraded to `manual_headstamp`
+   - wrapper replayed a seed pass only to satisfy its own first-pass gap
+
+Mandatory behavior:
+
+1. strict `reply_file` / `reply_log` send-time validation MUST accept either of these transport proofs:
+   - host-visible live receipt binding, or
+   - current-surface governed transport attestation for the just-produced reply transport.
+2. current-surface attestation is allowed only when all of the following hold:
+   - the validator is invoked from a controlled runtime entrypoint that explicitly attests the current surface
+   - `send_time_gate_status = PASS_REQUIRED`
+   - `reply_first_line_status = PASS_REQUIRED`
+   - `final_emit_contract_status = PASS_REQUIRED`
+   - governed outlet + final emit tuple are machine-attested
+   - live transport binding is missing only because live receipts are not materialized yet
+3. this attestation must be projected as:
+   - `current_surface_transport_attestation_status`
+   - `current_surface_transport_attestation_reason`
+   - `current_surface_transport_attestation_mode`
+   - `current_surface_native_machine_attested`
+4. live host-visible receipts remain required for post-emit runtime auditing; current-surface attestation does not replace that audit lane.
+
+Interpretation lock:
+
+1. this is not a new authority source and not a wrapper exception.
+2. it is the machine-owned bridge that removes first-pass replay circularity while preserving later live-receipt auditing.

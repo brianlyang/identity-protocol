@@ -2993,8 +2993,44 @@ Replay evidence:
      - `count = 20`
      - includes:
        - `fixture_identity_runtime_egress_blocked`
-       - `session_bound_missing_primary_identity_must_fail`
-       - `session_chain_fresh_run_receipt_seed_replay_pass`
+
+### 26.46 current-surface transport attestation replay for clean first-pass admission (2026-03-17)
+
+Problem:
+
+1. clean first-pass session-chain egress still had a latent circular dependency:
+   - governed reply file already existed
+   - live host-visible receipts were not yet written
+   - send-time validator downgraded to `manual_headstamp_not_next_hop_admissible`
+2. the wrapper then replayed a seed pass even though the first pass already satisfied governed-output prerequisites.
+
+Fix frozen:
+
+1. `scripts/validate_send_time_reply_gate.py`
+   - adds `current_surface_governed_reply_transport_attestation_v1`
+   - recognizes `reply_transport_live_receipts_missing*` as first-pass-bridge eligible only when the full governed tuple is already PASS_REQUIRED
+   - requires explicit controlled-runtime attestation input; direct compose paths remain non-admissible without live receipt binding
+   - projects:
+     - `current_surface_transport_attestation_status`
+     - `current_surface_transport_attestation_reason`
+     - `current_surface_transport_attestation_mode`
+     - `current_surface_native_machine_attested`
+2. output-governance / control-lane / next-hop admission now accept either:
+   - live receipt binding, or
+   - current-surface governed transport attestation.
+3. live receipts are still written and audited after egress; no fixture/source relaxation was introduced.
+
+Replay evidence:
+
+1. targeted compose replay for `probe-gateway`
+   - first pass now reports governed admission instead of `manual_headstamp`
+2. gateway trust-boundary suite
+   - retains negative control `session_bound_missing_primary_identity_must_fail`
+   - `session_chain_fresh_run_receipt_seed_replay_pass` must report:
+     - `host_visible_receipt_seed_attempted = false`
+     - `host_visible_receipt_seed_replay_count = 0`
+     - `host_visible_receipt_seed_gate_status = SKIPPED_NOT_REQUIRED`
+     - `host_visible_receipt_seed_gate_reason = initial_egress_pass_required`
 
 Checkpoint verdict:
 

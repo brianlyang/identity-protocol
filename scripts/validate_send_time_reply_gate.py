@@ -298,6 +298,106 @@ def _load_reply_transport_binding(
     return payload
 
 
+def _reply_transport_binding_missing_live_receipt_only(reason: Any) -> bool:
+    token = str(reason or "").strip()
+    if not token:
+        return False
+    return token == "reply_transport_live_receipts_missing" or token.startswith(
+        "reply_transport_live_receipt_missing:"
+    )
+
+
+def _inject_current_surface_transport_attestation_fields(payload: dict[str, Any]) -> dict[str, Any]:
+    out = dict(payload or {})
+    evidence_mode = str(out.get("reply_evidence_mode", "")).strip().lower()
+    strict_context = evidence_mode in {"reply_file", "reply_log"}
+    current_surface_attestation_requested = bool(
+        out.get("current_surface_transport_attestation_requested", False)
+    )
+    live_binding_status = str(out.get("reply_transport_binding_status", "")).strip().upper()
+    live_binding_reason = str(out.get("reply_transport_binding_reason", "")).strip()
+    send_time_status = str(out.get("send_time_gate_status", "")).strip().upper()
+    first_line_status = str(out.get("reply_first_line_status", "")).strip().upper()
+    final_emit_contract_status = str(out.get("final_emit_contract_status", "")).strip().upper()
+    final_emit_channel_id = str(out.get("final_emit_channel_id", "")).strip()
+    final_emit_policy_mode = str(out.get("final_emit_policy_mode", "")).strip()
+    final_emit_schema_status = str(out.get("final_emit_schema_status", "")).strip().upper()
+    outlet_channel_id = str(out.get("outlet_channel_id", "")).strip()
+    reply_transport_ref = str(out.get("reply_transport_ref", "")).strip()
+    reply_outlet_guard_applied = bool(out.get("reply_outlet_guard_applied", False))
+    outlet_bypass_detected = bool(out.get("outlet_bypass_detected", False))
+
+    status = STATUS_SKIPPED_NOT_REQUIRED
+    reason = "current_surface_transport_attestation_not_required"
+    mode = "not_required"
+    current_surface_native_machine_attested = False
+
+    if strict_context:
+        status = STATUS_FAIL_REQUIRED
+        reason = "current_surface_transport_attestation_prereq_missing"
+        mode = "strict_runtime_reply_transport"
+
+        if live_binding_status == STATUS_PASS_REQUIRED:
+            status = STATUS_PASS_REQUIRED
+            reason = "reply_transport_bound_to_host_visible_live_receipts"
+            mode = "live_receipt_binding"
+            current_surface_native_machine_attested = current_surface_attestation_requested
+        else:
+            prereq_ok = (
+                current_surface_attestation_requested
+                and bool(reply_transport_ref)
+                and reply_outlet_guard_applied
+                and not outlet_bypass_detected
+                and send_time_status == STATUS_PASS_REQUIRED
+                and first_line_status == STATUS_PASS_REQUIRED
+                and final_emit_contract_status == STATUS_PASS_REQUIRED
+                and _is_governed_outlet(outlet_channel_id)
+                and _is_host_visible_governed_channel(outlet_channel_id)
+                and _is_final_emit_channel(final_emit_channel_id)
+                and _is_final_emit_policy_mode(final_emit_policy_mode)
+                and _is_final_emit_schema_pass(final_emit_schema_status)
+            )
+            if prereq_ok and _reply_transport_binding_missing_live_receipt_only(live_binding_reason):
+                status = STATUS_PASS_REQUIRED
+                reason = "current_surface_governed_transport_attested_pre_live_receipt"
+                mode = "current_surface_projection"
+                current_surface_native_machine_attested = True
+            elif not bool(reply_transport_ref):
+                reason = "reply_transport_ref_missing"
+            elif not reply_outlet_guard_applied:
+                reason = "reply_outlet_guard_missing"
+            elif outlet_bypass_detected:
+                reason = "outlet_bypass_detected"
+            elif send_time_status != STATUS_PASS_REQUIRED:
+                reason = "send_time_gate_not_pass_required"
+            elif first_line_status != STATUS_PASS_REQUIRED:
+                reason = "reply_first_line_not_pass_required"
+            elif final_emit_contract_status != STATUS_PASS_REQUIRED:
+                reason = "final_emit_contract_not_pass_required"
+            elif not _is_governed_outlet(outlet_channel_id) or not _is_host_visible_governed_channel(
+                outlet_channel_id
+            ):
+                reason = "governed_outlet_not_attested"
+            elif not _is_final_emit_channel(final_emit_channel_id):
+                reason = "final_emit_channel_not_attested"
+            elif not _is_final_emit_policy_mode(final_emit_policy_mode):
+                reason = "final_emit_policy_mode_not_attested"
+            elif not _is_final_emit_schema_pass(final_emit_schema_status):
+                reason = "final_emit_schema_not_pass_required"
+            elif live_binding_reason:
+                reason = live_binding_reason
+
+    out["current_surface_transport_attestation_contract_id"] = (
+        "current_surface_governed_reply_transport_attestation_v1"
+    )
+    out["current_surface_transport_attestation_requested"] = current_surface_attestation_requested
+    out["current_surface_transport_attestation_status"] = status
+    out["current_surface_transport_attestation_reason"] = reason
+    out["current_surface_transport_attestation_mode"] = mode
+    out["current_surface_native_machine_attested"] = current_surface_native_machine_attested
+    return out
+
+
 def _inject_chat_egress_uniqueness_fields(payload: dict[str, Any]) -> dict[str, Any]:
     out = dict(payload or {})
     stale_reasons = [str(item).strip() for item in (out.get("stale_reasons") or []) if str(item).strip()]
@@ -360,13 +460,20 @@ def _derive_output_governance_mode(payload: dict[str, Any]) -> str:
     evidence_mode = str(payload.get("reply_evidence_mode", "")).strip().lower()
     reply_outlet_guard_applied = bool(payload.get("reply_outlet_guard_applied", False))
     reply_transport_binding_status = str(payload.get("reply_transport_binding_status", "")).strip().upper()
+    current_surface_transport_attestation_status = str(
+        payload.get("current_surface_transport_attestation_status", "")
+    ).strip().upper()
+    transport_attested = (
+        reply_transport_binding_status == STATUS_PASS_REQUIRED
+        or current_surface_transport_attestation_status == STATUS_PASS_REQUIRED
+    )
     if evidence_mode == "reply_text":
         return OUTPUT_GOVERNANCE_MODE_HOST_DIRECT
     if evidence_mode in {"stamp_json", "stamp_json_composed_reply"}:
         return OUTPUT_GOVERNANCE_MODE_MANUAL_HEADSTAMP
     if evidence_mode in {"missing", "invalid_input"}:
         return OUTPUT_GOVERNANCE_MODE_NON_GOVERNED
-    if evidence_mode in {"reply_file", "reply_log"} and reply_transport_binding_status != STATUS_PASS_REQUIRED:
+    if evidence_mode in {"reply_file", "reply_log"} and not transport_attested:
         return OUTPUT_GOVERNANCE_MODE_MANUAL_HEADSTAMP
     if not _is_governed_outlet(outlet_channel_id) or not _is_host_visible_governed_channel(outlet_channel_id):
         return OUTPUT_GOVERNANCE_MODE_NON_GOVERNED
@@ -388,8 +495,15 @@ def _inject_next_hop_admission_fields(payload: dict[str, Any]) -> dict[str, Any]
     reply_outlet_guard_applied = bool(out.get("reply_outlet_guard_applied", False))
     outlet_bypass_detected = bool(out.get("outlet_bypass_detected", False))
     reply_transport_binding_status = str(out.get("reply_transport_binding_status", "")).strip().upper()
+    current_surface_transport_attestation_status = str(
+        out.get("current_surface_transport_attestation_status", "")
+    ).strip().upper()
     output_governance_mode = _derive_output_governance_mode(out)
     out["output_governance_mode"] = output_governance_mode
+    transport_attested = (
+        reply_transport_binding_status == STATUS_PASS_REQUIRED
+        or current_surface_transport_attestation_status == STATUS_PASS_REQUIRED
+    )
 
     control_lane_attestation_status = STATUS_PASS_REQUIRED
     control_lane_attestation_reason = "canonical_control_lane_attested"
@@ -402,10 +516,22 @@ def _inject_next_hop_admission_fields(payload: dict[str, Any]) -> dict[str, Any]
     elif outlet_bypass_detected:
         control_lane_attestation_status = STATUS_FAIL_REQUIRED
         control_lane_attestation_reason = "outlet_bypass_detected"
-    elif reply_transport_binding_status not in {"", STATUS_SKIPPED_NOT_REQUIRED, STATUS_PASS_REQUIRED}:
+    elif not transport_attested and reply_transport_binding_status not in {
+        "",
+        STATUS_SKIPPED_NOT_REQUIRED,
+        STATUS_PASS_REQUIRED,
+    }:
         control_lane_attestation_status = STATUS_FAIL_REQUIRED
         control_lane_attestation_reason = "reply_transport_binding_not_pass"
-    elif reply_transport_binding_status == STATUS_SKIPPED_NOT_REQUIRED and str(out.get("reply_evidence_mode", "")).strip().lower() in {"reply_file", "reply_log"}:
+    elif not transport_attested and reply_transport_binding_status == STATUS_SKIPPED_NOT_REQUIRED and str(
+        out.get("reply_evidence_mode", "")
+    ).strip().lower() in {"reply_file", "reply_log"}:
+        control_lane_attestation_status = STATUS_FAIL_REQUIRED
+        control_lane_attestation_reason = "reply_transport_binding_not_pass"
+    elif not transport_attested and str(out.get("reply_evidence_mode", "")).strip().lower() in {
+        "reply_file",
+        "reply_log",
+    }:
         control_lane_attestation_status = STATUS_FAIL_REQUIRED
         control_lane_attestation_reason = "reply_transport_binding_not_pass"
     elif final_emit_contract_status != STATUS_PASS_REQUIRED:
@@ -750,6 +876,7 @@ def _is_final_emit_schema_pass(schema_status: str) -> bool:
 
 
 def _finalize_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    payload = _inject_current_surface_transport_attestation_fields(payload)
     payload = _inject_chat_egress_uniqueness_fields(payload)
     payload = _inject_next_hop_admission_fields(payload)
     if not str(payload.get("headstamp_consistency_status", "")).strip():
@@ -822,6 +949,14 @@ def main() -> int:
         help="final emission schema identifier",
     )
     ap.add_argument("--reply-outlet-guard-applied", action="store_true")
+    ap.add_argument(
+        "--current-surface-native-machine-attested",
+        action="store_true",
+        help=(
+            "mark this send-time validation as running on the controlled current surface "
+            "after parent/wrapper attestation succeeded"
+        ),
+    )
     ap.add_argument("--business-line", default="SEND_TIME_GATE_PROBE_BODY")
     ap.add_argument("--expected-work-layer", default="")
     ap.add_argument("--expected-source-layer", default="")
@@ -1595,6 +1730,9 @@ def main() -> int:
         "reply_first_line_blocked_reason": first_line_blocked_reason,
         "reply_evidence_mode": evidence_mode,
         "reply_transport_ref": reply_transport_ref,
+        "current_surface_transport_attestation_requested": bool(
+            args.current_surface_native_machine_attested
+        ),
         "reply_transport_binding_required": bool(reply_transport_binding.get("reply_transport_binding_required", False)),
         "reply_transport_binding_status": str(reply_transport_binding.get("reply_transport_binding_status", "")).strip(),
         "reply_transport_binding_reason": str(reply_transport_binding.get("reply_transport_binding_reason", "")).strip(),

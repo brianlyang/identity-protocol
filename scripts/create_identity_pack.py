@@ -75,6 +75,7 @@ from protocol_infra_contract import (
     HOST_VISIBLE_SURFACE_STATE_FILE as INFRA_HOST_VISIBLE_SURFACE_STATE_FILE,
     HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE as INFRA_HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
     HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE as INFRA_HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE,
+    HOST_VISIBLE_SURFACE_POST_CHECK_SCHEMA_VERSION as INFRA_HOST_VISIBLE_SURFACE_POST_CHECK_SCHEMA_VERSION,
     UNIQUE_ENTRY_RECEIPT_SELECTOR_POLICY_ID as INFRA_UNIQUE_ENTRY_RECEIPT_SELECTOR_POLICY_ID,
     UNIQUE_ENTRY_RECEIPT_SELECTOR_PRECEDENCE as INFRA_UNIQUE_ENTRY_RECEIPT_SELECTOR_PRECEDENCE,
     UNIQUE_ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS as INFRA_UNIQUE_ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS,
@@ -201,6 +202,7 @@ HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED = INFRA_HOST_VISIBLE_SURFA
 HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS = INFRA_HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS
 HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE = INFRA_HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE
 HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE = INFRA_HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE
+HOST_VISIBLE_SURFACE_POST_CHECK_SCHEMA_VERSION = INFRA_HOST_VISIBLE_SURFACE_POST_CHECK_SCHEMA_VERSION
 HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD = INFRA_HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD
 HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE = INFRA_HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE
 HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE = INFRA_HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE
@@ -815,6 +817,27 @@ def _default_host_visible_surface_state_doc(identity_id: str) -> dict:
         "identity_id": str(identity_id or "").strip(),
         "channels": channels,
         "updated_at_utc": "",
+    }
+
+
+def _default_host_visible_surface_post_check_closure_state_doc(identity_id: str) -> dict:
+    return {
+        "schema_version": HOST_VISIBLE_SURFACE_POST_CHECK_SCHEMA_VERSION,
+        "identity_id": str(identity_id or "").strip(),
+        "catalog_path": "",
+        "pack_path": "",
+        "task_path": "",
+        "validator": HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR,
+        "closure_status": "PASS_REQUIRED",
+        "block_on_active": bool(HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE),
+        "blocker_active": False,
+        "error_code": "",
+        "stale_reasons": [],
+        "live_receipt_required": True,
+        "required_actor_id": "",
+        "required_session_id": "",
+        "required_run_id": "",
+        "checked_at_utc": "",
     }
 
 
@@ -4637,6 +4660,11 @@ def materialize_protocol_host_gateway_artifacts(
         str(visible_surface_contract.get("runtime_state_file", "")).strip(),
         fallback=HOST_VISIBLE_SURFACE_STATE_FILE,
     )
+    post_check_closure_state_path = _resolve_pack_runtime_path(
+        pack_dir,
+        str(visible_surface_contract.get("post_check_closure_state_file", "")).strip(),
+        fallback=HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
+    )
 
     contract["required"] = True
     contract["contract_id"] = HOST_GATEWAY_CONTRACT_ID
@@ -4694,6 +4722,8 @@ def materialize_protocol_host_gateway_artifacts(
     visible_surface_contract["validator"] = HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR
     visible_surface_contract["required_channels"] = list(HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS)
     visible_surface_contract["runtime_state_file"] = visible_surface_state_path.as_posix()
+    visible_surface_contract["post_check_closure_state_file"] = post_check_closure_state_path.as_posix()
+    visible_surface_contract["post_check_block_on_active"] = bool(HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE)
     visible_surface_contract["runtime_receipt_pattern"] = str(
         visible_surface_contract.get("runtime_receipt_pattern", "")
     ).strip() or HOST_VISIBLE_SURFACE_RECEIPT_PATTERN
@@ -4892,6 +4922,11 @@ def materialize_protocol_host_gateway_artifacts(
         write_json(broadcast_state_path, _default_broadcast_state_doc(identity_id))
     if not visible_surface_state_path.exists():
         write_json(visible_surface_state_path, _default_host_visible_surface_state_doc(identity_id))
+    if not post_check_closure_state_path.exists():
+        write_json(
+            post_check_closure_state_path,
+            _default_host_visible_surface_post_check_closure_state_doc(identity_id),
+        )
     write(ingress_wrapper_path, _protocol_ingress_wrapper_template())
     write(egress_wrapper_path, _protocol_egress_wrapper_template())
     write(session_chain_wrapper_path, _protocol_session_chain_wrapper_template())
