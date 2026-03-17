@@ -163,6 +163,10 @@ Interpretation contract:
    - `scripts/render_identity_response_stamp.py`, `scripts/compose_and_validate_governed_reply.py`, and
      `scripts/validate_reply_identity_context_first_line.py` now propagate resolved actor/session context
      instead of reusing raw empty CLI input.
+5. static anti-forget surface
+   - `scripts/validate_response_authority_consumer_semantics.py` scans response/headstamp authority consumers and
+     fail-closes when any consumer drops `session_id`, reintroduces `resolve_actor_id()` host fallback, or reuses
+     compatibility-pointer literals as authority hints.
 
 ### 10.3 Replay evidence
 
@@ -171,6 +175,8 @@ Interpretation contract:
    - repair applied => actor-session validation returns `last_mutation_projection_scope=session_primary`
    - no actor context + compatibility pointer only => render path fail-closes instead of adopting pointer authority
    - env actor + bound session => render path restores headstamp output deterministically
+   - negative authority-consumer drift probe => static validator blocks missing session passthrough, host fallback
+     resolver reuse, and compatibility-pointer literal reuse
 2. live runtime replay:
    - `/tmp/actor_session_authority_residue_apply_20260317.json`
    - `/tmp/actor_session_authority_residue_scan_20260317.json`
