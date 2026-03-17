@@ -406,7 +406,10 @@ def _ensure_provider_bindings_template(
     binding_before = ""
     if binding_exists_before:
         binding_before = binding_path.read_text(encoding="utf-8", errors="ignore")
-    binding_after = binding_before or _provider_bindings_template_text(repo_root=repo_root)
+    if binding_exists_before:
+        binding_after = _provider_bindings_template_text(repo_root=repo_root, existing_text=binding_before)
+    else:
+        binding_after = _provider_bindings_template_text(repo_root=repo_root)
     binding_changed = not binding_exists_before or binding_before != binding_after
     binding_written = False
     if apply and binding_changed:
@@ -573,10 +576,20 @@ def _normalize_multimodal_contracts(task: dict[str, Any]) -> tuple[list[str], li
                     merged_profiles.append(profile_id)
             requirements["required_profiles"] = merged_profiles
         min_bindings = requirements.get("minimum_enabled_bindings")
-        if not isinstance(min_bindings, int) or min_bindings < 2:
-            requirements["minimum_enabled_bindings"] = 2
-        if requirements.get("require_all_required_profiles") is not True:
-            requirements["require_all_required_profiles"] = True
+        current_profiles = {
+            str(x).strip()
+            for x in (requirements.get("required_profiles") or [])
+            if str(x).strip()
+        }
+        canonical_dual_profiles = {"glm46v_vision_prod", "openai_vision_prod"}
+        if not isinstance(min_bindings, int) or min_bindings < 1:
+            requirements["minimum_enabled_bindings"] = 1
+        elif current_profiles == canonical_dual_profiles and min_bindings == 2:
+            requirements["minimum_enabled_bindings"] = 1
+        if "require_all_required_profiles" not in requirements:
+            requirements["require_all_required_profiles"] = False
+        elif current_profiles == canonical_dual_profiles and requirements.get("require_all_required_profiles") is True:
+            requirements["require_all_required_profiles"] = False
 
     arbitration = task.get("capability_arbitration_contract")
     if isinstance(arbitration, dict):
