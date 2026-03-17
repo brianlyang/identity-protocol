@@ -104,6 +104,19 @@ def _collect_new_events(*, receipt: dict[str, Any], identity_id: str, surface: s
     return out
 
 
+def _collect_active_fail_families(receipt: dict[str, Any]) -> list[str]:
+    families: set[str] = set()
+    for row in list(receipt.get("results") or []):
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("status", "")).strip().upper() != STATUS_FAIL_REQUIRED:
+            continue
+        family = _error_family(str(row.get("error_code", "")).strip().upper())
+        if family:
+            families.add(family)
+    return sorted(families)
+
+
 def _dedupe_events(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     seen: set[str] = set()
     out: list[dict[str, Any]] = []
@@ -208,6 +221,7 @@ def main() -> int:
     now_iso = _to_iso_z(now_dt)
 
     historical_events = [row for row in state.get("events", []) if isinstance(row, dict)]
+    active_fail_families = _collect_active_fail_families(receipt)
     new_events = _collect_new_events(
         receipt=receipt,
         identity_id=str(args.identity_id),
@@ -303,6 +317,10 @@ def main() -> int:
     elif l1_families:
         escalation_level = "L1"
 
+    historical_only = not active_fail_families
+    if historical_only:
+        escalation_level = "L0"
+
     if escalation_level == "L0":
         status = STATUS_PASS_REQUIRED
         error_code = ""
@@ -327,11 +345,13 @@ def main() -> int:
         "state_path": str(state_path),
         "new_event_count": len(new_events),
         "tracked_event_count": len(kept_events),
+        "active_fail_family_count": len(active_fail_families),
+        "active_fail_families": active_fail_families,
         "l1_error_families": sorted(set(l1_families)),
         "l2_error_families": sorted(set(l2_families)),
         "l3_error_families": sorted(set(l3_families)),
         "family_metrics": family_metrics,
-        "stale_reasons": [],
+        "stale_reasons": ["historical_only_recurrence_suppressed"] if historical_only and kept_events else [],
     }
 
     if args.json_only:
