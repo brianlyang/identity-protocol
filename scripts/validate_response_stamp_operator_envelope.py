@@ -13,7 +13,26 @@ from response_stamp_common import (
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 NON_BLOCKING_EXCLUSION_SCOPE = "EXCLUDED_NON_BLOCKING"
+HEADSTAMP_SCOPE_REQUIRED = "REQUIRED_ASSISTANT_PROCESS_MESSAGE"
+HEADSTAMP_SCOPE_EXCLUDED = "EXCLUDED_HOST_TOOL_SYSTEM_EVENT"
+HEADSTAMP_SCOPE_OPTIONAL = "OPTIONAL_UNCLASSIFIED"
+ASSISTANT_PROCESS_MESSAGE_KINDS = frozenset(
+    {"checkpoint", "action_intent", "status_update", "handoff", "result_summary"}
+)
+EXCLUDED_MESSAGE_AUTHOR_ROLES = frozenset({"host", "tool", "system"})
+EXCLUDED_MESSAGE_KINDS = frozenset(
+    {
+        "host_notice",
+        "system_notice",
+        "tool_event",
+        "tool_stderr",
+        "retry_notice",
+        "timeout_notice",
+        "rate_limit_notice",
+    }
+)
 
 
 def _load_json(path: Path) -> Any:
@@ -56,6 +75,63 @@ def _normalized_bool_token(value: str) -> str:
     return token
 
 
+def _normalized_text_token(value: Any) -> str:
+    return str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+
+
+def _first_present_text(payload: dict[str, Any], *keys: str) -> str:
+    for key in keys:
+        value = str(payload.get(key, "")).strip()
+        if value:
+            return value
+    return ""
+
+
+def _resolve_message_headstamp_requirement(payload: dict[str, Any]) -> dict[str, Any]:
+    author_role = _normalized_text_token(
+        _first_present_text(
+            payload,
+            "message_author_role",
+            "message_role",
+            "author_role",
+            "event_author_role",
+            "message_source_role",
+        )
+    )
+    message_kind = _normalized_text_token(
+        _first_present_text(
+            payload,
+            "message_kind",
+            "assistant_message_kind",
+            "event_kind",
+            "status_kind",
+        )
+    )
+    if author_role == "assistant" and message_kind in ASSISTANT_PROCESS_MESSAGE_KINDS:
+        return {
+            "author_role": author_role,
+            "message_kind": message_kind,
+            "headstamp_required": True,
+            "scope": HEADSTAMP_SCOPE_REQUIRED,
+            "reason": f"assistant_process_message:{message_kind}",
+        }
+    if author_role in EXCLUDED_MESSAGE_AUTHOR_ROLES or message_kind in EXCLUDED_MESSAGE_KINDS:
+        return {
+            "author_role": author_role,
+            "message_kind": message_kind,
+            "headstamp_required": False,
+            "scope": HEADSTAMP_SCOPE_EXCLUDED,
+            "reason": "host_tool_system_event_excluded",
+        }
+    return {
+        "author_role": author_role,
+        "message_kind": message_kind,
+        "headstamp_required": False,
+        "scope": HEADSTAMP_SCOPE_OPTIONAL,
+        "reason": "message_kind_outside_enforced_scope",
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate shared operator response-stamp envelope.")
     ap.add_argument("--stamp-json", required=True)
@@ -78,14 +154,9 @@ def main() -> int:
     template_ref = str(response_stamp_profile.get("template_ref", "")).strip() or DEFAULT_RESPONSE_STAMP_TEMPLATE_REF
     template_path = (repo_root / template_ref).resolve() if not Path(template_ref).is_absolute() else Path(template_ref)
     stale_reasons: list[str] = []
+    requirement = _resolve_message_headstamp_requirement(payload)
 
     template_doc: dict[str, Any] = {}
-    if not template_path.exists():
-        stale_reasons.append("operator_template_missing")
-    else:
-        doc = _load_json(template_path)
-        template_doc = doc if isinstance(doc, dict) else {}
-
     operator_lines = payload.get("operator_envelope_lines")
     if not isinstance(operator_lines, list):
         operator_lines = []
@@ -102,50 +173,69 @@ def main() -> int:
     machine_line = operator_lines[1] if len(operator_lines) >= 2 else ""
     external_stamp = str(payload.get("external_stamp", "")).strip()
     expected_display_line = f"Display-Headstamp: {external_stamp}" if external_stamp else ""
-
-    if not response_stamp_profile.get("enabled", False):
-        stale_reasons.append("response_stamp_profile_disabled")
-    if str(response_stamp_profile.get("format", "")).strip() != "structured_block":
-        stale_reasons.append("response_stamp_profile_format_not_structured_block")
-    if display_line != expected_display_line:
-        stale_reasons.append("display_headstamp_line_mismatch")
-    if not machine_line.startswith("Machine-Verification: "):
-        stale_reasons.append("machine_verification_line_missing")
-
-    machine_fields = _parse_machine_line(machine_line)
-    template_required_fields = []
-    if template_doc:
-        template_required_fields = list(((template_doc.get("machine_segment") or {}).get("required_fields") or []))
-    if not template_required_fields:
-        template_required_fields = [
-            "verification_source",
-            "display_headstamp_identity_id",
-            "authoritative_identity_id",
-            "headstamp_consistency_status",
-        ]
-    missing_machine_fields = [field for field in template_required_fields if not str(machine_fields.get(field, "")).strip()]
-    if missing_machine_fields:
-        stale_reasons.extend(f"machine_verification_field_missing:{field}" for field in missing_machine_fields)
-
     expected_machine_payload = payload.get("machine_verification")
     if not isinstance(expected_machine_payload, dict):
         expected_machine_payload = {}
-    for field in template_required_fields:
-        expected_value = _stringify(
-            expected_machine_payload.get(field, payload.get(field, ""))
-        )
-        actual_value = str(machine_fields.get(field, "")).strip()
-        if expected_value and actual_value and expected_value != actual_value:
-            stale_reasons.append(f"machine_verification_field_mismatch:{field}")
+    envelope_present = bool(operator_lines or external_stamp or expected_machine_payload)
+    should_validate_operator_envelope = bool(requirement["headstamp_required"] or envelope_present)
+    response_stamp_profile_status = STATUS_SKIPPED_NOT_REQUIRED
+    operator_template_status = STATUS_SKIPPED_NOT_REQUIRED
 
-    if (
-        str(machine_fields.get("display_headstamp_identity_id", "")).strip()
-        and str(machine_fields.get("authoritative_identity_id", "")).strip()
-        and str(machine_fields.get("display_headstamp_identity_id", "")).strip()
-        == str(machine_fields.get("authoritative_identity_id", "")).strip()
-        and str(machine_fields.get("headstamp_consistency_status", "")).strip() != STATUS_PASS_REQUIRED
-    ):
-        stale_reasons.append("machine_verification_consistency_projection_invalid")
+    machine_fields = _parse_machine_line(machine_line)
+    template_required_fields = []
+    missing_machine_fields: list[str] = []
+    if should_validate_operator_envelope:
+        if not template_path.exists():
+            stale_reasons.append("operator_template_missing")
+        else:
+            doc = _load_json(template_path)
+            template_doc = doc if isinstance(doc, dict) else {}
+        response_stamp_profile_status = (
+            STATUS_PASS_REQUIRED if response_stamp_profile.get("enabled", False) else STATUS_FAIL_REQUIRED
+        )
+        operator_template_status = STATUS_PASS_REQUIRED if template_doc else STATUS_FAIL_REQUIRED
+
+        if not response_stamp_profile.get("enabled", False):
+            stale_reasons.append("response_stamp_profile_disabled")
+        if str(response_stamp_profile.get("format", "")).strip() != "structured_block":
+            stale_reasons.append("response_stamp_profile_format_not_structured_block")
+        if display_line != expected_display_line:
+            stale_reasons.append("display_headstamp_line_mismatch")
+        if not machine_line.startswith("Machine-Verification: "):
+            stale_reasons.append("machine_verification_line_missing")
+
+        if template_doc:
+            template_required_fields = list(((template_doc.get("machine_segment") or {}).get("required_fields") or []))
+        if not template_required_fields:
+            template_required_fields = [
+                "verification_source",
+                "display_headstamp_identity_id",
+                "authoritative_identity_id",
+                "headstamp_consistency_status",
+            ]
+        missing_machine_fields = [
+            field for field in template_required_fields if not str(machine_fields.get(field, "")).strip()
+        ]
+        if missing_machine_fields:
+            stale_reasons.extend(f"machine_verification_field_missing:{field}" for field in missing_machine_fields)
+
+        for field in template_required_fields:
+            expected_value = _stringify(expected_machine_payload.get(field, payload.get(field, "")))
+            actual_value = str(machine_fields.get(field, "")).strip()
+            if expected_value and actual_value and expected_value != actual_value:
+                stale_reasons.append(f"machine_verification_field_mismatch:{field}")
+
+        if (
+            str(machine_fields.get("display_headstamp_identity_id", "")).strip()
+            and str(machine_fields.get("authoritative_identity_id", "")).strip()
+            and str(machine_fields.get("display_headstamp_identity_id", "")).strip()
+            == str(machine_fields.get("authoritative_identity_id", "")).strip()
+            and str(machine_fields.get("headstamp_consistency_status", "")).strip() != STATUS_PASS_REQUIRED
+        ):
+            stale_reasons.append("machine_verification_consistency_projection_invalid")
+
+    if requirement["headstamp_required"] and not operator_lines:
+        stale_reasons.append("assistant_process_message_headstamp_missing")
 
     explanatory_surface_exclusion_status = ""
     closure_blocker_scope = str(machine_fields.get("closure_blocker_scope", "")).strip().upper()
@@ -178,11 +268,20 @@ def main() -> int:
     status = STATUS_FAIL_REQUIRED if stale_reasons else STATUS_PASS_REQUIRED
     out = {
         "operator_headstamp_envelope_status": status,
-        "response_stamp_profile_status": STATUS_PASS_REQUIRED if response_stamp_profile.get("enabled", False) else STATUS_FAIL_REQUIRED,
+        "response_stamp_profile_status": response_stamp_profile_status,
         "response_stamp_profile": response_stamp_profile,
+        "message_author_role": requirement["author_role"],
+        "message_kind": requirement["message_kind"],
+        "message_headstamp_requirement_scope": requirement["scope"],
+        "message_headstamp_requirement_reason": requirement["reason"],
+        "headstamp_required_for_message": bool(requirement["headstamp_required"]),
+        "message_headstamp_requirement_status": (
+            STATUS_FAIL_REQUIRED if requirement["headstamp_required"] and stale_reasons else STATUS_PASS_REQUIRED
+        ),
+        "operator_envelope_validation_applied": should_validate_operator_envelope,
         "operator_template_ref": template_ref,
         "operator_template_path": str(template_path),
-        "operator_template_status": STATUS_PASS_REQUIRED if template_doc else STATUS_FAIL_REQUIRED,
+        "operator_template_status": operator_template_status,
         "operator_envelope_line_count": len(operator_lines),
         "display_headstamp_line": display_line,
         "machine_verification_line": machine_line,
