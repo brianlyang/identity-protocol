@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,8 @@ ERR_VALIDATOR_EXEC_FAILED = "IP-RCLOUD-002"
 ERR_CONDITION_FAILED = "IP-RCLOUD-003"
 
 STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate"}
+SCRIPT_DIR = Path(__file__).resolve().parent
+CLOSURE_VALIDATOR = SCRIPT_DIR / "validate_release_plane_cloud_closure.py"
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -217,8 +220,8 @@ def main() -> int:
         return 0
 
     cmd = [
-        "python3",
-        "scripts/validate_release_plane_cloud_closure.py",
+        sys.executable,
+        str(CLOSURE_VALIDATOR),
         "--target-branch",
         target_branch,
         "--release-head-sha",
