@@ -167,7 +167,7 @@ for ID in ${IDS}; do
     python3 scripts/validate_writeback_continuity.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --report "$UPGRADE_REPORT" --operation ci
     python3 scripts/validate_post_execution_mandatory.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --report "$UPGRADE_REPORT" --operation ci
     python3 scripts/report_three_plane_status.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --execution-report "$UPGRADE_REPORT" --expected-work-layer protocol --expected-source-layer project --out "$THREE_PLANE_REPORT_JSON"
-    IDENTITY_ID="$ID" CATALOG_PATH="$CATALOG_PATH" HEAD_SHA="$HEAD_SHA" GITHUB_REF_NAME="${GITHUB_REF_NAME:-main}" UPGRADE_REPORT_PATH="$UPGRADE_REPORT" THREE_PLANE_REPORT_PATH="$THREE_PLANE_REPORT_JSON" python3 - <<'PY'
+    IDENTITY_ID="$ID" CATALOG_PATH="$CATALOG_PATH" REPO_CATALOG_PATH="$REPO_CATALOG_PATH" HEAD_SHA="$HEAD_SHA" GITHUB_REF_NAME="${GITHUB_REF_NAME:-main}" HEADSTAMP_ACTOR_ID="$HEADSTAMP_ACTOR_ID" HEADSTAMP_SESSION_ID="$HEADSTAMP_SESSION_ID" UPGRADE_REPORT_PATH="$UPGRADE_REPORT" THREE_PLANE_REPORT_PATH="$THREE_PLANE_REPORT_JSON" python3 - <<'PY'
 import json
 import os
 import subprocess
@@ -178,8 +178,11 @@ report_path = os.environ["UPGRADE_REPORT_PATH"]
 three_plane_path = os.environ["THREE_PLANE_REPORT_PATH"]
 identity_id = os.environ["IDENTITY_ID"]
 catalog_path = os.environ["CATALOG_PATH"]
+repo_catalog_path = os.environ["REPO_CATALOG_PATH"]
 head_sha = os.environ["HEAD_SHA"]
 github_ref_name = os.environ["GITHUB_REF_NAME"]
+headstamp_actor_id = os.environ["HEADSTAMP_ACTOR_ID"]
+headstamp_session_id = os.environ["HEADSTAMP_SESSION_ID"]
 
 with open(report_path, encoding="utf-8") as fh:
     report = json.load(fh)
@@ -400,6 +403,54 @@ with tempfile.TemporaryDirectory(prefix="release-cloud-evidence-ci-") as tmpdir:
         raise SystemExit("[FAIL] expected release_cloud_evidence_adapter_status=PASS_REQUIRED for jobs-json probe")
     if str((jobs_payload.get("conditions") or {}).get("required_checks_status", "")).strip().upper() != "PASS":
         raise SystemExit("[FAIL] expected required_checks_status=PASS for jobs-json probe")
+
+    jobs_three_plane_path = os.path.join(tmpdir, "three-plane-jobs-pass.json")
+    jobs_three_plane = subprocess.run(
+        [
+            sys.executable,
+            "scripts/report_three_plane_status.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog_path,
+            "--repo-catalog",
+            repo_catalog_path,
+            "--actor-id",
+            headstamp_actor_id,
+            "--session-id",
+            headstamp_session_id,
+            "--target-branch",
+            github_ref_name,
+            "--release-head-sha",
+            head_sha,
+            "--required-gates-run-id",
+            "ci-synthetic-run",
+            "--run-url",
+            "https://example.invalid/run/ci-synthetic-run",
+            "--workflow-file-sha",
+            head_sha,
+            "--run-head-sha",
+            head_sha,
+            "--run-workflow-file-sha",
+            head_sha,
+            "--jobs-json",
+            jobs_pass_path,
+            "--out",
+            jobs_three_plane_path,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if jobs_three_plane.returncode != 0:
+        raise SystemExit("[FAIL] expected jobs-json three-plane probe to complete successfully")
+    with open(jobs_three_plane_path, encoding="utf-8") as fh:
+        jobs_three_plane_payload = json.load(fh)
+    if str(jobs_three_plane_payload.get("release_plane_status", "")).strip().upper() != "CLOSED":
+        raise SystemExit("[FAIL] expected release_plane_status=CLOSED for jobs-json three-plane probe")
+    adapter_payload = jobs_three_plane_payload.get("release_cloud_evidence_adapter") or {}
+    if str(adapter_payload.get("release_cloud_evidence_adapter_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("[FAIL] expected three-plane adapter status PASS_REQUIRED for jobs-json probe")
 
 print("[OK] release cloud evidence checks-state probes passed: EVIDENCE_MISSING/EMPTY_SET/FAILED/PASS remain distinct")
 PY
