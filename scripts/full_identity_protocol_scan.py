@@ -30,6 +30,7 @@ from protocol_infra_contract import (
     HOST_VISIBLE_FALSE_GREEN_MAX_RATE,
     HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
 )
+from resolve_release_plane_cloud_evidence import resolve_release_cloud_evidence
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
 
@@ -152,6 +153,20 @@ def _safe_json_file(path: Path) -> dict[str, Any]:
     except Exception:
         return {}
     return doc if isinstance(doc, dict) else {}
+
+
+def _git_rev(repo_root: Path, ref: str) -> str:
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", ref],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except Exception:
+        return ""
+    return proc.stdout.strip() if proc.returncode == 0 else ""
 
 
 def _parse_path_list_arg(*, raw_value: str, repo_root: Path) -> list[Path]:
@@ -1492,6 +1507,15 @@ def main() -> int:
             "when omitted, scan auto-discovers canonical manifest paths near selected catalogs and base-repo .identity/_probe."
         ),
     )
+    ap.add_argument("--target-branch", default="")
+    ap.add_argument("--release-head-sha", default="")
+    ap.add_argument("--required-gates-run-id", default="")
+    ap.add_argument("--run-url", default="")
+    ap.add_argument("--workflow-file-sha", default="")
+    ap.add_argument("--run-head-sha", default="")
+    ap.add_argument("--run-workflow-file-sha", default="")
+    ap.add_argument("--checks-json", default="")
+    ap.add_argument("--jobs-json", default="")
     ap.add_argument("--out", default="")
     args = ap.parse_args()
 
@@ -1524,6 +1548,28 @@ def main() -> int:
     gate_profile = str(args.gate_profile or "").strip() or DEFAULT_GATE_PROFILE_NAME
     gate_profile_file = str(args.gate_profile_file or "").strip() or DEFAULT_GATE_PROFILE_FILE
     target_source_layer_mode = str(args.target_source_layer or "auto").strip().lower() or "auto"
+    target_branch = str(args.target_branch or "").strip() or str(os.environ.get("GITHUB_REF_NAME", "main")).strip() or "main"
+    release_head_sha = str(args.release_head_sha or "").strip() or _git_rev(repo_root, "HEAD")
+    required_gates_run_id = str(args.required_gates_run_id or "").strip() or str(os.environ.get("GITHUB_RUN_ID", "")).strip()
+    run_url = str(args.run_url or "").strip()
+    workflow_file_sha = str(args.workflow_file_sha or "").strip() or release_head_sha
+    run_head_sha = str(args.run_head_sha or "").strip() or release_head_sha
+    run_workflow_file_sha = str(args.run_workflow_file_sha or "").strip() or workflow_file_sha
+    checks_json = str(args.checks_json or "").strip()
+    jobs_json = str(args.jobs_json or "").strip()
+    release_adapter_payload = resolve_release_cloud_evidence(
+        identity_id="full-scan",
+        operation="scan",
+        required_gates_run_id=required_gates_run_id,
+        run_url=run_url,
+        checks_json=checks_json,
+        jobs_json=jobs_json,
+    )
+    required_gates_run_id = str(
+        release_adapter_payload.get("required_gates_run_id", "") or required_gates_run_id
+    ).strip()
+    run_url = str(release_adapter_payload.get("run_url", "") or run_url).strip()
+    checks_json = str(release_adapter_payload.get("checks_json_path", "") or checks_json).strip()
     actor_id_input = str(args.actor_id or "").strip()
     if not actor_id_input:
         print("[FAIL] IP-ACTOR-ENTRY-001 explicit --actor-id is required for strict full-scan execution")
@@ -1613,6 +1659,26 @@ def main() -> int:
         "session_id_map_identity_ids": sorted(session_id_map.keys()),
         "gate_profile": gate_profile,
         "gate_profile_file": gate_profile_file,
+        "target_branch": target_branch,
+        "release_head_sha": release_head_sha,
+        "required_gates_run_id": required_gates_run_id,
+        "run_url": run_url,
+        "workflow_file_sha": workflow_file_sha,
+        "run_head_sha": run_head_sha,
+        "run_workflow_file_sha": run_workflow_file_sha,
+        "checks_json": checks_json,
+        "jobs_json": jobs_json,
+        "release_cloud_evidence_adapter": {
+            "release_cloud_evidence_adapter_status": release_adapter_payload.get("release_cloud_evidence_adapter_status", ""),
+            "adapter_source_kind": release_adapter_payload.get("adapter_source_kind", ""),
+            "checks_json_path": release_adapter_payload.get("checks_json_path", ""),
+            "required_gates_run_id": release_adapter_payload.get("required_gates_run_id", ""),
+            "run_url": release_adapter_payload.get("run_url", ""),
+            "adapter_http_status": release_adapter_payload.get("adapter_http_status", ""),
+            "github_rate_limit_remaining": release_adapter_payload.get("github_rate_limit_remaining", ""),
+            "github_rate_limit_reset_epoch": release_adapter_payload.get("github_rate_limit_reset_epoch", ""),
+            "stale_reasons": list(release_adapter_payload.get("stale_reasons", []) or []),
+        },
         "catalog_dedup_skips": catalog_dedup_skips,
         "catalogs": [],
         "summary": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
@@ -2841,6 +2907,22 @@ def main() -> int:
                     str(catalog),
                     "--identity-id",
                     iid,
+                    "--target-branch",
+                    target_branch,
+                    "--release-head-sha",
+                    release_head_sha,
+                    "--required-gates-run-id",
+                    required_gates_run_id,
+                    "--run-url",
+                    run_url,
+                    "--workflow-file-sha",
+                    workflow_file_sha,
+                    "--run-head-sha",
+                    run_head_sha,
+                    "--run-workflow-file-sha",
+                    run_workflow_file_sha,
+                    *(["--checks-json", checks_json] if checks_json else []),
+                    *(["--jobs-json", jobs_json] if jobs_json and not checks_json else []),
                     "--operation",
                     "scan",
                     "--json-only",
@@ -3917,11 +3999,24 @@ def main() -> int:
                         "run_head_sha",
                         "run_workflow_file_sha",
                         "checks_json",
+                        "jobs_json",
+                        "required_checks_set",
+                        "release_cloud_evidence_adapter_status",
+                        "release_cloud_evidence_adapter_source_kind",
+                        "release_cloud_evidence_adapter_stale_reasons",
                         "stale_reasons",
                         "evidence_ref",
                     ):
                         if k in release_doc:
                             check_payload[k] = release_doc.get(k)
+                    for k in (
+                        "adapter_http_status",
+                        "github_rate_limit_remaining",
+                        "github_rate_limit_reset_epoch",
+                    ):
+                        value = release_adapter_payload.get(k)
+                        if value not in ("", None):
+                            check_payload[k] = value
                 if name == "cross_cwd_absolute_input":
                     cross_cwd_doc = _parse_json_safely(r.stdout) or {}
                     for k in (
@@ -5542,6 +5637,22 @@ def main() -> int:
                     scan_session_id,
                     "--scope",
                     scan_scope_hint,
+                    "--target-branch",
+                    target_branch,
+                    "--release-head-sha",
+                    release_head_sha,
+                    "--required-gates-run-id",
+                    required_gates_run_id,
+                    "--run-url",
+                    run_url,
+                    "--workflow-file-sha",
+                    workflow_file_sha,
+                    "--run-head-sha",
+                    run_head_sha,
+                    "--run-workflow-file-sha",
+                    run_workflow_file_sha,
+                    *(["--checks-json", checks_json] if checks_json else []),
+                    *(["--jobs-json", jobs_json] if jobs_json and not checks_json else []),
                     *(["--layer-intent-text", layer_intent_text] if layer_intent_text else []),
                     *(["--expected-work-layer", effective_work_layer] if effective_work_layer else []),
                     *(["--expected-source-layer", effective_source_layer] if effective_source_layer else []),
