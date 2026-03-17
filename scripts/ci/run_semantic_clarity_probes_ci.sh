@@ -472,10 +472,18 @@ from actor_session_common import resolve_actor_id
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--actor-id", default=os.environ.get("CODEX_ACTOR_ID", "assistant:codex"))
+ap.add_argument("--project-catalog", default="identity/catalog/identities.yaml")
 
 def run():
     actor = resolve_actor_id("")
-    cmd = ["python3", "scripts/render_identity_response_stamp.py", "--actor-id", actor]
+    cmd = [
+        "python3",
+        "scripts/full_identity_protocol_scan.py",
+        "--project-catalog",
+        "identity/catalog/identities.yaml",
+        "--actor-id",
+        actor,
+    ]
     return cmd
 PY
 set +e
@@ -495,6 +503,7 @@ obj=json.load(open(sys.argv[1]))
 assert obj.get("error_code") == "IP-ACTOR-ENTRY-SEM-001", obj
 reasons=set(obj.get("stale_reasons") or [])
 assert "strict_actor_default_literal_forbidden" in reasons, obj
+assert "strict_project_catalog_repo_fixture_default_forbidden" in reasons, obj
 assert "strict_actor_entry_gate_missing" in reasons, obj
 print("[PASS] negative strict actor entry fallback blocked")
 PY
