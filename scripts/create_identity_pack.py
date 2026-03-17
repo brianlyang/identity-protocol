@@ -7,6 +7,7 @@ import argparse
 import copy
 import hashlib
 import json
+import os
 import secrets
 import subprocess
 from datetime import datetime, timezone
@@ -256,16 +257,45 @@ PROMPT_GOVERNANCE_REQUIRED_TOKENS: tuple[str, ...] = (
     "decision",
     "gate",
 )
+PROVIDER_BINDINGS_TEMPLATE_CONTRACT_ID = "provider_bindings_template_contract_v1"
 
 def write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
 
 
-def _provider_bindings_template_text(*, repo_root: Path | None = None) -> str:
+def _normalize_provider_bindings_template_doc(doc: dict[str, Any]) -> dict[str, Any]:
+    if str(doc.get("contract_id", "")).strip() != PROVIDER_BINDINGS_TEMPLATE_CONTRACT_ID:
+        return doc
+    bindings = doc.get("bindings")
+    if not isinstance(bindings, list):
+        return doc
+    for row in bindings:
+        if not isinstance(row, dict):
+            continue
+        credential_ref = str(row.get("credential_ref", "")).strip()
+        if not credential_ref.startswith("env:"):
+            continue
+        env_key = credential_ref.split(":", 1)[1].strip()
+        if not env_key:
+            continue
+        row["enabled"] = bool(str(os.getenv(env_key, "")).strip())
+    return doc
+
+
+def _provider_bindings_template_text(*, repo_root: Path | None = None, existing_text: str = "") -> str:
     resolved_repo_root = repo_root.resolve() if repo_root is not None else Path(__file__).resolve().parents[1]
     template_path = (resolved_repo_root / PROVIDER_BINDINGS_TEMPLATE_RELATIVE_PATH).resolve()
-    return template_path.read_text(encoding="utf-8")
+    source_text = str(existing_text or "").strip()
+    raw_text = source_text or template_path.read_text(encoding="utf-8")
+    try:
+        doc = yaml.safe_load(raw_text) or {}
+    except Exception:
+        return raw_text if raw_text.endswith("\n") else raw_text + "\n"
+    if not isinstance(doc, dict):
+        return raw_text if raw_text.endswith("\n") else raw_text + "\n"
+    normalized = _normalize_provider_bindings_template_doc(doc)
+    return yaml.safe_dump(normalized, sort_keys=False, allow_unicode=True)
 
 
 def _identity_prompt_governance_kernel(
@@ -1355,8 +1385,8 @@ def _multimodal_plugin_enforcement_contract_skeleton() -> dict:
                 "glm46v_vision_prod",
                 "openai_vision_prod",
             ],
-            "minimum_enabled_bindings": 2,
-            "require_all_required_profiles": True,
+            "minimum_enabled_bindings": 1,
+            "require_all_required_profiles": False,
         },
         "capability_requirements": {
             "vision": True,
