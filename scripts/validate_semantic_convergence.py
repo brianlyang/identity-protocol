@@ -148,6 +148,10 @@ def main() -> int:
             payload["stale_reasons"] = ["required_contract_not_applicable_missing_lineage_reports"]
             _emit(payload, json_only=args.json_only)
             return 0
+        if args.operation in {"update", "validate"}:
+            payload["stale_reasons"] = ["required_contract_not_applicable_current_round_unmaterialized"]
+            _emit(payload, json_only=args.json_only)
+            return 0
         payload["semantic_convergence_status"] = STATUS_FAIL_REQUIRED
         payload["semantic_convergence_error_code"] = ERR_SOURCE_MISSING
         payload["error_code"] = ERR_SOURCE_MISSING
