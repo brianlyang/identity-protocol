@@ -16,6 +16,7 @@ ERR_REPORT_NOT_FOUND = "IP-RSEL-001"
 ERR_RUN_ID_NO_MATCH = "IP-RSEL-002"
 
 STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate"}
+INSPECTION_OPERATIONS = {"scan", "three-plane", "inspection"}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -65,6 +66,19 @@ def _collect_reports(pack_path: Path, identity_id: str) -> list[Path]:
     return sorted(unique.values(), key=lambda p: p.stat().st_mtime)
 
 
+def _report_run_id(path: Path) -> str:
+    try:
+        data = load_json(path)
+    except Exception:
+        data = {}
+    run_id = str(data.get("run_id", "")).strip()
+    if run_id:
+        return run_id
+    if path.name.startswith("identity-upgrade-exec-") and path.name.endswith(".json") and not path.name.endswith("-patch-plan.json"):
+        return path.stem
+    return ""
+
+
 def _select_report(*, explicit_report: str, run_id: str, reports: list[Path]) -> tuple[Path | None, str]:
     if explicit_report.strip():
         p = Path(explicit_report).expanduser().resolve()
@@ -73,7 +87,7 @@ def _select_report(*, explicit_report: str, run_id: str, reports: list[Path]) ->
         return None, "explicit_report_missing"
 
     if run_id.strip():
-        run_hits = [p for p in reports if run_id in p.name]
+        run_hits = [p for p in reports if run_id in p.name or _report_run_id(p) == run_id]
         if run_hits:
             return sorted(run_hits, key=lambda p: p.stat().st_mtime)[-1], "run_id_bound"
         return None, "run_id_not_found"
@@ -129,7 +143,7 @@ def main() -> int:
         "required_contract": required,
         "auto_required_signal": bool(required and args.operation in STRICT_OPERATIONS),
         "producer_readiness": bool(reports),
-        "requiredization_current_round_linked": bool(run_id or explicit_report or reports),
+        "requiredization_current_round_linked": False,
         "run_id_report_selection_status": STATUS_SKIPPED_NOT_REQUIRED,
         "error_code": "",
         "run_id": run_id,
@@ -147,7 +161,20 @@ def main() -> int:
         return 0
 
     if selected_report is None:
-        if selection_strategy in {"no_reports"} and args.operation in {"scan", "three-plane", "inspection"}:
+        if args.operation in INSPECTION_OPERATIONS:
+            if selection_strategy == "run_id_not_found":
+                payload["stale_reasons"] = ["required_contract_not_applicable_current_round_unlinked"]
+                _emit(payload, json_only=args.json_only)
+                return 0
+            if selection_strategy in {"no_reports"}:
+                payload["stale_reasons"] = ["required_contract_not_applicable_no_reports"]
+                _emit(payload, json_only=args.json_only)
+                return 0
+            if not run_id and not explicit_report:
+                payload["stale_reasons"] = ["required_contract_not_applicable_no_current_round_evidence_source"]
+                _emit(payload, json_only=args.json_only)
+                return 0
+        if selection_strategy in {"no_reports"} and args.operation in INSPECTION_OPERATIONS:
             payload["stale_reasons"] = ["required_contract_not_applicable_no_reports"]
             _emit(payload, json_only=args.json_only)
             return 0
@@ -156,6 +183,15 @@ def main() -> int:
         payload["stale_reasons"] = [selection_strategy]
         _emit(payload, json_only=args.json_only)
         return 1
+
+    if explicit_report:
+        payload["requiredization_current_round_linked"] = True
+    elif run_id and selection_strategy == "run_id_bound":
+        payload["requiredization_current_round_linked"] = True
+    elif args.operation in INSPECTION_OPERATIONS:
+        payload["stale_reasons"] = ["required_contract_not_applicable_no_current_round_evidence_source"]
+        _emit(payload, json_only=args.json_only)
+        return 0
 
     payload["run_id_report_selection_status"] = STATUS_PASS_REQUIRED
     _emit(payload, json_only=args.json_only)
