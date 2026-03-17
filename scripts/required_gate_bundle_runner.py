@@ -1264,7 +1264,12 @@ def _load_gate_profile_selection(
         _as_str_list(doc.get("strict_no_trim_operations")) or list(STRICT_NO_TRIM_OPERATIONS_DEFAULT)
     )
     normalized_operation = str(operation or "").strip().lower()
-    if mode != "full" and normalized_operation in set(strict_no_trim_operations):
+    allow_strict_operations = set(_as_str_list(selected.get("allow_strict_operations")))
+    if (
+        mode != "full"
+        and normalized_operation in set(strict_no_trim_operations)
+        and normalized_operation not in allow_strict_operations
+    ):
         errors.append(f"gate_profile_forbidden_for_strict_operation:{selected_name}:{normalized_operation}")
 
     allowed_operations = _as_str_list(selected.get("allowed_operations"))
