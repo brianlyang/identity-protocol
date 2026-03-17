@@ -31,6 +31,10 @@ class StampContext:
 
 ALLOWED_DISCLOSURE_LEVELS = {"minimal", "standard", "verbose", "audit"}
 DEFAULT_DISCLOSURE_LEVEL = "standard"
+ALLOWED_RESPONSE_STAMP_FORMATS = {"header_line", "structured_block", "mail_header"}
+ALLOWED_RESPONSE_STAMP_AUDIENCE_MODES = {"external", "internal", "dual"}
+ALLOWED_RESPONSE_STAMP_REDACTION_POLICIES = {"strict", "standard"}
+ALLOWED_RESPONSE_STAMP_MISMATCH_ACTIONS = {"blocker_receipt"}
 ALLOWED_WORK_LAYERS = {"protocol", "instance", "dual"}
 ALLOWED_SOURCE_LAYERS = {"project", "global"}
 LEGACY_SOURCE_LAYER_ALIASES = {
@@ -41,6 +45,28 @@ LEGACY_SOURCE_LAYER_ALIASES = {
 }
 LAYER_INTENT_STRICT_THRESHOLD = 0.75
 DEFAULT_WORK_LAYER = "instance"
+DEFAULT_RESPONSE_STAMP_FORMAT = "structured_block"
+DEFAULT_RESPONSE_STAMP_AUDIENCE_MODE = "external"
+DEFAULT_RESPONSE_STAMP_REDACTION_POLICY = "strict"
+DEFAULT_RESPONSE_STAMP_ON_MISMATCH = "blocker_receipt"
+DEFAULT_RESPONSE_STAMP_TEMPLATE_REF = (
+    "identity/protocol/plugins/templates/response-stamp.operator_dual_segment_v1.json"
+)
+DEFAULT_MACHINE_VERIFICATION_SOURCE = "context_checkpoint"
+OPERATOR_ENVELOPE_MACHINE_FIELD_ORDER = (
+    "verification_source",
+    "display_headstamp_identity_id",
+    "authoritative_identity_id",
+    "headstamp_consistency_status",
+    "headstamp_consistency_mode",
+    "headstamp_consistency_reason",
+    "surface_native_machine_attested",
+    "output_governance_mode",
+    "control_lane_attestation_status",
+    "post_check_blocker_status",
+    "next_hop_admission_status",
+    "next_hop_admission_reason",
+)
 
 PROTOCOL_TRIGGER_FLAG_PATTERNS = (
     re.compile(r"\bprotocol[_\-\s]?trigger(?:ed)?\s*[:=]\s*(true|1|yes|on)\b"),
@@ -813,6 +839,128 @@ def _persist_response_stamp_profile_state(ctx: StampContext, *, level: str, trig
     }
     p.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return p
+
+
+def default_response_stamp_profile(*, disclosure_level: str = DEFAULT_DISCLOSURE_LEVEL) -> dict[str, Any]:
+    return {
+        "enabled": True,
+        "format": DEFAULT_RESPONSE_STAMP_FORMAT,
+        "audience_mode": DEFAULT_RESPONSE_STAMP_AUDIENCE_MODE,
+        "redaction_policy": DEFAULT_RESPONSE_STAMP_REDACTION_POLICY,
+        "template_ref": DEFAULT_RESPONSE_STAMP_TEMPLATE_REF,
+        "on_mismatch": DEFAULT_RESPONSE_STAMP_ON_MISMATCH,
+        "disclosure_level": normalize_disclosure_level(disclosure_level),
+    }
+
+
+def normalize_response_stamp_profile(
+    raw_profile: Any,
+    *,
+    disclosure_level: str = DEFAULT_DISCLOSURE_LEVEL,
+) -> dict[str, Any]:
+    profile = raw_profile if isinstance(raw_profile, dict) else {}
+    normalized = default_response_stamp_profile(disclosure_level=disclosure_level)
+
+    enabled = profile.get("enabled")
+    if isinstance(enabled, bool):
+        normalized["enabled"] = enabled
+
+    fmt = str(profile.get("format", "")).strip().lower()
+    if fmt in ALLOWED_RESPONSE_STAMP_FORMATS:
+        normalized["format"] = fmt
+
+    audience_mode = str(profile.get("audience_mode", "")).strip().lower()
+    if audience_mode in ALLOWED_RESPONSE_STAMP_AUDIENCE_MODES:
+        normalized["audience_mode"] = audience_mode
+
+    redaction_policy = str(profile.get("redaction_policy", "")).strip().lower()
+    if redaction_policy in ALLOWED_RESPONSE_STAMP_REDACTION_POLICIES:
+        normalized["redaction_policy"] = redaction_policy
+
+    template_ref = str(profile.get("template_ref", "")).strip()
+    if template_ref:
+        normalized["template_ref"] = template_ref
+
+    on_mismatch = str(profile.get("on_mismatch", "")).strip().lower()
+    if on_mismatch in ALLOWED_RESPONSE_STAMP_MISMATCH_ACTIONS:
+        normalized["on_mismatch"] = on_mismatch
+
+    explicit_level = normalize_disclosure_level(
+        str(profile.get("disclosure_level", "")).strip(),
+        default="",
+        allow_empty=True,
+    )
+    if explicit_level:
+        normalized["disclosure_level"] = explicit_level
+
+    return normalized
+
+
+def resolve_task_response_stamp_profile(ctx: StampContext) -> dict[str, Any]:
+    return normalize_response_stamp_profile(_load_task_response_stamp_profile(ctx))
+
+
+def _format_machine_verification_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return ""
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return str(value)
+    if isinstance(value, (list, dict)):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    return str(value).strip()
+
+
+def render_machine_verification_line(
+    machine_payload: dict[str, Any] | None,
+    *,
+    field_order: tuple[str, ...] = OPERATOR_ENVELOPE_MACHINE_FIELD_ORDER,
+) -> str:
+    payload = machine_payload if isinstance(machine_payload, dict) else {}
+    ordered_parts: list[str] = []
+    seen: set[str] = set()
+    for key in field_order:
+        rendered = _format_machine_verification_value(payload.get(key))
+        if rendered == "":
+            continue
+        ordered_parts.append(f"{key}={rendered}")
+        seen.add(key)
+
+    extra_parts: list[str] = []
+    for key in sorted(payload.keys()):
+        if key in seen:
+            continue
+        rendered = _format_machine_verification_value(payload.get(key))
+        if rendered == "":
+            continue
+        extra_parts.append(f"{key}={rendered}")
+
+    parts = ordered_parts + extra_parts
+    return "Machine-Verification: " + "; ".join(parts) if parts else ""
+
+
+def render_operator_headstamp_lines(
+    ctx: StampContext,
+    *,
+    disclosure_level: str = DEFAULT_DISCLOSURE_LEVEL,
+    work_layer: str = DEFAULT_WORK_LAYER,
+    source_layer: str = "",
+    machine_payload: dict[str, Any] | None = None,
+) -> list[str]:
+    lines = [
+        "Display-Headstamp: "
+        + render_external_stamp_with_layer_context(
+            ctx,
+            disclosure_level=disclosure_level,
+            work_layer=work_layer,
+            source_layer=source_layer,
+        )
+    ]
+    machine_line = render_machine_verification_line(machine_payload)
+    if machine_line:
+        lines.append(machine_line)
+    return lines
 
 
 def resolve_disclosure_level(

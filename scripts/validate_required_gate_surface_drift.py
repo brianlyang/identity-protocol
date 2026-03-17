@@ -87,6 +87,15 @@ WORKFLOW_REQUIRED_EXECUTION_SCRIPTS: tuple[str, ...] = (
     SEMANTIC_CLARITY_PROBE_CI_DELEGATE_SCRIPT,
     FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT,
 )
+REQUIRED_GATE_CI_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
+    "scripts/render_identity_response_stamp.py",
+    "scripts/validate_response_stamp_operator_envelope.py",
+)
+REQUIRED_GATE_CI_DELEGATED_REQUIRED_TOKENS: tuple[str, ...] = (
+    "--stamp-json",
+    "--repo-root",
+    "--json-only",
+)
 CI_DELEGATED_LINEAGE_SURFACES: tuple[str, ...] = (
     REQUIRED_GATE_CI_DELEGATE_SCRIPT,
 )
@@ -1042,6 +1051,35 @@ def main() -> int:
         if missing:
             missing_lineage_refs[rel] = missing
 
+    required_gate_ci_delegate_path = repo_root / REQUIRED_GATE_CI_DELEGATE_SCRIPT
+    if not required_gate_ci_delegate_path.exists():
+        missing_surface_files.append(REQUIRED_GATE_CI_DELEGATE_SCRIPT)
+    else:
+        rel = REQUIRED_GATE_CI_DELEGATE_SCRIPT
+        text = _read_text(required_gate_ci_delegate_path)
+        invoked_python_scripts = _extract_shell_invocations(text, executable="python3")
+        missing_python = [
+            script
+            for script in REQUIRED_GATE_CI_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+            if script not in invoked_python_scripts
+        ]
+        if missing_python:
+            existing = list(missing_lineage_refs.get(rel, []))
+            missing_lineage_refs[rel] = sorted(set(existing + missing_python))
+        required_gate_invocation_args: list[list[str]] = []
+        for script in REQUIRED_GATE_CI_DELEGATED_REQUIRED_PYTHON_SCRIPTS:
+            required_gate_invocation_args.extend(
+                _extract_shell_invocation_args(text, executable="python3", script=script)
+            )
+        required_gate_missing_tokens = [
+            token
+            for token in REQUIRED_GATE_CI_DELEGATED_REQUIRED_TOKENS
+            if not any(_arg_token_present(args, token) for args in required_gate_invocation_args)
+        ]
+        if required_gate_missing_tokens:
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(set(existing_tokens + required_gate_missing_tokens))
+
     full_scan_delegate_path = repo_root / FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT
     if not full_scan_delegate_path.exists():
         missing_surface_files.append(FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT)
@@ -1058,6 +1096,7 @@ def main() -> int:
             existing = list(missing_lineage_refs.get(rel, []))
             missing_lineage_refs[rel] = sorted(set(existing + missing_python))
         full_scan_invocation_args: list[list[str]] = []
+        missing_tokens: list[str] = []
         for script in FULL_SCAN_DELEGATED_REQUIRED_PYTHON_SCRIPTS:
             full_scan_invocation_args.extend(
                 _extract_shell_invocation_args(text, executable="python3", script=script)
@@ -1067,9 +1106,9 @@ def main() -> int:
             for token in FULL_SCAN_DELEGATED_REQUIRED_TOKENS
             if not any(_arg_token_present(args, token) for args in full_scan_invocation_args)
         ]
-    if missing_tokens:
-        existing_tokens = list(missing_execution_tokens.get(rel, []))
-        missing_execution_tokens[rel] = sorted(set(existing_tokens + missing_tokens))
+        if missing_tokens:
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(set(existing_tokens + missing_tokens))
 
     monotonic_probe_delegate_path = repo_root / MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT
     if not monotonic_probe_delegate_path.exists():
@@ -1464,9 +1503,9 @@ def main() -> int:
             host_visible_missing_tokens.append("host_visible_surface_post_check_blocker_chat_egress_probe_invocation_missing")
         if not has_post_check_state_missing_probe:
             host_visible_missing_tokens.append("host_visible_surface_post_check_state_missing_chat_egress_probe_invocation_missing")
-    if host_visible_missing_tokens:
-        existing_tokens = list(missing_execution_tokens.get(rel, []))
-        missing_execution_tokens[rel] = sorted(set(existing_tokens + host_visible_missing_tokens))
+        if host_visible_missing_tokens:
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(set(existing_tokens + host_visible_missing_tokens))
 
     reachability_probe_delegate_path = repo_root / HOST_TRANSPORT_REACHABILITY_PROBE_CI_DELEGATE_SCRIPT
     if not reachability_probe_delegate_path.exists():

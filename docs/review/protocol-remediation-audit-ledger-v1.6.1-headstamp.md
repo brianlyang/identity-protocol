@@ -218,3 +218,47 @@ Observed after fix:
 
 1. Three-plane strict execution should no longer fail headstamp lane solely because of stale recovery run-id.
 2. Remaining failures (if any) must map to real required contracts, not host-visible tuple drift artifacts.
+
+## 12) Operator envelope + task-profile rollout audit (2026-03-17)
+
+### 12.1 Problem restatement
+
+1. Shared response stamp rendering and disclosure logic already existed.
+2. Runtime `CURRENT_TASK.json` still did not reliably carry `response_stamp_profile`, so renderer defaults were not materialized as runtime contract.
+3. Operator-visible chat/report surfaces also lacked a shared two-segment envelope for visible display vs machine verification.
+
+### 12.2 Landed infrastructure changes audited
+
+1. `scripts/create_identity_pack.py`
+   - now materializes `response_stamp_profile` during pack generation.
+2. `scripts/repair_contract_backfill.py`
+   - now normalizes/backfills `response_stamp_profile` into existing packs and reports before/after state.
+3. `scripts/response_stamp_common.py`
+   - now owns shared response-stamp profile defaults and operator envelope rendering helpers.
+4. `scripts/render_identity_response_stamp.py`
+   - now emits normalized `response_stamp_profile`, `operator_envelope_lines`, and `machine_verification_line`.
+5. `scripts/validate_response_stamp_operator_envelope.py`
+   - added as the shared validator for the operator envelope.
+6. `identity/protocol/plugins/templates/response-stamp.operator_dual_segment_v1.json`
+   - added as the template anchor for the shared operator envelope.
+
+### 12.3 Audit interpretation
+
+1. This is infrastructure-first closure:
+   - one shared renderer,
+   - one shared template,
+   - one shared validator,
+   - pack generation + backfill rollout.
+2. No identity-specific literal formatting freedom was added.
+3. No governed artifact semantics were weakened; the operator envelope sits outside the canonical first-line artifact.
+
+### 12.4 Required replay evidence
+
+1. `python3 scripts/render_identity_response_stamp.py ... --json-only`
+   - must emit `response_stamp_profile` and `operator_envelope_lines`.
+2. `python3 scripts/validate_response_stamp_operator_envelope.py --stamp-json <...> --json-only`
+   - must return `operator_headstamp_envelope_status=PASS_REQUIRED`.
+3. `python3 scripts/repair_contract_backfill.py --catalog <...> --identity-id <...> --json-only`
+   - must report `response_stamp_profile_before` / `response_stamp_profile_after`.
+4. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+   - must pass with operator-envelope validator wiring guarded.

@@ -9,6 +9,15 @@
     "identity_prompt_path": "identity/store-manager/IDENTITY_PROMPT.md",
     "canon_path": "identity/STORE_MANAGER_CANON.md"
   },
+  "response_stamp_profile": {
+    "enabled": true,
+    "format": "structured_block",
+    "audience_mode": "external",
+    "redaction_policy": "strict",
+    "template_ref": "identity/protocol/plugins/templates/response-stamp.operator_dual_segment_v1.json",
+    "on_mismatch": "blocker_receipt",
+    "disclosure_level": "standard"
+  },
   "objective": {
     "title": "Run stable listing and reject-recovery with event-first feedback",
     "priority": "HIGH",

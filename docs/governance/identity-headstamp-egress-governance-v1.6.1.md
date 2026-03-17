@@ -403,3 +403,54 @@ deepening base for v1.6.1 headstamp semantics.
 
 1. Closure uses tuple-derived tokens and runtime report path fallback.
 2. No identity id literal pinning and no absolute-path hardcoding is introduced.
+
+## 15) Operator envelope template + response stamp profile materialization freeze (2026-03-17)
+
+### 15.1 Problem statement
+
+1. Shared stamp rendering already existed, but `CURRENT_TASK.json` did not consistently materialize `response_stamp_profile`.
+2. This left disclosure/default template behavior split across governance text and renderer defaults, instead of a runtime SSOT.
+3. Chat/operator-visible surfaces also lacked a shared outer envelope for:
+   - visible `Display-Headstamp`
+   - machine-readable `Machine-Verification`
+
+### 15.2 Normative closure rules (MUST)
+
+1. Every generated/backfilled identity `CURRENT_TASK.json` MUST materialize `response_stamp_profile`.
+2. Default governed user-visible profile is frozen as:
+   - `enabled=true`
+   - `format=structured_block`
+   - `audience_mode=external`
+   - `redaction_policy=strict`
+   - `template_ref=identity/protocol/plugins/templates/response-stamp.operator_dual_segment_v1.json`
+   - `on_mismatch=blocker_receipt`
+   - `disclosure_level=standard`
+3. `response_stamp_profile` remains presentation-only and MUST NOT weaken first-line gate, authority resolution, or next-hop admission semantics.
+
+### 15.3 Shared operator envelope
+
+1. v1.6.1 freezes a shared operator envelope template:
+   - line 1: `Display-Headstamp: <canonical external stamp>`
+   - line 2: `Machine-Verification: <ordered machine fields>`
+2. The canonical template file is:
+   - `identity/protocol/plugins/templates/response-stamp.operator_dual_segment_v1.json`
+3. Shared rendering MUST reuse:
+   - `scripts/response_stamp_common.py`
+   - `scripts/render_identity_response_stamp.py`
+4. Identity instances may supply runtime values and wiring only; they MUST NOT fork literal layout or field ordering per identity.
+
+### 15.4 Machine-verification segment boundary
+
+1. `Machine-Verification` is an operator envelope segment, not a replacement for canonical governed artifact internals.
+2. Governed reply artifact first line remains the raw `Identity-Context: ... | Layer-Context: ...` stamp.
+3. Operator envelope machine fields must reuse existing protocol field names, especially:
+   - `display_headstamp_identity_id`
+   - `authoritative_identity_id`
+   - `headstamp_consistency_status`
+4. New synonymous truth fields are forbidden.
+
+### 15.5 Regression prevention
+
+1. `scripts/validate_response_stamp_operator_envelope.py` is the shared validator for the operator envelope.
+2. `scripts/ci/run_required_runtime_gates_ci.sh` MUST invoke that validator after `render_identity_response_stamp.py`.
+3. `scripts/validate_required_gate_surface_drift.py` MUST guard this CI wiring so template validation cannot silently disappear.

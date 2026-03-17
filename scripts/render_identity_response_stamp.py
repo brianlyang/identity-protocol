@@ -13,11 +13,16 @@ from governed_reply_observability_common import build_headstamp_consistency_proj
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
+    DEFAULT_MACHINE_VERIFICATION_SOURCE,
+    normalize_response_stamp_profile,
+    render_machine_verification_line,
+    render_operator_headstamp_lines,
     render_external_stamp_with_layer_context,
     render_internal_stamp,
     render_structured_context,
     resolve_layer_intent,
     resolve_disclosure_level,
+    resolve_task_response_stamp_profile,
     resolve_stamp_context,
 )
 
@@ -48,6 +53,21 @@ def main() -> int:
         "--no-persist-session-trigger",
         action="store_true",
         help="disable session-trigger persistence (useful for sandbox dry-runs)",
+    )
+    ap.add_argument(
+        "--machine-payload-json",
+        default="",
+        help="optional JSON object merged into Machine-Verification rendering",
+    )
+    ap.add_argument(
+        "--machine-payload-file",
+        default="",
+        help="optional path to JSON object merged into Machine-Verification rendering",
+    )
+    ap.add_argument(
+        "--render-operator-envelope",
+        action="store_true",
+        help="print Display-Headstamp + Machine-Verification lines instead of raw external/internal stamps",
     )
     ap.add_argument("--out", default="", help="optional path to persist rendered stamp payload JSON")
     ap.add_argument("--json-only", action="store_true")
@@ -109,6 +129,11 @@ def main() -> int:
         persist_session_trigger=persist_session_trigger,
     )
     disclosure_level = str(disclosure.get("disclosure_level", "standard")).strip() or "standard"
+    response_stamp_profile = resolve_task_response_stamp_profile(ctx)
+    response_stamp_profile = normalize_response_stamp_profile(
+        response_stamp_profile,
+        disclosure_level=disclosure_level,
+    )
     intent = resolve_layer_intent(
         explicit_work_layer=str(args.work_layer or "").strip(),
         explicit_source_layer=str(args.source_layer or "").strip(),
@@ -133,6 +158,7 @@ def main() -> int:
         "pack_path": str(ctx.pack_path),
         "view": args.view,
         "disclosure_level": disclosure_level,
+        "response_stamp_profile": response_stamp_profile,
         "session_id": str(args.session_id or "").strip(),
         "disclosure_source": disclosure.get("disclosure_source", ""),
         "trigger_applied": bool(disclosure.get("trigger_applied", False)),
@@ -186,6 +212,50 @@ def main() -> int:
         )
     )
 
+    machine_payload: dict[str, object] = {
+        "verification_source": DEFAULT_MACHINE_VERIFICATION_SOURCE,
+        "display_headstamp_identity_id": payload.get("display_headstamp_identity_id", ""),
+        "authoritative_identity_id": payload.get("authoritative_identity_id", ""),
+        "headstamp_consistency_status": payload.get("headstamp_consistency_status", ""),
+        "headstamp_consistency_mode": payload.get("headstamp_consistency_mode", ""),
+        "headstamp_consistency_reason": payload.get("headstamp_consistency_reason", ""),
+    }
+    if str(args.machine_payload_file or "").strip():
+        extra_path = Path(args.machine_payload_file).expanduser().resolve()
+        if not extra_path.exists():
+            print(
+                f"[FAIL] machine payload file not found: {extra_path}"
+            )
+            return 2
+        extra_payload = json.loads(extra_path.read_text(encoding="utf-8"))
+        if not isinstance(extra_payload, dict):
+            print("[FAIL] machine payload file must contain a JSON object")
+            return 2
+        machine_payload.update(extra_payload)
+    if str(args.machine_payload_json or "").strip():
+        try:
+            extra_payload = json.loads(str(args.machine_payload_json or "").strip())
+        except json.JSONDecodeError as exc:
+            print(f"[FAIL] invalid --machine-payload-json: {exc}")
+            return 2
+        if not isinstance(extra_payload, dict):
+            print("[FAIL] --machine-payload-json must decode to a JSON object")
+            return 2
+        machine_payload.update(extra_payload)
+
+    operator_envelope_lines = render_operator_headstamp_lines(
+        ctx,
+        disclosure_level=disclosure_level,
+        work_layer=work_layer,
+        source_layer=source_layer,
+        machine_payload=machine_payload,
+    )
+    payload["machine_verification"] = machine_payload
+    payload["machine_verification_line"] = render_machine_verification_line(machine_payload)
+    payload["display_headstamp_line"] = operator_envelope_lines[0] if operator_envelope_lines else ""
+    payload["operator_envelope_lines"] = operator_envelope_lines
+    payload["operator_envelope"] = "\n".join(operator_envelope_lines)
+
     if args.out.strip():
         out_path = Path(args.out).expanduser().resolve()
         out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -193,6 +263,11 @@ def main() -> int:
 
     if args.json_only:
         print(json.dumps(payload, ensure_ascii=False))
+        return 0
+
+    if args.render_operator_envelope:
+        for line in operator_envelope_lines:
+            print(line)
         return 0
 
     if args.view in {"external", "dual"}:

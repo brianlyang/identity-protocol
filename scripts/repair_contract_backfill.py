@@ -70,6 +70,7 @@ from create_identity_pack import (
     materialize_protocol_host_gateway_artifacts,
 )
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
+from response_stamp_common import normalize_response_stamp_profile
 from version_baseline_common import (
     apply_version_baseline_to_catalog_row,
     apply_version_baseline_to_meta_doc,
@@ -1082,6 +1083,8 @@ def main() -> int:
     meta_before = json.loads(json.dumps(meta_doc)) if isinstance(meta_doc, dict) else {}
 
     before = json.loads(json.dumps(task_doc))
+    response_stamp_profile_present_before = isinstance(before.get("response_stamp_profile"), dict)
+    response_stamp_profile_before = normalize_response_stamp_profile(before.get("response_stamp_profile"))
     missing_before = [k for k in REQUIRED_INTAKE_KEYS if not isinstance(task_doc.get(k), dict)]
     prompt_missing_before = [k for k in REQUIRED_PROMPT_KEYS if not isinstance(task_doc.get(k), dict)]
     multimodal_missing_before = [k for k in REQUIRED_MULTIMODAL_KEYS if not isinstance(task_doc.get(k), dict)]
@@ -1099,6 +1102,7 @@ def main() -> int:
     legacy_drift_before = _legacy_path_drift_fields(task_doc, args.identity_id)
 
     updated = _ensure_intake_p1_contracts(task_doc, args.identity_id)
+    updated["response_stamp_profile"] = normalize_response_stamp_profile(updated.get("response_stamp_profile"))
     restored_skill_supply_chain_contract_keys = _normalize_skill_supply_chain_contracts(updated, args.identity_id)
     restored_capability_driver_validator_paths = _normalize_capability_driver_validators(updated)
     skill_contract = updated.get("skill_path_integrity_contract_v1")
@@ -1133,6 +1137,12 @@ def main() -> int:
     if isinstance(meta_doc, dict):
         meta_version_changed = apply_version_baseline_to_meta_doc(meta_doc, version_baseline)
     missing_after = [k for k in REQUIRED_INTAKE_KEYS if not isinstance(updated.get(k), dict)]
+    response_stamp_profile_present_after = isinstance(updated.get("response_stamp_profile"), dict)
+    response_stamp_profile_after = normalize_response_stamp_profile(updated.get("response_stamp_profile"))
+    response_stamp_profile_changed = (
+        response_stamp_profile_present_before != response_stamp_profile_present_after
+        or response_stamp_profile_before != response_stamp_profile_after
+    )
     prompt_missing_after = [k for k in REQUIRED_PROMPT_KEYS if not isinstance(updated.get(k), dict)]
     multimodal_missing_after = [k for k in REQUIRED_MULTIMODAL_KEYS if not isinstance(updated.get(k), dict)]
     reasoning_missing_after = [k for k in REQUIRED_REASONING_KEYS if not isinstance(updated.get(k), dict)]
@@ -1654,6 +1664,11 @@ def main() -> int:
         "host_gateway_wrapper_snapshot_after": host_gateway_wrapper_snapshot_after,
         "host_gateway_artifact_materialization_invoked": host_gateway_artifact_materialization_invoked,
         "applied": applied,
+        "response_stamp_profile_present_before": response_stamp_profile_present_before,
+        "response_stamp_profile_present_after": response_stamp_profile_present_after,
+        "response_stamp_profile_before": response_stamp_profile_before,
+        "response_stamp_profile_after": response_stamp_profile_after,
+        "response_stamp_profile_changed": response_stamp_profile_changed,
         "missing_contract_keys_before": missing_before,
         "missing_contract_keys_after": missing_after,
         "required_prompt_contract_keys": list(REQUIRED_PROMPT_KEYS),

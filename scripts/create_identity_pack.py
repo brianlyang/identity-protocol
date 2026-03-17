@@ -79,6 +79,7 @@ from protocol_infra_contract import (
     UNIQUE_ENTRY_RECEIPT_SELECTOR_PRECEDENCE as INFRA_UNIQUE_ENTRY_RECEIPT_SELECTOR_PRECEDENCE,
     UNIQUE_ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS as INFRA_UNIQUE_ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS,
 )
+from response_stamp_common import default_response_stamp_profile, normalize_response_stamp_profile
 
 
 MANDATORY_PROTOCOL_SOURCES = [
@@ -312,6 +313,7 @@ def _minimal_current_task(
             "identity_prompt_path": f"identity/packs/{identity_id}/IDENTITY_PROMPT.md",
             "canon_path": "identity/protocol/IDENTITY_PROTOCOL.md",
         },
+        "response_stamp_profile": default_response_stamp_profile(),
         "objective": {
             "title": description,
             "priority": "HIGH",
@@ -4867,6 +4869,7 @@ def _legacy_full_contract_current_task(
         agent["name"] = identity_id
         agent["role"] = title
         agent["identity_prompt_path"] = f"identity/packs/{identity_id}/IDENTITY_PROMPT.md"
+    task["response_stamp_profile"] = normalize_response_stamp_profile(task.get("response_stamp_profile"))
     apply_version_baseline_to_task_doc(task, version_baseline)
     objective = task.setdefault("objective", {})
     if isinstance(objective, dict):

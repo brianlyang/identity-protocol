@@ -53,6 +53,7 @@ for ID in ${IDS}; do
   python3 scripts/validate_identity_session_refresh_status.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --actor-id "$HEADSTAMP_ACTOR_ID" --operation ci --baseline-policy warn
   python3 scripts/validate_e2e_hermetic_runtime_import.py --operation ci --pythonpath-bootstrap-mode internal_bootstrap --json-only
   python3 scripts/render_identity_response_stamp.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --work-layer protocol --source-layer project --view external --disclosure-level standard --out "${STAMP_JSON}" --json-only
+  python3 scripts/validate_response_stamp_operator_envelope.py --stamp-json "${STAMP_JSON}" --repo-root "${PWD}" --json-only
   if [ "${IS_FIXTURE_ID}" = "1" ]; then
     echo "[INFO] fixture identity ${ID}: skipping user-visible stamp hard gates in ci lane."
   else
