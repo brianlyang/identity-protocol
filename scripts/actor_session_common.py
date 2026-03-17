@@ -39,6 +39,13 @@ def resolve_actor_id(explicit_actor_id: str = "") -> str:
     return resolve_protocol_actor_id(explicit_actor_id, allow_host_fallback=True)
 
 
+def resolve_required_protocol_actor_id(explicit_actor_id: str = "") -> str:
+    actor = resolve_protocol_actor_id(explicit_actor_id, allow_host_fallback=False)
+    if actor:
+        return actor
+    raise ValueError("actor-id required: pass --actor-id or set CODEX_ACTOR_ID")
+
+
 def actor_session_dir(catalog_path: Path) -> Path:
     return (catalog_path.parent / "session" / "actors").resolve()
 

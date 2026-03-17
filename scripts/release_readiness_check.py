@@ -13,7 +13,7 @@ from typing import Any
 
 import yaml
 
-from actor_session_common import load_actor_binding, resolve_actor_id
+from actor_session_common import load_actor_binding, resolve_required_protocol_actor_id
 from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gateway_wrapped_command
 from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
@@ -323,10 +323,10 @@ def main() -> int:
     ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
     ap.add_argument(
         "--actor-id",
-        default=os.environ.get("CODEX_ACTOR_ID", "assistant:codex"),
+        default="",
         help=(
             "explicit actor id for strict governed-outlet/headstamp recurrence closure checks. "
-            "Defaults to CODEX_ACTOR_ID; falls back to assistant:codex."
+            "Defaults to CODEX_ACTOR_ID when exported; no implicit assistant fallback is allowed."
         ),
     )
     ap.add_argument(
@@ -351,7 +351,11 @@ def main() -> int:
     layer_intent_text = args.layer_intent_text.strip()
     expected_work_layer = args.expected_work_layer.strip().lower()
     expected_source_layer = args.expected_source_layer.strip().lower()
-    actor_id = resolve_actor_id(str(args.actor_id or "").strip())
+    try:
+        actor_id = resolve_required_protocol_actor_id(str(args.actor_id or "").strip())
+    except ValueError as exc:
+        print(f"[FAIL] IP-ACTOR-ENTRY-001 {exc} (identity_id={identity_id})")
+        return 1
     explicit_catalog = args.catalog.strip()
     env_catalog = os.environ.get("IDENTITY_CATALOG", "").strip()
     catalog = explicit_catalog or env_catalog
