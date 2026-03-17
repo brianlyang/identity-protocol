@@ -223,6 +223,9 @@ def main() -> int:
         "release_cloud_evidence_adapter_status": str(adapter_payload.get("release_cloud_evidence_adapter_status", "")).strip(),
         "release_cloud_evidence_adapter_source_kind": str(adapter_payload.get("adapter_source_kind", "")).strip(),
         "release_cloud_evidence_adapter_stale_reasons": list(adapter_payload.get("stale_reasons", []) or []),
+        "adapter_http_status": adapter_payload.get("adapter_http_status", ""),
+        "github_rate_limit_remaining": adapter_payload.get("github_rate_limit_remaining", ""),
+        "github_rate_limit_reset_epoch": adapter_payload.get("github_rate_limit_reset_epoch", ""),
     }
 
     if not required:
