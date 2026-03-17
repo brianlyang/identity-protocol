@@ -280,11 +280,22 @@ print("[OK] release cloud evidence validator assertion passed: baseline_known_mi
 with tempfile.TemporaryDirectory(prefix="release-cloud-evidence-ci-") as tmpdir:
     empty_checks_path = os.path.join(tmpdir, "checks-empty.json")
     failed_checks_path = os.path.join(tmpdir, "checks-failed.json")
+    jobs_pass_path = os.path.join(tmpdir, "jobs-pass.json")
 
     with open(empty_checks_path, "w", encoding="utf-8") as fh:
         json.dump({"required_checks_set": []}, fh)
     with open(failed_checks_path, "w", encoding="utf-8") as fh:
         json.dump({"required_checks_set": [{"name": "ci", "status": "failure"}]}, fh)
+    with open(jobs_pass_path, "w", encoding="utf-8") as fh:
+        json.dump(
+            {
+                "jobs": [
+                    {"id": 1, "name": "build", "status": "completed", "conclusion": "success"},
+                    {"id": 2, "name": "lint", "status": "completed", "conclusion": "success"},
+                ]
+            },
+            fh,
+        )
 
     def run_checks_probe(checks_path: str) -> dict:
         result = subprocess.run(
@@ -343,7 +354,54 @@ with tempfile.TemporaryDirectory(prefix="release-cloud-evidence-ci-") as tmpdir:
     if str((failed_probe.get("conditions") or {}).get("required_checks_status", "")).strip().upper() != "FAILED":
         raise SystemExit("[FAIL] expected required_checks_status=FAILED for FAILED release checks probe")
 
-print("[OK] release cloud evidence checks-state probes passed: EMPTY_SET/FAILED remain distinct")
+    jobs_probe = subprocess.run(
+        [
+            sys.executable,
+            "scripts/validate_release_plane_cloud_evidence.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog_path,
+            "--target-branch",
+            github_ref_name,
+            "--release-head-sha",
+            head_sha,
+            "--required-gates-run-id",
+            "ci-synthetic-run",
+            "--run-url",
+            "https://example.invalid/run/ci-synthetic-run",
+            "--workflow-file-sha",
+            head_sha,
+            "--run-head-sha",
+            head_sha,
+            "--run-workflow-file-sha",
+            head_sha,
+            "--jobs-json",
+            jobs_pass_path,
+            "--operation",
+            "ci",
+            "--force-required",
+            "--json-only",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    try:
+        jobs_payload = json.loads(jobs_probe.stdout)
+    except Exception as exc:
+        raise SystemExit(f"[FAIL] unable to parse release jobs probe output: {exc}")
+
+    if jobs_probe.returncode != 0:
+        raise SystemExit("[FAIL] expected jobs-json release evidence probe to pass")
+    if str(jobs_payload.get("release_plane_cloud_evidence_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("[FAIL] expected release_plane_cloud_evidence_status=PASS_REQUIRED for jobs-json probe")
+    if str(jobs_payload.get("release_cloud_evidence_adapter_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("[FAIL] expected release_cloud_evidence_adapter_status=PASS_REQUIRED for jobs-json probe")
+    if str((jobs_payload.get("conditions") or {}).get("required_checks_status", "")).strip().upper() != "PASS":
+        raise SystemExit("[FAIL] expected required_checks_status=PASS for jobs-json probe")
+
+print("[OK] release cloud evidence checks-state probes passed: EVIDENCE_MISSING/EMPTY_SET/FAILED/PASS remain distinct")
 PY
     python3 scripts/validate_protocol_feedback_sidecar_contract.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --report "$UPGRADE_REPORT" --operation ci --enforce-blocking
     python3 scripts/validate_instance_base_repo_write_boundary.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --report "$UPGRADE_REPORT" --operation ci
