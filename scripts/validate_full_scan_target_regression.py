@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import tempfile
 from datetime import datetime, timezone
@@ -10,6 +11,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+
+from actor_session_common import resolve_required_protocol_actor_id
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -156,6 +159,26 @@ def _resolve_repo_path(path_like: str) -> Path:
     return (REPO_ROOT / candidate).resolve()
 
 
+def _resolve_project_catalog_path(path_like: str) -> Path:
+    raw = str(path_like or "").strip()
+    if raw:
+        return _resolve_repo_path(raw)
+    env_catalog = str(os.environ.get("IDENTITY_CATALOG", "")).strip()
+    if env_catalog:
+        candidate = Path(env_catalog).expanduser()
+        if candidate.is_absolute():
+            return candidate.resolve()
+        return (Path.cwd() / candidate).resolve()
+    candidates = [
+        (REPO_ROOT.parent / ".identity" / "catalog.local.yaml").resolve(),
+        (REPO_ROOT / ".identity" / "catalog.local.yaml").resolve(),
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
+
+
 def _only_requested_session_binding_p0(report_doc: dict[str, Any]) -> bool:
     catalogs = report_doc.get("catalogs") or []
     if not isinstance(catalogs, list):
@@ -207,10 +230,10 @@ def main() -> int:
         description="Regression gate: full_identity_protocol_scan --scan-mode target must keep summary.p0 == 0."
     )
     ap.add_argument("--identity-id", required=True)
-    ap.add_argument("--project-catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--project-catalog", default="")
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--target-source-layer", choices=["auto", "project", "global", "both"], default="project")
-    ap.add_argument("--actor-id", default="assistant:codex")
+    ap.add_argument("--actor-id", default="")
     ap.add_argument("--session-id", default="")
     ap.add_argument("--expected-work-layer", default="protocol")
     ap.add_argument("--expected-source-layer", default="project")
@@ -244,8 +267,46 @@ def main() -> int:
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    project_catalog_path = _resolve_repo_path(str(args.project_catalog))
+    project_catalog_path = _resolve_project_catalog_path(str(args.project_catalog))
     repo_catalog_path = _resolve_repo_path(str(args.repo_catalog))
+    try:
+        actor_id = resolve_required_protocol_actor_id(str(args.actor_id or "").strip())
+    except ValueError as exc:
+        payload = {
+            "full_scan_target_regression_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_SCAN_CMD_FAILED,
+            "identity_id": str(args.identity_id).strip(),
+            "target_source_layer": str(args.target_source_layer).strip(),
+            "project_catalog": str(project_catalog_path),
+            "repo_catalog": str(repo_catalog_path),
+            "actor_id": "",
+            "session_id": session_id,
+            "expected_work_layer": str(args.expected_work_layer).strip(),
+            "expected_source_layer": str(args.expected_source_layer).strip(),
+            "scan_command": [],
+            "scan_cwd": str(REPO_ROOT),
+            "scan_rc": 1,
+            "scan_stdout_tail": "",
+            "scan_stderr_tail": str(exc),
+            "scan_report_path": str(out_path),
+            "summary": {},
+            "summary_m2m": {},
+            "p0_count": None,
+            "p1_count": None,
+            "ok_count": None,
+            "p0_rows": [],
+            "three_plane_summary_conflicts": [],
+            "m2m_pass_count": None,
+            "m2m_fail_count": None,
+            "m2m_fail_rows": [],
+            "enforce_m2m_pass": bool(args.enforce_m2m_pass),
+            "allow_fixture_session_skip": bool(args.allow_fixture_session_skip),
+            "fixture_identity": _is_fixture_identity(project_catalog_path, str(args.identity_id).strip()),
+            "fixture_session_skip_applied": False,
+            "stale_reasons": ["actor_context_missing"],
+        }
+        _emit(payload, json_only=args.json_only)
+        return 1
     full_scan_script_path = (REPO_ROOT / "scripts/full_identity_protocol_scan.py").resolve()
 
     cmd = [
@@ -262,7 +323,7 @@ def main() -> int:
         "--repo-catalog",
         str(repo_catalog_path),
         "--actor-id",
-        str(args.actor_id).strip(),
+        actor_id,
         "--session-id",
         session_id,
         "--expected-work-layer",
@@ -282,7 +343,7 @@ def main() -> int:
         "target_source_layer": str(args.target_source_layer).strip(),
         "project_catalog": str(project_catalog_path),
         "repo_catalog": str(repo_catalog_path),
-        "actor_id": str(args.actor_id).strip(),
+        "actor_id": actor_id,
         "session_id": session_id,
         "expected_work_layer": str(args.expected_work_layer).strip(),
         "expected_source_layer": str(args.expected_source_layer).strip(),

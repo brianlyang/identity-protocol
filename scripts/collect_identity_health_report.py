@@ -301,7 +301,7 @@ def _build_self_upgrade_plan(
             "notes": ["No upgrade-triggering health failures/warnings detected."],
         }
 
-    actor_hint = actor_id.strip() or "${CODEX_ACTOR_ID:-assistant:codex}"
+    actor_hint = actor_id.strip() or '${CODEX_ACTOR_ID:?"set CODEX_ACTOR_ID or pass --actor-id explicitly"}'
     session_hint = "${CODEX_SESSION_ID:-}"
     upgrade_report_dir = str((Path(out_dir).expanduser().resolve() / "upgrade-reports" / identity_id).resolve())
     catalog_path = str(Path(catalog).expanduser().resolve())

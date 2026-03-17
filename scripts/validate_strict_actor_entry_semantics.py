@@ -17,9 +17,11 @@ STRICT_ACTOR_ENTRY_DISCOVERY_TOKENS = (
     "scripts/validate_headstamp_recurrence_closure.py",
     "scripts/validate_execution_reply_identity_coherence.py",
     "scripts/final_emit_governed.py",
+    "scripts/full_identity_protocol_scan.py",
     "CANONICAL_FINAL_EMIT_SCRIPT",
 )
 STRICT_ACTOR_ENTRY_LITERAL_FORBIDDEN = "assistant:codex"
+STRICT_PROJECT_CATALOG_REPO_FIXTURE_FORBIDDEN = "identity/catalog/identities.yaml"
 STRICT_ACTOR_ENTRY_GATE_MARKERS = (
     "IP-ACTOR-ENTRY-001",
     "resolve_required_protocol_actor_id(",
@@ -104,6 +106,18 @@ def _forbidden_actor_default_hits(tree: ast.Module, *, constants: dict[str, str]
     return hits
 
 
+def _forbidden_project_catalog_default_hits(tree: ast.Module, *, constants: dict[str, str]) -> list[int]:
+    hits: list[int] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not _is_add_argument_call(node):
+            continue
+        if "--project-catalog" not in _option_tokens(node):
+            continue
+        if _extract_default_literal(node, constants=constants) == STRICT_PROJECT_CATALOG_REPO_FIXTURE_FORBIDDEN:
+            hits.append(int(getattr(node, "lineno", 0) or 0))
+    return hits
+
+
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
@@ -176,6 +190,16 @@ def main() -> int:
                     "line": line,
                     "violation_type": "strict_actor_default_literal_forbidden",
                     "snippet": STRICT_ACTOR_ENTRY_LITERAL_FORBIDDEN,
+                }
+            )
+
+        for line in _forbidden_project_catalog_default_hits(tree, constants=constants):
+            violations.append(
+                {
+                    "file": rel,
+                    "line": line,
+                    "violation_type": "strict_project_catalog_repo_fixture_default_forbidden",
+                    "snippet": STRICT_PROJECT_CATALOG_REPO_FIXTURE_FORBIDDEN,
                 }
             )
 
