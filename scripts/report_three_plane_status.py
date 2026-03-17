@@ -602,18 +602,35 @@ def _latest_report(identity_id: str, identity_home: str = "", preferred_pack: st
 
 def _release_plane_status(args: argparse.Namespace) -> tuple[str, dict[str, Any]]:
     checks: list[dict[str, Any]] = []
+    checks_json_supplied = bool(str(args.checks_json or "").strip())
     if args.checks_json:
         checks_doc = _load_json(args.checks_json)
         raw = checks_doc.get("required_checks_set", [])
         if isinstance(raw, list):
             checks = [x for x in raw if isinstance(x, dict)]
 
+    checks_set_present = bool(checks)
+    checks_all_success = checks_set_present and all(str(x.get("status", "")).lower() == "success" for x in checks)
+    required_checks_status = (
+        "PASS"
+        if checks_all_success
+        else "EVIDENCE_MISSING"
+        if not checks_json_supplied
+        else "EMPTY_SET"
+        if not checks_set_present
+        else "FAILED"
+    )
     cond = {
         "target_branch_explicit": bool(args.target_branch),
         "release_head_sha_explicit": bool(args.release_head_sha),
+        "required_gates_run_id_present": bool(args.required_gates_run_id),
+        "run_url_present": bool(args.run_url),
         "required_gates_run_id_accessible": bool(args.required_gates_run_id and args.run_url),
         "run_head_matches_release_head": args.run_head_sha == args.release_head_sha and bool(args.run_head_sha),
-        "required_checks_all_success": bool(checks) and all(str(x.get("status", "")).lower() == "success" for x in checks),
+        "required_checks_evidence_accessible": checks_json_supplied,
+        "required_checks_set_present": checks_set_present,
+        "required_checks_status": required_checks_status,
+        "required_checks_all_success": checks_all_success,
         "workflow_file_sha_matches": args.run_workflow_file_sha == args.workflow_file_sha and bool(args.workflow_file_sha),
     }
     has_release_baseline = any(
