@@ -188,19 +188,35 @@ post_exec = (
 
 if not strict_non_upgrade:
     print("[INFO] skip three-plane non-upgrade closure assertion: current report is not strict non-upgrade")
-    sys.exit(0)
+else:
+    if str(post_exec.get("post_execution_mandatory_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit(
+            "[FAIL] expected post_execution_mandatory_status=PASS_REQUIRED for strict non-upgrade closure assertion"
+        )
 
-if str(post_exec.get("post_execution_mandatory_status", "")).strip().upper() != "PASS_REQUIRED":
+    if str(three_plane.get("instance_plane_status", "")).strip().upper() != "CLOSED":
+        raise SystemExit(
+            "[FAIL] strict non-upgrade report must close instance plane when post_execution_mandatory passed"
+        )
+
+    print("[OK] strict non-upgrade closure assertion passed: instance_plane_status=CLOSED")
+
+release_status = str(three_plane.get("release_plane_status", "")).strip().upper()
+release_conditions = ((three_plane.get("release_plane_detail") or {}).get("conditions") or {})
+if release_status != "BLOCKED":
     raise SystemExit(
-        "[FAIL] expected post_execution_mandatory_status=PASS_REQUIRED for strict non-upgrade closure assertion"
+        "[FAIL] expected release_plane_status=BLOCKED when release baseline is known but cloud evidence is still missing"
     )
+if release_conditions.get("run_head_matches_release_head") is not True:
+    raise SystemExit("[FAIL] expected run_head_matches_release_head=true after release baseline normalization")
+if release_conditions.get("workflow_file_sha_matches") is not True:
+    raise SystemExit("[FAIL] expected workflow_file_sha_matches=true after release baseline normalization")
+if release_conditions.get("required_gates_run_id_accessible") is not False:
+    raise SystemExit("[FAIL] expected required_gates_run_id_accessible=false without release cloud evidence")
+if release_conditions.get("required_checks_all_success") is not False:
+    raise SystemExit("[FAIL] expected required_checks_all_success=false without release checks evidence")
 
-if str(three_plane.get("instance_plane_status", "")).strip().upper() != "CLOSED":
-    raise SystemExit(
-        "[FAIL] strict non-upgrade report must close instance plane when post_execution_mandatory passed"
-    )
-
-print("[OK] strict non-upgrade closure assertion passed: instance_plane_status=CLOSED")
+print("[OK] release-plane baseline normalization assertion passed: baseline_known_missing_cloud_evidence=>BLOCKED")
 PY
     python3 scripts/validate_protocol_feedback_sidecar_contract.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --report "$UPGRADE_REPORT" --operation ci --enforce-blocking
     python3 scripts/validate_instance_base_repo_write_boundary.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --report "$UPGRADE_REPORT" --operation ci
