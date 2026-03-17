@@ -351,16 +351,33 @@ def _catalog_rows(path: Path) -> list[dict[str, Any]]:
 def _parse_json_safely(raw: str) -> dict[str, Any] | None:
     if not raw:
         return None
-    try:
-        return json.loads(raw)
-    except Exception:
-        pass
-    lines = raw.splitlines()
+    text = str(raw).strip()
+    if not text:
+        return None
+    candidates: list[str] = [text]
+    lines = text.splitlines()
     if lines and lines[-1].startswith("overall_release_decision="):
+        trimmed = "\n".join(lines[:-1]).strip()
+        if trimmed:
+            candidates.append(trimmed)
+    decoder = json.JSONDecoder()
+    for candidate in candidates:
         try:
-            return json.loads("\n".join(lines[:-1]))
+            payload = json.loads(candidate)
         except Exception:
-            return None
+            payload = None
+        if isinstance(payload, dict):
+            return payload
+        for match in reversed(list(re.finditer(r"\{", candidate))):
+            try:
+                parsed, end = decoder.raw_decode(candidate[match.start() :])
+            except Exception:
+                continue
+            if not isinstance(parsed, dict):
+                continue
+            if candidate[match.start() + end :].strip():
+                continue
+            return parsed
     return None
 
 
