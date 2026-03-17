@@ -3103,13 +3103,13 @@ Fix frozen:
 
 Replay evidence:
 
-1. `python3 scripts/report_three_plane_status.py ... --out /tmp/three_plane_after_commit.json`
+1. `python3 scripts/report_three_plane_status.py ... --out activity/evidence/v166-host-channel/<YYYY-MM-DD>/three_plane_after_commit.json`
    - `instance_plane_status = CLOSED`
    - `repo_plane_status = CLOSED`
    - `release_plane_status = NOT_STARTED`
    - `governance_closure_axes.infrastructure_closure_status = PASS_REQUIRED`
    - `conditional_reasons = ["release_plane_not_closed:NOT_STARTED"]`
-2. `python3 scripts/full_identity_protocol_scan.py ... --out /tmp/full_scan_after_instance_closure_fix.json`
+2. `python3 scripts/full_identity_protocol_scan.py ... --out activity/evidence/v166-host-channel/<YYYY-MM-DD>/full_scan_after_instance_closure_fix.json`
    - `summary.p0 = 0`
    - `summary.ok = 1`
    - `summary_m2m.fail = 0`
@@ -3146,7 +3146,7 @@ Fix frozen:
 
 Replay evidence:
 
-1. `python3 scripts/report_three_plane_status.py ... --out /tmp/three_plane_after_release_plane_commit.json`
+1. `python3 scripts/report_three_plane_status.py ... --out activity/evidence/v166-host-channel/<YYYY-MM-DD>/three_plane_after_release_plane_commit.json`
    - `instance_plane_status = CLOSED`
    - `repo_plane_status = CLOSED`
    - `release_plane_status = BLOCKED`
@@ -3220,7 +3220,7 @@ Fix frozen:
 
 Replay evidence:
 
-1. `python3 scripts/report_three_plane_status.py ... --out /tmp/three_plane_after_release_checks_split.json`
+1. `python3 scripts/report_three_plane_status.py ... --out activity/evidence/v166-host-channel/<YYYY-MM-DD>/three_plane_after_release_checks_split.json`
 2. release-plane detail now shows:
    - `required_gates_run_id_present = false`
    - `run_url_present = false`
