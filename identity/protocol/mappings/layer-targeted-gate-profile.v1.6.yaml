@@ -37,6 +37,8 @@ profiles:
     allowed_operations:
       - three-plane
       - scan
+    allow_strict_operations:
+      - three-plane
     require_work_layers:
       - protocol
       - instance
