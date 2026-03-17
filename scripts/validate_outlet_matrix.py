@@ -20,6 +20,7 @@ ERR_OUTLET_BYPASS = "IP-OUTLET-003"
 ERR_FINAL_EMIT_CONTRACT = "IP-OUTLET-004"
 
 STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate"}
+INSPECTION_OPERATIONS = {"scan", "three-plane", "inspection"}
 HOST_VISIBLE_GOVERNED_CHANNELS = {
     str(channel).strip().lower()
     for channel in HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS
@@ -67,11 +68,21 @@ def _resolve_report_path(pack_path: Path, identity_id: str, explicit_report: str
     return None, None
 
 
+def _report_run_id(report_path: Path, report_doc: dict[str, Any]) -> str:
+    run_id = str(report_doc.get("run_id", "")).strip()
+    if run_id:
+        return run_id
+    if report_path.name.startswith("identity-upgrade-exec-") and report_path.name.endswith(".json") and not report_path.name.endswith("-patch-plan.json"):
+        return report_path.stem
+    return ""
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate outlet regression matrix contract (RQ-004).")
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
+    ap.add_argument("--run-id", default="")
     ap.add_argument(
         "--operation",
         choices=["activate", "update", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection"],
@@ -110,6 +121,8 @@ def main() -> int:
         "requiredization_current_round_linked": False,
         "outlet_matrix_status": STATUS_SKIPPED_NOT_REQUIRED,
         "error_code": "",
+        "requested_run_id": str(args.run_id or "").strip(),
+        "report_run_id": "",
         "matrix_positive_status": STATUS_SKIPPED_NOT_REQUIRED,
         "matrix_negative_status": STATUS_SKIPPED_NOT_REQUIRED,
         "cross_cwd_parity_status": STATUS_SKIPPED_NOT_REQUIRED,
@@ -141,9 +154,23 @@ def main() -> int:
         return 0
 
     payload["producer_readiness"] = True
-    payload["requiredization_current_round_linked"] = True
     payload["report_path"] = str(report_path)
     payload["evidence_ref"] = str(report_path)
+    report_run_id = _report_run_id(report_path, report_doc)
+    requested_run_id = str(args.run_id or "").strip()
+    payload["report_run_id"] = report_run_id
+    payload["requiredization_current_round_linked"] = bool(args.report.strip()) or bool(
+        requested_run_id and report_run_id and requested_run_id == report_run_id
+    )
+
+    if args.operation in INSPECTION_OPERATIONS and not payload["requiredization_current_round_linked"]:
+        payload["stale_reasons"] = [
+            "required_contract_not_applicable_current_round_unlinked"
+            if requested_run_id
+            else "required_contract_not_applicable_no_current_round_evidence_source"
+        ]
+        _emit(payload, json_only=args.json_only)
+        return 0
 
     send_time_gate_status = str(report_doc.get("send_time_gate_status", "")).strip().upper()
     governed_outlet = bool(report_doc.get("governed_outlet_enforced", False))
