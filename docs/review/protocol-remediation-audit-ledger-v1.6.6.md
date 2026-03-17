@@ -3114,6 +3114,10 @@ Replay evidence:
    - `summary.ok = 1`
    - `summary_m2m.fail = 0`
 
+Evidence note:
+
+1. named replay outputs for this stream now anchor under `activity/evidence/v166-host-channel/<YYYY-MM-DD>/...`; execution-local scratch files are not cited as normative evidence.
+
 Checkpoint verdict:
 
 1. strict non-upgrade completion is no longer falsely held open by duplicated instance-plane writeback logic.
