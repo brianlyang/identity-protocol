@@ -9,6 +9,7 @@ from typing import Any
 
 from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID, FINAL_EMIT_POLICY_MODE, FINAL_EMIT_SCHEMA_ID
 from tool_vendor_governance_common import boolish, latest_identity_upgrade_report, load_json, resolve_pack_and_task
+from writeback_continuity_common import derive_writeback_continuity_fields
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -145,6 +146,16 @@ def main() -> int:
     report_after["writeback_mode"] = writeback_mode
     report_after["next_action"] = next_action
     report_after["next_recovery_action"] = next_recovery_action
+    report_after.update(
+        derive_writeback_continuity_fields(
+            upgrade_required=boolish(report_after.get("upgrade_required")),
+            all_ok=boolish(report_after.get("all_ok")),
+            writeback_status=writeback_status,
+            writeback_error_code=str(report_after.get("writeback_error_code", "")),
+            permission_error_code=str(report_after.get("permission_error_code", "")),
+            next_action=next_recovery_action or next_action,
+        )
+    )
     report_after["phase_a_refresh_applied"] = bool(report_after.get("phase_a_refresh_applied", False))
     report_after["phase_b_strict_revalidate_status"] = (
         str(report_after.get("phase_b_strict_revalidate_status", "")).strip() or "NOT_APPLICABLE"

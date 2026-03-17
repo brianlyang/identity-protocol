@@ -119,26 +119,39 @@ def _load_json(path: Path) -> dict[str, Any]:
     return data
 
 
-def _latest_receipt_by_channel(receipts: list[Path]) -> tuple[dict[str, Path], list[str]]:
-    by_channel: dict[str, Path] = {}
-    issues: list[str] = []
-    def _safe_mtime(item: Path) -> float:
-        try:
-            return float(item.stat().st_mtime)
-        except Exception as exc:
-            if _is_privilege_escalation_error(exc):
-                issues.append(
-                    _format_privilege_escalation_reason(
-                        path=item,
-                        scope="host_visible_live_receipt_stat",
-                        exc=exc,
-                    )
+def _safe_receipt_mtime(path: Path, *, issues: list[str]) -> float:
+    try:
+        return float(path.stat().st_mtime)
+    except Exception as exc:
+        if _is_privilege_escalation_error(exc):
+            issues.append(
+                _format_privilege_escalation_reason(
+                    path=path,
+                    scope="host_visible_live_receipt_stat",
+                    exc=exc,
                 )
-            else:
-                issues.append(f"host_visible_surface_live_channel_receipt_stat_failed:{item.name}")
-            return -1.0
+            )
+        else:
+            issues.append(f"host_visible_surface_live_channel_receipt_stat_failed:{path.name}")
+        return -1.0
 
-    for path in sorted(receipts, key=_safe_mtime, reverse=True):
+
+def _select_receipts_by_channel(
+    *,
+    receipts: list[Path],
+    identity_id: str,
+    required_channels: set[str],
+    required_actor_id: str,
+    required_session_id: str,
+    required_run_id: str,
+    allowed_sources: set[str],
+) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]], list[str]]:
+    issues: list[str] = []
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    preview: list[dict[str, Any]] = []
+
+    for path in receipts:
+        mtime_epoch = _safe_receipt_mtime(path, issues=issues)
         try:
             payload = _load_json(path)
         except Exception as exc:
@@ -156,10 +169,73 @@ def _latest_receipt_by_channel(receipts: list[Path]) -> tuple[dict[str, Path], l
                 )
             continue
         channel = str(payload.get("emit_channel_id", "")).strip()
-        if not channel or channel in by_channel:
+        if not channel:
             continue
-        by_channel[channel] = path
-    return by_channel, issues
+        identity_match = str(payload.get("identity_id", "")).strip() == str(identity_id or "").strip()
+        actor_match = (
+            not str(required_actor_id or "").strip()
+            or str(payload.get("actor_id", "")).strip() == str(required_actor_id or "").strip()
+        )
+        session_match = (
+            not str(required_session_id or "").strip()
+            or str(payload.get("session_id", "")).strip() == str(required_session_id or "").strip()
+        )
+        run_match = (
+            not str(required_run_id or "").strip()
+            or str(payload.get("run_id", "")).strip() == str(required_run_id or "").strip()
+        )
+        receipt_source = str(payload.get(HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD, "")).strip()
+        source_match = receipt_source in allowed_sources
+        tuple_match = bool(identity_match and actor_match and session_match and run_match and source_match)
+        candidate = {
+            "path": path,
+            "payload": payload,
+            "channel": channel,
+            "mtime_epoch": mtime_epoch,
+            "identity_match": identity_match,
+            "actor_match": actor_match,
+            "session_match": session_match,
+            "run_match": run_match,
+            "source_match": source_match,
+            "tuple_match": tuple_match,
+            "receipt_source": receipt_source,
+        }
+        grouped.setdefault(channel, []).append(candidate)
+
+    selected: dict[str, dict[str, Any]] = {}
+    for channel, candidates in grouped.items():
+        sorted_candidates = sorted(
+            candidates,
+            key=lambda item: (
+                int(bool(item.get("tuple_match"))),
+                int(bool(item.get("identity_match"))),
+                int(bool(item.get("source_match"))),
+                int(bool(item.get("run_match"))),
+                int(bool(item.get("actor_match"))),
+                int(bool(item.get("session_match"))),
+                float(item.get("mtime_epoch", -1.0)),
+            ),
+            reverse=True,
+        )
+        if not sorted_candidates:
+            continue
+        chosen = sorted_candidates[0]
+        selected[channel] = chosen
+        if channel in required_channels:
+            preview.append(
+                {
+                    "channel": channel,
+                    "path": str(chosen["path"]),
+                    "tuple_match": bool(chosen["tuple_match"]),
+                    "identity_match": bool(chosen["identity_match"]),
+                    "actor_match": bool(chosen["actor_match"]),
+                    "session_match": bool(chosen["session_match"]),
+                    "run_match": bool(chosen["run_match"]),
+                    "source_match": bool(chosen["source_match"]),
+                    "receipt_source": str(chosen["receipt_source"]),
+                }
+            )
+    return selected, preview, issues
 
 
 def _pick_host_gateway_contract(task: dict[str, Any]) -> tuple[dict[str, Any], str]:
@@ -346,6 +422,10 @@ def main() -> int:
         "host_transport_wiring_attestation_allowed_live_receipt_sources": _parse_csv(
             args.allowed_live_receipt_sources
         ),
+        "host_transport_wiring_attestation_receipt_selector_policy_id": "host_visible_live_receipt_selector_tuple_latest_v1",
+        "host_transport_wiring_attestation_receipt_selector_preview": [],
+        "host_transport_wiring_attestation_state_semantics": "global_latest_registry",
+        "host_transport_wiring_attestation_state_latest_diverged_channels": [],
         "host_transport_wiring_attestation_live_coverage_status": STATUS_PASS_REQUIRED,
         "host_transport_wiring_attestation_live_covered_channels": [],
         "host_transport_wiring_attestation_live_binding_required": False,
@@ -587,29 +667,28 @@ def main() -> int:
             issues.append("host_visible_surface_live_receipts_missing")
             payload["host_transport_wiring_attestation_live_coverage_status"] = STATUS_FAIL_REQUIRED
         else:
-            latest_by_channel, latest_scan_issues = _latest_receipt_by_channel(receipt_files)
+            selected_by_channel, selector_preview, latest_scan_issues = _select_receipts_by_channel(
+                receipts=receipt_files,
+                identity_id=str(args.identity_id).strip(),
+                required_channels=required_channels,
+                required_actor_id=required_actor_id,
+                required_session_id=required_session_id,
+                required_run_id=required_run_id,
+                allowed_sources=allowed_sources,
+            )
             issues.extend(latest_scan_issues)
-            covered_channels = sorted(latest_by_channel.keys())
+            payload["host_transport_wiring_attestation_receipt_selector_preview"] = selector_preview[:8]
+            covered_channels = sorted(selected_by_channel.keys())
             payload["host_transport_wiring_attestation_live_covered_channels"] = covered_channels
+            state_latest_diverged_channels: list[str] = []
             for channel in sorted(required_channels):
-                receipt_path = latest_by_channel.get(channel)
-                if receipt_path is None:
+                candidate = selected_by_channel.get(channel)
+                if candidate is None:
                     issues.append(f"host_visible_surface_live_channel_receipt_missing:{channel}")
                     continue
-                try:
-                    receipt_doc = _load_json(receipt_path)
-                except Exception as exc:
-                    if _is_privilege_escalation_error(exc):
-                        issues.append(
-                            _format_privilege_escalation_reason(
-                                path=receipt_path,
-                                scope=f"host_visible_live_channel_receipt_read:{channel}",
-                                exc=exc,
-                            )
-                        )
-                    else:
-                        issues.append(f"host_visible_surface_live_channel_receipt_invalid:{channel}")
-                    continue
+                receipt_path = Path(candidate["path"]).resolve()
+                receipt_doc = dict(candidate.get("payload") or {})
+                candidate_tuple_match = bool(candidate.get("tuple_match"))
                 receipt_age_seconds = max(0, int(time.time() - receipt_path.stat().st_mtime))
                 if receipt_age_seconds > runtime_receipt_max_age_seconds:
                     issues.append(
@@ -654,26 +733,47 @@ def main() -> int:
                 if not state_last_receipt:
                     issues.append(f"host_visible_surface_live_state_channel_receipt_missing:{channel}")
                 elif Path(state_last_receipt).resolve() != receipt_path.resolve():
-                    issues.append(f"host_visible_surface_live_state_channel_receipt_mismatch:{channel}")
+                    state_latest_run_id = str(channel_state.get("last_run_id", "")).strip()
+                    latest_registry_diverged = bool(
+                        candidate_tuple_match
+                        and required_run_id
+                        and state_latest_run_id
+                        and state_latest_run_id != required_run_id
+                    )
+                    if latest_registry_diverged:
+                        state_latest_diverged_channels.append(channel)
+                    else:
+                        issues.append(f"host_visible_surface_live_state_channel_receipt_mismatch:{channel}")
                 state_last_status = str(channel_state.get("last_status", "")).strip().upper()
                 if state_last_status != STATUS_PASS_REQUIRED:
                     issues.append(f"host_visible_surface_live_state_channel_status_not_pass:{channel}")
                 state_last_run_id = str(channel_state.get("last_run_id", "")).strip()
                 if state_last_run_id and receipt_run_id and state_last_run_id != receipt_run_id:
-                    issues.append(
-                        "host_visible_surface_live_state_channel_run_id_receipt_mismatch:"
-                        f"{channel}:state={state_last_run_id}:receipt={receipt_run_id}"
-                    )
+                    if candidate_tuple_match and required_run_id and state_last_run_id != required_run_id:
+                        if channel not in state_latest_diverged_channels:
+                            state_latest_diverged_channels.append(channel)
+                    else:
+                        issues.append(
+                            "host_visible_surface_live_state_channel_run_id_receipt_mismatch:"
+                            f"{channel}:state={state_last_run_id}:receipt={receipt_run_id}"
+                        )
                 if required_run_id and state_last_run_id != required_run_id:
-                    issues.append(
-                        "host_visible_surface_live_state_channel_run_id_mismatch:"
-                        f"{channel}:expected={required_run_id}:observed={state_last_run_id or 'missing'}"
-                    )
+                    if candidate_tuple_match and state_last_run_id:
+                        if channel not in state_latest_diverged_channels:
+                            state_latest_diverged_channels.append(channel)
+                    else:
+                        issues.append(
+                            "host_visible_surface_live_state_channel_run_id_mismatch:"
+                            f"{channel}:expected={required_run_id}:observed={state_last_run_id or 'missing'}"
+                        )
                 state_source = str(channel_state.get(HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD, "")).strip()
                 if state_source not in allowed_sources:
                     issues.append(
                         f"host_visible_surface_live_state_channel_source_invalid:{channel}:{state_source or 'missing'}"
                     )
+            payload["host_transport_wiring_attestation_state_latest_diverged_channels"] = sorted(
+                set(state_latest_diverged_channels)
+            )
             if any(issue.startswith("host_visible_surface_live_") for issue in issues):
                 payload["host_transport_wiring_attestation_live_coverage_status"] = STATUS_FAIL_REQUIRED
 

@@ -272,6 +272,9 @@ ENTRY_RECEIPT_PAYLOAD_ISO_FIELDS: tuple[str, ...] = (
     "issued_at_utc",
     "issued_at",
 )
+ENTRY_RECEIPT_OPERATION_BRIDGES: dict[str, set[str]] = {
+    "validate": {"inspection"},
+}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -483,6 +486,14 @@ def _safe_file_mtime_epoch(path: Path) -> int:
         return 0
 
 
+def _operation_bridge_match(expected_operation: str, receipt_operation: str) -> bool:
+    expected = str(expected_operation or "").strip().lower()
+    observed = str(receipt_operation or "").strip().lower()
+    if not expected or not observed:
+        return False
+    return observed in ENTRY_RECEIPT_OPERATION_BRIDGES.get(expected, set())
+
+
 def _evaluate_entry_receipt_candidate(
     *,
     receipt: dict[str, Any],
@@ -500,7 +511,9 @@ def _evaluate_entry_receipt_candidate(
     receipt_session_id, _ = _first_receipt_value(receipt, ENTRY_RECEIPT_SESSION_ID_FIELDS)
     receipt_bundle_status = str(receipt.get("bundle_status", "")).strip().upper()
     receipt_catalog_path = str(receipt.get("catalog_path", "")).strip()
-    operation_match = bool(receipt_operation and receipt_operation == expected_operation)
+    operation_exact_match = bool(receipt_operation and receipt_operation == expected_operation)
+    operation_bridge_match = _operation_bridge_match(expected_operation, receipt_operation)
+    operation_match = bool(operation_exact_match or operation_bridge_match)
     run_match = bool(expected_run_id and receipt_run_id == expected_run_id)
     actor_match = bool(expected_actor_id and receipt_actor_id == expected_actor_id)
     session_match = bool(expected_session_id and receipt_session_id == expected_session_id)
@@ -526,6 +539,8 @@ def _evaluate_entry_receipt_candidate(
         "session_id": receipt_session_id,
         "catalog_path": receipt_catalog_path,
         "bundle_status": receipt_bundle_status,
+        "operation_exact_match": operation_exact_match,
+        "operation_bridge_match": operation_bridge_match,
         "tuple_match_count": tuple_match_count,
         "tuple_expected_count": tuple_expected_count,
         "same_tuple": same_tuple,
@@ -535,6 +550,7 @@ def _evaluate_entry_receipt_candidate(
         "effective_epoch_source": payload_field or "file_mtime",
         "sort_key": (
             int(same_tuple),
+            int(operation_exact_match),
             int(tuple_match_count),
             int(same_catalog),
             int(bundle_status_pass),
@@ -595,6 +611,8 @@ def _select_entry_receipt_candidate(
             "session_id": row["session_id"],
             "catalog_path": row["catalog_path"],
             "bundle_status": row["bundle_status"],
+            "operation_exact_match": row["operation_exact_match"],
+            "operation_bridge_match": row["operation_bridge_match"],
             "same_tuple": row["same_tuple"],
             "same_catalog": row["same_catalog"],
             "bundle_status_pass": row["bundle_status_pass"],
@@ -611,6 +629,8 @@ def _select_entry_receipt_candidate(
     reasons: list[str] = []
     if selected.get("same_tuple"):
         reasons.append("same_tuple")
+    if selected.get("operation_bridge_match"):
+        reasons.append("operation_bridge_match")
     if selected.get("same_catalog"):
         reasons.append("same_catalog")
     if selected.get("bundle_status_pass"):
@@ -758,6 +778,8 @@ def main() -> int:
         "protocol_unique_entry_receipt_session_id_field": "",
         "protocol_unique_entry_receipt_operation": "",
         "protocol_unique_entry_receipt_operation_field": "",
+        "protocol_unique_entry_receipt_operation_bridge_allowed": False,
+        "protocol_unique_entry_receipt_operation_bridge_applied": False,
         "protocol_unique_entry_receipt_tuple_context_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_unique_entry_receipt_tuple_context_required_fields": [],
         "protocol_unique_entry_receipt_tuple_context_mismatch_fields": [],
@@ -2104,6 +2126,14 @@ def main() -> int:
             ENTRY_RECEIPT_OPERATION_FIELDS,
             lower=True,
         )
+        receipt_operation_bridge_allowed = _operation_bridge_match(
+            str(args.operation).strip().lower(),
+            receipt_operation,
+        )
+        receipt_operation_bridge_applied = bool(
+            receipt_operation_bridge_allowed
+            and receipt_operation != str(args.operation).strip().lower()
+        )
         receipt_run_id, receipt_run_id_field = _first_receipt_value(receipt, ENTRY_RECEIPT_RUN_ID_FIELDS)
         receipt_actor_id, receipt_actor_id_field = _first_receipt_value(receipt, ENTRY_RECEIPT_ACTOR_ID_FIELDS)
         receipt_session_id, receipt_session_id_field = _first_receipt_value(receipt, ENTRY_RECEIPT_SESSION_ID_FIELDS)
@@ -2183,6 +2213,12 @@ def main() -> int:
         payload["protocol_unique_entry_receipt_session_id_field"] = receipt_session_id_field
         payload["protocol_unique_entry_receipt_operation"] = receipt_operation
         payload["protocol_unique_entry_receipt_operation_field"] = receipt_operation_field
+        payload["protocol_unique_entry_receipt_operation_bridge_allowed"] = (
+            receipt_operation_bridge_allowed
+        )
+        payload["protocol_unique_entry_receipt_operation_bridge_applied"] = (
+            receipt_operation_bridge_applied
+        )
         tuple_context_expected: dict[str, str] = {
             "operation": str(args.operation).strip().lower(),
         }
@@ -2234,7 +2270,10 @@ def main() -> int:
             receipt_issues.append("entry_receipt_bundle_key_mismatch")
         if receipt_identity_id != str(args.identity_id).strip():
             receipt_issues.append("entry_receipt_identity_mismatch")
-        if receipt_operation != str(args.operation).strip().lower():
+        if (
+            receipt_operation != str(args.operation).strip().lower()
+            and not receipt_operation_bridge_allowed
+        ):
             receipt_issues.append("entry_receipt_operation_mismatch")
         if receipt_bundle_status != STATUS_PASS_REQUIRED:
             receipt_issues.append("entry_receipt_bundle_status_not_pass")

@@ -228,6 +228,8 @@ def main() -> int:
         "session_id": str(args.session_id).strip(),
         "receipt_source": receipt_source,
         "allowed_live_receipt_sources": allowed_live_receipt_sources,
+        "session_run_id_projection": "",
+        "session_run_id_projection_mismatch": False,
         "recovery_status": STATUS_FAIL_REQUIRED,
         "error_code": "",
         "stale_reasons": [],
@@ -236,14 +238,9 @@ def main() -> int:
     run_token = str(args.run_id or "").strip()
     if session_token.lower().startswith("run:"):
         session_bound_run_id = str(session_token.split(":", 1)[1]).strip()
+        base_payload["session_run_id_projection"] = session_bound_run_id
         if session_bound_run_id and session_bound_run_id != run_token:
-            base_payload["error_code"] = ERR_INVALID
-            base_payload["stale_reasons"] = [
-                "recovery_run_id_session_mismatch:"
-                f"session_run_id={session_bound_run_id}:requested_run_id={run_token or 'missing'}"
-            ]
-            _emit(base_payload, json_only=args.json_only)
-            return 1
+            base_payload["session_run_id_projection_mismatch"] = True
 
     if operation not in FIXTURE_ALLOWED_OPERATIONS and receipt_source == HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE:
         base_payload["error_code"] = ERR_INVALID

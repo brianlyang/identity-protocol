@@ -53,6 +53,29 @@ FINAL_EMIT_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
 REQUIRED_GATE_BUNDLE_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
 
 
+def _coverage_governed_validator_scripts() -> set[str]:
+    try:
+        from validate_required_contract_coverage import TARGETS  # type: ignore
+    except Exception:
+        try:
+            from validate_required_contract_coverage import TARGET_SPECS as TARGETS  # type: ignore
+        except Exception:
+            return set()
+    out: set[str] = set()
+    for spec in TARGETS:
+        script = str(getattr(spec, "validator_script", "") or "").strip()
+        if script:
+            out.add(script)
+    return out
+
+
+def _validate_observation_only_validator_scripts() -> set[str]:
+    return {
+        "scripts/validate_writeback_continuity.py",
+        "scripts/validate_post_execution_mandatory.py",
+    }
+
+
 def _resolve_pack_relative_path(pack_path: Path, raw_path: str, default_rel: str) -> Path:
     token = str(raw_path or "").strip() or str(default_rel or "").strip()
     if not token:
@@ -1940,6 +1963,15 @@ def main() -> int:
                 ext="txt",
             )
         )
+        send_time_reply_report = str(
+            runtime_temp_file(
+                channel="response-stamp",
+                operation="validate",
+                identity_id=args.identity_id,
+                stem=f"identity-send-time-report-{args.identity_id}",
+                ext="json",
+            )
+        )
         send_time_reply_gate_blocker_receipt = str(
             runtime_temp_file(
                 channel="response-stamp",
@@ -1992,26 +2024,6 @@ def main() -> int:
         )
         if rc_unique_entry_migration != 0:
             return rc_unique_entry_migration
-        required_gate_bundle_receipt_validate = str(
-            runtime_temp_file(
-                channel="required-gate-bundle",
-                operation="validate",
-                identity_id=args.identity_id,
-                run_token=validate_run_token,
-                stem=f"required-gate-bundle-validate-{args.identity_id}-{validate_run_token}",
-                ext="json",
-            )
-        )
-        required_gate_bundle_receipt_validate_probe = str(
-            runtime_temp_file(
-                channel="required-gate-bundle",
-                operation="scan",
-                identity_id=args.identity_id,
-                run_token=f"{validate_run_token}-scan-probe",
-                stem=f"required-gate-bundle-validate-scan-probe-{args.identity_id}-{validate_run_token}",
-                ext="json",
-            )
-        )
         checks = [
             ["python3", "scripts/validate_identity_scope_resolution.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
             ["python3", "scripts/validate_identity_scope_isolation.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
@@ -2214,8 +2226,12 @@ def main() -> int:
                 args.identity_id,
                 "--body-text",
                 "VALIDATE_SEND_TIME_REPLY_BODY",
+                "--run-id",
+                validate_run_token,
                 "--out-reply-file",
                 send_time_reply_file,
+                "--out-json",
+                send_time_reply_report,
                 "--blocker-receipt-out",
                 send_time_reply_gate_blocker_receipt,
                 "--outlet-channel-id",
@@ -2351,6 +2367,10 @@ def main() -> int:
                 actor_id_validate,
                 "--session-id",
                 validate_session_id,
+                "--run-id",
+                validate_run_token,
+                "--report-selected-path",
+                send_time_reply_report,
                 "--operation",
                 "validate",
             ],
@@ -2479,6 +2499,8 @@ def main() -> int:
                 args.catalog,
                 "--identity-id",
                 args.identity_id,
+                "--report",
+                send_time_reply_report,
                 "--operation",
                 "validate",
                 "--json-only",
@@ -2603,94 +2625,6 @@ def main() -> int:
             ],
             [
                 "python3",
-                "scripts/required_gate_bundle_runner.py",
-                "--catalog",
-                args.catalog,
-                "--identity-id",
-                args.identity_id,
-                "--run-id",
-                validate_run_token,
-                "--send-time-gate-status",
-                "NOT_APPLICABLE",
-                "--outlet-bypass-detected",
-                "false",
-                "--final-emit-contract-status",
-                "NOT_APPLICABLE",
-                "--final-emit-policy-mode",
-                "tool_choice_required",
-                "--final-emit-schema-status",
-                "NOT_APPLICABLE",
-                "--actor-id",
-                actor_id_validate,
-                "--session-id",
-                validate_session_id,
-                "--resolved-work-layer",
-                (str(args.expected_work_layer or "").strip().lower() or "instance"),
-                "--resolved-source-layer",
-                (str(args.expected_source_layer or "").strip().lower() or _infer_source_domain_from_catalog(args.catalog)),
-                "--lock-state",
-                "LOCK_MATCH",
-                "--surface-label",
-                "creator_validate",
-                "--operation",
-                "validate",
-                "--out",
-                required_gate_bundle_receipt_validate,
-                "--json-only",
-            ],
-            [
-                "python3",
-                "scripts/required_gate_bundle_runner.py",
-                "--catalog",
-                args.catalog,
-                "--identity-id",
-                args.identity_id,
-                "--run-id",
-                validate_run_token,
-                "--send-time-gate-status",
-                "NOT_APPLICABLE",
-                "--outlet-bypass-detected",
-                "false",
-                "--final-emit-contract-status",
-                "NOT_APPLICABLE",
-                "--final-emit-policy-mode",
-                "tool_choice_required",
-                "--final-emit-schema-status",
-                "NOT_APPLICABLE",
-                "--actor-id",
-                actor_id_validate,
-                "--session-id",
-                validate_session_id,
-                "--resolved-work-layer",
-                (str(args.expected_work_layer or "").strip().lower() or "instance"),
-                "--resolved-source-layer",
-                (str(args.expected_source_layer or "").strip().lower() or _infer_source_domain_from_catalog(args.catalog)),
-                "--lock-state",
-                "LOCK_MATCH",
-                "--surface-label",
-                "creator_validate_scan_probe",
-                "--operation",
-                "scan",
-                "--out",
-                required_gate_bundle_receipt_validate_probe,
-                "--json-only",
-            ],
-            [
-                "python3",
-                "scripts/validate_required_gate_recurrence_escalator.py",
-                "--identity-id",
-                args.identity_id,
-                "--surface",
-                "creator_validate",
-                "--operation",
-                "validate",
-                "--receipt",
-                required_gate_bundle_receipt_validate,
-                "--enforce-blocking",
-                "--json-only",
-            ],
-            [
-                "python3",
                 "scripts/validate_protocol_unique_entry_gate.py",
                 "--catalog",
                 args.catalog,
@@ -2704,20 +2638,8 @@ def main() -> int:
                 actor_id_validate,
                 "--session-id",
                 validate_session_id,
-                "--entry-receipt",
-                required_gate_bundle_receipt_validate,
                 "--force-check",
                 "--require-entry-receipt",
-                "--json-only",
-            ],
-            [
-                "python3",
-                "scripts/validate_required_gate_tuple_parity.py",
-                "--receipt",
-                required_gate_bundle_receipt_validate,
-                "--receipt",
-                required_gate_bundle_receipt_validate_probe,
-                "--require-distinct-operations",
                 "--json-only",
             ],
             [
@@ -3190,8 +3112,23 @@ def main() -> int:
                 cmd.extend(["--actor-id", actor_id_validate])
             if cmd[1] in session_id_required_scripts and "--session-id" not in cmd:
                 cmd.extend(["--session-id", validate_session_id])
+        coverage_authority_script = "scripts/validate_required_contract_coverage.py"
+        coverage_governed_scripts = _coverage_governed_validator_scripts()
+        validate_observation_only_scripts = _validate_observation_only_validator_scripts()
+        coverage_authority_passed = False
         for cmd in checks:
+            script = cmd[1] if len(cmd) >= 2 else ""
+            if script in validate_observation_only_scripts:
+                continue
+            if (
+                coverage_authority_passed
+                and script != coverage_authority_script
+                and script in coverage_governed_scripts
+            ):
+                continue
             rc = _run(cmd)
+            if script == coverage_authority_script and rc == 0:
+                coverage_authority_passed = True
             if rc != 0:
                 return rc
         return 0

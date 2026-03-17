@@ -860,6 +860,7 @@ def _run_validator(
     expected_source_layer: str,
     layer_intent_text: str,
     run_id: str,
+    report_selected_path: str,
     force_required: bool,
     extra_args: tuple[str, ...],
 ) -> tuple[int, str, str]:
@@ -963,8 +964,13 @@ def _run_validator(
             cmd += ["--expected-source-layer", expected_source_layer]
         if layer_intent_text:
             cmd += ["--layer-intent-text", layer_intent_text]
-    if script == "scripts/validate_run_id_report_selection.py" and run_id:
-        cmd += ["--run-id", run_id]
+    if script == "scripts/validate_run_id_report_selection.py":
+        if run_id:
+            cmd += ["--run-id", run_id]
+        if str(report_selected_path or "").strip():
+            cmd += ["--report", str(report_selected_path).strip()]
+    if script == "scripts/validate_outlet_matrix.py" and str(report_selected_path or "").strip():
+        cmd += ["--report", str(report_selected_path).strip()]
     if script in {
         "scripts/validate_v16_cross_verification_tracks.py",
         "scripts/validate_v16_intake_evidence_quorum.py",
@@ -1044,6 +1050,7 @@ def main() -> int:
     ap.add_argument("--expected-source-layer", default="")
     ap.add_argument("--layer-intent-text", default="")
     ap.add_argument("--run-id", default="")
+    ap.add_argument("--report-selected-path", default="")
     ap.add_argument(
         "--operation",
         choices=["activate", "update", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection"],
@@ -1132,6 +1139,7 @@ def main() -> int:
             expected_source_layer=str(args.expected_source_layer or "").strip(),
             layer_intent_text=str(args.layer_intent_text or "").strip(),
             run_id=str(args.run_id or "").strip(),
+            report_selected_path=str(args.report_selected_path or "").strip(),
             force_required=force_required,
             extra_args=target.validator_args,
         )

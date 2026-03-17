@@ -358,7 +358,10 @@ def run_final_emit_via_instance_wrappers(*, cmd: list[str], protocol_root: Path)
     work_layer = _arg_value(cmd, "--work-layer", "instance")
     source_layer = _arg_value(cmd, "--source-layer", infer_source_domain_from_catalog(catalog))
     layer_intent_text = _arg_value(cmd, "--layer-intent-text")
+    repo_catalog = _arg_value(cmd, "--repo-catalog")
     out_reply_file = _arg_value(cmd, "--out-reply-file")
+    out_json = _arg_value(cmd, "--out-json")
+    blocker_receipt_out = _arg_value(cmd, "--blocker-receipt-out")
     session_chain_cmd = [
         sys.executable,
         str(session_chain_wrapper),
@@ -382,8 +385,16 @@ def run_final_emit_via_instance_wrappers(*, cmd: list[str], protocol_root: Path)
         body_text,
         "--json-only",
     ]
+    if repo_catalog:
+        session_chain_cmd.extend(["--repo-catalog", repo_catalog])
     if out_reply_file:
         session_chain_cmd.extend(["--out-reply-file", out_reply_file])
+    if out_json:
+        session_chain_cmd.extend(["--out-json", out_json])
+    if blocker_receipt_out:
+        session_chain_cmd.extend(["--blocker-receipt-out", blocker_receipt_out])
+    if layer_intent_text:
+        session_chain_cmd.extend(["--layer-intent-text", layer_intent_text])
 
     print("$", " ".join(session_chain_cmd))
     timeout_seconds = _resolve_command_timeout_seconds(session_chain_cmd, env=child_env)
