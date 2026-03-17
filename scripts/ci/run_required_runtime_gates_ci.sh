@@ -168,6 +168,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 
 report_path = os.environ["UPGRADE_REPORT_PATH"]
 three_plane_path = os.environ["THREE_PLANE_REPORT_PATH"]
@@ -271,6 +272,74 @@ if str(probe_conditions.get("required_checks_status", "")).strip().upper() != "E
     raise SystemExit("[FAIL] expected required_checks_status=EVIDENCE_MISSING for missing cloud evidence probe")
 
 print("[OK] release cloud evidence validator assertion passed: baseline_known_missing_evidence=>FAIL_REQUIRED/IP-RCLOUD-001")
+
+with tempfile.TemporaryDirectory(prefix="release-cloud-evidence-ci-") as tmpdir:
+    empty_checks_path = os.path.join(tmpdir, "checks-empty.json")
+    failed_checks_path = os.path.join(tmpdir, "checks-failed.json")
+
+    with open(empty_checks_path, "w", encoding="utf-8") as fh:
+        json.dump({"required_checks_set": []}, fh)
+    with open(failed_checks_path, "w", encoding="utf-8") as fh:
+        json.dump({"required_checks_set": [{"name": "ci", "status": "failure"}]}, fh)
+
+    def run_checks_probe(checks_path: str) -> dict:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/validate_release_plane_cloud_evidence.py",
+                "--identity-id",
+                identity_id,
+                "--catalog",
+                catalog_path,
+                "--target-branch",
+                github_ref_name,
+                "--release-head-sha",
+                head_sha,
+                "--required-gates-run-id",
+                "ci-synthetic-run",
+                "--run-url",
+                "https://example.invalid/run/ci-synthetic-run",
+                "--workflow-file-sha",
+                head_sha,
+                "--run-head-sha",
+                head_sha,
+                "--run-workflow-file-sha",
+                head_sha,
+                "--checks-json",
+                checks_path,
+                "--operation",
+                "ci",
+                "--force-required",
+                "--json-only",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        try:
+            payload = json.loads(result.stdout)
+        except Exception as exc:
+            raise SystemExit(f"[FAIL] unable to parse release checks probe output: {exc}")
+        payload["_rc"] = result.returncode
+        return payload
+
+    empty_probe = run_checks_probe(empty_checks_path)
+    if empty_probe["_rc"] == 0:
+        raise SystemExit("[FAIL] expected EMPTY_SET release checks probe to fail-close")
+    if str(empty_probe.get("error_code", "")).strip().upper() != "IP-RCLOUD-003":
+        raise SystemExit("[FAIL] expected IP-RCLOUD-003 for EMPTY_SET release checks probe")
+    if str((empty_probe.get("conditions") or {}).get("required_checks_status", "")).strip().upper() != "EMPTY_SET":
+        raise SystemExit("[FAIL] expected required_checks_status=EMPTY_SET for EMPTY_SET release checks probe")
+
+    failed_probe = run_checks_probe(failed_checks_path)
+    if failed_probe["_rc"] == 0:
+        raise SystemExit("[FAIL] expected FAILED release checks probe to fail-close")
+    if str(failed_probe.get("error_code", "")).strip().upper() != "IP-RCLOUD-003":
+        raise SystemExit("[FAIL] expected IP-RCLOUD-003 for FAILED release checks probe")
+    if str((failed_probe.get("conditions") or {}).get("required_checks_status", "")).strip().upper() != "FAILED":
+        raise SystemExit("[FAIL] expected required_checks_status=FAILED for FAILED release checks probe")
+
+print("[OK] release cloud evidence checks-state probes passed: EMPTY_SET/FAILED remain distinct")
 PY
     python3 scripts/validate_protocol_feedback_sidecar_contract.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --report "$UPGRADE_REPORT" --operation ci --enforce-blocking
     python3 scripts/validate_instance_base_repo_write_boundary.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --report "$UPGRADE_REPORT" --operation ci
