@@ -1664,3 +1664,32 @@ Interpretation lock:
 
 1. this does not relax unique-entry governance.
 2. it hardens runtime integrity so parallel self-tests cannot corrupt or cross-wire strict entry receipts.
+
+### 5.31 three-plane instance closure must follow post-execution mandatory contract (2026-03-17)
+
+Problem:
+
+1. `validate_post_execution_mandatory.py` already recognizes the strict non-upgrade closure path:
+   - `upgrade_required = false`
+   - `all_ok = true`
+   - `writeback_mode = STRICT_WRITEBACK`
+   - `writeback_status in {WRITTEN, NOT_REQUIRED}`
+2. `report_three_plane_status.py` still re-derived instance closure with a narrower rule:
+   - `writeback_status = WRITTEN`
+   - `permission_state = WRITEBACK_WRITTEN`
+3. this left strict non-upgrade rounds stuck at `instance_plane_status = IN_PROGRESS` even when:
+   - `post_execution_mandatory_status = PASS_REQUIRED`
+   - validators were all green
+   - `next_action = no_upgrade_triggered`
+
+Mandatory behavior:
+
+1. three-plane instance-plane aggregation MUST treat `post_execution_mandatory_status = PASS_REQUIRED` as the closure authority for strict execution completion.
+2. `permission_state = PRECHECK` on a strict non-upgrade round is not, by itself, a non-closure signal once post-execution mandatory has passed.
+3. `WRITEBACK_WRITTEN` remains the closure shape for strict upgrade/writeback-required rounds; it is not mandatory for strict non-upgrade closure.
+4. full-scan / three-plane aggregation MUST NOT reintroduce a narrower writeback-only rule after the post-execution validator has already accepted the round.
+
+Interpretation lock:
+
+1. this is an acceptance aggregation alignment, not a relaxation of writeback continuity or send-time governance.
+2. remaining `Conditional Go` after this alignment must come from repo-plane / release-plane conditions or genuine validator failures, not stale duplicated instance-plane closure logic.
