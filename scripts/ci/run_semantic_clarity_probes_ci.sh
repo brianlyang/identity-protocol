@@ -486,6 +486,16 @@ def run():
     ]
     return cmd
 PY
+cat > "$TMP_ROOT/neg-strict-actor/scripts/bad_strict_shell_entry.sh" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+CATALOG_PATH="${CATALOG_PATH:-identity/catalog/identities.yaml}"
+HEADSTAMP_ACTOR_ID="${HEADSTAMP_ACTOR_ID:-${CODEX_ACTOR_ID:-assistant:codex}}"
+python3 scripts/full_identity_protocol_scan.py \
+  --project-catalog "${CATALOG_PATH}" \
+  --actor-id "${HEADSTAMP_ACTOR_ID}"
+SH
 set +e
 python3 scripts/validate_strict_actor_entry_semantics.py \
   --repo-root "$TMP_ROOT/neg-strict-actor" \
@@ -505,6 +515,9 @@ reasons=set(obj.get("stale_reasons") or [])
 assert "strict_actor_default_literal_forbidden" in reasons, obj
 assert "strict_project_catalog_repo_fixture_default_forbidden" in reasons, obj
 assert "strict_actor_entry_gate_missing" in reasons, obj
+assert "shell_strict_actor_default_literal_forbidden" in reasons, obj
+assert "shell_strict_project_catalog_repo_fixture_default_forbidden" in reasons, obj
+assert "shell_strict_entry_registry_missing" in reasons, obj
 print("[PASS] negative strict actor entry fallback blocked")
 PY
 

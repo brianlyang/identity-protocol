@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,48 @@ STRICT_PROJECT_CATALOG_REPO_FIXTURE_FORBIDDEN = "identity/catalog/identities.yam
 STRICT_ACTOR_ENTRY_GATE_MARKERS = (
     "IP-ACTOR-ENTRY-001",
     "resolve_required_protocol_actor_id(",
+)
+STRICT_SHELL_ENTRY_DISCOVERY_TOKENS = (
+    "scripts/render_identity_response_stamp.py",
+    "scripts/validate_reply_identity_context_first_line.py",
+    "scripts/validate_headstamp_recurrence_closure.py",
+    "scripts/validate_execution_reply_identity_coherence.py",
+    "scripts/final_emit_governed.py",
+    "scripts/full_identity_protocol_scan.py",
+    "scripts/validate_full_scan_target_regression.py",
+    "scripts/report_three_plane_status.py",
+)
+STRICT_SHELL_ENTRY_RULES: dict[str, dict[str, bool]] = {
+    "scripts/ci/run_full_scan_target_regression_ci.sh": {
+        "require_actor_helper": True,
+        "require_project_catalog_helper": True,
+    },
+    "scripts/ci/run_required_runtime_gates_ci.sh": {
+        "require_actor_helper": True,
+        "require_project_catalog_helper": True,
+    },
+    "scripts/e2e_smoke_test.sh": {
+        "require_actor_helper": True,
+        "require_project_catalog_helper": False,
+    },
+}
+STRICT_SHELL_ENTRY_EXEMPTIONS: dict[str, tuple[str, ...]] = {
+    "scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh": ("probe_fixture_catalog_allowed",),
+    "scripts/ci/run_privilege_escalation_write_probes_ci.sh": ("probe_fixture_catalog_allowed",),
+    "scripts/ci/run_semantic_clarity_probes_ci.sh": ("probe_fixture_literals_allowed",),
+    "scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh": ("probe_fixture_catalog_allowed",),
+}
+STRICT_SHELL_ACTOR_HELPER_TOKENS = (
+    "protocol_shell_entry_require_actor_id",
+    'CODEX_ACTOR_ID:?"set CODEX_ACTOR_ID',
+)
+STRICT_SHELL_PROJECT_CATALOG_HELPER_TOKENS = (
+    "protocol_shell_entry_resolve_project_catalog",
+    'IDENTITY_CATALOG is required (implicit catalog fallback is disabled).',
+)
+STRICT_SHELL_ACTOR_LITERAL_RE = re.compile(r"(assistant:codex|CODEX_ACTOR_ID:-assistant:codex)")
+STRICT_SHELL_PROJECT_CATALOG_LITERAL_RE = re.compile(
+    r"((^|[^A-Z_])CATALOG_PATH=.*identity/catalog/identities\.yaml|--project-catalog[ =\"']+identity/catalog/identities\.yaml)"
 )
 
 
@@ -139,6 +182,107 @@ def _first_line(lines: list[str], token: str) -> int:
     return 0
 
 
+def _first_regex_line(lines: list[str], pattern: re.Pattern[str]) -> int:
+    for idx, line in enumerate(lines, start=1):
+        if pattern.search(line):
+            return idx
+    return 0
+
+
+def _scan_shell_strict_entry_surfaces(repo_root: Path) -> tuple[list[str], dict[str, list[str]], list[dict[str, Any]]]:
+    discovered: list[str] = []
+    exemptions: dict[str, list[str]] = {}
+    violations: list[dict[str, Any]] = []
+    for path in sorted((repo_root / "scripts").rglob("*.sh")):
+        text = path.read_text(encoding="utf-8")
+        if not any(token in text for token in STRICT_SHELL_ENTRY_DISCOVERY_TOKENS):
+            continue
+        rel = _relative(path, repo_root)
+        lines = text.splitlines()
+        discovered.append(rel)
+
+        exemption_reasons = list(STRICT_SHELL_ENTRY_EXEMPTIONS.get(rel, ()))
+        if exemption_reasons:
+            exemptions[rel] = exemption_reasons
+            continue
+
+        rule = STRICT_SHELL_ENTRY_RULES.get(rel)
+        if rule is None:
+            violations.append(
+                {
+                    "file": rel,
+                    "line": 1,
+                    "violation_type": "shell_strict_entry_registry_missing",
+                    "snippet": next((line.strip() for line in lines if line.strip()), ""),
+                }
+            )
+            actor_line = _first_regex_line(lines, STRICT_SHELL_ACTOR_LITERAL_RE)
+            if actor_line:
+                violations.append(
+                    {
+                        "file": rel,
+                        "line": actor_line,
+                        "violation_type": "shell_strict_actor_default_literal_forbidden",
+                        "snippet": lines[actor_line - 1].strip(),
+                    }
+                )
+            catalog_line = _first_regex_line(lines, STRICT_SHELL_PROJECT_CATALOG_LITERAL_RE)
+            if catalog_line:
+                violations.append(
+                    {
+                        "file": rel,
+                        "line": catalog_line,
+                        "violation_type": "shell_strict_project_catalog_repo_fixture_default_forbidden",
+                        "snippet": lines[catalog_line - 1].strip(),
+                    }
+                )
+            continue
+
+        if rule.get("require_actor_helper", False):
+            if not any(token in text for token in STRICT_SHELL_ACTOR_HELPER_TOKENS):
+                violations.append(
+                    {
+                        "file": rel,
+                        "line": 1,
+                        "violation_type": "shell_strict_actor_helper_missing",
+                        "snippet": "protocol_shell_entry_require_actor_id",
+                    }
+                )
+            actor_line = _first_regex_line(lines, STRICT_SHELL_ACTOR_LITERAL_RE)
+            if actor_line:
+                violations.append(
+                    {
+                        "file": rel,
+                        "line": actor_line,
+                        "violation_type": "shell_strict_actor_default_literal_forbidden",
+                        "snippet": lines[actor_line - 1].strip(),
+                    }
+                )
+
+        if rule.get("require_project_catalog_helper", False):
+            if not any(token in text for token in STRICT_SHELL_PROJECT_CATALOG_HELPER_TOKENS):
+                violations.append(
+                    {
+                        "file": rel,
+                        "line": 1,
+                        "violation_type": "shell_strict_project_catalog_helper_missing",
+                        "snippet": "protocol_shell_entry_resolve_project_catalog",
+                    }
+                )
+            catalog_line = _first_regex_line(lines, STRICT_SHELL_PROJECT_CATALOG_LITERAL_RE)
+            if catalog_line:
+                violations.append(
+                    {
+                        "file": rel,
+                        "line": catalog_line,
+                        "violation_type": "shell_strict_project_catalog_repo_fixture_default_forbidden",
+                        "snippet": lines[catalog_line - 1].strip(),
+                    }
+                )
+
+    return discovered, exemptions, violations
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Fail-close when strict authority-entry orchestrators silently fall back to a default actor."
@@ -168,6 +312,8 @@ def main() -> int:
         return 1
 
     discovered: list[str] = []
+    discovered_shell: list[str] = []
+    exempt_shell: dict[str, list[str]] = {}
     violations: list[dict[str, Any]] = []
     for path in sorted(scripts_root.glob("*.py")):
         text = path.read_text(encoding="utf-8")
@@ -213,12 +359,17 @@ def main() -> int:
                 }
             )
 
+    discovered_shell, exempt_shell, shell_violations = _scan_shell_strict_entry_surfaces(repo_root)
+    violations.extend(shell_violations)
+
     stale_reasons = sorted({str(item.get("violation_type", "")).strip() for item in violations if item.get("violation_type")})
     payload.update(
         {
             "strict_actor_entry_semantics_status": STATUS_PASS_REQUIRED if not violations else STATUS_FAIL_REQUIRED,
             "error_code": "" if not violations else ERR_STRICT_ACTOR_ENTRY,
             "discovered_surface_files": discovered,
+            "discovered_shell_surface_files": discovered_shell,
+            "exempt_shell_surface_files": exempt_shell,
             "violation_count": len(violations),
             "violations": violations,
             "stale_reasons": stale_reasons,
