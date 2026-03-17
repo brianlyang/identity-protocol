@@ -1,14 +1,14 @@
 schema_version: 1
 budget_version: v1.6
-last_updated_utc: '2026-03-16T17:04:41Z'
+last_updated_utc: '2026-03-17T05:06:18Z'
 policy_mode: dual_threshold_with_family_convergence
 budgets:
   validator_scripts:
-    warn: 163
-    fail: 166
+    warn: 164
+    fail: 167
   error_codes:
-    warn: 467
-    fail: 473
+    warn: 468
+    fail: 474
   error_code_families:
     warn: 163
     fail: 170
@@ -38,10 +38,10 @@ convergence_guard:
   enabled: true
   mode: no_rebound
   enforce_mode: fail_required
-  baseline_snapshot_utc: '2026-03-16T17:04:41Z'
+  baseline_snapshot_utc: '2026-03-17T05:06:18Z'
   ceilings:
-    validator_scripts: 163
-    error_codes: 467
+    validator_scripts: 164
+    error_codes: 468
     error_code_families: 163
     mapping_rows_missing_in_bundle: 0
     direct_validate_calls:

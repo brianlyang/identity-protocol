@@ -464,6 +464,18 @@ Interpretation lock:
    - v1.6.10 remains reserved for runtime dynamic file governance;
    - skill supply-chain contract closure evidence belongs to v1.6.5 governance/review pair.
 
+### 8.8 Adjacent runtime-file residue absorber contract (mandatory)
+
+1. When runtime-file governance adds generic repair/validation surfaces that increase control-plane counters
+   (for example actor-session authority residue tooling), v1.6.5 must absorb the resulting no-rebound drift.
+2. The absorber sequence stays canonical and alias-driven:
+   - `python3 scripts/render_control_plane_budget.py --write --json-only`
+   - `python3 scripts/render_control_plane_status.py --write --json-only`
+   - `python3 scripts/validate_control_plane_budget.py --json-only`
+   - `python3 scripts/validate_control_plane_status_sync.py --json-only`
+   - `python3 scripts/validate_control_plane_invariants.py --json-only`
+3. Manual counter edits remain forbidden; only renderer-produced baseline refresh is compliant.
+
 ## 9) External references
 
 1. GitHub rulesets available rules:

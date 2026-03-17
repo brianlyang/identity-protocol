@@ -842,3 +842,30 @@ Result:
 
 1. skill supply-chain contracts are now recorded as v1.6.5 absorber scope (not v1.6.10 stream semantics).
 2. one-stream-per-PR boundary remains auditable and machine-replayable.
+
+### 7.23 Rebound absorber replay after actor-session authority residue tooling growth (2026-03-17)
+
+Context:
+
+1. adjacent runtime-file governance added generic actor-session residue tooling and replay coverage:
+   - `scripts/repair_actor_session_authority_residue.py`
+   - extended semantic clarity replay
+2. live control-plane counters rebounded accordingly:
+   - `validator_scripts: 163 -> 164`
+   - `error_codes: 467 -> 468`
+3. no-rebound guard therefore reopened:
+   - `validate_control_plane_budget` => `FAIL_REQUIRED` (`IP-CP-BUDGET-001`)
+   - `validate_control_plane_status_sync` => `FAIL_REQUIRED` (`IP-CP-STATUS-001`)
+
+Action (canonical, alias-driven, serial):
+
+1. `python3 scripts/render_control_plane_budget.py --write --json-only`
+2. `python3 scripts/render_control_plane_status.py --write --json-only`
+3. `python3 scripts/validate_control_plane_budget.py --json-only`
+4. `python3 scripts/validate_control_plane_status_sync.py --json-only`
+5. `python3 scripts/validate_control_plane_invariants.py --json-only`
+
+Result:
+
+1. budget/status mirrors are re-synchronized to the new live baseline by renderer flow only.
+2. no manual literal counter patching was introduced.
