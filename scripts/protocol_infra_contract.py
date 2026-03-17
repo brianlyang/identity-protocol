@@ -145,6 +145,7 @@ GATEWAY_CONTEXT_RESOLVE_TIMEOUT_SECONDS_DEFAULT = 5
 GATEWAY_WRAPPER_TIMEOUT_PROFILE_SECONDS: tuple[tuple[str, int], ...] = (
     ("scripts/report_three_plane_status.py", 180),
     ("scripts/validate_control_plane_status_sync.py", 180),
+    ("scripts/validate_required_contract_coverage.py", 180),
 )
 HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS: tuple[str, ...] = (
     "emit_channel_id",
