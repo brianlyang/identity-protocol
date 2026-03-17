@@ -80,6 +80,9 @@ HOST_GATEWAY_LIGHT_OPERATIONS: tuple[str, ...] = (
     "scan",
 )
 HOST_GATEWAY_STRICT_GATE_PROFILE = "strict_full"
+HOST_GATEWAY_STRICT_GATE_PROFILE_BY_OPERATION: dict[str, str] = {
+    "three-plane": "three_plane_core",
+}
 HOST_GATEWAY_LIGHT_GATE_PROFILE = "inspection_targeted"
 HOST_GATEWAY_ALLOW_UPGRADE_ONLY = True
 
