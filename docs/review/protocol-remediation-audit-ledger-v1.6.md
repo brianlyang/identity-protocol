@@ -4196,3 +4196,54 @@ Round-21 runtime identity authority bypass closure (`HEAD=dirty`, 2026-03-16):
 80. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260306T140030Z_tmp_hardcoded_path_governance_gap.md`
 81. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/PROTOCOL_FEEDBACK_RECEIPT_20260306T140030Z_tmp_hardcoded_path_governance_gap.json`
 82. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/evidence-index/INDEX.md`
+
+## v1.6.0 Addendum (2026-03-17): session-primary switch + strict authority purity replay
+
+### A1) Scope
+
+1. fix switch receipt validation so it binds to session-primary pre-state instead of shared canonical pre-state.
+2. remove canonical/catalog fallback from strict actor/session authority paths.
+3. fail-close final emit auto identity resolution when explicit actor context has no binding.
+
+### A2) Code closure
+
+1. `scripts/identity_creator.py`
+   - activate -> sync handoff now passes:
+     - `--switch-prestate-mode session_primary`
+     - `--switch-from-identity <current_actor_identity>`
+2. `scripts/sync_session_identity.py`
+   - added `session_primary` vs `legacy_canonical` pre-state modes for switch receipt validation.
+3. `scripts/identity_runtime_authority_common.py`
+   - explicit actor/session missing-binding now returns `actor_binding_session_binding_missing`.
+   - explicit actor-only ambiguity/missing now fail-closes instead of degrading into canonical/catalog authority.
+4. `scripts/response_stamp_common.py`
+   - canonical pointer no longer fills visible lock state when actor context is present but unbound.
+5. `scripts/final_emit_governed.py`
+   - auto identity resolution now fails under strict actor authority if no actor/session binding exists.
+
+### A3) Replay evidence
+
+1. synthetic switch replay:
+   - `/tmp/switch_guard_session_primary_proof_20260317.json`
+   - verdict:
+     - positive receipt (`alpha -> gamma`) passes even when canonical pointer pre-state is `beta`
+     - negative receipt (`beta -> gamma`) fails with `IP-ASB-MB-009`
+2. synthetic strict authority replay:
+   - `/tmp/strict_authority_purity_proof_20260317.json`
+   - verdict:
+     - unbound explicit session fails with `identity_authority_resolution_mode=actor_binding_session_binding_missing`
+     - final emit auto identity resolution fails with `context_resolution_failed: identity-id is unresolved under strict actor authority`
+3. live runtime replay:
+   - `/tmp/base_repo_architect_multibinding_20260317.json`
+   - `/tmp/base_repo_architect_render_stamp_20260317.json`
+   - `/tmp/base_repo_architect_pointer_consistency_20260317.log`
+   - verdict:
+     - multibinding concurrency `PASS_REQUIRED`
+     - render stamp resolves `identity_authority_resolution_mode=actor_binding_session_scoped`
+     - pointer consistency passes under `--strict-session-primary`
+
+### A4) Verdict
+
+1. the reproduced “receipt matched session-primary state but failed against canonical pointer state” defect is closed.
+2. explicit actor/session lanes no longer silently degrade into shared canonical or catalog authority.
+3. strict authority gaps now fail-close with machine-readable stale reasons instead of identity drift.

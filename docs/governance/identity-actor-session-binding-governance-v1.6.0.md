@@ -4925,3 +4925,34 @@ Replay evidence (2026-03-09):
 4. Ownership baseline:
    - protocol-side enforces detectability + next-hop blocker contracts;
    - instance-side fixes lane/runtime implementations surfaced by those contracts.
+
+### A5) Session-primary switch + strict authority purity closure (2026-03-17)
+
+Problem freeze:
+
+1. `identity_creator.py` already detected guarded identity switches from actor/session binding state,
+   but `sync_session_identity.py` still validated `switch_intent_receipt` against the shared
+   canonical pointer pre-state.
+2. strict runtime authority resolution still degraded from explicit actor/session context into
+   canonical pointer / catalog fallback in several paths.
+3. that mixed-mode authority graph allowed the protocol to behave like a legacy single-pointer
+   system even after M:N actor-session multibinding had been declared.
+
+Mandatory behavior:
+
+1. `identity_creator.py activate` must pass session-primary pre-state into `sync_session_identity.py`.
+2. `sync_session_identity.py` must validate switch receipts against session-primary pre-state when
+   invoked in session-primary mode.
+3. strict actor/session authority resolution must fail-close when the requested session has no
+   bound identity; it must not silently fall back to canonical pointer or catalog default.
+4. `response_stamp_common.py` must not use canonical pointer as the visible lock source when actor
+   context is present but unbound.
+5. `final_emit_governed.py` auto identity resolution must fail-close under explicit actor context
+   when no actor/session binding is available.
+
+Interpretation lock:
+
+1. `session/active_identity.json` remains a compatibility mirror and shared transport artifact.
+2. it is not allowed to override session-primary before-state for guarded identity switching.
+3. it is not allowed to override strict actor/session authority during final emit or stamp render.
+4. legacy canonical fallback is permitted only through explicit legacy mode, not by silent downgrade.
