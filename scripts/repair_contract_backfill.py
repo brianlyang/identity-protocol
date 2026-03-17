@@ -873,6 +873,7 @@ def _normalize_host_gateway_contracts(task: dict[str, Any], *, identity_id: str 
                 "strict_operations",
                 "light_operations",
                 "strict_gate_profile",
+                "strict_gate_profile_by_operation",
                 "light_gate_profile",
                 "allow_upgrade_only",
             ):
