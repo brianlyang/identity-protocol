@@ -28,6 +28,7 @@ from protocol_infra_contract import (
     HOST_VISIBLE_POST_CHECK_DETECTABILITY_REQUIRED_RATE,
     HOST_VISIBLE_NEXT_HOP_BLOCK_REQUIRED_RATE,
     HOST_VISIBLE_FALSE_GREEN_MAX_RATE,
+    HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
 )
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
@@ -3093,7 +3094,7 @@ def main() -> int:
                     "--lock-state",
                     "LOCK_MATCH",
                     "--surface-label",
-                    f"full_scan_{layer}",
+                    HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
                     "--operation",
                     "scan",
                     "--out",
