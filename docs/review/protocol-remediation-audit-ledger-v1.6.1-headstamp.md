@@ -293,3 +293,14 @@ Observed after fix:
 
 1. Visible reply envelope stays infrastructure-owned and shared.
 2. No instance-specific literal headstamp rendering was introduced.
+
+### 13.5 Non-native chat surface explanatory boundary (2026-03-17)
+
+1. The shared operator envelope is now also frozen for explanatory chat surfaces that are not native machine-attested.
+2. In that mode, the second line must make the non-claim explicit instead of pretending governed proof:
+   - `verification_source = not_claimed`
+   - `current_chat_surface_native_machine_attested = false`
+   - identity consistency fields remain visible for downstream machine reasoning:
+     - `display_headstamp_identity_id`
+     - `authoritative_identity_id`
+3. This keeps the visible template unified without conflating chat-surface display with controlled-runtime admission evidence.
