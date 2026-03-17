@@ -174,6 +174,8 @@ Interpretation contract:
    - `scripts/validate_strict_actor_entry_semantics.py` scans strict orchestrators that launch governed
      render/first-line/headstamp/final-emit checks and blocks hidden `assistant:codex` defaults or missing
      `IP-ACTOR-ENTRY-001` / `resolve_required_protocol_actor_id()` entry gates.
+   - the same validator now also blocks strict regression wrappers that default `--project-catalog` back to
+     `identity/catalog/identities.yaml` instead of runtime-local catalog semantics.
 
 ### 10.3 Replay evidence
 
@@ -186,6 +188,8 @@ Interpretation contract:
      resolver reuse, compatibility-pointer literal reuse, and unregistered authority-consumer surfaces
    - negative strict actor entry probe => static validator blocks hidden `assistant:codex` defaults and missing
      strict actor entry gates on authority-adjacent orchestrators
+   - negative strict project-catalog probe => static validator blocks strict regression wrappers that silently
+     revert project catalog input to the repo fixture
 2. live runtime replay:
    - `/tmp/actor_session_authority_residue_apply_20260317.json`
    - `/tmp/actor_session_authority_residue_scan_20260317.json`

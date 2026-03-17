@@ -223,6 +223,9 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
 7. strict actor-entry orchestrators that launch governed headstamp / final-emit / reply-coherence checks must not
    ship a hidden `assistant:codex` fallback; they must either use `resolve_required_protocol_actor_id()` or fail-close
    with `IP-ACTOR-ENTRY-001` before they fan out strict checks.
+8. strict scan / regression orchestrators must resolve `--project-catalog` from runtime-local catalog semantics
+   (`IDENTITY_CATALOG` or project `.identity/catalog.local.yaml`) and must not silently default that lane back to
+   `identity/catalog/identities.yaml`.
 
 ## 10) References
 
