@@ -50,6 +50,8 @@ from create_identity_pack import (
     HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE,
     UNIQUE_EGRESS_SCRIPT,
     UNIQUE_INGRESS_SCRIPT,
+    _copy_jsonl_with_identity,
+    _copy_sample_with_identity,
     _derived_prompt_conformance_contract_skeleton,
     _default_identity_prompt_markdown,
     _ensure_intake_p1_contracts,
@@ -334,6 +336,105 @@ def _safe_load_yaml(path: Path) -> dict[str, Any]:
 
 def _safe_dump_yaml(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(yaml.safe_dump(payload, sort_keys=False, allow_unicode=True), encoding="utf-8")
+
+
+def _jsonl_has_required_fields(path: Path, required_fields: list[str]) -> bool:
+    if not path.exists():
+        return False
+    try:
+        lines = [ln.strip() for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    except Exception:
+        return False
+    if not lines:
+        return False
+    for line in lines:
+        try:
+            payload = json.loads(line)
+        except Exception:
+            return False
+        if not isinstance(payload, dict):
+            return False
+        if any(field not in payload for field in required_fields):
+            return False
+    return True
+
+
+def _ensure_feedback_selftest_assets(
+    *,
+    pack_path: Path,
+    identity_id: str,
+    task_doc: dict[str, Any],
+    repo_root: Path,
+    apply: bool,
+) -> dict[str, Any]:
+    runtime_root = (pack_path / "runtime").resolve()
+    contract = task_doc.get("experience_feedback_contract")
+    required_fields = []
+    if isinstance(contract, dict):
+        required_fields = [str(x).strip() for x in list(contract.get("required_fields") or []) if str(x).strip()]
+    if not required_fields:
+        required_fields = ["case_id", "layer", "pattern", "action", "impact_score", "replay_status"]
+
+    positive_src = (repo_root / "identity/runtime/rulebooks/positive.jsonl").resolve()
+    negative_src = (repo_root / "identity/runtime/rulebooks/negative.jsonl").resolve()
+    positive_dst = (runtime_root / "rulebooks/positive.jsonl").resolve()
+    negative_dst = (runtime_root / "rulebooks/negative.jsonl").resolve()
+
+    positive_valid_before = _jsonl_has_required_fields(positive_dst, required_fields)
+    negative_valid_before = _jsonl_has_required_fields(negative_dst, required_fields)
+    positive_backfilled = False
+    negative_backfilled = False
+
+    if apply and positive_src.exists() and not positive_valid_before:
+        _copy_jsonl_with_identity(positive_src, positive_dst, identity_id)
+        positive_backfilled = True
+    if apply and negative_src.exists() and not negative_valid_before:
+        _copy_jsonl_with_identity(negative_src, negative_dst, identity_id)
+        negative_backfilled = True
+
+    return {
+        "positive_rulebook_path": str(positive_dst),
+        "negative_rulebook_path": str(negative_dst),
+        "required_fields": required_fields,
+        "positive_rulebook_valid_before": positive_valid_before,
+        "negative_rulebook_valid_before": negative_valid_before,
+        "positive_rulebook_valid_after": _jsonl_has_required_fields(positive_dst, required_fields),
+        "negative_rulebook_valid_after": _jsonl_has_required_fields(negative_dst, required_fields),
+        "positive_rulebook_backfilled": positive_backfilled,
+        "negative_rulebook_backfilled": negative_backfilled,
+    }
+
+
+def _ensure_handoff_selftest_assets(
+    *,
+    pack_path: Path,
+    identity_id: str,
+    repo_root: Path,
+    apply: bool,
+) -> dict[str, Any]:
+    sample_src = (repo_root / "identity/runtime/examples/handoff").resolve()
+    sample_dst = (pack_path / "runtime/examples/handoff").resolve()
+    positive_before = sorted((sample_dst / "positive").glob("*.json"))
+    negative_before = sorted((sample_dst / "negative").glob("*.json"))
+    backfilled_files: list[str] = []
+
+    if apply and sample_src.exists() and (not positive_before or not negative_before):
+        for sample in sample_src.rglob("*.json"):
+            rel = sample.relative_to(sample_src)
+            dst = sample_dst / rel
+            _copy_sample_with_identity(sample, dst, identity_id)
+            backfilled_files.append(str(dst))
+
+    positive_after = sorted((sample_dst / "positive").glob("*.json"))
+    negative_after = sorted((sample_dst / "negative").glob("*.json"))
+    return {
+        "sample_root": str(sample_dst),
+        "positive_count_before": len(positive_before),
+        "negative_count_before": len(negative_before),
+        "positive_count_after": len(positive_after),
+        "negative_count_after": len(negative_after),
+        "backfilled_files": backfilled_files,
+    }
 
 
 def _identity_title_description(
@@ -1649,6 +1750,19 @@ def main() -> int:
         repo_root=repo_root,
         apply=args.apply,
     )
+    feedback_selftest_assets_result = _ensure_feedback_selftest_assets(
+        pack_path=pack_path,
+        identity_id=str(args.identity_id or "").strip(),
+        task_doc=updated,
+        repo_root=repo_root,
+        apply=args.apply,
+    )
+    handoff_selftest_assets_result = _ensure_handoff_selftest_assets(
+        pack_path=pack_path,
+        identity_id=str(args.identity_id or "").strip(),
+        repo_root=repo_root,
+        apply=args.apply,
+    )
 
     task_changed = before != updated
     catalog_changed = catalog_row_version_changed
@@ -1659,6 +1773,9 @@ def main() -> int:
         or meta_changed
         or bool(prompt_runtime_governance_result.get("changed"))
         or bool(provider_bindings_template_result.get("changed"))
+        or bool(feedback_selftest_assets_result.get("positive_rulebook_backfilled"))
+        or bool(feedback_selftest_assets_result.get("negative_rulebook_backfilled"))
+        or bool(handoff_selftest_assets_result.get("backfilled_files"))
     )
     applied = False
     if args.apply:
@@ -1676,6 +1793,12 @@ def main() -> int:
         if prompt_runtime_governance_result.get("applied"):
             applied = True
         if provider_bindings_template_result.get("applied"):
+            applied = True
+        if feedback_selftest_assets_result.get("positive_rulebook_backfilled"):
+            applied = True
+        if feedback_selftest_assets_result.get("negative_rulebook_backfilled"):
+            applied = True
+        if handoff_selftest_assets_result.get("backfilled_files"):
             applied = True
 
     if missing_after:
@@ -1807,6 +1930,8 @@ def main() -> int:
         "host_gateway_artifact_materialization_invoked": host_gateway_artifact_materialization_invoked,
         "identity_prompt_runtime_governance": prompt_runtime_governance_result,
         "provider_bindings_template_backfill": provider_bindings_template_result,
+        "feedback_selftest_assets_backfill": feedback_selftest_assets_result,
+        "handoff_selftest_assets_backfill": handoff_selftest_assets_result,
         "applied": applied,
         "response_stamp_profile_present_before": response_stamp_profile_present_before,
         "response_stamp_profile_present_after": response_stamp_profile_present_after,
