@@ -3616,6 +3616,12 @@ HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD = "receipt_source"
 HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE = "runtime_dialogue"
 HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE = "__TEMPLATE_HOST_VISIBLE_FIXTURE_RECEIPT_SOURCE__"
 HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS = {__TEMPLATE_HOST_VISIBLE_FIXTURE_ALLOWED_OPERATIONS__}
+ASSISTANT_PROCESS_MESSAGE_KIND_BY_OPERATION = {
+    "commentary": "checkpoint",
+    "status": "status_update",
+    "final": "result_summary",
+    "inspection": "checkpoint",
+}
 PRIVILEGE_ESCALATION_ERROR_CODE = "IP-PRIV-ESC-001"
 PRIVILEGE_ESCALATION_REASON_PREFIX = "privilege_escalation_required"
 PRIVILEGE_ESCALATION_REMEDIATION_HINT = "rerun_with_host_privilege_escalation"
@@ -3825,6 +3831,23 @@ def _select_host_visible_receipt_source(operation: str) -> str:
     if op in HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS:
         return HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE
     return HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE
+
+
+def _resolve_process_message_metadata(operation: str) -> dict[str, str]:
+    normalized_operation = _normalize_operation(operation)
+    message_kind = str(
+        ASSISTANT_PROCESS_MESSAGE_KIND_BY_OPERATION.get(normalized_operation, "")
+    ).strip()
+    payload = {
+        "message_author_role": "assistant",
+        "message_operation": normalized_operation,
+        "message_kind_resolution_mode": (
+            "host_visible_operation_map" if message_kind else "host_visible_operation_unclassified"
+        ),
+    }
+    if message_kind:
+        payload["message_kind"] = message_kind
+    return payload
 
 
 def _receipt_path_for_channel(
@@ -4648,6 +4671,7 @@ def main() -> int:
                 json_only=args.json_only,
             )
     host_visible_receipt_source = _select_host_visible_receipt_source(str(args.operation).strip())
+    process_message_metadata = _resolve_process_message_metadata(str(args.operation).strip())
     _emit(
         {
             "protocol_session_chain_wrapper_status": STATUS_PASS_REQUIRED,
@@ -4665,11 +4689,13 @@ def main() -> int:
             "visible_reply_preview": [str(line).strip() for line in visible_reply_preview if str(line).strip()],
             "reply_transport_ref": str(out_reply_path),
             "reply_transport_binding_status": STATUS_PASS_REQUIRED,
+            "external_stamp": first_line,
             "display_headstamp_line": display_headstamp_line,
             "machine_verification_line": machine_verification_line,
             "machine_verification": machine_verification,
             "operator_envelope_lines": operator_envelope_lines,
             "operator_envelope": operator_envelope or "\\n".join(operator_envelope_lines),
+            **process_message_metadata,
             "ingress_bundle_status": ingress_payload.get("bundle_status", ""),
             "wrapper_surface_status": ingress_payload.get("wrapper_surface_status", ""),
             "entry_receipt_tuple_status": tuple_status,
