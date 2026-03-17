@@ -16,7 +16,11 @@ from typing import Any
 
 import yaml
 
-from actor_session_common import load_actor_binding, load_actor_binding_store, resolve_actor_id
+from actor_session_common import (
+    load_actor_binding,
+    load_actor_binding_store,
+    resolve_protocol_actor_id,
+)
 from final_emit_contract_common import (
     FINAL_EMIT_CHANNEL_ID,
     FINAL_EMIT_POLICY_MODE,
@@ -640,10 +644,10 @@ def _resolve_repo_catalog(args: argparse.Namespace) -> tuple[Path, str]:
 def _resolve_actor_id(args: argparse.Namespace) -> tuple[str, str]:
     actor_raw = str(args.actor_id or "").strip()
     if actor_raw:
-        return resolve_actor_id(actor_raw), "explicit"
+        return resolve_protocol_actor_id(actor_raw), "explicit"
     actor_env = str(os.environ.get("CODEX_ACTOR_ID", "")).strip()
     if actor_env:
-        return resolve_actor_id(actor_env), "env"
+        return resolve_protocol_actor_id(actor_env), "env"
     raise ValueError("actor-id required: pass --actor-id or set CODEX_ACTOR_ID")
 
 
