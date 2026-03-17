@@ -20,6 +20,7 @@ from final_emit_contract_common import (
     FINAL_EMIT_POLICY_MODE,
     FINAL_EMIT_SCHEMA_ID,
 )
+from gateway_wrapper_enforcement import run_gateway_wrapped_command as _gw_run_gateway_wrapped_command
 from protocol_infra_contract import (
     HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
     MULTIMODAL_RUNTIME_STAGE_RECEIPT_DIR as INFRA_MULTIMODAL_RUNTIME_STAGE_RECEIPT_DIR,
@@ -864,7 +865,11 @@ def _sha256_file(path: Path) -> str:
 def _run(cmd: list[str], log_dir: Path, run_id: str, idx: int, *, cwd: Path | None = None) -> dict[str, Any]:
     start = datetime.now(timezone.utc)
     t0 = time()
-    p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(cwd) if cwd else None)
+    rc, stdout_text, stderr_text = _gw_run_gateway_wrapped_command(
+        cmd=cmd,
+        protocol_root=PROTOCOL_REPO_ROOT,
+        passthrough_cwd=cwd,
+    )
     end = datetime.now(timezone.utc)
     elapsed_ms = int((time() - t0) * 1000)
     log_path = log_dir / f"{run_id}-check-{idx:02d}.log"
@@ -872,25 +877,25 @@ def _run(cmd: list[str], log_dir: Path, run_id: str, idx: int, *, cwd: Path | No
     log_content = (
         f"$ {' '.join(cmd)}\n"
         f"[cwd] {str(cwd) if cwd else str(Path.cwd())}\n"
-        f"[exit_code] {p.returncode}\n"
+        f"[exit_code] {rc}\n"
         f"[started_at] {start.strftime('%Y-%m-%dT%H:%M:%SZ')}\n"
         f"[ended_at] {end.strftime('%Y-%m-%dT%H:%M:%SZ')}\n\n"
-        f"[stdout]\n{p.stdout}\n"
-        f"[stderr]\n{p.stderr}\n"
+        f"[stdout]\n{stdout_text}\n"
+        f"[stderr]\n{stderr_text}\n"
     )
     log_path.write_text(log_content, encoding="utf-8")
     log_sha256 = _sha256_file(log_path)
     return {
         "command": " ".join(cmd),
         "cmd": " ".join(cmd),
-        "code": p.returncode,
-        "ok": p.returncode == 0,
-        "stdout": p.stdout[-4000:],
-        "stderr": p.stderr[-4000:],
+        "code": rc,
+        "ok": rc == 0,
+        "stdout": stdout_text[-4000:],
+        "stderr": stderr_text[-4000:],
         "started_at": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "ended_at": end.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "duration_ms": elapsed_ms,
-        "exit_code": p.returncode,
+        "exit_code": rc,
         "log_path": str(log_path),
         "cwd": str(cwd) if cwd else str(Path.cwd()),
         "sha256": log_sha256,
