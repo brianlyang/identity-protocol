@@ -1,6 +1,10 @@
 ---
 name: identity-creator
 description: Design, scaffold, validate, and evolve an identity control-plane package that is parallel to skills and MCP. Use when the user asks to create or update identity architecture, identity metadata registry, runtime identity contracts, or identity-creator standards.
+skill_id: identity-creator
+version: 1.0.0
+owner: protocol
+source: protocol_repo
 metadata:
   short-description: Create or update identity protocol and packs
 ---

@@ -11,7 +11,15 @@ from typing import Any
 
 import yaml
 
-from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
+from tool_vendor_governance_common import (
+    contract_required,
+    dedupe_paths,
+    load_json,
+    path_within,
+    resolve_pack_and_task,
+    root_family_for_path,
+    select_skill_enforcement_roots,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -39,6 +47,8 @@ CONTRACT_KEYS = (
     "skill_sync_drift_guard_contract",
     "rq_041_skill_sync_drift_guard_contract_v1",
 )
+DEFAULT_SELECTED_PATH_SCOPE_POLICY = "all_selected_paths"
+DEFAULT_DRIFT_SCOPE_MODE = "all_roots"
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -161,15 +171,17 @@ def _resolve_roots(skill_payload: dict[str, Any], contract: dict[str, Any]) -> l
             token = token.replace("{codex_home}", str(codex_home))
             rows.append(Path(token).expanduser().resolve())
 
-    dedup: list[Path] = []
-    seen: set[str] = set()
-    for row in rows:
-        key = row.as_posix()
-        if key in seen:
-            continue
-        seen.add(key)
-        dedup.append(row)
-    return dedup
+    return dedupe_paths(rows)
+
+
+def _policy_token(contract: dict[str, Any]) -> str:
+    token = str(contract.get("selected_path_scope_policy", "")).strip().lower()
+    return token or DEFAULT_SELECTED_PATH_SCOPE_POLICY
+
+
+def _drift_scope_mode(contract: dict[str, Any]) -> str:
+    token = str(contract.get("drift_scope_mode", "")).strip().lower()
+    return token or DEFAULT_DRIFT_SCOPE_MODE
 
 
 def main() -> int:
@@ -216,13 +228,74 @@ def main() -> int:
 
     allow_missing_skills = bool(contract.get("allow_missing_skills", False))
     drift_roots = _resolve_roots(skill_payload, contract)
+    active_repo_root = Path(str(skill_payload.get("active_repo_root", "")).strip() or pack_path.parent.parent).expanduser().resolve()
+    active_runtime_root = Path(
+        str(skill_payload.get("active_runtime_root", "")).strip() or (Path.home() / ".codex")
+    ).expanduser().resolve()
+    allowed_skill_roots = [
+        Path(str(raw)).expanduser().resolve()
+        for raw in (skill_payload.get("allowed_skill_roots") or [])
+        if str(raw).strip()
+    ]
+    selected_scope_policy = _policy_token(contract)
+    drift_scope_mode = _drift_scope_mode(contract)
+    enforcement_roots = select_skill_enforcement_roots(
+        allowed_skill_roots=allowed_skill_roots,
+        active_repo_root=active_repo_root,
+        active_runtime_root=active_runtime_root,
+        policy=selected_scope_policy,
+    )
+    selected_rows_by_skill = {
+        str(row.get("skill", "")).strip(): row
+        for row in (skill_payload.get("skill_path_rows") or [])
+        if isinstance(row, dict) and str(row.get("skill", "")).strip()
+    }
 
     skill_sync_rows: list[dict[str, Any]] = []
     drift_skills: list[str] = []
     missing_skills: list[str] = []
+    skipped_unmanaged_skills: list[dict[str, Any]] = []
 
     for skill_id in required_skills:
-        candidates = _skill_candidates(str(skill_id), drift_roots)
+        selected_row = selected_rows_by_skill.get(str(skill_id), {})
+        selected_path_raw = str(selected_row.get("path", "")).strip() if isinstance(selected_row, dict) else ""
+        selected_path = Path(selected_path_raw).expanduser().resolve() if selected_path_raw else None
+        selected_root_family = (
+            root_family_for_path(selected_path, allowed_skill_roots)
+            if isinstance(selected_path, Path)
+            else None
+        )
+        governed_selected_path = bool(selected_path and path_within(selected_path, active_repo_root))
+        if selected_path and enforcement_roots and not any(path_within(selected_path, root) for root in enforcement_roots):
+            skipped_unmanaged_skills.append(
+                {
+                    "skill": str(skill_id),
+                    "path": str(selected_path),
+                    "selected_root_family": str(selected_root_family) if selected_root_family else "",
+                    "governed_selected_path": governed_selected_path,
+                    "skip_reason": "selected_path_outside_enforcement_scope",
+                }
+            )
+            skill_sync_rows.append(
+                {
+                    "skill": str(skill_id),
+                    "candidate_count": 0,
+                    "existing_count": 0,
+                    "hash_variants": 0,
+                    "hash_to_paths": {},
+                    "selected_root_family": str(selected_root_family) if selected_root_family else "",
+                    "governed_selected_path": governed_selected_path,
+                    "drift_scope_mode": drift_scope_mode,
+                    "skipped": True,
+                }
+            )
+            continue
+
+        candidate_roots = drift_roots
+        if drift_scope_mode == "selected_root_family_only" and selected_root_family is not None:
+            candidate_roots = [selected_root_family]
+
+        candidates = _skill_candidates(str(skill_id), candidate_roots)
         existing = [p for p in candidates if p.exists() and p.is_file()]
         hash_to_paths: dict[str, list[str]] = {}
         for path in existing:
@@ -242,6 +315,9 @@ def main() -> int:
                 "existing_count": len(existing),
                 "hash_variants": len(hash_to_paths.keys()),
                 "hash_to_paths": hash_to_paths,
+                "selected_root_family": str(selected_root_family) if selected_root_family else "",
+                "governed_selected_path": governed_selected_path,
+                "drift_scope_mode": drift_scope_mode,
             }
         )
 
@@ -261,10 +337,16 @@ def main() -> int:
         "allow_missing_skills": allow_missing_skills,
         "required_skill_count": len(required_skills),
         "required_skills": required_skills,
+        "selected_path_scope_policy": selected_scope_policy,
+        "drift_scope_mode": drift_scope_mode,
+        "active_repo_root": str(active_repo_root),
+        "active_runtime_root": str(active_runtime_root),
+        "enforcement_roots": [x.as_posix() for x in enforcement_roots],
         "drift_roots": [x.as_posix() for x in drift_roots],
         "skill_sync_rows": skill_sync_rows,
         "drift_skills": drift_skills,
         "missing_skills": missing_skills,
+        "skipped_unmanaged_skills": skipped_unmanaged_skills,
         "skill_path_integrity": {
             "status": skill_status,
             "rc": rc_skill,

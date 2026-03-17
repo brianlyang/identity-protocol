@@ -558,7 +558,7 @@ def _vendor_api_solution_contract_skeleton(identity_id: str) -> dict:
 
 def _skill_installation_supply_chain_contract_skeleton(identity_id: str) -> dict:
     return {
-        "required": False,
+        "required": True,
         "contract_id": "rq_039_skill_installation_supply_chain_contract_v1",
         "artifact_type": "skill",
         "required_capability_drivers": [
@@ -579,7 +579,7 @@ def _skill_installation_supply_chain_contract_skeleton(identity_id: str) -> dict
 
 def _skill_frontmatter_contract_skeleton() -> dict:
     return {
-        "required": False,
+        "required": True,
         "contract_id": "rq_040_skill_frontmatter_contract_v1",
         "required_frontmatter_fields": [
             "skill_id",
@@ -588,16 +588,19 @@ def _skill_frontmatter_contract_skeleton() -> dict:
             "source",
         ],
         "strict_require_frontmatter": True,
+        "selected_path_scope_policy": "governed_selected_paths_only",
         "validator": "scripts/validate_skill_frontmatter.py",
     }
 
 
 def _skill_sync_drift_guard_contract_skeleton() -> dict:
     return {
-        "required": False,
+        "required": True,
         "contract_id": "rq_041_skill_sync_drift_guard_contract_v1",
         "artifact_type": "skill",
         "drift_check_mode": "sha256",
+        "selected_path_scope_policy": "governed_selected_paths_only",
+        "drift_scope_mode": "selected_root_family_only",
         "allow_missing_skills": False,
         "validator": "scripts/validate_skill_sync_drift_guard.py",
     }

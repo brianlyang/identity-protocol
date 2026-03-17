@@ -8,6 +8,12 @@ from typing import Any
 
 import yaml
 
+from protocol_infra_contract import (
+    UNIQUE_ENTRY_RECEIPT_SELECTOR_POLICY_ID,
+    UNIQUE_ENTRY_RECEIPT_SELECTOR_PRECEDENCE,
+    UNIQUE_ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS,
+)
+
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_CONTRACT_INVALID = "IP-GATE-ENTRY-002"
@@ -135,6 +141,9 @@ def main() -> int:
                 "pack_path": str(pack_path),
                 "task_path": str(task_path),
                 "max_age_seconds": 0,
+                "selector_policy_id": "",
+                "selector_precedence": [],
+                "selector_source_fields": [],
                 "status": STATUS_PASS_REQUIRED,
                 "reason": "",
             }
@@ -160,9 +169,31 @@ def main() -> int:
             except Exception:
                 max_age = 0
             row_state["max_age_seconds"] = max_age
+            row_state["selector_policy_id"] = str(contract.get("entry_receipt_selector_policy_id", "")).strip()
+            row_state["selector_precedence"] = [
+                str(x).strip() for x in (contract.get("entry_receipt_selector_precedence") or []) if str(x).strip()
+            ]
+            row_state["selector_source_fields"] = [
+                str(x).strip() for x in (contract.get("entry_receipt_selector_source_fields") or []) if str(x).strip()
+            ]
             if max_age <= 0:
                 row_state["status"] = STATUS_FAIL_REQUIRED
                 row_state["reason"] = "entry_receipt_max_age_seconds_invalid"
+                violations.append(dict(row_state))
+                continue
+            if row_state["selector_policy_id"] != UNIQUE_ENTRY_RECEIPT_SELECTOR_POLICY_ID:
+                row_state["status"] = STATUS_FAIL_REQUIRED
+                row_state["reason"] = "entry_receipt_selector_policy_id_invalid"
+                violations.append(dict(row_state))
+                continue
+            if list(row_state["selector_precedence"]) != list(UNIQUE_ENTRY_RECEIPT_SELECTOR_PRECEDENCE):
+                row_state["status"] = STATUS_FAIL_REQUIRED
+                row_state["reason"] = "entry_receipt_selector_precedence_invalid"
+                violations.append(dict(row_state))
+                continue
+            if list(row_state["selector_source_fields"]) != list(UNIQUE_ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS):
+                row_state["status"] = STATUS_FAIL_REQUIRED
+                row_state["reason"] = "entry_receipt_selector_source_fields_invalid"
                 violations.append(dict(row_state))
 
     if not checked_rows:

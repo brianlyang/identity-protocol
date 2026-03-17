@@ -278,7 +278,14 @@ def _normalize_skill_supply_chain_contracts(task_doc: dict[str, Any], identity_i
             task_doc[key] = json.loads(json.dumps(default))
             restored.append(key)
             continue
-        task_doc[key] = _deep_merge(node, default)
+        merged = _deep_merge(node, default)
+        if merged.get("required") is not True:
+            merged["required"] = True
+            restored.append(f"{key}.required")
+        if not str(merged.get("validator", "")).strip() and str(default.get("validator", "")).strip():
+            merged["validator"] = str(default.get("validator", "")).strip()
+            restored.append(f"{key}.validator")
+        task_doc[key] = merged
     return restored
 
 
@@ -562,6 +569,8 @@ def _normalize_unique_entry_contracts(task: dict[str, Any]) -> tuple[list[str], 
             forced_required_keys.append(key)
             restored_validator_keys.append(key)
             continue
+        node = _deep_merge(node, default)
+        task[key] = node
         if node.get("required") is not True:
             node["required"] = True
             forced_required_keys.append(key)

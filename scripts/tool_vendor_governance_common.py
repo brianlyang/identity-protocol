@@ -202,6 +202,52 @@ def latest_identity_upgrade_report(identity_id: str, pack_root: Path) -> Path | 
     return rows[-1]
 
 
+def path_within(path: Path, root: Path) -> bool:
+    try:
+        path.expanduser().resolve().relative_to(root.expanduser().resolve())
+        return True
+    except Exception:
+        return False
+
+
+def dedupe_paths(rows: list[Path]) -> list[Path]:
+    dedup: list[Path] = []
+    seen: set[str] = set()
+    for row in rows:
+        token = row.expanduser().resolve()
+        key = token.as_posix()
+        if key in seen:
+            continue
+        seen.add(key)
+        dedup.append(token)
+    return dedup
+
+
+def select_skill_enforcement_roots(
+    *,
+    allowed_skill_roots: list[Path],
+    active_repo_root: Path,
+    active_runtime_root: Path,
+    policy: str,
+) -> list[Path]:
+    normalized = str(policy or "").strip().lower() or "all_selected_paths"
+    roots = dedupe_paths([root.expanduser().resolve() for root in allowed_skill_roots])
+    if normalized == "all_selected_paths":
+        return roots
+    if normalized == "governed_selected_paths_only":
+        return [root for root in roots if path_within(root, active_repo_root)]
+    if normalized == "runtime_selected_paths_only":
+        return [root for root in roots if path_within(root, active_runtime_root)]
+    return roots
+
+
+def root_family_for_path(path: Path, roots: list[Path]) -> Path | None:
+    for root in dedupe_paths(list(roots)):
+        if path_within(path, root):
+            return root
+    return None
+
+
 def boolish(value: Any) -> bool:
     if isinstance(value, bool):
         return value

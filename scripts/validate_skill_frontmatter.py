@@ -9,7 +9,14 @@ from typing import Any
 
 import yaml
 
-from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
+from tool_vendor_governance_common import (
+    contract_required,
+    load_json,
+    path_within,
+    resolve_pack_and_task,
+    root_family_for_path,
+    select_skill_enforcement_roots,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -44,6 +51,7 @@ DEFAULT_REQUIRED_FIELDS = (
     "owner",
     "source",
 )
+DEFAULT_SELECTED_PATH_SCOPE_POLICY = "all_selected_paths"
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -127,6 +135,11 @@ def _parse_frontmatter(path: Path) -> tuple[dict[str, Any] | None, str]:
     return loaded, ""
 
 
+def _policy_token(contract: dict[str, Any]) -> str:
+    token = str(contract.get("selected_path_scope_policy", "")).strip().lower()
+    return token or DEFAULT_SELECTED_PATH_SCOPE_POLICY
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate skill frontmatter contract (RQ-040).")
     ap.add_argument("--catalog", required=True)
@@ -174,11 +187,28 @@ def main() -> int:
     )
     skill_status = str(skill_payload.get("path_integrity_status", "")).strip().upper()
     skill_rows = skill_payload.get("skill_path_rows") if isinstance(skill_payload.get("skill_path_rows"), list) else []
+    active_repo_root = Path(str(skill_payload.get("active_repo_root", "")).strip() or pack_path.parent.parent).expanduser().resolve()
+    active_runtime_root = Path(
+        str(skill_payload.get("active_runtime_root", "")).strip() or (Path.home() / ".codex")
+    ).expanduser().resolve()
+    allowed_skill_roots = [
+        Path(str(raw)).expanduser().resolve()
+        for raw in (skill_payload.get("allowed_skill_roots") or [])
+        if str(raw).strip()
+    ]
+    selected_path_scope_policy = _policy_token(contract)
+    enforcement_roots = select_skill_enforcement_roots(
+        allowed_skill_roots=allowed_skill_roots,
+        active_repo_root=active_repo_root,
+        active_runtime_root=active_runtime_root,
+        policy=selected_path_scope_policy,
+    )
 
     frontmatter_rows: list[dict[str, Any]] = []
     parse_errors: list[str] = []
     missing_frontmatter_skills: list[str] = []
     missing_required_field_rows: list[dict[str, Any]] = []
+    skipped_unmanaged_rows: list[dict[str, Any]] = []
 
     for row in skill_rows:
         if not isinstance(row, dict):
@@ -190,6 +220,19 @@ def main() -> int:
             continue
         skill_path = Path(path_raw).expanduser().resolve()
         if not skill_path.exists() or not skill_path.is_file():
+            continue
+        selected_root_family = root_family_for_path(skill_path, allowed_skill_roots)
+        governed_selected_path = path_within(skill_path, active_repo_root)
+        if enforcement_roots and not any(path_within(skill_path, root) for root in enforcement_roots):
+            skipped_unmanaged_rows.append(
+                {
+                    "skill": skill,
+                    "path": str(skill_path),
+                    "selected_root_family": str(selected_root_family) if selected_root_family else "",
+                    "governed_selected_path": governed_selected_path,
+                    "skip_reason": "selected_path_outside_enforcement_scope",
+                }
+            )
             continue
 
         frontmatter, parse_reason = _parse_frontmatter(skill_path)
@@ -220,6 +263,8 @@ def main() -> int:
                 "frontmatter_found": frontmatter is not None,
                 "frontmatter_keys": sorted(list(frontmatter.keys())) if isinstance(frontmatter, dict) else [],
                 "missing_required_fields": missing_fields,
+                "selected_root_family": str(selected_root_family) if selected_root_family else "",
+                "governed_selected_path": governed_selected_path,
             }
         )
 
@@ -237,7 +282,12 @@ def main() -> int:
         "skill_frontmatter_status": STATUS_SKIPPED_NOT_REQUIRED,
         "error_code": "",
         "required_frontmatter_fields": required_fields,
+        "selected_path_scope_policy": selected_path_scope_policy,
+        "active_repo_root": str(active_repo_root),
+        "active_runtime_root": str(active_runtime_root),
+        "enforcement_roots": [str(root) for root in enforcement_roots],
         "frontmatter_rows": frontmatter_rows,
+        "skipped_unmanaged_rows": skipped_unmanaged_rows,
         "missing_frontmatter_skills": missing_frontmatter_skills,
         "frontmatter_parse_errors": parse_errors,
         "missing_required_field_rows": missing_required_field_rows,
