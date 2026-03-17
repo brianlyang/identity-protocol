@@ -68,7 +68,11 @@ STRICT_NO_TRIM_OPERATIONS_DEFAULT: tuple[str, ...] = (
 LIGHT_NO_TRIM_OPERATIONS_DEFAULT: tuple[str, ...] = (
     "inspection",
     "scan",
+    "status",
 )
+VALIDATOR_OPERATION_ALIAS_BY_SURFACE_OPERATION: dict[str, str] = {
+    "status": "inspection",
+}
 
 # Order is deterministic for replay and log comparison.
 BUNDLE_REQUIREMENT_ORDER: tuple[str, ...] = (
@@ -1821,6 +1825,11 @@ def _is_strict_no_trim_operation(operation: str) -> bool:
     return str(operation or "").strip().lower() in set(STRICT_NO_TRIM_OPERATIONS_DEFAULT)
 
 
+def _effective_validator_operation(operation: str) -> str:
+    normalized = str(operation or "").strip().lower()
+    return VALIDATOR_OPERATION_ALIAS_BY_SURFACE_OPERATION.get(normalized, normalized)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run required gate bundle from mapping single-source registry.")
     parser.add_argument("--catalog", required=True)
@@ -1904,13 +1913,14 @@ def main() -> int:
     gate_profile_file = str(args.gate_profile_file or "").strip() or DEFAULT_GATE_PROFILE_FILE
     operation = str(args.operation or "").strip()
     operation_normalized = operation.lower()
+    effective_validator_operation = _effective_validator_operation(operation)
     gate_profile_entry_file = _resolve_input_path(repo_root, gate_profile_file)
     canonical_gate_profile_entry_file = (repo_root / DEFAULT_GATE_PROFILE_FILE).resolve()
     gate_profile_selection, gate_profile_resolved_file, gate_profile_errors = _load_gate_profile_selection(
         repo_root=repo_root,
         profile_file=gate_profile_file,
         profile_name=gate_profile,
-        operation=operation,
+        operation=effective_validator_operation,
         resolved_work_layer=str(args.resolved_work_layer or "").strip(),
         default_requirement_order=effective_requirement_order,
         known_requirement_keys=known_requirement_keys,
@@ -2141,7 +2151,7 @@ def main() -> int:
             "--identity-id",
             str(args.identity_id),
             "--operation",
-            str(args.operation),
+            str(effective_validator_operation),
             "--json-only",
         ]
         cmd.extend(spec.fixed_args)
@@ -2393,6 +2403,7 @@ def main() -> int:
         "identity_id": str(args.identity_id),
         "catalog_path": str(Path(args.catalog).expanduser().resolve()),
         "operation": str(args.operation),
+        "effective_validator_operation": effective_validator_operation,
         "contract_mapping": str(mapping_path),
         "gate_profile": gate_profile,
         "gate_profile_mode": (

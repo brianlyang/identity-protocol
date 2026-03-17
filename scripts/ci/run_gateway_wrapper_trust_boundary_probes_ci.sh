@@ -724,6 +724,27 @@ elif name == "session_chain_fresh_run_receipt_seed_replay_pass":
         first_line = str(preview[0] or "").strip()
     if not first_line.startswith("Identity-Context:"):
         raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: missing Identity-Context first line")
+elif name == "session_chain_status_update_operation_pass":
+    if rc != 0:
+        raise SystemExit("session_chain_status_update_operation_pass: expected zero rc")
+    if str(doc.get("protocol_session_chain_wrapper_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_status_update_operation_pass: expected PASS_REQUIRED wrapper status")
+    if str(doc.get("message_author_role", "")).strip() != "assistant":
+        raise SystemExit("session_chain_status_update_operation_pass: expected assistant message_author_role")
+    if str(doc.get("message_operation", "")).strip() != "status":
+        raise SystemExit("session_chain_status_update_operation_pass: expected raw message_operation=status")
+    if str(doc.get("message_kind", "")).strip() != "status_update":
+        raise SystemExit("session_chain_status_update_operation_pass: expected message_kind=status_update")
+    if not str(doc.get("external_stamp", "")).strip().startswith("Identity-Context:"):
+        raise SystemExit("session_chain_status_update_operation_pass: expected external_stamp first line")
+    if str(doc.get("headstamp_first_line_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_status_update_operation_pass: headstamp_first_line_status must be PASS_REQUIRED")
+    if str(doc.get("entry_receipt_tuple_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_status_update_operation_pass: entry_receipt_tuple_status must be PASS_REQUIRED")
+    if str(doc.get("final_emit_contract_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_status_update_operation_pass: final_emit_contract_status must be PASS_REQUIRED")
+    if doc.get("next_hop_release_allowed") is not True:
+        raise SystemExit("session_chain_status_update_operation_pass: next_hop_release_allowed must be true")
 elif name == "session_chain_receipt_seed_not_allowed_on_hard_prereq_failure":
     if rc == 0:
         raise SystemExit("session_chain_receipt_seed_not_allowed_on_hard_prereq_failure: expected non-zero rc")
@@ -1205,6 +1226,20 @@ run_probe session_chain_fresh_run_receipt_seed_replay_pass \
   --source-layer project \
   --operation inspection \
   --message "session chain fresh run receipt seed replay probe" \
+  --json-only
+
+run_probe session_chain_status_update_operation_pass \
+  python3 "${SESSION_CHAIN_WRAPPER_PATH}" \
+  --catalog "${CATALOG_PATH}" \
+  --repo-catalog identity/catalog/identities.yaml \
+  --identity-id "${IDENTITY_ID}" \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID}" \
+  --run-id "${SESSION_CHAIN_FRESH_RUN_ID}-status" \
+  --work-layer protocol \
+  --source-layer project \
+  --operation status \
+  --message "session chain status update operation probe" \
   --json-only
 
 run_probe session_chain_receipt_seed_not_allowed_on_hard_prereq_failure \

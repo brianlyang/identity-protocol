@@ -78,6 +78,7 @@ HOST_GATEWAY_STRICT_OPERATIONS: tuple[str, ...] = (
 HOST_GATEWAY_LIGHT_OPERATIONS: tuple[str, ...] = (
     "inspection",
     "scan",
+    "status",
 )
 HOST_GATEWAY_STRICT_GATE_PROFILE = "strict_full"
 HOST_GATEWAY_STRICT_GATE_PROFILE_BY_OPERATION: dict[str, str] = {

@@ -2696,7 +2696,7 @@ def _resolve_gate_profile(*, contract: dict[str, Any], operation: str, requested
         "validate",
         "three-plane",
     }
-    light_operations = _as_str_set(policy.get("light_operations")) or {"inspection", "scan"}
+    light_operations = _as_str_set(policy.get("light_operations")) or {"inspection", "scan", "status"}
     strict_profile = str(policy.get("strict_gate_profile", "")).strip() or "strict_full"
     strict_profile_by_operation_raw = policy.get("strict_gate_profile_by_operation")
     strict_profile_by_operation: dict[str, str] = {}
