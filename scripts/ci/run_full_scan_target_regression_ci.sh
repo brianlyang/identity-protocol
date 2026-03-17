@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "${REPO_ROOT}/scripts/shell_strict_entry_common.sh"
+
 IDS="${1:-${IDS:-}}"
 if [ -z "${IDS}" ]; then
   echo "[FAIL] IDS is empty"
   exit 1
 fi
 
-CATALOG_PATH="${CATALOG_PATH:-identity/catalog/identities.yaml}"
-REPO_CATALOG_PATH="${REPO_CATALOG_PATH:-identity/catalog/identities.yaml}"
-HEADSTAMP_ACTOR_ID="${HEADSTAMP_ACTOR_ID:-${CODEX_ACTOR_ID:-assistant:codex}}"
+CATALOG_PATH="$(protocol_shell_entry_resolve_project_catalog "${CATALOG_PATH:-}")"
+REPO_CATALOG_PATH="$(protocol_shell_entry_repo_catalog_path "${REPO_CATALOG_PATH:-}")"
+HEADSTAMP_ACTOR_ID="$(protocol_shell_entry_require_actor_id "${HEADSTAMP_ACTOR_ID:-}")"
 HEADSTAMP_SESSION_ID="${HEADSTAMP_SESSION_ID:-run:${GITHUB_RUN_ID:-ci-local}}"
 
 for ID in ${IDS}; do

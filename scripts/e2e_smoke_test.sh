@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "$REPO_ROOT"
+source "${REPO_ROOT}/scripts/shell_strict_entry_common.sh"
 
 if [ -n "${PYTHONPATH:-}" ]; then
   export PYTHONPATH="${SCRIPT_DIR}:${REPO_ROOT}:${PYTHONPATH}"
@@ -128,7 +129,7 @@ if [ -z "$IDS" ]; then
   exit 1
 fi
 
-SESSION_ACTOR_ID="${HEADSTAMP_ACTOR_ID:-${CODEX_ACTOR_ID:-assistant:codex}}"
+SESSION_ACTOR_ID="$(protocol_shell_entry_require_actor_id "${HEADSTAMP_ACTOR_ID:-}")"
 SESSION_ACTOR_SESSION_ID="${HEADSTAMP_SESSION_ID:-}"
 
 resolve_identity_session_id() {

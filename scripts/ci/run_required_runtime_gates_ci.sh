@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "${REPO_ROOT}/scripts/shell_strict_entry_common.sh"
+
 IDS="${1:-${IDS:-}}"
 BASE_SHA="${2:-${BASE_SHA:-$(git rev-parse HEAD~1)}}"
 HEAD_SHA="${3:-${HEAD_SHA:-$(git rev-parse HEAD)}}"
@@ -10,14 +14,14 @@ if [ -z "${IDS}" ]; then
   exit 1
 fi
 
-CATALOG_PATH="${CATALOG_PATH:-identity/catalog/identities.yaml}"
-REPO_CATALOG_PATH="${REPO_CATALOG_PATH:-identity/catalog/identities.yaml}"
+CATALOG_PATH="$(protocol_shell_entry_resolve_project_catalog "${CATALOG_PATH:-}")"
+REPO_CATALOG_PATH="$(protocol_shell_entry_repo_catalog_path "${REPO_CATALOG_PATH:-}")"
 TMP_ROOT_BASE="${RUNNER_TEMP:-${TMPDIR:-${GITHUB_WORKSPACE:-$PWD}/.tmp-runtime}}"
 mkdir -p "${TMP_ROOT_BASE}"
 CATALOG_PARENT="$(dirname "$(realpath "${CATALOG_PATH}")")"
 REPO_CATALOG_ABS="$(REPO_CATALOG_PATH="${REPO_CATALOG_PATH}" python3 -c 'from pathlib import Path; import os; print(Path(os.environ.get("REPO_CATALOG_PATH", "identity/catalog/identities.yaml")).expanduser().resolve())')"
 
-HEADSTAMP_ACTOR_ID="${HEADSTAMP_ACTOR_ID:-${CODEX_ACTOR_ID:-assistant:codex}}"
+HEADSTAMP_ACTOR_ID="$(protocol_shell_entry_require_actor_id "${HEADSTAMP_ACTOR_ID:-}")"
 HEADSTAMP_SESSION_ID="${HEADSTAMP_SESSION_ID:-run:${GITHUB_RUN_ID:-ci-local}}"
 
 python3 scripts/validate_required_gate_surface_drift.py --json-only
