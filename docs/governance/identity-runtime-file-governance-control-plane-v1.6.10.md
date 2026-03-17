@@ -196,6 +196,22 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
    - `scripts/ci/run_downsink_path_immutability_probes_ci.sh`
 6. if any new v1.6.10 clause lacks the above machine surfaces, it is a fail-close anti-forget regression.
 
+## 11) Addendum (2026-03-17): actor-session authority residue belongs to runtime-file governance
+
+1. `session/actors/*.json` are instance-runtime authoritative state files, but their persisted schema must remain
+   protocol-governed so session-primary authority is machine-readable.
+2. `session/active_identity.json` and `session/mirror/current.json` are
+   `protocol_controlled_mirror_artifact`, not authority sources.
+3. Runtime-file governance must therefore enforce:
+   - actor stores persist `last_mutation_by_session` plus explicit compatibility projection metadata;
+   - compatibility pointers persist `authority_role=compatibility_mirror`;
+   - compatibility pointers persist `authoritative_decision_allowed=false`;
+   - runtime repair is done through protocol-owned generic tooling, not instance-specific patch scripts.
+4. `scripts/repair_actor_session_authority_residue.py` is allowed under v1.6.10 because it repairs
+   runtime-file semantics without promoting actor stores or pointers into protocol-owned source-of-truth.
+5. `scripts/ci/run_semantic_clarity_probes_ci.sh` must replay negative residue detection and positive repair
+   application whenever v1.6.10 changes touch actor-session runtime files or compatibility pointers.
+
 ## 10) References
 
 1. `docs/governance/identity-host-unique-channel-governance-v1.6.6.md`

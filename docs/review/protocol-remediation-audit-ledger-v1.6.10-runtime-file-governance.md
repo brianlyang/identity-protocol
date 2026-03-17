@@ -134,3 +134,39 @@ Interpretation contract:
 
 1. If any v1.6.10 clause changes without the boundary validator and semantic clarity replay, classify as anti-forget regression.
 2. Anti-forget regressions are fail-close in strict operations.
+
+## 10) Addendum (2026-03-17): actor-session authority residue replay
+
+### 10.1 Scope
+
+1. Runtime-file governance must cover persisted actor-session authority semantics, not only wrapper shells and mirror path ownership.
+2. The specific residue addressed here:
+   - actor stores missing `last_mutation_by_session` / authority metadata;
+   - compatibility pointers missing explicit non-authoritative mirror metadata.
+
+### 10.2 Code closure
+
+1. `scripts/repair_actor_session_authority_residue.py`
+   - scans `<catalog_dir>/session/actors/*.json`;
+   - rewrites persisted actor-session authority residue via normalized protocol schema;
+   - updates canonical + mirror compatibility pointers with explicit demotion metadata.
+2. `scripts/sync_session_identity.py`
+   - future canonical/mirror writes now persist `authority_role=compatibility_mirror` and
+     `authoritative_decision_allowed=false`.
+3. `scripts/validate_actor_session_multibinding_concurrency.py`
+   - when `--session-id` is supplied, session-primary projection is read from `last_mutation_by_session`.
+
+### 10.3 Replay evidence
+
+1. semantic clarity probe lane:
+   - residue present => `repair_actor_session_authority_residue.py` returns `FAIL_REQUIRED`
+   - repair applied => actor-session validation returns `last_mutation_projection_scope=session_primary`
+2. live runtime replay:
+   - `/tmp/actor_session_authority_residue_apply_20260317.json`
+   - `/tmp/actor_session_authority_residue_scan_20260317.json`
+
+### 10.4 Verdict
+
+1. The remaining “identity switched / authority looked mixed” confusion is now classified as runtime-file residue,
+   not unresolved core actor-session logic.
+2. Repair stays protocol-owned and generic; no per-identity hardcoded migration was introduced.
