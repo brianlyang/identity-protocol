@@ -140,6 +140,7 @@ HOST_GATEWAY_OPERATION_PROFILE_ALLOWED_FIELDS = {
     "strict_operations",
     "light_operations",
     "strict_gate_profile",
+    "strict_gate_profile_by_operation",
     "light_gate_profile",
     "allow_upgrade_only",
 }
@@ -1299,6 +1300,14 @@ def main() -> int:
             strict_operations = _as_str_set(operation_profile_policy.get("strict_operations"))
             light_operations = _as_str_set(operation_profile_policy.get("light_operations"))
             strict_gate_profile = str(operation_profile_policy.get("strict_gate_profile", "")).strip()
+            strict_gate_profile_by_operation_raw = operation_profile_policy.get("strict_gate_profile_by_operation")
+            strict_gate_profile_by_operation: dict[str, str] = {}
+            if isinstance(strict_gate_profile_by_operation_raw, dict):
+                strict_gate_profile_by_operation = {
+                    str(key).strip().lower(): str(value).strip()
+                    for key, value in strict_gate_profile_by_operation_raw.items()
+                    if str(key).strip() and str(value).strip()
+                }
             light_gate_profile = str(operation_profile_policy.get("light_gate_profile", "")).strip()
             allow_upgrade_only = bool(operation_profile_policy.get("allow_upgrade_only", True))
             host_gateway_strict_operations = set(strict_operations)
@@ -1307,6 +1316,9 @@ def main() -> int:
             payload["protocol_host_gateway_strict_operations"] = sorted(strict_operations)
             payload["protocol_host_gateway_light_operations"] = sorted(light_operations)
             payload["protocol_host_gateway_strict_gate_profile"] = strict_gate_profile
+            payload["protocol_host_gateway_strict_gate_profile_by_operation"] = dict(
+                sorted(strict_gate_profile_by_operation.items())
+            )
             payload["protocol_host_gateway_light_gate_profile"] = light_gate_profile
             payload["protocol_host_gateway_allow_upgrade_only"] = allow_upgrade_only
             if not strict_operations:
@@ -1589,11 +1601,31 @@ def main() -> int:
                     runtime_strict_operations = _as_str_set(runtime_operation_profile.get("strict_operations"))
                     runtime_light_operations = _as_str_set(runtime_operation_profile.get("light_operations"))
                     runtime_strict_gate_profile = str(runtime_operation_profile.get("strict_gate_profile", "")).strip()
+                    runtime_strict_gate_profile_by_operation_raw = runtime_operation_profile.get(
+                        "strict_gate_profile_by_operation"
+                    )
+                    runtime_strict_gate_profile_by_operation: dict[str, str] = {}
+                    if isinstance(runtime_strict_gate_profile_by_operation_raw, dict):
+                        runtime_strict_gate_profile_by_operation = {
+                            str(key).strip().lower(): str(value).strip()
+                            for key, value in runtime_strict_gate_profile_by_operation_raw.items()
+                            if str(key).strip() and str(value).strip()
+                        }
                     runtime_light_gate_profile = str(runtime_operation_profile.get("light_gate_profile", "")).strip()
                     runtime_allow_upgrade_only = bool(runtime_operation_profile.get("allow_upgrade_only", True))
                     contract_strict_operations = _as_str_set(operation_profile_policy.get("strict_operations"))
                     contract_light_operations = _as_str_set(operation_profile_policy.get("light_operations"))
                     contract_strict_gate_profile = str(operation_profile_policy.get("strict_gate_profile", "")).strip()
+                    contract_strict_gate_profile_by_operation_raw = operation_profile_policy.get(
+                        "strict_gate_profile_by_operation"
+                    )
+                    contract_strict_gate_profile_by_operation: dict[str, str] = {}
+                    if isinstance(contract_strict_gate_profile_by_operation_raw, dict):
+                        contract_strict_gate_profile_by_operation = {
+                            str(key).strip().lower(): str(value).strip()
+                            for key, value in contract_strict_gate_profile_by_operation_raw.items()
+                            if str(key).strip() and str(value).strip()
+                        }
                     contract_light_gate_profile = str(operation_profile_policy.get("light_gate_profile", "")).strip()
                     contract_allow_upgrade_only = bool(operation_profile_policy.get("allow_upgrade_only", True))
                     if runtime_strict_operations != contract_strict_operations:
@@ -1602,6 +1634,10 @@ def main() -> int:
                         host_gateway_issues.append("host_gateway_runtime_contract_light_operations_mismatch")
                     if runtime_strict_gate_profile != contract_strict_gate_profile:
                         host_gateway_issues.append("host_gateway_runtime_contract_strict_gate_profile_mismatch")
+                    if runtime_strict_gate_profile_by_operation != contract_strict_gate_profile_by_operation:
+                        host_gateway_issues.append(
+                            "host_gateway_runtime_contract_strict_gate_profile_by_operation_mismatch"
+                        )
                     if runtime_light_gate_profile != contract_light_gate_profile:
                         host_gateway_issues.append("host_gateway_runtime_contract_light_gate_profile_mismatch")
                     if runtime_allow_upgrade_only != contract_allow_upgrade_only:
