@@ -1348,6 +1348,27 @@ def _run(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
         return 124, out, str(exc)
 
 
+_SCRIPT_FLAG_SCAN_CACHE: dict[tuple[str, str], bool] = {}
+
+
+def _script_accepts_flag(script_path: str, *, flag: str, repo_root: Path) -> bool:
+    key = (str(script_path or "").strip(), str(flag or "").strip())
+    if not key[0] or not key[1]:
+        return False
+    cached = _SCRIPT_FLAG_SCAN_CACHE.get(key)
+    if cached is not None:
+        return cached
+    path = _resolve_input_path(repo_root, key[0])
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        _SCRIPT_FLAG_SCAN_CACHE[key] = False
+        return False
+    accepted = key[1] in text
+    _SCRIPT_FLAG_SCAN_CACHE[key] = accepted
+    return accepted
+
+
 def _parse_payload(stdout_text: str) -> dict[str, Any]:
     text = (stdout_text or "").strip()
     if not text:
@@ -1838,6 +1859,11 @@ def main() -> int:
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
+    repo_catalog_path = (
+        Path(str(args.repo_catalog or "")).expanduser().resolve()
+        if str(args.repo_catalog or "").strip()
+        else (repo_root / "identity" / "catalog" / "identities.yaml").resolve()
+    )
     mapping_path = Path(args.contract_mapping).expanduser().resolve() if str(args.contract_mapping or "").strip() else _resolve_default_contract_mapping(repo_root)
     mapping_alias_error = ""
     if mapping_path.name.endswith(".current.yaml"):
@@ -2106,6 +2132,11 @@ def main() -> int:
             "--json-only",
         ]
         cmd.extend(spec.fixed_args)
+        if (
+            repo_catalog_path.exists()
+            and _script_accepts_flag(spec.script_path, flag="--repo-catalog", repo_root=repo_root)
+        ):
+            cmd.extend(["--repo-catalog", str(repo_catalog_path)])
         if spec.target_name == "prompt_import_executable_coupling":
             if actor_id:
                 cmd.extend(["--actor-id", actor_id])
