@@ -59,6 +59,69 @@ def _parse_json(raw: str) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def _has_release_baseline(
+    *,
+    target_branch: str,
+    release_head_sha: str,
+    workflow_file_sha: str,
+    run_head_sha: str,
+    run_workflow_file_sha: str,
+    run_url: str,
+    checks_json: str,
+) -> bool:
+    return any(
+        (
+            bool(target_branch),
+            bool(release_head_sha),
+            bool(workflow_file_sha),
+            bool(run_head_sha),
+            bool(run_workflow_file_sha),
+            bool(run_url),
+            bool(checks_json),
+        )
+    )
+
+
+def _classify_failure(detail: dict[str, Any]) -> tuple[str, list[str]]:
+    conditions = detail.get("conditions", {})
+    if not isinstance(conditions, dict):
+        return ERR_VALIDATOR_EXEC_FAILED, ["release_plane_validator_result_unparseable"]
+
+    stale_reasons: list[str] = []
+    if not bool(conditions.get("required_gates_run_id_present", False)):
+        stale_reasons.append("release_plane_required_gates_run_id_missing")
+    if not bool(conditions.get("run_url_present", False)):
+        stale_reasons.append("release_plane_run_url_missing")
+
+    required_checks_status = str(conditions.get("required_checks_status", "")).strip().upper()
+    if required_checks_status == "EVIDENCE_MISSING":
+        stale_reasons.append("release_plane_checks_evidence_missing")
+    elif required_checks_status == "EMPTY_SET":
+        stale_reasons.append("release_plane_checks_set_empty")
+    elif required_checks_status == "FAILED":
+        stale_reasons.append("release_plane_checks_failed")
+
+    if not bool(conditions.get("run_head_matches_release_head", False)):
+        stale_reasons.append("release_plane_run_head_mismatch")
+    if not bool(conditions.get("workflow_file_sha_matches", False)):
+        stale_reasons.append("release_plane_workflow_sha_mismatch")
+
+    error_code = (
+        ERR_EVIDENCE_MISSING
+        if any(
+            reason
+            in {
+                "release_plane_required_gates_run_id_missing",
+                "release_plane_run_url_missing",
+                "release_plane_checks_evidence_missing",
+            }
+            for reason in stale_reasons
+        )
+        else ERR_CONDITION_FAILED
+    )
+    return error_code, stale_reasons or ["release_plane_condition_failed"]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate release-plane cloud evidence contract (RQ-006).")
     ap.add_argument("--catalog", required=True)
@@ -105,6 +168,15 @@ def main() -> int:
     run_head_sha = str(args.run_head_sha or contract.get("run_head_sha", "")).strip()
     run_workflow_file_sha = str(args.run_workflow_file_sha or contract.get("run_workflow_file_sha", "")).strip()
     checks_json = str(args.checks_json or contract.get("checks_json", "")).strip()
+    has_release_baseline = _has_release_baseline(
+        target_branch=target_branch,
+        release_head_sha=release_head_sha,
+        workflow_file_sha=workflow_file_sha,
+        run_head_sha=run_head_sha,
+        run_workflow_file_sha=run_workflow_file_sha,
+        run_url=run_url,
+        checks_json=checks_json,
+    )
 
     payload: dict[str, Any] = {
         "identity_id": args.identity_id,
@@ -137,19 +209,12 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 0
 
-    cloud_evidence_present = bool(run_url or checks_json)
     linked = bool(target_branch and release_head_sha and required_gates_run_id and run_url and workflow_file_sha and run_head_sha and run_workflow_file_sha)
     payload["requiredization_current_round_linked"] = linked
-    if not linked:
-        if (not cloud_evidence_present) and args.operation in {"update", "validate", "scan", "three-plane", "inspection"}:
-            payload["stale_reasons"] = ["required_contract_not_applicable_missing_release_evidence"]
-            _emit(payload, json_only=args.json_only)
-            return 0
-        payload["release_plane_cloud_evidence_status"] = STATUS_FAIL_REQUIRED
-        payload["error_code"] = ERR_EVIDENCE_MISSING
-        payload["stale_reasons"] = ["release_plane_evidence_missing_required_fields"]
+    if not has_release_baseline:
+        payload["stale_reasons"] = ["required_contract_not_applicable_missing_release_baseline"]
         _emit(payload, json_only=args.json_only)
-        return 1
+        return 0
 
     cmd = [
         "python3",
@@ -178,11 +243,16 @@ def main() -> int:
     payload["evidence_ref"] = checks_json or run_url
     payload["conditions"] = detail.get("conditions", {}) if isinstance(detail.get("conditions"), dict) else {}
     payload["release_plane_status"] = str(detail.get("release_plane_status", "")).strip()
+    if isinstance(detail.get("required_checks_set"), list):
+        payload["required_checks_set"] = detail.get("required_checks_set")
 
     if proc.returncode != 0:
         payload["release_plane_cloud_evidence_status"] = STATUS_FAIL_REQUIRED
-        payload["error_code"] = ERR_VALIDATOR_EXEC_FAILED if not detail else ERR_CONDITION_FAILED
-        payload["stale_reasons"] = ["release_plane_condition_failed"]
+        if not detail:
+            payload["error_code"] = ERR_VALIDATOR_EXEC_FAILED
+            payload["stale_reasons"] = ["release_plane_validator_exec_failed"]
+        else:
+            payload["error_code"], payload["stale_reasons"] = _classify_failure(detail)
         _emit(payload, json_only=args.json_only)
         return 1
 
