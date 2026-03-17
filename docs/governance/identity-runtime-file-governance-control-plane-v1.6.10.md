@@ -220,6 +220,9 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
    - any script that calls `resolve_stamp_context()` or `validate_runtime_egress_identity_authority()` must either
      live in the validator default scan set or declare `AUTHORITY_CONSUMER_EXEMPT = True`; unregistered consumers
      fail-close before they become silent authority side doors.
+7. strict actor-entry orchestrators that launch governed headstamp / final-emit / reply-coherence checks must not
+   ship a hidden `assistant:codex` fallback; they must either use `resolve_required_protocol_actor_id()` or fail-close
+   with `IP-ACTOR-ENTRY-001` before they fan out strict checks.
 
 ## 10) References
 

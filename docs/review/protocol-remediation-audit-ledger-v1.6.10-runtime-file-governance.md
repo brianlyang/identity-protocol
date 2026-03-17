@@ -171,6 +171,9 @@ Interpretation contract:
      same authority-consumer drift guard as render/compose/first-line validators.
    - authority-provider / validator helper modules now declare `AUTHORITY_CONSUMER_EXEMPT = True`, and the validator
      fail-closes any newly discovered authority consumer that is neither registered nor explicitly exempt.
+   - `scripts/validate_strict_actor_entry_semantics.py` scans strict orchestrators that launch governed
+     render/first-line/headstamp/final-emit checks and blocks hidden `assistant:codex` defaults or missing
+     `IP-ACTOR-ENTRY-001` / `resolve_required_protocol_actor_id()` entry gates.
 
 ### 10.3 Replay evidence
 
@@ -181,6 +184,8 @@ Interpretation contract:
    - env actor + bound session => render path restores headstamp output deterministically
    - negative authority-consumer drift probe => static validator blocks missing session passthrough, host fallback
      resolver reuse, compatibility-pointer literal reuse, and unregistered authority-consumer surfaces
+   - negative strict actor entry probe => static validator blocks hidden `assistant:codex` defaults and missing
+     strict actor entry gates on authority-adjacent orchestrators
 2. live runtime replay:
    - `/tmp/actor_session_authority_residue_apply_20260317.json`
    - `/tmp/actor_session_authority_residue_scan_20260317.json`
