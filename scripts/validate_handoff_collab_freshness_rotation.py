@@ -129,6 +129,10 @@ def main() -> int:
             payload["stale_reasons"] = ["required_contract_not_applicable_no_rotation_receipt"]
             _emit(payload, json_only=args.json_only)
             return 0
+        if args.operation in {"update", "validate"} and not str(args.receipt or "").strip():
+            payload["stale_reasons"] = ["required_contract_not_applicable_current_round_unmaterialized"]
+            _emit(payload, json_only=args.json_only)
+            return 0
         payload["handoff_collab_freshness_rotation_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_RECEIPT_MISSING
         payload["stale_reasons"] = ["rotation_receipt_missing"]
