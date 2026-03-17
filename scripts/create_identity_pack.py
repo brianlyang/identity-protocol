@@ -56,6 +56,7 @@ from protocol_infra_contract import (
     HOST_GATEWAY_SIGNER_MODE as INFRA_HOST_GATEWAY_SIGNER_MODE,
     HOST_GATEWAY_SIGNER_SECRET_ENV_PREFIX as INFRA_HOST_GATEWAY_SIGNER_SECRET_ENV_PREFIX,
     HOST_GATEWAY_STRICT_GATE_PROFILE as INFRA_HOST_GATEWAY_STRICT_GATE_PROFILE,
+    HOST_GATEWAY_STRICT_GATE_PROFILE_BY_OPERATION as INFRA_HOST_GATEWAY_STRICT_GATE_PROFILE_BY_OPERATION,
     HOST_GATEWAY_STRICT_OPERATIONS as INFRA_HOST_GATEWAY_STRICT_OPERATIONS,
     HOST_VISIBLE_SURFACE_RECEIPT_PATTERN as INFRA_HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
     HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED as INFRA_HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED,
@@ -163,6 +164,11 @@ HOST_GATEWAY_REQUIRED_DISPATCH_STATUS = INFRA_HOST_GATEWAY_REQUIRED_DISPATCH_STA
 HOST_GATEWAY_STRICT_OPERATIONS = list(INFRA_HOST_GATEWAY_STRICT_OPERATIONS)
 HOST_GATEWAY_LIGHT_OPERATIONS = list(INFRA_HOST_GATEWAY_LIGHT_OPERATIONS)
 HOST_GATEWAY_STRICT_GATE_PROFILE = INFRA_HOST_GATEWAY_STRICT_GATE_PROFILE
+HOST_GATEWAY_STRICT_GATE_PROFILE_BY_OPERATION = {
+    str(key).strip().lower(): str(value).strip()
+    for key, value in INFRA_HOST_GATEWAY_STRICT_GATE_PROFILE_BY_OPERATION.items()
+    if str(key).strip() and str(value).strip()
+}
 HOST_GATEWAY_LIGHT_GATE_PROFILE = INFRA_HOST_GATEWAY_LIGHT_GATE_PROFILE
 HOST_GATEWAY_ALLOW_UPGRADE_ONLY = INFRA_HOST_GATEWAY_ALLOW_UPGRADE_ONLY
 HOST_GATEWAY_SIGNER_MODE = INFRA_HOST_GATEWAY_SIGNER_MODE
@@ -896,6 +902,7 @@ def _host_gateway_operation_profile_policy() -> dict:
         "strict_operations": list(HOST_GATEWAY_STRICT_OPERATIONS),
         "light_operations": list(HOST_GATEWAY_LIGHT_OPERATIONS),
         "strict_gate_profile": HOST_GATEWAY_STRICT_GATE_PROFILE,
+        "strict_gate_profile_by_operation": dict(HOST_GATEWAY_STRICT_GATE_PROFILE_BY_OPERATION),
         "light_gate_profile": HOST_GATEWAY_LIGHT_GATE_PROFILE,
         "allow_upgrade_only": bool(HOST_GATEWAY_ALLOW_UPGRADE_ONLY),
     }
@@ -2661,24 +2668,33 @@ def _resolve_gate_profile(*, contract: dict[str, Any], operation: str, requested
     }
     light_operations = _as_str_set(policy.get("light_operations")) or {"inspection", "scan"}
     strict_profile = str(policy.get("strict_gate_profile", "")).strip() or "strict_full"
+    strict_profile_by_operation_raw = policy.get("strict_gate_profile_by_operation")
+    strict_profile_by_operation: dict[str, str] = {}
+    if isinstance(strict_profile_by_operation_raw, dict):
+        strict_profile_by_operation = {
+            str(key).strip().lower(): str(value).strip()
+            for key, value in strict_profile_by_operation_raw.items()
+            if str(key).strip() and str(value).strip()
+        }
     light_profile = str(policy.get("light_gate_profile", "")).strip() or "inspection_targeted"
     allow_upgrade_only = bool(policy.get("allow_upgrade_only", True))
     operation_token = str(operation or "").strip().lower()
     requested = str(requested_profile or "").strip()
+    operation_strict_profile = strict_profile_by_operation.get(operation_token, strict_profile)
 
     if operation_token in strict_operations:
-        if requested and requested != strict_profile:
-            return "", f"strict_operation_gate_profile_mismatch:{requested}:expected={strict_profile}"
-        return strict_profile, ""
+        if requested and requested != operation_strict_profile:
+            return "", f"strict_operation_gate_profile_mismatch:{requested}:expected={operation_strict_profile}"
+        return operation_strict_profile, ""
 
     if operation_token in light_operations:
         if not requested:
             return light_profile, ""
         if requested == light_profile:
             return light_profile, ""
-        if requested == strict_profile:
-            return strict_profile, ""
-        return "", f"light_operation_gate_profile_invalid:{requested}:allowed={light_profile}|{strict_profile}"
+        if requested == operation_strict_profile:
+            return operation_strict_profile, ""
+        return "", f"light_operation_gate_profile_invalid:{requested}:allowed={light_profile}|{operation_strict_profile}"
 
     if requested:
         if allow_upgrade_only and requested != strict_profile:
