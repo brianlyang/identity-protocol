@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from resolve_release_plane_cloud_evidence import resolve_release_cloud_evidence
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -137,6 +138,7 @@ def main() -> int:
     ap.add_argument("--run-head-sha", default="")
     ap.add_argument("--run-workflow-file-sha", default="")
     ap.add_argument("--checks-json", default="")
+    ap.add_argument("--jobs-json", default="")
     ap.add_argument("--force-required", action="store_true")
     ap.add_argument(
         "--operation",
@@ -171,6 +173,18 @@ def main() -> int:
     run_head_sha = str(args.run_head_sha or contract.get("run_head_sha", "")).strip()
     run_workflow_file_sha = str(args.run_workflow_file_sha or contract.get("run_workflow_file_sha", "")).strip()
     checks_json = str(args.checks_json or contract.get("checks_json", "")).strip()
+    jobs_json = str(args.jobs_json or contract.get("jobs_json", "")).strip()
+    adapter_payload = resolve_release_cloud_evidence(
+        identity_id=args.identity_id,
+        operation=args.operation,
+        required_gates_run_id=required_gates_run_id,
+        run_url=run_url,
+        checks_json=checks_json,
+        jobs_json=jobs_json,
+    )
+    required_gates_run_id = str(adapter_payload.get("required_gates_run_id", "") or required_gates_run_id).strip()
+    run_url = str(adapter_payload.get("run_url", "") or run_url).strip()
+    checks_json = str(adapter_payload.get("checks_json_path", "") or checks_json).strip()
     has_release_baseline = _has_release_baseline(
         target_branch=target_branch,
         release_head_sha=release_head_sha,
@@ -203,8 +217,12 @@ def main() -> int:
         "run_head_sha": run_head_sha,
         "run_workflow_file_sha": run_workflow_file_sha,
         "checks_json": checks_json,
+        "jobs_json": jobs_json,
         "evidence_ref": "",
         "stale_reasons": [],
+        "release_cloud_evidence_adapter_status": str(adapter_payload.get("release_cloud_evidence_adapter_status", "")).strip(),
+        "release_cloud_evidence_adapter_source_kind": str(adapter_payload.get("adapter_source_kind", "")).strip(),
+        "release_cloud_evidence_adapter_stale_reasons": list(adapter_payload.get("stale_reasons", []) or []),
     }
 
     if not required:
@@ -256,6 +274,9 @@ def main() -> int:
             payload["stale_reasons"] = ["release_plane_validator_exec_failed"]
         else:
             payload["error_code"], payload["stale_reasons"] = _classify_failure(detail)
+        for reason in payload.get("release_cloud_evidence_adapter_stale_reasons", []):
+            if reason not in payload["stale_reasons"]:
+                payload["stale_reasons"].append(reason)
         _emit(payload, json_only=args.json_only)
         return 1
 
