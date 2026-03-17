@@ -287,13 +287,21 @@ def main() -> int:
     ap = argparse.ArgumentParser(
         description="Fail-close when strict authority-entry orchestrators silently fall back to a default actor."
     )
-    ap.add_argument("--repo-root", default=".")
-    ap.add_argument("--scripts-root", default="scripts")
+    ap.add_argument("--repo-root", default="", help="repository root to scan; defaults to script parent repo")
+    ap.add_argument("--scripts-root", default="", help="scripts root relative to repo root; defaults to repo_root/scripts")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
-    repo_root = Path(args.repo_root).expanduser().resolve()
-    scripts_root = (repo_root / str(args.scripts_root)).resolve()
+    repo_root = (
+        Path(args.repo_root).expanduser().resolve()
+        if str(args.repo_root or "").strip()
+        else Path(__file__).resolve().parent.parent
+    )
+    scripts_root = (
+        (repo_root / str(args.scripts_root)).resolve()
+        if str(args.scripts_root or "").strip()
+        else (repo_root / "scripts").resolve()
+    )
 
     payload: dict[str, Any] = {
         "strict_actor_entry_semantics_status": STATUS_FAIL_REQUIRED,
@@ -301,6 +309,10 @@ def main() -> int:
         "repo_root": str(repo_root),
         "scripts_root": str(scripts_root),
         "discovered_surface_files": [],
+        "discovered_surface_file_count": 0,
+        "discovered_shell_surface_files": [],
+        "discovered_shell_surface_file_count": 0,
+        "exempt_shell_surface_files": {},
         "violation_count": 0,
         "violations": [],
         "stale_reasons": [],
@@ -362,13 +374,25 @@ def main() -> int:
     discovered_shell, exempt_shell, shell_violations = _scan_shell_strict_entry_surfaces(repo_root)
     violations.extend(shell_violations)
 
+    if not discovered and not discovered_shell:
+        violations.append(
+            {
+                "file": str(scripts_root),
+                "line": 1,
+                "violation_type": "strict_entry_surface_discovery_empty",
+                "snippet": "no strict-entry surfaces discovered under scripts root",
+            }
+        )
+
     stale_reasons = sorted({str(item.get("violation_type", "")).strip() for item in violations if item.get("violation_type")})
     payload.update(
         {
             "strict_actor_entry_semantics_status": STATUS_PASS_REQUIRED if not violations else STATUS_FAIL_REQUIRED,
             "error_code": "" if not violations else ERR_STRICT_ACTOR_ENTRY,
             "discovered_surface_files": discovered,
+            "discovered_surface_file_count": len(discovered),
             "discovered_shell_surface_files": discovered_shell,
+            "discovered_shell_surface_file_count": len(discovered_shell),
             "exempt_shell_surface_files": exempt_shell,
             "violation_count": len(violations),
             "violations": violations,
