@@ -566,4 +566,46 @@ else
   echo "[warn] skip stream scope negative probe: HEAD~1 unavailable"
 fi
 
+echo "[info] semantic clarity probes: host-native explanatory envelope exclusion"
+cat > "$TMP_ROOT/operator_envelope_exclusion_probe.json" <<'JSON'
+{
+  "response_stamp_profile": {
+    "enabled": true,
+    "format": "structured_block",
+    "template_ref": "identity/protocol/plugins/templates/response-stamp.operator_dual_segment_v1.json"
+  },
+  "external_stamp": "Identity-Context: actor_id=assistant:codex; identity_id=probe-host-native; scope=USER; source=project | Layer-Context: work_layer=protocol; source_layer=project",
+  "machine_verification": {
+    "verification_source": "not_claimed",
+    "display_headstamp_identity_id": "probe-host-native",
+    "authoritative_identity_id": "probe-host-native",
+    "headstamp_consistency_status": "PASS_REQUIRED",
+    "surface_class": "host_native_chat_panel",
+    "native_attestation_wiring_capability": "unavailable",
+    "closure_blocker_scope": "EXCLUDED_NON_BLOCKING",
+    "current_chat_surface_native_machine_attested": false,
+    "next_hop_admission_status": "FAIL_REQUIRED"
+  },
+  "display_headstamp_line": "Display-Headstamp: Identity-Context: actor_id=assistant:codex; identity_id=probe-host-native; scope=USER; source=project | Layer-Context: work_layer=protocol; source_layer=project",
+  "machine_verification_line": "Machine-Verification: verification_source=not_claimed; display_headstamp_identity_id=probe-host-native; authoritative_identity_id=probe-host-native; headstamp_consistency_status=PASS_REQUIRED; surface_class=host_native_chat_panel; native_attestation_wiring_capability=unavailable; closure_blocker_scope=EXCLUDED_NON_BLOCKING; current_chat_surface_native_machine_attested=false; next_hop_admission_status=FAIL_REQUIRED",
+  "operator_envelope_lines": [
+    "Display-Headstamp: Identity-Context: actor_id=assistant:codex; identity_id=probe-host-native; scope=USER; source=project | Layer-Context: work_layer=protocol; source_layer=project",
+    "Machine-Verification: verification_source=not_claimed; display_headstamp_identity_id=probe-host-native; authoritative_identity_id=probe-host-native; headstamp_consistency_status=PASS_REQUIRED; surface_class=host_native_chat_panel; native_attestation_wiring_capability=unavailable; closure_blocker_scope=EXCLUDED_NON_BLOCKING; current_chat_surface_native_machine_attested=false; next_hop_admission_status=FAIL_REQUIRED"
+  ]
+}
+JSON
+python3 scripts/validate_response_stamp_operator_envelope.py \
+  --stamp-json "$TMP_ROOT/operator_envelope_exclusion_probe.json" \
+  --repo-root "$REPO_ROOT" \
+  --json-only > "$TMP_ROOT/operator_envelope_exclusion_probe_result.json"
+python3 - "$TMP_ROOT/operator_envelope_exclusion_probe_result.json" <<'PY'
+import json,sys
+obj=json.load(open(sys.argv[1]))
+assert obj.get("operator_headstamp_envelope_status") == "PASS_REQUIRED", obj
+assert obj.get("explanatory_surface_exclusion_status") == "PASS_REQUIRED", obj
+assert obj.get("parsed_machine_verification", {}).get("closure_blocker_scope") == "EXCLUDED_NON_BLOCKING", obj
+assert obj.get("parsed_machine_verification", {}).get("current_chat_surface_native_machine_attested") == "false", obj
+print("[PASS] host-native explanatory envelope exclusion probe")
+PY
+
 echo "[PASS] run_semantic_clarity_probes_ci.sh complete"
