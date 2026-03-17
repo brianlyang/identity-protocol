@@ -4839,6 +4839,9 @@ def main() -> int:
         "release_cloud_evidence_adapter": {
             "release_cloud_evidence_adapter_status": adapter_payload.get("release_cloud_evidence_adapter_status", ""),
             "adapter_source_kind": adapter_payload.get("adapter_source_kind", ""),
+            "adapter_http_status": adapter_payload.get("adapter_http_status", ""),
+            "github_rate_limit_remaining": adapter_payload.get("github_rate_limit_remaining", ""),
+            "github_rate_limit_reset_epoch": adapter_payload.get("github_rate_limit_reset_epoch", ""),
             "stale_reasons": adapter_payload.get("stale_reasons", []),
             "checks_json_path": adapter_payload.get("checks_json_path", ""),
         },
