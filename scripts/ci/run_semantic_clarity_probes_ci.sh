@@ -29,6 +29,110 @@ assert boundary.get("runtime_file_boundary_governance_status") == "PASS_REQUIRED
 print("[PASS] positive semantic clarity lane")
 PY
 
+echo "[info] semantic clarity probes: authority fallback hardening lane"
+mkdir -p "$TMP_ROOT/authority-fallback/.identity/session/actors"
+cat > "$TMP_ROOT/authority-fallback/.identity/catalog.local.yaml" <<'YAML'
+identities:
+  - id: alpha
+    pack_path: /tmp/alpha
+    status: active
+    profile: runtime
+    runtime_mode: local_only
+  - id: beta
+    pack_path: /tmp/beta
+    status: active
+    profile: runtime
+    runtime_mode: local_only
+YAML
+cat > "$TMP_ROOT/authority-fallback/.identity/session/actors/assistant_codex.json" <<'JSON'
+{
+  "schema_version": "actor_session_multibinding_v1",
+  "actor_id": "assistant:codex",
+  "catalog_path": "__CATALOG__",
+  "binding_key_mode": "actor_id+identity_id+session_id",
+  "binding_version": 2,
+  "compare_token": "2",
+  "session_entry_count": 1,
+  "bindings": [
+    {
+      "actor_id": "assistant:codex",
+      "session_id": "run:alpha",
+      "identity_id": "alpha",
+      "catalog_path": "__CATALOG__",
+      "pack_path": "/tmp/alpha",
+      "status": "active",
+      "bound_at": "2026-03-17T00:00:00Z",
+      "updated_at": "2026-03-17T00:00:00Z",
+      "binding_ref": "assistant:codex:alpha:run:alpha:v2",
+      "binding_version": 2,
+      "compare_token": "2",
+      "mutation_lane": "activate",
+      "run_id": "alpha",
+      "switch_reason": "probe",
+      "approved_by": "system:auto"
+    }
+  ]
+}
+JSON
+cat > "$TMP_ROOT/authority-fallback/.identity/session/active_identity.json" <<'JSON'
+{
+  "identity_id": "beta",
+  "catalog_path": "__CATALOG__",
+  "pack_path": "/tmp/beta",
+  "status": "active",
+  "synced_at": "2026-03-17T00:00:00Z",
+  "session_pointer_type": "canonical",
+  "authority_role": "compatibility_mirror",
+  "authoritative_decision_allowed": false
+}
+JSON
+python3 - "$TMP_ROOT/authority-fallback/.identity/catalog.local.yaml" <<'PY'
+from pathlib import Path
+import sys
+catalog = Path(sys.argv[1]).resolve()
+catalog_dir = catalog.parent
+for path in [
+    catalog_dir / "session" / "actors" / "assistant_codex.json",
+    catalog_dir / "session" / "active_identity.json",
+]:
+    raw = path.read_text(encoding="utf-8")
+    raw = raw.replace("__CATALOG__", str(catalog))
+    path.write_text(raw, encoding="utf-8")
+PY
+
+env -u CODEX_ACTOR_ID python3 scripts/render_identity_response_stamp.py \
+  --identity-id alpha \
+  --catalog "$TMP_ROOT/authority-fallback/.identity/catalog.local.yaml" \
+  --repo-catalog identity/catalog/identities.yaml \
+  --json-only > "$TMP_ROOT/authority_fallback_negative.json" || true
+python3 - "$TMP_ROOT/authority_fallback_negative.json" <<'PY'
+import json,sys
+obj=json.load(open(sys.argv[1]))
+assert obj.get("identity_authority_status") == "FAIL_REQUIRED", obj
+assert obj.get("identity_authority_actor_id", "") == "", obj
+assert obj.get("identity_authority_actor_resolution_mode") == "missing", obj
+assert obj.get("identity_authority_resolution_mode") == "compatibility_pointer_non_authoritative", obj
+assert "compatibility_pointer_non_authoritative" in (obj.get("stale_reasons") or []), obj
+assert "actor_context_missing" in (obj.get("stale_reasons") or []), obj
+print("[PASS] non-authoritative compatibility pointer blocked")
+PY
+
+CODEX_ACTOR_ID=assistant:codex python3 scripts/render_identity_response_stamp.py \
+  --identity-id alpha \
+  --catalog "$TMP_ROOT/authority-fallback/.identity/catalog.local.yaml" \
+  --repo-catalog identity/catalog/identities.yaml \
+  --session-id run:alpha \
+  --json-only > "$TMP_ROOT/authority_fallback_positive.json"
+python3 - "$TMP_ROOT/authority_fallback_positive.json" <<'PY'
+import json,sys
+obj=json.load(open(sys.argv[1]))
+assert obj.get("identity_id") == "alpha", obj
+assert obj.get("identity_authority_status") == "PASS_REQUIRED", obj
+assert obj.get("identity_authority_resolution_mode") == "actor_binding_session_scoped", obj
+assert "external_stamp" in obj, obj
+print("[PASS] env actor + session binding renders headstamp")
+PY
+
 echo "[info] semantic clarity probes: actor-session authority residue repair lane"
 mkdir -p "$TMP_ROOT/authority-residue/.identity/session/actors" "$TMP_ROOT/authority-residue/.identity/session/mirror"
 cat > "$TMP_ROOT/authority-residue/.identity/catalog.local.yaml" <<'YAML'

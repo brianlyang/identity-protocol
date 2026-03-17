@@ -280,6 +280,7 @@ def main() -> int:
             catalog_path=catalog_path,
             repo_catalog_path=repo_catalog_path,
             actor_id=args.actor_id,
+            session_id=str(args.session_id or "").strip(),
             explicit_catalog=bool(args.catalog.strip()),
         )
     except Exception as exc:
@@ -289,7 +290,7 @@ def main() -> int:
     authority = validate_runtime_egress_identity_authority(
         catalog_path=catalog_path,
         identity_id=ctx.identity_id,
-        actor_id=args.actor_id,
+        actor_id=ctx.actor_id,
         session_id=str(args.session_id or "").strip(),
     )
 

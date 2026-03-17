@@ -155,12 +155,22 @@ Interpretation contract:
      `authoritative_decision_allowed=false`.
 3. `scripts/validate_actor_session_multibinding_concurrency.py`
    - when `--session-id` is supplied, session-primary projection is read from `last_mutation_by_session`.
+4. governed response/headstamp consumers
+   - `scripts/identity_runtime_authority_common.py` now treats compatibility pointers as non-authoritative
+     unless explicit legacy fallback is enabled;
+   - `scripts/response_stamp_common.py` no longer silently falls back from missing actor context into
+     shared compatibility pointers;
+   - `scripts/render_identity_response_stamp.py`, `scripts/compose_and_validate_governed_reply.py`, and
+     `scripts/validate_reply_identity_context_first_line.py` now propagate resolved actor/session context
+     instead of reusing raw empty CLI input.
 
 ### 10.3 Replay evidence
 
 1. semantic clarity probe lane:
    - residue present => `repair_actor_session_authority_residue.py` returns `FAIL_REQUIRED`
    - repair applied => actor-session validation returns `last_mutation_projection_scope=session_primary`
+   - no actor context + compatibility pointer only => render path fail-closes instead of adopting pointer authority
+   - env actor + bound session => render path restores headstamp output deterministically
 2. live runtime replay:
    - `/tmp/actor_session_authority_residue_apply_20260317.json`
    - `/tmp/actor_session_authority_residue_scan_20260317.json`

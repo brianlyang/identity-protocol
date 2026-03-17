@@ -10,7 +10,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from actor_session_common import load_actor_binding, resolve_actor_id
+from actor_session_common import load_actor_binding, resolve_protocol_actor_id
+from identity_runtime_authority_common import (
+    compatibility_pointer_authority_allowed,
+)
 from resolve_identity_context import resolve_identity
 from tool_vendor_governance_common import load_json
 
@@ -229,17 +232,17 @@ def _session_pointer_path(catalog_path: Path) -> Path:
 
 
 def _session_data(catalog_path: Path, actor_id: str, identity_id: str, session_id: str = "") -> dict[str, Any]:
-    actor_binding = load_actor_binding(
-        catalog_path,
-        actor_id,
-        identity_id=identity_id,
-        session_id=str(session_id or "").strip(),
-    )
-    if actor_binding:
-        payload = dict(actor_binding)
-        payload["session_pointer_source"] = "actor"
-        return payload
     if str(actor_id or "").strip():
+        actor_binding = load_actor_binding(
+            catalog_path,
+            actor_id,
+            identity_id=identity_id,
+            session_id=str(session_id or "").strip(),
+        )
+        if actor_binding:
+            payload = dict(actor_binding)
+            payload["session_pointer_source"] = "actor"
+            return payload
         return {}
     p = _session_pointer_path(catalog_path)
     if not p.exists():
@@ -248,8 +251,8 @@ def _session_data(catalog_path: Path, actor_id: str, identity_id: str, session_i
         data = load_json(p)
     except Exception:
         return {}
-    if isinstance(data, dict):
-        data["session_pointer_source"] = "canonical"
+    if isinstance(data, dict) and compatibility_pointer_authority_allowed(data):
+        data["session_pointer_source"] = "compatibility_pointer"
         return data
     return {}
 
@@ -287,7 +290,7 @@ def resolve_stamp_context(
     session_id: str = "",
     explicit_catalog: bool = True,
 ) -> StampContext:
-    actor = resolve_actor_id(actor_id)
+    actor = resolve_protocol_actor_id(actor_id)
     resolved = resolve_identity(
         identity_id,
         repo_catalog_path.resolve(),

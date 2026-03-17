@@ -206,6 +206,8 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
    - actor stores persist `last_mutation_by_session` plus explicit compatibility projection metadata;
    - compatibility pointers persist `authority_role=compatibility_mirror`;
    - compatibility pointers persist `authoritative_decision_allowed=false`;
+   - response/headstamp authority consumers must ignore compatibility pointers by default and may
+     read them only under explicit legacy fallback mode;
    - runtime repair is done through protocol-owned generic tooling, not instance-specific patch scripts.
 4. `scripts/repair_actor_session_authority_residue.py` is allowed under v1.6.10 because it repairs
    runtime-file semantics without promoting actor stores or pointers into protocol-owned source-of-truth.

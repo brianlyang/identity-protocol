@@ -367,7 +367,7 @@ For runtime operations (validate/activate/update/install/writeback), always use 
 ### State consistency gate
 
 - Active status source-of-truth: catalog (`catalog.local.yaml` for runtime).
-- Session pointer canonical path: `<catalog_dir>/session/active_identity.json`
+- Session pointer compatibility path: `<catalog_dir>/session/active_identity.json`
 - Session pointer mirror path (default): `<catalog_dir>/session/mirror/current.json`
   (legacy `/tmp/identity-session/current.json` is compatibility-only and opt-in).
 - Strategy selected in v1.4.x hardening: **dual-write + strong consistency**.
@@ -376,6 +376,9 @@ For runtime operations (validate/activate/update/install/writeback), always use 
   - activation transaction must sync canonical session pointer and rollback on
     canonical sync failure.
   - activation transaction must keep catalog + META synchronized.
+  - compatibility pointers are non-authoritative mirrors; governed reply/headstamp
+    authority must come from explicit actor/session binding (or explicit legacy mode),
+    not from silent pointer fallback.
 - Validator: `scripts/validate_identity_state_consistency.py`
   + `scripts/validate_identity_session_pointer_consistency.py`
 

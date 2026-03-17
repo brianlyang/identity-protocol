@@ -385,6 +385,7 @@ def main() -> int:
             catalog_path=catalog_path,
             repo_catalog_path=repo_catalog_path,
             actor_id=actor_id_input,
+            session_id=str(args.session_id or "").strip(),
             explicit_catalog=bool(str(args.catalog or "").strip()),
         )
     except Exception as exc:

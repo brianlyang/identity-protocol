@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -11,13 +12,15 @@ from actor_session_common import (
     list_session_primary_conflicts,
     load_actor_binding,
     load_actor_binding_store,
-    resolve_actor_id,
+    resolve_protocol_actor_id,
 )
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
 ERR_IDENTITY_AUTHORITY_VIOLATION = "IP-IAUTH-001"
+LEGACY_AUTHORITY_FALLBACK_ENV = "IDENTITY_PROTOCOL_ALLOW_LEGACY_AUTHORITY_FALLBACK"
+TRUE_VALUES = {"1", "true", "yes", "on"}
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -37,6 +40,16 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 def _canonical_session_pointer_path(catalog_path: Path) -> Path:
     return (catalog_path.parent / "session" / "active_identity.json").resolve()
+
+
+def legacy_authority_fallback_enabled() -> bool:
+    return str(os.environ.get(LEGACY_AUTHORITY_FALLBACK_ENV, "")).strip().lower() in TRUE_VALUES
+
+
+def compatibility_pointer_authority_allowed(pointer: dict[str, Any]) -> bool:
+    if legacy_authority_fallback_enabled():
+        return True
+    return pointer.get("authoritative_decision_allowed") is True
 
 
 def _identity_row(rows: list[dict[str, Any]], identity_id: str) -> dict[str, Any] | None:
@@ -80,7 +93,7 @@ def _resolve_authoritative_identity(
     actor_id: str,
     session_id: str,
 ) -> tuple[str, str, dict[str, Any]]:
-    actor = resolve_actor_id(actor_id)
+    actor = resolve_protocol_actor_id(actor_id)
     sid = str(session_id or "").strip()
     if actor and sid:
         binding = load_actor_binding(catalog_path, actor, session_id=sid)
@@ -126,24 +139,27 @@ def _resolve_authoritative_identity(
         pointer = _load_json(pointer_path)
         identity_id = str(pointer.get("identity_id", "")).strip()
         if identity_id:
-            return identity_id, "canonical_session_pointer", pointer
+            if compatibility_pointer_authority_allowed(pointer):
+                return identity_id, "legacy_canonical_session_pointer", pointer
+            return "", "compatibility_pointer_non_authoritative", pointer
 
-    runtime_active_ids = [
-        str(row.get("id", "")).strip()
-        for row in rows
-        if _identity_runtime_meta(row).get("runtime_eligible")
-        and str(row.get("id", "")).strip()
-    ]
-    if len(runtime_active_ids) == 1:
-        identity_id = runtime_active_ids[0]
-        row = _identity_row(rows, identity_id) or {}
-        return identity_id, "catalog_single_active_runtime", row
+    if legacy_authority_fallback_enabled():
+        runtime_active_ids = [
+            str(row.get("id", "")).strip()
+            for row in rows
+            if _identity_runtime_meta(row).get("runtime_eligible")
+            and str(row.get("id", "")).strip()
+        ]
+        if len(runtime_active_ids) == 1:
+            identity_id = runtime_active_ids[0]
+            row = _identity_row(rows, identity_id) or {}
+            return identity_id, "legacy_catalog_single_active_runtime", row
 
-    default_identity = str(catalog_doc.get("default_identity", "")).strip()
-    if default_identity:
-        row = _identity_row(rows, default_identity)
-        if row and bool(_identity_runtime_meta(row).get("runtime_eligible")):
-            return default_identity, "catalog_default_runtime_identity", row
+        default_identity = str(catalog_doc.get("default_identity", "")).strip()
+        if default_identity:
+            row = _identity_row(rows, default_identity)
+            if row and bool(_identity_runtime_meta(row).get("runtime_eligible")):
+                return default_identity, "legacy_catalog_default_runtime_identity", row
 
     return "", "authority_unresolved", {}
 
@@ -157,7 +173,8 @@ def validate_runtime_egress_identity_authority(
 ) -> dict[str, Any]:
     target_identity_id = str(identity_id or "").strip()
     actor_raw = str(actor_id or "").strip()
-    actor = resolve_actor_id(actor_raw) if actor_raw else ""
+    actor = resolve_protocol_actor_id(actor_raw)
+    actor_resolution_mode = "explicit" if actor_raw else ("env" if actor else "missing")
     sid = str(session_id or "").strip()
 
     payload: dict[str, Any] = {
@@ -175,6 +192,7 @@ def validate_runtime_egress_identity_authority(
         "identity_authority_authoritative_runtime_mode": "",
         "identity_authority_authoritative_runtime_eligible": False,
         "identity_authority_actor_id": actor,
+        "identity_authority_actor_resolution_mode": actor_resolution_mode,
         "identity_authority_session_id": sid,
         "identity_authority_stale_reasons": [],
         "identity_authority_next_action": "",
@@ -269,8 +287,23 @@ def validate_runtime_egress_identity_authority(
     if resolution_mode == "authority_unresolved":
         payload["identity_authority_status"] = STATUS_FAIL_REQUIRED
         payload["identity_authority_error_code"] = ERR_IDENTITY_AUTHORITY_VIOLATION
-        payload["identity_authority_stale_reasons"] = ["authoritative_identity_unresolved"]
-        payload["identity_authority_next_action"] = "provide_runtime_authority_context_then_retry"
+        stale_reasons = ["authoritative_identity_unresolved"]
+        next_action = "provide_runtime_authority_context_then_retry"
+        if actor_resolution_mode == "missing":
+            stale_reasons.insert(0, "actor_context_missing")
+            next_action = "pass_actor_id_or_set_CODEX_ACTOR_ID_then_retry"
+        payload["identity_authority_stale_reasons"] = stale_reasons
+        payload["identity_authority_next_action"] = next_action
+        return payload
+
+    if resolution_mode == "compatibility_pointer_non_authoritative":
+        payload["identity_authority_status"] = STATUS_FAIL_REQUIRED
+        payload["identity_authority_error_code"] = ERR_IDENTITY_AUTHORITY_VIOLATION
+        stale_reasons = ["compatibility_pointer_non_authoritative"]
+        if actor_resolution_mode == "missing":
+            stale_reasons.insert(0, "actor_context_missing")
+        payload["identity_authority_stale_reasons"] = stale_reasons
+        payload["identity_authority_next_action"] = "pass_actor_id_or_set_CODEX_ACTOR_ID_then_retry"
         return payload
 
     if authoritative_identity_id:
@@ -331,8 +364,10 @@ def validate_runtime_egress_identity_authority(
         ]
         if resolution_mode.startswith("actor_binding"):
             payload["identity_authority_next_action"] = "use_session_primary_identity_or_run_gated_switch_then_retry"
-        else:
+        elif resolution_mode.startswith("legacy_"):
             payload["identity_authority_next_action"] = "align_canonical_runtime_identity_then_retry"
+        else:
+            payload["identity_authority_next_action"] = "provide_runtime_authority_context_then_retry"
         return payload
 
     return payload

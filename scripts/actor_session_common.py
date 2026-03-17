@@ -18,15 +18,25 @@ AUTHORITATIVE_BINDING_RULE = "(actor_id,session_id)->identity_id"
 ACTOR_GLOBAL_LAST_MUTATION_PROJECTION_SCOPE = "actor_global_compatibility_only"
 
 
-def resolve_actor_id(explicit_actor_id: str = "") -> str:
+def resolve_protocol_actor_id(
+    explicit_actor_id: str = "",
+    *,
+    allow_host_fallback: bool = False,
+) -> str:
     actor = str(explicit_actor_id or "").strip()
     if actor:
         return actor
     env_actor = str(os.environ.get("CODEX_ACTOR_ID", "")).strip()
     if env_actor:
         return env_actor
+    if not allow_host_fallback:
+        return ""
     user = str(os.environ.get("USER", "unknown")).strip() or "unknown"
     return f"user:{user}"
+
+
+def resolve_actor_id(explicit_actor_id: str = "") -> str:
+    return resolve_protocol_actor_id(explicit_actor_id, allow_host_fallback=True)
 
 
 def actor_session_dir(catalog_path: Path) -> Path:
