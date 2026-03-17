@@ -66,14 +66,31 @@ def main() -> int:
     required_checks_set = checks_doc.get("required_checks_set", [])
     if not required_checks_set and isinstance(evidence.get("required_checks_set"), list):
         required_checks_set = evidence["required_checks_set"]
+    checks_json_supplied = bool(str(args.checks_json or "").strip())
+    checks_set_present = bool(required_checks_set)
+    checks_all_success = _all_success(required_checks_set)
+    required_checks_status = (
+        "PASS"
+        if checks_all_success
+        else "EVIDENCE_MISSING"
+        if not checks_json_supplied and not isinstance(evidence.get("required_checks_set"), list)
+        else "EMPTY_SET"
+        if not checks_set_present
+        else "FAILED"
+    )
 
     conditions = {
         "target_branch_explicit": bool(args.target_branch.strip()),
         "release_head_sha_explicit": bool(args.release_head_sha.strip()),
+        "required_gates_run_id_present": bool(args.required_gates_run_id.strip()),
+        "run_url_present": bool(args.run_url.strip()),
         "required_gates_run_id_accessible": bool(args.required_gates_run_id.strip())
         and bool(args.run_url.strip()),
         "run_head_matches_release_head": args.run_head_sha == args.release_head_sha,
-        "required_checks_all_success": _all_success(required_checks_set),
+        "required_checks_evidence_accessible": bool(checks_json_supplied or isinstance(evidence.get("required_checks_set"), list)),
+        "required_checks_set_present": checks_set_present,
+        "required_checks_status": required_checks_status,
+        "required_checks_all_success": checks_all_success,
         "workflow_file_sha_matches": args.run_workflow_file_sha == args.workflow_file_sha,
     }
 
