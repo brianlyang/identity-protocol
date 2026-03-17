@@ -4168,7 +4168,7 @@ def main() -> int:
             json_only=args.json_only,
         )
     state_dir = contract_path.parent.parent / "state"
-    ingress_receipt_path = (state_dir / "required_gate_bundle_entry.latest.json").resolve()
+    default_ingress_receipt_path = (state_dir / "required_gate_bundle_entry.latest.json").resolve()
     out_reply_path = (
         Path(str(args.out_reply_file).strip()).expanduser().resolve()
         if str(args.out_reply_file or "").strip()
@@ -4212,6 +4212,17 @@ def main() -> int:
             stale_reason="ingress_bundle_not_pass_required",
             json_only=args.json_only,
         )
+    ingress_receipt_history_path = str(ingress_payload.get("protocol_unique_entry_receipt_history_path", "")).strip()
+    ingress_receipt_runtime_path = str(ingress_payload.get("protocol_unique_entry_receipt_path", "")).strip()
+    ingress_receipt_path = (
+        Path(ingress_receipt_history_path).expanduser().resolve()
+        if ingress_receipt_history_path
+        else (
+            Path(ingress_receipt_runtime_path).expanduser().resolve()
+            if ingress_receipt_runtime_path
+            else default_ingress_receipt_path
+        )
+    )
     receipt_run_id = str(ingress_payload.get("run_id_binding", "")).strip()
     receipt_session_id = str(ingress_payload.get("session_id", "")).strip()
     receipt_actor_id = str(ingress_payload.get("actor_id", "")).strip()

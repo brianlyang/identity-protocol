@@ -3037,3 +3037,31 @@ Checkpoint verdict:
 1. probe wording is now aligned with the live admission contract.
 2. clean first-pass egress no longer produces false CI red due to obsolete seed expectations.
 3. missing session-primary binding is now explicitly locked as a trust-boundary failure mode.
+
+### 26.47 session-chain per-run ingress receipt handoff + atomic state write fix (2026-03-17)
+
+Problem:
+
+1. real instance self-tests revealed that `required_gate_bundle_entry.latest.json` could be cross-wired during parallel wrapper rounds.
+2. the root cause was twofold:
+   - session-chain egress consumed the shared `latest` receipt pointer instead of the ingress run's own receipt path
+   - receipt state writes were plain overwrite writes instead of atomic replace writes
+
+Fix frozen:
+
+1. `scripts/create_identity_pack.py`
+   - session-chain wrapper now prefers `protocol_unique_entry_receipt_path` emitted by ingress payload
+   - shared `latest` remains fallback only
+2. `scripts/required_gate_bundle_runner.py`
+   - receipt persistence now uses temp-file replace semantics
+   - nonce replay state persistence now uses the same atomic write path
+
+Replay evidence:
+
+1. parallel runtime self-tests no longer corrupt `required_gate_bundle_entry.latest.json`
+2. sequential real-instance wrapper self-tests recover from previously polluted `latest` state as soon as a valid ingress pass rewrites the receipt atomically
+
+Checkpoint verdict:
+
+1. strict wrapper chaining now follows the ingress run's own receipt artifact.
+2. shared operator/runtime self-tests no longer rely on non-atomic mutable state during entry receipt handoff.

@@ -333,6 +333,14 @@ def _safe_int(value: Any, *, default: int = 0) -> int:
         return int(default)
 
 
+def _atomic_write_text(path: Path, content: str) -> None:
+    target = path.expanduser().resolve()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp = target.with_suffix(target.suffix + f".tmp-{os.getpid()}")
+    tmp.write_text(content, encoding="utf-8")
+    tmp.replace(target)
+
+
 def _resolve_subprocess_timeout_seconds() -> int:
     env_token = str(os.environ.get(DEFAULT_TIMEOUT_ENV, "")).strip()
     fallback = int(GATEWAY_WRAPPER_SUBPROCESS_TIMEOUT_SECONDS_DEFAULT)
@@ -456,7 +464,10 @@ def _consume_wrapper_nonce(
     used[nonce_key] = int(issued_at_epoch)
     state_doc["used"] = used
     try:
-        state_path.write_text(json.dumps(state_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        _atomic_write_text(
+            state_path,
+            json.dumps(state_doc, ensure_ascii=False, indent=2) + "\n",
+        )
     except Exception as exc:
         if _is_privilege_escalation_error(exc):
             return False, _format_privilege_escalation_reason(
@@ -1428,8 +1439,7 @@ def _validate_row_payload_contract(
 
 def _write_payload_out(out_path: str, payload: dict[str, Any]) -> None:
     target = Path(out_path).expanduser().resolve()
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _atomic_write_text(target, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
 
 
 def _utc_now_iso() -> str:

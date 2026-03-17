@@ -1641,3 +1641,26 @@ Interpretation lock:
 
 1. this is not a new authority source and not a wrapper exception.
 2. it is the machine-owned bridge that removes first-pass replay circularity while preserving later live-receipt auditing.
+
+### 5.30 session-chain ingress receipt consumption must be per-run and atomic (2026-03-17)
+
+Problem:
+
+1. session-chain wrapper historically reused `runtime/state/required_gate_bundle_entry.latest.json` as the ingress receipt path for egress.
+2. under concurrent self-tests or parallel runtime rounds, `latest` is a shared mutable pointer and can be replaced by a sibling run between ingress and egress.
+3. that creates two invalid outcomes:
+   - logical race: egress reads another run's receipt tuple
+   - file corruption risk if concurrent writers do not persist state atomically
+
+Mandatory behavior:
+
+1. session-chain wrapper MUST consume `protocol_unique_entry_receipt_path` returned by the ingress payload whenever available.
+2. `required_gate_bundle_runner.py` receipt state writes MUST use atomic temp-file replace semantics for:
+   - nonce replay state
+   - entry receipt state/history outputs
+3. shared `latest` state may remain as an operator convenience pointer, but it must not be the only per-run handoff artifact for strict wrapper chaining.
+
+Interpretation lock:
+
+1. this does not relax unique-entry governance.
+2. it hardens runtime integrity so parallel self-tests cannot corrupt or cross-wire strict entry receipts.
