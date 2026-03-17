@@ -176,6 +176,7 @@ def _send_time_cmd(
     expected_work_layer: str = "",
     expected_source_layer: str = "",
     layer_intent_text: str = "",
+    current_surface_native_machine_attested: bool = False,
 ) -> list[str]:
     cmd = [
         sys.executable,
@@ -211,6 +212,8 @@ def _send_time_cmd(
         cmd += ["--expected-source-layer", str(expected_source_layer).strip()]
     if str(layer_intent_text or "").strip():
         cmd += ["--layer-intent-text", str(layer_intent_text).strip()]
+    if current_surface_native_machine_attested:
+        cmd.append("--current-surface-native-machine-attested")
     return cmd
 
 
@@ -737,7 +740,7 @@ def main() -> int:
         and nongov_error_code in {ERR_NON_GOVERNED_OUTLET, ERR_FINAL_EMIT_CHANNEL_REQUIRED}
         and str(payload_nongov.get("send_time_gate_status", "")) == STATUS_FAIL_REQUIRED
         and str(payload_nongov.get("next_hop_admission_status", "")) == STATUS_FAIL_REQUIRED
-        and str(payload_nongov.get("output_governance_mode", "")) == "non_governed"
+        and str(payload_nongov.get("output_governance_mode", "")) == "manual_headstamp"
     )
     if not nongov_ok and not error_code:
         error_code = ERR_OUTLET_NEGATIVE
@@ -804,6 +807,7 @@ def main() -> int:
         "final_emit_governed",
         "--actor-id",
         actor_id,
+        "--current-surface-native-machine-attested",
         "--json-only",
     ]
     if session_id_effective:
@@ -856,6 +860,7 @@ def main() -> int:
             reply_file=pass_file,
             expected_work_layer=first_line_work_layer,
             expected_source_layer=first_line_source_layer,
+            current_surface_native_machine_attested=True,
         )
         rc_cov, payload_cov, _, _ = _run_json(coverage_cmd)
         coverage_case = {
