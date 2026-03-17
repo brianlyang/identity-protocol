@@ -2,6 +2,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+WORKSPACE_ROOT="$(cd "$REPO_ROOT/.." && pwd)"
 cd "$REPO_ROOT"
 
 TMP_ROOT="$(mktemp -d /tmp/semantic-clarity-probes.XXXXXX)"
@@ -33,6 +34,20 @@ assert boundary.get("runtime_file_boundary_governance_status") == "PASS_REQUIRED
 assert strict_actor.get("strict_actor_entry_semantics_status") == "PASS_REQUIRED", strict_actor
 assert authority.get("response_authority_consumer_semantics_status") == "PASS_REQUIRED", authority
 print("[PASS] positive semantic clarity lane")
+PY
+
+echo "[info] semantic clarity probes: workspace-root strict-entry replay"
+(
+  cd "$WORKSPACE_ROOT"
+  python3 identity-protocol-local/scripts/validate_strict_actor_entry_semantics.py --json-only > "$TMP_ROOT/strict_actor_entry_workspace_root.json"
+)
+python3 - "$TMP_ROOT/strict_actor_entry_workspace_root.json" <<'PY'
+import json,sys
+obj=json.load(open(sys.argv[1]))
+assert obj.get("strict_actor_entry_semantics_status") == "PASS_REQUIRED", obj
+assert obj.get("discovered_surface_file_count", 0) > 0, obj
+assert obj.get("discovered_shell_surface_file_count", 0) > 0, obj
+print("[PASS] workspace-root strict-entry replay")
 PY
 
 echo "[info] semantic clarity probes: authority fallback hardening lane"
