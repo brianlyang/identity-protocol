@@ -9,7 +9,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from actor_session_common import load_actor_binding, load_actor_binding_store, resolve_actor_id
+from actor_session_common import (
+    load_actor_binding,
+    load_actor_binding_store,
+    resolve_protocol_actor_id,
+)
 from final_emit_contract_common import (
     FINAL_EMIT_CHANNEL_ID,
     FINAL_EMIT_POLICY_MODE,
@@ -419,7 +423,7 @@ def main() -> int:
             "final_emit_schema_id": FINAL_EMIT_SCHEMA_ID,
             "final_emit_schema_status": "FAIL_REQUIRED",
             "final_emit_contract_status": "FAIL_REQUIRED",
-            "resolved_actor_id": resolve_actor_id(actor_id_input),
+            "resolved_actor_id": resolve_protocol_actor_id(actor_id_input),
             "stale_reasons": list(authority.get("identity_authority_stale_reasons") or []),
             "identity_authority_status": str(authority.get("identity_authority_status", "")).strip(),
             "identity_authority_next_action": str(authority.get("identity_authority_next_action", "")).strip(),
@@ -440,7 +444,7 @@ def main() -> int:
         )
         return 1
 
-    actor_id_effective = resolve_actor_id(actor_id_input)
+    actor_id_effective = resolve_protocol_actor_id(actor_id_input)
     actor_binding, actor_binding_store, actor_binding_selection_mode = _resolve_actor_binding_with_target(
         catalog_path=catalog_path,
         actor_id=actor_id_effective,
