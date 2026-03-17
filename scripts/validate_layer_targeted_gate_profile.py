@@ -163,6 +163,7 @@ def main() -> int:
                         "reason": "allowed_operations_missing",
                     }
                 )
+            allow_strict_operations = set(_as_str_list(raw.get("allow_strict_operations")))
             requirement_keys = _as_str_list(raw.get("requirement_keys"))
             unknown_keys = [key for key in requirement_keys if key not in requirement_set]
             if unknown_keys:
@@ -183,14 +184,25 @@ def main() -> int:
                         }
                     )
                 overlap = sorted(set(allowed_operations) & strict_no_trim_operations)
-                if overlap:
+                unknown_allowlist = sorted(op for op in allow_strict_operations if op not in strict_no_trim_operations)
+                if unknown_allowlist:
                     violations.append(
                         {
-                            "field": f"profiles.{profile_name}.allowed_operations",
-                            "reason": "targeted_profile_forbidden_strict_operations",
-                            "operations": overlap,
+                            "field": f"profiles.{profile_name}.allow_strict_operations",
+                            "reason": "allow_strict_operations_not_strict",
+                            "operations": unknown_allowlist,
                         }
                     )
+                if overlap:
+                    unapproved_overlap = sorted(op for op in overlap if op not in allow_strict_operations)
+                    if unapproved_overlap:
+                        violations.append(
+                            {
+                                "field": f"profiles.{profile_name}.allowed_operations",
+                                "reason": "targeted_profile_forbidden_strict_operations",
+                                "operations": unapproved_overlap,
+                            }
+                        )
             else:
                 if requirement_keys and set(requirement_keys) != requirement_set:
                     violations.append(
