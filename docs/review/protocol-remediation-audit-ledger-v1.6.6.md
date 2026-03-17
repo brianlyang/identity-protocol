@@ -3118,3 +3118,44 @@ Checkpoint verdict:
 
 1. strict non-upgrade completion is no longer falsely held open by duplicated instance-plane writeback logic.
 2. current acceptance residuals have moved above instance-plane aggregation; the remaining three-plane non-closure is release-plane scope, not runtime-plane drift.
+
+### 26.50 release-plane baseline normalization for three-plane observability (2026-03-17)
+
+Problem:
+
+1. after instance-plane closure was fixed, local three-plane still surfaced release plane as
+   `NOT_STARTED` with four false conditions.
+2. this overstated ambiguity:
+   - branch/head baseline was already known locally
+   - the actual missing evidence was the cloud run binding plus required-check verdict set
+3. the drift came from `scripts/report_three_plane_status.py` not normalizing the release comparison tuple the same way
+   `scripts/release_readiness_check.py` already does.
+
+Fix frozen:
+
+1. `scripts/report_three_plane_status.py`
+   - now defaults:
+     - `workflow_file_sha := release_head_sha`
+     - `run_head_sha := release_head_sha`
+     - `run_workflow_file_sha := workflow_file_sha`
+   - treats missing cloud evidence as release-plane `BLOCKED` once that baseline tuple exists
+2. the release-plane condition matrix now isolates the true unresolved items:
+   - `required_gates_run_id_accessible = false`
+   - `required_checks_all_success = false`
+   while sha parity remains visible as pass.
+
+Replay evidence:
+
+1. `python3 scripts/report_three_plane_status.py ... --out /tmp/three_plane_after_release_plane_commit.json`
+   - `instance_plane_status = CLOSED`
+   - `repo_plane_status = CLOSED`
+   - `release_plane_status = BLOCKED`
+   - `conditional_reasons = ["release_plane_not_closed:BLOCKED"]`
+2. release-plane detail now reports:
+   - `run_head_matches_release_head = true`
+   - `workflow_file_sha_matches = true`
+
+Checkpoint verdict:
+
+1. three-plane no longer hides release evidence gaps behind a partially-initialized `NOT_STARTED` state.
+2. remaining non-closure is now explicitly the cloud release evidence gap, not release-plane baseline drift.
