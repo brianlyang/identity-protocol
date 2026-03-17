@@ -55,7 +55,7 @@ def _call_block(lines: list[str], start_idx: int, *, span: int = 10) -> str:
     return "\n".join(lines[start_idx : start_idx + span])
 
 
-def _scan_file(path: Path, *, repo_root: Path) -> list[dict[str, Any]]:
+def _scan_file(path: Path, *, repo_root: Path, enforce_all_rules: bool = False) -> list[dict[str, Any]]:
     rel = _relative_token(path, repo_root)
     text = path.read_text(encoding="utf-8")
     lines = text.splitlines()
@@ -86,7 +86,7 @@ def _scan_file(path: Path, *, repo_root: Path) -> list[dict[str, Any]]:
                     }
                 )
 
-    if rel in FORBID_HOST_FALLBACK_RESOLVER:
+    if enforce_all_rules or rel in FORBID_HOST_FALLBACK_RESOLVER:
         for idx, line in enumerate(lines):
             if "resolve_actor_id(" in line:
                 violations.append(
@@ -98,7 +98,7 @@ def _scan_file(path: Path, *, repo_root: Path) -> list[dict[str, Any]]:
                     }
                 )
 
-    if rel in FORBID_COMPAT_POINTER_LITERAL:
+    if enforce_all_rules or rel in FORBID_COMPAT_POINTER_LITERAL:
         for idx, line in enumerate(lines):
             if "active_identity.json" in line:
                 violations.append(
@@ -150,7 +150,7 @@ def main() -> int:
             missing_files.append(rel)
             continue
         scanned_files.append(rel)
-        violations.extend(_scan_file(path, repo_root=repo_root))
+        violations.extend(_scan_file(path, repo_root=repo_root, enforce_all_rules=bool(requested_files)))
 
     stale_reasons: list[str] = []
     if missing_files:
