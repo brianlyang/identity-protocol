@@ -8,7 +8,7 @@ from typing import Any
 
 import yaml
 
-from actor_session_common import load_actor_binding, resolve_actor_id
+from actor_session_common import AUTHORITATIVE_BINDING_RULE, load_actor_binding, resolve_actor_id
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -40,6 +40,7 @@ def _validate_pointer(
     catalog_path: Path,
     active_identity_id: str,
     active_pack_path: str,
+    require_compatibility_metadata: bool = False,
 ) -> tuple[bool, str]:
     if not pointer_path.exists():
         return False, f"{pointer_name}_missing:{pointer_path}"
@@ -77,6 +78,18 @@ def _validate_pointer(
             False,
             f"{pointer_name}_pack_mismatch:pointer={pointer_pack} expected={active_pack_path}",
         )
+
+    if require_compatibility_metadata:
+        if str(payload.get("authority_role", "")).strip() != "compatibility_mirror":
+            return False, f"{pointer_name}_authority_role_missing_or_invalid"
+        if str(payload.get("authoritative_binding_rule", "")).strip() != AUTHORITATIVE_BINDING_RULE:
+            return False, f"{pointer_name}_authoritative_binding_rule_missing_or_invalid"
+        if payload.get("authoritative_decision_allowed") is not False:
+            return False, f"{pointer_name}_authoritative_decision_allowed_not_false"
+        if not str(payload.get("authoritative_binding_store_root", "")).strip():
+            return False, f"{pointer_name}_authoritative_binding_store_root_missing"
+        if not str(payload.get("pointer_semantics_version", "")).strip():
+            return False, f"{pointer_name}_pointer_semantics_version_missing"
 
     return True, "ok"
 
@@ -190,6 +203,7 @@ def main() -> int:
         catalog_path=catalog_path,
         active_identity_id=expected_identity_id,
         active_pack_path=expected_pack_path,
+        require_compatibility_metadata=bool(args.strict_session_primary),
     )
     if not ok:
         allow_multi_active_identity_mismatch = (
@@ -231,6 +245,7 @@ def main() -> int:
                 catalog_path=catalog_path,
                 active_identity_id=expected_identity_id,
                 active_pack_path=expected_pack_path,
+                require_compatibility_metadata=bool(args.strict_session_primary),
             )
             if not ok:
                 allow_multi_active_identity_mismatch = (

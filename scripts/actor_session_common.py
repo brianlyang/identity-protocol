@@ -13,6 +13,9 @@ SCHEMA_VERSION = "actor_session_multibinding_v1"
 DEFAULT_BINDING_KEY_MODE = "actor_id+identity_id+session_id"
 SESSION_ONLY_BINDING_KEY_MODE = "actor_id+session_id"
 LEGACY_BINDING_KEY_MODE = "legacy_single_object"
+AUTHORITY_MODEL = "actor_session_multibinding_session_primary_v2"
+AUTHORITATIVE_BINDING_RULE = "(actor_id,session_id)->identity_id"
+ACTOR_GLOBAL_LAST_MUTATION_PROJECTION_SCOPE = "actor_global_compatibility_only"
 
 
 def resolve_actor_id(explicit_actor_id: str = "") -> str:
@@ -127,6 +130,98 @@ def _binding_entry_key(row: dict[str, Any], *, key_mode: str) -> str:
     return f"{identity}::{sid}"
 
 
+def _binding_mutation_projection(row: dict[str, Any]) -> dict[str, Any]:
+    binding = copy.deepcopy(row) if isinstance(row, dict) else {}
+    updated_at = str(binding.get("updated_at", "")).strip() or str(binding.get("bound_at", "")).strip()
+    projection = {
+        "session_id": str(binding.get("session_id", "")).strip(),
+        "identity_id": str(binding.get("identity_id", "")).strip(),
+        "binding_ref": str(binding.get("binding_ref", "")).strip(),
+        "binding_version": _as_int(binding.get("binding_version")) or 0,
+        "mutation_lane": str(binding.get("mutation_lane", "")).strip(),
+        "run_id": str(binding.get("run_id", "")).strip(),
+        "switch_reason": str(binding.get("switch_reason", "")).strip(),
+        "approved_by": str(binding.get("approved_by", "")).strip(),
+        "governance_override_receipt": str(binding.get("governance_override_receipt", "")).strip(),
+        "updated_at": updated_at,
+        "applied_at": updated_at,
+        "projection_source": "binding_latest",
+    }
+    return projection
+
+
+def _merge_projection_overlay(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
+    merged = copy.deepcopy(base) if isinstance(base, dict) else {}
+    if not isinstance(overlay, dict):
+        return merged
+    for key, value in overlay.items():
+        if value is None:
+            continue
+        if isinstance(value, str) and not value.strip():
+            continue
+        merged[key] = copy.deepcopy(value)
+    return merged
+
+
+def _derive_last_mutation_by_session(
+    bindings: list[dict[str, Any]],
+    *,
+    payload: dict[str, Any],
+) -> dict[str, dict[str, Any]]:
+    derived: dict[str, dict[str, Any]] = {}
+    for row in bindings:
+        if not isinstance(row, dict):
+            continue
+        session_id = str(row.get("session_id", "")).strip()
+        if not session_id:
+            continue
+        current = derived.get(session_id)
+        if current is None or _entry_sort_key(row) >= _entry_sort_key(current):
+            derived[session_id] = copy.deepcopy(row)
+
+    projected: dict[str, dict[str, Any]] = {}
+    raw_map = payload.get("last_mutation_by_session")
+    raw_map = raw_map if isinstance(raw_map, dict) else {}
+    raw_last_mutation = payload.get("last_mutation") if isinstance(payload.get("last_mutation"), dict) else {}
+    for session_id, row in derived.items():
+        projection = _binding_mutation_projection(row)
+        raw_projection = raw_map.get(session_id)
+        if isinstance(raw_projection, dict):
+            projection = _merge_projection_overlay(projection, raw_projection)
+        if session_id and str(raw_last_mutation.get("session_id", "")).strip() == session_id:
+            projection = _merge_projection_overlay(projection, raw_last_mutation)
+        projection["session_id"] = session_id
+        projection["projection_scope"] = "session_primary"
+        projected[session_id] = projection
+    return projected
+
+
+def _derive_actor_global_last_mutation(
+    last_mutation_by_session: dict[str, dict[str, Any]],
+    *,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    candidates = [copy.deepcopy(v) for v in last_mutation_by_session.values() if isinstance(v, dict)]
+    candidates.sort(
+        key=lambda row: (
+            _as_int(row.get("binding_version")) or 0,
+            str(row.get("applied_at", "")).strip() or str(row.get("updated_at", "")).strip(),
+        )
+    )
+    projected = candidates[-1] if candidates else {}
+    raw_last_mutation = payload.get("last_mutation") if isinstance(payload.get("last_mutation"), dict) else {}
+    if raw_last_mutation:
+        raw_session_id = str(raw_last_mutation.get("session_id", "")).strip()
+        if raw_session_id and raw_session_id in last_mutation_by_session:
+            projected = _merge_projection_overlay(projected, raw_last_mutation)
+        elif not projected:
+            projected = copy.deepcopy(raw_last_mutation)
+    if projected:
+        projected["projection_scope"] = ACTOR_GLOBAL_LAST_MUTATION_PROJECTION_SCOPE
+        projected["projection_role"] = "compatibility_projection"
+    return projected
+
+
 def normalize_actor_binding_store(
     *,
     data: dict[str, Any] | None,
@@ -198,8 +293,13 @@ def normalize_actor_binding_store(
 
     receipts_raw = payload.get("rebind_receipts")
     receipts = [x for x in receipts_raw if isinstance(x, dict)] if isinstance(receipts_raw, list) else []
+    last_mutation_by_session = _derive_last_mutation_by_session(bindings, payload=payload)
+    actor_global_last_mutation = _derive_actor_global_last_mutation(last_mutation_by_session, payload=payload)
     return {
         "schema_version": SCHEMA_VERSION,
+        "authority_model": str(payload.get("authority_model", "")).strip() or AUTHORITY_MODEL,
+        "authoritative_binding_rule": str(payload.get("authoritative_binding_rule", "")).strip()
+        or AUTHORITATIVE_BINDING_RULE,
         "actor_id": actor_id,
         "catalog_path": str(catalog_path),
         "binding_key_mode": key_mode,
@@ -208,7 +308,9 @@ def normalize_actor_binding_store(
         "session_entry_count": len(bindings),
         "bindings": bindings,
         "rebind_receipts": receipts,
-        "last_mutation": payload.get("last_mutation", {}) if isinstance(payload.get("last_mutation"), dict) else {},
+        "last_mutation": actor_global_last_mutation,
+        "last_mutation_projection_scope": ACTOR_GLOBAL_LAST_MUTATION_PROJECTION_SCOPE,
+        "last_mutation_by_session": last_mutation_by_session,
         "updated_at": str(payload.get("updated_at", "")).strip(),
         "actor_session_path": str(actor_session_file),
         "stale_reasons": sorted(set(stale_reasons)),
@@ -361,5 +463,19 @@ def list_actor_bindings(catalog_path: Path) -> list[dict[str, Any]]:
 def write_actor_binding_store(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + f".tmp-{os.getpid()}")
-    tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    actor_id = str((payload or {}).get("actor_id", "")).strip()
+    catalog_raw = str((payload or {}).get("catalog_path", "")).strip()
+    if actor_id and catalog_raw:
+        try:
+            normalized = normalize_actor_binding_store(
+                data=payload,
+                actor_id=actor_id,
+                catalog_path=Path(catalog_raw).expanduser().resolve(),
+                actor_session_file=path.resolve(),
+            )
+        except Exception:
+            normalized = payload
+    else:
+        normalized = payload
+    tmp.write_text(json.dumps(normalized, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     tmp.replace(path)

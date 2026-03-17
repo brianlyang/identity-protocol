@@ -29,6 +29,151 @@ assert boundary.get("runtime_file_boundary_governance_status") == "PASS_REQUIRED
 print("[PASS] positive semantic clarity lane")
 PY
 
+echo "[info] semantic clarity probes: actor-session authority residue repair lane"
+mkdir -p "$TMP_ROOT/authority-residue/.identity/session/actors" "$TMP_ROOT/authority-residue/.identity/session/mirror"
+cat > "$TMP_ROOT/authority-residue/.identity/catalog.local.yaml" <<'YAML'
+identities:
+  - id: probe-identity
+    pack_path: /tmp/probe-identity
+    status: active
+    profile: runtime
+    runtime_mode: local_only
+YAML
+cat > "$TMP_ROOT/authority-residue/.identity/session/actors/user_test.json" <<'JSON'
+{
+  "schema_version": "actor_session_multibinding_v1",
+  "actor_id": "user:test",
+  "catalog_path": "__CATALOG__",
+  "binding_key_mode": "actor_id+identity_id+session_id",
+  "binding_version": 3,
+  "compare_token": "3",
+  "session_entry_count": 1,
+  "bindings": [
+    {
+      "actor_id": "user:test",
+      "session_id": "run:probe",
+      "identity_id": "probe-identity",
+      "catalog_path": "__CATALOG__",
+      "pack_path": "/tmp/probe-identity",
+      "status": "active",
+      "bound_at": "2026-03-17T00:00:00Z",
+      "updated_at": "2026-03-17T00:00:00Z",
+      "binding_ref": "user:test:probe-identity:run:probe:v3",
+      "binding_version": 3,
+      "compare_token": "3",
+      "mutation_lane": "activate",
+      "run_id": "probe",
+      "switch_reason": "probe",
+      "approved_by": "system:auto"
+    }
+  ],
+  "rebind_receipts": [
+    {
+      "from_binding_ref": "NONE",
+      "to_binding_ref": "user:test:probe-identity:run:probe:v3",
+      "actor_id": "user:test",
+      "session_id": "run:probe",
+      "run_id": "probe",
+      "switch_reason": "probe",
+      "approved_by": "system:auto",
+      "applied_at": "2026-03-17T00:00:00Z"
+    }
+  ],
+  "last_mutation": {
+    "mutation_lane": "activate",
+    "session_id": "run:probe",
+    "run_id": "probe",
+    "switch_reason": "probe",
+    "approved_by": "system:auto",
+    "compare_token_before": "2",
+    "compare_token_after": "3",
+    "applied_at": "2026-03-17T00:00:00Z"
+  }
+}
+JSON
+cat > "$TMP_ROOT/authority-residue/.identity/session/active_identity.json" <<'JSON'
+{
+  "identity_id": "probe-identity",
+  "catalog_path": "__CATALOG__",
+  "pack_path": "/tmp/probe-identity",
+  "status": "active",
+  "synced_at": "2026-03-17T00:00:00Z",
+  "session_pointer_type": "canonical"
+}
+JSON
+cat > "$TMP_ROOT/authority-residue/.identity/session/mirror/current.json" <<'JSON'
+{
+  "identity_id": "probe-identity",
+  "catalog_path": "__CATALOG__",
+  "pack_path": "/tmp/probe-identity",
+  "status": "active",
+  "synced_at": "2026-03-17T00:00:00Z",
+  "session_pointer_type": "mirror",
+  "canonical_session_pointer": "__CATALOG_DIR__/session/active_identity.json"
+}
+JSON
+python3 - "$TMP_ROOT/authority-residue/.identity/catalog.local.yaml" <<'PY'
+from pathlib import Path
+import sys
+catalog = Path(sys.argv[1]).resolve()
+catalog_dir = catalog.parent
+for path in [
+    catalog_dir / "session" / "actors" / "user_test.json",
+    catalog_dir / "session" / "active_identity.json",
+    catalog_dir / "session" / "mirror" / "current.json",
+]:
+    raw = path.read_text(encoding="utf-8")
+    raw = raw.replace("__CATALOG__", str(catalog))
+    raw = raw.replace("__CATALOG_DIR__", str(catalog_dir))
+    path.write_text(raw, encoding="utf-8")
+PY
+
+set +e
+python3 scripts/repair_actor_session_authority_residue.py \
+  --catalog "$TMP_ROOT/authority-residue/.identity/catalog.local.yaml" \
+  --all-actors \
+  --json-only > "$TMP_ROOT/authority_residue_negative.json"
+rc=$?
+set -e
+if [[ "$rc" -eq 0 ]]; then
+  echo "[FAIL] expected authority residue pre-repair probe to fail"
+  exit 1
+fi
+python3 - "$TMP_ROOT/authority_residue_negative.json" <<'PY'
+import json,sys
+obj=json.load(open(sys.argv[1]))
+assert obj.get("actor_session_authority_residue_status") == "FAIL_REQUIRED", obj
+assert obj.get("actor_store_residue_count", 0) >= 1, obj
+assert obj.get("pointer_residue_count", 0) >= 1, obj
+print("[PASS] authority residue negative probe blocked")
+PY
+
+python3 scripts/repair_actor_session_authority_residue.py \
+  --catalog "$TMP_ROOT/authority-residue/.identity/catalog.local.yaml" \
+  --all-actors \
+  --apply \
+  --json-only > "$TMP_ROOT/authority_residue_apply.json"
+python3 scripts/validate_actor_session_multibinding_concurrency.py \
+  --catalog "$TMP_ROOT/authority-residue/.identity/catalog.local.yaml" \
+  --actor-id user:test \
+  --session-id run:probe \
+  --operation ci \
+  --json-only > "$TMP_ROOT/authority_residue_validate.json"
+python3 - "$TMP_ROOT/authority_residue_apply.json" "$TMP_ROOT/authority_residue_validate.json" "$TMP_ROOT/authority-residue/.identity/session/active_identity.json" <<'PY'
+import json,sys
+apply_obj=json.load(open(sys.argv[1]))
+validate_obj=json.load(open(sys.argv[2]))
+pointer=json.load(open(sys.argv[3]))
+assert apply_obj.get("actor_session_authority_residue_status") == "PASS_REQUIRED", apply_obj
+assert apply_obj.get("applied_actor_store_count", 0) >= 1, apply_obj
+assert apply_obj.get("applied_pointer_count", 0) >= 1, apply_obj
+assert validate_obj.get("actor_session_multibinding_status") == "PASS_REQUIRED", validate_obj
+assert validate_obj.get("last_mutation_projection_scope") == "session_primary", validate_obj
+assert pointer.get("authority_role") == "compatibility_mirror", pointer
+assert pointer.get("authoritative_decision_allowed") is False, pointer
+print("[PASS] authority residue repair lane")
+PY
+
 echo "[info] semantic clarity probes: negative lane (semantic term forbidden phrase)"
 mkdir -p "$TMP_ROOT/neg-semantic/docs"
 cat > "$TMP_ROOT/neg-semantic/docs/probe.md" <<'MD'

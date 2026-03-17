@@ -4247,3 +4247,45 @@ Round-21 runtime identity authority bypass closure (`HEAD=dirty`, 2026-03-16):
 1. the reproduced “receipt matched session-primary state but failed against canonical pointer state” defect is closed.
 2. explicit actor/session lanes no longer silently degrade into shared canonical or catalog authority.
 3. strict authority gaps now fail-close with machine-readable stale reasons instead of identity drift.
+
+## v1.6.0 Addendum (2026-03-17): actor-session authority residue cleanup replay
+
+### B1) Scope
+
+1. remove persisted-data ambiguity after session-primary closure:
+   - actor stores need session-primary mutation projection, not only actor-global compatibility projection;
+   - compatibility pointers must declare non-authoritative role explicitly.
+
+### B2) Code closure
+
+1. `scripts/validate_actor_session_multibinding_concurrency.py`
+   - now prefers `last_mutation_by_session[session_id]` when `--session-id` is supplied;
+   - emits `last_mutation_projection_scope` / `last_mutation_projection_source`;
+   - fails-close on raw persisted residue (`authority_model`, `authoritative_binding_rule`,
+     `last_mutation_by_session`, `last_mutation_projection_scope`) before repair.
+2. `scripts/sync_session_identity.py`
+   - canonical + mirror pointers now persist compatibility-mirror metadata and explicit
+     `authoritative_decision_allowed=false`.
+3. `scripts/repair_actor_session_authority_residue.py`
+   - scans actor stores + compatibility pointers;
+   - rewrites persisted runtime residue via normalized protocol shapes;
+   - supports `--apply` against live runtime catalogs without identity-specific branches.
+4. `scripts/ci/run_semantic_clarity_probes_ci.sh`
+   - now replays negative residue detection + positive repair application.
+
+### B3) Replay evidence
+
+1. synthetic residue replay (CI):
+   - negative: residue present => repair surface returns `FAIL_REQUIRED`
+   - positive: `--apply` backfills actor store + pointer metadata, then multibinding validator returns
+     `last_mutation_projection_scope=session_primary`
+2. live runtime replay:
+   - `python3 scripts/repair_actor_session_authority_residue.py --catalog ../.identity/catalog.local.yaml --all-actors --apply --json-only`
+   - expected verdict:
+     - actor stores normalized to session-primary v2 authority model
+     - compatibility pointers explicitly demoted
+
+### B4) Verdict
+
+1. remaining confusion after M:N closure is now classified as persisted authority residue, not core binding logic failure.
+2. runtime residue is repairable through one protocol-owned surface instead of per-instance patching.

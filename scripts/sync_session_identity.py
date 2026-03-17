@@ -11,6 +11,8 @@ from typing import Any
 import yaml
 
 from actor_session_common import (
+    AUTHORITY_MODEL,
+    AUTHORITATIVE_BINDING_RULE,
     DEFAULT_BINDING_KEY_MODE,
     SESSION_ONLY_BINDING_KEY_MODE,
     actor_session_path,
@@ -34,6 +36,7 @@ SWITCH_PRESTATE_MODE_CHOICES = {
     SWITCH_PRESTATE_MODE_LEGACY_CANONICAL,
     SWITCH_PRESTATE_MODE_SESSION_PRIMARY,
 }
+POINTER_SEMANTICS_VERSION = "session_pointer_compatibility_v2"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -49,6 +52,10 @@ def _default_canonical_out(catalog: Path) -> Path:
 
 def _default_mirror_out(catalog: Path) -> Path:
     return (catalog.parent / "session" / "mirror" / "current.json").resolve()
+
+
+def _authoritative_binding_store_root(catalog: Path) -> Path:
+    return (catalog.parent / "session" / "actors").resolve()
 
 
 def _write_payload(path: Path, payload: dict[str, Any]) -> None:
@@ -97,6 +104,19 @@ def _load_canonical_identity_id(canonical_out: Path) -> str:
         return ""
     doc = _load_json(canonical_out)
     return str(doc.get("identity_id", "")).strip()
+
+
+def _pointer_metadata(*, catalog: Path, canonical_out: Path) -> dict[str, Any]:
+    return {
+        "authority_role": "compatibility_mirror",
+        "authority_model": AUTHORITY_MODEL,
+        "authoritative_binding_rule": AUTHORITATIVE_BINDING_RULE,
+        "authoritative_binding_store_root": str(_authoritative_binding_store_root(catalog)),
+        "authoritative_decision_allowed": False,
+        "pointer_semantics_version": POINTER_SEMANTICS_VERSION,
+        "authoritative_source": "actor_session_store",
+        "canonical_session_pointer": str(canonical_out),
+    }
 
 
 def _resolve_switch_from_identity(
@@ -412,6 +432,7 @@ def main() -> int:
         "synced_at": _utc_now(),
         "session_pointer_type": "canonical",
     }
+    payload.update(_pointer_metadata(catalog=catalog, canonical_out=canonical_out))
 
     mirror_targets: list[Path] = []
     mirror_raw = args.mirror_out.strip()

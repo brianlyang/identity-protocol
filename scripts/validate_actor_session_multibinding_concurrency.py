@@ -9,6 +9,8 @@ from typing import Any
 import yaml
 
 from actor_session_common import (
+    ACTOR_GLOBAL_LAST_MUTATION_PROJECTION_SCOPE,
+    AUTHORITATIVE_BINDING_RULE,
     LEGACY_BINDING_KEY_MODE,
     SESSION_ONLY_BINDING_KEY_MODE,
     actor_session_path,
@@ -32,6 +34,7 @@ ERR_MB_003 = "IP-ASB-MB-003"
 ERR_MB_004 = "IP-ASB-MB-004"
 ERR_MB_005 = "IP-ASB-MB-005"
 ERR_MB_006 = "IP-ASB-MB-006"
+ERR_MB_010 = "IP-ASB-MB-010"
 
 RECEIPT_REQUIRED_FIELDS = (
     "from_binding_ref",
@@ -157,6 +160,19 @@ def main() -> int:
     rebind_receipt_status = STATUS_PASS_REQUIRED
     session_primary_conflicts: list[dict[str, Any]] = []
     operation = str(args.operation or "validate").strip().lower()
+    requested_session_id = str(args.session_id or "").strip()
+    authority_model = str(store.get("authority_model", "")).strip()
+    authoritative_binding_rule = str(store.get("authoritative_binding_rule", "")).strip()
+    raw_authority_residue_missing_fields: list[str] = []
+    if raw_payload:
+        if not str(raw_payload.get("authority_model", "")).strip():
+            raw_authority_residue_missing_fields.append("authority_model")
+        if not str(raw_payload.get("authoritative_binding_rule", "")).strip():
+            raw_authority_residue_missing_fields.append("authoritative_binding_rule")
+        if not isinstance(raw_payload.get("last_mutation_by_session"), dict):
+            raw_authority_residue_missing_fields.append("last_mutation_by_session")
+        if not str(raw_payload.get("last_mutation_projection_scope", "")).strip():
+            raw_authority_residue_missing_fields.append("last_mutation_projection_scope")
 
     if fixture_mode:
         status = STATUS_SKIPPED_NOT_REQUIRED
@@ -192,7 +208,26 @@ def main() -> int:
         stale_reasons.append("compare_token_conflict")
         cas_conflict_detected = True
 
+    last_mutation_by_session = (
+        store.get("last_mutation_by_session") if isinstance(store.get("last_mutation_by_session"), dict) else {}
+    )
+    last_mutation_projection_scope = ACTOR_GLOBAL_LAST_MUTATION_PROJECTION_SCOPE
+    last_mutation_projection_source = "compatibility_projection"
     last_mutation = store.get("last_mutation") if isinstance(store.get("last_mutation"), dict) else {}
+    if requested_session_id and isinstance(last_mutation_by_session.get(requested_session_id), dict):
+        last_mutation = last_mutation_by_session.get(requested_session_id) or {}
+        last_mutation_projection_scope = "session_primary"
+        last_mutation_projection_source = "last_mutation_by_session"
+    elif isinstance(last_mutation, dict) and str(last_mutation.get("projection_scope", "")).strip():
+        last_mutation_projection_scope = str(last_mutation.get("projection_scope", "")).strip()
+
+    if status == STATUS_PASS_REQUIRED and raw_payload and raw_authority_residue_missing_fields:
+        error_code = ERR_MB_010
+        status = STATUS_FAIL_REQUIRED
+        stale_reasons.append(
+            "authority_residue_missing_fields:" + ",".join(sorted(set(raw_authority_residue_missing_fields)))
+        )
+
     if status == STATUS_PASS_REQUIRED and last_mutation:
         lane = str(last_mutation.get("mutation_lane", "")).strip().lower()
         override_receipt = str(last_mutation.get("governance_override_receipt", "")).strip()
@@ -224,7 +259,7 @@ def main() -> int:
     if status == STATUS_PASS_REQUIRED:
         session_primary_conflicts = list_session_primary_conflicts(
             store,
-            session_id=str(args.session_id or "").strip(),
+            session_id=requested_session_id,
         )
         if session_primary_conflicts:
             error_code = ERR_MB_001
@@ -289,6 +324,15 @@ def main() -> int:
         "error_code": error_code,
         "binding_key_mode": binding_key_mode,
         "session_entry_count": session_entry_count,
+        "authority_model": authority_model,
+        "authoritative_binding_rule": authoritative_binding_rule,
+        "authoritative_binding_rule_expected": AUTHORITATIVE_BINDING_RULE,
+        "requested_session_id": requested_session_id,
+        "last_mutation_projection_scope": last_mutation_projection_scope,
+        "last_mutation_projection_source": last_mutation_projection_source,
+        "last_mutation_selected_session_id": str(last_mutation.get("session_id", "")).strip(),
+        "last_mutation_by_session_count": len(last_mutation_by_session),
+        "raw_authority_residue_missing_fields": raw_authority_residue_missing_fields,
         "cas_checked": cas_checked,
         "cas_conflict_detected": cas_conflict_detected,
         "non_activation_mutation_detected": non_activation_mutation_detected,

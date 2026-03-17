@@ -4956,3 +4956,29 @@ Interpretation lock:
 2. it is not allowed to override session-primary before-state for guarded identity switching.
 3. it is not allowed to override strict actor/session authority during final emit or stamp render.
 4. legacy canonical fallback is permitted only through explicit legacy mode, not by silent downgrade.
+
+### A6) Actor-session authority residue normalization + compatibility pointer demotion (2026-03-17)
+
+Problem freeze:
+
+1. persisted actor-session stores still exposed only actor-global `last_mutation` to readers, which could
+   be misread as authoritative session state after M:N multibinding landed.
+2. compatibility pointers (`session/active_identity.json` + `session/mirror/current.json`) still looked
+   authoritative because they lacked explicit demotion metadata.
+
+Mandatory behavior:
+
+1. actor-session stores must persist:
+   - `authority_model=actor_session_multibinding_session_primary_v2`
+   - `authoritative_binding_rule=(actor_id,session_id)->identity_id`
+   - `last_mutation_by_session`
+   - `last_mutation_projection_scope=actor_global_compatibility_only`
+2. validators invoked with `--session-id` must evaluate `last_mutation_by_session[session_id]` before
+   reading actor-global compatibility projection.
+3. compatibility pointers must persist:
+   - `authority_role=compatibility_mirror`
+   - `authoritative_decision_allowed=false`
+   - `pointer_semantics_version=session_pointer_compatibility_v2`
+   - `authoritative_binding_store_root=<catalog_dir>/session/actors`
+4. `scripts/repair_actor_session_authority_residue.py` is the canonical repair surface for backfilling
+   this persisted metadata across runtime catalogs without identity-specific hardcoding.
