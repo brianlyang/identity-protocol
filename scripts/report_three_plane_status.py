@@ -93,6 +93,11 @@ VALIDATOR_ERROR_CODE_KEYS: tuple[str, ...] = (
 )
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+CURRENT_CHAT_SURFACE_CLASS = "host_native_chat_panel"
+CURRENT_CHAT_SURFACE_WIRING_CAPABILITY = "unavailable"
+CURRENT_CHAT_SURFACE_EXCLUSION_SCOPE = "EXCLUDED_NON_BLOCKING"
+CURRENT_CHAT_SURFACE_CONTROL_STATE = "CONTROLLED_EXCLUSION"
+CURRENT_CHAT_SURFACE_BLOCKING_STATE = "RAW_FAIL_BLOCKING"
 TUPLE_CONTEXT_PRIMARY_MARKERS: set[str] = {
     "entry_receipt_operation_mismatch",
     "entry_receipt_run_id_mismatch",
@@ -221,6 +226,153 @@ def _extract_error_code_from_validator(entry: dict[str, Any]) -> str:
         if m:
             return str(m.group(1) or "").strip()
     return ""
+
+
+def _build_current_chat_surface_exclusion_projection(
+    *,
+    args: argparse.Namespace,
+    actor_id: str,
+    layer_intent_text: str,
+    effective_work_layer: str,
+    effective_source_layer: str,
+    stamp_render_payload: dict[str, Any],
+) -> dict[str, Any]:
+    display_identity_id = str(stamp_render_payload.get("display_headstamp_identity_id", "")).strip() or str(
+        getattr(args, "identity_id", "") or ""
+    ).strip()
+    authoritative_identity_id = (
+        str(stamp_render_payload.get("authoritative_identity_id", "")).strip()
+        or str(stamp_render_payload.get("identity_authority_authoritative_identity_id", "")).strip()
+        or display_identity_id
+    )
+    headstamp_consistency_status = str(
+        stamp_render_payload.get("headstamp_consistency_status", "")
+    ).strip() or (STATUS_PASS_REQUIRED if display_identity_id == authoritative_identity_id else STATUS_FAIL_REQUIRED)
+    source_layer = (
+        str(effective_source_layer or "").strip().lower()
+        or str(stamp_render_payload.get("resolved_source_layer", "")).strip().lower()
+        or "project"
+    )
+    machine_payload = {
+        "verification_source": "not_claimed",
+        "display_headstamp_identity_id": display_identity_id,
+        "authoritative_identity_id": authoritative_identity_id,
+        "headstamp_consistency_status": headstamp_consistency_status,
+        "surface_class": CURRENT_CHAT_SURFACE_CLASS,
+        "native_attestation_wiring_capability": CURRENT_CHAT_SURFACE_WIRING_CAPABILITY,
+        "closure_blocker_scope": CURRENT_CHAT_SURFACE_EXCLUSION_SCOPE,
+        "current_chat_surface_native_machine_attested": False,
+        "next_hop_admission_status": STATUS_FAIL_REQUIRED,
+        "source_layer": source_layer,
+    }
+    envelope_artifact = str(
+        runtime_temp_file(
+            channel="three-plane",
+            operation="host-native-chat-surface-exclusion",
+            identity_id=str(getattr(args, "identity_id", "")).strip() or "identity",
+            stem=f"host-native-chat-surface-exclusion-{str(getattr(args, 'identity_id', '')).strip() or 'identity'}",
+            ext=".json",
+            run_token=_derive_run_id_from_session_id(str(getattr(args, "session_id", "") or "").strip()),
+        )
+    )
+    render_cmd = [
+        "python3",
+        "scripts/render_identity_response_stamp.py",
+        "--catalog",
+        str(args.catalog),
+        "--repo-catalog",
+        str(args.repo_catalog),
+        "--identity-id",
+        str(getattr(args, "identity_id", "")).strip(),
+        "--actor-id",
+        actor_id,
+        "--session-id",
+        str(getattr(args, "session_id", "") or "").strip(),
+        "--view",
+        "external",
+        "--disclosure-level",
+        "standard",
+        "--machine-payload-json",
+        json.dumps(machine_payload, ensure_ascii=False, separators=(",", ":")),
+        "--out",
+        envelope_artifact,
+        "--json-only",
+    ]
+    if layer_intent_text:
+        render_cmd.extend(["--layer-intent-text", layer_intent_text])
+    if effective_work_layer:
+        render_cmd.extend(["--work-layer", effective_work_layer])
+    if effective_source_layer:
+        render_cmd.extend(["--source-layer", effective_source_layer])
+    rc_render, out_render, err_render = _run(render_cmd)
+    rendered_payload = _parse_json_payload(out_render) or {}
+    if not rendered_payload and envelope_artifact:
+        try:
+            rendered_payload = _load_json(envelope_artifact)
+        except Exception:
+            rendered_payload = {}
+
+    validator_cmd = [
+        "python3",
+        "scripts/validate_response_stamp_operator_envelope.py",
+        "--stamp-json",
+        envelope_artifact,
+        "--repo-root",
+        str(PROTOCOL_ROOT),
+        "--json-only",
+    ]
+    rc_validate, out_validate, err_validate = _run(validator_cmd)
+    validator_payload = _parse_json_payload(out_validate) or {}
+    parsed_machine = validator_payload.get("parsed_machine_verification")
+    if not isinstance(parsed_machine, dict):
+        parsed_machine = {}
+    explanatory_surface_exclusion_status = str(
+        validator_payload.get("explanatory_surface_exclusion_status", "")
+    ).strip().upper()
+    operator_headstamp_envelope_status = str(
+        validator_payload.get("operator_headstamp_envelope_status", "")
+    ).strip().upper()
+    closure_blocker_scope = str(parsed_machine.get("closure_blocker_scope", "")).strip().upper()
+    excluded_from_blockers = (
+        rc_render == 0
+        and rc_validate == 0
+        and operator_headstamp_envelope_status == STATUS_PASS_REQUIRED
+        and explanatory_surface_exclusion_status == STATUS_PASS_REQUIRED
+        and closure_blocker_scope == CURRENT_CHAT_SURFACE_EXCLUSION_SCOPE
+    )
+    stale_reasons: list[str] = []
+    for reason in list(rendered_payload.get("stale_reasons", []) or []):
+        token = str(reason).strip()
+        if token and token not in stale_reasons:
+            stale_reasons.append(token)
+    for reason in list(validator_payload.get("stale_reasons", []) or []):
+        token = str(reason).strip()
+        if token and token not in stale_reasons:
+            stale_reasons.append(token)
+    return {
+        "render_rc": rc_render,
+        "render_ok": rc_render == 0,
+        "render_stdout": out_render,
+        "render_stderr": err_render,
+        "validator_rc": rc_validate,
+        "validator_ok": rc_validate == 0,
+        "validator_stdout": out_validate,
+        "validator_stderr": err_validate,
+        "operator_headstamp_envelope_status": operator_headstamp_envelope_status,
+        "explanatory_surface_exclusion_status": explanatory_surface_exclusion_status,
+        "closure_blocker_scope": closure_blocker_scope,
+        "effective_blocker_scope": CURRENT_CHAT_SURFACE_EXCLUSION_SCOPE if excluded_from_blockers else "BLOCKING",
+        "excluded_from_blocker_aggregation": excluded_from_blockers,
+        "control_state": CURRENT_CHAT_SURFACE_CONTROL_STATE if excluded_from_blockers else CURRENT_CHAT_SURFACE_BLOCKING_STATE,
+        "display_headstamp_line": str(rendered_payload.get("display_headstamp_line", "")).strip(),
+        "machine_verification_line": str(
+            validator_payload.get("machine_verification_line", "") or rendered_payload.get("machine_verification_line", "")
+        ).strip(),
+        "parsed_machine_verification": parsed_machine,
+        "artifact_path": envelope_artifact,
+        "stale_reasons": stale_reasons,
+        "blocking_contract_failed": not excluded_from_blockers,
+    }
 
 
 def _is_m2m_error_code(error_code: str) -> bool:
@@ -416,21 +568,44 @@ def _build_governance_closure_axes(
     release_status: str,
     m2m_projection: dict[str, Any],
     tuple_context_projection: dict[str, Any],
+    current_chat_surface_exclusion: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     normalized_instance = str(instance_status or "").strip().upper()
     normalized_repo = str(repo_status or "").strip().upper()
     normalized_release = str(release_status or "").strip().upper()
     m2m_status = str(m2m_projection.get("m2m_binding_closure_status", "")).strip().upper()
-    infra_pass = normalized_repo == "CLOSED" and m2m_status == "PASS"
+    current_chat_surface_exclusion = (
+        current_chat_surface_exclusion if isinstance(current_chat_surface_exclusion, dict) else {}
+    )
+    chat_surface_effective_blocker_scope = str(
+        current_chat_surface_exclusion.get("effective_blocker_scope", "")
+    ).strip().upper()
+    chat_surface_exclusion_status = str(
+        current_chat_surface_exclusion.get("explanatory_surface_exclusion_status", "")
+    ).strip().upper()
+    chat_surface_exclusion_pass = (
+        not current_chat_surface_exclusion
+        or chat_surface_effective_blocker_scope == CURRENT_CHAT_SURFACE_EXCLUSION_SCOPE
+    )
+    infra_pass = normalized_repo == "CLOSED" and m2m_status == "PASS" and chat_surface_exclusion_pass
     runtime_pass = normalized_instance == "CLOSED"
     release_pass = normalized_release == "CLOSED"
     tuple_context_status = str(tuple_context_projection.get("tuple_context_status", "")).strip().upper()
     tuple_context_pass = tuple_context_status != STATUS_FAIL_REQUIRED
     reasons: list[str] = []
+    non_blocking_exclusions: list[str] = []
     if normalized_repo != "CLOSED":
         reasons.append(f"repo_plane_not_closed:{normalized_repo or 'UNKNOWN'}")
     if m2m_status != "PASS":
         reasons.append(f"m2m_binding_not_pass:{m2m_status or 'UNKNOWN'}")
+    if current_chat_surface_exclusion:
+        if chat_surface_effective_blocker_scope == CURRENT_CHAT_SURFACE_EXCLUSION_SCOPE:
+            non_blocking_exclusions.append(CURRENT_CHAT_SURFACE_CLASS)
+        else:
+            reasons.append(
+                "host_native_chat_surface_exclusion_not_frozen:"
+                + (chat_surface_exclusion_status or STATUS_FAIL_REQUIRED)
+            )
     if normalized_instance != "CLOSED":
         reasons.append(f"instance_plane_not_closed:{normalized_instance or 'UNKNOWN'}")
     if normalized_release != "CLOSED":
@@ -450,6 +625,10 @@ def _build_governance_closure_axes(
         "runtime_readiness_status": STATUS_PASS_REQUIRED if runtime_pass else STATUS_FAIL_REQUIRED,
         "release_readiness_status": STATUS_PASS_REQUIRED if release_pass else STATUS_FAIL_REQUIRED,
         "tuple_context_consistency_status": STATUS_PASS_REQUIRED if tuple_context_pass else STATUS_FAIL_REQUIRED,
+        "current_chat_surface_effective_blocker_scope": chat_surface_effective_blocker_scope,
+        "current_chat_surface_exclusion_status": chat_surface_exclusion_status,
+        "current_chat_surface_excluded_from_blocker_aggregation": bool(non_blocking_exclusions),
+        "non_blocking_exclusions": sorted(set(non_blocking_exclusions)),
         "decision_mode": (
             "FULL_GO" if (infra_pass and runtime_pass and release_pass and tuple_context_pass) else "CONDITIONAL_GO"
         ),
@@ -1145,6 +1324,16 @@ def _instance_plane_status(
         "out": out_stamp_render,
         "err": err_stamp_render,
     }
+    current_chat_surface_exclusion = _build_current_chat_surface_exclusion_projection(
+        args=args,
+        actor_id=actor_id,
+        layer_intent_text=layer_intent_text,
+        effective_work_layer=effective_work_layer,
+        effective_source_layer=effective_source_layer,
+        stamp_render_payload=stamp_render_payload,
+    )
+    if bool(current_chat_surface_exclusion.get("blocking_contract_failed", False)):
+        hard_boundary = True
 
     rc_stamp, out_stamp, err_stamp = _run(
         [
@@ -4599,12 +4788,23 @@ def _instance_plane_status(
             "reply_coherence_catalog_ref": reply_coherence_payload.get("reply_catalog_ref", ""),
             "reply_coherence_blocker_receipt_path": reply_coherence_payload.get("blocker_receipt_path", ""),
             "external_stamp": stamp_render_payload.get("external_stamp"),
+            "current_chat_surface_explanatory_exclusion_status": current_chat_surface_exclusion.get(
+                "explanatory_surface_exclusion_status", ""
+            ),
+            "current_chat_surface_effective_blocker_scope": current_chat_surface_exclusion.get(
+                "effective_blocker_scope", ""
+            ),
+            "current_chat_surface_excluded_from_blocker_aggregation": current_chat_surface_exclusion.get(
+                "excluded_from_blocker_aggregation", False
+            ),
+            "current_chat_surface_control_state": current_chat_surface_exclusion.get("control_state", ""),
             "stale_reasons": stamp_payload.get("stale_reasons", []),
             "first_line_stale_reasons": reply_first_line_payload.get("stale_reasons", []),
             "layer_intent_stale_reasons": layer_intent_payload.get("stale_reasons", []),
             "send_time_stale_reasons": send_time_gate_payload.get("stale_reasons", []),
             "coherence_stale_reasons": reply_coherence_payload.get("stale_reasons", []),
         },
+        "current_chat_surface_exclusion": current_chat_surface_exclusion,
         "execution_report_freshness": {
             "freshness_status": freshness_payload.get("freshness_status"),
             "freshness_error_code": freshness_payload.get("freshness_error_code"),
@@ -4836,6 +5036,9 @@ def main() -> int:
         "instance_plane_detail": instance_detail,
         "repo_plane_detail": repo_detail,
         "release_plane_detail": release_detail,
+        "current_chat_surface_exclusion": (
+            instance_detail.get("current_chat_surface_exclusion", {}) if isinstance(instance_detail, dict) else {}
+        ),
         "release_cloud_evidence_adapter": {
             "release_cloud_evidence_adapter_status": adapter_payload.get("release_cloud_evidence_adapter_status", ""),
             "adapter_source_kind": adapter_payload.get("adapter_source_kind", ""),
@@ -4866,6 +5069,7 @@ def main() -> int:
         release_status=release_status,
         m2m_projection=m2m_projection,
         tuple_context_projection=tuple_context_projection,
+        current_chat_surface_exclusion=payload.get("current_chat_surface_exclusion", {}),
     )
 
     overall = "Conditional Go"
