@@ -11,12 +11,14 @@ from typing import Any
 import yaml
 
 from actor_session_common import (
+    ACTOR_GLOBAL_LAST_MUTATION_PROJECTION_SCOPE,
     AUTHORITY_MODEL,
     AUTHORITATIVE_BINDING_RULE,
     DEFAULT_BINDING_KEY_MODE,
     SESSION_ONLY_BINDING_KEY_MODE,
     actor_session_path,
     load_actor_binding_store,
+    load_actor_global_compatibility_projection,
     resolve_actor_id,
     write_actor_binding_store,
 )
@@ -106,8 +108,26 @@ def _load_canonical_identity_id(canonical_out: Path) -> str:
     return str(doc.get("identity_id", "")).strip()
 
 
-def _pointer_metadata(*, catalog: Path, canonical_out: Path) -> dict[str, Any]:
+def _compatibility_projection_metadata(*, projection: dict[str, Any] | None) -> dict[str, Any]:
+    raw = projection if isinstance(projection, dict) else {}
     return {
+        "compatibility_projection_scope": str(raw.get("projection_scope", "")).strip(),
+        "compatibility_projection_role": str(raw.get("projection_role", "")).strip(),
+        "compatibility_projection_actor_id": str(raw.get("actor_id", "")).strip(),
+        "compatibility_projection_identity_id": str(raw.get("identity_id", "")).strip(),
+        "compatibility_projection_session_id": str(raw.get("session_id", "")).strip(),
+        "compatibility_projection_binding_ref": str(raw.get("binding_ref", "")).strip(),
+        "compatibility_projection_run_id": str(raw.get("run_id", "")).strip(),
+        "compatibility_projection_compare_token": str(raw.get("compare_token", "")).strip(),
+        "compatibility_projection_binding_version": int(raw.get("binding_version", 0) or 0),
+        "compatibility_projection_switch_reason": str(raw.get("switch_reason", "")).strip(),
+        "compatibility_projection_applied_at": str(raw.get("applied_at", "")).strip(),
+        "compatibility_projection_updated_at": str(raw.get("updated_at", "")).strip(),
+    }
+
+
+def _pointer_metadata(*, catalog: Path, canonical_out: Path, projection: dict[str, Any] | None = None) -> dict[str, Any]:
+    payload = {
         "authority_role": "compatibility_mirror",
         "authority_model": AUTHORITY_MODEL,
         "authoritative_binding_rule": AUTHORITATIVE_BINDING_RULE,
@@ -117,6 +137,8 @@ def _pointer_metadata(*, catalog: Path, canonical_out: Path) -> dict[str, Any]:
         "authoritative_source": "actor_session_store",
         "canonical_session_pointer": str(canonical_out),
     }
+    payload.update(_compatibility_projection_metadata(projection=projection))
+    return payload
 
 
 def _resolve_switch_from_identity(
@@ -543,6 +565,8 @@ def main() -> int:
     except Exception as exc:
         print(f"[FAIL] actor session binding sync failed: {actor_out} ({exc})")
         return 1
+    projection_after = load_actor_global_compatibility_projection(catalog, actor_id)
+    payload.update(_pointer_metadata(catalog=catalog, canonical_out=canonical_out, projection=projection_after))
     print(
         "[OK] session identity actor-bound: "
         f"{actor_out} session_id={session_id} compare_token={compare_token_after} lane={mutation_lane}"

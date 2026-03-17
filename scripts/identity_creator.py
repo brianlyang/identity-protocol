@@ -11,7 +11,13 @@ from pathlib import Path
 
 import yaml
 
-from actor_session_common import list_actor_bindings, load_actor_binding, load_actor_binding_store, resolve_actor_id
+from actor_session_common import (
+    list_actor_bindings,
+    load_actor_binding,
+    load_actor_binding_store,
+    load_actor_global_compatibility_projection,
+    resolve_actor_id,
+)
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
 from resolve_identity_context import (
     collect_protocol_evidence,
@@ -801,7 +807,7 @@ def _activate_identity(
         switch_scope = SWITCH_GUARD_SCOPE_ACTOR_SESSION
     switch_reason_resolved = str(switch_reason or "").strip() or "explicit_activate"
     if switch_scope == SWITCH_GUARD_SCOPE_ACTOR_GLOBAL:
-        actor_binding = load_actor_binding(local_catalog, actor_id_resolved)
+        actor_binding = load_actor_global_compatibility_projection(local_catalog, actor_id_resolved)
     else:
         actor_binding = load_actor_binding(
             local_catalog,
@@ -920,6 +926,8 @@ def _activate_identity(
             "switch_reason": switch_reason_resolved,
             "switch_guard_scope": switch_scope,
             "switch_guard_binding_ref": str(actor_binding.get("binding_ref", "")).strip(),
+            "switch_guard_projection_role": str(actor_binding.get("projection_role", "")).strip(),
+            "switch_guard_projection_scope": str(actor_binding.get("projection_scope", "")).strip(),
             "identity_switch_detected": identity_switch_detected,
             "identity_switch_from": current_actor_identity,
             "identity_switch_to": identity_id,

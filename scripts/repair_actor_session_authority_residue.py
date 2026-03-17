@@ -13,6 +13,7 @@ from actor_session_common import (
     AUTHORITATIVE_BINDING_RULE,
     actor_session_dir,
     normalize_actor_binding_store,
+    select_actor_global_compatibility_projection,
     write_actor_binding_store,
 )
 
@@ -48,8 +49,14 @@ def _default_mirror_pointer(catalog_path: Path) -> Path:
     return (catalog_path.parent / "session" / "mirror" / "current.json").resolve()
 
 
-def _pointer_metadata(*, catalog_path: Path, canonical_pointer_path: Path) -> dict[str, Any]:
-    return {
+def _pointer_metadata(
+    *,
+    catalog_path: Path,
+    canonical_pointer_path: Path,
+    projection: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    raw = projection if isinstance(projection, dict) else {}
+    payload = {
         "authority_role": "compatibility_mirror",
         "authority_model": AUTHORITY_MODEL,
         "authoritative_binding_rule": AUTHORITATIVE_BINDING_RULE,
@@ -59,6 +66,23 @@ def _pointer_metadata(*, catalog_path: Path, canonical_pointer_path: Path) -> di
         "authoritative_source": "actor_session_store",
         "canonical_session_pointer": str(canonical_pointer_path),
     }
+    payload.update(
+        {
+            "compatibility_projection_scope": str(raw.get("projection_scope", "")).strip(),
+            "compatibility_projection_role": str(raw.get("projection_role", "")).strip(),
+            "compatibility_projection_actor_id": str(raw.get("actor_id", "")).strip(),
+            "compatibility_projection_identity_id": str(raw.get("identity_id", "")).strip(),
+            "compatibility_projection_session_id": str(raw.get("session_id", "")).strip(),
+            "compatibility_projection_binding_ref": str(raw.get("binding_ref", "")).strip(),
+            "compatibility_projection_run_id": str(raw.get("run_id", "")).strip(),
+            "compatibility_projection_compare_token": str(raw.get("compare_token", "")).strip(),
+            "compatibility_projection_binding_version": int(raw.get("binding_version", 0) or 0),
+            "compatibility_projection_switch_reason": str(raw.get("switch_reason", "")).strip(),
+            "compatibility_projection_applied_at": str(raw.get("applied_at", "")).strip(),
+            "compatibility_projection_updated_at": str(raw.get("updated_at", "")).strip(),
+        }
+    )
+    return payload
 
 
 def _repair_actor_store(path: Path, *, catalog_path: Path) -> dict[str, Any]:
@@ -108,11 +132,25 @@ def _repair_pointer(path: Path, *, pointer_name: str, catalog_path: Path, canoni
             "normalized_payload": {},
         }
 
+    projection = select_actor_global_compatibility_projection(
+        catalog_path,
+        identity_id=str(raw.get("identity_id", "")).strip(),
+    )
     normalized = dict(raw)
-    normalized.update(_pointer_metadata(catalog_path=catalog_path, canonical_pointer_path=canonical_pointer_path))
+    normalized.update(
+        _pointer_metadata(
+            catalog_path=catalog_path,
+            canonical_pointer_path=canonical_pointer_path,
+            projection=projection,
+        )
+    )
     normalized["session_pointer_type"] = "canonical" if pointer_name == "canonical" else "mirror"
     residue_fields: list[str] = []
-    for field, expected in _pointer_metadata(catalog_path=catalog_path, canonical_pointer_path=canonical_pointer_path).items():
+    for field, expected in _pointer_metadata(
+        catalog_path=catalog_path,
+        canonical_pointer_path=canonical_pointer_path,
+        projection=projection,
+    ).items():
         if raw.get(field) != expected:
             residue_fields.append(field)
     if str(raw.get("session_pointer_type", "")).strip().lower() != normalized["session_pointer_type"]:

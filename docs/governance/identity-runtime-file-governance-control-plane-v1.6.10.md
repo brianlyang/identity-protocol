@@ -205,8 +205,14 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
    `protocol_controlled_mirror_artifact`, not authority sources.
 3. Runtime-file governance must therefore enforce:
    - actor stores persist `last_mutation_by_session` plus explicit compatibility projection metadata;
+   - actor-global switch guards read the actor-store compatibility projection directly and must not reuse
+     ambiguous actor-scope selectors that return empty under multi-identity state;
    - compatibility pointers persist `authority_role=compatibility_mirror`;
    - compatibility pointers persist `authoritative_decision_allowed=false`;
+   - compatibility pointers persist compatibility-projection provenance fields
+     (`compatibility_projection_actor_id`, `compatibility_projection_identity_id`,
+     `compatibility_projection_session_id`, `compatibility_projection_binding_ref`,
+     `compatibility_projection_run_id`) so any later overwrite remains machine-auditable;
    - response/headstamp authority consumers must ignore compatibility pointers by default and may
      read them only under explicit legacy fallback mode;
    - runtime repair is done through protocol-owned generic tooling, not instance-specific patch scripts.
@@ -233,6 +239,11 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
      entry set (`scripts/ci/run_full_scan_target_regression_ci.sh`, `scripts/ci/run_required_runtime_gates_ci.sh`,
      `scripts/e2e_smoke_test.sh`);
    - probe / fixture shell surfaces may stay exempt only through an explicit exemption registry, never by omission.
+10. cross-session pointer drift is only acceptable as compatibility residue, never as authority:
+    - tuple-bound session renders continue to resolve from `(actor_id,session_id)->identity_id`;
+    - shared pointer drift may pass only when validators can prove the pointer carries explicit
+      actor-global compatibility provenance for a different session;
+    - absent that provenance, shared-pointer drift remains fail-close.
 
 ## 10) References
 

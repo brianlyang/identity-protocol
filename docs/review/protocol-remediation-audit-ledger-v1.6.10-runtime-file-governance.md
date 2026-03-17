@@ -152,10 +152,23 @@ Interpretation contract:
    - updates canonical + mirror compatibility pointers with explicit demotion metadata.
 2. `scripts/sync_session_identity.py`
    - future canonical/mirror writes now persist `authority_role=compatibility_mirror` and
-     `authoritative_decision_allowed=false`.
-3. `scripts/validate_actor_session_multibinding_concurrency.py`
+     `authoritative_decision_allowed=false`;
+   - future canonical/mirror writes also persist compatibility-projection provenance
+     (`compatibility_projection_actor_id`, `compatibility_projection_identity_id`,
+     `compatibility_projection_session_id`, `compatibility_projection_binding_ref`,
+     `compatibility_projection_run_id`) so the last overwrite stays explicitly non-authoritative.
+3. `scripts/identity_creator.py`
+   - `--switch-guard-scope actor_global` now reads actor-store compatibility projection directly
+     instead of reusing the ambiguous actor-scope selector;
+   - this closes the multi-identity blind spot where later session activations could overwrite the
+     shared pointer without tripping actor-global switch detection.
+4. `scripts/validate_actor_session_multibinding_concurrency.py`
    - when `--session-id` is supplied, session-primary projection is read from `last_mutation_by_session`.
-4. governed response/headstamp consumers
+5. `scripts/validate_identity_session_pointer_consistency.py`
+   - strict pointer validation still fail-closes on shared-pointer mismatch by default;
+   - explicit `--allow-compatibility-projection-drift` only acknowledges mismatch when the shared pointer proves
+     actor-global compatibility provenance for a different session.
+6. governed response/headstamp consumers
    - `scripts/identity_runtime_authority_common.py` now treats compatibility pointers as non-authoritative
      unless explicit legacy fallback is enabled;
    - `scripts/response_stamp_common.py` no longer silently falls back from missing actor context into
@@ -163,7 +176,7 @@ Interpretation contract:
    - `scripts/render_identity_response_stamp.py`, `scripts/compose_and_validate_governed_reply.py`, and
      `scripts/validate_reply_identity_context_first_line.py` now propagate resolved actor/session context
      instead of reusing raw empty CLI input.
-5. static anti-forget surface
+7. static anti-forget surface
    - `scripts/validate_response_authority_consumer_semantics.py` scans response/headstamp authority consumers and
      fail-closes when any consumer drops `session_id`, reintroduces `resolve_actor_id()` host fallback, or reuses
      compatibility-pointer literals as authority hints.
@@ -185,8 +198,13 @@ Interpretation contract:
 1. semantic clarity probe lane:
    - residue present => `repair_actor_session_authority_residue.py` returns `FAIL_REQUIRED`
    - repair applied => actor-session validation returns `last_mutation_projection_scope=session_primary`
+   - repaired compatibility pointers now expose explicit actor/session/binding provenance, not only demotion flags
    - no actor context + compatibility pointer only => render path fail-closes instead of adopting pointer authority
    - env actor + bound session => render path restores headstamp output deterministically
+   - cross-session pointer drift without explicit allowance => strict pointer validator fail-closes
+   - cross-session pointer drift with explicit compatibility provenance => strict pointer validator acknowledges
+     non-authoritative drift while tuple-bound session authority stays intact
+   - actor-global switch guard now blocks later cross-session overwrite attempts before role-binding validation
    - negative authority-consumer drift probe => static validator blocks missing session passthrough, host fallback
      resolver reuse, compatibility-pointer literal reuse, and unregistered authority-consumer surfaces
    - negative strict actor entry probe => static validator blocks hidden `assistant:codex` defaults and missing
@@ -201,6 +219,11 @@ Interpretation contract:
 
 ### 10.4 Verdict
 
-1. The remaining “identity switched / authority looked mixed” confusion is now classified as runtime-file residue,
-   not unresolved core actor-session logic.
-2. Repair stays protocol-owned and generic; no per-identity hardcoded migration was introduced.
+1. The remaining “identity switched / authority looked mixed” confusion included a producer-side blind spot:
+   actor-global guard read an ambiguous actor selector while shared compatibility pointers kept being overwritten by
+   later sessions.
+2. Runtime-file governance now closes that gap by combining:
+   - direct actor-global compatibility projection reads for switch guard;
+   - explicit compatibility-projection provenance on shared pointers;
+   - strict cross-session drift validation that only allows non-authoritative residue when provenance is present.
+3. Repair stays protocol-owned and generic; no per-identity hardcoded migration was introduced.

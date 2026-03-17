@@ -296,7 +296,144 @@ assert validate_obj.get("actor_session_multibinding_status") == "PASS_REQUIRED",
 assert validate_obj.get("last_mutation_projection_scope") == "session_primary", validate_obj
 assert pointer.get("authority_role") == "compatibility_mirror", pointer
 assert pointer.get("authoritative_decision_allowed") is False, pointer
+assert pointer.get("compatibility_projection_scope") == "actor_global_compatibility_only", pointer
+assert pointer.get("compatibility_projection_role") == "compatibility_projection", pointer
+assert pointer.get("compatibility_projection_actor_id") == "user:test", pointer
+assert pointer.get("compatibility_projection_identity_id") == "probe-identity", pointer
+assert pointer.get("compatibility_projection_session_id") == "run:probe", pointer
 print("[PASS] authority residue repair lane")
+PY
+
+echo "[info] semantic clarity probes: cross-session compatibility projection drift lane"
+mkdir -p "$TMP_ROOT/cross-session-drift/.identity/session/mirror" "$TMP_ROOT/cross-session-drift/.identity/session/actors"
+mkdir -p "$TMP_ROOT/cross-session-drift/.identity/alpha" "$TMP_ROOT/cross-session-drift/.identity/beta"
+cat > "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" <<'YAML'
+identities:
+  - id: alpha
+    pack_path: __PACK_ROOT__/alpha
+    status: active
+    profile: runtime
+    runtime_mode: local
+  - id: beta
+    pack_path: __PACK_ROOT__/beta
+    status: active
+    profile: runtime
+    runtime_mode: local
+YAML
+python3 - "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" "$TMP_ROOT/cross-session-drift/.identity" <<'PY'
+from pathlib import Path
+import sys
+catalog = Path(sys.argv[1]).resolve()
+pack_root = Path(sys.argv[2]).resolve()
+raw = catalog.read_text(encoding="utf-8")
+catalog.write_text(raw.replace("__PACK_ROOT__", str(pack_root)), encoding="utf-8")
+PY
+python3 scripts/sync_session_identity.py \
+  --catalog "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" \
+  --identity-id alpha \
+  --actor-id assistant:codex \
+  --session-id run:alpha \
+  --session-id-source explicit_session_id \
+  --run-id alpha \
+  --compare-token 0 \
+  --mutation-lane activate > "$TMP_ROOT/cross_session_alpha_sync.log"
+cat > "$TMP_ROOT/cross-session-drift/switch-alpha-to-beta.json" <<'JSON'
+{
+  "receipt_id": "switch-alpha-to-beta",
+  "actor_id": "assistant:codex",
+  "from_identity_id": "alpha",
+  "to_identity_id": "beta",
+  "approved_by": "system:test",
+  "approved_at": "2026-03-18T00:00:00Z",
+  "reason": "semantic-clarity-cross-session-drift-probe"
+}
+JSON
+python3 scripts/sync_session_identity.py \
+  --catalog "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" \
+  --identity-id beta \
+  --actor-id assistant:codex \
+  --session-id run:beta \
+  --session-id-source explicit_session_id \
+  --run-id beta \
+  --compare-token 1 \
+  --switch-intent-receipt "$TMP_ROOT/cross-session-drift/switch-alpha-to-beta.json" \
+  --mutation-lane activate > "$TMP_ROOT/cross_session_beta_sync.log"
+
+set +e
+python3 scripts/validate_identity_session_pointer_consistency.py \
+  --catalog "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" \
+  --identity-id alpha \
+  --actor-id assistant:codex \
+  --session-id run:alpha \
+  --strict-session-primary > "$TMP_ROOT/cross_session_pointer_negative.log" 2>&1
+rc=$?
+set -e
+if [[ "$rc" -eq 0 ]]; then
+  echo "[FAIL] expected strict pointer validation without compatibility drift allowance to fail"
+  exit 1
+fi
+python3 - "$TMP_ROOT/cross_session_pointer_negative.log" <<'PY'
+from pathlib import Path
+import sys
+text = Path(sys.argv[1]).read_text(encoding="utf-8")
+assert "canonical_identity_mismatch:pointer=beta active=alpha" in text, text
+print("[PASS] strict pointer drift blocks without explicit allowance")
+PY
+
+python3 scripts/validate_identity_session_pointer_consistency.py \
+  --catalog "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" \
+  --identity-id alpha \
+  --actor-id assistant:codex \
+  --session-id run:alpha \
+  --strict-session-primary \
+  --allow-compatibility-projection-drift > "$TMP_ROOT/cross_session_pointer_positive.log"
+python3 - "$TMP_ROOT/cross_session_pointer_positive.log" "$TMP_ROOT/cross-session-drift/.identity/session/active_identity.json" <<'PY'
+from pathlib import Path
+import json
+import sys
+text = Path(sys.argv[1]).read_text(encoding="utf-8")
+pointer = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+assert "compatibility_projection_drift=yes" in text, text
+assert "projection_session=run:beta" in text, text
+assert pointer.get("compatibility_projection_identity_id") == "beta", pointer
+assert pointer.get("compatibility_projection_session_id") == "run:beta", pointer
+print("[PASS] cross-session compatibility projection drift acknowledged")
+PY
+
+set +e
+python3 - "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" > "$TMP_ROOT/cross_session_actor_global_guard.log" 2>&1 <<'PY'
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path("scripts").resolve()))
+import identity_creator
+
+catalog = Path(sys.argv[1]).resolve()
+rc = identity_creator._activate_identity(
+    catalog,
+    catalog,
+    "alpha",
+    actor_id="assistant:codex",
+    run_id="guard-probe",
+    session_id="run:gamma",
+    switch_reason="probe",
+    switch_guard_scope=identity_creator.SWITCH_GUARD_SCOPE_ACTOR_GLOBAL,
+)
+raise SystemExit(rc)
+PY
+rc=$?
+set -e
+if [[ "$rc" -eq 0 ]]; then
+  echo "[FAIL] expected actor_global switch guard to detect compatibility projection switch"
+  exit 1
+fi
+python3 - "$TMP_ROOT/cross_session_actor_global_guard.log" <<'PY'
+from pathlib import Path
+import sys
+text = Path(sys.argv[1]).read_text(encoding="utf-8")
+assert "IP-ACT-SWITCH-001" in text, text
+assert "current_identity=beta" in text, text
+assert "switch_guard_scope=actor_global" in text, text
+print("[PASS] actor_global switch guard reads compatibility projection")
 PY
 
 echo "[info] semantic clarity probes: negative lane (semantic term forbidden phrase)"
@@ -606,6 +743,98 @@ assert obj.get("explanatory_surface_exclusion_status") == "PASS_REQUIRED", obj
 assert obj.get("parsed_machine_verification", {}).get("closure_blocker_scope") == "EXCLUDED_NON_BLOCKING", obj
 assert obj.get("parsed_machine_verification", {}).get("current_chat_surface_native_machine_attested") == "false", obj
 print("[PASS] host-native explanatory envelope exclusion probe")
+PY
+
+echo "[info] semantic clarity probes: process-dialogue headstamp scope contract"
+cat > "$TMP_ROOT/process_message_positive.json" <<'JSON'
+{
+  "message_author_role": "assistant",
+  "message_kind": "checkpoint",
+  "response_stamp_profile": {
+    "enabled": true,
+    "format": "structured_block",
+    "template_ref": "identity/protocol/plugins/templates/response-stamp.operator_dual_segment_v1.json"
+  },
+  "external_stamp": "Identity-Context: actor_id=assistant:codex; identity_id=probe-process; scope=USER; source=project | Layer-Context: work_layer=protocol; source_layer=project",
+  "machine_verification": {
+    "verification_source": "not_claimed",
+    "display_headstamp_identity_id": "probe-process",
+    "authoritative_identity_id": "probe-process",
+    "headstamp_consistency_status": "PASS_REQUIRED"
+  },
+  "display_headstamp_line": "Display-Headstamp: Identity-Context: actor_id=assistant:codex; identity_id=probe-process; scope=USER; source=project | Layer-Context: work_layer=protocol; source_layer=project",
+  "machine_verification_line": "Machine-Verification: verification_source=not_claimed; display_headstamp_identity_id=probe-process; authoritative_identity_id=probe-process; headstamp_consistency_status=PASS_REQUIRED",
+  "operator_envelope_lines": [
+    "Display-Headstamp: Identity-Context: actor_id=assistant:codex; identity_id=probe-process; scope=USER; source=project | Layer-Context: work_layer=protocol; source_layer=project",
+    "Machine-Verification: verification_source=not_claimed; display_headstamp_identity_id=probe-process; authoritative_identity_id=probe-process; headstamp_consistency_status=PASS_REQUIRED"
+  ]
+}
+JSON
+python3 scripts/validate_response_stamp_operator_envelope.py \
+  --stamp-json "$TMP_ROOT/process_message_positive.json" \
+  --repo-root "$REPO_ROOT" \
+  --json-only > "$TMP_ROOT/process_message_positive_result.json"
+python3 - "$TMP_ROOT/process_message_positive_result.json" <<'PY'
+import json,sys
+obj=json.load(open(sys.argv[1]))
+assert obj.get("operator_headstamp_envelope_status") == "PASS_REQUIRED", obj
+assert obj.get("message_headstamp_requirement_scope") == "REQUIRED_ASSISTANT_PROCESS_MESSAGE", obj
+assert obj.get("message_headstamp_requirement_reason") == "assistant_process_message:checkpoint", obj
+assert obj.get("headstamp_required_for_message") is True, obj
+assert obj.get("message_headstamp_requirement_status") == "PASS_REQUIRED", obj
+assert obj.get("operator_envelope_validation_applied") is True, obj
+print("[PASS] assistant process message requires and accepts shared headstamp")
+PY
+
+cat > "$TMP_ROOT/process_message_missing_headstamp.json" <<'JSON'
+{
+  "message_author_role": "assistant",
+  "message_kind": "status_update"
+}
+JSON
+set +e
+python3 scripts/validate_response_stamp_operator_envelope.py \
+  --stamp-json "$TMP_ROOT/process_message_missing_headstamp.json" \
+  --repo-root "$REPO_ROOT" \
+  --json-only > "$TMP_ROOT/process_message_missing_headstamp_result.json"
+rc=$?
+set -e
+if [[ "$rc" -eq 0 ]]; then
+  echo "[FAIL] expected assistant process message without headstamp to fail"
+  exit 1
+fi
+python3 - "$TMP_ROOT/process_message_missing_headstamp_result.json" <<'PY'
+import json,sys
+obj=json.load(open(sys.argv[1]))
+assert obj.get("operator_headstamp_envelope_status") == "FAIL_REQUIRED", obj
+assert obj.get("message_headstamp_requirement_scope") == "REQUIRED_ASSISTANT_PROCESS_MESSAGE", obj
+assert obj.get("headstamp_required_for_message") is True, obj
+assert obj.get("message_headstamp_requirement_status") == "FAIL_REQUIRED", obj
+assert "assistant_process_message_headstamp_missing" in (obj.get("stale_reasons") or []), obj
+print("[PASS] assistant process message missing headstamp fails closed")
+PY
+
+cat > "$TMP_ROOT/process_message_excluded_tool_event.json" <<'JSON'
+{
+  "message_author_role": "tool",
+  "message_kind": "tool_stderr"
+}
+JSON
+python3 scripts/validate_response_stamp_operator_envelope.py \
+  --stamp-json "$TMP_ROOT/process_message_excluded_tool_event.json" \
+  --repo-root "$REPO_ROOT" \
+  --json-only > "$TMP_ROOT/process_message_excluded_tool_event_result.json"
+python3 - "$TMP_ROOT/process_message_excluded_tool_event_result.json" <<'PY'
+import json,sys
+obj=json.load(open(sys.argv[1]))
+assert obj.get("operator_headstamp_envelope_status") == "PASS_REQUIRED", obj
+assert obj.get("message_headstamp_requirement_scope") == "EXCLUDED_HOST_TOOL_SYSTEM_EVENT", obj
+assert obj.get("message_headstamp_requirement_reason") == "host_tool_system_event_excluded", obj
+assert obj.get("headstamp_required_for_message") is False, obj
+assert obj.get("message_headstamp_requirement_status") == "PASS_REQUIRED", obj
+assert obj.get("operator_envelope_validation_applied") is False, obj
+assert obj.get("response_stamp_profile_status") == "SKIPPED_NOT_REQUIRED", obj
+print("[PASS] host/tool/system event stays outside headstamp requirement")
 PY
 
 echo "[info] semantic clarity probes: three-plane host-native exclusion aggregation"

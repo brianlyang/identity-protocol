@@ -396,6 +396,84 @@ def load_actor_binding(
     return _select_binding(store, identity_id=identity_id, session_id=session_id)
 
 
+def _decorate_actor_global_compatibility_projection(
+    *,
+    store: dict[str, Any],
+    projection: dict[str, Any] | None,
+) -> dict[str, Any]:
+    raw = copy.deepcopy(projection) if isinstance(projection, dict) else {}
+    if not raw:
+        return {}
+    if str(raw.get("projection_scope", "")).strip() != ACTOR_GLOBAL_LAST_MUTATION_PROJECTION_SCOPE:
+        return {}
+    raw["projection_role"] = str(raw.get("projection_role", "")).strip() or "compatibility_projection"
+    raw["actor_id"] = str(raw.get("actor_id", "")).strip() or str(store.get("actor_id", "")).strip()
+    raw["actor_session_path"] = str(store.get("actor_session_path", "")).strip()
+    raw["binding_key_mode"] = str(store.get("binding_key_mode", "")).strip() or DEFAULT_BINDING_KEY_MODE
+    raw["binding_version_store"] = _as_int(store.get("binding_version")) or 0
+    raw["compare_token"] = str(store.get("compare_token", "")).strip()
+    raw["session_entry_count"] = _as_int(store.get("session_entry_count")) or 0
+    return raw
+
+
+def _projection_sort_key(row: dict[str, Any]) -> tuple[int, str]:
+    version = _as_int(row.get("binding_version"))
+    if version is None:
+        version = _as_int(row.get("binding_version_store")) or 0
+    applied = str(row.get("applied_at", "")).strip() or str(row.get("updated_at", "")).strip()
+    return (version, applied)
+
+
+def load_actor_global_compatibility_projection(catalog_path: Path, actor_id: str) -> dict[str, Any]:
+    store = load_actor_binding_store(catalog_path, actor_id)
+    return _decorate_actor_global_compatibility_projection(
+        store=store,
+        projection=store.get("last_mutation") if isinstance(store.get("last_mutation"), dict) else {},
+    )
+
+
+def list_actor_global_compatibility_projections(catalog_path: Path) -> list[dict[str, Any]]:
+    root = actor_session_dir(catalog_path)
+    if not root.exists():
+        return []
+    projections: list[dict[str, Any]] = []
+    for path in sorted(root.glob("*.json")):
+        store = load_actor_binding_store(catalog_path, path.stem.replace("_", ":"))
+        projection = _decorate_actor_global_compatibility_projection(
+            store=store,
+            projection=store.get("last_mutation") if isinstance(store.get("last_mutation"), dict) else {},
+        )
+        if projection:
+            projections.append(projection)
+    return sorted(projections, key=_projection_sort_key)
+
+
+def select_actor_global_compatibility_projection(
+    catalog_path: Path,
+    *,
+    identity_id: str = "",
+    actor_id: str = "",
+) -> dict[str, Any]:
+    target_identity = str(identity_id or "").strip()
+    target_actor = str(actor_id or "").strip()
+    projections = list_actor_global_compatibility_projections(catalog_path)
+    if target_actor:
+        actor_matches = [
+            item for item in projections if str(item.get("actor_id", "")).strip() == target_actor
+        ]
+        if actor_matches:
+            projections = actor_matches
+    if target_identity:
+        identity_matches = [
+            item for item in projections if str(item.get("identity_id", "")).strip() == target_identity
+        ]
+        if identity_matches:
+            projections = identity_matches
+    if not projections:
+        return {}
+    return copy.deepcopy(sorted(projections, key=_projection_sort_key)[-1])
+
+
 def list_session_primary_conflicts(
     store: dict[str, Any],
     *,

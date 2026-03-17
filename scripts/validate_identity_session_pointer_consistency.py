@@ -8,7 +8,12 @@ from typing import Any
 
 import yaml
 
-from actor_session_common import AUTHORITATIVE_BINDING_RULE, load_actor_binding, resolve_actor_id
+from actor_session_common import (
+    ACTOR_GLOBAL_LAST_MUTATION_PROJECTION_SCOPE,
+    AUTHORITATIVE_BINDING_RULE,
+    load_actor_binding,
+    resolve_actor_id,
+)
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -41,24 +46,25 @@ def _validate_pointer(
     active_identity_id: str,
     active_pack_path: str,
     require_compatibility_metadata: bool = False,
-) -> tuple[bool, str]:
+) -> tuple[bool, str, dict[str, Any]]:
     if not pointer_path.exists():
-        return False, f"{pointer_name}_missing:{pointer_path}"
+        return False, f"{pointer_name}_missing:{pointer_path}", {}
     try:
         payload = _load_json(pointer_path)
     except Exception as exc:
-        return False, f"{pointer_name}_invalid_json:{exc}"
+        return False, f"{pointer_name}_invalid_json:{exc}", {}
 
     pointer_identity_id = str(payload.get("identity_id", "")).strip()
     if pointer_identity_id != active_identity_id:
         return (
             False,
             f"{pointer_name}_identity_mismatch:pointer={pointer_identity_id} active={active_identity_id}",
+            payload,
         )
 
     pointer_status = str(payload.get("status", "")).strip().lower()
     if pointer_status != "active":
-        return False, f"{pointer_name}_status_not_active:{pointer_status}"
+        return False, f"{pointer_name}_status_not_active:{pointer_status}", payload
 
     pointer_catalog = str(payload.get("catalog_path", "")).strip()
     if pointer_catalog:
@@ -70,6 +76,7 @@ def _validate_pointer(
             return (
                 False,
                 f"{pointer_name}_catalog_mismatch:pointer={pointer_catalog_path} expected={catalog_path}",
+                payload,
             )
 
     pointer_pack = str(payload.get("pack_path", "")).strip()
@@ -77,21 +84,56 @@ def _validate_pointer(
         return (
             False,
             f"{pointer_name}_pack_mismatch:pointer={pointer_pack} expected={active_pack_path}",
+            payload,
         )
 
     if require_compatibility_metadata:
         if str(payload.get("authority_role", "")).strip() != "compatibility_mirror":
-            return False, f"{pointer_name}_authority_role_missing_or_invalid"
+            return False, f"{pointer_name}_authority_role_missing_or_invalid", payload
         if str(payload.get("authoritative_binding_rule", "")).strip() != AUTHORITATIVE_BINDING_RULE:
-            return False, f"{pointer_name}_authoritative_binding_rule_missing_or_invalid"
+            return False, f"{pointer_name}_authoritative_binding_rule_missing_or_invalid", payload
         if payload.get("authoritative_decision_allowed") is not False:
-            return False, f"{pointer_name}_authoritative_decision_allowed_not_false"
+            return False, f"{pointer_name}_authoritative_decision_allowed_not_false", payload
         if not str(payload.get("authoritative_binding_store_root", "")).strip():
-            return False, f"{pointer_name}_authoritative_binding_store_root_missing"
+            return False, f"{pointer_name}_authoritative_binding_store_root_missing", payload
         if not str(payload.get("pointer_semantics_version", "")).strip():
-            return False, f"{pointer_name}_pointer_semantics_version_missing"
+            return False, f"{pointer_name}_pointer_semantics_version_missing", payload
 
-    return True, "ok"
+    return True, "ok", payload
+
+
+def _validate_compatibility_projection_drift(
+    *,
+    payload: dict[str, Any],
+    expected_identity_id: str,
+    actor_id: str,
+    session_id: str,
+) -> tuple[bool, str]:
+    pointer_identity_id = str(payload.get("identity_id", "")).strip()
+    if not pointer_identity_id:
+        return False, "compatibility_projection_identity_missing"
+    if pointer_identity_id == expected_identity_id:
+        return False, "compatibility_projection_drift_not_needed"
+    if str(payload.get("authority_role", "")).strip() != "compatibility_mirror":
+        return False, "compatibility_projection_authority_role_invalid"
+    if payload.get("authoritative_decision_allowed") is not False:
+        return False, "compatibility_projection_decision_flag_invalid"
+    if str(payload.get("compatibility_projection_scope", "")).strip() != ACTOR_GLOBAL_LAST_MUTATION_PROJECTION_SCOPE:
+        return False, "compatibility_projection_scope_invalid"
+    if str(payload.get("compatibility_projection_role", "")).strip() != "compatibility_projection":
+        return False, "compatibility_projection_role_invalid"
+    if str(payload.get("compatibility_projection_actor_id", "")).strip() != actor_id:
+        return False, "compatibility_projection_actor_mismatch"
+    if str(payload.get("compatibility_projection_identity_id", "")).strip() != pointer_identity_id:
+        return False, "compatibility_projection_identity_mismatch"
+    projection_session_id = str(payload.get("compatibility_projection_session_id", "")).strip()
+    if not projection_session_id:
+        return False, "compatibility_projection_session_missing"
+    if projection_session_id == session_id:
+        return False, "compatibility_projection_not_cross_session"
+    if not str(payload.get("compatibility_projection_binding_ref", "")).strip():
+        return False, "compatibility_projection_binding_ref_missing"
+    return True, "compatibility_projection_cross_session_drift"
 
 
 def main() -> int:
@@ -134,6 +176,14 @@ def main() -> int:
         help=(
             "enforce session-primary semantics for strict lanes: "
             "canonical/mirror identity mismatches and missing mirror become fail-close even under multi-active."
+        ),
+    )
+    ap.add_argument(
+        "--allow-compatibility-projection-drift",
+        action="store_true",
+        help=(
+            "allow cross-session shared-pointer drift only when the pointer is explicitly marked "
+            "as a non-authoritative actor-global compatibility projection."
         ),
     )
     args = ap.parse_args()
@@ -196,8 +246,11 @@ def main() -> int:
         else _default_canonical_out(catalog_path)
     )
     require_mirror_effective = bool(args.require_mirror or args.strict_session_primary)
+    compatibility_projection_drift_detected = False
+    compatibility_projection_drift_pointer_names: list[str] = []
+    compatibility_projection_payload: dict[str, Any] = {}
 
-    ok, reason = _validate_pointer(
+    ok, reason, pointer_payload = _validate_pointer(
         pointer_path=canonical_out,
         pointer_name="canonical",
         catalog_path=catalog_path,
@@ -206,12 +259,33 @@ def main() -> int:
         require_compatibility_metadata=bool(args.strict_session_primary),
     )
     if not ok:
+        allow_compatibility_projection_drift = False
+        if (
+            args.allow_compatibility_projection_drift
+            and args.strict_session_primary
+            and actor_id
+            and session_id
+            and reason.startswith("canonical_identity_mismatch:")
+        ):
+            allow_compatibility_projection_drift, drift_reason = _validate_compatibility_projection_drift(
+                payload=pointer_payload,
+                expected_identity_id=expected_identity_id,
+                actor_id=actor_id,
+                session_id=session_id,
+            )
+            if allow_compatibility_projection_drift:
+                compatibility_projection_drift_detected = True
+                compatibility_projection_drift_pointer_names.append("canonical")
+                compatibility_projection_payload = dict(pointer_payload)
+                print(f"[INFO] canonical compatibility projection drift acknowledged: {drift_reason}")
         allow_multi_active_identity_mismatch = (
             (not args.strict_session_primary)
             and len(active_rows) > 1
             and reason.startswith("canonical_identity_mismatch:")
         )
-        if allow_multi_active_identity_mismatch:
+        if allow_compatibility_projection_drift:
+            pass
+        elif allow_multi_active_identity_mismatch:
             print(f"[WARN] {reason} (allowed under actor-scoped multi-active model)")
         else:
             print(f"[FAIL] {reason}")
@@ -239,7 +313,7 @@ def main() -> int:
     for i, mirror_out in enumerate(dedup_targets, start=1):
         pointer_name = "mirror" if i == 1 else f"mirror_{i}"
         if mirror_out.exists():
-            ok, reason = _validate_pointer(
+            ok, reason, pointer_payload = _validate_pointer(
                 pointer_path=mirror_out,
                 pointer_name=pointer_name,
                 catalog_path=catalog_path,
@@ -248,11 +322,33 @@ def main() -> int:
                 require_compatibility_metadata=bool(args.strict_session_primary),
             )
             if not ok:
+                allow_compatibility_projection_drift = False
+                if (
+                    args.allow_compatibility_projection_drift
+                    and args.strict_session_primary
+                    and actor_id
+                    and session_id
+                    and reason.startswith(f"{pointer_name}_identity_mismatch:")
+                ):
+                    allow_compatibility_projection_drift, drift_reason = _validate_compatibility_projection_drift(
+                        payload=pointer_payload,
+                        expected_identity_id=expected_identity_id,
+                        actor_id=actor_id,
+                        session_id=session_id,
+                    )
+                    if allow_compatibility_projection_drift:
+                        compatibility_projection_drift_detected = True
+                        compatibility_projection_drift_pointer_names.append(pointer_name)
+                        if not compatibility_projection_payload:
+                            compatibility_projection_payload = dict(pointer_payload)
+                        print(f"[INFO] {pointer_name} compatibility projection drift acknowledged: {drift_reason}")
                 allow_multi_active_identity_mismatch = (
                     (not args.strict_session_primary)
                     and len(active_rows) > 1
                     and reason.startswith(f"{pointer_name}_identity_mismatch:")
                 )
+                if allow_compatibility_projection_drift:
+                    continue
                 if allow_multi_active_identity_mismatch and not require_mirror_effective:
                     print(f"[WARN] {reason} (allowed under actor-scoped multi-active model)")
                     continue
@@ -272,7 +368,9 @@ def main() -> int:
         "[OK] session pointer consistency validated: "
         f"expected_identity={expected_identity_id} actor={actor_id} "
         f"session_id={session_id or '<auto>'} "
-        f"active_count={len(active_rows)} catalog={catalog_path} canonical={canonical_out}"
+        f"active_count={len(active_rows)} catalog={catalog_path} canonical={canonical_out} "
+        f"compatibility_projection_drift={'yes' if compatibility_projection_drift_detected else 'no'} "
+        f"projection_session={str(compatibility_projection_payload.get('compatibility_projection_session_id', '')).strip() or '<none>'}"
     )
     return 0
 
