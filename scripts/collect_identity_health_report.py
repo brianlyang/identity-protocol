@@ -10,7 +10,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from actor_session_common import load_actor_binding_store, resolve_actor_id
+from actor_session_common import (
+    load_actor_binding_store,
+    resolve_protocol_actor_id,
+    resolve_required_protocol_actor_id,
+)
 
 
 DEFAULT_CHECKS: list[tuple[str, list[str]]] = [
@@ -481,15 +485,23 @@ def main() -> int:
         or str((Path.home() / ".codex" / ".identity" / "catalog.local.yaml").resolve())
     )
     execution_report = str(args.execution_report or "").strip()
+    strict_session_bound = str(args.operation or "").strip().lower() in STRICT_SESSION_BOUND_OPERATIONS
     actor_id_raw = str(args.actor_id or "").strip()
-    actor_id = resolve_actor_id(actor_id_raw) if actor_id_raw else ""
+    try:
+        actor_id = (
+            resolve_required_protocol_actor_id(actor_id_raw)
+            if strict_session_bound
+            else resolve_protocol_actor_id(actor_id_raw)
+        )
+    except ValueError as exc:
+        print(f"[FAIL] IP-ACTOR-ENTRY-001 {exc} (identity_id={args.identity_id}, operation={args.operation})")
+        return 1
     session_id, session_id_source = _resolve_actor_session_id(
         catalog=catalog,
         identity_id=args.identity_id,
         actor_id=actor_id,
         explicit_session_id=str(args.session_id or "").strip(),
     )
-    strict_session_bound = str(args.operation or "").strip().lower() in STRICT_SESSION_BOUND_OPERATIONS
     if strict_session_bound and actor_id and not session_id:
         print(
             "[FAIL] IP-ASB-SESSION-ENTRY-001 strict health requires actor-session binding context "
