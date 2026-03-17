@@ -3234,23 +3234,24 @@ def _instance_plane_status(
     if rc_namespace != 0 or namespace_status == "FAIL_REQUIRED":
         hard_boundary = True
 
-    rc_writeback, out_writeback, err_writeback = _run(
-        [
-            "python3",
-            "scripts/validate_writeback_continuity.py",
-            "--identity-id",
-            args.identity_id,
-            "--catalog",
-            args.catalog,
-            "--repo-catalog",
-            args.repo_catalog,
-            "--report",
-            str(report_path),
-            "--operation",
-            "three-plane",
-            "--json-only",
-        ]
-    )
+    writeback_cmd = [
+        "python3",
+        "scripts/validate_writeback_continuity.py",
+        "--identity-id",
+        args.identity_id,
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--run-id",
+        session_run_id,
+        "--operation",
+        "three-plane",
+        "--json-only",
+    ]
+    if str(getattr(args, "execution_report", "") or "").strip():
+        writeback_cmd.extend(["--report", str(report_path)])
+    rc_writeback, out_writeback, err_writeback = _run(writeback_cmd)
     writeback_payload = _parse_json_payload(out_writeback) or {}
     validators["writeback_continuity"] = {
         "rc": rc_writeback,
