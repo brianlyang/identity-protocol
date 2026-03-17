@@ -167,6 +167,8 @@ Interpretation contract:
    - `scripts/validate_response_authority_consumer_semantics.py` scans response/headstamp authority consumers and
      fail-closes when any consumer drops `session_id`, reintroduces `resolve_actor_id()` host fallback, or reuses
      compatibility-pointer literals as authority hints.
+   - default scan set now includes `scripts/final_emit_governed.py`, so final single-entry egress stays under the
+     same authority-consumer drift guard as render/compose/first-line validators.
 
 ### 10.3 Replay evidence
 
