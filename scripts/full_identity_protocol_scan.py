@@ -547,6 +547,62 @@ def _classify_tuple_context_projection(*, checks: dict[str, Any]) -> dict[str, A
     }
 
 
+def _build_current_chat_surface_projection_from_three_plane(
+    *, three_plane_payload: dict[str, Any]
+) -> dict[str, Any]:
+    payload = three_plane_payload if isinstance(three_plane_payload, dict) else {}
+    exclusion = payload.get("current_chat_surface_exclusion")
+    if not isinstance(exclusion, dict):
+        exclusion = {}
+    axes = payload.get("governance_closure_axes")
+    if not isinstance(axes, dict):
+        axes = {}
+    parsed_machine = exclusion.get("parsed_machine_verification")
+    if not isinstance(parsed_machine, dict):
+        parsed_machine = {}
+
+    effective_blocker_scope = str(
+        axes.get("current_chat_surface_effective_blocker_scope", "")
+    ).strip() or str(exclusion.get("effective_blocker_scope", "")).strip()
+    explanatory_exclusion_status = str(
+        axes.get("current_chat_surface_exclusion_status", "")
+    ).strip() or str(exclusion.get("explanatory_surface_exclusion_status", "")).strip()
+    excluded_from_blockers = axes.get("current_chat_surface_excluded_from_blocker_aggregation")
+    if not isinstance(excluded_from_blockers, bool):
+        excluded_from_blockers = bool(exclusion.get("excluded_from_blocker_aggregation", False))
+    control_state = str(exclusion.get("control_state", "")).strip()
+    display_headstamp_line = str(exclusion.get("display_headstamp_line", "")).strip()
+    machine_verification_line = str(exclusion.get("machine_verification_line", "")).strip()
+    non_blocking_exclusions = [
+        str(item).strip()
+        for item in (axes.get("non_blocking_exclusions") or [])
+        if str(item).strip()
+    ]
+    if not any(
+        (
+            effective_blocker_scope,
+            explanatory_exclusion_status,
+            control_state,
+            display_headstamp_line,
+            machine_verification_line,
+            parsed_machine,
+            non_blocking_exclusions,
+        )
+    ):
+        return {}
+
+    return {
+        "explanatory_exclusion_status": explanatory_exclusion_status,
+        "effective_blocker_scope": effective_blocker_scope,
+        "excluded_from_blocker_aggregation": excluded_from_blockers,
+        "control_state": control_state,
+        "display_headstamp_line": display_headstamp_line,
+        "machine_verification_line": machine_verification_line,
+        "parsed_machine_verification": parsed_machine,
+        "non_blocking_exclusions": sorted(set(non_blocking_exclusions)),
+    }
+
+
 def _safe_rate(*, passed: int, total: int) -> float:
     if total <= 0:
         return 1.0
@@ -5664,6 +5720,9 @@ def main() -> int:
             item["checks"]["three_plane"] = {"rc": three_plane.rc, "ok": three_plane.ok, "tail": three_plane.tail}
             tp = _parse_json_safely(three_plane.stdout)
             if tp:
+                current_chat_surface_projection = _build_current_chat_surface_projection_from_three_plane(
+                    three_plane_payload=tp
+                )
                 item["three_plane"] = {
                     "instance": tp.get("instance_plane_status"),
                     "repo": tp.get("repo_plane_status"),
@@ -5672,6 +5731,38 @@ def main() -> int:
                 }
                 if isinstance(tp.get("m2m_projection"), dict):
                     item["three_plane_m2m_projection"] = tp.get("m2m_projection")
+                if current_chat_surface_projection:
+                    item["current_chat_surface_projection"] = current_chat_surface_projection
+                    item["current_chat_surface_explanatory_exclusion_status"] = current_chat_surface_projection.get(
+                        "explanatory_exclusion_status", ""
+                    )
+                    item["current_chat_surface_effective_blocker_scope"] = current_chat_surface_projection.get(
+                        "effective_blocker_scope", ""
+                    )
+                    item["current_chat_surface_excluded_from_blocker_aggregation"] = current_chat_surface_projection.get(
+                        "excluded_from_blocker_aggregation", False
+                    )
+                    item["current_chat_surface_control_state"] = current_chat_surface_projection.get(
+                        "control_state", ""
+                    )
+                    item["current_chat_surface_display_headstamp_line"] = current_chat_surface_projection.get(
+                        "display_headstamp_line", ""
+                    )
+                    item["current_chat_surface_machine_verification_line"] = current_chat_surface_projection.get(
+                        "machine_verification_line", ""
+                    )
+                    item["three_plane"]["current_chat_surface_explanatory_exclusion_status"] = (
+                        current_chat_surface_projection.get("explanatory_exclusion_status", "")
+                    )
+                    item["three_plane"]["current_chat_surface_effective_blocker_scope"] = (
+                        current_chat_surface_projection.get("effective_blocker_scope", "")
+                    )
+                    item["three_plane"]["current_chat_surface_excluded_from_blocker_aggregation"] = (
+                        current_chat_surface_projection.get("excluded_from_blocker_aggregation", False)
+                    )
+                    item["three_plane"]["current_chat_surface_control_state"] = (
+                        current_chat_surface_projection.get("control_state", "")
+                    )
             # Keep full-scan m2m projection strictly derived from full-scan checks.
             # Three-plane projection is retained separately for observability only,
             # avoiding cross-surface aggregation noise where nested three-plane
