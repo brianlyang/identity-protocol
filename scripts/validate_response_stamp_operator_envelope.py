@@ -13,6 +13,7 @@ from response_stamp_common import (
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+NON_BLOCKING_EXCLUSION_SCOPE = "EXCLUDED_NON_BLOCKING"
 
 
 def _load_json(path: Path) -> Any:
@@ -44,6 +45,15 @@ def _stringify(value: Any) -> str:
     if isinstance(value, (list, dict)):
         return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
     return str(value).strip()
+
+
+def _normalized_bool_token(value: str) -> str:
+    token = str(value or "").strip().lower()
+    if token in {"true", "1", "yes", "on"}:
+        return "true"
+    if token in {"false", "0", "no", "off"}:
+        return "false"
+    return token
 
 
 def main() -> int:
@@ -137,6 +147,34 @@ def main() -> int:
     ):
         stale_reasons.append("machine_verification_consistency_projection_invalid")
 
+    explanatory_surface_exclusion_status = ""
+    closure_blocker_scope = str(machine_fields.get("closure_blocker_scope", "")).strip().upper()
+    if closure_blocker_scope == NON_BLOCKING_EXCLUSION_SCOPE:
+        explanatory_surface_errors: list[str] = []
+        if str(machine_fields.get("verification_source", "")).strip() != "not_claimed":
+            explanatory_surface_errors.append("verification_source_not_not_claimed")
+        if str(machine_fields.get("surface_class", "")).strip() != "host_native_chat_panel":
+            explanatory_surface_errors.append("surface_class_not_host_native_chat_panel")
+        if str(machine_fields.get("native_attestation_wiring_capability", "")).strip() != "unavailable":
+            explanatory_surface_errors.append("native_attestation_wiring_capability_not_unavailable")
+        chat_surface_attested = _normalized_bool_token(
+            machine_fields.get(
+                "current_chat_surface_native_machine_attested",
+                machine_fields.get("current_surface_native_machine_attested", ""),
+            )
+        )
+        if chat_surface_attested != "false":
+            explanatory_surface_errors.append("current_chat_surface_native_machine_attested_not_false")
+        if str(machine_fields.get("next_hop_admission_status", "")).strip() != STATUS_FAIL_REQUIRED:
+            explanatory_surface_errors.append("next_hop_admission_status_not_fail_required")
+        if explanatory_surface_errors:
+            stale_reasons.extend(
+                f"explanatory_surface_exclusion_invalid:{reason}" for reason in explanatory_surface_errors
+            )
+            explanatory_surface_exclusion_status = STATUS_FAIL_REQUIRED
+        else:
+            explanatory_surface_exclusion_status = STATUS_PASS_REQUIRED
+
     status = STATUS_FAIL_REQUIRED if stale_reasons else STATUS_PASS_REQUIRED
     out = {
         "operator_headstamp_envelope_status": status,
@@ -149,6 +187,7 @@ def main() -> int:
         "display_headstamp_line": display_line,
         "machine_verification_line": machine_line,
         "parsed_machine_verification": machine_fields,
+        "explanatory_surface_exclusion_status": explanatory_surface_exclusion_status,
         "missing_machine_fields": missing_machine_fields,
         "stale_reasons": stale_reasons,
     }
