@@ -176,6 +176,9 @@ Interpretation contract:
      `IP-ACTOR-ENTRY-001` / `resolve_required_protocol_actor_id()` entry gates.
    - the same validator now also blocks strict regression wrappers that default `--project-catalog` back to
      `identity/catalog/identities.yaml` instead of runtime-local catalog semantics.
+   - shell strict-entry wrappers now route through `scripts/shell_strict_entry_common.sh`; the validator covers the
+     registered shell entry set and records explicit probe-only exemptions for fixture scripts such as semantic clarity
+     and gateway / privilege probe lanes.
 
 ### 10.3 Replay evidence
 
@@ -190,6 +193,8 @@ Interpretation contract:
      strict actor entry gates on authority-adjacent orchestrators
    - negative strict project-catalog probe => static validator blocks strict regression wrappers that silently
      revert project catalog input to the repo fixture
+   - negative strict shell-entry probe => static validator blocks unregistered shell strict surfaces plus shell actor
+     / project-catalog defaults before they re-enter runtime lanes
 2. live runtime replay:
    - `/tmp/actor_session_authority_residue_apply_20260317.json`
    - `/tmp/actor_session_authority_residue_scan_20260317.json`

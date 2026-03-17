@@ -226,6 +226,13 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
 8. strict scan / regression orchestrators must resolve `--project-catalog` from runtime-local catalog semantics
    (`IDENTITY_CATALOG` or project `.identity/catalog.local.yaml`) and must not silently default that lane back to
    `identity/catalog/identities.yaml`.
+9. shell strict-entry orchestrators are covered by the same anti-forget lane:
+   - `scripts/shell_strict_entry_common.sh` is the protocol-owned resolver for runtime-local `CATALOG_PATH` and
+     required actor entry in shell;
+   - `scripts/validate_strict_actor_entry_semantics.py` must scan both Python orchestrators and the registered shell
+     entry set (`scripts/ci/run_full_scan_target_regression_ci.sh`, `scripts/ci/run_required_runtime_gates_ci.sh`,
+     `scripts/e2e_smoke_test.sh`);
+   - probe / fixture shell surfaces may stay exempt only through an explicit exemption registry, never by omission.
 
 ## 10) References
 
