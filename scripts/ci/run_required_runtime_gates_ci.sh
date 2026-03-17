@@ -163,13 +163,18 @@ for ID in ${IDS}; do
     python3 scripts/validate_writeback_continuity.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --report "$UPGRADE_REPORT" --operation ci
     python3 scripts/validate_post_execution_mandatory.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --report "$UPGRADE_REPORT" --operation ci
     python3 scripts/report_three_plane_status.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --execution-report "$UPGRADE_REPORT" --expected-work-layer protocol --expected-source-layer project --out "$THREE_PLANE_REPORT_JSON"
-    UPGRADE_REPORT_PATH="$UPGRADE_REPORT" THREE_PLANE_REPORT_PATH="$THREE_PLANE_REPORT_JSON" python3 - <<'PY'
+    IDENTITY_ID="$ID" CATALOG_PATH="$CATALOG_PATH" HEAD_SHA="$HEAD_SHA" GITHUB_REF_NAME="${GITHUB_REF_NAME:-main}" UPGRADE_REPORT_PATH="$UPGRADE_REPORT" THREE_PLANE_REPORT_PATH="$THREE_PLANE_REPORT_JSON" python3 - <<'PY'
 import json
 import os
+import subprocess
 import sys
 
 report_path = os.environ["UPGRADE_REPORT_PATH"]
 three_plane_path = os.environ["THREE_PLANE_REPORT_PATH"]
+identity_id = os.environ["IDENTITY_ID"]
+catalog_path = os.environ["CATALOG_PATH"]
+head_sha = os.environ["HEAD_SHA"]
+github_ref_name = os.environ["GITHUB_REF_NAME"]
 
 with open(report_path, encoding="utf-8") as fh:
     report = json.load(fh)
@@ -217,6 +222,55 @@ if release_conditions.get("required_checks_all_success") is not False:
     raise SystemExit("[FAIL] expected required_checks_all_success=false without release checks evidence")
 
 print("[OK] release-plane baseline normalization assertion passed: baseline_known_missing_cloud_evidence=>BLOCKED")
+
+probe = subprocess.run(
+    [
+        sys.executable,
+        "scripts/validate_release_plane_cloud_evidence.py",
+        "--identity-id",
+        identity_id,
+        "--catalog",
+        catalog_path,
+        "--target-branch",
+        github_ref_name,
+        "--release-head-sha",
+        head_sha,
+        "--workflow-file-sha",
+        head_sha,
+        "--run-head-sha",
+        head_sha,
+        "--run-workflow-file-sha",
+        head_sha,
+        "--operation",
+        "ci",
+        "--force-required",
+        "--json-only",
+    ],
+    capture_output=True,
+    text=True,
+    check=False,
+)
+try:
+    probe_payload = json.loads(probe.stdout)
+except Exception as exc:
+    raise SystemExit(f"[FAIL] unable to parse release cloud evidence probe output: {exc}")
+
+if probe.returncode == 0:
+    raise SystemExit("[FAIL] expected release cloud evidence probe to fail when release baseline is known but cloud evidence is absent")
+if str(probe_payload.get("release_plane_cloud_evidence_status", "")).strip().upper() != "FAIL_REQUIRED":
+    raise SystemExit("[FAIL] expected release_plane_cloud_evidence_status=FAIL_REQUIRED for missing cloud evidence probe")
+if str(probe_payload.get("error_code", "")).strip().upper() != "IP-RCLOUD-001":
+    raise SystemExit("[FAIL] expected IP-RCLOUD-001 for missing cloud evidence probe")
+
+probe_conditions = probe_payload.get("conditions") or {}
+if probe_conditions.get("required_gates_run_id_present") is not False:
+    raise SystemExit("[FAIL] expected required_gates_run_id_present=false for missing cloud evidence probe")
+if probe_conditions.get("run_url_present") is not False:
+    raise SystemExit("[FAIL] expected run_url_present=false for missing cloud evidence probe")
+if str(probe_conditions.get("required_checks_status", "")).strip().upper() != "EVIDENCE_MISSING":
+    raise SystemExit("[FAIL] expected required_checks_status=EVIDENCE_MISSING for missing cloud evidence probe")
+
+print("[OK] release cloud evidence validator assertion passed: baseline_known_missing_evidence=>FAIL_REQUIRED/IP-RCLOUD-001")
 PY
     python3 scripts/validate_protocol_feedback_sidecar_contract.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --report "$UPGRADE_REPORT" --operation ci --enforce-blocking
     python3 scripts/validate_instance_base_repo_write_boundary.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --report "$UPGRADE_REPORT" --operation ci
