@@ -191,6 +191,7 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
    - `scripts/validate_stream_scope_semantic_integrity.py`
 4. runtime-file anti-forget surface must stay wired through:
    - `scripts/validate_required_gate_surface_drift.py`
+   - `scripts/validate_response_authority_consumer_semantics.py`
 5. CI replay must stay wired through:
    - `scripts/ci/run_semantic_clarity_probes_ci.sh`
    - `scripts/ci/run_downsink_path_immutability_probes_ci.sh`
@@ -213,6 +214,9 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
    runtime-file semantics without promoting actor stores or pointers into protocol-owned source-of-truth.
 5. `scripts/ci/run_semantic_clarity_probes_ci.sh` must replay negative residue detection and positive repair
    application whenever v1.6.10 changes touch actor-session runtime files or compatibility pointers.
+6. response/headstamp authority-consumer drift must fail-close through:
+   - `scripts/validate_response_authority_consumer_semantics.py`
+   - negative probe: missing `session_id` passthrough / `resolve_actor_id()` host fallback / compatibility-pointer literal reuse.
 
 ## 10) References
 
