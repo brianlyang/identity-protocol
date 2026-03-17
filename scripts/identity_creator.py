@@ -786,6 +786,7 @@ def _activate_identity(
     cross_actor_receipt: str = "",
 ) -> int:
     ensure_local_catalog(repo_catalog, local_catalog)
+    protocol_root_resolved = resolve_protocol_root(protocol_root or str(PROTOCOL_ROOT))
     try:
         resolved = resolve_identity(identity_id, repo_catalog, local_catalog, preferred_scope=scope)
     except Exception as e:
@@ -951,7 +952,7 @@ def _activate_identity(
             "session_pointer_canonical_path": str(canonical_session_pointer),
             "session_pointer_mirror_path": str(scoped_session_mirror),
         }
-        protocol = collect_protocol_evidence(protocol_root, protocol_mode)
+        protocol = collect_protocol_evidence(str(protocol_root_resolved), protocol_mode)
         switch_payload.update(
             {
                 "protocol_mode": protocol["protocol_mode"],
@@ -1009,6 +1010,7 @@ def _activate_identity(
             sync_cmd,
             capture_output=True,
             text=True,
+            cwd=str(protocol_root_resolved),
         )
         if sync.returncode != 0:
             if sync.stdout.strip():
@@ -3150,6 +3152,15 @@ def main() -> int:
         return 0
 
     if args.command == "activate":
+        repo_catalog_activate = str(Path(args.repo_catalog).expanduser().resolve())
+        local_catalog_activate = str(Path(args.catalog).expanduser().resolve())
+        protocol_root_activate = str(resolve_protocol_root(args.protocol_root or str(PROTOCOL_ROOT)))
+        switch_intent_receipt_activate = (
+            str(Path(args.switch_intent_receipt).expanduser().resolve()) if str(args.switch_intent_receipt or "").strip() else ""
+        )
+        cross_actor_receipt_activate = (
+            str(Path(args.cross_actor_receipt).expanduser().resolve()) if str(args.cross_actor_receipt or "").strip() else ""
+        )
         actor_id_activate, rc_actor_activate = _resolve_actor_entry_or_fail(
             str(args.actor_id or ""),
             operation="activate",
@@ -3159,14 +3170,14 @@ def main() -> int:
             return rc_actor_activate
         rc_guard = _runtime_mode_guard(
             args.identity_id,
-            args.catalog,
-            args.repo_catalog,
+            local_catalog_activate,
+            repo_catalog_activate,
             args.scope,
             operation="activate",
         )
         if rc_guard != 0:
             return rc_guard
-        identity_home_expected = str(Path(args.catalog).expanduser().resolve().parent)
+        identity_home_expected = str(Path(local_catalog_activate).expanduser().resolve().parent)
         rc_home_align = _run(
             [
                 "python3",
@@ -3174,9 +3185,9 @@ def main() -> int:
                 "--identity-id",
                 args.identity_id,
                 "--catalog",
-                args.catalog,
+                local_catalog_activate,
                 "--repo-catalog",
-                args.repo_catalog,
+                repo_catalog_activate,
                 "--identity-home",
                 identity_home_expected,
             ]
@@ -3188,9 +3199,9 @@ def main() -> int:
             "python3",
             "scripts/validate_identity_scope_isolation.py",
             "--catalog",
-            args.catalog,
+            local_catalog_activate,
             "--repo-catalog",
-            args.repo_catalog,
+            repo_catalog_activate,
             "--identity-id",
             args.identity_id,
         ]
@@ -3206,9 +3217,9 @@ def main() -> int:
             "--identity-id",
             args.identity_id,
             "--catalog",
-            args.catalog,
+            local_catalog_activate,
             "--repo-catalog",
-            args.repo_catalog,
+            repo_catalog_activate,
             "--operation",
             "activate",
         ]
@@ -3221,11 +3232,11 @@ def main() -> int:
             print("[FAIL] fixture/runtime boundary validation failed; activate blocked")
             return rc_boundary
         return _activate_identity(
-            Path(args.repo_catalog),
-            Path(args.catalog),
+            Path(repo_catalog_activate),
+            Path(local_catalog_activate),
             args.identity_id,
             args.scope,
-            args.protocol_root,
+            protocol_root_activate,
             args.protocol_mode,
             actor_id_activate,
             args.run_id,
@@ -3233,9 +3244,9 @@ def main() -> int:
             args.switch_reason,
             args.switch_guard_scope,
             bool(args.allow_identity_switch),
-            args.switch_intent_receipt,
+            switch_intent_receipt_activate,
             bool(args.allow_cross_actor_switch),
-            args.cross_actor_receipt,
+            cross_actor_receipt_activate,
         )
 
     if args.command == "update":
