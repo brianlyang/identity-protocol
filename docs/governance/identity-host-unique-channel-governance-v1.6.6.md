@@ -1722,3 +1722,31 @@ Interpretation lock:
 
 1. this does not close release plane without cloud evidence.
 2. it removes release-plane observability drift so `Conditional Go` points at the real missing release evidence instead of a stale partially-initialized baseline.
+
+### 5.33 release-plane checks evidence accessibility must be distinct from checks verdict (2026-03-17)
+
+Problem:
+
+1. once release baseline was normalized, the remaining release-plane blocker still mixed two different states under
+   `required_checks_all_success = false`:
+   - checks evidence was never supplied
+   - checks evidence was supplied but failed
+2. that ambiguity makes local three-plane output less useful for deciding whether to fetch release evidence or debug a failing check set.
+
+Mandatory behavior:
+
+1. release-plane condition projection MUST expose evidence accessibility separately from verdict:
+   - `required_checks_evidence_accessible`
+   - `required_checks_set_present`
+   - `required_checks_status`
+2. `required_checks_status` must distinguish at least:
+   - `EVIDENCE_MISSING`
+   - `EMPTY_SET`
+   - `FAILED`
+   - `PASS`
+3. `required_checks_all_success = false` is therefore no longer interpreted alone; operators must read it together with the evidence-accessibility fields.
+
+Interpretation lock:
+
+1. this does not weaken release gating.
+2. it sharpens release-plane diagnosis so “go fetch the cloud checks evidence” and “the checks failed” cannot collapse into the same opaque false boolean.
