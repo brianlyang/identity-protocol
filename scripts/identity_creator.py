@@ -3399,32 +3399,62 @@ def main() -> int:
             return rc
         creator_run_id = f"identity-upgrade-exec-{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
         update_run_id = str(args.run_id or "").strip() or creator_run_id
-        update_target_branch = str(args.target_branch or "").strip() or str(os.environ.get("GITHUB_REF_NAME", "main")).strip() or "main"
-        update_release_head_sha = str(args.release_head_sha or "").strip()
-        if not update_release_head_sha:
-            try:
-                p_head = subprocess.run(
-                    ["git", "rev-parse", "HEAD"],
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
-                if p_head.returncode == 0:
-                    update_release_head_sha = str(p_head.stdout or "").strip()
-            except Exception:
-                update_release_head_sha = ""
-        update_required_gates_run_id = (
-            str(args.required_gates_run_id or "").strip()
-            or str(os.environ.get("GITHUB_RUN_ID", "")).strip()
-            or update_run_id
-        )
-        update_run_url = str(args.run_url or "").strip()
-        update_workflow_file_sha = str(args.workflow_file_sha or "").strip() or update_release_head_sha
-        update_run_head_sha = str(args.run_head_sha or "").strip() or update_release_head_sha
-        update_run_workflow_file_sha = (
-            str(args.run_workflow_file_sha or "").strip() or update_workflow_file_sha
-        )
+        explicit_target_branch = str(args.target_branch or "").strip()
+        explicit_release_head_sha = str(args.release_head_sha or "").strip()
+        explicit_required_gates_run_id = str(args.required_gates_run_id or "").strip()
+        explicit_run_url = str(args.run_url or "").strip()
+        explicit_workflow_file_sha = str(args.workflow_file_sha or "").strip()
+        explicit_run_head_sha = str(args.run_head_sha or "").strip()
+        explicit_run_workflow_file_sha = str(args.run_workflow_file_sha or "").strip()
         update_checks_json = str(args.checks_json or "").strip()
+        github_run_id = str(os.environ.get("GITHUB_RUN_ID", "")).strip()
+        github_server_url = str(os.environ.get("GITHUB_SERVER_URL", "")).strip()
+        github_repository = str(os.environ.get("GITHUB_REPOSITORY", "")).strip()
+        github_run_url = (
+            f"{github_server_url}/{github_repository}/actions/runs/{github_run_id}"
+            if github_run_id and github_server_url and github_repository
+            else ""
+        )
+        release_plane_context_requested = any(
+            [
+                explicit_target_branch,
+                explicit_release_head_sha,
+                explicit_required_gates_run_id,
+                explicit_run_url,
+                explicit_workflow_file_sha,
+                explicit_run_head_sha,
+                explicit_run_workflow_file_sha,
+                update_checks_json,
+                github_run_url,
+            ]
+        )
+        update_target_branch = ""
+        update_release_head_sha = ""
+        update_required_gates_run_id = ""
+        update_run_url = ""
+        update_workflow_file_sha = ""
+        update_run_head_sha = ""
+        update_run_workflow_file_sha = ""
+        if release_plane_context_requested:
+            update_target_branch = explicit_target_branch or str(os.environ.get("GITHUB_REF_NAME", "main")).strip() or "main"
+            update_release_head_sha = explicit_release_head_sha
+            if not update_release_head_sha:
+                try:
+                    p_head = subprocess.run(
+                        ["git", "rev-parse", "HEAD"],
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                    )
+                    if p_head.returncode == 0:
+                        update_release_head_sha = str(p_head.stdout or "").strip()
+                except Exception:
+                    update_release_head_sha = ""
+            update_required_gates_run_id = explicit_required_gates_run_id or github_run_id or update_run_id
+            update_run_url = explicit_run_url or github_run_url
+            update_workflow_file_sha = explicit_workflow_file_sha or update_release_head_sha
+            update_run_head_sha = explicit_run_head_sha or update_release_head_sha
+            update_run_workflow_file_sha = explicit_run_workflow_file_sha or update_workflow_file_sha
         pre_mutation_gate_ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         pre_mutation_reply_file = str(
             runtime_temp_file(
