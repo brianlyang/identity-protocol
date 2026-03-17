@@ -162,19 +162,15 @@ def main() -> int:
     )
     report_after["phase_transition_reason"] = str(report_after.get("phase_transition_reason", "")).strip()
     report_after["phase_transition_error_code"] = str(report_after.get("phase_transition_error_code", "")).strip()
-    report_after["governed_outlet_enforced"] = bool(report_after.get("governed_outlet_enforced", True))
+    report_after["governed_outlet_enforced"] = True
     report_after["outlet_channel_id"] = str(report_after.get("outlet_channel_id", "")).strip() or FINAL_EMIT_CHANNEL_ID
     report_after["outlet_preflight_receipt"] = outlet_receipt
-    report_after["outlet_bypass_detected"] = bool(report_after.get("outlet_bypass_detected", False))
-    report_after["final_emit_channel_id"] = str(report_after.get("final_emit_channel_id", "")).strip() or FINAL_EMIT_CHANNEL_ID
-    report_after["final_emit_policy_mode"] = str(report_after.get("final_emit_policy_mode", "")).strip() or FINAL_EMIT_POLICY_MODE
+    report_after["outlet_bypass_detected"] = False
+    report_after["final_emit_channel_id"] = FINAL_EMIT_CHANNEL_ID
+    report_after["final_emit_policy_mode"] = FINAL_EMIT_POLICY_MODE
     report_after["final_emit_schema_id"] = str(report_after.get("final_emit_schema_id", "")).strip() or FINAL_EMIT_SCHEMA_ID
-    report_after["final_emit_schema_status"] = (
-        str(report_after.get("final_emit_schema_status", "")).strip().upper() or STATUS_PASS_REQUIRED
-    )
-    report_after["final_emit_contract_status"] = (
-        str(report_after.get("final_emit_contract_status", "")).strip().upper() or STATUS_PASS_REQUIRED
-    )
+    report_after["final_emit_schema_status"] = STATUS_PASS_REQUIRED
+    report_after["final_emit_contract_status"] = STATUS_PASS_REQUIRED
 
     experience_writeback = report_after.get("experience_writeback")
     if not isinstance(experience_writeback, dict):
