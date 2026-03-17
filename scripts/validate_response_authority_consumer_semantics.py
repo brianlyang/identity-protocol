@@ -9,6 +9,7 @@ from typing import Any
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_RESPONSE_AUTHORITY_CONSUMER = "IP-HDSTAMP-CONSUMER-001"
+AUTHORITY_CONSUMER_EXEMPT = True  # Validator module; not a direct authority-consuming surface.
 
 DEFAULT_TARGET_FILES = (
     "scripts/final_emit_governed.py",
@@ -40,6 +41,12 @@ FORBID_COMPAT_POINTER_LITERAL = {
     "scripts/validate_instance_protocol_split_receipt.py",
 }
 
+AUTHORITY_CONSUMER_DISCOVERY_TOKENS = (
+    "resolve_stamp_context(",
+    "validate_runtime_egress_identity_authority(",
+)
+AUTHORITY_CONSUMER_EXEMPT_MARKER = "AUTHORITY_CONSUMER_EXEMPT = True"
+
 
 def _resolve_repo_root(path: str) -> Path:
     base = Path(path).expanduser().resolve()
@@ -55,6 +62,45 @@ def _relative_token(path: Path, repo_root: Path) -> str:
 
 def _call_block(lines: list[str], start_idx: int, *, span: int = 10) -> str:
     return "\n".join(lines[start_idx : start_idx + span])
+
+
+def _declares_authority_consumer_exempt(text: str) -> bool:
+    return AUTHORITY_CONSUMER_EXEMPT_MARKER in text
+
+
+def _discover_authority_consumer_registry_gaps(repo_root: Path) -> tuple[list[str], list[str], list[dict[str, Any]]]:
+    discovered: list[str] = []
+    exempted: list[str] = []
+    violations: list[dict[str, Any]] = []
+    scripts_root = repo_root / "scripts"
+    for path in sorted(scripts_root.glob("*.py")):
+        rel = _relative_token(path, repo_root)
+        text = path.read_text(encoding="utf-8")
+        if not any(token in text for token in AUTHORITY_CONSUMER_DISCOVERY_TOKENS):
+            continue
+        discovered.append(rel)
+        if rel in DEFAULT_TARGET_FILES:
+            continue
+        if _declares_authority_consumer_exempt(text):
+            exempted.append(rel)
+            continue
+        first_hit = next(
+            (
+                line.strip()
+                for line in text.splitlines()
+                if any(token in line for token in AUTHORITY_CONSUMER_DISCOVERY_TOKENS)
+            ),
+            "",
+        )
+        violations.append(
+            {
+                "file": rel,
+                "line": 1,
+                "violation_type": "authority_consumer_registry_coverage_missing",
+                "snippet": first_hit,
+            }
+        )
+    return discovered, exempted, violations
 
 
 def _scan_file(path: Path, *, repo_root: Path, enforce_all_rules: bool = False) -> list[dict[str, Any]]:
@@ -154,6 +200,11 @@ def main() -> int:
         scanned_files.append(rel)
         violations.extend(_scan_file(path, repo_root=repo_root, enforce_all_rules=bool(requested_files)))
 
+    discovered_authority_consumers, exempt_authority_consumers, registry_gap_violations = (
+        _discover_authority_consumer_registry_gaps(repo_root)
+    )
+    violations.extend(registry_gap_violations)
+
     stale_reasons: list[str] = []
     if missing_files:
         stale_reasons.append("target_file_missing")
@@ -165,6 +216,8 @@ def main() -> int:
         "repo_root": str(repo_root),
         "scanned_file_count": len(scanned_files),
         "scanned_files": scanned_files,
+        "discovered_authority_consumer_files": discovered_authority_consumers,
+        "exempt_authority_consumer_files": exempt_authority_consumers,
         "missing_files": missing_files,
         "violation_count": len(violations),
         "violations": violations,
