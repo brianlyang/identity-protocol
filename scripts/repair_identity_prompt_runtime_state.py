@@ -103,6 +103,7 @@ def main() -> int:
         return 1
 
     prompt_hash = _sha256(prompt_path)
+    prompt_bytes = int(prompt_path.stat().st_size)
     payload["prompt_hash"] = prompt_hash
 
     runtime_state_before = _load_json_safe(runtime_state_path)
@@ -144,6 +145,11 @@ def main() -> int:
 
     report_after = dict(report_doc)
     report_after["identity_prompt_path"] = str(prompt_path)
+    report_after["identity_prompt_sha256"] = prompt_hash
+    report_after["identity_prompt_bytes"] = prompt_bytes
+    report_after["identity_prompt_activated_at"] = str(
+        report_after.get("identity_prompt_activated_at", "") or now
+    ).strip() or now
     report_after["identity_prompt_hash_after"] = prompt_hash
     report_after["prompt_policy_hash"] = prompt_hash
     report_after["identity_prompt_status"] = "ACTIVATED"
