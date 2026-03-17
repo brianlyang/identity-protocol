@@ -19,6 +19,7 @@ from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
 )
+from resolve_release_plane_cloud_evidence import resolve_release_cloud_evidence
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
 
@@ -318,6 +319,7 @@ def main() -> int:
     ap.add_argument("--run-head-sha", default="")
     ap.add_argument("--run-workflow-file-sha", default="")
     ap.add_argument("--checks-json", default="")
+    ap.add_argument("--jobs-json", default="")
     ap.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent for stamp render/validators")
     ap.add_argument("--expected-work-layer", default="", help="optional expected work_layer override for strict reply gates")
     ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
@@ -346,7 +348,21 @@ def main() -> int:
     run_head_sha = str(args.run_head_sha or "").strip() or release_head_sha
     run_workflow_file_sha = str(args.run_workflow_file_sha or "").strip() or workflow_file_sha
     checks_json = str(args.checks_json or "").strip()
+    jobs_json = str(args.jobs_json or "").strip()
     identity_id = args.identity_id.strip()
+    release_adapter_payload = resolve_release_cloud_evidence(
+        identity_id=identity_id,
+        operation="readiness",
+        required_gates_run_id=required_gates_run_id,
+        run_url=run_url,
+        checks_json=checks_json,
+        jobs_json=jobs_json,
+    )
+    required_gates_run_id = str(
+        release_adapter_payload.get("required_gates_run_id", "") or required_gates_run_id
+    ).strip()
+    run_url = str(release_adapter_payload.get("run_url", "") or run_url).strip()
+    checks_json = str(release_adapter_payload.get("checks_json_path", "") or checks_json).strip()
     scope = args.scope.strip().upper()
     layer_intent_text = args.layer_intent_text.strip()
     expected_work_layer = args.expected_work_layer.strip().lower()
