@@ -3065,3 +3065,15 @@ Checkpoint verdict:
 
 1. strict wrapper chaining now follows the ingress run's own receipt artifact.
 2. shared operator/runtime self-tests no longer rely on non-atomic mutable state during entry receipt handoff.
+
+### 26.48 Cross-stream boundary note: v1.6.6 consumes v1.6.10 authority hardening, but does not redefine it (2026-03-17)
+
+Boundary freeze:
+
+1. unique-entry / governed-egress / headstamp continuity under v1.6.6 may rely on response authority that is now
+   hardened by v1.6.10 runtime-file governance.
+2. that dependency is consumption-only:
+   - v1.6.6 remains the host-visible admission / unique-entry / next-hop chain;
+   - v1.6.10 remains the authority-source / compatibility-pointer anti-downgrade source.
+3. therefore v1.6.6 finish evidence may cite the landed v1.6.10 authority hardening as an upstream dependency,
+   but must not duplicate or restate the v1.6.10 runtime-file rules as if they were native v1.6.6 scope.
