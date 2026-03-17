@@ -274,6 +274,8 @@ PRE_EXECUTION_CURRENT_ROUND_SKIP_ALLOWED_REASONS: tuple[str, ...] = (
     "required_contract_not_applicable_current_round_unmaterialized",
     "required_contract_not_applicable_current_round_unlinked",
     "required_contract_not_applicable_no_current_round_evidence_source",
+    "required_contract_not_applicable_missing_release_evidence",
+    "no_promotion_event_in_current_run",
 )
 PRE_EXECUTION_CURRENT_ROUND_SKIP_OPERATIONS: set[str] = {"update", "validate"}
 MONOTONIC_POLICY_DEFAULT_TARGET = "__strict_skip_defaults__"
