@@ -23,6 +23,7 @@ from protocol_infra_contract import (
     HOST_GATEWAY_STRICT_GATE_PROFILE_BY_OPERATION,
     HOST_GATEWAY_STRICT_OPERATIONS,
 )
+from resolve_release_plane_cloud_evidence import resolve_release_cloud_evidence
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from resolve_identity_context import resolve_identity
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
@@ -4685,6 +4686,7 @@ def main() -> int:
     ap.add_argument("--run-head-sha", default="")
     ap.add_argument("--run-workflow-file-sha", default="")
     ap.add_argument("--checks-json", default="")
+    ap.add_argument("--jobs-json", default="")
     ap.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent passed to stamp render/reply gates")
     ap.add_argument("--expected-work-layer", default="", help="optional expected work_layer override for strict reply gates")
     ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
@@ -4787,6 +4789,19 @@ def main() -> int:
         args.run_head_sha = args.release_head_sha
     if not args.run_workflow_file_sha:
         args.run_workflow_file_sha = args.workflow_file_sha
+    adapter_payload = resolve_release_cloud_evidence(
+        identity_id=args.identity_id,
+        operation="three-plane",
+        required_gates_run_id=str(args.required_gates_run_id or "").strip(),
+        run_url=str(args.run_url or "").strip(),
+        checks_json=str(args.checks_json or "").strip(),
+        jobs_json=str(args.jobs_json or "").strip(),
+    )
+    args.required_gates_run_id = str(
+        adapter_payload.get("required_gates_run_id", "") or str(args.required_gates_run_id or "")
+    ).strip()
+    args.run_url = str(adapter_payload.get("run_url", "") or str(args.run_url or "")).strip()
+    args.checks_json = str(adapter_payload.get("checks_json_path", "") or str(args.checks_json or "")).strip()
 
     preferred_pack = str(resolved.get("resolved_pack_path") or resolved.get("pack_path") or "")
     report_path = Path(args.execution_report).expanduser().resolve() if args.execution_report else _latest_report(
@@ -4804,6 +4819,7 @@ def main() -> int:
         "required_gates_run_id": args.required_gates_run_id,
         "run_url": args.run_url,
         "workflow_file_sha": args.workflow_file_sha,
+        "checks_json": args.checks_json,
         "required_checks_set": release_detail.get("required_checks_set", []),
         "instance_plane_status": instance_status,
         "repo_plane_status": repo_status,
@@ -4820,6 +4836,12 @@ def main() -> int:
         "instance_plane_detail": instance_detail,
         "repo_plane_detail": repo_detail,
         "release_plane_detail": release_detail,
+        "release_cloud_evidence_adapter": {
+            "release_cloud_evidence_adapter_status": adapter_payload.get("release_cloud_evidence_adapter_status", ""),
+            "adapter_source_kind": adapter_payload.get("adapter_source_kind", ""),
+            "stale_reasons": adapter_payload.get("stale_reasons", []),
+            "checks_json_path": adapter_payload.get("checks_json_path", ""),
+        },
     }
     m2m_projection = _classify_m2m_projection(
         validators=instance_detail.get("validators", {}) if isinstance(instance_detail, dict) else {},
