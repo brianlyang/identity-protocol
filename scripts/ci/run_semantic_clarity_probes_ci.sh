@@ -726,4 +726,143 @@ assert any(
 print("[PASS] three-plane host-native exclusion aggregation probe")
 PY
 
+echo "[info] semantic clarity probes: three-plane/full-scan consumer parity"
+python3 - "$REPO_ROOT" <<'PY'
+import argparse
+import importlib.util
+import json
+import pathlib
+import sys
+
+repo_root = pathlib.Path(sys.argv[1]).resolve()
+scripts_dir = repo_root / "scripts"
+sys.path.insert(0, str(scripts_dir))
+sys.path.insert(0, str(repo_root))
+
+
+def load_module(name: str, script_name: str):
+    script = scripts_dir / script_name
+    spec = importlib.util.spec_from_file_location(name, script)
+    if spec is None or spec.loader is None:
+        raise SystemExit(f"[FAIL] unable to load {script_name}")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+three_plane = load_module("three_plane_consumer_parity_probe_mod", "report_three_plane_status.py")
+full_scan = load_module("full_scan_consumer_parity_probe_mod", "full_identity_protocol_scan.py")
+
+render_payload = {
+    "display_headstamp_line": "Display-Headstamp: Identity-Context: actor_id=assistant:codex; identity_id=probe; scope=USER; source=project | Layer-Context: work_layer=protocol; source_layer=project",
+    "machine_verification_line": "Machine-Verification: verification_source=not_claimed; display_headstamp_identity_id=probe; authoritative_identity_id=probe; headstamp_consistency_status=PASS_REQUIRED; surface_class=host_native_chat_panel; native_attestation_wiring_capability=unavailable; closure_blocker_scope=EXCLUDED_NON_BLOCKING; current_chat_surface_native_machine_attested=false; next_hop_admission_status=FAIL_REQUIRED",
+}
+validator_payload = {
+    "operator_headstamp_envelope_status": "PASS_REQUIRED",
+    "explanatory_surface_exclusion_status": "PASS_REQUIRED",
+    "machine_verification_line": render_payload["machine_verification_line"],
+    "parsed_machine_verification": {
+        "closure_blocker_scope": "EXCLUDED_NON_BLOCKING",
+        "current_chat_surface_native_machine_attested": "false",
+        "next_hop_admission_status": "FAIL_REQUIRED",
+    },
+    "stale_reasons": [],
+}
+
+
+def fake_run(cmd, *, cwd=None):
+    target = cmd[1] if len(cmd) > 1 else ""
+    if target.endswith("render_identity_response_stamp.py"):
+        return 0, json.dumps(render_payload), ""
+    if target.endswith("validate_response_stamp_operator_envelope.py"):
+        return 0, json.dumps(validator_payload), ""
+    raise AssertionError(cmd)
+
+
+args = argparse.Namespace(
+    catalog="/tmp/catalog.yaml",
+    repo_catalog="identity/catalog/identities.yaml",
+    identity_id="probe",
+    session_id="run:test",
+)
+three_plane._run = fake_run
+projection = three_plane._build_current_chat_surface_exclusion_projection(
+    args=args,
+    actor_id="assistant:codex",
+    layer_intent_text="protocol lane",
+    effective_work_layer="protocol",
+    effective_source_layer="project",
+    stamp_render_payload={
+        "display_headstamp_identity_id": "probe",
+        "authoritative_identity_id": "probe",
+        "headstamp_consistency_status": "PASS_REQUIRED",
+    },
+)
+axes = three_plane._build_governance_closure_axes(
+    instance_status="CLOSED",
+    repo_status="CLOSED",
+    release_status="BLOCKED",
+    m2m_projection={"m2m_binding_closure_status": "PASS"},
+    tuple_context_projection={"tuple_context_status": "PASS_REQUIRED"},
+    current_chat_surface_exclusion=projection,
+)
+scan_projection = full_scan._build_current_chat_surface_projection_from_three_plane(
+    three_plane_payload={
+        "current_chat_surface_exclusion": projection,
+        "governance_closure_axes": axes,
+    }
+)
+assert scan_projection.get("effective_blocker_scope") == "EXCLUDED_NON_BLOCKING", scan_projection
+assert scan_projection.get("excluded_from_blocker_aggregation") is True, scan_projection
+assert scan_projection.get("control_state") == "CONTROLLED_EXCLUSION", scan_projection
+assert scan_projection.get("machine_verification_line") == render_payload["machine_verification_line"], scan_projection
+
+validator_payload_bad = dict(validator_payload)
+validator_payload_bad["explanatory_surface_exclusion_status"] = "FAIL_REQUIRED"
+validator_payload_bad["stale_reasons"] = ["explanatory_surface_exclusion_invalid:verification_source_not_not_claimed"]
+
+
+def fake_run_bad(cmd, *, cwd=None):
+    target = cmd[1] if len(cmd) > 1 else ""
+    if target.endswith("render_identity_response_stamp.py"):
+        return 0, json.dumps(render_payload), ""
+    if target.endswith("validate_response_stamp_operator_envelope.py"):
+        return 1, json.dumps(validator_payload_bad), ""
+    raise AssertionError(cmd)
+
+
+three_plane._run = fake_run_bad
+bad_projection = three_plane._build_current_chat_surface_exclusion_projection(
+    args=args,
+    actor_id="assistant:codex",
+    layer_intent_text="protocol lane",
+    effective_work_layer="protocol",
+    effective_source_layer="project",
+    stamp_render_payload={
+        "display_headstamp_identity_id": "probe",
+        "authoritative_identity_id": "probe",
+        "headstamp_consistency_status": "PASS_REQUIRED",
+    },
+)
+bad_axes = three_plane._build_governance_closure_axes(
+    instance_status="BLOCKED",
+    repo_status="CLOSED",
+    release_status="BLOCKED",
+    m2m_projection={"m2m_binding_closure_status": "PASS"},
+    tuple_context_projection={"tuple_context_status": "PASS_REQUIRED"},
+    current_chat_surface_exclusion=bad_projection,
+)
+bad_scan_projection = full_scan._build_current_chat_surface_projection_from_three_plane(
+    three_plane_payload={
+        "current_chat_surface_exclusion": bad_projection,
+        "governance_closure_axes": bad_axes,
+    }
+)
+assert bad_scan_projection.get("effective_blocker_scope") == "BLOCKING", bad_scan_projection
+assert bad_scan_projection.get("excluded_from_blocker_aggregation") is False, bad_scan_projection
+assert bad_scan_projection.get("control_state") == "RAW_FAIL_BLOCKING", bad_scan_projection
+print("[PASS] three-plane/full-scan host-native exclusion consumer parity probe")
+PY
+
 echo "[PASS] run_semantic_clarity_probes_ci.sh complete"
