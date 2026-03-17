@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-16T17:55:52Z",
-  "git_head_short": "a679d49",
+  "generated_at_utc": "2026-03-17T03:55:02Z",
+  "git_head_short": "349c8ff",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -60,7 +60,7 @@
           },
           "required_gate_workflow_python_invocations": 16,
           "required_gate_workflow_unique_python_scripts": 16,
-          "required_gate_delegate_inclusive_python_invocations": 196,
+          "required_gate_delegate_inclusive_python_invocations": 198,
           "required_gate_delegate_inclusive_unique_python_scripts": 137
         },
         "budgets": {
@@ -518,11 +518,26 @@
           "host-direct output",
           "next-hop-admissible output",
           "inline/self-printed reply text is classified as `host_direct` and not next-hop admissible",
-          "display headstamp",
-          "canonical next-hop headstamp",
-          "authoritative identity precedence",
-          "AUTO_CORRECTED",
-          "display headstamp presence alone never proves next-hop admissibility"
+          "display_headstamp / machine_headstamp object split freeze",
+          "`display_headstamp` is a visibility-layer object.",
+          "`machine_headstamp` is a control-plane object.",
+          "display rights are delegated; truth rights stay machine-authoritative in the control plane.",
+          "`identity` owns display wiring; control plane owns truth and admission.",
+          "manual display is a render_origin of `display_headstamp`, not an automatic fail condition.",
+          "`display_headstamp` text must never become an authority source",
+          "`display_headstamp` presence is necessary for strict user-visible lanes, but never sufficient for admission.",
+          "fail-close + remediation lane processing freeze",
+          "business next hop must fail-close before remediation lane opens.",
+          "remediation lane is allowed only when truth is already resolved and remediation target is deterministic.",
+          "`v1.6.1` owns display entry; `v1.6.6` owns consistency, correction, and next-hop admissibility.",
+          "5.27 display declaration lineage + headstamp admission receipt freeze",
+          "`IDENTITY_PROMPT` declares display intent and schema, not final runtime display literals.",
+          "`CURRENT_TASK.json` carries the normalized runtime `display_headstamp` contract and is the runtime SSOT.",
+          "raw prompt text must never be consumed directly as the runtime `display_headstamp` object.",
+          "strict human-visible next hop requires `display_headstamp` present AND `headstamp_admission_receipt.next_hop_admission_status = PASS_REQUIRED`.",
+          "`manual_headstamp` is the human-facing shorthand for `display_headstamp.render_origin = manual`.",
+          "`manual_headstamp` is not a third truth object, authority source, or admission-proof class.",
+          "`headstamp_admission_receipt` minimum fields:"
         ],
         "host_visible_semantic_freeze_review_doc_required_tokens": [
           "26.37 Pre-95/Post-100 semantic freeze + serial-5 replay uplift",
@@ -545,10 +560,22 @@
           "host-direct output",
           "next-hop-admissible output",
           "assistant-visible self-printed headstamp is manual headstamp, not governed-output evidence.",
-          "display headstamp preserves usability",
-          "canonical next-hop headstamp preserves controlled-hop trust",
-          "mismatch is uniquely correctable",
-          "mismatch is not uniquely correctable"
+          "26.43 v1.6.6 display_headstamp / machine_headstamp split + remediation-lane freeze",
+          "display rights are delegated; truth rights stay machine-authoritative in the control plane.",
+          "`identity` owns display wiring; control plane owns truth and admission.",
+          "`v1.6.1` owns display entry; `v1.6.6` owns consistency, correction, and next-hop admissibility.",
+          "manual display is a render_origin of `display_headstamp`, not an automatic fail condition.",
+          "business next hop must fail-close before remediation lane opens.",
+          "remediation lane is allowed only when truth is already resolved and remediation target is deterministic.",
+          "`display_headstamp` may remain manual or host-direct as a visibility object; that alone does not decide admission.",
+          "manual display is normalized as `display_headstamp.render_origin`, not treated as a standalone semantic class that can override truth.",
+          "26.44 v1.6.6 display declaration lineage + headstamp admission receipt freeze",
+          "`IDENTITY_PROMPT` declares display intent and schema, not final runtime display literals.",
+          "`CURRENT_TASK.json` carries the normalized runtime `display_headstamp` contract and is the runtime SSOT.",
+          "strict human-visible next hop now requires `display_headstamp` present AND `headstamp_admission_receipt.next_hop_admission_status = PASS_REQUIRED`.",
+          "`manual_headstamp` is the human-facing shorthand for `display_headstamp.render_origin = manual`.",
+          "`manual_headstamp` is not a third truth object, authority source, or admission-proof class.",
+          "`headstamp_admission_receipt` minimum fields frozen:"
         ],
         "dialogue_feedback_bundle_script": "scripts/run_identity_dialogue_feedback_bundle.py",
         "dialogue_feedback_bundle_required_surfaces": [

@@ -2987,7 +2987,7 @@ Fix frozen:
 Replay evidence:
 
 1. gateway trust-boundary suite:
-   - manifest: `/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/identity-gateway-boundary-probes/manifest.gateway_wrapper_trust_boundary.json`
+   - manifest: `${TMPDIR}/identity-gateway-boundary-probes/manifest.gateway_wrapper_trust_boundary.json`
    - verdict:
      - suite exits `0`
      - `count = 20`
