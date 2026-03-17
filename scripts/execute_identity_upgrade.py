@@ -1004,10 +1004,24 @@ def _resolve_git_range(repo_root: Path | None = None) -> tuple[str, str]:
     return base or "HEAD~1", head or "HEAD"
 
 
-def _build_validator_cmd(check: str, identity_id: str, catalog_path: str) -> list[str]:
+def _build_validator_cmd(
+    check: str,
+    *,
+    identity_id: str,
+    catalog_path: str,
+    repo_catalog_path: str,
+    operation: str,
+    actor_id: str,
+    session_id: str,
+    expected_work_layer: str,
+    expected_source_layer: str,
+    run_id: str,
+) -> list[str]:
     if not check.startswith("scripts/"):
         return ["python3", check]
     cmd = ["python3", check]
+    resolved_repo_catalog = str(Path(repo_catalog_path).expanduser().resolve()) if str(repo_catalog_path).strip() else ""
+    script_name = Path(check).name
     if check.endswith("validate_changelog_updated.py"):
         base, head = _resolve_git_range()
         return ["python3", check, "--base", base, "--head", head]
@@ -1021,6 +1035,47 @@ def _build_validator_cmd(check: str, identity_id: str, catalog_path: str) -> lis
         cmd += ["--identity-id", identity_id]
     if check.startswith("scripts/validate_") and "--catalog" not in check:
         cmd += ["--catalog", catalog_path]
+    if check.endswith("required_gate_bundle_runner.py") and "--catalog" not in check:
+        cmd += ["--catalog", catalog_path]
+    if script_name == "validate_cross_cwd_absolute_input.py":
+        if resolved_repo_catalog and "--repo-catalog" not in check:
+            cmd += ["--repo-catalog", resolved_repo_catalog]
+        if "--operation" not in check:
+            cmd += ["--operation", operation]
+        if "--json-only" not in check:
+            cmd += ["--json-only"]
+    if script_name == "validate_prompt_kernel_executable_coupling.py":
+        if resolved_repo_catalog and "--repo-catalog" not in check:
+            cmd += ["--repo-catalog", resolved_repo_catalog]
+        if str(actor_id).strip() and "--actor-id" not in check:
+            cmd += ["--actor-id", str(actor_id).strip()]
+        if str(session_id).strip() and "--session-id" not in check:
+            cmd += ["--session-id", str(session_id).strip()]
+        if str(expected_work_layer).strip() and "--expected-work-layer" not in check:
+            cmd += ["--expected-work-layer", str(expected_work_layer).strip()]
+        if str(expected_source_layer).strip() and "--source-layer" not in check:
+            cmd += ["--source-layer", str(expected_source_layer).strip()]
+        if "--operation" not in check:
+            cmd += ["--operation", operation]
+        if "--json-only" not in check:
+            cmd += ["--json-only"]
+    if script_name == "required_gate_bundle_runner.py":
+        if resolved_repo_catalog and "--repo-catalog" not in check:
+            cmd += ["--repo-catalog", resolved_repo_catalog]
+        if "--operation" not in check:
+            cmd += ["--operation", operation]
+        if str(run_id).strip() and "--run-id" not in check:
+            cmd += ["--run-id", str(run_id).strip()]
+        if str(session_id).strip() and "--session-id" not in check:
+            cmd += ["--session-id", str(session_id).strip()]
+        if str(actor_id).strip() and "--actor-id" not in check:
+            cmd += ["--actor-id", str(actor_id).strip()]
+        if str(expected_work_layer).strip() and "--resolved-work-layer" not in check:
+            cmd += ["--resolved-work-layer", str(expected_work_layer).strip()]
+        if str(expected_source_layer).strip() and "--resolved-source-layer" not in check:
+            cmd += ["--resolved-source-layer", str(expected_source_layer).strip()]
+        if "--json-only" not in check:
+            cmd += ["--json-only"]
     if check.endswith("validate_identity_collab_trigger.py"):
         cmd += ["--self-test"]
     if check.endswith("validate_agent_handoff_contract.py"):
@@ -1963,7 +2018,21 @@ def main() -> int:
     lane_transition_reason = str(lane_ctx.get("lane_transition_reason", "instance_default_fallback"))
 
     required_checks, skipped_protocol_publish_checks = _filter_required_checks_for_lane(required_checks_raw, work_layer)
-    check_cmds = [_build_validator_cmd(chk, args.identity_id, args.catalog) for chk in required_checks]
+    check_cmds = [
+        _build_validator_cmd(
+            chk,
+            identity_id=args.identity_id,
+            catalog_path=args.catalog,
+            repo_catalog_path=args.repo_catalog,
+            operation="update",
+            actor_id=args.actor_id,
+            session_id=f"run:{run_id}",
+            expected_work_layer=args.expected_work_layer,
+            expected_source_layer=args.expected_source_layer,
+            run_id=run_id,
+        )
+        for chk in required_checks
+    ]
     _ensure_multimodal_enforcement_check(
         check_cmds=check_cmds,
         catalog_path=args.catalog,
