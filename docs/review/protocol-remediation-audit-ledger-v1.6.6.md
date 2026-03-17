@@ -3077,3 +3077,44 @@ Boundary freeze:
    - v1.6.10 remains the authority-source / compatibility-pointer anti-downgrade source.
 3. therefore v1.6.6 finish evidence may cite the landed v1.6.10 authority hardening as an upstream dependency,
    but must not duplicate or restate the v1.6.10 runtime-file rules as if they were native v1.6.6 scope.
+
+### 26.49 three-plane instance closure alignment to post-execution mandatory contract (2026-03-17)
+
+Problem:
+
+1. after the display / admission / seed-replay fixes were already green, strict three-plane still reported
+   `instance_plane_status = IN_PROGRESS` on a non-upgrade run.
+2. the current round evidence was already machine-clean:
+   - `post_execution_mandatory_status = PASS_REQUIRED`
+   - all instance validators green
+   - `next_action = no_upgrade_triggered`
+3. the remaining mismatch was in aggregation only:
+   - `scripts/report_three_plane_status.py` still hard-required
+     `writeback_status = WRITTEN` and `permission_state = WRITEBACK_WRITTEN`
+   - that duplicated a narrower rule than the accepted post-execution contract.
+
+Fix frozen:
+
+1. `scripts/report_three_plane_status.py`
+   - adds shared instance-closure evaluation so strict non-upgrade completion can close on
+     `post_execution_mandatory_status = PASS_REQUIRED`
+   - retains the legacy `WRITTEN + WRITEBACK_WRITTEN` path for upgrade/writeback-required rounds
+2. three-plane no longer re-derives a stale writeback-only closure rule after the post-execution validator has already accepted the run.
+
+Replay evidence:
+
+1. `python3 scripts/report_three_plane_status.py ... --out /tmp/three_plane_after_commit.json`
+   - `instance_plane_status = CLOSED`
+   - `repo_plane_status = CLOSED`
+   - `release_plane_status = NOT_STARTED`
+   - `governance_closure_axes.infrastructure_closure_status = PASS_REQUIRED`
+   - `conditional_reasons = ["release_plane_not_closed:NOT_STARTED"]`
+2. `python3 scripts/full_identity_protocol_scan.py ... --out /tmp/full_scan_after_instance_closure_fix.json`
+   - `summary.p0 = 0`
+   - `summary.ok = 1`
+   - `summary_m2m.fail = 0`
+
+Checkpoint verdict:
+
+1. strict non-upgrade completion is no longer falsely held open by duplicated instance-plane writeback logic.
+2. current acceptance residuals have moved above instance-plane aggregation; the remaining three-plane non-closure is release-plane scope, not runtime-plane drift.
