@@ -136,6 +136,14 @@ def main() -> int:
             payload["stale_reasons"] = ["required_contract_not_applicable_no_atomic_receipt"]
             _emit(payload, json_only=args.json_only)
             return 0
+        if (
+            args.operation in {"update", "validate"}
+            and not str(args.receipt or "").strip()
+            and not str(args.transaction_id or "").strip()
+        ):
+            payload["stale_reasons"] = ["required_contract_not_applicable_current_round_unmaterialized"]
+            _emit(payload, json_only=args.json_only)
+            return 0
         payload["protocol_feedback_atomic_emit_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_RECEIPT_MISSING
         payload["stale_reasons"] = ["atomic_receipt_missing"]
