@@ -39,6 +39,7 @@ for ID in ${IDS}; do
   VIBE_PACK_ROOT="${TMP_ROOT}/vibe-coding-feeding-packs"
   CAPABILITY_FIT_ROOT="${TMP_ROOT}/capability-fit-matrices"
   UPGRADE_REPORT_ROOT="${TMP_ROOT}/identity-upgrade-reports"
+  THREE_PLANE_REPORT_JSON="${TMP_ROOT}/three-plane-${ID}.json"
   IS_FIXTURE_ID="$(ID="$ID" CATALOG_PATH="$CATALOG_PATH" python3 -c 'import os,yaml,pathlib; identity_id=os.environ.get("ID","").strip(); catalog_path=os.environ.get("CATALOG_PATH","identity/catalog/identities.yaml"); doc=yaml.safe_load(pathlib.Path(catalog_path).read_text(encoding="utf-8")) or {}; rows=[x for x in (doc.get("identities") or []) if isinstance(x,dict)]; row=next((x for x in rows if str(x.get("id","")).strip()==identity_id), {}); profile=str(row.get("profile","")).strip().lower(); runtime_mode=str(row.get("runtime_mode","")).strip().lower(); print("1" if (profile=="fixture" or runtime_mode=="demo_only") else "0")')"
 
   python3 scripts/validate_identity_runtime_contract.py --identity-id "$ID"
@@ -161,6 +162,46 @@ for ID in ${IDS}; do
     fi
     python3 scripts/validate_writeback_continuity.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --report "$UPGRADE_REPORT" --operation ci
     python3 scripts/validate_post_execution_mandatory.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --report "$UPGRADE_REPORT" --operation ci
+    python3 scripts/report_three_plane_status.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --execution-report "$UPGRADE_REPORT" --expected-work-layer protocol --expected-source-layer project --out "$THREE_PLANE_REPORT_JSON"
+    UPGRADE_REPORT_PATH="$UPGRADE_REPORT" THREE_PLANE_REPORT_PATH="$THREE_PLANE_REPORT_JSON" python3 - <<'PY'
+import json
+import os
+import sys
+
+report_path = os.environ["UPGRADE_REPORT_PATH"]
+three_plane_path = os.environ["THREE_PLANE_REPORT_PATH"]
+
+with open(report_path, encoding="utf-8") as fh:
+    report = json.load(fh)
+with open(three_plane_path, encoding="utf-8") as fh:
+    three_plane = json.load(fh)
+
+strict_non_upgrade = (
+    bool(report.get("all_ok"))
+    and not bool(report.get("upgrade_required"))
+    and str(report.get("writeback_mode", "")).strip().upper() == "STRICT_WRITEBACK"
+    and str(report.get("writeback_status", "")).strip().upper() == "NOT_REQUIRED"
+)
+post_exec = (
+    (three_plane.get("instance_plane_detail") or {}).get("post_execution_mandatory") or {}
+)
+
+if not strict_non_upgrade:
+    print("[INFO] skip three-plane non-upgrade closure assertion: current report is not strict non-upgrade")
+    sys.exit(0)
+
+if str(post_exec.get("post_execution_mandatory_status", "")).strip().upper() != "PASS_REQUIRED":
+    raise SystemExit(
+        "[FAIL] expected post_execution_mandatory_status=PASS_REQUIRED for strict non-upgrade closure assertion"
+    )
+
+if str(three_plane.get("instance_plane_status", "")).strip().upper() != "CLOSED":
+    raise SystemExit(
+        "[FAIL] strict non-upgrade report must close instance plane when post_execution_mandatory passed"
+    )
+
+print("[OK] strict non-upgrade closure assertion passed: instance_plane_status=CLOSED")
+PY
     python3 scripts/validate_protocol_feedback_sidecar_contract.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --report "$UPGRADE_REPORT" --operation ci --enforce-blocking
     python3 scripts/validate_instance_base_repo_write_boundary.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --report "$UPGRADE_REPORT" --operation ci
     python3 scripts/validate_protocol_feedback_ssot_archival.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --operation ci
