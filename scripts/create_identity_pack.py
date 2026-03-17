@@ -240,10 +240,133 @@ DOWNSINK_REQUIRED_DOMAINS: tuple[str, ...] = (
     DOWNSINK_RUNTIME_PROTOCOL_FEEDBACK_DOMAIN,
     DOWNSINK_PROTOCOL_BROADCAST_SOURCE_DOMAIN,
 )
+PROVIDER_BINDINGS_TEMPLATE_RELATIVE_PATH = (
+    "identity/protocol/plugins/templates/provider-bindings.local.template.yaml"
+)
+PROMPT_GOVERNANCE_KERNEL_HEADING = "## Governance Kernel"
+PROMPT_GOVERNANCE_REQUIRED_TOKENS: tuple[str, ...] = (
+    "role",
+    "principle",
+    "decision",
+    "gate",
+)
 
 def write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
+
+
+def _provider_bindings_template_text(*, repo_root: Path | None = None) -> str:
+    resolved_repo_root = repo_root.resolve() if repo_root is not None else Path(__file__).resolve().parents[1]
+    template_path = (resolved_repo_root / PROVIDER_BINDINGS_TEMPLATE_RELATIVE_PATH).resolve()
+    return template_path.read_text(encoding="utf-8")
+
+
+def _identity_prompt_governance_kernel(
+    *,
+    identity_id: str,
+    title: str = "",
+    description: str = "",
+) -> str:
+    identity_token = str(identity_id or "").strip() or "unspecified-identity"
+    title_token = str(title or "").strip() or identity_token
+    description_token = str(description or "").strip()
+    lines = [
+        PROMPT_GOVERNANCE_KERNEL_HEADING,
+        f"- role: `{identity_token}` operates as {title_token}.",
+        "- principle: fail-close, evidence-first, and runtime source-of-truth.",
+        "- decision: release conclusions only when current-round receipts and validators align.",
+        "- gate: required gates, recurrence closure, and three-plane status must stay mutually consistent.",
+    ]
+    if description_token:
+        lines.append(f"- mission: {description_token}")
+    return "\n".join(lines) + "\n"
+
+
+def _default_identity_prompt_markdown(
+    *,
+    identity_id: str,
+    title: str = "",
+    description: str = "",
+) -> str:
+    identity_token = str(identity_id or "").strip() or "unspecified-identity"
+    title_token = str(title or "").strip() or identity_token
+    description_token = str(description or "").strip()
+    prompt_lines = [
+        f"# Identity Prompt: {title_token}",
+        "",
+        _identity_prompt_governance_kernel(
+            identity_id=identity_token,
+            title=title_token,
+            description=description_token,
+        ).rstrip(),
+        "",
+        "## Mission",
+        "Define role cognition, principle hierarchy, decision rules, and gate expectations.",
+        "",
+        "## Operating Baseline",
+        "- Keep runtime evidence current and reproducible.",
+        "- Escalate unresolved conflicts instead of soft-passing them.",
+        "- Separate visible display from machine admission and truth claims.",
+        "",
+    ]
+    return "\n".join(prompt_lines)
+
+
+def _ensure_identity_prompt_governance_kernel(
+    text: str,
+    *,
+    identity_id: str,
+    title: str = "",
+    description: str = "",
+) -> tuple[str, list[str], bool]:
+    source_text = str(text or "")
+    lowered = source_text.lower()
+    missing_tokens = [token for token in PROMPT_GOVERNANCE_REQUIRED_TOKENS if token not in lowered]
+    marker_present = PROMPT_GOVERNANCE_KERNEL_HEADING.lower() in lowered
+    if not missing_tokens and marker_present:
+        return source_text, [], False
+
+    governance_lines = {
+        "role": f"- role: `{str(identity_id or '').strip() or 'unspecified-identity'}` operates as {str(title or '').strip() or str(identity_id or '').strip() or 'unspecified-identity'}.",
+        "principle": "- principle: fail-close, evidence-first, and runtime source-of-truth.",
+        "decision": "- decision: release conclusions only when current-round receipts and validators align.",
+        "gate": "- gate: required gates, recurrence closure, and three-plane status must stay mutually consistent.",
+    }
+
+    lines = source_text.splitlines()
+    if marker_present:
+        marker_index = next(
+            (
+                idx
+                for idx, line in enumerate(lines)
+                if str(line).strip().lower() == PROMPT_GOVERNANCE_KERNEL_HEADING.lower()
+            ),
+            -1,
+        )
+        if marker_index >= 0 and missing_tokens:
+            insert_at = marker_index + 1
+            for token in missing_tokens:
+                lines.insert(insert_at, governance_lines[token])
+                insert_at += 1
+            updated = "\n".join(lines).strip() + "\n"
+            return updated, missing_tokens, True
+
+    kernel = _identity_prompt_governance_kernel(
+        identity_id=identity_id,
+        title=title,
+        description=description,
+    ).rstrip()
+    if lines and str(lines[0]).startswith("#"):
+        updated_lines = [lines[0], ""]
+        updated_lines.extend(kernel.splitlines())
+        if len(lines) > 1:
+            updated_lines.append("")
+            updated_lines.extend(lines[1:])
+        updated = "\n".join(updated_lines).strip() + "\n"
+    else:
+        updated = (kernel + "\n\n" + source_text.strip()).strip() + "\n"
+    return updated, list(PROMPT_GOVERNANCE_REQUIRED_TOKENS), True
 
 
 def _host_gateway_signer_secret_env(identity_id: str) -> str:
@@ -4096,6 +4219,9 @@ def main() -> int:
     ap.add_argument("--message-file", default="")
     ap.add_argument("--stdin-message", action="store_true")
     ap.add_argument("--out-reply-file", default="")
+    ap.add_argument("--out-json", default="")
+    ap.add_argument("--blocker-receipt-out", default="")
+    ap.add_argument("--layer-intent-text", default="")
     ap.add_argument("--contract-path", default="")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
@@ -4257,6 +4383,12 @@ def main() -> int:
     ]
     if repo_catalog_path:
         egress_cmd.extend(["--repo-catalog", repo_catalog_path])
+    if str(args.out_json or "").strip():
+        egress_cmd.extend(["--out-json", str(args.out_json).strip()])
+    if str(args.blocker_receipt_out or "").strip():
+        egress_cmd.extend(["--blocker-receipt-out", str(args.blocker_receipt_out).strip()])
+    if str(args.layer_intent_text or "").strip():
+        egress_cmd.extend(["--layer-intent-text", str(args.layer_intent_text).strip()])
     egress_env = dict(os.environ)
     egress_env["IDENTITY_PROTOCOL_SESSION_CHAIN_WRAPPER_PATH"] = str(Path(__file__).resolve())
     egress_receipt_seed_attempted = False
@@ -6386,10 +6518,18 @@ def main() -> int:
 
     write(
         pack_dir / "IDENTITY_PROMPT.md",
-        "# Identity Prompt\n\nDefine role cognition, principles, and decision rules.\n",
+        _default_identity_prompt_markdown(
+            identity_id=identity_id,
+            title=args.title,
+            description=args.description,
+        ),
     )
 
     runtime_root = pack_dir / "runtime"
+    write(
+        runtime_root / "plugins" / "provider-bindings.local.yaml",
+        _provider_bindings_template_text(repo_root=repo_root),
+    )
     seed_runtime_root = (repo_root / "identity" / "runtime").resolve()
     if runtime_root.resolve() == seed_runtime_root:
         print("[FAIL] runtime root overlaps repository seed runtime templates.")
