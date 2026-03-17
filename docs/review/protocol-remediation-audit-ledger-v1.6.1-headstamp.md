@@ -262,3 +262,34 @@ Observed after fix:
    - must report `response_stamp_profile_before` / `response_stamp_profile_after`.
 4. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
    - must pass with operator-envelope validator wiring guarded.
+
+## 13) Controlled-runtime visible reply envelope replay (2026-03-17)
+
+### 13.1 Scope
+
+1. Operator envelope standardization is incomplete if only stamp JSON carries `Display-Headstamp` / `Machine-Verification`.
+2. Controlled runtime emitters must project the same envelope into visible reply output.
+
+### 13.2 Code closure
+
+1. `scripts/response_stamp_common.py`
+   - adds shared helpers for machine-verification payload construction and visible reply envelope rendering.
+2. `scripts/compose_and_validate_governed_reply.py`
+   - now emits visible reply through the shared operator envelope helper.
+3. `scripts/final_emit_governed.py`
+   - now preserves operator envelope lines when printing final user-visible output.
+4. `scripts/create_identity_pack.py`
+   - now propagates the final-emit operator envelope fields through the session-chain wrapper instead of letting wrapper output drift back to raw first-line-only text.
+5. Template/order freeze now uses:
+   - `current_surface_native_machine_attested`
+
+### 13.3 Replay evidence
+
+1. `python3 scripts/render_identity_response_stamp.py ... --json-only`
+2. `python3 scripts/validate_response_stamp_operator_envelope.py --stamp-json <...> --json-only`
+3. `python3 -m py_compile scripts/response_stamp_common.py scripts/render_identity_response_stamp.py scripts/compose_and_validate_governed_reply.py scripts/final_emit_governed.py`
+
+### 13.4 Verdict
+
+1. Visible reply envelope stays infrastructure-owned and shared.
+2. No instance-specific literal headstamp rendering was introduced.

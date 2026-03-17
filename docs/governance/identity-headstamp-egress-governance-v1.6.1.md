@@ -454,3 +454,19 @@ deepening base for v1.6.1 headstamp semantics.
 1. `scripts/validate_response_stamp_operator_envelope.py` is the shared validator for the operator envelope.
 2. `scripts/ci/run_required_runtime_gates_ci.sh` MUST invoke that validator after `render_identity_response_stamp.py`.
 3. `scripts/validate_required_gate_surface_drift.py` MUST guard this CI wiring so template validation cannot silently disappear.
+
+### 15.6 Controlled-runtime visible reply envelope closure (2026-03-17)
+
+1. Shared operator envelope rendering must not stop at stamp JSON generation; controlled runtime reply emitters must reuse it for user-visible output.
+2. `scripts/compose_and_validate_governed_reply.py` and `scripts/final_emit_governed.py` MUST emit the visible reply through:
+   - `render_visible_reply_with_operator_envelope(...)`
+3. `scripts/create_identity_pack.py` session-chain wrapper materialization MUST preserve the shared envelope fields from final emit:
+   - `display_headstamp_line`
+   - `machine_verification_line`
+   - `operator_envelope_lines`
+   - `visible_reply_preview`
+   and MUST print the propagated `visible_reply` instead of reconstructing a new literal locally.
+4. Machine-verification payloads on controlled runtime surfaces must use the current-surface-specific field:
+   - `current_surface_native_machine_attested`
+   instead of generic synonyms.
+5. Canonical first-line semantics remain machine-owned; operator envelope is the user-visible outer segment and MUST NOT create a new authority source.

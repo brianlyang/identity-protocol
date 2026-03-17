@@ -53,6 +53,7 @@ DEFAULT_RESPONSE_STAMP_TEMPLATE_REF = (
     "identity/protocol/plugins/templates/response-stamp.operator_dual_segment_v1.json"
 )
 DEFAULT_MACHINE_VERIFICATION_SOURCE = "context_checkpoint"
+CONTROLLED_RUNTIME_MACHINE_VERIFICATION_SOURCE = "external_controlled_runtime_selftest"
 OPERATOR_ENVELOPE_MACHINE_FIELD_ORDER = (
     "verification_source",
     "display_headstamp_identity_id",
@@ -60,7 +61,7 @@ OPERATOR_ENVELOPE_MACHINE_FIELD_ORDER = (
     "headstamp_consistency_status",
     "headstamp_consistency_mode",
     "headstamp_consistency_reason",
-    "surface_native_machine_attested",
+    "current_surface_native_machine_attested",
     "output_governance_mode",
     "control_lane_attestation_status",
     "post_check_blocker_status",
@@ -961,6 +962,65 @@ def render_operator_headstamp_lines(
     if machine_line:
         lines.append(machine_line)
     return lines
+
+
+def build_operator_machine_verification_payload(
+    base_payload: dict[str, Any] | None = None,
+    *,
+    verification_source: str = DEFAULT_MACHINE_VERIFICATION_SOURCE,
+    current_surface_native_machine_attested: bool | None = None,
+) -> dict[str, Any]:
+    source_payload = base_payload if isinstance(base_payload, dict) else {}
+    machine_payload: dict[str, Any] = {"verification_source": verification_source}
+    if current_surface_native_machine_attested is not None:
+        machine_payload["current_surface_native_machine_attested"] = bool(
+            current_surface_native_machine_attested
+        )
+    for key in OPERATOR_ENVELOPE_MACHINE_FIELD_ORDER:
+        if key in {"verification_source", "current_surface_native_machine_attested"}:
+            continue
+        value = source_payload.get(key)
+        if value is None:
+            continue
+        if isinstance(value, str) and not value.strip():
+            continue
+        machine_payload[key] = value
+    return machine_payload
+
+
+def split_canonical_reply_text(reply_text: str) -> tuple[str, str]:
+    text = str(reply_text or "")
+    if not text:
+        return "", ""
+    lines = text.splitlines()
+    if not lines:
+        return "", ""
+    first_line = str(lines[0]).rstrip()
+    remainder = "\n".join(lines[1:]).strip()
+    return first_line, remainder
+
+
+def render_visible_reply_with_operator_envelope(
+    *,
+    reply_text: str,
+    operator_envelope_lines: list[str] | tuple[str, ...] | None = None,
+) -> str:
+    lines = [str(line).strip() for line in (operator_envelope_lines or []) if str(line).strip()]
+    first_line, body_text = split_canonical_reply_text(reply_text)
+    visible_lines: list[str] = []
+    if lines:
+        visible_lines.extend(lines)
+    elif first_line:
+        visible_lines.append(first_line)
+
+    if first_line.startswith("Identity-Context:"):
+        if body_text:
+            visible_lines.append(body_text)
+    else:
+        normalized_reply = str(reply_text or "").strip()
+        if normalized_reply:
+            visible_lines.append(normalized_reply)
+    return "\n".join([line for line in visible_lines if str(line).strip()]).rstrip() + "\n"
 
 
 def resolve_disclosure_level(

@@ -13,6 +13,7 @@ from governed_reply_observability_common import build_headstamp_consistency_proj
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
+    build_operator_machine_verification_payload,
     DEFAULT_MACHINE_VERIFICATION_SOURCE,
     normalize_response_stamp_profile,
     render_machine_verification_line,
@@ -212,14 +213,10 @@ def main() -> int:
         )
     )
 
-    machine_payload: dict[str, object] = {
-        "verification_source": DEFAULT_MACHINE_VERIFICATION_SOURCE,
-        "display_headstamp_identity_id": payload.get("display_headstamp_identity_id", ""),
-        "authoritative_identity_id": payload.get("authoritative_identity_id", ""),
-        "headstamp_consistency_status": payload.get("headstamp_consistency_status", ""),
-        "headstamp_consistency_mode": payload.get("headstamp_consistency_mode", ""),
-        "headstamp_consistency_reason": payload.get("headstamp_consistency_reason", ""),
-    }
+    machine_payload: dict[str, object] = build_operator_machine_verification_payload(
+        payload,
+        verification_source=DEFAULT_MACHINE_VERIFICATION_SOURCE,
+    )
     if str(args.machine_payload_file or "").strip():
         extra_path = Path(args.machine_payload_file).expanduser().resolve()
         if not extra_path.exists():

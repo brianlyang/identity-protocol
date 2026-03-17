@@ -39,6 +39,10 @@ from identity_runtime_authority_common import (
     STATUS_PASS_REQUIRED as AUTHORITY_PASS_REQUIRED,
     validate_runtime_egress_identity_authority,
 )
+from response_stamp_common import (
+    render_machine_verification_line,
+    render_visible_reply_with_operator_envelope,
+)
 from tool_vendor_governance_common import resolve_pack_and_task
 from protocol_infra_contract import (
     PRIVILEGE_ESCALATION_ERROR_CODE,
@@ -1084,6 +1088,7 @@ def main() -> int:
         body,
         "--outlet-channel-id",
         outlet_channel_id,
+        "--current-surface-native-machine-attested",
         "--json-only",
     ]
     if str(args.work_layer or "").strip():
@@ -1275,11 +1280,44 @@ def main() -> int:
         return 1
 
     reply_text = reply_path.read_text(encoding="utf-8", errors="ignore")
+    reply_preview = reply_text.splitlines()[:2]
+    reply_first_line = str(reply_preview[0] if reply_preview else "").strip()
+    machine_verification = dict(compose_payload.get("machine_verification") or {})
+    display_headstamp_line = str(compose_payload.get("display_headstamp_line", "")).strip()
+    if not display_headstamp_line and reply_first_line.startswith("Identity-Context:"):
+        display_headstamp_line = f"Display-Headstamp: {reply_first_line}"
+    machine_verification_line = str(compose_payload.get("machine_verification_line", "")).strip()
+    if not machine_verification_line and machine_verification:
+        machine_verification_line = render_machine_verification_line(machine_verification)
+    operator_envelope_lines = [
+        str(line).strip()
+        for line in (compose_payload.get("operator_envelope_lines") or [])
+        if str(line).strip()
+    ]
+    if not operator_envelope_lines:
+        for fallback_line in (display_headstamp_line, machine_verification_line):
+            token = str(fallback_line or "").strip()
+            if token:
+                operator_envelope_lines.append(token)
+    visible_reply = render_visible_reply_with_operator_envelope(
+        reply_text=reply_text,
+        operator_envelope_lines=operator_envelope_lines,
+    )
+    payload["display_headstamp_line"] = display_headstamp_line
+    payload["machine_verification_line"] = machine_verification_line
+    payload["machine_verification"] = machine_verification
+    payload["current_surface_native_machine_attested"] = bool(
+        compose_payload.get("current_surface_native_machine_attested", False)
+    )
+    payload["operator_envelope_lines"] = operator_envelope_lines
+    payload["operator_envelope"] = "\n".join(operator_envelope_lines)
+    payload["visible_reply"] = visible_reply
+    payload["visible_reply_preview"] = visible_reply.splitlines()[:3]
     if args.json_only:
-        payload["reply_preview"] = reply_text.splitlines()[:2]
+        payload["reply_preview"] = reply_preview
         _emit(payload, json_only=True)
     else:
-        print(reply_text.rstrip())
+        print(visible_reply.rstrip())
     return 0
 
 

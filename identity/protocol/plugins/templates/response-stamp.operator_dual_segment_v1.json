@@ -23,7 +23,7 @@
       "headstamp_consistency_status",
       "headstamp_consistency_mode",
       "headstamp_consistency_reason",
-      "surface_native_machine_attested",
+      "current_surface_native_machine_attested",
       "output_governance_mode",
       "control_lane_attestation_status",
       "post_check_blocker_status",

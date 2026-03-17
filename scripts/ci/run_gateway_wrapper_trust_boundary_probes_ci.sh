@@ -8,6 +8,7 @@ FIXTURE_ROOT="${WORK_ROOT}/fixtures"
 RESULT_ROOT="${WORK_ROOT}/results"
 MANIFEST_PATH="${WORK_ROOT}/manifest.gateway_wrapper_trust_boundary.json"
 
+rm -rf "${FIXTURE_ROOT}" "${RESULT_ROOT}" "${MANIFEST_PATH}"
 mkdir -p "${FIXTURE_ROOT}" "${RESULT_ROOT}"
 
 python3 - <<'PY' "${FIXTURE_ROOT}"
@@ -704,6 +705,19 @@ elif name == "session_chain_fresh_run_receipt_seed_replay_pass":
         raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected PASS_REQUIRED reply transport binding")
     if doc.get("next_hop_release_allowed") is not True:
         raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: next_hop_release_allowed must be true")
+    display_line = str(doc.get("display_headstamp_line", "")).strip()
+    machine_line = str(doc.get("machine_verification_line", "")).strip()
+    if not display_line.startswith("Display-Headstamp: "):
+        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: missing display headstamp line")
+    if not machine_line.startswith("Machine-Verification: "):
+        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: missing machine verification line")
+    visible_preview = doc.get("visible_reply_preview")
+    if not isinstance(visible_preview, list) or len(visible_preview) < 2:
+        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected visible_reply_preview with operator envelope")
+    if not str(visible_preview[0] or "").strip().startswith("Display-Headstamp: "):
+        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: visible reply preview missing display headstamp")
+    if not str(visible_preview[1] or "").strip().startswith("Machine-Verification: "):
+        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: visible reply preview missing machine verification")
     preview = doc.get("reply_preview")
     first_line = ""
     if isinstance(preview, list) and preview:
@@ -748,6 +762,19 @@ elif name == "session_chain_protocol_lane_explicit_context_pass":
         first_line = str(preview[0] or "").strip()
     if "work_layer=protocol" not in first_line:
         raise SystemExit("session_chain_protocol_lane_explicit_context_pass: expected protocol headstamp first line")
+    display_line = str(doc.get("display_headstamp_line", "")).strip()
+    machine_line = str(doc.get("machine_verification_line", "")).strip()
+    if not display_line.startswith("Display-Headstamp: "):
+        raise SystemExit("session_chain_protocol_lane_explicit_context_pass: missing display headstamp line")
+    if not machine_line.startswith("Machine-Verification: "):
+        raise SystemExit("session_chain_protocol_lane_explicit_context_pass: missing machine verification line")
+    visible_preview = doc.get("visible_reply_preview")
+    if not isinstance(visible_preview, list) or len(visible_preview) < 2:
+        raise SystemExit("session_chain_protocol_lane_explicit_context_pass: expected visible_reply_preview with operator envelope")
+    if not str(visible_preview[0] or "").strip().startswith("Display-Headstamp: "):
+        raise SystemExit("session_chain_protocol_lane_explicit_context_pass: visible preview missing display headstamp")
+    if not str(visible_preview[1] or "").strip().startswith("Machine-Verification: "):
+        raise SystemExit("session_chain_protocol_lane_explicit_context_pass: visible preview missing machine verification")
 elif name == "session_chain_conflicting_session_primary_blocked":
     if rc == 0:
         raise SystemExit("session_chain_conflicting_session_primary_blocked: expected non-zero rc")

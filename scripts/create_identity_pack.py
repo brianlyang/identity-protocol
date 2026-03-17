@@ -3453,11 +3453,34 @@ def _parse_stdout_json(text: str) -> dict[str, Any]:
     return doc if isinstance(doc, dict) else {}
 
 
-def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
+def _emit(payload: dict[str, Any], *, json_only: bool, visible_reply: str = "") -> None:
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
     else:
+        if str(visible_reply or "").strip():
+            print(str(visible_reply).rstrip())
+            print("")
         print(json.dumps(payload, ensure_ascii=False, indent=2))
+
+
+def _render_machine_verification_line(machine_payload: dict[str, Any]) -> str:
+    parts: list[str] = []
+    for key, value in machine_payload.items():
+        if not str(key).strip():
+            continue
+        if isinstance(value, bool):
+            rendered = "true" if value else "false"
+        elif value is None:
+            rendered = ""
+        elif isinstance(value, (dict, list)):
+            rendered = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+        else:
+            rendered = str(value).strip()
+        if rendered:
+            parts.append(f"{str(key).strip()}={rendered}")
+    if not parts:
+        return ""
+    return "Machine-Verification: " + "; ".join(parts)
 
 
 def _resolve_contract_path(raw_contract_path: str) -> Path:
@@ -4265,6 +4288,49 @@ def main() -> int:
     reply_text = out_reply_path.read_text(encoding="utf-8", errors="ignore").strip()
     reply_preview = reply_text.splitlines()[:2] if reply_text else []
     first_line = str(reply_preview[0] if reply_preview else "").strip()
+    machine_verification = egress_payload.get("machine_verification")
+    if not isinstance(machine_verification, dict):
+        machine_verification = {}
+    display_headstamp_line = str(egress_payload.get("display_headstamp_line", "")).strip()
+    if not display_headstamp_line and first_line.startswith("Identity-Context:"):
+        display_headstamp_line = f"Display-Headstamp: {first_line}"
+    machine_verification_line = str(egress_payload.get("machine_verification_line", "")).strip()
+    if not machine_verification_line and machine_verification:
+        machine_verification_line = _render_machine_verification_line(machine_verification)
+    operator_envelope = str(egress_payload.get("operator_envelope", "")).strip()
+    visible_reply = str(egress_payload.get("visible_reply", "")).strip() or reply_text
+    visible_reply_preview = egress_payload.get("visible_reply_preview")
+    if not isinstance(visible_reply_preview, list):
+        visible_reply_preview = visible_reply.splitlines()[:3] if visible_reply else []
+    operator_envelope_lines = egress_payload.get("operator_envelope_lines")
+    if not isinstance(operator_envelope_lines, list):
+        operator_envelope_lines = []
+    operator_envelope_lines = [str(line).strip() for line in operator_envelope_lines if str(line).strip()]
+    if not operator_envelope_lines and operator_envelope:
+        operator_envelope_lines = [str(line).strip() for line in operator_envelope.splitlines() if str(line).strip()]
+    if not operator_envelope_lines:
+        operator_envelope_lines = [line for line in (display_headstamp_line, machine_verification_line) if line]
+    if (
+        operator_envelope_lines
+        and (not visible_reply or not str(visible_reply).startswith("Display-Headstamp: "))
+    ):
+        reply_body_lines = reply_text.splitlines()
+        if reply_body_lines and str(reply_body_lines[0]).strip().startswith("Identity-Context:"):
+            reply_body_lines = reply_body_lines[1:]
+        visible_reply_parts = list(operator_envelope_lines)
+        body_text = "\\n".join(reply_body_lines).strip()
+        if body_text:
+            visible_reply_parts.append(body_text)
+        visible_reply = "\\n".join(visible_reply_parts).strip()
+    if (
+        operator_envelope_lines
+        and (
+            not isinstance(visible_reply_preview, list)
+            or not visible_reply_preview
+            or not str(visible_reply_preview[0] or "").strip().startswith("Display-Headstamp: ")
+        )
+    ):
+        visible_reply_preview = visible_reply.splitlines()[:3] if visible_reply else []
     headstamp_first_line_status = (
         STATUS_PASS_REQUIRED if first_line.startswith("Identity-Context:") else STATUS_FAIL_REQUIRED
     )
@@ -4381,8 +4447,14 @@ def main() -> int:
             "ingress_receipt_path": str(ingress_receipt_path),
             "out_reply_file": str(out_reply_path),
             "reply_preview": reply_preview,
+            "visible_reply_preview": [str(line).strip() for line in visible_reply_preview if str(line).strip()],
             "reply_transport_ref": str(out_reply_path),
             "reply_transport_binding_status": STATUS_PASS_REQUIRED,
+            "display_headstamp_line": display_headstamp_line,
+            "machine_verification_line": machine_verification_line,
+            "machine_verification": machine_verification,
+            "operator_envelope_lines": operator_envelope_lines,
+            "operator_envelope": operator_envelope or "\\n".join(operator_envelope_lines),
             "ingress_bundle_status": ingress_payload.get("bundle_status", ""),
             "wrapper_surface_status": ingress_payload.get("wrapper_surface_status", ""),
             "entry_receipt_tuple_status": tuple_status,
@@ -4464,9 +4536,8 @@ def main() -> int:
             ),
         },
         json_only=args.json_only,
+        visible_reply=visible_reply,
     )
-    if not args.json_only:
-        print(reply_text)
     return 0
 
 

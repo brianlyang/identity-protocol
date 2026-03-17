@@ -31,7 +31,11 @@ from identity_runtime_authority_common import (
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
+    build_operator_machine_verification_payload,
+    CONTROLLED_RUNTIME_MACHINE_VERIFICATION_SOURCE,
     parse_identity_context_stamp,
+    render_operator_headstamp_lines,
+    render_visible_reply_with_operator_envelope,
     render_external_stamp_with_layer_context,
     resolve_disclosure_level,
     resolve_layer_intent,
@@ -167,13 +171,19 @@ def _resolve_actor_binding_with_target(
     return selected, store, selection_mode
 
 
-def _emit(payload: dict[str, Any], *, json_only: bool, composed_reply: str, allow_reply_emit: bool) -> None:
+def _emit(
+    payload: dict[str, Any],
+    *,
+    json_only: bool,
+    visible_reply: str,
+    allow_reply_emit: bool,
+) -> None:
     payload = inject_legacy_error_fields(payload)
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
         return
     if allow_reply_emit:
-        print(composed_reply.rstrip())
+        print(visible_reply.rstrip())
         print("")
     print(json.dumps(payload, ensure_ascii=False, indent=2))
 
@@ -204,6 +214,11 @@ def main() -> int:
     ap.add_argument("--preflight-receipt-out", default="")
     ap.add_argument("--final-emit-receipt-out", default="")
     ap.add_argument("--outlet-channel-id", default=FINAL_EMIT_CHANNEL_ID)
+    ap.add_argument(
+        "--current-surface-native-machine-attested",
+        action="store_true",
+        help="allow current-surface governed transport attestation for controlled runtime entrypoints",
+    )
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
@@ -606,6 +621,8 @@ def main() -> int:
         source_layer,
         "--json-only",
     ]
+    if args.current_surface_native_machine_attested:
+        validate_cmd.append("--current-surface-native-machine-attested")
     validate_cmd += ["--actor-id", str(actor_id_effective).strip()]
     if str(args.session_id or "").strip():
         validate_cmd += ["--session-id", str(args.session_id).strip()]
@@ -760,6 +777,21 @@ def main() -> int:
         "reply_first_line_status": str(validate_payload.get("reply_first_line_status", "")),
         "reply_evidence_mode": str(validate_payload.get("reply_evidence_mode", "")),
         "reply_transport_ref": str(validate_payload.get("reply_transport_ref", "")),
+        "current_surface_transport_attestation_contract_id": str(
+            validate_payload.get("current_surface_transport_attestation_contract_id", "")
+        ).strip(),
+        "current_surface_transport_attestation_status": str(
+            validate_payload.get("current_surface_transport_attestation_status", "")
+        ).strip(),
+        "current_surface_transport_attestation_reason": str(
+            validate_payload.get("current_surface_transport_attestation_reason", "")
+        ).strip(),
+        "current_surface_transport_attestation_mode": str(
+            validate_payload.get("current_surface_transport_attestation_mode", "")
+        ).strip(),
+        "current_surface_native_machine_attested": bool(
+            validate_payload.get("current_surface_native_machine_attested", False)
+        ),
         "reply_outlet_guard_applied": bool(validate_payload.get("reply_outlet_guard_applied", False)),
         "governed_outlet_enforced": bool(validate_payload.get("governed_outlet_enforced", False)),
         "output_governance_mode": str(validate_payload.get("output_governance_mode", "")).strip(),
@@ -846,6 +878,31 @@ def main() -> int:
             reply_emit_allowed=allow_reply_emit,
         )
     )
+    machine_verification_payload = build_operator_machine_verification_payload(
+        payload,
+        verification_source=CONTROLLED_RUNTIME_MACHINE_VERIFICATION_SOURCE,
+        current_surface_native_machine_attested=bool(
+            payload.get("current_surface_native_machine_attested", False)
+        ),
+    )
+    operator_envelope_lines = render_operator_headstamp_lines(
+        ctx,
+        disclosure_level=disclosure_level,
+        work_layer=work_layer,
+        source_layer=source_layer,
+        machine_payload=machine_verification_payload,
+    )
+    visible_reply = render_visible_reply_with_operator_envelope(
+        reply_text=composed_reply,
+        operator_envelope_lines=operator_envelope_lines,
+    )
+    payload["machine_verification"] = machine_verification_payload
+    payload["machine_verification_line"] = operator_envelope_lines[1] if len(operator_envelope_lines) > 1 else ""
+    payload["display_headstamp_line"] = operator_envelope_lines[0] if operator_envelope_lines else ""
+    payload["operator_envelope_lines"] = operator_envelope_lines
+    payload["operator_envelope"] = "\n".join(operator_envelope_lines)
+    payload["visible_reply"] = visible_reply
+    payload["visible_reply_preview"] = visible_reply.splitlines()[:3]
 
     out_json = str(args.out_json or "").strip()
     if out_json:
@@ -859,7 +916,7 @@ def main() -> int:
     _emit(
         payload,
         json_only=args.json_only,
-        composed_reply=composed_reply,
+        visible_reply=visible_reply,
         allow_reply_emit=allow_reply_emit,
     )
     return 0 if proc.returncode == 0 else 1
