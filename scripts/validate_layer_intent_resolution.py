@@ -114,6 +114,7 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="")
     ap.add_argument("--layer-intent-text", default="")
     ap.add_argument("--work-layer", default="", help="explicit work-layer override for resolver seed")
     ap.add_argument("--source-layer", default="", help="explicit source-layer override for resolver seed")
@@ -173,6 +174,7 @@ def main() -> int:
             catalog_path=catalog_path,
             repo_catalog_path=repo_catalog_path,
             actor_id=args.actor_id,
+            session_id=str(args.session_id or "").strip(),
             explicit_catalog=bool(str(args.catalog or "").strip()),
         )
     except Exception as exc:
