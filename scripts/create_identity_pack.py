@@ -6092,6 +6092,17 @@ def _bootstrap_legacy_identity_samples(identity_id: str, runtime_root: Path) -> 
         runtime_root / "logs" / "collaboration" / f"{identity_id}-bootstrap.json",
         identity_id,
     )
+
+    _bootstrap_runtime_selftest_assets(identity_id, runtime_root)
+    collab_src = Path("identity/runtime/examples/collaboration-trigger")
+    collab_dst = runtime_root / "examples" / "collaboration-trigger"
+    for sample in collab_src.rglob("*.json"):
+        rel = sample.relative_to(collab_src)
+        _copy_sample_with_identity(sample, collab_dst / rel, identity_id)
+    _write_install_provenance_reports(identity_id, runtime_root)
+
+
+def _bootstrap_runtime_selftest_assets(identity_id: str, runtime_root: Path) -> None:
     rulebook_dir = runtime_root / "rulebooks"
     _copy_jsonl_with_identity(
         Path("identity/runtime/rulebooks/positive.jsonl"),
@@ -6109,13 +6120,6 @@ def _bootstrap_legacy_identity_samples(identity_id: str, runtime_root: Path) -> 
     for sample in handoff_src.rglob("*.json"):
         rel = sample.relative_to(handoff_src)
         _copy_sample_with_identity(sample, handoff_dst / rel, identity_id)
-
-    collab_src = Path("identity/runtime/examples/collaboration-trigger")
-    collab_dst = runtime_root / "examples" / "collaboration-trigger"
-    for sample in collab_src.rglob("*.json"):
-        rel = sample.relative_to(collab_src)
-        _copy_sample_with_identity(sample, collab_dst / rel, identity_id)
-    _write_install_provenance_reports(identity_id, runtime_root)
 
 
 def _bootstrap_neutral_identity_samples(identity_id: str, runtime_root: Path, task_id: str) -> None:
@@ -6259,41 +6263,7 @@ def _bootstrap_neutral_identity_samples(identity_id: str, runtime_root: Path, ta
         },
     )
 
-    runtime_rulebooks.mkdir(parents=True, exist_ok=True)
-    rulebook_common_fields = {
-        "evidence_run_id": "bootstrap",
-        "scope": "identity_runtime",
-        "confidence": "high",
-        "updated_at": iso,
-    }
-    write(
-        runtime_rulebooks / "positive.jsonl",
-        json.dumps(
-            {
-                "rule_id": f"{identity_id}-positive-bootstrap-001",
-                "type": "positive",
-                "trigger": "validated_contract_inputs",
-                "action": "continue_execution",
-                **rulebook_common_fields,
-            },
-            ensure_ascii=False,
-        )
-        + "\n",
-    )
-    write(
-        runtime_rulebooks / "negative.jsonl",
-        json.dumps(
-            {
-                "rule_id": f"{identity_id}-negative-bootstrap-001",
-                "type": "negative",
-                "trigger": "missing_evidence_fields",
-                "action": "block_and_request_remediation",
-                **rulebook_common_fields,
-            },
-            ensure_ascii=False,
-        )
-        + "\n",
-    )
+    _bootstrap_runtime_selftest_assets(identity_id, runtime_root)
 
     write_json(
         runtime_logs / "feedback" / f"{identity_id}-feedback-bootstrap.json",
