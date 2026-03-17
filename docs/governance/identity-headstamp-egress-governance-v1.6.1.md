@@ -470,3 +470,14 @@ deepening base for v1.6.1 headstamp semantics.
    - `current_surface_native_machine_attested`
    instead of generic synonyms.
 5. Canonical first-line semantics remain machine-owned; operator envelope is the user-visible outer segment and MUST NOT create a new authority source.
+
+### 15.7 Non-native chat surface explanatory envelope boundary (2026-03-17)
+
+1. A chat/host surface that is not native machine-attested MAY still emit the shared two-line operator envelope for visibility and machine-readable context carry-forward.
+2. When that surface is explanatory-only, the `Machine-Verification` segment MUST state non-claim semantics explicitly, including:
+   - `verification_source = not_claimed`
+   - `current_chat_surface_native_machine_attested = false`
+   - `display_headstamp_identity_id`
+   - `authoritative_identity_id`
+3. This explanatory envelope is display-only and MUST NOT be consumed as governed proof, native attestation, or next-hop admission pass by itself.
+4. Governed proof remains with controlled-runtime artifacts and the v1.6.6 admission chain; the shared operator envelope only standardizes the visible/operator-readable outer shape.
