@@ -966,6 +966,14 @@ def _activate_identity(
         ]
         if switch_intent_receipt_sync:
             sync_cmd.extend(["--switch-intent-receipt", switch_intent_receipt_sync])
+        sync_cmd.extend(
+            [
+                "--switch-prestate-mode",
+                "session_primary",
+                "--switch-from-identity",
+                current_actor_identity,
+            ]
+        )
         sync = subprocess.run(
             sync_cmd,
             capture_output=True,

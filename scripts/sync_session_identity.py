@@ -28,6 +28,12 @@ ERR_MB_006 = "IP-ASB-MB-006"
 ERR_MB_007 = "IP-ASB-MB-007"
 ERR_MB_008 = "IP-ASB-MB-008"
 ERR_MB_009 = "IP-ASB-MB-009"
+SWITCH_PRESTATE_MODE_LEGACY_CANONICAL = "legacy_canonical"
+SWITCH_PRESTATE_MODE_SESSION_PRIMARY = "session_primary"
+SWITCH_PRESTATE_MODE_CHOICES = {
+    SWITCH_PRESTATE_MODE_LEGACY_CANONICAL,
+    SWITCH_PRESTATE_MODE_SESSION_PRIMARY,
+}
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -91,6 +97,21 @@ def _load_canonical_identity_id(canonical_out: Path) -> str:
         return ""
     doc = _load_json(canonical_out)
     return str(doc.get("identity_id", "")).strip()
+
+
+def _resolve_switch_from_identity(
+    *,
+    switch_prestate_mode: str,
+    switch_from_identity: str,
+    canonical_out: Path,
+) -> tuple[str, str]:
+    mode = str(switch_prestate_mode or "").strip().lower() or SWITCH_PRESTATE_MODE_LEGACY_CANONICAL
+    if mode not in SWITCH_PRESTATE_MODE_CHOICES:
+        mode = SWITCH_PRESTATE_MODE_LEGACY_CANONICAL
+    explicit_before = str(switch_from_identity or "").strip()
+    if mode == SWITCH_PRESTATE_MODE_SESSION_PRIMARY:
+        return explicit_before, mode
+    return explicit_before or _load_canonical_identity_id(canonical_out), mode
 
 
 def _validate_switch_intent_receipt(
@@ -339,6 +360,20 @@ def main() -> int:
         help="receipt required when canonical pointer switches identity (actor_id/from_identity_id/to_identity_id tuple-bound)",
     )
     ap.add_argument(
+        "--switch-from-identity",
+        default="",
+        help="explicit pre-switch identity authority; identity_creator passes session-primary state here",
+    )
+    ap.add_argument(
+        "--switch-prestate-mode",
+        default=SWITCH_PRESTATE_MODE_LEGACY_CANONICAL,
+        choices=sorted(SWITCH_PRESTATE_MODE_CHOICES),
+        help=(
+            "selects the authority used for switch-intent receipt validation: "
+            "legacy_canonical uses canonical pointer fallback; session_primary uses only --switch-from-identity"
+        ),
+    )
+    ap.add_argument(
         "--session-id-source",
         default="",
         help="session id source tag (explicit_session_id/run_id); activate lane requires explicit_session_id",
@@ -427,21 +462,29 @@ def main() -> int:
     entrypoint_pid = str(args.entrypoint_pid or "").strip() or str(os.getpid())
     approved_by = str(args.approved_by or "").strip() or "system:auto"
     cross_actor_override_receipt = str(args.cross_actor_override_receipt or "").strip()
-    canonical_before_identity = _load_canonical_identity_id(canonical_out)
-    if canonical_before_identity and canonical_before_identity != args.identity_id:
+    switch_before_identity, switch_prestate_mode = _resolve_switch_from_identity(
+        switch_prestate_mode=str(args.switch_prestate_mode or "").strip(),
+        switch_from_identity=str(args.switch_from_identity or "").strip(),
+        canonical_out=canonical_out,
+    )
+    if switch_before_identity and switch_before_identity != args.identity_id:
         switch_receipt = str(args.switch_intent_receipt or "").strip()
         if not switch_receipt:
+            if switch_prestate_mode == SWITCH_PRESTATE_MODE_SESSION_PRIMARY:
+                missing_reason = "session_primary_identity_switch_requires_switch_intent_receipt"
+            else:
+                missing_reason = "canonical_pointer_identity_switch_requires_switch_intent_receipt"
             return _fail(
                 ERR_MB_008,
                 (
-                    "canonical_pointer_identity_switch_requires_switch_intent_receipt "
-                    f"from={canonical_before_identity} to={args.identity_id}"
+                    f"{missing_reason} "
+                    f"from={switch_before_identity} to={args.identity_id}"
                 ),
             )
         receipt_errors = _validate_switch_intent_receipt(
             receipt_path=switch_receipt,
             actor_id=actor_id,
-            from_identity_id=canonical_before_identity,
+            from_identity_id=switch_before_identity,
             to_identity_id=args.identity_id,
         )
         if receipt_errors:
