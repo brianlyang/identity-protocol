@@ -140,6 +140,14 @@ def main() -> int:
             payload["stale_reasons"] = ["required_contract_not_applicable_missing_refresh_or_strict_receipt"]
             _emit(payload, json_only=args.json_only)
             return 0
+        if (
+            args.operation in {"update", "validate"}
+            and not str(args.refresh_receipt or "").strip()
+            and not str(args.strict_receipt or "").strip()
+        ):
+            payload["stale_reasons"] = ["required_contract_not_applicable_current_round_unmaterialized"]
+            _emit(payload, json_only=args.json_only)
+            return 0
         payload["refresh_strict_business_interference_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_RECEIPT_MISSING
         payload["stale_reasons"] = ["refresh_or_strict_receipt_missing"]
