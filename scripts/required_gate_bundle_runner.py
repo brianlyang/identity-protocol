@@ -270,6 +270,12 @@ DEFAULT_STRICT_SKIP_ALLOWED_REASONS: tuple[str, ...] = (
     "contract_not_required",
     "scan_probe_profile_filtered_not_required",
 )
+PRE_EXECUTION_CURRENT_ROUND_SKIP_ALLOWED_REASONS: tuple[str, ...] = (
+    "required_contract_not_applicable_current_round_unmaterialized",
+    "required_contract_not_applicable_current_round_unlinked",
+    "required_contract_not_applicable_no_current_round_evidence_source",
+)
+PRE_EXECUTION_CURRENT_ROUND_SKIP_OPERATIONS: set[str] = {"update", "validate"}
 MONOTONIC_POLICY_DEFAULT_TARGET = "__strict_skip_defaults__"
 STRICT_SKIP_RUNTIME_STATUS_FIELD_BY_TARGET: dict[str, str] = {
     "multimodal_plugin_enforcement": "multimodal_runtime_evidence_status",
@@ -2231,6 +2237,8 @@ def main() -> int:
             for token in (monotonic_policy.get("strict_skip_allowed_reasons") or set())
             if str(token).strip()
         }
+        if operation_normalized in PRE_EXECUTION_CURRENT_ROUND_SKIP_OPERATIONS:
+            strict_skip_allowed_reasons.update(PRE_EXECUTION_CURRENT_ROUND_SKIP_ALLOWED_REASONS)
         runtime_status_field = STRICT_SKIP_RUNTIME_STATUS_FIELD_BY_TARGET.get(spec.target_name, "")
         runtime_status_value = str(payload.get(runtime_status_field, "")).strip().upper()
         row_status_skipped = status_value == STATUS_SKIPPED_NOT_REQUIRED
