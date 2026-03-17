@@ -2584,7 +2584,7 @@ def main() -> int:
         )
         report["writeback_status"] = str(report["experience_writeback"]["status"])
         report.update(
-            _derive_writeback_continuity_fields(
+            derive_writeback_continuity_fields(
                 upgrade_required=bool(report.get("upgrade_required", False)),
                 all_ok=bool(report.get("all_ok", False)),
                 writeback_status=str(report.get("writeback_status", "")),
@@ -2714,7 +2714,7 @@ def main() -> int:
         )
         report["writeback_status"] = str(report["experience_writeback"]["status"])
         report.update(
-            _derive_writeback_continuity_fields(
+            derive_writeback_continuity_fields(
                 upgrade_required=bool(report.get("upgrade_required", False)),
                 all_ok=bool(report.get("all_ok", False)),
                 writeback_status=str(report.get("writeback_status", "")),
@@ -2973,7 +2973,7 @@ def main() -> int:
                 )
                 report["writeback_status"] = str(report["experience_writeback"]["status"])
                 report.update(
-                    _derive_writeback_continuity_fields(
+                    derive_writeback_continuity_fields(
                         upgrade_required=bool(report.get("upgrade_required", False)),
                         all_ok=bool(report.get("all_ok", False)),
                         writeback_status=str(report.get("writeback_status", "")),
@@ -3345,7 +3345,7 @@ def main() -> int:
         "why_now": why_now,
     }
     report.update(
-        _derive_writeback_continuity_fields(
+        derive_writeback_continuity_fields(
             upgrade_required=bool(upgrade_required),
             all_ok=bool(all_ok),
             writeback_status=str(report.get("writeback_status", "")),
