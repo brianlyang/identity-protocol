@@ -26,6 +26,9 @@ from protocol_infra_contract import (
     PRIVILEGE_ESCALATION_ERROR_CODE,
     PRIVILEGE_ESCALATION_REASON_PREFIX,
     PRIVILEGE_ESCALATION_REMEDIATION_HINT,
+    UNIQUE_ENTRY_RECEIPT_SELECTOR_POLICY_ID,
+    UNIQUE_ENTRY_RECEIPT_SELECTOR_PRECEDENCE,
+    UNIQUE_ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS,
 )
 from tool_vendor_governance_common import derive_active_repo_root, load_json, resolve_pack_and_task
 
@@ -1520,6 +1523,9 @@ def _persist_unique_entry_receipt(
         "gate_profile": str(payload.get("gate_profile", "")).strip(),
         "gate_profile_mode": str(payload.get("gate_profile_mode", "")).strip(),
         "mapping_errors": list(payload.get("mapping_errors") or []),
+        "selector_policy_id": UNIQUE_ENTRY_RECEIPT_SELECTOR_POLICY_ID,
+        "selector_precedence": list(UNIQUE_ENTRY_RECEIPT_SELECTOR_PRECEDENCE),
+        "selector_source_fields": list(UNIQUE_ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS),
     }
     try:
         state_dir.mkdir(parents=True, exist_ok=True)
