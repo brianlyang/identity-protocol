@@ -138,6 +138,35 @@ def render_native_chat_failure_machine_placeholder_line() -> str:
     return "Machine-Verification: verification_status=FAIL_REQUIRED; <machine tuple missing/conflicted>"
 
 
+def render_native_chat_compiled_brief_reply_hard_guard_markdown(*, actor_id: str = "assistant:codex") -> str:
+    success_line_1 = render_native_chat_success_identity_placeholder_line(actor_id=actor_id)
+    success_line_2 = (
+        "Machine-Verification: authority_source=actor_session_store; "
+        f"identity_id={PLACEHOLDER_CURRENT_SESSION_IDENTITY_ID}; "
+        f"status={PLACEHOLDER_RESOLVED_STATUS}; "
+        f"prompt_version={PLACEHOLDER_RESOLVED_PROMPT_VERSION}; "
+        f"source_layer={PLACEHOLDER_RESOLVED_SOURCE_LAYER}"
+    )
+    failure_line_1 = render_native_chat_failure_identity_placeholder_line(actor_id=actor_id)
+    failure_line_2 = render_native_chat_failure_machine_placeholder_line()
+    lines = [
+        "## Native Chat Reply Hard Guard",
+        "",
+        "Read this first before producing any assistant-authored native-chat reply.",
+        "",
+        "- Never start with body text; line 1 and line 2 are mandatory.",
+        "- Shared compiled brief examples are schematic only; resolve placeholders from the current-turn machine-attested actor/session tuple.",
+        "- Success path first two lines:",
+        f"  1. `{success_line_1}`",
+        f"  2. `{success_line_2}`",
+        "- Failure path first two lines when the current-turn machine tuple is missing, conflicted, or polluted:",
+        f"  1. `{failure_line_1}`",
+        f"  2. `{failure_line_2}`",
+        "- Only after those two lines may body text begin.",
+    ]
+    return "\n".join(lines).strip() + "\n"
+
+
 def prompt_hard_guard_required_tokens(
     *,
     default_machine_profile: str = "mini",

@@ -19,6 +19,7 @@ from native_chat_headstamp_common import (
     DEFAULT_NATIVE_CHAT_PROMPT_HARD_GUARD_TEMPLATE_REF,
     load_native_chat_prompt_hard_guard_template,
     native_chat_success_placeholder_payload,
+    render_native_chat_compiled_brief_reply_hard_guard_markdown,
     render_native_chat_failure_identity_placeholder_line,
     render_native_chat_failure_machine_placeholder_line,
     render_native_chat_success_identity_placeholder_line,
@@ -537,9 +538,12 @@ def main() -> int:
             "without a current-turn machine tuple, native chat must stay on the two-line withheld/conflict envelope.",
         )
     ).strip()
+    top_reply_hard_guard = render_native_chat_compiled_brief_reply_hard_guard_markdown(actor_id=actor_id).strip()
 
     lines = [
         "# Identity Runtime Brief",
+        "",
+        top_reply_hard_guard,
         "",
         "This file is generated/maintained by identity runtime tooling.",
         "",

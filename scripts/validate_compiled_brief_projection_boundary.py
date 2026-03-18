@@ -177,6 +177,7 @@ def main() -> int:
         "default_machine_profile": "",
         "missing_required_tokens": [],
         "forbidden_token_hits": [],
+        "top_hard_guard_status": STATUS_FAIL_REQUIRED,
         "stale_reasons": [],
     }
 
@@ -200,14 +201,31 @@ def main() -> int:
     )
     missing_required_tokens = [token for token in required if token not in text]
     forbidden_hits = [token for token in FORBIDDEN_TOKENS if token in text]
+    first_nonempty_lines = [line for line in text.splitlines() if line.strip()][:20]
+    top_section = "\n".join(first_nonempty_lines)
+    top_guard_tokens = [
+        "## Native Chat Reply Hard Guard",
+        "Read this first before producing any assistant-authored native-chat reply.",
+        "- Never start with body text; line 1 and line 2 are mandatory.",
+        "- Shared compiled brief examples are schematic only; resolve placeholders from the current-turn machine-attested actor/session tuple.",
+        "- Only after those two lines may body text begin.",
+    ]
+    top_guard_status = (
+        STATUS_PASS_REQUIRED
+        if all(token in top_section for token in top_guard_tokens)
+        else STATUS_FAIL_REQUIRED
+    )
     payload["missing_required_tokens"] = missing_required_tokens
     payload["forbidden_token_hits"] = forbidden_hits
+    payload["top_hard_guard_status"] = top_guard_status
 
     stale_reasons: list[str] = []
     if missing_required_tokens:
         stale_reasons.append("compiled_brief_missing_required_projection_tokens")
     if forbidden_hits:
         stale_reasons.append("compiled_brief_contains_stale_runtime_projection_tokens")
+    if top_guard_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append("compiled_brief_top_reply_hard_guard_missing_or_not_front_loaded")
 
     if stale_reasons:
         payload["stale_reasons"] = stale_reasons

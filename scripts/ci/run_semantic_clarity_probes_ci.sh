@@ -36,6 +36,7 @@ assert cli.get("cli_catalog_default_semantics_status") == "PASS_REQUIRED", cli
 assert stream.get("stream_scope_semantic_integrity_status") == "SKIPPED_NOT_REQUIRED", stream
 assert boundary.get("runtime_file_boundary_governance_status") == "PASS_REQUIRED", boundary
 assert compiled_brief.get("compiled_brief_projection_boundary_status") == "PASS_REQUIRED", compiled_brief
+assert compiled_brief.get("top_hard_guard_status") == "PASS_REQUIRED", compiled_brief
 assert strict_actor.get("strict_actor_entry_semantics_status") == "PASS_REQUIRED", strict_actor
 assert authority.get("response_authority_consumer_semantics_status") == "PASS_REQUIRED", authority
 assert activate_cwd.get("activate_cwd_invariance_status") == "PASS_REQUIRED", activate_cwd
@@ -56,6 +57,7 @@ import json,sys
 obj=json.load(open(sys.argv[1]))
 assert obj.get("compiled_brief_projection_boundary_status") == "PASS_REQUIRED", obj
 assert obj.get("default_machine_profile") == "mini", obj
+assert obj.get("top_hard_guard_status") == "PASS_REQUIRED", obj
 print("[PASS] native chat compiled brief freeze")
 PY
 
@@ -855,6 +857,7 @@ import sys
 obj = json.load(open(sys.argv[1], encoding="utf-8"))
 assert obj.get("compiled_brief_projection_boundary_status") == "PASS_REQUIRED", obj
 assert obj.get("default_machine_profile") == "mini", obj
+assert obj.get("top_hard_guard_status") == "PASS_REQUIRED", obj
 print("[PASS] compile runtime follows session-primary contract source without projecting a stale success identity")
 PY
 set +e

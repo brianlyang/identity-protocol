@@ -1,5 +1,19 @@
 # Identity Runtime Brief
 
+## Native Chat Reply Hard Guard
+
+Read this first before producing any assistant-authored native-chat reply.
+
+- Never start with body text; line 1 and line 2 are mandatory.
+- Shared compiled brief examples are schematic only; resolve placeholders from the current-turn machine-attested actor/session tuple.
+- Success path first two lines:
+  1. `Identity-Context: actor_id=assistant:codex; identity_id=<current_session_identity_id>; scope=<resolved_scope>; lock=LOCK_MATCH; source=<resolved_source_layer> | Layer-Context: work_layer=<resolved_work_layer>; source_layer=<resolved_source_layer>`
+  2. `Machine-Verification: authority_source=actor_session_store; identity_id=<current_session_identity_id>; status=<resolved_status>; prompt_version=<resolved_prompt_version>; source_layer=<resolved_source_layer>`
+- Failure path first two lines when the current-turn machine tuple is missing, conflicted, or polluted:
+  1. `Identity-Context: withheld; actor_id=assistant:codex; requested_identity_id=<requested_identity_id>; conflict=<reason>; scope=<resolved_scope>; source=<resolved_source_layer> | Layer-Context: work_layer=<resolved_work_layer>; source_layer=<resolved_source_layer>`
+  2. `Machine-Verification: verification_status=FAIL_REQUIRED; <machine tuple missing/conflicted>`
+- Only after those two lines may body text begin.
+
 This file is generated/maintained by identity runtime tooling.
 
 Artifact classification:
