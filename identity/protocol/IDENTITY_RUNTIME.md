@@ -232,3 +232,4 @@ Hard semantics:
 2. `relay_mode=exact` is the only mode allowed to carry governed headstamp or canonical final-answer text, and the delivered text must byte-match the governed source artifact.
 3. `relay_mode=summary` must classify as `ungoverned_operator_summary` and must not begin with governed-output prefixes such as `Identity-Context:`, `Display-Headstamp:`, or `Machine-Verification:`.
 4. Relay receipts must stay anchored to a governed source artifact (`leader_snapshot`, `final_report`, or canonical plain-text final answer) with matching `target_identity_id` and `source_snapshot_ts`; mismatches are fail-close.
+5. Instances must reuse the shared protocol builder/validator toolchain for `agent_relay_final_answer`; local receipt-construction logic is non-authoritative and must stay thin.

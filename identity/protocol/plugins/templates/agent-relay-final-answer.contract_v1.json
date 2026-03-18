@@ -4,7 +4,9 @@
   "surface_id": "agent_relay_final_answer",
   "status": "ACTIVE",
   "description": "Govern relay semantics when an outer agent delivers an identity instance final answer to the user.",
+  "builder_id": "scripts/build_agent_relay_final_answer.py",
   "validator_id": "scripts/validate_agent_relay_final_answer.py",
+  "builder_ci_probe_script": "scripts/ci/run_agent_relay_final_answer_builder_probes_ci.sh",
   "ci_probe_script": "scripts/ci/run_agent_relay_final_answer_probes_ci.sh",
   "receipt_schema_version": "agent_relay_final_answer_receipt_v1",
   "required_common_fields": [

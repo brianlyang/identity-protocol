@@ -20,8 +20,11 @@ Scope: protocol-only review ledger for outer-agent exact/summary relay governanc
 ### 2.1 New protocol assets
 
 1. `identity/protocol/plugins/templates/agent-relay-final-answer.contract_v1.json`
-2. `scripts/validate_agent_relay_final_answer.py`
-3. `scripts/ci/run_agent_relay_final_answer_probes_ci.sh`
+2. `scripts/agent_relay_final_answer_common.py`
+3. `scripts/build_agent_relay_final_answer.py`
+4. `scripts/validate_agent_relay_final_answer.py`
+5. `scripts/ci/run_agent_relay_final_answer_builder_probes_ci.sh`
+6. `scripts/ci/run_agent_relay_final_answer_probes_ci.sh`
 
 ### 2.2 Motherline and registry updates
 
@@ -44,6 +47,7 @@ Scope: protocol-only review ledger for outer-agent exact/summary relay governanc
 3. Freeze delivery authority split:
    - `identity_instance_output`
    - `ungoverned_operator_summary`
+4. Freeze shared protocol builder ownership for receipt construction.
 
 ### 3.2 Validator layer
 
@@ -51,6 +55,13 @@ Scope: protocol-only review ledger for outer-agent exact/summary relay governanc
 2. Enforce exact-mode byte match.
 3. Enforce summary-mode impersonation guard.
 4. Enforce source identity and source timestamp parity.
+
+### 3.2 Builder layer
+
+1. Shared builder resolves governed source artifact kinds.
+2. Shared builder materializes exact relay text from source artifact instead of caller-authored text.
+3. Shared builder rejects summary impersonation before sender handoff.
+4. Shared builder emits canonical receipt structure for all instances.
 
 ### 3.3 Mapping layer
 
@@ -60,20 +71,25 @@ Scope: protocol-only review ledger for outer-agent exact/summary relay governanc
 
 ### 3.4 CI layer
 
-1. Add dedicated relay probe runner.
-2. Lock both positive and negative probe cases into machine-verifiable outputs.
+1. Add dedicated builder probe runner.
+2. Add dedicated validator probe runner.
+3. Lock both positive and negative probe cases into machine-verifiable outputs.
 
 ## 4) Probe matrix (required)
 
 ### 4.1 Positive probes
 
-1. exact relay pass
-2. summary relay pass
+1. builder exact relay pass
+2. builder summary relay pass
+3. validator exact relay pass
+4. validator summary relay pass
 
 ### 4.2 Negative probes
 
-1. summary impersonates governed output -> `IP-RELAY-004`
-2. exact relay diverges from source artifact -> `IP-RELAY-003`
+1. builder summary impersonates governed output -> `IP-RELAY-004`
+2. builder exact relay diverges from source artifact -> `IP-RELAY-003`
+3. validator summary impersonates governed output -> `IP-RELAY-004`
+4. validator exact relay diverges from source artifact -> `IP-RELAY-003`
 
 ## 5) Audit verdict rules (frozen)
 
@@ -82,8 +98,9 @@ Scope: protocol-only review ledger for outer-agent exact/summary relay governanc
    - review doc registered in stream-doc registry
    - allowlist entries present for both docs
 2. **Implementation PASS** requires:
+   - shared builder exists and is the canonical receipt constructor
    - validator parses receipts and source artifacts correctly
-   - positive/negative probes all behave as expected
+   - builder + validator positive/negative probes all behave as expected
    - motherline row `ASB16-RQ-042` is present
 3. Any missing tuple field, relay/source mismatch, or summary impersonation remains `FAIL_REQUIRED`.
 
@@ -99,7 +116,10 @@ Evidence root pattern (strict docs):
 ## 7) Local verification performed for this landing
 
 1. `python3 -m py_compile scripts/validate_agent_relay_final_answer.py`
-2. `bash scripts/ci/run_agent_relay_final_answer_probes_ci.sh`
+2. `python3 -m py_compile scripts/agent_relay_final_answer_common.py`
+3. `python3 -m py_compile scripts/build_agent_relay_final_answer.py`
+4. `bash scripts/ci/run_agent_relay_final_answer_builder_probes_ci.sh`
+5. `bash scripts/ci/run_agent_relay_final_answer_probes_ci.sh`
 
 ## 8) Boundary lock for reviewers
 

@@ -12,7 +12,9 @@ Execution mode: topic-level canonical SSOT for v1.6.11 outer relay governance.
 2. v1.6.1 and v1.6.6 remain valid and are inherited unless explicitly superseded by this stream.
 3. This stream does not reopen native-chat renderer semantics, host-native explanatory display semantics, or wrapper/session-chain semantics.
 4. Current-state judgment for this stream must prioritize machine outputs from:
+   - `python3 scripts/build_agent_relay_final_answer.py --mode <exact|summary> --source-artifact <artifact> --question-tag <tag> --output <receipt> --json-only`
    - `python3 scripts/validate_agent_relay_final_answer.py --receipt <receipt> --json-only`
+   - `bash scripts/ci/run_agent_relay_final_answer_builder_probes_ci.sh`
    - `bash scripts/ci/run_agent_relay_final_answer_probes_ci.sh`
 5. Canonical mapping entrypoints remain:
    - `identity/protocol/mappings/contract-binding.current.yaml`
@@ -40,10 +42,12 @@ Execution mode: topic-level canonical SSOT for v1.6.11 outer relay governance.
 1. `relay_mode=exact`
    - delivery authority must be `identity_instance_output`
    - delivered text must byte-match the governed source artifact
+   - shared builder must materialize relay text from the source artifact and not from caller-authored free text
    - governed headstamp/canonical output is allowed only in this mode
 2. `relay_mode=summary`
    - delivery authority must be `ungoverned_operator_summary`
    - delivered text may summarize, but must not impersonate governed output
+   - shared builder must reject governed-prefix impersonation before sender wiring
    - governed prefixes are forbidden:
      - `Identity-Context:`
      - `Display-Headstamp:`
@@ -99,8 +103,29 @@ Missing or invalid tuples are fail-close under `IP-RELAY-001`.
    - blocks governed-prefix impersonation for `relay_mode=summary`
    - locks source identity and snapshot timestamp parity
 
+### 3.1.1 Required shared builder
+
+1. `scripts/build_agent_relay_final_answer.py`
+   - resolves governed source artifact kind
+   - extracts source text / identity / snapshot timestamp
+   - materializes exact relay text directly from the governed source artifact
+   - rejects summary impersonation before receipt emission
+   - emits canonical receipt fields for downstream sender wiring
+
 ### 3.2 Required probe matrix
 
+1. `builder_probe_exact_pass`
+   - builder materializes exact relay from governed source artifact
+   - expected: `PASS_REQUIRED`
+2. `builder_probe_summary_pass`
+   - builder emits summary-mode receipt with `ungoverned_operator_summary`
+   - expected: `PASS_REQUIRED`
+3. `builder_probe_summary_impersonation_fail`
+   - builder rejects summary text that begins with governed prefixes
+   - expected: `FAIL_REQUIRED / IP-RELAY-004`
+4. `builder_probe_exact_mismatch_fail`
+   - builder rejects caller-supplied exact text that diverges from source artifact
+   - expected: `FAIL_REQUIRED / IP-RELAY-003`
 1. `probe_exact_pass`
    - exact relay matches governed source artifact
    - expected: `PASS_REQUIRED`
@@ -121,7 +146,10 @@ Missing or invalid tuples are fail-close under `IP-RELAY-001`.
    - `identity/protocol/IDENTITY_RUNTIME.md#rq_042_agent_relay_final_answer_contract_v1`
 3. Validator anchor:
    - `scripts/validate_agent_relay_final_answer.py`
-4. CI anchor:
+4. Builder anchor:
+   - `scripts/build_agent_relay_final_answer.py`
+5. CI anchor:
+   - `scripts/ci/run_agent_relay_final_answer_builder_probes_ci.sh`
    - `scripts/ci/run_agent_relay_final_answer_probes_ci.sh`
 
 ## 5) Evidence contract for this stream
@@ -137,5 +165,6 @@ Evidence root pattern (strict docs):
 
 1. Keep machine truth in wrapper/runtime receipts and governed source artifacts.
 2. Keep outer delivery classification explicit at relay time.
-3. Do not backslide to "old office-style canonical first line only" as the target for this stream.
-4. Do not let summary-mode delivery masquerade as governed instance output.
+3. Shared builder/runtime tool owns receipt construction; instances only own thin wiring to sender/transport.
+4. Do not backslide to "old office-style canonical first line only" as the target for this stream.
+5. Do not let summary-mode delivery masquerade as governed instance output.
