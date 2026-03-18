@@ -23,6 +23,10 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 PROTOCOL_ROOT = SCRIPT_DIR.parent
 DEFAULT_REPO_CATALOG = (PROTOCOL_ROOT / "identity" / "catalog" / "identities.yaml").resolve()
 DEFAULT_OUTPUT = (PROTOCOL_ROOT / "identity" / "runtime" / "IDENTITY_COMPILED.md").resolve()
+DEFAULT_NATIVE_CHAT_HEADSTAMP_TEMPLATE_REF = (
+    "identity/protocol/plugins/templates/native-chat-headstamp.machine_verification_profiles_v1.json"
+)
+ALLOWED_NATIVE_CHAT_MACHINE_PROFILES = ("mini", "standard", "audit")
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -51,6 +55,199 @@ def _load_json_if_exists(path: Path) -> dict[str, Any]:
     except Exception:
         return {}
     return data if isinstance(data, dict) else {}
+
+
+def _stringify_machine_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return ""
+    if isinstance(value, (list, dict)):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    return str(value).strip()
+
+
+def _render_machine_line_with_profile(
+    payload: dict[str, Any],
+    *,
+    field_order: tuple[str, ...],
+    include_extra_fields: bool,
+) -> str:
+    ordered_parts: list[str] = []
+    seen: set[str] = set()
+    for key in field_order:
+        rendered = _stringify_machine_value(payload.get(key))
+        if rendered == "":
+            continue
+        ordered_parts.append(f"{key}={rendered}")
+        seen.add(key)
+
+    extra_parts: list[str] = []
+    if include_extra_fields:
+        for key in sorted(payload.keys()):
+            if key in seen:
+                continue
+            rendered = _stringify_machine_value(payload.get(key))
+            if rendered == "":
+                continue
+            extra_parts.append(f"{key}={rendered}")
+
+    parts = ordered_parts + extra_parts
+    return "Machine-Verification: " + "; ".join(parts) if parts else ""
+
+
+def _default_native_chat_headstamp_contract() -> dict[str, Any]:
+    return {
+        "required": True,
+        "surface_class": "host_native_chat_panel",
+        "delivery_mode": "assistant_text_injection",
+        "template_ref": DEFAULT_NATIVE_CHAT_HEADSTAMP_TEMPLATE_REF,
+        "default_machine_profile": "mini",
+        "allowed_machine_profiles": list(ALLOWED_NATIVE_CHAT_MACHINE_PROFILES),
+        "success_order": ["Identity-Context", "Machine-Verification", "body"],
+        "runtime_loop": ["machine-verify", "assistant-visible-inject", "next-turn-reverify"],
+        "failure_mode": "withhold_success_identity_line",
+    }
+
+
+def _fallback_native_chat_headstamp_template() -> dict[str, Any]:
+    return {
+        "template_id": "native_chat_machine_verification_profiles_v1",
+        "version": "v1",
+        "default_machine_profile": "mini",
+        "profiles": {
+            "mini": {
+                "description": "Compact native-chat default for ordinary user-visible replies.",
+                "field_order": [
+                    "authority_source",
+                    "identity_id",
+                    "status",
+                    "prompt_version",
+                    "source_layer",
+                ],
+                "include_extra_fields": False,
+            },
+            "standard": {
+                "description": "Readable debug profile for native-chat verification and delivery triage.",
+                "field_order": [
+                    "authority_source",
+                    "actor_id",
+                    "identity_id",
+                    "status",
+                    "pointer_path",
+                    "prompt_version",
+                    "work_layer",
+                    "source_layer",
+                ],
+                "include_extra_fields": False,
+            },
+            "audit": {
+                "description": "Full audit/native-debug projection with replay lineage when available.",
+                "field_order": [
+                    "authority_source",
+                    "actor_id",
+                    "identity_id",
+                    "status",
+                    "pointer_path",
+                    "catalog_path",
+                    "pack_path",
+                    "prompt_version",
+                    "binding_version",
+                    "work_layer",
+                    "source_layer",
+                ],
+                "include_extra_fields": True,
+            },
+        },
+    }
+
+
+def _normalize_native_chat_machine_profile(value: Any, *, default: str = "mini") -> str:
+    token = str(value or "").strip().lower()
+    aliases = {
+        "minimal": "mini",
+        "compact": "mini",
+        "default": "mini",
+        "full": "audit",
+        "verbose": "audit",
+    }
+    token = aliases.get(token, token)
+    if token in ALLOWED_NATIVE_CHAT_MACHINE_PROFILES:
+        return token
+    return default if default in ALLOWED_NATIVE_CHAT_MACHINE_PROFILES else "mini"
+
+
+def _normalize_native_chat_headstamp_contract(raw: Any) -> dict[str, Any]:
+    contract = dict(_default_native_chat_headstamp_contract())
+    source = raw if isinstance(raw, dict) else {}
+
+    template_ref = str(source.get("template_ref", "")).strip()
+    if template_ref:
+        contract["template_ref"] = template_ref
+
+    allowed_profiles = []
+    for item in source.get("allowed_machine_profiles") or []:
+        normalized = _normalize_native_chat_machine_profile(item, default="")
+        if normalized and normalized not in allowed_profiles:
+            allowed_profiles.append(normalized)
+    if allowed_profiles:
+        contract["allowed_machine_profiles"] = allowed_profiles
+
+    default_profile = _normalize_native_chat_machine_profile(
+        source.get("default_machine_profile", ""),
+        default=str(contract.get("default_machine_profile", "mini")),
+    )
+    if default_profile not in contract["allowed_machine_profiles"]:
+        contract["allowed_machine_profiles"].append(default_profile)
+    contract["default_machine_profile"] = default_profile
+    return contract
+
+
+def _load_native_chat_headstamp_template(template_ref: str) -> tuple[dict[str, Any], Path]:
+    template_path = (
+        (PROTOCOL_ROOT / template_ref).resolve()
+        if template_ref and not Path(template_ref).is_absolute()
+        else Path(template_ref or DEFAULT_NATIVE_CHAT_HEADSTAMP_TEMPLATE_REF).expanduser().resolve()
+    )
+    template_doc = _load_json_if_exists(template_path)
+    if not template_doc:
+        template_doc = _fallback_native_chat_headstamp_template()
+    return template_doc, template_path
+
+
+def _resolve_native_chat_profile_doc(
+    template_doc: dict[str, Any],
+    *,
+    profile_name: str,
+) -> dict[str, Any]:
+    fallback_doc = _fallback_native_chat_headstamp_template()
+    profiles = template_doc.get("profiles") if isinstance(template_doc.get("profiles"), dict) else {}
+    doc = profiles.get(profile_name)
+    if not isinstance(doc, dict):
+        doc = ((fallback_doc.get("profiles") or {}).get(profile_name) or {})
+    field_order = tuple(
+        str(item).strip()
+        for item in doc.get("field_order") or []
+        if str(item).strip()
+    )
+    if not field_order:
+        fallback = ((fallback_doc.get("profiles") or {}).get(profile_name) or {})
+        field_order = tuple(
+            str(item).strip()
+            for item in fallback.get("field_order") or []
+            if str(item).strip()
+        )
+    return {
+        "name": profile_name,
+        "description": str(doc.get("description", "")).strip()
+        or str((((fallback_doc.get("profiles") or {}).get(profile_name) or {}).get("description", ""))).strip(),
+        "field_order": field_order,
+        "include_extra_fields": bool(doc.get("include_extra_fields", False)),
+    }
+
+
+def _format_profile_fields(field_order: tuple[str, ...]) -> str:
+    return ", ".join(field_order)
 
 
 def _pick_active_identity(
@@ -178,15 +375,42 @@ def main() -> int:
     pointer_payload = _load_json_if_exists(canonical_pointer_path)
     authority_source = str(pointer_payload.get("authoritative_source", "")).strip() or "actor_session_store"
     canonical_pointer_identity = str(pointer_payload.get("identity_id", "")).strip()
+    binding_version = pointer_payload.get("compatibility_projection_binding_version")
+    native_chat_contract = _normalize_native_chat_headstamp_contract(
+        current_task.get("native_chat_headstamp_contract_v1")
+    )
+    native_chat_template, native_chat_template_path = _load_native_chat_headstamp_template(
+        str(native_chat_contract.get("template_ref", "")).strip()
+    )
+    native_chat_machine_profile = _normalize_native_chat_machine_profile(
+        native_chat_contract.get("default_machine_profile", "mini")
+    )
+    native_chat_profile_doc = _resolve_native_chat_profile_doc(
+        native_chat_template,
+        profile_name=native_chat_machine_profile,
+    )
 
     native_identity_line = (
         f"Identity-Context: actor_id={actor_id}; identity_id={active_id}; scope={scope}; "
         f"lock=LOCK_MATCH; source={source_layer} | Layer-Context: work_layer=instance; source_layer={source_layer}"
     )
-    native_machine_line = (
-        f"Machine-Verification: authority_source={authority_source}; actor_id={actor_id}; identity_id={active_id}; "
-        f"status=active; pointer_path={canonical_pointer_path}; prompt_version={prompt_version or 'unknown'}; "
-        f"work_layer=instance; source_layer={source_layer}"
+    native_machine_payload = {
+        "authority_source": authority_source,
+        "actor_id": actor_id,
+        "identity_id": active_id,
+        "status": "active",
+        "pointer_path": str(canonical_pointer_path),
+        "catalog_path": str(catalog_path),
+        "pack_path": str(pack_path),
+        "prompt_version": prompt_version or "unknown",
+        "binding_version": binding_version,
+        "work_layer": "instance",
+        "source_layer": source_layer,
+    }
+    native_machine_line = _render_machine_line_with_profile(
+        native_machine_payload,
+        field_order=native_chat_profile_doc["field_order"],
+        include_extra_fields=bool(native_chat_profile_doc["include_extra_fields"]),
     )
 
     lines = [
@@ -239,7 +463,22 @@ def main() -> int:
         "- Apply this contract to every assistant-authored user-visible native-chat reply.",
         "- Success order is fixed: `Identity-Context` first, `Machine-Verification` second, then body.",
         f"- Success line 1 example: `{native_identity_line}`",
-        f"- Success line 2 example: `{native_machine_line}`",
+        f"- Success line 2 example (`{native_chat_machine_profile}`): `{native_machine_line}`",
+        f"- Native chat machine profile default: `{native_chat_machine_profile}`.",
+        "- Available native chat machine profiles: `mini`, `standard`, `audit`.",
+        (
+            "- `mini`: compact human-facing default; fields = "
+            f"`{_format_profile_fields(_resolve_native_chat_profile_doc(native_chat_template, profile_name='mini')['field_order'])}`."
+        ),
+        (
+            "- `standard`: readable debug projection; fields = "
+            f"`{_format_profile_fields(_resolve_native_chat_profile_doc(native_chat_template, profile_name='standard')['field_order'])}`."
+        ),
+        (
+            "- `audit`: full lineage/debug projection; fields = "
+            f"`{_format_profile_fields(_resolve_native_chat_profile_doc(native_chat_template, profile_name='audit')['field_order'])}`."
+        ),
+        "- Ordinary user-facing native chat replies must stay on `mini`; only expand to `standard` or `audit` when debug/audit context explicitly requires it.",
         "- This native-chat path is assistant text-layer injection, not host sender physical injection.",
         "- Governed repo-controlled surfaces keep the separate `Display-Headstamp` + `Machine-Verification` envelope; do not replace that contract here.",
         "- If machine verification is missing, conflicted, or polluted, do not emit a success identity line; emit a withheld/conflict `Identity-Context` plus `Machine-Verification: verification_status=FAIL_REQUIRED ...` instead.",
@@ -248,6 +487,7 @@ def main() -> int:
         "See source:",
         "- ${IDENTITY_CATALOG}",
         f"- ${{IDENTITY_HOME}}/{active_id or 'unknown'}/CURRENT_TASK.json  # resolved via catalog pack_path",
+        f"- {native_chat_template_path}",
     ]
 
     output = Path(args.output).expanduser().resolve()

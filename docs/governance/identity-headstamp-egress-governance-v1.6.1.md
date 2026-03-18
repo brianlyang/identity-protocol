@@ -518,9 +518,14 @@ deepening base for v1.6.1 headstamp semantics.
    - resolved `identity_id`
    - active status
    - pointer path / prompt metadata sufficient for replay
-6. When that tuple is missing, conflicted, drifted, polluted, or incomplete:
+6. Native chat `Machine-Verification` display profiles are frozen as:
+   - `mini` = default human-facing profile; keep only the compact tuple subset needed for visible confidence,
+   - `standard` = readable debug profile for native-chat triage,
+   - `audit` = full lineage/debug projection for audit-native inspection.
+7. The default native chat profile MUST be `mini`; implementations MAY escalate to `standard` or `audit` only when the chat context explicitly needs debug or audit detail.
+8. When that tuple is missing, conflicted, drifted, polluted, or incomplete:
    - success-state identity injection is forbidden,
    - line 1 MUST degrade to a withheld/conflict `Identity-Context`,
    - line 2 MUST emit `Machine-Verification: verification_status=FAIL_REQUIRED ...`,
    - implementations MUST fail-close rather than emit a stable-but-wrong identity headstamp.
-7. This freeze is the closure baseline for native chat surfaces in the current architecture boundary; future sender/renderer physical wiring is a higher-tier enhancement, not a prerequisite for v1.6.1 / v1.6.6 closure.
+9. This freeze is the closure baseline for native chat surfaces in the current architecture boundary; future sender/renderer physical wiring is a higher-tier enhancement, not a prerequisite for v1.6.1 / v1.6.6 closure.

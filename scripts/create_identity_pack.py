@@ -852,6 +852,20 @@ def _protocol_lane_activation_headstamp_contract_skeleton() -> dict:
     }
 
 
+def _native_chat_headstamp_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "surface_class": "host_native_chat_panel",
+        "delivery_mode": "assistant_text_injection",
+        "template_ref": "identity/protocol/plugins/templates/native-chat-headstamp.machine_verification_profiles_v1.json",
+        "default_machine_profile": "mini",
+        "allowed_machine_profiles": ["mini", "standard", "audit"],
+        "success_order": ["Identity-Context", "Machine-Verification", "body"],
+        "runtime_loop": ["machine-verify", "assistant-visible-inject", "next-turn-reverify"],
+        "failure_mode": "withhold_success_identity_line",
+    }
+
+
 def _execution_target_tuple_isolation_contract_skeleton() -> dict:
     return {
         "required": False,
@@ -2044,6 +2058,7 @@ def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> di
         "protocol_feedback_sidecar_contract_v1": _protocol_feedback_sidecar_contract_skeleton(),
         "gated_switch_guard_contract_v1": _gated_switch_guard_contract_skeleton(),
         "protocol_lane_activation_headstamp_contract_v1": _protocol_lane_activation_headstamp_contract_skeleton(),
+        "native_chat_headstamp_contract_v1": _native_chat_headstamp_contract_skeleton(),
         "execution_target_tuple_isolation_contract_v1": _execution_target_tuple_isolation_contract_skeleton(),
         "protocol_unique_entry_gate_contract_v1": _protocol_unique_entry_gate_contract_skeleton(),
         DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY: _protocol_downsink_path_immutability_contract_skeleton(),

@@ -21,13 +21,13 @@ Identity runtime metadata:
 - methodology_version: v1.6
 - runtime_mode: local_only
 - canonical_pointer_path: /Users/yangxi/claude/codex_project/weixinstore/.identity/session/active_identity.json
-- canonical_pointer_identity: base-repo-closure-orchestrator
+- canonical_pointer_identity: (missing)
 - authority_source: actor_session_store
 
 Identity prompt activation:
 - prompt_path: /Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-closure-orchestrator/IDENTITY_PROMPT.md
 - prompt_loaded: yes
-- prompt_sha256: b1990188e2ffeea150fbef3b24f9c56de88a5c040ddc747509b23ad182412db9
+- prompt_sha256: d4b2db6edd2476f570d9ac40aa71ae808b32e25468a65661403b7b07d17e1aa1
 - prompt_preview: # Identity Prompt: Base Repo Closure Orchestrator ## Governance Kernel - role: `base-repo-closure-orchestrator` operates as 基础仓协议收口编排专家. - principle: fail-close, evidence-first, an
 
 Runtime baseline review references:
@@ -44,7 +44,13 @@ Native chat assistant-visible headstamp contract:
 - Apply this contract to every assistant-authored user-visible native-chat reply.
 - Success order is fixed: `Identity-Context` first, `Machine-Verification` second, then body.
 - Success line 1 example: `Identity-Context: actor_id=assistant:codex; identity_id=base-repo-closure-orchestrator; scope=USER; lock=LOCK_MATCH; source=project | Layer-Context: work_layer=instance; source_layer=project`
-- Success line 2 example: `Machine-Verification: authority_source=actor_session_store; actor_id=assistant:codex; identity_id=base-repo-closure-orchestrator; status=active; pointer_path=/Users/yangxi/claude/codex_project/weixinstore/.identity/session/active_identity.json; prompt_version=v1.6; work_layer=instance; source_layer=project`
+- Success line 2 example (`mini`): `Machine-Verification: authority_source=actor_session_store; identity_id=base-repo-closure-orchestrator; status=active; prompt_version=v1.6; source_layer=project`
+- Native chat machine profile default: `mini`.
+- Available native chat machine profiles: `mini`, `standard`, `audit`.
+- `mini`: compact human-facing default; fields = `authority_source, identity_id, status, prompt_version, source_layer`.
+- `standard`: readable debug projection; fields = `authority_source, actor_id, identity_id, status, pointer_path, prompt_version, work_layer, source_layer`.
+- `audit`: full lineage/debug projection; fields = `authority_source, actor_id, identity_id, status, pointer_path, catalog_path, pack_path, prompt_version, binding_version, work_layer, source_layer`.
+- Ordinary user-facing native chat replies must stay on `mini`; only expand to `standard` or `audit` when debug/audit context explicitly requires it.
 - This native-chat path is assistant text-layer injection, not host sender physical injection.
 - Governed repo-controlled surfaces keep the separate `Display-Headstamp` + `Machine-Verification` envelope; do not replace that contract here.
 - If machine verification is missing, conflicted, or polluted, do not emit a success identity line; emit a withheld/conflict `Identity-Context` plus `Machine-Verification: verification_status=FAIL_REQUIRED ...` instead.
@@ -53,3 +59,4 @@ Native chat assistant-visible headstamp contract:
 See source:
 - ${IDENTITY_CATALOG}
 - ${IDENTITY_HOME}/base-repo-closure-orchestrator/CURRENT_TASK.json  # resolved via catalog pack_path
+- /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/templates/native-chat-headstamp.machine_verification_profiles_v1.json

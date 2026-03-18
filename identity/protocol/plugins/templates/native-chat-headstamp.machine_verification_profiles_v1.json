@@ -1,0 +1,76 @@
+{
+  "template_id": "native_chat_machine_verification_profiles_v1",
+  "version": "v1",
+  "surface_class": "host_native_chat_panel",
+  "delivery_mode": "assistant_text_injection",
+  "description": "Machine-Verification line profiles for native-chat assistant-visible identity injection.",
+  "success_order": [
+    "Identity-Context",
+    "Machine-Verification",
+    "body"
+  ],
+  "default_machine_profile": "mini",
+  "profiles": {
+    "mini": {
+      "description": "Compact native-chat default for ordinary user-visible replies.",
+      "required_fields": [
+        "authority_source",
+        "identity_id",
+        "status"
+      ],
+      "field_order": [
+        "authority_source",
+        "identity_id",
+        "status",
+        "prompt_version",
+        "source_layer"
+      ],
+      "include_extra_fields": false
+    },
+    "standard": {
+      "description": "Readable debug profile for native-chat verification and delivery triage.",
+      "required_fields": [
+        "authority_source",
+        "identity_id",
+        "status",
+        "pointer_path"
+      ],
+      "field_order": [
+        "authority_source",
+        "actor_id",
+        "identity_id",
+        "status",
+        "pointer_path",
+        "prompt_version",
+        "work_layer",
+        "source_layer"
+      ],
+      "include_extra_fields": false
+    },
+    "audit": {
+      "description": "Full audit/native-debug projection with replay lineage when available.",
+      "required_fields": [
+        "authority_source",
+        "identity_id",
+        "status",
+        "pointer_path",
+        "catalog_path",
+        "pack_path"
+      ],
+      "field_order": [
+        "authority_source",
+        "actor_id",
+        "identity_id",
+        "status",
+        "pointer_path",
+        "catalog_path",
+        "pack_path",
+        "prompt_version",
+        "binding_version",
+        "work_layer",
+        "source_layer"
+      ],
+      "include_extra_fields": true
+    }
+  }
+}
