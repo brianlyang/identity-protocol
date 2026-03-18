@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from response_stamp_common import render_visible_reply_with_operator_envelope
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 from final_emit_contract_common import (
     FINAL_EMIT_CHANNEL_ID,
@@ -109,6 +110,51 @@ def _looks_like_json_dict(raw: str) -> bool:
     except Exception:
         return False
     return isinstance(payload, dict)
+
+
+def _load_json_dict(path_text: str) -> dict[str, Any]:
+    token = str(path_text or "").strip()
+    if not token:
+        return {}
+    try:
+        payload = load_json(Path(token).expanduser().resolve())
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _resolve_visible_reply(
+    *,
+    chain_payload: dict[str, Any],
+    out_json_path: str,
+    reply_text: str,
+) -> str:
+    visible_reply = str(chain_payload.get("visible_reply", "")).strip()
+    if visible_reply:
+        return visible_reply
+
+    report_payload = _load_json_dict(out_json_path)
+    visible_reply = str(report_payload.get("visible_reply", "")).strip()
+    if visible_reply:
+        return visible_reply
+
+    operator_envelope_lines = chain_payload.get("operator_envelope_lines")
+    if not isinstance(operator_envelope_lines, list):
+        operator_envelope_lines = []
+    operator_envelope_lines = [
+        str(line).strip() for line in operator_envelope_lines if str(line).strip()
+    ]
+    if not operator_envelope_lines:
+        for key in ("display_headstamp_line", "machine_verification_line"):
+            token = str(chain_payload.get(key, "")).strip()
+            if token:
+                operator_envelope_lines.append(token)
+    if not operator_envelope_lines:
+        return ""
+    return render_visible_reply_with_operator_envelope(
+        reply_text=reply_text,
+        operator_envelope_lines=operator_envelope_lines,
+    ).strip()
 
 
 def _classify_subprocess_failure(*, stdout_text: str, stderr_text: str) -> tuple[str, str] | None:
@@ -544,7 +590,14 @@ def run_final_emit_via_instance_wrappers(*, cmd: list[str], protocol_root: Path)
         if caller_json_only:
             print(normalized)
             return 0, normalized, p_chain.stderr or ""
-        visible_reply = str(chain_payload.get("visible_reply", "")).strip() or reply_text
+        visible_reply = (
+            _resolve_visible_reply(
+                chain_payload=chain_payload,
+                out_json_path=out_json,
+                reply_text=reply_text,
+            )
+            or reply_text
+        )
         print(visible_reply)
         return 0, visible_reply, p_chain.stderr or ""
     return _emit_fail_payload("session_chain_payload_missing_or_non_json")
