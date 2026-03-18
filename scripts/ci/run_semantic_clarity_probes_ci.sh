@@ -16,23 +16,26 @@ python3 scripts/validate_semantic_term_registry.py --json-only > "$TMP_ROOT/sema
 python3 scripts/validate_cli_catalog_default_semantics.py --json-only > "$TMP_ROOT/cli_catalog_positive.json"
 python3 scripts/validate_stream_scope_semantic_integrity.py --base HEAD --head HEAD --json-only > "$TMP_ROOT/stream_scope_positive.json"
 python3 scripts/validate_runtime_file_boundary_governance.py --json-only > "$TMP_ROOT/runtime_boundary_positive.json"
+python3 scripts/validate_compiled_brief_projection_boundary.py --json-only > "$TMP_ROOT/compiled_brief_positive.json"
 python3 scripts/validate_strict_actor_entry_semantics.py --json-only > "$TMP_ROOT/strict_actor_entry_positive.json"
 python3 scripts/validate_response_authority_consumer_semantics.py --json-only > "$TMP_ROOT/authority_consumer_positive.json"
 python3 scripts/validate_activate_cwd_invariance.py --json-only > "$TMP_ROOT/activate_cwd_positive.json"
 
-python3 - "$TMP_ROOT/semantic_term_positive.json" "$TMP_ROOT/cli_catalog_positive.json" "$TMP_ROOT/stream_scope_positive.json" "$TMP_ROOT/runtime_boundary_positive.json" "$TMP_ROOT/strict_actor_entry_positive.json" "$TMP_ROOT/authority_consumer_positive.json" "$TMP_ROOT/activate_cwd_positive.json" <<'PY'
+python3 - "$TMP_ROOT/semantic_term_positive.json" "$TMP_ROOT/cli_catalog_positive.json" "$TMP_ROOT/stream_scope_positive.json" "$TMP_ROOT/runtime_boundary_positive.json" "$TMP_ROOT/compiled_brief_positive.json" "$TMP_ROOT/strict_actor_entry_positive.json" "$TMP_ROOT/authority_consumer_positive.json" "$TMP_ROOT/activate_cwd_positive.json" <<'PY'
 import json,sys
 semantic=json.load(open(sys.argv[1]))
 cli=json.load(open(sys.argv[2]))
 stream=json.load(open(sys.argv[3]))
 boundary=json.load(open(sys.argv[4]))
-strict_actor=json.load(open(sys.argv[5]))
-authority=json.load(open(sys.argv[6]))
-activate_cwd=json.load(open(sys.argv[7]))
+compiled_brief=json.load(open(sys.argv[5]))
+strict_actor=json.load(open(sys.argv[6]))
+authority=json.load(open(sys.argv[7]))
+activate_cwd=json.load(open(sys.argv[8]))
 assert semantic.get("semantic_term_registry_status") == "PASS_REQUIRED", semantic
 assert cli.get("cli_catalog_default_semantics_status") == "PASS_REQUIRED", cli
 assert stream.get("stream_scope_semantic_integrity_status") == "SKIPPED_NOT_REQUIRED", stream
 assert boundary.get("runtime_file_boundary_governance_status") == "PASS_REQUIRED", boundary
+assert compiled_brief.get("compiled_brief_projection_boundary_status") == "PASS_REQUIRED", compiled_brief
 assert strict_actor.get("strict_actor_entry_semantics_status") == "PASS_REQUIRED", strict_actor
 assert authority.get("response_authority_consumer_semantics_status") == "PASS_REQUIRED", authority
 assert activate_cwd.get("activate_cwd_invariance_status") == "PASS_REQUIRED", activate_cwd
@@ -45,36 +48,14 @@ python3 scripts/compile_identity_runtime.py \
   --identity-id base-repo-closure-orchestrator \
   --actor-id assistant:codex \
   --output "$TMP_ROOT/native_chat_compiled.md"
-python3 - "$TMP_ROOT/native_chat_compiled.md" <<'PY'
-from pathlib import Path
-import sys
-
-text = Path(sys.argv[1]).read_text(encoding="utf-8")
-required = [
-    "Active identity: base-repo-closure-orchestrator",
-    "Native chat assistant-visible headstamp contract:",
-    "Success order is fixed: `Identity-Context` first, `Machine-Verification` second, then body.",
-    "This native-chat path is the standard assistant-visible delivery path for host-native chat surfaces.",
-    "Ordinary replies should stay focused on the standard native-chat output path; governed receipt or attestation boundaries are audit/debug-only.",
-    "Runtime loop is fixed: `machine-verify -> assistant-visible-inject -> next turn re-verify`.",
-    "Native chat headstamp hard guard:",
-    "There is no headerless assistant-authored native-chat reply path.",
-    "Failure example line 1: `Identity-Context: withheld; actor_id=assistant:codex; requested_identity_id=base-repo-closure-orchestrator;",
-    "Failure example line 2: `Machine-Verification: verification_status=FAIL_REQUIRED;",
-]
-for token in required:
-    if token not in text:
-        raise SystemExit(f"native_chat_compiled_brief_missing_token: {token}")
-line1 = text.index("Compile-time generated line 1")
-line2 = text.index("Compile-time generated line 2")
-if line1 > line2:
-    raise SystemExit("native_chat_compiled_brief_order_invalid: success line 1 must precede success line 2")
-if "Identity-Context: actor_id=assistant:codex; identity_id=base-repo-closure-orchestrator" not in text:
-    raise SystemExit("native_chat_compiled_brief_identity_context_example_missing")
-if "Compile-time generated line 2 (generated from current runtime; re-verify each turn; profile `mini`): `Machine-Verification: authority_source=actor_session_store; identity_id=base-repo-closure-orchestrator" not in text:
-    raise SystemExit("native_chat_compiled_brief_machine_verification_example_missing")
-if "Native chat machine profile default: `mini`." not in text:
-    raise SystemExit("native_chat_compiled_brief_machine_profile_default_missing")
+python3 scripts/validate_compiled_brief_projection_boundary.py \
+  --compiled-brief "$TMP_ROOT/native_chat_compiled.md" \
+  --json-only > "$TMP_ROOT/native_chat_compiled_boundary.json"
+python3 - "$TMP_ROOT/native_chat_compiled_boundary.json" <<'PY'
+import json,sys
+obj=json.load(open(sys.argv[1]))
+assert obj.get("compiled_brief_projection_boundary_status") == "PASS_REQUIRED", obj
+assert obj.get("default_machine_profile") == "mini", obj
 print("[PASS] native chat compiled brief freeze")
 PY
 
@@ -627,7 +608,7 @@ cat > "$TMP_ROOT/cross-session-drift/.identity/beta/CURRENT_TASK.json" <<'JSON'
     "current_state": "ready"
   },
   "native_chat_headstamp_contract_v1": {
-    "default_machine_profile": "mini"
+    "default_machine_profile": "audit"
   }
 }
 JSON
@@ -821,13 +802,16 @@ python3 scripts/compile_identity_runtime.py \
   --actor-id assistant:codex \
   --session-id run:alpha \
   --output "$TMP_ROOT/cross-session-drift/compiled-alpha.md"
-python3 - "$TMP_ROOT/cross-session-drift/compiled-alpha.md" <<'PY'
-from pathlib import Path
+python3 scripts/validate_compiled_brief_projection_boundary.py \
+  --compiled-brief "$TMP_ROOT/cross-session-drift/compiled-alpha.md" \
+  --json-only > "$TMP_ROOT/cross_session_compile_positive.json"
+python3 - "$TMP_ROOT/cross_session_compile_positive.json" <<'PY'
+import json
 import sys
-text = Path(sys.argv[1]).read_text(encoding="utf-8")
-assert "Active identity: alpha" in text, text
-assert "Identity-Context: actor_id=assistant:codex; identity_id=alpha;" in text, text
-print("[PASS] compile runtime follows session-primary identity instead of compatibility projection")
+obj = json.load(open(sys.argv[1], encoding="utf-8"))
+assert obj.get("compiled_brief_projection_boundary_status") == "PASS_REQUIRED", obj
+assert obj.get("default_machine_profile") == "mini", obj
+print("[PASS] compile runtime follows session-primary contract source without projecting a stale success identity")
 PY
 set +e
 python3 scripts/compile_identity_runtime.py \

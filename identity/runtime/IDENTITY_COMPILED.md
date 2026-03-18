@@ -1,45 +1,21 @@
 # Identity Runtime Brief
 
-Active identity: base-repo-architect
-Actor binding: assistant:codex
-Resolved source layer: project
-
 This file is generated/maintained by identity runtime tooling.
 
-Hard guardrails:
-- (none)
-
-Current objective:
-- Protocol architecture owner for identity baseline, release gates, and regression closure.
-
-Current state:
-- doc_crosscheck
-
-Identity runtime metadata:
-- role: Base Repo Architect
-- prompt_version: v1.6
-- methodology_version: v1.6
-- runtime_mode: local_only
-- canonical_pointer_path: /Users/yangxi/claude/codex_project/weixinstore/.identity/session/active_identity.json
-- canonical_pointer_identity: base-repo-architect
-- authority_source: actor_session_store
+Artifact classification:
+- artifact_class: tracked_compiled_brief_artifact
+- path_status: legacy_canonical_compatibility_path
+- generation_mode: source_first
+- runtime_mode_default: local_only
+- default_machine_profile: `mini`
+- shared compiled brief never acts as current-turn identity authority; success projection remains schematic until a machine-attested actor/session tuple resolves it at turn time.
+- without a current-turn machine tuple, native chat must stay on the two-line withheld/conflict envelope.
 - compile/runtime authority note: compile/replay metadata may read compatibility mirror; current-session authority must not.
 
-Identity prompt activation:
-- prompt_path: /Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-architect/IDENTITY_PROMPT.md
-- prompt_loaded: yes
-- prompt_sha256: 1be3242c55c285791fd4b81f7d5768a7d269c57afb9527ae8585b908d5dd1807
-- prompt_preview: # Identity Prompt: Base Repo Architect ## Governance Kernel - role: `base-repo-architect` operates as Base Repo Architect. - principle: fail-close, evidence-first, and runtime sour
-
-Runtime baseline review references:
-- brianlyang/identity-protocol::identity/protocol/IDENTITY_PROTOCOL.md
-- brianlyang/identity-protocol::docs/references/skill-installer-skill-creator-skill-update-lifecycle.md
-- brianlyang/identity-protocol::docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md
-- brianlyang/identity-protocol::docs/references/skill-mcp-tool-collaboration-contract-v1.0.md
-- brianlyang/identity-protocol::docs/research/IDENTITY_PROTOCOL_BENCHMARK_SKILLS_2026-02-19.md
-- https://developers.openai.com/codex/skills/
-- https://agentskills.io/specification
-- https://modelcontextprotocol.io/specification/latest
+Source-first generation inputs:
+- `${IDENTITY_CATALOG}`
+- `${IDENTITY_HOME}/<resolved_identity_id>/CURRENT_TASK.json`
+- `${IDENTITY_HOME}/<resolved_identity_id>/IDENTITY_PROMPT.md`
 
 Native chat assistant-visible headstamp contract:
 - Apply this contract to every assistant-authored user-visible native-chat reply.
@@ -54,8 +30,24 @@ Native chat assistant-visible headstamp contract:
 - Ordinary replies should stay focused on the standard native-chat output path; governed receipt or attestation boundaries are audit/debug-only.
 - Native-chat display alone does not replace governed proof, admission, or runtime receipt ownership.
 - Governed repo-controlled surfaces keep the separate `Display-Headstamp` + `Machine-Verification` envelope; do not replace that contract here.
+- shared compiled brief never acts as current-turn identity authority; success projection remains schematic until a machine-attested actor/session tuple resolves it at turn time.
+- without a current-turn machine tuple, native chat must stay on the two-line withheld/conflict envelope.
 - If machine verification is missing, conflicted, or polluted, do not emit a success identity line; emit a withheld/conflict `Identity-Context` plus `Machine-Verification: verification_status=FAIL_REQUIRED ...` instead.
 - Runtime loop is fixed: `machine-verify -> assistant-visible-inject -> next turn re-verify`.
+
+Native chat headstamp hard guard:
+- template source: `/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/templates/native-chat-headstamp.prompt_hard_guard_v1.json`.
+- Apply these hard rules to every assistant-authored user-visible native-chat reply.
+- Every assistant-authored user-visible native-chat reply MUST begin with a two-line headstamp before any body text.
+- There is no headerless assistant-authored native-chat reply path.
+- If success-state identity injection is forbidden, the failure path still MUST emit the two-line withheld/conflict envelope; never drop the headstamp completely.
+- Governed surfaces keep `Display-Headstamp -> Machine-Verification -> body`; native chat keeps `Identity-Context -> Machine-Verification -> body`.
+- Success visible order: `Identity-Context -> Machine-Verification -> body`.
+- Failure visible order: `Identity-Context(withheld_or_conflict) -> Machine-Verification(verification_status=FAIL_REQUIRED) -> body`.
+- Success example line 1 (schematic only; placeholders resolve only from current-turn machine tuple): `Identity-Context: actor_id=assistant:codex; identity_id=<current_session_identity_id>; scope=<resolved_scope>; lock=LOCK_MATCH; source=<resolved_source_layer> | Layer-Context: work_layer=<resolved_work_layer>; source_layer=<resolved_source_layer>`
+- Success example line 2 (schematic only; profile `mini`): `Machine-Verification: authority_source=actor_session_store; identity_id=<current_session_identity_id>; status=<resolved_status>; prompt_version=<resolved_prompt_version>; source_layer=<resolved_source_layer>`
+- Failure example line 1: `Identity-Context: withheld; actor_id=assistant:codex; requested_identity_id=<requested_identity_id>; conflict=<reason>; scope=<resolved_scope>; source=<resolved_source_layer> | Layer-Context: work_layer=<resolved_work_layer>; source_layer=<resolved_source_layer>`
+- Failure example line 2: `Machine-Verification: verification_status=FAIL_REQUIRED; <machine tuple missing/conflicted>`
 
 Headstamp semantic clarity freeze:
 - canonical semantic matrix template: `/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/templates/headstamp-surface-semantics.matrix_v1.json`.
@@ -77,11 +69,13 @@ Headstamp semantic clarity freeze:
 - `manual_headstamp` = render_origin tag only; never verdict axis.
 - `EXCLUDED_NON_BLOCKING` only removes blocker aggregation; it never upgrades next-hop admission.
 - Ordinary replies should stay focused on the standard native-chat output path; governed receipt or attestation boundaries are audit/debug-only.
-- Compile-time generated line 1 (generated from current runtime; re-verify each turn): `Identity-Context: actor_id=assistant:codex; identity_id=base-repo-architect; scope=USER; lock=LOCK_MATCH; source=project | Layer-Context: work_layer=instance; source_layer=project`
-- Compile-time generated line 2 (generated from current runtime; re-verify each turn; profile `mini`): `Machine-Verification: authority_source=actor_session_store; identity_id=base-repo-architect; status=active; prompt_version=v1.6; source_layer=project`
+- shared compiled brief never acts as current-turn identity authority; success projection remains schematic until a machine-attested actor/session tuple resolves it at turn time.
+- without a current-turn machine tuple, native chat must stay on the two-line withheld/conflict envelope.
 
 See source:
 - ${IDENTITY_CATALOG}
-- ${IDENTITY_HOME}/base-repo-architect/CURRENT_TASK.json  # resolved via catalog pack_path
+- ${IDENTITY_HOME}/<resolved_identity_id>/CURRENT_TASK.json  # resolved via catalog pack_path
+- ${IDENTITY_HOME}/<resolved_identity_id>/IDENTITY_PROMPT.md  # resolved via catalog pack_path
 - /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/templates/native-chat-headstamp.machine_verification_profiles_v1.json
+- /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/templates/native-chat-headstamp.prompt_hard_guard_v1.json
 - /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/templates/headstamp-surface-semantics.matrix_v1.json

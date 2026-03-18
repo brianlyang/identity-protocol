@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -19,6 +18,10 @@ from actor_session_common import (
 from native_chat_headstamp_common import (
     DEFAULT_NATIVE_CHAT_PROMPT_HARD_GUARD_TEMPLATE_REF,
     load_native_chat_prompt_hard_guard_template,
+    native_chat_success_placeholder_payload,
+    render_native_chat_failure_identity_placeholder_line,
+    render_native_chat_failure_machine_placeholder_line,
+    render_native_chat_success_identity_placeholder_line,
 )
 from resolve_identity_context import default_local_catalog_path, resolve_identity
 
@@ -42,16 +45,6 @@ def load_yaml(path: Path) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError(f"YAML root must be object: {path}")
     return data
-
-
-def _format_source_entry(src: dict[str, Any]) -> str:
-    if not isinstance(src, dict):
-        return ""
-    if src.get("repo") and src.get("path"):
-        return f"{src.get('repo')}::{src.get('path')}"
-    if src.get("url"):
-        return str(src.get("url"))
-    return ""
 
 
 def _load_json_if_exists(path: Path) -> dict[str, Any]:
@@ -475,7 +468,6 @@ def main() -> int:
     )
     source_layer = str(resolved_ctx.get("source_layer", "")).strip() or "unknown"
     runtime_mode = str(resolved_ctx.get("runtime_mode", "")).strip() or str(active.get("runtime_mode", "")).strip()
-    scope = str(resolved_ctx.get("resolved_scope", "")).strip() or "USER"
     pack_path = Path(str(resolved_ctx.get("resolved_pack_path", "")).strip() or active.get("pack_path", "")).expanduser().resolve()
     current_task_path = pack_path / "CURRENT_TASK.json"
     if not current_task_path.exists():
@@ -487,36 +479,7 @@ def main() -> int:
 
     current_task = json.loads(current_task_path.read_text(encoding="utf-8"))
     agent_identity = current_task.get("agent_identity") or {}
-    objective = (current_task.get("objective") or {}).get("title", "")
-    state = (current_task.get("state_machine") or {}).get("current_state", "unknown")
-    role = str(agent_identity.get("role", "")).strip()
     prompt_version = str(agent_identity.get("prompt_version", "")).strip() or str(agent_identity.get("methodology_version", "")).strip()
-    methodology_version = str(agent_identity.get("methodology_version", "")).strip()
-    prompt_path = pack_path / "IDENTITY_PROMPT.md"
-    prompt_loaded = prompt_path.exists()
-    prompt_digest = ""
-    prompt_preview = ""
-    if prompt_loaded:
-        prompt_text = prompt_path.read_text(encoding="utf-8", errors="ignore").strip()
-        prompt_digest = hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
-        prompt_preview = " ".join(prompt_text.split())[:180]
-
-    hard_guardrails = (((active.get("governance") or {}).get("hard_guardrails") or [])
-        if isinstance(active.get("governance"), dict)
-        else [])
-
-    review_sources = []
-    protocol_review_contract = current_task.get("protocol_review_contract") or {}
-    for src in protocol_review_contract.get("must_review_sources") or []:
-        formatted = _format_source_entry(src)
-        if formatted:
-            review_sources.append(formatted)
-
-    canonical_pointer_path = (catalog_path.parent / "session" / "active_identity.json").resolve()
-    pointer_payload = _load_json_if_exists(canonical_pointer_path)
-    authority_source = str(pointer_payload.get("authoritative_source", "")).strip() or "actor_session_store"
-    canonical_pointer_identity = str(pointer_payload.get("identity_id", "")).strip()
-    binding_version = pointer_payload.get("compatibility_projection_binding_version")
     native_chat_contract = _normalize_native_chat_headstamp_contract(
         current_task.get("native_chat_headstamp_contract_v1")
     )
@@ -541,38 +504,14 @@ def main() -> int:
         if isinstance(headstamp_semantics_template.get("clarity_freeze"), dict)
         else {}
     )
-    compiled_example_label = str(
-        headstamp_clarity_freeze.get("compiled_example_label", "generated from current runtime; re-verify each turn")
-    ).strip()
-
-    native_identity_line = (
-        f"Identity-Context: actor_id={actor_id}; identity_id={active_id}; scope={scope}; "
-        f"lock=LOCK_MATCH; source={source_layer} | Layer-Context: work_layer=instance; source_layer={source_layer}"
-    )
-    native_machine_payload = {
-        "authority_source": authority_source,
-        "actor_id": actor_id,
-        "identity_id": active_id,
-        "status": "active",
-        "pointer_path": str(canonical_pointer_path),
-        "catalog_path": str(catalog_path),
-        "pack_path": str(pack_path),
-        "prompt_version": prompt_version or "unknown",
-        "binding_version": binding_version,
-        "work_layer": "instance",
-        "source_layer": source_layer,
-    }
-    native_machine_line = _render_machine_line_with_profile(
-        native_machine_payload,
+    success_identity_line = render_native_chat_success_identity_placeholder_line(actor_id=actor_id)
+    success_machine_line = _render_machine_line_with_profile(
+        native_chat_success_placeholder_payload(actor_id=actor_id),
         field_order=native_chat_profile_doc["field_order"],
         include_extra_fields=bool(native_chat_profile_doc["include_extra_fields"]),
     )
-    failure_identity_line = (
-        f"Identity-Context: withheld; actor_id={actor_id}; requested_identity_id={active_id}; "
-        "conflict=<reason>; scope="
-        f"{scope}; source={source_layer} | Layer-Context: work_layer=instance; source_layer={source_layer}"
-    )
-    failure_machine_line = "Machine-Verification: verification_status=FAIL_REQUIRED; <machine tuple missing/conflicted>"
+    failure_identity_line = render_native_chat_failure_identity_placeholder_line(actor_id=actor_id)
+    failure_machine_line = render_native_chat_failure_machine_placeholder_line()
     prompt_hard_guard_intro = str(
         prompt_hard_guard_template.get(
             "section_intro",
@@ -586,53 +525,38 @@ def main() -> int:
     ]
     prompt_hard_guard_success_order = _sequence_to_arrow(list(prompt_hard_guard_template.get("success_order") or []))
     prompt_hard_guard_failure_order = _sequence_to_arrow(list(prompt_hard_guard_template.get("failure_order") or []))
+    compiled_brief_projection_rule = str(
+        headstamp_clarity_freeze.get(
+            "compiled_brief_projection_rule",
+            "shared compiled brief never acts as current-turn identity authority; success projection remains schematic until a machine-attested actor/session tuple resolves it at turn time.",
+        )
+    ).strip()
+    compiled_brief_default_reply_rule = str(
+        headstamp_clarity_freeze.get(
+            "compiled_brief_default_reply_rule",
+            "without a current-turn machine tuple, native chat must stay on the two-line withheld/conflict envelope.",
+        )
+    ).strip()
 
     lines = [
         "# Identity Runtime Brief",
         "",
-        f"Active identity: {active_id or 'unknown'}",
-        f"Actor binding: {actor_id}",
-        f"Resolved source layer: {source_layer}",
-        "",
         "This file is generated/maintained by identity runtime tooling.",
         "",
-        "Hard guardrails:",
-    ]
-    lines.extend([f"- {g}" for g in hard_guardrails] or ["- (none)"])
-
-    lines += [
-        "",
-        "Current objective:",
-        f"- {objective or '(not set)'}",
-        "",
-        "Current state:",
-        f"- {state}",
-        "",
-        "Identity runtime metadata:",
-        f"- role: {role or '(missing)'}",
-        f"- prompt_version: {prompt_version or '(missing)'}",
-        f"- methodology_version: {methodology_version or '(missing)'}",
-        f"- runtime_mode: {runtime_mode or '(missing)'}",
-        f"- canonical_pointer_path: {canonical_pointer_path}",
-        f"- canonical_pointer_identity: {canonical_pointer_identity or '(missing)'}",
-        f"- authority_source: {authority_source}",
+        "Artifact classification:",
+        "- artifact_class: tracked_compiled_brief_artifact",
+        "- path_status: legacy_canonical_compatibility_path",
+        "- generation_mode: source_first",
+        f"- runtime_mode_default: {runtime_mode or '(missing)'}",
+        f"- default_machine_profile: `{native_chat_machine_profile}`",
+        f"- {compiled_brief_projection_rule}",
+        f"- {compiled_brief_default_reply_rule}",
         f"- compile/runtime authority note: {str(headstamp_clarity_freeze.get('compile_runtime_authority', 'compile/replay metadata may read compatibility mirror; current-session authority must not.')).strip()}",
         "",
-        "Identity prompt activation:",
-        f"- prompt_path: {prompt_path.as_posix()}",
-        f"- prompt_loaded: {'yes' if prompt_loaded else 'no'}",
-        f"- prompt_sha256: {prompt_digest or '(missing)'}",
-        f"- prompt_preview: {prompt_preview or '(missing)'}",
-    ]
-
-    if review_sources:
-        lines += [
-            "",
-            "Runtime baseline review references:",
-        ]
-        lines.extend([f"- {s}" for s in review_sources])
-
-    lines += [
+        "Source-first generation inputs:",
+        "- `${IDENTITY_CATALOG}`",
+        "- `${IDENTITY_HOME}/<resolved_identity_id>/CURRENT_TASK.json`",
+        "- `${IDENTITY_HOME}/<resolved_identity_id>/IDENTITY_PROMPT.md`",
         "",
         "Native chat assistant-visible headstamp contract:",
         "- Apply this contract to every assistant-authored user-visible native-chat reply.",
@@ -656,6 +580,8 @@ def main() -> int:
         f"- {str(headstamp_clarity_freeze.get('sender_boundary_visibility', 'Ordinary replies should stay focused on the standard native-chat output path; governed receipt or attestation boundaries are audit/debug-only.')).strip()}",
         "- Native-chat display alone does not replace governed proof, admission, or runtime receipt ownership.",
         "- Governed repo-controlled surfaces keep the separate `Display-Headstamp` + `Machine-Verification` envelope; do not replace that contract here.",
+        f"- {compiled_brief_projection_rule}",
+        f"- {compiled_brief_default_reply_rule}",
         "- If machine verification is missing, conflicted, or polluted, do not emit a success identity line; emit a withheld/conflict `Identity-Context` plus `Machine-Verification: verification_status=FAIL_REQUIRED ...` instead.",
         "- Runtime loop is fixed: `machine-verify -> assistant-visible-inject -> next turn re-verify`.",
         "",
@@ -667,6 +593,8 @@ def main() -> int:
     lines += [
         f"- Success visible order: `{prompt_hard_guard_success_order}`.",
         f"- Failure visible order: `{prompt_hard_guard_failure_order}`.",
+        f"- Success example line 1 (schematic only; placeholders resolve only from current-turn machine tuple): `{success_identity_line}`",
+        f"- Success example line 2 (schematic only; profile `{native_chat_machine_profile}`): `{success_machine_line}`",
         f"- Failure example line 1: `{failure_identity_line}`",
         f"- Failure example line 2: `{failure_machine_line}`",
     ]
@@ -716,12 +644,13 @@ def main() -> int:
         f"- {str(headstamp_clarity_freeze.get('manual_headstamp', '`manual_headstamp` = render_origin tag only; never verdict axis.')).strip()}",
         f"- {str(headstamp_clarity_freeze.get('excluded_non_blocking', '`EXCLUDED_NON_BLOCKING` only removes blocker aggregation; it never upgrades next-hop admission.')).strip()}",
         f"- {str(headstamp_clarity_freeze.get('sender_boundary_visibility', 'Ordinary replies should stay focused on the standard native-chat output path; governed receipt or attestation boundaries are audit/debug-only.')).strip()}",
-        f"- Compile-time generated line 1 ({compiled_example_label}): `{native_identity_line}`",
-        f"- Compile-time generated line 2 ({compiled_example_label}; profile `{native_chat_machine_profile}`): `{native_machine_line}`",
+        f"- {compiled_brief_projection_rule}",
+        f"- {compiled_brief_default_reply_rule}",
         "",
         "See source:",
         "- ${IDENTITY_CATALOG}",
-        f"- ${{IDENTITY_HOME}}/{active_id or 'unknown'}/CURRENT_TASK.json  # resolved via catalog pack_path",
+        "- ${IDENTITY_HOME}/<resolved_identity_id>/CURRENT_TASK.json  # resolved via catalog pack_path",
+        "- ${IDENTITY_HOME}/<resolved_identity_id>/IDENTITY_PROMPT.md  # resolved via catalog pack_path",
         f"- {native_chat_template_path}",
         f"- {prompt_hard_guard_template_path}",
         f"- {headstamp_semantics_template_path}",

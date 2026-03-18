@@ -13,6 +13,19 @@ DEFAULT_NATIVE_CHAT_PROMPT_HARD_GUARD_TEMPLATE_REF = (
 )
 ALLOWED_NATIVE_CHAT_MACHINE_PROFILES = ("mini", "standard", "audit")
 
+PLACEHOLDER_CURRENT_SESSION_IDENTITY_ID = "<current_session_identity_id>"
+PLACEHOLDER_REQUESTED_IDENTITY_ID = "<requested_identity_id>"
+PLACEHOLDER_RESOLVED_SCOPE = "<resolved_scope>"
+PLACEHOLDER_RESOLVED_SOURCE_LAYER = "<resolved_source_layer>"
+PLACEHOLDER_RESOLVED_WORK_LAYER = "<resolved_work_layer>"
+PLACEHOLDER_RESOLVED_STATUS = "<resolved_status>"
+PLACEHOLDER_RESOLVED_PROMPT_VERSION = "<resolved_prompt_version>"
+PLACEHOLDER_RESOLVED_POINTER_PATH = "<resolved_pointer_path>"
+PLACEHOLDER_RESOLVED_CATALOG_PATH = "<resolved_catalog_path>"
+PLACEHOLDER_RESOLVED_PACK_PATH = "<resolved_pack_path>"
+PLACEHOLDER_RESOLVED_BINDING_VERSION = "<resolved_binding_version>"
+PLACEHOLDER_CONFLICT_REASON = "<reason>"
+
 PROMPT_HARD_GUARD_BEGIN = "<!-- NATIVE_CHAT_HEADSTAMP_HARD_GUARD:BEGIN -->"
 PROMPT_HARD_GUARD_END = "<!-- NATIVE_CHAT_HEADSTAMP_HARD_GUARD:END -->"
 PROMPT_HARD_GUARD_INSERT_BEFORE = "## Mission"
@@ -78,6 +91,51 @@ def normalize_native_chat_machine_profile(value: Any, *, default: str = "mini") 
 def _sequence_to_arrow(items: list[Any] | tuple[Any, ...]) -> str:
     tokens = [str(item).strip() for item in items if str(item).strip()]
     return " -> ".join(tokens)
+
+
+def native_chat_success_placeholder_payload(*, actor_id: str = "assistant:codex") -> dict[str, str]:
+    return {
+        "authority_source": "actor_session_store",
+        "actor_id": str(actor_id or "assistant:codex").strip() or "assistant:codex",
+        "identity_id": PLACEHOLDER_CURRENT_SESSION_IDENTITY_ID,
+        "status": PLACEHOLDER_RESOLVED_STATUS,
+        "pointer_path": PLACEHOLDER_RESOLVED_POINTER_PATH,
+        "catalog_path": PLACEHOLDER_RESOLVED_CATALOG_PATH,
+        "pack_path": PLACEHOLDER_RESOLVED_PACK_PATH,
+        "prompt_version": PLACEHOLDER_RESOLVED_PROMPT_VERSION,
+        "binding_version": PLACEHOLDER_RESOLVED_BINDING_VERSION,
+        "work_layer": PLACEHOLDER_RESOLVED_WORK_LAYER,
+        "source_layer": PLACEHOLDER_RESOLVED_SOURCE_LAYER,
+    }
+
+
+def render_native_chat_success_identity_placeholder_line(*, actor_id: str = "assistant:codex") -> str:
+    actor_token = str(actor_id or "assistant:codex").strip() or "assistant:codex"
+    return (
+        f"Identity-Context: actor_id={actor_token}; "
+        f"identity_id={PLACEHOLDER_CURRENT_SESSION_IDENTITY_ID}; "
+        f"scope={PLACEHOLDER_RESOLVED_SCOPE}; "
+        f"lock=LOCK_MATCH; source={PLACEHOLDER_RESOLVED_SOURCE_LAYER} | "
+        f"Layer-Context: work_layer={PLACEHOLDER_RESOLVED_WORK_LAYER}; "
+        f"source_layer={PLACEHOLDER_RESOLVED_SOURCE_LAYER}"
+    )
+
+
+def render_native_chat_failure_identity_placeholder_line(*, actor_id: str = "assistant:codex") -> str:
+    actor_token = str(actor_id or "assistant:codex").strip() or "assistant:codex"
+    return (
+        f"Identity-Context: withheld; actor_id={actor_token}; "
+        f"requested_identity_id={PLACEHOLDER_REQUESTED_IDENTITY_ID}; "
+        f"conflict={PLACEHOLDER_CONFLICT_REASON}; "
+        f"scope={PLACEHOLDER_RESOLVED_SCOPE}; "
+        f"source={PLACEHOLDER_RESOLVED_SOURCE_LAYER} | "
+        f"Layer-Context: work_layer={PLACEHOLDER_RESOLVED_WORK_LAYER}; "
+        f"source_layer={PLACEHOLDER_RESOLVED_SOURCE_LAYER}"
+    )
+
+
+def render_native_chat_failure_machine_placeholder_line() -> str:
+    return "Machine-Verification: verification_status=FAIL_REQUIRED; <machine tuple missing/conflicted>"
 
 
 def prompt_hard_guard_required_tokens(

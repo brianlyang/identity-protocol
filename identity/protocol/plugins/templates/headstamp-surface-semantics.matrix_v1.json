@@ -146,6 +146,8 @@
     "excluded_non_blocking": "`EXCLUDED_NON_BLOCKING` only removes blocker aggregation; it never upgrades next-hop admission.",
     "sender_boundary_visibility": "Ordinary replies should stay focused on the standard native-chat output path; governed receipt or attestation boundaries are audit/debug-only.",
     "compile_runtime_authority": "compile/replay metadata may read compatibility mirror; current-session authority must not.",
-    "compiled_example_label": "generated from current runtime; re-verify each turn"
+    "compiled_example_label": "generated from current runtime; re-verify each turn",
+    "compiled_brief_projection_rule": "shared compiled brief never acts as current-turn identity authority; success projection remains schematic until a machine-attested actor/session tuple resolves it at turn time.",
+    "compiled_brief_default_reply_rule": "without a current-turn machine tuple, native chat must stay on the two-line withheld/conflict envelope."
   }
 }
