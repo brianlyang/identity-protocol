@@ -176,6 +176,7 @@ SESSION_CHAIN_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/
 SESSION_CHAIN_NON_JSON_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_session_chain_wrapper_non_json.py"
 SESSION_CHAIN_SEED_BLOCK_EGRESS_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_egress_wrapper_seed_block.py"
 GATEWAY_WRAPPER_INVOKER_PATH="${WORK_ROOT}/invoke_gateway_wrapper_final_emit_probe.py"
+GATEWAY_VISIBLE_REPLY_INVOKER_PATH="${WORK_ROOT}/invoke_gateway_wrapper_visible_reply_probe.py"
 SESSION_CHAIN_SEED_BLOCK_INVOKER_PATH="${WORK_ROOT}/invoke_session_chain_seed_block_probe.py"
 export IDENTITY_PROTOCOL_GATEWAY_SIGNING_SECRET_PROBE_GATEWAY="gateway-env-secret-only"
 
@@ -365,6 +366,105 @@ if __name__ == "__main__":
     raise SystemExit(main())
 PY
 chmod +x "${GATEWAY_WRAPPER_INVOKER_PATH}"
+
+cat > "${GATEWAY_VISIBLE_REPLY_INVOKER_PATH}" <<'PY'
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import contextlib
+import io
+import json
+import sys
+import tempfile
+from pathlib import Path
+
+
+def main() -> int:
+    if len(sys.argv) != 7:
+        raise SystemExit(
+            "usage: invoke_gateway_wrapper_visible_reply_probe.py <repo_root> <catalog> <identity_id> <actor_id> <session_id> <run_id>"
+        )
+
+    repo_root = Path(sys.argv[1]).expanduser().resolve()
+    catalog_path = Path(sys.argv[2]).expanduser().resolve()
+    identity_id = str(sys.argv[3]).strip()
+    actor_id = str(sys.argv[4]).strip()
+    session_id = str(sys.argv[5]).strip()
+    run_id = str(sys.argv[6]).strip()
+
+    sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+    from gateway_wrapper_enforcement import run_gateway_wrapped_command  # type: ignore
+    from tool_vendor_governance_common import load_json  # type: ignore
+
+    with tempfile.TemporaryDirectory(prefix="gateway-visible-reply-probe-") as tmp_dir:
+        tmp_root = Path(tmp_dir).resolve()
+        out_reply_file = tmp_root / "reply.txt"
+        out_json_file = tmp_root / "compose.json"
+        blocker_file = tmp_root / "blocker.json"
+        cmd = [
+            sys.executable,
+            "scripts/final_emit_governed.py",
+            "--catalog",
+            str(catalog_path),
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+            "--actor-id",
+            actor_id,
+            "--session-id",
+            session_id,
+            "--run-id",
+            run_id,
+            "--body-text",
+            "gateway visible reply consumer probe",
+            "--work-layer",
+            "protocol",
+            "--source-layer",
+            "project",
+            "--layer-intent-text",
+            "gateway visible reply consumer parity probe",
+            "--out-reply-file",
+            str(out_reply_file),
+            "--out-json",
+            str(out_json_file),
+            "--blocker-receipt-out",
+            str(blocker_file),
+            "--outlet-channel-id",
+            "final_emit_governed",
+        ]
+
+        stdout_io = io.StringIO()
+        with contextlib.redirect_stdout(stdout_io):
+            rc, out, err = run_gateway_wrapped_command(cmd=cmd, protocol_root=repo_root)
+
+        captured_stdout_lines = [
+            str(line).strip() for line in stdout_io.getvalue().splitlines() if str(line).strip()
+        ]
+        visible_stdout_lines = [line for line in captured_stdout_lines if not line.startswith("$ ")]
+        reply_lines = out_reply_file.read_text(encoding="utf-8", errors="ignore").splitlines()
+        compose_payload = load_json(out_json_file)
+        if not isinstance(compose_payload, dict):
+            compose_payload = {}
+        visible_reply_lines = str(compose_payload.get("visible_reply", "")).splitlines()
+        summary = {
+            "gateway_visible_reply_probe_status": "PASS_REQUIRED" if rc == 0 else "FAIL_REQUIRED",
+            "returned_out_first_lines": str(out or "").splitlines()[:4],
+            "captured_stdout_first_lines": captured_stdout_lines[:6],
+            "captured_visible_stdout_first_line": str(visible_stdout_lines[0] if visible_stdout_lines else "").strip(),
+            "reply_file_first_line": str(reply_lines[0] if reply_lines else "").strip(),
+            "out_json_visible_reply_first_line": str(visible_reply_lines[0] if visible_reply_lines else "").strip(),
+            "stderr_text": str(err or "").strip(),
+        }
+        print(json.dumps(summary, ensure_ascii=False))
+        return 0 if rc == 0 else int(rc)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+PY
+chmod +x "${GATEWAY_VISIBLE_REPLY_INVOKER_PATH}"
 
 cat > "${SESSION_CHAIN_SEED_BLOCK_EGRESS_PATH}" <<'PY'
 #!/usr/bin/env python3
@@ -684,6 +784,26 @@ elif name == "session_chain_headstamp_first_line_required":
         raise SystemExit("session_chain_headstamp_first_line_required: sender consumption projection must be PASS_REQUIRED")
     if doc.get("next_hop_release_allowed") is not True:
         raise SystemExit("session_chain_headstamp_first_line_required: next_hop_release_allowed must be true")
+elif name == "gateway_visible_reply_consumed":
+    if rc != 0:
+        raise SystemExit("gateway_visible_reply_consumed: expected zero rc")
+    if str(doc.get("gateway_visible_reply_probe_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("gateway_visible_reply_consumed: expected PASS_REQUIRED summary status")
+    returned_lines = doc.get("returned_out_first_lines")
+    returned_first_line = ""
+    if isinstance(returned_lines, list) and returned_lines:
+        returned_first_line = str(returned_lines[0] or "").strip()
+    if not returned_first_line.startswith("Display-Headstamp: "):
+        raise SystemExit("gateway_visible_reply_consumed: returned output must start with Display-Headstamp")
+    visible_stdout_first_line = str(doc.get("captured_visible_stdout_first_line", "")).strip()
+    if not visible_stdout_first_line.startswith("Display-Headstamp: "):
+        raise SystemExit("gateway_visible_reply_consumed: captured stdout must expose Display-Headstamp")
+    reply_file_first_line = str(doc.get("reply_file_first_line", "")).strip()
+    if not reply_file_first_line.startswith("Identity-Context:"):
+        raise SystemExit("gateway_visible_reply_consumed: canonical reply file must keep Identity-Context first line")
+    out_json_visible_reply_first_line = str(doc.get("out_json_visible_reply_first_line", "")).strip()
+    if not out_json_visible_reply_first_line.startswith("Display-Headstamp: "):
+        raise SystemExit("gateway_visible_reply_consumed: out_json visible_reply must start with Display-Headstamp")
 elif name == "session_chain_fresh_run_receipt_seed_replay_pass":
     if rc != 0:
         raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected zero rc")
@@ -1274,6 +1394,15 @@ run_probe session_chain_headstamp_first_line_required \
   --operation inspection \
   --message "session chain headstamp required probe" \
   --json-only
+
+run_probe gateway_visible_reply_consumed \
+  python3 "${GATEWAY_VISIBLE_REPLY_INVOKER_PATH}" \
+  "${REPO_ROOT}" \
+  "${CATALOG_PATH}" \
+  "${IDENTITY_ID}" \
+  "${ACTOR_ID}" \
+  "${SESSION_ID}" \
+  "${SESSION_CHAIN_RUN_ID}-visible-reply"
 
 run_probe session_chain_protocol_lane_explicit_context_pass \
   python3 "${SESSION_CHAIN_WRAPPER_PATH}" \
