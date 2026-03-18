@@ -125,6 +125,11 @@ def main() -> int:
 
     payload["kernel_contract_digest"] = _sha256(kernel_contract_path)
     payload["overlay_digest"] = _sha256(prompt_path)
+    raw_derived_from_contract_ids = (
+        contract.get("derived_from_contract_ids")
+        if isinstance(contract.get("derived_from_contract_ids"), list)
+        else []
+    )
     if not payload["derived_from_contract_ids"]:
         payload["derived_from_contract_ids"] = [
             "rq_014_prompt_bootstrap_capability_contract_v1",
@@ -134,7 +139,7 @@ def main() -> int:
     prompt_text = prompt_path.read_text(encoding="utf-8", errors="ignore")
     native_chat_contract = task.get("native_chat_headstamp_contract_v1") or {}
     if isinstance(native_chat_contract, dict) and native_chat_contract.get("required") is True:
-        if "rq_033_native_chat_headstamp_prompt_contract_v1" not in payload["derived_from_contract_ids"]:
+        if "rq_033_native_chat_headstamp_prompt_contract_v1" not in raw_derived_from_contract_ids:
             payload["prompt_derivation_conformance_status"] = STATUS_FAIL_REQUIRED
             payload["native_chat_prompt_contract_status"] = STATUS_FAIL_REQUIRED
             payload["error_code"] = "IP-PDER-004"
