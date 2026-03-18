@@ -3236,3 +3236,9 @@ Checkpoint verdict:
 
 1. release-plane observability now separates “evidence missing” from “checks failed”.
 2. the next release-plane work can target evidence accessibility first, then checks verdicts, without re-litigating aggregation semantics.
+
+### 26.45 semantic matrices wording lock addendum (2026-03-18)
+
+1. `manual_headstamp` = render_origin tag only; never verdict axis.
+2. `EXCLUDED_NON_BLOCKING` only removes blocker aggregation; it never upgrades next-hop admission.
+3. this addendum exists to keep review wording aligned with the v1.6.6 governance-side surface/order/object mapping freeze.

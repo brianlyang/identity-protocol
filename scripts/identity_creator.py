@@ -17,6 +17,7 @@ from actor_session_common import (
     load_actor_binding_store,
     load_actor_global_compatibility_projection,
     resolve_actor_id,
+    resolve_protocol_actor_id,
 )
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
 from resolve_identity_context import (
@@ -3172,7 +3173,10 @@ def main() -> int:
     if args.command == "compile":
         compile_catalog = str(Path(args.catalog).expanduser().resolve())
         compile_output = str(Path(args.output).expanduser().resolve())
-        compile_actor_id = resolve_actor_id(str(args.actor_id or ""))
+        compile_actor_id = (
+            resolve_protocol_actor_id(str(args.actor_id or ""), allow_host_fallback=False)
+            or "assistant:codex"
+        )
         compile_session_id = str(args.session_id or "").strip()
         cmd = [
             "python3",

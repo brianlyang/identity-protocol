@@ -227,3 +227,21 @@ Interpretation contract:
    - explicit compatibility-projection provenance on shared pointers;
    - strict cross-session drift validation that only allows non-authoritative residue when provenance is present.
 3. Repair stays protocol-owned and generic; no per-identity hardcoded migration was introduced.
+
+### 10.5 Compile/replay compatibility mirror clarification (2026-03-18)
+
+1. compile/replay compatibility mirror clarification is now frozen under v1.6.10 runtime-file governance.
+2. compile/replay metadata may read compatibility mirror; current-session authority must not.
+3. compiled/runtime examples are therefore treated as compile-time projections from the currently resolved runtime, not standalone live authority.
+
+### 10.6 Compiled brief artifact class + legacy compatibility path freeze (2026-03-18)
+
+1. `identity/runtime/IDENTITY_COMPILED.md` is now reviewed as a `tracked_compiled_brief_artifact`, not an ordinary runtime evidence/log artifact.
+2. The file is a governed generated artifact and must not be interpreted as:
+   - instance-autonomous runtime state
+   - generic `protocol_controlled_mirror_artifact`
+3. The current path is frozen as a `legacy_canonical_compatibility_path`; consumer/config/docs continue to use it until a separately approved taxonomy migration lands.
+4. Source-first rule is frozen:
+   - semantic changes land in docs/template/script sources first,
+   - then `scripts/compile_identity_runtime.py` regenerates the brief,
+   - direct manual semantic editing of `identity/runtime/IDENTITY_COMPILED.md` is non-compliant.

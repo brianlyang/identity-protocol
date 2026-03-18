@@ -1753,3 +1753,48 @@ Interpretation lock:
 
 1. this does not weaken release gating.
 2. it sharpens release-plane diagnosis so “go fetch the cloud checks evidence” and “the checks failed” cannot collapse into the same opaque false boolean.
+
+### 5.34 surface semantics matrix + order separation freeze (2026-03-18)
+
+Canonical semantics source:
+
+1. `identity/protocol/plugins/templates/headstamp-surface-semantics.matrix_v1.json` is the machine-readable SSOT for the wording in this section.
+
+Processing order vs runtime loop vs visible line order:
+
+1. `processing order` belongs to control plane review and admission:
+   - `Display render -> Machine truth resolve -> Consistency review -> Business next-hop admission`
+2. `runtime loop` belongs to native chat assistant-visible injection:
+   - `machine-verify -> assistant-visible-inject -> next turn re-verify`
+3. `visible line order` is surface-specific and MUST NOT be inferred from either item 1 or 2:
+   - native chat = `Identity-Context -> Machine-Verification -> body`
+   - governed/explanatory envelope = `Display-Headstamp -> Machine-Verification -> body`
+
+Surface semantics matrix (authoritative surface -> visible literal order freeze):
+
+1. native chat visible order = `Identity-Context -> Machine-Verification -> body`
+2. governed/explanatory visible order = `Display-Headstamp -> Machine-Verification -> body`
+
+Three orders matrix (do not collapse these terms):
+
+1. processing order = control-plane review/admission sequence
+2. runtime loop = native chat injection sequence
+3. visible line order = surface literal sequence
+
+Object vs literal mapping:
+
+1. `display_headstamp` is a visibility object.
+   - native literal = `Identity-Context: ... | Layer-Context: ...`
+   - governed literal = `Display-Headstamp: Identity-Context: ... | Layer-Context: ...`
+2. `machine_headstamp` is a control-plane truth object.
+   - native literal = `Machine-Verification: ...`
+   - governed literal = `Machine-Verification: ...`
+3. `headstamp_admission_receipt` is the admission-verdict object.
+   - it is not the first visible literal on either native chat or governed surfaces
+   - it decides next-hop legality together with machine truth
+
+Interpretation lock:
+
+1. `manual_headstamp` = render_origin tag only; never verdict axis.
+2. `EXCLUDED_NON_BLOCKING` only removes blocker aggregation; it never upgrades next-hop admission.
+3. strict human-visible next hop still requires `display_headstamp` present AND `headstamp_admission_receipt.next_hop_admission_status = PASS_REQUIRED`.

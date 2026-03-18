@@ -502,9 +502,11 @@ deepening base for v1.6.1 headstamp semantics.
 
 1. For host-native chat panels without developer-wirable sender attestation, the standard closure path is:
    - `machine-verify -> assistant-visible-inject -> next turn re-verify`
-2. This path is explicitly an assistant text-layer injection contract:
+2. This path is the standard assistant-visible delivery contract for host-native chat panels:
    - it MAY provide stable visible headstamp output,
-   - it MUST NOT be described as host sender physical injection,
+   - it SHOULD be treated as the default user-facing native-chat closure path,
+   - ordinary user-facing wording SHOULD stay focused on the standard native-chat output path,
+   - governed receipt / attestation boundaries are audit/debug-only and MUST NOT dominate ordinary user-facing wording,
    - it MUST NOT replace governed proof, admission, or runtime receipt ownership.
 3. The native chat success-state visible ordering is frozen as:
    - line 1: `Identity-Context: ... | Layer-Context: ...`
@@ -529,3 +531,63 @@ deepening base for v1.6.1 headstamp semantics.
    - line 2 MUST emit `Machine-Verification: verification_status=FAIL_REQUIRED ...`,
    - implementations MUST fail-close rather than emit a stable-but-wrong identity headstamp.
 9. This freeze is the closure baseline for native chat surfaces in the current architecture boundary; future sender/renderer physical wiring is a higher-tier enhancement, not a prerequisite for v1.6.1 / v1.6.6 closure.
+10. Deterministic native-chat smoke validation SHOULD use `codex exec --ephemeral --output-last-message ...` or `bash scripts/run_native_chat_headstamp_smoke.sh`:
+   - raw stdout redirection alone is not a reliable proof surface for this path,
+   - pass/fail MUST be read from the emitted last message artifact,
+   - acceptance MUST verify the fixed ordering `Identity-Context -> Machine-Verification -> body`.
+
+### 15.10 Surface semantics matrix + order separation freeze (2026-03-18)
+
+Canonical semantics template:
+
+1. `identity/protocol/plugins/templates/headstamp-surface-semantics.matrix_v1.json` is the machine-readable SSOT for the matrices and mappings in this section.
+
+Surface semantics matrix (authoritative surface -> visible literal order freeze):
+
+1. `native chat`
+   - visible literal order = `Identity-Context -> Machine-Verification -> body`
+   - visible first literal = `Identity-Context: ... | Layer-Context: ...`
+   - truth/admission owner = `machine_headstamp + headstamp_admission_receipt + controlled-runtime artifacts`
+2. `governed wrapper`
+   - visible literal order = `Display-Headstamp -> Machine-Verification -> body`
+   - visible first literal = `Display-Headstamp: Identity-Context: ... | Layer-Context: ...`
+   - truth/admission owner = `machine_headstamp + headstamp_admission_receipt + controlled-runtime artifacts`
+3. `explanatory host-native`
+   - visible literal order = `Display-Headstamp -> Machine-Verification -> body`
+   - visible first literal = `Display-Headstamp: Identity-Context: ... | Layer-Context: ...`
+   - proof owner = explanatory only; governed proof remains external
+4. `controlled-runtime artifact`
+   - canonical artifact lead = `Identity-Context: ... | Layer-Context: ...`
+   - machine proof = structured `machine_headstamp` / `headstamp_admission_receipt`
+   - this is the authoritative proof surface for truth/admission replay
+
+Three orders matrix (do not collapse these terms):
+
+1. `processing order`
+   - applies to `v1.6.6` control plane
+   - sequence = `Display render -> Machine truth resolve -> Consistency review -> Business next-hop admission`
+2. `runtime loop`
+   - applies to `v1.6.1` native chat injection
+   - sequence = `machine-verify -> assistant-visible-inject -> next turn re-verify`
+3. `visible line order`
+   - native chat = `Identity-Context -> Machine-Verification -> body`
+   - governed/explanatory envelope = `Display-Headstamp -> Machine-Verification -> body`
+
+Object vs literal mapping:
+
+1. `display_headstamp` object
+   - native literal = `Identity-Context: ... | Layer-Context: ...`
+   - governed literal = `Display-Headstamp: Identity-Context: ... | Layer-Context: ...`
+   - `display_headstamp` text must never become an authority source
+2. `machine_headstamp`
+   - native literal = `Machine-Verification: ...`
+   - governed literal = `Machine-Verification: ...`
+   - machine truth remains machine-authoritative in the control plane
+3. `headstamp_admission_receipt`
+   - not directly rendered as the first visible literal
+   - remains the admission-verdict object for next-hop legality
+
+Interpretation lock:
+
+1. `manual_headstamp` = render_origin tag only; never verdict axis.
+2. `EXCLUDED_NON_BLOCKING` only removes blocker aggregation; it never upgrades next-hop admission.

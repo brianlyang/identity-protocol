@@ -54,19 +54,20 @@ required = [
     "Active identity: base-repo-closure-orchestrator",
     "Native chat assistant-visible headstamp contract:",
     "Success order is fixed: `Identity-Context` first, `Machine-Verification` second, then body.",
-    "This native-chat path is assistant text-layer injection, not host sender physical injection.",
+    "This native-chat path is the standard assistant-visible delivery path for host-native chat surfaces.",
+    "Ordinary replies should stay focused on the standard native-chat output path; governed receipt or attestation boundaries are audit/debug-only.",
     "Runtime loop is fixed: `machine-verify -> assistant-visible-inject -> next turn re-verify`.",
 ]
 for token in required:
     if token not in text:
         raise SystemExit(f"native_chat_compiled_brief_missing_token: {token}")
-line1 = text.index("Success line 1 example:")
-line2 = text.index("Success line 2 example (`mini`):")
+line1 = text.index("Compile-time generated line 1")
+line2 = text.index("Compile-time generated line 2")
 if line1 > line2:
     raise SystemExit("native_chat_compiled_brief_order_invalid: success line 1 must precede success line 2")
 if "Identity-Context: actor_id=assistant:codex; identity_id=base-repo-closure-orchestrator" not in text:
     raise SystemExit("native_chat_compiled_brief_identity_context_example_missing")
-if "Success line 2 example (`mini`): `Machine-Verification: authority_source=actor_session_store; identity_id=base-repo-closure-orchestrator" not in text:
+if "Compile-time generated line 2 (generated from current runtime; re-verify each turn; profile `mini`): `Machine-Verification: authority_source=actor_session_store; identity_id=base-repo-closure-orchestrator" not in text:
     raise SystemExit("native_chat_compiled_brief_machine_verification_example_missing")
 if "Native chat machine profile default: `mini`." not in text:
     raise SystemExit("native_chat_compiled_brief_machine_profile_default_missing")

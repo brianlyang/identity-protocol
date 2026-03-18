@@ -34,6 +34,8 @@ LOCK_EXIT_PREFIX = "SESSION_LANE_LOCK_EXIT_"
 IP_ERROR_CODE_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
 FINAL_EMIT_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
 REQUIRED_GATE_BUNDLE_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
+# Strict-surface lineage refs for drift validation:
+# - scripts/required_gate_bundle_runner.py
 SESSION_ID_FALLBACK = ""
 REPORT_SELECTED_PATH_FALLBACK = ""
 

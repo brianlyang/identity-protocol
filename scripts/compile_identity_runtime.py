@@ -14,7 +14,7 @@ import yaml
 from actor_session_common import (
     load_actor_binding,
     load_actor_binding_store,
-    resolve_actor_id,
+    resolve_protocol_actor_id,
 )
 from resolve_identity_context import default_local_catalog_path, resolve_identity
 
@@ -25,6 +25,9 @@ DEFAULT_REPO_CATALOG = (PROTOCOL_ROOT / "identity" / "catalog" / "identities.yam
 DEFAULT_OUTPUT = (PROTOCOL_ROOT / "identity" / "runtime" / "IDENTITY_COMPILED.md").resolve()
 DEFAULT_NATIVE_CHAT_HEADSTAMP_TEMPLATE_REF = (
     "identity/protocol/plugins/templates/native-chat-headstamp.machine_verification_profiles_v1.json"
+)
+DEFAULT_HEADSTAMP_SURFACE_SEMANTICS_TEMPLATE_REF = (
+    "identity/protocol/plugins/templates/headstamp-surface-semantics.matrix_v1.json"
 )
 ALLOWED_NATIVE_CHAT_MACHINE_PROFILES = ("mini", "standard", "audit")
 
@@ -162,6 +165,73 @@ def _fallback_native_chat_headstamp_template() -> dict[str, Any]:
     }
 
 
+def _fallback_headstamp_surface_semantics_template() -> dict[str, Any]:
+    return {
+        "template_id": "headstamp_surface_semantics_matrix_v1",
+        "version": "v1",
+        "surface_semantics_matrix": [
+            {
+                "surface_id": "native_chat_assistant_visible",
+                "surface_label": "native chat",
+                "surface_class": "host_native_chat_panel",
+                "visible_order": ["Identity-Context", "Machine-Verification", "body"],
+                "primary_human_literal": "Identity-Context: ... | Layer-Context: ...",
+                "machine_literal": "Machine-Verification: ...",
+                "proof_owner": "machine_headstamp + headstamp_admission_receipt + controlled-runtime artifacts",
+            },
+            {
+                "surface_id": "governed_wrapper_visible",
+                "surface_label": "governed wrapper",
+                "surface_class": "controlled_runtime_surface",
+                "visible_order": ["Display-Headstamp", "Machine-Verification", "body"],
+                "primary_human_literal": "Display-Headstamp: Identity-Context: ... | Layer-Context: ...",
+                "machine_literal": "Machine-Verification: ...",
+                "proof_owner": "machine_headstamp + headstamp_admission_receipt + controlled-runtime artifacts",
+            },
+        ],
+        "three_orders_matrix": [
+            {
+                "order_id": "processing_order",
+                "label": "processing order",
+                "applies_to": "v1.6.6 control plane",
+                "sequence": [
+                    "Display render",
+                    "Machine truth resolve",
+                    "Consistency review",
+                    "Business next-hop admission",
+                ],
+                "not_equivalent_to": "visible line order",
+            },
+            {
+                "order_id": "runtime_loop",
+                "label": "runtime loop",
+                "applies_to": "v1.6.1 native chat injection",
+                "sequence": [
+                    "machine-verify",
+                    "assistant-visible-inject",
+                    "next turn re-verify",
+                ],
+                "not_equivalent_to": "visible line order",
+            },
+        ],
+        "object_literal_mapping": [
+            {
+                "semantic_object": "display_headstamp",
+                "native_chat_literal": "Identity-Context: ... | Layer-Context: ...",
+                "governed_literal": "Display-Headstamp: Identity-Context: ... | Layer-Context: ...",
+                "authority_rule": "display object never becomes an authority source",
+            }
+        ],
+        "clarity_freeze": {
+            "manual_headstamp": "`manual_headstamp` = render_origin tag only; never verdict axis.",
+            "excluded_non_blocking": "`EXCLUDED_NON_BLOCKING` only removes blocker aggregation; it never upgrades next-hop admission.",
+            "sender_boundary_visibility": "Ordinary replies should stay focused on the standard native-chat output path; governed receipt or attestation boundaries are audit/debug-only.",
+            "compile_runtime_authority": "compile/replay metadata may read compatibility mirror; current-session authority must not.",
+            "compiled_example_label": "generated from current runtime; re-verify each turn",
+        },
+    }
+
+
 def _normalize_native_chat_machine_profile(value: Any, *, default: str = "mini") -> str:
     token = str(value or "").strip().lower()
     aliases = {
@@ -215,6 +285,18 @@ def _load_native_chat_headstamp_template(template_ref: str) -> tuple[dict[str, A
     return template_doc, template_path
 
 
+def _load_headstamp_surface_semantics_template(template_ref: str) -> tuple[dict[str, Any], Path]:
+    template_path = (
+        (PROTOCOL_ROOT / template_ref).resolve()
+        if template_ref and not Path(template_ref).is_absolute()
+        else Path(template_ref or DEFAULT_HEADSTAMP_SURFACE_SEMANTICS_TEMPLATE_REF).expanduser().resolve()
+    )
+    template_doc = _load_json_if_exists(template_path)
+    if not template_doc:
+        template_doc = _fallback_headstamp_surface_semantics_template()
+    return template_doc, template_path
+
+
 def _resolve_native_chat_profile_doc(
     template_doc: dict[str, Any],
     *,
@@ -248,6 +330,11 @@ def _resolve_native_chat_profile_doc(
 
 def _format_profile_fields(field_order: tuple[str, ...]) -> str:
     return ", ".join(field_order)
+
+
+def _sequence_to_arrow(items: list[Any] | tuple[Any, ...]) -> str:
+    tokens = [str(item).strip() for item in items if str(item).strip()]
+    return " -> ".join(tokens)
 
 
 def _pick_active_identity(
@@ -339,6 +426,11 @@ def _pick_active_identity(
     raise SystemExit("identity-neutral baseline with no active/default identity; pass --identity-id explicitly")
 
 
+def _resolve_compile_actor_id(explicit_actor_id: str = "") -> str:
+    actor = resolve_protocol_actor_id(explicit_actor_id, allow_host_fallback=False)
+    return actor or "assistant:codex"
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--catalog", default=str(default_local_catalog_path(start=SCRIPT_DIR)))
@@ -358,7 +450,7 @@ def main() -> int:
 
     default_id = str(catalog.get("default_identity") or "").strip()
     explicit_id = str(args.identity_id or "").strip()
-    actor_id = resolve_actor_id(args.actor_id)
+    actor_id = _resolve_compile_actor_id(args.actor_id)
     identities = catalog.get("identities") or []
     if not isinstance(identities, list):
         raise SystemExit("Invalid catalog: identities missing")
@@ -434,6 +526,17 @@ def main() -> int:
         native_chat_template,
         profile_name=native_chat_machine_profile,
     )
+    headstamp_semantics_template, headstamp_semantics_template_path = _load_headstamp_surface_semantics_template(
+        DEFAULT_HEADSTAMP_SURFACE_SEMANTICS_TEMPLATE_REF
+    )
+    headstamp_clarity_freeze = (
+        headstamp_semantics_template.get("clarity_freeze")
+        if isinstance(headstamp_semantics_template.get("clarity_freeze"), dict)
+        else {}
+    )
+    compiled_example_label = str(
+        headstamp_clarity_freeze.get("compiled_example_label", "generated from current runtime; re-verify each turn")
+    ).strip()
 
     native_identity_line = (
         f"Identity-Context: actor_id={actor_id}; identity_id={active_id}; scope={scope}; "
@@ -487,6 +590,7 @@ def main() -> int:
         f"- canonical_pointer_path: {canonical_pointer_path}",
         f"- canonical_pointer_identity: {canonical_pointer_identity or '(missing)'}",
         f"- authority_source: {authority_source}",
+        f"- compile/runtime authority note: {str(headstamp_clarity_freeze.get('compile_runtime_authority', 'compile/replay metadata may read compatibility mirror; current-session authority must not.')).strip()}",
         "",
         "Identity prompt activation:",
         f"- prompt_path: {prompt_path.as_posix()}",
@@ -507,8 +611,6 @@ def main() -> int:
         "Native chat assistant-visible headstamp contract:",
         "- Apply this contract to every assistant-authored user-visible native-chat reply.",
         "- Success order is fixed: `Identity-Context` first, `Machine-Verification` second, then body.",
-        f"- Success line 1 example: `{native_identity_line}`",
-        f"- Success line 2 example (`{native_chat_machine_profile}`): `{native_machine_line}`",
         f"- Native chat machine profile default: `{native_chat_machine_profile}`.",
         "- Available native chat machine profiles: `mini`, `standard`, `audit`.",
         (
@@ -524,15 +626,67 @@ def main() -> int:
             f"`{_format_profile_fields(_resolve_native_chat_profile_doc(native_chat_template, profile_name='audit')['field_order'])}`."
         ),
         "- Ordinary user-facing native chat replies must stay on `mini`; only expand to `standard` or `audit` when debug/audit context explicitly requires it.",
-        "- This native-chat path is assistant text-layer injection, not host sender physical injection.",
+        "- This native-chat path is the standard assistant-visible delivery path for host-native chat surfaces.",
+        f"- {str(headstamp_clarity_freeze.get('sender_boundary_visibility', 'Ordinary replies should stay focused on the standard native-chat output path; governed receipt or attestation boundaries are audit/debug-only.')).strip()}",
+        "- Native-chat display alone does not replace governed proof, admission, or runtime receipt ownership.",
         "- Governed repo-controlled surfaces keep the separate `Display-Headstamp` + `Machine-Verification` envelope; do not replace that contract here.",
         "- If machine verification is missing, conflicted, or polluted, do not emit a success identity line; emit a withheld/conflict `Identity-Context` plus `Machine-Verification: verification_status=FAIL_REQUIRED ...` instead.",
         "- Runtime loop is fixed: `machine-verify -> assistant-visible-inject -> next turn re-verify`.",
+    ]
+    lines += [
+        "",
+        "Headstamp semantic clarity freeze:",
+        f"- canonical semantic matrix template: `{headstamp_semantics_template_path.as_posix()}`.",
+        "- surface semantics matrix:",
+    ]
+    for row in headstamp_semantics_template.get("surface_semantics_matrix") or []:
+        if not isinstance(row, dict):
+            continue
+        label = str(row.get("surface_label", row.get("surface_id", ""))).strip() or "surface"
+        visible_order = _sequence_to_arrow(list(row.get("visible_order") or []))
+        primary_literal = str(row.get("primary_human_literal", "")).strip()
+        proof_owner = str(row.get("proof_owner", "")).strip()
+        lines.append(
+            f"- `{label}`: visible order = `{visible_order}`; first literal = `{primary_literal}`; proof owner = `{proof_owner}`."
+        )
+    lines += [
+        "- three orders matrix:",
+    ]
+    for row in headstamp_semantics_template.get("three_orders_matrix") or []:
+        if not isinstance(row, dict):
+            continue
+        label = str(row.get("label", row.get("order_id", ""))).strip() or "order"
+        applies_to = str(row.get("applies_to", "")).strip()
+        sequence = _sequence_to_arrow(list(row.get("sequence") or []))
+        not_equivalent_to = str(row.get("not_equivalent_to", "")).strip()
+        lines.append(
+            f"- `{label}` ({applies_to}): `{sequence}`; do not collapse with `{not_equivalent_to}`."
+        )
+    lines += [
+        "- object vs literal mapping:",
+    ]
+    for row in headstamp_semantics_template.get("object_literal_mapping") or []:
+        if not isinstance(row, dict):
+            continue
+        obj = str(row.get("semantic_object", "")).strip() or "object"
+        native_literal = str(row.get("native_chat_literal", "")).strip()
+        governed_literal = str(row.get("governed_literal", "")).strip()
+        authority_rule = str(row.get("authority_rule", "")).strip()
+        lines.append(
+            f"- `{obj}`: native literal = `{native_literal}`; governed literal = `{governed_literal}`; rule = {authority_rule}"
+        )
+    lines += [
+        f"- {str(headstamp_clarity_freeze.get('manual_headstamp', '`manual_headstamp` = render_origin tag only; never verdict axis.')).strip()}",
+        f"- {str(headstamp_clarity_freeze.get('excluded_non_blocking', '`EXCLUDED_NON_BLOCKING` only removes blocker aggregation; it never upgrades next-hop admission.')).strip()}",
+        f"- {str(headstamp_clarity_freeze.get('sender_boundary_visibility', 'Ordinary replies should stay focused on the standard native-chat output path; governed receipt or attestation boundaries are audit/debug-only.')).strip()}",
+        f"- Compile-time generated line 1 ({compiled_example_label}): `{native_identity_line}`",
+        f"- Compile-time generated line 2 ({compiled_example_label}; profile `{native_chat_machine_profile}`): `{native_machine_line}`",
         "",
         "See source:",
         "- ${IDENTITY_CATALOG}",
         f"- ${{IDENTITY_HOME}}/{active_id or 'unknown'}/CURRENT_TASK.json  # resolved via catalog pack_path",
         f"- {native_chat_template_path}",
+        f"- {headstamp_semantics_template_path}",
     ]
 
     output = Path(args.output).expanduser().resolve()

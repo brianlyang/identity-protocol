@@ -1,0 +1,150 @@
+{
+  "template_id": "headstamp_surface_semantics_matrix_v1",
+  "version": "v1",
+  "surface_semantics_matrix": [
+    {
+      "surface_id": "native_chat_assistant_visible",
+      "surface_label": "native chat",
+      "surface_class": "host_native_chat_panel",
+      "visible_order": [
+        "Identity-Context",
+        "Machine-Verification",
+        "body"
+      ],
+      "primary_human_literal": "Identity-Context: ... | Layer-Context: ...",
+      "machine_literal": "Machine-Verification: ...",
+      "proof_owner": "machine_headstamp + headstamp_admission_receipt + controlled-runtime artifacts",
+      "attestation_mode": "assistant_text_injection_not_native_machine_attestation",
+      "next_hop_rule": "visible success lines never upgrade next-hop admission by themselves"
+    },
+    {
+      "surface_id": "governed_wrapper_visible",
+      "surface_label": "governed wrapper",
+      "surface_class": "controlled_runtime_surface",
+      "visible_order": [
+        "Display-Headstamp",
+        "Machine-Verification",
+        "body"
+      ],
+      "primary_human_literal": "Display-Headstamp: Identity-Context: ... | Layer-Context: ...",
+      "machine_literal": "Machine-Verification: ...",
+      "proof_owner": "machine_headstamp + headstamp_admission_receipt + controlled-runtime artifacts",
+      "attestation_mode": "controlled_runtime_governed_output",
+      "next_hop_rule": "strict user-visible next hop still requires PASS_REQUIRED admission"
+    },
+    {
+      "surface_id": "explanatory_host_native_envelope",
+      "surface_label": "explanatory host-native",
+      "surface_class": "host_native_chat_panel",
+      "visible_order": [
+        "Display-Headstamp",
+        "Machine-Verification",
+        "body"
+      ],
+      "primary_human_literal": "Display-Headstamp: Identity-Context: ... | Layer-Context: ...",
+      "machine_literal": "Machine-Verification: verification_source=not_claimed; ...",
+      "proof_owner": "explanatory only; governed proof remains external",
+      "attestation_mode": "not_claimed_explanatory_only",
+      "next_hop_rule": "must remain FAIL_REQUIRED even when display is visible"
+    },
+    {
+      "surface_id": "controlled_runtime_artifact",
+      "surface_label": "controlled-runtime artifact",
+      "surface_class": "machine_artifact",
+      "visible_order": [
+        "Identity-Context artifact line",
+        "Machine-Verification receipt or projection",
+        "structured payload"
+      ],
+      "primary_human_literal": "Identity-Context: ... | Layer-Context: ...",
+      "machine_literal": "machine_headstamp / receipt fields",
+      "proof_owner": "authoritative proof surface",
+      "attestation_mode": "machine_authoritative",
+      "next_hop_rule": "consumed by control plane for truth and admission"
+    }
+  ],
+  "three_orders_matrix": [
+    {
+      "order_id": "processing_order",
+      "label": "processing order",
+      "applies_to": "v1.6.6 control plane",
+      "sequence": [
+        "Display render",
+        "Machine truth resolve",
+        "Consistency review",
+        "Business next-hop admission"
+      ],
+      "not_equivalent_to": "visible line order"
+    },
+    {
+      "order_id": "runtime_loop",
+      "label": "runtime loop",
+      "applies_to": "v1.6.1 native chat injection",
+      "sequence": [
+        "machine-verify",
+        "assistant-visible-inject",
+        "next turn re-verify"
+      ],
+      "not_equivalent_to": "visible line order"
+    },
+    {
+      "order_id": "native_chat_visible_order",
+      "label": "native chat visible order",
+      "applies_to": "native chat assistant-visible injection",
+      "sequence": [
+        "Identity-Context",
+        "Machine-Verification",
+        "body"
+      ],
+      "not_equivalent_to": "processing order"
+    },
+    {
+      "order_id": "governed_visible_order",
+      "label": "governed visible order",
+      "applies_to": "governed wrapper or explanatory envelope",
+      "sequence": [
+        "Display-Headstamp",
+        "Machine-Verification",
+        "body"
+      ],
+      "not_equivalent_to": "processing order"
+    }
+  ],
+  "object_literal_mapping": [
+    {
+      "semantic_object": "display_headstamp",
+      "object_layer": "visibility",
+      "native_chat_literal": "Identity-Context: ... | Layer-Context: ...",
+      "governed_literal": "Display-Headstamp: Identity-Context: ... | Layer-Context: ...",
+      "authority_rule": "display object never becomes an authority source"
+    },
+    {
+      "semantic_object": "machine_headstamp",
+      "object_layer": "control_plane_truth",
+      "native_chat_literal": "Machine-Verification: ...",
+      "governed_literal": "Machine-Verification: ...",
+      "authority_rule": "machine truth stays machine-authoritative in control plane"
+    },
+    {
+      "semantic_object": "headstamp_admission_receipt",
+      "object_layer": "control_plane_admission",
+      "native_chat_literal": "not directly rendered; projected through Machine-Verification status fields when needed",
+      "governed_literal": "not directly rendered; governs admission and correction state",
+      "authority_rule": "admission verdict object for next-hop legality"
+    },
+    {
+      "semantic_object": "identity_context_literal",
+      "object_layer": "visible_literal",
+      "native_chat_literal": "Identity-Context: ... | Layer-Context: ...",
+      "governed_literal": "embedded after Display-Headstamp prefix",
+      "authority_rule": "literal projection only; not a separate truth object"
+    }
+  ],
+  "clarity_freeze": {
+    "manual_headstamp": "`manual_headstamp` = render_origin tag only; never verdict axis.",
+    "excluded_non_blocking": "`EXCLUDED_NON_BLOCKING` only removes blocker aggregation; it never upgrades next-hop admission.",
+    "sender_boundary_visibility": "Ordinary replies should stay focused on the standard native-chat output path; governed receipt or attestation boundaries are audit/debug-only.",
+    "compile_runtime_authority": "compile/replay metadata may read compatibility mirror; current-session authority must not.",
+    "compiled_example_label": "generated from current runtime; re-verify each turn"
+  }
+}

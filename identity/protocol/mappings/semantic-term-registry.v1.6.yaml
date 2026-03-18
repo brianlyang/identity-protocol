@@ -60,6 +60,30 @@ terms:
       - instance_runtime
       - stream_v1_6_10
 
+  - term_id: tracked_compiled_brief_artifact
+    canonical_term: tracked_compiled_brief_artifact
+    aliases:
+      - "tracked compiled brief"
+      - "governed generated artifact"
+      - "compiled runtime brief artifact"
+    semantics: "Tracked generated brief artifact consumed by config/docs/review as a compiled model-instructions brief; it is not ordinary runtime evidence/log and not instance-autonomous runtime state."
+    allowed_scope:
+      - compiled_brief
+      - compatibility_path
+      - stream_v1_6_10
+
+  - term_id: legacy_canonical_compatibility_path
+    canonical_term: legacy_canonical_compatibility_path
+    aliases:
+      - "legacy canonical path"
+      - "compatibility canonical path"
+      - "兼容 canonical 路径"
+    semantics: "Still-valid canonical compatibility path retained during governance freeze or migration staging; consumers continue to use it until a separately approved migration closes."
+    allowed_scope:
+      - compatibility_path
+      - migration_governance
+      - stream_v1_6_10
+
 forbidden_phrases:
   - phrase: "multi-active state is a protocol violation"
     replacement: "catalog_multi_active is allowed; enforce session_primary_binding in strict lanes"
@@ -72,6 +96,14 @@ forbidden_phrases:
   - phrase: "`runtime/gate/protocol_ingress_wrapper.py`, `runtime/gate/protocol_egress_wrapper.py`, and `runtime/gate/protocol_session_chain_wrapper.py` are governed mirrors, not source of truth."
     replacement: "the three wrapper files are protocol_generated_gateway_shell, while protocol_gateway_contract.json is a protocol_controlled_mirror_artifact"
     rationale: "Prevents gateway shell and mirror artifact semantics from being conflated."
+
+  - phrase: "`identity/runtime/IDENTITY_COMPILED.md` is an ordinary runtime artifact."
+    replacement: "`identity/runtime/IDENTITY_COMPILED.md` is a tracked_compiled_brief_artifact at a legacy_canonical_compatibility_path."
+    rationale: "Prevents the compiled brief from being misclassified as runtime evidence/log pollution."
+
+  - phrase: "`identity/runtime/IDENTITY_COMPILED.md` is an instance-autonomous runtime state file."
+    replacement: "`identity/runtime/IDENTITY_COMPILED.md` is a tracked_compiled_brief_artifact and must be updated through source-first compile flow."
+    rationale: "Prevents autonomous runtime-state semantics from being incorrectly applied to the compiled brief."
 
 scan_roots:
   - identity/protocol/IDENTITY_PROTOCOL.md

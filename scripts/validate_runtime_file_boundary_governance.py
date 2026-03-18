@@ -28,6 +28,8 @@ DEFAULT_GOV_DOC = "docs/governance/identity-runtime-file-governance-control-plan
 DEFAULT_REVIEW_DOC = "docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md"
 DEFAULT_STREAM_REGISTRY = "identity/protocol/mappings/stream-doc-registry.current.yaml"
 DEFAULT_SEMANTIC_REGISTRY = "identity/protocol/mappings/semantic-term-registry.current.yaml"
+TRACKED_COMPILED_BRIEF_ARTIFACT_TERM = "tracked_compiled_brief_artifact"
+LEGACY_CANONICAL_COMPATIBILITY_PATH_TERM = "legacy_canonical_compatibility_path"
 
 
 def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
@@ -102,6 +104,8 @@ def main() -> int:
         "canonical_shell_term": PROTOCOL_GENERATED_GATEWAY_SHELL_TERM,
         "canonical_mirror_term": PROTOCOL_CONTROLLED_MIRROR_ARTIFACT_TERM,
         "canonical_autonomous_term": INSTANCE_AUTONOMOUS_RUNTIME_TERM,
+        "compiled_brief_term": TRACKED_COMPILED_BRIEF_ARTIFACT_TERM,
+        "legacy_compatibility_term": LEGACY_CANONICAL_COMPATIBILITY_PATH_TERM,
         "canonical_shell_paths": list(PROTOCOL_GENERATED_GATEWAY_SHELL_PATHS),
         "canonical_mirror_paths": list(PROTOCOL_CONTROLLED_MIRROR_ARTIFACT_PATHS),
         "governance_doc_missing_tokens": [],
@@ -164,14 +168,26 @@ def main() -> int:
         "Runtime default is `instance_autonomous_runtime` unless explicitly declared as `protocol_controlled_mirror_artifact`.",
         "PROTOCOL_GENERATED_GATEWAY_SHELL_PATHS",
         "PROTOCOL_CONTROLLED_MIRROR_ARTIFACT_PATHS",
+        TRACKED_COMPILED_BRIEF_ARTIFACT_TERM,
+        LEGACY_CANONICAL_COMPATIBILITY_PATH_TERM,
+        "identity/runtime/IDENTITY_COMPILED.md",
+        "governed generated artifact",
+        "not ordinary runtime evidence/log artifact",
+        "not instance-autonomous runtime state",
+        "source-first",
     ]
     review_required_tokens = [
         PROTOCOL_GENERATED_GATEWAY_SHELL_TERM,
         PROTOCOL_CONTROLLED_MIRROR_ARTIFACT_TERM,
         INSTANCE_AUTONOMOUS_RUNTIME_TERM,
+        TRACKED_COMPILED_BRIEF_ARTIFACT_TERM,
+        LEGACY_CANONICAL_COMPATIBILITY_PATH_TERM,
         "scripts/validate_runtime_file_boundary_governance.py",
         "scripts/ci/run_semantic_clarity_probes_ci.sh",
         HOST_GATEWAY_DEFAULT_RUNTIME_CONTRACT,
+        "identity/runtime/IDENTITY_COMPILED.md",
+        "governed generated artifact",
+        "direct manual semantic editing",
     ]
     payload["governance_doc_missing_tokens"] = _missing_tokens(governance_text, governance_required_tokens)
     payload["review_doc_missing_tokens"] = _missing_tokens(review_text, review_required_tokens)
@@ -192,6 +208,8 @@ def main() -> int:
             PROTOCOL_GENERATED_GATEWAY_SHELL_TERM,
             PROTOCOL_CONTROLLED_MIRROR_ARTIFACT_TERM,
             INSTANCE_AUTONOMOUS_RUNTIME_TERM,
+            TRACKED_COMPILED_BRIEF_ARTIFACT_TERM,
+            LEGACY_CANONICAL_COMPATIBILITY_PATH_TERM,
         )
         if term not in canonical_terms
     ]

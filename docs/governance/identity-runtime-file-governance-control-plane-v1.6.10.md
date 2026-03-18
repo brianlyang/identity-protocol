@@ -197,7 +197,7 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
    - `scripts/ci/run_downsink_path_immutability_probes_ci.sh`
 6. if any new v1.6.10 clause lacks the above machine surfaces, it is a fail-close anti-forget regression.
 
-## 11) Addendum (2026-03-17): actor-session authority residue belongs to runtime-file governance
+## 10) Addendum (2026-03-17): actor-session authority residue belongs to runtime-file governance
 
 1. `session/actors/*.json` are instance-runtime authoritative state files, but their persisted schema must remain
    protocol-governed so session-primary authority is machine-readable.
@@ -223,9 +223,7 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
 6. response/headstamp authority-consumer drift must fail-close through:
    - `scripts/validate_response_authority_consumer_semantics.py`
    - negative probe: missing `session_id` passthrough / `resolve_actor_id()` host fallback / compatibility-pointer literal reuse.
-   - any script that calls `resolve_stamp_context()` or `validate_runtime_egress_identity_authority()` must either
-     live in the validator default scan set or declare `AUTHORITY_CONSUMER_EXEMPT = True`; unregistered consumers
-     fail-close before they become silent authority side doors.
+
 7. strict actor-entry orchestrators that launch governed headstamp / final-emit / reply-coherence checks must not
    ship a hidden `assistant:codex` fallback; they must either use `resolve_required_protocol_actor_id()` or fail-close
    with `IP-ACTOR-ENTRY-001` before they fan out strict checks.
@@ -245,7 +243,31 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
       actor-global compatibility provenance for a different session;
     - absent that provenance, shared-pointer drift remains fail-close.
 
-## 10) References
+### 10.1 Addendum (2026-03-18): compile/replay compatibility mirror clarification
+
+1. compile/replay metadata may read compatibility mirror; current-session authority must not.
+2. generated compile/runtime examples MUST be labeled as compile-time projections from the currently resolved runtime and MUST NOT be described as standalone live authority.
+3. `session/active_identity.json` and `session/mirror/current.json` may therefore appear in compiled briefs or replay metadata as compatibility context, but actor-session authority still resolves from the authoritative actor/session store.
+
+### 10.2 Addendum (2026-03-18): compiled brief artifact class + legacy compatibility path freeze
+
+1. `identity/runtime/IDENTITY_COMPILED.md` is frozen as a `tracked_compiled_brief_artifact`.
+2. Its artifact attributes are:
+   - `governed generated artifact`
+   - not ordinary runtime evidence/log artifact
+   - not instance-autonomous runtime state
+   - not a generic `protocol_controlled_mirror_artifact`
+3. Its current location `identity/runtime/IDENTITY_COMPILED.md` is frozen as a `legacy_canonical_compatibility_path`.
+4. Until directory taxonomy governance separately approves a new family:
+   - consumer/config/docs continue to use the current path,
+   - no new canonical directory family may be created for compiled briefs,
+   - no canonical path migration may be bundled into ordinary feature work.
+5. `identity/runtime/IDENTITY_COMPILED.md` must follow source-first generation only:
+   - semantic/content changes land in governance/template/script sources first,
+   - then `scripts/compile_identity_runtime.py` regenerates the compiled brief,
+   - direct manual semantic editing of the compiled brief is forbidden.
+
+## 11) References
 
 1. `docs/governance/identity-host-unique-channel-governance-v1.6.6.md`
 2. `docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md`
