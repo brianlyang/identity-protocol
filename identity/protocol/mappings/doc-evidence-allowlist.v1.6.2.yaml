@@ -215,3 +215,19 @@ strict_docs:
     allowed_activity_patterns:
       - '^activity/evidence/v1610-runtime-file-governance/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
       - '^activity/evidence/v1610-runtime-file-governance/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
+
+  docs/governance/agent-relay-final-answer-governance-v1.6.11.md:
+    max_activity_refs: 20
+    allowed_activity_patterns:
+      - '^activity/evidence/v1611-agent-relay-final-answer/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v1611-agent-relay-final-answer/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
+      - '^activity/evidence/v1611-agent-relay-final-answer/\d{4}-\d{2}-\d{2}/relay_receipt_snapshot\..+\.json$'
+      - '^activity/evidence/v1611-agent-relay-final-answer/\d{4}-\d{2}-\d{2}/relay_probe_matrix\..+\.json$'
+
+  docs/review/protocol-remediation-audit-ledger-v1.6.11-agent-relay-final-answer.md:
+    max_activity_refs: 20
+    allowed_activity_patterns:
+      - '^activity/evidence/v1611-agent-relay-final-answer/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v1611-agent-relay-final-answer/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
+      - '^activity/evidence/v1611-agent-relay-final-answer/\d{4}-\d{2}-\d{2}/relay_receipt_snapshot\..+\.json$'
+      - '^activity/evidence/v1611-agent-relay-final-answer/\d{4}-\d{2}-\d{2}/relay_probe_matrix\..+\.json$'

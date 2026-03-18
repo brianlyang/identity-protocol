@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "contract_id": "agent_relay_final_answer_contract_v1",
+  "surface_id": "agent_relay_final_answer",
+  "status": "ACTIVE",
+  "description": "Govern relay semantics when an outer agent delivers an identity instance final answer to the user.",
+  "validator_id": "scripts/validate_agent_relay_final_answer.py",
+  "ci_probe_script": "scripts/ci/run_agent_relay_final_answer_probes_ci.sh",
+  "receipt_schema_version": "agent_relay_final_answer_receipt_v1",
+  "required_common_fields": [
+    "schema_version",
+    "relay_surface",
+    "relay_mode",
+    "target_identity_id",
+    "question_tag",
+    "source_artifact",
+    "source_snapshot_ts",
+    "relay_text",
+    "delivery_authority"
+  ],
+  "relay_modes": {
+    "exact": {
+      "required_fields": [
+        "schema_version",
+        "relay_surface",
+        "relay_mode",
+        "target_identity_id",
+        "question_tag",
+        "source_artifact",
+        "source_snapshot_ts",
+        "relay_text",
+        "delivery_authority"
+      ],
+      "delivery_authority": "identity_instance_output",
+      "source_match_required": true,
+      "allow_identity_headstamp": true,
+      "allow_content_rewrite": false
+    },
+    "summary": {
+      "required_fields": [
+        "schema_version",
+        "relay_surface",
+        "relay_mode",
+        "target_identity_id",
+        "question_tag",
+        "source_artifact",
+        "source_snapshot_ts",
+        "relay_text",
+        "delivery_authority"
+      ],
+      "delivery_authority": "ungoverned_operator_summary",
+      "source_match_required": false,
+      "allow_identity_headstamp": false,
+      "allow_content_rewrite": true
+    }
+  },
+  "summary_forbidden_prefixes": [
+    "Identity-Context:",
+    "Display-Headstamp:",
+    "Machine-Verification:"
+  ],
+  "allowed_source_artifact_kinds": [
+    "leader_snapshot_item",
+    "leader_snapshot_payload",
+    "final_report_json",
+    "plain_text_final_answer"
+  ],
+  "error_codes": {
+    "missing_or_invalid_receipt": "IP-RELAY-001",
+    "source_artifact_unavailable": "IP-RELAY-002",
+    "exact_relay_mismatch": "IP-RELAY-003",
+    "summary_impersonates_governed_output": "IP-RELAY-004",
+    "invalid_relay_mode": "IP-RELAY-005",
+    "source_identity_mismatch": "IP-RELAY-006",
+    "source_snapshot_ts_mismatch": "IP-RELAY-007"
+  },
+  "governance_doc": "docs/governance/agent-relay-final-answer-governance-v1.6.11.md",
+  "review_doc": "docs/review/protocol-remediation-audit-ledger-v1.6.11-agent-relay-final-answer.md"
+}

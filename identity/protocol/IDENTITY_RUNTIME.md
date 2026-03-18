@@ -210,3 +210,25 @@ Hard semantics:
 1. Skill sync drift is hash-based (`sha256`) by default and evaluates multi-root replicas (`workspace`, `runtime`, `codex_home`) as one governed tuple.
 2. Drift detection must distinguish “missing” vs “content divergence” and preserve machine-readable error families (`IP-SDRIFT-*`).
 3. Strict lane cannot claim pass when required skill artifacts diverge across roots.
+
+### rq_042_agent_relay_final_answer_contract_v1
+
+Required receipt fields:
+
+- `relay_surface`
+- `relay_mode`
+- `target_identity_id`
+- `question_tag`
+- `source_artifact`
+- `source_snapshot_ts`
+- `relay_text`
+- `delivery_authority`
+- `agent_relay_final_answer_status`
+- `stale_reasons`
+
+Hard semantics:
+
+1. When an outer agent delivers an identity instance final answer to the user, the delivery surface must be `agent_relay_final_answer`; free-form outer replies cannot impersonate governed instance output.
+2. `relay_mode=exact` is the only mode allowed to carry governed headstamp or canonical final-answer text, and the delivered text must byte-match the governed source artifact.
+3. `relay_mode=summary` must classify as `ungoverned_operator_summary` and must not begin with governed-output prefixes such as `Identity-Context:`, `Display-Headstamp:`, or `Machine-Verification:`.
+4. Relay receipts must stay anchored to a governed source artifact (`leader_snapshot`, `final_report`, or canonical plain-text final answer) with matching `target_identity_id` and `source_snapshot_ts`; mismatches are fail-close.
