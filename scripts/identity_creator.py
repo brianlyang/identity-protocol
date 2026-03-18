@@ -1067,8 +1067,12 @@ def _activate_identity(
             str(local_catalog),
             "--output",
             str((protocol_root_resolved / "identity" / "runtime" / "IDENTITY_COMPILED.md").resolve()),
+            "--identity-id",
+            identity_id,
             "--actor-id",
             actor_id_resolved,
+            "--session-id",
+            session_id_resolved,
         ]
         rc = _run(compile_cmd)
         if rc != 0:
@@ -1672,6 +1676,7 @@ def main() -> int:
     p_compile.add_argument("--catalog", default=local_catalog_default)
     p_compile.add_argument("--identity-id", default="")
     p_compile.add_argument("--actor-id", default="")
+    p_compile.add_argument("--session-id", default="", help="optional actor session id for session-primary compile resolution")
     p_compile.add_argument("--output", default="identity/runtime/IDENTITY_COMPILED.md")
     p_compile.add_argument("--check", action="store_true", help="fail if compile output is not stable")
 
@@ -3168,6 +3173,7 @@ def main() -> int:
         compile_catalog = str(Path(args.catalog).expanduser().resolve())
         compile_output = str(Path(args.output).expanduser().resolve())
         compile_actor_id = resolve_actor_id(str(args.actor_id or ""))
+        compile_session_id = str(args.session_id or "").strip()
         cmd = [
             "python3",
             "scripts/compile_identity_runtime.py",
@@ -3180,6 +3186,8 @@ def main() -> int:
             cmd.extend(["--identity-id", str(args.identity_id).strip()])
         if compile_actor_id:
             cmd.extend(["--actor-id", compile_actor_id])
+        if compile_session_id:
+            cmd.extend(["--session-id", compile_session_id])
         rc = _run(cmd)
         if rc != 0:
             return rc

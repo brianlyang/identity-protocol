@@ -13,7 +13,7 @@ import yaml
 
 from actor_session_common import (
     load_actor_binding,
-    load_actor_global_compatibility_projection,
+    load_actor_binding_store,
     resolve_actor_id,
 )
 from resolve_identity_context import default_local_catalog_path, resolve_identity
@@ -256,6 +256,7 @@ def _pick_active_identity(
     *,
     explicit_id: str,
     actor_id: str,
+    session_id: str,
     default_id: str,
 ) -> dict[str, Any]:
     if explicit_id:
@@ -264,27 +265,65 @@ def _pick_active_identity(
             raise SystemExit(f"identity_id not found in identities: {explicit_id}")
         return active
 
-    actor_binding = load_actor_binding(
-        catalog_path.resolve(),
-        actor_id,
-        identity_id="",
-    )
-    if not actor_binding:
-        actor_binding = load_actor_global_compatibility_projection(
+    actor = str(actor_id or "").strip()
+    sid = str(session_id or "").strip()
+    if actor and sid:
+        actor_binding = load_actor_binding(
             catalog_path.resolve(),
             actor_id,
+            session_id=sid,
         )
-    bound_identity_id = str(actor_binding.get("identity_id", "")).strip()
-    if bound_identity_id:
+        bound_identity_id = str(actor_binding.get("identity_id", "")).strip()
+        if not bound_identity_id:
+            raise SystemExit(
+                "session-primary actor binding missing; "
+                f"pass --identity-id explicitly or repair actor/session binding: actor={actor} session_id={sid}"
+            )
         active = next((x for x in identities if isinstance(x, dict) and x.get("id") == bound_identity_id), None)
         if not active:
-            raise SystemExit(f"actor-bound identity not found in identities: actor={actor_id} identity={bound_identity_id}")
+            raise SystemExit(
+                f"actor session-bound identity not found in identities: actor={actor} session={sid} identity={bound_identity_id}"
+            )
         if str(active.get("status", "")).lower() != "active":
             raise SystemExit(
-                f"actor-bound identity is not active: actor={actor_id} identity={bound_identity_id} "
-                f"status={active.get('status', '')}"
+                f"actor session-bound identity is not active: actor={actor} session={sid} "
+                f"identity={bound_identity_id} status={active.get('status', '')}"
             )
         return active
+
+    if actor:
+        actor_binding = load_actor_binding(
+            catalog_path.resolve(),
+            actor,
+            identity_id="",
+        )
+        bound_identity_id = str(actor_binding.get("identity_id", "")).strip()
+        if bound_identity_id:
+            active = next((x for x in identities if isinstance(x, dict) and x.get("id") == bound_identity_id), None)
+            if not active:
+                raise SystemExit(
+                    f"actor-bound identity not found in identities: actor={actor} identity={bound_identity_id}"
+                )
+            if str(active.get("status", "")).lower() != "active":
+                raise SystemExit(
+                    f"actor-bound identity is not active: actor={actor} identity={bound_identity_id} "
+                    f"status={active.get('status', '')}"
+                )
+            return active
+
+        store = load_actor_binding_store(catalog_path.resolve(), actor)
+        bound_identity_ids = sorted(
+            {
+                str(item.get("identity_id", "")).strip()
+                for item in (store.get("bindings") or [])
+                if isinstance(item, dict) and str(item.get("identity_id", "")).strip()
+            }
+        )
+        if bound_identity_ids:
+            raise SystemExit(
+                "actor has multiple session-primary identities; "
+                f"pass --session-id or --identity-id explicitly: actor={actor} identities={','.join(bound_identity_ids)}"
+            )
 
     if default_id:
         active = next((x for x in identities if isinstance(x, dict) and x.get("id") == default_id), None)
@@ -306,6 +345,11 @@ def main() -> int:
     p.add_argument("--output", default=str(DEFAULT_OUTPUT))
     p.add_argument("--identity-id", default="", help="explicit identity id for identity-neutral baseline")
     p.add_argument("--actor-id", default="", help="optional actor id used for actor-scoped identity resolution")
+    p.add_argument(
+        "--session-id",
+        default="",
+        help="optional session-primary selector (run:<id>) used for multi-session actor resolution",
+    )
     args = p.parse_args()
 
     catalog_path = Path(args.catalog).expanduser().resolve()
@@ -323,6 +367,7 @@ def main() -> int:
         identities,
         explicit_id=explicit_id,
         actor_id=actor_id,
+        session_id=str(args.session_id or "").strip(),
         default_id=default_id,
     )
     active_id = str(active.get("id", "")).strip()

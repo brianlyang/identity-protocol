@@ -487,6 +487,7 @@ PY
 echo "[info] semantic clarity probes: cross-session compatibility projection drift lane"
 mkdir -p "$TMP_ROOT/cross-session-drift/.identity/session/mirror" "$TMP_ROOT/cross-session-drift/.identity/session/actors"
 mkdir -p "$TMP_ROOT/cross-session-drift/.identity/alpha" "$TMP_ROOT/cross-session-drift/.identity/beta"
+mkdir -p "$TMP_ROOT/cross-session-drift/identity-protocol-local"
 cat > "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" <<'YAML'
 identities:
   - id: alpha
@@ -508,6 +509,40 @@ pack_root = Path(sys.argv[2]).resolve()
 raw = catalog.read_text(encoding="utf-8")
 catalog.write_text(raw.replace("__PACK_ROOT__", str(pack_root)), encoding="utf-8")
 PY
+cat > "$TMP_ROOT/cross-session-drift/.identity/alpha/CURRENT_TASK.json" <<'JSON'
+{
+  "agent_identity": {
+    "role": "alpha-role",
+    "prompt_version": "probe-alpha"
+  },
+  "objective": {
+    "title": "Alpha compile probe"
+  },
+  "state_machine": {
+    "current_state": "ready"
+  },
+  "native_chat_headstamp_contract_v1": {
+    "default_machine_profile": "mini"
+  }
+}
+JSON
+cat > "$TMP_ROOT/cross-session-drift/.identity/beta/CURRENT_TASK.json" <<'JSON'
+{
+  "agent_identity": {
+    "role": "beta-role",
+    "prompt_version": "probe-beta"
+  },
+  "objective": {
+    "title": "Beta compile probe"
+  },
+  "state_machine": {
+    "current_state": "ready"
+  },
+  "native_chat_headstamp_contract_v1": {
+    "default_machine_profile": "mini"
+  }
+}
+JSON
 python3 scripts/sync_session_identity.py \
   --catalog "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" \
   --identity-id alpha \
@@ -639,6 +674,40 @@ pointer = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
 assert "compatibility_projection_drift=no" in text, text
 assert pointer.get("identity_id", "") == "beta", pointer
 print("[PASS] strict pointer validation follows the approved compatibility projection")
+PY
+
+echo "[info] semantic clarity probes: compile runtime session-primary lane"
+python3 scripts/compile_identity_runtime.py \
+  --catalog "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" \
+  --actor-id assistant:codex \
+  --session-id run:alpha \
+  --output "$TMP_ROOT/cross-session-drift/compiled-alpha.md"
+python3 - "$TMP_ROOT/cross-session-drift/compiled-alpha.md" <<'PY'
+from pathlib import Path
+import sys
+text = Path(sys.argv[1]).read_text(encoding="utf-8")
+assert "Active identity: alpha" in text, text
+assert "Identity-Context: actor_id=assistant:codex; identity_id=alpha;" in text, text
+print("[PASS] compile runtime follows session-primary identity instead of compatibility projection")
+PY
+set +e
+python3 scripts/compile_identity_runtime.py \
+  --catalog "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" \
+  --actor-id assistant:codex \
+  --output "$TMP_ROOT/cross-session-drift/compiled-ambiguous.md" > "$TMP_ROOT/cross_session_compile_ambiguous.log" 2>&1
+rc=$?
+set -e
+if [[ "$rc" -eq 0 ]]; then
+  echo "[FAIL] compile runtime should fail-close when actor has multiple session-primary identities and no session-id"
+  cat "$TMP_ROOT/cross_session_compile_ambiguous.log"
+  exit 1
+fi
+python3 - "$TMP_ROOT/cross_session_compile_ambiguous.log" <<'PY'
+from pathlib import Path
+import sys
+text = Path(sys.argv[1]).read_text(encoding="utf-8")
+assert "actor has multiple session-primary identities; pass --session-id or --identity-id explicitly" in text, text
+print("[PASS] compile runtime fail-closes on ambiguous actor-only resolution")
 PY
 
 cat > "$TMP_ROOT/cross-session-drift/inspection-override.json" <<'JSON'

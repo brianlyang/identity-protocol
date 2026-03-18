@@ -277,6 +277,9 @@ def main() -> int:
     require_mirror_effective = bool(args.require_mirror or args.strict_session_primary)
     compatibility_projection_drift_detected = False
     compatibility_projection_payload: dict[str, Any] = {}
+    compatibility_projection_drift_check_enabled = bool(
+        args.strict_session_primary and actor_id and session_id
+    )
 
     ok, reason, pointer_payload = _validate_pointer(
         pointer_path=canonical_out,
@@ -289,10 +292,7 @@ def main() -> int:
     if not ok:
         allow_compatibility_projection_drift = False
         if (
-            args.allow_compatibility_projection_drift
-            and args.strict_session_primary
-            and actor_id
-            and session_id
+            compatibility_projection_drift_check_enabled
             and (
                 reason.startswith("canonical_identity_mismatch:")
                 or reason == "canonical_projection_suppressed_multi_identity"
@@ -354,10 +354,7 @@ def main() -> int:
             if not ok:
                 allow_compatibility_projection_drift = False
                 if (
-                    args.allow_compatibility_projection_drift
-                    and args.strict_session_primary
-                    and actor_id
-                    and session_id
+                    compatibility_projection_drift_check_enabled
                     and (
                         reason.startswith(f"{pointer_name}_identity_mismatch:")
                         or reason == f"{pointer_name}_projection_suppressed_multi_identity"
