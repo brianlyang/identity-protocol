@@ -1769,6 +1769,9 @@ Processing order vs runtime loop vs visible line order:
 3. `visible line order` is surface-specific and MUST NOT be inferred from either item 1 or 2:
    - native chat = `Identity-Context -> Machine-Verification -> body`
    - governed/explanatory envelope = `Display-Headstamp -> Machine-Verification -> body`
+4. Native chat failure handling remains fail-close:
+   - headerless assistant-authored native-chat reply is forbidden
+   - when success-state identity injection is blocked, the two-line withheld/conflict envelope remains required
 
 Surface semantics matrix (authoritative surface -> visible literal order freeze):
 

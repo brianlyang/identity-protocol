@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from native_chat_headstamp_common import prompt_hard_guard_required_tokens
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -99,6 +100,8 @@ def main() -> int:
         "derived_from_contract_ids": contract.get("derived_from_contract_ids", []) if isinstance(contract.get("derived_from_contract_ids"), list) else [],
         "overlay_digest": "",
         "evidence_ref": str(prompt_path) if prompt_path.exists() else "",
+        "native_chat_prompt_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "native_chat_prompt_missing_literals": [],
         "stale_reasons": [],
     }
 
@@ -126,7 +129,25 @@ def main() -> int:
         payload["derived_from_contract_ids"] = [
             "rq_014_prompt_bootstrap_capability_contract_v1",
             "rq_015_prompt_capability_matrix_fail_closed_contract_v1",
+            "rq_033_native_chat_headstamp_prompt_contract_v1",
         ]
+    prompt_text = prompt_path.read_text(encoding="utf-8", errors="ignore")
+    native_chat_contract = task.get("native_chat_headstamp_contract_v1") or {}
+    if isinstance(native_chat_contract, dict) and native_chat_contract.get("required") is True:
+        required_literals = prompt_hard_guard_required_tokens(
+            default_machine_profile=str(native_chat_contract.get("default_machine_profile", "mini")),
+            template_ref=str(native_chat_contract.get("prompt_hard_guard_template_ref", "")).strip(),
+        )
+        missing_literals = [literal for literal in required_literals if literal not in prompt_text]
+        payload["native_chat_prompt_missing_literals"] = missing_literals
+        if missing_literals:
+            payload["prompt_derivation_conformance_status"] = STATUS_FAIL_REQUIRED
+            payload["native_chat_prompt_contract_status"] = STATUS_FAIL_REQUIRED
+            payload["error_code"] = "IP-PDER-003"
+            payload["stale_reasons"] = ["native_chat_prompt_contract_literals_missing"]
+            _emit(payload, json_only=args.json_only)
+            return 1
+        payload["native_chat_prompt_contract_status"] = STATUS_PASS_REQUIRED
     payload["prompt_derivation_conformance_status"] = STATUS_PASS_REQUIRED
     _emit(payload, json_only=args.json_only)
     return 0

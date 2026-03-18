@@ -83,6 +83,13 @@ from protocol_infra_contract import (
     UNIQUE_ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS as INFRA_UNIQUE_ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS,
 )
 from response_stamp_common import default_response_stamp_profile, normalize_response_stamp_profile
+from native_chat_headstamp_common import (
+    DEFAULT_NATIVE_CHAT_PROMPT_HARD_GUARD_TEMPLATE_REF,
+    ensure_native_chat_prompt_hard_guard as _ensure_native_chat_prompt_hard_guard,
+    render_native_chat_prompt_hard_guard_markdown,
+)
+
+ensure_native_chat_prompt_hard_guard = _ensure_native_chat_prompt_hard_guard
 
 
 MANDATORY_PROTOCOL_SOURCES = [
@@ -344,6 +351,8 @@ def _default_identity_prompt_markdown(
         "- Keep runtime evidence current and reproducible.",
         "- Escalate unresolved conflicts instead of soft-passing them.",
         "- Separate visible display from machine admission and truth claims.",
+        "",
+        render_native_chat_prompt_hard_guard_markdown().rstrip(),
         "",
     ]
     return "\n".join(prompt_lines)
@@ -858,11 +867,14 @@ def _native_chat_headstamp_contract_skeleton() -> dict:
         "surface_class": "host_native_chat_panel",
         "delivery_mode": "assistant_text_injection",
         "template_ref": "identity/protocol/plugins/templates/native-chat-headstamp.machine_verification_profiles_v1.json",
+        "prompt_hard_guard_template_ref": DEFAULT_NATIVE_CHAT_PROMPT_HARD_GUARD_TEMPLATE_REF,
         "default_machine_profile": "mini",
         "allowed_machine_profiles": ["mini", "standard", "audit"],
         "success_order": ["Identity-Context", "Machine-Verification", "body"],
         "runtime_loop": ["machine-verify", "assistant-visible-inject", "next-turn-reverify"],
         "failure_mode": "withhold_success_identity_line",
+        "headerless_reply_forbidden": True,
+        "failure_envelope_required": True,
     }
 
 
@@ -1835,6 +1847,7 @@ def _derived_prompt_conformance_contract_skeleton() -> dict:
         "derived_from_contract_ids": [
             "rq_014_prompt_bootstrap_capability_contract_v1",
             "rq_015_prompt_capability_matrix_fail_closed_contract_v1",
+            "rq_033_native_chat_headstamp_prompt_contract_v1",
         ],
         "fail_action": "block_when_prompt_derivation_metadata_incomplete",
     }

@@ -56,6 +56,7 @@ from create_identity_pack import (
     _default_identity_prompt_markdown,
     _ensure_intake_p1_contracts,
     _ensure_identity_prompt_governance_kernel,
+    ensure_native_chat_prompt_hard_guard,
     _multimodal_plugin_enforcement_contract_skeleton,
     _provider_bindings_template_text,
     _protocol_lane_activation_headstamp_contract_skeleton,
@@ -462,6 +463,7 @@ def _ensure_identity_prompt_runtime_governance(
     identity_id: str,
     title: str,
     description: str,
+    task_doc: dict[str, Any],
     apply: bool,
 ) -> dict[str, Any]:
     prompt_path = (pack_path / "IDENTITY_PROMPT.md").resolve()
@@ -480,6 +482,19 @@ def _ensure_identity_prompt_runtime_governance(
         title=title,
         description=description,
     )
+    native_chat_contract = (
+        task_doc.get("native_chat_headstamp_contract_v1")
+        if isinstance(task_doc.get("native_chat_headstamp_contract_v1"), dict)
+        else {}
+    )
+    native_chat_tokens_inserted: list[str] = []
+    if native_chat_contract.get("required") is True:
+        prompt_after, native_chat_tokens_inserted, native_chat_prompt_changed = ensure_native_chat_prompt_hard_guard(
+            prompt_after,
+            default_machine_profile=str(native_chat_contract.get("default_machine_profile", "mini")),
+            template_ref=str(native_chat_contract.get("prompt_hard_guard_template_ref", "")).strip(),
+        )
+        prompt_changed = bool(prompt_changed or native_chat_prompt_changed)
     prompt_written = False
     if apply and (prompt_changed or not prompt_exists_before):
         prompt_path.parent.mkdir(parents=True, exist_ok=True)
@@ -491,6 +506,7 @@ def _ensure_identity_prompt_runtime_governance(
         "changed": bool(prompt_changed or not prompt_exists_before),
         "applied": prompt_written,
         "governance_tokens_inserted": governance_tokens_inserted,
+        "native_chat_hard_guard_tokens_inserted": native_chat_tokens_inserted,
         "prompt_bytes_before": len(prompt_before.encode("utf-8")),
         "prompt_bytes_after": len(prompt_after.encode("utf-8")),
     }
@@ -1743,6 +1759,7 @@ def main() -> int:
         identity_id=str(args.identity_id or "").strip(),
         title=identity_title,
         description=identity_description,
+        task_doc=task_doc,
         apply=args.apply,
     )
     provider_bindings_template_result = _ensure_provider_bindings_template(

@@ -94,6 +94,23 @@ Non-compliant pattern:
 
 1. text-only prompt import without executable mapping delta.
 
+### rq_033_native_chat_headstamp_prompt_contract_v1
+
+Required native-chat prompt literals:
+
+1. `Native Chat Headstamp Hard Guard`
+2. every assistant-authored native-chat reply begins with a two-line headstamp before body text
+3. headerless native-chat reply path is forbidden
+4. failure path still emits withheld/conflict `Identity-Context` + `Machine-Verification: verification_status=FAIL_REQUIRED ...`
+5. native chat keeps `Identity-Context -> Machine-Verification -> body`
+6. governed surfaces keep `Display-Headstamp -> Machine-Verification -> body`
+7. default native-chat `Machine-Verification` profile is `mini`
+
+Conformance rule:
+
+1. Missing any required native-chat hard-guard literal is `FAIL_REQUIRED`.
+2. Prompt derivation must consume the prompt hard-guard template source rather than ad hoc identity-local wording.
+
 ## Base protocol capability absorption matrix (full set)
 
 The file must continuously absorb identity base protocol capabilities from `identity/protocol/IDENTITY_PROTOCOL.md`.

@@ -16,6 +16,10 @@ from actor_session_common import (
     load_actor_binding_store,
     resolve_protocol_actor_id,
 )
+from native_chat_headstamp_common import (
+    DEFAULT_NATIVE_CHAT_PROMPT_HARD_GUARD_TEMPLATE_REF,
+    load_native_chat_prompt_hard_guard_template,
+)
 from resolve_identity_context import default_local_catalog_path, resolve_identity
 
 
@@ -529,6 +533,9 @@ def main() -> int:
     headstamp_semantics_template, headstamp_semantics_template_path = _load_headstamp_surface_semantics_template(
         DEFAULT_HEADSTAMP_SURFACE_SEMANTICS_TEMPLATE_REF
     )
+    prompt_hard_guard_template, prompt_hard_guard_template_path = load_native_chat_prompt_hard_guard_template(
+        DEFAULT_NATIVE_CHAT_PROMPT_HARD_GUARD_TEMPLATE_REF
+    )
     headstamp_clarity_freeze = (
         headstamp_semantics_template.get("clarity_freeze")
         if isinstance(headstamp_semantics_template.get("clarity_freeze"), dict)
@@ -560,6 +567,25 @@ def main() -> int:
         field_order=native_chat_profile_doc["field_order"],
         include_extra_fields=bool(native_chat_profile_doc["include_extra_fields"]),
     )
+    failure_identity_line = (
+        f"Identity-Context: withheld; actor_id={actor_id}; requested_identity_id={active_id}; "
+        "conflict=<reason>; scope="
+        f"{scope}; source={source_layer} | Layer-Context: work_layer=instance; source_layer={source_layer}"
+    )
+    failure_machine_line = "Machine-Verification: verification_status=FAIL_REQUIRED; <machine tuple missing/conflicted>"
+    prompt_hard_guard_intro = str(
+        prompt_hard_guard_template.get(
+            "section_intro",
+            "Apply these hard rules to every assistant-authored user-visible native-chat reply.",
+        )
+    ).strip()
+    prompt_hard_guard_invariants = [
+        str(item).strip()
+        for item in (prompt_hard_guard_template.get("required_invariants") or [])
+        if str(item).strip()
+    ]
+    prompt_hard_guard_success_order = _sequence_to_arrow(list(prompt_hard_guard_template.get("success_order") or []))
+    prompt_hard_guard_failure_order = _sequence_to_arrow(list(prompt_hard_guard_template.get("failure_order") or []))
 
     lines = [
         "# Identity Runtime Brief",
@@ -632,6 +658,17 @@ def main() -> int:
         "- Governed repo-controlled surfaces keep the separate `Display-Headstamp` + `Machine-Verification` envelope; do not replace that contract here.",
         "- If machine verification is missing, conflicted, or polluted, do not emit a success identity line; emit a withheld/conflict `Identity-Context` plus `Machine-Verification: verification_status=FAIL_REQUIRED ...` instead.",
         "- Runtime loop is fixed: `machine-verify -> assistant-visible-inject -> next turn re-verify`.",
+        "",
+        "Native chat headstamp hard guard:",
+        f"- template source: `{prompt_hard_guard_template_path.as_posix()}`.",
+        f"- {prompt_hard_guard_intro}",
+    ]
+    lines.extend([f"- {item}" for item in prompt_hard_guard_invariants])
+    lines += [
+        f"- Success visible order: `{prompt_hard_guard_success_order}`.",
+        f"- Failure visible order: `{prompt_hard_guard_failure_order}`.",
+        f"- Failure example line 1: `{failure_identity_line}`",
+        f"- Failure example line 2: `{failure_machine_line}`",
     ]
     lines += [
         "",
@@ -686,6 +723,7 @@ def main() -> int:
         "- ${IDENTITY_CATALOG}",
         f"- ${{IDENTITY_HOME}}/{active_id or 'unknown'}/CURRENT_TASK.json  # resolved via catalog pack_path",
         f"- {native_chat_template_path}",
+        f"- {prompt_hard_guard_template_path}",
         f"- {headstamp_semantics_template_path}",
     ]
 

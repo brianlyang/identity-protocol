@@ -15,7 +15,8 @@
       "machine_literal": "Machine-Verification: ...",
       "proof_owner": "machine_headstamp + headstamp_admission_receipt + controlled-runtime artifacts",
       "attestation_mode": "assistant_text_injection_not_native_machine_attestation",
-      "next_hop_rule": "visible success lines never upgrade next-hop admission by themselves"
+      "next_hop_rule": "visible success lines never upgrade next-hop admission by themselves",
+      "failure_visibility_rule": "headerless assistant-authored native-chat reply is forbidden; failure path still emits the two-line withheld/conflict envelope"
     },
     {
       "surface_id": "governed_wrapper_visible",

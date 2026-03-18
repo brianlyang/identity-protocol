@@ -57,6 +57,10 @@ required = [
     "This native-chat path is the standard assistant-visible delivery path for host-native chat surfaces.",
     "Ordinary replies should stay focused on the standard native-chat output path; governed receipt or attestation boundaries are audit/debug-only.",
     "Runtime loop is fixed: `machine-verify -> assistant-visible-inject -> next turn re-verify`.",
+    "Native chat headstamp hard guard:",
+    "There is no headerless assistant-authored native-chat reply path.",
+    "Failure example line 1: `Identity-Context: withheld; actor_id=assistant:codex; requested_identity_id=base-repo-closure-orchestrator;",
+    "Failure example line 2: `Machine-Verification: verification_status=FAIL_REQUIRED;",
 ]
 for token in required:
     if token not in text:
@@ -72,6 +76,87 @@ if "Compile-time generated line 2 (generated from current runtime; re-verify eac
 if "Native chat machine profile default: `mini`." not in text:
     raise SystemExit("native_chat_compiled_brief_machine_profile_default_missing")
 print("[PASS] native chat compiled brief freeze")
+PY
+
+echo "[info] semantic clarity probes: native chat prompt hard guard"
+mkdir -p "$TMP_ROOT/prompt-hard-guard/.identity/alpha"
+cat > "$TMP_ROOT/prompt-hard-guard/.identity/catalog.local.yaml" <<'YAML'
+identities:
+  - id: alpha
+    pack_path: __PACK_ROOT__/alpha
+    status: active
+    profile: runtime
+    runtime_mode: local_only
+YAML
+python3 - "$TMP_ROOT/prompt-hard-guard/.identity/catalog.local.yaml" "$TMP_ROOT/prompt-hard-guard/.identity" <<'PY'
+from pathlib import Path
+import sys
+catalog = Path(sys.argv[1]).resolve()
+pack_root = Path(sys.argv[2]).resolve()
+catalog.write_text(catalog.read_text(encoding="utf-8").replace("__PACK_ROOT__", str(pack_root)), encoding="utf-8")
+PY
+cat > "$TMP_ROOT/prompt-hard-guard/.identity/alpha/CURRENT_TASK.json" <<'JSON'
+{
+  "agent_identity": {
+    "role": "alpha-role",
+    "prompt_version": "probe-alpha"
+  },
+  "objective": {
+    "title": "Alpha prompt hard guard probe"
+  },
+  "state_machine": {
+    "current_state": "ready"
+  },
+  "native_chat_headstamp_contract_v1": {
+    "required": true,
+    "default_machine_profile": "mini",
+    "prompt_hard_guard_template_ref": "identity/protocol/plugins/templates/native-chat-headstamp.prompt_hard_guard_v1.json"
+  }
+}
+JSON
+cat > "$TMP_ROOT/prompt-hard-guard/.identity/alpha/IDENTITY_PROMPT.md" <<'MD'
+# Identity Prompt: Alpha
+
+## Mission
+Keep the prompt minimal before repair.
+MD
+set +e
+python3 scripts/validate_identity_prompt_quality.py \
+  --catalog "$TMP_ROOT/prompt-hard-guard/.identity/catalog.local.yaml" \
+  --identity-id alpha > "$TMP_ROOT/prompt_hard_guard_negative.log" 2>&1
+rc=$?
+set -e
+if [ "$rc" -eq 0 ]; then
+  echo "[FAIL] prompt quality validator should fail when native-chat hard guard is missing"
+  exit 1
+fi
+grep -q "Native Chat Headstamp Hard Guard" "$TMP_ROOT/prompt_hard_guard_negative.log"
+python3 scripts/repair_contract_backfill.py \
+  --catalog "$TMP_ROOT/prompt-hard-guard/.identity/catalog.local.yaml" \
+  --identity-id alpha \
+  --apply \
+  --json-only > "$TMP_ROOT/prompt_hard_guard_repair.json"
+python3 scripts/validate_identity_prompt_quality.py \
+  --catalog "$TMP_ROOT/prompt-hard-guard/.identity/catalog.local.yaml" \
+  --identity-id alpha > "$TMP_ROOT/prompt_hard_guard_positive.log"
+python3 - "$TMP_ROOT/prompt-hard-guard/.identity/alpha/IDENTITY_PROMPT.md" "$TMP_ROOT/prompt_hard_guard_repair.json" <<'PY'
+from pathlib import Path
+import json
+import sys
+
+prompt = Path(sys.argv[1]).read_text(encoding="utf-8")
+repair = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+required = [
+    "Native Chat Headstamp Hard Guard",
+    "There is no headerless assistant-authored native-chat reply path.",
+    "Failure visible order: `Identity-Context(withheld_or_conflict) -> Machine-Verification(verification_status=FAIL_REQUIRED) -> body`.",
+]
+for token in required:
+    if token not in prompt:
+        raise SystemExit(f"native_chat_prompt_hard_guard_missing_token: {token}")
+if not repair.get("identity_prompt_runtime_governance", {}).get("changed", False):
+    raise SystemExit("native_chat_prompt_hard_guard_repair_not_recorded")
+print("[PASS] native chat prompt hard guard")
 PY
 
 echo "[info] semantic clarity probes: workspace-root strict-entry replay"
@@ -477,11 +562,13 @@ assert validate_obj.get("actor_session_multibinding_status") == "PASS_REQUIRED",
 assert validate_obj.get("last_mutation_projection_scope") == "session_primary", validate_obj
 assert pointer.get("authority_role") == "compatibility_mirror", pointer
 assert pointer.get("authoritative_decision_allowed") is False, pointer
-assert pointer.get("compatibility_projection_scope") == "actor_global_compatibility_only", pointer
-assert pointer.get("compatibility_projection_role") == "compatibility_projection", pointer
-assert pointer.get("compatibility_projection_actor_id") == "user:test", pointer
-assert pointer.get("compatibility_projection_identity_id") == "probe-identity", pointer
-assert pointer.get("compatibility_projection_session_id") == "run:probe", pointer
+assert pointer.get("status") == "compatibility_projection_unavailable", pointer
+assert pointer.get("identity_id") == "", pointer
+assert pointer.get("compatibility_projection_scope") == "", pointer
+assert pointer.get("compatibility_projection_role") == "", pointer
+assert pointer.get("compatibility_projection_actor_id") == "", pointer
+assert pointer.get("compatibility_projection_identity_id") == "", pointer
+assert pointer.get("compatibility_projection_session_id") == "", pointer
 print("[PASS] authority residue repair lane")
 PY
 
@@ -553,13 +640,20 @@ python3 scripts/sync_session_identity.py \
   --run-id alpha \
   --compare-token 0 \
   --mutation-lane activate > "$TMP_ROOT/cross_session_alpha_sync.log"
-python3 - "$TMP_ROOT/cross-session-drift/.identity/session/active_identity.json" <<'PY'
+python3 - "$TMP_ROOT/cross_session_alpha_sync.log" "$TMP_ROOT/cross-session-drift/.identity/session/active_identity.json" <<'PY'
 from pathlib import Path
 import json
 import sys
-pointer = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert pointer.get("identity_id") == "alpha", pointer
-print("[PASS] bootstrap compatibility projection anchored to first active identity")
+log = Path(sys.argv[1]).read_text(encoding="utf-8")
+pointer = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+assert "canonical compatibility pointer neutralized: reason=compatibility_projection_write_disabled_by_policy" in log, log
+assert pointer.get("identity_id") == "", pointer
+assert pointer.get("status") == "compatibility_projection_unavailable", pointer
+assert pointer.get("compatibility_projection_status") == "UNAVAILABLE", pointer
+assert pointer.get("compatibility_projection_reason") == "projection_missing", pointer
+assert pointer.get("compatibility_projection_write_allowed") is False, pointer
+assert pointer.get("compatibility_projection_write_reason") == "compatibility_projection_write_disabled_by_policy", pointer
+print("[PASS] bootstrap compatibility pointer neutralized when policy disables projection writes")
 PY
 set +e
 python3 scripts/validate_identity_session_pointer_consistency.py \
@@ -579,8 +673,10 @@ python3 - "$TMP_ROOT/cross_session_alpha_pointer.log" <<'PY'
 from pathlib import Path
 import sys
 text = Path(sys.argv[1]).read_text(encoding="utf-8")
-assert "compatibility_projection_drift=no" in text, text
-print("[PASS] strict pointer validation passes for projected primary session")
+assert "compatibility_projection_drift=yes" in text, text
+assert "projection_status=UNAVAILABLE" in text, text
+assert "projection_session=<none>" in text, text
+print("[PASS] strict pointer validation acknowledges unavailable projection under disabled-write policy")
 PY
 
 python3 scripts/sync_session_identity.py \
@@ -605,12 +701,12 @@ beta = next(
     item for item in actor_store.get("bindings", [])
     if item.get("session_id") == "run:beta" and item.get("identity_id") == "beta"
 )
-assert "canonical pointer write skipped" in log, log
-assert "actor_global_projection_switch_receipt_missing" in log, log
-assert pointer.get("identity_id") == "alpha", pointer
+assert "canonical compatibility pointer neutralized: reason=compatibility_projection_write_disabled_by_policy" in log, log
+assert pointer.get("identity_id") == "", pointer
+assert pointer.get("status") == "compatibility_projection_unavailable", pointer
 assert beta.get("compatibility_projection_allowed") is False, beta
-assert beta.get("compatibility_projection_reason") == "actor_global_projection_switch_receipt_missing", beta
-print("[PASS] unapproved cross-session activate cannot steal compatibility pointer")
+assert beta.get("compatibility_projection_reason") == "compatibility_projection_write_disabled_by_policy", beta
+print("[PASS] unapproved cross-session activate cannot re-enable compatibility projection when writes are disabled")
 PY
 
 cat > "$TMP_ROOT/cross-session-drift/switch-alpha-to-beta.json" <<'JSON'
@@ -651,13 +747,14 @@ beta = next(
     item for item in actor_store.get("bindings", [])
     if item.get("session_id") == "run:beta-switch" and item.get("identity_id") == "beta"
 )
-assert "canonical pointer write skipped" not in log, log
-assert pointer.get("identity_id") == "beta", pointer
-assert beta.get("compatibility_projection_allowed") is True, beta
-assert beta.get("compatibility_projection_reason") == "actor_global_projection_switch_receipt_validated", beta
+assert "canonical compatibility pointer neutralized: reason=compatibility_projection_write_disabled_by_policy" in log, log
+assert pointer.get("identity_id") == "", pointer
+assert pointer.get("status") == "compatibility_projection_unavailable", pointer
+assert beta.get("compatibility_projection_allowed") is False, beta
+assert beta.get("compatibility_projection_reason") == "compatibility_projection_write_disabled_by_policy", beta
 assert alpha.get("compatibility_projection_allowed") is False, alpha
-assert alpha.get("compatibility_projection_reason") == "superseded_by_actor_global_projection_switch", alpha
-print("[PASS] approved cross-session switch rebinds the single compatibility projection")
+assert alpha.get("compatibility_projection_reason") == "compatibility_projection_write_disabled_by_policy", alpha
+print("[PASS] approved cross-session switch still preserves unavailable compatibility projection under disabled-write policy")
 PY
 
 python3 scripts/validate_identity_session_pointer_consistency.py \
@@ -672,9 +769,12 @@ import json
 import sys
 text = Path(sys.argv[1]).read_text(encoding="utf-8")
 pointer = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
-assert "compatibility_projection_drift=no" in text, text
-assert pointer.get("identity_id", "") == "beta", pointer
-print("[PASS] strict pointer validation follows the approved compatibility projection")
+assert "compatibility_projection_drift=yes" in text, text
+assert "projection_status=UNAVAILABLE" in text, text
+assert "projection_session=<none>" in text, text
+assert pointer.get("identity_id", "") == "", pointer
+assert pointer.get("status") == "compatibility_projection_unavailable", pointer
+print("[PASS] strict pointer validation acknowledges unavailable projection after approved cross-session switch")
 PY
 
 echo "[info] semantic clarity probes: session-primary authority resolver lane"
@@ -768,10 +868,11 @@ import json
 import sys
 log = Path(sys.argv[1]).read_text(encoding="utf-8")
 pointer = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
-assert "canonical pointer write skipped" in log, log
+assert "canonical pointer write skipped: reason=non_activate_lane_observation_only" in log, log
 assert "non_activate_lane_observation_only" in log, log
-assert pointer.get("identity_id") == "beta", pointer
-print("[PASS] observation lane cannot mutate canonical active pointer")
+assert pointer.get("identity_id") == "", pointer
+assert pointer.get("status") == "compatibility_projection_unavailable", pointer
+print("[PASS] observation lane cannot mutate canonical pointer while projection writes remain disabled")
 PY
 
 echo "[info] semantic clarity probes: cross-layer uniqueness lane"

@@ -527,9 +527,11 @@ deepening base for v1.6.1 headstamp semantics.
 7. The default native chat profile MUST be `mini`; implementations MAY escalate to `standard` or `audit` only when the chat context explicitly needs debug or audit detail.
 8. When that tuple is missing, conflicted, drifted, polluted, or incomplete:
    - success-state identity injection is forbidden,
+   - headerless assistant-authored native-chat reply is forbidden,
    - line 1 MUST degrade to a withheld/conflict `Identity-Context`,
    - line 2 MUST emit `Machine-Verification: verification_status=FAIL_REQUIRED ...`,
-   - implementations MUST fail-close rather than emit a stable-but-wrong identity headstamp.
+   - implementations MUST fail-close rather than emit a stable-but-wrong identity headstamp,
+   - implementations MUST emit the two-line failure envelope rather than dropping the headstamp entirely.
 9. This freeze is the closure baseline for native chat surfaces in the current architecture boundary; future sender/renderer physical wiring is a higher-tier enhancement, not a prerequisite for v1.6.1 / v1.6.6 closure.
 10. Deterministic native-chat smoke validation SHOULD use `codex exec --ephemeral --output-last-message ...` or `bash scripts/run_native_chat_headstamp_smoke.sh`:
    - raw stdout redirection alone is not a reliable proof surface for this path,
