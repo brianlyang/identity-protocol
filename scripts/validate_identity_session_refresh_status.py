@@ -18,6 +18,7 @@ ERR_REFRESH_PAYLOAD = "IP-ASB-RFS-001"
 ERR_REFRESH_POINTER = "IP-ASB-RFS-002"
 ERR_REFRESH_CONTEXT = "IP-ASB-RFS-003"
 ERR_REFRESH_BASELINE = "IP-ASB-RFS-004"
+PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
 
 STRICT_OPERATIONS = {"activate", "update", "readiness", "e2e", "ci", "validate", "mutation"}
 INSPECTION_OPERATIONS = {"scan", "three-plane", "inspection"}
@@ -29,6 +30,8 @@ REQUIRED_FIELDS = (
     "catalog_path",
     "resolved_pack_path",
     "resolved_scope",
+    "session_id",
+    "session_id_source",
     "lease_status",
     "pointer_consistency",
     "risk_flags",
@@ -61,7 +64,7 @@ def _is_fixture_identity(row: dict[str, Any] | None) -> bool:
 
 
 def _run_capture(cmd: list[str]) -> tuple[int, str, str]:
-    p = subprocess.run(cmd, capture_output=True, text=True)
+    p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROTOCOL_ROOT))
     return p.returncode, (p.stdout or "").strip(), (p.stderr or "").strip()
 
 
@@ -114,6 +117,8 @@ def _load_refresh_payload(args: argparse.Namespace) -> tuple[dict[str, Any], lis
         args.repo_catalog,
         "--actor-id",
         args.actor_id,
+        "--session-id",
+        args.session_id,
         "--baseline-policy",
         args.baseline_policy,
         "--json-only",
@@ -145,6 +150,7 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="")
     ap.add_argument("--execution-report", default="")
     ap.add_argument("--refresh-json", default="", help="optional refresh payload json path")
     ap.add_argument("--baseline-policy", choices=["strict", "warn"], default="warn")
@@ -158,7 +164,13 @@ def main() -> int:
     args = ap.parse_args()
 
     catalog_path = Path(args.catalog).expanduser().resolve()
-    repo_catalog_path = Path(args.repo_catalog).expanduser().resolve()
+    repo_catalog_arg = Path(args.repo_catalog).expanduser()
+    if repo_catalog_arg.is_absolute():
+        repo_catalog_path = repo_catalog_arg.resolve()
+    else:
+        repo_catalog_path = (PROTOCOL_ROOT / repo_catalog_arg).resolve()
+    args.catalog = str(catalog_path)
+    args.repo_catalog = str(repo_catalog_path)
     if not catalog_path.exists():
         print(f"[FAIL] catalog not found: {catalog_path}")
         return 2
@@ -175,6 +187,8 @@ def main() -> int:
             "session_refresh_status": STATUS_SKIPPED_NOT_REQUIRED,
             "error_code": "",
             "actor_id": "",
+            "session_id": "",
+            "session_id_source": "",
             "lease_status": "",
             "pointer_consistency": "",
             "risk_flags": [],
@@ -203,6 +217,8 @@ def main() -> int:
         "session_refresh_status": STATUS_PASS_REQUIRED,
         "error_code": "",
         "actor_id": "",
+        "session_id": "",
+        "session_id_source": "",
         "lease_status": "",
         "pointer_consistency": "",
         "risk_flags": [],
@@ -229,6 +245,8 @@ def main() -> int:
         payload.update(
             {
                 "actor_id": str(refresh_payload.get("actor_id", "")).strip(),
+                "session_id": str(refresh_payload.get("session_id", "")).strip(),
+                "session_id_source": str(refresh_payload.get("session_id_source", "")).strip(),
                 "lease_status": str(refresh_payload.get("lease_status", "")).strip().upper(),
                 "pointer_consistency": str(refresh_payload.get("pointer_consistency", "")).strip().upper(),
                 "risk_flags": refresh_payload.get("risk_flags", []),

@@ -396,6 +396,36 @@ def load_actor_binding(
     return _select_binding(store, identity_id=identity_id, session_id=session_id)
 
 
+def resolve_bound_session_id_for_identity(
+    catalog_path: Path,
+    actor_id: str,
+    identity_id: str,
+    *,
+    explicit_session_id: str = "",
+) -> tuple[str, str]:
+    explicit = str(explicit_session_id or "").strip()
+    if explicit:
+        return explicit, "explicit_session_id"
+    actor = str(actor_id or "").strip()
+    target_identity = str(identity_id or "").strip()
+    if not actor:
+        return "", "actor_missing"
+    if not target_identity:
+        return "", "identity_missing"
+    try:
+        binding = load_actor_binding(
+            catalog_path,
+            actor,
+            identity_id=target_identity,
+        )
+    except Exception:
+        binding = {}
+    bound_session_id = str((binding or {}).get("session_id", "")).strip()
+    if bound_session_id:
+        return bound_session_id, "actor_binding_identity"
+    return "", "binding_missing"
+
+
 def _decorate_actor_global_compatibility_projection(
     *,
     store: dict[str, Any],

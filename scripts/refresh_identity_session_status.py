@@ -8,7 +8,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from actor_session_common import actor_session_path, load_actor_binding, resolve_actor_id
+from actor_session_common import (
+    actor_session_path,
+    load_actor_binding,
+    resolve_bound_session_id_for_identity,
+    resolve_protocol_actor_id,
+)
 from resolve_identity_context import resolve_identity
 
 LEASE_ACTIVE = "ACTIVE"
@@ -18,10 +23,11 @@ LEASE_MISSING = "MISSING"
 POINTER_PASS = "PASS"
 POINTER_WARN = "WARN"
 POINTER_FAIL = "FAIL"
+PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _run_capture(cmd: list[str]) -> tuple[int, str, str]:
-    p = subprocess.run(cmd, capture_output=True, text=True)
+    p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROTOCOL_ROOT))
     return p.returncode, (p.stdout or "").strip(), (p.stderr or "").strip()
 
 
@@ -230,13 +236,18 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="")
     ap.add_argument("--execution-report", default="")
     ap.add_argument("--baseline-policy", choices=["strict", "warn"], default="warn")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
     catalog_path = Path(args.catalog).expanduser().resolve()
-    repo_catalog_path = Path(args.repo_catalog).expanduser().resolve()
+    repo_catalog_arg = Path(args.repo_catalog).expanduser()
+    if repo_catalog_arg.is_absolute():
+        repo_catalog_path = repo_catalog_arg.resolve()
+    else:
+        repo_catalog_path = (PROTOCOL_ROOT / repo_catalog_arg).resolve()
     if not catalog_path.exists():
         print(f"[FAIL] catalog not found: {catalog_path}")
         return 2
@@ -255,9 +266,20 @@ def main() -> int:
         print(f"[FAIL] unable to resolve identity context: {exc}")
         return 1
 
-    actor_id = resolve_actor_id(args.actor_id)
+    actor_id = resolve_protocol_actor_id(args.actor_id)
+    resolved_session_id, session_id_source = resolve_bound_session_id_for_identity(
+        catalog_path,
+        actor_id,
+        args.identity_id,
+        explicit_session_id=str(args.session_id or "").strip(),
+    )
     actor_session_file = actor_session_path(catalog_path, actor_id)
-    actor_binding = load_actor_binding(catalog_path, actor_id, identity_id=args.identity_id)
+    actor_binding = load_actor_binding(
+        catalog_path,
+        actor_id,
+        identity_id=args.identity_id,
+        session_id=resolved_session_id,
+    )
 
     resolved_pack = Path(str(resolved.get("resolved_pack_path") or resolved.get("pack_path") or "")).expanduser().resolve()
     resolved_scope = str(resolved.get("resolved_scope", "")).strip().upper() or "UNKNOWN"
@@ -296,6 +318,8 @@ def main() -> int:
         "catalog_path": str(catalog_path),
         "resolved_pack_path": str(resolved_pack),
         "resolved_scope": resolved_scope,
+        "session_id": resolved_session_id,
+        "session_id_source": session_id_source,
         "lease_status": lease_status,
         "pointer_consistency": pointer_consistency,
         "risk_flags": risk_flags,
