@@ -12,6 +12,8 @@ ERR_RESPONSE_AUTHORITY_CONSUMER = "IP-HDSTAMP-CONSUMER-001"
 AUTHORITY_CONSUMER_EXEMPT = True  # Validator module; not a direct authority-consuming surface.
 
 DEFAULT_TARGET_FILES = (
+    "scripts/identity_runtime_authority_common.py",
+    "scripts/response_stamp_common.py",
     "scripts/final_emit_governed.py",
     "scripts/render_identity_response_stamp.py",
     "scripts/compose_and_validate_governed_reply.py",
@@ -33,6 +35,8 @@ FORBID_HOST_FALLBACK_RESOLVER = {
 }
 
 FORBID_COMPAT_POINTER_LITERAL = {
+    "scripts/identity_runtime_authority_common.py",
+    "scripts/response_stamp_common.py",
     "scripts/render_identity_response_stamp.py",
     "scripts/compose_and_validate_governed_reply.py",
     "scripts/validate_reply_identity_context_first_line.py",
@@ -40,6 +44,17 @@ FORBID_COMPAT_POINTER_LITERAL = {
     "scripts/validate_execution_reply_identity_coherence.py",
     "scripts/validate_instance_protocol_split_receipt.py",
 }
+
+FORBID_CURRENT_SESSION_FALLBACK_MODES = {
+    "scripts/identity_runtime_authority_common.py",
+    "scripts/response_stamp_common.py",
+}
+
+CURRENT_SESSION_FALLBACK_TOKENS = (
+    "legacy_canonical_session_pointer",
+    "actor_binding_actor_scoped",
+    "compatibility_pointer_non_authoritative",
+)
 
 AUTHORITY_CONSUMER_DISCOVERY_TOKENS = (
     "resolve_stamp_context(",
@@ -111,6 +126,8 @@ def _scan_file(path: Path, *, repo_root: Path, enforce_all_rules: bool = False) 
 
     for idx, line in enumerate(lines):
         if "resolve_stamp_context(" in line:
+            if line.lstrip().startswith("def "):
+                continue
             block = _call_block(lines, idx)
             if "session_id=" not in block:
                 violations.append(
@@ -123,6 +140,8 @@ def _scan_file(path: Path, *, repo_root: Path, enforce_all_rules: bool = False) 
                 )
 
         if "validate_runtime_egress_identity_authority(" in line:
+            if line.lstrip().startswith("def "):
+                continue
             block = _call_block(lines, idx)
             if "actor_id=args.actor_id" in block or 'actor_id=str(args.actor_id' in block:
                 violations.append(
@@ -154,6 +173,18 @@ def _scan_file(path: Path, *, repo_root: Path, enforce_all_rules: bool = False) 
                         "file": rel,
                         "line": idx + 1,
                         "violation_type": "compatibility_pointer_literal_forbidden",
+                        "snippet": line.strip(),
+                    }
+                )
+
+    if enforce_all_rules or rel in FORBID_CURRENT_SESSION_FALLBACK_MODES:
+        for idx, line in enumerate(lines):
+            if any(token in line for token in CURRENT_SESSION_FALLBACK_TOKENS):
+                violations.append(
+                    {
+                        "file": rel,
+                        "line": idx + 1,
+                        "violation_type": "current_session_fallback_mode_forbidden",
                         "snippet": line.strip(),
                     }
                 )

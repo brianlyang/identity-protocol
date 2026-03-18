@@ -169,10 +169,26 @@ obj=json.load(open(sys.argv[1]))
 assert obj.get("identity_authority_status") == "FAIL_REQUIRED", obj
 assert obj.get("identity_authority_actor_id", "") == "", obj
 assert obj.get("identity_authority_actor_resolution_mode") == "missing", obj
-assert obj.get("identity_authority_resolution_mode") == "compatibility_pointer_non_authoritative", obj
-assert "compatibility_pointer_non_authoritative" in (obj.get("stale_reasons") or []), obj
+assert obj.get("identity_authority_resolution_mode") == "actor_context_missing", obj
 assert "actor_context_missing" in (obj.get("stale_reasons") or []), obj
+assert "authoritative_identity_unresolved" in (obj.get("stale_reasons") or []), obj
 print("[PASS] non-authoritative compatibility pointer blocked")
+PY
+
+CODEX_ACTOR_ID=assistant:codex python3 scripts/render_identity_response_stamp.py \
+  --identity-id alpha \
+  --catalog "$TMP_ROOT/authority-fallback/.identity/catalog.local.yaml" \
+  --repo-catalog identity/catalog/identities.yaml \
+  --json-only > "$TMP_ROOT/authority_fallback_missing_session.json" || true
+python3 - "$TMP_ROOT/authority_fallback_missing_session.json" <<'PY'
+import json,sys
+obj=json.load(open(sys.argv[1]))
+assert obj.get("identity_authority_status") == "FAIL_REQUIRED", obj
+assert obj.get("identity_authority_actor_id") == "assistant:codex", obj
+assert obj.get("identity_authority_resolution_mode") == "actor_binding_session_context_missing", obj
+assert "session_context_missing:actor_id=assistant:codex" in (obj.get("stale_reasons") or []), obj
+assert obj.get("identity_authority_next_action") == "pass_session_id_then_retry", obj
+print("[PASS] actor binding without session id cannot drive current-session authority")
 PY
 
 CODEX_ACTOR_ID=assistant:codex python3 scripts/render_identity_response_stamp.py \

@@ -11,11 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from actor_session_common import load_actor_binding, resolve_protocol_actor_id
-from identity_runtime_authority_common import (
-    compatibility_pointer_authority_allowed,
-)
 from resolve_identity_context import resolve_identity
-from tool_vendor_governance_common import load_json
 
 
 @dataclass
@@ -232,33 +228,21 @@ def _ref_token(path: Path) -> str:
     return f"{path.name}#{h}"
 
 
-def _session_pointer_path(catalog_path: Path) -> Path:
-    return (catalog_path.parent / "session" / "active_identity.json").resolve()
-
-
 def _session_data(catalog_path: Path, actor_id: str, identity_id: str, session_id: str = "") -> dict[str, Any]:
-    if str(actor_id or "").strip():
-        actor_binding = load_actor_binding(
-            catalog_path,
-            actor_id,
-            identity_id=identity_id,
-            session_id=str(session_id or "").strip(),
-        )
-        if actor_binding:
-            payload = dict(actor_binding)
-            payload["session_pointer_source"] = "actor"
-            return payload
+    actor = str(actor_id or "").strip()
+    sid = str(session_id or "").strip()
+    if not actor or not sid:
         return {}
-    p = _session_pointer_path(catalog_path)
-    if not p.exists():
-        return {}
-    try:
-        data = load_json(p)
-    except Exception:
-        return {}
-    if isinstance(data, dict) and compatibility_pointer_authority_allowed(data):
-        data["session_pointer_source"] = "compatibility_pointer"
-        return data
+    actor_binding = load_actor_binding(
+        catalog_path,
+        actor,
+        identity_id=identity_id,
+        session_id=sid,
+    )
+    if actor_binding:
+        payload = dict(actor_binding)
+        payload["session_pointer_source"] = "actor_session_primary"
+        return payload
     return {}
 
 
