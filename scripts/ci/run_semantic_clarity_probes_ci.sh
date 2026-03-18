@@ -157,6 +157,92 @@ assert "external_stamp" in obj, obj
 print("[PASS] env actor + session binding renders headstamp")
 PY
 
+echo "[info] semantic clarity probes: foreign project env authority precedence lane"
+mkdir -p "$TMP_ROOT/authority-env/codex/.identity" \
+  "$TMP_ROOT/authority-env/foreign/.identity" \
+  "$TMP_ROOT/authority-env/foreign/identity-protocol-local" \
+  "$TMP_ROOT/authority-env/current-no-session/.git" \
+  "$TMP_ROOT/authority-env/current-with-session/.git" \
+  "$TMP_ROOT/authority-env/current-with-session/identity-protocol-local" \
+  "$TMP_ROOT/authority-env/current-with-session/.identity/session"
+cat > "$TMP_ROOT/authority-env/codex/.identity/catalog.local.yaml" <<'YAML'
+identities:
+  - id: global-authority
+    pack_path: /tmp/global-authority
+    status: active
+    profile: runtime
+    runtime_mode: local_only
+YAML
+cat > "$TMP_ROOT/authority-env/foreign/.identity/catalog.local.yaml" <<'YAML'
+identities:
+  - id: foreign-project-authority
+    pack_path: /tmp/foreign-project-authority
+    status: active
+    profile: runtime
+    runtime_mode: local_only
+YAML
+cat > "$TMP_ROOT/authority-env/current-with-session/.identity/catalog.local.yaml" <<'YAML'
+identities:
+  - id: current-project-authority
+    pack_path: /tmp/current-project-authority
+    status: active
+    profile: runtime
+    runtime_mode: local_only
+YAML
+cat > "$TMP_ROOT/authority-env/current-with-session/.identity/session/active_identity.json" <<'JSON'
+{
+  "identity_id": "current-project-authority",
+  "status": "active",
+  "session_pointer_type": "canonical",
+  "authority_role": "compatibility_mirror",
+  "authoritative_decision_allowed": false
+}
+JSON
+(
+  cd "$TMP_ROOT/authority-env/current-no-session"
+  CODEX_HOME="$TMP_ROOT/authority-env/codex" \
+  IDENTITY_HOME="$TMP_ROOT/authority-env/foreign/.identity" \
+  IDENTITY_CATALOG="$TMP_ROOT/authority-env/foreign/.identity/catalog.local.yaml" \
+  IDENTITY_PROTOCOL_HOME="$TMP_ROOT/authority-env/foreign/identity-protocol-local" \
+  IDENTITY_ENV_SOURCE=project_runtime_forced \
+  python3 "$REPO_ROOT/scripts/resolve_identity_context.py" resolve \
+    --identity-id global-authority \
+    --repo-catalog "$REPO_ROOT/identity/catalog/identities.yaml" \
+    > "$TMP_ROOT/authority_env_global_fallback.json"
+)
+python3 - "$TMP_ROOT/authority_env_global_fallback.json" "$TMP_ROOT/authority-env/codex/.identity/catalog.local.yaml" <<'PY'
+import json,sys
+from pathlib import Path
+obj=json.load(open(sys.argv[1]))
+expected_catalog=str(Path(sys.argv[2]).resolve())
+assert obj.get("identity_id") == "global-authority", obj
+assert obj.get("source_layer") == "global", obj
+assert obj.get("catalog_path") == expected_catalog, obj
+print("[PASS] foreign project env ignored when current project has no session pointer")
+PY
+(
+  cd "$TMP_ROOT/authority-env/current-with-session"
+  CODEX_HOME="$TMP_ROOT/authority-env/codex" \
+  IDENTITY_HOME="$TMP_ROOT/authority-env/foreign/.identity" \
+  IDENTITY_CATALOG="$TMP_ROOT/authority-env/foreign/.identity/catalog.local.yaml" \
+  IDENTITY_PROTOCOL_HOME="$TMP_ROOT/authority-env/foreign/identity-protocol-local" \
+  IDENTITY_ENV_SOURCE=project_runtime_forced \
+  python3 "$REPO_ROOT/scripts/resolve_identity_context.py" resolve \
+    --identity-id current-project-authority \
+    --repo-catalog "$REPO_ROOT/identity/catalog/identities.yaml" \
+    > "$TMP_ROOT/authority_env_current_project.json"
+)
+python3 - "$TMP_ROOT/authority_env_current_project.json" "$TMP_ROOT/authority-env/current-with-session/.identity/catalog.local.yaml" <<'PY'
+import json,sys
+from pathlib import Path
+obj=json.load(open(sys.argv[1]))
+expected_catalog=str(Path(sys.argv[2]).resolve())
+assert obj.get("identity_id") == "current-project-authority", obj
+assert obj.get("source_layer") == "project", obj
+assert obj.get("catalog_path") == expected_catalog, obj
+print("[PASS] current project session pointer wins over foreign project env")
+PY
+
 echo "[info] semantic clarity probes: projection consumer isolation lane"
 (
   cd "$WORKSPACE_ROOT"

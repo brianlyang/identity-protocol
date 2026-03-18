@@ -11,6 +11,7 @@ from typing import Any, Literal
 import yaml
 
 ScopeName = Literal["EXPLICIT", "REPO", "USER", "ADMIN", "SYSTEM", "FALLBACK", "UNKNOWN"]
+PROJECT_RUNTIME_FORCED_ENV_SOURCE = "project_runtime_forced"
 
 
 def _default_runtime_config_path() -> Path:
@@ -105,6 +106,59 @@ def _within(path: Path, root: Path) -> bool:
         return False
 
 
+def _project_runtime_env_source() -> str:
+    return str(os.environ.get("IDENTITY_ENV_SOURCE", "")).strip().lower()
+
+
+def _session_pointer_exists(identity_home: Path) -> bool:
+    for candidate in (
+        identity_home / "session" / "active_identity.json",
+        identity_home / "session" / "mirror" / "current.json",
+    ):
+        if candidate.exists():
+            return True
+    return False
+
+
+def _guard_forced_project_identity_home(candidate: Path, *, start: Path | None = None) -> Path:
+    if _project_runtime_env_source() != PROJECT_RUNTIME_FORCED_ENV_SOURCE:
+        return candidate
+    current_repo_home = _default_repo_identity_home(start)
+    cwd = (start or Path.cwd()).resolve()
+    if candidate == current_repo_home:
+        return candidate
+    if candidate.name == ".identity" and _within(cwd, candidate.parent):
+        return candidate
+    if _session_pointer_exists(current_repo_home):
+        return current_repo_home
+    return _default_user_identity_home()
+
+
+def _default_protocol_home_fallback(start: Path | None = None) -> Path:
+    base = (start or Path.cwd()).resolve()
+    repo_root = _detect_repo_root(base)
+    if repo_root.name == "identity-protocol-local":
+        return repo_root.resolve()
+    nested = (repo_root / "identity-protocol-local").resolve()
+    if nested.exists():
+        return nested
+    return base
+
+
+def _guard_forced_project_protocol_home(candidate: Path, *, start: Path | None = None) -> Path:
+    if _project_runtime_env_source() != PROJECT_RUNTIME_FORCED_ENV_SOURCE:
+        return candidate
+    fallback = _default_protocol_home_fallback(start)
+    cwd = (start or Path.cwd()).resolve()
+    if candidate == fallback:
+        return candidate
+    if candidate.name == "identity-protocol-local" and _within(cwd, candidate.parent):
+        return candidate
+    if _within(cwd, candidate):
+        return candidate
+    return fallback
+
+
 def _classify_catalog_source_layer(
     catalog_path: Path,
     *,
@@ -161,23 +215,21 @@ def _classify_scope_from_pack_path(
     return "UNKNOWN"
 
 
-def default_identity_home() -> Path:
+def default_identity_home(start: Path | None = None) -> Path:
     explicit_identity_home = os.environ.get("IDENTITY_HOME", "").strip()
     runtime_defaults = _load_runtime_env_defaults()
     configured_identity_home = runtime_defaults.get("IDENTITY_HOME", "").strip()
 
     if explicit_identity_home:
-        raw = explicit_identity_home
+        p = _guard_forced_project_identity_home(_expand(explicit_identity_home), start=start)
     elif configured_identity_home:
-        raw = configured_identity_home
+        p = _expand(configured_identity_home)
     else:
-        repo_home = _default_repo_identity_home()
+        repo_home = _default_repo_identity_home(start)
         if repo_home.exists():
-            raw = str(repo_home)
+            p = repo_home
         else:
-            raw = str(_default_user_identity_home())
-
-    p = _expand(raw)
+            p = _default_user_identity_home()
     try:
         p.mkdir(parents=True, exist_ok=True)
     except Exception:
@@ -186,26 +238,26 @@ def default_identity_home() -> Path:
     return p
 
 
-def default_local_catalog_path(identity_home: Path | None = None) -> Path:
-    home = identity_home or default_identity_home()
+def default_local_catalog_path(identity_home: Path | None = None, *, start: Path | None = None) -> Path:
+    home = identity_home or default_identity_home(start=start)
     return home / "catalog.local.yaml"
 
 
-def default_local_instances_root(identity_home: Path | None = None) -> Path:
-    home = identity_home or default_identity_home()
+def default_local_instances_root(identity_home: Path | None = None, *, start: Path | None = None) -> Path:
+    home = identity_home or default_identity_home(start=start)
     return home.resolve()
 
 
-def default_protocol_home() -> Path:
+def default_protocol_home(start: Path | None = None) -> Path:
     explicit = os.environ.get("IDENTITY_PROTOCOL_HOME", "").strip()
     runtime_defaults = _load_runtime_env_defaults()
     configured = runtime_defaults.get("IDENTITY_PROTOCOL_HOME", "").strip()
     if explicit:
-        p = _expand(explicit)
+        p = _guard_forced_project_protocol_home(_expand(explicit), start=start)
     elif configured:
         p = _expand(configured)
     else:
-        p = Path.cwd().resolve()
+        p = _default_protocol_home_fallback(start)
     return p
 
 
