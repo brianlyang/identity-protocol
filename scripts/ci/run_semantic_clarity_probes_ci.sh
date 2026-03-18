@@ -157,6 +157,47 @@ assert "external_stamp" in obj, obj
 print("[PASS] env actor + session binding renders headstamp")
 PY
 
+echo "[info] semantic clarity probes: projection consumer isolation lane"
+(
+  cd "$WORKSPACE_ROOT"
+  python3 identity-protocol-local/scripts/refresh_identity_session_status.py \
+    --identity-id alpha \
+    --catalog "$TMP_ROOT/authority-fallback/.identity/catalog.local.yaml" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --actor-id assistant:codex \
+    --baseline-policy warn \
+    --json-only > "$TMP_ROOT/projection_refresh_workspace_root.json"
+  python3 identity-protocol-local/scripts/validate_identity_session_refresh_status.py \
+    --identity-id alpha \
+    --catalog "$TMP_ROOT/authority-fallback/.identity/catalog.local.yaml" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --actor-id assistant:codex \
+    --baseline-policy warn \
+    --operation scan \
+    --json-only > "$TMP_ROOT/projection_refresh_validate_workspace_root.json"
+)
+python3 - "$TMP_ROOT/projection_refresh_workspace_root.json" "$TMP_ROOT/projection_refresh_validate_workspace_root.json" <<'PY'
+import json,sys
+refresh=json.load(open(sys.argv[1]))
+validate=json.load(open(sys.argv[2]))
+assert refresh.get("identity_id") == "alpha", refresh
+assert refresh.get("actor_id") == "assistant:codex", refresh
+assert refresh.get("session_id") == "run:alpha", refresh
+assert refresh.get("session_id_source") == "actor_binding_identity", refresh
+assert refresh.get("pointer_consistency") == "WARN", refresh
+assert "legacy_pointer_identity_mismatch" in (refresh.get("risk_flags") or []), refresh
+assert "actor_binding_missing" not in (refresh.get("risk_flags") or []), refresh
+assert validate.get("session_refresh_status") == "PASS_REQUIRED", validate
+assert validate.get("actor_id") == "assistant:codex", validate
+assert validate.get("session_id") == "run:alpha", validate
+assert validate.get("session_id_source") == "actor_binding_identity", validate
+assert validate.get("baseline_status") == "WARN", validate
+assert validate.get("baseline_error_code") == "IP-PBL-002", validate
+assert validate.get("error_code") == "", validate
+assert all("can't open file" not in str(reason) for reason in (validate.get("stale_reasons") or [])), validate
+print("[PASS] projection consumer isolation replay")
+PY
+
 echo "[info] semantic clarity probes: actor-session authority residue repair lane"
 mkdir -p "$TMP_ROOT/authority-residue/.identity/session/actors" "$TMP_ROOT/authority-residue/.identity/session/mirror"
 cat > "$TMP_ROOT/authority-residue/.identity/catalog.local.yaml" <<'YAML'

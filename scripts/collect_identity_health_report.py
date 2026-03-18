@@ -11,11 +11,13 @@ from pathlib import Path
 from typing import Any
 
 from actor_session_common import (
-    load_actor_binding_store,
+    resolve_bound_session_id_for_identity,
     resolve_protocol_actor_id,
     resolve_required_protocol_actor_id,
 )
+from resolve_identity_context import default_local_catalog_path
 
+PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
 
 DEFAULT_CHECKS: list[tuple[str, list[str]]] = [
     ("scope_resolution", ["python3", "scripts/validate_identity_scope_resolution.py"]),
@@ -315,7 +317,7 @@ def _build_self_upgrade_plan(
         f"export CODEX_HOME={codex_home}",
         'export IDENTITY_PROTOCOL_HOME="${IDENTITY_PROTOCOL_HOME:-$PWD}"',
         (
-            "python3 scripts/identity_creator.py update "
+            'python3 "$IDENTITY_PROTOCOL_HOME"/scripts/identity_creator.py update '
             f"--identity-id {identity_id} "
             f"--catalog {catalog_path} "
             f"--repo-catalog {repo_catalog} "
@@ -327,7 +329,7 @@ def _build_self_upgrade_plan(
         ),
         f"LATEST_REPORT={latest_expr}",
         (
-            "python3 scripts/validate_writeback_continuity.py "
+            'python3 "$IDENTITY_PROTOCOL_HOME"/scripts/validate_writeback_continuity.py '
             f"--identity-id {identity_id} "
             f"--catalog {catalog_path} "
             f"--repo-catalog {repo_catalog} "
@@ -335,7 +337,7 @@ def _build_self_upgrade_plan(
             "--operation validate --json-only"
         ),
         (
-            "python3 scripts/validate_post_execution_mandatory.py "
+            'python3 "$IDENTITY_PROTOCOL_HOME"/scripts/validate_post_execution_mandatory.py '
             f"--identity-id {identity_id} "
             f"--catalog {catalog_path} "
             f"--repo-catalog {repo_catalog} "
@@ -343,14 +345,14 @@ def _build_self_upgrade_plan(
             "--operation validate --json-only"
         ),
         (
-            "python3 scripts/validate_outlet_matrix.py "
+            'python3 "$IDENTITY_PROTOCOL_HOME"/scripts/validate_outlet_matrix.py '
             f"--identity-id {identity_id} "
             f"--catalog {catalog_path} "
             '--report "$LATEST_REPORT" '
             "--operation validate --force-required --json-only"
         ),
         (
-            "python3 scripts/validate_identity_protocol_version_alignment.py "
+            'python3 "$IDENTITY_PROTOCOL_HOME"/scripts/validate_identity_protocol_version_alignment.py '
             f"--identity-id {identity_id} "
             f"--catalog {catalog_path} "
             f"--repo-catalog {repo_catalog} "
@@ -358,7 +360,7 @@ def _build_self_upgrade_plan(
             "--operation validate --alignment-policy strict --json-only"
         ),
         (
-            "python3 scripts/collect_identity_health_report.py "
+            'python3 "$IDENTITY_PROTOCOL_HOME"/scripts/collect_identity_health_report.py '
             f"--identity-id {identity_id} "
             f"--catalog {catalog_path} "
             f"--repo-catalog {repo_catalog} "
@@ -385,7 +387,7 @@ def _build_self_upgrade_plan(
 
 
 def _run(cmd: list[str]) -> tuple[int, str, str]:
-    p = subprocess.run(cmd, capture_output=True, text=True)
+    p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROTOCOL_ROOT))
     return p.returncode, p.stdout or "", p.stderr or ""
 
 
@@ -406,38 +408,6 @@ def _override_operation(cmd: list[str], operation: str) -> list[str]:
             return out
     out.extend(["--operation", operation])
     return out
-
-
-def _resolve_actor_session_id(
-    *,
-    catalog: str,
-    identity_id: str,
-    actor_id: str,
-    explicit_session_id: str,
-) -> tuple[str, str]:
-    explicit = str(explicit_session_id or "").strip()
-    if explicit:
-        return explicit, "explicit_session_id"
-    actor = str(actor_id or "").strip()
-    if not actor:
-        return "", "actor_missing"
-    try:
-        store = load_actor_binding_store(Path(catalog).expanduser().resolve(), actor)
-    except Exception:
-        return "", "actor_binding_store_unavailable"
-    bindings = [x for x in (store.get("bindings") or []) if isinstance(x, dict)]
-    scoped = [
-        x
-        for x in bindings
-        if str(x.get("identity_id", "")).strip() == str(identity_id or "").strip()
-        and str(x.get("session_id", "")).strip()
-    ]
-    if not scoped:
-        return "", "actor_binding_identity_missing"
-    session_ids = sorted({str(x.get("session_id", "")).strip() for x in scoped if str(x.get("session_id", "")).strip()})
-    if len(session_ids) == 1:
-        return session_ids[0], "actor_binding_identity"
-    return "", "actor_binding_identity_ambiguous"
 
 
 def _parse_json_payload(raw: str) -> dict[str, Any] | None:
@@ -482,8 +452,14 @@ def main() -> int:
     catalog = (
         args.catalog.strip()
         or str(os.environ.get("IDENTITY_CATALOG", "")).strip()
-        or str((Path.home() / ".codex" / ".identity" / "catalog.local.yaml").resolve())
+        or str(default_local_catalog_path())
     )
+    catalog_path = Path(catalog).expanduser().resolve()
+    repo_catalog_arg = Path(args.repo_catalog).expanduser()
+    if repo_catalog_arg.is_absolute():
+        repo_catalog_path = repo_catalog_arg.resolve()
+    else:
+        repo_catalog_path = (PROTOCOL_ROOT / repo_catalog_arg).resolve()
     execution_report = str(args.execution_report or "").strip()
     strict_session_bound = str(args.operation or "").strip().lower() in STRICT_SESSION_BOUND_OPERATIONS
     actor_id_raw = str(args.actor_id or "").strip()
@@ -496,10 +472,10 @@ def main() -> int:
     except ValueError as exc:
         print(f"[FAIL] IP-ACTOR-ENTRY-001 {exc} (identity_id={args.identity_id}, operation={args.operation})")
         return 1
-    session_id, session_id_source = _resolve_actor_session_id(
-        catalog=catalog,
+    session_id, session_id_source = resolve_bound_session_id_for_identity(
+        catalog_path,
+        actor_id,
         identity_id=args.identity_id,
-        actor_id=actor_id,
         explicit_session_id=str(args.session_id or "").strip(),
     )
     if strict_session_bound and actor_id and not session_id:
@@ -516,38 +492,40 @@ def main() -> int:
         if name in OPERATION_AWARE_CHECKS:
             cmd = _override_operation(cmd, args.operation)
         if name == "state_consistency":
-            cmd = [*base, "--catalog", catalog]
+            cmd = [*base, "--catalog", str(catalog_path)]
         elif name in {"protocol_baseline_freshness", "protocol_version_alignment"}:
-            cmd += ["--catalog", catalog, "--repo-catalog", args.repo_catalog]
+            cmd += ["--catalog", str(catalog_path), "--repo-catalog", str(repo_catalog_path)]
             if execution_report:
                 cmd += ["--execution-report", execution_report]
         elif name in {"semantic_routing_guard", "vendor_namespace_separation"}:
-            cmd += ["--catalog", catalog]
+            cmd += ["--catalog", str(catalog_path)]
         elif name == "protocol_feedback_sidecar":
-            cmd += ["--catalog", catalog, "--repo-catalog", args.repo_catalog]
+            cmd += ["--catalog", str(catalog_path), "--repo-catalog", str(repo_catalog_path)]
             if execution_report:
                 cmd += ["--report", execution_report]
         elif name in {"writeback_continuity", "post_execution_mandatory"}:
-            cmd += ["--catalog", catalog, "--repo-catalog", args.repo_catalog]
+            cmd += ["--catalog", str(catalog_path), "--repo-catalog", str(repo_catalog_path)]
             if execution_report:
                 cmd += ["--report", execution_report]
         elif name == "outlet_matrix":
-            cmd += ["--catalog", catalog]
+            cmd += ["--catalog", str(catalog_path)]
             if execution_report:
                 cmd += ["--report", execution_report]
             if args.operation in {"validate", "readiness", "e2e", "ci", "three-plane"}:
                 cmd += ["--force-required"]
         elif name in {"scope_resolution", "scope_isolation", "scope_persistence"}:
-            cmd += ["--catalog", catalog, "--repo-catalog", args.repo_catalog]
+            cmd += ["--catalog", str(catalog_path), "--repo-catalog", str(repo_catalog_path)]
             if args.scope:
                 cmd += ["--scope", args.scope]
         else:
-            cmd += ["--catalog", catalog]
+            cmd += ["--catalog", str(catalog_path)]
         if name == "session_refresh_status":
             if execution_report:
                 cmd += ["--execution-report", execution_report]
             if actor_id:
                 cmd += ["--actor-id", actor_id]
+            if session_id:
+                cmd += ["--session-id", session_id]
         if name in {"actor_session_binding", "headstamp_recurrence_closure"} and actor_id:
             cmd += ["--actor-id", actor_id]
         if name in {"actor_session_binding", "headstamp_recurrence_closure"} and session_id:
@@ -558,6 +536,8 @@ def main() -> int:
             cmd += ["--actor-id", actor_id]
         if name == "pointer_drift_guard" and session_id:
             cmd += ["--session-id", session_id]
+        if name == "pointer_drift_guard":
+            cmd += ["--allow-compatibility-projection-drift"]
 
         rc, out, err = _run(cmd)
         status = "PASS" if rc == 0 else "FAIL"
@@ -804,8 +784,8 @@ def main() -> int:
 
     self_upgrade_plan = _build_self_upgrade_plan(
         identity_id=args.identity_id,
-        catalog=catalog,
-        repo_catalog=args.repo_catalog,
+        catalog=str(catalog_path),
+        repo_catalog=str(repo_catalog_path),
         actor_id=actor_id,
         out_dir=args.out_dir,
         checks=checks,
@@ -815,7 +795,8 @@ def main() -> int:
         "report_id": f"identity-health-{args.identity_id}-{int(now.timestamp())}",
         "generated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "identity_id": args.identity_id,
-        "catalog_path": str(Path(catalog).expanduser().resolve()),
+        "catalog_path": str(catalog_path),
+        "repo_catalog_path": str(repo_catalog_path),
         "scope": args.scope,
         "operation": args.operation,
         "execution_report_ref": execution_report,
