@@ -497,3 +497,30 @@ deepening base for v1.6.1 headstamp semantics.
    - controlled-runtime governed proof remains authoritative,
    - the host-native panel stays explanatory-only.
 4. Aggregators MAY exclude this surface from blocker sets only when the tuple in clause 2 is present; otherwise the surface remains an ordinary non-claim explanatory envelope and receives no automatic exclusion.
+
+### 15.9 Native chat assistant-visible injection freeze (2026-03-18)
+
+1. For host-native chat panels without developer-wirable sender attestation, the standard closure path is:
+   - `machine-verify -> assistant-visible-inject -> next turn re-verify`
+2. This path is explicitly an assistant text-layer injection contract:
+   - it MAY provide stable visible headstamp output,
+   - it MUST NOT be described as host sender physical injection,
+   - it MUST NOT replace governed proof, admission, or runtime receipt ownership.
+3. The native chat success-state visible ordering is frozen as:
+   - line 1: `Identity-Context: ... | Layer-Context: ...`
+   - line 2: `Machine-Verification: ...`
+   - line 3+: business body
+4. The ordering in clause 3 is native-chat-specific and does not modify governed controlled-runtime surfaces:
+   - governed visible envelope remains `Display-Headstamp` then `Machine-Verification`,
+   - canonical governed artifact first line remains raw `Identity-Context: ... | Layer-Context: ...`.
+5. Native chat success-state injection MUST be gated by a clean machine tuple. At minimum the tuple must provide:
+   - authoritative identity source
+   - resolved `identity_id`
+   - active status
+   - pointer path / prompt metadata sufficient for replay
+6. When that tuple is missing, conflicted, drifted, polluted, or incomplete:
+   - success-state identity injection is forbidden,
+   - line 1 MUST degrade to a withheld/conflict `Identity-Context`,
+   - line 2 MUST emit `Machine-Verification: verification_status=FAIL_REQUIRED ...`,
+   - implementations MUST fail-close rather than emit a stable-but-wrong identity headstamp.
+7. This freeze is the closure baseline for native chat surfaces in the current architecture boundary; future sender/renderer physical wiring is a higher-tier enhancement, not a prerequisite for v1.6.1 / v1.6.6 closure.

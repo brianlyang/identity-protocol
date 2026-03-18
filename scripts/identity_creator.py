@@ -1060,6 +1060,23 @@ def _activate_identity(
         )
         if rc != 0:
             raise RuntimeError("actor session multibinding concurrency validation failed")
+        compile_cmd = [
+            "python3",
+            "scripts/compile_identity_runtime.py",
+            "--catalog",
+            str(local_catalog),
+            "--output",
+            str((protocol_root_resolved / "identity" / "runtime" / "IDENTITY_COMPILED.md").resolve()),
+            "--actor-id",
+            actor_id_resolved,
+        ]
+        rc = _run(compile_cmd)
+        if rc != 0:
+            print(
+                "[FAIL] activation succeeded but runtime brief compilation failed "
+                f"(identity_id={identity_id}, actor_id={actor_id_resolved})."
+            )
+            return rc
         print(f"[OK] activated identity in catalog (actor-scoped multi-active): {identity_id}")
         print(f"[OK] switch report: {switch_report}")
         return 0
@@ -1652,6 +1669,10 @@ def main() -> int:
     )
 
     p_compile = sub.add_parser("compile", help="Compile runtime brief")
+    p_compile.add_argument("--catalog", default=local_catalog_default)
+    p_compile.add_argument("--identity-id", default="")
+    p_compile.add_argument("--actor-id", default="")
+    p_compile.add_argument("--output", default="identity/runtime/IDENTITY_COMPILED.md")
     p_compile.add_argument("--check", action="store_true", help="fail if compile output is not stable")
 
     p_activate = sub.add_parser("activate", help="Set identity status=active in catalog")
@@ -3144,11 +3165,26 @@ def main() -> int:
         return 0
 
     if args.command == "compile":
-        rc = _run(["python3", "scripts/compile_identity_runtime.py"])
+        compile_catalog = str(Path(args.catalog).expanduser().resolve())
+        compile_output = str(Path(args.output).expanduser().resolve())
+        compile_actor_id = resolve_actor_id(str(args.actor_id or ""))
+        cmd = [
+            "python3",
+            "scripts/compile_identity_runtime.py",
+            "--catalog",
+            compile_catalog,
+            "--output",
+            compile_output,
+        ]
+        if str(args.identity_id or "").strip():
+            cmd.extend(["--identity-id", str(args.identity_id).strip()])
+        if compile_actor_id:
+            cmd.extend(["--actor-id", compile_actor_id])
+        rc = _run(cmd)
         if rc != 0:
             return rc
         if args.check:
-            return _run(["git", "diff", "--exit-code", "--", "identity/runtime/IDENTITY_COMPILED.md"])
+            return _run(["git", "diff", "--exit-code", "--", compile_output])
         return 0
 
     if args.command == "activate":
