@@ -11,6 +11,7 @@ import yaml
 from actor_session_common import (
     ACTOR_GLOBAL_LAST_MUTATION_PROJECTION_SCOPE,
     AUTHORITATIVE_BINDING_RULE,
+    COMPATIBILITY_PROJECTION_STATUS_SUPPRESSED_MULTI_IDENTITY,
     load_actor_binding,
     resolve_actor_id,
 )
@@ -53,6 +54,17 @@ def _validate_pointer(
         payload = _load_json(pointer_path)
     except Exception as exc:
         return False, f"{pointer_name}_invalid_json:{exc}", {}
+
+    projection_status = str(payload.get("compatibility_projection_status", "")).strip()
+    if projection_status == COMPATIBILITY_PROJECTION_STATUS_SUPPRESSED_MULTI_IDENTITY:
+        if require_compatibility_metadata:
+            if str(payload.get("authority_role", "")).strip() != "compatibility_mirror":
+                return False, f"{pointer_name}_authority_role_missing_or_invalid", payload
+            if str(payload.get("authoritative_binding_rule", "")).strip() != AUTHORITATIVE_BINDING_RULE:
+                return False, f"{pointer_name}_authoritative_binding_rule_missing_or_invalid", payload
+            if payload.get("authoritative_decision_allowed") is not False:
+                return False, f"{pointer_name}_authoritative_decision_allowed_not_false", payload
+        return False, f"{pointer_name}_projection_suppressed_multi_identity", payload
 
     pointer_identity_id = str(payload.get("identity_id", "")).strip()
     if pointer_identity_id != active_identity_id:
@@ -102,13 +114,30 @@ def _validate_pointer(
     return True, "ok", payload
 
 
-def _validate_compatibility_projection_drift(
+def _validate_compatibility_projection_exception(
     *,
     payload: dict[str, Any],
     expected_identity_id: str,
     actor_id: str,
     session_id: str,
 ) -> tuple[bool, str]:
+    projection_status = str(payload.get("compatibility_projection_status", "")).strip()
+    if projection_status == COMPATIBILITY_PROJECTION_STATUS_SUPPRESSED_MULTI_IDENTITY:
+        if str(payload.get("authority_role", "")).strip() != "compatibility_mirror":
+            return False, "compatibility_projection_authority_role_invalid"
+        if payload.get("authoritative_decision_allowed") is not False:
+            return False, "compatibility_projection_decision_flag_invalid"
+        if str(payload.get("compatibility_projection_reason", "")).strip() != "multiple_session_primary_identity_ids":
+            return False, "compatibility_projection_reason_invalid"
+        candidate_ids = [
+            str(item).strip()
+            for item in (payload.get("compatibility_projection_candidate_identity_ids") or [])
+            if str(item).strip()
+        ]
+        if expected_identity_id not in candidate_ids:
+            return False, "compatibility_projection_candidates_missing_expected_identity"
+        return True, "compatibility_projection_suppressed_multi_identity"
+
     pointer_identity_id = str(payload.get("identity_id", "")).strip()
     if not pointer_identity_id:
         return False, "compatibility_projection_identity_missing"
@@ -247,7 +276,6 @@ def main() -> int:
     )
     require_mirror_effective = bool(args.require_mirror or args.strict_session_primary)
     compatibility_projection_drift_detected = False
-    compatibility_projection_drift_pointer_names: list[str] = []
     compatibility_projection_payload: dict[str, Any] = {}
 
     ok, reason, pointer_payload = _validate_pointer(
@@ -265,9 +293,12 @@ def main() -> int:
             and args.strict_session_primary
             and actor_id
             and session_id
-            and reason.startswith("canonical_identity_mismatch:")
+            and (
+                reason.startswith("canonical_identity_mismatch:")
+                or reason == "canonical_projection_suppressed_multi_identity"
+            )
         ):
-            allow_compatibility_projection_drift, drift_reason = _validate_compatibility_projection_drift(
+            allow_compatibility_projection_drift, drift_reason = _validate_compatibility_projection_exception(
                 payload=pointer_payload,
                 expected_identity_id=expected_identity_id,
                 actor_id=actor_id,
@@ -275,7 +306,6 @@ def main() -> int:
             )
             if allow_compatibility_projection_drift:
                 compatibility_projection_drift_detected = True
-                compatibility_projection_drift_pointer_names.append("canonical")
                 compatibility_projection_payload = dict(pointer_payload)
                 print(f"[INFO] canonical compatibility projection drift acknowledged: {drift_reason}")
         allow_multi_active_identity_mismatch = (
@@ -328,9 +358,12 @@ def main() -> int:
                     and args.strict_session_primary
                     and actor_id
                     and session_id
-                    and reason.startswith(f"{pointer_name}_identity_mismatch:")
+                    and (
+                        reason.startswith(f"{pointer_name}_identity_mismatch:")
+                        or reason == f"{pointer_name}_projection_suppressed_multi_identity"
+                    )
                 ):
-                    allow_compatibility_projection_drift, drift_reason = _validate_compatibility_projection_drift(
+                    allow_compatibility_projection_drift, drift_reason = _validate_compatibility_projection_exception(
                         payload=pointer_payload,
                         expected_identity_id=expected_identity_id,
                         actor_id=actor_id,
@@ -338,7 +371,6 @@ def main() -> int:
                     )
                     if allow_compatibility_projection_drift:
                         compatibility_projection_drift_detected = True
-                        compatibility_projection_drift_pointer_names.append(pointer_name)
                         if not compatibility_projection_payload:
                             compatibility_projection_payload = dict(pointer_payload)
                         print(f"[INFO] {pointer_name} compatibility projection drift acknowledged: {drift_reason}")
@@ -370,6 +402,7 @@ def main() -> int:
         f"session_id={session_id or '<auto>'} "
         f"active_count={len(active_rows)} catalog={catalog_path} canonical={canonical_out} "
         f"compatibility_projection_drift={'yes' if compatibility_projection_drift_detected else 'no'} "
+        f"projection_status={str(compatibility_projection_payload.get('compatibility_projection_status', '')).strip() or '<none>'} "
         f"projection_session={str(compatibility_projection_payload.get('compatibility_projection_session_id', '')).strip() or '<none>'}"
     )
     return 0

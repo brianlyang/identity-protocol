@@ -61,13 +61,15 @@ for token in required:
     if token not in text:
         raise SystemExit(f"native_chat_compiled_brief_missing_token: {token}")
 line1 = text.index("Success line 1 example:")
-line2 = text.index("Success line 2 example:")
+line2 = text.index("Success line 2 example (`mini`):")
 if line1 > line2:
     raise SystemExit("native_chat_compiled_brief_order_invalid: success line 1 must precede success line 2")
 if "Identity-Context: actor_id=assistant:codex; identity_id=base-repo-closure-orchestrator" not in text:
     raise SystemExit("native_chat_compiled_brief_identity_context_example_missing")
-if "Machine-Verification: authority_source=actor_session_store; actor_id=assistant:codex; identity_id=base-repo-closure-orchestrator" not in text:
+if "Success line 2 example (`mini`): `Machine-Verification: authority_source=actor_session_store; identity_id=base-repo-closure-orchestrator" not in text:
     raise SystemExit("native_chat_compiled_brief_machine_verification_example_missing")
+if "Native chat machine profile default: `mini`." not in text:
+    raise SystemExit("native_chat_compiled_brief_machine_profile_default_missing")
 print("[PASS] native chat compiled brief freeze")
 PY
 
@@ -499,6 +501,66 @@ python3 scripts/sync_session_identity.py \
   --run-id alpha \
   --compare-token 0 \
   --mutation-lane activate > "$TMP_ROOT/cross_session_alpha_sync.log"
+python3 - "$TMP_ROOT/cross-session-drift/.identity/session/active_identity.json" <<'PY'
+from pathlib import Path
+import json
+import sys
+pointer = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert pointer.get("identity_id") == "alpha", pointer
+print("[PASS] bootstrap compatibility projection anchored to first active identity")
+PY
+set +e
+python3 scripts/validate_identity_session_pointer_consistency.py \
+  --catalog "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" \
+  --identity-id alpha \
+  --actor-id assistant:codex \
+  --session-id run:alpha \
+  --strict-session-primary > "$TMP_ROOT/cross_session_alpha_pointer.log" 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 0 ]]; then
+  echo "[FAIL] expected alpha strict pointer validation to pass before competing session is added"
+  cat "$TMP_ROOT/cross_session_alpha_pointer.log"
+  exit 1
+fi
+python3 - "$TMP_ROOT/cross_session_alpha_pointer.log" <<'PY'
+from pathlib import Path
+import sys
+text = Path(sys.argv[1]).read_text(encoding="utf-8")
+assert "compatibility_projection_drift=no" in text, text
+print("[PASS] strict pointer validation passes for projected primary session")
+PY
+
+python3 scripts/sync_session_identity.py \
+  --catalog "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" \
+  --identity-id beta \
+  --actor-id assistant:codex \
+  --session-id run:beta \
+  --session-id-source explicit_session_id \
+  --run-id beta \
+  --compare-token 1 \
+  --switch-prestate-mode session_primary \
+  --switch-from-identity "" \
+  --mutation-lane activate > "$TMP_ROOT/cross_session_beta_unapproved.log"
+python3 - "$TMP_ROOT/cross_session_beta_unapproved.log" "$TMP_ROOT/cross-session-drift/.identity/session/active_identity.json" "$TMP_ROOT/cross-session-drift/.identity/session/actors/assistant_codex.json" <<'PY'
+from pathlib import Path
+import json
+import sys
+log = Path(sys.argv[1]).read_text(encoding="utf-8")
+pointer = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+actor_store = json.loads(Path(sys.argv[3]).read_text(encoding="utf-8"))
+beta = next(
+    item for item in actor_store.get("bindings", [])
+    if item.get("session_id") == "run:beta" and item.get("identity_id") == "beta"
+)
+assert "canonical pointer write skipped" in log, log
+assert "actor_global_projection_switch_receipt_missing" in log, log
+assert pointer.get("identity_id") == "alpha", pointer
+assert beta.get("compatibility_projection_allowed") is False, beta
+assert beta.get("compatibility_projection_reason") == "actor_global_projection_switch_receipt_missing", beta
+print("[PASS] unapproved cross-session activate cannot steal compatibility pointer")
+PY
+
 cat > "$TMP_ROOT/cross-session-drift/switch-alpha-to-beta.json" <<'JSON'
 {
   "receipt_id": "switch-alpha-to-beta",
@@ -514,91 +576,78 @@ python3 scripts/sync_session_identity.py \
   --catalog "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" \
   --identity-id beta \
   --actor-id assistant:codex \
-  --session-id run:beta \
+  --session-id run:beta-switch \
   --session-id-source explicit_session_id \
-  --run-id beta \
-  --compare-token 1 \
+  --run-id beta-switch \
+  --compare-token 2 \
   --switch-intent-receipt "$TMP_ROOT/cross-session-drift/switch-alpha-to-beta.json" \
+  --switch-prestate-mode session_primary \
+  --switch-from-identity "" \
   --mutation-lane activate > "$TMP_ROOT/cross_session_beta_sync.log"
-
-set +e
-python3 scripts/validate_identity_session_pointer_consistency.py \
-  --catalog "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" \
-  --identity-id alpha \
-  --actor-id assistant:codex \
-  --session-id run:alpha \
-  --strict-session-primary > "$TMP_ROOT/cross_session_pointer_negative.log" 2>&1
-rc=$?
-set -e
-if [[ "$rc" -eq 0 ]]; then
-  echo "[FAIL] expected strict pointer validation without compatibility drift allowance to fail"
-  exit 1
-fi
-python3 - "$TMP_ROOT/cross_session_pointer_negative.log" <<'PY'
+python3 - "$TMP_ROOT/cross_session_beta_sync.log" "$TMP_ROOT/cross-session-drift/.identity/session/active_identity.json" "$TMP_ROOT/cross-session-drift/.identity/session/actors/assistant_codex.json" <<'PY'
 from pathlib import Path
+import json
 import sys
-text = Path(sys.argv[1]).read_text(encoding="utf-8")
-assert "canonical_projection_suppressed_multi_identity" in text, text
-print("[PASS] strict pointer suppression blocks without explicit allowance")
+log = Path(sys.argv[1]).read_text(encoding="utf-8")
+pointer = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+actor_store = json.loads(Path(sys.argv[3]).read_text(encoding="utf-8"))
+alpha = next(
+    item for item in actor_store.get("bindings", [])
+    if item.get("session_id") == "run:alpha" and item.get("identity_id") == "alpha"
+)
+beta = next(
+    item for item in actor_store.get("bindings", [])
+    if item.get("session_id") == "run:beta-switch" and item.get("identity_id") == "beta"
+)
+assert "canonical pointer write skipped" not in log, log
+assert pointer.get("identity_id") == "beta", pointer
+assert beta.get("compatibility_projection_allowed") is True, beta
+assert beta.get("compatibility_projection_reason") == "actor_global_projection_switch_receipt_validated", beta
+assert alpha.get("compatibility_projection_allowed") is False, alpha
+assert alpha.get("compatibility_projection_reason") == "superseded_by_actor_global_projection_switch", alpha
+print("[PASS] approved cross-session switch rebinds the single compatibility projection")
 PY
 
 python3 scripts/validate_identity_session_pointer_consistency.py \
   --catalog "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" \
-  --identity-id alpha \
+  --identity-id beta \
   --actor-id assistant:codex \
-  --session-id run:alpha \
-  --strict-session-primary \
-  --allow-compatibility-projection-drift > "$TMP_ROOT/cross_session_pointer_positive.log"
+  --session-id run:beta-switch \
+  --strict-session-primary > "$TMP_ROOT/cross_session_pointer_positive.log"
 python3 - "$TMP_ROOT/cross_session_pointer_positive.log" "$TMP_ROOT/cross-session-drift/.identity/session/active_identity.json" <<'PY'
 from pathlib import Path
 import json
 import sys
 text = Path(sys.argv[1]).read_text(encoding="utf-8")
 pointer = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
-assert "compatibility_projection_drift=yes" in text, text
-assert "projection_status=SUPPRESSED_MULTI_IDENTITY" in text, text
-assert "projection_session=<none>" in text, text
-assert pointer.get("identity_id", "") == "", pointer
-assert pointer.get("status") == "compatibility_projection_suppressed", pointer
-assert pointer.get("compatibility_projection_status") == "SUPPRESSED_MULTI_IDENTITY", pointer
-assert sorted(pointer.get("compatibility_projection_candidate_identity_ids") or []) == ["alpha", "beta"], pointer
-print("[PASS] cross-session compatibility projection suppression acknowledged")
+assert "compatibility_projection_drift=no" in text, text
+assert pointer.get("identity_id", "") == "beta", pointer
+print("[PASS] strict pointer validation follows the approved compatibility projection")
 PY
 
-set +e
-python3 - "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" > "$TMP_ROOT/cross_session_actor_global_guard.log" 2>&1 <<'PY'
+cat > "$TMP_ROOT/cross-session-drift/inspection-override.json" <<'JSON'
+{"receipt_id":"inspection-override","reason":"semantic-clarity-observation-lane-probe"}
+JSON
+python3 scripts/sync_session_identity.py \
+  --catalog "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" \
+  --identity-id beta \
+  --actor-id assistant:codex \
+  --session-id run:inspection \
+  --session-id-source explicit_session_id \
+  --run-id inspection \
+  --compare-token 3 \
+  --mutation-lane inspection \
+  --governance-override-receipt "$TMP_ROOT/cross-session-drift/inspection-override.json" > "$TMP_ROOT/cross_session_inspection.log"
+python3 - "$TMP_ROOT/cross_session_inspection.log" "$TMP_ROOT/cross-session-drift/.identity/session/active_identity.json" <<'PY'
 from pathlib import Path
+import json
 import sys
-sys.path.insert(0, str(Path("scripts").resolve()))
-import identity_creator
-
-catalog = Path(sys.argv[1]).resolve()
-rc = identity_creator._activate_identity(
-    catalog,
-    catalog,
-    "alpha",
-    actor_id="assistant:codex",
-    run_id="guard-probe",
-    session_id="run:gamma",
-    switch_reason="probe",
-    switch_guard_scope=identity_creator.SWITCH_GUARD_SCOPE_ACTOR_GLOBAL,
-)
-raise SystemExit(rc)
-PY
-rc=$?
-set -e
-if [[ "$rc" -eq 0 ]]; then
-  echo "[FAIL] expected actor_global switch guard to detect compatibility projection switch"
-  exit 1
-fi
-python3 - "$TMP_ROOT/cross_session_actor_global_guard.log" <<'PY'
-from pathlib import Path
-import sys
-text = Path(sys.argv[1]).read_text(encoding="utf-8")
-assert "IP-ACT-SWITCH-001" in text, text
-assert "current_identity=beta" in text, text
-assert "switch_guard_scope=actor_global" in text, text
-print("[PASS] actor_global switch guard reads compatibility projection")
+log = Path(sys.argv[1]).read_text(encoding="utf-8")
+pointer = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+assert "canonical pointer write skipped" in log, log
+assert "non_activate_lane_observation_only" in log, log
+assert pointer.get("identity_id") == "beta", pointer
+print("[PASS] observation lane cannot mutate canonical active pointer")
 PY
 
 echo "[info] semantic clarity probes: cross-layer uniqueness lane"
@@ -606,7 +655,7 @@ mkdir -p "$TMP_ROOT/cross-layer-uniqueness/project/.identity" "$TMP_ROOT/cross-l
 cat > "$TMP_ROOT/cross-layer-uniqueness/project/.identity/catalog.local.yaml" <<'YAML'
 identities:
   - id: base-repo-architect
-    pack_path: /tmp/project-architect
+    pack_path: /tmp/base-repo-architect-project
     status: active
     profile: runtime
     runtime_mode: local_only
@@ -614,7 +663,7 @@ YAML
 cat > "$TMP_ROOT/cross-layer-uniqueness/global/.identity/catalog.local.yaml" <<'YAML'
 identities:
   - id: base-repo-architect
-    pack_path: /tmp/global-architect
+    pack_path: /tmp/base-repo-architect-global
     status: inactive
     profile: runtime
     runtime_mode: local_only

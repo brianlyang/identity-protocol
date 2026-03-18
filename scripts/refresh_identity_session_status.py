@@ -139,6 +139,9 @@ def _pointer_consistency(
     legacy_pointer = _load_json(legacy_pointer_path) if legacy_pointer_path.exists() else {}
     legacy_identity = str(legacy_pointer.get("identity_id", "")).strip() if legacy_pointer else ""
     legacy_catalog = str(legacy_pointer.get("catalog_path", "")).strip() if legacy_pointer else ""
+    legacy_projection_status = (
+        str(legacy_pointer.get("compatibility_projection_status", "")).strip() if legacy_pointer else ""
+    )
 
     if not legacy_pointer:
         if status == POINTER_PASS:
@@ -146,7 +149,11 @@ def _pointer_consistency(
         risks.append("legacy_pointer_missing")
     else:
         expected_identity = actor_binding_identity or identity_id
-        if legacy_identity and expected_identity and legacy_identity != expected_identity:
+        if legacy_projection_status == "SUPPRESSED_MULTI_IDENTITY":
+            if status == POINTER_PASS:
+                status = POINTER_WARN
+            risks.append("legacy_pointer_projection_suppressed_multi_identity")
+        elif legacy_identity and expected_identity and legacy_identity != expected_identity:
             if status == POINTER_PASS:
                 status = POINTER_WARN
             risks.append("legacy_pointer_identity_mismatch")
@@ -160,6 +167,7 @@ def _pointer_consistency(
         "actor_binding_identity_id": actor_binding_identity,
         "legacy_pointer_path": str(legacy_pointer_path),
         "legacy_pointer_identity_id": legacy_identity,
+        "legacy_pointer_projection_status": legacy_projection_status,
     }
     return status, risks, detail
 

@@ -2,25 +2,20 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
-import yaml
-
+from identity_scope_isolation_common import (
+    analyze_cross_layer_identity_uniqueness,
+    load_yaml,
+    resolve_global_catalog,
+    resolve_project_catalog_from_repo,
+)
 from resolve_identity_context import (
-    _default_user_identity_home,
-    _detect_repo_root,
-    _project_identity_home_from_repo_catalog,
     default_identity_home,
     default_local_catalog_path,
     resolve_identity,
 )
-
-
-def _load_yaml(path: Path) -> dict:
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    if not isinstance(data, dict):
-        raise ValueError(f"yaml root must be object: {path}")
-    return data
 
 
 def _find_identity_row(catalog: dict, identity_id: str) -> dict:
@@ -41,79 +36,34 @@ def _is_runtime_row(row: dict) -> bool:
 def _is_active_row(row: dict) -> bool:
     return str((row or {}).get("status", "")).strip().lower() in {"active", "enabled", "on"}
 
-
-def _resolve_project_catalog_from_repo(repo_catalog: Path) -> Path:
-    repo_catalog = repo_catalog.expanduser().resolve()
-    repo_root = _detect_repo_root(repo_catalog.parent)
-    project_identity_home = _project_identity_home_from_repo_catalog(repo_root, repo_catalog)
-    return (project_identity_home / "catalog.local.yaml").resolve()
-
-
-def _resolve_global_catalog() -> Path:
-    return (_default_user_identity_home() / "catalog.local.yaml").resolve()
-
-
-def _cross_layer_duplicate_details(identity_id: str, local_catalog: Path, repo_catalog: Path) -> list[dict]:
-    local_catalog = local_catalog.expanduser().resolve()
-    project_catalog = _resolve_project_catalog_from_repo(repo_catalog)
-    global_catalog = _resolve_global_catalog()
-    candidates = []
-    for p in [project_catalog, global_catalog]:
-        rp = p.expanduser().resolve()
-        if rp == local_catalog:
-            continue
-        if rp.exists():
-            candidates.append(rp)
-
-    if not local_catalog.exists():
-        return []
-    local_doc = _load_yaml(local_catalog)
-    local_row = _find_identity_row(local_doc, identity_id)
-    if not local_row:
-        return []
-
-    out: list[dict] = []
-    for other_catalog in candidates:
-        try:
-            other_doc = _load_yaml(other_catalog)
-        except Exception:
-            continue
-        other_row = _find_identity_row(other_doc, identity_id)
-        if not other_row:
-            continue
-        out.append(
-            {
-                "other_catalog": str(other_catalog),
-                "other_pack_path": str(other_row.get("pack_path", "")),
-                "other_status": str(other_row.get("status", "")),
-                "other_profile": str(other_row.get("profile", "")),
-                "other_runtime_mode": str(other_row.get("runtime_mode", "")),
-                "other_runtime_identity": _is_runtime_row(other_row),
-                "other_active": _is_active_row(other_row),
-                "local_catalog": str(local_catalog),
-                "local_pack_path": str(local_row.get("pack_path", "")),
-                "local_status": str(local_row.get("status", "")),
-                "local_profile": str(local_row.get("profile", "")),
-                "local_runtime_mode": str(local_row.get("runtime_mode", "")),
-                "local_runtime_identity": _is_runtime_row(local_row),
-                "local_active": _is_active_row(local_row),
-            }
-        )
-    return out
-
-
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate scope-isolation for an identity.")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--catalog", default="")
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--scope", default="")
+    ap.add_argument("--json-only", action="store_true")
     ap.add_argument(
         "--allow-cross-layer-runtime-duplicate",
         action="store_true",
         help="allow runtime duplicate identity_id across project/global catalogs (non-default; for migration only)",
     )
     args = ap.parse_args()
+
+    def _emit_failure(reason: str, *, error_code: str = "IP-SCOPE-LAYER-001", extra: dict | None = None) -> int:
+        payload = {
+            "scope_isolation_status": "FAIL_REQUIRED",
+            "error_code": error_code,
+            "identity_id": args.identity_id,
+            "stale_reasons": [reason],
+        }
+        if extra:
+            payload.update(extra)
+        if args.json_only:
+            print(json.dumps(payload, ensure_ascii=False))
+        else:
+            print(f"[FAIL] {reason}")
+        return 1
 
     local_catalog = (
         Path(args.catalog).expanduser().resolve()
@@ -124,7 +74,7 @@ def main() -> int:
 
     resolve_errors: list[str] = []
     resolve_catalog_candidates: list[Path] = [local_catalog]
-    global_catalog = _resolve_global_catalog()
+    global_catalog = resolve_global_catalog()
     if global_catalog not in resolve_catalog_candidates:
         resolve_catalog_candidates.append(global_catalog)
 
@@ -146,32 +96,36 @@ def main() -> int:
 
     if ctx is None:
         tail = resolve_errors[-1] if resolve_errors else "unknown_resolve_error"
-        print(f"[FAIL] resolve failed: {tail}")
-        return 1
+        return _emit_failure(
+            "resolve_failed",
+            extra={
+                "resolve_error_tail": tail,
+                "resolve_errors": resolve_errors,
+            },
+        )
 
     explicit_scope = bool(str(args.scope or "").strip())
     if bool(ctx.get("conflict_detected")) and not explicit_scope:
-        print("[FAIL] scope conflict detected")
-        return 1
+        return _emit_failure("scope_conflict_detected")
 
     scope = str(ctx.get("resolved_scope", "")).upper()
     profile = str(ctx.get("profile", "")).lower()
     runtime_mode = str(ctx.get("runtime_mode", "")).lower()
 
     if profile == "runtime" and scope == "SYSTEM":
-        print("[FAIL] runtime identity cannot resolve to SYSTEM scope")
-        return 1
+        return _emit_failure("runtime_identity_resolved_to_system_scope")
     if runtime_mode == "local_only" and scope == "SYSTEM":
-        print("[FAIL] local_only identity resolved to SYSTEM scope")
-        return 1
+        return _emit_failure("local_only_identity_resolved_to_system_scope")
 
     resolved = Path(str(ctx.get("resolved_pack_path", ""))).expanduser().resolve()
     if args.identity_id not in resolved.as_posix():
-        print(f"[FAIL] resolved pack path does not include identity id: {resolved}")
-        return 1
+        return _emit_failure(
+            "resolved_pack_path_missing_identity_id",
+            extra={"resolved_pack_path": str(resolved)},
+        )
 
     # no other identity may point to exact same pack path
-    catalog = _load_yaml(effective_catalog if effective_catalog.exists() else repo_catalog)
+    catalog = load_yaml(effective_catalog if effective_catalog.exists() else repo_catalog)
     collisions = []
     for row in catalog.get("identities", []) or []:
         if not isinstance(row, dict):
@@ -183,42 +137,59 @@ def main() -> int:
         if iid != args.identity_id and Path(p).expanduser().resolve() == resolved:
             collisions.append(iid)
     if collisions:
-        print(f"[FAIL] pack-path collision detected with identities: {sorted(collisions)}")
+        return _emit_failure(
+            "pack_path_collision_detected",
+            extra={"collisions": sorted(collisions)},
+        )
+
+    global_catalog = resolve_global_catalog()
+    project_catalog = effective_catalog if effective_catalog != global_catalog else resolve_project_catalog_from_repo(repo_catalog)
+    uniqueness = analyze_cross_layer_identity_uniqueness(
+        args.identity_id,
+        project_catalog=project_catalog,
+        global_catalog=global_catalog,
+    )
+    duplicate_detected = bool(uniqueness.get("runtime_duplicate_detected"))
+
+    payload = {
+        "scope_isolation_status": "PASS_REQUIRED",
+        "error_code": "",
+        "identity_id": args.identity_id,
+        "resolved_scope": scope,
+        "resolved_pack_path": str(resolved),
+        "effective_catalog": str(effective_catalog),
+        "runtime_duplicate_detected": duplicate_detected,
+        "active_runtime_duplicate_detected": bool(uniqueness.get("active_runtime_duplicate_detected")),
+        "duplicate_layers": uniqueness.get("runtime_duplicate_layers", []),
+        "entries": uniqueness.get("entries", []),
+        "stale_reasons": [],
+    }
+    if duplicate_detected and not args.allow_cross_layer_runtime_duplicate:
+        payload["scope_isolation_status"] = "FAIL_REQUIRED"
+        payload["error_code"] = "IP-SCOPE-LAYER-001"
+        payload["stale_reasons"].append("cross_layer_runtime_identity_id_duplicate_detected")
+        if payload["active_runtime_duplicate_detected"]:
+            payload["stale_reasons"].append("cross_layer_active_runtime_duplicate_detected")
+        message = (
+            "[FAIL] cross-layer runtime duplicate identity_id detected; "
+            "same runtime identity_id appears in both project/global catalogs. "
+            f"details={uniqueness.get('entries', [])}"
+        )
+        hint = (
+            "[HINT] keep a single runtime owner for this identity_id and archive/remove "
+            "the duplicate layer entry via repair_identity_cross_layer_uniqueness.py."
+        )
+        if args.json_only:
+            print(json.dumps(payload, ensure_ascii=False))
+        else:
+            print(message)
+            print(hint)
         return 1
 
-    duplicate_rows = _cross_layer_duplicate_details(args.identity_id, effective_catalog, repo_catalog)
-    if duplicate_rows and not args.allow_cross_layer_runtime_duplicate:
-        blocking_rows = [
-            row
-            for row in duplicate_rows
-            if row.get("local_runtime_identity")
-            and row.get("other_runtime_identity")
-            and row.get("local_active")
-            and row.get("other_active")
-        ]
-        if blocking_rows:
-            details = [
-                {
-                    "local_catalog": r["local_catalog"],
-                    "local_pack_path": r["local_pack_path"],
-                    "other_catalog": r["other_catalog"],
-                    "other_pack_path": r["other_pack_path"],
-                    "identity_id": args.identity_id,
-                }
-                for r in blocking_rows
-            ]
-            print(
-                "[FAIL] cross-layer runtime duplicate identity_id detected; "
-                "same active runtime identity appears in both project/global catalogs. "
-                f"details={details}"
-            )
-            print(
-                "[HINT] keep a single active runtime owner for this identity_id "
-                "and deactivate/quarantine the duplicate layer entry."
-            )
-            return 1
-
-    print(f"[OK] scope isolation validated: identity={args.identity_id}, scope={scope}, pack={resolved}")
+    if args.json_only:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(f"[OK] scope isolation validated: identity={args.identity_id}, scope={scope}, pack={resolved}")
     return 0
 
 

@@ -14,11 +14,14 @@ from actor_session_common import (
     ACTOR_GLOBAL_LAST_MUTATION_PROJECTION_SCOPE,
     AUTHORITY_MODEL,
     AUTHORITATIVE_BINDING_RULE,
+    COMPATIBILITY_PROJECTION_STATUS_AVAILABLE,
+    COMPATIBILITY_PROJECTION_STATUS_SUPPRESSED_MULTI_IDENTITY,
     DEFAULT_BINDING_KEY_MODE,
     SESSION_ONLY_BINDING_KEY_MODE,
     actor_session_path,
+    binding_compatibility_projection_allowed,
     load_actor_binding_store,
-    load_actor_global_compatibility_projection,
+    load_actor_global_compatibility_projection_state,
     resolve_actor_id,
     write_actor_binding_store,
 )
@@ -32,6 +35,7 @@ ERR_MB_006 = "IP-ASB-MB-006"
 ERR_MB_007 = "IP-ASB-MB-007"
 ERR_MB_008 = "IP-ASB-MB-008"
 ERR_MB_009 = "IP-ASB-MB-009"
+ERR_MB_010 = "IP-ASB-MB-010"
 SWITCH_PRESTATE_MODE_LEGACY_CANONICAL = "legacy_canonical"
 SWITCH_PRESTATE_MODE_SESSION_PRIMARY = "session_primary"
 SWITCH_PRESTATE_MODE_CHOICES = {
@@ -126,7 +130,43 @@ def _compatibility_projection_metadata(*, projection: dict[str, Any] | None) -> 
     }
 
 
-def _pointer_metadata(*, catalog: Path, canonical_out: Path, projection: dict[str, Any] | None = None) -> dict[str, Any]:
+def _pointer_projection_surface(
+    *,
+    projection_state: dict[str, Any] | None,
+    fallback_identity_id: str,
+    fallback_pack_path: str,
+    fallback_status: str,
+) -> dict[str, str]:
+    state = projection_state if isinstance(projection_state, dict) else {}
+    projection = state.get("projection") if isinstance(state.get("projection"), dict) else {}
+    projection_status = str(state.get("projection_status", "")).strip()
+    if projection_status == COMPATIBILITY_PROJECTION_STATUS_AVAILABLE and projection:
+        return {
+            "identity_id": str(projection.get("identity_id", "")).strip() or fallback_identity_id,
+            "pack_path": fallback_pack_path,
+            "status": fallback_status,
+        }
+    if projection_status == COMPATIBILITY_PROJECTION_STATUS_SUPPRESSED_MULTI_IDENTITY:
+        return {
+            "identity_id": "",
+            "pack_path": "",
+            "status": "compatibility_projection_suppressed",
+        }
+    return {
+        "identity_id": "",
+        "pack_path": "",
+        "status": "compatibility_projection_unavailable",
+    }
+
+
+def _pointer_metadata(
+    *,
+    catalog: Path,
+    canonical_out: Path,
+    projection_state: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    state = projection_state if isinstance(projection_state, dict) else {}
+    projection = state.get("projection") if isinstance(state.get("projection"), dict) else {}
     payload = {
         "authority_role": "compatibility_mirror",
         "authority_model": AUTHORITY_MODEL,
@@ -136,9 +176,77 @@ def _pointer_metadata(*, catalog: Path, canonical_out: Path, projection: dict[st
         "pointer_semantics_version": POINTER_SEMANTICS_VERSION,
         "authoritative_source": "actor_session_store",
         "canonical_session_pointer": str(canonical_out),
+        "compatibility_projection_status": str(state.get("projection_status", "")).strip(),
+        "compatibility_projection_reason": str(state.get("projection_reason", "")).strip(),
+        "compatibility_projection_candidate_identity_ids": [
+            str(item).strip()
+            for item in (state.get("projection_candidate_identity_ids") or [])
+            if str(item).strip()
+        ],
     }
     payload.update(_compatibility_projection_metadata(projection=projection))
     return payload
+
+
+def _current_projection_identity(projection_state: dict[str, Any] | None) -> str:
+    state = projection_state if isinstance(projection_state, dict) else {}
+    projection = state.get("projection") if isinstance(state.get("projection"), dict) else {}
+    return str(projection.get("identity_id", "")).strip()
+
+
+def _resolve_compatibility_projection_decision(
+    *,
+    store: dict[str, Any],
+    mutation_lane: str,
+    actor_id: str,
+    target_identity_id: str,
+    switch_intent_receipt: str,
+) -> dict[str, Any]:
+    projection_before = _actor_global_projection_state_for_store(store)
+    previous_identity_id = _current_projection_identity(projection_before)
+    receipt_path = str(switch_intent_receipt or "").strip()
+    if mutation_lane != "activate":
+        return {
+            "allowed": False,
+            "reason": "non_activate_lane_observation_only",
+            "receipt_path": "",
+            "previous_identity_id": previous_identity_id,
+        }
+    if not previous_identity_id or previous_identity_id == target_identity_id:
+        return {
+            "allowed": True,
+            "reason": "bootstrap_or_same_identity_refresh",
+            "receipt_path": receipt_path,
+            "previous_identity_id": previous_identity_id,
+        }
+    if not receipt_path:
+        return {
+            "allowed": False,
+            "reason": "actor_global_projection_switch_receipt_missing",
+            "receipt_path": "",
+            "previous_identity_id": previous_identity_id,
+        }
+    receipt_errors = _validate_switch_intent_receipt(
+        receipt_path=receipt_path,
+        actor_id=actor_id,
+        from_identity_id=previous_identity_id,
+        to_identity_id=target_identity_id,
+    )
+    if receipt_errors:
+        raise ValueError(f"{ERR_MB_010}:compatibility_projection_switch_intent_receipt_invalid:{','.join(receipt_errors)}")
+    return {
+        "allowed": True,
+        "reason": "actor_global_projection_switch_receipt_validated",
+        "receipt_path": receipt_path,
+        "previous_identity_id": previous_identity_id,
+    }
+
+
+def _actor_global_projection_state_for_store(store: dict[str, Any]) -> dict[str, Any]:
+    return load_actor_global_compatibility_projection_state(
+        Path(str(store.get("catalog_path", "")).strip()),
+        str(store.get("actor_id", "")).strip(),
+    )
 
 
 def _resolve_switch_from_identity(
@@ -201,6 +309,7 @@ def _build_actor_payload(
     override_receipt: str,
     approved_by: str,
     compare_token_before: str,
+    compatibility_projection_decision: dict[str, Any],
 ) -> tuple[dict[str, Any], str]:
     now = _utc_now()
     existing_bindings = [x for x in (store.get("bindings") or []) if isinstance(x, dict)]
@@ -253,6 +362,12 @@ def _build_actor_payload(
         "mutation_lane": mutation_lane,
         "governance_override_receipt": override_receipt,
         "approved_by": approved_by,
+        "compatibility_projection_allowed": bool(compatibility_projection_decision.get("allowed")),
+        "compatibility_projection_reason": str(compatibility_projection_decision.get("reason", "")).strip(),
+        "compatibility_projection_receipt": str(compatibility_projection_decision.get("receipt_path", "")).strip(),
+        "compatibility_projection_previous_identity_id": str(
+            compatibility_projection_decision.get("previous_identity_id", "")
+        ).strip(),
     }
 
     merged: list[dict[str, Any]] = []
@@ -266,6 +381,25 @@ def _build_actor_payload(
         merged.append(row)
     if not replaced:
         merged.append(updated_entry)
+
+    if bool(compatibility_projection_decision.get("allowed")):
+        previous_identity_id = str(compatibility_projection_decision.get("previous_identity_id", "")).strip()
+        if previous_identity_id and previous_identity_id != target_identity_id:
+            for row in merged:
+                if not isinstance(row, dict):
+                    continue
+                if row is updated_entry:
+                    continue
+                if not binding_compatibility_projection_allowed(row):
+                    continue
+                if str(row.get("identity_id", "")).strip() == target_identity_id:
+                    continue
+                row["compatibility_projection_allowed"] = False
+                row["compatibility_projection_reason"] = "superseded_by_actor_global_projection_switch"
+                row["compatibility_projection_previous_identity_id"] = previous_identity_id
+                row["compatibility_projection_receipt"] = str(
+                    compatibility_projection_decision.get("receipt_path", "")
+                ).strip()
 
     pre_keys = {binding_key(x) for x in existing_bindings if binding_key(x)}
     post_keys = {binding_key(x) for x in merged if binding_key(x)}
@@ -322,6 +456,12 @@ def _build_actor_payload(
             "compare_token_before": compare_token_before,
             "compare_token_after": str(next_version),
             "applied_at": now,
+            "compatibility_projection_allowed": bool(compatibility_projection_decision.get("allowed")),
+            "compatibility_projection_reason": str(compatibility_projection_decision.get("reason", "")).strip(),
+            "compatibility_projection_receipt": str(compatibility_projection_decision.get("receipt_path", "")).strip(),
+            "compatibility_projection_previous_identity_id": str(
+                compatibility_projection_decision.get("previous_identity_id", "")
+            ).strip(),
         },
         # compatibility mirrors (for legacy readers in migration window)
         "identity_id": target_identity_id,
@@ -533,6 +673,19 @@ def main() -> int:
         if receipt_errors:
             return _fail(ERR_MB_009, "switch_intent_receipt_invalid:" + ",".join(receipt_errors))
     try:
+        compatibility_projection_decision = _resolve_compatibility_projection_decision(
+            store=store,
+            mutation_lane=mutation_lane,
+            actor_id=actor_id,
+            target_identity_id=args.identity_id,
+            switch_intent_receipt=str(args.switch_intent_receipt or "").strip(),
+        )
+    except ValueError as exc:
+        token = str(exc)
+        if token.startswith(f"{ERR_MB_010}:"):
+            return _fail(ERR_MB_010, token.split(":", 1)[1])
+        raise
+    try:
         actor_payload, compare_token_after = _build_actor_payload(
             store=store,
             actor_id=actor_id,
@@ -551,6 +704,7 @@ def main() -> int:
             override_receipt=override_receipt,
             approved_by=approved_by,
             compare_token_before=compare_token,
+            compatibility_projection_decision=compatibility_projection_decision,
         )
     except ValueError as exc:
         token = str(exc)
@@ -565,12 +719,32 @@ def main() -> int:
     except Exception as exc:
         print(f"[FAIL] actor session binding sync failed: {actor_out} ({exc})")
         return 1
-    projection_after = load_actor_global_compatibility_projection(catalog, actor_id)
-    payload.update(_pointer_metadata(catalog=catalog, canonical_out=canonical_out, projection=projection_after))
+    projection_after = load_actor_global_compatibility_projection_state(catalog, actor_id)
+    pointer_surface = _pointer_projection_surface(
+        projection_state=projection_after,
+        fallback_identity_id=args.identity_id,
+        fallback_pack_path=str(target.get("pack_path", "")),
+        fallback_status=status,
+    )
+    payload["identity_id"] = pointer_surface["identity_id"]
+    payload["pack_path"] = pointer_surface["pack_path"]
+    payload["status"] = pointer_surface["status"]
+    payload["compatibility_projection_write_allowed"] = bool(compatibility_projection_decision.get("allowed"))
+    payload["compatibility_projection_write_reason"] = str(compatibility_projection_decision.get("reason", "")).strip()
+    payload["compatibility_projection_previous_identity_id"] = str(
+        compatibility_projection_decision.get("previous_identity_id", "")
+    ).strip()
+    payload.update(_pointer_metadata(catalog=catalog, canonical_out=canonical_out, projection_state=projection_after))
     print(
         "[OK] session identity actor-bound: "
         f"{actor_out} session_id={session_id} compare_token={compare_token_after} lane={mutation_lane}"
     )
+    if not bool(compatibility_projection_decision.get("allowed")):
+        print(
+            "[INFO] canonical pointer write skipped: "
+            f"reason={str(compatibility_projection_decision.get('reason', '')).strip() or 'not_projection_eligible'}"
+        )
+        return 0
     try:
         _write_payload(canonical_out, payload)
     except Exception as exc:

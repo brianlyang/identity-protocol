@@ -16,6 +16,9 @@ LEGACY_BINDING_KEY_MODE = "legacy_single_object"
 AUTHORITY_MODEL = "actor_session_multibinding_session_primary_v2"
 AUTHORITATIVE_BINDING_RULE = "(actor_id,session_id)->identity_id"
 ACTOR_GLOBAL_LAST_MUTATION_PROJECTION_SCOPE = "actor_global_compatibility_only"
+COMPATIBILITY_PROJECTION_STATUS_AVAILABLE = "AVAILABLE"
+COMPATIBILITY_PROJECTION_STATUS_SUPPRESSED_MULTI_IDENTITY = "SUPPRESSED_MULTI_IDENTITY"
+COMPATIBILITY_PROJECTION_STATUS_UNAVAILABLE = "UNAVAILABLE"
 
 
 def resolve_protocol_actor_id(
@@ -160,6 +163,12 @@ def _binding_mutation_projection(row: dict[str, Any]) -> dict[str, Any]:
         "switch_reason": str(binding.get("switch_reason", "")).strip(),
         "approved_by": str(binding.get("approved_by", "")).strip(),
         "governance_override_receipt": str(binding.get("governance_override_receipt", "")).strip(),
+        "compatibility_projection_allowed": bool(binding.get("compatibility_projection_allowed")),
+        "compatibility_projection_reason": str(binding.get("compatibility_projection_reason", "")).strip(),
+        "compatibility_projection_receipt": str(binding.get("compatibility_projection_receipt", "")).strip(),
+        "compatibility_projection_previous_identity_id": str(
+            binding.get("compatibility_projection_previous_identity_id", "")
+        ).strip(),
         "updated_at": updated_at,
         "applied_at": updated_at,
         "projection_source": "binding_latest",
@@ -237,6 +246,68 @@ def _derive_actor_global_last_mutation(
         projected["projection_scope"] = ACTOR_GLOBAL_LAST_MUTATION_PROJECTION_SCOPE
         projected["projection_role"] = "compatibility_projection"
     return projected
+
+
+def binding_compatibility_projection_allowed(row: dict[str, Any]) -> bool:
+    if not isinstance(row, dict):
+        return False
+    raw_allowed = row.get("compatibility_projection_allowed")
+    if isinstance(raw_allowed, bool):
+        return raw_allowed
+    lane = str(row.get("mutation_lane", "")).strip().lower()
+    if not lane:
+        return True
+    return lane == "activate"
+
+
+def _actor_global_projection_state(
+    *,
+    store: dict[str, Any],
+    projection: dict[str, Any] | None,
+) -> dict[str, Any]:
+    last_mutation_by_session = (
+        store.get("last_mutation_by_session") if isinstance(store.get("last_mutation_by_session"), dict) else {}
+    )
+    projection_candidates = sorted(
+        (
+            copy.deepcopy(item)
+            for item in last_mutation_by_session.values()
+            if isinstance(item, dict) and binding_compatibility_projection_allowed(item)
+        ),
+        key=_projection_sort_key,
+    )
+    session_primary_identity_ids = sorted(
+        {
+            str(item.get("identity_id", "")).strip()
+            for item in projection_candidates
+            if str(item.get("identity_id", "")).strip()
+        }
+    )
+    if len(session_primary_identity_ids) > 1:
+        return {
+            "projection_status": COMPATIBILITY_PROJECTION_STATUS_SUPPRESSED_MULTI_IDENTITY,
+            "projection_reason": "multiple_session_primary_identity_ids",
+            "projection_candidate_identity_ids": session_primary_identity_ids,
+            "projection": {},
+        }
+    if projection_candidates:
+        projection = copy.deepcopy(projection_candidates[-1])
+        projection["projection_scope"] = ACTOR_GLOBAL_LAST_MUTATION_PROJECTION_SCOPE
+        projection["projection_role"] = "compatibility_projection"
+    decorated = _decorate_actor_global_compatibility_projection(store=store, projection=projection)
+    if decorated:
+        return {
+            "projection_status": COMPATIBILITY_PROJECTION_STATUS_AVAILABLE,
+            "projection_reason": "ok",
+            "projection_candidate_identity_ids": session_primary_identity_ids,
+            "projection": decorated,
+        }
+    return {
+        "projection_status": COMPATIBILITY_PROJECTION_STATUS_UNAVAILABLE,
+        "projection_reason": "projection_missing",
+        "projection_candidate_identity_ids": session_primary_identity_ids,
+        "projection": {},
+    }
 
 
 def normalize_actor_binding_store(
@@ -456,7 +527,17 @@ def _projection_sort_key(row: dict[str, Any]) -> tuple[int, str]:
 
 def load_actor_global_compatibility_projection(catalog_path: Path, actor_id: str) -> dict[str, Any]:
     store = load_actor_binding_store(catalog_path, actor_id)
-    return _decorate_actor_global_compatibility_projection(
+    state = _actor_global_projection_state(
+        store=store,
+        projection=store.get("last_mutation") if isinstance(store.get("last_mutation"), dict) else {},
+    )
+    projection = state.get("projection") if isinstance(state.get("projection"), dict) else {}
+    return copy.deepcopy(projection)
+
+
+def load_actor_global_compatibility_projection_state(catalog_path: Path, actor_id: str) -> dict[str, Any]:
+    store = load_actor_binding_store(catalog_path, actor_id)
+    return _actor_global_projection_state(
         store=store,
         projection=store.get("last_mutation") if isinstance(store.get("last_mutation"), dict) else {},
     )
@@ -469,10 +550,11 @@ def list_actor_global_compatibility_projections(catalog_path: Path) -> list[dict
     projections: list[dict[str, Any]] = []
     for path in sorted(root.glob("*.json")):
         store = load_actor_binding_store(catalog_path, path.stem.replace("_", ":"))
-        projection = _decorate_actor_global_compatibility_projection(
+        state = _actor_global_projection_state(
             store=store,
             projection=store.get("last_mutation") if isinstance(store.get("last_mutation"), dict) else {},
         )
+        projection = state.get("projection") if isinstance(state.get("projection"), dict) else {}
         if projection:
             projections.append(projection)
     return sorted(projections, key=_projection_sort_key)

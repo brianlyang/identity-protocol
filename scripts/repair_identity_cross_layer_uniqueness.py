@@ -8,11 +8,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import yaml
-from resolve_identity_context import (
-    _default_user_identity_home,
-    _detect_repo_root,
-    _project_identity_home_from_repo_catalog,
+from identity_scope_isolation_common import (
+    ARCHIVE_KEY,
+    analyze_cross_layer_identity_uniqueness,
+    archive_removed_identity_row,
+    find_identity_row,
+    load_yaml,
+    resolve_global_catalog,
+    resolve_project_catalog_from_repo,
+    write_yaml,
 )
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -20,30 +24,6 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_CROSS_LAYER_DUPLICATE = "IP-SCOPE-LAYER-001"
 ERR_APPLY_WRITE_DENIED = "IP-SCOPE-LAYER-002"
 ERR_IDENTITY_MISSING = "IP-SCOPE-LAYER-003"
-
-
-def _load_yaml(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    if not isinstance(data, dict):
-        raise ValueError(f"yaml root must be object: {path}")
-    return data
-
-
-def _write_yaml(path: Path, data: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8")
-
-
-def _find_row(catalog: dict[str, Any], identity_id: str) -> tuple[int, dict[str, Any]]:
-    rows = catalog.get("identities") or []
-    for idx, row in enumerate(rows):
-        if not isinstance(row, dict):
-            continue
-        if str(row.get("id", "")).strip() == identity_id:
-            return idx, row
-    return -1, {}
 
 
 def _is_runtime_row(row: dict[str, Any]) -> bool:
@@ -54,17 +34,6 @@ def _is_runtime_row(row: dict[str, Any]) -> bool:
 
 def _is_active_row(row: dict[str, Any]) -> bool:
     return str((row or {}).get("status", "")).strip().lower() in {"active", "enabled", "on"}
-
-
-def _resolve_project_catalog_from_repo(repo_catalog: Path) -> Path:
-    repo_catalog = repo_catalog.expanduser().resolve()
-    repo_root = _detect_repo_root(repo_catalog.parent)
-    project_identity_home = _project_identity_home_from_repo_catalog(repo_root, repo_catalog)
-    return (project_identity_home / "catalog.local.yaml").resolve()
-
-
-def _resolve_global_catalog() -> Path:
-    return (_default_user_identity_home() / "catalog.local.yaml").resolve()
 
 
 def _emit(payload: dict[str, Any], json_only: bool) -> None:
@@ -91,18 +60,25 @@ def main() -> int:
     project_catalog_path = (
         Path(args.project_catalog).expanduser().resolve()
         if str(args.project_catalog or "").strip()
-        else _resolve_project_catalog_from_repo(repo_catalog)
+        else resolve_project_catalog_from_repo(repo_catalog)
     )
     global_catalog_path = (
         Path(args.global_catalog).expanduser().resolve()
         if str(args.global_catalog or "").strip()
-        else _resolve_global_catalog()
+        else resolve_global_catalog()
     )
 
-    project_doc = _load_yaml(project_catalog_path)
-    global_doc = _load_yaml(global_catalog_path)
-    p_idx, p_row = _find_row(project_doc, args.identity_id)
-    g_idx, g_row = _find_row(global_doc, args.identity_id)
+    project_doc = load_yaml(project_catalog_path)
+    global_doc = load_yaml(global_catalog_path)
+    p_idx, p_row = find_identity_row(project_doc, args.identity_id)
+    g_idx, g_row = find_identity_row(global_doc, args.identity_id)
+    uniqueness = analyze_cross_layer_identity_uniqueness(
+        args.identity_id,
+        project_catalog=project_catalog_path,
+        global_catalog=global_catalog_path,
+    )
+    duplicate_runtime = bool(uniqueness.get("runtime_duplicate_detected"))
+    active_runtime_duplicate = bool(uniqueness.get("active_runtime_duplicate_detected"))
 
     payload: dict[str, Any] = {
         "identity_id": args.identity_id,
@@ -118,10 +94,14 @@ def main() -> int:
         "global_active": _is_active_row(g_row),
         "project_pack_path": str(p_row.get("pack_path", "")),
         "global_pack_path": str(g_row.get("pack_path", "")),
+        "runtime_duplicate_detected": duplicate_runtime,
+        "active_runtime_duplicate_detected": active_runtime_duplicate,
+        "duplicate_layers": uniqueness.get("runtime_duplicate_layers", []),
         "status": STATUS_PASS_REQUIRED,
         "error_code": "",
         "actions": [],
         "stale_reasons": [],
+        "archive_key": ARCHIVE_KEY,
     }
 
     if p_idx < 0 and g_idx < 0:
@@ -131,22 +111,16 @@ def main() -> int:
         _emit(payload, args.json_only)
         return 1
 
-    duplicate_runtime_active = (
-        p_idx >= 0
-        and g_idx >= 0
-        and _is_runtime_row(p_row)
-        and _is_runtime_row(g_row)
-        and _is_active_row(p_row)
-        and _is_active_row(g_row)
-    )
-    if not duplicate_runtime_active:
-        payload["stale_reasons"].append("no_cross_layer_active_runtime_duplicate_detected")
+    if not duplicate_runtime:
+        payload["stale_reasons"].append("no_cross_layer_runtime_duplicate_detected")
         _emit(payload, args.json_only)
         return 0
 
     payload["status"] = STATUS_FAIL_REQUIRED
     payload["error_code"] = ERR_CROSS_LAYER_DUPLICATE
-    payload["stale_reasons"].append("cross_layer_active_runtime_duplicate_detected")
+    payload["stale_reasons"].append("cross_layer_runtime_duplicate_detected")
+    if active_runtime_duplicate:
+        payload["stale_reasons"].append("cross_layer_active_runtime_duplicate_detected")
 
     if not args.apply:
         _emit(payload, args.json_only)
@@ -179,23 +153,30 @@ def main() -> int:
         _emit(payload, args.json_only)
         return 1
 
-    target_row["status"] = "inactive"
-    target_row["deactivated_by"] = "repair_identity_cross_layer_uniqueness.py"
-    target_row["deactivated_at"] = now_utc
-    target_row["deactivation_reason"] = "cross_layer_runtime_uniqueness_enforcement"
-    (target_doc.get("identities") or [])[target_idx] = target_row
+    target_rows = target_doc.get("identities") or []
+    removed_row = dict(target_row)
+    archive_removed_identity_row(
+        target_doc,
+        removed_row=removed_row,
+        removed_layer="global" if preferred == "project" else "project",
+        kept_layer=preferred,
+        archived_at=now_utc,
+        archive_reason="cross_layer_runtime_uniqueness_enforcement",
+    )
+    del target_rows[target_idx]
     target_doc["updated_at"] = now_utc.split("T", 1)[0]
-    _write_yaml(target_path, target_doc)
+    write_yaml(target_path, target_doc)
 
     payload["status"] = STATUS_PASS_REQUIRED
     payload["error_code"] = ""
     payload["actions"].append(
         {
-            "action": "deactivate_duplicate_layer_entry",
+            "action": "archive_and_remove_duplicate_layer_entry",
             "catalog": str(target_path),
             "identity_id": args.identity_id,
-            "deactivated_layer": "global" if preferred == "project" else "project",
+            "removed_layer": "global" if preferred == "project" else "project",
             "kept_layer": preferred,
+            "archive_key": ARCHIVE_KEY,
         }
     )
     payload["stale_reasons"] = []

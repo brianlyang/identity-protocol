@@ -11,7 +11,10 @@ import yaml
 from actor_session_common import (
     AUTHORITY_MODEL,
     AUTHORITATIVE_BINDING_RULE,
+    COMPATIBILITY_PROJECTION_STATUS_AVAILABLE,
+    COMPATIBILITY_PROJECTION_STATUS_SUPPRESSED_MULTI_IDENTITY,
     actor_session_dir,
+    load_actor_global_compatibility_projection_state,
     normalize_actor_binding_store,
     select_actor_global_compatibility_projection,
     write_actor_binding_store,
@@ -53,9 +56,10 @@ def _pointer_metadata(
     *,
     catalog_path: Path,
     canonical_pointer_path: Path,
-    projection: dict[str, Any] | None = None,
+    projection_state: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    raw = projection if isinstance(projection, dict) else {}
+    state = projection_state if isinstance(projection_state, dict) else {}
+    raw = state.get("projection") if isinstance(state.get("projection"), dict) else {}
     payload = {
         "authority_role": "compatibility_mirror",
         "authority_model": AUTHORITY_MODEL,
@@ -65,6 +69,13 @@ def _pointer_metadata(
         "pointer_semantics_version": POINTER_SEMANTICS_VERSION,
         "authoritative_source": "actor_session_store",
         "canonical_session_pointer": str(canonical_pointer_path),
+        "compatibility_projection_status": str(state.get("projection_status", "")).strip(),
+        "compatibility_projection_reason": str(state.get("projection_reason", "")).strip(),
+        "compatibility_projection_candidate_identity_ids": [
+            str(item).strip()
+            for item in (state.get("projection_candidate_identity_ids") or [])
+            if str(item).strip()
+        ],
     }
     payload.update(
         {
@@ -83,6 +94,29 @@ def _pointer_metadata(
         }
     )
     return payload
+
+
+def _pointer_surface_fields(projection_state: dict[str, Any] | None, raw: dict[str, Any]) -> dict[str, str]:
+    state = projection_state if isinstance(projection_state, dict) else {}
+    projection = state.get("projection") if isinstance(state.get("projection"), dict) else {}
+    projection_status = str(state.get("projection_status", "")).strip()
+    if projection_status == COMPATIBILITY_PROJECTION_STATUS_AVAILABLE and projection:
+        return {
+            "identity_id": str(projection.get("identity_id", "")).strip(),
+            "pack_path": str(raw.get("pack_path", "")).strip(),
+            "status": str(raw.get("status", "")).strip() or "active",
+        }
+    if projection_status == COMPATIBILITY_PROJECTION_STATUS_SUPPRESSED_MULTI_IDENTITY:
+        return {
+            "identity_id": "",
+            "pack_path": "",
+            "status": "compatibility_projection_suppressed",
+        }
+    return {
+        "identity_id": "",
+        "pack_path": "",
+        "status": "compatibility_projection_unavailable",
+    }
 
 
 def _repair_actor_store(path: Path, *, catalog_path: Path) -> dict[str, Any]:
@@ -132,16 +166,24 @@ def _repair_pointer(path: Path, *, pointer_name: str, catalog_path: Path, canoni
             "normalized_payload": {},
         }
 
-    projection = select_actor_global_compatibility_projection(
-        catalog_path,
-        identity_id=str(raw.get("identity_id", "")).strip(),
-    )
+    actor_id = str(raw.get("compatibility_projection_actor_id", "")).strip() or str(raw.get("actor_id", "")).strip()
+    if not actor_id:
+        inferred = select_actor_global_compatibility_projection(
+            catalog_path,
+            identity_id=str(raw.get("identity_id", "")).strip(),
+        )
+        actor_id = str(inferred.get("actor_id", "")).strip()
+    projection_state = load_actor_global_compatibility_projection_state(catalog_path, actor_id) if actor_id else {}
+    surface = _pointer_surface_fields(projection_state, raw)
     normalized = dict(raw)
+    normalized["identity_id"] = surface["identity_id"]
+    normalized["pack_path"] = surface["pack_path"]
+    normalized["status"] = surface["status"]
     normalized.update(
         _pointer_metadata(
             catalog_path=catalog_path,
             canonical_pointer_path=canonical_pointer_path,
-            projection=projection,
+            projection_state=projection_state,
         )
     )
     normalized["session_pointer_type"] = "canonical" if pointer_name == "canonical" else "mirror"
@@ -149,9 +191,12 @@ def _repair_pointer(path: Path, *, pointer_name: str, catalog_path: Path, canoni
     for field, expected in _pointer_metadata(
         catalog_path=catalog_path,
         canonical_pointer_path=canonical_pointer_path,
-        projection=projection,
+        projection_state=projection_state,
     ).items():
         if raw.get(field) != expected:
+            residue_fields.append(field)
+    for field in ("identity_id", "pack_path", "status"):
+        if raw.get(field) != normalized.get(field):
             residue_fields.append(field)
     if str(raw.get("session_pointer_type", "")).strip().lower() != normalized["session_pointer_type"]:
         residue_fields.append("session_pointer_type")
