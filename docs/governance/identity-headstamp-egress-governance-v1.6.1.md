@@ -532,7 +532,7 @@ deepening base for v1.6.1 headstamp semantics.
    - line 2 MUST emit `Machine-Verification: verification_status=FAIL_REQUIRED ...`,
    - implementations MUST fail-close rather than emit a stable-but-wrong identity headstamp,
    - implementations MUST emit the two-line failure envelope rather than dropping the headstamp entirely.
-9. This freeze is the closure baseline for native chat surfaces in the current architecture boundary; future sender/renderer physical wiring is a higher-tier enhancement, not a prerequisite for v1.6.1 / v1.6.6 closure.
+9. This freeze is the closure baseline for native chat surfaces in the current architecture boundary; future host-native sender attestation / renderer integration uplift is a higher-tier enhancement, not a prerequisite for v1.6.1 / v1.6.6 closure.
 10. Deterministic native-chat smoke validation SHOULD use `codex exec --ephemeral --output-last-message ...` or `bash scripts/run_native_chat_headstamp_smoke.sh`:
    - raw stdout redirection alone is not a reliable proof surface for this path,
    - pass/fail MUST be read from the emitted last message artifact,

@@ -287,6 +287,17 @@ HOST_VISIBLE_SEMANTIC_FREEZE_REVIEW_REQUIRED_TOKENS: tuple[str, ...] = (
     "`manual_headstamp` is not a third truth object, authority source, or admission-proof class.",
     "`headstamp_admission_receipt` minimum fields frozen:",
 )
+HOST_VISIBLE_SEMANTIC_FORBIDDEN_PHRASES: tuple[str, ...] = (
+    "physical 100% interception",
+    'physical-layer `100%` host interception',
+    "physical 100% pre-send hook",
+    "future sender/renderer physical wiring",
+    "物理只消费 wrapper out_reply_file",
+    "sender-layer physical routing closure",
+    "聊天发送通道物理封口",
+    "发送器物理路由边界仍需接线层闭环",
+    "sender physical wiring consuming wrapper artifacts only",
+)
 SUPER_LINTER_REQUIRED_TOKENS: tuple[str, ...] = (
     "name: super-linter",
     "merge_group:",
@@ -1901,6 +1912,12 @@ def main() -> int:
         if missing_tokens:
             existing = list(missing_lineage_refs.get(rel, []))
             missing_lineage_refs[rel] = sorted(set(existing + [f"runtime_file_governance_token_missing:{tok}" for tok in missing_tokens]))
+        forbidden_phrase_hits = [phrase for phrase in HOST_VISIBLE_SEMANTIC_FORBIDDEN_PHRASES if phrase in text]
+        if forbidden_phrase_hits:
+            existing = list(missing_lineage_refs.get(rel, []))
+            missing_lineage_refs[rel] = sorted(
+                set(existing + [f"runtime_file_governance_forbidden_phrase_detected:{tok}" for tok in forbidden_phrase_hits])
+            )
 
     dialogue_bundle_path = repo_root / DIALOGUE_FEEDBACK_BUNDLE_SCRIPT
     if not dialogue_bundle_path.exists():

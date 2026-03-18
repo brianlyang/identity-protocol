@@ -582,7 +582,7 @@ Posture remains:
 
 1. policy: `PASS_REQUIRED`
 2. implementation: `CONDITIONAL_PASS`
-3. remaining blocker: project runtime dispatcher physical wrapper-only exposure proof.
+3. remaining blocker: project runtime dispatcher wrapper-only exposure proof.
 
 ### 5.3 Audit delta follow-up (2026-03-13, serialized replay)
 
@@ -613,8 +613,8 @@ Serialized replay conclusion for this delta:
    - ingress wrapper `PASS_REQUIRED`
    - egress wrapper `PASS_REQUIRED`
 2. Direct runner/final-emit calls without wrapper attestation fail-close.
-3. Closure state remains `CONDITIONAL_PASS` because same trust-domain self-injection is still not physically eliminated:
-   - if attacker controls signer secret and wrapper attestation inputs in the same runtime trust domain, full physical non-forgeability is not yet guaranteed.
+3. Closure state remains `CONDITIONAL_PASS` because same trust-domain self-injection is still not eliminated:
+   - if attacker controls signer secret and wrapper attestation inputs in the same runtime trust domain, full same-domain non-forgeability is not yet guaranteed.
 
 ### 5.4 Update-chain wrapper routing correction (2026-03-13, serialized)
 
@@ -662,7 +662,7 @@ Serialized replay summary for this uplift:
 2. strict wrapper chain remains reproducible for creator update pre-mutation:
    - `final_emit_guard_status=PASS_REQUIRED`
    - `egress_wrapper_parent_attestation_status=PASS_REQUIRED`
-3. stream posture remains `CONDITIONAL_PASS` until signer root trust is physically separated from same-domain caller control.
+3. stream posture remains `CONDITIONAL_PASS` until signer root trust is separated from same-domain caller control.
 
 ### 5.6 L3 reasoning fallback bootstrap hardening (2026-03-13, serialized)
 
@@ -875,7 +875,7 @@ Serialized attach check (base-repo-architect):
 边界声明（防止过度宣称）：
 
 1. 本轮实现了“wrapper 执行链路”的自引导闭环（signer bootstrap + session binding bootstrap）。
-2. 但“当前聊天渲染通道是否物理只消费 wrapper out_reply_file”仍是发送器层接线问题；
+2. 但“当前聊天渲染通道是否稳定沿 native chat standard path 消费 wrapper out_reply_file”仍是发送器层集成问题；
    - 若发送器未绑定 wrapper 产物，仍可出现对话 UI 无头显。
 
 ### 5.12 Session-chain 父链路门禁补强（2026-03-14, base-repo-audit-expert-v3）
@@ -923,7 +923,7 @@ Serialized attach check (base-repo-architect):
 口径保持：
 
 1. wrapper 链路与协议唯一入口/出口映射：`PASS_REQUIRED`。
-2. 会话渲染器是否“物理只消费 wrapper out_reply_file”：仍取决于发送器接线实现，属于运行侧集成边界。
+2. 会话渲染器是否“稳定沿 native chat standard path 消费 wrapper out_reply_file”：仍取决于发送器集成实现，属于运行侧集成边界。
 
 ### 5.13 Unified wrapper bus closure (2026-03-14, base-repo-audit-expert-v3)
 
@@ -969,7 +969,7 @@ Current posture:
 
 1. `Policy PASS`
 2. `Implementation CONDITIONAL PASS`
-3. remaining condition is sender-layer physical routing closure (`wrapper output only`), not protocol semantic drift.
+3. remaining condition is sender-layer native-chat standard-path convergence (`wrapper output only`), not protocol semantic drift.
 
 ### 5.14 Receipt tuple generation compatibility normalization (2026-03-14)
 
@@ -1363,7 +1363,7 @@ Interpretation lock:
 ### 5.24 v1.6.6 finish-line freeze: one-hop death + blocker evidence + canonical next-hop admission (2026-03-17)
 
 This checkpoint freezes the remaining v1.6.6 closure scope so later work cannot drift into
-"physical 100% interception" language or reduce closure to text-only headstamp checks.
+overclaiming full pre-send native-chat control or reduce closure to text-only headstamp checks.
 
 Authoritative finish-line definition:
 
@@ -1372,7 +1372,7 @@ Authoritative finish-line definition:
    - post-check `100%` detectability
    - post-check `100%` next-hop blocking
    - next-hop mandatory canonical headstamp
-2. v1.6.6 does **not** claim physical-layer `100%` host interception.
+2. v1.6.6 does **not** claim `current_chat_surface_native_machine_attested = true`; host-native chat remains on the standard path `machine-verify -> assistant-visible-inject -> next turn re-verify`.
 3. any output outside canonical control lane must be governed by the non-governed output one-hop death rule.
 
 Finish lines (must all hold for v1.6.6 closure claim):

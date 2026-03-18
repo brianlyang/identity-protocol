@@ -615,7 +615,7 @@ by spoofing caller parameters (for example `--resolved-work-layer protocol`) dur
    - contract/runtime additionalProperties drift now has machine fail-close protection.
 2. Still tracked for full stream closure:
    - per-turn dynamic wrapper proof (`nonce + time-window + replay block`) for anti-replay hardening.
-   - project session dispatcher must expose wrapper-only execution APIs (conversation-layer physical routing proof).
+   - project session dispatcher must expose wrapper-only execution APIs (conversation-layer wrapper-only routing proof).
 3. Posture remains: `Policy PASS / Implementation CONDITIONAL PASS`.
 
 ## 11) Deep self-check against frozen dialogue baseline (2026-03-12)
@@ -648,7 +648,7 @@ This section performs an explicit item-by-item replay against section 9 (`9.3 + 
 7. `9.4-7` strict non-wrapper provenance -> **PASS (blocked as expected)**.
    - probe: direct runner call with forged `--resolved-work-layer protocol --surface-label bypass_probe`.
    - observed: `rc=1`, `bundle_status=FAIL_REQUIRED`.
-8. `9.4-8` any user-visible output path without egress wrapper -> **FAIL (not yet physically sealed)**.
+8. `9.4-8` any user-visible output path without egress wrapper -> **FAIL (not yet sealed at the governed sender boundary)**.
    - observed: direct canonical egress script can emit pass without wrapper envelope.
 
 ### 11.3 9.5 non-closure indicator check
@@ -664,7 +664,7 @@ This section performs an explicit item-by-item replay against section 9 (`9.3 + 
 
 1. Section-9 baseline is correctly materialized and useful as an audit checklist.
 2. P1 spoofed-layer ingress bypass is now closed in code.
-3. Full closure is not yet achieved because egress physical bypass and anti-replay hardening are still pending.
+3. Full closure is not yet achieved because egress sender-path bypass and anti-replay hardening are still pending.
 4. Stream posture remains: `Policy PASS / Implementation CONDITIONAL PASS`.
 
 ## 12) Anti-static-token bypass hardening checkpoint (2026-03-12, serial replay)
@@ -787,7 +787,7 @@ This checkpoint upgrades the signer source from static dispatch token to runtime
 
 1. Static dispatch token no longer serves as signer secret.
 2. Signer now binds to runtime key-file policy path and replay protections remain active.
-3. Stream remains `CONDITIONAL_GO` pending project dispatcher physical wrapper-only exposure proof across runtime entrypoints.
+3. Stream remains `CONDITIONAL_GO` pending project dispatcher wrapper-only exposure proof across runtime entrypoints.
 
 ## 15) Six-item audit closure mapping (2026-03-12, serial hardening)
 
@@ -796,7 +796,7 @@ This section maps one-to-one against the six missing items raised in the latest 
 ### 15.1 Item-by-item mapping
 
 1. **P0 signer trust boundary not truly lifted (same-domain key-file forge)**  
-   - status: **PARTIAL_CLOSED** (code hardening done, physical boundary still conditional).  
+   - status: **PARTIAL_CLOSED** (code hardening done, sender-path boundary still conditional).  
    - implemented in:
      - `scripts/create_identity_pack.py` (host gateway policy defaults now support signer mode/env)
      - `scripts/repair_contract_backfill.py` (backfill upgrades legacy instances to env signer mode)
@@ -806,12 +806,12 @@ This section maps one-to-one against the six missing items raised in the latest 
    - result:
      - direct local-key forge probes are blocked in CI probe suite.
    - caveat:
-     - if same trust domain can read signer env directly, full “physical不可伪造” still needs external signer boundary.
+     - if same trust domain can read signer env directly, full same-domain non-forgeability still needs external signer boundary.
 
-2. **P0 host runtime per-turn wrapper-only physical enforcement missing**  
+2. **P0 host runtime per-turn wrapper-only enforcement missing**  
    - status: **OPEN_CONDITIONAL** (not closed inside protocol base repo only).  
    - rationale:
-     - protocol side now enforces stronger provenance contracts, but project runtime dispatcher must still expose wrapper-only entrypoints physically.
+     - protocol side now enforces stronger provenance contracts, but project runtime dispatcher must still expose wrapper-only entrypoints through declared wrapper-only paths.
    - no overclaim:
      - this item remains blocker for `Implementation PASS`.
 
@@ -854,7 +854,7 @@ This section maps one-to-one against the six missing items raised in the latest 
 1. policy posture: `PASS_REQUIRED`
 2. implementation posture: `CONDITIONAL_PASS`
 3. remaining hard blocker:
-   - project runtime dispatcher physical wrapper-only exposure proof (item 2).
+   - project runtime dispatcher wrapper-only exposure proof (item 2).
 
 ## 16) 2026-03-13 audit replay delta (item-by-item correction, frozen)
 
@@ -884,7 +884,7 @@ This delta corrects over-closure risk and records latest serialized replay outco
 At least the following remain open, therefore stream posture stays conditional:
 
 1. **Signer trust boundary is still same-domain conditional**
-   - when signer env + wrapper-attestation inputs are controllable in the same trust domain, physical non-forgeability is not fully guaranteed.
+   - when signer env + wrapper-attestation inputs are controllable in the same trust domain, same-domain non-forgeability is not fully guaranteed.
 2. **Egress positive replay has prerequisite**
    - requires actor/session binding (`session_scoped_actor_binding`) to satisfy send-time/final-emit contracts.
 3. **`source_layer` cross-cwd drift**
@@ -944,7 +944,7 @@ during `identity_creator.py update` pre-mutation flow.
 1. Closed in this follow-up:
    - update pre-mutation wrapper-parent-attestation path mismatch.
 2. Still open:
-   - same trust-domain signer secret self-injection risk (physical non-forgeability not closed).
+   - same trust-domain signer secret self-injection risk (same-domain non-forgeability not closed).
    - runtime report freshness debt (`IP-REL-001`) for update chain continuity.
 3. Stream posture remains:
    - `Policy PASS / Implementation CONDITIONAL PASS`.
@@ -994,7 +994,7 @@ This section records the additional closure work requested for v1.6.6 item-by-it
 
 ### 18.4 Open items (explicit)
 
-1. same trust-domain signer-root isolation is still not physically complete.
+1. same trust-domain signer-root isolation is still not complete.
 2. stale-report freshness drift (`IP-REL-001`) is downgraded to preflight refresh warning path for update, and no longer the immediate stop cause.
 3. stream posture stays: `Policy PASS / Implementation CONDITIONAL PASS`.
 
@@ -1039,7 +1039,7 @@ Pass target for this sequence:
 
 1. `RQ-035` moves from bootstrap-structure failure to runtime evidence closure.
 2. `IP-WRB-003` is evaluated against fresh update run output, not stale pre-fix report.
-3. posture stays `CONDITIONAL PASS` until signer trust boundary + physical conversation transport binding are closed.
+3. posture stays `CONDITIONAL PASS` until signer trust boundary + conversation transport attestation binding are closed.
 
 ## 20) IP-WRB-003 + prompt lifecycle repair-chain closure round (2026-03-13, serialized)
 
@@ -1071,7 +1071,7 @@ This round lands protocol-driven auto-repair to remove manual instance surgery f
 
 1. This is not a closure overclaim:
    - it removes avoidable stale-report and hash-drift blockers.
-   - it does not claim signer-root physical isolation closure.
+   - it does not claim signer-root isolation closure.
 2. Stream posture remains:
    - `Policy PASS / Implementation CONDITIONAL PASS`.
 
@@ -1129,7 +1129,7 @@ Interpretation:
 1. Policy: `PASS_REQUIRED`
 2. Implementation: `CONDITIONAL PASS`
 3. Reason conditional remains:
-   - signer-root trust still not physically separated from same-domain caller control;
+   - signer-root trust still not separated from same-domain caller control;
    - deep-scan still reports one stable P0 instance debt item.
 
 ## 22) Final closure replay (2026-03-13, serialized 5x5)
@@ -1274,10 +1274,10 @@ commit: `cb4478e`
 ### 24.4 审计结论
 
 1. 协议+实例 wrapper 执行链路：`PASS_REQUIRED`（含 signer/session 自举）。
-2. 会话 UI 输出头显是否“每条必显”：仍取决于发送器是否物理只消费 wrapper `out_reply_file`。
+2. 会话 UI 输出头显是否“每条必显”：仍取决于发送器是否稳定沿 native chat standard path 消费 wrapper `out_reply_file`。
 3. 本轮口径：
    - `Policy PASS`
-   - `Implementation CONDITIONAL PASS`（残余项：聊天发送通道物理封口）。
+   - `Implementation CONDITIONAL PASS`（残余项：聊天发送通道仍待完成 native chat standard path 对齐）。
 
 ## 25) Session-chain 父链路封口复验（2026-03-14, base-repo-audit-expert-v3）
 
@@ -1337,7 +1337,7 @@ commit: `cb4478e`
 2. 以实例本机链路验证，头显首行在 session-chain 正向路径稳定可见；
 3. 口径保持：
    - `Policy PASS`
-   - `Implementation CONDITIONAL PASS`（发送器物理路由边界仍需接线层闭环）。
+   - `Implementation CONDITIONAL PASS`（发送器侧 native chat standard path 仍需统一对齐）。
 
 ## 26) Unified wrapper bus closure re-audit (2026-03-14, base-repo-audit-expert-v3)
 
@@ -1388,10 +1388,10 @@ commit: `cb4478e`
 ### 26.5 Verdict and boundary
 
 1. Protocol-side v1.6.6 closure is now bus-centric and anti-drift strict, with reduced bypass surface across strict entrypoints.
-2. UI-layer guaranteed headstamp on every emitted message still depends on sender physical wiring consuming wrapper artifacts only.
+2. UI-layer guaranteed headstamp on every emitted message still depends on sender integration consuming wrapper artifacts on the native chat standard path.
 3. Verdict:
    - `Policy PASS`
-   - `Implementation CONDITIONAL PASS` (bounded to sender physical routing closure).
+   - `Implementation CONDITIONAL PASS` (bounded to sender native-chat standard-path convergence).
 
 ### 26.6 Post-commit serial replay and probe coverage
 
@@ -1511,7 +1511,7 @@ Commits landed in this checkpoint:
 
 Root-cause class addressed:
 
-1. Host-visible sender channel bypass (especially `commentary`) could evade physical attestation in prior baseline.
+1. Host-visible sender channel bypass (especially `commentary`) could evade sender-path attestation in prior baseline.
 2. Wrapper files existed, but no canonical host-visible channel registry + live transport attestation probe existed as required infrastructure.
 
 Protocol-side infrastructure added:
@@ -1945,7 +1945,7 @@ Problem:
 
 1. host-visible runtime attestation previously checked channel receipt existence + status only.
 2. stale historical receipts could still satisfy contract shape checks, masking current-turn sender bypass.
-3. this left a P0 blind spot for commentary channel physical wiring when no fresh receipt was produced.
+3. this left a P0 blind spot for commentary channel current-turn sender-path coverage when no fresh receipt was produced.
 
 Fix landed:
 
@@ -2285,7 +2285,7 @@ Checkpoint verdict update:
 
 1. host-visible live run binding is now a strict default contract requirement, not an optional caller behavior.
 2. strict scan/coverage/CI governance now carries bound run context end-to-end.
-3. remaining P0 closure is now narrowed to real host sender physical lane convergence (same-turn run-bound receipt production), not validator optionality.
+3. remaining P0 closure is now narrowed to real host sender lane convergence (same-turn run-bound receipt production), not validator optionality.
 
 ### 26.27 Privilege-escalation fail-close normalization for global runtime writes (2026-03-15)
 
@@ -2765,7 +2765,7 @@ Interpretation lock:
 
 Problem:
 
-1. field discussion could still drift back to "physical 100% interception" even though v1.6.6 was already frozen around pre-95/post-100 semantics.
+1. field discussion could still drift back to overclaiming full pre-send native-chat control even though v1.6.6 was already frozen around pre-95/post-100 semantics.
 2. "has headstamp text" and "is allowed into next hop" were still too easy to conflate in incident reviews.
 3. key terms (`governed output`, `manual headstamp`, `host-direct output`, `next-hop-admissible output`) were not yet locked as required wording in anti-forget validation.
 
@@ -2796,7 +2796,7 @@ Fix landed:
 
 Checkpoint verdict update:
 
-1. v1.6.6 closure wording is now explicitly infrastructure-scoped and no longer compatible with "physical 100% pre-send hook" phrasing.
+1. v1.6.6 closure wording is now explicitly infrastructure-scoped and no longer compatible with overclaiming full pre-send native-chat control phrasing.
 2. next-hop legality is now frozen as stronger than "headstamp text present".
 3. anti-forget drift validation now protects both wording scope and runtime-endpoint boundary.
 
