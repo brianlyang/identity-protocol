@@ -1772,6 +1772,8 @@ Processing order vs runtime loop vs visible line order:
 4. Native chat failure handling remains fail-close:
    - headerless assistant-authored native-chat reply is forbidden
    - when success-state identity injection is blocked, the two-line withheld/conflict envelope remains required
+   - failure line 1 `requested_identity_id` is the requested target only; it is not the current speaking identity
+   - compatibility-pointer identity, when shown, remains a `Machine-Verification` diagnostic only and never upgrades to current-turn authority
 
 Surface semantics matrix (authoritative surface -> visible literal order freeze):
 

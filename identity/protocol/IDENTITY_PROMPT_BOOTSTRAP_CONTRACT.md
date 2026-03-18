@@ -105,6 +105,8 @@ Required native-chat prompt literals:
 5. native chat keeps `Identity-Context -> Machine-Verification -> body`
 6. governed surfaces keep `Display-Headstamp -> Machine-Verification -> body`
 7. default native-chat `Machine-Verification` profile is `mini`
+8. failure line 1 may claim only `requested_identity_id`
+9. compatibility pointer diagnostics stay on `Machine-Verification` and remain diagnostic-only
 
 Conformance rule:
 

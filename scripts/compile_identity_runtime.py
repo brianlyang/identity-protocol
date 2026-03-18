@@ -17,12 +17,14 @@ from actor_session_common import (
 )
 from native_chat_headstamp_common import (
     DEFAULT_NATIVE_CHAT_PROMPT_HARD_GUARD_TEMPLATE_REF,
+    fallback_native_chat_machine_profile_template,
     load_native_chat_prompt_hard_guard_template,
-    native_chat_success_placeholder_payload,
     render_native_chat_compiled_brief_reply_hard_guard_markdown,
     render_native_chat_failure_identity_placeholder_line,
     render_native_chat_failure_machine_placeholder_line,
+    render_native_chat_success_machine_placeholder_line,
     render_native_chat_success_identity_placeholder_line,
+    resolve_native_chat_profile_doc,
 )
 from resolve_identity_context import default_local_catalog_path, resolve_identity
 
@@ -58,45 +60,6 @@ def _load_json_if_exists(path: Path) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-def _stringify_machine_value(value: Any) -> str:
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if value is None:
-        return ""
-    if isinstance(value, (list, dict)):
-        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
-    return str(value).strip()
-
-
-def _render_machine_line_with_profile(
-    payload: dict[str, Any],
-    *,
-    field_order: tuple[str, ...],
-    include_extra_fields: bool,
-) -> str:
-    ordered_parts: list[str] = []
-    seen: set[str] = set()
-    for key in field_order:
-        rendered = _stringify_machine_value(payload.get(key))
-        if rendered == "":
-            continue
-        ordered_parts.append(f"{key}={rendered}")
-        seen.add(key)
-
-    extra_parts: list[str] = []
-    if include_extra_fields:
-        for key in sorted(payload.keys()):
-            if key in seen:
-                continue
-            rendered = _stringify_machine_value(payload.get(key))
-            if rendered == "":
-                continue
-            extra_parts.append(f"{key}={rendered}")
-
-    parts = ordered_parts + extra_parts
-    return "Machine-Verification: " + "; ".join(parts) if parts else ""
-
-
 def _default_native_chat_headstamp_contract() -> dict[str, Any]:
     return {
         "required": True,
@@ -112,55 +75,7 @@ def _default_native_chat_headstamp_contract() -> dict[str, Any]:
 
 
 def _fallback_native_chat_headstamp_template() -> dict[str, Any]:
-    return {
-        "template_id": "native_chat_machine_verification_profiles_v1",
-        "version": "v1",
-        "default_machine_profile": "mini",
-        "profiles": {
-            "mini": {
-                "description": "Compact native-chat default for ordinary user-visible replies.",
-                "field_order": [
-                    "authority_source",
-                    "identity_id",
-                    "status",
-                    "prompt_version",
-                    "source_layer",
-                ],
-                "include_extra_fields": False,
-            },
-            "standard": {
-                "description": "Readable debug profile for native-chat verification and delivery triage.",
-                "field_order": [
-                    "authority_source",
-                    "actor_id",
-                    "identity_id",
-                    "status",
-                    "pointer_path",
-                    "prompt_version",
-                    "work_layer",
-                    "source_layer",
-                ],
-                "include_extra_fields": False,
-            },
-            "audit": {
-                "description": "Full audit/native-debug projection with replay lineage when available.",
-                "field_order": [
-                    "authority_source",
-                    "actor_id",
-                    "identity_id",
-                    "status",
-                    "pointer_path",
-                    "catalog_path",
-                    "pack_path",
-                    "prompt_version",
-                    "binding_version",
-                    "work_layer",
-                    "source_layer",
-                ],
-                "include_extra_fields": True,
-            },
-        },
-    }
+    return fallback_native_chat_machine_profile_template()
 
 
 def _fallback_headstamp_surface_semantics_template() -> dict[str, Any]:
@@ -218,7 +133,19 @@ def _fallback_headstamp_surface_semantics_template() -> dict[str, Any]:
                 "native_chat_literal": "Identity-Context: ... | Layer-Context: ...",
                 "governed_literal": "Display-Headstamp: Identity-Context: ... | Layer-Context: ...",
                 "authority_rule": "display object never becomes an authority source",
-            }
+            },
+            {
+                "semantic_object": "requested_identity_id",
+                "native_chat_literal": "Identity-Context: withheld; ... requested_identity_id=...",
+                "governed_literal": "rendered only inside failure envelopes when needed",
+                "authority_rule": "requested target only; never the current speaking identity",
+            },
+            {
+                "semantic_object": "compatibility_pointer_identity_id",
+                "native_chat_literal": "Machine-Verification: ... compatibility_pointer_identity_id=...",
+                "governed_literal": "diagnostic-only when explicitly rendered",
+                "authority_rule": "compatibility diagnostic only; never replace current-turn authoritative identity",
+            },
         ],
         "clarity_freeze": {
             "manual_headstamp": "`manual_headstamp` = render_origin tag only; never verdict axis.",
@@ -226,6 +153,11 @@ def _fallback_headstamp_surface_semantics_template() -> dict[str, Any]:
             "sender_boundary_visibility": "Ordinary replies should stay focused on the standard native-chat output path; governed receipt or attestation boundaries are audit/debug-only.",
             "compile_runtime_authority": "compile/replay metadata may read compatibility mirror; current-session authority must not.",
             "compiled_example_label": "generated from current runtime; re-verify each turn",
+            "compiled_brief_projection_rule": "shared compiled brief never acts as current-turn identity authority; success projection remains schematic until a machine-attested actor/session tuple resolves it at turn time.",
+            "compiled_brief_default_reply_rule": "without a current-turn machine tuple, native chat must stay on the two-line withheld/conflict envelope.",
+            "failure_envelope_claim_scope": "`requested_identity_id` in native-chat failure line 1 is the requested target only; it never proves the current speaking identity.",
+            "compatibility_pointer_diagnostic_rule": "`compatibility_pointer_identity_id` is diagnostic-only compatibility metadata; it MUST NOT replace `identity_id` or appear as success-state identity injection.",
+            "failure_profile_default": "native-chat failure `Machine-Verification` defaults to the compact `mini` profile unless debug/audit context explicitly requires escalation.",
         },
     }
 
@@ -299,31 +231,9 @@ def _resolve_native_chat_profile_doc(
     template_doc: dict[str, Any],
     *,
     profile_name: str,
+    failure: bool = False,
 ) -> dict[str, Any]:
-    fallback_doc = _fallback_native_chat_headstamp_template()
-    profiles = template_doc.get("profiles") if isinstance(template_doc.get("profiles"), dict) else {}
-    doc = profiles.get(profile_name)
-    if not isinstance(doc, dict):
-        doc = ((fallback_doc.get("profiles") or {}).get(profile_name) or {})
-    field_order = tuple(
-        str(item).strip()
-        for item in doc.get("field_order") or []
-        if str(item).strip()
-    )
-    if not field_order:
-        fallback = ((fallback_doc.get("profiles") or {}).get(profile_name) or {})
-        field_order = tuple(
-            str(item).strip()
-            for item in fallback.get("field_order") or []
-            if str(item).strip()
-        )
-    return {
-        "name": profile_name,
-        "description": str(doc.get("description", "")).strip()
-        or str((((fallback_doc.get("profiles") or {}).get(profile_name) or {}).get("description", ""))).strip(),
-        "field_order": field_order,
-        "include_extra_fields": bool(doc.get("include_extra_fields", False)),
-    }
+    return resolve_native_chat_profile_doc(template_doc, profile_name=profile_name, failure=failure)
 
 
 def _format_profile_fields(field_order: tuple[str, ...]) -> str:
@@ -490,10 +400,6 @@ def main() -> int:
     native_chat_machine_profile = _normalize_native_chat_machine_profile(
         native_chat_contract.get("default_machine_profile", "mini")
     )
-    native_chat_profile_doc = _resolve_native_chat_profile_doc(
-        native_chat_template,
-        profile_name=native_chat_machine_profile,
-    )
     headstamp_semantics_template, headstamp_semantics_template_path = _load_headstamp_surface_semantics_template(
         DEFAULT_HEADSTAMP_SURFACE_SEMANTICS_TEMPLATE_REF
     )
@@ -506,13 +412,16 @@ def main() -> int:
         else {}
     )
     success_identity_line = render_native_chat_success_identity_placeholder_line(actor_id=actor_id)
-    success_machine_line = _render_machine_line_with_profile(
-        native_chat_success_placeholder_payload(actor_id=actor_id),
-        field_order=native_chat_profile_doc["field_order"],
-        include_extra_fields=bool(native_chat_profile_doc["include_extra_fields"]),
+    success_machine_line = render_native_chat_success_machine_placeholder_line(
+        actor_id=actor_id,
+        default_machine_profile=native_chat_machine_profile,
+        template_ref=str(native_chat_contract.get("template_ref", "")).strip(),
     )
     failure_identity_line = render_native_chat_failure_identity_placeholder_line(actor_id=actor_id)
-    failure_machine_line = render_native_chat_failure_machine_placeholder_line()
+    failure_machine_line = render_native_chat_failure_machine_placeholder_line(
+        default_machine_profile=native_chat_machine_profile,
+        template_ref=str(native_chat_contract.get("template_ref", "")).strip(),
+    )
     prompt_hard_guard_intro = str(
         prompt_hard_guard_template.get(
             "section_intro",
@@ -538,7 +447,29 @@ def main() -> int:
             "without a current-turn machine tuple, native chat must stay on the two-line withheld/conflict envelope.",
         )
     ).strip()
-    top_reply_hard_guard = render_native_chat_compiled_brief_reply_hard_guard_markdown(actor_id=actor_id).strip()
+    failure_envelope_claim_scope = str(
+        headstamp_clarity_freeze.get(
+            "failure_envelope_claim_scope",
+            "`requested_identity_id` in native-chat failure line 1 is the requested target only; it never proves the current speaking identity.",
+        )
+    ).strip()
+    compatibility_pointer_diagnostic_rule = str(
+        headstamp_clarity_freeze.get(
+            "compatibility_pointer_diagnostic_rule",
+            "`compatibility_pointer_identity_id` is diagnostic-only compatibility metadata; it MUST NOT replace `identity_id` or appear as success-state identity injection.",
+        )
+    ).strip()
+    failure_profile_default_rule = str(
+        headstamp_clarity_freeze.get(
+            "failure_profile_default",
+            "native-chat failure `Machine-Verification` defaults to the compact `mini` profile unless debug/audit context explicitly requires escalation.",
+        )
+    ).strip()
+    top_reply_hard_guard = render_native_chat_compiled_brief_reply_hard_guard_markdown(
+        actor_id=actor_id,
+        default_machine_profile=native_chat_machine_profile,
+        machine_profile_template_ref=str(native_chat_contract.get("template_ref", "")).strip(),
+    ).strip()
 
     lines = [
         "# Identity Runtime Brief",
@@ -579,13 +510,22 @@ def main() -> int:
             "- `audit`: full lineage/debug projection; fields = "
             f"`{_format_profile_fields(_resolve_native_chat_profile_doc(native_chat_template, profile_name='audit')['field_order'])}`."
         ),
+        "- Failure `mini`: compact fail-close projection; fields = "
+        f"`{_format_profile_fields(_resolve_native_chat_profile_doc(native_chat_template, profile_name='mini', failure=True)['field_order'])}`.",
+        "- Failure `standard`: readable fail-close debug projection; fields = "
+        f"`{_format_profile_fields(_resolve_native_chat_profile_doc(native_chat_template, profile_name='standard', failure=True)['field_order'])}`.",
+        "- Failure `audit`: full fail-close audit projection; fields = "
+        f"`{_format_profile_fields(_resolve_native_chat_profile_doc(native_chat_template, profile_name='audit', failure=True)['field_order'])}`.",
         "- Ordinary user-facing native chat replies must stay on `mini`; only expand to `standard` or `audit` when debug/audit context explicitly requires it.",
+        f"- {failure_profile_default_rule}",
         "- This native-chat path is the standard assistant-visible delivery path for host-native chat surfaces.",
         f"- {str(headstamp_clarity_freeze.get('sender_boundary_visibility', 'Ordinary replies should stay focused on the standard native-chat output path; governed receipt or attestation boundaries are audit/debug-only.')).strip()}",
         "- Native-chat display alone does not replace governed proof, admission, or runtime receipt ownership.",
         "- Governed repo-controlled surfaces keep the separate `Display-Headstamp` + `Machine-Verification` envelope; do not replace that contract here.",
         f"- {compiled_brief_projection_rule}",
         f"- {compiled_brief_default_reply_rule}",
+        f"- {failure_envelope_claim_scope}",
+        f"- {compatibility_pointer_diagnostic_rule}",
         "- If machine verification is missing, conflicted, or polluted, do not emit a success identity line; emit a withheld/conflict `Identity-Context` plus `Machine-Verification: verification_status=FAIL_REQUIRED ...` instead.",
         "- Runtime loop is fixed: `machine-verify -> assistant-visible-inject -> next turn re-verify`.",
         "",

@@ -60,6 +60,40 @@ assert obj.get("default_machine_profile") == "mini", obj
 assert obj.get("top_hard_guard_status") == "PASS_REQUIRED", obj
 print("[PASS] native chat compiled brief freeze")
 PY
+cp "$TMP_ROOT/native_chat_compiled.md" "$TMP_ROOT/native_chat_compiled_bad.md"
+python3 - "$TMP_ROOT/native_chat_compiled_bad.md" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+marker = "- Failure example line 2:"
+replacement = (
+    marker
+    + " `Machine-Verification: verification_source=<verification_source>; verification_status=FAIL_REQUIRED; "
+    "current_pointer_identity_id=<stale_pointer_identity_id>; next_hop_admission_status=FAIL_REQUIRED`"
+)
+if marker not in text:
+    raise SystemExit("compiled_brief_failure_marker_missing")
+path.write_text(text.replace(marker + " `Machine-Verification:", replacement, 1), encoding="utf-8")
+PY
+set +e
+python3 scripts/validate_compiled_brief_projection_boundary.py \
+  --compiled-brief "$TMP_ROOT/native_chat_compiled_bad.md" \
+  --json-only > "$TMP_ROOT/native_chat_compiled_bad_boundary.json"
+rc=$?
+set -e
+if [ "$rc" -eq 0 ]; then
+  echo "[FAIL] compiled brief validator should fail when stale current_pointer_identity_id leaks into failure envelope"
+  exit 1
+fi
+python3 - "$TMP_ROOT/native_chat_compiled_bad_boundary.json" <<'PY'
+import json,sys
+obj=json.load(open(sys.argv[1]))
+assert obj.get("compiled_brief_projection_boundary_status") == "FAIL_REQUIRED", obj
+assert "current_pointer_identity_id=" in (obj.get("forbidden_token_hits") or []), obj
+print("[PASS] stale current_pointer_identity_id forbidden in compiled brief")
+PY
 
 echo "[info] semantic clarity probes: native chat prompt hard guard"
 mkdir -p "$TMP_ROOT/prompt-hard-guard/.identity/alpha"
@@ -169,6 +203,8 @@ required = [
     "Native Chat Headstamp Hard Guard",
     "There is no headerless assistant-authored native-chat reply path.",
     "Failure visible order: `Identity-Context(withheld_or_conflict) -> Machine-Verification(verification_status=FAIL_REQUIRED) -> body`.",
+    "Failure line 1 may claim only `requested_identity_id`; it MUST NOT project a success identity when the current-turn machine tuple is missing, conflicted, or polluted.",
+    "Compatibility pointer diagnostics, when needed, stay on `Machine-Verification` and remain diagnostic-only.",
 ]
 for token in required:
     if token not in prompt:

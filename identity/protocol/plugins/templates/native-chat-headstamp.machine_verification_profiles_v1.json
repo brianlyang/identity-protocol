@@ -10,6 +10,7 @@
     "body"
   ],
   "default_machine_profile": "mini",
+  "failure_default_machine_profile": "mini",
   "profiles": {
     "mini": {
       "description": "Compact native-chat default for ordinary user-visible replies.",
@@ -72,5 +73,72 @@
       ],
       "include_extra_fields": true
     }
+  },
+  "failure_profiles": {
+    "mini": {
+      "description": "Compact native-chat failure profile for ordinary user-visible replies.",
+      "required_fields": [
+        "verification_source",
+        "verification_status",
+        "current_chat_surface_native_machine_attested",
+        "next_hop_admission_status"
+      ],
+      "field_order": [
+        "verification_source",
+        "verification_status",
+        "current_chat_surface_native_machine_attested",
+        "next_hop_admission_status"
+      ],
+      "include_extra_fields": false
+    },
+    "standard": {
+      "description": "Readable native-chat failure/debug profile with compatibility diagnostics kept off the visible identity line.",
+      "required_fields": [
+        "verification_source",
+        "verification_status",
+        "compatibility_pointer_identity_id",
+        "current_chat_surface_native_machine_attested",
+        "next_hop_admission_status"
+      ],
+      "field_order": [
+        "verification_source",
+        "verification_status",
+        "compatibility_pointer_identity_id",
+        "compatibility_pointer_scope",
+        "current_chat_surface_native_machine_attested",
+        "next_hop_admission_status",
+        "source_layer"
+      ],
+      "include_extra_fields": false
+    },
+    "audit": {
+      "description": "Full failure/audit projection with compatibility-pointer lineage kept diagnostic-only.",
+      "required_fields": [
+        "verification_source",
+        "verification_status",
+        "compatibility_pointer_identity_id",
+        "pointer_path",
+        "current_chat_surface_native_machine_attested",
+        "next_hop_admission_status"
+      ],
+      "field_order": [
+        "verification_source",
+        "verification_status",
+        "compatibility_pointer_identity_id",
+        "compatibility_pointer_scope",
+        "pointer_path",
+        "current_chat_surface_native_machine_attested",
+        "next_hop_admission_status",
+        "control_state",
+        "source_layer"
+      ],
+      "include_extra_fields": true
+    }
+  },
+  "failure_field_freeze": {
+    "identity_line_claim_field": "requested_identity_id",
+    "success_identity_field": "identity_id",
+    "compatibility_pointer_field": "compatibility_pointer_identity_id",
+    "compatibility_pointer_rule": "compatibility pointer identity is diagnostic only; it never becomes the current speaking identity"
   }
 }

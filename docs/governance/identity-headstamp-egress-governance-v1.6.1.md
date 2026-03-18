@@ -530,6 +530,8 @@ deepening base for v1.6.1 headstamp semantics.
    - headerless assistant-authored native-chat reply is forbidden,
    - line 1 MUST degrade to a withheld/conflict `Identity-Context`,
    - line 2 MUST emit `Machine-Verification: verification_status=FAIL_REQUIRED ...`,
+   - line 1 `requested_identity_id` is the requested target only and MUST NOT be read as the current speaking identity,
+   - compatibility-pointer diagnostics, when rendered, MUST stay on the `Machine-Verification` line and remain diagnostic-only,
    - implementations MUST fail-close rather than emit a stable-but-wrong identity headstamp,
    - implementations MUST emit the two-line failure envelope rather than dropping the headstamp entirely.
 9. This freeze is the closure baseline for native chat surfaces in the current architecture boundary; future host-native sender attestation / renderer integration uplift is a higher-tier enhancement, not a prerequisite for v1.6.1 / v1.6.6 closure.

@@ -11,9 +11,11 @@ from native_chat_headstamp_common import (
     PLACEHOLDER_REQUESTED_IDENTITY_ID,
     native_chat_success_placeholder_payload,
     normalize_native_chat_machine_profile,
+    render_machine_line,
     render_native_chat_failure_identity_placeholder_line,
     render_native_chat_failure_machine_placeholder_line,
     render_native_chat_success_identity_placeholder_line,
+    resolve_native_chat_profile_doc,
 )
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -35,39 +37,6 @@ def _load_json(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text(encoding="utf-8"))
     return data if isinstance(data, dict) else {}
 
-
-def _stringify_machine_value(value: Any) -> str:
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if value is None:
-        return ""
-    if isinstance(value, (list, dict)):
-        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
-    return str(value).strip()
-
-
-def _render_machine_line(payload: dict[str, Any], *, field_order: list[str], include_extra_fields: bool) -> str:
-    ordered_parts: list[str] = []
-    seen: set[str] = set()
-    for key in field_order:
-        rendered = _stringify_machine_value(payload.get(key))
-        if rendered == "":
-            continue
-        ordered_parts.append(f"{key}={rendered}")
-        seen.add(key)
-    extra_parts: list[str] = []
-    if include_extra_fields:
-        for key in sorted(payload.keys()):
-            if key in seen:
-                continue
-            rendered = _stringify_machine_value(payload.get(key))
-            if rendered == "":
-                continue
-            extra_parts.append(f"{key}={rendered}")
-    parts = ordered_parts + extra_parts
-    return "Machine-Verification: " + "; ".join(parts) if parts else ""
-
-
 def _detect_default_profile(text: str) -> str:
     patterns = (
         r"default_machine_profile: `([^`]+)`",
@@ -85,6 +54,7 @@ def _required_tokens(
     profile: str,
     surface_template: dict[str, Any],
     machine_profile_template: dict[str, Any],
+    machine_profile_template_path: Path,
 ) -> list[str]:
     clarity = surface_template.get("clarity_freeze") if isinstance(surface_template.get("clarity_freeze"), dict) else {}
     projection_rule = str(
@@ -99,14 +69,33 @@ def _required_tokens(
             "without a current-turn machine tuple, native chat must stay on the two-line withheld/conflict envelope.",
         )
     ).strip()
-    profiles = machine_profile_template.get("profiles") if isinstance(machine_profile_template.get("profiles"), dict) else {}
-    profile_doc = profiles.get(profile) if isinstance(profiles.get(profile), dict) else {}
-    field_order = [str(item).strip() for item in (profile_doc.get("field_order") or []) if str(item).strip()]
-    include_extra_fields = bool(profile_doc.get("include_extra_fields", False))
-    success_machine_line = _render_machine_line(
+    failure_envelope_claim_scope = str(
+        clarity.get(
+            "failure_envelope_claim_scope",
+            "`requested_identity_id` in native-chat failure line 1 is the requested target only; it never proves the current speaking identity.",
+        )
+    ).strip()
+    compatibility_pointer_diagnostic_rule = str(
+        clarity.get(
+            "compatibility_pointer_diagnostic_rule",
+            "`compatibility_pointer_identity_id` is diagnostic-only compatibility metadata; it MUST NOT replace `identity_id` or appear as success-state identity injection.",
+        )
+    ).strip()
+    failure_profile_default = str(
+        clarity.get(
+            "failure_profile_default",
+            "native-chat failure `Machine-Verification` defaults to the compact `mini` profile unless debug/audit context explicitly requires escalation.",
+        )
+    ).strip()
+    success_profile_doc = resolve_native_chat_profile_doc(
+        machine_profile_template,
+        profile_name=profile,
+        failure=False,
+    )
+    success_machine_line = render_machine_line(
         native_chat_success_placeholder_payload(),
-        field_order=field_order,
-        include_extra_fields=include_extra_fields,
+        field_order=success_profile_doc["field_order"],
+        include_extra_fields=success_profile_doc["include_extra_fields"],
     )
     return [
         "Artifact classification:",
@@ -120,6 +109,9 @@ def _required_tokens(
         "${IDENTITY_HOME}/<resolved_identity_id>/IDENTITY_PROMPT.md",
         "Native chat assistant-visible headstamp contract:",
         "Runtime loop is fixed: `machine-verify -> assistant-visible-inject -> next turn re-verify`.",
+        failure_envelope_claim_scope,
+        compatibility_pointer_diagnostic_rule,
+        failure_profile_default,
         "Native chat headstamp hard guard:",
         (
             "Success example line 1 (schematic only; placeholders resolve only from current-turn machine tuple): "
@@ -127,7 +119,10 @@ def _required_tokens(
         ),
         f"Success example line 2 (schematic only; profile `{profile}`): `{success_machine_line}`",
         f"Failure example line 1: `{render_native_chat_failure_identity_placeholder_line()}`",
-        f"Failure example line 2: `{render_native_chat_failure_machine_placeholder_line()}`",
+        (
+            "Failure example line 2: "
+            f"`{render_native_chat_failure_machine_placeholder_line(default_machine_profile=profile, template_ref=str(machine_profile_template_path))}`"
+        ),
         PLACEHOLDER_REQUESTED_IDENTITY_ID,
     ]
 
@@ -146,6 +141,7 @@ FORBIDDEN_TOKENS = [
     "prompt_preview:",
     "prompt_sha256:",
     "canonical_pointer_identity:",
+    "current_pointer_identity_id=",
 ]
 
 
@@ -198,6 +194,7 @@ def main() -> int:
         profile=profile,
         surface_template=_load_json(surface_template),
         machine_profile_template=_load_json(machine_profile_template),
+        machine_profile_template_path=machine_profile_template,
     )
     missing_required_tokens = [token for token in required if token not in text]
     forbidden_hits = [token for token in FORBIDDEN_TOKENS if token in text]

@@ -8,6 +8,9 @@ from typing import Any
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROTOCOL_ROOT = SCRIPT_DIR.parent
 
+DEFAULT_NATIVE_CHAT_MACHINE_PROFILE_TEMPLATE_REF = (
+    "identity/protocol/plugins/templates/native-chat-headstamp.machine_verification_profiles_v1.json"
+)
 DEFAULT_NATIVE_CHAT_PROMPT_HARD_GUARD_TEMPLATE_REF = (
     "identity/protocol/plugins/templates/native-chat-headstamp.prompt_hard_guard_v1.json"
 )
@@ -25,6 +28,10 @@ PLACEHOLDER_RESOLVED_CATALOG_PATH = "<resolved_catalog_path>"
 PLACEHOLDER_RESOLVED_PACK_PATH = "<resolved_pack_path>"
 PLACEHOLDER_RESOLVED_BINDING_VERSION = "<resolved_binding_version>"
 PLACEHOLDER_CONFLICT_REASON = "<reason>"
+PLACEHOLDER_VERIFICATION_SOURCE = "<verification_source>"
+PLACEHOLDER_COMPATIBILITY_POINTER_IDENTITY_ID = "<compatibility_pointer_identity_id>"
+PLACEHOLDER_COMPATIBILITY_POINTER_SCOPE = "<compatibility_pointer_scope>"
+PLACEHOLDER_CONTROL_STATE = "<control_state>"
 
 PROMPT_HARD_GUARD_BEGIN = "<!-- NATIVE_CHAT_HEADSTAMP_HARD_GUARD:BEGIN -->"
 PROMPT_HARD_GUARD_END = "<!-- NATIVE_CHAT_HEADSTAMP_HARD_GUARD:END -->"
@@ -56,7 +63,143 @@ def fallback_native_chat_prompt_hard_guard_template() -> dict[str, Any]:
             "There is no headerless assistant-authored native-chat reply path.",
             "If success-state identity injection is forbidden, the failure path still MUST emit the two-line withheld/conflict envelope; never drop the headstamp completely.",
             "Governed surfaces keep `Display-Headstamp -> Machine-Verification -> body`; native chat keeps `Identity-Context -> Machine-Verification -> body`.",
+            "Failure line 1 may claim only `requested_identity_id`; it MUST NOT project a success identity when the current-turn machine tuple is missing, conflicted, or polluted.",
+            "Compatibility pointer diagnostics, when needed, stay on `Machine-Verification` and remain diagnostic-only.",
         ],
+    }
+
+
+def fallback_native_chat_machine_profile_template() -> dict[str, Any]:
+    return {
+        "template_id": "native_chat_machine_verification_profiles_v1",
+        "version": "v1",
+        "surface_class": "host_native_chat_panel",
+        "delivery_mode": "assistant_text_injection",
+        "description": "Machine-Verification line profiles for native-chat assistant-visible identity injection.",
+        "success_order": ["Identity-Context", "Machine-Verification", "body"],
+        "default_machine_profile": "mini",
+        "failure_default_machine_profile": "mini",
+        "profiles": {
+            "mini": {
+                "description": "Compact native-chat default for ordinary user-visible replies.",
+                "required_fields": ["authority_source", "identity_id", "status"],
+                "field_order": [
+                    "authority_source",
+                    "identity_id",
+                    "status",
+                    "prompt_version",
+                    "source_layer",
+                ],
+                "include_extra_fields": False,
+            },
+            "standard": {
+                "description": "Readable debug profile for native-chat verification and delivery triage.",
+                "required_fields": ["authority_source", "identity_id", "status", "pointer_path"],
+                "field_order": [
+                    "authority_source",
+                    "actor_id",
+                    "identity_id",
+                    "status",
+                    "pointer_path",
+                    "prompt_version",
+                    "work_layer",
+                    "source_layer",
+                ],
+                "include_extra_fields": False,
+            },
+            "audit": {
+                "description": "Full audit/native-debug projection with replay lineage when available.",
+                "required_fields": [
+                    "authority_source",
+                    "identity_id",
+                    "status",
+                    "pointer_path",
+                    "catalog_path",
+                    "pack_path",
+                ],
+                "field_order": [
+                    "authority_source",
+                    "actor_id",
+                    "identity_id",
+                    "status",
+                    "pointer_path",
+                    "catalog_path",
+                    "pack_path",
+                    "prompt_version",
+                    "binding_version",
+                    "work_layer",
+                    "source_layer",
+                ],
+                "include_extra_fields": True,
+            },
+        },
+        "failure_profiles": {
+            "mini": {
+                "description": "Compact native-chat failure profile for ordinary user-visible replies.",
+                "required_fields": [
+                    "verification_source",
+                    "verification_status",
+                    "current_chat_surface_native_machine_attested",
+                    "next_hop_admission_status",
+                ],
+                "field_order": [
+                    "verification_source",
+                    "verification_status",
+                    "current_chat_surface_native_machine_attested",
+                    "next_hop_admission_status",
+                ],
+                "include_extra_fields": False,
+            },
+            "standard": {
+                "description": "Readable native-chat failure/debug profile with compatibility diagnostics kept off the visible identity line.",
+                "required_fields": [
+                    "verification_source",
+                    "verification_status",
+                    "compatibility_pointer_identity_id",
+                    "current_chat_surface_native_machine_attested",
+                    "next_hop_admission_status",
+                ],
+                "field_order": [
+                    "verification_source",
+                    "verification_status",
+                    "compatibility_pointer_identity_id",
+                    "compatibility_pointer_scope",
+                    "current_chat_surface_native_machine_attested",
+                    "next_hop_admission_status",
+                    "source_layer",
+                ],
+                "include_extra_fields": False,
+            },
+            "audit": {
+                "description": "Full failure/audit projection with compatibility-pointer lineage kept diagnostic-only.",
+                "required_fields": [
+                    "verification_source",
+                    "verification_status",
+                    "compatibility_pointer_identity_id",
+                    "pointer_path",
+                    "current_chat_surface_native_machine_attested",
+                    "next_hop_admission_status",
+                ],
+                "field_order": [
+                    "verification_source",
+                    "verification_status",
+                    "compatibility_pointer_identity_id",
+                    "compatibility_pointer_scope",
+                    "pointer_path",
+                    "current_chat_surface_native_machine_attested",
+                    "next_hop_admission_status",
+                    "control_state",
+                    "source_layer",
+                ],
+                "include_extra_fields": True,
+            },
+        },
+        "failure_field_freeze": {
+            "identity_line_claim_field": "requested_identity_id",
+            "success_identity_field": "identity_id",
+            "compatibility_pointer_field": "compatibility_pointer_identity_id",
+            "compatibility_pointer_rule": "compatibility pointer identity is diagnostic only; it never becomes the current speaking identity",
+        },
     }
 
 
@@ -70,6 +213,19 @@ def load_native_chat_prompt_hard_guard_template(template_ref: str = "") -> tuple
     template_doc = _load_json_if_exists(template_path)
     if not template_doc:
         template_doc = fallback_native_chat_prompt_hard_guard_template()
+    return template_doc, template_path
+
+
+def load_native_chat_machine_profile_template(template_ref: str = "") -> tuple[dict[str, Any], Path]:
+    resolved_ref = str(template_ref or DEFAULT_NATIVE_CHAT_MACHINE_PROFILE_TEMPLATE_REF).strip()
+    template_path = (
+        (PROTOCOL_ROOT / resolved_ref).resolve()
+        if resolved_ref and not Path(resolved_ref).is_absolute()
+        else Path(resolved_ref or DEFAULT_NATIVE_CHAT_MACHINE_PROFILE_TEMPLATE_REF).expanduser().resolve()
+    )
+    template_doc = _load_json_if_exists(template_path)
+    if not template_doc:
+        template_doc = fallback_native_chat_machine_profile_template()
     return template_doc, template_path
 
 
@@ -93,6 +249,73 @@ def _sequence_to_arrow(items: list[Any] | tuple[Any, ...]) -> str:
     return " -> ".join(tokens)
 
 
+def _stringify_machine_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return ""
+    if isinstance(value, (list, dict)):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    return str(value).strip()
+
+
+def render_machine_line(
+    payload: dict[str, Any],
+    *,
+    field_order: tuple[str, ...] | list[str],
+    include_extra_fields: bool,
+) -> str:
+    ordered_parts: list[str] = []
+    seen: set[str] = set()
+    for key in field_order:
+        rendered = _stringify_machine_value(payload.get(str(key)))
+        if rendered == "":
+            continue
+        ordered_parts.append(f"{key}={rendered}")
+        seen.add(str(key))
+    extra_parts: list[str] = []
+    if include_extra_fields:
+        for key in sorted(payload.keys()):
+            if key in seen:
+                continue
+            rendered = _stringify_machine_value(payload.get(key))
+            if rendered == "":
+                continue
+            extra_parts.append(f"{key}={rendered}")
+    parts = ordered_parts + extra_parts
+    return "Machine-Verification: " + "; ".join(parts) if parts else ""
+
+
+def resolve_native_chat_profile_doc(
+    template_doc: dict[str, Any],
+    *,
+    profile_name: str,
+    failure: bool = False,
+) -> dict[str, Any]:
+    fallback_doc = fallback_native_chat_machine_profile_template()
+    profile_key = "failure_profiles" if failure else "profiles"
+    profiles = template_doc.get(profile_key) if isinstance(template_doc.get(profile_key), dict) else {}
+    fallback_profiles = (
+        fallback_doc.get(profile_key) if isinstance(fallback_doc.get(profile_key), dict) else {}
+    )
+    doc = profiles.get(profile_name)
+    if not isinstance(doc, dict):
+        doc = fallback_profiles.get(profile_name) if isinstance(fallback_profiles.get(profile_name), dict) else {}
+    field_order = tuple(str(item).strip() for item in (doc.get("field_order") or []) if str(item).strip())
+    if not field_order:
+        fallback_profile = fallback_profiles.get(profile_name) if isinstance(fallback_profiles.get(profile_name), dict) else {}
+        field_order = tuple(
+            str(item).strip() for item in (fallback_profile.get("field_order") or []) if str(item).strip()
+        )
+    return {
+        "name": profile_name,
+        "description": str(doc.get("description", "")).strip()
+        or str((((fallback_profiles or {}).get(profile_name) or {}).get("description", ""))).strip(),
+        "field_order": field_order,
+        "include_extra_fields": bool(doc.get("include_extra_fields", False)),
+    }
+
+
 def native_chat_success_placeholder_payload(*, actor_id: str = "assistant:codex") -> dict[str, str]:
     return {
         "authority_source": "actor_session_store",
@@ -105,6 +328,20 @@ def native_chat_success_placeholder_payload(*, actor_id: str = "assistant:codex"
         "prompt_version": PLACEHOLDER_RESOLVED_PROMPT_VERSION,
         "binding_version": PLACEHOLDER_RESOLVED_BINDING_VERSION,
         "work_layer": PLACEHOLDER_RESOLVED_WORK_LAYER,
+        "source_layer": PLACEHOLDER_RESOLVED_SOURCE_LAYER,
+    }
+
+
+def native_chat_failure_placeholder_payload() -> dict[str, Any]:
+    return {
+        "verification_source": PLACEHOLDER_VERIFICATION_SOURCE,
+        "verification_status": "FAIL_REQUIRED",
+        "compatibility_pointer_identity_id": PLACEHOLDER_COMPATIBILITY_POINTER_IDENTITY_ID,
+        "compatibility_pointer_scope": PLACEHOLDER_COMPATIBILITY_POINTER_SCOPE,
+        "pointer_path": PLACEHOLDER_RESOLVED_POINTER_PATH,
+        "current_chat_surface_native_machine_attested": False,
+        "next_hop_admission_status": "FAIL_REQUIRED",
+        "control_state": PLACEHOLDER_CONTROL_STATE,
         "source_layer": PLACEHOLDER_RESOLVED_SOURCE_LAYER,
     }
 
@@ -134,21 +371,60 @@ def render_native_chat_failure_identity_placeholder_line(*, actor_id: str = "ass
     )
 
 
-def render_native_chat_failure_machine_placeholder_line() -> str:
-    return "Machine-Verification: verification_status=FAIL_REQUIRED; <machine tuple missing/conflicted>"
+def render_native_chat_success_machine_placeholder_line(
+    *,
+    actor_id: str = "assistant:codex",
+    default_machine_profile: str = "mini",
+    template_ref: str = "",
+) -> str:
+    template_doc, _ = load_native_chat_machine_profile_template(template_ref)
+    profile = normalize_native_chat_machine_profile(
+        default_machine_profile,
+        default=str(template_doc.get("default_machine_profile", "mini")),
+    )
+    profile_doc = resolve_native_chat_profile_doc(template_doc, profile_name=profile, failure=False)
+    return render_machine_line(
+        native_chat_success_placeholder_payload(actor_id=actor_id),
+        field_order=profile_doc["field_order"],
+        include_extra_fields=profile_doc["include_extra_fields"],
+    )
 
 
-def render_native_chat_compiled_brief_reply_hard_guard_markdown(*, actor_id: str = "assistant:codex") -> str:
+def render_native_chat_failure_machine_placeholder_line(
+    *,
+    default_machine_profile: str = "mini",
+    template_ref: str = "",
+) -> str:
+    template_doc, _ = load_native_chat_machine_profile_template(template_ref)
+    profile = normalize_native_chat_machine_profile(
+        default_machine_profile,
+        default=str(template_doc.get("failure_default_machine_profile", "mini")),
+    )
+    profile_doc = resolve_native_chat_profile_doc(template_doc, profile_name=profile, failure=True)
+    return render_machine_line(
+        native_chat_failure_placeholder_payload(),
+        field_order=profile_doc["field_order"],
+        include_extra_fields=profile_doc["include_extra_fields"],
+    )
+
+
+def render_native_chat_compiled_brief_reply_hard_guard_markdown(
+    *,
+    actor_id: str = "assistant:codex",
+    default_machine_profile: str = "mini",
+    machine_profile_template_ref: str = "",
+) -> str:
     success_line_1 = render_native_chat_success_identity_placeholder_line(actor_id=actor_id)
-    success_line_2 = (
-        "Machine-Verification: authority_source=actor_session_store; "
-        f"identity_id={PLACEHOLDER_CURRENT_SESSION_IDENTITY_ID}; "
-        f"status={PLACEHOLDER_RESOLVED_STATUS}; "
-        f"prompt_version={PLACEHOLDER_RESOLVED_PROMPT_VERSION}; "
-        f"source_layer={PLACEHOLDER_RESOLVED_SOURCE_LAYER}"
+    success_line_2 = render_native_chat_success_machine_placeholder_line(
+        actor_id=actor_id,
+        default_machine_profile=default_machine_profile,
+        template_ref=machine_profile_template_ref,
     )
     failure_line_1 = render_native_chat_failure_identity_placeholder_line(actor_id=actor_id)
-    failure_line_2 = render_native_chat_failure_machine_placeholder_line()
+    failure_line_2 = render_native_chat_failure_machine_placeholder_line(
+        default_machine_profile=default_machine_profile,
+        template_ref=machine_profile_template_ref,
+    )
     lines = [
         "## Native Chat Reply Hard Guard",
         "",
@@ -156,6 +432,8 @@ def render_native_chat_compiled_brief_reply_hard_guard_markdown(*, actor_id: str
         "",
         "- Never start with body text; line 1 and line 2 are mandatory.",
         "- Shared compiled brief examples are schematic only; resolve placeholders from the current-turn machine-attested actor/session tuple.",
+        "- Failure line 1 may claim only `requested_identity_id`; it never proves the current speaking identity.",
+        "- Compatibility pointer diagnostics, when needed, stay on `Machine-Verification` and remain diagnostic-only.",
         "- Success path first two lines:",
         f"  1. `{success_line_1}`",
         f"  2. `{success_line_2}`",
@@ -190,6 +468,8 @@ def prompt_hard_guard_required_tokens(
             for item in (template_doc.get("required_invariants") or [])
             if str(item).strip()
         ],
+        "Failure line 1 may claim only `requested_identity_id`; it MUST NOT project a success identity when the current-turn machine tuple is missing, conflicted, or polluted.",
+        "Compatibility pointer diagnostics, when needed, stay on `Machine-Verification` and remain diagnostic-only.",
         f"Default native-chat Machine-Verification profile: `{profile}`.",
         f"Success visible order: `{_sequence_to_arrow(list(template_doc.get('success_order') or []))}`.",
         f"Failure visible order: `{_sequence_to_arrow(list(template_doc.get('failure_order') or []))}`.",

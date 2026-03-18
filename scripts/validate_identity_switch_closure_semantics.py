@@ -245,7 +245,8 @@ def main() -> int:
     payload = {
         "identity_switch_closure_status": "PASS_REQUIRED" if not failures else "FAIL_REQUIRED",
         "catalog_path": str(catalog_path),
-        "current_pointer_identity_id": current_identity,
+        "compatibility_pointer_identity_id": current_identity,
+        "compatibility_pointer_identity_authority": "diagnostic_only",
         "probe_target_identity_id": target_identity,
         "source_contract_issues": source_issues,
         "disabled_probe": {

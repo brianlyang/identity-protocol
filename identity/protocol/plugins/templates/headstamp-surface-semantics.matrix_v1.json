@@ -139,6 +139,20 @@
       "native_chat_literal": "Identity-Context: ... | Layer-Context: ...",
       "governed_literal": "embedded after Display-Headstamp prefix",
       "authority_rule": "literal projection only; not a separate truth object"
+    },
+    {
+      "semantic_object": "requested_identity_id",
+      "object_layer": "failure_claim_target",
+      "native_chat_literal": "Identity-Context: withheld; ... requested_identity_id=...",
+      "governed_literal": "rendered only inside failure envelopes when needed",
+      "authority_rule": "requested target only; never the current speaking identity"
+    },
+    {
+      "semantic_object": "compatibility_pointer_identity_id",
+      "object_layer": "compatibility_diagnostic",
+      "native_chat_literal": "Machine-Verification: ... compatibility_pointer_identity_id=...",
+      "governed_literal": "diagnostic-only when explicitly rendered",
+      "authority_rule": "compatibility diagnostic only; never replace current-turn authoritative identity"
     }
   ],
   "clarity_freeze": {
@@ -148,6 +162,9 @@
     "compile_runtime_authority": "compile/replay metadata may read compatibility mirror; current-session authority must not.",
     "compiled_example_label": "generated from current runtime; re-verify each turn",
     "compiled_brief_projection_rule": "shared compiled brief never acts as current-turn identity authority; success projection remains schematic until a machine-attested actor/session tuple resolves it at turn time.",
-    "compiled_brief_default_reply_rule": "without a current-turn machine tuple, native chat must stay on the two-line withheld/conflict envelope."
+    "compiled_brief_default_reply_rule": "without a current-turn machine tuple, native chat must stay on the two-line withheld/conflict envelope.",
+    "failure_envelope_claim_scope": "`requested_identity_id` in native-chat failure line 1 is the requested target only; it never proves the current speaking identity.",
+    "compatibility_pointer_diagnostic_rule": "`compatibility_pointer_identity_id` is diagnostic-only compatibility metadata; it MUST NOT replace `identity_id` or appear as success-state identity injection.",
+    "failure_profile_default": "native-chat failure `Machine-Verification` defaults to the compact `mini` profile unless debug/audit context explicitly requires escalation."
   }
 }
