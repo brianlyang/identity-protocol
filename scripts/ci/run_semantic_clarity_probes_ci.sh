@@ -676,6 +676,44 @@ assert pointer.get("identity_id", "") == "beta", pointer
 print("[PASS] strict pointer validation follows the approved compatibility projection")
 PY
 
+echo "[info] semantic clarity probes: session-primary authority resolver lane"
+python3 scripts/resolve_runtime_authoritative_identity.py \
+  --catalog "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" \
+  --actor-id assistant:codex \
+  --session-id run:alpha \
+  --json-only > "$TMP_ROOT/cross_session_authority_resolver_positive.json"
+python3 - "$TMP_ROOT/cross_session_authority_resolver_positive.json" <<'PY'
+import json
+import sys
+obj = json.load(open(sys.argv[1], encoding="utf-8"))
+assert obj.get("runtime_authoritative_identity_status") == "PASS_REQUIRED", obj
+assert obj.get("authoritative_identity_id") == "alpha", obj
+assert obj.get("resolution_mode") == "actor_binding_session_scoped", obj
+print("[PASS] session-primary authority resolver returns the bound session identity")
+PY
+set +e
+python3 scripts/resolve_runtime_authoritative_identity.py \
+  --catalog "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" \
+  --actor-id assistant:codex \
+  --session-id run:alpha \
+  --identity-id beta \
+  --json-only > "$TMP_ROOT/cross_session_authority_resolver_negative.json" 2>&1
+rc=$?
+set -e
+if [[ "$rc" -eq 0 ]]; then
+  echo "[FAIL] session-primary authority resolver should fail-close on explicit identity mismatch"
+  cat "$TMP_ROOT/cross_session_authority_resolver_negative.json"
+  exit 1
+fi
+python3 - "$TMP_ROOT/cross_session_authority_resolver_negative.json" <<'PY'
+import json
+import sys
+obj = json.load(open(sys.argv[1], encoding="utf-8"))
+assert obj.get("runtime_authoritative_identity_status") == "FAIL_REQUIRED", obj
+assert any(str(reason).startswith("identity_authority_mismatch:") for reason in (obj.get("stale_reasons") or [])), obj
+print("[PASS] session-primary authority resolver blocks explicit identity mismatch")
+PY
+
 echo "[info] semantic clarity probes: compile runtime session-primary lane"
 python3 scripts/compile_identity_runtime.py \
   --catalog "$TMP_ROOT/cross-session-drift/.identity/catalog.local.yaml" \

@@ -51,3 +51,52 @@ protocol_shell_entry_require_actor_id() {
   fi
   printf '%s\n' "${actor_id}"
 }
+
+protocol_shell_entry_require_session_id() {
+  local explicit_session_id="${1:-}"
+  local session_id="${explicit_session_id:-${CODEX_SESSION_ID:-${IDENTITY_SESSION_ID:-}}}"
+  if [[ -z "${session_id}" ]]; then
+    echo "[FAIL] IP-SESSION-ENTRY-001 session-id required: export CODEX_SESSION_ID / IDENTITY_SESSION_ID or pass --session-id explicitly." >&2
+    return 1
+  fi
+  printf '%s\n' "${session_id}"
+}
+
+protocol_shell_entry_resolve_session_primary_identity() {
+  local catalog_path="${1:-}"
+  local actor_id="${2:-}"
+  local session_id="${3:-}"
+  local explicit_identity_id="${4:-}"
+  local payload=""
+
+  local cmd=(
+    python3
+    "${STRICT_ENTRY_REPO_ROOT}/scripts/resolve_runtime_authoritative_identity.py"
+    --catalog
+    "${catalog_path}"
+    --actor-id
+    "${actor_id}"
+    --session-id
+    "${session_id}"
+    --json-only
+  )
+  if [[ -n "${explicit_identity_id}" ]]; then
+    cmd+=(--identity-id "${explicit_identity_id}")
+  fi
+
+  if ! payload="$("${cmd[@]}")"; then
+    printf '%s\n' "${payload}" >&2
+    return 1
+  fi
+
+  python3 - "${payload}" <<'PY'
+import json
+import sys
+
+payload = json.loads(sys.argv[1])
+identity_id = str(payload.get("authoritative_identity_id", "")).strip()
+if not identity_id:
+    raise SystemExit(json.dumps(payload, ensure_ascii=False))
+print(identity_id)
+PY
+}

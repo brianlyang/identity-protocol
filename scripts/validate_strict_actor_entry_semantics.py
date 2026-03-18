@@ -36,19 +36,36 @@ STRICT_SHELL_ENTRY_DISCOVERY_TOKENS = (
     "scripts/full_identity_protocol_scan.py",
     "scripts/validate_full_scan_target_regression.py",
     "scripts/report_three_plane_status.py",
+    "--output-last-message",
 )
 STRICT_SHELL_ENTRY_RULES: dict[str, dict[str, bool]] = {
     "scripts/ci/run_full_scan_target_regression_ci.sh": {
         "require_actor_helper": True,
+        "require_session_helper": False,
         "require_project_catalog_helper": True,
+        "require_session_primary_resolver": False,
+        "forbid_compatibility_pointer_literal": False,
     },
     "scripts/ci/run_required_runtime_gates_ci.sh": {
         "require_actor_helper": True,
+        "require_session_helper": False,
         "require_project_catalog_helper": True,
+        "require_session_primary_resolver": False,
+        "forbid_compatibility_pointer_literal": False,
     },
     "scripts/e2e_smoke_test.sh": {
         "require_actor_helper": True,
+        "require_session_helper": False,
         "require_project_catalog_helper": False,
+        "require_session_primary_resolver": False,
+        "forbid_compatibility_pointer_literal": False,
+    },
+    "scripts/run_native_chat_headstamp_smoke.sh": {
+        "require_actor_helper": True,
+        "require_session_helper": True,
+        "require_project_catalog_helper": True,
+        "require_session_primary_resolver": True,
+        "forbid_compatibility_pointer_literal": True,
     },
 }
 STRICT_SHELL_ENTRY_EXEMPTIONS: dict[str, tuple[str, ...]] = {
@@ -61,14 +78,23 @@ STRICT_SHELL_ACTOR_HELPER_TOKENS = (
     "protocol_shell_entry_require_actor_id",
     'CODEX_ACTOR_ID:?"set CODEX_ACTOR_ID',
 )
+STRICT_SHELL_SESSION_HELPER_TOKENS = (
+    "protocol_shell_entry_require_session_id",
+    'CODEX_SESSION_ID / IDENTITY_SESSION_ID',
+)
 STRICT_SHELL_PROJECT_CATALOG_HELPER_TOKENS = (
     "protocol_shell_entry_resolve_project_catalog",
     'IDENTITY_CATALOG is required (implicit catalog fallback is disabled).',
+)
+STRICT_SHELL_SESSION_PRIMARY_RESOLVER_TOKENS = (
+    "protocol_shell_entry_resolve_session_primary_identity",
+    "resolve_runtime_authoritative_identity.py",
 )
 STRICT_SHELL_ACTOR_LITERAL_RE = re.compile(r"(assistant:codex|CODEX_ACTOR_ID:-assistant:codex)")
 STRICT_SHELL_PROJECT_CATALOG_LITERAL_RE = re.compile(
     r"((^|[^A-Z_])CATALOG_PATH=.*identity/catalog/identities\.yaml|--project-catalog[ =\"']+identity/catalog/identities\.yaml)"
 )
+STRICT_SHELL_COMPAT_POINTER_LITERAL_RE = re.compile(r"active_identity\.json")
 
 
 def _const_str(node: ast.AST | None) -> str:
@@ -277,6 +303,40 @@ def _scan_shell_strict_entry_surfaces(repo_root: Path) -> tuple[list[str], dict[
                         "line": catalog_line,
                         "violation_type": "shell_strict_project_catalog_repo_fixture_default_forbidden",
                         "snippet": lines[catalog_line - 1].strip(),
+                    }
+                )
+
+        if rule.get("require_session_helper", False):
+            if not any(token in text for token in STRICT_SHELL_SESSION_HELPER_TOKENS):
+                violations.append(
+                    {
+                        "file": rel,
+                        "line": 1,
+                        "violation_type": "shell_strict_session_helper_missing",
+                        "snippet": "protocol_shell_entry_require_session_id",
+                    }
+                )
+
+        if rule.get("require_session_primary_resolver", False):
+            if not any(token in text for token in STRICT_SHELL_SESSION_PRIMARY_RESOLVER_TOKENS):
+                violations.append(
+                    {
+                        "file": rel,
+                        "line": 1,
+                        "violation_type": "shell_strict_session_primary_resolver_missing",
+                        "snippet": "protocol_shell_entry_resolve_session_primary_identity",
+                    }
+                )
+
+        if rule.get("forbid_compatibility_pointer_literal", False):
+            compat_line = _first_regex_line(lines, STRICT_SHELL_COMPAT_POINTER_LITERAL_RE)
+            if compat_line:
+                violations.append(
+                    {
+                        "file": rel,
+                        "line": compat_line,
+                        "violation_type": "shell_strict_compatibility_pointer_literal_forbidden",
+                        "snippet": lines[compat_line - 1].strip(),
                     }
                 )
 
