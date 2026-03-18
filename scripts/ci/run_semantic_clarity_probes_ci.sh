@@ -39,6 +39,38 @@ assert activate_cwd.get("activate_cwd_invariance_status") == "PASS_REQUIRED", ac
 print("[PASS] positive semantic clarity lane")
 PY
 
+echo "[info] semantic clarity probes: native chat compiled brief freeze"
+python3 scripts/compile_identity_runtime.py \
+  --catalog "$WORKSPACE_ROOT/.identity/catalog.local.yaml" \
+  --identity-id base-repo-closure-orchestrator \
+  --actor-id assistant:codex \
+  --output "$TMP_ROOT/native_chat_compiled.md"
+python3 - "$TMP_ROOT/native_chat_compiled.md" <<'PY'
+from pathlib import Path
+import sys
+
+text = Path(sys.argv[1]).read_text(encoding="utf-8")
+required = [
+    "Active identity: base-repo-closure-orchestrator",
+    "Native chat assistant-visible headstamp contract:",
+    "Success order is fixed: `Identity-Context` first, `Machine-Verification` second, then body.",
+    "This native-chat path is assistant text-layer injection, not host sender physical injection.",
+    "Runtime loop is fixed: `machine-verify -> assistant-visible-inject -> next turn re-verify`.",
+]
+for token in required:
+    if token not in text:
+        raise SystemExit(f"native_chat_compiled_brief_missing_token: {token}")
+line1 = text.index("Success line 1 example:")
+line2 = text.index("Success line 2 example:")
+if line1 > line2:
+    raise SystemExit("native_chat_compiled_brief_order_invalid: success line 1 must precede success line 2")
+if "Identity-Context: actor_id=assistant:codex; identity_id=base-repo-closure-orchestrator" not in text:
+    raise SystemExit("native_chat_compiled_brief_identity_context_example_missing")
+if "Machine-Verification: authority_source=actor_session_store; actor_id=assistant:codex; identity_id=base-repo-closure-orchestrator" not in text:
+    raise SystemExit("native_chat_compiled_brief_machine_verification_example_missing")
+print("[PASS] native chat compiled brief freeze")
+PY
+
 echo "[info] semantic clarity probes: workspace-root strict-entry replay"
 (
   cd "$WORKSPACE_ROOT"
@@ -506,8 +538,8 @@ python3 - "$TMP_ROOT/cross_session_pointer_negative.log" <<'PY'
 from pathlib import Path
 import sys
 text = Path(sys.argv[1]).read_text(encoding="utf-8")
-assert "canonical_identity_mismatch:pointer=beta active=alpha" in text, text
-print("[PASS] strict pointer drift blocks without explicit allowance")
+assert "canonical_projection_suppressed_multi_identity" in text, text
+print("[PASS] strict pointer suppression blocks without explicit allowance")
 PY
 
 python3 scripts/validate_identity_session_pointer_consistency.py \
@@ -524,10 +556,13 @@ import sys
 text = Path(sys.argv[1]).read_text(encoding="utf-8")
 pointer = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
 assert "compatibility_projection_drift=yes" in text, text
-assert "projection_session=run:beta" in text, text
-assert pointer.get("compatibility_projection_identity_id") == "beta", pointer
-assert pointer.get("compatibility_projection_session_id") == "run:beta", pointer
-print("[PASS] cross-session compatibility projection drift acknowledged")
+assert "projection_status=SUPPRESSED_MULTI_IDENTITY" in text, text
+assert "projection_session=<none>" in text, text
+assert pointer.get("identity_id", "") == "", pointer
+assert pointer.get("status") == "compatibility_projection_suppressed", pointer
+assert pointer.get("compatibility_projection_status") == "SUPPRESSED_MULTI_IDENTITY", pointer
+assert sorted(pointer.get("compatibility_projection_candidate_identity_ids") or []) == ["alpha", "beta"], pointer
+print("[PASS] cross-session compatibility projection suppression acknowledged")
 PY
 
 set +e
@@ -564,6 +599,96 @@ assert "IP-ACT-SWITCH-001" in text, text
 assert "current_identity=beta" in text, text
 assert "switch_guard_scope=actor_global" in text, text
 print("[PASS] actor_global switch guard reads compatibility projection")
+PY
+
+echo "[info] semantic clarity probes: cross-layer uniqueness lane"
+mkdir -p "$TMP_ROOT/cross-layer-uniqueness/project/.identity" "$TMP_ROOT/cross-layer-uniqueness/global/.identity"
+cat > "$TMP_ROOT/cross-layer-uniqueness/project/.identity/catalog.local.yaml" <<'YAML'
+identities:
+  - id: base-repo-architect
+    pack_path: /tmp/project-architect
+    status: active
+    profile: runtime
+    runtime_mode: local_only
+YAML
+cat > "$TMP_ROOT/cross-layer-uniqueness/global/.identity/catalog.local.yaml" <<'YAML'
+identities:
+  - id: base-repo-architect
+    pack_path: /tmp/global-architect
+    status: inactive
+    profile: runtime
+    runtime_mode: local_only
+YAML
+cat > "$TMP_ROOT/cross-layer-uniqueness/repo-catalog.yaml" <<'YAML'
+identities: []
+YAML
+set +e
+CODEX_HOME="$TMP_ROOT/cross-layer-uniqueness/global" \
+python3 scripts/validate_identity_scope_isolation.py \
+  --catalog "$TMP_ROOT/cross-layer-uniqueness/project/.identity/catalog.local.yaml" \
+  --repo-catalog "$TMP_ROOT/cross-layer-uniqueness/repo-catalog.yaml" \
+  --identity-id base-repo-architect \
+  --json-only > "$TMP_ROOT/cross_layer_uniqueness_negative.json"
+rc=$?
+set -e
+if [[ "$rc" -eq 0 ]]; then
+  echo "[FAIL] expected cross-layer uniqueness validator to block duplicate runtime identity id"
+  exit 1
+fi
+python3 - "$TMP_ROOT/cross_layer_uniqueness_negative.json" <<'PY'
+import json,sys
+obj=json.load(open(sys.argv[1]))
+assert obj.get("scope_isolation_status") == "FAIL_REQUIRED", obj
+assert obj.get("runtime_duplicate_detected") is True, obj
+assert "cross_layer_runtime_identity_id_duplicate_detected" in (obj.get("stale_reasons") or []), obj
+print("[PASS] cross-layer uniqueness validator blocks runtime duplicate")
+PY
+
+set +e
+CODEX_HOME="$TMP_ROOT/cross-layer-uniqueness/global" \
+python3 scripts/repair_identity_cross_layer_uniqueness.py \
+  --project-catalog "$TMP_ROOT/cross-layer-uniqueness/project/.identity/catalog.local.yaml" \
+  --global-catalog "$TMP_ROOT/cross-layer-uniqueness/global/.identity/catalog.local.yaml" \
+  --repo-catalog "$TMP_ROOT/cross-layer-uniqueness/repo-catalog.yaml" \
+  --identity-id base-repo-architect \
+  --prefer-layer project \
+  --json-only > "$TMP_ROOT/cross_layer_uniqueness_repair_check.json"
+rc=$?
+set -e
+if [[ "$rc" -eq 0 ]]; then
+  echo "[FAIL] expected repair check mode to report duplicate before apply"
+  exit 1
+fi
+CODEX_HOME="$TMP_ROOT/cross-layer-uniqueness/global" \
+python3 scripts/repair_identity_cross_layer_uniqueness.py \
+  --project-catalog "$TMP_ROOT/cross-layer-uniqueness/project/.identity/catalog.local.yaml" \
+  --global-catalog "$TMP_ROOT/cross-layer-uniqueness/global/.identity/catalog.local.yaml" \
+  --repo-catalog "$TMP_ROOT/cross-layer-uniqueness/repo-catalog.yaml" \
+  --identity-id base-repo-architect \
+  --prefer-layer project \
+  --apply \
+  --json-only > "$TMP_ROOT/cross_layer_uniqueness_repair_apply.json"
+CODEX_HOME="$TMP_ROOT/cross-layer-uniqueness/global" \
+python3 scripts/validate_identity_scope_isolation.py \
+  --catalog "$TMP_ROOT/cross-layer-uniqueness/project/.identity/catalog.local.yaml" \
+  --repo-catalog "$TMP_ROOT/cross-layer-uniqueness/repo-catalog.yaml" \
+  --identity-id base-repo-architect \
+  --json-only > "$TMP_ROOT/cross_layer_uniqueness_positive.json"
+python3 - "$TMP_ROOT/cross_layer_uniqueness_repair_check.json" "$TMP_ROOT/cross_layer_uniqueness_repair_apply.json" "$TMP_ROOT/cross_layer_uniqueness_positive.json" "$TMP_ROOT/cross-layer-uniqueness/global/.identity/catalog.local.yaml" <<'PY'
+import json,sys,yaml
+check=json.load(open(sys.argv[1]))
+apply=json.load(open(sys.argv[2]))
+positive=json.load(open(sys.argv[3]))
+global_doc=yaml.safe_load(open(sys.argv[4])) or {}
+archive=global_doc.get("identity_uniqueness_archive") or []
+assert check.get("status") == "FAIL_REQUIRED", check
+assert apply.get("status") == "PASS_REQUIRED", apply
+assert positive.get("scope_isolation_status") == "PASS_REQUIRED", positive
+assert positive.get("runtime_duplicate_detected") is False, positive
+assert len(global_doc.get("identities") or []) == 0, global_doc
+assert len(archive) == 1, global_doc
+assert archive[0].get("identity_id") == "base-repo-architect", archive
+print("[PASS] cross-layer uniqueness repair archives and removes duplicate layer entry")
 PY
 
 echo "[info] semantic clarity probes: negative lane (semantic term forbidden phrase)"
