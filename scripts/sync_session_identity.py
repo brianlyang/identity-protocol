@@ -36,6 +36,12 @@ ERR_MB_007 = "IP-ASB-MB-007"
 ERR_MB_008 = "IP-ASB-MB-008"
 ERR_MB_009 = "IP-ASB-MB-009"
 ERR_MB_010 = "IP-ASB-MB-010"
+COMPATIBILITY_PROJECTION_WRITE_MODE_DISABLED = "disabled"
+COMPATIBILITY_PROJECTION_WRITE_MODE_LEGACY_ACTOR_GLOBAL_SWITCH = "legacy_actor_global_switch"
+COMPATIBILITY_PROJECTION_WRITE_MODE_CHOICES = {
+    COMPATIBILITY_PROJECTION_WRITE_MODE_DISABLED,
+    COMPATIBILITY_PROJECTION_WRITE_MODE_LEGACY_ACTOR_GLOBAL_SWITCH,
+}
 SWITCH_PRESTATE_MODE_LEGACY_CANONICAL = "legacy_canonical"
 SWITCH_PRESTATE_MODE_SESSION_PRIMARY = "session_primary"
 SWITCH_PRESTATE_MODE_CHOICES = {
@@ -201,6 +207,7 @@ def _resolve_compatibility_projection_decision(
     actor_id: str,
     target_identity_id: str,
     switch_intent_receipt: str,
+    write_mode: str,
 ) -> dict[str, Any]:
     projection_before = _actor_global_projection_state_for_store(store)
     previous_identity_id = _current_projection_identity(projection_before)
@@ -209,6 +216,13 @@ def _resolve_compatibility_projection_decision(
         return {
             "allowed": False,
             "reason": "non_activate_lane_observation_only",
+            "receipt_path": "",
+            "previous_identity_id": previous_identity_id,
+        }
+    if write_mode != COMPATIBILITY_PROJECTION_WRITE_MODE_LEGACY_ACTOR_GLOBAL_SWITCH:
+        return {
+            "allowed": False,
+            "reason": "compatibility_projection_write_disabled_by_policy",
             "receipt_path": "",
             "previous_identity_id": previous_identity_id,
         }
@@ -400,6 +414,21 @@ def _build_actor_payload(
                 row["compatibility_projection_receipt"] = str(
                     compatibility_projection_decision.get("receipt_path", "")
                 ).strip()
+    elif (
+        str(compatibility_projection_decision.get("reason", "")).strip()
+        == "compatibility_projection_write_disabled_by_policy"
+    ):
+        previous_identity_id = str(compatibility_projection_decision.get("previous_identity_id", "")).strip()
+        if previous_identity_id and previous_identity_id != target_identity_id:
+            for row in merged:
+                if not isinstance(row, dict):
+                    continue
+                if not binding_compatibility_projection_allowed(row):
+                    continue
+                row["compatibility_projection_allowed"] = False
+                row["compatibility_projection_reason"] = "projection_disabled_multi_identity_runtime"
+                row["compatibility_projection_previous_identity_id"] = previous_identity_id
+                row["compatibility_projection_receipt"] = ""
 
     pre_keys = {binding_key(x) for x in existing_bindings if binding_key(x)}
     post_keys = {binding_key(x) for x in merged if binding_key(x)}
@@ -513,6 +542,15 @@ def main() -> int:
     ap.add_argument("--run-id", default="", help="run id associated with this session sync")
     ap.add_argument("--switch-reason", default="", help="reason for activation/switch")
     ap.add_argument("--entrypoint-pid", default="", help="entrypoint process id for audit trail")
+    ap.add_argument(
+        "--compatibility-projection-write-mode",
+        choices=sorted(COMPATIBILITY_PROJECTION_WRITE_MODE_CHOICES),
+        default=COMPATIBILITY_PROJECTION_WRITE_MODE_DISABLED,
+        help=(
+            "compatibility pointer mutation policy: default disabled seals actor-global projection writes; "
+            "legacy_actor_global_switch is legacy-only and requires audited switch intent for cross-identity refresh."
+        ),
+    )
     ap.add_argument(
         "--cross-actor-override-receipt",
         default="",
@@ -673,12 +711,18 @@ def main() -> int:
         if receipt_errors:
             return _fail(ERR_MB_009, "switch_intent_receipt_invalid:" + ",".join(receipt_errors))
     try:
+        compatibility_projection_write_mode = str(
+            args.compatibility_projection_write_mode or ""
+        ).strip().lower() or COMPATIBILITY_PROJECTION_WRITE_MODE_DISABLED
+        if compatibility_projection_write_mode not in COMPATIBILITY_PROJECTION_WRITE_MODE_CHOICES:
+            compatibility_projection_write_mode = COMPATIBILITY_PROJECTION_WRITE_MODE_DISABLED
         compatibility_projection_decision = _resolve_compatibility_projection_decision(
             store=store,
             mutation_lane=mutation_lane,
             actor_id=actor_id,
             target_identity_id=args.identity_id,
             switch_intent_receipt=str(args.switch_intent_receipt or "").strip(),
+            write_mode=compatibility_projection_write_mode,
         )
     except ValueError as exc:
         token = str(exc)
@@ -740,9 +784,37 @@ def main() -> int:
         f"{actor_out} session_id={session_id} compare_token={compare_token_after} lane={mutation_lane}"
     )
     if not bool(compatibility_projection_decision.get("allowed")):
+        reason = str(compatibility_projection_decision.get("reason", "")).strip() or "not_projection_eligible"
+        if reason == "compatibility_projection_write_disabled_by_policy":
+            try:
+                _write_payload(canonical_out, payload)
+                print(
+                    "[INFO] canonical compatibility pointer neutralized: "
+                    f"reason={reason} path={canonical_out}"
+                )
+            except Exception as exc:
+                print(f"[FAIL] canonical compatibility pointer neutralization failed: {canonical_out} ({exc})")
+                return 1
+            for mirror_out in dedup_targets:
+                if mirror_out == canonical_out:
+                    print("[INFO] mirror path equals canonical path; mirror write skipped")
+                    continue
+                mirror_payload = dict(payload)
+                mirror_payload["session_pointer_type"] = "mirror"
+                mirror_payload["canonical_session_pointer"] = str(canonical_out)
+                try:
+                    _write_payload(mirror_out, mirror_payload)
+                    print(f"[OK] session identity mirrored: {mirror_out}")
+                except Exception as exc:
+                    msg = f"mirror session sync failed: {mirror_out} ({exc})"
+                    if args.require_mirror:
+                        print(f"[FAIL] {msg}")
+                        return 1
+                    print(f"[WARN] {msg}")
+            return 0
         print(
             "[INFO] canonical pointer write skipped: "
-            f"reason={str(compatibility_projection_decision.get('reason', '')).strip() or 'not_projection_eligible'}"
+            f"reason={reason}"
         )
         return 0
     try:

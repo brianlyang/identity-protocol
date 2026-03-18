@@ -45,9 +45,22 @@ ERR_EXEC_ORDER_HEADER_FIRST = "IP-EXEC-ORDER-001"
 ERR_EXEC_ORDER_SCAFFOLD_CONSENT = "IP-EXEC-ORDER-002"
 ERR_EXEC_ORDER_MUTATION_PLAN = "IP-EXEC-ORDER-003"
 ERR_ACTOR_ENTRY_REQUIRED = "IP-ACTOR-ENTRY-001"
+ERR_ACTIVATION_PROJECTION_POLICY = "IP-ACT-PROJECTION-001"
 SWITCH_GUARD_SCOPE_ACTOR_SESSION = "actor_session"
 SWITCH_GUARD_SCOPE_ACTOR_GLOBAL = "actor_global"
 SWITCH_GUARD_SCOPE_CHOICES = {SWITCH_GUARD_SCOPE_ACTOR_SESSION, SWITCH_GUARD_SCOPE_ACTOR_GLOBAL}
+COMPATIBILITY_PROJECTION_WRITE_MODE_DISABLED = "disabled"
+COMPATIBILITY_PROJECTION_WRITE_MODE_LEGACY_ACTOR_GLOBAL_SWITCH = "legacy_actor_global_switch"
+COMPATIBILITY_PROJECTION_WRITE_MODE_CHOICES = {
+    COMPATIBILITY_PROJECTION_WRITE_MODE_DISABLED,
+    COMPATIBILITY_PROJECTION_WRITE_MODE_LEGACY_ACTOR_GLOBAL_SWITCH,
+}
+COMPILED_BRIEF_REFRESH_MODE_MANUAL_ONLY = "manual_only"
+COMPILED_BRIEF_REFRESH_MODE_REFRESH_LEGACY = "refresh_legacy_canonical_compatibility_path"
+COMPILED_BRIEF_REFRESH_MODE_CHOICES = {
+    COMPILED_BRIEF_REFRESH_MODE_MANUAL_ONLY,
+    COMPILED_BRIEF_REFRESH_MODE_REFRESH_LEGACY,
+}
 SCAFFOLD_CONSENT_TOKEN = "I_ACK_IDENTITY_SCAFFOLD_SCOPE_STACK_RUNTIME"
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROTOCOL_ROOT = SCRIPT_DIR.parent
@@ -785,6 +798,8 @@ def _activate_identity(
     switch_intent_receipt: str = "",
     allow_cross_actor_switch: bool = False,
     cross_actor_receipt: str = "",
+    compatibility_projection_write_mode: str = COMPATIBILITY_PROJECTION_WRITE_MODE_DISABLED,
+    compiled_brief_refresh_mode: str = COMPILED_BRIEF_REFRESH_MODE_MANUAL_ONLY,
 ) -> int:
     ensure_local_catalog(repo_catalog, local_catalog)
     protocol_root_resolved = resolve_protocol_root(protocol_root or str(PROTOCOL_ROOT))
@@ -807,6 +822,30 @@ def _activate_identity(
     switch_scope = str(switch_guard_scope or SWITCH_GUARD_SCOPE_ACTOR_SESSION).strip().lower()
     if switch_scope not in SWITCH_GUARD_SCOPE_CHOICES:
         switch_scope = SWITCH_GUARD_SCOPE_ACTOR_SESSION
+    compatibility_projection_write_mode_resolved = str(
+        compatibility_projection_write_mode or ""
+    ).strip().lower() or COMPATIBILITY_PROJECTION_WRITE_MODE_DISABLED
+    if compatibility_projection_write_mode_resolved not in COMPATIBILITY_PROJECTION_WRITE_MODE_CHOICES:
+        compatibility_projection_write_mode_resolved = COMPATIBILITY_PROJECTION_WRITE_MODE_DISABLED
+    compiled_brief_refresh_mode_resolved = str(compiled_brief_refresh_mode or "").strip().lower()
+    if compiled_brief_refresh_mode_resolved not in COMPILED_BRIEF_REFRESH_MODE_CHOICES:
+        compiled_brief_refresh_mode_resolved = COMPILED_BRIEF_REFRESH_MODE_MANUAL_ONLY
+    if (
+        switch_scope == SWITCH_GUARD_SCOPE_ACTOR_GLOBAL
+        and compatibility_projection_write_mode_resolved
+        != COMPATIBILITY_PROJECTION_WRITE_MODE_LEGACY_ACTOR_GLOBAL_SWITCH
+    ):
+        print(
+            "[FAIL] actor-global switch guard is sealed by default "
+            f"(error_code={ERR_ACTIVATION_PROJECTION_POLICY}, switch_guard_scope={switch_scope}, "
+            f"compatibility_projection_write_mode={compatibility_projection_write_mode_resolved})."
+        )
+        print(
+            "[HINT] use --switch-guard-scope actor_session for session-primary activation, "
+            "or opt into the audited legacy lane with "
+            f"--compatibility-projection-write-mode {COMPATIBILITY_PROJECTION_WRITE_MODE_LEGACY_ACTOR_GLOBAL_SWITCH}."
+        )
+        return 1
     switch_reason_resolved = str(switch_reason or "").strip() or "explicit_activate"
     if switch_scope == SWITCH_GUARD_SCOPE_ACTOR_GLOBAL:
         actor_binding = load_actor_global_compatibility_projection(local_catalog, actor_id_resolved)
@@ -930,6 +969,8 @@ def _activate_identity(
             "switch_guard_binding_ref": str(actor_binding.get("binding_ref", "")).strip(),
             "switch_guard_projection_role": str(actor_binding.get("projection_role", "")).strip(),
             "switch_guard_projection_scope": str(actor_binding.get("projection_scope", "")).strip(),
+            "compatibility_projection_write_mode": compatibility_projection_write_mode_resolved,
+            "compiled_brief_refresh_mode": compiled_brief_refresh_mode_resolved,
             "identity_switch_detected": identity_switch_detected,
             "identity_switch_from": current_actor_identity,
             "identity_switch_to": identity_id,
@@ -996,6 +1037,8 @@ def _activate_identity(
             str(os.getpid()),
             "--cross-actor-override-receipt",
             cross_actor_receipt_path,
+            "--compatibility-projection-write-mode",
+            compatibility_projection_write_mode_resolved,
         ]
         if switch_intent_receipt_sync:
             sync_cmd.extend(["--switch-intent-receipt", switch_intent_receipt_sync])
@@ -1021,27 +1064,36 @@ def _activate_identity(
             raise RuntimeError("session pointer canonical sync failed")
         if sync.stdout.strip():
             print(sync.stdout.strip())
-        rc = _run(
-            [
-                "python3",
-                "scripts/validate_identity_session_pointer_consistency.py",
-                "--catalog",
-                str(local_catalog),
-                "--identity-id",
-                identity_id,
-                "--actor-id",
-                actor_id_resolved,
-                "--session-id",
-                session_id_resolved,
-                "--strict-session-primary",
-                "--canonical-out",
-                str(canonical_session_pointer),
-                "--mirror-out",
-                str(scoped_session_mirror),
-            ]
-        )
-        if rc != 0:
-            raise RuntimeError("session pointer consistency validation failed")
+        if (
+            compatibility_projection_write_mode_resolved
+            == COMPATIBILITY_PROJECTION_WRITE_MODE_LEGACY_ACTOR_GLOBAL_SWITCH
+        ):
+            rc = _run(
+                [
+                    "python3",
+                    "scripts/validate_identity_session_pointer_consistency.py",
+                    "--catalog",
+                    str(local_catalog),
+                    "--identity-id",
+                    identity_id,
+                    "--actor-id",
+                    actor_id_resolved,
+                    "--session-id",
+                    session_id_resolved,
+                    "--strict-session-primary",
+                    "--canonical-out",
+                    str(canonical_session_pointer),
+                    "--mirror-out",
+                    str(scoped_session_mirror),
+                ]
+            )
+            if rc != 0:
+                raise RuntimeError("session pointer consistency validation failed")
+        else:
+            print(
+                "[INFO] compatibility pointer alignment validation skipped: "
+                f"compatibility_projection_write_mode={compatibility_projection_write_mode_resolved}"
+            )
         rc = _run(
             [
                 "python3",
@@ -1061,27 +1113,33 @@ def _activate_identity(
         )
         if rc != 0:
             raise RuntimeError("actor session multibinding concurrency validation failed")
-        compile_cmd = [
-            "python3",
-            "scripts/compile_identity_runtime.py",
-            "--catalog",
-            str(local_catalog),
-            "--output",
-            str((protocol_root_resolved / "identity" / "runtime" / "IDENTITY_COMPILED.md").resolve()),
-            "--identity-id",
-            identity_id,
-            "--actor-id",
-            actor_id_resolved,
-            "--session-id",
-            session_id_resolved,
-        ]
-        rc = _run(compile_cmd)
-        if rc != 0:
+        if compiled_brief_refresh_mode_resolved == COMPILED_BRIEF_REFRESH_MODE_REFRESH_LEGACY:
+            compile_cmd = [
+                "python3",
+                "scripts/compile_identity_runtime.py",
+                "--catalog",
+                str(local_catalog),
+                "--output",
+                str((protocol_root_resolved / "identity" / "runtime" / "IDENTITY_COMPILED.md").resolve()),
+                "--identity-id",
+                identity_id,
+                "--actor-id",
+                actor_id_resolved,
+                "--session-id",
+                session_id_resolved,
+            ]
+            rc = _run(compile_cmd)
+            if rc != 0:
+                print(
+                    "[FAIL] activation succeeded but runtime brief compilation failed "
+                    f"(identity_id={identity_id}, actor_id={actor_id_resolved})."
+                )
+                return rc
+        else:
             print(
-                "[FAIL] activation succeeded but runtime brief compilation failed "
-                f"(identity_id={identity_id}, actor_id={actor_id_resolved})."
+                "[INFO] shared compiled brief refresh skipped by policy: "
+                f"compiled_brief_refresh_mode={compiled_brief_refresh_mode_resolved}"
             )
-            return rc
         print(f"[OK] activated identity in catalog (actor-scoped multi-active): {identity_id}")
         print(f"[OK] switch report: {switch_report}")
         return 0
@@ -1702,7 +1760,25 @@ def main() -> int:
         default=SWITCH_GUARD_SCOPE_ACTOR_SESSION,
         help=(
             "switch guard scope: actor_session enforces receipt when same actor+session switches identity; "
-            "actor_global preserves legacy actor-wide guard."
+            "actor_global is legacy-only and must be paired with explicit compatibility projection write mode."
+        ),
+    )
+    p_activate.add_argument(
+        "--compatibility-projection-write-mode",
+        choices=sorted(COMPATIBILITY_PROJECTION_WRITE_MODE_CHOICES),
+        default=COMPATIBILITY_PROJECTION_WRITE_MODE_DISABLED,
+        help=(
+            "compatibility pointer mutation policy for activate: default disabled seals shared actor-global pointer writes; "
+            "legacy_actor_global_switch keeps the legacy compatibility lane explicit."
+        ),
+    )
+    p_activate.add_argument(
+        "--compiled-brief-refresh-mode",
+        choices=sorted(COMPILED_BRIEF_REFRESH_MODE_CHOICES),
+        default=COMPILED_BRIEF_REFRESH_MODE_MANUAL_ONLY,
+        help=(
+            "shared compiled-brief refresh policy for activate: default manual_only keeps "
+            "identity/runtime/IDENTITY_COMPILED.md stable unless refresh is explicitly requested."
         ),
     )
     p_activate.add_argument(
@@ -3295,6 +3371,8 @@ def main() -> int:
             switch_intent_receipt_activate,
             bool(args.allow_cross_actor_switch),
             cross_actor_receipt_activate,
+            args.compatibility_projection_write_mode,
+            args.compiled_brief_refresh_mode,
         )
 
     if args.command == "update":

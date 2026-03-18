@@ -295,7 +295,7 @@ def _actor_global_projection_state(
         projection["projection_scope"] = ACTOR_GLOBAL_LAST_MUTATION_PROJECTION_SCOPE
         projection["projection_role"] = "compatibility_projection"
     decorated = _decorate_actor_global_compatibility_projection(store=store, projection=projection)
-    if decorated:
+    if decorated and binding_compatibility_projection_allowed(decorated):
         return {
             "projection_status": COMPATIBILITY_PROJECTION_STATUS_AVAILABLE,
             "projection_reason": "ok",

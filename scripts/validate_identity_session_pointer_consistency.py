@@ -12,6 +12,7 @@ from actor_session_common import (
     ACTOR_GLOBAL_LAST_MUTATION_PROJECTION_SCOPE,
     AUTHORITATIVE_BINDING_RULE,
     COMPATIBILITY_PROJECTION_STATUS_SUPPRESSED_MULTI_IDENTITY,
+    COMPATIBILITY_PROJECTION_STATUS_UNAVAILABLE,
     load_actor_binding,
     resolve_actor_id,
 )
@@ -137,6 +138,14 @@ def _validate_compatibility_projection_exception(
         if expected_identity_id not in candidate_ids:
             return False, "compatibility_projection_candidates_missing_expected_identity"
         return True, "compatibility_projection_suppressed_multi_identity"
+    if projection_status == COMPATIBILITY_PROJECTION_STATUS_UNAVAILABLE:
+        if str(payload.get("authority_role", "")).strip() != "compatibility_mirror":
+            return False, "compatibility_projection_authority_role_invalid"
+        if payload.get("authoritative_decision_allowed") is not False:
+            return False, "compatibility_projection_decision_flag_invalid"
+        if str(payload.get("identity_id", "")).strip():
+            return False, "compatibility_projection_identity_expected_empty"
+        return True, "compatibility_projection_unavailable_by_policy"
 
     pointer_identity_id = str(payload.get("identity_id", "")).strip()
     if not pointer_identity_id:
