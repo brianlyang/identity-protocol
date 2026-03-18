@@ -544,8 +544,9 @@ def run_final_emit_via_instance_wrappers(*, cmd: list[str], protocol_root: Path)
         if caller_json_only:
             print(normalized)
             return 0, normalized, p_chain.stderr or ""
-        print(reply_text)
-        return 0, reply_text, p_chain.stderr or ""
+        visible_reply = str(chain_payload.get("visible_reply", "")).strip() or reply_text
+        print(visible_reply)
+        return 0, visible_reply, p_chain.stderr or ""
     return _emit_fail_payload("session_chain_payload_missing_or_non_json")
 
 
