@@ -134,6 +134,13 @@ def main() -> int:
     prompt_text = prompt_path.read_text(encoding="utf-8", errors="ignore")
     native_chat_contract = task.get("native_chat_headstamp_contract_v1") or {}
     if isinstance(native_chat_contract, dict) and native_chat_contract.get("required") is True:
+        if "rq_033_native_chat_headstamp_prompt_contract_v1" not in payload["derived_from_contract_ids"]:
+            payload["prompt_derivation_conformance_status"] = STATUS_FAIL_REQUIRED
+            payload["native_chat_prompt_contract_status"] = STATUS_FAIL_REQUIRED
+            payload["error_code"] = "IP-PDER-004"
+            payload["stale_reasons"] = ["native_chat_prompt_contract_id_missing_from_derived_metadata"]
+            _emit(payload, json_only=args.json_only)
+            return 1
         required_literals = prompt_hard_guard_required_tokens(
             default_machine_profile=str(native_chat_contract.get("default_machine_profile", "mini")),
             template_ref=str(native_chat_contract.get("prompt_hard_guard_template_ref", "")).strip(),

@@ -271,6 +271,30 @@ def _merge_validator_ids(container: dict[str, Any], key: str, validator_ids: tup
     return changed, appended
 
 
+def _merge_required_string_list(
+    container: dict[str, Any],
+    key: str,
+    required_items: list[str] | tuple[str, ...],
+) -> tuple[bool, list[str]]:
+    current = container.get(key)
+    if isinstance(current, list):
+        rows = [str(item).strip() for item in current if str(item).strip()]
+    else:
+        rows = []
+    changed = False
+    appended: list[str] = []
+    for item in required_items:
+        token = str(item).strip()
+        if not token or token in rows:
+            continue
+        rows.append(token)
+        appended.append(token)
+        changed = True
+    if changed:
+        container[key] = rows
+    return changed, appended
+
+
 def _normalize_skill_supply_chain_contracts(task_doc: dict[str, Any], identity_id: str) -> list[str]:
     restored: list[str] = []
     defaults = {
@@ -639,9 +663,10 @@ def _legacy_path_drift_fields(task: dict[str, Any], identity_id: str) -> list[st
     return out
 
 
-def _normalize_prompt_contracts(task: dict[str, Any]) -> tuple[list[str], list[str]]:
+def _normalize_prompt_contracts(task: dict[str, Any]) -> tuple[list[str], list[str], dict[str, list[str]]]:
     forced_required_keys: list[str] = []
     restored_validator_keys: list[str] = []
+    restored_list_fields: dict[str, list[str]] = {}
     for key in REQUIRED_PROMPT_KEYS:
         default = PROMPT_CONTRACT_DEFAULTS.get(key, {})
         node = task.get(key)
@@ -655,7 +680,12 @@ def _normalize_prompt_contracts(task: dict[str, Any]) -> tuple[list[str], list[s
         if not validator:
             node["validator"] = str(default.get("validator", "")).strip()
             restored_validator_keys.append(key)
-    return forced_required_keys, restored_validator_keys
+        default_contract_ids = default.get("derived_from_contract_ids")
+        if key == "derived_prompt_conformance_contract_v1" and isinstance(default_contract_ids, list):
+            _, appended_contract_ids = _merge_required_string_list(node, "derived_from_contract_ids", default_contract_ids)
+            if appended_contract_ids:
+                restored_list_fields[f"{key}.derived_from_contract_ids"] = appended_contract_ids
+    return forced_required_keys, restored_validator_keys, restored_list_fields
 
 
 def _normalize_multimodal_contracts(task: dict[str, Any]) -> tuple[list[str], list[str], bool]:
@@ -1342,7 +1372,11 @@ def main() -> int:
     skill_contract = updated.get("skill_path_integrity_contract_v1")
     if isinstance(skill_contract, dict):
         _merge_required_skills(skill_contract, FILE_GOVERNANCE_SKILL_ID)
-    forced_required_keys, restored_validator_keys = _normalize_prompt_contracts(updated)
+    (
+        forced_required_keys,
+        restored_validator_keys,
+        restored_prompt_contract_list_fields,
+    ) = _normalize_prompt_contracts(updated)
     forced_mm_required_keys, restored_mm_validator_keys, arbitration_link_restored = _normalize_multimodal_contracts(updated)
     forced_rl_required_keys, restored_rl_validator_keys, reasoning_arbitration_link_restored = _normalize_reasoning_contracts(updated)
     forced_entry_required_keys, restored_entry_validator_keys = _normalize_unique_entry_contracts(updated)
@@ -1963,6 +1997,7 @@ def main() -> int:
         "invalid_prompt_contract_keys_after": prompt_invalid_after,
         "forced_prompt_required_keys": forced_required_keys,
         "restored_prompt_validator_keys": restored_validator_keys,
+        "restored_prompt_contract_list_fields": restored_prompt_contract_list_fields,
         "required_multimodal_contract_keys": list(REQUIRED_MULTIMODAL_KEYS),
         "missing_multimodal_contract_keys_before": multimodal_missing_before,
         "missing_multimodal_contract_keys_after": multimodal_missing_after,

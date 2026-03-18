@@ -92,6 +92,16 @@ cat > "$TMP_ROOT/prompt-hard-guard/.identity/alpha/CURRENT_TASK.json" <<'JSON'
     "required": true,
     "default_machine_profile": "mini",
     "prompt_hard_guard_template_ref": "identity/protocol/plugins/templates/native-chat-headstamp.prompt_hard_guard_v1.json"
+  },
+  "derived_prompt_conformance_contract_v1": {
+    "required": true,
+    "validator": "scripts/validate_prompt_derivation_conformance.py",
+    "kernel_contract_version": "v1.6",
+    "derived_from_contract_ids": [
+      "rq_014_prompt_bootstrap_capability_contract_v1",
+      "rq_015_prompt_capability_matrix_fail_closed_contract_v1"
+    ],
+    "fail_action": "block_when_prompt_derivation_metadata_incomplete"
   }
 }
 JSON
@@ -112,6 +122,26 @@ if [ "$rc" -eq 0 ]; then
   exit 1
 fi
 grep -q "Native Chat Headstamp Hard Guard" "$TMP_ROOT/prompt_hard_guard_negative.log"
+set +e
+python3 scripts/validate_prompt_derivation_conformance.py \
+  --catalog "$TMP_ROOT/prompt-hard-guard/.identity/catalog.local.yaml" \
+  --identity-id alpha \
+  --json-only > "$TMP_ROOT/prompt_hard_guard_derivation_negative.json" 2>&1
+rc=$?
+set -e
+if [ "$rc" -eq 0 ]; then
+  echo "[FAIL] prompt derivation validator should fail when native-chat contract id is missing from derived metadata"
+  exit 1
+fi
+python3 - "$TMP_ROOT/prompt_hard_guard_derivation_negative.json" <<'PY'
+import json
+import sys
+
+obj = json.load(open(sys.argv[1], encoding="utf-8"))
+assert obj.get("error_code") == "IP-PDER-004", obj
+assert "native_chat_prompt_contract_id_missing_from_derived_metadata" in (obj.get("stale_reasons") or []), obj
+print("[PASS] native chat prompt derivation metadata hard guard")
+PY
 python3 scripts/repair_contract_backfill.py \
   --catalog "$TMP_ROOT/prompt-hard-guard/.identity/catalog.local.yaml" \
   --identity-id alpha \
@@ -120,13 +150,19 @@ python3 scripts/repair_contract_backfill.py \
 python3 scripts/validate_identity_prompt_quality.py \
   --catalog "$TMP_ROOT/prompt-hard-guard/.identity/catalog.local.yaml" \
   --identity-id alpha > "$TMP_ROOT/prompt_hard_guard_positive.log"
-python3 - "$TMP_ROOT/prompt-hard-guard/.identity/alpha/IDENTITY_PROMPT.md" "$TMP_ROOT/prompt_hard_guard_repair.json" <<'PY'
+python3 scripts/validate_prompt_derivation_conformance.py \
+  --catalog "$TMP_ROOT/prompt-hard-guard/.identity/catalog.local.yaml" \
+  --identity-id alpha \
+  --json-only > "$TMP_ROOT/prompt_hard_guard_derivation.json"
+python3 - "$TMP_ROOT/prompt-hard-guard/.identity/alpha/IDENTITY_PROMPT.md" "$TMP_ROOT/prompt-hard-guard/.identity/alpha/CURRENT_TASK.json" "$TMP_ROOT/prompt_hard_guard_repair.json" "$TMP_ROOT/prompt_hard_guard_derivation.json" <<'PY'
 from pathlib import Path
 import json
 import sys
 
 prompt = Path(sys.argv[1]).read_text(encoding="utf-8")
-repair = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+task = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+repair = json.loads(Path(sys.argv[3]).read_text(encoding="utf-8"))
+derivation = json.loads(Path(sys.argv[4]).read_text(encoding="utf-8"))
 required = [
     "Native Chat Headstamp Hard Guard",
     "There is no headerless assistant-authored native-chat reply path.",
@@ -137,6 +173,14 @@ for token in required:
         raise SystemExit(f"native_chat_prompt_hard_guard_missing_token: {token}")
 if not repair.get("identity_prompt_runtime_governance", {}).get("changed", False):
     raise SystemExit("native_chat_prompt_hard_guard_repair_not_recorded")
+derived_ids = ((task.get("derived_prompt_conformance_contract_v1") or {}).get("derived_from_contract_ids") or [])
+if "rq_033_native_chat_headstamp_prompt_contract_v1" not in derived_ids:
+    raise SystemExit("native_chat_prompt_hard_guard_contract_id_not_backfilled")
+restored = repair.get("restored_prompt_contract_list_fields", {})
+if "rq_033_native_chat_headstamp_prompt_contract_v1" not in (restored.get("derived_prompt_conformance_contract_v1.derived_from_contract_ids") or []):
+    raise SystemExit("native_chat_prompt_hard_guard_contract_id_restore_not_recorded")
+if derivation.get("prompt_derivation_conformance_status") != "PASS_REQUIRED":
+    raise SystemExit("native_chat_prompt_hard_guard_derivation_not_pass")
 print("[PASS] native chat prompt hard guard")
 PY
 
