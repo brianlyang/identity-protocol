@@ -1279,6 +1279,24 @@ python3 scripts/full_identity_protocol_scan.py \
   --project-catalog "${CATALOG_PATH}" \
   --actor-id "${HEADSTAMP_ACTOR_ID}"
 SH
+cat > "$TMP_ROOT/neg-strict-actor/scripts/run_native_chat_headstamp_smoke.sh" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+
+source ./scripts/shell_strict_entry_common.sh
+CATALOG_PATH="$(protocol_shell_entry_resolve_project_catalog "${CATALOG_PATH:-}")"
+EXPECTED_ACTOR_ID="$(protocol_shell_entry_require_actor_id "${HEADSTAMP_ACTOR_ID:-}")"
+EXPECTED_SESSION_ID="$(protocol_shell_entry_require_session_id "${HEADSTAMP_SESSION_ID:-}")"
+IDENTITY_ID="$(protocol_shell_entry_resolve_session_primary_identity "${CATALOG_PATH}" "${EXPECTED_ACTOR_ID}" "${EXPECTED_SESSION_ID}" "${IDENTITY_ID:-probe}")"
+python3 - <<'PY'
+import os
+import subprocess
+
+env = os.environ.copy()
+cmd = ["codex", "exec", "--ephemeral", "--output-last-message", "/tmp/probe.txt", "probe"]
+subprocess.run(cmd, env=env, check=False)
+PY
+SH
 set +e
 python3 scripts/validate_strict_actor_entry_semantics.py \
   --repo-root "$TMP_ROOT/neg-strict-actor" \
@@ -1301,6 +1319,7 @@ assert "strict_actor_entry_gate_missing" in reasons, obj
 assert "shell_strict_actor_default_literal_forbidden" in reasons, obj
 assert "shell_strict_project_catalog_repo_fixture_default_forbidden" in reasons, obj
 assert "shell_strict_entry_registry_missing" in reasons, obj
+assert "shell_strict_codex_tuple_handoff_missing" in reasons, obj
 print("[PASS] negative strict actor entry fallback blocked")
 PY
 
