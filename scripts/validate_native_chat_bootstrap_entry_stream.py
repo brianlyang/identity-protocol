@@ -22,6 +22,8 @@ DEFAULT_STREAM_DOC_REGISTRY = "identity/protocol/mappings/stream-doc-registry.cu
 DEFAULT_DOC_EVIDENCE_ALLOWLIST = "identity/protocol/mappings/doc-evidence-allowlist.current.yaml"
 DEFAULT_SUMMARY_NAME = "bootstrap_entry_summary.v1.6.12.json"
 DEFAULT_MANIFEST_NAME = "EVIDENCE_MANIFEST.v1.6.12-native-chat-bootstrap-entry.json"
+DEFAULT_ACTIVITY_EVIDENCE_ROOT = Path("activity") / "evidence"
+DEFAULT_CANONICAL_FIXTURE_ROOT = Path("identity") / "protocol" / "fixtures"
 
 CHECK_SCOPE_FULL = "full"
 CHECK_SCOPE_BUNDLE_ONLY = "bundle_only"
@@ -43,6 +45,15 @@ REQUIRED_INCONCLUSIVE_RECORD_KINDS = {
     "live_smoke_stderr",
 }
 REQUIRED_RECORD_FIELDS = ("mirror_path", "sha256", "command", "rc", "timestamp")
+PROMOTION_LOCK = "NON_PROMOTIONAL_LOCK"
+PROMOTION_ELIGIBLE = "PROMOTION_REVIEW_ELIGIBLE"
+PROMOTION_UNKNOWN = "UNKNOWN"
+HOST_VISIBLE_PROBE_SUITE = "host_visible_surface_live_probes"
+HOST_VISIBLE_REQUIRED_PROMOTION_PROBES = {
+    "host_visible_live_receipts_pass": 0,
+    "host_visible_final_channel_relay_missing_blocked": 1,
+    "send_time_governed_pass_headstamp_required": 0,
+}
 
 
 def _repo_root() -> Path:
@@ -85,14 +96,22 @@ def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[P
     return active_path, active_file, ""
 
 
-def _discover_latest_bundle_root(repo_root: Path, stream_slug: str) -> Path:
-    root = (repo_root / "activity" / "evidence" / stream_slug).resolve()
-    if not root.exists():
-        raise RuntimeError(f"bundle_root_missing:{root}")
-    candidates = sorted(path for path in root.iterdir() if path.is_dir())
-    if not candidates:
-        raise RuntimeError(f"bundle_date_missing:{root}")
-    return candidates[-1]
+def _discover_latest_bundle_root(repo_root: Path, stream_slug: str) -> tuple[Path, str]:
+    candidates = (
+        ("canonical_fixture", (repo_root / DEFAULT_CANONICAL_FIXTURE_ROOT / stream_slug).resolve()),
+        ("activity_evidence", (repo_root / DEFAULT_ACTIVITY_EVIDENCE_ROOT / stream_slug).resolve()),
+    )
+    missing_roots: list[str] = []
+    for source_kind, root in candidates:
+        if not root.exists():
+            missing_roots.append(str(root))
+            continue
+        dated_roots = sorted(path for path in root.iterdir() if path.is_dir())
+        if not dated_roots:
+            missing_roots.append(f"{root}#bundle_date_missing")
+            continue
+        return dated_roots[-1], source_kind
+    raise RuntimeError("bundle_root_missing:" + "|".join(missing_roots))
 
 
 def _matches_any(patterns: list[str], rel_path: str) -> bool:
@@ -109,6 +128,219 @@ def _failure(payload: dict[str, Any], reason: str) -> None:
     failures = payload.setdefault("failures", [])
     if reason not in failures:
         failures.append(reason)
+
+
+def _promotion_lock(payload: dict[str, Any], reason: str) -> None:
+    reasons = payload.setdefault("promotion_unlock_failures", [])
+    if reason not in reasons:
+        reasons.append(reason)
+
+
+def _resolve_summary_ref(repo_root: Path, summary_path: Path, value: str) -> Path | None:
+    token = _norm_path(value)
+    if not token:
+        return None
+    raw_path = Path(token)
+    if raw_path.is_absolute():
+        return raw_path.expanduser().resolve()
+    repo_candidate = (repo_root / token).resolve()
+    if repo_candidate.exists():
+        return repo_candidate
+    return (summary_path.parent / token).resolve()
+
+
+def _derive_live_no_headstamp_status(live_smoke_status: str) -> str:
+    if live_smoke_status == STATUS_PASS_REQUIRED:
+        return STATUS_PASS_REQUIRED
+    if live_smoke_status == "INCONCLUSIVE_HOST_RUNTIME_PANIC":
+        return "INCONCLUSIVE_HOST_RUNTIME_PANIC"
+    return STATUS_FAIL_REQUIRED
+
+
+def _read_probe_doc(path: Path) -> dict[str, Any]:
+    data = _load_json(path)
+    return data if isinstance(data, dict) else {}
+
+
+def _resolve_manifest_member_path(manifest_path: Path, value: str) -> Path:
+    token = _norm_path(value)
+    raw = Path(token)
+    if raw.is_absolute():
+        return raw.expanduser().resolve()
+    return (manifest_path.parent / raw).resolve()
+
+
+def _inspect_host_visible_probe_manifest(repo_root: Path, manifest_path: Path) -> dict[str, Any]:
+    doc = _load_json(manifest_path)
+    payload: dict[str, Any] = {
+        "status": STATUS_PASS_REQUIRED,
+        "suite": str(doc.get("suite", "")).strip(),
+        "probe_manifest_ref": _relative(repo_root, manifest_path),
+        "required_probe_count": len(HOST_VISIBLE_REQUIRED_PROMOTION_PROBES),
+        "checked_probe_names": [],
+        "failures": [],
+        "final_channel_relay_receipt_status": STATUS_FAIL_REQUIRED,
+        "controlled_emitter_path_status": STATUS_FAIL_REQUIRED,
+        "unsupported_bypass_status": STATUS_FAIL_REQUIRED,
+    }
+    if payload["suite"] != HOST_VISIBLE_PROBE_SUITE:
+        payload["status"] = STATUS_FAIL_REQUIRED
+        payload["failures"].append("host_visible_probe_suite_mismatch")
+        return payload
+
+    results = doc.get("results") or []
+    if not isinstance(results, list):
+        payload["status"] = STATUS_FAIL_REQUIRED
+        payload["failures"].append("host_visible_probe_results_invalid")
+        return payload
+    index = {
+        str((row or {}).get("probe_name", "")).strip(): row
+        for row in results
+        if isinstance(row, dict) and str((row or {}).get("probe_name", "")).strip()
+    }
+
+    for probe_name, expected_rc in HOST_VISIBLE_REQUIRED_PROMOTION_PROBES.items():
+        row = index.get(probe_name)
+        if row is None:
+            payload["status"] = STATUS_FAIL_REQUIRED
+            payload["failures"].append(f"host_visible_probe_missing:{probe_name}")
+            continue
+        payload["checked_probe_names"].append(probe_name)
+        rc = int(row.get("rc", -999))
+        if rc != expected_rc:
+            payload["status"] = STATUS_FAIL_REQUIRED
+            payload["failures"].append(f"host_visible_probe_rc_mismatch:{probe_name}")
+
+    bypass_row = index.get("host_visible_commentary_bypass_blocked")
+    inline_row = index.get("send_time_inline_reply_text_host_direct_blocked")
+    if bypass_row is not None and inline_row is not None and int(bypass_row.get("rc", 0)) != 0 and int(inline_row.get("rc", 0)) != 0:
+        payload["unsupported_bypass_status"] = STATUS_PASS_REQUIRED
+    else:
+        payload["failures"].append("host_visible_unsupported_bypass_proof_missing")
+
+    positive_row = index.get("host_visible_live_receipts_pass")
+    if positive_row is not None:
+        positive_doc = _read_probe_doc(
+            _resolve_manifest_member_path(manifest_path, str(positive_row.get("stdout_path", "")))
+        )
+        relay_status = str(positive_doc.get("host_transport_wiring_attestation_final_channel_relay_status", "")).strip()
+        payload["host_visible_live_receipts_status"] = str(
+            positive_doc.get("host_transport_wiring_attestation_status", "")
+        ).strip()
+        payload["final_channel_relay_receipt_status"] = relay_status or STATUS_FAIL_REQUIRED
+        payload["final_channel_relay_receipt_path"] = str(
+            positive_doc.get("host_transport_wiring_attestation_final_channel_relay_receipt_path", "")
+        ).strip()
+        if relay_status != STATUS_PASS_REQUIRED:
+            payload["status"] = STATUS_FAIL_REQUIRED
+            payload["failures"].append("host_visible_final_channel_relay_not_pass_required")
+
+    send_time_row = index.get("send_time_governed_pass_headstamp_required")
+    if send_time_row is not None:
+        send_time_doc = _read_probe_doc(
+            _resolve_manifest_member_path(manifest_path, str(send_time_row.get("stdout_path", "")))
+        )
+        controlled_fields = {
+            "send_time_gate_status": str(send_time_doc.get("send_time_gate_status", "")).strip(),
+            "current_surface_transport_attestation_status": str(
+                send_time_doc.get("current_surface_transport_attestation_status", "")
+            ).strip(),
+            "chat_egress_uniqueness_status": str(send_time_doc.get("chat_egress_uniqueness_status", "")).strip(),
+            "next_hop_admission_status": str(send_time_doc.get("next_hop_admission_status", "")).strip(),
+            "headstamp_consistency_status": str(send_time_doc.get("headstamp_consistency_status", "")).strip(),
+            "output_governance_mode": str(send_time_doc.get("output_governance_mode", "")).strip(),
+        }
+        payload["controlled_emitter_observed"] = controlled_fields
+        if (
+            controlled_fields["send_time_gate_status"] == STATUS_PASS_REQUIRED
+            and controlled_fields["current_surface_transport_attestation_status"] == STATUS_PASS_REQUIRED
+            and controlled_fields["chat_egress_uniqueness_status"] == STATUS_PASS_REQUIRED
+            and controlled_fields["next_hop_admission_status"] == STATUS_PASS_REQUIRED
+            and controlled_fields["headstamp_consistency_status"] == STATUS_PASS_REQUIRED
+            and controlled_fields["output_governance_mode"] == "governed"
+        ):
+            payload["controlled_emitter_path_status"] = STATUS_PASS_REQUIRED
+        else:
+            payload["failures"].append("host_visible_controlled_emitter_not_pass_required")
+            payload["status"] = STATUS_FAIL_REQUIRED
+
+    if payload["failures"]:
+        payload["status"] = STATUS_FAIL_REQUIRED
+    return payload
+
+
+def _validate_promotion_unlock_bundle(
+    payload: dict[str, Any],
+    *,
+    repo_root: Path,
+    summary_path: Path,
+    summary: dict[str, Any],
+    live_smoke_status: str,
+) -> None:
+    bundle = summary.get("promotion_unlock_evidence") or {}
+    if not isinstance(bundle, dict):
+        bundle = {}
+    payload["promotion_unlock_bundle_present"] = bool(bundle)
+    payload["promotion_unlock_bundle_status"] = str(bundle.get("status", "")).strip() or PROMOTION_LOCK
+
+    derived_tuple_present_status = STATUS_PASS_REQUIRED
+    derived_authoritative_resolve_status = STATUS_PASS_REQUIRED
+    derived_live_no_headstamp_status = _derive_live_no_headstamp_status(live_smoke_status)
+    payload["tuple_present_status"] = str(bundle.get("tuple_present_status", "")).strip() or derived_tuple_present_status
+    payload["authoritative_resolve_status"] = (
+        str(bundle.get("authoritative_resolve_status", "")).strip() or derived_authoritative_resolve_status
+    )
+    payload["no_silent_headerless_turn_status"] = (
+        str(bundle.get("no_silent_headerless_turn_status", "")).strip() or derived_live_no_headstamp_status
+    )
+    payload["final_channel_relay_receipt_status"] = str(bundle.get("final_channel_relay_receipt_status", "")).strip() or PROMOTION_UNKNOWN
+    payload["controlled_emitter_path_status"] = str(bundle.get("controlled_emitter_path_status", "")).strip() or PROMOTION_UNKNOWN
+    payload["unsupported_bypass_status"] = str(bundle.get("unsupported_bypass_status", "")).strip() or PROMOTION_UNKNOWN
+
+    if payload["tuple_present_status"] != derived_tuple_present_status:
+        _promotion_lock(payload, "tuple_present_status_not_pass_required")
+    if payload["authoritative_resolve_status"] != derived_authoritative_resolve_status:
+        _promotion_lock(payload, "authoritative_resolve_status_not_pass_required")
+    if payload["no_silent_headerless_turn_status"] != derived_live_no_headstamp_status:
+        _promotion_lock(payload, "no_silent_headerless_turn_status_not_aligned_with_live_smoke")
+
+    probe_manifest_ref = str(bundle.get("host_visible_surface_probe_manifest_ref", "")).strip()
+    payload["host_visible_surface_probe_manifest_ref"] = probe_manifest_ref
+    if probe_manifest_ref:
+        manifest_path = _resolve_summary_ref(repo_root, summary_path, probe_manifest_ref)
+        if manifest_path is None or not manifest_path.exists():
+            _promotion_lock(payload, "host_visible_surface_probe_manifest_missing")
+        else:
+            probe_payload = _inspect_host_visible_probe_manifest(repo_root, manifest_path)
+            payload["host_visible_surface_probe_status"] = str(probe_payload.get("status", "")).strip()
+            payload["host_visible_surface_probe_suite"] = str(probe_payload.get("suite", "")).strip()
+            payload["host_visible_surface_probe_checked_probe_names"] = probe_payload.get("checked_probe_names", [])
+            payload["host_visible_surface_probe_failures"] = probe_payload.get("failures", [])
+            payload["final_channel_relay_receipt_status"] = str(
+                probe_payload.get("final_channel_relay_receipt_status", payload["final_channel_relay_receipt_status"])
+            ).strip()
+            payload["controlled_emitter_path_status"] = str(
+                probe_payload.get("controlled_emitter_path_status", payload["controlled_emitter_path_status"])
+            ).strip()
+            payload["unsupported_bypass_status"] = str(
+                probe_payload.get("unsupported_bypass_status", payload["unsupported_bypass_status"])
+            ).strip()
+            payload["final_channel_relay_receipt_path"] = str(
+                probe_payload.get("final_channel_relay_receipt_path", "")
+            ).strip()
+            if payload["host_visible_surface_probe_status"] != STATUS_PASS_REQUIRED:
+                _promotion_lock(payload, "host_visible_surface_probe_status_not_pass_required")
+    else:
+        _promotion_lock(payload, "host_visible_surface_probe_manifest_ref_missing")
+
+    all_promotion_requirements_pass = (
+        payload["tuple_present_status"] == STATUS_PASS_REQUIRED
+        and payload["authoritative_resolve_status"] == STATUS_PASS_REQUIRED
+        and payload["final_channel_relay_receipt_status"] == STATUS_PASS_REQUIRED
+        and payload["controlled_emitter_path_status"] == STATUS_PASS_REQUIRED
+        and payload["no_silent_headerless_turn_status"] == STATUS_PASS_REQUIRED
+    )
+    payload["promotion_unlock_ready"] = bool(all_promotion_requirements_pass)
 
 
 def _validate_registry(payload: dict[str, Any], *, repo_root: Path, stream_version: str, governance_doc: str, review_doc: str, registry_rel: str) -> None:
@@ -255,13 +487,25 @@ def _validate_summary_and_manifest(
         _failure(payload, "live_smoke_status_not_allowed_for_stream_opening")
     if live_smoke_status == "INCONCLUSIVE_HOST_RUNTIME_PANIC":
         payload["live_smoke_contract_classification"] = "HOST_RUNTIME_INCONCLUSIVE_NON_PROMOTIONAL"
-        payload["promotion_status"] = "NON_PROMOTIONAL_LOCK"
+        payload["promotion_status"] = PROMOTION_LOCK
     elif live_smoke_status == STATUS_PASS_REQUIRED:
         payload["live_smoke_contract_classification"] = "PROMOTION_SIGNAL_PASS"
-        payload["promotion_status"] = "PROMOTION_REVIEW_ELIGIBLE"
+        payload["promotion_status"] = PROMOTION_ELIGIBLE
     else:
         payload["live_smoke_contract_classification"] = "FAIL_REQUIRED"
         payload["promotion_status"] = STATUS_FAIL_REQUIRED
+
+    _validate_promotion_unlock_bundle(
+        payload,
+        repo_root=repo_root,
+        summary_path=summary_path,
+        summary=summary,
+        live_smoke_status=live_smoke_status,
+    )
+    if payload.get("promotion_unlock_ready") is True and payload["promotion_status"] != STATUS_FAIL_REQUIRED:
+        payload["promotion_status"] = PROMOTION_ELIGIBLE
+    elif payload["promotion_status"] != STATUS_FAIL_REQUIRED:
+        payload["promotion_status"] = PROMOTION_LOCK
 
     if str(manifest.get("summary_ref", "")).strip() != _relative(repo_root, summary_path):
         _failure(payload, "manifest_summary_ref_mismatch")
@@ -323,8 +567,9 @@ def main() -> int:
     repo_root = Path(args.repo_root).expanduser().resolve() if str(args.repo_root).strip() else _repo_root()
     summary_path = Path(args.summary).expanduser().resolve() if str(args.summary).strip() else None
     manifest_path = Path(args.manifest).expanduser().resolve() if str(args.manifest).strip() else None
+    bundle_root_source = "explicit"
     if summary_path is None or manifest_path is None:
-        bundle_root = _discover_latest_bundle_root(repo_root, args.stream_slug)
+        bundle_root, bundle_root_source = _discover_latest_bundle_root(repo_root, args.stream_slug)
         summary_path = summary_path or (bundle_root / DEFAULT_SUMMARY_NAME).resolve()
         manifest_path = manifest_path or (bundle_root / DEFAULT_MANIFEST_NAME).resolve()
 
@@ -337,6 +582,7 @@ def main() -> int:
         "stream_opening_status": STATUS_PASS_REQUIRED,
         "promotion_status": "UNKNOWN",
         "live_smoke_contract_classification": "UNKNOWN",
+        "bundle_root_source": bundle_root_source,
         "failures": [],
     }
 

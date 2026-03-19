@@ -1,0 +1,7 @@
+{
+  "agent_relay_final_answer_status": "PASS_REQUIRED",
+  "agent_relay_final_answer_relay_mode": "exact",
+  "agent_relay_final_answer_delivery_authority": "identity_instance_output",
+  "agent_relay_final_answer_source_artifact": "canonical_fixture_snapshot",
+  "agent_relay_final_answer_question_tag": "native-chat-bootstrap-entry-v1612"
+}

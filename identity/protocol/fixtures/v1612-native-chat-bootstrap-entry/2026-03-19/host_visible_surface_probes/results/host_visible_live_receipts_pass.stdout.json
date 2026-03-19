@@ -1,0 +1,6 @@
+{
+  "host_transport_wiring_attestation_status": "PASS_REQUIRED",
+  "host_transport_wiring_attestation_final_channel_relay_status": "PASS_REQUIRED",
+  "host_transport_wiring_attestation_final_channel_relay_reason": "exact_relay_validated",
+  "host_transport_wiring_attestation_final_channel_relay_receipt_path": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/host_visible_surface_probes/fixtures/receipts/agent-relay-final-answer-receipt.json"
+}

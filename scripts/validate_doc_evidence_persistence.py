@@ -40,12 +40,14 @@ STREAM_DOC_REGISTRY_FILE = "identity/protocol/mappings/stream-doc-registry.curre
 TMP_PREFIXES = ("/tmp/", "/private/tmp/")
 ALLOWED_PERSISTENT_PREFIXES = (
     "activity/evidence/",
+    "identity/protocol/fixtures/",
     ".identity/",
 )
 ALLOWED_IDENTITY_REPORT_RE = re.compile(r"^\.identity/[^/\s]+/runtime/reports/.+")
 ALLOWED_ACTIVITY_RE = re.compile(r"^activity/evidence/[^/\s]+/\d{4}-\d{2}-\d{2}/.+")
+ALLOWED_CANONICAL_FIXTURE_RE = re.compile(r"^identity/protocol/fixtures/[^/\s]+/\d{4}-\d{2}-\d{2}/.+")
 PATH_TOKEN_RE = re.compile(
-    r"(?P<path>(?:/tmp/|/private/tmp/|activity/evidence/|\.identity/)[^\s`\"'()<>\]]+)"
+    r"(?P<path>(?:/tmp/|/private/tmp/|activity/evidence/|identity/protocol/fixtures/|\.identity/)[^\s`\"'()<>\]]+)"
 )
 REQUIRED_TUPLE_FIELDS = ("sha256", "command", "rc", "timestamp")
 EVIDENCE_ALLOWLIST_FILE = "identity/protocol/mappings/doc-evidence-allowlist.current.yaml"
@@ -189,6 +191,8 @@ def _allowed_persistent_path(path: str) -> bool:
     p = _norm_path(path)
     if p.startswith("activity/evidence/"):
         return bool(ALLOWED_ACTIVITY_RE.match(p))
+    if p.startswith("identity/protocol/fixtures/"):
+        return bool(ALLOWED_CANONICAL_FIXTURE_RE.match(p))
     if p.startswith(".identity/"):
         return bool(ALLOWED_IDENTITY_REPORT_RE.match(p))
     return False
@@ -198,7 +202,9 @@ def _load_manifest_records(repo_root: Path) -> tuple[dict[str, dict[str, Any]], 
     by_mirror: dict[str, dict[str, Any]] = {}
     by_tmp: dict[str, dict[str, Any]] = {}
     manifests: list[str] = []
-    for manifest in sorted(repo_root.glob("activity/evidence/**/EVIDENCE_MANIFEST*.json")):
+    manifest_iter = list(repo_root.glob("activity/evidence/**/EVIDENCE_MANIFEST*.json"))
+    manifest_iter.extend(repo_root.glob("identity/protocol/fixtures/**/EVIDENCE_MANIFEST*.json"))
+    for manifest in sorted(manifest_iter):
         rel_manifest = str(manifest.relative_to(repo_root)).replace("\\", "/")
         manifests.append(rel_manifest)
         try:
@@ -315,7 +321,7 @@ def _validate_tmp_for_review_doc(
         )
 
 
-def _validate_activity_mirror_ref(
+def _validate_manifest_backed_mirror_ref(
     *,
     repo_root: Path,
     ref: str,
@@ -414,19 +420,23 @@ def _validate_strict_doc_evidence_allowlist(
                     "error_code": "IP-DOC-EVID-012",
                 }
             )
-    activity_refs = [ref for ref in persistent_refs if ref.startswith("activity/evidence/")]
+    allowlisted_refs = [
+        ref
+        for ref in persistent_refs
+        if ref.startswith("activity/evidence/") or ref.startswith("identity/protocol/fixtures/")
+    ]
     max_refs = allowlist_doc.get("max_activity_refs", 0)
-    if isinstance(max_refs, int) and max_refs > 0 and len(activity_refs) > max_refs:
+    if isinstance(max_refs, int) and max_refs > 0 and len(allowlisted_refs) > max_refs:
         violations.append(
             {
                 "type": "strict_doc_activity_ref_count_exceeded",
                 "doc": doc_rel,
-                "observed_count": len(activity_refs),
+                "observed_count": len(allowlisted_refs),
                 "max_allowed": max_refs,
                 "error_code": "IP-DOC-EVID-013",
             }
         )
-    for ref in activity_refs:
+    for ref in allowlisted_refs:
         matched = any(pat.match(ref) for pat in compiled_patterns)
         if matched:
             continue
@@ -632,8 +642,8 @@ def main() -> int:
                 }
             )
             continue
-        if ref.startswith("activity/evidence/"):
-            _validate_activity_mirror_ref(
+        if ref.startswith("activity/evidence/") or ref.startswith("identity/protocol/fixtures/"):
+            _validate_manifest_backed_mirror_ref(
                 repo_root=repo_root,
                 ref=ref,
                 by_mirror=by_mirror,

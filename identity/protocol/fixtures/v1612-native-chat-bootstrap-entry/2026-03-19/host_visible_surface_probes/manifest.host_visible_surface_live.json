@@ -1,0 +1,46 @@
+{
+  "schema_version": "v1",
+  "suite": "host_visible_surface_live_probes",
+  "results": [
+    {
+      "probe_name": "host_visible_live_receipts_pass",
+      "timestamp_utc": "2026-03-19T15:30:00Z",
+      "command": "fixture_snapshot:host_visible_live_receipts_pass",
+      "rc": 0,
+      "stdout_path": "results/host_visible_live_receipts_pass.stdout.json",
+      "stderr_path": ""
+    },
+    {
+      "probe_name": "host_visible_final_channel_relay_missing_blocked",
+      "timestamp_utc": "2026-03-19T15:30:00Z",
+      "command": "fixture_snapshot:host_visible_final_channel_relay_missing_blocked",
+      "rc": 1,
+      "stdout_path": "",
+      "stderr_path": ""
+    },
+    {
+      "probe_name": "send_time_governed_pass_headstamp_required",
+      "timestamp_utc": "2026-03-19T15:30:00Z",
+      "command": "fixture_snapshot:send_time_governed_pass_headstamp_required",
+      "rc": 0,
+      "stdout_path": "results/send_time_governed_pass_headstamp_required.stdout.json",
+      "stderr_path": ""
+    },
+    {
+      "probe_name": "host_visible_commentary_bypass_blocked",
+      "timestamp_utc": "2026-03-19T15:30:00Z",
+      "command": "fixture_snapshot:host_visible_commentary_bypass_blocked",
+      "rc": 1,
+      "stdout_path": "",
+      "stderr_path": ""
+    },
+    {
+      "probe_name": "send_time_inline_reply_text_host_direct_blocked",
+      "timestamp_utc": "2026-03-19T15:30:00Z",
+      "command": "fixture_snapshot:send_time_inline_reply_text_host_direct_blocked",
+      "rc": 1,
+      "stdout_path": "",
+      "stderr_path": ""
+    }
+  ]
+}

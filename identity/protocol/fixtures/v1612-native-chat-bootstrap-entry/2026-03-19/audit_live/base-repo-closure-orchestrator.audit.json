@@ -1,0 +1,6 @@
+{
+  "identity_id": "base-repo-closure-orchestrator",
+  "status": "INCONCLUSIVE_HOST_RUNTIME_PANIC",
+  "classification": "HOST_RUNTIME_INCONCLUSIVE_NON_PROMOTIONAL",
+  "verification_source": "canonical_fixture_snapshot"
+}

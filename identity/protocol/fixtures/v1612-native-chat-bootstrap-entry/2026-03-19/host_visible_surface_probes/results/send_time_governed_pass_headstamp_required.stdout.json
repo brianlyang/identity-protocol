@@ -1,0 +1,8 @@
+{
+  "send_time_gate_status": "PASS_REQUIRED",
+  "current_surface_transport_attestation_status": "PASS_REQUIRED",
+  "chat_egress_uniqueness_status": "PASS_REQUIRED",
+  "next_hop_admission_status": "PASS_REQUIRED",
+  "headstamp_consistency_status": "PASS_REQUIRED",
+  "output_governance_mode": "governed"
+}

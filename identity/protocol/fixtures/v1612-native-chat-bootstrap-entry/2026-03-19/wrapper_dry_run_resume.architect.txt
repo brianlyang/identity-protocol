@@ -1,0 +1,6 @@
+status=PASS_REQUIRED
+mode=resume
+host_thread_uuid_preserved=true
+resume_uuid_is_not_identity_session=true
+identity_id=base-repo-architect
+identity_session_id=run:switch-back-base-repo-architect-20260318T085733Z

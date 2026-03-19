@@ -1,0 +1,6 @@
+{
+  "identity_id": "base-repo-closure-orchestrator",
+  "status": "PASS_REQUIRED",
+  "verification_source": "canonical_fixture_snapshot",
+  "scope": "USER"
+}

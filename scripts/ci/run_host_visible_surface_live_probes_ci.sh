@@ -380,8 +380,8 @@ else:
     raise SystemExit(f"unknown probe name: {name}")
 PY
 
-  python3 - <<'PY' \
-    "${name}" "${timestamp_utc}" "${rc}" "${cmd_string}" "${stdout_path}" "${stderr_path}" "${meta_path}"
+python3 - <<'PY' \
+  "${name}" "${timestamp_utc}" "${rc}" "${cmd_string}" "${stdout_path}" "${stderr_path}" "${meta_path}"
 from __future__ import annotations
 
 import json
@@ -394,8 +394,8 @@ entry = {
     "timestamp_utc": timestamp,
     "command": cmd_string,
     "rc": int(rc),
-    "stdout_path": stdout_path,
-    "stderr_path": stderr_path if Path(stderr_path).exists() else "",
+    "stdout_path": str(Path(stdout_path).resolve()),
+    "stderr_path": str(Path(stderr_path).resolve()) if Path(stderr_path).exists() else "",
 }
 Path(meta_path).write_text(json.dumps(entry, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 print(f"[PASS] {name} (rc={rc})")
@@ -890,7 +890,13 @@ result_root = Path(sys.argv[1]).resolve()
 manifest_path = Path(sys.argv[2]).resolve()
 entries = []
 for meta_path in sorted(result_root.glob("*.meta.json")):
-    entries.append(json.loads(meta_path.read_text(encoding="utf-8")))
+    entry = json.loads(meta_path.read_text(encoding="utf-8"))
+    if isinstance(entry, dict):
+        for key in ("stdout_path", "stderr_path"):
+            raw = str(entry.get(key, "")).strip()
+            if raw:
+                entry[key] = str(Path(raw).resolve().relative_to(manifest_path.parent.resolve()))
+    entries.append(entry)
 manifest = {
     "schema_version": "v1",
     "suite": "host_visible_surface_live_probes",

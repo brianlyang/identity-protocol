@@ -14,8 +14,8 @@ Execution mode: topic-level canonical SSOT for v1.6.12 native-chat bootstrap ent
 4. Current-state judgment for this stream must anchor to:
    - `identity/protocol/mappings/stream-doc-registry.current.yaml`
    - `identity/protocol/mappings/doc-evidence-allowlist.current.yaml`
-   - `activity/evidence/v1612-native-chat-bootstrap-entry/2026-03-19/EVIDENCE_MANIFEST.v1.6.12-native-chat-bootstrap-entry.json`
-   - `activity/evidence/v1612-native-chat-bootstrap-entry/2026-03-19/bootstrap_entry_summary.v1.6.12.json`
+   - `identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/EVIDENCE_MANIFEST.v1.6.12-native-chat-bootstrap-entry.json`
+   - `identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/bootstrap_entry_summary.v1.6.12.json`
 5. Protocol-side authoritative identity resolution remains session-primary and fail-close.
 6. Compatibility projection / active pointer remain diagnostic mirrors only and must not be reused as bootstrap tuple truth.
 7. `stream_opening_status=PASS_REQUIRED` in this stream certifies only that the bootstrap-entry governance lane is opened with accepted evidence; it does not certify motherline promotion, required-gate uplift, or stable outer native-chat final visible surface binding.
@@ -115,12 +115,13 @@ Execution mode: topic-level canonical SSOT for v1.6.12 native-chat bootstrap ent
 ## 5) Evidence contract for this stream
 
 1. Strict governance/review docs may cite only these persistent evidence anchors directly:
-   - `activity/evidence/v1612-native-chat-bootstrap-entry/<YYYY-MM-DD>/EVIDENCE_MANIFEST.v1.6.12-native-chat-bootstrap-entry.json`
-   - `activity/evidence/v1612-native-chat-bootstrap-entry/<YYYY-MM-DD>/bootstrap_entry_summary.v1.6.12.json`
-2. Deeper replay artifacts stay indexed from the manifest and should not be copied into new strict docs unless the allowlist is expanded first.
-3. The current accepted replay bundle for stream opening is:
-   - `activity/evidence/v1612-native-chat-bootstrap-entry/2026-03-19/EVIDENCE_MANIFEST.v1.6.12-native-chat-bootstrap-entry.json`
-   - `activity/evidence/v1612-native-chat-bootstrap-entry/2026-03-19/bootstrap_entry_summary.v1.6.12.json`
+   - `identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/<YYYY-MM-DD>/EVIDENCE_MANIFEST.v1.6.12-native-chat-bootstrap-entry.json`
+   - `identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/<YYYY-MM-DD>/bootstrap_entry_summary.v1.6.12.json`
+2. Local runtime mirrors may still be generated under `activity/evidence/v1612-native-chat-bootstrap-entry/<YYYY-MM-DD>/...`, but strict docs and protocol validators must not depend on ignored runtime-only paths for reproducible stream judgment.
+3. Deeper replay artifacts stay indexed from the manifest and should not be copied into new strict docs unless the allowlist is expanded first.
+4. The current accepted replay bundle for stream opening is:
+   - `identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/EVIDENCE_MANIFEST.v1.6.12-native-chat-bootstrap-entry.json`
+   - `identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/bootstrap_entry_summary.v1.6.12.json`
 
 ## 6) Frozen implementation guidance
 
@@ -129,7 +130,8 @@ Execution mode: topic-level canonical SSOT for v1.6.12 native-chat bootstrap ent
 3. Keep multi-agent or multi-identity scaling on isolated wrapped processes, tmux lanes, process-call lanes, or governed sub-agent handoff; do not route through shared mutable pointer guesses.
 4. Keep host-runtime panic evidence classified as host-runtime instability, not as proof that protocol renderer semantics regressed.
 5. Machine-consumable stream opening checks should use `scripts/validate_native_chat_bootstrap_entry_stream.py`; host-runtime inconclusive live smoke must resolve to a non-promotional lock, not a stream-opening semantic regression.
-6. Keep this stream infrastructure-first: no ad hoc prompt patches, no identity guessing from projection files, and no hidden in-place switching path.
+6. `scripts/validate_native_chat_bootstrap_entry_stream.py` must prefer the tracked canonical fixture bundle under `identity/protocol/fixtures/...` and use `activity/evidence/...` only as a local fallback when the tracked fixture is unavailable.
+7. Keep this stream infrastructure-first: no ad hoc prompt patches, no identity guessing from projection files, and no hidden in-place switching path.
 
 ## 7) Future promotion exit criteria (frozen for clarity)
 
@@ -137,9 +139,17 @@ Execution mode: topic-level canonical SSOT for v1.6.12 native-chat bootstrap ent
 2. At minimum, future promotion evidence must prove all of the following together:
    - current-turn tuple is present,
    - authoritative resolve passes on session-primary truth,
+   - final channel relay receipt remains `PASS_REQUIRED`,
+   - sender-side controlled emitter path remains `PASS_REQUIRED`,
    - the outer native-chat final visible surface does not emit a silent headerless turn,
    - the final host-visible answer is bound to the controlled visible emitter path rather than to a free-form outer reply path.
 3. Until those conditions are proven, the correct status is:
    - bootstrap-entry stream opening may still be `PASS_REQUIRED`,
    - promotion remains locked,
    - outer visible surface instability remains a residual implementation-side closure item rather than a semantic contradiction inside v1.6.12.
+4. `scripts/validate_native_chat_bootstrap_entry_stream.py` is the machine gate for this bundle and must report the promotion-side evidence fields explicitly:
+   - `tuple_present_status`
+   - `authoritative_resolve_status`
+   - `final_channel_relay_receipt_status`
+   - `controlled_emitter_path_status`
+   - `no_silent_headerless_turn_status`

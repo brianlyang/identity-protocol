@@ -1,0 +1,101 @@
+{
+  "stream_version": "v1.6.12",
+  "topic": "native_chat_bootstrap_entry",
+  "generated_at": "2026-03-19T15:30:00Z",
+  "evidence_root": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19",
+  "summary_ref": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/bootstrap_entry_summary.v1.6.12.json",
+  "notes": [
+    "Canonical tracked fixture snapshot for v1.6.12 stream-opening and promotion-lock checks.",
+    "Derived from the 2026-03-19 local runtime evidence bundle and sanitized to repo-relative paths."
+  ],
+  "evidence_records": [
+    {
+      "kind": "stream_summary",
+      "mirror_path": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/bootstrap_entry_summary.v1.6.12.json",
+      "sha256": "0f729d7498aea32bf38ff9dd259123d1bee23815d571eddcb80f2092c760a4ab",
+      "command": "fixture_snapshot:canonical_v1612_bundle",
+      "rc": 0,
+      "timestamp": "2026-03-19T15:30:00Z"
+    },
+    {
+      "kind": "fast_audit_summary",
+      "mirror_path": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/audit_fast/summary.json",
+      "sha256": "3e96ed97969efd793e6a1e5fbe6af3a765d139ca5d674f90e2f81171e383d258",
+      "command": "fixture_snapshot:canonical_v1612_bundle",
+      "rc": 0,
+      "timestamp": "2026-03-19T15:30:00Z"
+    },
+    {
+      "kind": "fast_audit_identity",
+      "mirror_path": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/audit_fast/base-repo-closure-orchestrator.audit.json",
+      "sha256": "bfa397a97eb03c10e093f0360badaa2a9a191843fa9978cf20ffefb709ad0cc3",
+      "command": "fixture_snapshot:canonical_v1612_bundle",
+      "rc": 0,
+      "timestamp": "2026-03-19T15:30:00Z"
+    },
+    {
+      "kind": "fast_audit_identity",
+      "mirror_path": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/audit_fast/base-repo-architect.audit.json",
+      "sha256": "88dfc49d9e172f64859fc600f687e027ce36a7a9100f9e07e205f162203c6ffc",
+      "command": "fixture_snapshot:canonical_v1612_bundle",
+      "rc": 0,
+      "timestamp": "2026-03-19T15:30:00Z"
+    },
+    {
+      "kind": "protocol_authority_resolve",
+      "mirror_path": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/protocol_authority_resolve.architect.json",
+      "sha256": "219db11c7911670550422d10fbffa31be31213430b4103fec9d8d04e70b52100",
+      "command": "fixture_snapshot:canonical_v1612_bundle",
+      "rc": 0,
+      "timestamp": "2026-03-19T15:30:00Z"
+    },
+    {
+      "kind": "wrapper_dry_run_resume",
+      "mirror_path": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/wrapper_dry_run_resume.architect.txt",
+      "sha256": "c6e4236de1488c0d3fe91778320dffc27ca8860d2d87f283333d89c9deb8dbee",
+      "command": "fixture_snapshot:canonical_v1612_bundle",
+      "rc": 0,
+      "timestamp": "2026-03-19T15:30:00Z"
+    },
+    {
+      "kind": "wrapper_dry_run_exec",
+      "mirror_path": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/wrapper_dry_run_exec.closure.txt",
+      "sha256": "cc61a7773f08de34565c7e808dadd8dda9bab25d3620ee830679373e68a8ebc8",
+      "command": "fixture_snapshot:canonical_v1612_bundle",
+      "rc": 0,
+      "timestamp": "2026-03-19T15:30:00Z"
+    },
+    {
+      "kind": "live_smoke_timeout_audit",
+      "mirror_path": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/audit_live/base-repo-closure-orchestrator.audit.json",
+      "sha256": "dfb13389ef704ce7a4dc50ce9cc03499712b558e4634e3d2d71d1bf11d60bd7e",
+      "command": "fixture_snapshot:canonical_v1612_bundle",
+      "rc": 0,
+      "timestamp": "2026-03-19T15:30:00Z"
+    },
+    {
+      "kind": "live_smoke_stderr",
+      "mirror_path": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/audit_live/base-repo-closure-orchestrator.smoke.txt.stderr.log",
+      "sha256": "1278d5140f4ab0c599e25183f361e9a7d11c9461e1e01dfef81059d3c9b9d45f",
+      "command": "fixture_snapshot:canonical_v1612_bundle",
+      "rc": 0,
+      "timestamp": "2026-03-19T15:30:00Z"
+    },
+    {
+      "kind": "live_smoke_stderr",
+      "mirror_path": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/audit_live/base-repo-architect.smoke.txt.stderr.log",
+      "sha256": "6ebac8db0d837d16395389eae926564a5f3c9844da677c626cd0e563d05be01b",
+      "command": "fixture_snapshot:canonical_v1612_bundle",
+      "rc": 0,
+      "timestamp": "2026-03-19T15:30:00Z"
+    },
+    {
+      "kind": "host_visible_surface_probe_manifest",
+      "mirror_path": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/host_visible_surface_probes/manifest.host_visible_surface_live.json",
+      "sha256": "9a09b50e4f15836df65bc2ceb61fb721690910ba37a0d272e84ed334b3600eec",
+      "command": "fixture_snapshot:canonical_v1612_bundle",
+      "rc": 0,
+      "timestamp": "2026-03-19T15:30:00Z"
+    }
+  ]
+}

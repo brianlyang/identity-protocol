@@ -58,8 +58,8 @@ Scope: protocol review ledger for native-chat bootstrap entry governance and wor
 ### 3.4 T4 replay bundle
 
 1. Accept the v1.6.12 replay bundle indexed by:
-   - `activity/evidence/v1612-native-chat-bootstrap-entry/2026-03-19/EVIDENCE_MANIFEST.v1.6.12-native-chat-bootstrap-entry.json`
-   - `activity/evidence/v1612-native-chat-bootstrap-entry/2026-03-19/bootstrap_entry_summary.v1.6.12.json`
+   - `identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/EVIDENCE_MANIFEST.v1.6.12-native-chat-bootstrap-entry.json`
+   - `identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/bootstrap_entry_summary.v1.6.12.json`
 2. Treat the fast audit, wrapper dry-run, and protocol authoritative resolve as opening evidence.
 3. Treat current live smoke as inconclusive host-runtime evidence, not as stream-promotion proof.
 
@@ -70,8 +70,8 @@ Scope: protocol review ledger for native-chat bootstrap entry governance and wor
 3. `identity/protocol/mappings/stream-doc-registry.v1.6.yaml`
 4. `identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml`
 5. `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
-6. `activity/evidence/v1612-native-chat-bootstrap-entry/2026-03-19/EVIDENCE_MANIFEST.v1.6.12-native-chat-bootstrap-entry.json`
-7. `activity/evidence/v1612-native-chat-bootstrap-entry/2026-03-19/bootstrap_entry_summary.v1.6.12.json`
+6. `identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/EVIDENCE_MANIFEST.v1.6.12-native-chat-bootstrap-entry.json`
+7. `identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/bootstrap_entry_summary.v1.6.12.json`
 
 ### 4.1) Implementation closure progress snapshot (2026-03-19)
 
@@ -91,7 +91,8 @@ Scope: protocol review ledger for native-chat bootstrap entry governance and wor
 5. Closure blockers identified during review on 2026-03-19 are now reduced on the protocol side:
    - the previously untracked v1.6.12/final-relay protocol files are landed in commit `3e6ca34`
    - `scripts/ci/run_host_visible_surface_live_probes_ci.sh` now resolves repo-root-owned script paths explicitly, so prefixed invocation from the workspace root no longer depends on `cwd`
-6. This progress note does not upgrade the stream to promotion-grade closure: the outer native-chat final visible surface still needs stable host-runtime proof before reviewers may claim that the final visible reply is always hard-bound to the controlled visible emitter.
+6. The stream-opening validator now prefers the tracked canonical fixture bundle under `identity/protocol/fixtures/...`; runtime-local `activity/evidence/...` remains a replay mirror, not the only reproducible audit source.
+7. This progress note does not upgrade the stream to promotion-grade closure: the outer native-chat final visible surface still needs stable host-runtime proof before reviewers may claim that the final visible reply is always hard-bound to the controlled visible emitter.
 
 ## 5) Audit verdict rules (frozen)
 
@@ -111,14 +112,21 @@ Scope: protocol review ledger for native-chat bootstrap entry governance and wor
 5. Any proposal that reintroduces active-pointer or projection guessing for bootstrap truth remains `FAIL_REQUIRED` for this stream.
 6. Future promotion or stronger closure claims must additionally prove:
    - `tuple_present + authoritative_resolve_pass + no_silent_headerless_turn`
+   - `final_channel_relay_receipt_status=PASS_REQUIRED + controlled_emitter_path_status=PASS_REQUIRED`
    - outer final native-chat visible surface is bound to the controlled visible emitter path rather than to a free-form outer reply path
 7. A repeated silent headerless turn with tuple truth already present must be logged as an outer final visible surface residual; it does not invalidate v1.6.12 stream opening by itself, but it does block stronger promotion claims.
 8. Sender-side implementation closure is acceptable only when the host-visible `final` channel records a passing exact relay receipt instead of treating naked outer delivery as equivalent proof.
+9. `scripts/validate_native_chat_bootstrap_entry_stream.py` now exposes the promotion-side machine bundle directly and must remain the single audit gate for:
+   - `tuple_present_status`
+   - `authoritative_resolve_status`
+   - `final_channel_relay_receipt_status`
+   - `controlled_emitter_path_status`
+   - `no_silent_headerless_turn_status`
 
 ## 6) Local verification accepted for this opening
 
-1. See `activity/evidence/v1612-native-chat-bootstrap-entry/2026-03-19/EVIDENCE_MANIFEST.v1.6.12-native-chat-bootstrap-entry.json`.
-2. See `activity/evidence/v1612-native-chat-bootstrap-entry/2026-03-19/bootstrap_entry_summary.v1.6.12.json`.
+1. See `identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/EVIDENCE_MANIFEST.v1.6.12-native-chat-bootstrap-entry.json`.
+2. See `identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/bootstrap_entry_summary.v1.6.12.json`.
 3. The current summary freezes one accurate conclusion: fast audit + wrapper dry-run + authority resolve are green enough to open v1.6.12, while live smoke remains host-runtime-dependent and therefore non-promotional.
 
 ## 7) Boundary lock for reviewers
