@@ -104,7 +104,7 @@ echo "[INFO] session_id=${EXPECTED_SESSION_ID}"
 echo "[INFO] catalog_path=${EXPECTED_CATALOG}"
 echo "[INFO] output_path=${OUTPUT_PATH}"
 
-python3 - "${OUTPUT_PATH}" "${PROMPT_TEXT}" <<'PY'
+python3 - "${OUTPUT_PATH}" "${PROMPT_TEXT}" "${EXPECTED_ACTOR_ID}" "${EXPECTED_SESSION_ID}" <<'PY'
 import json
 import os
 import subprocess
@@ -114,6 +114,8 @@ from pathlib import Path
 
 output_path = Path(sys.argv[1]).expanduser().resolve()
 prompt_text = sys.argv[2]
+actor_id = sys.argv[3].strip()
+session_id = sys.argv[4].strip()
 stdout_log = Path(f"{output_path}.stdout.log")
 stderr_log = Path(f"{output_path}.stderr.log")
 
@@ -125,6 +127,10 @@ for path in (output_path, stdout_log, stderr_log):
 
 env = os.environ.copy()
 env["OTEL_SDK_DISABLED"] = "true"
+# Keep the ephemeral smoke run on the same actor/session tuple it already validated.
+env["CODEX_ACTOR_ID"] = actor_id
+env["CODEX_SESSION_ID"] = session_id
+env["IDENTITY_SESSION_ID"] = session_id
 cmd = [
     "codex",
     "exec",
