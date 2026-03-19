@@ -12,7 +12,7 @@
     {
       "kind": "stream_summary",
       "mirror_path": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/bootstrap_entry_summary.v1.6.12.json",
-      "sha256": "0f729d7498aea32bf38ff9dd259123d1bee23815d571eddcb80f2092c760a4ab",
+      "sha256": "f880cfc28c9b9cc933f952bcd1fb016833df12bb59cf464909b451a16cbe1189",
       "command": "fixture_snapshot:canonical_v1612_bundle",
       "rc": 0,
       "timestamp": "2026-03-19T15:30:00Z"

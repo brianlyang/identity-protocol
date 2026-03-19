@@ -135,6 +135,11 @@ Scope: protocol review ledger for native-chat bootstrap entry governance and wor
    - `standard_closure=closed`
    - `promotion_enhancement=open`
 5. As long as `promotion_status=NON_PROMOTIONAL_LOCK`, reviewers may still accept standard closure while keeping the stronger sender-side proof path open for later enhancement.
+6. `scripts/validate_native_chat_bootstrap_entry_stream.py` is the machine source for that distinction and must keep exposing:
+   - `standard_implementation_mode=assistant_visible_inject`
+   - `standard_closure_status=CLOSED`
+   - `promotion_enhancement_mode=host_final_surface_controlled_display`
+   - `promotion_enhancement_status=OPEN`
 
 ## 6) Local verification accepted for this opening
 

@@ -86,5 +86,12 @@
       "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/audit_live/base-repo-closure-orchestrator.smoke.txt.stderr.log",
       "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/audit_live/base-repo-architect.smoke.txt.stderr.log"
     ]
+  },
+  "closure_decision": {
+    "standard_implementation_mode": "assistant_visible_inject",
+    "standard_closure_status": "CLOSED",
+    "promotion_enhancement_mode": "host_final_surface_controlled_display",
+    "promotion_enhancement_status": "OPEN",
+    "summary": "standard closure is accepted on machine-verified assistant-visible injection; host final surface controlled display remains the stronger enhancement track while promotion stays locked"
   }
 }

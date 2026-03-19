@@ -48,6 +48,11 @@ REQUIRED_RECORD_FIELDS = ("mirror_path", "sha256", "command", "rc", "timestamp")
 PROMOTION_LOCK = "NON_PROMOTIONAL_LOCK"
 PROMOTION_ELIGIBLE = "PROMOTION_REVIEW_ELIGIBLE"
 PROMOTION_UNKNOWN = "UNKNOWN"
+STANDARD_CLOSURE_CLOSED = "CLOSED"
+STANDARD_CLOSURE_BLOCKED = "BLOCKED"
+PROMOTION_ENHANCEMENT_OPEN = "OPEN"
+PROMOTION_ENHANCEMENT_READY = "READY"
+PROMOTION_ENHANCEMENT_CLOSED = "CLOSED"
 HOST_VISIBLE_PROBE_SUITE = "host_visible_surface_live_probes"
 HOST_VISIBLE_REQUIRED_PROMOTION_PROBES = {
     "host_visible_live_receipts_pass": 0,
@@ -155,6 +160,14 @@ def _derive_live_no_headstamp_status(live_smoke_status: str) -> str:
     if live_smoke_status == "INCONCLUSIVE_HOST_RUNTIME_PANIC":
         return "INCONCLUSIVE_HOST_RUNTIME_PANIC"
     return STATUS_FAIL_REQUIRED
+
+
+def _derive_standard_closure_ready(payload: dict[str, Any]) -> bool:
+    return (
+        payload.get("stream_opening_status") == STATUS_PASS_REQUIRED
+        and payload.get("tuple_present_status") == STATUS_PASS_REQUIRED
+        and payload.get("authoritative_resolve_status") == STATUS_PASS_REQUIRED
+    )
 
 
 def _read_probe_doc(path: Path) -> dict[str, Any]:
@@ -343,6 +356,48 @@ def _validate_promotion_unlock_bundle(
     payload["promotion_unlock_ready"] = bool(all_promotion_requirements_pass)
 
 
+def _validate_closure_decision(
+    payload: dict[str, Any],
+    *,
+    summary: dict[str, Any],
+) -> None:
+    decision = summary.get("closure_decision") or {}
+    if not isinstance(decision, dict):
+        decision = {}
+
+    payload["standard_implementation_mode"] = str(decision.get("standard_implementation_mode", "")).strip()
+    payload["standard_closure_status"] = str(decision.get("standard_closure_status", "")).strip() or STANDARD_CLOSURE_BLOCKED
+    payload["promotion_enhancement_mode"] = str(decision.get("promotion_enhancement_mode", "")).strip()
+    payload["promotion_enhancement_status"] = str(decision.get("promotion_enhancement_status", "")).strip() or PROMOTION_ENHANCEMENT_OPEN
+
+    if payload["standard_implementation_mode"] != "assistant_visible_inject":
+        _failure(payload, "standard_implementation_mode_invalid")
+    if payload["promotion_enhancement_mode"] != "host_final_surface_controlled_display":
+        _failure(payload, "promotion_enhancement_mode_invalid")
+    if payload["standard_closure_status"] not in {STANDARD_CLOSURE_CLOSED, STANDARD_CLOSURE_BLOCKED}:
+        _failure(payload, "standard_closure_status_invalid")
+    if payload["promotion_enhancement_status"] not in {
+        PROMOTION_ENHANCEMENT_OPEN,
+        PROMOTION_ENHANCEMENT_READY,
+        PROMOTION_ENHANCEMENT_CLOSED,
+    }:
+        _failure(payload, "promotion_enhancement_status_invalid")
+
+    standard_ready = _derive_standard_closure_ready(payload)
+    payload["standard_closure_ready"] = bool(standard_ready)
+    if payload["standard_closure_status"] == STANDARD_CLOSURE_CLOSED and not standard_ready:
+        _failure(payload, "standard_closure_claim_not_supported")
+    if payload["standard_closure_status"] == STANDARD_CLOSURE_BLOCKED and standard_ready:
+        _failure(payload, "standard_closure_status_not_closed")
+
+    if payload["promotion_status"] == PROMOTION_LOCK:
+        if payload["promotion_enhancement_status"] != PROMOTION_ENHANCEMENT_OPEN:
+            _failure(payload, "promotion_enhancement_status_not_open_while_locked")
+    elif payload["promotion_status"] == PROMOTION_ELIGIBLE:
+        if payload["promotion_enhancement_status"] == PROMOTION_ENHANCEMENT_OPEN:
+            _failure(payload, "promotion_enhancement_status_still_open_while_eligible")
+
+
 def _validate_registry(payload: dict[str, Any], *, repo_root: Path, stream_version: str, governance_doc: str, review_doc: str, registry_rel: str) -> None:
     resolved_path, active_file, alias_error = _resolve_current_yaml_alias(repo_root, registry_rel)
     payload["stream_doc_registry_entry"] = str((repo_root / registry_rel).resolve())
@@ -506,6 +561,11 @@ def _validate_summary_and_manifest(
         payload["promotion_status"] = PROMOTION_ELIGIBLE
     elif payload["promotion_status"] != STATUS_FAIL_REQUIRED:
         payload["promotion_status"] = PROMOTION_LOCK
+
+    _validate_closure_decision(
+        payload,
+        summary=summary,
+    )
 
     if str(manifest.get("summary_ref", "")).strip() != _relative(repo_root, summary_path):
         _failure(payload, "manifest_summary_ref_mismatch")

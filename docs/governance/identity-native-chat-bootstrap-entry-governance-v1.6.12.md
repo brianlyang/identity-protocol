@@ -167,3 +167,8 @@ Execution mode: topic-level canonical SSOT for v1.6.12 native-chat bootstrap ent
    - `final_channel_relay_receipt_status`
    - `controlled_emitter_path_status`
    - `no_silent_headerless_turn_status`
+5. The same machine gate must also report the closure boundary explicitly so later work cannot reinterpret the stream by chat text alone:
+   - `standard_implementation_mode=assistant_visible_inject`
+   - `standard_closure_status=CLOSED`
+   - `promotion_enhancement_mode=host_final_surface_controlled_display`
+   - `promotion_enhancement_status=OPEN` while `promotion_status=NON_PROMOTIONAL_LOCK`

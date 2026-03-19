@@ -107,6 +107,11 @@ assert positive['stream_opening_status'] == 'PASS_REQUIRED', positive
 assert positive['promotion_status'] == 'NON_PROMOTIONAL_LOCK', positive
 assert positive['live_smoke_contract_classification'] == 'HOST_RUNTIME_INCONCLUSIVE_NON_PROMOTIONAL', positive
 assert positive['bundle_root_source'] == 'canonical_fixture', positive
+assert positive['standard_implementation_mode'] == 'assistant_visible_inject', positive
+assert positive['standard_closure_status'] == 'CLOSED', positive
+assert positive['standard_closure_ready'] is True, positive
+assert positive['promotion_enhancement_mode'] == 'host_final_surface_controlled_display', positive
+assert positive['promotion_enhancement_status'] == 'OPEN', positive
 assert positive['final_channel_relay_receipt_status'] == 'PASS_REQUIRED', positive
 assert positive['controlled_emitter_path_status'] == 'PASS_REQUIRED', positive
 assert positive['unsupported_bypass_status'] == 'PASS_REQUIRED', positive
@@ -124,6 +129,8 @@ print(json.dumps({
     'positive_stream_opening_status': positive['stream_opening_status'],
     'positive_promotion_status': positive['promotion_status'],
     'positive_bundle_root_source': positive['bundle_root_source'],
+    'positive_standard_closure_status': positive['standard_closure_status'],
+    'positive_promotion_enhancement_status': positive['promotion_enhancement_status'],
     'positive_final_channel_relay_receipt_status': positive['final_channel_relay_receipt_status'],
     'positive_controlled_emitter_path_status': positive['controlled_emitter_path_status'],
     'positive_no_silent_headerless_turn_status': positive['no_silent_headerless_turn_status'],
