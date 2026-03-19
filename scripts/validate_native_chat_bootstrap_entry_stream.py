@@ -57,6 +57,7 @@ HOST_VISIBLE_PROBE_SUITE = "host_visible_surface_live_probes"
 HOST_VISIBLE_REQUIRED_PROMOTION_PROBES = {
     "host_visible_live_receipts_pass": 0,
     "host_visible_final_channel_relay_missing_blocked": 1,
+    "host_visible_post_check_recovery_reseeds_final_channel_relay": 0,
     "send_time_governed_pass_headstamp_required": 0,
 }
 
@@ -195,6 +196,7 @@ def _inspect_host_visible_probe_manifest(repo_root: Path, manifest_path: Path) -
         "final_channel_relay_receipt_status": STATUS_FAIL_REQUIRED,
         "controlled_emitter_path_status": STATUS_FAIL_REQUIRED,
         "unsupported_bypass_status": STATUS_FAIL_REQUIRED,
+        "post_check_recovery_status": STATUS_FAIL_REQUIRED,
     }
     if payload["suite"] != HOST_VISIBLE_PROBE_SUITE:
         payload["status"] = STATUS_FAIL_REQUIRED
@@ -247,6 +249,39 @@ def _inspect_host_visible_probe_manifest(repo_root: Path, manifest_path: Path) -
         if relay_status != STATUS_PASS_REQUIRED:
             payload["status"] = STATUS_FAIL_REQUIRED
             payload["failures"].append("host_visible_final_channel_relay_not_pass_required")
+
+    recovery_row = index.get("host_visible_post_check_recovery_reseeds_final_channel_relay")
+    if recovery_row is not None:
+        recovery_stdout = str(recovery_row.get("stdout_path", "")).strip()
+        if not recovery_stdout:
+            payload["status"] = STATUS_FAIL_REQUIRED
+            payload["failures"].append("host_visible_post_check_recovery_stdout_missing")
+        else:
+            recovery_doc = _read_probe_doc(
+                _resolve_manifest_member_path(manifest_path, recovery_stdout)
+            )
+            payload["post_check_recovery_observed"] = {
+                "recovery_status": str(recovery_doc.get("recovery_status", "")).strip(),
+                "attestation_status": str(recovery_doc.get("attestation_status", "")).strip(),
+                "seeded_final_channel_relay_status": str(
+                    recovery_doc.get("seeded_final_channel_relay_status", "")
+                ).strip(),
+            }
+            payload["post_check_recovery_status"] = str(
+                recovery_doc.get("recovery_status", "")
+            ).strip() or STATUS_FAIL_REQUIRED
+            if payload["post_check_recovery_status"] != STATUS_PASS_REQUIRED:
+                payload["status"] = STATUS_FAIL_REQUIRED
+                payload["failures"].append("host_visible_post_check_recovery_not_pass_required")
+            if str(recovery_doc.get("attestation_status", "")).strip() != STATUS_PASS_REQUIRED:
+                payload["status"] = STATUS_FAIL_REQUIRED
+                payload["failures"].append("host_visible_post_check_recovery_attestation_not_pass_required")
+            if str(recovery_doc.get("seeded_final_channel_relay_status", "")).strip() != STATUS_PASS_REQUIRED:
+                payload["status"] = STATUS_FAIL_REQUIRED
+                payload["failures"].append("host_visible_post_check_recovery_relay_seed_not_pass_required")
+            if not str(recovery_doc.get("seeded_final_channel_relay_receipt_path", "")).strip():
+                payload["status"] = STATUS_FAIL_REQUIRED
+                payload["failures"].append("host_visible_post_check_recovery_relay_receipt_path_missing")
 
     send_time_row = index.get("send_time_governed_pass_headstamp_required")
     if send_time_row is not None:
@@ -338,6 +373,10 @@ def _validate_promotion_unlock_bundle(
             payload["unsupported_bypass_status"] = str(
                 probe_payload.get("unsupported_bypass_status", payload["unsupported_bypass_status"])
             ).strip()
+            payload["post_check_recovery_status"] = str(
+                probe_payload.get("post_check_recovery_status", "")
+            ).strip()
+            payload["post_check_recovery_observed"] = probe_payload.get("post_check_recovery_observed", {})
             payload["final_channel_relay_receipt_path"] = str(
                 probe_payload.get("final_channel_relay_receipt_path", "")
             ).strip()

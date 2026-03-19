@@ -86,13 +86,14 @@ Scope: protocol review ledger for native-chat bootstrap entry governance and wor
    - `scripts/ci/run_host_visible_surface_live_probes_ci.sh`
 3. Local replay on 2026-03-19 confirms that the producer, send-time gate, and host-visible attestation layers now agree on the final-channel relay proof path:
    - `python3 scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` returns `stream_opening_status=PASS_REQUIRED`, `promotion_status=NON_PROMOTIONAL_LOCK`, and `live_smoke_status=INCONCLUSIVE_HOST_RUNTIME_PANIC`
-   - `bash scripts/ci/run_host_visible_surface_live_probes_ci.sh` returns passing positive/negative probes including `host_visible_live_receipts_pass`, `host_visible_final_channel_relay_missing_blocked`, and `send_time_governed_pass_headstamp_required`
-4. This progress raises confidence that sender-side controlled visible projection is no longer relying on a naked outer delivery assumption.
-5. Closure blockers identified during review on 2026-03-19 are now reduced on the protocol side:
+   - `bash scripts/ci/run_host_visible_surface_live_probes_ci.sh` returns passing positive/negative probes including `host_visible_live_receipts_pass`, `host_visible_final_channel_relay_missing_blocked`, `host_visible_post_check_recovery_reseeds_final_channel_relay`, and `send_time_governed_pass_headstamp_required`
+4. The host-visible live probe suite now proves that post-check recovery is not a blind backfill: when the `final` channel relay fields are intentionally removed, `scripts/recover_host_visible_post_check_state.py` reseeds the exact relay metadata from the actual reply transport ref and returns `recovery_status=PASS_REQUIRED` together with `seeded_final_channel_relay_status=PASS_REQUIRED`.
+5. This progress raises confidence that sender-side controlled visible projection is no longer relying on a naked outer delivery assumption.
+6. Closure blockers identified during review on 2026-03-19 are now reduced on the protocol side:
    - the previously untracked v1.6.12/final-relay protocol files are landed in commit `3e6ca34`
    - `scripts/ci/run_host_visible_surface_live_probes_ci.sh` now resolves repo-root-owned script paths explicitly, so prefixed invocation from the workspace root no longer depends on `cwd`
-6. The stream-opening validator now prefers the tracked canonical fixture bundle under `identity/protocol/fixtures/...`; runtime-local `activity/evidence/...` remains a replay mirror, not the only reproducible audit source.
-7. This progress note does not upgrade the stream to promotion-grade closure: the outer native-chat final visible surface still needs stable host-runtime proof before reviewers may claim that the final visible reply is always hard-bound to the controlled visible emitter.
+7. The stream-opening validator now prefers the tracked canonical fixture bundle under `identity/protocol/fixtures/...`; runtime-local `activity/evidence/...` remains a replay mirror, not the only reproducible audit source.
+8. This progress note does not upgrade the stream to promotion-grade closure: the outer native-chat final visible surface still needs stable host-runtime proof before reviewers may claim that the final visible reply is always hard-bound to the controlled visible emitter.
 
 ## 5) Audit verdict rules (frozen)
 
@@ -119,6 +120,7 @@ Scope: protocol review ledger for native-chat bootstrap entry governance and wor
 9. `scripts/validate_native_chat_bootstrap_entry_stream.py` now exposes the promotion-side machine bundle directly and must remain the single audit gate for:
    - `tuple_present_status`
    - `authoritative_resolve_status`
+   - `post_check_recovery_status`
    - `final_channel_relay_receipt_status`
    - `controlled_emitter_path_status`
    - `no_silent_headerless_turn_status`

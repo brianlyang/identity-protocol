@@ -112,6 +112,7 @@ assert positive['standard_closure_status'] == 'CLOSED', positive
 assert positive['standard_closure_ready'] is True, positive
 assert positive['promotion_enhancement_mode'] == 'host_final_surface_controlled_display', positive
 assert positive['promotion_enhancement_status'] == 'OPEN', positive
+assert positive['post_check_recovery_status'] == 'PASS_REQUIRED', positive
 assert positive['final_channel_relay_receipt_status'] == 'PASS_REQUIRED', positive
 assert positive['controlled_emitter_path_status'] == 'PASS_REQUIRED', positive
 assert positive['unsupported_bypass_status'] == 'PASS_REQUIRED', positive
@@ -131,6 +132,7 @@ print(json.dumps({
     'positive_bundle_root_source': positive['bundle_root_source'],
     'positive_standard_closure_status': positive['standard_closure_status'],
     'positive_promotion_enhancement_status': positive['promotion_enhancement_status'],
+    'positive_post_check_recovery_status': positive['post_check_recovery_status'],
     'positive_final_channel_relay_receipt_status': positive['final_channel_relay_receipt_status'],
     'positive_controlled_emitter_path_status': positive['controlled_emitter_path_status'],
     'positive_no_silent_headerless_turn_status': positive['no_silent_headerless_turn_status'],

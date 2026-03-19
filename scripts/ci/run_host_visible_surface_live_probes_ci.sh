@@ -8,10 +8,16 @@ WORK_ROOT="${HOST_VISIBLE_SURFACE_PROBE_WORK_ROOT:-${DEFAULT_WORK_ROOT}}"
 FIXTURE_ROOT="${WORK_ROOT}/fixtures"
 RESULT_ROOT="${WORK_ROOT}/results"
 MANIFEST_PATH="${WORK_ROOT}/manifest.host_visible_surface_live.json"
+CANONICAL_FIXTURE_ROOT_PREFIX="${REPO_ROOT}/identity/protocol/fixtures/"
+SNAPSHOT_MODE="${HOST_VISIBLE_SURFACE_PROBE_SNAPSHOT_MODE:-}"
+if [ -z "${SNAPSHOT_MODE}" ] && [[ "${WORK_ROOT}" == "${CANONICAL_FIXTURE_ROOT_PREFIX}"* ]]; then
+  SNAPSHOT_MODE="canonical"
+fi
 REPO_CATALOG_PATH="${REPO_ROOT}/identity/catalog/identities.yaml"
 REPAIR_CONTRACT_BACKFILL="${REPO_ROOT}/scripts/repair_contract_backfill.py"
 VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION="${REPO_ROOT}/scripts/validate_host_transport_wiring_attestation.py"
 VALIDATE_SEND_TIME_REPLY_GATE="${REPO_ROOT}/scripts/validate_send_time_reply_gate.py"
+RECOVER_HOST_VISIBLE_POST_CHECK_STATE="${REPO_ROOT}/scripts/recover_host_visible_post_check_state.py"
 
 rm -rf "${WORK_ROOT}"
 mkdir -p "${FIXTURE_ROOT}" "${RESULT_ROOT}"
@@ -172,6 +178,23 @@ elif name == "host_visible_final_channel_relay_missing_blocked":
     token = "host_visible_surface_live_final_channel_agent_relay_final_answer_status_missing"
     if token not in reasons:
         raise SystemExit("host_visible_final_channel_relay_missing_blocked: expected final relay missing token")
+elif name == "host_visible_post_check_recovery_reseeds_final_channel_relay":
+    if rc != 0:
+        raise SystemExit("host_visible_post_check_recovery_reseeds_final_channel_relay: expected zero rc")
+    recovery_status = str(doc.get("recovery_status", "")).strip().upper()
+    if recovery_status != "PASS_REQUIRED":
+        raise SystemExit("host_visible_post_check_recovery_reseeds_final_channel_relay: recovery_status must be PASS_REQUIRED")
+    attestation_status = str(doc.get("attestation_status", "")).strip().upper()
+    if attestation_status != "PASS_REQUIRED":
+        raise SystemExit("host_visible_post_check_recovery_reseeds_final_channel_relay: attestation_status must be PASS_REQUIRED")
+    relay_status = str(doc.get("seeded_final_channel_relay_status", "")).strip().upper()
+    if relay_status != "PASS_REQUIRED":
+        raise SystemExit("host_visible_post_check_recovery_reseeds_final_channel_relay: seeded_final_channel_relay_status must be PASS_REQUIRED")
+    relay_receipt_path = str(doc.get("seeded_final_channel_relay_receipt_path", "")).strip()
+    if not relay_receipt_path:
+        raise SystemExit("host_visible_post_check_recovery_reseeds_final_channel_relay: seeded_final_channel_relay_receipt_path missing")
+    if reasons:
+        raise SystemExit("host_visible_post_check_recovery_reseeds_final_channel_relay: stale_reasons must be empty")
 elif name == "host_visible_live_run_binding_required_blocked":
     if rc == 0:
         raise SystemExit("host_visible_live_run_binding_required_blocked: expected non-zero rc")
@@ -570,54 +593,19 @@ run_probe host_visible_final_channel_relay_missing_blocked \
     --require-run-id run:ci-probe-receipt \
     --json-only
 
-python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}" "${SEND_TIME_REPLY_FILE}"
-from __future__ import annotations
-
-import json
-from datetime import datetime, timezone
-from pathlib import Path
-import sys
-
-repo_root = Path(sys.argv[3]).resolve()
-sys.path.insert(0, str((repo_root / "scripts").resolve()))
-
-from host_visible_final_channel_relay_common import (
-    build_host_visible_final_channel_relay_receipt,
-    project_host_visible_final_channel_relay_fields,
-)
-from tool_vendor_governance_common import resolve_pack_and_task
-
-catalog_path = Path(sys.argv[1]).resolve()
-identity_id = sys.argv[2]
-reply_transport_ref = str(Path(sys.argv[4]).resolve())
-pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
-relay_rc, relay_payload = build_host_visible_final_channel_relay_receipt(
-    repo_root=repo_root,
-    pack_path=pack_path,
-    identity_id=identity_id,
-    run_id="run:ci-probe-receipt",
-    reply_transport_ref=reply_transport_ref,
-    now_token=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
-)
-if relay_rc != 0:
-    raise SystemExit(f"failed to reseed final relay: {relay_payload}")
-relay_projection = project_host_visible_final_channel_relay_fields(relay_payload)
-path = pack_path / "runtime" / "reports" / "host-visible-surface" / "host-visible-surface-04-final.json"
-doc = json.loads(path.read_text(encoding="utf-8"))
-doc.update(relay_projection)
-path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-PY
-
-python3 "${VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION}" \
-  --catalog "${CATALOG_PATH}" \
-  --identity-id "${IDENTITY_ID}" \
-  --operation ci \
-  --require-live-receipts \
-  --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
-  --require-actor-id assistant:ci-probe \
-  --require-session-id run:ci-probe-session \
-  --require-run-id run:ci-probe-receipt \
-  --json-only >/dev/null
+run_probe host_visible_post_check_recovery_reseeds_final_channel_relay \
+  python3 "${RECOVER_HOST_VISIBLE_POST_CHECK_STATE}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
+    --identity-id "${IDENTITY_ID}" \
+    --operation ci \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --run-id run:ci-probe-receipt \
+    --receipt-source runtime_dialogue \
+    --reply-transport-ref "${SEND_TIME_REPLY_FILE}" \
+    --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+    --json-only
 
 run_probe send_time_governed_pass_headstamp_required \
   python3 "${VALIDATE_SEND_TIME_REPLY_GATE}" \
@@ -720,6 +708,7 @@ run_probe host_visible_live_run_binding_required_blocked \
 python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
 from __future__ import annotations
 
+import json
 import os
 import time
 from pathlib import Path
@@ -733,9 +722,13 @@ from tool_vendor_governance_common import resolve_pack_and_task
 catalog_path = Path(sys.argv[1]).resolve()
 identity_id = sys.argv[2]
 pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
-path = pack_path / "runtime" / "reports" / "host-visible-surface" / "host-visible-surface-01-commentary.json"
 stale_epoch = int(time.time()) - 600
-os.utime(path, (stale_epoch, stale_epoch))
+receipt_dir = pack_path / "runtime" / "reports" / "host-visible-surface"
+for path in sorted(receipt_dir.glob("host-visible-surface*.json")):
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if str(doc.get("emit_channel_id", "")).strip() != "commentary":
+        continue
+    os.utime(path, (stale_epoch, stale_epoch))
 PY
 
 run_probe host_visible_receipt_stale_blocked \
@@ -766,12 +759,14 @@ from tool_vendor_governance_common import resolve_pack_and_task
 catalog_path = Path(sys.argv[1]).resolve()
 identity_id = sys.argv[2]
 pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
-receipt_dir = pack_path / "runtime" / "reports" / "host-visible-surface"
 timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-path = receipt_dir / "host-visible-surface-01-commentary.json"
-doc = json.loads(path.read_text(encoding="utf-8"))
-doc["created_at_utc"] = timestamp
-path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+receipt_dir = pack_path / "runtime" / "reports" / "host-visible-surface"
+for path in sorted(receipt_dir.glob("host-visible-surface*.json")):
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if str(doc.get("emit_channel_id", "")).strip() != "commentary":
+        continue
+    doc["created_at_utc"] = timestamp
+    path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 PY
 
 python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
@@ -789,10 +784,13 @@ from tool_vendor_governance_common import resolve_pack_and_task
 catalog_path = Path(sys.argv[1]).resolve()
 identity_id = sys.argv[2]
 pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
-path = pack_path / "runtime" / "reports" / "host-visible-surface" / "host-visible-surface-01-commentary.json"
-doc = json.loads(path.read_text(encoding="utf-8"))
-doc["session_id"] = "run:ci-probe-session-drift"
-path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+receipt_dir = pack_path / "runtime" / "reports" / "host-visible-surface"
+for path in sorted(receipt_dir.glob("host-visible-surface*.json")):
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if str(doc.get("emit_channel_id", "")).strip() != "commentary":
+        continue
+    doc["session_id"] = "run:ci-probe-session-drift"
+    path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 PY
 
 run_probe host_visible_commentary_session_binding_blocked \
@@ -823,11 +821,15 @@ from tool_vendor_governance_common import resolve_pack_and_task
 catalog_path = Path(sys.argv[1]).resolve()
 identity_id = sys.argv[2]
 pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
-path = pack_path / "runtime" / "reports" / "host-visible-surface" / "host-visible-surface-01-commentary.json"
-doc = json.loads(path.read_text(encoding="utf-8"))
-doc["session_id"] = "run:ci-probe-session"
-doc["created_at_utc"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+receipt_dir = pack_path / "runtime" / "reports" / "host-visible-surface"
+timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+for path in sorted(receipt_dir.glob("host-visible-surface*.json")):
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if str(doc.get("emit_channel_id", "")).strip() != "commentary":
+        continue
+    doc["session_id"] = "run:ci-probe-session"
+    doc["created_at_utc"] = timestamp
+    path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 PY
 
 python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
@@ -845,10 +847,13 @@ from tool_vendor_governance_common import resolve_pack_and_task
 catalog_path = Path(sys.argv[1]).resolve()
 identity_id = sys.argv[2]
 pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
-path = pack_path / "runtime" / "reports" / "host-visible-surface" / "host-visible-surface-01-commentary.json"
-doc = json.loads(path.read_text(encoding="utf-8"))
-doc["headstamp_first_line_status"] = "FAIL_REQUIRED"
-path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+receipt_dir = pack_path / "runtime" / "reports" / "host-visible-surface"
+for path in sorted(receipt_dir.glob("host-visible-surface*.json")):
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if str(doc.get("emit_channel_id", "")).strip() != "commentary":
+        continue
+    doc["headstamp_first_line_status"] = "FAIL_REQUIRED"
+    path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 PY
 
 run_probe host_visible_commentary_bypass_blocked \
@@ -906,3 +911,112 @@ manifest_path.parent.mkdir(parents=True, exist_ok=True)
 manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 print(f"[PASS] host visible surface probe suite wrote manifest: {manifest_path}")
 PY
+
+if [ "${SNAPSHOT_MODE}" = "canonical" ]; then
+  python3 - <<'PY' "${REPO_ROOT}" "${WORK_ROOT}" "${FIXTURE_ROOT}" "${RESULT_ROOT}" "${MANIFEST_PATH}"
+from __future__ import annotations
+
+import json
+import shutil
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[1]).resolve()
+work_root = Path(sys.argv[2]).resolve()
+fixture_root = Path(sys.argv[3]).resolve()
+result_root = Path(sys.argv[4]).resolve()
+manifest_path = Path(sys.argv[5]).resolve()
+manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+results = manifest.get("results") or []
+
+relay_receipt_rel = (
+    work_root.relative_to(repo_root).as_posix() + "/fixtures/receipts/agent-relay-final-answer-receipt.json"
+)
+relay_receipt_path = fixture_root / "receipts" / "agent-relay-final-answer-receipt.json"
+relay_receipt_path.parent.mkdir(parents=True, exist_ok=True)
+
+def load_result(name: str) -> tuple[dict, Path]:
+    path = result_root / f"{name}.stdout.json"
+    return json.loads(path.read_text(encoding="utf-8")), path
+
+live_doc, live_src = load_result("host_visible_live_receipts_pass")
+real_receipt_path = Path(
+    str(live_doc.get("host_transport_wiring_attestation_final_channel_relay_receipt_path", "")).strip()
+).expanduser()
+if not real_receipt_path.exists():
+    raise SystemExit("canonical snapshot export missing live relay receipt")
+shutil.copyfile(real_receipt_path, relay_receipt_path)
+
+recovery_doc, recovery_src = load_result("host_visible_post_check_recovery_reseeds_final_channel_relay")
+send_time_doc, send_time_src = load_result("send_time_governed_pass_headstamp_required")
+
+minimal_outputs = {
+    "host_visible_live_receipts_pass": {
+        "host_transport_wiring_attestation_status": str(
+            live_doc.get("host_transport_wiring_attestation_status", "")
+        ).strip(),
+        "host_transport_wiring_attestation_final_channel_relay_status": str(
+            live_doc.get("host_transport_wiring_attestation_final_channel_relay_status", "")
+        ).strip(),
+        "host_transport_wiring_attestation_final_channel_relay_reason": str(
+            live_doc.get("host_transport_wiring_attestation_final_channel_relay_reason", "")
+        ).strip(),
+        "host_transport_wiring_attestation_final_channel_relay_receipt_path": relay_receipt_rel,
+    },
+    "host_visible_post_check_recovery_reseeds_final_channel_relay": {
+        "recovery_status": str(recovery_doc.get("recovery_status", "")).strip(),
+        "attestation_status": str(recovery_doc.get("attestation_status", "")).strip(),
+        "seeded_final_channel_relay_status": str(
+            recovery_doc.get("seeded_final_channel_relay_status", "")
+        ).strip(),
+        "seeded_final_channel_relay_receipt_path": relay_receipt_rel,
+    },
+    "send_time_governed_pass_headstamp_required": {
+        "send_time_gate_status": str(send_time_doc.get("send_time_gate_status", "")).strip(),
+        "current_surface_transport_attestation_status": str(
+            send_time_doc.get("current_surface_transport_attestation_status", "")
+        ).strip(),
+        "chat_egress_uniqueness_status": str(
+            send_time_doc.get("chat_egress_uniqueness_status", "")
+        ).strip(),
+        "next_hop_admission_status": str(send_time_doc.get("next_hop_admission_status", "")).strip(),
+        "headstamp_consistency_status": str(send_time_doc.get("headstamp_consistency_status", "")).strip(),
+        "output_governance_mode": str(send_time_doc.get("output_governance_mode", "")).strip(),
+    },
+}
+
+for probe_name, payload in minimal_outputs.items():
+    path = result_root / f"{probe_name}.stdout.json"
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+keep_stdout = {
+    "host_visible_live_receipts_pass",
+    "host_visible_post_check_recovery_reseeds_final_channel_relay",
+    "send_time_governed_pass_headstamp_required",
+}
+for row in results:
+    if not isinstance(row, dict):
+        continue
+    probe_name = str(row.get("probe_name", "")).strip()
+    row["command"] = f"fixture_snapshot:{probe_name}"
+    row["stderr_path"] = ""
+    if probe_name in keep_stdout:
+        row["stdout_path"] = f"results/{probe_name}.stdout.json"
+    else:
+        row["stdout_path"] = ""
+
+manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+for path in list(result_root.glob("*")):
+    if path.name not in {f"{name}.stdout.json" for name in keep_stdout}:
+        path.unlink()
+
+for path in fixture_root.iterdir():
+    if path.name == "receipts":
+        continue
+    if path.is_dir():
+        shutil.rmtree(path)
+    else:
+        path.unlink()
+PY
+fi

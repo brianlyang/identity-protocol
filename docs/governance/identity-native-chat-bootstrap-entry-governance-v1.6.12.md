@@ -123,6 +123,7 @@ Execution mode: topic-level canonical SSOT for v1.6.12 native-chat bootstrap ent
 4. Host final surface controlled display remains a stronger sender-side proof enhancement:
    - controlled visible emitter on the final host-visible surface,
    - exact relay receipt at the `final` channel,
+   - post-check recovery that can reseed the exact relay metadata from the actual reply transport ref,
    - live `no_silent_headerless_turn` proof.
 5. That stronger sender-side proof stays in the same `v1.6.12` stream as a promotion-grade enhancement and must not be used to reopen or invalidate the standard implementation once the standard boundary above is satisfied.
 
@@ -164,6 +165,7 @@ Execution mode: topic-level canonical SSOT for v1.6.12 native-chat bootstrap ent
 4. `scripts/validate_native_chat_bootstrap_entry_stream.py` is the machine gate for this bundle and must report the promotion-side evidence fields explicitly:
    - `tuple_present_status`
    - `authoritative_resolve_status`
+   - `post_check_recovery_status`
    - `final_channel_relay_receipt_status`
    - `controlled_emitter_path_status`
    - `no_silent_headerless_turn_status`

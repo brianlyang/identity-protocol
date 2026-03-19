@@ -297,7 +297,9 @@ def _run_post_check_auto_recovery(
     session_id: str,
     run_id: str,
     requested_work_layer: str,
+    reply_transport_ref: str,
 ) -> tuple[int, dict[str, Any] | None]:
+    transport_ref = str(reply_transport_ref or "").strip() or "runtime:final_emit_governed_auto_recovery"
     recovery_cmd = [
         sys.executable,
         str((SCRIPT_DIR / "recover_host_visible_post_check_state.py").resolve()),
@@ -318,7 +320,7 @@ def _run_post_check_auto_recovery(
         "--receipt-source",
         "runtime_dialogue",
         "--reply-transport-ref",
-        "runtime:final_emit_governed_auto_recovery",
+        transport_ref,
         "--json-only",
     ]
     if str(requested_work_layer or "").strip().lower() == "protocol":
@@ -1156,6 +1158,7 @@ def main() -> int:
             session_id=str(args.session_id or "").strip(),
             run_id=run_id,
             requested_work_layer=requested_work_layer,
+            reply_transport_ref=str(compose_payload.get("reply_transport_ref") or compose_payload.get("out_reply_file") or "").strip(),
         )
         if post_check_auto_recovery_rc == 0:
             proc = subprocess.run(compose_cmd, cwd=str(REPO_ROOT), capture_output=True, text=True)

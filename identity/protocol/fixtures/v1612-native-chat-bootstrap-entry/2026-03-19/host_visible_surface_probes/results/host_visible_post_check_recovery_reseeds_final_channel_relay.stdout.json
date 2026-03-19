@@ -1,0 +1,6 @@
+{
+  "recovery_status": "PASS_REQUIRED",
+  "attestation_status": "PASS_REQUIRED",
+  "seeded_final_channel_relay_status": "PASS_REQUIRED",
+  "seeded_final_channel_relay_receipt_path": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/host_visible_surface_probes/fixtures/receipts/agent-relay-final-answer-receipt.json"
+}

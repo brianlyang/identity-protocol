@@ -92,10 +92,10 @@
     {
       "kind": "host_visible_surface_probe_manifest",
       "mirror_path": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/host_visible_surface_probes/manifest.host_visible_surface_live.json",
-      "sha256": "9a09b50e4f15836df65bc2ceb61fb721690910ba37a0d272e84ed334b3600eec",
+      "sha256": "fc4504785633fa0cc6d480b47674a1d106cb516a4007631aaa305901b47b4321",
       "command": "fixture_snapshot:canonical_v1612_bundle",
       "rc": 0,
-      "timestamp": "2026-03-19T15:30:00Z"
+      "timestamp": "2026-03-19T16:44:49Z"
     }
   ]
 }

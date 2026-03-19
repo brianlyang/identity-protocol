@@ -225,6 +225,8 @@ def main() -> int:
         str(args.run_id).strip(),
         "--receipt-source",
         HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
+        "--reply-transport-ref",
+        str(reply_file_path),
         "--allowed-live-receipt-sources",
         HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
         "--json-only",

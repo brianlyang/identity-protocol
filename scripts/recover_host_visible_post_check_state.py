@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Any
 
 from protocol_infra_contract import (
+    HOST_VISIBLE_FINAL_CHANNEL_ID,
+    HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED,
     HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
     HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS,
     HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
@@ -25,6 +27,10 @@ from protocol_infra_contract import (
     PRIVILEGE_ESCALATION_ERROR_CODE,
     PRIVILEGE_ESCALATION_REASON_PREFIX,
     PRIVILEGE_ESCALATION_REMEDIATION_HINT,
+)
+from host_visible_final_channel_relay_common import (
+    build_host_visible_final_channel_relay_receipt,
+    project_host_visible_final_channel_relay_fields,
 )
 from tool_vendor_governance_common import resolve_pack_and_task
 
@@ -292,9 +298,43 @@ def main() -> int:
         "final_emit_contract_status": STATUS_PASS_REQUIRED,
     }
 
+    issues: list[str] = []
+    final_channel_relay_projection: dict[str, Any] = {}
+    reply_transport_ref = str(args.reply_transport_ref).strip()
+    if reply_transport_ref:
+        candidate_path = Path(reply_transport_ref).expanduser()
+        if candidate_path.exists():
+            reply_transport_ref = str(candidate_path.resolve())
+    if HOST_VISIBLE_FINAL_CHANNEL_ID in required_channels and bool(
+        contract.get("final_channel_relay_required", HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED)
+    ):
+        reply_path = Path(reply_transport_ref).expanduser()
+        if reply_transport_ref and reply_path.exists():
+            relay_rc, relay_payload = build_host_visible_final_channel_relay_receipt(
+                repo_root=REPO_ROOT,
+                pack_path=pack_path.resolve(),
+                identity_id=str(args.identity_id).strip(),
+                run_id=str(args.run_id).strip(),
+                reply_transport_ref=reply_transport_ref,
+                now_token=now_token,
+            )
+            final_channel_relay_projection = project_host_visible_final_channel_relay_fields(relay_payload)
+            relay_status = str(
+                final_channel_relay_projection.get("agent_relay_final_answer_status", "")
+            ).strip().upper()
+            if relay_rc != 0 or relay_status != STATUS_PASS_REQUIRED:
+                relay_reasons = [
+                    str(item).strip()
+                    for item in (relay_payload.get("stale_reasons") or [])
+                    if str(item).strip()
+                ]
+                issues.append(
+                    "recovery_final_channel_relay_not_pass:"
+                    + (relay_reasons[0] if relay_reasons else "unknown")
+                )
+
     receipt_paths: list[str] = []
     receipt_paths_by_channel: dict[str, str] = {}
-    issues: list[str] = []
 
     for channel in required_channels:
         receipt_path = _receipt_path_for_channel(
@@ -310,11 +350,13 @@ def main() -> int:
             "actor_id": str(args.actor_id).strip(),
             "session_id": str(args.session_id).strip(),
             "run_id": str(args.run_id).strip(),
-            "reply_transport_ref": str(args.reply_transport_ref).strip(),
+            "reply_transport_ref": reply_transport_ref,
             "emit_channel_id": str(channel).strip(),
             HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD: receipt_source,
         }
         receipt_payload.update(status_map)
+        if str(channel).strip() == HOST_VISIBLE_FINAL_CHANNEL_ID and final_channel_relay_projection:
+            receipt_payload.update(final_channel_relay_projection)
         missing_fields = sorted(field for field in required_attestation_fields if field not in receipt_payload)
         if missing_fields:
             issues.append(f"recovery_receipt_missing_required_fields:{channel}:{','.join(missing_fields)}")
@@ -398,6 +440,12 @@ def main() -> int:
             "seeded_channels": required_channels,
             "seeded_receipt_paths": receipt_paths,
             "seeded_receipt_source": receipt_source,
+            "seeded_final_channel_relay_receipt_path": str(
+                final_channel_relay_projection.get("agent_relay_final_answer_receipt_path", "")
+            ).strip(),
+            "seeded_final_channel_relay_status": str(
+                final_channel_relay_projection.get("agent_relay_final_answer_status", "")
+            ).strip(),
         }
     )
 
