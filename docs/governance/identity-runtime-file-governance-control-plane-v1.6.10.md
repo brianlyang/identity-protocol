@@ -43,6 +43,16 @@ The objective is to freeze the boundary as:
 4. Runtime default is `instance_autonomous_runtime` unless explicitly declared as `protocol_controlled_mirror_artifact`.
 5. No file becomes protocol-owned merely because it lives under `runtime/`.
 
+### 2.1 Core ownership and escalation freeze (authoritative)
+
+1. `identity protocol` is the shared contract and upgrade framework; it does **not** backstop `instance_owned_technical_debt`.
+2. `instance_owned_technical_debt` remains instance-owned until the instance completes self-heal and produces `instance_clean_proof`.
+3. `instance_clean_proof` is required before any remaining issue may be escalated as `protocol_residual_issue`.
+4. `No instance-clean proof, no protocol escalation.`
+5. `protocol_residual_issue` is limited to shared contract / wiring / validator / CI / governance defects that remain after `instance_clean_proof`.
+6. Host/runtime entry gaps are a separate boundary and must not be relabeled as either `instance_owned_technical_debt` or `protocol_residual_issue`.
+7. Closed protocol layers must not be reopened by unresolved instance-owned technical debt.
+
 ## 3) Boundary freeze (authoritative)
 
 ### 3.1 Canonical classes

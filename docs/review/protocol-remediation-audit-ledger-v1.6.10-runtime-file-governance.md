@@ -56,15 +56,27 @@ Current-pointer continuity refs (mandatory):
 1. `protocol_generated_gateway_shell` appears in governance + review docs.
 2. `protocol_controlled_mirror_artifact` appears in governance + review docs.
 3. `instance_autonomous_runtime` appears in governance + review docs.
-4. Governance doc explicitly states: runtime default is `instance_autonomous_runtime` unless explicitly declared as `protocol_controlled_mirror_artifact`.
-5. Shell set is exactly:
+4. `instance_owned_technical_debt`, `instance_clean_proof`, and `protocol_residual_issue` appear with frozen meanings.
+5. Review wording explicitly states: `No instance-clean proof, no protocol escalation.`
+6. Review wording explicitly states protocol does not backstop instance-owned technical debt.
+7. Governance doc explicitly states: runtime default is `instance_autonomous_runtime` unless explicitly declared as `protocol_controlled_mirror_artifact`.
+8. Shell set is exactly:
    - `runtime/gate/protocol_ingress_wrapper.py`
    - `runtime/gate/protocol_egress_wrapper.py`
    - `runtime/gate/protocol_session_chain_wrapper.py`
-6. `runtime/gate/protocol_gateway_contract.json` is treated as mirror artifact, not shell code.
-7. `v1.6.10` exists in active stream registry and is not listed under legacy archival docs.
-8. `v1.6.10` does not absorb `ASB16-RQ-039/040/041`.
-9. No non-landed “must-have validator” remains in doc text.
+9. `runtime/gate/protocol_gateway_contract.json` is treated as mirror artifact, not shell code.
+10. `v1.6.10` exists in active stream registry and is not listed under legacy archival docs.
+11. `v1.6.10` does not absorb `ASB16-RQ-039/040/041`.
+12. No non-landed “must-have validator” remains in doc text.
+
+## 3.1 Ownership split freeze
+
+1. `identity protocol` is the shared contract and upgrade framework; it does **not** backstop `instance_owned_technical_debt`.
+2. `instance_owned_technical_debt` includes missing instance-local skills/config/transport/install/replay hygiene and other local recovery obligations.
+3. `instance_clean_proof` is required before any remaining issue may be escalated as `protocol_residual_issue`.
+4. `No instance-clean proof, no protocol escalation.`
+5. `protocol_residual_issue` is limited to shared contract / wiring / validator / CI / governance defects that remain after `instance_clean_proof`.
+6. Host/runtime entry gaps stay a separate boundary and must not be relabeled as either instance debt or protocol residual.
 
 ## 4) Probe matrix
 

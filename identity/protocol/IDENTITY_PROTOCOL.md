@@ -44,6 +44,17 @@ Define identity as a first-class control-plane protocol, parallel to skills and 
 
 This protocol is scenario-agnostic by design.
 
+## Core ownership and escalation contract (v1.6.10 additive)
+
+1. `identity protocol` is the shared contract and upgrade framework; it does **not** backstop instance-owned technical debt.
+2. `identity instance` is an autonomous optimization unit and must absorb protocol upgrades, complete self-heal, and clear its own technical debt.
+3. `instance_owned_technical_debt` includes missing instance-local skills/config/transport/install/replay hygiene and other local recovery obligations.
+4. `instance_clean_proof` is required before any remaining issue may be escalated as `protocol_residual_issue`.
+5. `No instance-clean proof, no protocol escalation.`
+6. `protocol_residual_issue` means a shared contract / wiring / validator / CI / governance defect that still remains **after** `instance_clean_proof`.
+7. Host/runtime entry gaps remain a separate boundary and must not be relabeled as either `instance_owned_technical_debt` or `protocol_residual_issue`.
+8. Closed protocol layers must not be reopened by unresolved instance-owned technical debt.
+
 ## Layer contract
 
 1. Canon layer (hard governance)

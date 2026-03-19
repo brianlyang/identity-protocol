@@ -26,10 +26,14 @@ ERR_BOUNDARY = "IP-RFILE-BDRY-001"
 
 DEFAULT_GOV_DOC = "docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md"
 DEFAULT_REVIEW_DOC = "docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md"
+DEFAULT_PROTOCOL_OVERVIEW_DOC = "identity/protocol/IDENTITY_PROTOCOL.md"
 DEFAULT_STREAM_REGISTRY = "identity/protocol/mappings/stream-doc-registry.current.yaml"
 DEFAULT_SEMANTIC_REGISTRY = "identity/protocol/mappings/semantic-term-registry.current.yaml"
 TRACKED_COMPILED_BRIEF_ARTIFACT_TERM = "tracked_compiled_brief_artifact"
 LEGACY_CANONICAL_COMPATIBILITY_PATH_TERM = "legacy_canonical_compatibility_path"
+INSTANCE_OWNED_TECHNICAL_DEBT_TERM = "instance_owned_technical_debt"
+INSTANCE_CLEAN_PROOF_TERM = "instance_clean_proof"
+PROTOCOL_RESIDUAL_ISSUE_TERM = "protocol_residual_issue"
 
 
 def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
@@ -75,6 +79,7 @@ def main() -> int:
     ap.add_argument("--repo-root", default=".")
     ap.add_argument("--governance-doc", default=DEFAULT_GOV_DOC)
     ap.add_argument("--review-doc", default=DEFAULT_REVIEW_DOC)
+    ap.add_argument("--protocol-overview-doc", default=DEFAULT_PROTOCOL_OVERVIEW_DOC)
     ap.add_argument("--stream-registry", default=DEFAULT_STREAM_REGISTRY)
     ap.add_argument("--semantic-registry", default=DEFAULT_SEMANTIC_REGISTRY)
     ap.add_argument("--json-only", action="store_true")
@@ -83,6 +88,7 @@ def main() -> int:
     repo_root = Path(args.repo_root).expanduser().resolve()
     governance_doc = (repo_root / str(args.governance_doc)).resolve()
     review_doc = (repo_root / str(args.review_doc)).resolve()
+    protocol_overview_doc = (repo_root / str(args.protocol_overview_doc)).resolve()
     stream_registry_path, stream_registry_active_file, stream_registry_alias_error = _resolve_current_yaml_alias(
         repo_root, str(args.stream_registry)
     )
@@ -95,6 +101,7 @@ def main() -> int:
         "error_code": ERR_BOUNDARY,
         "governance_doc": str(governance_doc),
         "review_doc": str(review_doc),
+        "protocol_overview_doc": str(protocol_overview_doc),
         "stream_registry_path": str(stream_registry_path),
         "stream_registry_active_file": stream_registry_active_file,
         "stream_registry_alias_error": stream_registry_alias_error,
@@ -110,6 +117,7 @@ def main() -> int:
         "canonical_mirror_paths": list(PROTOCOL_CONTROLLED_MIRROR_ARTIFACT_PATHS),
         "governance_doc_missing_tokens": [],
         "review_doc_missing_tokens": [],
+        "protocol_overview_missing_tokens": [],
         "missing_terms": [],
         "stream_registry_violations": [],
         "stale_reasons": [],
@@ -127,7 +135,11 @@ def main() -> int:
 
     missing_paths = [
         label
-        for label, path in (("governance_doc_missing", governance_doc), ("review_doc_missing", review_doc))
+        for label, path in (
+            ("governance_doc_missing", governance_doc),
+            ("review_doc_missing", review_doc),
+            ("protocol_overview_doc_missing", protocol_overview_doc),
+        )
         if not path.exists() or not path.is_file()
     ]
     if not stream_registry_path.exists() or not stream_registry_path.is_file():
@@ -141,6 +153,7 @@ def main() -> int:
 
     governance_text = governance_doc.read_text(encoding="utf-8", errors="ignore")
     review_text = review_doc.read_text(encoding="utf-8", errors="ignore")
+    protocol_overview_text = protocol_overview_doc.read_text(encoding="utf-8", errors="ignore")
     stream_doc = _load_yaml(stream_registry_path)
     semantic_doc = _load_yaml(semantic_registry_path)
 
@@ -175,6 +188,11 @@ def main() -> int:
         "not ordinary runtime evidence/log artifact",
         "not instance-autonomous runtime state",
         "source-first",
+        INSTANCE_OWNED_TECHNICAL_DEBT_TERM,
+        INSTANCE_CLEAN_PROOF_TERM,
+        PROTOCOL_RESIDUAL_ISSUE_TERM,
+        "No instance-clean proof, no protocol escalation.",
+        "does **not** backstop `instance_owned_technical_debt`",
     ]
     review_required_tokens = [
         PROTOCOL_GENERATED_GATEWAY_SHELL_TERM,
@@ -188,13 +206,33 @@ def main() -> int:
         "identity/runtime/IDENTITY_COMPILED.md",
         "governed generated artifact",
         "direct manual semantic editing",
+        INSTANCE_OWNED_TECHNICAL_DEBT_TERM,
+        INSTANCE_CLEAN_PROOF_TERM,
+        PROTOCOL_RESIDUAL_ISSUE_TERM,
+        "No instance-clean proof, no protocol escalation.",
+        "does **not** backstop `instance_owned_technical_debt`",
+    ]
+    protocol_overview_required_tokens = [
+        "Core ownership and escalation contract",
+        INSTANCE_OWNED_TECHNICAL_DEBT_TERM,
+        INSTANCE_CLEAN_PROOF_TERM,
+        PROTOCOL_RESIDUAL_ISSUE_TERM,
+        "No instance-clean proof, no protocol escalation.",
+        "does **not** backstop instance-owned technical debt",
+        "autonomous optimization unit",
+        "Host/runtime entry gaps remain a separate boundary",
     ]
     payload["governance_doc_missing_tokens"] = _missing_tokens(governance_text, governance_required_tokens)
     payload["review_doc_missing_tokens"] = _missing_tokens(review_text, review_required_tokens)
+    payload["protocol_overview_missing_tokens"] = _missing_tokens(
+        protocol_overview_text, protocol_overview_required_tokens
+    )
     if payload["governance_doc_missing_tokens"]:
         stale_reasons.append("governance_doc_missing_required_tokens")
     if payload["review_doc_missing_tokens"]:
         stale_reasons.append("review_doc_missing_required_tokens")
+    if payload["protocol_overview_missing_tokens"]:
+        stale_reasons.append("protocol_overview_missing_required_tokens")
 
     semantic_terms = semantic_doc.get("terms") if isinstance(semantic_doc, dict) else []
     canonical_terms = {
@@ -210,6 +248,9 @@ def main() -> int:
             INSTANCE_AUTONOMOUS_RUNTIME_TERM,
             TRACKED_COMPILED_BRIEF_ARTIFACT_TERM,
             LEGACY_CANONICAL_COMPATIBILITY_PATH_TERM,
+            INSTANCE_OWNED_TECHNICAL_DEBT_TERM,
+            INSTANCE_CLEAN_PROOF_TERM,
+            PROTOCOL_RESIDUAL_ISSUE_TERM,
         )
         if term not in canonical_terms
     ]

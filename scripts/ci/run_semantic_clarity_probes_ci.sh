@@ -1113,6 +1113,59 @@ assert "forbidden_phrase_detected" in (obj.get("stale_reasons") or []), obj
 print("[PASS] negative semantic term forbidden phrase blocked")
 PY
 
+echo "[info] semantic clarity probes: negative lane (instance debt ownership forbidden phrase)"
+mkdir -p "$TMP_ROOT/neg-semantic-instance/docs"
+cat > "$TMP_ROOT/neg-semantic-instance/docs/probe.md" <<'MD'
+This sentence says: protocol will backstop instance technical debt.
+MD
+cat > "$TMP_ROOT/neg-semantic-instance/semantic-term-registry.current.yaml" <<'YAML'
+schema_version: 1
+pointer_version: v1
+active_file: semantic-term-registry.v1.yaml
+YAML
+cat > "$TMP_ROOT/neg-semantic-instance/semantic-term-registry.v1.yaml" <<'YAML'
+schema_version: 1
+registry_version: test
+stream_version: v1.6
+terms:
+  - term_id: instance_owned_technical_debt
+    canonical_term: instance_owned_technical_debt
+    semantics: ok
+    allowed_scope: [instance_runtime]
+  - term_id: instance_clean_proof
+    canonical_term: instance_clean_proof
+    semantics: ok
+    allowed_scope: [review_acceptance]
+  - term_id: protocol_residual_issue
+    canonical_term: protocol_residual_issue
+    semantics: ok
+    allowed_scope: [governance]
+forbidden_phrases:
+  - phrase: "protocol will backstop instance technical debt"
+    replacement: "instance_owned_technical_debt remains instance-owned; protocol_residual_issue starts only after instance_clean_proof"
+scan_roots:
+  - docs/probe.md
+include_active_stream_docs: false
+YAML
+set +e
+python3 scripts/validate_semantic_term_registry.py \
+  --repo-root "$TMP_ROOT/neg-semantic-instance" \
+  --registry semantic-term-registry.current.yaml \
+  --json-only > "$TMP_ROOT/semantic_term_instance_negative.json"
+rc=$?
+set -e
+if [[ "$rc" -eq 0 ]]; then
+  echo "[FAIL] expected instance debt ownership forbidden-phrase probe to fail"
+  exit 1
+fi
+python3 - "$TMP_ROOT/semantic_term_instance_negative.json" <<'PY'
+import json,sys
+obj=json.load(open(sys.argv[1]))
+assert obj.get("error_code") == "IP-SEMREG-001", obj
+assert "forbidden_phrase_detected" in (obj.get("stale_reasons") or []), obj
+print("[PASS] negative instance debt ownership forbidden phrase blocked")
+PY
+
 echo "[info] semantic clarity probes: negative lane (runtime catalog default fallback)"
 mkdir -p "$TMP_ROOT/neg-cli/scripts"
 cat > "$TMP_ROOT/neg-cli/scripts/bad.py" <<'PY'
@@ -1140,7 +1193,7 @@ print("[PASS] negative cli catalog fallback blocked")
 PY
 
 echo "[info] semantic clarity probes: negative lane (runtime boundary missing required tokens)"
-mkdir -p "$TMP_ROOT/neg-boundary/docs/governance" "$TMP_ROOT/neg-boundary/docs/review" "$TMP_ROOT/neg-boundary/identity/protocol/mappings"
+mkdir -p "$TMP_ROOT/neg-boundary/docs/governance" "$TMP_ROOT/neg-boundary/docs/review" "$TMP_ROOT/neg-boundary/identity/protocol/mappings" "$TMP_ROOT/neg-boundary/identity/protocol"
 cat > "$TMP_ROOT/neg-boundary/docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md" <<'MD'
 # broken doc
 This text wrongly says all protocol-governed instance runtime files under `runtime/state`, `runtime/gate`, `runtime/plugins`, and `runtime/protocol-feedback`.
@@ -1148,6 +1201,10 @@ MD
 cat > "$TMP_ROOT/neg-boundary/docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md" <<'MD'
 # broken review
 missing boundary tokens on purpose
+MD
+cat > "$TMP_ROOT/neg-boundary/identity/protocol/IDENTITY_PROTOCOL.md" <<'MD'
+# broken protocol overview
+protocol will backstop instance technical debt
 MD
 cat > "$TMP_ROOT/neg-boundary/identity/protocol/mappings/stream-doc-registry.current.yaml" <<'YAML'
 schema_version: 1
@@ -1185,6 +1242,18 @@ terms:
     canonical_term: instance_autonomous_runtime
     semantics: ok
     allowed_scope: [instance_runtime]
+  - term_id: instance_owned_technical_debt
+    canonical_term: instance_owned_technical_debt
+    semantics: ok
+    allowed_scope: [instance_runtime]
+  - term_id: instance_clean_proof
+    canonical_term: instance_clean_proof
+    semantics: ok
+    allowed_scope: [review_acceptance]
+  - term_id: protocol_residual_issue
+    canonical_term: protocol_residual_issue
+    semantics: ok
+    allowed_scope: [governance]
 forbidden_phrases: []
 scan_roots: []
 include_active_stream_docs: false
@@ -1203,7 +1272,10 @@ python3 - "$TMP_ROOT/runtime_boundary_negative.json" <<'PY'
 import json,sys
 obj=json.load(open(sys.argv[1]))
 assert obj.get("error_code") == "IP-RFILE-BDRY-001", obj
-assert "governance_doc_missing_required_tokens" in (obj.get("stale_reasons") or []), obj
+assert (
+    "governance_doc_missing_required_tokens" in (obj.get("stale_reasons") or [])
+    or "protocol_overview_missing_required_tokens" in (obj.get("stale_reasons") or [])
+), obj
 print("[PASS] negative runtime boundary missing-token probe blocked")
 PY
 

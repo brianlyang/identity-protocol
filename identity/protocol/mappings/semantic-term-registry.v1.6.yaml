@@ -84,6 +84,45 @@ terms:
       - migration_governance
       - stream_v1_6_10
 
+  - term_id: instance_owned_technical_debt
+    canonical_term: instance_owned_technical_debt
+    aliases:
+      - "instance technical debt"
+      - "instance-owned debt"
+      - "实例技术债务"
+    semantics: "Missing instance-local skills/config/transport/install/replay hygiene and other local recovery obligations remain instance-owned until the instance completes self-heal and proves closure."
+    allowed_scope:
+      - instance_runtime
+      - protocol_feedback_triage
+      - escalation_gate
+      - stream_v1_6_10
+
+  - term_id: instance_clean_proof
+    canonical_term: instance_clean_proof
+    aliases:
+      - "instance clean proof"
+      - "self-heal closure proof"
+      - "实例清债证据"
+    semantics: "Replayable proof that instance-owned technical debt is closed; required before escalating any remaining issue as protocol residual."
+    allowed_scope:
+      - protocol_feedback_triage
+      - escalation_gate
+      - review_acceptance
+      - stream_v1_6_10
+
+  - term_id: protocol_residual_issue
+    canonical_term: protocol_residual_issue
+    aliases:
+      - "protocol residual"
+      - "shared protocol residual"
+      - "协议残留问题"
+    semantics: "Shared contract / wiring / validator / CI / governance issue that remains only after instance_clean_proof; unresolved instance-owned technical debt must not be relabeled as protocol residual."
+    allowed_scope:
+      - governance
+      - review
+      - protocol_feedback_triage
+      - stream_v1_6_10
+
 forbidden_phrases:
   - phrase: "multi-active state is a protocol violation"
     replacement: "catalog_multi_active is allowed; enforce session_primary_binding in strict lanes"
@@ -104,6 +143,18 @@ forbidden_phrases:
   - phrase: "`identity/runtime/IDENTITY_COMPILED.md` is an instance-autonomous runtime state file."
     replacement: "`identity/runtime/IDENTITY_COMPILED.md` is a tracked_compiled_brief_artifact and must be updated through source-first compile flow."
     rationale: "Prevents autonomous runtime-state semantics from being incorrectly applied to the compiled brief."
+
+  - phrase: "protocol will backstop instance technical debt"
+    replacement: "instance_owned_technical_debt remains instance-owned; protocol_residual_issue starts only after instance_clean_proof"
+    rationale: "Prevents protocol/instance ownership from collapsing."
+
+  - phrase: "instance may escalate to protocol before self-heal closure"
+    replacement: "No instance-clean proof, no protocol escalation."
+    rationale: "Prevents unresolved instance debt from being relabeled as protocol residual."
+
+  - phrase: "protocol residual may include unresolved instance configuration or skill debt"
+    replacement: "protocol_residual_issue is limited to shared defects that remain after instance_clean_proof"
+    rationale: "Prevents instance-local obligations from being pushed into protocol scope."
 
 scan_roots:
   - identity/protocol/IDENTITY_PROTOCOL.md
