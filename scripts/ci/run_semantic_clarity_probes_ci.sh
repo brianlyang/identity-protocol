@@ -60,6 +60,40 @@ assert obj.get("default_machine_profile") == "mini", obj
 assert obj.get("top_hard_guard_status") == "PASS_REQUIRED", obj
 print("[PASS] native chat compiled brief freeze")
 PY
+cp "$TMP_ROOT/native_chat_compiled.md" "$TMP_ROOT/native_chat_compiled_missing_tuple_guard.md"
+python3 - "$TMP_ROOT/native_chat_compiled_missing_tuple_guard.md" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+token = (
+    "- If `CODEX_SESSION_ID` / `IDENTITY_SESSION_ID` is missing, or the current-turn actor/session tuple cannot be "
+    "resolved, line 1 and line 2 MUST fall back to the two-line withheld/conflict envelope; never drop the "
+    "headstamp completely."
+)
+if token not in text:
+    raise SystemExit("compiled_brief_tuple_guard_missing")
+path.write_text(text.replace(token + "\n", "", 1), encoding="utf-8")
+PY
+set +e
+python3 scripts/validate_compiled_brief_projection_boundary.py \
+  --compiled-brief "$TMP_ROOT/native_chat_compiled_missing_tuple_guard.md" \
+  --json-only > "$TMP_ROOT/native_chat_compiled_missing_tuple_guard_boundary.json"
+rc=$?
+set -e
+if [ "$rc" -eq 0 ]; then
+  echo "[FAIL] compiled brief validator should fail when tuple-missing failure-envelope rule disappears"
+  exit 1
+fi
+python3 - "$TMP_ROOT/native_chat_compiled_missing_tuple_guard_boundary.json" <<'PY'
+import json,sys
+obj=json.load(open(sys.argv[1]))
+assert obj.get("compiled_brief_projection_boundary_status") == "FAIL_REQUIRED", obj
+assert obj.get("top_hard_guard_status") == "FAIL_REQUIRED", obj
+assert "compiled_brief_top_reply_hard_guard_missing_or_not_front_loaded" in (obj.get("stale_reasons") or []), obj
+print("[PASS] tuple-missing failure-envelope rule required in compiled brief")
+PY
 cp "$TMP_ROOT/native_chat_compiled.md" "$TMP_ROOT/native_chat_compiled_bad.md"
 python3 - "$TMP_ROOT/native_chat_compiled_bad.md" <<'PY'
 from pathlib import Path
@@ -202,6 +236,7 @@ derivation = json.loads(Path(sys.argv[4]).read_text(encoding="utf-8"))
 required = [
     "Native Chat Headstamp Hard Guard",
     "There is no headerless assistant-authored native-chat reply path.",
+    "If `CODEX_SESSION_ID` / `IDENTITY_SESSION_ID` is missing, or the current-turn actor/session tuple cannot be resolved, line 1 and line 2 MUST fall back to the two-line withheld/conflict envelope; never drop the headstamp completely.",
     "Failure visible order: `Identity-Context(withheld_or_conflict) -> Machine-Verification(verification_status=FAIL_REQUIRED) -> body`.",
     "Failure line 1 may claim only `requested_identity_id`; it MUST NOT project a success identity when the current-turn machine tuple is missing, conflicted, or polluted.",
     "Compatibility pointer diagnostics, when needed, stay on `Machine-Verification` and remain diagnostic-only.",

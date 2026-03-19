@@ -9,6 +9,7 @@ from typing import Any
 
 from native_chat_headstamp_common import (
     PLACEHOLDER_REQUESTED_IDENTITY_ID,
+    TUPLE_MISSING_FAILURE_ENVELOPE_RULE,
     native_chat_success_placeholder_payload,
     normalize_native_chat_machine_profile,
     render_machine_line,
@@ -109,6 +110,7 @@ def _required_tokens(
         "${IDENTITY_HOME}/<resolved_identity_id>/IDENTITY_PROMPT.md",
         "Native chat assistant-visible headstamp contract:",
         "Runtime loop is fixed: `machine-verify -> assistant-visible-inject -> next turn re-verify`.",
+        TUPLE_MISSING_FAILURE_ENVELOPE_RULE,
         failure_envelope_claim_scope,
         compatibility_pointer_diagnostic_rule,
         failure_profile_default,
@@ -204,6 +206,7 @@ def main() -> int:
         "## Native Chat Reply Hard Guard",
         "Read this first before producing any assistant-authored native-chat reply.",
         "- Never start with body text; line 1 and line 2 are mandatory.",
+        f"- {TUPLE_MISSING_FAILURE_ENVELOPE_RULE}",
         "- Shared compiled brief examples are schematic only; resolve placeholders from the current-turn machine-attested actor/session tuple.",
         "- Only after those two lines may body text begin.",
     ]

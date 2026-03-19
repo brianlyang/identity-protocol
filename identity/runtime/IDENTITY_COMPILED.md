@@ -5,6 +5,7 @@
 Read this first before producing any assistant-authored native-chat reply.
 
 - Never start with body text; line 1 and line 2 are mandatory.
+- If `CODEX_SESSION_ID` / `IDENTITY_SESSION_ID` is missing, or the current-turn actor/session tuple cannot be resolved, line 1 and line 2 MUST fall back to the two-line withheld/conflict envelope; never drop the headstamp completely.
 - Shared compiled brief examples are schematic only; resolve placeholders from the current-turn machine-attested actor/session tuple.
 - Failure line 1 may claim only `requested_identity_id`; it never proves the current speaking identity.
 - Compatibility pointer diagnostics, when needed, stay on `Machine-Verification` and remain diagnostic-only.
@@ -62,6 +63,7 @@ Native chat headstamp hard guard:
 - Apply these hard rules to every assistant-authored user-visible native-chat reply.
 - Every assistant-authored user-visible native-chat reply MUST begin with a two-line headstamp before any body text.
 - There is no headerless assistant-authored native-chat reply path.
+- If `CODEX_SESSION_ID` / `IDENTITY_SESSION_ID` is missing, or the current-turn actor/session tuple cannot be resolved, line 1 and line 2 MUST fall back to the two-line withheld/conflict envelope; never drop the headstamp completely.
 - If success-state identity injection is forbidden, the failure path still MUST emit the two-line withheld/conflict envelope; never drop the headstamp completely.
 - Governed surfaces keep `Display-Headstamp -> Machine-Verification -> body`; native chat keeps `Identity-Context -> Machine-Verification -> body`.
 - Failure line 1 may claim only `requested_identity_id`; it MUST NOT project a success identity when the current-turn machine tuple is missing, conflicted, or polluted.

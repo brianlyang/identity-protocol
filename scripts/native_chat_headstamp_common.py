@@ -32,6 +32,11 @@ PLACEHOLDER_VERIFICATION_SOURCE = "<verification_source>"
 PLACEHOLDER_COMPATIBILITY_POINTER_IDENTITY_ID = "<compatibility_pointer_identity_id>"
 PLACEHOLDER_COMPATIBILITY_POINTER_SCOPE = "<compatibility_pointer_scope>"
 PLACEHOLDER_CONTROL_STATE = "<control_state>"
+TUPLE_MISSING_FAILURE_ENVELOPE_RULE = (
+    "If `CODEX_SESSION_ID` / `IDENTITY_SESSION_ID` is missing, or the current-turn actor/session tuple cannot be "
+    "resolved, line 1 and line 2 MUST fall back to the two-line withheld/conflict envelope; never drop the "
+    "headstamp completely."
+)
 
 PROMPT_HARD_GUARD_BEGIN = "<!-- NATIVE_CHAT_HEADSTAMP_HARD_GUARD:BEGIN -->"
 PROMPT_HARD_GUARD_END = "<!-- NATIVE_CHAT_HEADSTAMP_HARD_GUARD:END -->"
@@ -61,6 +66,7 @@ def fallback_native_chat_prompt_hard_guard_template() -> dict[str, Any]:
         "required_invariants": [
             "Every assistant-authored user-visible native-chat reply MUST begin with a two-line headstamp before any body text.",
             "There is no headerless assistant-authored native-chat reply path.",
+            TUPLE_MISSING_FAILURE_ENVELOPE_RULE,
             "If success-state identity injection is forbidden, the failure path still MUST emit the two-line withheld/conflict envelope; never drop the headstamp completely.",
             "Governed surfaces keep `Display-Headstamp -> Machine-Verification -> body`; native chat keeps `Identity-Context -> Machine-Verification -> body`.",
             "Failure line 1 may claim only `requested_identity_id`; it MUST NOT project a success identity when the current-turn machine tuple is missing, conflicted, or polluted.",
@@ -431,6 +437,7 @@ def render_native_chat_compiled_brief_reply_hard_guard_markdown(
         "Read this first before producing any assistant-authored native-chat reply.",
         "",
         "- Never start with body text; line 1 and line 2 are mandatory.",
+        f"- {TUPLE_MISSING_FAILURE_ENVELOPE_RULE}",
         "- Shared compiled brief examples are schematic only; resolve placeholders from the current-turn machine-attested actor/session tuple.",
         "- Failure line 1 may claim only `requested_identity_id`; it never proves the current speaking identity.",
         "- Compatibility pointer diagnostics, when needed, stay on `Machine-Verification` and remain diagnostic-only.",
