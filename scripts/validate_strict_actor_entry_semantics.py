@@ -65,6 +65,7 @@ STRICT_SHELL_ENTRY_RULES: dict[str, dict[str, bool]] = {
         "require_session_helper": True,
         "require_project_catalog_helper": True,
         "require_session_primary_resolver": True,
+        "require_codex_tuple_handoff": True,
         "forbid_compatibility_pointer_literal": True,
     },
 }
@@ -89,6 +90,11 @@ STRICT_SHELL_PROJECT_CATALOG_HELPER_TOKENS = (
 STRICT_SHELL_SESSION_PRIMARY_RESOLVER_TOKENS = (
     "protocol_shell_entry_resolve_session_primary_identity",
     "resolve_runtime_authoritative_identity.py",
+)
+STRICT_SHELL_CODEX_TUPLE_HANDOFF_TOKENS = (
+    'env["CODEX_ACTOR_ID"] = actor_id',
+    'env["CODEX_SESSION_ID"] = session_id',
+    'env["IDENTITY_SESSION_ID"] = session_id',
 )
 STRICT_SHELL_ACTOR_LITERAL_RE = re.compile(r"(assistant:codex|CODEX_ACTOR_ID:-assistant:codex)")
 STRICT_SHELL_PROJECT_CATALOG_LITERAL_RE = re.compile(
@@ -325,6 +331,20 @@ def _scan_shell_strict_entry_surfaces(repo_root: Path) -> tuple[list[str], dict[
                         "line": 1,
                         "violation_type": "shell_strict_session_primary_resolver_missing",
                         "snippet": "protocol_shell_entry_resolve_session_primary_identity",
+                    }
+                )
+
+        if rule.get("require_codex_tuple_handoff", False):
+            missing_tokens = [
+                token for token in STRICT_SHELL_CODEX_TUPLE_HANDOFF_TOKENS if token not in text
+            ]
+            if missing_tokens:
+                violations.append(
+                    {
+                        "file": rel,
+                        "line": 1,
+                        "violation_type": "shell_strict_codex_tuple_handoff_missing",
+                        "snippet": missing_tokens[0],
                     }
                 )
 
