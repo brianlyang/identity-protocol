@@ -88,7 +88,10 @@ Scope: protocol review ledger for native-chat bootstrap entry governance and wor
    - `python3 scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` returns `stream_opening_status=PASS_REQUIRED`, `promotion_status=NON_PROMOTIONAL_LOCK`, and `live_smoke_status=INCONCLUSIVE_HOST_RUNTIME_PANIC`
    - `bash scripts/ci/run_host_visible_surface_live_probes_ci.sh` returns passing positive/negative probes including `host_visible_live_receipts_pass`, `host_visible_final_channel_relay_missing_blocked`, and `send_time_governed_pass_headstamp_required`
 4. This progress raises confidence that sender-side controlled visible projection is no longer relying on a naked outer delivery assumption.
-5. This progress note does not upgrade the stream to promotion-grade closure: the outer native-chat final visible surface still needs stable host-runtime proof before reviewers may claim that the final visible reply is always hard-bound to the controlled visible emitter.
+5. Closure blockers identified during review on 2026-03-19 are now reduced on the protocol side:
+   - the previously untracked v1.6.12/final-relay protocol files are landed in commit `3e6ca34`
+   - `scripts/ci/run_host_visible_surface_live_probes_ci.sh` now resolves repo-root-owned script paths explicitly, so prefixed invocation from the workspace root no longer depends on `cwd`
+6. This progress note does not upgrade the stream to promotion-grade closure: the outer native-chat final visible surface still needs stable host-runtime proof before reviewers may claim that the final visible reply is always hard-bound to the controlled visible emitter.
 
 ## 5) Audit verdict rules (frozen)
 
