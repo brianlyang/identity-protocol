@@ -59,6 +59,12 @@ Quick entrypoint for audit history and remediation closure records.
 - Canonical runtime file governance boundary freeze (v1.6.10 stream):
   - `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
   - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md`
+- Canonical outer-agent final answer governance (v1.6.11 stream):
+  - `docs/governance/agent-relay-final-answer-governance-v1.6.11.md`
+  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.11-agent-relay-final-answer.md`
+- Canonical native-chat bootstrap entry governance (v1.6.12 stream):
+  - `docs/governance/identity-native-chat-bootstrap-entry-governance-v1.6.12.md`
+  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.12-native-chat-bootstrap-entry.md`
 
 ## Snapshots
 

@@ -377,6 +377,190 @@ def render_native_chat_failure_identity_placeholder_line(*, actor_id: str = "ass
     )
 
 
+def render_native_chat_success_identity_line(
+    *,
+    actor_id: str,
+    identity_id: str,
+    scope: str,
+    source_layer: str,
+    work_layer: str,
+    lock_state: str = "LOCK_MATCH",
+) -> str:
+    actor_token = str(actor_id or "assistant:codex").strip() or "assistant:codex"
+    identity_token = str(identity_id or "").strip() or PLACEHOLDER_CURRENT_SESSION_IDENTITY_ID
+    scope_token = str(scope or "").strip() or PLACEHOLDER_RESOLVED_SCOPE
+    source_token = str(source_layer or "").strip() or PLACEHOLDER_RESOLVED_SOURCE_LAYER
+    work_token = str(work_layer or "").strip() or PLACEHOLDER_RESOLVED_WORK_LAYER
+    lock_token = str(lock_state or "").strip() or "LOCK_MATCH"
+    return (
+        f"Identity-Context: actor_id={actor_token}; "
+        f"identity_id={identity_token}; "
+        f"scope={scope_token}; "
+        f"lock={lock_token}; source={source_token} | "
+        f"Layer-Context: work_layer={work_token}; "
+        f"source_layer={source_token}"
+    )
+
+
+def render_native_chat_failure_identity_line(
+    *,
+    actor_id: str,
+    requested_identity_id: str,
+    conflict: str,
+    scope: str,
+    source_layer: str,
+    work_layer: str,
+) -> str:
+    actor_token = str(actor_id or "assistant:codex").strip() or "assistant:codex"
+    requested_token = str(requested_identity_id or "").strip() or PLACEHOLDER_REQUESTED_IDENTITY_ID
+    conflict_token = str(conflict or "").strip() or PLACEHOLDER_CONFLICT_REASON
+    scope_token = str(scope or "").strip() or PLACEHOLDER_RESOLVED_SCOPE
+    source_token = str(source_layer or "").strip() or PLACEHOLDER_RESOLVED_SOURCE_LAYER
+    work_token = str(work_layer or "").strip() or PLACEHOLDER_RESOLVED_WORK_LAYER
+    return (
+        f"Identity-Context: withheld; actor_id={actor_token}; "
+        f"requested_identity_id={requested_token}; "
+        f"conflict={conflict_token}; "
+        f"scope={scope_token}; "
+        f"source={source_token} | "
+        f"Layer-Context: work_layer={work_token}; "
+        f"source_layer={source_token}"
+    )
+
+
+def build_native_chat_success_machine_payload(
+    *,
+    actor_id: str,
+    identity_id: str,
+    status: str,
+    prompt_version: str,
+    source_layer: str,
+    pointer_path: str = "",
+    catalog_path: str = "",
+    pack_path: str = "",
+    binding_version: str | int | None = "",
+    work_layer: str = "",
+    authority_source: str = "actor_session_store",
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "authority_source": str(authority_source or "actor_session_store").strip() or "actor_session_store",
+        "actor_id": str(actor_id or "").strip(),
+        "identity_id": str(identity_id or "").strip(),
+        "status": str(status or "").strip() or PLACEHOLDER_RESOLVED_STATUS,
+        "pointer_path": str(pointer_path or "").strip(),
+        "catalog_path": str(catalog_path or "").strip(),
+        "pack_path": str(pack_path or "").strip(),
+        "prompt_version": str(prompt_version or "").strip() or PLACEHOLDER_RESOLVED_PROMPT_VERSION,
+        "binding_version": str(binding_version or "").strip(),
+        "work_layer": str(work_layer or "").strip(),
+        "source_layer": str(source_layer or "").strip() or PLACEHOLDER_RESOLVED_SOURCE_LAYER,
+    }
+    return payload
+
+
+def build_native_chat_failure_machine_payload(
+    *,
+    verification_source: str,
+    source_layer: str,
+    compatibility_pointer_identity_id: str = "",
+    compatibility_pointer_scope: str = "",
+    pointer_path: str = "",
+    control_state: str = "withheld",
+    current_chat_surface_native_machine_attested: bool = False,
+    next_hop_admission_status: str = "FAIL_REQUIRED",
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "verification_source": str(verification_source or "").strip() or PLACEHOLDER_VERIFICATION_SOURCE,
+        "verification_status": "FAIL_REQUIRED",
+        "compatibility_pointer_identity_id": str(compatibility_pointer_identity_id or "").strip(),
+        "compatibility_pointer_scope": str(compatibility_pointer_scope or "").strip(),
+        "pointer_path": str(pointer_path or "").strip(),
+        "current_chat_surface_native_machine_attested": bool(current_chat_surface_native_machine_attested),
+        "next_hop_admission_status": str(next_hop_admission_status or "").strip() or "FAIL_REQUIRED",
+        "control_state": str(control_state or "").strip() or PLACEHOLDER_CONTROL_STATE,
+        "source_layer": str(source_layer or "").strip() or PLACEHOLDER_RESOLVED_SOURCE_LAYER,
+    }
+    return payload
+
+
+def render_native_chat_success_machine_line(
+    *,
+    actor_id: str,
+    identity_id: str,
+    status: str,
+    prompt_version: str,
+    source_layer: str,
+    pointer_path: str = "",
+    catalog_path: str = "",
+    pack_path: str = "",
+    binding_version: str | int | None = "",
+    work_layer: str = "",
+    authority_source: str = "actor_session_store",
+    machine_profile: str = "mini",
+    template_ref: str = "",
+) -> str:
+    template_doc, _ = load_native_chat_machine_profile_template(template_ref)
+    profile = normalize_native_chat_machine_profile(
+        machine_profile,
+        default=str(template_doc.get("default_machine_profile", "mini")),
+    )
+    profile_doc = resolve_native_chat_profile_doc(template_doc, profile_name=profile, failure=False)
+    payload = build_native_chat_success_machine_payload(
+        actor_id=actor_id,
+        identity_id=identity_id,
+        status=status,
+        prompt_version=prompt_version,
+        source_layer=source_layer,
+        pointer_path=pointer_path,
+        catalog_path=catalog_path,
+        pack_path=pack_path,
+        binding_version=binding_version,
+        work_layer=work_layer,
+        authority_source=authority_source,
+    )
+    return render_machine_line(
+        payload,
+        field_order=profile_doc["field_order"],
+        include_extra_fields=profile_doc["include_extra_fields"],
+    )
+
+
+def render_native_chat_failure_machine_line(
+    *,
+    verification_source: str,
+    source_layer: str,
+    compatibility_pointer_identity_id: str = "",
+    compatibility_pointer_scope: str = "",
+    pointer_path: str = "",
+    control_state: str = "withheld",
+    current_chat_surface_native_machine_attested: bool = False,
+    next_hop_admission_status: str = "FAIL_REQUIRED",
+    machine_profile: str = "mini",
+    template_ref: str = "",
+) -> str:
+    template_doc, _ = load_native_chat_machine_profile_template(template_ref)
+    profile = normalize_native_chat_machine_profile(
+        machine_profile,
+        default=str(template_doc.get("failure_default_machine_profile", "mini")),
+    )
+    profile_doc = resolve_native_chat_profile_doc(template_doc, profile_name=profile, failure=True)
+    payload = build_native_chat_failure_machine_payload(
+        verification_source=verification_source,
+        source_layer=source_layer,
+        compatibility_pointer_identity_id=compatibility_pointer_identity_id,
+        compatibility_pointer_scope=compatibility_pointer_scope,
+        pointer_path=pointer_path,
+        control_state=control_state,
+        current_chat_surface_native_machine_attested=current_chat_surface_native_machine_attested,
+        next_hop_admission_status=next_hop_admission_status,
+    )
+    return render_machine_line(
+        payload,
+        field_order=profile_doc["field_order"],
+        include_extra_fields=profile_doc["include_extra_fields"],
+    )
+
+
 def render_native_chat_success_machine_placeholder_line(
     *,
     actor_id: str = "assistant:codex",

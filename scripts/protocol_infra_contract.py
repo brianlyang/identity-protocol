@@ -114,6 +114,13 @@ HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS: tuple[str, ...] = (
     "status",
     "final",
 )
+HOST_VISIBLE_FINAL_CHANNEL_ID = "final"
+HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED = True
+HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE = "agent_relay_final_answer"
+HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE = "exact"
+HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY = "identity_instance_output"
+HOST_VISIBLE_FINAL_CHANNEL_RELAY_RECEIPT_DIR = "runtime/reports/agent-relay-final-answer"
+HOST_VISIBLE_FINAL_CHANNEL_RELAY_RECEIPT_PREFIX = "agent-relay-final-answer"
 HOST_VISIBLE_SURFACE_STATE_FILE = "runtime/state/host_visible_surface_registry_state.json"
 HOST_VISIBLE_SURFACE_RECEIPT_PATTERN = "runtime/reports/host-visible-surface/host-visible-surface-*.json"
 HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS = 300
@@ -162,6 +169,17 @@ HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS: tuple[str, ...] = (
     "headstamp_first_line_status",
     "send_time_gate_status",
     "final_emit_contract_status",
+)
+HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS: tuple[str, ...] = (
+    "agent_relay_final_answer_receipt_path",
+    "agent_relay_final_answer_status",
+    "agent_relay_final_answer_relay_mode",
+    "agent_relay_final_answer_delivery_authority",
+    "agent_relay_final_answer_source_artifact",
+    "agent_relay_final_answer_question_tag",
+)
+HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS: tuple[str, ...] = (
+    "agent_relay_final_answer_status",
 )
 HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD = "receipt_source"
 HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE = "runtime_dialogue"

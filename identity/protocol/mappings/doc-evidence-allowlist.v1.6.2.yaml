@@ -231,3 +231,15 @@ strict_docs:
       - '^activity/evidence/v1611-agent-relay-final-answer/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
       - '^activity/evidence/v1611-agent-relay-final-answer/\d{4}-\d{2}-\d{2}/relay_receipt_snapshot\..+\.json$'
       - '^activity/evidence/v1611-agent-relay-final-answer/\d{4}-\d{2}-\d{2}/relay_probe_matrix\..+\.json$'
+
+  docs/governance/identity-native-chat-bootstrap-entry-governance-v1.6.12.md:
+    max_activity_refs: 20
+    allowed_activity_patterns:
+      - '^activity/evidence/v1612-native-chat-bootstrap-entry/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\.v1\.6\.12-native-chat-bootstrap-entry\.json$'
+      - '^activity/evidence/v1612-native-chat-bootstrap-entry/\d{4}-\d{2}-\d{2}/bootstrap_entry_summary\.v1\.6\.12\.json$'
+
+  docs/review/protocol-remediation-audit-ledger-v1.6.12-native-chat-bootstrap-entry.md:
+    max_activity_refs: 20
+    allowed_activity_patterns:
+      - '^activity/evidence/v1612-native-chat-bootstrap-entry/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\.v1\.6\.12-native-chat-bootstrap-entry\.json$'
+      - '^activity/evidence/v1612-native-chat-bootstrap-entry/\d{4}-\d{2}-\d{2}/bootstrap_entry_summary\.v1\.6\.12\.json$'

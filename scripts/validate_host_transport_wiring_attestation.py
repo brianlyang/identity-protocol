@@ -24,6 +24,13 @@ from protocol_infra_contract import (
     HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS,
     HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
     HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS,
+    HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY,
+    HOST_VISIBLE_FINAL_CHANNEL_ID,
+    HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE,
+    HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED,
+    HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE,
+    HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS,
+    HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS,
     HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS,
     HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
     HOST_VISIBLE_SURFACE_RUNTIME_ALLOWED_LIVE_RECEIPT_SOURCES,
@@ -36,14 +43,17 @@ from protocol_infra_contract import (
     PRIVILEGE_ESCALATION_REASON_PREFIX,
     PRIVILEGE_ESCALATION_REMEDIATION_HINT,
 )
+from host_visible_final_channel_relay_common import inspect_host_visible_final_channel_relay
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 
 ERR_MISSING = "IP-HDSTAMP-001"
 ERR_INVALID = "IP-HDSTAMP-003"
 FIXTURE_ALLOWED_OPERATIONS = set(HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS)
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -444,6 +454,24 @@ def main() -> int:
         "host_transport_post_check_closure_status": STATUS_PASS_REQUIRED,
         "host_transport_post_check_checked_at_utc": "",
         "host_transport_post_check_state_write_status": "",
+        "host_transport_wiring_attestation_final_channel_id": HOST_VISIBLE_FINAL_CHANNEL_ID,
+        "host_transport_wiring_attestation_final_channel_relay_required": bool(
+            HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED
+        ),
+        "host_transport_wiring_attestation_final_channel_relay_surface": HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE,
+        "host_transport_wiring_attestation_final_channel_relay_mode": HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE,
+        "host_transport_wiring_attestation_final_channel_delivery_authority": (
+            HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY
+        ),
+        "host_transport_wiring_attestation_final_channel_required_attestation_fields": list(
+            HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS
+        ),
+        "host_transport_wiring_attestation_final_channel_required_pass_status_fields": list(
+            HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS
+        ),
+        "host_transport_wiring_attestation_final_channel_relay_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "host_transport_wiring_attestation_final_channel_relay_reason": "final_channel_relay_unchecked",
+        "host_transport_wiring_attestation_final_channel_relay_receipt_path": "",
         "error_code": "",
         "stale_reasons": [],
     }
@@ -509,6 +537,33 @@ def main() -> int:
 
     required_attestation_fields = set(_as_list(host_visible_contract.get("required_attestation_fields")))
     required_pass_status_fields = set(_as_list(host_visible_contract.get("required_pass_status_fields")))
+    final_channel_id = str(host_visible_contract.get("final_channel_id", "")).strip() or HOST_VISIBLE_FINAL_CHANNEL_ID
+    final_channel_relay_required = _as_bool(
+        host_visible_contract.get("final_channel_relay_required", HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED),
+        default=bool(HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED),
+    )
+    final_channel_relay_surface = (
+        str(host_visible_contract.get("final_channel_relay_surface", "")).strip()
+        or HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE
+    )
+    final_channel_relay_mode = (
+        str(host_visible_contract.get("final_channel_relay_mode", "")).strip()
+        or HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE
+    )
+    final_channel_delivery_authority = (
+        str(host_visible_contract.get("final_channel_delivery_authority", "")).strip()
+        or HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY
+    )
+    final_channel_required_attestation_fields = set(
+        _as_list(host_visible_contract.get("final_channel_required_attestation_fields"))
+    )
+    if not final_channel_required_attestation_fields:
+        final_channel_required_attestation_fields = set(HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS)
+    final_channel_required_pass_status_fields = set(
+        _as_list(host_visible_contract.get("final_channel_required_pass_status_fields"))
+    )
+    if not final_channel_required_pass_status_fields:
+        final_channel_required_pass_status_fields = set(HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS)
     runtime_live_sources = set(_as_list(host_visible_contract.get("runtime_live_receipt_sources")))
     if not runtime_live_sources:
         runtime_live_sources = set(HOST_VISIBLE_SURFACE_RUNTIME_ALLOWED_LIVE_RECEIPT_SOURCES)
@@ -530,10 +585,43 @@ def main() -> int:
     payload["host_transport_wiring_attestation_fixture_allowed_operations"] = sorted(
         fixture_allowed_operations
     )
+    payload["host_transport_wiring_attestation_final_channel_id"] = final_channel_id
+    payload["host_transport_wiring_attestation_final_channel_relay_required"] = bool(
+        final_channel_relay_required
+    )
+    payload["host_transport_wiring_attestation_final_channel_relay_surface"] = final_channel_relay_surface
+    payload["host_transport_wiring_attestation_final_channel_relay_mode"] = final_channel_relay_mode
+    payload["host_transport_wiring_attestation_final_channel_delivery_authority"] = (
+        final_channel_delivery_authority
+    )
+    payload["host_transport_wiring_attestation_final_channel_required_attestation_fields"] = sorted(
+        final_channel_required_attestation_fields
+    )
+    payload["host_transport_wiring_attestation_final_channel_required_pass_status_fields"] = sorted(
+        final_channel_required_pass_status_fields
+    )
     if not set(HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS).issubset(required_attestation_fields):
         issues.append("host_visible_surface_required_attestation_fields_missing")
     if not set(HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS).issubset(required_pass_status_fields):
         issues.append("host_visible_surface_required_pass_status_fields_missing")
+    if final_channel_id != HOST_VISIBLE_FINAL_CHANNEL_ID:
+        issues.append("host_visible_surface_final_channel_id_mismatch")
+    if final_channel_relay_required is not True:
+        issues.append("host_visible_surface_final_channel_relay_required_not_true")
+    if final_channel_relay_surface != HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE:
+        issues.append("host_visible_surface_final_channel_relay_surface_mismatch")
+    if final_channel_relay_mode != HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE:
+        issues.append("host_visible_surface_final_channel_relay_mode_mismatch")
+    if final_channel_delivery_authority != HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY:
+        issues.append("host_visible_surface_final_channel_delivery_authority_mismatch")
+    if not set(HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS).issubset(
+        final_channel_required_attestation_fields
+    ):
+        issues.append("host_visible_surface_final_channel_required_attestation_fields_missing")
+    if not set(HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS).issubset(
+        final_channel_required_pass_status_fields
+    ):
+        issues.append("host_visible_surface_final_channel_required_pass_status_fields_missing")
     if runtime_receipt_max_age_seconds <= 0:
         issues.append("host_visible_surface_runtime_receipt_max_age_seconds_invalid")
     if not runtime_live_sources:
@@ -685,6 +773,13 @@ def main() -> int:
                 candidate = selected_by_channel.get(channel)
                 if candidate is None:
                     issues.append(f"host_visible_surface_live_channel_receipt_missing:{channel}")
+                    if channel == final_channel_id and final_channel_relay_required:
+                        payload["host_transport_wiring_attestation_final_channel_relay_status"] = (
+                            STATUS_FAIL_REQUIRED
+                        )
+                        payload["host_transport_wiring_attestation_final_channel_relay_reason"] = (
+                            "final_channel_receipt_missing"
+                        )
                     continue
                 receipt_path = Path(candidate["path"]).resolve()
                 receipt_doc = dict(candidate.get("payload") or {})
@@ -707,6 +802,43 @@ def main() -> int:
                     status_value = str(receipt_doc.get(field, "")).strip().upper()
                     if status_value != STATUS_PASS_REQUIRED:
                         issues.append(f"host_visible_surface_live_channel_status_not_pass:{channel}:{field}")
+                if channel == final_channel_id and final_channel_relay_required:
+                    relay_projection = inspect_host_visible_final_channel_relay(
+                        receipt_doc=receipt_doc,
+                        repo_root=SCRIPT_DIR.parent,
+                        expected_identity_id=str(args.identity_id).strip(),
+                        expected_source_artifact=str(receipt_doc.get("reply_transport_ref", "")).strip(),
+                    )
+                    payload["host_transport_wiring_attestation_final_channel_relay_status"] = str(
+                        relay_projection.get("status", "")
+                    ).strip()
+                    payload["host_transport_wiring_attestation_final_channel_relay_reason"] = str(
+                        relay_projection.get("reason", "")
+                    ).strip()
+                    payload["host_transport_wiring_attestation_final_channel_relay_receipt_path"] = str(
+                        relay_projection.get("receipt_path", "")
+                    ).strip()
+                    for field in sorted(final_channel_required_attestation_fields):
+                        if field not in receipt_doc:
+                            issues.append(
+                                f"host_visible_surface_live_final_channel_attestation_field_missing:{field}"
+                            )
+                    for field in sorted(final_channel_required_pass_status_fields):
+                        status_value = str(receipt_doc.get(field, "")).strip().upper()
+                        if status_value != STATUS_PASS_REQUIRED:
+                            issues.append(
+                                f"host_visible_surface_live_final_channel_status_not_pass:{field}"
+                            )
+                    if str(relay_projection.get("status", "")).strip().upper() != STATUS_PASS_REQUIRED:
+                        relay_issues = [
+                            str(item).strip()
+                            for item in (relay_projection.get("issues") or [])
+                            if str(item).strip()
+                        ]
+                        if not relay_issues:
+                            relay_issues = [str(relay_projection.get("reason", "")).strip() or "relay_not_pass"]
+                        for relay_issue in relay_issues:
+                            issues.append(f"host_visible_surface_live_final_channel_{relay_issue}")
                 receipt_actor_id = str(receipt_doc.get("actor_id", "")).strip()
                 receipt_session_id = str(receipt_doc.get("session_id", "")).strip()
                 receipt_run_id = str(receipt_doc.get("run_id", "")).strip()

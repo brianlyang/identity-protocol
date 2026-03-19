@@ -45,6 +45,13 @@ from create_identity_pack import (
     HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS,
     HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
     HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS,
+    HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY,
+    HOST_VISIBLE_FINAL_CHANNEL_ID,
+    HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE,
+    HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED,
+    HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE,
+    HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS,
+    HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS,
     HOST_VISIBLE_SURFACE_STATE_FILE,
     HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
     HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE,
@@ -1149,6 +1156,42 @@ def _normalize_host_visible_surface_contracts(task: dict[str, Any]) -> tuple[lis
             if field not in merged_pass_status_fields:
                 merged_pass_status_fields.append(field)
         node["required_pass_status_fields"] = merged_pass_status_fields
+        node["final_channel_id"] = str(node.get("final_channel_id", "")).strip() or HOST_VISIBLE_FINAL_CHANNEL_ID
+        node["final_channel_relay_required"] = bool(
+            node.get("final_channel_relay_required", HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED)
+        )
+        node["final_channel_relay_surface"] = (
+            str(node.get("final_channel_relay_surface", "")).strip()
+            or HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE
+        )
+        node["final_channel_relay_mode"] = (
+            str(node.get("final_channel_relay_mode", "")).strip()
+            or HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE
+        )
+        node["final_channel_delivery_authority"] = (
+            str(node.get("final_channel_delivery_authority", "")).strip()
+            or HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY
+        )
+        final_attestation_fields = node.get("final_channel_required_attestation_fields")
+        if not isinstance(final_attestation_fields, list):
+            final_attestation_fields = []
+        merged_final_attestation_fields = [
+            str(item).strip() for item in final_attestation_fields if str(item).strip()
+        ]
+        for field in HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS:
+            if field not in merged_final_attestation_fields:
+                merged_final_attestation_fields.append(field)
+        node["final_channel_required_attestation_fields"] = merged_final_attestation_fields
+        final_pass_status_fields = node.get("final_channel_required_pass_status_fields")
+        if not isinstance(final_pass_status_fields, list):
+            final_pass_status_fields = []
+        merged_final_pass_status_fields = [
+            str(item).strip() for item in final_pass_status_fields if str(item).strip()
+        ]
+        for field in HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS:
+            if field not in merged_final_pass_status_fields:
+                merged_final_pass_status_fields.append(field)
+        node["final_channel_required_pass_status_fields"] = merged_final_pass_status_fields
         node["required_live_probe_delegate"] = HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE
         node["host_dispatch_mode_required"] = HOST_GATEWAY_REQUIRED_DISPATCH_MODE
         node["host_release_mode_required"] = HOST_GATEWAY_REQUIRED_RELEASE_MODE
@@ -1696,6 +1739,31 @@ def main() -> int:
                 {
                     str(item).strip()
                     for item in ((updated.get(k) or {}).get("required_pass_status_fields") or [])
+                    if str(item).strip()
+                }
+            )
+            or str((updated.get(k) or {}).get("final_channel_id", "")).strip()
+            != HOST_VISIBLE_FINAL_CHANNEL_ID
+            or (updated.get(k) or {}).get("final_channel_relay_required") is not True
+            or str((updated.get(k) or {}).get("final_channel_relay_surface", "")).strip()
+            != HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE
+            or str((updated.get(k) or {}).get("final_channel_relay_mode", "")).strip()
+            != HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE
+            or str((updated.get(k) or {}).get("final_channel_delivery_authority", "")).strip()
+            != HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY
+            or not isinstance((updated.get(k) or {}).get("final_channel_required_attestation_fields"), list)
+            or not set(HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS).issubset(
+                {
+                    str(item).strip()
+                    for item in ((updated.get(k) or {}).get("final_channel_required_attestation_fields") or [])
+                    if str(item).strip()
+                }
+            )
+            or not isinstance((updated.get(k) or {}).get("final_channel_required_pass_status_fields"), list)
+            or not set(HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS).issubset(
+                {
+                    str(item).strip()
+                    for item in ((updated.get(k) or {}).get("final_channel_required_pass_status_fields") or [])
                     if str(item).strip()
                 }
             )

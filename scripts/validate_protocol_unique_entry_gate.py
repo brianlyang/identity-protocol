@@ -44,6 +44,13 @@ from protocol_infra_contract import (
     HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS as INFRA_HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS,
     HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS as INFRA_HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
     HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS as INFRA_HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS,
+    HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY as INFRA_HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY,
+    HOST_VISIBLE_FINAL_CHANNEL_ID as INFRA_HOST_VISIBLE_FINAL_CHANNEL_ID,
+    HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE as INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE,
+    HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED as INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED,
+    HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE as INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE,
+    HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS as INFRA_HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS,
+    HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS as INFRA_HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS,
     HOST_VISIBLE_SURFACE_STATE_FILE as INFRA_HOST_VISIBLE_SURFACE_STATE_FILE,
     UNIQUE_ENTRY_RECEIPT_SELECTOR_POLICY_ID as INFRA_UNIQUE_ENTRY_RECEIPT_SELECTOR_POLICY_ID,
     UNIQUE_ENTRY_RECEIPT_SELECTOR_PRECEDENCE as INFRA_UNIQUE_ENTRY_RECEIPT_SELECTOR_PRECEDENCE,
@@ -97,6 +104,17 @@ HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE = INFRA_HOST_VISIBLE_SURFACE_R
 HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS = set(INFRA_HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS)
 HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS = set(INFRA_HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS)
 HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS = set(INFRA_HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS)
+HOST_VISIBLE_FINAL_CHANNEL_ID = INFRA_HOST_VISIBLE_FINAL_CHANNEL_ID
+HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED = INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED
+HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE = INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE
+HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE = INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE
+HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY = INFRA_HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY
+HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS = set(
+    INFRA_HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS
+)
+HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS = set(
+    INFRA_HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS
+)
 HOST_VISIBLE_SURFACE_STATE_FILE = INFRA_HOST_VISIBLE_SURFACE_STATE_FILE
 HOST_VISIBLE_SURFACE_RECEIPT_PATTERN = INFRA_HOST_VISIBLE_SURFACE_RECEIPT_PATTERN
 HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED = INFRA_HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED
@@ -198,6 +216,13 @@ HOST_VISIBLE_SURFACE_ALLOWED_FIELDS = {
     "strict_live_run_binding_required",
     "required_attestation_fields",
     "required_pass_status_fields",
+    "final_channel_id",
+    "final_channel_relay_required",
+    "final_channel_relay_surface",
+    "final_channel_relay_mode",
+    "final_channel_delivery_authority",
+    "final_channel_required_attestation_fields",
+    "final_channel_required_pass_status_fields",
     "required_live_probe_delegate",
     "host_dispatch_mode_required",
     "host_release_mode_required",
@@ -1103,6 +1128,56 @@ def main() -> int:
         payload["protocol_host_visible_surface_required_pass_status_fields"] = sorted(pass_status_fields)
         if not HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS.issubset(pass_status_fields):
             host_visible_surface_issues.append("host_visible_surface_required_pass_status_fields_missing")
+        final_channel_id = str(host_visible_surface_contract.get("final_channel_id", "")).strip()
+        payload["protocol_host_visible_surface_final_channel_id"] = final_channel_id
+        if final_channel_id != HOST_VISIBLE_FINAL_CHANNEL_ID:
+            host_visible_surface_issues.append("host_visible_surface_final_channel_id_mismatch")
+        if host_visible_surface_contract.get("final_channel_relay_required") is not True:
+            host_visible_surface_issues.append("host_visible_surface_final_channel_relay_required_not_true")
+        final_channel_relay_surface = str(
+            host_visible_surface_contract.get("final_channel_relay_surface", "")
+        ).strip()
+        payload["protocol_host_visible_surface_final_channel_relay_surface"] = (
+            final_channel_relay_surface
+        )
+        if final_channel_relay_surface != HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE:
+            host_visible_surface_issues.append("host_visible_surface_final_channel_relay_surface_mismatch")
+        final_channel_relay_mode = str(
+            host_visible_surface_contract.get("final_channel_relay_mode", "")
+        ).strip()
+        payload["protocol_host_visible_surface_final_channel_relay_mode"] = final_channel_relay_mode
+        if final_channel_relay_mode != HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE:
+            host_visible_surface_issues.append("host_visible_surface_final_channel_relay_mode_mismatch")
+        final_channel_delivery_authority = str(
+            host_visible_surface_contract.get("final_channel_delivery_authority", "")
+        ).strip()
+        payload["protocol_host_visible_surface_final_channel_delivery_authority"] = (
+            final_channel_delivery_authority
+        )
+        if final_channel_delivery_authority != HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY:
+            host_visible_surface_issues.append(
+                "host_visible_surface_final_channel_delivery_authority_mismatch"
+            )
+        final_attestation_fields = set(
+            _as_str_list(host_visible_surface_contract.get("final_channel_required_attestation_fields"))
+        )
+        payload["protocol_host_visible_surface_final_channel_required_attestation_fields"] = sorted(
+            final_attestation_fields
+        )
+        if not HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS.issubset(final_attestation_fields):
+            host_visible_surface_issues.append(
+                "host_visible_surface_final_channel_required_attestation_fields_missing"
+            )
+        final_pass_status_fields = set(
+            _as_str_list(host_visible_surface_contract.get("final_channel_required_pass_status_fields"))
+        )
+        payload["protocol_host_visible_surface_final_channel_required_pass_status_fields"] = sorted(
+            final_pass_status_fields
+        )
+        if not HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS.issubset(final_pass_status_fields):
+            host_visible_surface_issues.append(
+                "host_visible_surface_final_channel_required_pass_status_fields_missing"
+            )
         live_probe_delegate = str(host_visible_surface_contract.get("required_live_probe_delegate", "")).strip()
         payload["protocol_host_visible_surface_live_probe_delegate"] = live_probe_delegate
         if live_probe_delegate != HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE:

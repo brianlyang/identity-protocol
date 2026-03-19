@@ -74,6 +74,13 @@ from protocol_infra_contract import (
     HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS as INFRA_HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS,
     HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS as INFRA_HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
     HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS as INFRA_HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS,
+    HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY as INFRA_HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY,
+    HOST_VISIBLE_FINAL_CHANNEL_ID as INFRA_HOST_VISIBLE_FINAL_CHANNEL_ID,
+    HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE as INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE,
+    HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED as INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED,
+    HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE as INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE,
+    HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS as INFRA_HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS,
+    HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS as INFRA_HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS,
     HOST_VISIBLE_SURFACE_STATE_FILE as INFRA_HOST_VISIBLE_SURFACE_STATE_FILE,
     HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE as INFRA_HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
     HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE as INFRA_HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE,
@@ -81,6 +88,10 @@ from protocol_infra_contract import (
     UNIQUE_ENTRY_RECEIPT_SELECTOR_POLICY_ID as INFRA_UNIQUE_ENTRY_RECEIPT_SELECTOR_POLICY_ID,
     UNIQUE_ENTRY_RECEIPT_SELECTOR_PRECEDENCE as INFRA_UNIQUE_ENTRY_RECEIPT_SELECTOR_PRECEDENCE,
     UNIQUE_ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS as INFRA_UNIQUE_ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS,
+)
+from host_visible_final_channel_relay_common import (
+    build_host_visible_final_channel_relay_receipt,
+    project_host_visible_final_channel_relay_fields,
 )
 from response_stamp_common import default_response_stamp_profile, normalize_response_stamp_profile
 from native_chat_headstamp_common import (
@@ -209,6 +220,17 @@ HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS = list(
 )
 HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS = list(
     INFRA_HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS
+)
+HOST_VISIBLE_FINAL_CHANNEL_ID = INFRA_HOST_VISIBLE_FINAL_CHANNEL_ID
+HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED = INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED
+HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE = INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE
+HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE = INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE
+HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY = INFRA_HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY
+HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS = list(
+    INFRA_HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS
+)
+HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS = list(
+    INFRA_HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS
 )
 HOST_VISIBLE_SURFACE_STATE_FILE = INFRA_HOST_VISIBLE_SURFACE_STATE_FILE
 HOST_VISIBLE_SURFACE_RECEIPT_PATTERN = INFRA_HOST_VISIBLE_SURFACE_RECEIPT_PATTERN
@@ -1044,6 +1066,17 @@ def _host_visible_surface_registry_contract_skeleton() -> dict:
         "post_check_block_on_active": bool(HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE),
         "required_attestation_fields": list(HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS),
         "required_pass_status_fields": list(HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS),
+        "final_channel_id": HOST_VISIBLE_FINAL_CHANNEL_ID,
+        "final_channel_relay_required": bool(HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED),
+        "final_channel_relay_surface": HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE,
+        "final_channel_relay_mode": HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE,
+        "final_channel_delivery_authority": HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY,
+        "final_channel_required_attestation_fields": list(
+            HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS
+        ),
+        "final_channel_required_pass_status_fields": list(
+            HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS
+        ),
         "runtime_live_receipt_sources": list(HOST_VISIBLE_SURFACE_RUNTIME_ALLOWED_LIVE_RECEIPT_SOURCES),
         "fixture_receipt_source": HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
         "fixture_allowed_operations": list(HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS),
@@ -3913,14 +3946,14 @@ def _record_host_visible_surface_receipts(
     send_time_gate_status: str,
     final_emit_contract_status: str,
     out_reply_file: Path,
-) -> tuple[str, str, list[str], list[str]]:
+) -> tuple[str, str, list[str], list[str], dict[str, Any]]:
     visible_contract = contract.get(HOST_VISIBLE_SURFACE_CONTRACT_KEY)
     if not isinstance(visible_contract, dict) or visible_contract.get("required") is not True:
-        return "SKIPPED_NOT_REQUIRED", "", [], []
+        return "SKIPPED_NOT_REQUIRED", "", [], [], {}
 
     required_channels = _as_list(visible_contract.get("required_channels"))
     if not required_channels:
-        return STATUS_FAIL_REQUIRED, "", [], ["host_visible_surface_required_channels_missing"]
+        return STATUS_FAIL_REQUIRED, "", [], ["host_visible_surface_required_channels_missing"], {}
 
     state_path = _resolve_runtime_path(
         contract_path,
@@ -3931,9 +3964,9 @@ def _record_host_visible_surface_receipts(
         str(visible_contract.get("runtime_receipt_pattern", "")).strip() or HOST_VISIBLE_SURFACE_RECEIPT_PATTERN_DEFAULT,
     )
     if not str(state_path).strip():
-        return STATUS_FAIL_REQUIRED, "", [], ["host_visible_surface_state_path_unresolved"]
+        return STATUS_FAIL_REQUIRED, "", [], ["host_visible_surface_state_path_unresolved"], {}
     if not str(receipt_glob_path).strip():
-        return STATUS_FAIL_REQUIRED, str(state_path), [], ["host_visible_surface_receipt_path_unresolved"]
+        return STATUS_FAIL_REQUIRED, str(state_path), [], ["host_visible_surface_receipt_path_unresolved"], {}
 
     required_attestation_fields = set(_as_list(visible_contract.get("required_attestation_fields")))
     if not required_attestation_fields:
@@ -3965,6 +3998,31 @@ def _record_host_visible_surface_receipts(
         "final_emit_contract_status": str(final_emit_contract_status or "").strip().upper(),
     }
     receipt_source = _select_host_visible_receipt_source(operation)
+    pack_path = contract_path.parent.resolve()
+    final_channel_relay_projection: dict[str, Any] = {}
+    if HOST_VISIBLE_FINAL_CHANNEL_ID in required_channels and bool(
+        visible_contract.get("final_channel_relay_required", HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED)
+    ):
+        relay_rc, relay_payload = build_host_visible_final_channel_relay_receipt(
+            repo_root=_repo_root(),
+            pack_path=pack_path,
+            identity_id=str(identity_id or "").strip(),
+            run_id=str(run_id or "").strip(),
+            reply_transport_ref=str(out_reply_file),
+            now_token=now_token,
+        )
+        final_channel_relay_projection = project_host_visible_final_channel_relay_fields(relay_payload)
+        relay_status = str(final_channel_relay_projection.get("agent_relay_final_answer_status", "")).strip().upper()
+        if relay_rc != 0 or relay_status != STATUS_PASS_REQUIRED:
+            relay_reasons = [
+                str(item).strip()
+                for item in (relay_payload.get("stale_reasons") or [])
+                if str(item).strip()
+            ]
+            relay_reason = relay_reasons[0] if relay_reasons else "host_visible_final_channel_relay_not_pass"
+            errors_prefix = "host_visible_surface_final_channel_relay_not_pass"
+            errors = [f"{errors_prefix}:{relay_reason}"]
+            return STATUS_FAIL_REQUIRED, str(state_path), [], errors, final_channel_relay_projection
 
     receipt_paths: list[str] = []
     receipt_paths_by_channel: dict[str, str] = {}
@@ -3989,6 +4047,8 @@ def _record_host_visible_surface_receipts(
             HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD: receipt_source,
         }
         payload.update(status_map)
+        if str(channel).strip() == HOST_VISIBLE_FINAL_CHANNEL_ID and final_channel_relay_projection:
+            payload.update(final_channel_relay_projection)
         missing_fields = sorted(field for field in required_attestation_fields if field not in payload)
         if missing_fields:
             errors.append(f"host_visible_surface_receipt_missing_fields:{channel}:{','.join(missing_fields)}")
@@ -4045,8 +4105,8 @@ def _record_host_visible_surface_receipts(
         errors.append(f"host_visible_surface_state_write_failed:{exc}")
 
     if errors:
-        return STATUS_FAIL_REQUIRED, str(state_path), receipt_paths, errors
-    return STATUS_PASS_REQUIRED, str(state_path), receipt_paths, []
+        return STATUS_FAIL_REQUIRED, str(state_path), receipt_paths, errors, final_channel_relay_projection
+    return STATUS_PASS_REQUIRED, str(state_path), receipt_paths, [], final_channel_relay_projection
 
 
 def _evaluate_egress_payload_host_visible_receipt_seed(
@@ -4652,6 +4712,7 @@ def main() -> int:
         host_visible_state_file,
         host_visible_receipt_paths,
         host_visible_stale_reasons,
+        host_visible_final_channel_relay_projection,
     ) = _record_host_visible_surface_receipts(
         contract=contract,
         contract_path=contract_path,
@@ -4764,6 +4825,22 @@ def main() -> int:
             "host_visible_surface_state_file": host_visible_state_file,
             "host_visible_surface_live_receipt_paths": host_visible_receipt_paths,
             "host_visible_surface_live_receipt_source": host_visible_receipt_source,
+            "host_visible_final_channel_relay_status": host_visible_final_channel_relay_projection.get(
+                "agent_relay_final_answer_status",
+                "",
+            ),
+            "host_visible_final_channel_relay_receipt_path": host_visible_final_channel_relay_projection.get(
+                "agent_relay_final_answer_receipt_path",
+                "",
+            ),
+            "host_visible_final_channel_relay_question_tag": host_visible_final_channel_relay_projection.get(
+                "agent_relay_final_answer_question_tag",
+                "",
+            ),
+            "host_visible_final_channel_relay_source_artifact": host_visible_final_channel_relay_projection.get(
+                "agent_relay_final_answer_source_artifact",
+                "",
+            ),
             "host_visible_receipt_seed_attempted": egress_receipt_seed_attempted,
             "host_visible_receipt_seed_replay_count": egress_receipt_seed_replay_count,
             "host_visible_receipt_seed_gate_status": egress_receipt_seed_gate_status,
@@ -4975,6 +5052,19 @@ def materialize_protocol_host_gateway_artifacts(
     ).strip() or HOST_VISIBLE_SURFACE_RECEIPT_PATTERN
     visible_surface_contract["required_attestation_fields"] = list(HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS)
     visible_surface_contract["required_pass_status_fields"] = list(HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS)
+    visible_surface_contract["final_channel_id"] = HOST_VISIBLE_FINAL_CHANNEL_ID
+    visible_surface_contract["final_channel_relay_required"] = bool(HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED)
+    visible_surface_contract["final_channel_relay_surface"] = HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE
+    visible_surface_contract["final_channel_relay_mode"] = HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE
+    visible_surface_contract["final_channel_delivery_authority"] = (
+        HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY
+    )
+    visible_surface_contract["final_channel_required_attestation_fields"] = list(
+        HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS
+    )
+    visible_surface_contract["final_channel_required_pass_status_fields"] = list(
+        HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS
+    )
     visible_surface_contract["required_live_probe_delegate"] = HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE
     visible_surface_contract["host_dispatch_mode_required"] = HOST_GATEWAY_REQUIRED_DISPATCH_MODE
     visible_surface_contract["host_release_mode_required"] = HOST_GATEWAY_REQUIRED_RELEASE_MODE

@@ -8,6 +8,10 @@ WORK_ROOT="${HOST_VISIBLE_SURFACE_PROBE_WORK_ROOT:-${DEFAULT_WORK_ROOT}}"
 FIXTURE_ROOT="${WORK_ROOT}/fixtures"
 RESULT_ROOT="${WORK_ROOT}/results"
 MANIFEST_PATH="${WORK_ROOT}/manifest.host_visible_surface_live.json"
+REPO_CATALOG_PATH="${REPO_ROOT}/identity/catalog/identities.yaml"
+REPAIR_CONTRACT_BACKFILL="${REPO_ROOT}/scripts/repair_contract_backfill.py"
+VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION="${REPO_ROOT}/scripts/validate_host_transport_wiring_attestation.py"
+VALIDATE_SEND_TIME_REPLY_GATE="${REPO_ROOT}/scripts/validate_send_time_reply_gate.py"
 
 rm -rf "${WORK_ROOT}"
 mkdir -p "${FIXTURE_ROOT}" "${RESULT_ROOT}"
@@ -95,7 +99,7 @@ IDENTITY_ID="probe-visible"
 SEND_TIME_REPLY_FILE="${FIXTURE_ROOT}/send-time-governed-reply.txt"
 MANUAL_REPLY_FILE="${FIXTURE_ROOT}/manual-display-only-reply.txt"
 
-python3 scripts/repair_contract_backfill.py \
+python3 "${REPAIR_CONTRACT_BACKFILL}" \
   --catalog "${CATALOG_PATH}" \
   --identity-id "${IDENTITY_ID}" \
   --apply \
@@ -159,6 +163,15 @@ elif name == "host_visible_live_receipts_pass":
         raise SystemExit("host_visible_live_receipts_pass: expected zero rc")
     if status != "PASS_REQUIRED":
         raise SystemExit("host_visible_live_receipts_pass: expected PASS_REQUIRED status")
+    relay_status = str(doc.get("host_transport_wiring_attestation_final_channel_relay_status", "")).strip().upper()
+    if relay_status != "PASS_REQUIRED":
+        raise SystemExit("host_visible_live_receipts_pass: final channel relay status must be PASS_REQUIRED")
+elif name == "host_visible_final_channel_relay_missing_blocked":
+    if rc == 0:
+        raise SystemExit("host_visible_final_channel_relay_missing_blocked: expected non-zero rc")
+    token = "host_visible_surface_live_final_channel_agent_relay_final_answer_status_missing"
+    if token not in reasons:
+        raise SystemExit("host_visible_final_channel_relay_missing_blocked: expected final relay missing token")
 elif name == "host_visible_live_run_binding_required_blocked":
     if rc == 0:
         raise SystemExit("host_visible_live_run_binding_required_blocked: expected non-zero rc")
@@ -390,7 +403,7 @@ PY
 }
 
 run_probe host_visible_contract_static \
-  python3 scripts/validate_host_transport_wiring_attestation.py \
+  python3 "${VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION}" \
     --catalog "${CATALOG_PATH}" \
     --identity-id "${IDENTITY_ID}" \
     --operation ci \
@@ -408,6 +421,10 @@ repo_root = Path(sys.argv[3]).resolve()
 sys.path.insert(0, str((repo_root / "scripts").resolve()))
 
 from actor_session_common import actor_session_path, write_actor_binding_store
+from host_visible_final_channel_relay_common import (
+    build_host_visible_final_channel_relay_receipt,
+    project_host_visible_final_channel_relay_fields,
+)
 from tool_vendor_governance_common import resolve_pack_and_task
 
 catalog_path = Path(sys.argv[1]).resolve()
@@ -471,6 +488,17 @@ state_doc = {
     "channels": {},
     "updated_at_utc": timestamp,
 }
+relay_rc, relay_payload = build_host_visible_final_channel_relay_receipt(
+    repo_root=repo_root,
+    pack_path=pack_path,
+    identity_id=identity_id,
+    run_id=run_id,
+    reply_transport_ref=reply_transport_ref,
+    now_token=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
+)
+if relay_rc != 0:
+    raise SystemExit(f"failed to seed final channel relay receipt: {relay_payload}")
+relay_projection = project_host_visible_final_channel_relay_fields(relay_payload)
 for idx, channel in enumerate(("commentary", "approval", "status", "final"), start=1):
     payload = {
         "emit_channel_id": channel,
@@ -482,6 +510,8 @@ for idx, channel in enumerate(("commentary", "approval", "status", "final"), sta
         "run_id": run_id,
     }
     payload.update(fields)
+    if channel == "final":
+        payload.update(relay_projection)
     path = receipt_dir / f"host-visible-surface-{idx:02d}-{channel}.json"
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     state_doc["channels"][channel] = {
@@ -496,7 +526,7 @@ state_path.write_text(json.dumps(state_doc, ensure_ascii=False, indent=2) + "\n"
 PY
 
 run_probe host_visible_live_receipts_pass \
-  python3 scripts/validate_host_transport_wiring_attestation.py \
+  python3 "${VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION}" \
     --catalog "${CATALOG_PATH}" \
     --identity-id "${IDENTITY_ID}" \
     --operation ci \
@@ -507,11 +537,93 @@ run_probe host_visible_live_receipts_pass \
     --require-run-id run:ci-probe-receipt \
     --json-only
 
+python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[3]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from tool_vendor_governance_common import resolve_pack_and_task
+
+catalog_path = Path(sys.argv[1]).resolve()
+identity_id = sys.argv[2]
+pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
+path = pack_path / "runtime" / "reports" / "host-visible-surface" / "host-visible-surface-04-final.json"
+doc = json.loads(path.read_text(encoding="utf-8"))
+doc.pop("agent_relay_final_answer_status", None)
+path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+run_probe host_visible_final_channel_relay_missing_blocked \
+  python3 "${VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION}" \
+    --catalog "${CATALOG_PATH}" \
+    --identity-id "${IDENTITY_ID}" \
+    --operation ci \
+    --require-live-receipts \
+    --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+    --require-actor-id assistant:ci-probe \
+    --require-session-id run:ci-probe-session \
+    --require-run-id run:ci-probe-receipt \
+    --json-only
+
+python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}" "${SEND_TIME_REPLY_FILE}"
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[3]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from host_visible_final_channel_relay_common import (
+    build_host_visible_final_channel_relay_receipt,
+    project_host_visible_final_channel_relay_fields,
+)
+from tool_vendor_governance_common import resolve_pack_and_task
+
+catalog_path = Path(sys.argv[1]).resolve()
+identity_id = sys.argv[2]
+reply_transport_ref = str(Path(sys.argv[4]).resolve())
+pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
+relay_rc, relay_payload = build_host_visible_final_channel_relay_receipt(
+    repo_root=repo_root,
+    pack_path=pack_path,
+    identity_id=identity_id,
+    run_id="run:ci-probe-receipt",
+    reply_transport_ref=reply_transport_ref,
+    now_token=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
+)
+if relay_rc != 0:
+    raise SystemExit(f"failed to reseed final relay: {relay_payload}")
+relay_projection = project_host_visible_final_channel_relay_fields(relay_payload)
+path = pack_path / "runtime" / "reports" / "host-visible-surface" / "host-visible-surface-04-final.json"
+doc = json.loads(path.read_text(encoding="utf-8"))
+doc.update(relay_projection)
+path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+python3 "${VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION}" \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --operation ci \
+  --require-live-receipts \
+  --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+  --require-actor-id assistant:ci-probe \
+  --require-session-id run:ci-probe-session \
+  --require-run-id run:ci-probe-receipt \
+  --json-only >/dev/null
+
 run_probe send_time_governed_pass_headstamp_required \
-  python3 scripts/validate_send_time_reply_gate.py \
+  python3 "${VALIDATE_SEND_TIME_REPLY_GATE}" \
     --identity-id "${IDENTITY_ID}" \
     --catalog "${CATALOG_PATH}" \
-    --repo-catalog identity/catalog/identities.yaml \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
     --actor-id assistant:ci-probe \
     --session-id run:ci-probe-session \
     --operation ci \
@@ -527,10 +639,10 @@ run_probe send_time_governed_pass_headstamp_required \
     --json-only
 
 run_probe send_time_manual_reply_file_without_live_receipt_blocked \
-  python3 scripts/validate_send_time_reply_gate.py \
+  python3 "${VALIDATE_SEND_TIME_REPLY_GATE}" \
     --identity-id "${IDENTITY_ID}" \
     --catalog "${CATALOG_PATH}" \
-    --repo-catalog identity/catalog/identities.yaml \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
     --actor-id assistant:ci-probe \
     --session-id run:ci-probe-session \
     --operation ci \
@@ -546,10 +658,10 @@ run_probe send_time_manual_reply_file_without_live_receipt_blocked \
     --json-only
 
 run_probe send_time_inline_reply_text_host_direct_blocked \
-  python3 scripts/validate_send_time_reply_gate.py \
+  python3 "${VALIDATE_SEND_TIME_REPLY_GATE}" \
     --identity-id "${IDENTITY_ID}" \
     --catalog "${CATALOG_PATH}" \
-    --repo-catalog identity/catalog/identities.yaml \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
     --actor-id assistant:codex \
     --operation validate \
     --force-check \
@@ -579,10 +691,10 @@ if path.exists():
 PY
 
 run_probe send_time_next_hop_blocked_on_missing_post_check_state \
-  python3 scripts/validate_send_time_reply_gate.py \
+  python3 "${VALIDATE_SEND_TIME_REPLY_GATE}" \
     --identity-id "${IDENTITY_ID}" \
     --catalog "${CATALOG_PATH}" \
-    --repo-catalog identity/catalog/identities.yaml \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
     --actor-id assistant:ci-probe \
     --session-id run:ci-probe-session \
     --operation ci \
@@ -595,7 +707,7 @@ run_probe send_time_next_hop_blocked_on_missing_post_check_state \
     --json-only
 
 run_probe host_visible_live_run_binding_required_blocked \
-  python3 scripts/validate_host_transport_wiring_attestation.py \
+  python3 "${VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION}" \
     --catalog "${CATALOG_PATH}" \
     --identity-id "${IDENTITY_ID}" \
     --operation ci \
@@ -627,7 +739,7 @@ os.utime(path, (stale_epoch, stale_epoch))
 PY
 
 run_probe host_visible_receipt_stale_blocked \
-  python3 scripts/validate_host_transport_wiring_attestation.py \
+  python3 "${VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION}" \
     --catalog "${CATALOG_PATH}" \
     --identity-id "${IDENTITY_ID}" \
     --operation ci \
@@ -684,7 +796,7 @@ path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="
 PY
 
 run_probe host_visible_commentary_session_binding_blocked \
-  python3 scripts/validate_host_transport_wiring_attestation.py \
+  python3 "${VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION}" \
     --catalog "${CATALOG_PATH}" \
     --identity-id "${IDENTITY_ID}" \
     --operation ci \
@@ -740,7 +852,7 @@ path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="
 PY
 
 run_probe host_visible_commentary_bypass_blocked \
-  python3 scripts/validate_host_transport_wiring_attestation.py \
+  python3 "${VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION}" \
     --catalog "${CATALOG_PATH}" \
     --identity-id "${IDENTITY_ID}" \
     --operation ci \
@@ -752,10 +864,10 @@ run_probe host_visible_commentary_bypass_blocked \
     --json-only
 
 run_probe send_time_next_hop_blocked_by_post_check \
-  python3 scripts/validate_send_time_reply_gate.py \
+  python3 "${VALIDATE_SEND_TIME_REPLY_GATE}" \
     --identity-id "${IDENTITY_ID}" \
     --catalog "${CATALOG_PATH}" \
-    --repo-catalog identity/catalog/identities.yaml \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
     --actor-id assistant:ci-probe \
     --session-id run:ci-probe-session \
     --operation ci \

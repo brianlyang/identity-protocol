@@ -18,6 +18,7 @@ from final_emit_contract_common import (
     normalize_status,
     normalize_text,
 )
+from host_visible_final_channel_relay_common import inspect_host_visible_final_channel_relay
 from governed_reply_observability_common import build_headstamp_consistency_projection
 from protocol_infra_contract import (
     CHAT_EGRESS_POST_CHECK_STATE_UNAVAILABLE_ERROR_CODE,
@@ -26,6 +27,8 @@ from protocol_infra_contract import (
     HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
     HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
     HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD,
+    HOST_VISIBLE_FINAL_CHANNEL_ID,
+    HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED,
     HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
     HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS,
     HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
@@ -149,6 +152,14 @@ def _load_reply_transport_binding(
         "reply_transport_binding_error_code": "",
         "reply_transport_binding_receipt_paths": [],
         "reply_transport_binding_allowed_sources": [],
+        "final_channel_relay_required": False,
+        "final_channel_relay_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "final_channel_relay_reason": "final_channel_relay_not_required",
+        "final_channel_relay_receipt_path": "",
+        "final_channel_relay_question_tag": "",
+        "final_channel_relay_source_artifact": "",
+        "final_channel_relay_validation_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "final_channel_relay_validation_error_code": "",
     }
     normalized_mode = str(evidence_mode or "").strip().lower()
     if not strict_context or normalized_mode not in {"reply_file", "reply_log"}:
@@ -187,6 +198,14 @@ def _load_reply_transport_binding(
     required_pass_status_fields = _as_list(
         host_visible_contract.get("required_pass_status_fields")
     ) or list(HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS)
+    final_channel_id = (
+        str(host_visible_contract.get("final_channel_id", "")).strip()
+        or HOST_VISIBLE_FINAL_CHANNEL_ID
+    )
+    final_channel_relay_required = bool(
+        host_visible_contract.get("final_channel_relay_required", HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED)
+    )
+    payload["final_channel_relay_required"] = final_channel_relay_required
     receipt_pattern = (
         str(host_visible_contract.get("runtime_receipt_pattern", "")).strip()
         or HOST_VISIBLE_SURFACE_RECEIPT_PATTERN
@@ -268,6 +287,9 @@ def _load_reply_transport_binding(
         matched = matched_by_channel.get(channel)
         if matched is None:
             issues.append(f"reply_transport_live_receipt_missing:{channel}")
+            if channel == final_channel_id and final_channel_relay_required:
+                payload["final_channel_relay_status"] = STATUS_FAIL_REQUIRED
+                payload["final_channel_relay_reason"] = "final_channel_receipt_missing"
             continue
         receipt_path, receipt_doc = matched
         receipt_paths.append(str(receipt_path))
@@ -285,6 +307,40 @@ def _load_reply_transport_binding(
         for field in sorted(set(required_pass_status_fields)):
             if str(receipt_doc.get(field, "")).strip().upper() != STATUS_PASS_REQUIRED:
                 issues.append(f"reply_transport_live_receipt_status_not_pass:{channel}:{field}")
+        if channel == final_channel_id and final_channel_relay_required:
+            relay_projection = inspect_host_visible_final_channel_relay(
+                receipt_doc=receipt_doc,
+                repo_root=REPO_ROOT,
+                expected_identity_id=str(identity_id).strip(),
+                expected_source_artifact=str(reply_transport_ref).strip(),
+            )
+            payload["final_channel_relay_status"] = str(relay_projection.get("status", "")).strip()
+            payload["final_channel_relay_reason"] = str(relay_projection.get("reason", "")).strip()
+            payload["final_channel_relay_receipt_path"] = str(
+                relay_projection.get("receipt_path", "")
+            ).strip()
+            payload["final_channel_relay_question_tag"] = str(
+                relay_projection.get("question_tag", "")
+            ).strip()
+            payload["final_channel_relay_source_artifact"] = str(
+                relay_projection.get("source_artifact", "")
+            ).strip()
+            payload["final_channel_relay_validation_status"] = str(
+                relay_projection.get("validation_status", "")
+            ).strip()
+            payload["final_channel_relay_validation_error_code"] = str(
+                relay_projection.get("validation_error_code", "")
+            ).strip()
+            if str(relay_projection.get("status", "")).strip().upper() != STATUS_PASS_REQUIRED:
+                relay_issues = [
+                    str(item).strip()
+                    for item in (relay_projection.get("issues") or [])
+                    if str(item).strip()
+                ]
+                if not relay_issues:
+                    relay_issues = [str(relay_projection.get("reason", "")).strip() or "relay_not_pass"]
+                for relay_issue in relay_issues:
+                    issues.append(f"reply_transport_live_final_channel_{relay_issue}")
 
     payload["reply_transport_binding_receipt_paths"] = sorted(receipt_paths)
     if issues:
