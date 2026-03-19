@@ -112,6 +112,20 @@ Execution mode: topic-level canonical SSOT for v1.6.12 native-chat bootstrap ent
 7. This stream does not certify that the current outer native-chat final visible surface is already hard-bound to the controlled visible emitter.
 8. Implementation closure in this stream may consume the existing `v1.6.11` exact relay receipt at the host-visible `final` channel so the sender side proves controlled visible projection without reopening relay semantics.
 
+## 4.1) Standard implementation freeze vs enhancement boundary
+
+1. The standard native-chat implementation for this stream is frozen as:
+   - machine verification first,
+   - assistant-visible `Identity-Context` + `Machine-Verification` injection second,
+   - next-turn re-verification on later turns.
+2. The assistant-visible injected lines must come from the governed native-chat renderer output and must remain bound to current-turn tuple truth; they are not free-form commentary and they are not manual identity guessing.
+3. This standard implementation is sufficient for stream-level closure and for downstream feature work; it does not require the host final surface to be automatically hard-controlled before the stream may be considered closed at the standard level.
+4. Host final surface controlled display remains a stronger sender-side proof enhancement:
+   - controlled visible emitter on the final host-visible surface,
+   - exact relay receipt at the `final` channel,
+   - live `no_silent_headerless_turn` proof.
+5. That stronger sender-side proof stays in the same `v1.6.12` stream as a promotion-grade enhancement and must not be used to reopen or invalidate the standard implementation once the standard boundary above is satisfied.
+
 ## 5) Evidence contract for this stream
 
 1. Strict governance/review docs may cite only these persistent evidence anchors directly:

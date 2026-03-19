@@ -123,6 +123,19 @@ Scope: protocol review ledger for native-chat bootstrap entry governance and wor
    - `controlled_emitter_path_status`
    - `no_silent_headerless_turn_status`
 
+## 5.1) Closure decision for this stream
+
+1. The stream is closed at the standard implementation level when all of the following are true together:
+   - current-turn tuple truth is machine-verified,
+   - native-chat identity lines are renderer-produced and assistant-visible injected,
+   - failure cases remain fail-close rather than silent or identity-mismatched.
+2. Standard implementation closure does not require the host final surface to be automatically hard-controlled.
+3. Host final surface controlled display remains an enhancement track under `v1.6.12`, not a prerequisite for standard closure.
+4. Therefore review language must distinguish two valid states:
+   - `standard_closure=closed`
+   - `promotion_enhancement=open`
+5. As long as `promotion_status=NON_PROMOTIONAL_LOCK`, reviewers may still accept standard closure while keeping the stronger sender-side proof path open for later enhancement.
+
 ## 6) Local verification accepted for this opening
 
 1. See `identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/EVIDENCE_MANIFEST.v1.6.12-native-chat-bootstrap-entry.json`.
