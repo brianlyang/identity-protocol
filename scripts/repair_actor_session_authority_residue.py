@@ -154,7 +154,14 @@ def _repair_actor_store(path: Path, *, catalog_path: Path) -> dict[str, Any]:
     }
 
 
-def _repair_pointer(path: Path, *, pointer_name: str, catalog_path: Path, canonical_pointer_path: Path) -> dict[str, Any]:
+def _repair_pointer(
+    path: Path,
+    *,
+    pointer_name: str,
+    catalog_path: Path,
+    canonical_pointer_path: Path,
+    actor_id_hint: str = "",
+) -> dict[str, Any]:
     raw = _load_json(path)
     if not raw:
         return {
@@ -167,12 +174,17 @@ def _repair_pointer(path: Path, *, pointer_name: str, catalog_path: Path, canoni
         }
 
     actor_id = str(raw.get("compatibility_projection_actor_id", "")).strip() or str(raw.get("actor_id", "")).strip()
+    explicit_actor_id = str(actor_id_hint or "").strip()
     if not actor_id:
         inferred = select_actor_global_compatibility_projection(
             catalog_path,
             identity_id=str(raw.get("identity_id", "")).strip(),
         )
         actor_id = str(inferred.get("actor_id", "")).strip()
+    if not actor_id:
+        # Projection-unavailable pointers intentionally blank actor/id fields, so prefer the
+        # explicitly requested actor (or a single scanned actor) before treating reason/status as residue.
+        actor_id = explicit_actor_id
     projection_state = load_actor_global_compatibility_projection_state(catalog_path, actor_id) if actor_id else {}
     surface = _pointer_surface_fields(projection_state, raw)
     normalized = dict(raw)
@@ -263,9 +275,24 @@ def main() -> int:
 
     actor_results = [_repair_actor_store(path, catalog_path=catalog_path) for path in actor_paths if path.exists()]
     actor_missing = [str(path) for path in actor_paths if not path.exists()]
+    pointer_actor_hint = str(args.actor_id or "").strip()
+    if not pointer_actor_hint and len(actor_results) == 1:
+        pointer_actor_hint = str(actor_results[0].get("actor_id", "")).strip()
     pointer_results = [
-        _repair_pointer(canonical_pointer, pointer_name="canonical", catalog_path=catalog_path, canonical_pointer_path=canonical_pointer),
-        _repair_pointer(mirror_pointer, pointer_name="mirror", catalog_path=catalog_path, canonical_pointer_path=canonical_pointer),
+        _repair_pointer(
+            canonical_pointer,
+            pointer_name="canonical",
+            catalog_path=catalog_path,
+            canonical_pointer_path=canonical_pointer,
+            actor_id_hint=pointer_actor_hint,
+        ),
+        _repair_pointer(
+            mirror_pointer,
+            pointer_name="mirror",
+            catalog_path=catalog_path,
+            canonical_pointer_path=canonical_pointer,
+            actor_id_hint=pointer_actor_hint,
+        ),
     ]
 
     actor_residue_count = sum(1 for item in actor_results if item.get("residue_fields") or item.get("changed"))
