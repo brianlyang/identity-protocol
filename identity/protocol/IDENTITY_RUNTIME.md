@@ -233,3 +233,28 @@ Hard semantics:
 3. `relay_mode=summary` must classify as `ungoverned_operator_summary` and must not begin with governed-output prefixes such as `Identity-Context:`, `Display-Headstamp:`, or `Machine-Verification:`.
 4. Relay receipts must stay anchored to a governed source artifact (`leader_snapshot`, `final_report`, or canonical plain-text final answer) with matching `target_identity_id` and `source_snapshot_ts`; mismatches are fail-close.
 5. Instances must reuse the shared protocol builder/validator toolchain for `agent_relay_final_answer`; local receipt-construction logic is non-authoritative and must stay thin.
+
+### rq_043_identity_instance_pack_topology_contract_v1
+
+Required receipt fields:
+
+- `instance_pack_topology_status`
+- `pack_root_dir_lock_status`
+- `runtime_dir_lock_status`
+- `scripts_surface_status`
+- `required_contract`
+- `contract_key`
+- `missing_required_file_rows`
+- `missing_required_dir_rows`
+- `unknown_dir_rows`
+- `forbidden_dir_rows`
+- `stale_reasons`
+- `evidence_ref`
+
+Hard semantics:
+
+1. Governed identity packs must keep the canonical pack-root topology `agents/ + runtime/ + scripts/`; arbitrary additional root directories are not allowed without a later governed contract revision.
+2. Pack-root `scripts/` is the canonical instance-owned executable source surface; `runtime/scripts/` is forbidden.
+3. `runtime/` is reserved for runtime/autonomy/state/report/downsink surfaces and must not be repurposed as an executable source tree.
+4. Generated cache directories such as `__pycache__` and `.pytest_cache` are forbidden inside governed pack topology.
+5. Creator/bootstrap/update strict lanes must keep the topology contract and validator aligned; ad hoc instance-local topology keys are non-canonical.

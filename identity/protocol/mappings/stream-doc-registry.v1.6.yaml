@@ -38,6 +38,9 @@ stream_docs:
   - stream_version: v1.6.12
     governance_doc: docs/governance/identity-native-chat-bootstrap-entry-governance-v1.6.12.md
     review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.12-native-chat-bootstrap-entry.md
+  - stream_version: v1.6.13
+    governance_doc: docs/governance/identity-instance-pack-topology-governance-v1.6.13.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.13-instance-pack-topology.md
 
 mandatory_static_docs:
   - docs/governance/AUDIT_SNAPSHOT_INDEX.md
@@ -200,6 +203,20 @@ stream_doc_required_alias_refs:
     review_alias_refs:
       - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
       - identity/protocol/mappings/stream-doc-registry.current.yaml
+  - stream_version: v1.6.13
+    governance_doc: docs/governance/identity-instance-pack-topology-governance-v1.6.13.md
+    governance_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.13-instance-pack-topology.md
+    review_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/stream-scope-matrix.current.yaml
 
 static_doc_required_alias_refs:
   - doc: docs/governance/AUDIT_SNAPSHOT_INDEX.md

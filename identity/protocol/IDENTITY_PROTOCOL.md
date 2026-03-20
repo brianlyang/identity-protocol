@@ -1,15 +1,17 @@
-# Identity Protocol v1.4.10 (draft)
+# Identity Protocol v1.6.13 (draft)
 
-## Normative source map (v1.5 governance execution)
+## Normative source map (v1.6 stream execution)
 
 This file is kept as protocol overview/baseline context.  
-For active governance execution in v1.5 lanes, normative sources are:
+For active governance execution in v1.6 lanes, normative sources are:
 
-1. Topic-level canonical contract (SSOT):
-   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
-2. Execution/replay/audit ledger:
-   - `docs/review/protocol-remediation-audit-ledger-v1.5.md`
-3. Global protocol handoff baseline:
+1. Historical motherline baseline:
+   - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+2. Active stream registry (current-state routing SSOT):
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+3. Current review/audit baseline:
+   - `docs/review/protocol-remediation-audit-ledger-v1.6.md`
+4. Global protocol handoff baseline:
    - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
 
 Governance rule:
@@ -20,9 +22,9 @@ Governance rule:
 
 ## Governance execution stack (how work is controlled)
 
-1. **Contract layer** (`docs/governance/...v1.5.0.md`)
+1. **Contract layer** (`docs/governance/...v1.6.0.md` + active stream docs resolved by `stream-doc-registry.current.yaml`)
    - fields, enums, error-codes, fail-closed semantics, acceptance commands.
-2. **Review layer** (`docs/review/...v1.5.md`)
+2. **Review layer** (`docs/review/...v1.6.md` + active stream review ledgers)
    - intake, replay verdict, non-merge stage status, residual risks.
 3. **Implementation layer** (`scripts/*.py`, `scripts/*.sh`)
    - validators/writers/parsers and strict gate logic.
@@ -76,8 +78,19 @@ For each identity id `<id>`:
 - `identity/packs/<id>/CURRENT_TASK.json`
 - `identity/packs/<id>/TASK_HISTORY.md`
 - `identity/packs/<id>/META.yaml`
+- `identity/packs/<id>/agents/identity.yaml`
+- `identity/packs/<id>/scripts/README.md`
 
 Compatibility note: legacy packs can stay in `identity/<id>/` if catalog `pack_path` points there.
+
+### Canonical identity instance pack topology (v1.6.13 additive)
+
+1. Governed identity packs must keep the canonical root topology: `agents/`, `runtime/`, `scripts/`.
+2. Pack-root `scripts/` is the only canonical identity-instance executable source surface.
+3. `runtime/` remains reserved for runtime/autonomy/state/report/downsink assets; `runtime/scripts/` is forbidden.
+4. Instance-local helper automation belongs in the instance pack, not in a workspace-global shared patch directory.
+5. Required validator: `scripts/validate_identity_instance_pack_topology.py`.
+6. Directory drift is fail-close; unregistered additional directories are non-compliant until promoted by governance.
 
 ## Runtime source-of-truth boundary (v1.4.x hardening)
 

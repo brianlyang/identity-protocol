@@ -15,6 +15,7 @@ from pathlib import Path
 import sys
 import yaml
 
+from contract_binding_doc_defaults_common import resolve_validator_doc_defaults
 from resolve_identity_context import default_identity_home, default_local_catalog_path, default_local_instances_root
 from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID
 from version_baseline_common import (
@@ -276,6 +277,9 @@ DOWNSINK_REQUIRED_DOMAINS: tuple[str, ...] = (
     DOWNSINK_RUNTIME_PROTOCOL_FEEDBACK_DOMAIN,
     DOWNSINK_PROTOCOL_BROADCAST_SOURCE_DOMAIN,
 )
+INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY = "instance_pack_topology_contract_v1"
+INSTANCE_PACK_TOPOLOGY_CONTRACT_ID = "instance_pack_topology_contract_v1"
+INSTANCE_PACK_TOPOLOGY_VALIDATOR_ID = "scripts/validate_identity_instance_pack_topology.py"
 PROVIDER_BINDINGS_TEMPLATE_RELATIVE_PATH = (
     "identity/protocol/plugins/templates/provider-bindings.local.template.yaml"
 )
@@ -378,6 +382,36 @@ def _default_identity_prompt_markdown(
         "",
     ]
     return "\n".join(prompt_lines)
+
+
+def _default_instance_scripts_readme(identity_id: str) -> str:
+    identity_token = str(identity_id or "").strip() or "<identity-id>"
+    return """# Instance Scripts
+
+This directory is the instance-owned executable source surface for
+`{identity_token}`.
+
+Boundary:
+
+- `scripts/` lives at the identity-pack root and is the only canonical script surface for instance-owned helpers.
+- `runtime/` stays reserved for runtime/autonomy/state/report/downsink artifacts.
+- `runtime/scripts/` is forbidden and must fail-close under topology validation.
+- Scripts here may consume shared protocol/workspace resolvers, but must not fork shared protocol semantics.
+
+Guidance:
+
+- Keep commands identity-local and fail-close.
+- Prefer relative paths rooted at the current identity pack or protocol repo.
+- Do not introduce user-specific absolute paths into committed instance helpers.
+""".format(identity_token=identity_token)
+
+
+def _validator_doc_defaults(validator_script: str) -> tuple[str, str]:
+    governance_doc, review_doc = resolve_validator_doc_defaults(
+        Path(__file__).resolve().parent.parent,
+        validator_script=validator_script,
+    )
+    return governance_doc, review_doc
 
 
 def _ensure_identity_prompt_governance_kernel(
@@ -626,7 +660,8 @@ def _minimal_current_task(
         },
     }
     task = _ensure_dialogue_governance_contract(task, identity_id)
-    return _ensure_tool_vendor_governance_contracts(task, identity_id)
+    task = _ensure_tool_vendor_governance_contracts(task, identity_id)
+    return _ensure_instance_pack_topology_contract(task, identity_id)
 
 
 def _dialogue_governance_contract_skeleton(identity_id: str) -> dict:
@@ -671,6 +706,97 @@ def _ensure_dialogue_governance_contract(task: dict, identity_id: str) -> dict:
         task["dialogue_governance_contract"] = base
         return task
     task["dialogue_governance_contract"] = _deep_merge_defaults(base, cur)
+    return task
+
+
+def _instance_pack_topology_contract_skeleton(identity_id: str) -> dict:
+    return {
+        "required": True,
+        "contract_id": INSTANCE_PACK_TOPOLOGY_CONTRACT_ID,
+        "validator": INSTANCE_PACK_TOPOLOGY_VALIDATOR_ID,
+        "fail_mode": "fail_required",
+        "owner_scope": "identity_instance",
+        "artifact_class": "instance_pack_topology",
+        "pack_root_required_files": [
+            "CURRENT_TASK.json",
+            "IDENTITY_PROMPT.md",
+            "TASK_HISTORY.md",
+            "META.yaml",
+            "RULEBOOK.jsonl",
+            "agents/identity.yaml",
+            "scripts/README.md",
+        ],
+        "pack_root_required_dirs": [
+            "agents",
+            "runtime",
+            "scripts",
+        ],
+        "pack_root_optional_dirs": [],
+        "pack_root_legacy_compat_dirs": [],
+        "runtime_required_dirs": [
+            "runtime/examples",
+            "runtime/gate",
+            "runtime/logs",
+            "runtime/plugins",
+            "runtime/state",
+        ],
+        "runtime_optional_dirs": [
+            "runtime/examples/collaboration-trigger",
+            "runtime/examples/handoff",
+            "runtime/examples/handoff/negative",
+            "runtime/examples/handoff/positive",
+            "runtime/examples/install",
+            "runtime/examples/role-binding",
+            "runtime/logs/capability",
+            "runtime/logs/collaboration",
+            "runtime/logs/feedback",
+            "runtime/logs/handoff",
+            "runtime/logs/upgrade",
+            f"runtime/logs/upgrade/{identity_id}",
+            "runtime/metrics",
+            "runtime/protocol-feedback",
+            "runtime/protocol-feedback/evidence-index",
+            "runtime/protocol-feedback/outbox-to-protocol",
+            "runtime/protocol-feedback/upgrade-proposals",
+            "runtime/reports",
+            "runtime/reports/broadcast",
+            "runtime/reports/host-visible-surface",
+            "runtime/reports/install",
+            "runtime/reports/multimodal-runtime-stage",
+            "runtime/reports/required-gate-bundle-entry",
+            "runtime/rulebooks",
+        ],
+        "forbidden_dir_patterns": [
+            "runtime/scripts*",
+            "**/__pycache__",
+            "**/.pytest_cache",
+        ],
+        "scripts_surface": {
+            "root_dir": "scripts",
+            "must_live_at_pack_root": True,
+            "must_not_live_under_runtime": True,
+            "shared_dependency_policy": {
+                "allow_workspace_resolvers": True,
+                "allow_protocol_renderers": True,
+                "forbid_protocol_semantic_forks": True,
+                "forbid_workspace_shared_instance_patch_scripts": True,
+                "forbid_user_specific_absolute_paths": True,
+            },
+            "bootstrap_examples": [
+                "python3 <identity-pack-root>/scripts/<instance-helper>.py",
+                "PYTHONDONTWRITEBYTECODE=1 python3 <identity-pack-root>/scripts/<instance-helper>.py --json-only",
+            ],
+        },
+    }
+
+
+def _ensure_instance_pack_topology_contract(task: dict, identity_id: str) -> dict:
+    base = _instance_pack_topology_contract_skeleton(identity_id)
+    cur = task.get(INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY)
+    if not isinstance(cur, dict):
+        task[INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY] = base
+        return task
+    task[INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY] = _deep_merge_defaults(base, cur)
     return task
 
 
@@ -1583,11 +1709,12 @@ def _reasoning_loop_failclose_contract_skeleton() -> dict:
 
 
 def _release_unlock_formula_contract_skeleton() -> dict:
+    governance_doc, review_doc = _validator_doc_defaults("scripts/validate_unlock_formula.py")
     return {
         "required": True,
         "validator": "scripts/validate_unlock_formula.py",
-        "governance_doc": "docs/governance/identity-actor-session-binding-governance-v1.6.0.md",
-        "review_doc": "docs/review/protocol-remediation-audit-ledger-v1.6.md",
+        "governance_doc": governance_doc,
+        "review_doc": review_doc,
         "required_fields": [
             "unlock_allowed",
             "decision_gates",
@@ -1672,11 +1799,12 @@ def _sidecar_cwd_parity_contract_skeleton() -> dict:
 
 
 def _docs_bridge_consistency_contract_skeleton() -> dict:
+    governance_doc, review_doc = _validator_doc_defaults("scripts/validate_docs_bridge_consistency.py")
     return {
         "required": False,
         "validator": "scripts/validate_docs_bridge_consistency.py",
-        "governance_doc": "docs/governance/identity-actor-session-binding-governance-v1.6.0.md",
-        "review_doc": "docs/review/protocol-remediation-audit-ledger-v1.6.md",
+        "governance_doc": governance_doc,
+        "review_doc": review_doc,
         "required_fields": [
             "bridge_consistency_status",
             "contradiction_pairs",
@@ -1688,11 +1816,12 @@ def _docs_bridge_consistency_contract_skeleton() -> dict:
 
 
 def _contract_mapping_coverage_contract_skeleton() -> dict:
+    governance_doc, _review_doc = _validator_doc_defaults("scripts/validate_contract_mapping_coverage.py")
     return {
         "required": False,
         "validator": "scripts/validate_contract_mapping_coverage.py",
         "mapping_file": "identity/protocol/mappings/contract-binding.current.yaml",
-        "governance_doc": "docs/governance/identity-actor-session-binding-governance-v1.6.0.md",
+        "governance_doc": governance_doc,
         "required_fields": [
             "total_requirements",
             "p0_total",
@@ -5361,7 +5490,8 @@ def _legacy_full_contract_current_task(
     task["scaffold_profile"] = "legacy-commerce-overlay"
     task["scaffold_generation_mode"] = "explicit_opt_in"
     task = _ensure_dialogue_governance_contract(task, identity_id)
-    return _ensure_tool_vendor_governance_contracts(task, identity_id)
+    task = _ensure_tool_vendor_governance_contracts(task, identity_id)
+    return _ensure_instance_pack_topology_contract(task, identity_id)
 
 
 def _default_required_checks() -> list[str]:
@@ -5383,6 +5513,7 @@ def _default_required_checks() -> list[str]:
         "scripts/validate_identity_tool_installation.py",
         "scripts/validate_identity_vendor_api_discovery.py",
         "scripts/validate_identity_vendor_api_solution.py",
+        "scripts/validate_identity_instance_pack_topology.py",
         "scripts/validate_prompt_bootstrap_capability.py",
         "scripts/validate_prompt_capability_matrix.py",
         "scripts/validate_refresh_strict_business_interference.py",
@@ -6028,6 +6159,7 @@ def _neutral_full_contract_current_task(
     }
     task = _ensure_dialogue_governance_contract(task, identity_id)
     task = _ensure_tool_vendor_governance_contracts(task, identity_id)
+    task = _ensure_instance_pack_topology_contract(task, identity_id)
     task["scaffold_profile"] = "full-contract"
     task["scaffold_generation_mode"] = "neutral-default"
     return task
@@ -6684,6 +6816,7 @@ def main() -> int:
             description=args.description,
         ),
     )
+    write(pack_dir / "scripts" / "README.md", _default_instance_scripts_readme(identity_id))
 
     runtime_root = pack_dir / "runtime"
     write(
@@ -6721,6 +6854,7 @@ def main() -> int:
         )
     apply_version_baseline_to_task_doc(current_task, version_baseline)
     current_task = _inject_scaffold_metadata(current_task, args.profile, version_baseline=version_baseline)
+    current_task = _ensure_instance_pack_topology_contract(current_task, identity_id)
     current_task = _rewrite_identity_pack_root(current_task, identity_id, pack_dir)
     current_task = _rewrite_runtime_root(current_task, runtime_root)
     gateway_artifacts = materialize_protocol_host_gateway_artifacts(
@@ -6875,7 +7009,15 @@ def main() -> int:
                 identity_id,
                 "--current-task",
                 str(pack_dir / "CURRENT_TASK.json"),
-            ]
+            ],
+            [
+                "python3",
+                INSTANCE_PACK_TOPOLOGY_VALIDATOR_ID,
+                "--identity-id",
+                identity_id,
+                "--current-task",
+                str(pack_dir / "CURRENT_TASK.json"),
+            ],
         ]
         if args.register:
             checks.append(

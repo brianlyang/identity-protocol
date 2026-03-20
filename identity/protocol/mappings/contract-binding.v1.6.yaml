@@ -4,8 +4,8 @@ _meta:
   schema_version: 1
   source_layer: protocol
   lifecycle_state: phase6_full_requirement_projection
-  last_updated_utc: "2026-03-18T08:29:25Z"
-  row_count: 42
+  last_updated_utc: "2026-03-20T00:00:00Z"
+  row_count: 43
   notes:
     - "Phase-1 mapping seed for ASB16-RQ-017..022/030."
     - "Phase-2 extension adds prompt-kernel rows for ASB16-RQ-014/015/027/031."
@@ -19,6 +19,7 @@ _meta:
     - "v1.6.8 path-immutability stream is promoted into motherline rows RQ-036/037/038 to avoid side-chain drift."
     - "v1.6.5 rebound-absorber lane promotes rows RQ-039/040/041 into the motherline required bundle."
     - "v1.6.11 relay-final-answer stream adds motherline row RQ-042 for outer-agent exact/summary relay governance."
+    - "v1.6.13 instance-pack-topology stream adds motherline row RQ-043 for canonical pack-root scripts topology governance."
     - "Rows intentionally use canonical five-link tuple fields required by governance 4.15."
     - "Validator scripts referenced here may be planned-only until implementation commits land."
 
@@ -661,7 +662,8 @@ asb16-rq-019:
   kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_019_cross_workflow_evidence_schema_contract_v1
   validator_ids:
     - scripts/normalize_v16_cross_workflow_evidence.py
-    - scripts/validate_v16_cross_workflow_schema.py
+    - scripts/validate_cross_workflow_schema.py
+    - scripts/validate_v16_cross_workflow_schema.py::wrapper_compatibility_optional
   gate_surfaces:
     - creator
     - readiness
@@ -686,7 +688,8 @@ asb16-rq-020:
   kernel_contract_id: rq_020_skill_path_integrity_contract_v1
   kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_020_skill_path_integrity_contract_v1
   validator_ids:
-    - scripts/validate_v16_skill_path_integrity.py
+    - scripts/validate_skill_path_integrity.py
+    - scripts/validate_v16_skill_path_integrity.py::wrapper_compatibility_optional
   gate_surfaces:
     - creator
     - readiness
@@ -1225,6 +1228,40 @@ asb16-rq-042:
     - IP-RELAY-006
     - IP-RELAY-007
   mapping_state: phase6_v1611_agent_relay_motherline
+
+asb16-rq-043:
+  requirement_id: ASB16-RQ-043
+  kernel_contract_id: rq_043_identity_instance_pack_topology_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_043_identity_instance_pack_topology_contract_v1
+  validator_ids:
+    - scripts/validate_identity_instance_pack_topology.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-instance-pack-topology-governance-v1.6.13.md#2-frozen-pack-topology-no-ambiguity
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.13-instance-pack-topology.md#3-frozen-implementation-checklist
+  report_field_refs:
+    - instance_pack_topology_status
+    - pack_root_dir_lock_status
+    - runtime_dir_lock_status
+    - scripts_surface_status
+    - required_contract
+    - contract_key
+    - missing_required_file_rows
+    - missing_required_dir_rows
+    - unknown_dir_rows
+    - forbidden_dir_rows
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-IPACK-001
+    - IP-IPACK-002
+    - IP-IPACK-003
+  mapping_state: phase6_v1613_instance_pack_topology_motherline
 
 asb16-rq-030:
   requirement_id: ASB16-RQ-030

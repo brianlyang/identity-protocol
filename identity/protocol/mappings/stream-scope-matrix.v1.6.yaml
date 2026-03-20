@@ -1,7 +1,7 @@
 schema_version: 1
 matrix_version: v1
 stream_version: v1.6
-updated_at_utc: "2026-03-16T00:00:00Z"
+updated_at_utc: "2026-03-20T00:00:00Z"
 
 streams:
   - stream_version: v1.6.1
@@ -67,3 +67,36 @@ streams:
       - "validate_skill_installation_supply_chain.py"
       - "validate_skill_sync_drift_guard.py"
       - "run_skill_supply_chain_probes_ci.sh"
+
+  - stream_version: v1.6.11
+    scope_topic: agent_relay_final_answer
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.12
+    scope_topic: native_chat_bootstrap_entry
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.11
+    scope_topic: outer_agent_final_answer_relay
+    allowed_requirement_ids:
+      - ASB16-RQ-042
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.12
+    scope_topic: native_chat_bootstrap_entry
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
+
+  - stream_version: v1.6.13
+    scope_topic: identity_instance_pack_topology
+    allowed_requirement_ids:
+      - ASB16-RQ-043
+    forbidden_requirement_ids: []
+    forbidden_path_tokens:
+      - "runtime/scripts"

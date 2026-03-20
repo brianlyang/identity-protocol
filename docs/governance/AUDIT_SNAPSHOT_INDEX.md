@@ -65,6 +65,9 @@ Quick entrypoint for audit history and remediation closure records.
 - Canonical native-chat bootstrap entry governance (v1.6.12 stream):
   - `docs/governance/identity-native-chat-bootstrap-entry-governance-v1.6.12.md`
   - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.12-native-chat-bootstrap-entry.md`
+- Canonical identity-instance pack topology governance (v1.6.13 stream):
+  - `docs/governance/identity-instance-pack-topology-governance-v1.6.13.md`
+  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.13-instance-pack-topology.md`
 
 ## Snapshots
 
@@ -98,3 +101,4 @@ Quick entrypoint for audit history and remediation closure records.
 - `docs/governance/identity-cross-layer-runtime-uniqueness-governance-v1.6.7.md` — v1.6.7 dedicated runtime-source arbitration stream for single active runtime owner per identity across project/global catalogs, with fail-close duplicate detection and repair tooling.
 - `docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md` — v1.6.8 dedicated path-immutability stream for protocol-governed downsink assets (`runtime/gate`, `runtime/state`, `runtime/reports`, `runtime/protocol-feedback`, and protocol broadcast source paths), including core contract registry + required CI negative probes.
 - `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md` — v1.6.10 dedicated boundary-freeze stream for runtime dynamic file governance: wrapper strong-control, mirror constrained, runtime default autonomy, all machine-checked via semantic clarity + boundary validator surfaces.
+- `docs/governance/identity-instance-pack-topology-governance-v1.6.13.md` — v1.6.13 dedicated topology-lock stream for canonical identity-pack root layout (`agents/`, `runtime/`, `scripts/`), root-level instance script ownership, and fail-close drift gating.

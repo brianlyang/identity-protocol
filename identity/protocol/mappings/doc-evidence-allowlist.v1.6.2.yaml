@@ -247,3 +247,15 @@ strict_docs:
       - '^activity/evidence/v1612-native-chat-bootstrap-entry/\d{4}-\d{2}-\d{2}/bootstrap_entry_summary\.v1\.6\.12\.json$'
       - '^identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\.v1\.6\.12-native-chat-bootstrap-entry\.json$'
       - '^identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/\d{4}-\d{2}-\d{2}/bootstrap_entry_summary\.v1\.6\.12\.json$'
+
+  docs/governance/identity-instance-pack-topology-governance-v1.6.13.md:
+    max_activity_refs: 20
+    allowed_activity_patterns:
+      - '^activity/evidence/v1613-instance-pack-topology/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v1613-instance-pack-topology/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
+
+  docs/review/protocol-remediation-audit-ledger-v1.6.13-instance-pack-topology.md:
+    max_activity_refs: 20
+    allowed_activity_patterns:
+      - '^activity/evidence/v1613-instance-pack-topology/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v1613-instance-pack-topology/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
