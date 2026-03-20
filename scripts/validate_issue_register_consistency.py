@@ -38,6 +38,8 @@ OPEN_REFERENCE_RE = re.compile(
 HISTORICAL_MARKER_RE = re.compile(r"\bhistorical snapshot\b|\bprior round\b", flags=re.IGNORECASE)
 DOCS_CHECKED_RE = re.compile(r"docs checked:\s*(\d+)", flags=re.IGNORECASE)
 DOCS_SNIPPETS_RE = re.compile(r"command snippets checked:\s*(\d+)", flags=re.IGNORECASE)
+ISSUE_REGISTER_COUNT_RE = re.compile(r"issue_register_issue_count=(\d+)", flags=re.IGNORECASE)
+DEEP_AUDIT_COUNT_RE = re.compile(r"deep_audit_workbook_issue_count=(\d+)", flags=re.IGNORECASE)
 PROJECTION_FORBIDDEN_HEADER_RE = re.compile(
     r"\bauthoritative current status\b|\bauthoritative current machine snapshot\b|\bthis file is the authoritative\b",
     flags=re.IGNORECASE,
@@ -64,11 +66,14 @@ class ProjectionExport:
     authority_doc: Path
     authority_doc_rel: str
     presence_policy: str
+    freshness_mode: str
 
 
 @dataclass(frozen=True)
 class WorkbookFamily:
     registry_path: Path
+    workbook_family: str
+    minor_family_uniqueness_mode: str
     issue_register_doc: Path
     deep_audit_workbook_doc: Path
     projection_exports: tuple[ProjectionExport, ...]
@@ -109,6 +114,10 @@ def _discover_workbook_family(repo_root: Path, workspace_root: Path) -> Workbook
     family = registry_doc.get("active_workbook_family")
     if not isinstance(family, dict):
         raise ValueError(f"active_workbook_family missing: {registry_path}")
+    workbook_family = str(family.get("workbook_family", "")).strip()
+    if not workbook_family:
+        raise ValueError(f"workbook_family missing: {registry_path}")
+    minor_family_uniqueness_mode = str(family.get("minor_family_uniqueness_mode", "")).strip() or "exact_canonical_pair_only"
     issue_register_doc = _resolve_family_doc_path(family, "issue_register_doc")
     deep_audit_doc = _resolve_family_doc_path(family, "deep_audit_workbook_doc")
     if not issue_register_doc or not deep_audit_doc:
@@ -132,10 +141,13 @@ def _discover_workbook_family(repo_root: Path, workspace_root: Path) -> Workbook
                 authority_doc=(repo_root / authority_doc_rel).resolve(),
                 authority_doc_rel=authority_doc_rel,
                 presence_policy=str(row.get("presence_policy", "")).strip() or "optional_projection",
+                freshness_mode=str(row.get("freshness_mode", "")).strip() or "unspecified",
             )
         )
     return WorkbookFamily(
         registry_path=registry_path,
+        workbook_family=workbook_family,
+        minor_family_uniqueness_mode=minor_family_uniqueness_mode,
         issue_register_doc=(repo_root / issue_register_doc).resolve(),
         deep_audit_workbook_doc=(repo_root / deep_audit_doc).resolve(),
         projection_exports=tuple(projection_exports),
@@ -237,6 +249,14 @@ def _extract_doc_counts(text: str) -> tuple[int, int] | None:
     return int(docs_match.group(1)), int(snippet_match.group(1))
 
 
+def _extract_projection_issue_counts(text: str) -> tuple[int, int] | None:
+    issue_register_match = ISSUE_REGISTER_COUNT_RE.search(text)
+    deep_audit_match = DEEP_AUDIT_COUNT_RE.search(text)
+    if not issue_register_match or not deep_audit_match:
+        return None
+    return int(issue_register_match.group(1)), int(deep_audit_match.group(1))
+
+
 def _workspace_protocol_rel(repo_root: Path, relative_path: str) -> str:
     return str(Path(repo_root.name) / Path(relative_path))
 
@@ -249,10 +269,93 @@ def _serialize_projection_export(export: ProjectionExport) -> dict[str, Any]:
         "authority_doc": str(export.authority_doc),
         "authority_doc_rel": export.authority_doc_rel,
         "presence_policy": export.presence_policy,
+        "freshness_mode": export.freshness_mode,
     }
 
 
-def _validate_projection_export(export: ProjectionExport, repo_root: Path) -> tuple[dict[str, Any], list[str]]:
+def _validate_historical_boundary_surface(
+    *,
+    surface_key: str,
+    lines: list[str],
+    current_statuses: dict[str, str],
+) -> tuple[dict[str, Any], list[str]]:
+    violations: list[str] = []
+    open_refs = _collect_open_references(lines)
+    for ref in open_refs:
+        current_status = current_statuses.get(ref.issue_id, "")
+        if current_status == "CLOSED" and not HISTORICAL_MARKER_RE.search(ref.text):
+            violations.append(
+                f"unqualified_historical_open_reference:{surface_key}:{ref.issue_id}:line={ref.line_no}"
+            )
+
+    open_section_refs = _extract_section_issue_refs(lines, SECTION_OPEN)
+    for ref in open_section_refs:
+        current_status = current_statuses.get(ref.issue_id, "")
+        if current_status == "CLOSED":
+            violations.append(f"closed_issue_listed_in_open_section:{surface_key}:{ref.issue_id}:line={ref.line_no}")
+
+    closed_section_refs = _extract_section_issue_refs(lines, SECTION_CLOSED)
+    for ref in closed_section_refs:
+        current_status = current_statuses.get(ref.issue_id, "")
+        if current_status and current_status != "CLOSED":
+            violations.append(
+                f"non_closed_issue_listed_in_closed_section:{surface_key}:{ref.issue_id}:line={ref.line_no}"
+            )
+
+    return (
+        {
+            "historical_open_reference_count": len(open_refs),
+            "open_section_issue_count": len(open_section_refs),
+            "closed_section_issue_count": len(closed_section_refs),
+        },
+        violations,
+    )
+
+
+def _validate_minor_family_uniqueness(
+    *,
+    repo_root: Path,
+    workbook_family: str,
+    issue_register_doc: Path,
+    deep_audit_workbook_doc: Path,
+) -> tuple[dict[str, Any], list[str]]:
+    docs_root = (repo_root / WORKBOOK_CANONICAL_DIR).resolve()
+    canonical_docs = {
+        issue_register_doc.resolve(),
+        deep_audit_workbook_doc.resolve(),
+    }
+    family_docs = sorted(path.resolve() for path in docs_root.glob(f"*-{workbook_family}.md"))
+    family_doc_rel = [str(path.relative_to(repo_root)) for path in family_docs]
+    extra_docs = [path for path in family_docs if path not in canonical_docs]
+    missing_docs = [path for path in canonical_docs if path not in family_docs]
+    violations: list[str] = []
+    for path in extra_docs:
+        violations.append(f"minor_family_uniqueness_extra_doc:{workbook_family}:{path.relative_to(repo_root)}")
+    for path in missing_docs:
+        violations.append(f"minor_family_uniqueness_missing_doc:{workbook_family}:{path.relative_to(repo_root)}")
+    if len(family_docs) != len(canonical_docs):
+        violations.append(
+            f"minor_family_uniqueness_count_mismatch:{workbook_family}:expected={len(canonical_docs)}:found={len(family_docs)}"
+        )
+    return (
+        {
+            "workbook_family": workbook_family,
+            "family_docs": family_doc_rel,
+            "canonical_docs": sorted(str(path.relative_to(repo_root)) for path in canonical_docs),
+        },
+        violations,
+    )
+
+
+def _validate_projection_export(
+    export: ProjectionExport,
+    repo_root: Path,
+    *,
+    expected_issue_register_count: int,
+    expected_deep_audit_issue_count: int,
+    expected_docs_checked: int,
+    expected_snippets_checked: int,
+) -> tuple[dict[str, Any], list[str]]:
     result = {
         "projection_role": export.projection_role,
         "path": str(export.path),
@@ -260,6 +363,7 @@ def _validate_projection_export(export: ProjectionExport, repo_root: Path) -> tu
         "authority_doc": str(export.authority_doc),
         "authority_doc_rel": export.authority_doc_rel,
         "presence_policy": export.presence_policy,
+        "freshness_mode": export.freshness_mode,
         "exists": export.path.exists(),
     }
     violations: list[str] = []
@@ -282,6 +386,41 @@ def _validate_projection_export(export: ProjectionExport, repo_root: Path) -> tu
             violations.append(f"projection_marker_missing:{export.projection_role}:{marker}")
     if PROJECTION_FORBIDDEN_HEADER_RE.search(header_text):
         violations.append(f"projection_authority_claim:{export.projection_role}")
+    projection_counts = _extract_projection_issue_counts(text)
+    docs_counts = _extract_doc_counts(text)
+    result["recorded_issue_counts"] = (
+        {
+            "issue_register_issue_count": projection_counts[0],
+            "deep_audit_workbook_issue_count": projection_counts[1],
+        }
+        if projection_counts
+        else None
+    )
+    result["recorded_docs_checker_counts"] = (
+        {
+            "docs_checked": docs_counts[0],
+            "command_snippets_checked": docs_counts[1],
+        }
+        if docs_counts
+        else None
+    )
+    if export.freshness_mode == "summary_snapshot_parity_required":
+        if projection_counts is None:
+            violations.append(f"projection_freshness_missing_issue_counts:{export.projection_role}")
+        elif projection_counts != (expected_issue_register_count, expected_deep_audit_issue_count):
+            violations.append(
+                "projection_freshness_issue_count_mismatch:"
+                f"{export.projection_role}:expected={expected_issue_register_count}/{expected_deep_audit_issue_count}:"
+                f"recorded={projection_counts[0]}/{projection_counts[1]}"
+            )
+        if docs_counts is None:
+            violations.append(f"projection_freshness_missing_docs_checker_counts:{export.projection_role}")
+        elif docs_counts != (expected_docs_checked, expected_snippets_checked):
+            violations.append(
+                "projection_freshness_docs_checker_mismatch:"
+                f"{export.projection_role}:expected={expected_docs_checked}/{expected_snippets_checked}:"
+                f"recorded={docs_counts[0]}/{docs_counts[1]}"
+            )
     return result, violations
 
 
@@ -307,6 +446,8 @@ def main() -> int:
         "issue_register_doc": "",
         "deep_audit_workbook_doc": "",
         "projection_exports": [],
+        "historical_boundary_checks": {},
+        "minor_family_uniqueness": {},
         "issue_register_statuses": {},
         "deep_audit_workbook_statuses": {},
         "issue_register_issue_count": 0,
@@ -326,11 +467,15 @@ def main() -> int:
             if not issue_register_override or not deep_audit_override:
                 raise ValueError("issue-register-doc and deep-audit-workbook-doc must be provided together")
             workbook_registry = ""
+            workbook_family = ""
+            minor_family_uniqueness_mode = ""
             issue_register_doc = Path(issue_register_override).expanduser().resolve()
             deep_audit_workbook_doc = Path(deep_audit_override).expanduser().resolve()
         else:
             family = _discover_workbook_family(repo_root, workspace_root)
             workbook_registry = str(family.registry_path)
+            workbook_family = family.workbook_family
+            minor_family_uniqueness_mode = family.minor_family_uniqueness_mode
             issue_register_doc = family.issue_register_doc
             deep_audit_workbook_doc = family.deep_audit_workbook_doc
             projection_exports = family.projection_exports
@@ -377,23 +522,36 @@ def main() -> int:
 
     open_rows = {issue_id: status for issue_id, status in issue_register_statuses.items() if status in {"OPEN", "REOPENED"}}
     payload["open_rows_present"] = bool(open_rows)
+    issue_register_boundary, issue_register_boundary_violations = _validate_historical_boundary_surface(
+        surface_key="issue_register_doc",
+        lines=issue_register_lines,
+        current_statuses=issue_register_statuses,
+    )
+    deep_audit_boundary, deep_audit_boundary_violations = _validate_historical_boundary_surface(
+        surface_key="deep_audit_workbook_doc",
+        lines=deep_audit_workbook_lines,
+        current_statuses=issue_register_statuses,
+    )
+    payload["historical_boundary_checks"] = {
+        "issue_register_doc": issue_register_boundary,
+        "deep_audit_workbook_doc": deep_audit_boundary,
+    }
+    payload["historical_open_reference_count"] = (
+        issue_register_boundary["historical_open_reference_count"]
+        + deep_audit_boundary["historical_open_reference_count"]
+    )
+    violations.extend(issue_register_boundary_violations)
+    violations.extend(deep_audit_boundary_violations)
 
-    open_refs = _collect_open_references(issue_register_lines)
-    payload["historical_open_reference_count"] = len(open_refs)
-    for ref in open_refs:
-        current_status = issue_register_statuses.get(ref.issue_id, "")
-        if current_status == "CLOSED" and not HISTORICAL_MARKER_RE.search(ref.text):
-            violations.append(f"unqualified_historical_open_reference:{ref.issue_id}:line={ref.line_no}")
-
-    for ref in _extract_section_issue_refs(issue_register_lines, SECTION_OPEN):
-        current_status = issue_register_statuses.get(ref.issue_id, "")
-        if current_status == "CLOSED":
-            violations.append(f"closed_issue_listed_in_open_section:{ref.issue_id}:line={ref.line_no}")
-
-    for ref in _extract_section_issue_refs(issue_register_lines, SECTION_CLOSED):
-        current_status = issue_register_statuses.get(ref.issue_id, "")
-        if current_status and current_status != "CLOSED":
-            violations.append(f"non_closed_issue_listed_in_closed_section:{ref.issue_id}:line={ref.line_no}")
+    if workbook_family and minor_family_uniqueness_mode == "exact_canonical_pair_only":
+        minor_family_uniqueness, uniqueness_violations = _validate_minor_family_uniqueness(
+            repo_root=repo_root,
+            workbook_family=workbook_family,
+            issue_register_doc=issue_register_doc,
+            deep_audit_workbook_doc=deep_audit_workbook_doc,
+        )
+        payload["minor_family_uniqueness"] = minor_family_uniqueness
+        violations.extend(uniqueness_violations)
 
     try:
         docs_checked, snippets_checked, docs_output = _run_docs_checker(repo_root)
@@ -436,7 +594,14 @@ def main() -> int:
 
     projection_results: list[dict[str, Any]] = []
     for export in projection_exports:
-        projection_result, projection_violations = _validate_projection_export(export, repo_root)
+        projection_result, projection_violations = _validate_projection_export(
+            export,
+            repo_root,
+            expected_issue_register_count=len(issue_register_statuses),
+            expected_deep_audit_issue_count=len(deep_audit_workbook_statuses),
+            expected_docs_checked=docs_checked,
+            expected_snippets_checked=snippets_checked,
+        )
         projection_results.append(projection_result)
         violations.extend(projection_violations)
     if projection_results:
@@ -451,6 +616,7 @@ def main() -> int:
             if any(
                 "canonical directory" in item
                 or "outside canonical directory" in item
+                or item.startswith("minor_family_uniqueness")
                 or item.startswith("projection_")
                 or item.startswith("missing_required_projection_doc")
                 for item in violations

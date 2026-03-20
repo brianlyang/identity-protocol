@@ -79,6 +79,7 @@ Validators and CI must resolve the active workbook family through the registry, 
    - projection-only mode,
    - its canonical workbook source,
    - the current workbook registry pointer that governs it.
+4. If the registry opts a projection into freshness enforcement, the projection must also record machine-readable workbook issue counts and docs-checker counts so the validator can prove it still mirrors the active workbook family.
 
 ## 3) Relationship to `docs/review/`
 
@@ -99,13 +100,13 @@ Validators and CI must resolve the active workbook family through the registry, 
 
 1. Workbook docs are mandatory static docs under the protocol doc registry.
 2. The workbook registry current pointer and the versioned workbook registry are part of the same workbook control plane and must evolve with the workbook docs rather than as disconnected YAML sidecars.
-2. Workbook docs must carry explicit current-pointer alias refs, at minimum:
+3. Workbook docs must carry explicit current-pointer alias refs, at minimum:
    - `identity/protocol/mappings/workbook-registry.current.yaml`
    - `identity/protocol/mappings/stream-doc-registry.current.yaml`
    - `identity/protocol/mappings/control-plane-status.current.yaml`
-3. `docs/workbook/README.md` is part of the workbook control plane and must carry the same alias-ref discipline as the canonical workbook pair.
-4. `scripts/docs_command_contract_check.py` must validate workbook docs under the same documentation-governance discipline as `docs/governance/` and `docs/review/`.
-5. Any workbook drift that breaks alias-ref or executable-doc contract must fail in the same doc-governance lane.
+4. `docs/workbook/README.md` is part of the workbook control plane and must carry the same alias-ref discipline as the canonical workbook pair.
+5. `scripts/docs_command_contract_check.py` must validate workbook docs under the same documentation-governance discipline as `docs/governance/` and `docs/review/`.
+6. Any workbook drift that breaks alias-ref or executable-doc contract must fail in the same doc-governance lane.
 
 ## 6) Machine-gate binding
 
@@ -113,10 +114,12 @@ Validators and CI must resolve the active workbook family through the registry, 
 2. The validator must fail-close when:
    - workbook docs resolve outside `identity-protocol-local/docs/workbook/`;
    - issue register rows and deep-audit workbook statuses diverge;
-   - historical wording silently overrides current closed rows;
+   - either canonical workbook surface uses historical/open wording that silently overrides current closed rows;
+   - the active minor family resolves to more or fewer authority-shaped workbook docs than the canonical pair selected by the registry;
    - recorded docs-checker counts drift away from live checker output.
 3. If the versioned workbook registry declares optional projection exports, the validator may inspect them only to confirm projection-only boundary markers and canonical-source pointers; it must not use them as default status authority.
-4. `scripts/release_readiness_check.py` and `scripts/ci/run_required_runtime_gates_ci.sh` must keep the workbook-consistency gate in the formal release/runtime bundle.
+4. If the versioned workbook registry opts a projection export into freshness enforcement, the validator must fail-close when the projection's summary counts drift from the active workbook family.
+5. `scripts/release_readiness_check.py` and `scripts/ci/run_required_runtime_gates_ci.sh` must keep the workbook-consistency gate in the formal release/runtime bundle.
 
 ## 7) Frozen authority boundary
 
