@@ -1,0 +1,7 @@
+{
+  "protocol_lane_headstamp_status": "PASS_REQUIRED",
+  "protocol_lane_activation_status": "PASS_REQUIRED",
+  "headstamp_continuity_status": "PASS_REQUIRED",
+  "headstamp_live_receipt_binding_status": "PASS_REQUIRED",
+  "route_source_ref": "host_visible_live_receipt_fallback"
+}

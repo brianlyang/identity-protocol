@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 source "$ROOT/scripts/runtime_temp_path_common.sh"
+export IDENTITY_RUNTIME_TMP_ROOT="${IDENTITY_RUNTIME_TMP_ROOT:-$ROOT/.tmp}"
 TMP_ROOT="$(identity_runtime_mktemp_dir_sh "native-chat-bootstrap-entry-probes" "run")"
 trap 'rm -rf "$TMP_ROOT"' EXIT
 
@@ -82,7 +83,12 @@ summary = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
 manifest = json.loads(Path(sys.argv[2]).read_text(encoding='utf-8'))
 bundle = summary.get('promotion_unlock_evidence') or {}
 bundle.pop('host_visible_surface_probe_manifest_ref', None)
+bundle['status'] = 'NON_PROMOTIONAL_LOCK'
+bundle['no_silent_headerless_turn_status'] = 'INCONCLUSIVE_HOST_RUNTIME_PANIC'
+bundle.pop('governed_headstamp_continuity_status', None)
+bundle['no_silent_headerless_turn_proof_source'] = 'host_runtime_inconclusive'
 summary['promotion_unlock_evidence'] = bundle
+summary['closure_decision']['promotion_enhancement_status'] = 'OPEN'
 summary['four_track_alignment']['t4_replay_bundle'] = Path(sys.argv[4]).resolve().relative_to(Path(sys.argv[5]).resolve()).as_posix()
 manifest['summary_ref'] = Path(sys.argv[3]).resolve().relative_to(Path(sys.argv[5]).resolve()).as_posix()
 Path(sys.argv[3]).write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
@@ -103,19 +109,21 @@ positive, neg_summary, neg_manifest, lock_case = [
 ]
 assert positive['status'] == 'PASS_REQUIRED', positive
 assert positive['stream_opening_status'] == 'PASS_REQUIRED', positive
-assert positive['promotion_status'] == 'NON_PROMOTIONAL_LOCK', positive
-assert positive['live_smoke_contract_classification'] == 'HOST_RUNTIME_INCONCLUSIVE_NON_PROMOTIONAL', positive
+assert positive['promotion_status'] == 'PROMOTION_REVIEW_ELIGIBLE', positive
+assert positive['live_smoke_contract_classification'] == 'HOST_RUNTIME_INCONCLUSIVE_BUNDLE_COMPENSATED', positive
 assert positive['bundle_root_source'] == 'canonical_fixture', positive
 assert positive['standard_implementation_mode'] == 'assistant_visible_inject', positive
 assert positive['standard_closure_status'] == 'CLOSED', positive
 assert positive['standard_closure_ready'] is True, positive
 assert positive['promotion_enhancement_mode'] == 'host_final_surface_controlled_display', positive
-assert positive['promotion_enhancement_status'] == 'OPEN', positive
+assert positive['promotion_enhancement_status'] == 'READY', positive
 assert positive['post_check_recovery_status'] == 'PASS_REQUIRED', positive
 assert positive['final_channel_relay_receipt_status'] == 'PASS_REQUIRED', positive
 assert positive['controlled_emitter_path_status'] == 'PASS_REQUIRED', positive
 assert positive['unsupported_bypass_status'] == 'PASS_REQUIRED', positive
-assert positive['no_silent_headerless_turn_status'] == 'INCONCLUSIVE_HOST_RUNTIME_PANIC', positive
+assert positive['governed_headstamp_continuity_status'] == 'PASS_REQUIRED', positive
+assert positive['no_silent_headerless_turn_status'] == 'PASS_REQUIRED', positive
+assert positive['no_silent_headerless_turn_proof_source'] == 'host_visible_continuity_bundle', positive
 assert positive['host_visible_surface_probe_status'] == 'PASS_REQUIRED', positive
 assert neg_summary['status'] == 'FAIL_REQUIRED', neg_summary
 assert 'fast_audit_not_pass_required' in neg_summary['failures'], neg_summary
@@ -134,6 +142,7 @@ print(json.dumps({
     'positive_post_check_recovery_status': positive['post_check_recovery_status'],
     'positive_final_channel_relay_receipt_status': positive['final_channel_relay_receipt_status'],
     'positive_controlled_emitter_path_status': positive['controlled_emitter_path_status'],
+    'positive_governed_headstamp_continuity_status': positive['governed_headstamp_continuity_status'],
     'positive_no_silent_headerless_turn_status': positive['no_silent_headerless_turn_status'],
     'negative_summary_failure': 'fast_audit_not_pass_required',
     'negative_manifest_failure': 'manifest_missing_record_kind:wrapper_dry_run_exec',

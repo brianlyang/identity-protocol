@@ -4,7 +4,7 @@
   "results": [
     {
       "probe_name": "host_visible_commentary_bypass_blocked",
-      "timestamp_utc": "2026-03-19T16:44:48Z",
+      "timestamp_utc": "2026-03-20T09:12:29Z",
       "command": "fixture_snapshot:host_visible_commentary_bypass_blocked",
       "rc": 1,
       "stdout_path": "",
@@ -12,7 +12,7 @@
     },
     {
       "probe_name": "host_visible_commentary_session_binding_blocked",
-      "timestamp_utc": "2026-03-19T16:44:48Z",
+      "timestamp_utc": "2026-03-20T09:12:29Z",
       "command": "fixture_snapshot:host_visible_commentary_session_binding_blocked",
       "rc": 1,
       "stdout_path": "",
@@ -20,7 +20,7 @@
     },
     {
       "probe_name": "host_visible_contract_static",
-      "timestamp_utc": "2026-03-19T16:44:43Z",
+      "timestamp_utc": "2026-03-20T09:12:22Z",
       "command": "fixture_snapshot:host_visible_contract_static",
       "rc": 0,
       "stdout_path": "",
@@ -28,7 +28,7 @@
     },
     {
       "probe_name": "host_visible_final_channel_relay_missing_blocked",
-      "timestamp_utc": "2026-03-19T16:44:44Z",
+      "timestamp_utc": "2026-03-20T09:12:23Z",
       "command": "fixture_snapshot:host_visible_final_channel_relay_missing_blocked",
       "rc": 1,
       "stdout_path": "",
@@ -36,7 +36,7 @@
     },
     {
       "probe_name": "host_visible_live_receipts_pass",
-      "timestamp_utc": "2026-03-19T16:44:44Z",
+      "timestamp_utc": "2026-03-20T09:12:23Z",
       "command": "fixture_snapshot:host_visible_live_receipts_pass",
       "rc": 0,
       "stdout_path": "results/host_visible_live_receipts_pass.stdout.json",
@@ -44,7 +44,7 @@
     },
     {
       "probe_name": "host_visible_live_run_binding_required_blocked",
-      "timestamp_utc": "2026-03-19T16:44:47Z",
+      "timestamp_utc": "2026-03-20T09:12:28Z",
       "command": "fixture_snapshot:host_visible_live_run_binding_required_blocked",
       "rc": 1,
       "stdout_path": "",
@@ -52,7 +52,7 @@
     },
     {
       "probe_name": "host_visible_post_check_recovery_reseeds_final_channel_relay",
-      "timestamp_utc": "2026-03-19T16:44:44Z",
+      "timestamp_utc": "2026-03-20T09:12:24Z",
       "command": "fixture_snapshot:host_visible_post_check_recovery_reseeds_final_channel_relay",
       "rc": 0,
       "stdout_path": "results/host_visible_post_check_recovery_reseeds_final_channel_relay.stdout.json",
@@ -60,15 +60,23 @@
     },
     {
       "probe_name": "host_visible_receipt_stale_blocked",
-      "timestamp_utc": "2026-03-19T16:44:48Z",
+      "timestamp_utc": "2026-03-20T09:12:28Z",
       "command": "fixture_snapshot:host_visible_receipt_stale_blocked",
       "rc": 1,
       "stdout_path": "",
       "stderr_path": ""
     },
     {
+      "probe_name": "protocol_lane_headstamp_continuity_live_receipt_pass",
+      "timestamp_utc": "2026-03-20T09:12:26Z",
+      "command": "fixture_snapshot:protocol_lane_headstamp_continuity_live_receipt_pass",
+      "rc": 0,
+      "stdout_path": "results/protocol_lane_headstamp_continuity_live_receipt_pass.stdout.json",
+      "stderr_path": ""
+    },
+    {
       "probe_name": "send_time_governed_pass_headstamp_required",
-      "timestamp_utc": "2026-03-19T16:44:45Z",
+      "timestamp_utc": "2026-03-20T09:12:25Z",
       "command": "fixture_snapshot:send_time_governed_pass_headstamp_required",
       "rc": 0,
       "stdout_path": "results/send_time_governed_pass_headstamp_required.stdout.json",
@@ -76,7 +84,7 @@
     },
     {
       "probe_name": "send_time_inline_reply_text_host_direct_blocked",
-      "timestamp_utc": "2026-03-19T16:44:46Z",
+      "timestamp_utc": "2026-03-20T09:12:27Z",
       "command": "fixture_snapshot:send_time_inline_reply_text_host_direct_blocked",
       "rc": 1,
       "stdout_path": "",
@@ -84,7 +92,7 @@
     },
     {
       "probe_name": "send_time_manual_reply_file_without_live_receipt_blocked",
-      "timestamp_utc": "2026-03-19T16:44:46Z",
+      "timestamp_utc": "2026-03-20T09:12:26Z",
       "command": "fixture_snapshot:send_time_manual_reply_file_without_live_receipt_blocked",
       "rc": 1,
       "stdout_path": "",
@@ -92,7 +100,7 @@
     },
     {
       "probe_name": "send_time_next_hop_blocked_by_post_check",
-      "timestamp_utc": "2026-03-19T16:44:49Z",
+      "timestamp_utc": "2026-03-20T09:12:30Z",
       "command": "fixture_snapshot:send_time_next_hop_blocked_by_post_check",
       "rc": 1,
       "stdout_path": "",
@@ -100,7 +108,7 @@
     },
     {
       "probe_name": "send_time_next_hop_blocked_on_missing_post_check_state",
-      "timestamp_utc": "2026-03-19T16:44:47Z",
+      "timestamp_utc": "2026-03-20T09:12:27Z",
       "command": "fixture_snapshot:send_time_next_hop_blocked_on_missing_post_check_state",
       "rc": 1,
       "stdout_path": "",

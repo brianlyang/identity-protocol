@@ -1,21 +1,21 @@
 {
   "stream_version": "v1.6.12",
   "topic": "native_chat_bootstrap_entry",
-  "generated_at": "2026-03-19T15:30:00Z",
+  "generated_at": "2026-03-20T09:12:30Z",
   "evidence_root": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19",
   "summary_ref": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/bootstrap_entry_summary.v1.6.12.json",
   "notes": [
-    "Canonical tracked fixture snapshot for v1.6.12 stream-opening and promotion-lock checks.",
-    "Derived from the 2026-03-19 local runtime evidence bundle and sanitized to repo-relative paths."
+    "Canonical tracked fixture snapshot for v1.6.12 stream-opening and promotion-evidence checks.",
+    "Archived live smoke remains host-runtime inconclusive, while the governed host-visible continuity bundle now closes no_silent_headerless_turn on the controlled path."
   ],
   "evidence_records": [
     {
       "kind": "stream_summary",
       "mirror_path": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/bootstrap_entry_summary.v1.6.12.json",
-      "sha256": "f880cfc28c9b9cc933f952bcd1fb016833df12bb59cf464909b451a16cbe1189",
+      "sha256": "bf9fb7eb89dbddd06ee42138d99ac22359f7cf27cb6b291521c9aa65dd4735f5",
       "command": "fixture_snapshot:canonical_v1612_bundle",
       "rc": 0,
-      "timestamp": "2026-03-19T15:30:00Z"
+      "timestamp": "2026-03-20T09:12:30Z"
     },
     {
       "kind": "fast_audit_summary",
@@ -92,10 +92,18 @@
     {
       "kind": "host_visible_surface_probe_manifest",
       "mirror_path": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/host_visible_surface_probes/manifest.host_visible_surface_live.json",
-      "sha256": "fc4504785633fa0cc6d480b47674a1d106cb516a4007631aaa305901b47b4321",
+      "sha256": "f847d42776d15310ea90b958f7d0596f0a2d5cc79f141369be92e609a2e95fe1",
       "command": "fixture_snapshot:canonical_v1612_bundle",
       "rc": 0,
-      "timestamp": "2026-03-19T16:44:49Z"
+      "timestamp": "2026-03-20T09:12:30Z"
+    },
+    {
+      "kind": "host_visible_continuity_proof",
+      "mirror_path": "identity/protocol/fixtures/v1612-native-chat-bootstrap-entry/2026-03-19/host_visible_surface_probes/results/protocol_lane_headstamp_continuity_live_receipt_pass.stdout.json",
+      "sha256": "74c184824eb443410aea84a760ed94a3b59677e3aa3da5ebae7b7c0ff21f4929",
+      "command": "fixture_snapshot:protocol_lane_headstamp_continuity_live_receipt_pass",
+      "rc": 0,
+      "timestamp": "2026-03-20T09:12:30Z"
     }
   ]
 }

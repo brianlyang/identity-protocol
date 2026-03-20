@@ -44,6 +44,7 @@ REQUIRED_INCONCLUSIVE_RECORD_KINDS = {
     "live_smoke_timeout_audit",
     "live_smoke_stderr",
 }
+CONTINUITY_COMPENSATION_RECORD_KIND = "host_visible_continuity_proof"
 REQUIRED_RECORD_FIELDS = ("mirror_path", "sha256", "command", "rc", "timestamp")
 PROMOTION_LOCK = "NON_PROMOTIONAL_LOCK"
 PROMOTION_ELIGIBLE = "PROMOTION_REVIEW_ELIGIBLE"
@@ -59,6 +60,7 @@ HOST_VISIBLE_REQUIRED_PROMOTION_PROBES = {
     "host_visible_final_channel_relay_missing_blocked": 1,
     "host_visible_post_check_recovery_reseeds_final_channel_relay": 0,
     "send_time_governed_pass_headstamp_required": 0,
+    "protocol_lane_headstamp_continuity_live_receipt_pass": 0,
 }
 
 
@@ -163,6 +165,20 @@ def _derive_live_no_headstamp_status(live_smoke_status: str) -> str:
     return STATUS_FAIL_REQUIRED
 
 
+def _derive_no_silent_headerless_turn_status(
+    *,
+    live_smoke_status: str,
+    governed_headstamp_continuity_status: str,
+) -> str:
+    if live_smoke_status == STATUS_PASS_REQUIRED:
+        return STATUS_PASS_REQUIRED
+    if governed_headstamp_continuity_status == STATUS_PASS_REQUIRED:
+        return STATUS_PASS_REQUIRED
+    if live_smoke_status == "INCONCLUSIVE_HOST_RUNTIME_PANIC":
+        return "INCONCLUSIVE_HOST_RUNTIME_PANIC"
+    return STATUS_FAIL_REQUIRED
+
+
 def _derive_standard_closure_ready(payload: dict[str, Any]) -> bool:
     return (
         payload.get("stream_opening_status") == STATUS_PASS_REQUIRED
@@ -197,6 +213,7 @@ def _inspect_host_visible_probe_manifest(repo_root: Path, manifest_path: Path) -
         "controlled_emitter_path_status": STATUS_FAIL_REQUIRED,
         "unsupported_bypass_status": STATUS_FAIL_REQUIRED,
         "post_check_recovery_status": STATUS_FAIL_REQUIRED,
+        "governed_headstamp_continuity_status": STATUS_FAIL_REQUIRED,
     }
     if payload["suite"] != HOST_VISIBLE_PROBE_SUITE:
         payload["status"] = STATUS_FAIL_REQUIRED
@@ -312,6 +329,39 @@ def _inspect_host_visible_probe_manifest(repo_root: Path, manifest_path: Path) -
             payload["failures"].append("host_visible_controlled_emitter_not_pass_required")
             payload["status"] = STATUS_FAIL_REQUIRED
 
+    continuity_row = index.get("protocol_lane_headstamp_continuity_live_receipt_pass")
+    if continuity_row is not None:
+        continuity_doc = _read_probe_doc(
+            _resolve_manifest_member_path(manifest_path, str(continuity_row.get("stdout_path", "")))
+        )
+        continuity_fields = {
+            "protocol_lane_headstamp_status": str(
+                continuity_doc.get("protocol_lane_headstamp_status", "")
+            ).strip(),
+            "protocol_lane_activation_status": str(
+                continuity_doc.get("protocol_lane_activation_status", "")
+            ).strip(),
+            "headstamp_continuity_status": str(
+                continuity_doc.get("headstamp_continuity_status", "")
+            ).strip(),
+            "headstamp_live_receipt_binding_status": str(
+                continuity_doc.get("headstamp_live_receipt_binding_status", "")
+            ).strip(),
+            "route_source_ref": str(continuity_doc.get("route_source_ref", "")).strip(),
+        }
+        payload["governed_headstamp_continuity_observed"] = continuity_fields
+        if (
+            continuity_fields["protocol_lane_headstamp_status"] == STATUS_PASS_REQUIRED
+            and continuity_fields["protocol_lane_activation_status"] == STATUS_PASS_REQUIRED
+            and continuity_fields["headstamp_continuity_status"] == STATUS_PASS_REQUIRED
+            and continuity_fields["headstamp_live_receipt_binding_status"] == STATUS_PASS_REQUIRED
+            and continuity_fields["route_source_ref"] == "host_visible_live_receipt_fallback"
+        ):
+            payload["governed_headstamp_continuity_status"] = STATUS_PASS_REQUIRED
+        else:
+            payload["failures"].append("host_visible_governed_headstamp_continuity_not_pass_required")
+            payload["status"] = STATUS_FAIL_REQUIRED
+
     if payload["failures"]:
         payload["status"] = STATUS_FAIL_REQUIRED
     return payload
@@ -338,9 +388,8 @@ def _validate_promotion_unlock_bundle(
     payload["authoritative_resolve_status"] = (
         str(bundle.get("authoritative_resolve_status", "")).strip() or derived_authoritative_resolve_status
     )
-    payload["no_silent_headerless_turn_status"] = (
-        str(bundle.get("no_silent_headerless_turn_status", "")).strip() or derived_live_no_headstamp_status
-    )
+    bundle_no_headstamp_status = str(bundle.get("no_silent_headerless_turn_status", "")).strip()
+    payload["live_smoke_no_silent_headerless_turn_status"] = derived_live_no_headstamp_status
     payload["final_channel_relay_receipt_status"] = str(bundle.get("final_channel_relay_receipt_status", "")).strip() or PROMOTION_UNKNOWN
     payload["controlled_emitter_path_status"] = str(bundle.get("controlled_emitter_path_status", "")).strip() or PROMOTION_UNKNOWN
     payload["unsupported_bypass_status"] = str(bundle.get("unsupported_bypass_status", "")).strip() or PROMOTION_UNKNOWN
@@ -349,8 +398,6 @@ def _validate_promotion_unlock_bundle(
         _promotion_lock(payload, "tuple_present_status_not_pass_required")
     if payload["authoritative_resolve_status"] != derived_authoritative_resolve_status:
         _promotion_lock(payload, "authoritative_resolve_status_not_pass_required")
-    if payload["no_silent_headerless_turn_status"] != derived_live_no_headstamp_status:
-        _promotion_lock(payload, "no_silent_headerless_turn_status_not_aligned_with_live_smoke")
 
     probe_manifest_ref = str(bundle.get("host_visible_surface_probe_manifest_ref", "")).strip()
     payload["host_visible_surface_probe_manifest_ref"] = probe_manifest_ref
@@ -380,14 +427,38 @@ def _validate_promotion_unlock_bundle(
             payload["final_channel_relay_receipt_path"] = str(
                 probe_payload.get("final_channel_relay_receipt_path", "")
             ).strip()
+            payload["governed_headstamp_continuity_status"] = str(
+                probe_payload.get("governed_headstamp_continuity_status", "")
+            ).strip()
+            payload["governed_headstamp_continuity_observed"] = probe_payload.get(
+                "governed_headstamp_continuity_observed", {}
+            )
             if payload["host_visible_surface_probe_status"] != STATUS_PASS_REQUIRED:
                 _promotion_lock(payload, "host_visible_surface_probe_status_not_pass_required")
     else:
         _promotion_lock(payload, "host_visible_surface_probe_manifest_ref_missing")
 
+    derived_no_headstamp_status = _derive_no_silent_headerless_turn_status(
+        live_smoke_status=live_smoke_status,
+        governed_headstamp_continuity_status=str(payload.get("governed_headstamp_continuity_status", "")).strip(),
+    )
+    payload["no_silent_headerless_turn_proof_source"] = (
+        "live_smoke"
+        if live_smoke_status == STATUS_PASS_REQUIRED
+        else (
+            "host_visible_continuity_bundle"
+            if str(payload.get("governed_headstamp_continuity_status", "")).strip() == STATUS_PASS_REQUIRED
+            else "host_runtime_inconclusive"
+        )
+    )
+    payload["no_silent_headerless_turn_status"] = bundle_no_headstamp_status or derived_no_headstamp_status
+    if payload["no_silent_headerless_turn_status"] != derived_no_headstamp_status:
+        _promotion_lock(payload, "no_silent_headerless_turn_status_not_aligned_with_governed_proof")
+
     all_promotion_requirements_pass = (
         payload["tuple_present_status"] == STATUS_PASS_REQUIRED
         and payload["authoritative_resolve_status"] == STATUS_PASS_REQUIRED
+        and str(payload.get("host_visible_surface_probe_status", "")).strip() == STATUS_PASS_REQUIRED
         and payload["final_channel_relay_receipt_status"] == STATUS_PASS_REQUIRED
         and payload["controlled_emitter_path_status"] == STATUS_PASS_REQUIRED
         and payload["no_silent_headerless_turn_status"] == STATUS_PASS_REQUIRED
@@ -598,6 +669,8 @@ def _validate_summary_and_manifest(
     )
     if payload.get("promotion_unlock_ready") is True and payload["promotion_status"] != STATUS_FAIL_REQUIRED:
         payload["promotion_status"] = PROMOTION_ELIGIBLE
+        if live_smoke_status == "INCONCLUSIVE_HOST_RUNTIME_PANIC":
+            payload["live_smoke_contract_classification"] = "HOST_RUNTIME_INCONCLUSIVE_BUNDLE_COMPENSATED"
     elif payload["promotion_status"] != STATUS_FAIL_REQUIRED:
         payload["promotion_status"] = PROMOTION_LOCK
 
@@ -636,6 +709,9 @@ def _validate_summary_and_manifest(
         for required_kind in REQUIRED_INCONCLUSIVE_RECORD_KINDS:
             if required_kind not in kinds:
                 _failure(payload, f"manifest_missing_inconclusive_record_kind:{required_kind}")
+    if payload.get("no_silent_headerless_turn_proof_source") == "host_visible_continuity_bundle":
+        if CONTINUITY_COMPENSATION_RECORD_KIND not in kinds:
+            _failure(payload, f"manifest_missing_record_kind:{CONTINUITY_COMPENSATION_RECORD_KIND}")
 
     notes = manifest.get("notes") or []
     if not isinstance(notes, list) or len(notes) < 2:

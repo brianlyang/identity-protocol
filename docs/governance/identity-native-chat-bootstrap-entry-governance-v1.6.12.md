@@ -127,7 +127,7 @@ Execution mode: topic-level canonical SSOT for v1.6.12 native-chat bootstrap ent
    - controlled visible emitter on the final host-visible surface,
    - exact relay receipt at the `final` channel,
    - post-check recovery that can reseed the exact relay metadata from the actual reply transport ref,
-   - live `no_silent_headerless_turn` proof.
+   - `no_silent_headerless_turn` proof, satisfied either by a stable live smoke pass or by the governed host-visible continuity bundle when host runtime smoke is inconclusive but the controlled path is fully machine-attested.
 8. That stronger sender-side proof stays in the same `v1.6.12` stream as a promotion-grade enhancement and must not be used to reopen or invalidate the standard implementation once the standard boundary above is satisfied.
 
 ## 5) Evidence contract for this stream
@@ -147,7 +147,7 @@ Execution mode: topic-level canonical SSOT for v1.6.12 native-chat bootstrap ent
 2. Keep workspace bootstrap responsibility out of protocol motherline until promotion evidence is sufficient.
 3. Keep multi-agent or multi-identity scaling on isolated wrapped processes, tmux lanes, process-call lanes, or governed sub-agent handoff; do not route through shared mutable pointer guesses.
 4. Keep host-runtime panic evidence classified as host-runtime instability, not as proof that protocol renderer semantics regressed.
-5. Machine-consumable stream opening checks should use `scripts/validate_native_chat_bootstrap_entry_stream.py`; host-runtime inconclusive live smoke must resolve to a non-promotional lock, not a stream-opening semantic regression.
+5. Machine-consumable stream opening checks should use `scripts/validate_native_chat_bootstrap_entry_stream.py`; host-runtime inconclusive live smoke must never be interpreted as a stream-opening semantic regression, and it remains non-promotional unless the governed continuity bundle separately proves the same current-turn no-headerless-turn boundary.
 6. `scripts/validate_native_chat_bootstrap_entry_stream.py` must prefer the tracked canonical fixture bundle under `identity/protocol/fixtures/...` and use `activity/evidence/...` only as a local fallback when the tracked fixture is unavailable.
 7. Keep this stream infrastructure-first: no ad hoc prompt patches, no identity guessing from projection files, and no hidden in-place switching path.
 
@@ -159,7 +159,7 @@ Execution mode: topic-level canonical SSOT for v1.6.12 native-chat bootstrap ent
    - authoritative resolve passes on session-primary truth,
    - final channel relay receipt remains `PASS_REQUIRED`,
    - sender-side controlled emitter path remains `PASS_REQUIRED`,
-   - the outer native-chat final visible surface does not emit a silent headerless turn,
+   - the outer native-chat final visible surface does not emit a silent headerless turn, proven either by stable live smoke or by a governed host-visible continuity bundle that already binds the admitted reply to the controlled emitter path,
    - the final host-visible answer is bound to the controlled visible emitter path rather than to a free-form outer reply path.
 3. Until those conditions are proven, the correct status is:
    - bootstrap-entry stream opening may still be `PASS_REQUIRED`,
@@ -171,9 +171,11 @@ Execution mode: topic-level canonical SSOT for v1.6.12 native-chat bootstrap ent
    - `post_check_recovery_status`
    - `final_channel_relay_receipt_status`
    - `controlled_emitter_path_status`
+   - `governed_headstamp_continuity_status`
    - `no_silent_headerless_turn_status`
 5. The same machine gate must also report the closure boundary explicitly so later work cannot reinterpret the stream by chat text alone:
    - `standard_implementation_mode=assistant_visible_inject`
    - `standard_closure_status=CLOSED`
    - `promotion_enhancement_mode=host_final_surface_controlled_display`
    - `promotion_enhancement_status=OPEN` while `promotion_status=NON_PROMOTIONAL_LOCK`
+   - `promotion_enhancement_status=READY` when the governed continuity bundle closes promotion even if host-runtime smoke remains diagnostically inconclusive

@@ -17,6 +17,7 @@ REPO_CATALOG_PATH="${REPO_ROOT}/identity/catalog/identities.yaml"
 REPAIR_CONTRACT_BACKFILL="${REPO_ROOT}/scripts/repair_contract_backfill.py"
 VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION="${REPO_ROOT}/scripts/validate_host_transport_wiring_attestation.py"
 VALIDATE_SEND_TIME_REPLY_GATE="${REPO_ROOT}/scripts/validate_send_time_reply_gate.py"
+VALIDATE_PROTOCOL_LANE_HEADSTAMP_CONTINUITY="${REPO_ROOT}/scripts/validate_protocol_lane_headstamp_continuity.py"
 RECOVER_HOST_VISIBLE_POST_CHECK_STATE="${REPO_ROOT}/scripts/recover_host_visible_post_check_state.py"
 
 rm -rf "${WORK_ROOT}"
@@ -248,6 +249,24 @@ elif name == "send_time_governed_pass_headstamp_required":
     headstamp_consistency_mode = str(doc.get("headstamp_consistency_mode", "")).strip()
     if headstamp_consistency_mode != "exact_match":
         raise SystemExit("send_time_governed_pass_headstamp_required: headstamp_consistency_mode mismatch")
+elif name == "protocol_lane_headstamp_continuity_live_receipt_pass":
+    if rc != 0:
+        raise SystemExit("protocol_lane_headstamp_continuity_live_receipt_pass: expected zero rc")
+    continuity_status = str(doc.get("protocol_lane_headstamp_status", "")).strip().upper()
+    if continuity_status != "PASS_REQUIRED":
+        raise SystemExit("protocol_lane_headstamp_continuity_live_receipt_pass: protocol_lane_headstamp_status must be PASS_REQUIRED")
+    lane_status = str(doc.get("protocol_lane_activation_status", "")).strip().upper()
+    if lane_status != "PASS_REQUIRED":
+        raise SystemExit("protocol_lane_headstamp_continuity_live_receipt_pass: protocol_lane_activation_status must be PASS_REQUIRED")
+    headstamp_status = str(doc.get("headstamp_continuity_status", "")).strip().upper()
+    if headstamp_status != "PASS_REQUIRED":
+        raise SystemExit("protocol_lane_headstamp_continuity_live_receipt_pass: headstamp_continuity_status must be PASS_REQUIRED")
+    live_receipt_binding_status = str(doc.get("headstamp_live_receipt_binding_status", "")).strip().upper()
+    if live_receipt_binding_status != "PASS_REQUIRED":
+        raise SystemExit("protocol_lane_headstamp_continuity_live_receipt_pass: headstamp_live_receipt_binding_status must be PASS_REQUIRED")
+    route_source_ref = str(doc.get("route_source_ref", "")).strip()
+    if route_source_ref != "host_visible_live_receipt_fallback":
+        raise SystemExit("protocol_lane_headstamp_continuity_live_receipt_pass: route_source_ref mismatch")
 elif name == "send_time_manual_reply_file_without_live_receipt_blocked":
     if rc == 0:
         raise SystemExit("send_time_manual_reply_file_without_live_receipt_blocked: expected non-zero rc")
@@ -626,6 +645,19 @@ run_probe send_time_governed_pass_headstamp_required \
     --reply-outlet-guard-applied \
     --json-only
 
+run_probe protocol_lane_headstamp_continuity_live_receipt_pass \
+  python3 "${VALIDATE_PROTOCOL_LANE_HEADSTAMP_CONTINUITY}" \
+    --identity-id "${IDENTITY_ID}" \
+    --catalog "${CATALOG_PATH}" \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --run-id run:ci-probe-receipt \
+    --operation ci \
+    --expected-work-layer protocol \
+    --expected-source-layer project \
+    --layer-intent-text "work_layer=protocol source_layer=project" \
+    --json-only
+
 run_probe send_time_manual_reply_file_without_live_receipt_blocked \
   python3 "${VALIDATE_SEND_TIME_REPLY_GATE}" \
     --identity-id "${IDENTITY_ID}" \
@@ -949,6 +981,7 @@ shutil.copyfile(real_receipt_path, relay_receipt_path)
 
 recovery_doc, recovery_src = load_result("host_visible_post_check_recovery_reseeds_final_channel_relay")
 send_time_doc, send_time_src = load_result("send_time_governed_pass_headstamp_required")
+continuity_doc, continuity_src = load_result("protocol_lane_headstamp_continuity_live_receipt_pass")
 
 minimal_outputs = {
     "host_visible_live_receipts_pass": {
@@ -983,6 +1016,21 @@ minimal_outputs = {
         "headstamp_consistency_status": str(send_time_doc.get("headstamp_consistency_status", "")).strip(),
         "output_governance_mode": str(send_time_doc.get("output_governance_mode", "")).strip(),
     },
+    "protocol_lane_headstamp_continuity_live_receipt_pass": {
+        "protocol_lane_headstamp_status": str(
+            continuity_doc.get("protocol_lane_headstamp_status", "")
+        ).strip(),
+        "protocol_lane_activation_status": str(
+            continuity_doc.get("protocol_lane_activation_status", "")
+        ).strip(),
+        "headstamp_continuity_status": str(
+            continuity_doc.get("headstamp_continuity_status", "")
+        ).strip(),
+        "headstamp_live_receipt_binding_status": str(
+            continuity_doc.get("headstamp_live_receipt_binding_status", "")
+        ).strip(),
+        "route_source_ref": str(continuity_doc.get("route_source_ref", "")).strip(),
+    },
 }
 
 for probe_name, payload in minimal_outputs.items():
@@ -993,6 +1041,7 @@ keep_stdout = {
     "host_visible_live_receipts_pass",
     "host_visible_post_check_recovery_reseeds_final_channel_relay",
     "send_time_governed_pass_headstamp_required",
+    "protocol_lane_headstamp_continuity_live_receipt_pass",
 }
 for row in results:
     if not isinstance(row, dict):

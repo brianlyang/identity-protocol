@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from actor_session_common import load_actor_binding
+from protocol_infra_contract import HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY
 from response_stamp_common import parse_identity_context_stamp, resolve_layer_intent
 from tool_vendor_governance_common import (
     contract_required,
@@ -46,6 +47,7 @@ PRIMARY_CONTRACT_KEYS = (
     "protocol_lane_activation_headstamp_contract",
 )
 HOST_VISIBLE_CONTRACT_KEYS = (
+    HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
     "protocol_host_visible_surface_registry_contract_v1",
     "protocol_host_visible_surface_registry_contract",
 )

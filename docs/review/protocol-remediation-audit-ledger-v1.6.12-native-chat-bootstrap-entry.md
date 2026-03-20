@@ -84,9 +84,9 @@ Scope: protocol review ledger for native-chat bootstrap entry governance and wor
    - `scripts/validate_protocol_unique_entry_gate.py`
    - `scripts/repair_contract_backfill.py`
    - `scripts/ci/run_host_visible_surface_live_probes_ci.sh`
-3. Local replay on 2026-03-19 confirms that the producer, send-time gate, and host-visible attestation layers now agree on the final-channel relay proof path:
-   - `python3 scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` returns `stream_opening_status=PASS_REQUIRED`, `promotion_status=NON_PROMOTIONAL_LOCK`, and `live_smoke_status=INCONCLUSIVE_HOST_RUNTIME_PANIC`
-   - `bash scripts/ci/run_host_visible_surface_live_probes_ci.sh` returns passing positive/negative probes including `host_visible_live_receipts_pass`, `host_visible_final_channel_relay_missing_blocked`, `host_visible_post_check_recovery_reseeds_final_channel_relay`, and `send_time_governed_pass_headstamp_required`
+3. Local replay on 2026-03-20 confirms that the producer, send-time gate, and host-visible attestation layers now agree on the final-channel relay proof path:
+   - `python3 scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` returns `stream_opening_status=PASS_REQUIRED`, `promotion_status=PROMOTION_REVIEW_ELIGIBLE`, `no_silent_headerless_turn_status=PASS_REQUIRED`, and `live_smoke_status=INCONCLUSIVE_HOST_RUNTIME_PANIC`
+   - `bash scripts/ci/run_host_visible_surface_live_probes_ci.sh` returns passing positive/negative probes including `host_visible_live_receipts_pass`, `host_visible_final_channel_relay_missing_blocked`, `host_visible_post_check_recovery_reseeds_final_channel_relay`, `send_time_governed_pass_headstamp_required`, and `protocol_lane_headstamp_continuity_live_receipt_pass`
 4. The host-visible live probe suite now proves that post-check recovery is not a blind backfill: when the `final` channel relay fields are intentionally removed, `scripts/recover_host_visible_post_check_state.py` reseeds the exact relay metadata from the actual reply transport ref and returns `recovery_status=PASS_REQUIRED` together with `seeded_final_channel_relay_status=PASS_REQUIRED`.
 5. This progress raises confidence that sender-side controlled visible projection is no longer relying on a naked outer delivery assumption.
 6. Closure blockers identified during review on 2026-03-19 are now reduced on the protocol side:
@@ -108,13 +108,14 @@ Scope: protocol review ledger for native-chat bootstrap entry governance and wor
    - wrapper dry-run exec proves explicit tuple injection on a fresh closure launch
    - wrapper-owned project-doc fallback remains process-local and session-bound rather than workspace-global
    - protocol authoritative resolve remains `actor_binding_session_scoped`
-3. **Non-promotion lock** remains mandatory while live smoke is still host-runtime-dependent or inconclusive.
-4. `scripts/validate_native_chat_bootstrap_entry_stream.py` is the protocol-owned stream-opening consumer: it may pass stream opening while still returning `promotion_status=NON_PROMOTIONAL_LOCK`.
+3. **Non-promotion lock** remains mandatory while live smoke is still host-runtime-dependent or inconclusive and the governed continuity bundle has not yet closed the same boundary.
+4. `scripts/validate_native_chat_bootstrap_entry_stream.py` is the protocol-owned stream-opening consumer: it may pass stream opening while returning either `promotion_status=NON_PROMOTIONAL_LOCK` or `promotion_status=PROMOTION_REVIEW_ELIGIBLE`, depending on whether the governed continuity bundle closes `no_silent_headerless_turn`.
 5. Any proposal that reintroduces active-pointer or projection guessing for bootstrap truth remains `FAIL_REQUIRED` for this stream.
 6. Future promotion or stronger closure claims must additionally prove:
    - `tuple_present + authoritative_resolve_pass + no_silent_headerless_turn`
    - `final_channel_relay_receipt_status=PASS_REQUIRED + controlled_emitter_path_status=PASS_REQUIRED`
    - outer final native-chat visible surface is bound to the controlled visible emitter path rather than to a free-form outer reply path
+   - when host runtime smoke is inconclusive, the substitute proof must be a governed host-visible continuity bundle rather than chat-text inference
 7. A repeated silent headerless turn with tuple truth already present must be logged as an outer final visible surface residual; it does not invalidate v1.6.12 stream opening by itself, but it does block stronger promotion claims.
 8. Sender-side implementation closure is acceptable only when the host-visible `final` channel records a passing exact relay receipt instead of treating naked outer delivery as equivalent proof.
 9. `scripts/validate_native_chat_bootstrap_entry_stream.py` now exposes the promotion-side machine bundle directly and must remain the single audit gate for:
@@ -123,6 +124,7 @@ Scope: protocol review ledger for native-chat bootstrap entry governance and wor
    - `post_check_recovery_status`
    - `final_channel_relay_receipt_status`
    - `controlled_emitter_path_status`
+   - `governed_headstamp_continuity_status`
    - `no_silent_headerless_turn_status`
 
 ## 5.1) Closure decision for this stream
@@ -136,14 +138,14 @@ Scope: protocol review ledger for native-chat bootstrap entry governance and wor
 3. Host final surface controlled display remains an enhancement track under `v1.6.12`, not a prerequisite for standard closure.
 4. Therefore review language must distinguish two valid states:
    - `standard_closure=closed`
-   - `promotion_enhancement=open`
+   - `promotion_enhancement=open|ready`
 5. Current-turn source-boundary audit must accept only renderer output sourced from `render-current`; foreign requested identities may appear only as fail-close probes and never as successful speaking identity output.
-5. As long as `promotion_status=NON_PROMOTIONAL_LOCK`, reviewers may still accept standard closure while keeping the stronger sender-side proof path open for later enhancement.
+5. As long as `promotion_status=NON_PROMOTIONAL_LOCK`, reviewers may still accept standard closure while keeping the stronger sender-side proof path open for later enhancement; once `promotion_status=PROMOTION_REVIEW_ELIGIBLE`, the same stream remains closed at standard level and the enhancement lane becomes ready rather than open.
 6. `scripts/validate_native_chat_bootstrap_entry_stream.py` is the machine source for that distinction and must keep exposing:
    - `standard_implementation_mode=assistant_visible_inject`
    - `standard_closure_status=CLOSED`
    - `promotion_enhancement_mode=host_final_surface_controlled_display`
-   - `promotion_enhancement_status=OPEN`
+   - `promotion_enhancement_status=OPEN|READY`
 
 ## 6) Local verification accepted for this opening
 
