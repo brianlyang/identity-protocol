@@ -54,6 +54,7 @@ mandatory_static_docs:
   - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
   - docs/governance/identity-actor-session-binding-governance-v1.6.0.md
   - docs/review/protocol-remediation-audit-ledger-v1.6.md
+  - docs/governance/identity-post-closure-governance-mode-v1.6.14.md
   - docs/governance/branch-protection-required-checks-v1.2.8.md
   - identity/protocol/plugins/README.md
   - identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.current.md
@@ -273,6 +274,11 @@ static_doc_required_alias_refs:
       - identity/protocol/mappings/control-plane-budget.current.yaml
       - identity/protocol/mappings/control-plane-status.current.yaml
       - identity/protocol/mappings/github-control-plane-offload.current.yaml
+  - doc: docs/governance/identity-post-closure-governance-mode-v1.6.14.md
+    alias_refs:
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
   - doc: docs/governance/branch-protection-required-checks-v1.2.8.md
     alias_refs:
       - identity/protocol/mappings/stream-doc-registry.current.yaml
