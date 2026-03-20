@@ -71,6 +71,9 @@ Quick entrypoint for audit history and remediation closure records.
 - Canonical identity-Codex launcher governance (v1.6.14 stream):
   - `docs/governance/identity-codex-launcher-governance-v1.6.14.md`
   - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md`
+- Canonical identity-instance script orchestration governance (v1.6.15 stream):
+  - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md`
 
 ## Snapshots
 
@@ -106,3 +109,4 @@ Quick entrypoint for audit history and remediation closure records.
 - `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md` — v1.6.10 dedicated boundary-freeze stream for runtime dynamic file governance: wrapper strong-control, mirror constrained, runtime default autonomy, all machine-checked via semantic clarity + boundary validator surfaces.
 - `docs/governance/identity-instance-pack-topology-governance-v1.6.13.md` — v1.6.13 dedicated topology-lock stream for canonical identity-pack root layout (`agents/`, `runtime/`, `scripts/`), root-level instance script ownership, and fail-close drift gating.
 - `docs/governance/identity-codex-launcher-governance-v1.6.14.md` — v1.6.14 dedicated launcher-governance stream for canonical identity-bound Codex command names, install-path ownership, compatibility-bridge classification, and fail-close startup boundaries.
+- `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md` — v1.6.15 dedicated orchestration stream for route-to-script declarative binding, pack-local script manifests, explicit script-to-skill/MCP/tool joins, and reusable execution receipt-family governance.

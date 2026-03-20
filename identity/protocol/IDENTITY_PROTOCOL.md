@@ -105,6 +105,25 @@ Compatibility note: legacy packs can stay in `identity/<id>/` if catalog `pack_p
 7. Workspace helper paths such as `scripts/codex_native_chat/` are compatibility bridges only until the protocol-owned launcher installer lands.
 8. Launcher/install governance is separate from MCP provider health, business-tool availability, and host-final visible-surface promotion work.
 
+### Canonical identity-instance script orchestration boundary (v1.6.15 additive)
+
+1. `v1.6.15` freezes how governed routes bind to pack-local instance scripts; it does not create a new pack-root directory or reopen `v1.6.13` / `v1.6.14`.
+2. Canonical pack-local script catalog path:
+   - `<pack_path>/scripts/INSTANCE_SCRIPT_MANIFEST.json`
+3. Canonical additive route fields under `capability_orchestration_contract.task_type_routes.<route>`:
+   - `primary_instance_scripts`
+   - `fallback_instance_scripts`
+   - `script_preconditions`
+   - `script_receipt_pattern`
+4. Instance scripts become a first-class orchestration unit between `CURRENT_TASK.json` routing and lower capability execution, and a single route may bind multiple role-distinct script ids when probe/render/emit responsibilities are intentionally separated.
+5. Lower capability dependencies remain explicit through `primary_skills`, `fallback_skills`, `required_mcp`, and governed tool-route fields; script ids do not bypass those layers.
+6. `script_preconditions` may reference inherited gateway/headstamp/host-visible/relay contracts, but those references do not reopen ownership of `v1.6.11`-`v1.6.14` streams.
+7. Route-scoped lower-capability admission must remain machine-attributable; unrelated routes do not silently block a declared route unless a stronger activation policy explicitly says so.
+8. Canonical receipt-family roles are route admission, execution, emit, and recovery, and they remain runtime-owned artifacts rather than source files under `scripts/`.
+9. Receipt-family projections remain compatible with route provenance fields such as `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts`, including layered execution-then-emit patterns.
+10. If a governed route produces user-visible final text, that route must bind to a pack-local emitter script and declare an emit-family receipt.
+11. Protocol-owned validators/creator/readiness wiring are future implementation targets; this additive section freezes the ownership model first.
+
 ## Runtime source-of-truth boundary (v1.4.x hardening)
 
 Identity runtime must distinguish demo fixtures from local runtime instances:

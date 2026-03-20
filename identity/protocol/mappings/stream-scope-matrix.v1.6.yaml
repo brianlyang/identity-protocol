@@ -106,3 +106,9 @@ streams:
     allowed_requirement_ids: []
     forbidden_requirement_ids: []
     forbidden_path_tokens: []
+
+  - stream_version: v1.6.15
+    scope_topic: identity_instance_script_orchestration
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []

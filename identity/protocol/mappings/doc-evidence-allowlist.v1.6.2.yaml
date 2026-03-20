@@ -271,3 +271,15 @@ strict_docs:
     allowed_activity_patterns:
       - '^activity/evidence/v1614-identity-codex-launcher/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
       - '^activity/evidence/v1614-identity-codex-launcher/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
+
+  docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md:
+    max_activity_refs: 20
+    allowed_activity_patterns:
+      - '^activity/evidence/v1615-instance-script-orchestration/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v1615-instance-script-orchestration/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
+
+  docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md:
+    max_activity_refs: 20
+    allowed_activity_patterns:
+      - '^activity/evidence/v1615-instance-script-orchestration/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v1615-instance-script-orchestration/\d{4}-\d{2}-\d{2}/.+_summary\.json$'

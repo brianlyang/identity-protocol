@@ -270,3 +270,20 @@ Hard semantics:
 3. Canonical pack-local launcher assets belong under `<pack_path>/scripts/launchers/`; `runtime/` and `scripts/identity/` are non-canonical launcher homes.
 4. Launcher-owned startup injection must preserve `v1.6.12` tuple/bootstrap truth and keep manual `model_instructions_file` / `project_doc_fallback_filenames` override attempts fail-closed.
 5. Workspace bridge helpers under `scripts/codex_native_chat/` remain migration/evidence paths only until protocol-owned launcher render/install/validate assets land.
+
+### Canonical identity-instance script orchestration boundary (v1.6.15 additive)
+
+Hard semantics:
+
+1. Governed route-to-script binding is a machine contract, not filename discovery or operator memory.
+2. The canonical pack-local script catalog file is `<pack_path>/scripts/INSTANCE_SCRIPT_MANIFEST.json`, and every route-targetable `script_id` must resolve through it.
+3. Canonical additive route fields are `primary_instance_scripts`, `fallback_instance_scripts`, `script_preconditions`, and `script_receipt_pattern` under `capability_orchestration_contract.task_type_routes.<route>`.
+4. A single route may bind multiple role-distinct `script_id` values when probe/render/emit/recovery responsibilities are intentionally separated.
+5. `script_preconditions` constrains admission conditions such as identity lock, work/source layer, required contracts, and gate policies; it is not free-form prose.
+6. `script_preconditions` may reference inherited gateway/headstamp/host-visible/relay contracts when a route depends on them, but that does not transfer ownership of those contracts into `v1.6.15`.
+7. Lower capability dependencies remain explicit through skills, MCP servers, and governed tool-route fields; instance scripts do not bypass those layers.
+8. Route-scoped admission must be machine-evaluable against only that route's declared lower dependencies unless a stronger activation policy is explicitly selected.
+9. Canonical receipt-family roles are route admission, execution, emit, and recovery, and those receipts remain runtime-owned artifacts rather than source files under `scripts/`.
+10. Governed receipt families must preserve machine-readable route provenance compatible with `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts`, including layered execution-then-emit receipt mapping.
+11. If a governed route produces user-visible final text, that route must resolve to at least one pack-local emitter script and emit an `instance_script_emit_receipt`; direct free-form assistant text is non-canonical for that route.
+12. Any manifest entry that resolves outside pack-root `scripts/` is non-canonical and falls back to `v1.6.13` topology enforcement.
