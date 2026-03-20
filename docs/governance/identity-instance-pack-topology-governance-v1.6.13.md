@@ -94,6 +94,7 @@ The topology validator must fail-close when any of the following holds:
 2. Generated `CURRENT_TASK.json` must include `instance_pack_topology_contract_v1`.
 3. Bootstrap validation must execute `scripts/validate_identity_instance_pack_topology.py` before claiming scaffold success.
 4. Update/replay required checks must also include the topology validator so later topology drift cannot silently survive pack evolution.
+5. Runtime receipt/report families already frozen by earlier streams remain valid only when their runtime subtrees are explicitly registered in the topology contract; for the current baseline this includes `runtime/reports/agent-relay-final-answer`.
 
 ## 4) Inherited-stream owner matrix
 

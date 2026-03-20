@@ -56,6 +56,7 @@ Scope: protocol review ledger for identity-instance pack topology and root `scri
    - creator injects `instance_pack_topology_contract_v1`
    - topology validator is callable in bootstrap mode and pack mode
    - required checks include the topology validator
+   - registered runtime receipt/report directories cover the active governed families, including `runtime/reports/agent-relay-final-answer`
 3. **Topology PASS** requires:
    - required root dirs/files present
    - `runtime/scripts/` absent

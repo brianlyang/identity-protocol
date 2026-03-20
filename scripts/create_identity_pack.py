@@ -761,6 +761,7 @@ def _instance_pack_topology_contract_skeleton(identity_id: str) -> dict:
             "runtime/protocol-feedback/upgrade-proposals",
             "runtime/reports",
             "runtime/reports/broadcast",
+            "runtime/reports/agent-relay-final-answer",
             "runtime/reports/host-visible-surface",
             "runtime/reports/install",
             "runtime/reports/multimodal-runtime-stage",
