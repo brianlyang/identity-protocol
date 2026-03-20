@@ -5546,6 +5546,7 @@ def _default_required_checks() -> list[str]:
         "scripts/validate_replay_archive_contract.py",
         "scripts/validate_gated_switch_guard.py",
         "scripts/validate_protocol_lane_headstamp_continuity.py",
+        "scripts/validate_current_turn_authoritative_headstamp.py",
     ]
 
 

@@ -32,8 +32,8 @@ Scope: protocol review ledger for native-chat bootstrap entry governance and wor
 
 ### 2.2 Workspace / instance-owned surfaces consumed by this stream
 
-1. Native-chat bootstrap bridge and bootstrap-audit helper under the workspace scripts/identity tree.
-2. Workspace shell entry wrappers that inject tuple truth before launching `codex`, `codex resume`, or `codex exec`.
+1. Native-chat bootstrap bridge and bootstrap-audit helper under the workspace `scripts/codex_native_chat/` namespace.
+2. Workspace shell entry wrappers in `scripts/codex_native_chat/` inject tuple truth before launching `codex`, `codex resume`, or `codex exec`.
 3. Workspace wrappers may pair the bootstrap instructions file with a process-local project-doc fallback file so later turns can reread the same two governed native-chat lines without relying on a shared workspace-global projection file.
 4. These helpers are evidence sources for v1.6.12, not protocol motherline promotion by themselves.
 5. The process-local project-doc fallback remains a reread aid only; it is not a send-time egress binding and cannot be used as proof that the final host-visible answer was emitted through the controlled visible surface.
@@ -130,12 +130,14 @@ Scope: protocol review ledger for native-chat bootstrap entry governance and wor
 1. The stream is closed at the standard implementation level when all of the following are true together:
    - current-turn tuple truth is machine-verified,
    - native-chat identity lines are renderer-produced and assistant-visible injected,
-   - failure cases remain fail-close rather than silent or identity-mismatched.
+   - failure cases remain fail-close rather than silent or identity-mismatched,
+   - work-subject identity cannot override current-turn authoritative identity in the headstamp source path.
 2. Standard implementation closure does not require the host final surface to be automatically hard-controlled.
 3. Host final surface controlled display remains an enhancement track under `v1.6.12`, not a prerequisite for standard closure.
 4. Therefore review language must distinguish two valid states:
    - `standard_closure=closed`
    - `promotion_enhancement=open`
+5. Current-turn source-boundary audit must accept only renderer output sourced from `render-current`; foreign requested identities may appear only as fail-close probes and never as successful speaking identity output.
 5. As long as `promotion_status=NON_PROMOTIONAL_LOCK`, reviewers may still accept standard closure while keeping the stronger sender-side proof path open for later enhancement.
 6. `scripts/validate_native_chat_bootstrap_entry_stream.py` is the machine source for that distinction and must keep exposing:
    - `standard_implementation_mode=assistant_visible_inject`

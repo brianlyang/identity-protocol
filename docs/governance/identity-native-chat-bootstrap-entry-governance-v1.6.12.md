@@ -119,13 +119,16 @@ Execution mode: topic-level canonical SSOT for v1.6.12 native-chat bootstrap ent
    - assistant-visible `Identity-Context` + `Machine-Verification` injection second,
    - next-turn re-verification on later turns.
 2. The assistant-visible injected lines must come from the governed native-chat renderer output and must remain bound to current-turn tuple truth; they are not free-form commentary and they are not manual identity guessing.
-3. This standard implementation is sufficient for stream-level closure and for downstream feature work; it does not require the host final surface to be automatically hard-controlled before the stream may be considered closed at the standard level.
-4. Host final surface controlled display remains a stronger sender-side proof enhancement:
+3. Current speaking identity MUST be sourced from current-turn authoritative render only; the pack under repair, audit target, work subject, or any other foreign identity is never an authority source for the injected lines.
+4. The canonical runtime helper for this source boundary is `python3 scripts/codex_native_chat/native_chat_bootstrap_bridge.py render-current --catalog .identity/catalog.local.yaml`; it intentionally has no `--identity-id` input because subject-of-work override is forbidden.
+5. Any explicit `requested_identity_id` path remains selector-only and must fail-close unless it exactly matches the current-turn authoritative identity.
+6. This standard implementation is sufficient for stream-level closure and for downstream feature work; it does not require the host final surface to be automatically hard-controlled before the stream may be considered closed at the standard level.
+7. Host final surface controlled display remains a stronger sender-side proof enhancement:
    - controlled visible emitter on the final host-visible surface,
    - exact relay receipt at the `final` channel,
    - post-check recovery that can reseed the exact relay metadata from the actual reply transport ref,
    - live `no_silent_headerless_turn` proof.
-5. That stronger sender-side proof stays in the same `v1.6.12` stream as a promotion-grade enhancement and must not be used to reopen or invalidate the standard implementation once the standard boundary above is satisfied.
+8. That stronger sender-side proof stays in the same `v1.6.12` stream as a promotion-grade enhancement and must not be used to reopen or invalidate the standard implementation once the standard boundary above is satisfied.
 
 ## 5) Evidence contract for this stream
 
