@@ -112,6 +112,25 @@ The topology validator must fail-close when any of the following holds:
 4. Fallback behavior remains fail-close only: when standard readiness is missing, the instance may emit a withheld/conflict envelope, but it must not emit an ungoverned success headstamp.
 5. Enhanced host-auto-binding remains a later host/runtime concern; `v1.6.13` freezes the instance-owned topology and standard-capability composition, not outer-surface promotion claims.
 
+### 3.5 Diagnostic interpretation ladder (frozen)
+
+1. `contract_not_required` / `SKIPPED_NOT_REQUIRED` means the instance has not yet absorbed the topology contract; it is not evidence that the protocol stream is incomplete.
+2. `topology-ready` means the canonical pack structure is in place; it does not by itself prove that current-turn runtime state or historical actor-session bindings are already clean.
+3. When `topology-ready` is green but live entry or exit still fail-closes, diagnosis must proceed in this order:
+   - current-turn tuple validity,
+   - actor-session binding hygiene,
+   - exit-side receipt generation,
+   - then outer host/runtime residuals.
+4. A stale or non-`run:<...>` identity session binding is instance-owned runtime debt and must be repaired instance-side; it must not be relabeled as a `v1.6.13` protocol semantic gap.
+5. Informative fail-close after migration is a positive signal in this stream: it proves the instance is now executing governed checks instead of silently guessing through dirty runtime state.
+6. The intended self-heal order for this stream is:
+   - topology contract absorption,
+   - canonical root `scripts/` surface present,
+   - governed entry truth clean,
+   - exit-ready scripts pass under current-turn tuple,
+   - live receipts / relay receipts land,
+   - then the instance may claim standard-capability readiness.
+
 ## 4) Inherited-stream owner matrix
 
 1. `v1.6.10` remains the owner for runtime-file governance classification, generated artifact family semantics, and mirror/wrapper/runtime boundary language.
@@ -136,8 +155,9 @@ The topology validator must fail-close when any of the following holds:
 1. Put instance-local execution helpers in pack-root `scripts/`.
 2. Keep runtime outputs in `runtime/`.
 3. When migrating a legacy pack from `runtime/scripts/`, move helpers to root `scripts/`, update contracts, then delete the forbidden path.
-4. Keep the validator authoritative; do not hand-maintain side notes that disagree with the task contract.
-5. Treat topology as infrastructure: creator, validator, mappings, and example packs must all agree.
+4. Keep runtime-binding repair separate from topology judgment: once the pack is topology-ready, stale actor-session state should be repaired as instance runtime debt rather than folded back into protocol topology semantics.
+5. Keep the validator authoritative; do not hand-maintain side notes that disagree with the task contract.
+6. Treat topology as infrastructure: creator, validator, mappings, and example packs must all agree.
 
 ## 7) Future extension rule
 

@@ -87,6 +87,24 @@ This worked example proves the standard instance-owned path:
 - final visible reply emission is instance-owned
 - protocol semantics stay shared and authoritative
 
+## 3.1.1) Cross-instance self-heal interpretation frozen in this stream
+
+Review on a second migrated pack, `custom-creative-ecom-analyst`, reinforced an important judgment rule for `v1.6.13`:
+
+1. The instance may initially sit at `SKIPPED_NOT_REQUIRED` until `instance_pack_topology_contract_v1` is actually backfilled.
+2. After contract absorption, `topology-ready` can pass while live success still fails close.
+3. That intermediate failure must not be misread as a protocol reopen by default. In the reviewed replay, the true blocker was stale instance runtime debt: an old identity-specific actor-session binding carrying a non-`run:<...>` session id.
+4. After that stale binding was repaired, the same topology-ready pack advanced to:
+   - governed entry `PASS_REQUIRED`
+   - current-thread headstamp render `PASS_REQUIRED`
+   - final governed emitter `PASS_REQUIRED`
+   - fresh host-visible receipts and final relay receipt persisted
+5. This proves that `v1.6.13` closure must distinguish at least three states cleanly:
+   - `protocol_closed / instance_not_migrated`
+   - `topology_ready / runtime_binding_dirty`
+   - `topology_ready / exit_ready / governed_emit_pass`
+6. The review consequence is frozen: once topology is green, remaining stale non-`run:<...>` binding debt is instance-owned runtime cleanup unless some separate protocol validator proves otherwise.
+
 ## 3.2) Gate fusion verdict
 
 1. `v1.6.13` has no semantic conflict with the gateway four-piece already present in governed instance tasks.
@@ -113,17 +131,22 @@ This worked example proves the standard instance-owned path:
    - topology validator is callable in bootstrap mode and pack mode
    - required checks include the topology validator
    - registered runtime receipt/report directories cover the active governed families, including `runtime/reports/agent-relay-final-answer`
+   - proof-pack replays can distinguish protocol topology pass from stale runtime binding debt without collapsing the two diagnoses together
 3. **Topology PASS** requires:
    - required root dirs/files present
    - `runtime/scripts/` absent
    - no cache-dir residue
    - no unknown topology drift rows
+4. **Diagnostic PASS** for migrated proof packs requires:
+   - fail-close outputs stay specific enough to separate missing topology, dirty tuple, dirty binding, and governed emit success
+   - stale non-`run:<...>` binding incidents are tracked as instance runtime debt rather than as automatic protocol semantic regressions
 
 ## 5) Accepted closure boundary
 
 1. This stream is closed when topology is machine-enforced across creator, mappings, and the migrated example pack.
 2. This stream is not waiting on host-runtime live smoke or outer visible surface behavior.
-3. This stream is independent from Codex native feature evolution; it governs only the identity-instance pack surface that the protocol owns.
+3. This stream is also allowed to carry a diagnostic interpretation ladder for migrated packs, so review can tell apart protocol closure, migration incompleteness, and stale instance runtime debt without reopening the topology contract.
+4. This stream is independent from Codex native feature evolution; it governs only the identity-instance pack surface that the protocol owns.
 
 ## 6) Boundary lock for reviewers
 
