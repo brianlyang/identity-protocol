@@ -2,9 +2,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-TMP_ROOT_BASE="$ROOT/.tmp-native-chat-bootstrap-entry-probes"
-mkdir -p "$TMP_ROOT_BASE"
-TMP_ROOT="$(mktemp -d "$TMP_ROOT_BASE/run.XXXXXX")"
+source "$ROOT/scripts/runtime_temp_path_common.sh"
+TMP_ROOT="$(identity_runtime_mktemp_dir_sh "native-chat-bootstrap-entry-probes" "run")"
 trap 'rm -rf "$TMP_ROOT"' EXIT
 
 POSITIVE_JSON="$TMP_ROOT/positive.json"

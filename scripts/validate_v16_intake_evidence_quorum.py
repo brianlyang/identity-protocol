@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-from validate_v16_intake_evidence_core import MODE_PROMOTION_GATE, main as core_main
-
-
-def main() -> int:
-    return core_main(forced_mode=MODE_PROMOTION_GATE)
+from validate_intake_evidence_quorum import main
 
 
 if __name__ == "__main__":

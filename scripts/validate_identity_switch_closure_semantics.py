@@ -5,11 +5,12 @@ import argparse
 import json
 import shutil
 import subprocess
-import tempfile
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+from runtime_temp_path_common import identity_runtime_mkdtemp
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -52,7 +53,7 @@ def _check_source_contracts() -> list[str]:
 
 
 def _copy_runtime_snapshot(*, catalog_path: Path) -> tuple[Path, str, str, str]:
-    root = Path(tempfile.mkdtemp(prefix="identity-switch-closure-", dir="/tmp")).resolve()
+    root = identity_runtime_mkdtemp("identity-switch-closure", prefix="probe")
     actor_store_path = catalog_path.parent / "session" / "actors" / "assistant_codex.json"
     if not actor_store_path.exists():
         raise FileNotFoundError(f"actor store missing: {actor_store_path}")

@@ -257,3 +257,8 @@ Interpretation contract:
    - semantic changes land in docs/template/script sources first,
    - then `scripts/compile_identity_runtime.py` regenerates the brief,
    - direct manual semantic editing of `identity/runtime/IDENTITY_COMPILED.md` is non-compliant.
+## 2026-03-20 Closure Addendum - temp-path and compatibility-pointer terminology
+
+- `ISSUE-006` review verdict: `PASS_REQUIRED` once `scripts/validate_runtime_temp_path_contract.py` proves repaired live temp/probe surfaces no longer hardcode `/tmp` or raw probe `mktemp`.
+- `ISSUE-010` review verdict: `PASS_REQUIRED` once `scripts/validate_compatibility_pointer_terminology.py` proves repaired live tooling no longer emits canonical-pointer field names for compatibility mirrors.
+- These closures are runtime-file governance cleanup only; they do not alter actor-session authority semantics.

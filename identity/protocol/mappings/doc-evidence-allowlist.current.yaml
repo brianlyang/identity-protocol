@@ -1,3 +1,6 @@
 schema_version: 1
 pointer_version: v1
+pointer_contract: frozen_versioned_active_carrier
+upgrade_switch_mode: pointer_only
+replay_snapshot_immutable: true
 active_file: identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml

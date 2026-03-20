@@ -71,7 +71,7 @@ def _apply_projection_from_binding(store: dict[str, Any], binding: dict[str, Any
         "status",
         "bound_at",
         "session_pointer_type",
-        "canonical_session_pointer",
+        "compatibility_mirror_pointer_path",
         "run_id",
         "switch_reason",
         "entrypoint_pid",

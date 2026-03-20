@@ -4982,3 +4982,10 @@ Mandatory behavior:
    - `authoritative_binding_store_root=<catalog_dir>/session/actors`
 4. `scripts/repair_actor_session_authority_residue.py` is the canonical repair surface for backfilling
    this persisted metadata across runtime catalogs without identity-specific hardcoding.
+## 2026-03-20 Closure Addendum - Historical default / validator alias cleanup
+
+- `ISSUE-004` is closed as a default-boundary issue, not as a removal of historical traceability anchors.
+- Live default resolution must flow through `contract-binding.current.yaml`; `scripts/validate_historical_baseline_default_boundary.py` is the machine gate.
+- `ISSUE-005` is closed by freezing versioned `*.current.yaml` carriers as intentional compatibility aliases with `pointer_contract=frozen_versioned_active_carrier`, `upgrade_switch_mode=pointer_only`, and `replay_snapshot_immutable=true`; `scripts/validate_current_alias_versioned_carrier.py` is the machine gate.
+- `ISSUE-007` is closed by promoting canonical active validators (`scripts/validate_intake_evidence_core.py`, `scripts/validate_cross_verification_tracks.py`, `scripts/validate_intake_evidence_quorum.py`) and demoting `validate_v16_*` entries to explicit `wrapper_compatibility_optional` aliases only; `scripts/validate_active_validator_alias_residue.py` is the machine gate.
+- These closures are protocol-bucket only and do not reopen `v1.6.12` headstamp semantics.

@@ -80,7 +80,7 @@ def _run_probe_required_skills(
 ) -> list[str]:
     cmd = [
         python_bin,
-        str(scripts_dir / "validate_v16_skill_path_integrity.py"),
+        str(scripts_dir / "validate_skill_path_integrity.py"),
         "--catalog",
         catalog,
         "--identity-id",
@@ -296,7 +296,7 @@ def _build_cases(
             rq_id="ASB16-RQ-017",
             cmd=[
                 python_bin,
-                str(scripts_dir / "validate_v16_intake_evidence_core.py"),
+                str(scripts_dir / "validate_intake_evidence_core.py"),
                 "--mode",
                 "intake_contract",
                 "--catalog",
@@ -318,7 +318,7 @@ def _build_cases(
             rq_id="ASB16-RQ-017",
             cmd=[
                 python_bin,
-                str(scripts_dir / "validate_v16_intake_evidence_core.py"),
+                str(scripts_dir / "validate_intake_evidence_core.py"),
                 "--mode",
                 "intake_contract",
                 "--catalog",
@@ -341,7 +341,7 @@ def _build_cases(
             rq_id="ASB16-RQ-030",
             cmd=[
                 python_bin,
-                str(scripts_dir / "validate_v16_intake_evidence_core.py"),
+                str(scripts_dir / "validate_intake_evidence_core.py"),
                 "--mode",
                 "promotion_gate",
                 "--catalog",
@@ -363,7 +363,7 @@ def _build_cases(
             rq_id="ASB16-RQ-030",
             cmd=[
                 python_bin,
-                str(scripts_dir / "validate_v16_intake_evidence_core.py"),
+                str(scripts_dir / "validate_intake_evidence_core.py"),
                 "--mode",
                 "promotion_gate",
                 "--catalog",
@@ -386,7 +386,7 @@ def _build_cases(
             rq_id="ASB16-RQ-018",
             cmd=[
                 python_bin,
-                str(scripts_dir / "validate_v16_dedup_monotonicity.py"),
+                str(scripts_dir / "validate_dedup_monotonicity.py"),
                 "--catalog",
                 catalog,
                 "--identity-id",
@@ -410,7 +410,7 @@ def _build_cases(
             rq_id="ASB16-RQ-018",
             cmd=[
                 python_bin,
-                str(scripts_dir / "validate_v16_dedup_monotonicity.py"),
+                str(scripts_dir / "validate_dedup_monotonicity.py"),
                 "--catalog",
                 catalog,
                 "--identity-id",
@@ -435,7 +435,7 @@ def _build_cases(
             rq_id="ASB16-RQ-019",
             cmd=[
                 python_bin,
-                str(scripts_dir / "validate_v16_cross_workflow_schema.py"),
+                str(scripts_dir / "validate_cross_workflow_schema.py"),
                 "--catalog",
                 catalog,
                 "--identity-id",
@@ -455,7 +455,7 @@ def _build_cases(
             rq_id="ASB16-RQ-019",
             cmd=[
                 python_bin,
-                str(scripts_dir / "validate_v16_cross_workflow_schema.py"),
+                str(scripts_dir / "validate_cross_workflow_schema.py"),
                 "--catalog",
                 catalog,
                 "--identity-id",
@@ -476,7 +476,7 @@ def _build_cases(
             rq_id="ASB16-RQ-020",
             cmd=[
                 python_bin,
-                str(scripts_dir / "validate_v16_skill_path_integrity.py"),
+                str(scripts_dir / "validate_skill_path_integrity.py"),
                 "--catalog",
                 catalog,
                 "--identity-id",
@@ -501,7 +501,7 @@ def _build_cases(
             rq_id="ASB16-RQ-020",
             cmd=[
                 python_bin,
-                str(scripts_dir / "validate_v16_skill_path_integrity.py"),
+                str(scripts_dir / "validate_skill_path_integrity.py"),
                 "--catalog",
                 catalog,
                 "--identity-id",

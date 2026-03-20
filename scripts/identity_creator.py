@@ -19,6 +19,7 @@ from actor_session_common import (
     resolve_actor_id,
     resolve_protocol_actor_id,
 )
+from compatibility_pointer_semantics_common import SESSION_POINTER_COMPATIBILITY_PATH_FIELD
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
 from resolve_identity_context import (
     collect_protocol_evidence,
@@ -991,7 +992,7 @@ def _activate_identity(
             "catalog_path": str(local_catalog),
             "resolved_scope": str(resolved.get("resolved_scope", "")),
             "resolved_pack_path": str(resolved.get("resolved_pack_path", "")),
-            "session_pointer_canonical_path": str(canonical_session_pointer),
+            SESSION_POINTER_COMPATIBILITY_PATH_FIELD: str(canonical_session_pointer),
             "session_pointer_mirror_path": str(scoped_session_mirror),
         }
         protocol = collect_protocol_evidence(str(protocol_root_resolved), protocol_mode)

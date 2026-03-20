@@ -19,6 +19,7 @@ from actor_session_common import (
     select_actor_global_compatibility_projection,
     write_actor_binding_store,
 )
+from compatibility_pointer_semantics_common import apply_compatibility_mirror_pointer_path
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -68,7 +69,6 @@ def _pointer_metadata(
         "authoritative_decision_allowed": False,
         "pointer_semantics_version": POINTER_SEMANTICS_VERSION,
         "authoritative_source": "actor_session_store",
-        "canonical_session_pointer": str(canonical_pointer_path),
         "compatibility_projection_status": str(state.get("projection_status", "")).strip(),
         "compatibility_projection_reason": str(state.get("projection_reason", "")).strip(),
         "compatibility_projection_candidate_identity_ids": [
@@ -77,6 +77,7 @@ def _pointer_metadata(
             if str(item).strip()
         ],
     }
+    apply_compatibility_mirror_pointer_path(payload, canonical_pointer_path)
     payload.update(
         {
             "compatibility_projection_scope": str(raw.get("projection_scope", "")).strip(),

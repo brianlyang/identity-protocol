@@ -25,6 +25,7 @@ from actor_session_common import (
     resolve_actor_id,
     write_actor_binding_store,
 )
+from compatibility_pointer_semantics_common import apply_compatibility_mirror_pointer_path
 
 ERR_MB_001 = "IP-ASB-MB-001"
 ERR_MB_002 = "IP-ASB-MB-002"
@@ -181,7 +182,6 @@ def _pointer_metadata(
         "authoritative_decision_allowed": False,
         "pointer_semantics_version": POINTER_SEMANTICS_VERSION,
         "authoritative_source": "actor_session_store",
-        "canonical_session_pointer": str(canonical_out),
         "compatibility_projection_status": str(state.get("projection_status", "")).strip(),
         "compatibility_projection_reason": str(state.get("projection_reason", "")).strip(),
         "compatibility_projection_candidate_identity_ids": [
@@ -190,6 +190,7 @@ def _pointer_metadata(
             if str(item).strip()
         ],
     }
+    apply_compatibility_mirror_pointer_path(payload, canonical_out)
     payload.update(_compatibility_projection_metadata(projection=projection))
     return payload
 
@@ -365,7 +366,6 @@ def _build_actor_payload(
         "bound_at": bound_at,
         "updated_at": now,
         "session_pointer_type": "actor_binding",
-        "canonical_session_pointer": str(canonical_out),
         "run_id": run_id,
         "switch_reason": switch_reason,
         "entrypoint_pid": entrypoint_pid,
@@ -383,6 +383,7 @@ def _build_actor_payload(
             compatibility_projection_decision.get("previous_identity_id", "")
         ).strip(),
     }
+    apply_compatibility_mirror_pointer_path(updated_entry, canonical_out)
 
     merged: list[dict[str, Any]] = []
     replaced = False
@@ -498,13 +499,13 @@ def _build_actor_payload(
         "status": status,
         "bound_at": bound_at,
         "session_pointer_type": "actor_binding",
-        "canonical_session_pointer": str(canonical_out),
         "run_id": run_id,
         "switch_reason": switch_reason,
         "entrypoint_pid": entrypoint_pid,
         "cross_actor_override_receipt": cross_actor_override_receipt,
         "updated_at": now,
     }
+    apply_compatibility_mirror_pointer_path(actor_payload, canonical_out)
     return actor_payload, str(next_version)
 
 
@@ -801,7 +802,7 @@ def main() -> int:
                     continue
                 mirror_payload = dict(payload)
                 mirror_payload["session_pointer_type"] = "mirror"
-                mirror_payload["canonical_session_pointer"] = str(canonical_out)
+                apply_compatibility_mirror_pointer_path(mirror_payload, canonical_out)
                 try:
                     _write_payload(mirror_out, mirror_payload)
                     print(f"[OK] session identity mirrored: {mirror_out}")
@@ -835,7 +836,7 @@ def main() -> int:
             continue
         mirror_payload = dict(payload)
         mirror_payload["session_pointer_type"] = "mirror"
-        mirror_payload["canonical_session_pointer"] = str(canonical_out)
+        apply_compatibility_mirror_pointer_path(mirror_payload, canonical_out)
         try:
             _write_payload(mirror_out, mirror_payload)
             print(f"[OK] session identity mirrored: {mirror_out}")

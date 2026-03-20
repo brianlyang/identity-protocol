@@ -858,7 +858,7 @@
   },
   "multi_track_cross_verification_contract_v1": {
     "required": true,
-    "validator": "scripts/validate_v16_intake_evidence_core.py",
+    "validator": "scripts/validate_intake_evidence_core.py",
     "validator_mode": "intake_contract",
     "bundle_path_pattern": "runtime/protocol-feedback/**/*cross-verification*bundle*.json",
     "required_tracks": [
@@ -877,7 +877,7 @@
   },
   "intake_evidence_quorum_contract_v1": {
     "required": true,
-    "validator": "scripts/validate_v16_intake_evidence_core.py",
+    "validator": "scripts/validate_intake_evidence_core.py",
     "validator_mode": "promotion_gate",
     "bundle_path_pattern": "runtime/protocol-feedback/**/*cross-verification*bundle*.json",
     "required_tracks": [

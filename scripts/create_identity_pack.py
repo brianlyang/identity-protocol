@@ -18,6 +18,7 @@ import yaml
 from contract_binding_doc_defaults_common import resolve_validator_doc_defaults
 from resolve_identity_context import default_identity_home, default_local_catalog_path, default_local_instances_root
 from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID
+from runtime_temp_path_common import identity_runtime_named_temp_root
 from version_baseline_common import (
     apply_version_baseline_to_catalog_row,
     apply_version_baseline_to_task_doc,
@@ -2044,7 +2045,7 @@ def _intake_p1_contract_defaults(identity_id: str) -> dict[str, dict]:
     return {
         "multi_track_cross_verification_contract_v1": {
             "required": True,
-            "validator": "scripts/validate_v16_intake_evidence_core.py",
+            "validator": "scripts/validate_intake_evidence_core.py",
             "validator_mode": "intake_contract",
             "bundle_path_pattern": "runtime/protocol-feedback/**/*cross-verification*bundle*.json",
             "required_tracks": ["t1", "t2", "t3", "t4"],
@@ -2058,7 +2059,7 @@ def _intake_p1_contract_defaults(identity_id: str) -> dict[str, dict]:
         },
         "intake_evidence_quorum_contract_v1": {
             "required": True,
-            "validator": "scripts/validate_v16_intake_evidence_core.py",
+            "validator": "scripts/validate_intake_evidence_core.py",
             "validator_mode": "promotion_gate",
             "bundle_path_pattern": "runtime/protocol-feedback/**/*cross-verification*bundle*.json",
             "required_tracks": [
@@ -4587,7 +4588,7 @@ def main() -> int:
     out_reply_path = (
         Path(str(args.out_reply_file).strip()).expanduser().resolve()
         if str(args.out_reply_file or "").strip()
-        else (Path("/tmp") / f"identity-session-chain-reply-{run_id}.txt").resolve()
+        else (identity_runtime_named_temp_root("identity-session-chain") / f"reply-{run_id}.txt").resolve()
     )
 
     ingress_cmd = [

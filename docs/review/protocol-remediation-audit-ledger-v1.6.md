@@ -4289,3 +4289,9 @@ Round-21 runtime identity authority bypass closure (`HEAD=dirty`, 2026-03-16):
 
 1. remaining confusion after M:N closure is now classified as persisted authority residue, not core binding logic failure.
 2. runtime residue is repairable through one protocol-owned surface instead of per-instance patching.
+## 2026-03-20 Closure Addendum - Historical default / validator alias cleanup
+
+- `ISSUE-004` review verdict: `PASS_REQUIRED` once `scripts/validate_historical_baseline_default_boundary.py` proves historical motherline doc literals remain checker-only and no longer act as live defaults.
+- `ISSUE-005` review verdict: `PASS_REQUIRED` once versioned current carriers declare and satisfy the frozen alias policy enforced by `scripts/validate_current_alias_versioned_carrier.py`.
+- `ISSUE-007` review verdict: `PASS_REQUIRED` once active task/control-plane/coverage/replay surfaces stop referencing `validate_v16_*` validators except where contract-binding marks them `wrapper_compatibility_optional`; `scripts/validate_active_validator_alias_residue.py` is the machine gate.
+- These rows close residual cleanup debt; they do not reopen earlier batch semantics.

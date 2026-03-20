@@ -288,3 +288,8 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
 7. https://github.com/sigstore/docs
 8. https://developers.openai.com/api/docs/guides/evals/
 9. https://developers.openai.com/api/docs/guides/evaluation-best-practices/
+## 2026-03-20 Closure Addendum - temp-path and compatibility-pointer terminology
+
+- `ISSUE-006` is closed for the repaired live surfaces by converging temp/probe allocation onto `scripts/runtime_temp_path_common.py` / `scripts/runtime_temp_path_common.sh`; `scripts/validate_runtime_temp_path_contract.py` is the machine gate.
+- `ISSUE-010` is closed by renaming live compatibility payload terminology from canonical-pointer labels to `compatibility_mirror_pointer_path` / `session_pointer_compatibility_path`; `scripts/validate_compatibility_pointer_terminology.py` is the machine gate.
+- These closures preserve historical replay semantics while prohibiting new live runtime drift.
