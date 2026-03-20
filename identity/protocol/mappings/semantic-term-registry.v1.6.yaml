@@ -72,6 +72,18 @@ terms:
       - compatibility_path
       - stream_v1_6_10
 
+  - term_id: tracked_compiled_brief_frozen_path
+    canonical_term: tracked_compiled_brief_frozen_path
+    aliases:
+      - "compiled brief frozen path"
+      - "tracked compiled brief path"
+      - "冻结 compiled brief 路径"
+    semantics: "Pass-default path-status term for a tracked compiled brief whose current filesystem location is intentionally frozen by governance; unlike migration labels, it is safe to appear in generated compiled-brief artifacts and positive machine gates."
+    allowed_scope:
+      - compiled_brief
+      - path_status
+      - stream_v1_6_10
+
   - term_id: legacy_canonical_compatibility_path
     canonical_term: legacy_canonical_compatibility_path
     aliases:
@@ -137,7 +149,7 @@ forbidden_phrases:
     rationale: "Prevents gateway shell and mirror artifact semantics from being conflated."
 
   - phrase: "`identity/runtime/IDENTITY_COMPILED.md` is an ordinary runtime artifact."
-    replacement: "`identity/runtime/IDENTITY_COMPILED.md` is a tracked_compiled_brief_artifact at a legacy_canonical_compatibility_path."
+    replacement: "`identity/runtime/IDENTITY_COMPILED.md` is a tracked_compiled_brief_artifact at a tracked_compiled_brief_frozen_path."
     rationale: "Prevents the compiled brief from being misclassified as runtime evidence/log pollution."
 
   - phrase: "`identity/runtime/IDENTITY_COMPILED.md` is an instance-autonomous runtime state file."

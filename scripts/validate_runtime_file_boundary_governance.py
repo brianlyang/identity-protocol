@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from repo_root_resolution_common import resolve_repo_root
 
 from protocol_infra_contract import (
     HOST_GATEWAY_DEFAULT_EGRESS_WRAPPER,
@@ -30,6 +31,7 @@ DEFAULT_PROTOCOL_OVERVIEW_DOC = "identity/protocol/IDENTITY_PROTOCOL.md"
 DEFAULT_STREAM_REGISTRY = "identity/protocol/mappings/stream-doc-registry.current.yaml"
 DEFAULT_SEMANTIC_REGISTRY = "identity/protocol/mappings/semantic-term-registry.current.yaml"
 TRACKED_COMPILED_BRIEF_ARTIFACT_TERM = "tracked_compiled_brief_artifact"
+TRACKED_COMPILED_BRIEF_FROZEN_PATH_TERM = "tracked_compiled_brief_frozen_path"
 LEGACY_CANONICAL_COMPATIBILITY_PATH_TERM = "legacy_canonical_compatibility_path"
 INSTANCE_OWNED_TECHNICAL_DEBT_TERM = "instance_owned_technical_debt"
 INSTANCE_CLEAN_PROOF_TERM = "instance_clean_proof"
@@ -76,7 +78,7 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate v1.6.10 runtime file governance boundary freeze.")
-    ap.add_argument("--repo-root", default=".")
+    ap.add_argument("--repo-root", default="")
     ap.add_argument("--governance-doc", default=DEFAULT_GOV_DOC)
     ap.add_argument("--review-doc", default=DEFAULT_REVIEW_DOC)
     ap.add_argument("--protocol-overview-doc", default=DEFAULT_PROTOCOL_OVERVIEW_DOC)
@@ -85,7 +87,7 @@ def main() -> int:
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
-    repo_root = Path(args.repo_root).expanduser().resolve()
+    repo_root = resolve_repo_root(args.repo_root, start=__file__)
     governance_doc = (repo_root / str(args.governance_doc)).resolve()
     review_doc = (repo_root / str(args.review_doc)).resolve()
     protocol_overview_doc = (repo_root / str(args.protocol_overview_doc)).resolve()
@@ -112,6 +114,7 @@ def main() -> int:
         "canonical_mirror_term": PROTOCOL_CONTROLLED_MIRROR_ARTIFACT_TERM,
         "canonical_autonomous_term": INSTANCE_AUTONOMOUS_RUNTIME_TERM,
         "compiled_brief_term": TRACKED_COMPILED_BRIEF_ARTIFACT_TERM,
+        "compiled_brief_path_term": TRACKED_COMPILED_BRIEF_FROZEN_PATH_TERM,
         "legacy_compatibility_term": LEGACY_CANONICAL_COMPATIBILITY_PATH_TERM,
         "canonical_shell_paths": list(PROTOCOL_GENERATED_GATEWAY_SHELL_PATHS),
         "canonical_mirror_paths": list(PROTOCOL_CONTROLLED_MIRROR_ARTIFACT_PATHS),
@@ -182,6 +185,7 @@ def main() -> int:
         "PROTOCOL_GENERATED_GATEWAY_SHELL_PATHS",
         "PROTOCOL_CONTROLLED_MIRROR_ARTIFACT_PATHS",
         TRACKED_COMPILED_BRIEF_ARTIFACT_TERM,
+        TRACKED_COMPILED_BRIEF_FROZEN_PATH_TERM,
         LEGACY_CANONICAL_COMPATIBILITY_PATH_TERM,
         "identity/runtime/IDENTITY_COMPILED.md",
         "governed generated artifact",
@@ -199,6 +203,7 @@ def main() -> int:
         PROTOCOL_CONTROLLED_MIRROR_ARTIFACT_TERM,
         INSTANCE_AUTONOMOUS_RUNTIME_TERM,
         TRACKED_COMPILED_BRIEF_ARTIFACT_TERM,
+        TRACKED_COMPILED_BRIEF_FROZEN_PATH_TERM,
         LEGACY_CANONICAL_COMPATIBILITY_PATH_TERM,
         "scripts/validate_runtime_file_boundary_governance.py",
         "scripts/ci/run_semantic_clarity_probes_ci.sh",
@@ -247,6 +252,7 @@ def main() -> int:
             PROTOCOL_CONTROLLED_MIRROR_ARTIFACT_TERM,
             INSTANCE_AUTONOMOUS_RUNTIME_TERM,
             TRACKED_COMPILED_BRIEF_ARTIFACT_TERM,
+            TRACKED_COMPILED_BRIEF_FROZEN_PATH_TERM,
             LEGACY_CANONICAL_COMPATIBILITY_PATH_TERM,
             INSTANCE_OWNED_TECHNICAL_DEBT_TERM,
             INSTANCE_CLEAN_PROOF_TERM,

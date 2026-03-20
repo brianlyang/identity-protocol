@@ -480,7 +480,7 @@ def main() -> int:
         "",
         "Artifact classification:",
         "- artifact_class: tracked_compiled_brief_artifact",
-        "- path_status: legacy_canonical_compatibility_path",
+        "- path_status: tracked_compiled_brief_frozen_path",
         "- generation_mode: source_first",
         f"- runtime_mode_default: {runtime_mode or '(missing)'}",
         f"- default_machine_profile: `{native_chat_machine_profile}`",

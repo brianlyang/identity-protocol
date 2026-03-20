@@ -1391,10 +1391,10 @@ Row-level cross-check and explicit hook plan:
 
 | Requirement ID | Anchor state | Finding (cross-check) | Concrete hook plan (must all land) | Acceptance target |
 | --- | --- | --- | --- | --- |
-| ASB16-RQ-017 | `PARTIAL` | governance/review contract exists; scripts only provide distributed checks, not single four-track quorum verdict | canonical parser must be single-source: `scripts/validate_v16_intake_evidence_core.py --mode intake_contract`; optional wrapper `scripts/validate_v16_cross_verification_tracks.py` may only delegate; enforce call chain `identity_creator.py` -> `release_readiness_check.py` -> `report_three_plane_status.py`/`full_identity_protocol_scan.py` -> `e2e_smoke_test.sh`; canonical fields must include `t1_status/t2_status/t3_status/t4_status` + metadata quartet | all tracks + metadata present => `PASS_REQUIRED`; any missing track/metadata => deterministic `FAIL_REQUIRED` |
-| ASB16-RQ-018 | `PARTIAL` | monotonic dedup validator/wrapper landed, but deterministic positive+negative replay evidence for same `run_id` concurrency still missing | keep canonical path `scripts/validate_v16_dedup_monotonicity.py` (delegating to semantic core); keep hooks active in creator/readiness/three-plane/full-scan/e2e/ci; add replay artifacts proving stable winner tuple under repeated parallel claims | unchanged concurrent replay keeps identical `winner_id` tuple and `monotonicity_status=PASS_REQUIRED` |
-| ASB16-RQ-019 | `PARTIAL` | cross-workflow normalizer + schema validator landed and are lane-wired; replay evidence closure still pending | keep canonical pair `scripts/normalize_v16_cross_workflow_evidence.py` + `scripts/validate_v16_cross_workflow_schema.py`; preserve creator/readiness/three-plane/full-scan/e2e/ci consumption on canonical fields only | `run_id/route_action/quality_meta_state/dedup_state/evidence_hash` always present and hash-stable |
-| ASB16-RQ-020 | `PARTIAL` | skill-path integrity validator landed and lane-wired; strict layout replay matrix (in-layout pass/out-of-layout fail) still pending archive closure | keep `scripts/validate_v16_skill_path_integrity.py` as single fail-close gate; retain capability-activation as source-only data; enforce same verdict in creator/readiness/three-plane/full-scan/e2e/ci | any out-of-layout/missing skill path fails deterministically with canonical path-integrity code |
+| ASB16-RQ-017 | `PARTIAL` | governance/review contract exists; scripts only provide distributed checks, not single four-track quorum verdict | canonical parser must be single-source: `scripts/validate_intake_evidence_core.py --mode intake_contract`; optional wrapper `scripts/validate_v16_cross_verification_tracks.py` may only delegate; enforce call chain `identity_creator.py` -> `release_readiness_check.py` -> `report_three_plane_status.py`/`full_identity_protocol_scan.py` -> `e2e_smoke_test.sh`; canonical fields must include `t1_status/t2_status/t3_status/t4_status` + metadata quartet | all tracks + metadata present => `PASS_REQUIRED`; any missing track/metadata => deterministic `FAIL_REQUIRED` |
+| ASB16-RQ-018 | `PARTIAL` | monotonic dedup validator/wrapper landed, but deterministic positive+negative replay evidence for same `run_id` concurrency still missing | keep canonical path `scripts/validate_dedup_monotonicity.py`; optional compatibility wrapper `scripts/validate_v16_dedup_monotonicity.py` may only delegate; keep hooks active in creator/readiness/three-plane/full-scan/e2e/ci; add replay artifacts proving stable winner tuple under repeated parallel claims | unchanged concurrent replay keeps identical `winner_id` tuple and `monotonicity_status=PASS_REQUIRED` |
+| ASB16-RQ-019 | `PARTIAL` | cross-workflow normalizer + schema validator landed and are lane-wired; replay evidence closure still pending | keep canonical pair `scripts/normalize_cross_workflow_evidence.py` + `scripts/validate_cross_workflow_schema.py`; preserve creator/readiness/three-plane/full-scan/e2e/ci consumption on canonical fields only | `run_id/route_action/quality_meta_state/dedup_state/evidence_hash` always present and hash-stable |
+| ASB16-RQ-020 | `PARTIAL` | skill-path integrity validator landed and lane-wired; strict layout replay matrix (in-layout pass/out-of-layout fail) still pending archive closure | keep `scripts/validate_skill_path_integrity.py` as single fail-close gate; retain capability-activation as source-only data; enforce same verdict in creator/readiness/three-plane/full-scan/e2e/ci | any out-of-layout/missing skill path fails deterministically with canonical path-integrity code |
 | ASB16-RQ-021 | `PARTIAL` | emitter-before-gate sequence is now implemented, but full-chain replay evidence for required=true pinning scenarios remains incomplete | keep emitter-first (`scripts/emit_route_version_pin_receipt.py`) then gate (`scripts/validate_route_version_pinning.py`); retain creator/readiness/three-plane/full-scan/e2e/ci hooks; add deterministic mismatch replay archive | pin proof required for pass; endpoint-version mismatch must fail-close with canonical pin error code |
 
 Batch-6 five-link anchor lock (mandatory per row):
@@ -1407,7 +1407,7 @@ Batch-6 five-link anchor lock (mandatory per row):
 Batch-6 acceptance command set (normative target):
 
 ```bash
-python3 scripts/validate_v16_intake_evidence_core.py \
+python3 scripts/validate_intake_evidence_core.py \
   --mode intake_contract \
   --catalog <LOCAL_CATALOG> \
   --identity-id <ID> \
@@ -1415,20 +1415,20 @@ python3 scripts/validate_v16_intake_evidence_core.py \
   --operation readiness \
   --json-only
 
-python3 scripts/validate_v16_dedup_monotonicity.py \
+python3 scripts/validate_dedup_monotonicity.py \
   --catalog <LOCAL_CATALOG> \
   --identity-id <ID> \
   --run-id <RUN_ID> \
   --parallel-claims 5 \
   --json-only
 
-python3 scripts/validate_v16_cross_workflow_schema.py \
+python3 scripts/validate_cross_workflow_schema.py \
   --catalog <LOCAL_CATALOG> \
   --identity-id <ID> \
   --operation three-plane \
   --json-only
 
-python3 scripts/validate_v16_skill_path_integrity.py \
+python3 scripts/validate_skill_path_integrity.py \
   --catalog <LOCAL_CATALOG> \
   --identity-id <ID> \
   --operation readiness \
@@ -1513,7 +1513,7 @@ Row-level cross-check and explicit hook plan:
 | Requirement ID | Anchor state | Finding (cross-check) | Concrete hook plan (must all land) | Acceptance target |
 | --- | --- | --- | --- | --- |
 | ASB16-RQ-022 | `PARTIAL` | fallback taxonomy normalizer is implemented and lane-wired, but required=true replay archive across readiness/e2e/ci paths is not yet complete | keep `scripts/validate_fallback_taxonomy_normalization.py`; preserve dual-field output (`fallback_reason_raw`, `fallback_taxonomy_class`) and blocker-namespace isolation; keep creator/readiness/three-plane/full-scan/e2e/ci consumption aligned | each fallback sample maps to governed class (`data_missing/model_weak_signal/transport_error/policy_blocked`); unmappable value fails deterministically without breaking blocker chain |
-| ASB16-RQ-030 | `PARTIAL` | canonical parser + wrapper + lane hooks landed, but quorum replay evidence for required=true bundles remains incomplete | keep canonical parser `scripts/validate_v16_intake_evidence_core.py --mode promotion_gate`; wrapper `scripts/validate_v16_intake_evidence_quorum.py` delegates only; maintain single fail-close entrypoint in creator/readiness/three-plane/full-scan/e2e/ci | any missing track (`T1..T4`) or missing metadata (`bundle_id/source_url_set/reference_timestamp_utc/conflict_note`) blocks with deterministic fail code |
+| ASB16-RQ-030 | `PARTIAL` | canonical parser + wrapper + lane hooks landed, but quorum replay evidence for required=true bundles remains incomplete | keep canonical parser `scripts/validate_intake_evidence_core.py --mode promotion_gate`; wrapper `scripts/validate_v16_intake_evidence_quorum.py` delegates only; maintain single fail-close entrypoint in creator/readiness/three-plane/full-scan/e2e/ci | any missing track (`T1..T4`) or missing metadata (`bundle_id/source_url_set/reference_timestamp_utc/conflict_note`) blocks with deterministic fail code |
 
 Batch-7 five-link anchor lock (mandatory per row):
 
@@ -1531,7 +1531,7 @@ python3 scripts/validate_fallback_taxonomy_normalization.py \
   --operation three-plane \
   --json-only
 
-python3 scripts/validate_v16_intake_evidence_core.py \
+python3 scripts/validate_intake_evidence_core.py \
   --mode promotion_gate \
   --catalog <LOCAL_CATALOG> \
   --identity-id <ID> \
@@ -1575,7 +1575,7 @@ Batch-6/7 revised execution order (post-audit hard sequence):
 1. Land mapping base asset first:
    - `identity/protocol/mappings/contract-binding.v1.6.yaml` with rows for `RQ-017..022/030`.
 2. Implement intake evidence core parser:
-   - `validate_v16_intake_evidence_core.py` with `--mode intake_contract|promotion_gate`.
+   - `validate_intake_evidence_core.py` with `--mode intake_contract|promotion_gate`.
 3. Implement `RQ-022` taxonomy normalization with dual fields and namespace isolation.
 4. Implement `RQ-021` emitter (`emit_route_version_pin_receipt.py`) before pinning gate.
 5. Wire all seven new gates into coverage and aggregator payload extraction before any lock or promotion claim.
@@ -2371,7 +2371,7 @@ Implementation delta snapshot (2026-03-07):
 2. no-event legal terminal state added for fallback taxonomy:
    - `no_fallback_event_in_current_run`.
 3. landing scripts:
-   - `scripts/validate_v16_intake_evidence_core.py`
+   - `scripts/validate_intake_evidence_core.py`
    - `scripts/validate_dedup_monotonicity.py`
    - `scripts/validate_cross_workflow_schema.py`
    - `scripts/validate_route_version_pinning.py`
@@ -2711,7 +2711,7 @@ Promotion guard (hard):
 | FIX16-020 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T17:10:00Z | discovery dual-track intake preserved; kernel anchors + mapping rows for `RQ-023/024` landed (`910ec6e`) and now machine-projected, while promotion remains blocked pending required=true replay closure |
 | FIX16-021 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T16:45:00Z | kernel-first intake preserved; executable `RQ-025` canonical-source validator landed (`13485bb`) with mapping anchor sync and lane hooks; non-promotional replay boundary unchanged |
 | FIX16-022 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T16:45:00Z | semantic convergence requirement preserved; executable convergence validator landed (`13485bb`) and wired to readiness/three-plane/full-scan/e2e/ci, replay closure still pending |
-| FIX16-023 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T18:05:00Z | intake hard-gate executable closure landed (`f63eb55 + 47f2f38 + 1beeb88`): canonical single-parser dual-mode core (`scripts/validate_v16_intake_evidence_core.py`) + delegated wrappers + lane hooks (`creator/readiness/three-plane/full-scan/e2e/ci`); promotion boundary unchanged pending required=true replay closure |
+| FIX16-023 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T18:05:00Z | intake hard-gate executable closure landed (`f63eb55 + 47f2f38 + 1beeb88`): canonical single-parser dual-mode core (`scripts/validate_intake_evidence_core.py`) + delegated wrappers + lane hooks (`creator/readiness/three-plane/full-scan/e2e/ci`); promotion boundary unchanged pending required=true replay closure |
 | FIX16-024 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T16:45:00Z | self-drive conclusions preserved; executable coupling validator landed (`13485bb`) with explicit actor gate + lane hooks, while multimodal replay closure remains pending before promotion |
 | FIX16-025 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T18:05:00Z | deep cross-verification package remains valid and executable closures are now landed for `ASB16-RQ-015/029/030`; `S0..S4` sequence remains as replay-hardening path, and promotion is blocked until deterministic replay archive is complete |
 | FIX16-026 | PENDING_INTAKE | base-repo-architect(self-drive) | 2026-03-05T12:58:00Z | runtime self-drive pilot on `base-repo-architect`: protocol-kernel prompt injection + multimodal verification baseline passes; creator strict chain still shows actor-context convergence residual (`IP-ASB-STAMP-SESSION-005`), kept in v1.6 executable-coupling track only |

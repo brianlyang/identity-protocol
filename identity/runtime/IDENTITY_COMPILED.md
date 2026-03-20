@@ -21,7 +21,7 @@ This file is generated/maintained by identity runtime tooling.
 
 Artifact classification:
 - artifact_class: tracked_compiled_brief_artifact
-- path_status: legacy_canonical_compatibility_path
+- path_status: tracked_compiled_brief_frozen_path
 - generation_mode: source_first
 - runtime_mode_default: local_only
 - default_machine_profile: `mini`

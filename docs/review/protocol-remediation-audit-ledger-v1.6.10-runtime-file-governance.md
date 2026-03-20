@@ -254,11 +254,13 @@ Interpretation contract:
    - instance-autonomous runtime state
    - generic `protocol_controlled_mirror_artifact`
 3. The current path is frozen as a `legacy_canonical_compatibility_path`; consumer/config/docs continue to use it until a separately approved taxonomy migration lands.
-4. Source-first rule is frozen:
+4. Generated compiled-brief artifacts and positive compiled-brief gates now use `tracked_compiled_brief_frozen_path` as the neutral pass-default path-status term; `legacy_canonical_compatibility_path` remains a governance/migration label only.
+5. Source-first rule is frozen:
    - semantic changes land in docs/template/script sources first,
    - then `scripts/compile_identity_runtime.py` regenerates the brief,
    - direct manual semantic editing of `identity/runtime/IDENTITY_COMPILED.md` is non-compliant.
-5. The legacy compatibility-path term is now guarded from current-turn authority resolution, strict user-visible native-chat lanes, and active machine-gate defaults by `scripts/validate_compatibility_legacy_boundary.py`.
+6. The legacy compatibility-path term is now guarded from current-turn authority resolution and strict user-visible native-chat lanes by `scripts/validate_compatibility_legacy_boundary.py`.
+7. `scripts/validate_compiled_brief_projection_boundary.py` separately proves pass-default compiled-brief outputs depend on `tracked_compiled_brief_frozen_path`, not on the legacy compatibility-path term.
 ## 2026-03-20 Closure Addendum - temp-path and compatibility-pointer terminology
 
 - `ISSUE-006` review verdict: `PASS_REQUIRED` once `scripts/validate_runtime_temp_path_contract.py` proves repaired live temp/probe surfaces no longer hardcode `/tmp` or raw probe `mktemp`.

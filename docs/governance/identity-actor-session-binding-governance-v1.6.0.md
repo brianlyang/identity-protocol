@@ -1487,10 +1487,10 @@ Batch-6 strengthening matrix (explicit hook plan, mandatory):
 
 | Requirement ID | Current anchor_state | Kernel contract + mandatory fields | Concrete script hook plan (must all be wired) | Promotion guard |
 | --- | --- | --- | --- | --- |
-| ASB16-RQ-017 | `PARTIAL` | add `rq_017_multi_track_cross_verification_contract_v1`; required output fields: `t1_status`, `t2_status`, `t3_status`, `t4_status`, `cross_verification_bundle_id`, `source_url_set`, `reference_timestamp_utc`, `conflict_reconciliation_note` | canonical parser must be single-source: `scripts/validate_v16_intake_evidence_core.py --mode intake_contract`; `scripts/validate_v16_cross_verification_tracks.py` may exist only as wrapper (no independent field parsing); call chain: `scripts/identity_creator.py` (update/validate preflight) -> `scripts/release_readiness_check.py` (hard gate) -> `scripts/report_three_plane_status.py` + `scripts/full_identity_protocol_scan.py` (consume canonical receipt only) -> `scripts/e2e_smoke_test.sh` (negative replay with missing track/metadata) | keep `ACCEPT_WITH_FIX` with audit `PASS_WITH_BLOCKERS` until four-track quorum + four intake metadata fields are machine-enforced as single fail-close verdict |
+| ASB16-RQ-017 | `PARTIAL` | add `rq_017_multi_track_cross_verification_contract_v1`; required output fields: `t1_status`, `t2_status`, `t3_status`, `t4_status`, `cross_verification_bundle_id`, `source_url_set`, `reference_timestamp_utc`, `conflict_reconciliation_note` | canonical parser must be single-source: `scripts/validate_intake_evidence_core.py --mode intake_contract`; `scripts/validate_v16_cross_verification_tracks.py` may exist only as wrapper (no independent field parsing); call chain: `scripts/identity_creator.py` (update/validate preflight) -> `scripts/release_readiness_check.py` (hard gate) -> `scripts/report_three_plane_status.py` + `scripts/full_identity_protocol_scan.py` (consume canonical receipt only) -> `scripts/e2e_smoke_test.sh` (negative replay with missing track/metadata) | keep `ACCEPT_WITH_FIX` with audit `PASS_WITH_BLOCKERS` until four-track quorum + four intake metadata fields are machine-enforced as single fail-close verdict |
 | ASB16-RQ-018 | `PARTIAL` | `rq_018_dedup_monotonic_winner_contract_v1` validator is implemented, but deterministic replay evidence for required=true concurrency windows remains incomplete | keep canonical validator path `scripts/validate_dedup_monotonicity.py`; optional compatibility wrapper `scripts/validate_v16_dedup_monotonicity.py` must delegate only (no independent parsing); keep hooks active in creator/readiness/three-plane/full-scan/e2e/ci and aggregate only canonical `winner_id`/`winner_reason` fields | keep `ACCEPT_WITH_FIX` with audit `PASS_WITH_BLOCKERS` until same-input parallel replay proves deterministic winner tuple across lanes |
-| ASB16-RQ-019 | `PARTIAL` | `rq_019_cross_workflow_evidence_schema_contract_v1` normalizer+validator are implemented and lane-wired, but replay archive closure remains pending | keep canonical pair `scripts/normalize_v16_cross_workflow_evidence.py` + `scripts/validate_v16_cross_workflow_schema.py`; keep creator/readiness/three-plane/full-scan/e2e/ci consuming canonical schema fields only | keep `ACCEPT_WITH_FIX` with audit `PASS_WITH_BLOCKERS` until cross-workflow schema is canonicalized and hash replay is deterministic |
-| ASB16-RQ-020 | `PARTIAL` | `rq_020_skill_path_integrity_contract_v1` validator is implemented and lane-wired; out-of-layout/missing-path replay archive still pending | keep `scripts/validate_v16_skill_path_integrity.py` as single fail-close gate; capability-activation remains source-only; retain creator/readiness/three-plane/full-scan/e2e/ci consumption | keep `ACCEPT_WITH_FIX` with audit `PASS_WITH_BLOCKERS` until skill path checks are layout-anchored and fail-close on out-of-layout references |
+| ASB16-RQ-019 | `PARTIAL` | `rq_019_cross_workflow_evidence_schema_contract_v1` normalizer+validator are implemented and lane-wired, but replay archive closure remains pending | keep canonical pair `scripts/normalize_cross_workflow_evidence.py` + `scripts/validate_cross_workflow_schema.py`; keep creator/readiness/three-plane/full-scan/e2e/ci consuming canonical schema fields only | keep `ACCEPT_WITH_FIX` with audit `PASS_WITH_BLOCKERS` until cross-workflow schema is canonicalized and hash replay is deterministic |
+| ASB16-RQ-020 | `PARTIAL` | `rq_020_skill_path_integrity_contract_v1` validator is implemented and lane-wired; out-of-layout/missing-path replay archive still pending | keep `scripts/validate_skill_path_integrity.py` as single fail-close gate; capability-activation remains source-only; retain creator/readiness/three-plane/full-scan/e2e/ci consumption | keep `ACCEPT_WITH_FIX` with audit `PASS_WITH_BLOCKERS` until skill path checks are layout-anchored and fail-close on out-of-layout references |
 | ASB16-RQ-021 | `PARTIAL` | `rq_021_route_workflow_version_pinning_contract_v1` emitter-before-gate sequence is implemented; required=true replay archive still pending | keep phase order (`scripts/emit_route_version_pin_receipt.py` -> `scripts/validate_route_version_pinning.py`) and retain creator/readiness/three-plane/full-scan/e2e/ci hooks; CI/route metrics remain supplemental only | keep `ACCEPT_WITH_FIX` with audit `PASS_WITH_BLOCKERS` until emitter proof source and mismatch fail-close are replay-proven |
 
 Batch-6 row-level five-link anchors (mandatory, non-optional):
@@ -1499,7 +1499,7 @@ Batch-6 row-level five-link anchors (mandatory, non-optional):
    - `kernel_ref`: `identity/protocol/IDENTITY_PROTOCOL.md#rq_017_multi_track_cross_verification_contract_v1`
    - `runtime_ref`: four-track canonical quorum receipt consumed by all mandatory lanes
    - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-017`
-   - `validator_ref`: `scripts/validate_v16_intake_evidence_core.py --mode intake_contract` (wrapper alias `scripts/validate_v16_cross_verification_tracks.py` allowed only if parser is delegated)
+   - `validator_ref`: `scripts/validate_intake_evidence_core.py --mode intake_contract` (wrapper alias `scripts/validate_v16_cross_verification_tracks.py` allowed only if parser is delegated)
    - `acceptance_cmd`: four-track quorum replay command set (positive all-present + negative missing-track)
 2. `ASB16-RQ-018`
    - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_018_dedup_monotonic_winner_contract_v1`
@@ -1511,13 +1511,13 @@ Batch-6 row-level five-link anchors (mandatory, non-optional):
    - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_019_cross_workflow_evidence_schema_contract_v1`
    - `runtime_ref`: normalized cross-workflow schema receipt with stable `evidence_hash`
    - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-019`
-   - `validator_ref`: `scripts/validate_v16_cross_workflow_schema.py`
+   - `validator_ref`: `scripts/validate_cross_workflow_schema.py`
    - `acceptance_cmd`: schema-required-field replay + hash consistency check
 4. `ASB16-RQ-020`
    - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_020_skill_path_integrity_contract_v1`
    - `runtime_ref`: active-layout skill-path proof receipt
    - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-020`
-   - `validator_ref`: `scripts/validate_v16_skill_path_integrity.py`
+   - `validator_ref`: `scripts/validate_skill_path_integrity.py`
    - `acceptance_cmd`: in-layout pass + out-of-layout fail-close replay
 5. `ASB16-RQ-021`
    - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_021_route_workflow_version_pinning_contract_v1`
@@ -1529,10 +1529,10 @@ Batch-6 row-level five-link anchors (mandatory, non-optional):
 Batch-6 acceptance command set (normative executable set; replay closure still required):
 
 ```bash
-python3 scripts/validate_v16_intake_evidence_core.py --mode intake_contract --catalog <LOCAL_CATALOG> --identity-id <ID> --bundle-id <BUNDLE_ID> --operation readiness --json-only
+python3 scripts/validate_intake_evidence_core.py --mode intake_contract --catalog <LOCAL_CATALOG> --identity-id <ID> --bundle-id <BUNDLE_ID> --operation readiness --json-only
 python3 scripts/validate_dedup_monotonicity.py --catalog <LOCAL_CATALOG> --identity-id <ID> --run-id <RUN_ID> --parallel-claims 5 --json-only
-python3 scripts/validate_v16_cross_workflow_schema.py --catalog <LOCAL_CATALOG> --identity-id <ID> --operation three-plane --json-only
-python3 scripts/validate_v16_skill_path_integrity.py --catalog <LOCAL_CATALOG> --identity-id <ID> --operation readiness --json-only
+python3 scripts/validate_cross_workflow_schema.py --catalog <LOCAL_CATALOG> --identity-id <ID> --operation three-plane --json-only
+python3 scripts/validate_skill_path_integrity.py --catalog <LOCAL_CATALOG> --identity-id <ID> --operation readiness --json-only
 python3 scripts/emit_route_version_pin_receipt.py --catalog <LOCAL_CATALOG> --identity-id <ID> --operation readiness --route-endpoint <ROUTE_ENDPOINT> --workflow-id <WORKFLOW_ID> --workflow-publish-version <WORKFLOW_PUBLISH_VERSION> --out <PIN_RECEIPT_PATH> --json-only
 python3 scripts/validate_route_version_pinning.py --catalog <LOCAL_CATALOG> --identity-id <ID> --operation readiness --receipt <PIN_RECEIPT_PATH> --expected-route-endpoint <ROUTE_ENDPOINT> --expected-workflow-id <WORKFLOW_ID> --expected-workflow-publish-version <WORKFLOW_PUBLISH_VERSION> --json-only
 ```
@@ -1585,7 +1585,7 @@ Batch-7 strengthening matrix (explicit hook plan, mandatory):
 | Requirement ID | Current anchor_state | Kernel contract + mandatory fields | Concrete script hook plan (must all be wired) | Promotion guard |
 | --- | --- | --- | --- | --- |
 | ASB16-RQ-022 | `PARTIAL` | add `rq_022_fallback_taxonomy_normalization_contract_v1`; required fields: `fallback_reason_raw`, `fallback_taxonomy_class`, `taxonomy_version`, `normalization_status`, `normalization_error_code` | new `scripts/validate_fallback_taxonomy_normalization.py`; add normalization stage at `scripts/response_stamp_common.py` output boundary; **namespace separation is mandatory**: fallback taxonomy fields must not overwrite existing blocker taxonomy (`auth_login_required` etc.); enforce in `scripts/release_readiness_check.py`; consume same normalized class in `report_three_plane_status.py`, `full_identity_protocol_scan.py`, and `e2e_smoke_test.sh` | keep `ACCEPT_WITH_FIX` with audit `PASS_WITH_BLOCKERS` until all fallback reasons deterministically map to governed enum (`data_missing/model_weak_signal/transport_error/policy_blocked`) without altering blocker taxonomy chain |
-| ASB16-RQ-030 | `PARTIAL` | add `rq_030_intake_evidence_quorum_contract_v1`; required fields: `t1_roundtable_status`, `t2_vendor_status`, `t3_openai_context_status`, `t4_protocol_spec_status`, `cross_verification_bundle_id`, `source_url_set`, `reference_timestamp_utc`, `conflict_reconciliation_note` | canonical parser must reuse `scripts/validate_v16_intake_evidence_core.py --mode promotion_gate`; wrapper `scripts/validate_v16_intake_evidence_quorum.py` may exist only as delegated mode entry; call chain: `identity_creator` preflight -> readiness hard gate -> three-plane/full-scan promotion gate -> e2e negative replay with missing track/metadata; fail-close must be single entrypoint (no checklist bypass) | keep `ACCEPT_WITH_FIX` with audit `PASS_WITH_BLOCKERS` until four-track+four-metadata quorum is automated as promotion blocker across all required lanes |
+| ASB16-RQ-030 | `PARTIAL` | add `rq_030_intake_evidence_quorum_contract_v1`; required fields: `t1_roundtable_status`, `t2_vendor_status`, `t3_openai_context_status`, `t4_protocol_spec_status`, `cross_verification_bundle_id`, `source_url_set`, `reference_timestamp_utc`, `conflict_reconciliation_note` | canonical parser must reuse `scripts/validate_intake_evidence_core.py --mode promotion_gate`; wrapper `scripts/validate_v16_intake_evidence_quorum.py` may exist only as delegated mode entry; call chain: `identity_creator` preflight -> readiness hard gate -> three-plane/full-scan promotion gate -> e2e negative replay with missing track/metadata; fail-close must be single entrypoint (no checklist bypass) | keep `ACCEPT_WITH_FIX` with audit `PASS_WITH_BLOCKERS` until four-track+four-metadata quorum is automated as promotion blocker across all required lanes |
 
 Batch-7 row-level five-link anchors (mandatory, non-optional):
 
@@ -1599,14 +1599,14 @@ Batch-7 row-level five-link anchors (mandatory, non-optional):
    - `kernel_ref`: `identity/protocol/IDENTITY_PROTOCOL.md#rq_030_intake_evidence_quorum_contract_v1`
    - `runtime_ref`: intake evidence quorum hard gate with four-track/four-metadata receipt
    - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-030`
-   - `validator_ref`: `scripts/validate_v16_intake_evidence_core.py --mode promotion_gate` (wrapper alias `scripts/validate_v16_intake_evidence_quorum.py` allowed only if parser is delegated)
+   - `validator_ref`: `scripts/validate_intake_evidence_core.py --mode promotion_gate` (wrapper alias `scripts/validate_v16_intake_evidence_quorum.py` allowed only if parser is delegated)
    - `acceptance_cmd`: quorum replay (`positive` complete bundle + `negative` missing-track/missing-metadata)
 
 Batch-7 acceptance command set (normative executable set; replay closure still required):
 
 ```bash
 python3 scripts/validate_fallback_taxonomy_normalization.py --catalog <LOCAL_CATALOG> --identity-id <ID> --operation three-plane --json-only
-python3 scripts/validate_v16_intake_evidence_core.py --mode promotion_gate --catalog <LOCAL_CATALOG> --identity-id <ID> --operation validate --json-only
+python3 scripts/validate_intake_evidence_core.py --mode promotion_gate --catalog <LOCAL_CATALOG> --identity-id <ID> --operation validate --json-only
 ```
 
 Passing criteria:
@@ -1661,7 +1661,7 @@ Batch-6/7 post-audit blocker hardening addendum (mandatory, 2026-03-06):
    - `identity/protocol/mappings/contract-binding.v1.6.yaml` (and parent directory `identity/protocol/mappings`) must be landed before any lock computation for `RQ-017..022/030`.
    - without this asset, lock-state for this batch is interpreted as `BLOCKED_MAPPING_ASSET_MISSING` and cannot be promoted.
 2. `RQ-017` and `RQ-030` must share one core parser and one canonical field schema:
-   - canonical implementation: `validate_v16_intake_evidence_core.py` with `--mode intake_contract|promotion_gate`;
+   - canonical implementation: `validate_intake_evidence_core.py` with `--mode intake_contract|promotion_gate`;
    - separate wrappers may exist for ergonomics, but parser logic duplication is prohibited.
 3. `RQ-021` must follow emitter-before-gate order:
    - first emit publish-version proof receipt (`route_endpoint`, `workflow_id`, `workflow_publish_version`, `pin_proof_ref`);
@@ -2103,7 +2103,7 @@ Implementation delta (2026-03-07):
    - non-applicable required contracts emit `SKIPPED_NOT_REQUIRED` with explicit stale reason,
    - no-fallback-event terminal state emits `no_fallback_event_in_current_run`.
 4. landing scripts:
-   - `scripts/validate_v16_intake_evidence_core.py`
+   - `scripts/validate_intake_evidence_core.py`
    - `scripts/validate_dedup_monotonicity.py`
    - `scripts/validate_cross_workflow_schema.py`
    - `scripts/validate_route_version_pinning.py`
@@ -2250,7 +2250,7 @@ Replay commands executed:
 6. `python3 scripts/release_readiness_check.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
 7. `python3 scripts/identity_creator.py validate --identity-id office-ops-expert --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
 8. `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
-9. `python3 scripts/validate_v16_cross_workflow_schema.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --json-only`
+9. `python3 scripts/validate_cross_workflow_schema.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --json-only`
 10. `IDENTITY_CATALOG=/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml python3 scripts/validate_identity_runtime_mode_guard.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --expect-mode auto`
 
 Protocol-layer findings (round-2):
@@ -2311,7 +2311,7 @@ Findings:
    - env/catalog mismatch now fails with `IP-ENV-003` for `validate/readiness/ci` operations.
    - `scan` operation remains observational (`rc=0` + warning).
 3. `P1-APPLICABILITY-003` is closed on observation profile:
-   - `validate_v16_cross_workflow_schema.py --operation scan` now returns `SKIPPED_NOT_REQUIRED` with `cross_workflow_not_applicable_no_route_or_dedup_signal`.
+   - `validate_cross_workflow_schema.py --operation scan` now returns `SKIPPED_NOT_REQUIRED` with `cross_workflow_not_applicable_no_route_or_dedup_signal`.
 4. gate-chain now fails for contract reasons rather than parser/runtime crashes:
    - with catalog aligned, `identity_creator update` and delegated `release_readiness_check` preflight both progress into downstream contract gates and fail with deterministic business gate codes (for example `IP-EXEC-ORDER-001`, `IP-PVA-003`, `IP-INTAKE-EVID-001` depending on identity evidence state), not `AttributeError`/`NameError`.
 5. replay-archive expectation drift is closed:
@@ -2342,12 +2342,12 @@ Replay commands executed (project-local catalog lineage):
 3. `python3 scripts/release_readiness_check.py --identity-id <store-manager|base-repo-audit-expert-v3|custom-creative-ecom-analyst|base-repo-architect> --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --scope <SYSTEM|USER> --actor-id assistant:codex`
 4. `python3 scripts/identity_creator.py validate --identity-id <store-manager|base-repo-audit-expert-v3|custom-creative-ecom-analyst|base-repo-architect> --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --scope <SYSTEM|USER> --actor-id assistant:codex`
 5. `python3 scripts/validate_required_contract_coverage.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --operation update --json-only`
-6. `python3 scripts/validate_v16_cross_verification_tracks.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
-7. `python3 scripts/validate_v16_intake_evidence_quorum.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
+6. `python3 scripts/validate_cross_verification_tracks.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
+7. `python3 scripts/validate_intake_evidence_quorum.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
 8. `python3 scripts/validate_route_version_pinning.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
 9. `python3 scripts/validate_fallback_taxonomy_normalization.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
 10. `python3 scripts/validate_dedup_monotonicity.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
-11. `python3 scripts/validate_v16_cross_workflow_schema.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
+11. `python3 scripts/validate_cross_workflow_schema.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
 12. `python3 scripts/validate_replay_archive_contract.py --identity-id <base-repo-architect|base-repo-audit-expert-v3|custom-creative-ecom-analyst> --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --operation scan --json-only`
 13. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids store-manager,base-repo-audit-expert-v3,custom-creative-ecom-analyst,base-repo-architect --project-catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --global-catalog /tmp/nonexistent-catalog.yaml --actor-id assistant:codex --out /tmp/audit_r5_full_scan_project.json`
 
@@ -2360,7 +2360,7 @@ Findings:
    - for `base-repo-architect`, `update/readiness/ci` return `FAIL_REQUIRED` for six Batch-6/7 gates while `producer_readiness=false` and `requiredization_current_round_linked=false`.
    - failing contracts/codes: `cross_verification_tracks` (`IP-INTAKE-EVID-001`), `intake_evidence_quorum` (`IP-INTAKE-EVID-001`), `route_version_pinning` (`IP-PIN-001`), `fallback_taxonomy_normalization` (`IP-FBTAX-002`), `dedup_monotonicity` (`IP-DEDUP-001`), `cross_workflow_schema` (`IP-XWF-001`).
 4. intake auto-required inference is still history-sensitive under strict ops:
-   - `validate_v16_intake_evidence_core.py` promotes required mode from historical `runtime/protocol-feedback` presence (`auto_required_signal=true`) even when current-round linkage is false.
+   - `validate_intake_evidence_core.py` promotes required mode from historical `runtime/protocol-feedback` presence (`auto_required_signal=true`) even when current-round linkage is false.
 5. replay-archive contract closure remains stable:
    - `validate_replay_archive_contract.py` returns `PASS_REQUIRED` with `15/15` passing cases for all three audited runtime identities.
 6. strict context fail-fast remains enforced:
@@ -2395,7 +2395,7 @@ Replay commands executed (local catalog lineage, non-hardcoded temp roots):
 2. `CAT="${IDENTITY_CATALOG:-$PWD/../.identity/catalog.local.yaml}"`
 3. `python3 scripts/identity_creator.py validate --identity-id store-manager --catalog "$CAT" --scope SYSTEM --actor-id assistant:codex | rg "validate_identity_instance_isolation.py|instance isolation"`
 4. `python3 scripts/validate_required_contract_coverage.py --catalog "$CAT" --identity-id base-repo-architect --operation update --json-only`
-5. `for gate in validate_v16_cross_verification_tracks.py validate_v16_intake_evidence_quorum.py validate_route_version_pinning.py validate_fallback_taxonomy_normalization.py validate_dedup_monotonicity.py validate_v16_cross_workflow_schema.py; do python3 "scripts/${gate}" --catalog "$CAT" --identity-id base-repo-architect --operation update --json-only; done`
+5. `for gate in validate_cross_verification_tracks.py validate_intake_evidence_quorum.py validate_route_version_pinning.py validate_fallback_taxonomy_normalization.py validate_dedup_monotonicity.py validate_cross_workflow_schema.py; do python3 "scripts/${gate}" --catalog "$CAT" --identity-id base-repo-architect --operation update --json-only; done`
 6. `python3 scripts/validate_fallback_taxonomy_normalization.py --catalog "$CAT" --identity-id base-repo-architect --operation update --fallback-reason no_intent_signal --json-only`
 7. `python3 scripts/validate_fallback_taxonomy_normalization.py --catalog "$CAT" --identity-id base-repo-architect --operation update --fallback-reason unknown_vendor_glitch --json-only`
 8. `python3 scripts/validate_dedup_monotonicity.py --catalog "$CAT" --identity-id base-repo-architect --operation update --claims "<positive_claims.json>" --json-only`

@@ -5,6 +5,7 @@ import argparse
 import json
 import re
 from pathlib import Path
+from repo_root_resolution_common import resolve_repo_root
 from typing import Any
 
 import yaml
@@ -41,6 +42,11 @@ STREAM_FIELD_PREFIX: dict[str, str] = {
     "governance_anchor": "docs/governance/",
     "review_anchor": "docs/review/",
 }
+WRAPPER_OPTIONAL_METADATA = {"wrapper_only_optional", "wrapper_compatibility_optional"}
+WRAPPER_CONTEXT_RE = re.compile(
+    r"\b(wrapper|alias|compatibility|compatibility-only|optional|delegate|delegated|delegating)\b",
+    flags=re.IGNORECASE,
+)
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -87,11 +93,18 @@ def _append_violation(violations: list[dict[str, Any]], *, requirement_key: str,
     violations.append(row)
 
 
-def _parse_script_from_validator_id(raw: str) -> str:
+def _parse_validator_entry(raw: str) -> tuple[str, str]:
     token = str(raw or "").strip()
     if not token:
-        return ""
-    return token.split("::", 1)[0].strip()
+        return "", ""
+    if "::" not in token:
+        return token, ""
+    script_part, metadata = token.split("::", 1)
+    return script_part.strip(), metadata.strip()
+
+
+def _parse_script_from_validator_id(raw: str) -> str:
+    return _parse_validator_entry(raw)[0]
 
 
 def _slugify_heading(text: str) -> str:
@@ -182,9 +195,97 @@ def _load_stream_allowed_docs(registry_path: Path) -> tuple[set[str], list[str]]
     return allowed, errors
 
 
+def _derive_versioned_alias(script_path: str, *, repo_root: Path) -> str:
+    token = str(script_path or "").strip()
+    if not token.startswith("scripts/"):
+        return ""
+    alias_candidates = [
+        token.replace("scripts/validate_", "scripts/validate_v16_", 1),
+        token.replace("scripts/normalize_", "scripts/normalize_v16_", 1),
+    ]
+    for candidate in alias_candidates:
+        if candidate == token:
+            continue
+        if (repo_root / candidate).resolve().exists():
+            return candidate
+    return ""
+
+
+def _derive_canonical_from_versioned(script_path: str, *, repo_root: Path) -> str:
+    token = str(script_path or "").strip()
+    if not token.startswith("scripts/"):
+        return ""
+    candidates = [
+        token.replace("scripts/validate_v16_", "scripts/validate_", 1),
+        token.replace("scripts/normalize_v16_", "scripts/normalize_", 1),
+    ]
+    for candidate in candidates:
+        if candidate == token:
+            continue
+        if (repo_root / candidate).resolve().exists():
+            return candidate
+    return ""
+
+
+def _collect_doc_wrapper_alias_pairs(
+    *,
+    repo_root: Path,
+    validator_ids: list[str],
+) -> list[tuple[str, str]]:
+    pairs: set[tuple[str, str]] = set()
+    canonical_scripts: list[str] = []
+    for raw_validator in validator_ids:
+        script_path, metadata = _parse_validator_entry(raw_validator)
+        if not script_path:
+            continue
+        if metadata in WRAPPER_OPTIONAL_METADATA:
+            canonical = _derive_canonical_from_versioned(script_path, repo_root=repo_root)
+            if canonical:
+                pairs.add((script_path, canonical))
+            continue
+        canonical_scripts.append(script_path)
+    for canonical in canonical_scripts:
+        alias = _derive_versioned_alias(canonical, repo_root=repo_root)
+        if alias:
+            pairs.add((alias, canonical))
+    return sorted(pairs)
+
+
+def _scan_doc_for_legacy_wrapper_usage(
+    *,
+    doc_path: Path,
+    alias_pairs: list[tuple[str, str]],
+    requirement_key: str,
+    field_name: str,
+    violations: list[dict[str, Any]],
+) -> None:
+    if not alias_pairs:
+        return
+    for line_no, raw_line in enumerate(doc_path.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1):
+        line = raw_line.strip()
+        if not line:
+            continue
+        for legacy_script, canonical_script in alias_pairs:
+            if legacy_script not in line:
+                continue
+            if WRAPPER_CONTEXT_RE.search(line):
+                continue
+            _append_violation(
+                violations,
+                requirement_key=requirement_key,
+                field=field_name,
+                reason="doc_executable_role_mismatch_legacy_wrapper_used_as_canonical",
+                reference_path=str(doc_path),
+                line=line_no,
+                legacy_script=legacy_script,
+                canonical_script=canonical_script,
+                snippet=line,
+            )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate contract-binding reference integrity across docs/scripts.")
-    parser.add_argument("--repo-root", default=".")
+    parser.add_argument("--repo-root", default="")
     parser.add_argument("--contract-mapping", default="identity/protocol/mappings/contract-binding.current.yaml")
     parser.add_argument(
         "--stream-doc-registry",
@@ -193,7 +294,7 @@ def main() -> int:
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
-    repo_root = Path(args.repo_root).expanduser().resolve()
+    repo_root = resolve_repo_root(args.repo_root, start=__file__)
     mapping_entry_path = (repo_root / str(args.contract_mapping)).resolve()
     mapping_path, mapping_active_file, mapping_alias_error = _resolve_current_yaml_alias(
         repo_root, str(args.contract_mapping)
@@ -251,6 +352,10 @@ def main() -> int:
             )
 
         validator_ids = _as_str_list(row.get("validator_ids"))
+        doc_wrapper_alias_pairs = _collect_doc_wrapper_alias_pairs(
+            repo_root=repo_root,
+            validator_ids=validator_ids,
+        )
         if not validator_ids:
             _append_violation(
                 violations,
@@ -377,6 +482,14 @@ def main() -> int:
                         reference=ref,
                         anchor=anchor,
                         reference_path=rel_path,
+                    )
+                elif field_name in STREAM_ANCHOR_FIELDS:
+                    _scan_doc_for_legacy_wrapper_usage(
+                        doc_path=resolved,
+                        alias_pairs=doc_wrapper_alias_pairs,
+                        requirement_key=requirement_key,
+                        field_name=field_name,
+                        violations=violations,
                     )
 
     status = STATUS_PASS_REQUIRED

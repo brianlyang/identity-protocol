@@ -608,6 +608,7 @@ asb16-rq-017:
   kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_017_multi_track_cross_verification_contract_v1
   validator_ids:
     - scripts/validate_intake_evidence_core.py::mode=intake_contract
+    - scripts/validate_v16_intake_evidence_core.py::wrapper_compatibility_optional
     - scripts/validate_cross_verification_tracks.py
     - scripts/validate_v16_cross_verification_tracks.py::wrapper_compatibility_optional
   gate_surfaces:
@@ -662,7 +663,8 @@ asb16-rq-019:
   kernel_contract_id: rq_019_cross_workflow_evidence_schema_contract_v1
   kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_019_cross_workflow_evidence_schema_contract_v1
   validator_ids:
-    - scripts/normalize_v16_cross_workflow_evidence.py
+    - scripts/normalize_cross_workflow_evidence.py
+    - scripts/normalize_v16_cross_workflow_evidence.py::wrapper_compatibility_optional
     - scripts/validate_cross_workflow_schema.py
     - scripts/validate_v16_cross_workflow_schema.py::wrapper_compatibility_optional
   gate_surfaces:
@@ -1270,6 +1272,7 @@ asb16-rq-030:
   kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_030_intake_evidence_quorum_contract_v1
   validator_ids:
     - scripts/validate_intake_evidence_core.py::mode=promotion_gate
+    - scripts/validate_v16_intake_evidence_core.py::wrapper_compatibility_optional
     - scripts/validate_intake_evidence_quorum.py
     - scripts/validate_v16_intake_evidence_quorum.py::wrapper_compatibility_optional
   gate_surfaces:

@@ -101,7 +101,7 @@ def _required_tokens(
     return [
         "Artifact classification:",
         "artifact_class: tracked_compiled_brief_artifact",
-        "path_status: legacy_canonical_compatibility_path",
+        "path_status: tracked_compiled_brief_frozen_path",
         "generation_mode: source_first",
         projection_rule,
         default_reply_rule,

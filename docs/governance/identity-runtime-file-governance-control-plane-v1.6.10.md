@@ -269,13 +269,14 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
    - not instance-autonomous runtime state
    - not a generic `protocol_controlled_mirror_artifact`
 3. Its current location `identity/runtime/IDENTITY_COMPILED.md` is frozen as a `legacy_canonical_compatibility_path`.
-4. Until directory taxonomy governance separately approves a new family:
+4. Generated compiled-brief artifacts and positive compiled-brief machine gates must use the neutral path-status term `tracked_compiled_brief_frozen_path`; the legacy term remains governance/migration taxonomy only and must not be required for pass-default compiled-brief outputs.
+5. Until directory taxonomy governance separately approves a new family:
    - consumer/config/docs continue to use the current path,
    - no new canonical directory family may be created for compiled briefs,
    - no canonical path migration may be bundled into ordinary feature work.
-5. `legacy_canonical_compatibility_path` may remain in compile/replay compatibility surfaces during this freeze window, but it must not re-enter current-turn authority resolution, strict user-visible native-chat lanes, or active machine-gate defaults.
-6. `scripts/validate_compatibility_legacy_boundary.py` is the machine boundary guard for that rule.
-7. `identity/runtime/IDENTITY_COMPILED.md` must follow source-first generation only:
+6. `legacy_canonical_compatibility_path` may remain in governance/migration and compatibility replay surfaces during this freeze window, but it must not re-enter current-turn authority resolution, strict user-visible native-chat lanes, or pass-default compiled-brief machine gates.
+7. `scripts/validate_compatibility_legacy_boundary.py` is the machine boundary guard for strict/user-visible/authority lanes, and `scripts/validate_compiled_brief_projection_boundary.py` is the machine gate that enforces `tracked_compiled_brief_frozen_path` on generated compiled-brief pass-default surfaces.
+8. `identity/runtime/IDENTITY_COMPILED.md` must follow source-first generation only:
    - semantic/content changes land in governance/template/script sources first,
    - then `scripts/compile_identity_runtime.py` regenerates the compiled brief,
    - direct manual semantic editing of the compiled brief is forbidden.
