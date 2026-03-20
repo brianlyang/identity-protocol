@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from repo_root_resolution_common import resolve_workspace_root
+
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -138,7 +140,11 @@ def parse_args() -> argparse.Namespace:
             "By default, historical evidence trees (runtime/reports) are excluded."
         )
     )
-    parser.add_argument("--repo-root", default=".", help="Base repo root that contains .identity/<identity_id>")
+    parser.add_argument(
+        "--repo-root",
+        default="",
+        help="Workspace root that contains .identity/<identity_id>; auto-resolves from protocol repo when omitted",
+    )
     parser.add_argument("--identity-id", required=True, help="Identity id under .identity/")
     parser.add_argument("--apply", action="store_true", help="Apply token replacement in scoped control-plane files")
     parser.add_argument("--json-only", action="store_true", help="Print JSON payload only")
@@ -147,7 +153,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    repo_root = Path(args.repo_root).expanduser().resolve()
+    repo_root = resolve_workspace_root(args.repo_root, start=__file__)
     identity_home = _resolve_identity_home(repo_root=repo_root, identity_id=str(args.identity_id).strip())
 
     scanned_files = 0

@@ -35,10 +35,11 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
 5. `identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml`
 6. `identity/protocol/IDENTITY_PROTOCOL.md`
 7. `identity/protocol/IDENTITY_RUNTIME.md`
-8. Future implementation targets:
-   - `scripts/render_identity_codex_launcher.py`
-   - `scripts/install_identity_codex_launcher.py`
-   - `scripts/validate_identity_codex_launcher.py`
+8. `identity/protocol/mappings/control-plane-status.current.yaml`
+9. Future implementation targets stay descriptive until they land as real files under the protocol `scripts` directory:
+   - render_identity_codex_launcher.py
+   - install_identity_codex_launcher.py
+   - validate_identity_codex_launcher.py
 
 ### 2.2 Workspace / instance-owned surfaces consumed by this stream
 

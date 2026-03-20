@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from repo_root_resolution_common import resolve_protocol_repo_root
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
@@ -216,7 +217,7 @@ def build_status(repo_root: Path) -> dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Render machine-generated control-plane status artifact.")
-    parser.add_argument("--repo-root", default=".")
+    parser.add_argument("--repo-root", default="")
     parser.add_argument(
         "--status-file",
         default="identity/protocol/mappings/control-plane-status.current.yaml",
@@ -225,7 +226,7 @@ def main() -> int:
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
-    repo_root = Path(args.repo_root).expanduser().resolve()
+    repo_root = resolve_protocol_repo_root(args.repo_root, start=__file__)
     status_entry_file = (repo_root / str(args.status_file)).resolve()
     status_file, status_active_file, status_alias_error = _resolve_current_yaml_alias(
         repo_root, str(args.status_file)

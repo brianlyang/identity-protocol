@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-17T05:10:08Z",
-  "git_head_short": "5a64c37",
+  "generated_at_utc": "2026-03-20T09:40:03Z",
+  "git_head_short": "8fb133c",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -44,37 +44,37 @@
           ".github/workflows/_identity-required-gates.yml"
         ],
         "observed": {
-          "validator_scripts": 164,
-          "error_codes": 468,
-          "error_code_families": 163,
+          "validator_scripts": 181,
+          "error_codes": 493,
+          "error_code_families": 180,
           "mapping_rows_missing_in_bundle": 0,
-          "bundle_rows": 41,
+          "bundle_rows": 43,
           "missing_mapping_rows": [],
           "strict_direct_validate_calls": {
             "scripts/identity_creator.py": 89,
-            "scripts/release_readiness_check.py": 107,
-            "scripts/report_three_plane_status.py": 78,
+            "scripts/release_readiness_check.py": 108,
+            "scripts/report_three_plane_status.py": 79,
             "scripts/full_identity_protocol_scan.py": 87,
             "scripts/e2e_smoke_test.sh": 116,
             ".github/workflows/_identity-required-gates.yml": 13
           },
           "required_gate_workflow_python_invocations": 16,
           "required_gate_workflow_unique_python_scripts": 16,
-          "required_gate_delegate_inclusive_python_invocations": 202,
-          "required_gate_delegate_inclusive_unique_python_scripts": 139
+          "required_gate_delegate_inclusive_python_invocations": 235,
+          "required_gate_delegate_inclusive_unique_python_scripts": 154
         },
         "budgets": {
           "validator_scripts": {
-            "warn": 164,
-            "fail": 167
+            "warn": 181,
+            "fail": 184
           },
           "error_codes": {
-            "warn": 468,
-            "fail": 474
+            "warn": 493,
+            "fail": 499
           },
           "error_code_families": {
-            "warn": 163,
-            "fail": 170
+            "warn": 180,
+            "fail": 187
           },
           "mapping_rows_missing_in_bundle": {
             "warn": 0,
@@ -86,12 +86,12 @@
               "fail": 94
             },
             "scripts/release_readiness_check.py": {
-              "warn": 107,
-              "fail": 112
+              "warn": 108,
+              "fail": 113
             },
             "scripts/report_three_plane_status.py": {
-              "warn": 78,
-              "fail": 83
+              "warn": 79,
+              "fail": 84
             },
             "scripts/full_identity_protocol_scan.py": {
               "warn": 87,
@@ -163,8 +163,8 @@
         "contract_binding_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
         "contract_binding_parse_ok": true,
         "contract_binding_violation_count": 0,
-        "contract_binding_meta_row_count": 41,
-        "contract_binding_actual_row_count": 41,
+        "contract_binding_meta_row_count": 43,
+        "contract_binding_actual_row_count": 43,
         "contract_binding_row_count_match": true,
         "plugin_governance_configured_file": "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
         "plugin_governance_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
@@ -265,7 +265,7 @@
         "plugin_readability_violation_count": 0,
         "plugin_governance_parse_ok": true,
         "plugin_doc_control_parse_ok": true,
-        "bundle_target_map_size": 41,
+        "bundle_target_map_size": 43,
         "violation_count": 0,
         "violations": [],
         "stale_reasons": []
@@ -295,8 +295,8 @@
         "stream_doc_registry_active_file": "identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
         "stream_doc_registry_alias_error": "",
         "stream_doc_registry_parse_ok": true,
-        "stream_allowed_doc_count": 33,
-        "requirement_row_count": 41,
+        "stream_allowed_doc_count": 41,
+        "requirement_row_count": 43,
         "reference_fields": [
           "governance_anchor",
           "review_anchor",
@@ -338,7 +338,7 @@
         "profile_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml",
         "profile_active_file": "identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml",
         "contract_mapping": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
-        "profile_count": 2,
+        "profile_count": 3,
         "default_profile": "strict_full",
         "strict_no_trim_operations": [
           "activate",
@@ -350,7 +350,7 @@
           "validate",
           "three-plane"
         ],
-        "requirement_row_count": 41,
+        "requirement_row_count": 43,
         "parse_errors": [],
         "violation_count": 0,
         "violations": [],
@@ -459,7 +459,8 @@
           "scripts/validate_semantic_term_registry.py",
           "scripts/validate_cli_catalog_default_semantics.py",
           "scripts/validate_stream_scope_semantic_integrity.py",
-          "scripts/validate_runtime_file_boundary_governance.py"
+          "scripts/validate_runtime_file_boundary_governance.py",
+          "scripts/validate_compatibility_legacy_boundary.py"
         ],
         "runtime_file_governance_governance_doc": "docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md",
         "runtime_file_governance_review_doc": "docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md",
@@ -468,6 +469,8 @@
           "protocol_generated_gateway_shell",
           "protocol_controlled_mirror_artifact",
           "instance_autonomous_runtime",
+          "compile/replay compatibility mirror clarification",
+          "compile/replay metadata may read compatibility mirror; current-session authority must not.",
           "scripts/validate_runtime_file_boundary_governance.py",
           "scripts/validate_required_contract_coverage.py",
           "scripts/validate_required_gate_surface_drift.py",
@@ -479,6 +482,8 @@
           "protocol_generated_gateway_shell",
           "protocol_controlled_mirror_artifact",
           "instance_autonomous_runtime",
+          "compile/replay compatibility mirror clarification",
+          "compile/replay metadata may read compatibility mirror; current-session authority must not.",
           "required_gate_surface_drift_status",
           "required_contract_coverage_status",
           "scripts/validate_runtime_file_boundary_governance.py",
@@ -524,6 +529,12 @@
           "display rights are delegated; truth rights stay machine-authoritative in the control plane.",
           "`identity` owns display wiring; control plane owns truth and admission.",
           "manual display is a render_origin of `display_headstamp`, not an automatic fail condition.",
+          "surface semantics matrix + order separation freeze",
+          "Surface semantics matrix (authoritative surface -> visible literal order freeze):",
+          "Three orders matrix (do not collapse these terms):",
+          "Object vs literal mapping:",
+          "`manual_headstamp` = render_origin tag only; never verdict axis.",
+          "`EXCLUDED_NON_BLOCKING` only removes blocker aggregation; it never upgrades next-hop admission.",
           "`display_headstamp` text must never become an authority source",
           "`display_headstamp` presence is necessary for strict user-visible lanes, but never sufficient for admission.",
           "fail-close + remediation lane processing freeze",
@@ -569,6 +580,8 @@
           "remediation lane is allowed only when truth is already resolved and remediation target is deterministic.",
           "`display_headstamp` may remain manual or host-direct as a visibility object; that alone does not decide admission.",
           "manual display is normalized as `display_headstamp.render_origin`, not treated as a standalone semantic class that can override truth.",
+          "`manual_headstamp` = render_origin tag only; never verdict axis.",
+          "`EXCLUDED_NON_BLOCKING` only removes blocker aggregation; it never upgrades next-hop admission.",
           "26.44 v1.6.6 display declaration lineage + headstamp admission receipt freeze",
           "`IDENTITY_PROMPT` declares display intent and schema, not final runtime display literals.",
           "`CURRENT_TASK.json` carries the normalized runtime `display_headstamp` contract and is the runtime SSOT.",
@@ -617,17 +630,13 @@
         "forbidden_direct_validators": [
           "scripts/emit_route_version_pin_receipt.py",
           "scripts/normalize_cross_workflow_evidence.py",
-          "scripts/normalize_v16_cross_workflow_evidence.py",
           "scripts/validate_cross_verification_tracks.py",
           "scripts/validate_cross_workflow_schema.py",
           "scripts/validate_dedup_monotonicity.py",
           "scripts/validate_execution_target_tuple_isolation.py",
           "scripts/validate_fallback_taxonomy_normalization.py",
-          "scripts/validate_cross_verification_tracks.py",
           "scripts/validate_intake_evidence_core.py",
           "scripts/validate_intake_evidence_quorum.py",
-          "scripts/validate_cross_workflow_schema.py",
-          "scripts/validate_dedup_monotonicity.py",
           "scripts/validate_multimodal_plugin_enforcement.py",
           "scripts/validate_reasoning_loop_failclose.py",
           "scripts/validate_route_version_pinning.py",

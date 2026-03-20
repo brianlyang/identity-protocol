@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from repo_root_resolution_common import resolve_protocol_repo_root
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -131,7 +132,7 @@ def main() -> int:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--check", action="store_true", help="check parity only")
     mode.add_argument("--apply", action="store_true", help="reserved for future apply mode")
-    parser.add_argument("--repo-root", default=".")
+    parser.add_argument("--repo-root", default="")
     parser.add_argument(
         "--intake-current",
         default="identity/protocol/plugins/PLUGIN_JOIN_INTAKE.current.yaml",
@@ -151,7 +152,7 @@ def main() -> int:
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
-    repo_root = Path(args.repo_root).expanduser().resolve()
+    repo_root = resolve_protocol_repo_root(args.repo_root, start=__file__)
 
     intake_path, intake_active_file, intake_alias_error = _resolve_current_alias(repo_root, str(args.intake_current))
     registry_path, registry_active_file, registry_alias_error = _resolve_current_alias(repo_root, str(args.registry_current))
