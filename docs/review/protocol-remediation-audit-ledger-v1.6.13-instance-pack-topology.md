@@ -54,6 +54,52 @@ Scope: protocol review ledger for identity-instance pack topology and root `scri
 5. Example pack `base-repo-closure-orchestrator` is migrated off `runtime/scripts/`.
 6. Forbidden topology residue (`runtime/scripts/`, `__pycache__`) is removed from the governed example pack.
 
+## 3.1) Proof-pack worked example frozen in this stream
+
+The current proof pack for `v1.6.13` is `base-repo-closure-orchestrator`. The worked example is intentionally split into entry proof and exit proof so topology does not get confused with outer-host delivery claims.
+
+Entry-side proof:
+
+1. Workspace bootstrap helper:
+   - `scripts/codex_native_chat/codex_with_native_chat_entry.sh`
+2. Entry validator:
+   - `scripts/codex_native_chat/validate_native_chat_entry_bootstrap.py`
+3. Verified outcome:
+   - explicit bootstrap passes
+   - missing identity fails close
+   - resume UUID cannot impersonate `run:<...>` identity session tuple
+
+Exit-side proof:
+
+1. Instance-owned canonical helpers:
+   - `.identity/base-repo-closure-orchestrator/scripts/render_current_thread_headstamp.py`
+   - `.identity/base-repo-closure-orchestrator/scripts/emit_current_thread_final_reply.py`
+2. Verified outcome:
+   - current-thread headstamp render returns `PASS_REQUIRED`
+   - final emitter refreshes host-visible receipts and exact relay receipt before writing the visible reply
+3. Evidence family:
+   - `.identity/base-repo-closure-orchestrator/runtime/reports/host-visible-surface/host-visible-surface-*.json`
+   - `.identity/base-repo-closure-orchestrator/runtime/reports/agent-relay-final-answer/agent-relay-final-answer-*.json`
+
+This worked example proves the standard instance-owned path:
+
+- process entry is workspace-owned
+- final visible reply emission is instance-owned
+- protocol semantics stay shared and authoritative
+
+## 3.2) Gate fusion verdict
+
+1. `v1.6.13` has no semantic conflict with the gateway four-piece already present in governed instance tasks.
+2. The fusion model is frozen as:
+   - `topology-ready`
+   - `gate-ready`
+   - `entry-ready`
+   - `exit-ready`
+3. `pack-root scripts/` answers where instance-owned helper execution lives.
+4. `entry_receipt_policy + ingress_proof_policy` answer how governed entry is proven.
+5. `egress_grant_policy + headstamp_policy` answer how governed visible output is proven.
+6. Reviewers must not force a false choice between `v1.6.13` topology governance and the gateway four-piece; they are complementary layers of one infrastructure model.
+
 ## 4) Audit verdict rules (frozen)
 
 1. **Policy PASS** requires:
@@ -85,3 +131,4 @@ Scope: protocol review ledger for identity-instance pack topology and root `scri
 2. Do not treat `runtime/scripts/` as an acceptable compatibility path.
 3. Do not push instance-owned helper code back into protocol/shared paths just because multiple instances may reuse similar logic.
 4. Do not reopen `v1.6.10`, `v1.6.11`, or `v1.6.12` semantics while reviewing this stream.
+5. Do not fold unrelated host/provider/runtime failures into this stream; `v1.6.13` governs pack topology and the standard capability composition only.

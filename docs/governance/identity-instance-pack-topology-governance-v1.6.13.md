@@ -96,6 +96,22 @@ The topology validator must fail-close when any of the following holds:
 4. Update/replay required checks must also include the topology validator so later topology drift cannot silently survive pack evolution.
 5. Runtime receipt/report families already frozen by earlier streams remain valid only when their runtime subtrees are explicitly registered in the topology contract; for the current baseline this includes `runtime/reports/agent-relay-final-answer`.
 
+### 3.4 Standard capability profile (fused, not parallel)
+
+1. `v1.6.13` does not create a second execution-gate system; it composes with the already-governed gateway four-piece:
+   - `entry_receipt_policy`
+   - `ingress_proof_policy`
+   - `egress_grant_policy`
+   - `headstamp_policy`
+2. The frozen readiness model for an instance that claims the standard native-chat scheme is:
+   - `topology-ready`: `scripts/validate_identity_instance_pack_topology.py` returns `PASS_REQUIRED`.
+   - `gate-ready`: the instance task/runtime contract already carries the required gateway four-piece.
+   - `entry-ready`: the process enters through the governed bootstrap wrapper so current-turn tuple truth is injected before `codex`, `codex resume`, or `codex exec`.
+   - `exit-ready`: the instance pack exposes root-level scripts that render the current-thread headstamp and emit the final governed reply without forking protocol semantics.
+3. Standard scheme means `topology-ready + gate-ready + entry-ready + exit-ready`; creating directories alone is scaffold success, not full standard-capability readiness.
+4. Fallback behavior remains fail-close only: when standard readiness is missing, the instance may emit a withheld/conflict envelope, but it must not emit an ungoverned success headstamp.
+5. Enhanced host-auto-binding remains a later host/runtime concern; `v1.6.13` freezes the instance-owned topology and standard-capability composition, not outer-surface promotion claims.
+
 ## 4) Inherited-stream owner matrix
 
 1. `v1.6.10` remains the owner for runtime-file governance classification, generated artifact family semantics, and mirror/wrapper/runtime boundary language.
