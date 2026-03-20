@@ -55,11 +55,17 @@ from create_identity_pack import (
     HOST_VISIBLE_SURFACE_STATE_FILE,
     HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
     HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE,
+    INSTANCE_PACK_TOPOLOGY_CONTRACT_ID,
+    INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY,
+    INSTANCE_PACK_TOPOLOGY_VALIDATOR_ID,
     UNIQUE_EGRESS_SCRIPT,
     UNIQUE_INGRESS_SCRIPT,
     _copy_jsonl_with_identity,
     _copy_sample_with_identity,
+    _default_identity_agent_yaml,
+    _default_instance_scripts_readme,
     _derived_prompt_conformance_contract_skeleton,
+    _ensure_instance_pack_topology_contract,
     _default_identity_prompt_markdown,
     _ensure_intake_p1_contracts,
     _ensure_identity_prompt_governance_kernel,
@@ -107,6 +113,9 @@ REQUIRED_INTAKE_KEYS = (
     "skill_installation_supply_chain_contract_v1",
     "skill_frontmatter_contract_v1",
     "skill_sync_drift_guard_contract_v1",
+)
+REQUIRED_TOPOLOGY_KEYS = (
+    INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY,
 )
 
 REQUIRED_PROMPT_KEYS = (
@@ -199,6 +208,70 @@ REASONING_MIN_LEVEL = "L3"
 FILE_GOVERNANCE_SKILL_ID = "ai-folder-governance"
 ENTRY_SCRIPT = UNIQUE_INGRESS_SCRIPT
 ENTRY_BUNDLE_KEY = "required_gate_bundle_runner"
+
+
+def _normalize_instance_pack_topology_contract(task_doc: dict[str, Any], identity_id: str) -> list[str]:
+    restored: list[str] = []
+    before = json.loads(json.dumps(task_doc.get(INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY) or {}))
+    _ensure_instance_pack_topology_contract(task_doc, identity_id)
+    node = task_doc.get(INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY)
+    if not isinstance(node, dict):
+        return restored
+    if before != node:
+        restored.append(INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY)
+    lifecycle_contract = task_doc.get("identity_update_lifecycle_contract")
+    validation_contract = lifecycle_contract.get("validation_contract") if isinstance(lifecycle_contract, dict) else None
+    if isinstance(validation_contract, dict):
+        _, appended = _merge_validator_ids(
+            validation_contract,
+            "required_checks",
+            [INSTANCE_PACK_TOPOLOGY_VALIDATOR_ID],
+        )
+        restored.extend(f"identity_update_lifecycle_contract.validation_contract.required_checks:{row}" for row in appended)
+    return restored
+
+
+def _ensure_instance_pack_topology_assets(
+    *,
+    pack_path: Path,
+    identity_id: str,
+    title: str,
+    description: str,
+    apply: bool,
+) -> dict[str, Any]:
+    required_dirs = [
+        "agents",
+        "runtime",
+        "scripts",
+        "runtime/examples",
+        "runtime/gate",
+        "runtime/logs",
+        "runtime/plugins",
+        "runtime/state",
+    ]
+    missing_dirs = [row for row in required_dirs if not (pack_path / row).exists()]
+    required_files = {
+        "scripts/README.md": _default_instance_scripts_readme(identity_id),
+        "agents/identity.yaml": _default_identity_agent_yaml(identity_id, title, description),
+    }
+    missing_files = [row for row in required_files if not (pack_path / row).exists()]
+    if apply:
+        for row in required_dirs:
+            (pack_path / row).mkdir(parents=True, exist_ok=True)
+        for rel, text in required_files.items():
+            path = pack_path / rel
+            if not path.exists():
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text, encoding="utf-8")
+    return {
+        "status": STATUS_PASS_REQUIRED if apply or (not missing_dirs and not missing_files) else STATUS_SKIPPED_NOT_REQUIRED,
+        "changed": bool(missing_dirs or missing_files),
+        "applied": bool(apply and (missing_dirs or missing_files)),
+        "missing_dirs_before": missing_dirs,
+        "missing_files_before": missing_files,
+        "required_dirs": required_dirs,
+        "required_files": sorted(required_files.keys()),
+    }
 
 
 def _norm_level(value: Any) -> str:
@@ -1393,6 +1466,7 @@ def main() -> int:
     response_stamp_profile_present_before = isinstance(before.get("response_stamp_profile"), dict)
     response_stamp_profile_before = normalize_response_stamp_profile(before.get("response_stamp_profile"))
     missing_before = [k for k in REQUIRED_INTAKE_KEYS if not isinstance(task_doc.get(k), dict)]
+    topology_missing_before = [k for k in REQUIRED_TOPOLOGY_KEYS if not isinstance(task_doc.get(k), dict)]
     prompt_missing_before = [k for k in REQUIRED_PROMPT_KEYS if not isinstance(task_doc.get(k), dict)]
     multimodal_missing_before = [k for k in REQUIRED_MULTIMODAL_KEYS if not isinstance(task_doc.get(k), dict)]
     reasoning_missing_before = [k for k in REQUIRED_REASONING_KEYS if not isinstance(task_doc.get(k), dict)]
@@ -1409,6 +1483,7 @@ def main() -> int:
     legacy_drift_before = _legacy_path_drift_fields(task_doc, args.identity_id)
 
     updated = _ensure_intake_p1_contracts(task_doc, args.identity_id)
+    restored_topology_contract_keys = _normalize_instance_pack_topology_contract(updated, args.identity_id)
     updated["response_stamp_profile"] = normalize_response_stamp_profile(updated.get("response_stamp_profile"))
     restored_skill_supply_chain_contract_keys = _normalize_skill_supply_chain_contracts(updated, args.identity_id)
     restored_capability_driver_validator_paths = _normalize_capability_driver_validators(updated)
@@ -1444,10 +1519,18 @@ def main() -> int:
         _normalize_downsink_path_contracts(updated)
     )
     task_version_changed = apply_version_baseline_to_task_doc(updated, version_baseline)
+    topology_assets_result = _ensure_instance_pack_topology_assets(
+        pack_path=pack_path,
+        identity_id=str(args.identity_id or "").strip(),
+        title=identity_title,
+        description=identity_description,
+        apply=args.apply,
+    )
     meta_version_changed = False
     if isinstance(meta_doc, dict):
         meta_version_changed = apply_version_baseline_to_meta_doc(meta_doc, version_baseline)
     missing_after = [k for k in REQUIRED_INTAKE_KEYS if not isinstance(updated.get(k), dict)]
+    topology_missing_after = [k for k in REQUIRED_TOPOLOGY_KEYS if not isinstance(updated.get(k), dict)]
     response_stamp_profile_present_after = isinstance(updated.get("response_stamp_profile"), dict)
     response_stamp_profile_after = normalize_response_stamp_profile(updated.get("response_stamp_profile"))
     response_stamp_profile_changed = (
@@ -1466,6 +1549,17 @@ def main() -> int:
     downsink_missing_after = [k for k in REQUIRED_DOWNSINK_KEYS if not isinstance(updated.get(k), dict)]
     skill_supply_chain_missing_after = [
         k for k in SKILL_SUPPLY_CHAIN_CONTRACT_DEFAULTS.keys() if not isinstance(updated.get(k), dict)
+    ]
+    topology_invalid_after = [
+        k
+        for k in REQUIRED_TOPOLOGY_KEYS
+        if isinstance(updated.get(k), dict)
+        and (
+            updated.get(k, {}).get("required") is not True
+            or str((updated.get(k) or {}).get("contract_id", "")).strip() != INSTANCE_PACK_TOPOLOGY_CONTRACT_ID
+            or str((updated.get(k) or {}).get("validator", "")).strip() != INSTANCE_PACK_TOPOLOGY_VALIDATOR_ID
+            or str((updated.get(k) or {}).get("fail_mode", "")).strip().lower() != "fail_required"
+        )
     ]
     prompt_invalid_after = [
         k
@@ -1890,6 +1984,7 @@ def main() -> int:
         task_changed
         or catalog_changed
         or meta_changed
+        or bool(topology_assets_result.get("changed"))
         or bool(prompt_runtime_governance_result.get("changed"))
         or bool(provider_bindings_template_result.get("changed"))
         or bool(feedback_selftest_assets_result.get("positive_rulebook_backfilled"))
@@ -1906,6 +2001,8 @@ def main() -> int:
             applied = True
         if meta_changed:
             _safe_dump_yaml(meta_path, meta_doc)
+            applied = True
+        if topology_assets_result.get("applied"):
             applied = True
         if host_gateway_wrapper_artifacts_refreshed:
             applied = True
@@ -1924,6 +2021,14 @@ def main() -> int:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-CBKF-001"
         stale_reasons = ["required_contract_keys_missing_after_backfill"]
+    elif topology_missing_after:
+        status = STATUS_FAIL_REQUIRED
+        error_code = "IP-IPACK-001"
+        stale_reasons = ["required_topology_contract_keys_missing_after_backfill"]
+    elif topology_invalid_after:
+        status = STATUS_FAIL_REQUIRED
+        error_code = "IP-IPACK-002"
+        stale_reasons = ["required_topology_contract_invalid_after_backfill"]
     elif prompt_missing_after:
         status = STATUS_FAIL_REQUIRED
         error_code = ERR_PROMPT_WIRE_MISSING
@@ -1996,7 +2101,7 @@ def main() -> int:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-CBKF-002"
         stale_reasons = ["legacy_contract_path_drift_after_backfill"]
-    elif changed or host_gateway_wrapper_artifacts_refreshed:
+    elif changed or host_gateway_wrapper_artifacts_refreshed or bool(topology_assets_result.get("changed")):
         status = STATUS_PASS_REQUIRED if applied else STATUS_SKIPPED_NOT_REQUIRED
         error_code = ""
         stale_reasons = [] if applied else ["dry_run_only"]
@@ -2059,6 +2164,12 @@ def main() -> int:
         "response_stamp_profile_changed": response_stamp_profile_changed,
         "missing_contract_keys_before": missing_before,
         "missing_contract_keys_after": missing_after,
+        "required_topology_contract_keys": list(REQUIRED_TOPOLOGY_KEYS),
+        "missing_topology_contract_keys_before": topology_missing_before,
+        "missing_topology_contract_keys_after": topology_missing_after,
+        "invalid_topology_contract_keys_after": topology_invalid_after,
+        "restored_topology_contract_keys": restored_topology_contract_keys,
+        "topology_assets_backfill": topology_assets_result,
         "required_prompt_contract_keys": list(REQUIRED_PROMPT_KEYS),
         "missing_prompt_contract_keys_before": prompt_missing_before,
         "missing_prompt_contract_keys_after": prompt_missing_after,
@@ -2118,6 +2229,14 @@ def main() -> int:
         "restored_skill_supply_chain_contract_keys": restored_skill_supply_chain_contract_keys,
         "restored_capability_driver_validator_paths": restored_capability_driver_validator_paths,
         "host_gateway_artifacts": gateway_artifacts,
+        "instance_pack_topology_contract_auto_wire_status": (
+            STATUS_PASS_REQUIRED if not topology_missing_after and not topology_invalid_after else STATUS_FAIL_REQUIRED
+        ),
+        "instance_pack_topology_contract_auto_wire_error_code": (
+            ""
+            if not topology_missing_after and not topology_invalid_after
+            else ("IP-IPACK-001" if topology_missing_after else "IP-IPACK-002")
+        ),
         "unique_entry_contract_auto_wire_status": (
             STATUS_PASS_REQUIRED if not entry_missing_after and not entry_invalid_after else STATUS_FAIL_REQUIRED
         ),

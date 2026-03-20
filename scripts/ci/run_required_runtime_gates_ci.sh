@@ -36,6 +36,7 @@ run_global_protocol_gates() {
   run_cmd python3 scripts/validate_issue_register_consistency.py --json-only
   run_cmd python3 scripts/validate_native_chat_bootstrap_entry_stream.py --json-only
   run_cmd bash scripts/ci/run_native_chat_bootstrap_entry_probes_ci.sh
+  run_cmd bash scripts/ci/run_identity_instance_pack_topology_probes_ci.sh
 }
 
 run_global_protocol_gates
@@ -59,9 +60,10 @@ for ID in ${IDS}; do
   THREE_PLANE_REPORT_JSON="${TMP_ROOT}/three-plane-${ID}.json"
   IS_FIXTURE_ID="$(ID="$ID" CATALOG_PATH="$CATALOG_PATH" python3 -c 'import os,yaml,pathlib; identity_id=os.environ.get("ID","").strip(); catalog_path=os.environ["CATALOG_PATH"]; doc=yaml.safe_load(pathlib.Path(catalog_path).read_text(encoding="utf-8")) or {}; rows=[x for x in (doc.get("identities") or []) if isinstance(x,dict)]; row=next((x for x in rows if str(x.get("id","")).strip()==identity_id), {}); profile=str(row.get("profile","")).strip().lower(); runtime_mode=str(row.get("runtime_mode","")).strip().lower(); print("1" if (profile=="fixture" or runtime_mode=="demo_only") else "0")')"
 
-  python3 scripts/validate_identity_runtime_contract.py --identity-id "$ID"
+  python3 scripts/validate_identity_runtime_contract.py --identity-id "$ID" --catalog "${CATALOG_PATH}"
+  python3 scripts/validate_identity_instance_pack_topology.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --json-only
   python3 scripts/validate_identity_prompt_quality.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --scope AUTO
-  python3 scripts/validate_identity_role_binding.py --identity-id "$ID"
+  python3 scripts/validate_identity_role_binding.py --identity-id "$ID" --catalog "${CATALOG_PATH}"
   python3 scripts/validate_identity_home_catalog_alignment.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --identity-home "$CATALOG_PARENT"
   python3 scripts/validate_fixture_runtime_boundary.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --operation ci
   python3 scripts/validate_actor_session_binding.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --operation ci

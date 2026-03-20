@@ -681,6 +681,15 @@ def main() -> int:
             "--identity-id",
             identity_id,
         ],
+        [
+            "python3",
+            "scripts/validate_identity_instance_pack_topology.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--json-only",
+        ],
         ["python3", "scripts/validate_identity_state_consistency.py", "--catalog", catalog],
         [
             "python3",

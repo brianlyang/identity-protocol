@@ -53,6 +53,7 @@ Scope: protocol review ledger for identity-instance pack topology and root `scri
    - pack-root `scripts/`: canonical instance-owned executable layer
 2. `v1.6.13` reviews the third layer and the topology needed to keep it stable; it does not reopen whether the pack already has a guidance artifact.
 3. Therefore, a missing route-to-script join must not be misreported as “identity lacks a SKILL.md equivalent”; the pack already has a prompt kernel, but the execution join may still be immature.
+4. `agents/identity.yaml` may still participate as sidecar metadata for activation/display/dependency review, but reviewers must not treat it as a fourth execution layer that changes topology closure semantics.
 
 ## 3) Frozen implementation checklist
 
@@ -62,6 +63,24 @@ Scope: protocol review ledger for identity-instance pack topology and root `scri
 4. Update/replay required checks include the same topology validator.
 5. Example pack `base-repo-closure-orchestrator` is migrated off `runtime/scripts/`.
 6. Forbidden topology residue (`runtime/scripts/`, `__pycache__`) is removed from the governed example pack.
+
+### Review-time canonical tree
+
+Reviewers should evaluate implementation patches against this frozen shape:
+
+```text
+<pack_root>/
+├── agents/
+├── runtime/
+└── scripts/
+```
+
+With these owner rules:
+
+1. `scripts/` contains instance-owned executable source.
+2. `runtime/` contains runtime-generated state/report/receipt artifacts.
+3. `agents/` contains sidecar metadata only.
+4. Any patch that normalizes executable helpers under `runtime/` or invents a fourth canonical root must be reviewed as a topology regression, not as acceptable local style.
 
 ## 3.1) Proof-pack worked example frozen in this stream
 
@@ -147,12 +166,16 @@ Review on a second migrated pack, `custom-creative-ecom-analyst`, reinforced an 
    - `runtime/scripts/` absent
    - no cache-dir residue
    - no unknown topology drift rows
+   - new instance-owned helper sources, if any, land under pack-root `scripts/`
 4. **Diagnostic PASS** for migrated proof packs requires:
    - fail-close outputs stay specific enough to separate missing topology, dirty tuple, dirty binding, and governed emit success
    - stale non-`run:<...>` binding incidents are tracked as instance runtime debt rather than as automatic protocol semantic regressions
 5. **Boundary PASS** requires:
    - review language does not collapse prompt-kernel questions, topology questions, and route/orchestration questions into one diagnosis
    - any missing route-to-script binding or script receipt discussion is classified as outside `v1.6.13` unless a separate contract explicitly says otherwise
+6. **Coding-readiness PASS** requires:
+   - governance text is explicit enough that implementers can place helper source, generated output, and sidecar metadata without inventing local path policy
+   - review can reject `runtime/scripts/` or ad hoc root-directory proposals without appealing to unwritten convention
 
 ## 5) Accepted closure boundary
 
@@ -171,3 +194,4 @@ Review on a second migrated pack, `custom-creative-ecom-analyst`, reinforced an 
 5. Do not fold unrelated host/provider/runtime failures into this stream; `v1.6.13` governs pack topology and the standard capability composition only.
 6. Do not claim that `IDENTITY_PROMPT.md` alone is protocol-equivalent to a whole skill bundle; at most it is analogous to the guidance body inside a broader identity-pack capability bundle.
 7. Do not misclassify missing `CURRENT_TASK route -> scripts -> receipt` declarative join as a `v1.6.13` topology failure.
+8. Do not reinterpret `agents/identity.yaml` sidecar metadata as proof that a fourth execution/governance layer exists in this stream; review it only as descriptive metadata unless a later stream freezes stronger semantics.

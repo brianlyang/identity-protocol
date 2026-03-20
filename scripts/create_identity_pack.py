@@ -407,6 +407,28 @@ Guidance:
 """.format(identity_token=identity_token)
 
 
+def _default_identity_agent_yaml(identity_id: str, title: str, description: str) -> str:
+    identity_token = str(identity_id or "").strip() or "<identity-id>"
+    title_token = str(title or "").strip() or identity_token
+    description_token = str(description or "").strip()
+    return (
+        "interface:\n"
+        f'  display_name: "{title_token}"\n'
+        f'  short_description: "{description_token}"\n'
+        f'  default_prompt: "Operate as {identity_token} and satisfy runtime gates."\n\n'
+        "policy:\n"
+        "  allow_implicit_activation: true\n"
+        "  activation_priority: 50\n"
+        "  conflict_resolution: \"priority_then_objective\"\n\n"
+        "dependencies:\n"
+        "  tools: []\n\n"
+        "observability:\n"
+        "  event_topics: []\n"
+        "  required_artifacts:\n"
+        "    - \"resource/reports/*.json\"\n"
+    )
+
+
 def _validator_doc_defaults(validator_script: str) -> tuple[str, str]:
     governance_doc, review_doc = resolve_validator_doc_defaults(
         Path(__file__).resolve().parent.parent,
@@ -6889,25 +6911,7 @@ def main() -> int:
         + "\n",
     )
 
-    write(
-        pack_dir / "agents/identity.yaml",
-        (
-            "interface:\n"
-            f'  display_name: "{args.title}"\n'
-            f'  short_description: "{args.description}"\n'
-            f'  default_prompt: "Operate as {identity_id} and satisfy runtime gates."\n\n'
-            "policy:\n"
-            "  allow_implicit_activation: true\n"
-            "  activation_priority: 50\n"
-            "  conflict_resolution: \"priority_then_objective\"\n\n"
-            "dependencies:\n"
-            "  tools: []\n\n"
-            "observability:\n"
-            "  event_topics: []\n"
-            "  required_artifacts:\n"
-            "    - \"resource/reports/*.json\"\n"
-        ),
-    )
+    write(pack_dir / "agents" / "identity.yaml", _default_identity_agent_yaml(identity_id, args.title, args.description))
 
     protocol_review_sample_path = runtime_root / "examples" / f"protocol-baseline-review-{identity_id}-sample.json"
     write_json(protocol_review_sample_path, _default_protocol_review_sample(identity_id))

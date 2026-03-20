@@ -60,6 +60,36 @@ Required pack-root files remain:
    - `IDENTITY_PROMPT.md` is analogous to the guidance body of `SKILL.md`
    - pack-root `scripts/` is analogous to bundled executable resources
 5. `v1.6.13` does not freeze a skill-style trigger/discovery contract for identity packs, and it does not imply that `IDENTITY_PROMPT.md` alone is equivalent to a whole skill bundle.
+6. `agents/identity.yaml` remains a valid sidecar metadata artifact for activation/display/dependency hints, analogous in role to skill-side agent metadata, but it is not promoted by this stream into a fourth execution/governance layer beyond the three-layer interpretation above.
+
+### 2.1.2 Canonical topology example
+
+The frozen pack shape for a governed identity instance is:
+
+```text
+<pack_root>/
+├── IDENTITY_PROMPT.md
+├── CURRENT_TASK.json
+├── TASK_HISTORY.md
+├── META.yaml
+├── RULEBOOK.jsonl
+├── agents/
+│   └── identity.yaml
+├── runtime/
+│   ├── state/
+│   ├── reports/
+│   └── autonomy/
+└── scripts/
+    ├── README.md
+    └── <instance_owned_helpers>.py|.sh
+```
+
+Frozen interpretation:
+
+1. `scripts/` is the only canonical home for instance-owned executable sources.
+2. `runtime/` may contain runtime state, receipts, reports, autonomy outputs, and other generated artifacts, but it is not an executable source root.
+3. `agents/identity.yaml` remains descriptive sidecar metadata and must not be used to justify extra executable roots.
+4. If a helper must be invoked by the instance and is owned by the instance, its source belongs under pack-root `scripts/` even if the helper later writes reports into `runtime/`.
 
 ### 2.2 Root `scripts/` ownership freeze
 
@@ -67,6 +97,19 @@ Required pack-root files remain:
 2. Scripts under this directory may consume shared protocol/workspace resolvers or renderers, but they must remain thin consumers rather than semantic forks.
 3. Scripts here must stay identity-local, relative-path-friendly, and free of user-specific absolute path requirements.
 4. Shared protocol semantics, validators, CI bundles, and creator/backfill logic remain protocol-owned surfaces under `identity-protocol-local/`.
+
+### 2.2.1 Path responsibility matrix
+
+Use the following matrix when implementing or reviewing code:
+
+| Path | Owner | Allowed content | Forbidden content |
+| --- | --- | --- | --- |
+| pack-root `scripts/` | instance | thin instance-owned helpers, renderers, emitters, launcher consumers that reuse governed semantics | protocol semantic forks, user-specific absolute-path hacks, generated cache/state |
+| pack-root `runtime/` | runtime | state, reports, receipts, autonomy outputs, other generated artifacts | executable source trees, hand-maintained helper libraries |
+| pack-root `agents/` | metadata | identity display/activation/dependency sidecar metadata | executable source trees, runtime receipts |
+| `identity-protocol-local/scripts/` | protocol | shared validators, creator/backfill logic, canonical builders/renderers/installers | instance-owned business/helper code parked as canonical home |
+
+This matrix is frozen for `v1.6.13` and is intentionally narrow: if a future capability needs a new canonical path family, that requires a later governed stream instead of local expansion.
 
 ### 2.3 Runtime boundary freeze
 
@@ -157,6 +200,7 @@ The topology validator must fail-close when any of the following holds:
    - `runtime/scripts/` prohibition
    - topology drift fail-close validation and creator wiring
 5. `v1.6.13` does not own route-to-script declarative binding, instance-script manifest semantics, or a generic instance-script execution receipt family.
+6. `v1.6.13` also does not promote `agents/identity.yaml` sidecar metadata into an independent execution layer; that artifact may describe the pack, but it does not replace prompt-kernel, machine-contract, or canonical script-surface responsibilities.
 
 ## 5) Closure scope and explicit non-goals
 
@@ -176,6 +220,17 @@ The topology validator must fail-close when any of the following holds:
 4. Keep runtime-binding repair separate from topology judgment: once the pack is topology-ready, stale actor-session state should be repaired as instance runtime debt rather than folded back into protocol topology semantics.
 5. Keep the validator authoritative; do not hand-maintain side notes that disagree with the task contract.
 6. Treat topology as infrastructure: creator, validator, mappings, and example packs must all agree.
+
+### 6.1 Developer-ready coding checklist
+
+Any implementation that claims to follow `v1.6.13` should satisfy this checklist before code review:
+
+1. New instance-owned helper source files are added only under pack-root `scripts/`.
+2. Any new generated output path lands under `runtime/` and is either already registered by contract or introduced by a later governed stream.
+3. Shared semantic logic stays protocol-owned; instance scripts consume it rather than copy/fork it.
+4. `scripts/README.md` is updated so pack-local helper intent stays auditable.
+5. `CURRENT_TASK.json` continues to reference the canonical topology contract instead of introducing ad hoc topology keys.
+6. Legacy `runtime/scripts/` residue and cache directories are removed rather than tolerated as compatibility leftovers.
 
 ## 7) Future extension rule
 
