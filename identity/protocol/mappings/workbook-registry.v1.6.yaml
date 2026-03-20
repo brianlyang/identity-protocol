@@ -1,0 +1,27 @@
+schema_version: 1
+version: v1.6
+control_plane_contract: minor_family_workbook_control_plane
+description: >
+  Canonical workbook registry for cross-stream issue governance inside
+  identity-protocol-local.
+
+active_workbook_family:
+  workbook_family: v1.6
+  authority_surfaces:
+    issue_register_doc: docs/workbook/protocol-issue-register-v1.6.md
+    deep_audit_workbook_doc: docs/workbook/protocol-deep-audit-workbook-v1.6.md
+  issue_register_doc: docs/workbook/protocol-issue-register-v1.6.md
+  deep_audit_workbook_doc: docs/workbook/protocol-deep-audit-workbook-v1.6.md
+  governance_doc: docs/governance/identity-workbook-governance-v1.6.md
+  projection_policy: optional_workspace_projection_exports
+  projection_exports:
+    - projection_role: issue_register_projection
+      path: activity/evidence/2026-03-20/identity-protocol-v160-v1612-issue-remediation-plan.md
+      authority_doc: docs/workbook/protocol-issue-register-v1.6.md
+      presence_policy: optional_projection
+    - projection_role: deep_audit_projection
+      path: activity/evidence/2026-03-20/identity-protocol-v160-v1612-five-round-deep-audit.md
+      authority_doc: docs/workbook/protocol-deep-audit-workbook-v1.6.md
+      presence_policy: optional_projection
+  authority_model: minor_family_issue_register_authoritative_with_optional_workspace_projections
+  stream_version_mode: workbook_minor_governs_stream_patch_lanes
