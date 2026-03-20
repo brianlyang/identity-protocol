@@ -21,6 +21,7 @@ import re
 import shlex
 import subprocess
 import sys
+from functools import lru_cache
 from pathlib import Path
 from typing import List, Set, Tuple
 
@@ -107,6 +108,20 @@ V166_FORBIDDEN_EPHEMERAL_PATH_MARKERS = (
     "/tmp/",
     "/private/var/folders/",
 )
+
+
+def _resolve_repo_root(raw_repo_root: str) -> Path:
+    token = str(raw_repo_root or "").strip()
+    if token:
+        return Path(token).expanduser().resolve()
+    cwd = Path.cwd().resolve()
+    if (cwd / INDEX_PATH).exists() and (cwd / "scripts").exists() and (cwd / "identity").exists():
+        return cwd
+    return Path(__file__).resolve().parent.parent
+
+
+def _resolve_workspace_root(repo_root: Path) -> Path:
+    return repo_root.parent if repo_root.name == "identity-protocol-local" else repo_root
 
 def extract_backtick_commands(text: str) -> List[str]:
     return re.findall(r"`([^`]+)`", text)
@@ -581,22 +596,48 @@ def parse_script_command(cmd: str) -> Tuple[str | None, List[str], bool, List[st
     return script_path, flags, is_python, subcommands
 
 
-def load_help_flags(script_path: Path, subcommands: List[str]) -> Set[str]:
-    cmd = [sys.executable, str(script_path), *subcommands, "--help"]
-    proc = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-    )
-    # Some scripts may return non-zero for --help in edge cases; still parse output.
-    output = f"{proc.stdout}\n{proc.stderr}"
+@lru_cache(maxsize=None)
+def _load_help_flags_cached(script_path_text: str, subcommands_key: tuple[str, ...], cwd_root_text: str) -> Set[str]:
+    script_path = Path(script_path_text)
+    cwd_root = Path(cwd_root_text)
+    cmd = [sys.executable, str(script_path), *subcommands_key, "--help"]
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=cwd_root,
+            timeout=20,
+        )
+        # Some scripts may return non-zero for --help in edge cases; still parse output.
+        output = f"{proc.stdout}\n{proc.stderr}"
+    except subprocess.TimeoutExpired as exc:
+        output = f"{exc.stdout or ''}\n{exc.stderr or ''}\n--help timeout"
     return set(re.findall(r"(--[a-zA-Z0-9][a-zA-Z0-9\\-]*)", output))
+
+
+def load_help_flags(script_path: Path, subcommands: List[str], cwd_root: Path) -> Set[str]:
+    return _load_help_flags_cached(str(script_path.resolve()), tuple(subcommands), str(cwd_root.resolve()))
+
+
+def resolve_script_target(repo_root: Path, script_rel: str) -> tuple[Path, Path]:
+    workspace_root = _resolve_workspace_root(repo_root)
+    candidates = [
+        ((repo_root / script_rel).resolve(), repo_root),
+    ]
+    if workspace_root != repo_root:
+        candidates.append(((workspace_root / script_rel).resolve(), workspace_root))
+    for candidate_path, candidate_cwd in candidates:
+        if candidate_path.exists():
+            return candidate_path, candidate_cwd
+    return candidates[0]
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Validate governance-doc command snippets against script contracts."
     )
+    parser.add_argument("--repo-root", default="")
     parser.add_argument(
         "--docs",
         nargs="*",
@@ -605,7 +646,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    repo_root = Path.cwd()
+    repo_root = _resolve_repo_root(args.repo_root)
     docs = args.docs if args.docs else _docs_from_index(repo_root)
     bootstrap_failures: List[str] = []
     stream_doc_alias_requirements: dict[str, List[str]] = {}
@@ -771,14 +812,14 @@ def main() -> int:
                 if not script_rel:
                     continue
                 checks += 1
-                script_path = repo_root / script_rel
+                script_path, script_cwd = resolve_script_target(repo_root, script_rel)
                 if not script_path.exists():
                     failures.append(
                         f"[MISSING_SCRIPT] {doc}: `{cmd_snippet}` -> `{script_rel}` not found"
                     )
                     continue
                 if is_python:
-                    help_flags = load_help_flags(script_path, subcommands)
+                    help_flags = load_help_flags(script_path, subcommands, script_cwd)
                     for flag in flags:
                         # allow aliases in prose-style snippets using "..." or placeholders
                         if flag not in help_flags and "..." not in cmd_snippet:

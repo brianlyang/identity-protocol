@@ -18,6 +18,7 @@ Execution mode: topic-level canonical SSOT for v1.6.11 outer relay governance.
    - `bash scripts/ci/run_agent_relay_final_answer_probes_ci.sh`
 5. Canonical mapping entrypoints remain:
    - `identity/protocol/mappings/contract-binding.current.yaml`
+   - `identity/protocol/mappings/control-plane-invariants.current.yaml`
    - `identity/protocol/mappings/doc-evidence-allowlist.current.yaml`
    - `identity/protocol/mappings/stream-doc-registry.current.yaml`
 

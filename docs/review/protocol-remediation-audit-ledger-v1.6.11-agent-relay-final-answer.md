@@ -3,6 +3,16 @@
 Status: Active (protocol asset landed + local replay verified, 2026-03-18)  
 Scope: protocol-only review ledger for outer-agent exact/summary relay governance
 
+## 0.1) State interpretation guard (mandatory)
+
+1. Current-state judgment for this stream must anchor to:
+   - `identity/protocol/mappings/contract-binding.current.yaml`
+   - `identity/protocol/mappings/control-plane-status.current.yaml`
+   - `identity/protocol/mappings/control-plane-invariants.current.yaml`
+   - `identity/protocol/mappings/doc-evidence-allowlist.current.yaml`
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+2. This review ledger inherits the stream registry and current-pointer contract from the active protocol mappings; historical stream artifacts remain replay evidence only.
+
 ## 0) Stream objective
 
 1. Turn outer-agent final delivery from "discipline only" into a machine-verifiable relay contract.

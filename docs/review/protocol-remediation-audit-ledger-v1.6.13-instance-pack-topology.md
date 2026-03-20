@@ -3,6 +3,16 @@
 Status: Active (implementation closure stream, 2026-03-20)  
 Scope: protocol review ledger for identity-instance pack topology and root `scripts/` surface locking
 
+## 0.1) State interpretation guard (mandatory)
+
+1. Current-state judgment for this stream must anchor to:
+   - `identity/protocol/mappings/contract-binding.current.yaml`
+   - `identity/protocol/mappings/control-plane-status.current.yaml`
+   - `identity/protocol/mappings/doc-evidence-allowlist.current.yaml`
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+   - `identity/protocol/mappings/stream-scope-matrix.current.yaml`
+2. This review ledger evaluates topology closure through the active current-pointer mappings; replay snapshots and historical packs remain audit evidence only.
+
 ## 0) Stream objective
 
 1. Freeze pack-root `scripts/` as the canonical identity-instance executable source surface.

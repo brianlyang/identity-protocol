@@ -240,7 +240,7 @@ Hard rule:
 ```bash
 python3 scripts/compile_identity_runtime.py --catalog <LOCAL_CATALOG> --identity-id <ID>
 python3 scripts/validate_identity_prompt_quality.py --catalog <LOCAL_CATALOG> --identity-id <ID>
-python3 scripts/validate_v16_prompt_kernel_executable_coupling.py --catalog <LOCAL_CATALOG> --identity-id <ID> --operation update --json-only
+python3 scripts/validate_prompt_kernel_executable_coupling.py --catalog <LOCAL_CATALOG> --identity-id <ID> --operation update --json-only
 python3 scripts/docs_command_contract_check.py
 python3 scripts/validate_protocol_ssot_source.py
 ```
