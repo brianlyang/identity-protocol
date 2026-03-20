@@ -89,7 +89,8 @@ Frozen interpretation:
 1. `scripts/` is the only canonical home for instance-owned executable sources.
 2. `runtime/` may contain runtime state, receipts, reports, autonomy outputs, and other generated artifacts, but it is not an executable source root.
 3. `agents/identity.yaml` remains descriptive sidecar metadata and must not be used to justify extra executable roots.
-4. If a helper must be invoked by the instance and is owned by the instance, its source belongs under pack-root `scripts/` even if the helper later writes reports into `runtime/`.
+4. Sidecar observability hints inside `agents/identity.yaml` should point at governed `runtime/` report paths or remain clearly placeholder-only; they must not imply a separate `resource/` root for runtime pack topology.
+5. If a helper must be invoked by the instance and is owned by the instance, its source belongs under pack-root `scripts/` even if the helper later writes reports into `runtime/`.
 
 ### 2.2 Root `scripts/` ownership freeze
 

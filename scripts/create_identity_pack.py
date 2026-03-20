@@ -425,7 +425,7 @@ def _default_identity_agent_yaml(identity_id: str, title: str, description: str)
         "observability:\n"
         "  event_topics: []\n"
         "  required_artifacts:\n"
-        "    - \"resource/reports/*.json\"\n"
+        "    - \"runtime/reports/*.json\"\n"
     )
 
 

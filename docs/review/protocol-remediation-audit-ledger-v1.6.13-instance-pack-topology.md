@@ -80,7 +80,8 @@ With these owner rules:
 1. `scripts/` contains instance-owned executable source.
 2. `runtime/` contains runtime-generated state/report/receipt artifacts.
 3. `agents/` contains sidecar metadata only.
-4. Any patch that normalizes executable helpers under `runtime/` or invents a fourth canonical root must be reviewed as a topology regression, not as acceptable local style.
+4. `agents/identity.yaml.observability.required_artifacts` may describe runtime outputs, but its defaults must not mislead reviewers into treating `resource/` as an extra governed runtime root for instance packs.
+5. Any patch that normalizes executable helpers under `runtime/` or invents a fourth canonical root must be reviewed as a topology regression, not as acceptable local style.
 
 ## 3.1) Proof-pack worked example frozen in this stream
 
