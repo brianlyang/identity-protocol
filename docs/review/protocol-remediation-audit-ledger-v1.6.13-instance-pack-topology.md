@@ -45,6 +45,15 @@ Scope: protocol review ledger for identity-instance pack topology and root `scri
 2. Current example migration uses `base-repo-closure-orchestrator` as a proof pack.
 3. Instance-owned scripts may call shared protocol/workspace helpers, but the ownership home remains the instance pack.
 
+### 2.3 Three-layer pack interpretation frozen for review
+
+1. Reviewers must interpret a governed identity pack as:
+   - `IDENTITY_PROMPT.md`: prompt kernel / guidance layer
+   - `CURRENT_TASK.json`: runtime SSOT / machine-contract layer
+   - pack-root `scripts/`: canonical instance-owned executable layer
+2. `v1.6.13` reviews the third layer and the topology needed to keep it stable; it does not reopen whether the pack already has a guidance artifact.
+3. Therefore, a missing route-to-script join must not be misreported as “identity lacks a SKILL.md equivalent”; the pack already has a prompt kernel, but the execution join may still be immature.
+
 ## 3) Frozen implementation checklist
 
 1. Creator scaffolds `scripts/README.md` at the pack root.
@@ -117,6 +126,7 @@ Review on a second migrated pack, `custom-creative-ecom-analyst`, reinforced an 
 4. `entry_receipt_policy + ingress_proof_policy` answer how governed entry is proven.
 5. `egress_grant_policy + headstamp_policy` answer how governed visible output is proven.
 6. Reviewers must not force a false choice between `v1.6.13` topology governance and the gateway four-piece; they are complementary layers of one infrastructure model.
+7. Reviewers must also keep route-to-script declarative join separate from topology closure: a pack may be topology-ready and exit-ready while still lacking a later orchestration contract.
 
 ## 4) Audit verdict rules (frozen)
 
@@ -140,6 +150,9 @@ Review on a second migrated pack, `custom-creative-ecom-analyst`, reinforced an 
 4. **Diagnostic PASS** for migrated proof packs requires:
    - fail-close outputs stay specific enough to separate missing topology, dirty tuple, dirty binding, and governed emit success
    - stale non-`run:<...>` binding incidents are tracked as instance runtime debt rather than as automatic protocol semantic regressions
+5. **Boundary PASS** requires:
+   - review language does not collapse prompt-kernel questions, topology questions, and route/orchestration questions into one diagnosis
+   - any missing route-to-script binding or script receipt discussion is classified as outside `v1.6.13` unless a separate contract explicitly says otherwise
 
 ## 5) Accepted closure boundary
 
@@ -147,6 +160,7 @@ Review on a second migrated pack, `custom-creative-ecom-analyst`, reinforced an 
 2. This stream is not waiting on host-runtime live smoke or outer visible surface behavior.
 3. This stream is also allowed to carry a diagnostic interpretation ladder for migrated packs, so review can tell apart protocol closure, migration incompleteness, and stale instance runtime debt without reopening the topology contract.
 4. This stream is independent from Codex native feature evolution; it governs only the identity-instance pack surface that the protocol owns.
+5. This stream does not require a skill-style trigger/discovery contract for identity packs, a generic instance-script manifest, or a generic instance-script execution receipt family in order to close topology.
 
 ## 6) Boundary lock for reviewers
 
@@ -155,3 +169,5 @@ Review on a second migrated pack, `custom-creative-ecom-analyst`, reinforced an 
 3. Do not push instance-owned helper code back into protocol/shared paths just because multiple instances may reuse similar logic.
 4. Do not reopen `v1.6.10`, `v1.6.11`, or `v1.6.12` semantics while reviewing this stream.
 5. Do not fold unrelated host/provider/runtime failures into this stream; `v1.6.13` governs pack topology and the standard capability composition only.
+6. Do not claim that `IDENTITY_PROMPT.md` alone is protocol-equivalent to a whole skill bundle; at most it is analogous to the guidance body inside a broader identity-pack capability bundle.
+7. Do not misclassify missing `CURRENT_TASK route -> scripts -> receipt` declarative join as a `v1.6.13` topology failure.

@@ -48,6 +48,19 @@ Required pack-root files remain:
 - `agents/identity.yaml`
 - `scripts/README.md`
 
+### 2.1.1 Identity pack three-layer interpretation
+
+1. A governed identity instance pack must be read as a three-layer structure:
+   - `IDENTITY_PROMPT.md`: prompt kernel / role-guidance layer
+   - `CURRENT_TASK.json`: runtime SSOT / machine-contract layer
+   - pack-root `scripts/`: canonical instance-owned executable surface
+2. `v1.6.13` specializes only the third layer plus the pack topology needed to hold it stable; it does not redefine the semantic owner of the prompt kernel or the runtime contract.
+3. The existence of `IDENTITY_PROMPT.md` means identity instances already have a pack-level guidance artifact; reviewers must not misdiagnose later route or execution gaps as “missing prompt kernel”.
+4. Comparisons with skill bundles are allowed only at the guidance/resource-shape level:
+   - `IDENTITY_PROMPT.md` is analogous to the guidance body of `SKILL.md`
+   - pack-root `scripts/` is analogous to bundled executable resources
+5. `v1.6.13` does not freeze a skill-style trigger/discovery contract for identity packs, and it does not imply that `IDENTITY_PROMPT.md` alone is equivalent to a whole skill bundle.
+
 ### 2.2 Root `scripts/` ownership freeze
 
 1. Pack-root `scripts/` is the instance-owned executable source surface.
@@ -111,6 +124,7 @@ The topology validator must fail-close when any of the following holds:
 3. Standard scheme means `topology-ready + gate-ready + entry-ready + exit-ready`; creating directories alone is scaffold success, not full standard-capability readiness.
 4. Fallback behavior remains fail-close only: when standard readiness is missing, the instance may emit a withheld/conflict envelope, but it must not emit an ungoverned success headstamp.
 5. Enhanced host-auto-binding remains a later host/runtime concern; `v1.6.13` freezes the instance-owned topology and standard-capability composition, not outer-surface promotion claims.
+6. `exit-ready` proves the instance-owned executable surface is present and can consume governed protocol truth; it does not by itself prove that task-type routing already declaratively targets those scripts.
 
 ### 3.5 Diagnostic interpretation ladder (frozen)
 
@@ -130,6 +144,7 @@ The topology validator must fail-close when any of the following holds:
    - exit-ready scripts pass under current-turn tuple,
    - live receipts / relay receipts land,
    - then the instance may claim standard-capability readiness.
+7. If an instance is topology-ready but its `CURRENT_TASK` routes still do not explicitly bind to pack-root scripts, that is an orchestration/join gap outside this stream unless some separate validator proves a topology violation.
 
 ## 4) Inherited-stream owner matrix
 
@@ -141,6 +156,7 @@ The topology validator must fail-close when any of the following holds:
    - pack-root `scripts/` ownership semantics
    - `runtime/scripts/` prohibition
    - topology drift fail-close validation and creator wiring
+5. `v1.6.13` does not own route-to-script declarative binding, instance-script manifest semantics, or a generic instance-script execution receipt family.
 
 ## 5) Closure scope and explicit non-goals
 
@@ -149,6 +165,8 @@ The topology validator must fail-close when any of the following holds:
 3. This stream does not convert instance-local scripts into protocol-owned business logic.
 4. This stream does not reopen runtime path semantics already frozen in `v1.6.10`; it specializes the allowed instance-pack topology that sits on top of that boundary.
 5. This stream does not authorize free-form new root directories. Any topology expansion requires a new governed contract revision first.
+6. This stream does not define `CURRENT_TASK` route fields such as `primary_instance_scripts`, `fallback_instance_scripts`, or script-level precondition/receipt schemas.
+7. This stream does not define a generic instance-script manifest contract; any promotion of pack-local script manifests into protocol motherline must happen in a later governed stream.
 
 ## 6) Frozen implementation guidance
 
@@ -164,3 +182,5 @@ The topology validator must fail-close when any of the following holds:
 1. Additional pack-root directories are prohibited unless promoted by a later governed stream.
 2. Additional runtime subtrees are prohibited unless registered in the topology contract.
 3. New instance helper capabilities must reuse the canonical root `scripts/` surface instead of creating parallel executable roots.
+4. If a later stream promotes route-to-script declarative join, it must build on the three-layer pack model above rather than reopening the topology freeze.
+5. If a later stream promotes an instance-script manifest or execution receipt family, it must treat `v1.6.13` as the topology prerequisite rather than as the owner of that orchestration contract.
