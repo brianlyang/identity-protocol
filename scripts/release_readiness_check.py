@@ -29,6 +29,10 @@ PROTOCOL_PUBLISH_SCRIPTS = {
     "scripts/validate_release_metadata_sync.py",
     "scripts/validate_release_freeze_boundary.py",
 }
+POST_CLOSURE_GOVERNANCE_SCRIPTS = [
+    ["python3", "scripts/docs_command_contract_check.py"],
+    ["python3", "scripts/validate_issue_register_consistency.py", "--json-only"],
+]
 BUNDLE_RUNNER_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
 FINAL_EMIT_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
 FAILCLOSE_PLUGIN_PROJECTION_SCRIPT = "scripts/validate_failclose_plugin_projection.py"
@@ -761,6 +765,8 @@ def main() -> int:
             args.baseline_policy,
         ],
         ["python3", "scripts/validate_audit_snapshot_index.py"],
+        *POST_CLOSURE_GOVERNANCE_SCRIPTS,
+        ["python3", "scripts/validate_native_chat_bootstrap_entry_stream.py", "--json-only"],
         ["python3", "scripts/validate_protocol_ssot_source.py"],
         [
             "python3",

@@ -113,7 +113,9 @@ Execution mode: governance interpretation layer for how to handle remaining debt
    - instance script orchestration contract,
    - execution receipt family standardization,
    - `v1.6.14` launcher implementation landing.
-3. These lanes may add validators and docs, but they must inherit rather than reinterpret already-closed correctness boundaries.
+3. The current roadmap anchor for the first three items is:
+   - `docs/governance/identity-instance-script-orchestration-roadmap-2026-03-21.md`
+4. These lanes may add validators and docs, but they must inherit rather than reinterpret already-closed correctness boundaries.
 
 ### 4.3 Release hygiene discipline
 
@@ -185,7 +187,8 @@ Execution mode: governance interpretation layer for how to handle remaining debt
    - route-to-script declarative join,
    - receipt-family modeling,
    - launcher implementation landing.
-3. Run release hygiene as a separate owner lane:
+3. Use `docs/governance/identity-instance-script-orchestration-roadmap-2026-03-21.md` as the non-reopen architecture anchor for route/script/receipt modeling.
+4. Run release hygiene as a separate owner lane:
    - clean freeze,
    - workbook freshness,
    - simplification / consolidation of validators and current-authoritative-source boundaries.

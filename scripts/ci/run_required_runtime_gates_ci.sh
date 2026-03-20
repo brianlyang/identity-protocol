@@ -24,8 +24,21 @@ REPO_CATALOG_ABS="$(REPO_CATALOG_PATH="${REPO_CATALOG_PATH}" python3 -c 'from pa
 HEADSTAMP_ACTOR_ID="$(protocol_shell_entry_require_actor_id "${HEADSTAMP_ACTOR_ID:-}")"
 HEADSTAMP_SESSION_ID="${HEADSTAMP_SESSION_ID:-run:${GITHUB_RUN_ID:-ci-local}}"
 
-python3 scripts/validate_required_gate_surface_drift.py --json-only
-python3 scripts/sync_plugin_join_wiring.py --check --json-only
+run_cmd() {
+  echo "[RUN] $*"
+  "$@"
+}
+
+run_global_protocol_gates() {
+  run_cmd python3 scripts/validate_required_gate_surface_drift.py --json-only
+  run_cmd python3 scripts/sync_plugin_join_wiring.py --check --json-only
+  run_cmd python3 scripts/docs_command_contract_check.py
+  run_cmd python3 scripts/validate_issue_register_consistency.py --json-only
+  run_cmd python3 scripts/validate_native_chat_bootstrap_entry_stream.py --json-only
+  run_cmd bash scripts/ci/run_native_chat_bootstrap_entry_probes_ci.sh
+}
+
+run_global_protocol_gates
 
 echo "target identities: ${IDS}"
 for ID in ${IDS}; do
