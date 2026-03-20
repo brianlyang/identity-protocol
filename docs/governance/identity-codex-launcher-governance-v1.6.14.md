@@ -1,0 +1,197 @@
+# Identity Codex Launcher Governance (v1.6.14)
+
+Status: Active (contract-first stream frozen, 2026-03-20; implementation landing pending)  
+Layer: protocol  
+Scope: identity-bound Codex launcher model, install-path ownership, and fail-close startup governance
+
+Execution mode: topic-level canonical SSOT for v1.6.14 identity-Codex launcher governance.
+
+## 0) State interpretation guard (mandatory)
+
+1. This document is the active governance source for `identity_codex_launcher_governance`.
+2. `v1.6.12` remains the semantic owner for native-chat bootstrap entry and current-turn tuple rules.
+3. `v1.6.13` remains the semantic owner for canonical identity-instance pack topology and the pack-root `scripts/` surface.
+4. `v1.6.14` does not reopen headstamp semantics, outer relay semantics, MCP provider health, Codex product semantics, or host-final visible-surface promotion claims.
+5. Current-state judgment for this stream must anchor to:
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+   - `identity/protocol/mappings/stream-scope-matrix.current.yaml`
+   - `identity/protocol/mappings/doc-evidence-allowlist.current.yaml`
+   - `identity/protocol/IDENTITY_PROTOCOL.md`
+   - `identity/protocol/IDENTITY_RUNTIME.md`
+6. This stream freezes launcher/install/startup ownership and canonical paths; it does not certify that every host-native chat surface is already auto-bound.
+7. Workspace helper assets under `scripts/codex_native_chat/` are accepted as compatibility bridge evidence only until the protocol-owned launcher install path is implemented; they are not the canonical installed home.
+
+## 1) Why v1.6.14 is required
+
+1. `v1.6.12` froze wrapper-bound bootstrap semantics, and `v1.6.13` froze where instance-owned helper code belongs, but neither stream froze how a user gets a simple, installed, repeatable identity-bound Codex command.
+2. That gap leaves room for drift:
+   - workspace-local wrappers being mistaken for protocol motherline,
+   - ad hoc command names such as bare `<identity-id>`,
+   - accidental attempts to override the `codex` product command,
+   - launcher assets being parked in ambiguous shared directories.
+3. OpenAI Codex docs already define startup-scoped instruction/config surfaces such as project-scoped `.codex/config.toml`, `model_instructions_file`, and `project_doc_fallback_filenames`; that makes launcher/install governance a startup-entry concern rather than a late-turn patch concern.
+4. OpenAI Codex docs also state that instruction discovery is built when Codex starts, once per run, so identity bootstrap must be attached at process entry rather than reconstructed later from ambient state.
+5. MCP reference material distinguishes client/runtime initialization from server-exposed capabilities (`tools`, `resources`, `prompts`); therefore launcher/install governance belongs to the identity/Codex entry boundary, not to MCP server business semantics.
+6. `v1.6.14` closes this by freezing:
+   - the canonical generic launcher command,
+   - the canonical per-identity installed shortcut,
+   - the canonical install directories,
+   - the canonical ownership split between protocol, instance pack, and compatibility bridge.
+
+## 2) Frozen launcher model (no ambiguity)
+
+### 2.1 Canonical command model
+
+1. The canonical generic launcher command is:
+   - `identity-codex --identity-id <identity-id> -- <codex args>`
+2. The canonical installed convenience command is:
+   - `id-<identity-id> <codex args>`
+3. `id-<identity-id>` is a generated shortcut bound to one governed identity id; it is not a free-form manually named shell alias.
+4. Bare identity command names such as `<identity-id> ...` are forbidden as canonical launcher names.
+5. Overriding, shadowing, or mutating the product command `codex` is forbidden.
+6. `resume <uuid>` keeps the host-thread UUID as host state only; launcher logic must never reinterpret that UUID as the identity session tuple.
+
+### 2.2 Canonical path contract
+
+1. Protocol-owned launcher install surfaces belong under protocol-controlled tooling in `identity-protocol-local/scripts/`.
+2. Instance-pack-local launcher assets belong under pack-root `scripts/launchers/`.
+3. The canonical installed executable directory is `${CODEX_HOME}/bin/`, where:
+   - `${CODEX_HOME}/bin/identity-codex` is the generic launcher,
+   - `${CODEX_HOME}/bin/id-<identity-id>` is the per-identity shortcut.
+4. `scripts/codex_native_chat/` in a workspace may exist as migration/evidence bridge, but it is not the canonical installed launcher directory once `v1.6.14` is implemented.
+5. `runtime/` remains non-executable runtime space per `v1.6.13`; launcher assets must not be installed under `runtime/`.
+6. `scripts/identity/` is not a valid canonical home for identity-Codex launcher motherline assets.
+
+### 2.3 Ownership boundary freeze
+
+1. Protocol owns:
+   - launcher template/render logic,
+   - launcher install logic,
+   - launcher validator logic,
+   - creator/update/activate wiring,
+   - canonical command naming rules.
+2. Identity instance packs own only the pack-local launcher material rendered into their canonical root `scripts/launchers/` subtree.
+3. Workspace compatibility bridges may orchestrate current flows during migration, but they must remain thin consumers of protocol semantics and must not become the canonical installed standard.
+4. MCP server configuration, provider credentials, vendor tool health, and downstream business tooling are outside the ownership scope of this stream.
+
+### 2.4 Canonical launcher surfaces
+
+The frozen development target for `v1.6.14` is:
+
+1. Protocol-owned launcher renderer:
+   - `identity-protocol-local/scripts/render_identity_codex_launcher.py`
+2. Protocol-owned launcher installer:
+   - `identity-protocol-local/scripts/install_identity_codex_launcher.py`
+3. Protocol-owned launcher validator:
+   - `identity-protocol-local/scripts/validate_identity_codex_launcher.py`
+4. Canonical pack-local launcher manifest:
+   - `<pack_path>/scripts/launchers/identity-codex-launcher.manifest.json`
+5. Canonical pack-local launcher README:
+   - `<pack_path>/scripts/launchers/README.md`
+6. Canonical installed launchers:
+   - `${CODEX_HOME}/bin/identity-codex`
+   - `${CODEX_HOME}/bin/id-<identity-id>`
+
+These names and directories are frozen by this stream. Later implementation may extend fields inside the manifest, but it must not relocate these canonical homes without a new governed stream.
+
+### 2.5 Bootstrap ownership rules
+
+1. The launcher owns process-entry injection of the governed startup tuple and the launch-time instruction/fallback files required by `v1.6.12`.
+2. Manual overrides that attempt to replace launcher-owned `model_instructions_file` or `project_doc_fallback_filenames` on the same launch are non-qualified and must fail-close.
+3. Launcher-owned startup injection must remain process-local; shared workspace-global projection files are forbidden as authoritative startup truth.
+4. Launchers must not require in-place mutation of global `~/.codex/config.toml` as their normal operating mode.
+5. Launchers may rely on local runtime resolution through `CODEX_HOME`, `IDENTITY_HOME`, `IDENTITY_CATALOG`, and the governed identity id, but they must not hardcode user-specific workspace paths as the protocol contract.
+6. Failure to resolve identity context, pack path, or tuple truth must fail-close before `codex` starts.
+
+### 2.6 Standard path vs compatibility bridge
+
+1. The long-term standard path is: installed protocol-owned launcher under `${CODEX_HOME}/bin/`.
+2. The currently accepted migration bridge is: workspace helper flow under `scripts/codex_native_chat/`.
+3. The migration bridge is valid evidence for design and replay, but it is not sufficient by itself to claim that `v1.6.14` implementation closure has landed.
+4. Bare `codex`, `codex resume`, and `codex exec` remain product commands; under identity protocol governance they are unsupported or non-qualified as identity-bound launcher evidence unless invoked through the canonical launcher path.
+
+## 3) Four-track cross-verification boundary
+
+### 3.1 T1 roundtable / internal topology
+
+1. `docs/governance/roundtable-multi-agent-multi-identity-binding-governance-v1.4.12.md` already freezes explicit identity binding, isolated runtime contexts for parallel multi-identity work, and no hidden inheritance from ambient workspace state.
+2. `docs/governance/identity-actor-session-binding-governance-v1.6.0.md` already freezes execution-target tuple isolation and prohibits execution-state hard identity switch.
+3. `v1.6.14` reuses those invariants and specializes them to launcher/install/startup UX instead of inventing a new identity arbitration model.
+
+### 3.2 T2 vendor / OpenAI Codex evidence
+
+1. OpenAI Codex config reference documents:
+   - user-level `~/.codex/config.toml`,
+   - project-scoped `.codex/config.toml`,
+   - `model_instructions_file`,
+   - `project_doc_fallback_filenames`,
+   - `mcp_servers.<id>.command`.
+2. OpenAI Codex AGENTS guidance documents that Codex builds its instruction chain at startup, once per run, and that project fallback filenames participate in startup discovery order.
+3. Therefore launcher/install/startup governance is the correct place to bind identity-aware startup files; late-turn manual reconstruction is the wrong boundary.
+4. Canonical vendor anchors for this stream:
+   - `https://developers.openai.com/codex/config-reference/#configtoml`
+   - `https://developers.openai.com/codex/guides/agents-md/#how-codex-discovers-guidance`
+
+### 3.3 T3 Context7 / MCP / reference boundary
+
+1. MCP initialization exchanges protocol version, client/server capabilities, and readiness state before normal operations.
+2. MCP server capabilities explicitly describe `tools`, `resources`, and `prompts`; launcher/install ownership is therefore a client/runtime entry concern, not an MCP server business contract.
+3. This stream must not absorb provider-specific MCP failures into identity launcher semantics.
+4. Canonical reference family for this track:
+   - Context7 library id: `/modelcontextprotocol/modelcontextprotocol`
+   - MCP initialize lifecycle and capability declaration materials
+
+### 3.4 T4 protocol / inherited-stream references
+
+1. `v1.6.12` remains the owner for bootstrap tuple semantics and wrapper-bound entry interpretation.
+2. `v1.6.13` remains the owner for canonical pack-root `scripts/` topology and the prohibition on `runtime/scripts/`.
+3. `v1.6.11` remains the owner for governed outer final-answer relay semantics.
+4. `identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md` already freezes the four-track evidence bundle requirement (`T1/T2/T3/T4`) for promotion-grade updates.
+5. `v1.6.14` owns only launcher/install/startup contract closure and must not be used to reopen the inherited streams above.
+
+## 4) Closure scope and explicit non-goals
+
+1. This stream freezes the canonical launcher names, canonical directories, and ownership split needed for identity-bound Codex startup.
+2. This stream does not define new Codex product behavior.
+3. This stream does not define MCP provider configuration, provider permission recovery, or business-tool launch semantics.
+4. This stream does not reopen `v1.6.12` bootstrap semantics, `v1.6.13` pack topology semantics, or `v1.6.11` final relay semantics.
+5. This stream does not claim that the workspace bridge is already the final protocol-owned launcher.
+6. This stream does not claim that host final visible-surface auto-binding is complete.
+7. This stream does not authorize mutation of the bare `codex` command as the mechanism for identity binding.
+8. This stream does not authorize arbitrary alternate launcher directories or alternate shortcut naming schemes.
+
+## 5) Frozen implementation guidance
+
+1. Treat launcher installation as infrastructure, not as handwritten per-instance patching.
+2. Render a pack-local launcher manifest under the canonical `scripts/launchers/` subtree.
+3. Render installed executable shims under `${CODEX_HOME}/bin/` only.
+4. Keep per-identity convenience on `id-<identity-id>` instead of on bare identity names.
+5. Keep the generic entrypoint on `identity-codex` instead of on `codex`.
+6. Keep bootstrap injection process-local and generated at launch time rather than persisted as mutable shared global projection.
+7. Keep creator/update/activate responsible for refreshing launcher assets; manual operator editing of installed launcher shims is non-canonical.
+8. Keep compatibility bridge code thin and explicitly temporary; migrate responsibility to protocol-owned launcher/install/validate surfaces.
+
+## 6) Accepted migration path
+
+1. Preserve the current workspace bridge under `scripts/codex_native_chat/` as compatibility evidence while the protocol-owned launcher stack lands.
+2. Use `v1.6.13` canonical pack-root `scripts/` topology as the destination for pack-local launcher manifests.
+3. Land protocol-owned renderer/installer/validator before classifying installed launchers as the motherline standard.
+4. After canonical launchers exist, downgrade workspace bridge status from “current operator path” to “migration bridge / replay artifact.”
+5. Only after protocol-owned validator + creator/update/activate wiring are green may reviewers treat non-launcher naked entry as a stricter governance violation.
+
+## 7) Future promotion exit criteria
+
+1. `v1.6.14` promotion beyond contract freeze requires more than documents.
+2. At minimum, future implementation closure must prove all of the following together:
+   - protocol-owned launcher renderer exists,
+   - protocol-owned launcher installer exists,
+   - protocol-owned launcher validator exists,
+   - creator/update/activate refresh launcher assets deterministically,
+   - pack-local launcher manifest path is canonical and machine-validated,
+   - installed `identity-codex` and `id-<identity-id>` shims are rendered under `${CODEX_HOME}/bin/`,
+   - launcher startup fail-closes on missing tuple or forbidden manual override,
+   - compatibility bridge is clearly classified as bridge-only and no longer mistaken for the canonical installed home.
+3. Until those conditions are proven, the correct interpretation is:
+   - `1.6.14` contract freeze may be active,
+   - implementation landing remains open,
+   - workspace bridge remains compatibility evidence rather than final launcher motherline.

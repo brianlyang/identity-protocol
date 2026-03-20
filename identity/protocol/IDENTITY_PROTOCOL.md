@@ -1,4 +1,4 @@
-# Identity Protocol v1.6.13 (draft)
+# Identity Protocol v1.6.14 (draft)
 
 ## Normative source map (v1.6 stream execution)
 
@@ -91,6 +91,19 @@ Compatibility note: legacy packs can stay in `identity/<id>/` if catalog `pack_p
 4. Instance-local helper automation belongs in the instance pack, not in a workspace-global shared patch directory.
 5. Required validator: `scripts/validate_identity_instance_pack_topology.py`.
 6. Directory drift is fail-close; unregistered additional directories are non-compliant until promoted by governance.
+
+### Canonical identity-Codex launcher boundary (v1.6.14 additive)
+
+1. `v1.6.14` freezes the identity-bound Codex launcher model; it does not mutate Codex product semantics.
+2. Canonical generic launcher command:
+   - `identity-codex --identity-id <identity-id> -- <codex args>`
+3. Canonical per-identity shortcut command:
+   - `id-<identity-id> <codex args>`
+4. Bare identity command names are non-canonical, and overriding the product command `codex` is forbidden.
+5. Canonical pack-local launcher assets belong under pack-root `scripts/launchers/`, building on the `v1.6.13` pack topology freeze.
+6. Canonical installed launcher shims belong under `${CODEX_HOME}/bin/`.
+7. Workspace helper paths such as `scripts/codex_native_chat/` are compatibility bridges only until the protocol-owned launcher installer lands.
+8. Launcher/install governance is separate from MCP provider health, business-tool availability, and host-final visible-surface promotion work.
 
 ## Runtime source-of-truth boundary (v1.4.x hardening)
 

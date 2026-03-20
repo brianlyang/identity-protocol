@@ -100,3 +100,9 @@ streams:
     forbidden_requirement_ids: []
     forbidden_path_tokens:
       - "runtime/scripts"
+
+  - stream_version: v1.6.14
+    scope_topic: identity_codex_launcher_governance
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []

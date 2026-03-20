@@ -258,3 +258,15 @@ Hard semantics:
 3. `runtime/` is reserved for runtime/autonomy/state/report/downsink surfaces and must not be repurposed as an executable source tree.
 4. Generated cache directories such as `__pycache__` and `.pytest_cache` are forbidden inside governed pack topology.
 5. Creator/bootstrap/update strict lanes must keep the topology contract and validator aligned; ad hoc instance-local topology keys are non-canonical.
+
+### Canonical identity-Codex launcher execution boundary (v1.6.14 additive)
+
+Hard semantics:
+
+1. Identity-bound Codex launcher governance is a startup-entry concern and must not be implemented by overriding the product command `codex`.
+2. Canonical installed launcher shims belong under `${CODEX_HOME}/bin/`:
+   - `${CODEX_HOME}/bin/identity-codex`
+   - `${CODEX_HOME}/bin/id-<identity-id>`
+3. Canonical pack-local launcher assets belong under `<pack_path>/scripts/launchers/`; `runtime/` and `scripts/identity/` are non-canonical launcher homes.
+4. Launcher-owned startup injection must preserve `v1.6.12` tuple/bootstrap truth and keep manual `model_instructions_file` / `project_doc_fallback_filenames` override attempts fail-closed.
+5. Workspace bridge helpers under `scripts/codex_native_chat/` remain migration/evidence paths only until protocol-owned launcher render/install/validate assets land.
