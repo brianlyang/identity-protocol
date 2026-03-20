@@ -7,6 +7,7 @@ import json
 import re
 import shlex
 from pathlib import Path
+from repo_root_resolution_common import resolve_repo_root
 from typing import Any
 
 import yaml
@@ -158,6 +159,7 @@ SEMANTIC_CLARITY_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
     "scripts/validate_cli_catalog_default_semantics.py",
     "scripts/validate_stream_scope_semantic_integrity.py",
     "scripts/validate_runtime_file_boundary_governance.py",
+    "scripts/validate_compatibility_legacy_boundary.py",
 )
 RUNTIME_FILE_GOVERNANCE_GOV_DOC = "docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md"
 RUNTIME_FILE_GOVERNANCE_REVIEW_DOC = "docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md"
@@ -583,16 +585,9 @@ def _infra_contract_ast_violations(surface_path: Path, text: str) -> list[str]:
 
 def _extract_shell_invocations(text: str, executable: str) -> set[str]:
     targets: set[str] = set()
-    pattern = re.compile(rf"(?:^|\s){re.escape(executable)}\s+([^\s\"']+)")
-    for raw_line in text.splitlines():
-        # Strip inline comments so comment-only token spoofing cannot satisfy checks.
-        line = raw_line.split("#", 1)[0].strip()
-        if not line:
-            continue
-        for match in pattern.finditer(line):
-            target = match.group(1).strip()
-            if target:
-                targets.add(target)
+    for target, _args in _iter_shell_executable_rows(text, executable=executable):
+        if target:
+            targets.add(target)
     return targets
 
 
@@ -616,20 +611,87 @@ def _iter_shell_commands(text: str) -> list[str]:
     return commands
 
 
-def _extract_shell_invocation_args(text: str, *, executable: str, script: str) -> list[list[str]]:
-    rows: list[list[str]] = []
+_SHELL_ASSIGNMENT_RE = re.compile(r"^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$")
+_SHELL_SIMPLE_VAR_RE = re.compile(r"\$(\w+)|\$\{(\w+)\}")
+_SHELL_SCRIPT_CAPTURE_RE = re.compile(r"(?P<script>scripts/[A-Za-z0-9_./-]+\.py)")
+
+
+def _strip_shell_quotes(token: str) -> str:
+    value = str(token or "").strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+        return value[1:-1]
+    return value
+
+
+def _expand_shell_value(raw: str, variables: dict[str, str]) -> str:
+    value = _strip_shell_quotes(raw)
+    previous = None
+    while value != previous:
+        previous = value
+        value = _SHELL_SIMPLE_VAR_RE.sub(
+            lambda match: variables.get(match.group(1) or match.group(2) or "", match.group(0)),
+            value,
+        )
+    return value
+
+
+def _collect_shell_variables(text: str) -> dict[str, str]:
+    variables: dict[str, str] = {}
+    for raw_line in text.splitlines():
+        line = raw_line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        match = _SHELL_ASSIGNMENT_RE.match(line)
+        if not match:
+            continue
+        variables[match.group(1)] = _expand_shell_value(match.group(2), variables)
+    return variables
+
+
+def _find_executable_index(parts: list[str], executable: str) -> int | None:
+    for idx, part in enumerate(parts):
+        token = str(part or "").strip()
+        if not token:
+            continue
+        if _SHELL_ASSIGNMENT_RE.match(token):
+            continue
+        if Path(token).name == executable:
+            return idx
+    return None
+
+
+def _normalize_shell_target(token: str, *, variables: dict[str, str]) -> str:
+    expanded = _expand_shell_value(token, variables).replace("\\", "/")
+    if expanded == "-":
+        return ""
+    match = _SHELL_SCRIPT_CAPTURE_RE.search(expanded)
+    if match:
+        return match.group("script")
+    return expanded
+
+
+def _iter_shell_executable_rows(text: str, *, executable: str) -> list[tuple[str, list[str]]]:
+    rows: list[tuple[str, list[str]]] = []
+    variables = _collect_shell_variables(text)
     for command in _iter_shell_commands(text):
         try:
             parts = shlex.split(command, posix=True)
         except Exception:
             continue
-        if len(parts) < 2:
+        exec_idx = _find_executable_index(parts, executable)
+        if exec_idx is None or exec_idx + 1 >= len(parts):
             continue
-        if Path(parts[0]).name != executable:
-            continue
-        if parts[1] != script:
-            continue
-        rows.append(parts[2:])
+        target = _normalize_shell_target(parts[exec_idx + 1], variables=variables)
+        args = [_expand_shell_value(part, variables) for part in parts[exec_idx + 2 :]]
+        rows.append((target, args))
+    return rows
+
+
+def _extract_shell_invocation_args(text: str, *, executable: str, script: str) -> list[list[str]]:
+    rows: list[list[str]] = []
+    for target, args in _iter_shell_executable_rows(text, executable=executable):
+        if target == script:
+            rows.append(args)
     return rows
 
 
@@ -670,13 +732,14 @@ def _extract_workflow_run_invocations(path: Path, executable: str) -> set[str]:
     return targets
 
 
-def _parse_validator_entry(raw_entry: str) -> str:
+def _parse_validator_entry(raw_entry: str) -> tuple[str, str]:
     token = str(raw_entry or "").strip()
     if not token:
-        return ""
+        return "", ""
     if "::" in token:
-        token = token.split("::", 1)[0].strip()
-    return token
+        script_part, metadata = token.split("::", 1)
+        return script_part.strip(), metadata.strip()
+    return token, ""
 
 
 def _derive_alias_candidates(repo_root: Path, script_path: str) -> set[str]:
@@ -726,10 +789,11 @@ def _load_forbidden_direct_validators(*, repo_root: Path, mapping_path: Path) ->
             errors.append(f"validator_ids_missing:{requirement_key}")
             continue
         for raw in validator_ids:
-            script = _parse_validator_entry(str(raw))
+            script, metadata = _parse_validator_entry(str(raw))
             if not script:
                 continue
-            discovered.add(script)
+            if metadata not in {"wrapper_only_optional", "wrapper_compatibility_optional"}:
+                discovered.add(script)
             discovered.update(_derive_alias_candidates(repo_root, script))
 
     forbidden = sorted(
@@ -971,12 +1035,12 @@ def _missing_bundle_skill_path_active_repo_root_tokens(text: str) -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Detect strict-surface direct validator drift against bundle-runner lineage.")
-    parser.add_argument("--repo-root", default=".")
+    parser.add_argument("--repo-root", default="")
     parser.add_argument("--contract-mapping", default="")
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
-    repo_root = Path(args.repo_root).expanduser().resolve()
+    repo_root = resolve_repo_root(args.repo_root, start=__file__)
     mapping_entry_path = (
         Path(args.contract_mapping).expanduser().resolve()
         if str(args.contract_mapping or "").strip()

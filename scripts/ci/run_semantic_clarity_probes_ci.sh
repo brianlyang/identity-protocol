@@ -5,7 +5,8 @@ REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 WORKSPACE_ROOT="$(cd "$REPO_ROOT/.." && pwd)"
 cd "$REPO_ROOT"
 
-TMP_ROOT="$(mktemp -d /tmp/semantic-clarity-probes.XXXXXX)"
+source "$REPO_ROOT/scripts/runtime_temp_path_common.sh"
+TMP_ROOT="$(identity_runtime_mktemp_dir_sh "semantic-clarity-probes" "run")"
 cleanup() {
   rm -rf "$TMP_ROOT"
 }
@@ -16,31 +17,56 @@ python3 scripts/validate_semantic_term_registry.py --json-only > "$TMP_ROOT/sema
 python3 scripts/validate_cli_catalog_default_semantics.py --json-only > "$TMP_ROOT/cli_catalog_positive.json"
 python3 scripts/validate_stream_scope_semantic_integrity.py --base HEAD --head HEAD --json-only > "$TMP_ROOT/stream_scope_positive.json"
 python3 scripts/validate_runtime_file_boundary_governance.py --json-only > "$TMP_ROOT/runtime_boundary_positive.json"
+python3 scripts/validate_compatibility_legacy_boundary.py --json-only > "$TMP_ROOT/compatibility_legacy_boundary_positive.json"
 python3 scripts/validate_compiled_brief_projection_boundary.py --json-only > "$TMP_ROOT/compiled_brief_positive.json"
 python3 scripts/validate_strict_actor_entry_semantics.py --json-only > "$TMP_ROOT/strict_actor_entry_positive.json"
 python3 scripts/validate_response_authority_consumer_semantics.py --json-only > "$TMP_ROOT/authority_consumer_positive.json"
 python3 scripts/validate_activate_cwd_invariance.py --json-only > "$TMP_ROOT/activate_cwd_positive.json"
 
-python3 - "$TMP_ROOT/semantic_term_positive.json" "$TMP_ROOT/cli_catalog_positive.json" "$TMP_ROOT/stream_scope_positive.json" "$TMP_ROOT/runtime_boundary_positive.json" "$TMP_ROOT/compiled_brief_positive.json" "$TMP_ROOT/strict_actor_entry_positive.json" "$TMP_ROOT/authority_consumer_positive.json" "$TMP_ROOT/activate_cwd_positive.json" <<'PY'
+python3 - "$TMP_ROOT/semantic_term_positive.json" "$TMP_ROOT/cli_catalog_positive.json" "$TMP_ROOT/stream_scope_positive.json" "$TMP_ROOT/runtime_boundary_positive.json" "$TMP_ROOT/compatibility_legacy_boundary_positive.json" "$TMP_ROOT/compiled_brief_positive.json" "$TMP_ROOT/strict_actor_entry_positive.json" "$TMP_ROOT/authority_consumer_positive.json" "$TMP_ROOT/activate_cwd_positive.json" <<'PY'
 import json,sys
 semantic=json.load(open(sys.argv[1]))
 cli=json.load(open(sys.argv[2]))
 stream=json.load(open(sys.argv[3]))
 boundary=json.load(open(sys.argv[4]))
-compiled_brief=json.load(open(sys.argv[5]))
-strict_actor=json.load(open(sys.argv[6]))
-authority=json.load(open(sys.argv[7]))
-activate_cwd=json.load(open(sys.argv[8]))
+legacy_boundary=json.load(open(sys.argv[5]))
+compiled_brief=json.load(open(sys.argv[6]))
+strict_actor=json.load(open(sys.argv[7]))
+authority=json.load(open(sys.argv[8]))
+activate_cwd=json.load(open(sys.argv[9]))
 assert semantic.get("semantic_term_registry_status") == "PASS_REQUIRED", semantic
 assert cli.get("cli_catalog_default_semantics_status") == "PASS_REQUIRED", cli
 assert stream.get("stream_scope_semantic_integrity_status") == "SKIPPED_NOT_REQUIRED", stream
 assert boundary.get("runtime_file_boundary_governance_status") == "PASS_REQUIRED", boundary
+assert legacy_boundary.get("compatibility_legacy_boundary_status") == "PASS_REQUIRED", legacy_boundary
 assert compiled_brief.get("compiled_brief_projection_boundary_status") == "PASS_REQUIRED", compiled_brief
 assert compiled_brief.get("top_hard_guard_status") == "PASS_REQUIRED", compiled_brief
 assert strict_actor.get("strict_actor_entry_semantics_status") == "PASS_REQUIRED", strict_actor
 assert authority.get("response_authority_consumer_semantics_status") == "PASS_REQUIRED", authority
 assert activate_cwd.get("activate_cwd_invariance_status") == "PASS_REQUIRED", activate_cwd
 print("[PASS] positive semantic clarity lane")
+PY
+
+echo "[info] semantic clarity probes: compatibility legacy boundary negative lane"
+cat > "$TMP_ROOT/compatibility_legacy_boundary_negative.md" <<'EOF'
+legacy_canonical_compatibility_path
+EOF
+set +e
+python3 scripts/validate_compatibility_legacy_boundary.py \
+  --extra-forbidden-target "$TMP_ROOT/compatibility_legacy_boundary_negative.md" \
+  --json-only > "$TMP_ROOT/compatibility_legacy_boundary_negative.json"
+rc=$?
+set -e
+if [ "$rc" -eq 0 ]; then
+  echo "[FAIL] compatibility legacy boundary validator should fail when the guarded term appears in a forbidden target"
+  exit 1
+fi
+python3 - "$TMP_ROOT/compatibility_legacy_boundary_negative.json" <<'PY'
+import json,sys
+obj=json.load(open(sys.argv[1]))
+assert obj.get("compatibility_legacy_boundary_status") == "FAIL_REQUIRED", obj
+assert any(item.get("reason") == "legacy_compatibility_term_present_in_forbidden_surface" for item in (obj.get("violations") or [])), obj
+print("[PASS] compatibility legacy boundary negative lane")
 PY
 
 echo "[info] semantic clarity probes: native chat compiled brief freeze"
@@ -598,7 +624,7 @@ cat > "$TMP_ROOT/authority-residue/.identity/session/mirror/current.json" <<'JSO
   "status": "active",
   "synced_at": "2026-03-17T00:00:00Z",
   "session_pointer_type": "mirror",
-  "canonical_session_pointer": "__CATALOG_DIR__/session/active_identity.json"
+  "compatibility_mirror_pointer_path": "__CATALOG_DIR__/session/active_identity.json"
 }
 JSON
 python3 - "$TMP_ROOT/authority-residue/.identity/catalog.local.yaml" <<'PY'

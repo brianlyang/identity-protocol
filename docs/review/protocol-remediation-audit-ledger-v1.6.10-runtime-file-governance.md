@@ -44,6 +44,7 @@ Current-pointer continuity refs (mandatory):
 2. `scripts/validate_semantic_term_registry.py`
 3. `scripts/validate_stream_scope_semantic_integrity.py`
 4. `scripts/validate_required_gate_surface_drift.py`
+5. `scripts/validate_compatibility_legacy_boundary.py`
 
 ### 2.3 CI and replay wiring
 
@@ -257,6 +258,7 @@ Interpretation contract:
    - semantic changes land in docs/template/script sources first,
    - then `scripts/compile_identity_runtime.py` regenerates the brief,
    - direct manual semantic editing of `identity/runtime/IDENTITY_COMPILED.md` is non-compliant.
+5. The legacy compatibility-path term is now guarded from current-turn authority resolution, strict user-visible native-chat lanes, and active machine-gate defaults by `scripts/validate_compatibility_legacy_boundary.py`.
 ## 2026-03-20 Closure Addendum - temp-path and compatibility-pointer terminology
 
 - `ISSUE-006` review verdict: `PASS_REQUIRED` once `scripts/validate_runtime_temp_path_contract.py` proves repaired live temp/probe surfaces no longer hardcode `/tmp` or raw probe `mktemp`.

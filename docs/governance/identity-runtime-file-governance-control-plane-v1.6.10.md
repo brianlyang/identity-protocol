@@ -119,6 +119,7 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
 6. `scripts/validate_protocol_downsink_path_immutability.py`
 7. `scripts/validate_protocol_downsink_path_write_guard.py`
 8. `scripts/validate_host_transport_wiring_attestation.py`
+9. `scripts/validate_compatibility_legacy_boundary.py`
 
 ### 4.2 Required CI / replay surfaces
 
@@ -272,7 +273,9 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
    - consumer/config/docs continue to use the current path,
    - no new canonical directory family may be created for compiled briefs,
    - no canonical path migration may be bundled into ordinary feature work.
-5. `identity/runtime/IDENTITY_COMPILED.md` must follow source-first generation only:
+5. `legacy_canonical_compatibility_path` may remain in compile/replay compatibility surfaces during this freeze window, but it must not re-enter current-turn authority resolution, strict user-visible native-chat lanes, or active machine-gate defaults.
+6. `scripts/validate_compatibility_legacy_boundary.py` is the machine boundary guard for that rule.
+7. `identity/runtime/IDENTITY_COMPILED.md` must follow source-first generation only:
    - semantic/content changes land in governance/template/script sources first,
    - then `scripts/compile_identity_runtime.py` regenerates the compiled brief,
    - direct manual semantic editing of the compiled brief is forbidden.

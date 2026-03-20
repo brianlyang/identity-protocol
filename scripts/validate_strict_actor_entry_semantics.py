@@ -91,10 +91,18 @@ STRICT_SHELL_SESSION_PRIMARY_RESOLVER_TOKENS = (
     "protocol_shell_entry_resolve_session_primary_identity",
     "resolve_runtime_authoritative_identity.py",
 )
-STRICT_SHELL_CODEX_TUPLE_HANDOFF_TOKENS = (
-    'env["CODEX_ACTOR_ID"] = actor_id',
-    'env["CODEX_SESSION_ID"] = session_id',
-    'env["IDENTITY_SESSION_ID"] = session_id',
+STRICT_SHELL_CODEX_TUPLE_HANDOFF_TOKEN_GROUPS: tuple[tuple[str, ...], ...] = (
+    (
+        'env["CODEX_ACTOR_ID"] = actor_id',
+        'env["CODEX_SESSION_ID"] = session_id',
+        'env["IDENTITY_SESSION_ID"] = session_id',
+    ),
+    (
+        "CODEX_ACTOR_ID=",
+        "CODEX_SESSION_ID=",
+        "IDENTITY_SESSION_ID=",
+        '"codex"',
+    ),
 )
 STRICT_SHELL_ACTOR_LITERAL_RE = re.compile(r"(assistant:codex|CODEX_ACTOR_ID:-assistant:codex)")
 STRICT_SHELL_PROJECT_CATALOG_LITERAL_RE = re.compile(
@@ -221,6 +229,13 @@ def _first_regex_line(lines: list[str], pattern: re.Pattern[str]) -> int:
     return 0
 
 
+def _missing_codex_tuple_handoff_tokens(text: str) -> list[str]:
+    for token_group in STRICT_SHELL_CODEX_TUPLE_HANDOFF_TOKEN_GROUPS:
+        if all(token in text for token in token_group):
+            return []
+    return list(STRICT_SHELL_CODEX_TUPLE_HANDOFF_TOKEN_GROUPS[0])
+
+
 def _scan_shell_strict_entry_surfaces(repo_root: Path) -> tuple[list[str], dict[str, list[str]], list[dict[str, Any]]]:
     discovered: list[str] = []
     exemptions: dict[str, list[str]] = {}
@@ -335,9 +350,7 @@ def _scan_shell_strict_entry_surfaces(repo_root: Path) -> tuple[list[str], dict[
                 )
 
         if rule.get("require_codex_tuple_handoff", False):
-            missing_tokens = [
-                token for token in STRICT_SHELL_CODEX_TUPLE_HANDOFF_TOKENS if token not in text
-            ]
+            missing_tokens = _missing_codex_tuple_handoff_tokens(text)
             if missing_tokens:
                 violations.append(
                     {
