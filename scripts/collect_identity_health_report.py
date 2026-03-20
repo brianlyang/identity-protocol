@@ -8,6 +8,7 @@ import re
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
+from runtime_temp_path_common import runtime_temp_root
 from typing import Any
 
 from actor_session_common import (
@@ -15,7 +16,11 @@ from actor_session_common import (
     resolve_protocol_actor_id,
     resolve_required_protocol_actor_id,
 )
-from resolve_identity_context import default_local_catalog_path
+from resolve_identity_context import (
+    default_local_catalog_path,
+    resolve_local_catalog_path,
+    resolve_repo_catalog_path,
+)
 
 PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
 
@@ -432,6 +437,7 @@ def _parse_json_payload(raw: str) -> dict[str, Any] | None:
 
 
 def main() -> int:
+    script_ref = Path(__file__).resolve()
     ap = argparse.ArgumentParser(description="Collect identity health report with actionable recommendations.")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--catalog", default="")
@@ -445,21 +451,17 @@ def main() -> int:
     ap.add_argument("--execution-report", default="")
     ap.add_argument("--actor-id", default="")
     ap.add_argument("--session-id", default="", help="optional actor session selector (run:<id>) for strict actor-bound checks")
-    ap.add_argument("--out-dir", default="/tmp/identity-health-reports")
+    ap.add_argument("--out-dir", default=str(runtime_temp_root() / "identity-health-reports"))
     ap.add_argument("--enforce-pass", action="store_true", help="return non-zero if any check fails")
     args = ap.parse_args()
 
     catalog = (
         args.catalog.strip()
         or str(os.environ.get("IDENTITY_CATALOG", "")).strip()
-        or str(default_local_catalog_path())
+        or str(default_local_catalog_path(start=script_ref))
     )
-    catalog_path = Path(catalog).expanduser().resolve()
-    repo_catalog_arg = Path(args.repo_catalog).expanduser()
-    if repo_catalog_arg.is_absolute():
-        repo_catalog_path = repo_catalog_arg.resolve()
-    else:
-        repo_catalog_path = (PROTOCOL_ROOT / repo_catalog_arg).resolve()
+    catalog_path = resolve_local_catalog_path(catalog, start=script_ref)
+    repo_catalog_path = resolve_repo_catalog_path(args.repo_catalog, start=script_ref)
     execution_report = str(args.execution_report or "").strip()
     strict_session_bound = str(args.operation or "").strip().lower() in STRICT_SESSION_BOUND_OPERATIONS
     actor_id_raw = str(args.actor_id or "").strip()

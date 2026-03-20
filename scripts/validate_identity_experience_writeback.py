@@ -4,11 +4,17 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from runtime_temp_path_common import runtime_temp_root
 from typing import Any
 
 import yaml
 
-from resolve_identity_context import default_local_catalog_path, merged_catalog
+from resolve_identity_context import (
+    default_local_catalog_path,
+    merged_catalog,
+    resolve_local_catalog_path,
+    resolve_repo_catalog_path,
+)
 from tool_vendor_governance_common import latest_identity_upgrade_report
 
 
@@ -59,7 +65,7 @@ def _resolve_report(identity_id: str, override: str, pack_root: Path) -> Path:
     fallback_candidates: list[Path] = []
     for root in (
         Path("identity/runtime/reports"),
-        Path("/tmp/identity-upgrade-reports"),
+        runtime_temp_root() / "identity-upgrade-reports",
     ):
         if root.exists():
             fallback_candidates.extend(
@@ -117,18 +123,23 @@ def _load_rulebook_rows(path: Path) -> list[dict[str, Any]]:
 
 
 def main() -> int:
+    script_ref = Path(__file__).resolve()
     ap = argparse.ArgumentParser(description="Validate experience writeback after identity upgrade execution.")
     ap.add_argument("--catalog", default="", help="legacy alias; when set, used as repo catalog path")
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
-    ap.add_argument("--local-catalog", default=str(default_local_catalog_path()))
+    ap.add_argument("--local-catalog", default=str(default_local_catalog_path(start=script_ref)))
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--execution-report", default="")
     ap.add_argument("--report", default="", help="alias of --execution-report")
     args = ap.parse_args()
 
     try:
-        repo_catalog = Path(args.catalog).expanduser().resolve() if args.catalog else Path(args.repo_catalog).expanduser().resolve()
-        local_catalog = Path(args.local_catalog).expanduser().resolve()
+        repo_catalog = (
+            resolve_repo_catalog_path(args.catalog, start=script_ref)
+            if args.catalog
+            else resolve_repo_catalog_path(args.repo_catalog, start=script_ref)
+        )
+        local_catalog = resolve_local_catalog_path(args.local_catalog, start=script_ref)
         pack = _resolve_pack(args.identity_id, repo_catalog, local_catalog)
         override = args.execution_report or args.report
         report_path = _resolve_report(args.identity_id, override, pack)

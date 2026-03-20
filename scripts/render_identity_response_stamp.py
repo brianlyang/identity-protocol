@@ -17,7 +17,7 @@ from native_chat_headstamp_common import (
     render_native_chat_success_identity_line,
     render_native_chat_success_machine_line,
 )
-from resolve_identity_context import resolve_identity
+from resolve_identity_context import resolve_identity, resolve_repo_catalog_path
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
@@ -121,21 +121,11 @@ def _resolve_failure_scope_source(
 
 
 def _active_pointer_diag(catalog_path: Path) -> tuple[str, str, str]:
-    pointer_path = (catalog_path.parent / "session" / "active_identity.json").resolve()
-    if not pointer_path.exists():
-        return "", "", ""
-    try:
-        pointer_doc = json.loads(pointer_path.read_text(encoding="utf-8"))
-    except Exception:
-        return "", "", str(pointer_path)
-    if not isinstance(pointer_doc, dict):
-        return "", "", str(pointer_path)
-    return (
-        str(pointer_doc.get("compatibility_projection_identity_id", "")).strip(),
-        str(pointer_doc.get("projection_scope", "")).strip()
-        or str(pointer_doc.get("projection_role", "")).strip(),
-        str(pointer_path),
-    )
+    # Native-chat failure rendering must not read compatibility pointers directly.
+    # Compatibility diagnostics stay available to replay/status tooling, but strict
+    # authority consumers fail closed without consulting pointer files.
+    _ = catalog_path
+    return "", "", ""
 
 
 def _build_native_chat_payload(
@@ -249,6 +239,7 @@ def _build_native_chat_failure_payload(
     }
 
 def main() -> int:
+    script_ref = Path(__file__).resolve()
     ap = argparse.ArgumentParser(description="Render dynamic identity response stamp (external/internal).")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--catalog", required=True)
@@ -308,7 +299,7 @@ def main() -> int:
     args = ap.parse_args()
 
     catalog_path = Path(args.catalog).expanduser().resolve()
-    repo_catalog_path = Path(args.repo_catalog).expanduser().resolve()
+    repo_catalog_path = resolve_repo_catalog_path(args.repo_catalog, start=script_ref)
     if not catalog_path.exists():
         print(f"[FAIL] catalog not found: {catalog_path}")
         return 2

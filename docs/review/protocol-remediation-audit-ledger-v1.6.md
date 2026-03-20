@@ -1801,15 +1801,15 @@ Implementation delta snapshot (2026-03-07):
 
 Round-6 recurrence replay (`HEAD=6a2ef0b`, 2026-03-07, protocol-layer):
 
-1. replay commands executed:
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids <IDENTITY_A>,<IDENTITY_B> --project-catalog <PROJECT_CATALOG> --global-catalog /tmp/nonexistent-catalog.yaml --actor-id assistant:codex --out /tmp/hotfix_headstamp_r6_fullscan.json`
-   - `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id <IDENTITY_A> --catalog <PROJECT_CATALOG> --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
-   - `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id <IDENTITY_B> --catalog <PROJECT_CATALOG> --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
+1. replay commands executed (workspace-root invariant):
+   - `python3 identity-protocol-local/scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids <IDENTITY_A>,<IDENTITY_B> --project-catalog <PROJECT_CATALOG> --global-catalog /tmp/nonexistent-catalog.yaml --actor-id assistant:codex --out /tmp/hotfix_headstamp_r6_fullscan.json`
+   - `python3 identity-protocol-local/scripts/validate_headstamp_recurrence_closure.py --identity-id <IDENTITY_A> --catalog <PROJECT_CATALOG> --repo-catalog identity-protocol-local/identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
+   - `python3 identity-protocol-local/scripts/validate_headstamp_recurrence_closure.py --identity-id <IDENTITY_B> --catalog <PROJECT_CATALOG> --repo-catalog identity-protocol-local/identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
 2. observed behavior:
    - one strict-path identity returns `FAIL_REQUIRED` (`IP-ASB-STAMP-SCAN-004`) with dynamic positive case failing `IP-ASB-STAMP-SESSION-005`;
    - another identity under the same suite returns `PASS_REQUIRED`.
 3. cross-check command:
-   - `python3 scripts/validate_actor_session_binding.py --catalog <PROJECT_CATALOG> --identity-id <IDENTITY_A|IDENTITY_B> --actor-id assistant:codex --operation scan --json-only`
+   - `python3 identity-protocol-local/scripts/validate_actor_session_binding.py --catalog <PROJECT_CATALOG> --identity-id <IDENTITY_A|IDENTITY_B> --actor-id assistant:codex --operation scan --json-only`
    - both sampled identities return `actor_binding_status=PASS_REQUIRED` under `binding_key_mode=actor_id+session_id`.
 4. audit conclusion:
    - recurrence root cause is protocol-layer resolver divergence, not allowed hard-switch behavior:
@@ -1826,10 +1826,10 @@ Round-6 recurrence replay (`HEAD=6a2ef0b`, 2026-03-07, protocol-layer):
 
 Round-7 resolver convergence replay (`HEAD=d5f75d7+`, 2026-03-07):
 
-1. replay commands:
-   - `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
-   - `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
-   - `python3 scripts/validate_actor_session_binding.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id <base-repo-architect|base-repo-audit-expert-v3> --actor-id assistant:codex --operation scan --json-only`
+1. replay commands (workspace-root invariant):
+   - `python3 identity-protocol-local/scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-architect --catalog .identity/catalog.local.yaml --repo-catalog identity-protocol-local/identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
+   - `python3 identity-protocol-local/scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-audit-expert-v3 --catalog .identity/catalog.local.yaml --repo-catalog identity-protocol-local/identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
+   - `python3 identity-protocol-local/scripts/validate_actor_session_binding.py --catalog .identity/catalog.local.yaml --identity-id <base-repo-architect|base-repo-audit-expert-v3> --actor-id assistant:codex --operation scan --json-only`
 2. convergence result:
    - both sampled identities now return `headstamp_recurrence_closure_status=PASS_REQUIRED`;
    - mismatch-negative case remains fail-close with `error_code=IP-ASB-STAMP-SESSION-005`.
@@ -1844,7 +1844,7 @@ Round-7 resolver convergence replay (`HEAD=d5f75d7+`, 2026-03-07):
 Round-8 four-track convergence residual (`HEAD=f53f36a`, 2026-03-07):
 
 1. replay probe:
-   - `python3 scripts/validate_send_time_reply_gate.py --identity-id <ID> --catalog <PROJECT_CATALOG> --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
+   - `python3 identity-protocol-local/scripts/validate_send_time_reply_gate.py --identity-id <ID> --catalog <PROJECT_CATALOG> --repo-catalog identity-protocol-local/identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
 2. observed residual:
    - `send_time_gate_status=SKIPPED_NOT_REQUIRED`, `required_contract=false`, `stale_reasons=[\"contract_not_required\"]`.
 3. audit interpretation:

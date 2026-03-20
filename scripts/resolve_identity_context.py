@@ -248,6 +248,81 @@ def default_local_instances_root(identity_home: Path | None = None, *, start: Pa
     return home.resolve()
 
 
+def default_workspace_root(start: Path | None = None) -> Path:
+    protocol_home = default_protocol_home(start=start)
+    if protocol_home.name == "identity-protocol-local":
+        return protocol_home.parent.resolve()
+    return protocol_home.resolve()
+
+
+def default_repo_catalog_path(*, start: Path | None = None) -> Path:
+    return (default_protocol_home(start=start) / "identity" / "catalog" / "identities.yaml").resolve()
+
+
+def _dedupe_path_candidates(candidates: list[Path]) -> list[Path]:
+    out: list[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        key = str(candidate.resolve())
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(candidate.resolve())
+    return out
+
+
+def resolve_repo_catalog_path(raw_repo_catalog: str | Path | None, *, start: Path | None = None) -> Path:
+    token = str(raw_repo_catalog or "").strip()
+    if not token:
+        return default_repo_catalog_path(start=start)
+    raw_path = Path(token).expanduser()
+    if raw_path.is_absolute():
+        return raw_path.resolve()
+
+    protocol_root = default_protocol_home(start=start)
+    workspace_root = default_workspace_root(start=start)
+    candidates: list[Path] = []
+    if raw_path.parts and raw_path.parts[0] == protocol_root.name:
+        candidates.append((workspace_root / raw_path).resolve())
+    else:
+        candidates.append((protocol_root / raw_path).resolve())
+        candidates.append((workspace_root / raw_path).resolve())
+    candidates = _dedupe_path_candidates(candidates)
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
+
+
+def resolve_local_catalog_path(raw_local_catalog: str | Path | None, *, start: Path | None = None) -> Path:
+    token = str(raw_local_catalog or "").strip()
+    if not token:
+        return default_local_catalog_path(start=start)
+    raw_path = Path(token).expanduser()
+    if raw_path.is_absolute():
+        return raw_path.resolve()
+
+    workspace_root = default_workspace_root(start=start)
+    protocol_root = default_protocol_home(start=start)
+    candidates = _dedupe_path_candidates(
+        [
+            (workspace_root / raw_path).resolve(),
+            (protocol_root / raw_path).resolve(),
+        ]
+    )
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
+
+
+def resolve_protocol_root_from_repo_catalog(repo_catalog_path: Path | str, *, start: Path | None = None) -> Path:
+    resolved = Path(repo_catalog_path).expanduser().resolve()
+    if resolved.parent.name == "catalog" and resolved.parent.parent.name == "identity":
+        return resolved.parent.parent.parent.resolve()
+    return default_protocol_home(start=start)
+
+
 def default_protocol_home(start: Path | None = None) -> Path:
     explicit = os.environ.get("IDENTITY_PROTOCOL_HOME", "").strip()
     runtime_defaults = _load_runtime_env_defaults()

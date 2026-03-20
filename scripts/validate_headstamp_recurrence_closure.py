@@ -21,6 +21,7 @@ from headstamp_error_family_common import (
     inject_legacy_error_fields,
 )
 from identity_runtime_authority_common import ERR_IDENTITY_AUTHORITY_VIOLATION
+from resolve_identity_context import resolve_repo_catalog_path
 from runtime_temp_path_common import runtime_temp_file
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -453,6 +454,7 @@ def _actor_mismatch_probe(
 
 
 def main() -> int:
+    script_ref = Path(__file__).resolve()
     ap = argparse.ArgumentParser(
         description=(
             "Hard-close headstamp recurrence for v1.5.x by combining static outlet wiring checks "
@@ -473,7 +475,7 @@ def main() -> int:
     args = ap.parse_args()
 
     catalog_path = Path(args.catalog).expanduser().resolve()
-    repo_catalog_path = Path(args.repo_catalog).expanduser().resolve()
+    repo_catalog_path = resolve_repo_catalog_path(args.repo_catalog, start=script_ref)
     operation = str(args.operation or "").strip().lower()
     actor_id = str(args.actor_id or "").strip()
     session_id_input = str(args.session_id or "").strip()

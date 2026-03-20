@@ -108,6 +108,30 @@ V166_FORBIDDEN_EPHEMERAL_PATH_MARKERS = (
     "/tmp/",
     "/private/var/folders/",
 )
+DOC_PATH_VALUE_FLAGS = {
+    "--catalog",
+    "--local-catalog",
+    "--repo-catalog",
+}
+DOC_SEMANTIC_SKIP_FLAGS = {
+    "--out",
+    "--reply-file",
+    "--receipt",
+    "--report",
+    "--execution-report",
+    "--out-dir",
+}
+DOC_SEMANTIC_SAFE_SCRIPTS = {
+    "scripts/validate_fixture_runtime_boundary.py",
+    "scripts/validate_protocol_entry_candidate_bridge.py",
+    "scripts/render_identity_response_stamp.py",
+    "scripts/validate_headstamp_recurrence_closure.py",
+}
+DOC_SEMANTIC_PATH_ERROR_MARKERS = (
+    "repo catalog not found:",
+    "catalog not found:",
+    "missing catalog:",
+)
 
 
 def _resolve_repo_root(raw_repo_root: str) -> Path:
@@ -167,6 +191,15 @@ def _docs_from_index(repo_root: Path) -> List[str]:
             seen.add(d)
             out.append(d)
     return out
+
+
+def _canonical_script_rel(script_rel: str) -> str:
+    normalized = _norm_path(script_rel)
+    if normalized.startswith(f"{_resolve_repo_root('').name}/"):
+        return normalized.split("/", 1)[1]
+    if normalized.startswith("identity-protocol-local/"):
+        return normalized.split("/", 1)[1]
+    return normalized
 
 
 def _norm_path(value: str) -> str:
@@ -557,22 +590,30 @@ def parse_script_command(cmd: str) -> Tuple[str | None, List[str], bool, List[st
     except Exception:
         return None, [], False, []
 
-    # ignore placeholders or non-command snippets
-    if not tokens or "..." in cmd or "<" in cmd:
-        # keep <id>/<report.json> commands (they are still useful) but skip
-        # if parsing would be too ambiguous.
-        pass
+    # Ellipsis placeholders are documentation shorthand, not executable commands.
+    if not tokens or "..." in cmd:
+        return None, [], False, []
 
     script_path = None
     is_python = False
     for i, t in enumerate(tokens):
-        if t.startswith("scripts/") and (t.endswith(".py") or t.endswith(".sh")):
-            script_path = t
-            # heuristic: python command usually has interpreter before script
-            is_python = t.endswith(".py") and any(
+        normalized = _norm_path(t)
+        if (
+            "/scripts/" in normalized or normalized.startswith("scripts/")
+        ) and (normalized.endswith(".py") or normalized.endswith(".sh")):
+            python_invoked = normalized.endswith(".py") and any(
                 interp in tokens[: i + 1]
                 for interp in ("python", "python3", sys.executable)
             )
+            shell_invoked = normalized.endswith(".sh") and (
+                i == 0 or any(interp in tokens[: i + 1] for interp in ("bash", "sh", "zsh"))
+            )
+            if normalized.endswith(".py") and not python_invoked:
+                continue
+            if normalized.endswith(".sh") and not shell_invoked:
+                continue
+            script_path = t
+            is_python = python_invoked
             break
 
     flags = [t for t in tokens if t.startswith("--")]
@@ -622,15 +663,103 @@ def load_help_flags(script_path: Path, subcommands: List[str], cwd_root: Path) -
 
 def resolve_script_target(repo_root: Path, script_rel: str) -> tuple[Path, Path]:
     workspace_root = _resolve_workspace_root(repo_root)
+    normalized = _norm_path(script_rel)
+    if normalized.startswith(f"{repo_root.name}/"):
+        candidate = (workspace_root / normalized).resolve()
+        return candidate, workspace_root
+    if normalized.startswith("identity-protocol-local/"):
+        candidate = (workspace_root / normalized).resolve()
+        return candidate, workspace_root
     candidates = [
-        ((repo_root / script_rel).resolve(), repo_root),
+        ((repo_root / normalized).resolve(), repo_root),
     ]
     if workspace_root != repo_root:
-        candidates.append(((workspace_root / script_rel).resolve(), workspace_root))
+        candidates.append(((workspace_root / normalized).resolve(), workspace_root))
     for candidate_path, candidate_cwd in candidates:
         if candidate_path.exists():
             return candidate_path, candidate_cwd
     return candidates[0]
+
+
+def _rewrite_path_value_for_workspace(raw_value: str, *, repo_root: Path, workspace_root: Path, script_rel: str) -> str:
+    token = str(raw_value or "").strip()
+    if not token or token.startswith("<") or "..." in token:
+        return token
+    candidate = Path(token).expanduser()
+    if candidate.is_absolute():
+        return str(candidate.resolve())
+    normalized_script = _canonical_script_rel(script_rel)
+    base_root = repo_root if _norm_path(script_rel) == normalized_script else workspace_root
+    absolute = (base_root / candidate).resolve()
+    try:
+        return absolute.relative_to(workspace_root).as_posix()
+    except Exception:
+        return str(absolute)
+
+
+def _build_workspace_semantic_probe_tokens(
+    tokens: List[str],
+    *,
+    script_rel: str,
+    repo_root: Path,
+    workspace_root: Path,
+) -> List[str]:
+    rewritten = list(tokens)
+    normalized_script = _canonical_script_rel(script_rel)
+    script_token = f"{repo_root.name}/{normalized_script}"
+    try:
+        script_idx = rewritten.index(script_rel)
+    except ValueError:
+        return rewritten
+    rewritten[script_idx] = script_token
+    idx = 0
+    while idx < len(rewritten) - 1:
+        flag = rewritten[idx]
+        if flag not in DOC_PATH_VALUE_FLAGS:
+            idx += 1
+            continue
+        rewritten[idx + 1] = _rewrite_path_value_for_workspace(
+            rewritten[idx + 1],
+            repo_root=repo_root,
+            workspace_root=workspace_root,
+            script_rel=script_rel,
+        )
+        idx += 2
+    return rewritten
+
+
+def _run_workspace_semantic_probe(
+    *,
+    repo_root: Path,
+    script_rel: str,
+    cmd_snippet: str,
+) -> tuple[bool, str]:
+    normalized_script = _canonical_script_rel(script_rel)
+    if normalized_script not in DOC_SEMANTIC_SAFE_SCRIPTS:
+        return True, ""
+    if any(marker in cmd_snippet for marker in ("<", "...", ">", "|")):
+        return True, ""
+    try:
+        tokens = shlex.split(cmd_snippet)
+    except Exception as exc:
+        return False, f"semantic_probe_parse_failed:{exc}"
+    if any(flag in tokens for flag in DOC_SEMANTIC_SKIP_FLAGS):
+        return True, ""
+    workspace_root = _resolve_workspace_root(repo_root)
+    probe_tokens = _build_workspace_semantic_probe_tokens(
+        tokens,
+        script_rel=script_rel,
+        repo_root=repo_root,
+        workspace_root=workspace_root,
+    )
+    try:
+        proc = subprocess.run(probe_tokens, capture_output=True, text=True, cwd=workspace_root, timeout=20)
+    except subprocess.TimeoutExpired:
+        return True, ""
+    combined = f"{proc.stdout}\n{proc.stderr}".lower()
+    if any(marker in combined for marker in DOC_SEMANTIC_PATH_ERROR_MARKERS):
+        return False, f"workspace_launch_context_path_error:rc={proc.returncode}"
+    return True, ""
 
 
 def main() -> int:
@@ -826,6 +955,15 @@ def main() -> int:
                             failures.append(
                                 f"[FLAG_MISMATCH] {doc}: `{cmd_snippet}` -> `{flag}` not in {script_rel} --help"
                             )
+                    semantic_ok, semantic_reason = _run_workspace_semantic_probe(
+                        repo_root=repo_root,
+                        script_rel=script_rel,
+                        cmd_snippet=cmd_snippet,
+                    )
+                    if not semantic_ok:
+                        failures.append(
+                            f"[WORKSPACE_LAUNCH_CONTEXT_FAIL] {doc}: `{cmd_snippet}` -> {semantic_reason}"
+                        )
 
     if playbook_path is not None and playbook_required_tokens:
         playbook_text = playbook_path.read_text(encoding="utf-8")

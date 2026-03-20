@@ -3237,12 +3237,12 @@ Mandatory protocol closure target (UCG wave-4, control-plane only):
 4. CI must enforce same-run tuple full equality between `validate` and `three-plane` receipts.
 5. parity contract must include full HUD tuple and require non-empty `send_time_gate_status` for strict operations.
 
-Acceptance commands (round-19 auditor replay):
+Acceptance commands (round-19 auditor replay, workspace-root invariant):
 
-1. `python3 scripts/resolve_identity_context.py resolve --identity-id base-repo-architect --repo-catalog identity/catalog/identities.yaml --local-catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml`
-2. `python3 scripts/render_identity_response_stamp.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-id base-repo-architect --view external --disclosure-level standard --work-layer protocol --source-layer project --json-only`
-3. `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --scope USER --actor-id assistant:codex --baseline-policy warn --expected-work-layer protocol --expected-source-layer project`
-4. `python3 scripts/validate_required_gate_tuple_parity.py --receipt /tmp/tuple_parity_gap_a_r2.json --receipt /tmp/tuple_parity_gap_b_r2.json --min-receipts 2 --require-distinct-operations --json-only`
+1. `python3 identity-protocol-local/scripts/resolve_identity_context.py resolve --identity-id base-repo-architect --repo-catalog identity-protocol-local/identity/catalog/identities.yaml --local-catalog .identity/catalog.local.yaml`
+2. `python3 identity-protocol-local/scripts/render_identity_response_stamp.py --catalog .identity/catalog.local.yaml --repo-catalog identity-protocol-local/identity/catalog/identities.yaml --identity-id base-repo-architect --view external --disclosure-level standard --work-layer protocol --source-layer project --json-only`
+3. `python3 identity-protocol-local/scripts/identity_creator.py validate --identity-id base-repo-architect --catalog .identity/catalog.local.yaml --scope USER --actor-id assistant:codex --baseline-policy warn --expected-work-layer protocol --expected-source-layer project`
+4. `python3 identity-protocol-local/scripts/validate_required_gate_tuple_parity.py --receipt /tmp/tuple_parity_gap_a_r2.json --receipt /tmp/tuple_parity_gap_b_r2.json --min-receipts 2 --require-distinct-operations --json-only`
 
 State impact:
 

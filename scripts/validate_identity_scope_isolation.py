@@ -12,9 +12,10 @@ from identity_scope_isolation_common import (
     resolve_project_catalog_from_repo,
 )
 from resolve_identity_context import (
-    default_identity_home,
     default_local_catalog_path,
+    resolve_local_catalog_path,
     resolve_identity,
+    resolve_repo_catalog_path,
 )
 
 
@@ -37,6 +38,7 @@ def _is_active_row(row: dict) -> bool:
     return str((row or {}).get("status", "")).strip().lower() in {"active", "enabled", "on"}
 
 def main() -> int:
+    script_ref = Path(__file__).resolve()
     ap = argparse.ArgumentParser(description="Validate scope-isolation for an identity.")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--catalog", default="")
@@ -66,11 +68,11 @@ def main() -> int:
         return 1
 
     local_catalog = (
-        Path(args.catalog).expanduser().resolve()
+        resolve_local_catalog_path(args.catalog, start=script_ref)
         if args.catalog
-        else default_local_catalog_path(default_identity_home()).resolve()
+        else default_local_catalog_path(start=script_ref).resolve()
     )
-    repo_catalog = Path(args.repo_catalog).expanduser().resolve()
+    repo_catalog = resolve_repo_catalog_path(args.repo_catalog, start=script_ref)
 
     resolve_errors: list[str] = []
     resolve_catalog_candidates: list[Path] = [local_catalog]

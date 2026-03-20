@@ -4,16 +4,25 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import subprocess
 from pathlib import Path
-from repo_root_resolution_common import resolve_repo_root
+from repo_root_resolution_common import resolve_repo_root, resolve_workspace_root
 from typing import Any
+
+import yaml
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 
 ERR_CLI_CATALOG_DEFAULT = "IP-CLICAT-001"
 REPO_FIXTURE_CATALOG = "identity/catalog/identities.yaml"
 GLOBAL_HOME_CATALOG_TOKEN = ".codex/.identity/catalog.local.yaml"
+PATH_ERROR_MARKERS = (
+    "repo catalog not found:",
+    "catalog not found:",
+    "missing catalog:",
+)
 
 
 def _const_str(node: ast.AST | None) -> str:
@@ -124,20 +133,119 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
+def _load_yaml(path: Path) -> dict[str, Any]:
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        raise ValueError(f"yaml root must be object: {path}")
+    return data
+
+
+def _pick_identity_id(local_catalog_path: Path) -> str:
+    catalog = _load_yaml(local_catalog_path)
+    identities = [row for row in (catalog.get("identities") or []) if isinstance(row, dict)]
+    default_identity = str(catalog.get("default_identity", "")).strip()
+    if default_identity:
+        return default_identity
+    for row in identities:
+        if str(row.get("status", "")).strip().lower() == "active":
+            identity_id = str(row.get("id", "")).strip()
+            if identity_id:
+                return identity_id
+    for row in identities:
+        identity_id = str(row.get("id", "")).strip()
+        if identity_id:
+            return identity_id
+    raise ValueError(f"no identity rows found in local catalog: {local_catalog_path}")
+
+
+def _trim(text: str, *, limit: int = 1200) -> str:
+    raw = str(text or "").strip()
+    return raw[-limit:]
+
+
+def _run_command(command: list[str], *, cwd: Path) -> dict[str, Any]:
+    proc = subprocess.run(command, cwd=str(cwd), capture_output=True, text=True, check=False)
+    return {
+        "cwd": str(cwd),
+        "command": command,
+        "rc": proc.returncode,
+        "stdout": str(proc.stdout or ""),
+        "stderr": str(proc.stderr or ""),
+    }
+
+
+def _parse_json_payload(raw: str) -> dict[str, Any] | None:
+    text = str(raw or "").strip()
+    if not text:
+        return None
+    try:
+        data = json.loads(text)
+        return data if isinstance(data, dict) else None
+    except Exception:
+        pass
+    start = text.find("{")
+    end = text.rfind("}")
+    if start < 0 or end <= start:
+        return None
+    try:
+        data = json.loads(text[start : end + 1])
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _has_path_error(result: dict[str, Any]) -> bool:
+    combined = f"{result.get('stdout', '')}\n{result.get('stderr', '')}".lower()
+    return any(marker in combined for marker in PATH_ERROR_MARKERS)
+
+
+def _evaluate_path_probe(workspace_result: dict[str, Any], protocol_result: dict[str, Any]) -> tuple[bool, list[str]]:
+    stale_reasons: list[str] = []
+    if _has_path_error(workspace_result):
+        stale_reasons.append("workspace_launch_context_path_error")
+    if _has_path_error(protocol_result):
+        stale_reasons.append("protocol_launch_context_path_error")
+    return not stale_reasons, stale_reasons
+
+
+def _evaluate_identity_status_probe(
+    workspace_result: dict[str, Any],
+    protocol_result: dict[str, Any],
+    *,
+    identity_id: str,
+    expected_pack_path: Path,
+) -> tuple[bool, list[str]]:
+    stale_reasons: list[str] = []
+    for label, result in (("workspace", workspace_result), ("protocol", protocol_result)):
+        payload = _parse_json_payload(str(result.get("stdout", "")))
+        if not payload:
+            stale_reasons.append(f"{label}_identity_status_non_json")
+            continue
+        if str(payload.get("identity_id", "")).strip() != identity_id:
+            stale_reasons.append(f"{label}_identity_status_identity_mismatch")
+        if str(payload.get("pack_path", "")).strip() != str(expected_pack_path):
+            stale_reasons.append(f"{label}_identity_status_pack_path_mismatch")
+    return not stale_reasons, stale_reasons
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate CLI catalog default semantics (no silent repo-fixture fallback).")
     ap.add_argument("--repo-root", default="")
     ap.add_argument("--scripts-root", default="scripts")
+    ap.add_argument("--workspace-root", default="")
+    ap.add_argument("--identity-id", default="")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
     repo_root = resolve_repo_root(args.repo_root, start=__file__)
+    workspace_root = resolve_workspace_root(args.workspace_root, start=__file__)
     scripts_root = (repo_root / str(args.scripts_root)).resolve()
 
     payload: dict[str, Any] = {
         "cli_catalog_default_semantics_status": STATUS_FAIL_REQUIRED,
         "error_code": ERR_CLI_CATALOG_DEFAULT,
         "repo_root": str(repo_root),
+        "workspace_root": str(workspace_root),
         "scripts_root": str(scripts_root),
         "python_file_count": 0,
         "catalog_argument_count": 0,
@@ -145,6 +253,9 @@ def main() -> int:
         "runtime_catalog_repo_fixture_default_hits": [],
         "runtime_catalog_global_home_default_hits": [],
         "repo_catalog_repo_fixture_default_count": 0,
+        "launch_context_parity_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "launch_context_probe_identity_id": "",
+        "launch_context_parity_probes": [],
         "stale_reasons": [],
     }
 
@@ -230,6 +341,168 @@ def main() -> int:
     payload["runtime_catalog_global_home_default_hits"] = global_home_hits
     payload["repo_catalog_repo_fixture_default_count"] = repo_catalog_repo_fixture_default_count
 
+    local_catalog_path = (workspace_root / ".identity" / "catalog.local.yaml").resolve()
+    launch_context_stale_reasons: list[str] = []
+    if local_catalog_path.exists():
+        try:
+            identity_id = str(args.identity_id or "").strip() or _pick_identity_id(local_catalog_path)
+            payload["launch_context_probe_identity_id"] = identity_id
+            expected_pack_path = (workspace_root / ".identity" / identity_id).resolve()
+            repo_catalog_path = (repo_root / REPO_FIXTURE_CATALOG).resolve()
+            issue_021_probes = [
+                {
+                    "name": "validate_fixture_runtime_boundary",
+                    "workspace_cmd": [
+                        "python3",
+                        f"{repo_root.name}/scripts/validate_fixture_runtime_boundary.py",
+                        "--identity-id",
+                        identity_id,
+                        "--catalog",
+                        str(local_catalog_path),
+                        "--json-only",
+                    ],
+                    "protocol_cmd": [
+                        "python3",
+                        "scripts/validate_fixture_runtime_boundary.py",
+                        "--identity-id",
+                        identity_id,
+                        "--catalog",
+                        str(local_catalog_path),
+                        "--json-only",
+                    ],
+                    "evaluator": "path_probe",
+                },
+                {
+                    "name": "validate_protocol_entry_candidate_bridge",
+                    "workspace_cmd": [
+                        "python3",
+                        f"{repo_root.name}/scripts/validate_protocol_entry_candidate_bridge.py",
+                        "--catalog",
+                        str(local_catalog_path),
+                        "--identity-id",
+                        identity_id,
+                        "--json-only",
+                    ],
+                    "protocol_cmd": [
+                        "python3",
+                        "scripts/validate_protocol_entry_candidate_bridge.py",
+                        "--catalog",
+                        str(local_catalog_path),
+                        "--identity-id",
+                        identity_id,
+                        "--json-only",
+                    ],
+                    "evaluator": "path_probe",
+                },
+                {
+                    "name": "render_identity_response_stamp",
+                    "workspace_cmd": [
+                        "python3",
+                        f"{repo_root.name}/scripts/render_identity_response_stamp.py",
+                        "--identity-id",
+                        identity_id,
+                        "--catalog",
+                        str(local_catalog_path),
+                        "--actor-id",
+                        "assistant:codex",
+                        "--session-id",
+                        "test-session",
+                        "--json-only",
+                    ],
+                    "protocol_cmd": [
+                        "python3",
+                        "scripts/render_identity_response_stamp.py",
+                        "--identity-id",
+                        identity_id,
+                        "--catalog",
+                        str(local_catalog_path),
+                        "--actor-id",
+                        "assistant:codex",
+                        "--session-id",
+                        "test-session",
+                        "--json-only",
+                    ],
+                    "evaluator": "path_probe",
+                },
+                {
+                    "name": "validate_identity_local_persistence",
+                    "workspace_cmd": [
+                        "python3",
+                        f"{repo_root.name}/scripts/validate_identity_local_persistence.py",
+                        "--repo-catalog",
+                        str(repo_catalog_path),
+                        "--local-catalog",
+                        str(local_catalog_path),
+                    ],
+                    "protocol_cmd": [
+                        "python3",
+                        "scripts/validate_identity_local_persistence.py",
+                        "--repo-catalog",
+                        str(repo_catalog_path),
+                        "--local-catalog",
+                        str(local_catalog_path),
+                    ],
+                    "evaluator": "local_persistence",
+                },
+                {
+                    "name": "identity_status",
+                    "workspace_cmd": [
+                        "python3",
+                        f"{repo_root.name}/scripts/identity_status.py",
+                        "--identity-id",
+                        identity_id,
+                        "--json",
+                    ],
+                    "protocol_cmd": [
+                        "python3",
+                        "scripts/identity_status.py",
+                        "--identity-id",
+                        identity_id,
+                        "--json",
+                    ],
+                    "evaluator": "identity_status",
+                },
+            ]
+            for probe in issue_021_probes:
+                workspace_result = _run_command(probe["workspace_cmd"], cwd=workspace_root)
+                protocol_result = _run_command(probe["protocol_cmd"], cwd=repo_root)
+                if probe["evaluator"] == "path_probe":
+                    ok, reasons = _evaluate_path_probe(workspace_result, protocol_result)
+                elif probe["evaluator"] == "local_persistence":
+                    reasons = []
+                    if int(workspace_result.get("rc", 1)) != 0:
+                        reasons.append("workspace_local_persistence_failed")
+                    if int(protocol_result.get("rc", 1)) != 0:
+                        reasons.append("protocol_local_persistence_failed")
+                    ok = not reasons
+                else:
+                    ok, reasons = _evaluate_identity_status_probe(
+                        workspace_result,
+                        protocol_result,
+                        identity_id=identity_id,
+                        expected_pack_path=expected_pack_path,
+                    )
+                payload["launch_context_parity_probes"].append(
+                    {
+                        "name": probe["name"],
+                        "status": STATUS_PASS_REQUIRED if ok else STATUS_FAIL_REQUIRED,
+                        "workspace_replay": workspace_result,
+                        "protocol_replay": protocol_result,
+                        "stale_reasons": reasons,
+                    }
+                )
+                launch_context_stale_reasons.extend(f"{probe['name']}:{reason}" for reason in reasons)
+        except Exception as exc:
+            launch_context_stale_reasons.append(f"launch_context_probe_error:{exc}")
+    else:
+        launch_context_stale_reasons.append(f"workspace_local_catalog_missing:{local_catalog_path}")
+
+    payload["launch_context_parity_status"] = (
+        STATUS_FAIL_REQUIRED
+        if launch_context_stale_reasons and local_catalog_path.exists()
+        else STATUS_SKIPPED_NOT_REQUIRED if launch_context_stale_reasons else STATUS_PASS_REQUIRED
+    )
+
     if repo_fixture_hits or global_home_hits:
         payload["cli_catalog_default_semantics_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_CLI_CATALOG_DEFAULT
@@ -238,7 +511,15 @@ def main() -> int:
             stale_reasons.append("runtime_catalog_default_repo_fixture_fallback_detected")
         if global_home_hits:
             stale_reasons.append("runtime_catalog_default_global_home_fallback_detected")
+        stale_reasons.extend(launch_context_stale_reasons)
         payload["stale_reasons"] = stale_reasons
+        _emit(payload, json_only=args.json_only)
+        return 1
+
+    if launch_context_stale_reasons and local_catalog_path.exists():
+        payload["cli_catalog_default_semantics_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_CLI_CATALOG_DEFAULT
+        payload["stale_reasons"] = launch_context_stale_reasons
         _emit(payload, json_only=args.json_only)
         return 1
 

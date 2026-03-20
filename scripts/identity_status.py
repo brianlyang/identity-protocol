@@ -9,7 +9,7 @@ from typing import Any
 
 import yaml
 
-from resolve_identity_context import default_local_catalog_path
+from resolve_identity_context import default_local_catalog_path, resolve_local_catalog_path
 
 REQUIRED_PACK_FILES = [
     "IDENTITY_PROMPT.md",
@@ -49,13 +49,14 @@ def _run_check(cmd: list[str]) -> dict[str, Any]:
 
 
 def main() -> int:
+    script_ref = Path(__file__).resolve()
     ap = argparse.ArgumentParser(description="Show identity status with contract validator health")
-    ap.add_argument("--catalog", default=str(default_local_catalog_path()))
+    ap.add_argument("--catalog", default=str(default_local_catalog_path(start=script_ref)))
     ap.add_argument("--identity-id", default="")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
 
-    catalog_path = Path(args.catalog).expanduser().resolve()
+    catalog_path = resolve_local_catalog_path(args.catalog, start=script_ref)
     if not catalog_path.exists():
         print(f"[FAIL] missing catalog: {catalog_path}")
         return 1

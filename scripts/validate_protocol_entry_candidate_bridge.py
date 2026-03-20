@@ -15,6 +15,7 @@ from protocol_feedback_contract_common import (
     utc_now_z,
     write_json,
 )
+from resolve_identity_context import resolve_repo_catalog_path
 from response_stamp_common import resolve_layer_intent
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
@@ -129,6 +130,7 @@ def _resolve_intent(
 
 
 def main() -> int:
+    script_ref = Path(__file__).resolve()
     ap = argparse.ArgumentParser(description="Validate protocol-entry candidate clarification bridge.")
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--identity-id", required=True)
@@ -151,7 +153,7 @@ def main() -> int:
     args = ap.parse_args()
 
     catalog_path = Path(args.catalog).expanduser().resolve()
-    repo_catalog_path = Path(args.repo_catalog).expanduser().resolve()
+    repo_catalog_path = resolve_repo_catalog_path(args.repo_catalog, start=script_ref)
     if not catalog_path.exists():
         print(f"[FAIL] catalog not found: {catalog_path}")
         return 2

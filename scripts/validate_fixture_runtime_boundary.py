@@ -8,6 +8,8 @@ from typing import Any
 
 import yaml
 
+from resolve_identity_context import resolve_repo_catalog_path
+
 ERR_FIXTURE_RUNTIME_BOUNDARY = "IP-PATH-004"
 
 MUTATION_OPS = {"activate", "update", "readiness", "mutation", "e2e"}
@@ -61,6 +63,7 @@ def _valid_receipt(
 
 
 def main() -> int:
+    script_ref = Path(__file__).resolve()
     ap = argparse.ArgumentParser(description="Validate fixture/runtime boundary for runtime mutation flows.")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--catalog", required=True)
@@ -81,7 +84,7 @@ def main() -> int:
     args = ap.parse_args()
 
     catalog_path = Path(args.catalog).expanduser().resolve()
-    repo_catalog_path = Path(args.repo_catalog).expanduser().resolve()
+    repo_catalog_path = resolve_repo_catalog_path(args.repo_catalog, start=script_ref)
     operation = str(args.operation or "mutation").strip().lower()
 
     if not catalog_path.exists():
