@@ -1,4 +1,4 @@
-# Dev dependency baseline (release metadata synchronized in v1.4.10 draft)
+# Dev dependency baseline (release metadata synchronized in v1.6.14 draft)
 # Release metadata reviewed for v1.5.1 Full-Go closure (required-gates run 22708478725 = success).
 # Keep minimal; add new packages only when validators/scripts introduce
 # non-stdlib imports and update CHANGELOG.md accordingly.

@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from resolve_identity_context import resolve_identity
+from resolve_identity_context import default_local_catalog_path, resolve_identity
 
 
 def _probe_existing_instance_dirs(identity_id: str) -> list[Path]:
@@ -42,7 +42,8 @@ def main() -> int:
     ap.add_argument("--scope", default="")
     args = ap.parse_args()
 
-    local_catalog = Path(args.catalog).expanduser().resolve() if args.catalog else (Path.home() / ".codex" / ".identity" / "catalog.local.yaml")
+    default_catalog = default_local_catalog_path(start=Path(__file__).resolve())
+    local_catalog = Path(args.catalog).expanduser().resolve() if args.catalog else default_catalog
     repo_catalog = Path(args.repo_catalog).expanduser().resolve()
 
     try:

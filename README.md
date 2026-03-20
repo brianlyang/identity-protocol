@@ -670,6 +670,6 @@ This is enforced by contract + validators:
 
 ## Status
 
-- Protocol version: `v1.4.10` (draft)
+- Protocol version: `v1.6.14` (draft)
 - Discovery contract: `identity/protocol/IDENTITY_DISCOVERY.md`
 - Creator skill: `identity-creator` (create + update validators)

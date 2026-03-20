@@ -529,7 +529,7 @@ def _cmd_merge(args: argparse.Namespace) -> int:
 
 
 def main() -> int:
-    identity_home = default_identity_home()
+    identity_home = default_identity_home(start=Path(__file__).resolve())
     default_local_catalog = default_local_catalog_path(identity_home)
     ap = argparse.ArgumentParser(description="Resolve identity context across repo catalog and local catalog.")
     sub = ap.add_subparsers(dest="command", required=True)

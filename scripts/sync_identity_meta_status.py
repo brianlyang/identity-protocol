@@ -7,6 +7,8 @@ from typing import Any
 
 import yaml
 
+from resolve_identity_context import default_local_catalog_path
+
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -21,7 +23,7 @@ def _dump_yaml(path: Path, data: dict[str, Any]) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Sync pack META.yaml status from catalog identities status.")
-    ap.add_argument("--catalog", default=str(Path.home() / ".codex" / ".identity" / "catalog.local.yaml"))
+    ap.add_argument("--catalog", default=str(default_local_catalog_path(start=Path(__file__).resolve())))
     args = ap.parse_args()
 
     catalog_path = Path(args.catalog).expanduser().resolve()

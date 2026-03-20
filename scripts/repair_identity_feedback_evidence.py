@@ -9,6 +9,8 @@ from typing import Any
 
 import yaml
 
+from resolve_identity_context import default_local_catalog_path
+
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -70,7 +72,7 @@ def _write(path: Path, payload: dict[str, Any], apply: bool) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description="Repair/generate experience feedback governance evidence.")
     ap.add_argument("--identity-id", required=True)
-    ap.add_argument("--catalog", default=str((Path.home()/".codex" / ".identity"/"catalog.local.yaml").resolve()))
+    ap.add_argument("--catalog", default=str(default_local_catalog_path(start=Path(__file__).resolve())))
     ap.add_argument("--apply", action="store_true")
     args = ap.parse_args()
 
