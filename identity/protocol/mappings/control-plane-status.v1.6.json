@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-20T10:27:44Z",
-  "git_head_short": "68bc92c",
+  "generated_at_utc": "2026-03-21T10:27:53Z",
+  "git_head_short": "36c4e1e",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -23,14 +23,14 @@
         "scripts/validate_control_plane_budget.py",
         "--json-only"
       ],
-      "rc": 0,
-      "status": "PASS_REQUIRED",
-      "error_code": "",
+      "rc": 1,
+      "status": "FAIL_REQUIRED",
+      "error_code": "IP-CP-BUDGET-001",
       "stdout_tail": [],
       "stderr_tail": [],
       "payload": {
-        "control_plane_budget_status": "PASS_REQUIRED",
-        "error_code": "",
+        "control_plane_budget_status": "FAIL_REQUIRED",
+        "error_code": "IP-CP-BUDGET-001",
         "budget_file_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.current.yaml",
         "budget_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
@@ -44,15 +44,15 @@
           ".github/workflows/_identity-required-gates.yml"
         ],
         "observed": {
-          "validator_scripts": 182,
-          "error_codes": 494,
-          "error_code_families": 181,
+          "validator_scripts": 188,
+          "error_codes": 523,
+          "error_code_families": 188,
           "mapping_rows_missing_in_bundle": 0,
           "bundle_rows": 43,
           "missing_mapping_rows": [],
           "strict_direct_validate_calls": {
             "scripts/identity_creator.py": 89,
-            "scripts/release_readiness_check.py": 108,
+            "scripts/release_readiness_check.py": 114,
             "scripts/report_three_plane_status.py": 79,
             "scripts/full_identity_protocol_scan.py": 87,
             "scripts/e2e_smoke_test.sh": 116,
@@ -60,8 +60,8 @@
           },
           "required_gate_workflow_python_invocations": 16,
           "required_gate_workflow_unique_python_scripts": 16,
-          "required_gate_delegate_inclusive_python_invocations": 235,
-          "required_gate_delegate_inclusive_unique_python_scripts": 154
+          "required_gate_delegate_inclusive_python_invocations": 238,
+          "required_gate_delegate_inclusive_unique_python_scripts": 156
         },
         "budgets": {
           "validator_scripts": {
@@ -124,13 +124,122 @@
           "mode": "no_rebound",
           "enforce_mode": "fail_required",
           "ceiling_count": 5,
-          "violations": []
+          "violations": [
+            {
+              "field": "validator_scripts",
+              "observed": 188,
+              "ceiling": 182,
+              "reason": "convergence_rebound_detected"
+            },
+            {
+              "field": "error_codes",
+              "observed": 523,
+              "ceiling": 494,
+              "reason": "convergence_rebound_detected"
+            },
+            {
+              "field": "error_code_families",
+              "observed": 188,
+              "ceiling": 181,
+              "reason": "convergence_rebound_detected"
+            },
+            {
+              "field": "strict_direct_validate_calls",
+              "surface": "scripts/release_readiness_check.py",
+              "observed": 114,
+              "ceiling": 108,
+              "reason": "convergence_rebound_detected"
+            }
+          ]
         },
-        "warn_violation_count": 0,
-        "warn_violations": [],
-        "fail_violation_count": 0,
-        "fail_violations": [],
-        "stale_reasons": []
+        "warn_violation_count": 4,
+        "warn_violations": [
+          {
+            "field": "validator_scripts",
+            "observed": 188,
+            "budget_warn": 182,
+            "reason": "validator_script_count_warn"
+          },
+          {
+            "field": "error_codes",
+            "observed": 523,
+            "budget_warn": 494,
+            "reason": "error_code_count_warn"
+          },
+          {
+            "field": "error_code_families",
+            "observed": 188,
+            "budget_warn": 181,
+            "reason": "error_code_family_count_warn"
+          },
+          {
+            "field": "strict_direct_validate_calls",
+            "surface": "scripts/release_readiness_check.py",
+            "observed": 114,
+            "budget_warn": 108,
+            "reason": "strict_surface_direct_calls_warn"
+          }
+        ],
+        "fail_violation_count": 7,
+        "fail_violations": [
+          {
+            "field": "validator_scripts",
+            "observed": 188,
+            "budget_fail": 185,
+            "reason": "validator_script_count_exceeded"
+          },
+          {
+            "field": "error_codes",
+            "observed": 523,
+            "budget_fail": 500,
+            "reason": "error_code_count_exceeded"
+          },
+          {
+            "field": "strict_direct_validate_calls",
+            "surface": "scripts/release_readiness_check.py",
+            "observed": 114,
+            "budget_fail": 113,
+            "reason": "strict_surface_direct_calls_growth"
+          },
+          {
+            "field": "validator_scripts",
+            "observed": 188,
+            "ceiling": 182,
+            "reason": "convergence_rebound_detected"
+          },
+          {
+            "field": "error_codes",
+            "observed": 523,
+            "ceiling": 494,
+            "reason": "convergence_rebound_detected"
+          },
+          {
+            "field": "error_code_families",
+            "observed": 188,
+            "ceiling": 181,
+            "reason": "convergence_rebound_detected"
+          },
+          {
+            "field": "strict_direct_validate_calls",
+            "surface": "scripts/release_readiness_check.py",
+            "observed": 114,
+            "ceiling": 108,
+            "reason": "convergence_rebound_detected"
+          }
+        ],
+        "stale_reasons": [
+          "validator_script_count_warn",
+          "error_code_count_warn",
+          "error_code_family_count_warn",
+          "strict_surface_direct_calls_warn",
+          "validator_script_count_exceeded",
+          "error_code_count_exceeded",
+          "strict_surface_direct_calls_growth",
+          "convergence_rebound_detected",
+          "convergence_rebound_detected",
+          "convergence_rebound_detected",
+          "convergence_rebound_detected"
+        ]
       }
     },
     {
@@ -295,7 +404,7 @@
         "stream_doc_registry_active_file": "identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
         "stream_doc_registry_alias_error": "",
         "stream_doc_registry_parse_ok": true,
-        "stream_allowed_doc_count": 41,
+        "stream_allowed_doc_count": 54,
         "requirement_row_count": 43,
         "reference_fields": [
           "governance_anchor",
@@ -780,13 +889,15 @@
   ],
   "summary": {
     "check_count": 7,
-    "fail_count": 0,
+    "fail_count": 1,
     "warn_count": 0,
-    "pass_count": 7
+    "pass_count": 6
   },
-  "control_plane_status": "PASS_REQUIRED",
-  "promotion_ready": true,
-  "promotion_block_reasons": [],
+  "control_plane_status": "FAIL_REQUIRED",
+  "promotion_ready": false,
+  "promotion_block_reasons": [
+    "control_plane_budget:FAIL_REQUIRED"
+  ],
   "status_file_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.current.yaml",
   "status_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.v1.6.json",
   "status_file_active_file": "identity/protocol/mappings/control-plane-status.v1.6.json",
