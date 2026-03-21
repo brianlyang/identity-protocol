@@ -161,7 +161,8 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
    - adopt the same contract family across target packs without topology drift,
    - keep receipt-family provenance reusable across packs as additional admission/execution/recovery specializations appear,
    - avoid reintroducing pack-local one-off consumers outside the landed shared path.
-3. Freezing both the landed surfaces and the remaining rollout obligations keeps the protocol-owned path explicit so instances do not invent parallel ad hoc validators, consumers, or receipt rules.
+3. Shared stream-doc-registry current-pointer consumption for the touched validator family now resolves through one protocol-owned helper plus one invariant guard, so those consumers do not each carry their own default-path or alias-resolution drift.
+4. Freezing both the landed surfaces and the remaining rollout obligations keeps the protocol-owned path explicit so instances do not invent parallel ad hoc validators, consumers, or receipt rules.
 
 ## 3) Four-track cross-verification boundary
 

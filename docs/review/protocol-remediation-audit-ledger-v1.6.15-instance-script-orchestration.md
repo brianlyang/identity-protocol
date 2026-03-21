@@ -54,6 +54,7 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
 11. Remaining follow-on implementation obligations are:
    - roll the same shared family through target-pack adoption without topology drift
    - keep future receipt-family specializations inside the same validator/probe/control path
+12. Shared stream-doc-registry current-pointer consumption for the touched validator family is now expected to flow through one protocol-owned helper plus one invariant guard rather than per-script literal defaults.
 
 ### 2.2 Workspace / instance-owned surfaces consumed by this stream
 
@@ -216,4 +217,5 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
 5. Protocol hygiene and inherited motherline checks remain green after the upgrade:
    - `python3 scripts/docs_command_contract_check.py` -> `docs checked: 79`, `command snippets checked: 853`, `PASS`
    - `python3 scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `status=PASS_REQUIRED`, `standard_closure_status=CLOSED`, `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
-6. This snapshot closes the protocol-owned execution-lane governance gap for `v1.6.15`, but it does not claim repo-wide clean freeze or cross-pack adoption closure.
+6. The stream-doc-registry current-pointer lane is also now single-sourced for the touched validator family, and control-plane invariants fail close if the literal current pointer resurfaces outside the shared helper.
+7. This snapshot closes the protocol-owned execution-lane governance gap for `v1.6.15`, but it does not claim repo-wide clean freeze or cross-pack adoption closure.
