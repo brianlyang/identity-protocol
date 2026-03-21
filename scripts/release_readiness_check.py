@@ -1624,6 +1624,28 @@ def main() -> int:
         ],
         [
             "python3",
+            "scripts/validate_instance_script_manifest.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_identity_instance_script_orchestration.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--work-layer",
+            (str(args.expected_work_layer or "").strip().lower() or "instance"),
+            "--source-layer",
+            (str(args.expected_source_layer or "").strip().lower() or _infer_source_layer_from_catalog_path(catalog)),
+            "--json-only",
+        ],
+        [
+            "python3",
             "scripts/validate_identity_capability_activation.py",
             "--catalog",
             catalog,
@@ -1633,6 +1655,10 @@ def main() -> int:
             identity_id,
             "--activation-policy",
             args.capability_activation_policy,
+            "--work-layer",
+            (str(args.expected_work_layer or "").strip().lower() or "instance"),
+            "--source-layer",
+            (str(args.expected_source_layer or "").strip().lower() or _infer_source_layer_from_catalog_path(catalog)),
         ],
         [
             "python3",
@@ -2159,6 +2185,32 @@ def main() -> int:
     seq.append(
         [
             "python3",
+            "scripts/validate_instance_script_manifest.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--json-only",
+        ]
+    )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_identity_instance_script_orchestration.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--work-layer",
+            (str(args.expected_work_layer or "").strip().lower() or "instance"),
+            "--source-layer",
+            (str(args.expected_source_layer or "").strip().lower() or _infer_source_layer_from_catalog_path(catalog)),
+            "--json-only",
+        ]
+    )
+    seq.append(
+        [
+            "python3",
             "scripts/validate_identity_capability_activation.py",
             "--identity-id",
             identity_id,
@@ -2168,6 +2220,10 @@ def main() -> int:
             "identity/catalog/identities.yaml",
             "--activation-policy",
             args.capability_activation_policy,
+            "--work-layer",
+            (str(args.expected_work_layer or "").strip().lower() or "instance"),
+            "--source-layer",
+            (str(args.expected_source_layer or "").strip().lower() or _infer_source_layer_from_catalog_path(catalog)),
             "--require-activated",
         ]
     )

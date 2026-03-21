@@ -12,6 +12,18 @@ from typing import Any
 
 import yaml
 
+from instance_script_orchestration_common import (
+    STATUS_FAIL_REQUIRED as ORCHESTRATION_FAIL_REQUIRED,
+    STATUS_PASS_REQUIRED as ORCHESTRATION_PASS_REQUIRED,
+    build_route_orchestration_matrix,
+    clean_string_list,
+    load_manifest_doc,
+    manifest_required as instance_script_manifest_required,
+    normalize_source_layer,
+    orchestration_required as instance_script_orchestration_required,
+    route_uses_instance_scripts,
+    validate_manifest_doc,
+)
 from resolve_identity_context import resolve_identity
 
 
@@ -105,7 +117,14 @@ def _load_mcp_servers(cwd: Path) -> dict[str, str]:
     return servers
 
 
-def _collect_contract(pack: Path, task_path: Path) -> dict[str, Any]:
+def _collect_contract(
+    pack: Path,
+    task_path: Path,
+    *,
+    identity_id: str,
+    work_layer: str,
+    source_layer: str,
+) -> dict[str, Any]:
     task = _load_json(task_path)
     c = (task.get("capability_orchestration_contract") or {}) if isinstance(task, dict) else {}
     routes = c.get("task_type_routes") or {}
@@ -132,6 +151,8 @@ def _collect_contract(pack: Path, task_path: Path) -> dict[str, Any]:
                 token = str(m).strip()
                 required_mcp.add(token)
                 route_mcp.add(token)
+        primary_instance_scripts = clean_string_list(route.get("primary_instance_scripts"))
+        fallback_instance_scripts = clean_string_list(route.get("fallback_instance_scripts"))
         tool_routes.append(
             {
                 "route": str(route_name),
@@ -140,8 +161,53 @@ def _collect_contract(pack: Path, task_path: Path) -> dict[str, Any]:
                 "max_runtime_minutes": route.get("max_runtime_minutes"),
                 "required_skills": sorted(route_skills),
                 "required_mcp": sorted(route_mcp),
+                "uses_instance_scripts": route_uses_instance_scripts(route),
+                "primary_instance_scripts": primary_instance_scripts,
+                "fallback_instance_scripts": fallback_instance_scripts,
+                "script_receipt_pattern": str(route.get("script_receipt_pattern", "")).strip(),
             }
         )
+    manifest_path, manifest_doc = load_manifest_doc(pack)
+    manifest_required = instance_script_manifest_required(task, pack)
+    orchestration_required = instance_script_orchestration_required(task)
+    manifest_status = "SKIPPED_NOT_REQUIRED"
+    orchestration_status = "SKIPPED_NOT_REQUIRED"
+    manifest_stale_reasons: list[str] = []
+    orchestration_stale_reasons: list[str] = []
+    route_script_rows: list[dict[str, Any]] = []
+    if manifest_required:
+        if manifest_doc is None:
+            manifest_status = ORCHESTRATION_FAIL_REQUIRED
+            manifest_stale_reasons = ["manifest_missing"]
+            if orchestration_required:
+                orchestration_status = ORCHESTRATION_FAIL_REQUIRED
+                orchestration_stale_reasons = ["manifest_missing_for_adopted_routes"]
+        else:
+            manifest_validation = validate_manifest_doc(
+                manifest_doc=manifest_doc,
+                manifest_path=manifest_path,
+                pack_root=pack,
+                identity_id=identity_id,
+            )
+            manifest_status = str(manifest_validation.get("status", "")).strip() or ORCHESTRATION_FAIL_REQUIRED
+            manifest_stale_reasons = list(manifest_validation.get("stale_reasons") or [])
+            if orchestration_required:
+                if manifest_status == ORCHESTRATION_PASS_REQUIRED:
+                    route_validation = build_route_orchestration_matrix(
+                        task_doc=task,
+                        manifest_validation=manifest_validation,
+                        identity_id=identity_id,
+                        work_layer=work_layer,
+                        source_layer=source_layer,
+                    )
+                    orchestration_status = (
+                        str(route_validation.get("status", "")).strip() or ORCHESTRATION_FAIL_REQUIRED
+                    )
+                    orchestration_stale_reasons = list(route_validation.get("stale_reasons") or [])
+                    route_script_rows = list(route_validation.get("route_rows") or [])
+                else:
+                    orchestration_status = ORCHESTRATION_FAIL_REQUIRED
+                    orchestration_stale_reasons = ["manifest_invalid_for_adopted_routes"]
     return {
         "required": bool(c.get("required", False)),
         "required_skills": sorted(required_skills),
@@ -150,6 +216,14 @@ def _collect_contract(pack: Path, task_path: Path) -> dict[str, Any]:
         "tool_routes": tool_routes,
         "pack_path": str(pack),
         "task_path": str(task_path),
+        "instance_script_manifest_required": manifest_required,
+        "instance_script_manifest_status": manifest_status,
+        "instance_script_manifest_stale_reasons": manifest_stale_reasons,
+        "instance_script_orchestration_required": orchestration_required,
+        "instance_script_orchestration_status": orchestration_status,
+        "instance_script_orchestration_stale_reasons": orchestration_stale_reasons,
+        "route_script_rows": route_script_rows,
+        "manifest_path": str(manifest_path),
     }
 
 
@@ -204,10 +278,19 @@ def _build_runtime_payload(
     identity_id: str,
     catalog_path: Path,
     repo_catalog_path: Path,
+    work_layer: str,
+    source_layer: str,
     activation_policy: str = "strict-union",
 ) -> dict[str, Any]:
     pack, task_path = _resolve_current_task(catalog_path, identity_id)
-    contract = _collect_contract(pack, task_path)
+    resolved_source_layer = str(source_layer or "").strip().lower() or normalize_source_layer(catalog_path)
+    contract = _collect_contract(
+        pack,
+        task_path,
+        identity_id=identity_id,
+        work_layer=str(work_layer or "instance").strip().lower() or "instance",
+        source_layer=resolved_source_layer,
+    )
     cwd = Path.cwd().resolve()
     skill_rows: list[dict[str, Any]] = []
     active_skills: list[str] = []
@@ -259,13 +342,31 @@ def _build_runtime_payload(
     skill_ok_map = {row["skill"]: bool(row["available"]) for row in skill_rows}
     route_activation_matrix: list[dict[str, Any]] = []
     route_ready_count = 0
+    route_script_rows = {
+        str(row.get("route", "")).strip(): row
+        for row in (contract.get("route_script_rows") or [])
+        if str(row.get("route", "")).strip()
+    }
     for route in contract["tool_routes"]:
         route_name = str(route.get("route", "")).strip()
         route_skills = [str(x).strip() for x in (route.get("required_skills") or []) if str(x).strip()]
         route_mcp = [str(x).strip() for x in (route.get("required_mcp") or []) if str(x).strip()]
         route_missing_skills = [s for s in route_skills if not skill_ok_map.get(s, False)]
         route_missing_mcp = [m for m in route_mcp if not mcp_ok_map.get(m, False)]
-        route_ready = not route_missing_skills and not route_missing_mcp
+        route_script_row = route_script_rows.get(route_name, {})
+        route_uses_instance_scripts = bool(route.get("uses_instance_scripts"))
+        route_missing_script_ids = [
+            str(x).strip()
+            for x in (route_script_row.get("missing_script_ids") or [])
+            if str(x).strip()
+        ]
+        script_preconditions_status = str(route_script_row.get("script_preconditions_status", "")).strip()
+        route_script_ready = (
+            not route_uses_instance_scripts
+            or str(route_script_row.get("route_ready", "")).strip().lower() == "true"
+            or route_script_row.get("route_ready") is True
+        )
+        route_ready = not route_missing_skills and not route_missing_mcp and route_script_ready
         if route_ready:
             route_ready_count += 1
         route_activation_matrix.append(
@@ -275,6 +376,20 @@ def _build_runtime_payload(
                 "required_mcp": route_mcp,
                 "missing_skills": route_missing_skills,
                 "missing_mcp": route_missing_mcp,
+                "uses_instance_scripts": route_uses_instance_scripts,
+                "primary_instance_scripts": list(route.get("primary_instance_scripts") or []),
+                "fallback_instance_scripts": list(route.get("fallback_instance_scripts") or []),
+                "missing_script_ids": route_missing_script_ids,
+                "script_receipt_pattern": str(route.get("script_receipt_pattern", "")).strip(),
+                "script_preconditions_status": script_preconditions_status or "SKIPPED_NOT_REQUIRED",
+                "script_route_contract_status": str(
+                    route_script_row.get("route_contract_status", "SKIPPED_NOT_REQUIRED")
+                ).strip(),
+                "script_manifest_binding_status": str(
+                    route_script_row.get("manifest_binding_status", "SKIPPED_NOT_REQUIRED")
+                ).strip(),
+                "script_diagnostic_label": str(route_script_row.get("diagnostic_label", "")).strip(),
+                "script_stale_reasons": list(route_script_row.get("stale_reasons") or []),
                 "ready": route_ready,
             }
         )
@@ -314,6 +429,15 @@ def _build_runtime_payload(
             status = "BLOCKED"
             error_code = "IP-CAP-003"
             notes.append(f"mcp_auth_not_ready={missing_mcp_auth}")
+    if bool(contract.get("instance_script_orchestration_required")) and str(
+        contract.get("instance_script_orchestration_status", "")
+    ).strip() != ORCHESTRATION_PASS_REQUIRED:
+        status = "BLOCKED"
+        error_code = "IP-CAP-005"
+        notes.append(
+            "instance_script_orchestration_not_ready="
+            + ",".join(str(x).strip() for x in (contract.get("instance_script_orchestration_stale_reasons") or []) if str(x).strip())
+        )
     if not contract["required"]:
         status = "NOT_REQUIRED"
         error_code = ""
@@ -349,6 +473,21 @@ def _build_runtime_payload(
         "route_activation_matrix": route_activation_matrix,
         "route_ready_count": route_ready_count,
         "route_total_count": len(route_activation_matrix),
+        "instance_script_manifest_required": bool(contract.get("instance_script_manifest_required")),
+        "instance_script_manifest_status": str(contract.get("instance_script_manifest_status", "")).strip(),
+        "instance_script_manifest_stale_reasons": list(
+            contract.get("instance_script_manifest_stale_reasons") or []
+        ),
+        "instance_script_orchestration_required": bool(
+            contract.get("instance_script_orchestration_required")
+        ),
+        "instance_script_orchestration_status": str(
+            contract.get("instance_script_orchestration_status", "")
+        ).strip(),
+        "instance_script_orchestration_stale_reasons": list(
+            contract.get("instance_script_orchestration_stale_reasons") or []
+        ),
+        "instance_script_manifest_path": str(contract.get("manifest_path", "")).strip(),
         "capability_contract_required": bool(contract.get("required", False)),
         "capability_activation_status": status,
         "capability_activation_error_code": error_code,
@@ -403,6 +542,8 @@ def main() -> int:
         default="strict-union",
         help="strict-union blocks when any required capability is unavailable; route-any-ready allows activation when at least one route is ready.",
     )
+    ap.add_argument("--work-layer", default="instance")
+    ap.add_argument("--source-layer", default="")
     ap.add_argument("--out", default="")
     args = ap.parse_args()
 
@@ -429,6 +570,8 @@ def main() -> int:
             identity_id=args.identity_id,
             catalog_path=catalog_path,
             repo_catalog_path=repo_catalog_path,
+            work_layer=args.work_layer,
+            source_layer=args.source_layer,
             activation_policy=args.activation_policy,
         )
     except Exception as exc:

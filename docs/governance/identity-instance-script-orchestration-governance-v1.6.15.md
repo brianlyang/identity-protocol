@@ -1,6 +1,6 @@
 # Identity Instance Script Orchestration Governance (v1.6.15)
 
-Status: Active (contract-first stream frozen, 2026-03-21; implementation landing pending)  
+Status: Active (contract freeze plus core validator/readiness landing, 2026-03-21; broader rollout still in progress)  
 Layer: protocol  
 Scope: route -> instance-script declarative join, pack-local script manifest, lower-capability dependency join, and instance-script execution receipt family
 
@@ -32,7 +32,7 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
    - which lower capability dependencies are required,
    - which receipts must exist after execution.
 5. That gap causes drift, weak diagnostics, and repeated confusion between protocol debt, instance migration debt, runtime dirt, and lower-capability availability problems.
-6. `v1.6.15` closes the architecture lane by freezing the orchestration model without pretending that validator/creator/readiness implementation is already complete.
+6. `v1.6.15` closes the architecture lane by freezing the orchestration model and landing the first protocol-owned validator/readiness consumers without pretending that every downstream rollout is already complete.
 
 ## 2) Frozen orchestration model (no ambiguity)
 
@@ -131,19 +131,18 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
 
 ### 2.7 Canonical protocol implementation targets
 
-1. The frozen protocol-owned target surfaces for future implementation are the validator and CI families named:
-   - `validate_identity_instance_script_orchestration.py`
-   - `validate_route_script_receipt_join.py`
-   - `validate_instance_script_manifest.py`
-   - `run_identity_instance_script_orchestration_probes_ci.sh`
-   These future files are protocol-owned targets for the shared `scripts/` and `scripts/ci/` directories once implementation lands.
-2. The frozen shared consumers for later landing are:
+1. The landed protocol-owned shared surfaces for this stream are:
+   - `scripts/validate_identity_instance_script_orchestration.py`
+   - `scripts/validate_instance_script_manifest.py`
+   - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
+   - `scripts/release_readiness_check.py`
+   - `scripts/validate_identity_capability_activation.py`
+2. The remaining protocol-owned follow-on targets are:
+   - `scripts/validate_route_script_receipt_join.py`
    - `scripts/create_identity_pack.py`
    - `scripts/repair_contract_backfill.py`
    - `scripts/identity_creator.py`
-   - `scripts/release_readiness_check.py`
-   - `scripts/validate_identity_capability_activation.py`
-3. Naming these targets does not claim they are already implemented; it freezes the protocol-owned landing path so instances do not invent parallel ad hoc validators.
+3. Freezing both the landed surfaces and the remaining follow-on targets keeps the protocol-owned path explicit so instances do not invent parallel ad hoc validators, consumers, or receipt rules.
 
 ## 3) Four-track cross-verification boundary
 
@@ -189,7 +188,7 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
 4. This stream does not redefine Codex product behavior, MCP transport semantics, or host-visible final-surface promotion rules.
 5. This stream does not convert instance scripts into skills or make skills optional when strategy constraints are still required.
 6. This stream does not authorize workspace-global script dropzones, user-specific absolute paths, or hardcoded per-instance orchestration logic as the long-term answer.
-7. This stream does not claim that validator/creator/readiness implementation is complete today.
+7. This stream does not claim that receipt-join, creator/backfill, and probe rollout is complete today.
 
 ## 5) Frozen implementation guidance
 
@@ -218,17 +217,20 @@ Any implementation that claims to follow `v1.6.15` should satisfy this checklist
 
 ## 6) Future promotion exit criteria
 
-1. `v1.6.15` promotion beyond contract freeze requires more than documents.
-2. At minimum, future implementation closure must prove all of the following together:
-   - protocol-owned validators land for manifest integrity and route/script/receipt join,
-   - creator/backfill/update/readiness surfaces consume the same contract family,
-   - `validate_identity_capability_activation.py` (or its successor) understands instance scripts as a first-class route surface instead of skills/MCP only,
-   - route-scoped capability activation can evaluate script-backed routes without unrelated-route union blocking unless a stronger activation policy explicitly requires it,
+1. `v1.6.15` promotion beyond contract freeze still requires more than documents.
+2. The following implementation elements are now landed:
+   - protocol-owned validators for manifest integrity and route/script join,
+   - `scripts/release_readiness_check.py` consumption of those validators,
+   - `scripts/validate_identity_capability_activation.py` awareness of instance scripts as a first-class route surface.
+3. Full implementation closure still requires all of the following together:
+   - creator/backfill/update surfaces consume the same contract family,
+   - route-scoped capability activation remains reusable without unrelated-route union blocking unless a stronger activation policy explicitly requires it,
    - proof packs adopt `scripts/INSTANCE_SCRIPT_MANIFEST.json` and the additive route fields without topology drift,
-   - receipt-family enforcement is reusable across packs,
+   - receipt-family enforcement is reusable across packs through a dedicated receipt-join validator,
    - receipt-family projection preserves route provenance compatible with `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts`,
    - positive and negative CI probes exist for missing script bindings, missing receipts, and lower-capability join regressions.
-3. Until those conditions are proven, the correct interpretation is:
-   - `v1.6.15` contract freeze may be active,
-   - implementation landing remains open,
+4. Until those conditions are proven, the correct interpretation is:
+   - `v1.6.15` contract freeze is active,
+   - core validator/readiness landing is present,
+   - full rollout remains open,
    - instances must not improvise parallel orchestration standards.

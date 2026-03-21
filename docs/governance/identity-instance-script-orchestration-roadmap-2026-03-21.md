@@ -1,10 +1,10 @@
 # Identity Instance Script Orchestration Roadmap (2026-03-21)
 
-Status: Active roadmap guidance  
+Status: Promoted by v1.6.15 (2026-03-21); retained as pre-freeze design record  
 Layer: protocol  
 Scope: architecture roadmap for route -> instance scripts -> receipt contract modeling after issue-register closure
 
-Execution mode: roadmap-only governance document. This file defines the next architecture lane and its non-reopen boundary; it does not declare a new correctness failure by itself.
+Execution mode: historical design record. The active governance source is `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`; this file is kept to preserve the pre-freeze reasoning chain and non-reopen boundary.
 
 ## 0) State interpretation guard (mandatory)
 
@@ -131,8 +131,8 @@ Execution mode: roadmap-only governance document. This file defines the next arc
    - receipt standardization,
    - release hygiene.
 
-## 8) Immediate next-step recommendation
+## 8) Promotion note
 
-1. Promote this roadmap into a dedicated implementation lane only when owner bandwidth is ready.
-2. Start with the schema and validator layer, not with per-pack script rewrites.
-3. Keep the shared post-closure governance mode as the parent interpretation rule while this architecture lane remains open.
+1. This roadmap has now been promoted into `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`.
+2. Use the `v1.6.15` governance/review pair for current ownership, mappings, and audit verdicts.
+3. Keep this roadmap as the design-history companion that explains why the stream was split out without reopening correctness closure.
