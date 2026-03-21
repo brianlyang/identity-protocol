@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 79`, `command snippets checked: 853`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 79`, `command snippets checked: 854`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -567,7 +567,85 @@ Root cause:
   - `scripts/docs_command_contract_check.py` now recognizes workspace-root invariant `identity-protocol-local/scripts/...` commands and runs workspace semantic probes for safe path-sensitive executables.
   - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md` and `docs/review/protocol-remediation-audit-ledger-v1.6.md` now publish workspace-root invariant commands on the cited headstamp/actor-session-binding snippets.
 
-## 5) Frozen operating rule
+## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
+
+1. The rows below capture desensitized follow-on reinforcement for active streams; they are routed through this workbook so the protocol architect can land them on canonical governance/review surfaces without reopening the closed `ISSUE-001..023` correctness family.
+2. These rows are routing/intake metadata only; semantic ownership remains with the target stream governance doc and its review ledger.
+
+### RF-ORCH-001 - Aggregate route-scope/cardinality projection gap
+
+- `classification`: architecture reinforcement intake, non-reopen
+- `judgment`: aggregate capability-activation artifacts using `route-any-ready` are multi-route status summaries rather than route-scoped receipts; forcing `route_selected` there would mis-model the surface, but leaving scope/cardinality implicit weakens provenance.
+- `canonical_landings`:
+  - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md`
+- `implementation_follow_on`:
+  - `scripts/validate_identity_capability_activation.py`
+  - shared aggregate route-activation report builders/validators
+- `machine_acceptance`:
+  - aggregate reports declare route scope/cardinality and route activation counts;
+  - route-scoped admission/execution/emit/recovery receipts continue requiring `route_selected`;
+  - validator/probe coverage fail-closes if an artifact claims single-route scope without route provenance.
+- `non_goals`:
+  - do not invent an arbitrary selected route for aggregate `route-any-ready` status;
+  - do not weaken `route_selected` on route-scoped receipts.
+
+### RF-ORCH-002 - Declared-vs-observed dependency projection gap
+
+- `classification`: architecture reinforcement intake, non-reopen
+- `judgment`: route contracts already declare primary/fallback skills, required MCP, and instance-script bindings while receipts prove observed usage; the missing hardening is one standard declared-vs-observed projection across report families.
+- `canonical_landings`:
+  - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md`
+- `implementation_follow_on`:
+  - `scripts/instance_script_orchestration_common.py`
+  - `scripts/validate_route_script_receipt_join.py`
+  - `scripts/validate_identity_capability_activation.py`
+- `machine_acceptance`:
+  - declared dependencies, observed activations/executions, and gap reasons are machine-visible;
+  - undeclared observed usage fails closed or is surfaced through one governed gap model;
+  - the same declared/observed projection stays reusable across route-scoped and aggregate artifacts where applicable.
+- `non_goals`:
+  - do not replace machine-readable diff with narrative-only explanations;
+  - do not absorb instance-specific business heuristics into dependency provenance.
+
+### RF-ORCH-003 - Semantic-anchor extension-hook gap
+
+- `classification`: architecture reinforcement intake, non-reopen
+- `judgment`: downstream semantic narrowing can occur even when route/script orchestration remains correct; protocol should carry a generic semantic-anchor envelope by ref/schema/digest rather than domain-specific business fields.
+- `canonical_landings`:
+  - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md`
+- `implementation_follow_on`:
+  - shared route/script consumer builders
+  - receipt validators for route-scoped and aggregate artifacts that opt into anchor preservation
+- `machine_acceptance`:
+  - anchor ref/schema/source/revision/digest/status remain machine-visible;
+  - downstream consumers cannot silently drop a declared anchor without a governed mismatch signal;
+  - anchor projection remains on the shared validator/probe/control path.
+- `non_goals`:
+  - do not freeze product-specific keywords, scoring models, or supplier logic into protocol SSOT;
+  - do not reinterpret semantic-anchor support as protocol ownership of downstream business judgment.
+
+### RF-ORCH-004 - Outcome sentinel reference-hook gap
+
+- `classification`: architecture reinforcement intake, non-reopen
+- `judgment`: protocol needs a way to reference downstream risk signals without promoting business KPIs or thresholds into the core orchestration contract.
+- `canonical_landings`:
+  - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md`
+- `implementation_follow_on`:
+  - aggregate/report builders that choose to publish sentinel refs
+  - release/audit consumers only when a stream explicitly opts into sentinel gating
+- `machine_acceptance`:
+  - sentinel ref/schema/status remain machine-visible when present;
+  - advisory vs fail-close semantics are explicit;
+  - sentinel support does not bypass route/script/dependency provenance requirements.
+- `non_goals`:
+  - do not freeze universal business scoring thresholds in protocol core;
+  - do not use sentinel refs to relabel business drift as proof that orchestration semantics are wrong.
+
+## 6) Frozen operating rule
 
 1. New scans must update the owning stream docs and machine gates before a row here can move to `CLOSED`.
 2. This workbook may aggregate evidence, but it may not locally reinterpret already-frozen owner semantics.

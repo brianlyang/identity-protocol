@@ -164,6 +164,40 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
 3. Shared stream-doc-registry current-pointer consumption for the touched validator family now resolves through one protocol-owned helper plus one invariant guard, so those consumers do not each carry their own default-path or alias-resolution drift.
 4. Freezing both the landed surfaces and the remaining rollout obligations keeps the protocol-owned path explicit so instances do not invent parallel ad hoc validators, consumers, or receipt rules.
 
+### 2.8 Additive reinforcement envelope (non-reopen, machine-governed)
+
+1. `v1.6.15` may absorb additive reinforcement that strengthens route/script/dependency/receipt machine traceability without reopening topology, launcher, bootstrap, relay, or business-heuristic ownership.
+2. Aggregate capability-activation artifacts that summarize multiple route rows under `route-any-ready` or an equivalent multi-route policy are not single-route receipts.
+3. Such aggregate artifacts may omit `route_selected` only when they machine-project aggregate scope/cardinality explicitly; at minimum, the additive projection must preserve:
+   - `route_scope`
+   - `route_activation_strategy`
+   - `route_ready_count`
+   - `route_total_count`
+   - `route_selection_cardinality`
+4. Any route-scoped admission/execution/emit/recovery receipt, or any artifact that explicitly claims single-route scope, continues to require non-empty `route_selected`.
+5. Protocol-owned artifacts may add declared-vs-observed dependency projection when they preserve machine comparability between route contract and runtime evidence.
+6. The preferred additive model is one machine-readable declared/observed pair plus gap reasons, for example:
+   - `declared_dependency_projection`
+   - `observed_dependency_projection`
+   - `dependency_gap_reasons`
+7. A later implementation stream may freeze exact field names, but the semantic minimum is that declared route dependencies, observed activations/executions, and the machine-readable gap between them remain comparable without narrative-only reconciliation.
+8. Protocol-owned route/script consumers may add a governed semantic-anchor envelope by reference, digest, or both when downstream consumers must prove they preserved route-selected semantic basis rather than silently narrowing it.
+9. Any such semantic-anchor envelope must preserve at least:
+   - `semantic_anchor_ref`
+   - `semantic_anchor_schema_id`
+   - `semantic_anchor_source`
+   - `semantic_anchor_revision`
+   - `semantic_anchor_digest`
+   - `semantic_anchor_status`
+10. The semantic-anchor envelope is a transfer/control primitive only; it must not hardcode domain-specific scoring fields, search heuristics, or product-level business taxonomy into the core protocol contract.
+11. Protocol-owned artifacts may also expose an optional outcome-sentinel reference hook when downstream risk signals need governed traceability without redefining orchestration ownership.
+12. If an outcome-sentinel hook is present, it must preserve at least:
+   - `outcome_sentinel_ref`
+   - `outcome_sentinel_schema_id`
+   - `outcome_sentinel_status`
+13. Outcome sentinels do not become universal core pass/fail semantics merely by existing; a stream-specific policy must explicitly freeze whether a sentinel is advisory, gating, or ignored for the affected artifact family.
+14. These additive reinforcements belong to `v1.6.15` only insofar as they strengthen route/script/dependency/receipt governance; they must not be used to smuggle workbook-only narrative or instance-specific business heuristics into protocol SSOT.
+
 ## 3) Four-track cross-verification boundary
 
 ### 3.1 T1 roundtable / internal topology
@@ -235,6 +269,8 @@ Any implementation that claims to follow `v1.6.15` should satisfy this checklist
 8. Receipt outputs preserve machine-readable route provenance compatible with `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts`.
 9. Any governed route that returns user-visible final text binds to at least one pack-local emitter script and declares an emit-family receipt.
 10. If a protocol-generated wrapper seeds final-channel relay receipts on behalf of a route-bound emitter, that wrapper must carry the canonical final-relay constants/helpers and remain executable under the wrapper-template smoke contract; SHA freshness and token presence alone are not sufficient.
+11. Aggregate activation/report artifacts that summarize multiple routes declare explicit scope/cardinality instead of pretending to be route-scoped receipts.
+12. If declared-vs-observed dependency projection, semantic-anchor projection, or outcome-sentinel hooks are adopted on this lane, they remain machine-readable and stay on the shared validator/probe/control path rather than forking into per-pack narrative-only variants.
 
 ## 6) Future promotion exit criteria
 
@@ -245,7 +281,8 @@ Any implementation that claims to follow `v1.6.15` should satisfy this checklist
    - `scripts/release_readiness_check.py` consumption of those validators,
    - `scripts/validate_identity_capability_activation.py` awareness of instance scripts as a first-class route surface,
    - `scripts/create_identity_pack.py`, `scripts/repair_contract_backfill.py`, and `scripts/identity_creator.py` consumption of the same contract family,
-   - generated session-chain wrappers now freeze a `session_chain_executable_smoke_policy`, and the protocol gate executes that smoke against the final-channel relay branch so generator completeness defects fail closed instead of hiding behind template SHA parity.
+   - generated session-chain wrappers now freeze a `session_chain_executable_smoke_policy`, and the protocol gate executes that smoke against the final-channel relay branch so generator completeness defects fail closed instead of hiding behind template SHA parity,
+   - governed final emit now auto-recovers stale host-visible post-check blockers through `scripts/recover_host_visible_post_check_state.py`, and the gateway trust-boundary probe suite proves that a pre-seeded closure blocker can return to `PASS_REQUIRED` without manual runtime surgery.
 3. Full implementation closure still requires all of the following together:
    - proof packs adopt `scripts/INSTANCE_SCRIPT_MANIFEST.json` and the additive route fields without topology drift,
    - proof packs adopt `allowed_execution_lanes`, `lane_admission_policy`, `lane_receipt_pattern`, and `lane_block_on_fallback` where external/manual/editor/webhook fallback risk exists,
@@ -253,6 +290,8 @@ Any implementation that claims to follow `v1.6.15` should satisfy this checklist
    - route-scoped capability activation remains reusable without unrelated-route union blocking unless a stronger activation policy explicitly requires it,
    - lane-admission receipts keep `lane_id`, `lane_class`, `lane_source`, `lane_endpoint_class`, `lane_admission_status`, and `fallback_used` machine-visible under live pack execution,
    - receipt-family projection keeps route provenance compatible with `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts` under live pack execution,
+   - aggregate activation/report artifacts that summarize multiple routes keep scope/cardinality machine-visible and do not masquerade as single-route receipts,
+   - any adopted declared-vs-observed dependency projection, semantic-anchor envelope, or outcome-sentinel hook stays compatible with one shared validator/probe/control family instead of fragmenting into pack-local dialects,
    - future admission/execution/recovery receipt specializations, if introduced, stay compatible with the landed shared validator family rather than forking it.
 4. Until those conditions are proven, the correct interpretation is:
    - `v1.6.15` contract freeze is active,

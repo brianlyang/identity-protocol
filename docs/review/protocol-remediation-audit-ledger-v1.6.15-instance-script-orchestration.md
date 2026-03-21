@@ -183,7 +183,51 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
 5. A pack may be `topology-ready` and `exit-ready` yet still be pre-adoption for `v1.6.15` until manifest and additive route fields land; that migration state must not be misreported as a reopen of inherited streams.
 6. Even before host auto-binding is solved, `v1.6.15` may require the governed producer for final user-visible text to be a route-bound emitter script instead of direct free-form assistant delivery.
 
-## 7) Boundary lock for reviewers
+## 7) Follow-on reinforcement mapping (non-reopen, architect-owned)
+
+1. `RF-ORCH-001 aggregate_route_scope_cardinality_projection`
+   - current judgment: aggregate capability-activation artifacts using `route-any-ready` are multi-route status summaries rather than route-scoped receipts, so the missing hardening is explicit scope/cardinality projection rather than forcing a synthetic `route_selected`.
+   - target protocol surfaces:
+     - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+     - `scripts/validate_identity_capability_activation.py`
+     - shared aggregate report builders/validators that emit route-activation summaries
+   - audit acceptance:
+     - aggregate artifacts declare scope/cardinality and route counts,
+     - route-scoped receipts remain strict on `route_selected`,
+     - validator/probe coverage fail-closes when a single-route artifact omits route provenance.
+2. `RF-ORCH-002 declared_vs_observed_dependency_projection`
+   - current judgment: route contracts and receipts already expose pieces of the declared/observed diff, but the projection is not yet standardized across report families.
+   - target protocol surfaces:
+     - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+     - `scripts/instance_script_orchestration_common.py`
+     - `scripts/validate_route_script_receipt_join.py`
+     - `scripts/validate_identity_capability_activation.py`
+   - audit acceptance:
+     - declared dependencies, observed activations/executions, and gap reasons are machine-visible,
+     - undeclared observed usage fails closed or is surfaced through one governed gap model,
+     - the same field family is reused across route-scoped and aggregate artifacts where applicable.
+3. `RF-ORCH-003 semantic_anchor_extension_hook`
+   - current judgment: downstream semantic narrowing can happen even when route/script orchestration remains correct, so the missing control is a governed anchor envelope rather than protocol-owned business scoring.
+   - target protocol surfaces:
+     - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+     - shared route/script consumer builders and receipt validators
+     - pack-generation/backfill flows only if the anchor envelope becomes canonical
+   - audit acceptance:
+     - anchor ref/schema/source/revision/digest/status remain machine-visible,
+     - downstream consumers cannot silently drop a declared anchor without a governed mismatch signal,
+     - no domain-specific business fields become core protocol SSOT.
+4. `RF-ORCH-004 outcome_sentinel_reference_hook`
+   - current judgment: downstream risk signals should be referenceable without promoting business KPIs into core orchestration semantics.
+   - target protocol surfaces:
+     - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+     - aggregate/report builders that opt into sentinel references
+     - release/audit consumers only if a stream explicitly freezes sentinel gating
+   - audit acceptance:
+     - sentinel hook remains optional, schema-bound, and machine-visible when present,
+     - advisory vs fail-close semantics are explicit,
+     - protocol does not absorb instance-specific scoring thresholds as universal contract.
+
+## 8) Boundary lock for reviewers
 
 1. Do not reinterpret this stream as permission to add new pack-root directories or revive `runtime/scripts/`.
 2. Do not reinterpret this stream as permission to override launcher or bootstrap ownership already frozen by `v1.6.14` and `v1.6.12`.
@@ -193,7 +237,7 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
 6. Do not classify route blocks caused only by undeclared lower dependencies as proof that the route/script contract failed; first verify whether the route actually declared those skills, MCP servers, or tool constraints.
 7. Do not accept receipt families that drop `route_selected` / `skills_used` / `mcp_tools_used` provenance and then compensate with narrative-only explanation.
 
-## 8) 2026-03-21 machine-verified protocol landing snapshot
+## 9) 2026-03-21 machine-verified protocol landing snapshot
 
 1. Runtime truth was rechecked through the protocol resolver before interpreting this stream:
    - `python3 scripts/resolve_identity_context.py resolve --identity-id base-repo-architect`
@@ -214,8 +258,12 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
    - `scripts/validate_protocol_unique_entry_gate.py` now executes that smoke against the generated final-channel branch and projects `protocol_host_gateway_session_chain_executable_smoke_status`
    - the positive protocol probe suite keeps the smoke green on canonical generated wrappers, while the negative wrapper-mutation probe now proves that executable-smoke regressions fail closed
    - a live inherited pack that still carries the broken canonical wrapper now surfaces `protocol_host_gateway_session_chain_semantic_status=FAIL_REQUIRED` together with `protocol_host_gateway_session_chain_executable_smoke_status=FAIL_REQUIRED` instead of hiding behind template-latest PASS
-5. Protocol hygiene and inherited motherline checks remain green after the upgrade:
+5. Governed final emit now repairs stale host-visible post-check blockers instead of treating inherited closure-state drift as a permanent first-line gate failure:
+   - `scripts/final_emit_governed.py` now retries through `scripts/recover_host_visible_post_check_state.py` when the governed final outlet fails in the pre-first-line post-check blocker/state-unavailable branch
+   - `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh` now seeds a synthetic `host_visible_surface_live_closure_state.json` blocker and proves that the session-chain wrapper returns to `PASS_REQUIRED`
+   - this keeps stale host-visible closure state in the runtime-repair bucket instead of misclassifying it as a new route/script orchestration regression
+6. Protocol hygiene and inherited motherline checks remain green after the upgrade:
    - `python3 scripts/docs_command_contract_check.py` -> `docs checked: 79`, `command snippets checked: 853`, `PASS`
    - `python3 scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `status=PASS_REQUIRED`, `standard_closure_status=CLOSED`, `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
-6. The stream-doc-registry current-pointer lane is also now single-sourced for the touched validator family, and control-plane invariants fail close if the literal current pointer resurfaces outside the shared helper.
-7. This snapshot closes the protocol-owned execution-lane governance gap for `v1.6.15`, but it does not claim repo-wide clean freeze or cross-pack adoption closure.
+7. The stream-doc-registry current-pointer lane is also now single-sourced for the touched validator family, and control-plane invariants fail close if the literal current pointer resurfaces outside the shared helper.
+8. This snapshot closes the protocol-owned execution-lane governance gap for `v1.6.15`, but it does not claim repo-wide clean freeze or cross-pack adoption closure.
