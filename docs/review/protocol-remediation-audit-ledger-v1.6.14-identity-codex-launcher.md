@@ -151,3 +151,17 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - but docs checker / workbook consistency / launcher probes still evaluate against the provided `workspace_root` tree,
    - therefore the current asset is **not yet** a universal isolated historical replay engine for arbitrary commits unless it is run against an isolated clone/worktree representing that historical tree.
 7. This caveat does **not** downgrade the asset back to “explanatory only”; it only limits how far reviewers may promote the history-replay claim.
+
+## 9) Accepted external closure statement
+
+1. The audit-approved external statement for this stream is:
+   - **for the `v1.6.14` identity-Codex-launcher lane**, it has advanced from topic governance into a protocol-owned formal control-plane subsystem:
+     - semantics are in the main protocol,
+     - discovery is in registry,
+     - evidence is in allowlist,
+     - execution is in required gates,
+     - audit is in the lane-summary control plane.
+2. The remaining tail is also frozen precisely:
+   - remaining work belongs mainly to legacy rollout and isolated historical replay enhancement,
+   - it does **not** belong to unresolved launcher semantics.
+3. Reviewers may use the statement above as the auditable closure summary, but must keep the lane scope and replay caveat attached.

@@ -216,3 +216,7 @@ These names and directories are frozen by this stream. The renderer / installer 
    - `--base` / `--head` / `--commit` pin diff scope and stream-touch evidence,
    - but docs checker / workbook consistency / launcher probe execution still runs against the provided workspace tree,
    - therefore current summary pinning does not by itself claim arbitrary historical full-tree replay unless the caller supplies an isolated historical workspace.
+8. The accepted maturity statement for this stream is scoped precisely as follows:
+   - **for the `v1.6.14` identity-Codex-launcher lane**, the stream has advanced from topic governance into a protocol-owned formal control-plane subsystem,
+   - remaining work is limited primarily to legacy rollout and isolated historical replay enhancement,
+   - reviewers must not restate the residual work as proof that launcher semantics remain unclosed.
