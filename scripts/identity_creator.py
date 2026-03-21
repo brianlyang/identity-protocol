@@ -20,6 +20,11 @@ from actor_session_common import (
     resolve_protocol_actor_id,
 )
 from compatibility_pointer_semantics_common import SESSION_POINTER_COMPATIBILITY_PATH_FIELD
+from create_identity_pack import (
+    INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID,
+    INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID,
+    INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID,
+)
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
 from resolve_identity_context import (
     collect_protocol_evidence,
@@ -72,6 +77,11 @@ HOST_GATEWAY_DEFAULT_SESSION_CHAIN_WRAPPER = INFRA_HOST_GATEWAY_DEFAULT_SESSION_
 HOST_GATEWAY_DEFAULT_SIGNING_KEY = INFRA_HOST_GATEWAY_DEFAULT_SIGNING_KEY
 FINAL_EMIT_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
 REQUIRED_GATE_BUNDLE_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
+INSTANCE_SCRIPT_CONTRACT_VALIDATOR_IDS = (
+    INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID,
+    INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID,
+    INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID,
+)
 
 
 def _coverage_governed_validator_scripts() -> set[str]:
@@ -174,6 +184,69 @@ def _default_operation_run_token(identity_id: str, operation: str) -> str:
     operation_token = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "-" for ch in operation_token)
     ts = int(datetime.now(timezone.utc).timestamp())
     return f"{operation_token}-{identity_id}-{ts}"
+
+
+def _run_instance_script_contract_validators(
+    *,
+    identity_id: str,
+    catalog: str,
+    work_layer: str = "instance",
+    source_layer: str = "",
+) -> int:
+    resolved_source_layer = str(source_layer or "").strip().lower() or _infer_source_domain_from_catalog(catalog)
+    validator_cmds: list[list[str]] = []
+    for validator_id in INSTANCE_SCRIPT_CONTRACT_VALIDATOR_IDS:
+        cmd = [
+            "python3",
+            validator_id,
+            "--catalog",
+            str(catalog),
+            "--identity-id",
+            identity_id,
+            "--json-only",
+        ]
+        if validator_id != INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID:
+            cmd.extend(["--work-layer", str(work_layer or "instance").strip().lower() or "instance"])
+            cmd.extend(["--source-layer", resolved_source_layer])
+        validator_cmds.append(cmd)
+    for cmd in validator_cmds:
+        rc = _run(cmd)
+        if rc != 0:
+            print(
+                "[FAIL] instance script contract validator failed during identity_creator rollout; "
+                f"validator={cmd[1]}"
+            )
+            return rc
+    return 0
+
+
+def _run_contract_backfill_with_instance_script_rollout(
+    *,
+    identity_id: str,
+    catalog: str,
+    work_layer: str = "instance",
+    source_layer: str = "",
+) -> int:
+    rc = _run(
+        [
+            "python3",
+            "scripts/repair_contract_backfill.py",
+            "--catalog",
+            str(catalog),
+            "--identity-id",
+            identity_id,
+            "--apply",
+            "--json-only",
+        ]
+    )
+    if rc != 0:
+        return rc
+    return _run_instance_script_contract_validators(
+        identity_id=identity_id,
+        catalog=catalog,
+        work_layer=work_layer,
+        source_layer=source_layer,
+    )
 
 
 def _run(cmd: list[str]) -> int:
@@ -369,17 +442,11 @@ def _enforce_unique_entry_migration_closure(
             "running contract backfill for violating identities."
         )
         for violating_id in violation_ids:
-            rc_fix = _run(
-                [
-                    "python3",
-                    "scripts/repair_contract_backfill.py",
-                    "--catalog",
-                    str(catalog),
-                    "--identity-id",
-                    violating_id,
-                    "--apply",
-                    "--json-only",
-                ]
+            rc_fix = _run_contract_backfill_with_instance_script_rollout(
+                identity_id=violating_id,
+                catalog=str(catalog),
+                work_layer="instance",
+                source_layer=_infer_source_domain_from_catalog(str(catalog)),
             )
             if rc_fix != 0:
                 print(
@@ -1335,6 +1402,26 @@ def _heal_identity(
     )
     if rc != 0:
         report["result"] = "FAIL_CONTRACT_BACKFILL"
+        _write_heal_report(report, out_dir)
+        return rc
+    rollout_cmd = ["internal", "_run_instance_script_contract_validators"]
+    rc = _run_instance_script_contract_validators(
+        identity_id=identity_id,
+        catalog=str(local_catalog),
+        work_layer="instance",
+        source_layer=_infer_source_domain_from_catalog(str(local_catalog)),
+    )
+    report["steps"].append(
+        {
+            "name": "instance_script_contract_validators",
+            "command": rollout_cmd,
+            "rc": rc,
+            "stdout": "[OK] instance script contract validators completed" if rc == 0 else "",
+            "stderr": "" if rc == 0 else "instance script contract validator rollout failed",
+        }
+    )
+    if rc != 0:
+        report["result"] = "FAIL_INSTANCE_SCRIPT_CONTRACT_VALIDATORS"
         _write_heal_report(report, out_dir)
         return rc
 
@@ -3738,6 +3825,15 @@ def main() -> int:
         if rc != 0:
             print("[FAIL] contract backfill repair failed during update; update blocked")
             return rc
+        rc = _run_instance_script_contract_validators(
+            identity_id=args.identity_id,
+            catalog=args.catalog,
+            work_layer="instance",
+            source_layer=_infer_source_domain_from_catalog(args.catalog),
+        )
+        if rc != 0:
+            print("[FAIL] instance script contract validators failed during update; update blocked")
+            return rc
         rc = _run(
             [
                 "python3",
@@ -3944,23 +4040,15 @@ def main() -> int:
             and not pva_scaffold_ok
         )
         if rc_pva != 0 and scaffold_version_backfill_allowed:
-            repair_cmd = [
-                "python3",
-                "scripts/repair_contract_backfill.py",
-                "--catalog",
-                args.catalog,
-                "--identity-id",
-                args.identity_id,
-                "--apply",
-                "--json-only",
-            ]
-            rc_repair, out_repair, _ = _run_capture(repair_cmd)
-            repair_payload = _parse_json_payload(out_repair) or {}
-            repair_status = str(repair_payload.get("contract_backfill_status", "")).strip().upper()
-            repair_ok = rc_repair == 0 and repair_status in {"PASS_REQUIRED", "SKIPPED_NOT_REQUIRED"}
-            if not repair_ok:
+            rc_repair = _run_contract_backfill_with_instance_script_rollout(
+                identity_id=args.identity_id,
+                catalog=args.catalog,
+                work_layer="instance",
+                source_layer=_infer_source_domain_from_catalog(args.catalog),
+            )
+            if rc_repair != 0:
                 print("[FAIL] protocol version alignment scaffold mismatch auto-repair failed; update blocked")
-                return rc_repair or 1
+                return rc_repair
             rc_pva, out_pva, _ = _run_capture(protocol_alignment_cmd)
             pva_payload = _parse_json_payload(out_pva) or {}
             pva_error_code = str(pva_payload.get("error_code", "")).strip()

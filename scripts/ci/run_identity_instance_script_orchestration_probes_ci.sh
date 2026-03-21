@@ -56,6 +56,7 @@ sys.path.insert(0, str(root / "scripts"))
 from instance_script_orchestration_common import (  # noqa: E402
     STATUS_PASS_REQUIRED,
     build_route_orchestration_matrix,
+    build_route_receipt_join_matrix,
     load_manifest_doc,
     orchestration_required,
     resolve_pack_task,
@@ -110,16 +111,39 @@ for identity_id in candidate_ids:
     )
     if route_validation.get("status") != STATUS_PASS_REQUIRED:
         continue
+    receipt_validation = build_route_receipt_join_matrix(
+        pack_root=pack_root,
+        task_doc=task_doc,
+        manifest_validation=manifest_validation,
+        route_validation=route_validation,
+        identity_id=identity_id,
+        require_observed=True,
+    )
+    if receipt_validation.get("status") != STATUS_PASS_REQUIRED:
+        continue
+    receipt_rows = [
+        row
+        for row in (receipt_validation.get("route_rows") or [])
+        if isinstance(row, dict)
+        and str(row.get("receipt_validation_status", "")).strip() == STATUS_PASS_REQUIRED
+        and str(row.get("latest_receipt_path", "")).strip()
+    ]
+    if not receipt_rows:
+        continue
+    receipt_row = receipt_rows[0]
     selected = {
         "identity_id": identity_id,
         "pack_root": str(pack_root),
         "task_path": str(task_path),
         "manifest_path": str(manifest_path),
+        "receipt_route": str(receipt_row.get("route", "")).strip(),
+        "receipt_script_id": str(receipt_row.get("script_id", "")).strip(),
+        "receipt_path": str(receipt_row.get("latest_receipt_path", "")).strip(),
     }
     break
 
 if selected is None:
-    raise SystemExit("no orchestration-ready identity found for probes")
+    raise SystemExit("no receipt-ready orchestration identity found for probes")
 
 for key, value in selected.items():
     print(f"{key.upper()}={shlex.quote(str(value))}")
@@ -128,10 +152,13 @@ PY
 
 POS_MANIFEST_JSON="${TMP_ROOT}/positive-manifest.json"
 POS_ORCH_JSON="${TMP_ROOT}/positive-orchestration.json"
+POS_RECEIPT_JSON="${TMP_ROOT}/positive-receipt.json"
 NEG_MANIFEST_PACK="${TMP_ROOT}/negative-manifest-pack"
 NEG_MANIFEST_JSON="${TMP_ROOT}/negative-manifest.json"
 NEG_BINDING_PACK="${TMP_ROOT}/negative-binding-pack"
 NEG_BINDING_JSON="${TMP_ROOT}/negative-binding.json"
+NEG_RECEIPT_JSON="${TMP_ROOT}/negative-receipt.json"
+NEG_RECEIPT_PATH="${TMP_ROOT}/negative-receipt-override.json"
 
 mkdir -p "${NEG_MANIFEST_PACK}/scripts" "${NEG_BINDING_PACK}/scripts"
 cp "${TASK_PATH}" "${NEG_MANIFEST_PACK}/CURRENT_TASK.json"
@@ -150,6 +177,16 @@ python3 "${ROOT}/scripts/validate_identity_instance_script_orchestration.py" \
   --work-layer "${WORK_LAYER}" \
   --source-layer "${SOURCE_LAYER}" \
   --json-only > "${POS_ORCH_JSON}"
+
+python3 "${ROOT}/scripts/validate_route_script_receipt_join.py" \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --route "${RECEIPT_ROUTE}" \
+  --script-id "${RECEIPT_SCRIPT_ID}" \
+  --work-layer "${WORK_LAYER}" \
+  --source-layer "${SOURCE_LAYER}" \
+  --require-observed \
+  --json-only > "${POS_RECEIPT_JSON}"
 
 python3 - "${NEG_MANIFEST_PACK}/scripts/INSTANCE_SCRIPT_MANIFEST.json" <<'PY'
 import json
@@ -230,22 +267,51 @@ if python3 "${ROOT}/scripts/validate_identity_instance_script_orchestration.py" 
   exit 1
 fi
 
-python3 - "${POS_MANIFEST_JSON}" "${POS_ORCH_JSON}" "${NEG_MANIFEST_JSON}" "${NEG_BINDING_JSON}" "${IDENTITY_ID}" "${TMP_ROOT}" <<'PY'
+python3 - "${RECEIPT_PATH}" "${NEG_RECEIPT_PATH}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+source_path = Path(sys.argv[1])
+target_path = Path(sys.argv[2])
+receipt_doc = json.loads(source_path.read_text(encoding="utf-8"))
+receipt_doc["route_selected"] = "wrong_route"
+target_path.write_text(json.dumps(receipt_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+if python3 "${ROOT}/scripts/validate_route_script_receipt_join.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${TASK_PATH}" \
+  --route "${RECEIPT_ROUTE}" \
+  --script-id "${RECEIPT_SCRIPT_ID}" \
+  --receipt "${NEG_RECEIPT_PATH}" \
+  --work-layer "${WORK_LAYER}" \
+  --source-layer "${SOURCE_LAYER}" \
+  --require-observed \
+  --json-only > "${NEG_RECEIPT_JSON}"; then
+  echo "[FAIL] negative receipt probe unexpectedly passed"
+  exit 1
+fi
+
+python3 - "${POS_MANIFEST_JSON}" "${POS_ORCH_JSON}" "${POS_RECEIPT_JSON}" "${NEG_MANIFEST_JSON}" "${NEG_BINDING_JSON}" "${NEG_RECEIPT_JSON}" "${IDENTITY_ID}" "${TMP_ROOT}" <<'PY'
 import json
 import sys
 
-positive_manifest, positive_orch, negative_manifest, negative_binding = [
-    json.loads(open(path, encoding="utf-8").read()) for path in sys.argv[1:5]
+positive_manifest, positive_orch, positive_receipt, negative_manifest, negative_binding, negative_receipt = [
+    json.loads(open(path, encoding="utf-8").read()) for path in sys.argv[1:7]
 ]
-identity_id = sys.argv[5]
-tmp_root = sys.argv[6]
+identity_id = sys.argv[7]
+tmp_root = sys.argv[8]
 
 assert positive_manifest["instance_script_manifest_status"] == "PASS_REQUIRED", positive_manifest
 assert positive_orch["instance_script_orchestration_status"] == "PASS_REQUIRED", positive_orch
+assert positive_receipt["route_script_receipt_join_status"] == "PASS_REQUIRED", positive_receipt
 assert negative_manifest["instance_script_manifest_status"] == "FAIL_REQUIRED", negative_manifest
 assert any("entry_target_missing" in reason for reason in negative_manifest.get("stale_reasons", [])), negative_manifest
 assert negative_binding["instance_script_orchestration_status"] == "FAIL_REQUIRED", negative_binding
 assert any("missing_script_id:" in reason for reason in negative_binding.get("stale_reasons", [])), negative_binding
+assert negative_receipt["route_script_receipt_join_status"] == "FAIL_REQUIRED", negative_receipt
+assert any("receipt_route_selected_mismatch" in reason for reason in negative_receipt.get("stale_reasons", [])), negative_receipt
 
 print(
     json.dumps(
@@ -254,8 +320,10 @@ print(
             "identity_id": identity_id,
             "positive_manifest_status": positive_manifest["instance_script_manifest_status"],
             "positive_orchestration_status": positive_orch["instance_script_orchestration_status"],
+            "positive_receipt_join_status": positive_receipt["route_script_receipt_join_status"],
             "negative_manifest_failure": "entry_target_missing",
             "negative_binding_failure": "missing_script_id",
+            "negative_receipt_failure": "receipt_route_selected_mismatch",
             "tmp_root": tmp_root,
         },
         ensure_ascii=False,

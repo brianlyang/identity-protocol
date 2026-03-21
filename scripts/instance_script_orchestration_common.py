@@ -12,6 +12,20 @@ STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
 INSTANCE_SCRIPT_MANIFEST_REL = Path("scripts/INSTANCE_SCRIPT_MANIFEST.json")
+INSTANCE_SCRIPT_RECEIPT_FAMILIES: tuple[str, ...] = (
+    "instance_script_admission_receipt",
+    "instance_script_execution_receipt",
+    "instance_script_emit_receipt",
+    "instance_script_recovery_receipt",
+)
+INSTANCE_SCRIPT_RECEIPT_PROVENANCE_FIELDS: tuple[str, ...] = (
+    "route_selected",
+    "skills_used",
+    "mcp_tools_used",
+    "actions_taken",
+    "result",
+    "artifacts",
+)
 INSTANCE_SCRIPT_ROUTE_FIELDS: tuple[str, ...] = (
     "primary_instance_scripts",
     "fallback_instance_scripts",
@@ -250,6 +264,173 @@ def validate_manifest_doc(
     }
 
 
+def route_evidence_schema_fields(task_doc: dict[str, Any]) -> list[str]:
+    contract = task_doc.get("capability_orchestration_contract")
+    declared = clean_string_list(contract.get("evidence_schema_fields")) if isinstance(contract, dict) else []
+    merged: list[str] = []
+    for token in [*INSTANCE_SCRIPT_RECEIPT_PROVENANCE_FIELDS, *declared]:
+        if token and token not in merged:
+            merged.append(token)
+    return merged
+
+
+def expected_receipt_family(*, receipt_pattern: str, script_kind: str) -> str:
+    pattern_token = str(receipt_pattern or "").strip().lower()
+    kind_token = str(script_kind or "").strip().lower()
+    if "instance-script-emit" in pattern_token or kind_token in {"emit", "emitter"} or "emitter" in kind_token:
+        return "instance_script_emit_receipt"
+    if "instance-script-recovery" in pattern_token or "recovery" in kind_token:
+        return "instance_script_recovery_receipt"
+    if "instance-script-admission" in pattern_token or "admission" in kind_token or kind_token.startswith("entry"):
+        return "instance_script_admission_receipt"
+    return "instance_script_execution_receipt"
+
+
+def _resolve_receipt_paths(
+    *,
+    pack_root: Path,
+    receipt_pattern: str,
+    route_name: str,
+    script_id: str,
+    receipt_override: str = "",
+) -> tuple[list[Path], list[str]]:
+    override = str(receipt_override or "").strip()
+    if override:
+        return [Path(override).expanduser().resolve()], []
+    token = str(receipt_pattern or "").strip()
+    if not token:
+        return [], ["receipt_pattern_missing"]
+    try:
+        hits = [path.resolve() for path in pack_root.glob(token) if path.is_file()]
+    except Exception as exc:
+        return [], [f"receipt_glob_failed:{type(exc).__name__}:{exc}"]
+    route_token = str(route_name or "").strip()
+    script_token = str(script_id or "").strip()
+    filtered = [
+        path
+        for path in hits
+        if route_token in path.name and script_token in path.name
+    ]
+    return sorted(filtered, key=lambda item: item.stat().st_mtime, reverse=True), []
+
+
+def _validate_string_list_field(value: Any, *, field_name: str) -> tuple[list[str], list[str]]:
+    issues: list[str] = []
+    if not isinstance(value, list):
+        return [], [f"{field_name}_not_list"]
+    tokens = clean_string_list(value)
+    if len(tokens) != len(value):
+        issues.append(f"{field_name}_contains_blank_or_non_string")
+    return tokens, issues
+
+
+def validate_route_script_receipt_doc(
+    *,
+    receipt_doc: dict[str, Any],
+    receipt_path: Path,
+    pack_root: Path,
+    identity_id: str,
+    route_name: str,
+    script_id: str,
+    route_doc: dict[str, Any],
+    manifest_entry: dict[str, Any],
+    expected_pattern: str,
+    allow_external_receipt: bool = False,
+) -> dict[str, Any]:
+    issues: list[str] = []
+    if str(receipt_doc.get("schema_version", "")).strip() != "v1":
+        issues.append("receipt_schema_version_invalid")
+    receipt_family = str(receipt_doc.get("receipt_family", "")).strip()
+    if receipt_family not in INSTANCE_SCRIPT_RECEIPT_FAMILIES:
+        issues.append(f"receipt_family_invalid:{receipt_family or 'missing'}")
+    expected_family = expected_receipt_family(
+        receipt_pattern=expected_pattern,
+        script_kind=str(manifest_entry.get("script_kind", "")).strip(),
+    )
+    if receipt_family and receipt_family in INSTANCE_SCRIPT_RECEIPT_FAMILIES and receipt_family != expected_family:
+        issues.append(f"receipt_family_mismatch:{expected_family}!={receipt_family}")
+    if str(receipt_doc.get("identity_id", "")).strip() != str(identity_id or "").strip():
+        issues.append("receipt_identity_id_mismatch")
+    if str(receipt_doc.get("route_selected", "")).strip() != str(route_name or "").strip():
+        issues.append("receipt_route_selected_mismatch")
+    if str(receipt_doc.get("script_id", "")).strip() != str(script_id or "").strip():
+        issues.append("receipt_script_id_mismatch")
+    manifest_script_kind = str(manifest_entry.get("script_kind", "")).strip()
+    if str(receipt_doc.get("script_kind", "")).strip() != manifest_script_kind:
+        issues.append("receipt_script_kind_mismatch")
+    if str(receipt_doc.get("script_receipt_pattern", "")).strip() != str(expected_pattern or "").strip():
+        issues.append("receipt_pattern_mismatch")
+
+    if not allow_external_receipt:
+        runtime_root = (pack_root / "runtime").resolve()
+        if not path_within(receipt_path, runtime_root):
+            issues.append("receipt_path_outside_runtime_root")
+
+    required_skills = {
+        *clean_string_list(route_doc.get("primary_skills")),
+        *clean_string_list(route_doc.get("fallback_skills")),
+    }
+    required_mcp = set(clean_string_list(route_doc.get("required_mcp")))
+
+    skills_used, skill_issues = _validate_string_list_field(receipt_doc.get("skills_used"), field_name="skills_used")
+    issues.extend(skill_issues)
+    if required_skills and not skills_used:
+        issues.append("skills_used_empty_for_declared_route")
+    undeclared_skills = [token for token in skills_used if token not in required_skills]
+    if undeclared_skills:
+        issues.append("skills_used_undeclared:" + ",".join(sorted(set(undeclared_skills))))
+
+    mcp_tools_used, mcp_issues = _validate_string_list_field(
+        receipt_doc.get("mcp_tools_used"),
+        field_name="mcp_tools_used",
+    )
+    issues.extend(mcp_issues)
+    if required_mcp and not mcp_tools_used:
+        issues.append("mcp_tools_used_empty_for_declared_route")
+    undeclared_mcp = [token for token in mcp_tools_used if token not in required_mcp]
+    if undeclared_mcp:
+        issues.append("mcp_tools_used_undeclared:" + ",".join(sorted(set(undeclared_mcp))))
+
+    actions_taken, action_issues = _validate_string_list_field(
+        receipt_doc.get("actions_taken"),
+        field_name="actions_taken",
+    )
+    issues.extend(action_issues)
+    if not actions_taken:
+        issues.append("actions_taken_empty")
+
+    result_token = str(receipt_doc.get("result", "")).strip()
+    if not result_token:
+        issues.append("result_missing")
+    elif result_token != STATUS_PASS_REQUIRED:
+        issues.append(f"result_not_pass_required:{result_token}")
+
+    artifacts = receipt_doc.get("artifacts")
+    if isinstance(artifacts, dict):
+        if not artifacts:
+            issues.append("artifacts_empty")
+    elif isinstance(artifacts, list):
+        if not clean_string_list(artifacts):
+            issues.append("artifacts_empty")
+    else:
+        issues.append("artifacts_not_machine_visible")
+
+    missing_minimum_fields = [
+        field
+        for field in INSTANCE_SCRIPT_RECEIPT_PROVENANCE_FIELDS
+        if field not in receipt_doc
+    ]
+    if missing_minimum_fields:
+        issues.append("missing_provenance_fields:" + ",".join(sorted(set(missing_minimum_fields))))
+
+    return {
+        "status": STATUS_PASS_REQUIRED if not issues else STATUS_FAIL_REQUIRED,
+        "receipt_family": receipt_family,
+        "expected_receipt_family": expected_family,
+        "stale_reasons": issues,
+    }
+
+
 def _precondition_tokens(value: Any) -> list[str]:
     if isinstance(value, (str, list)):
         return clean_string_list(value)
@@ -425,4 +606,138 @@ def build_route_orchestration_matrix(
         "route_ready_count": ready_count,
         "route_rows": route_rows,
         "stale_reasons": stale_reasons,
+    }
+
+
+def build_route_receipt_join_matrix(
+    *,
+    pack_root: Path,
+    task_doc: dict[str, Any],
+    manifest_validation: dict[str, Any],
+    route_validation: dict[str, Any],
+    identity_id: str,
+    require_observed: bool = False,
+    receipt_override: str = "",
+    target_route: str = "",
+    target_script_id: str = "",
+) -> dict[str, Any]:
+    manifest_index = dict(manifest_validation.get("manifest_index") or {})
+    routes = task_type_routes(task_doc)
+    target_route_token = str(target_route or "").strip()
+    target_script_token = str(target_script_id or "").strip()
+    route_rows: list[dict[str, Any]] = []
+    blocking_reasons: list[str] = []
+    observed_count = 0
+    checked_count = 0
+
+    for route_row in route_validation.get("route_rows") or []:
+        if not isinstance(route_row, dict):
+            continue
+        route_name = str(route_row.get("route", "")).strip()
+        if not route_name or not bool(route_row.get("adopted")):
+            continue
+        if target_route_token and route_name != target_route_token:
+            continue
+        if route_row.get("route_ready") is not True:
+            row_copy = dict(route_row)
+            row_copy["receipt_validation_status"] = STATUS_SKIPPED_NOT_REQUIRED
+            row_copy["diagnostic_label"] = "orchestration_not_ready"
+            row_copy["receipt_observed_count"] = 0
+            route_rows.append(row_copy)
+            continue
+
+        route_doc = routes.get(route_name) or {}
+        resolved_script_ids = [
+            str(token).strip()
+            for token in (route_row.get("resolved_script_ids") or [])
+            if str(token).strip()
+        ]
+        for script_id in resolved_script_ids:
+            if target_script_token and script_id != target_script_token:
+                continue
+            checked_count += 1
+            manifest_entry = dict(manifest_index.get(script_id) or {})
+            receipt_pattern = str(route_doc.get("script_receipt_pattern", "")).strip() or str(
+                manifest_entry.get("default_receipt_pattern", "")
+            ).strip()
+            row: dict[str, Any] = {
+                "route": route_name,
+                "script_id": script_id,
+                "script_kind": str(manifest_entry.get("script_kind", "")).strip(),
+                "receipt_pattern": receipt_pattern,
+                "receipt_validation_status": STATUS_SKIPPED_NOT_REQUIRED,
+                "diagnostic_label": "receipt_not_observed_yet",
+                "receipt_observed_count": 0,
+                "latest_receipt_path": "",
+                "required_provenance_fields": route_evidence_schema_fields(task_doc),
+                "stale_reasons": [],
+            }
+            receipt_paths, path_issues = _resolve_receipt_paths(
+                pack_root=pack_root,
+                receipt_pattern=receipt_pattern,
+                route_name=route_name,
+                script_id=script_id,
+                receipt_override=receipt_override,
+            )
+            if path_issues:
+                row["receipt_validation_status"] = STATUS_FAIL_REQUIRED
+                row["diagnostic_label"] = "receipt_glob_failed"
+                row["stale_reasons"] = list(path_issues)
+                blocking_reasons.extend(f"{route_name}:{script_id}:{reason}" for reason in path_issues)
+                route_rows.append(row)
+                continue
+            row["receipt_observed_count"] = len(receipt_paths)
+            if not receipt_paths:
+                if require_observed:
+                    row["receipt_validation_status"] = STATUS_FAIL_REQUIRED
+                    row["diagnostic_label"] = "receipt_missing"
+                    row["stale_reasons"] = ["receipt_not_observed"]
+                    blocking_reasons.append(f"{route_name}:{script_id}:receipt_not_observed")
+                route_rows.append(row)
+                continue
+
+            observed_count += 1
+            latest_receipt = receipt_paths[0]
+            row["latest_receipt_path"] = str(latest_receipt)
+            try:
+                receipt_doc = load_json(latest_receipt)
+            except Exception as exc:
+                row["receipt_validation_status"] = STATUS_FAIL_REQUIRED
+                row["diagnostic_label"] = "receipt_invalid_json"
+                row["stale_reasons"] = [f"receipt_invalid_json:{exc}"]
+                blocking_reasons.append(f"{route_name}:{script_id}:receipt_invalid_json")
+                route_rows.append(row)
+                continue
+
+            validation = validate_route_script_receipt_doc(
+                receipt_doc=receipt_doc,
+                receipt_path=latest_receipt,
+                pack_root=pack_root,
+                identity_id=identity_id,
+                route_name=route_name,
+                script_id=script_id,
+                route_doc=route_doc,
+                manifest_entry=manifest_entry,
+                expected_pattern=receipt_pattern,
+                allow_external_receipt=bool(str(receipt_override or "").strip()),
+            )
+            row["receipt_validation_status"] = str(validation.get("status", "")).strip() or STATUS_FAIL_REQUIRED
+            row["expected_receipt_family"] = str(validation.get("expected_receipt_family", "")).strip()
+            row["observed_receipt_family"] = str(validation.get("receipt_family", "")).strip()
+            row["stale_reasons"] = list(validation.get("stale_reasons") or [])
+            row["diagnostic_label"] = "ready" if row["receipt_validation_status"] == STATUS_PASS_REQUIRED else "receipt_invalid"
+            if row["receipt_validation_status"] != STATUS_PASS_REQUIRED:
+                blocking_reasons.extend(f"{route_name}:{script_id}:{reason}" for reason in row["stale_reasons"])
+            route_rows.append(row)
+
+    status = STATUS_PASS_REQUIRED if not blocking_reasons else STATUS_FAIL_REQUIRED
+    if checked_count == 0:
+        status = STATUS_SKIPPED_NOT_REQUIRED
+    return {
+        "status": status,
+        "route_total_count": len(route_rows),
+        "route_checked_count": checked_count,
+        "route_observed_count": observed_count,
+        "route_rows": route_rows,
+        "stale_reasons": blocking_reasons,
     }

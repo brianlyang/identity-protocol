@@ -58,10 +58,15 @@ from create_identity_pack import (
     INSTANCE_PACK_TOPOLOGY_CONTRACT_ID,
     INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY,
     INSTANCE_PACK_TOPOLOGY_VALIDATOR_ID,
+    INSTANCE_SCRIPT_MANIFEST_RELATIVE_PATH,
+    INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID,
+    INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID,
+    INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID,
     UNIQUE_EGRESS_SCRIPT,
     UNIQUE_INGRESS_SCRIPT,
     _copy_jsonl_with_identity,
     _copy_sample_with_identity,
+    _default_instance_script_manifest,
     _default_identity_agent_yaml,
     _default_instance_scripts_readme,
     _derived_prompt_conformance_contract_skeleton,
@@ -185,6 +190,9 @@ CAPABILITY_DRIVER_VALIDATOR_IDS: tuple[str, ...] = (
     "scripts/validate_identity_tool_installation.py",
     "scripts/validate_identity_vendor_api_discovery.py",
     "scripts/validate_identity_vendor_api_solution.py",
+    INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID,
+    INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID,
+    INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID,
 )
 
 ERR_PROMPT_WIRE_MISSING = "IP-PROMPT-WIRE-002"
@@ -254,7 +262,16 @@ def _ensure_instance_pack_topology_assets(
         "scripts/README.md": _default_instance_scripts_readme(identity_id),
         "agents/identity.yaml": _default_identity_agent_yaml(identity_id, title, description),
     }
+    optional_files = {
+        INSTANCE_SCRIPT_MANIFEST_RELATIVE_PATH: json.dumps(
+            _default_instance_script_manifest(identity_id),
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+    }
     missing_files = [row for row in required_files if not (pack_path / row).exists()]
+    missing_optional_files = [row for row in optional_files if not (pack_path / row).exists()]
     if apply:
         for row in required_dirs:
             (pack_path / row).mkdir(parents=True, exist_ok=True)
@@ -263,14 +280,21 @@ def _ensure_instance_pack_topology_assets(
             if not path.exists():
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(text, encoding="utf-8")
+        for rel, text in optional_files.items():
+            path = pack_path / rel
+            if not path.exists():
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(text, encoding="utf-8")
     return {
         "status": STATUS_PASS_REQUIRED if apply or (not missing_dirs and not missing_files) else STATUS_SKIPPED_NOT_REQUIRED,
-        "changed": bool(missing_dirs or missing_files),
-        "applied": bool(apply and (missing_dirs or missing_files)),
+        "changed": bool(missing_dirs or missing_files or missing_optional_files),
+        "applied": bool(apply and (missing_dirs or missing_files or missing_optional_files)),
         "missing_dirs_before": missing_dirs,
         "missing_files_before": missing_files,
+        "missing_optional_files_before": missing_optional_files,
         "required_dirs": required_dirs,
         "required_files": sorted(required_files.keys()),
+        "optional_seed_files": sorted(optional_files.keys()),
     }
 
 

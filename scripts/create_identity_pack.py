@@ -281,6 +281,10 @@ DOWNSINK_REQUIRED_DOMAINS: tuple[str, ...] = (
 INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY = "instance_pack_topology_contract_v1"
 INSTANCE_PACK_TOPOLOGY_CONTRACT_ID = "instance_pack_topology_contract_v1"
 INSTANCE_PACK_TOPOLOGY_VALIDATOR_ID = "scripts/validate_identity_instance_pack_topology.py"
+INSTANCE_SCRIPT_MANIFEST_RELATIVE_PATH = "scripts/INSTANCE_SCRIPT_MANIFEST.json"
+INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID = "scripts/validate_instance_script_manifest.py"
+INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID = "scripts/validate_identity_instance_script_orchestration.py"
+INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID = "scripts/validate_route_script_receipt_join.py"
 PROVIDER_BINDINGS_TEMPLATE_RELATIVE_PATH = (
     "identity/protocol/plugins/templates/provider-bindings.local.template.yaml"
 )
@@ -395,6 +399,7 @@ This directory is the instance-owned executable source surface for
 Boundary:
 
 - `scripts/` lives at the identity-pack root and is the only canonical script surface for instance-owned helpers.
+- `scripts/INSTANCE_SCRIPT_MANIFEST.json` is the canonical route-targetable script catalog for this pack.
 - `runtime/` stays reserved for runtime/autonomy/state/report/downsink artifacts.
 - `runtime/scripts/` is forbidden and must fail-close under topology validation.
 - Scripts here may consume shared protocol/workspace resolvers, but must not fork shared protocol semantics.
@@ -405,6 +410,14 @@ Guidance:
 - Prefer relative paths rooted at the current identity pack or protocol repo.
 - Do not introduce user-specific absolute paths into committed instance helpers.
 """.format(identity_token=identity_token)
+
+
+def _default_instance_script_manifest(identity_id: str) -> dict[str, Any]:
+    return {
+        "manifest_version": "v1",
+        "identity_id": str(identity_id or "").strip(),
+        "scripts": {},
+    }
 
 
 def _default_identity_agent_yaml(identity_id: str, title: str, description: str) -> str:
@@ -786,6 +799,10 @@ def _instance_pack_topology_contract_skeleton(identity_id: str) -> dict:
             "runtime/reports/agent-relay-final-answer",
             "runtime/reports/host-visible-surface",
             "runtime/reports/install",
+            "runtime/reports/instance-script-admission",
+            "runtime/reports/instance-script-execution",
+            "runtime/reports/instance-script-emit",
+            "runtime/reports/instance-script-recovery",
             "runtime/reports/multimodal-runtime-stage",
             "runtime/reports/required-gate-bundle-entry",
             "runtime/rulebooks",
@@ -5538,6 +5555,9 @@ def _default_required_checks() -> list[str]:
         "scripts/validate_identity_vendor_api_discovery.py",
         "scripts/validate_identity_vendor_api_solution.py",
         "scripts/validate_identity_instance_pack_topology.py",
+        INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID,
+        INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID,
+        INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID,
         "scripts/validate_prompt_bootstrap_capability.py",
         "scripts/validate_prompt_capability_matrix.py",
         "scripts/validate_refresh_strict_business_interference.py",
@@ -6842,6 +6862,10 @@ def main() -> int:
         ),
     )
     write(pack_dir / "scripts" / "README.md", _default_instance_scripts_readme(identity_id))
+    write_json(
+        pack_dir / INSTANCE_SCRIPT_MANIFEST_RELATIVE_PATH,
+        _default_instance_script_manifest(identity_id),
+    )
 
     runtime_root = pack_dir / "runtime"
     write(

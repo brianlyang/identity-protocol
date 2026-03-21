@@ -1,6 +1,6 @@
 # Protocol Remediation Audit Ledger (v1.6.15 instance-script orchestration stream)
 
-Status: Active (contract freeze plus core validator/readiness landing, 2026-03-21; broader rollout still in progress)  
+Status: Active (shared validator/probe/consumer landing in place, 2026-03-21; cross-pack adoption rollout still in progress)  
 Scope: protocol review ledger for route -> instance-script declarative join, pack-local script manifest governance, and execution receipt-family modeling
 
 ## 0) Stream objective
@@ -42,12 +42,16 @@ Scope: protocol review ledger for route -> instance-script declarative join, pac
 10. Landed implementation surfaces for this stream now include:
    - `scripts/validate_identity_instance_script_orchestration.py`
    - `scripts/validate_instance_script_manifest.py`
+   - `scripts/validate_route_script_receipt_join.py`
    - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
    - `scripts/release_readiness_check.py`
    - `scripts/validate_identity_capability_activation.py`
-11. Remaining follow-on implementation targets are:
-   - `scripts/validate_route_script_receipt_join.py`
-   - shared creator/backfill consumers that still need the same contract family
+   - `scripts/create_identity_pack.py`
+   - `scripts/repair_contract_backfill.py`
+   - `scripts/identity_creator.py`
+11. Remaining follow-on implementation obligations are:
+   - roll the same shared family through target-pack adoption without topology drift
+   - keep future receipt-family specializations inside the same validator/probe/control path
 
 ### 2.2 Workspace / instance-owned surfaces consumed by this stream
 
@@ -134,16 +138,16 @@ Scope: protocol review ledger for route -> instance-script declarative join, pac
    - receipt-provenance projection expectations are frozen,
    - reviewer failure-attribution order is explicit.
 3. **Implementation PASS** for this stream is not satisfied by documentation alone. The following implementation pieces are now landed:
-   - protocol-owned manifest and route/script validators,
+   - protocol-owned manifest, route/script, and route/script-to-receipt validators,
+   - positive and negative probes through `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`,
    - readiness wiring through `scripts/release_readiness_check.py`,
-   - capability-activation awareness of instance scripts through `scripts/validate_identity_capability_activation.py`.
+   - capability-activation awareness of instance scripts through `scripts/validate_identity_capability_activation.py`,
+   - shared create/backfill/update consumer rollout through `scripts/create_identity_pack.py`, `scripts/repair_contract_backfill.py`, and `scripts/identity_creator.py`.
 4. Full **Implementation PASS** still requires:
-   - creator/backfill/update wiring on the same contract family,
-   - a dedicated route/script receipt-join validator,
    - route-scoped activation behavior that does not union-block unrelated routes unless an explicit stronger policy is selected,
-   - reusable positive and negative probes,
-   - proof-pack adoption without topology drift,
-   - receipt-provenance projection that keeps `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts` machine-visible.
+   - proof-pack adoption without topology drift across target identities,
+   - receipt-provenance projection that keeps `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts` machine-visible under live pack execution,
+   - future receipt-family specializations, when needed, stay on the same shared validator/probe/control path instead of forking it.
 5. Reviewers must not collapse `Architecture PASS` into `Implementation PASS`.
 6. **Diagnostic Attribution PASS** requires reviewers to classify failures in this order:
    - `route_contract_missing`: one or more of `primary_instance_scripts`, `fallback_instance_scripts`, `script_preconditions`, or `script_receipt_pattern` is absent, contradictory, or unresolved in `CURRENT_TASK.json`.
@@ -157,7 +161,7 @@ Scope: protocol review ledger for route -> instance-script declarative join, pac
 ## 6) Accepted closure boundary
 
 1. `v1.6.15` is closed at the contract-freeze level when the route/script/dependency/receipt model is frozen in protocol docs and mappings.
-2. `v1.6.15` is not closed at the full implementation level until receipt-join/probe surfaces and the remaining shared consumers land in addition to the core validators/readiness wiring that already exist.
+2. `v1.6.15` is not closed at the full implementation level until cross-pack adoption proves the landed shared validator/probe/consumer family holds without topology drift.
 3. Instance packs may already be able to self-organize around pack-root `scripts/`, but chat evidence alone does not promote a private local pattern into protocol motherline.
 4. This stream remains independent from provider runtime incidents, launcher install incidents, and host-visible final-surface auto-binding work.
 5. A pack may be `topology-ready` and `exit-ready` yet still be pre-adoption for `v1.6.15` until manifest and additive route fields land; that migration state must not be misreported as a reopen of inherited streams.
