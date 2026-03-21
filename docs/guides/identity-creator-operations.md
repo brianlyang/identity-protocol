@@ -63,7 +63,7 @@ bash scripts/e2e_smoke_test.sh
 In consumer repo:
 
 ```bash
-bash scripts/identity/upgrade_and_verify_v1.sh
+bash scripts/protocol_consumer/upgrade_and_verify_v1.sh
 ```
 
 ## 7) Publish protocol changes

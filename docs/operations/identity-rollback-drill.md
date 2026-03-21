@@ -16,7 +16,7 @@ Practice a safe rollback from a newer protocol pin to a known-good pin.
 
 ```bash
 cat identity/PROTOCOL_PIN.yaml
-bash scripts/identity/upgrade_and_verify_v1.sh
+bash scripts/protocol_consumer/upgrade_and_verify_v1.sh
 ```
 
 Archive outputs:
@@ -37,7 +37,7 @@ Edit `identity/PROTOCOL_PIN.yaml` to previous known-good tag+commit.
 ### 4) Re-verify
 
 ```bash
-bash scripts/identity/upgrade_and_verify_v1.sh
+bash scripts/protocol_consumer/upgrade_and_verify_v1.sh
 ```
 
 Pass criteria:
@@ -57,4 +57,3 @@ Record in incident log:
 - If failure affects required contract keys/files: immediate rollback.
 - If failure only affects optional v1.1 features and operations are not blocked:
   allow temporary degraded mode with explicit risk note.
-

@@ -30,22 +30,23 @@ Add `[[skills.config]]` entries for role-critical skills and route dependencies.
 Run in consumer repo:
 
 ```bash
-python3 scripts/identity/check_protocol_pin.py
-python3 scripts/identity/validate_identity_manifest.py
-python3 scripts/identity/test_identity_discovery_contract.py
-python3 scripts/identity/validate_identity_runtime_contract.py
+python3 scripts/protocol_consumer/check_protocol_pin.py
+python3 scripts/protocol_consumer/validate_identity_manifest.py
+python3 scripts/protocol_consumer/test_identity_discovery_contract.py
+python3 identity-protocol-local/scripts/validate_identity_runtime_contract.py
+python3 scripts/validate_workspace_script_topology.py
 ```
 
 Optional one-shot:
 
 ```bash
-bash scripts/identity/upgrade_and_verify_v1.sh
+bash scripts/protocol_consumer/upgrade_and_verify_v1.sh
 ```
 
 ## 5) Validate learning loop (#2 and #4)
 
 ```bash
-python3 scripts/identity/validate_identity_learning_loop.py \
+python3 identity-protocol-local/scripts/validate_identity_learning_loop.py \
   --run-report identity/runtime/examples/store-manager-learning-sample.json
 ```
 
@@ -55,7 +56,8 @@ Only publish consumer update when:
 - pin matches remote tag commit
 - runtime contract validation passes
 - learning-loop validation passes
-- route resolvability checks pass for critical problem types
+- workspace topology validation passes
+- consumer-specific route resolvability checks pass for critical problem types
 
 ## Notes
 
