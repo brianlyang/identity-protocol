@@ -20,11 +20,16 @@ from pathlib import Path
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["range_mode"] in {"default_head_parent", "explicit_range", "commit_pinned"}, payload
+assert payload["base"], payload
+assert payload["head"], payload
+assert isinstance(payload["changed_files"], list), payload
 lane_summary = payload["lane_summary"]
 assert lane_summary["launcher_lane_status"] == "PASS_REQUIRED", lane_summary
 assert lane_summary["workbook_canonical_freshness_status"] == "PASS_REQUIRED", lane_summary
 assert lane_summary["projection_docs_checker_gate_status"] == "NOT_GATING_BOUNDARY_ONLY", lane_summary
 assert lane_summary["protocol_gate_depends_on_projection_docs_checker_counts"] is False, lane_summary
+assert lane_summary["lane_change_scope"], lane_summary
 
 stream_scope = payload["stream_scope"]
 if lane_summary["stream_touch_evidence_status"] == "NOT_APPLICABLE_NO_STREAM_DOCS_TOUCHED":
