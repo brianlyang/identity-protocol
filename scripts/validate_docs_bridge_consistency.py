@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from contract_binding_doc_defaults_common import resolve_validator_doc_defaults
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -38,6 +39,32 @@ def _select_contract(task: dict[str, Any]) -> dict[str, Any]:
         if isinstance(value, dict):
             return value
     return {}
+
+
+def _resolve_doc_paths(
+    *,
+    repo_root: Path,
+    contract: dict[str, Any],
+    governance_doc_arg: str,
+    review_doc_arg: str,
+) -> tuple[Path | None, Path | None]:
+    derived_governance_doc, derived_review_doc = resolve_validator_doc_defaults(
+        repo_root,
+        validator_script="scripts/validate_docs_bridge_consistency.py",
+    )
+    governance_doc_rel = (
+        str(governance_doc_arg or "").strip()
+        or str(contract.get("governance_doc", "")).strip()
+        or derived_governance_doc
+    )
+    review_doc_rel = (
+        str(review_doc_arg or "").strip()
+        or str(contract.get("review_doc", "")).strip()
+        or derived_review_doc
+    )
+    governance_doc_path = (repo_root / governance_doc_rel).resolve() if governance_doc_rel else None
+    review_doc_path = (repo_root / review_doc_rel).resolve() if review_doc_rel else None
+    return governance_doc_path, review_doc_path
 
 
 def _anchor_refs(text: str, *, limit: int = 24) -> list[str]:
@@ -77,8 +104,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Validate governance/review docs bridge consistency contract (RQ-008).")
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--identity-id", required=True)
-    ap.add_argument("--governance-doc", default="docs/governance/identity-actor-session-binding-governance-v1.6.0.md")
-    ap.add_argument("--review-doc", default="docs/review/protocol-remediation-audit-ledger-v1.6.md")
+    ap.add_argument("--governance-doc", default="")
+    ap.add_argument("--review-doc", default="")
     ap.add_argument(
         "--operation",
         choices=["activate", "update", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection"],
@@ -131,19 +158,29 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 0
 
-    governance_doc_path = Path(args.governance_doc).expanduser().resolve()
-    review_doc_path = Path(args.review_doc).expanduser().resolve()
-    payload["governance_doc_path"] = str(governance_doc_path)
-    payload["review_doc_path"] = str(review_doc_path)
-    payload["evidence_ref"] = str(governance_doc_path)
+    repo_root = Path(__file__).resolve().parent.parent
+    governance_doc_path, review_doc_path = _resolve_doc_paths(
+        repo_root=repo_root,
+        contract=contract,
+        governance_doc_arg=args.governance_doc,
+        review_doc_arg=args.review_doc,
+    )
+    payload["governance_doc_path"] = str(governance_doc_path) if governance_doc_path is not None else ""
+    payload["review_doc_path"] = str(review_doc_path) if review_doc_path is not None else ""
+    payload["evidence_ref"] = str(governance_doc_path) if governance_doc_path is not None else ""
 
-    if not governance_doc_path.exists() or not review_doc_path.exists():
+    if (
+        governance_doc_path is None
+        or review_doc_path is None
+        or not governance_doc_path.exists()
+        or not review_doc_path.exists()
+    ):
         payload["bridge_consistency_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_DOC_MISSING
         reasons = []
-        if not governance_doc_path.exists():
+        if governance_doc_path is None or not governance_doc_path.exists():
             reasons.append("governance_doc_missing")
-        if not review_doc_path.exists():
+        if review_doc_path is None or not review_doc_path.exists():
             reasons.append("review_doc_missing")
         payload["stale_reasons"] = reasons
         _emit(payload, json_only=args.json_only)

@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from contract_binding_doc_defaults_common import resolve_validator_doc_defaults
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -26,8 +27,8 @@ STRICT_OPERATIONS = {
     "validate",
 }
 
-DEFAULT_GOV_DOC = "docs/governance/identity-actor-session-binding-governance-v1.6.0.md"
-DEFAULT_REVIEW_DOC = "docs/review/protocol-remediation-audit-ledger-v1.6.md"
+DEFAULT_GOV_DOC = ""
+DEFAULT_REVIEW_DOC = ""
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -47,6 +48,32 @@ def _select_contract(task: dict[str, Any]) -> dict[str, Any]:
         if isinstance(value, dict):
             return value
     return {}
+
+
+def _resolve_doc_paths(
+    *,
+    repo_root: Path,
+    contract: dict[str, Any],
+    governance_doc_arg: str,
+    review_doc_arg: str,
+) -> tuple[Path | None, Path | None]:
+    derived_governance_doc, derived_review_doc = resolve_validator_doc_defaults(
+        repo_root,
+        validator_script="scripts/validate_unlock_formula.py",
+    )
+    governance_doc_rel = (
+        str(governance_doc_arg or "").strip()
+        or str(contract.get("governance_doc", "")).strip()
+        or derived_governance_doc
+    )
+    review_doc_rel = (
+        str(review_doc_arg or "").strip()
+        or str(contract.get("review_doc", "")).strip()
+        or derived_review_doc
+    )
+    gov_doc_path = (repo_root / governance_doc_rel).resolve() if governance_doc_rel else None
+    review_doc_path = (repo_root / review_doc_rel).resolve() if review_doc_rel else None
+    return gov_doc_path, review_doc_path
 
 
 def _extract_section(text: str, start_marker: str, end_marker: str) -> str:
@@ -209,18 +236,23 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 0
 
-    gov_doc_path = Path(args.governance_doc).expanduser().resolve()
-    review_doc_path = Path(args.review_doc).expanduser().resolve()
-    payload["evidence_refs"] = [str(gov_doc_path), str(review_doc_path)]
-    payload["evidence_ref"] = str(gov_doc_path)
+    repo_root = Path(__file__).resolve().parent.parent
+    gov_doc_path, review_doc_path = _resolve_doc_paths(
+        repo_root=repo_root,
+        contract=contract,
+        governance_doc_arg=args.governance_doc,
+        review_doc_arg=args.review_doc,
+    )
+    payload["evidence_refs"] = [str(path) for path in (gov_doc_path, review_doc_path) if path is not None]
+    payload["evidence_ref"] = str(gov_doc_path) if gov_doc_path is not None else ""
 
-    if not gov_doc_path.exists() or not review_doc_path.exists():
+    if gov_doc_path is None or review_doc_path is None or not gov_doc_path.exists() or not review_doc_path.exists():
         payload["unlock_formula_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_DOC_READ_FAILED
         missing_docs = []
-        if not gov_doc_path.exists():
+        if gov_doc_path is None or not gov_doc_path.exists():
             missing_docs.append("governance_doc_missing")
-        if not review_doc_path.exists():
+        if review_doc_path is None or not review_doc_path.exists():
             missing_docs.append("review_doc_missing")
         payload["stale_reasons"] = missing_docs
         _emit(payload, json_only=args.json_only)
