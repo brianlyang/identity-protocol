@@ -1392,6 +1392,44 @@ def _script_accepts_flag(script_path: str, *, flag: str, repo_root: Path) -> boo
     return accepted
 
 
+def _append_supported_flag(
+    cmd: list[str],
+    *,
+    script_path: str,
+    flag: str,
+    repo_root: Path,
+    value: str | None = "",
+) -> None:
+    if not _script_accepts_flag(script_path, flag=flag, repo_root=repo_root):
+        return
+    if value is None:
+        cmd.append(flag)
+        return
+    if value == "":
+        return
+    cmd.extend([flag, value])
+
+
+def _build_agent_relay_skip_payload(*, evidence_ref: str = "") -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "agent_relay_final_answer_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "required_contract": False,
+        "auto_required_signal": False,
+        "error_code": "",
+        "relay_surface": "",
+        "relay_mode": "",
+        "relay_output_classification": "",
+        "delivery_authority": "",
+        "target_identity_id": "",
+        "source_artifact": "",
+        "source_snapshot_ts": "",
+        "stale_reasons": [REQUIRED_EVIDENCE_GAP_TOKEN],
+    }
+    if str(evidence_ref or "").strip():
+        payload["evidence_ref"] = str(evidence_ref).strip()
+    return payload
+
+
 def _parse_payload(stdout_text: str) -> dict[str, Any]:
     text = (stdout_text or "").strip()
     if not text:
@@ -1815,6 +1853,8 @@ def _resolve_cross_verification_bundle_context(
         ]
         if filtered:
             selected = filtered[0]
+        else:
+            return "", "", "bundle_current_round_unresolved"
 
     bundle_id = selected.stem
     try:
@@ -2149,71 +2189,193 @@ def main() -> int:
         validator_path = Path(spec.script_path)
         if not validator_path.is_absolute():
             validator_path = (repo_root / validator_path).resolve()
-        cmd = [
-            sys.executable,
-            str(validator_path),
-            "--catalog",
-            str(args.catalog),
-            "--identity-id",
-            str(args.identity_id),
-            "--operation",
-            str(effective_validator_operation),
-            "--json-only",
-        ]
+        cmd = [sys.executable, str(validator_path)]
+        _append_supported_flag(
+            cmd,
+            script_path=spec.script_path,
+            flag="--catalog",
+            value=str(args.catalog),
+            repo_root=repo_root,
+        )
+        _append_supported_flag(
+            cmd,
+            script_path=spec.script_path,
+            flag="--identity-id",
+            value=str(args.identity_id),
+            repo_root=repo_root,
+        )
+        _append_supported_flag(
+            cmd,
+            script_path=spec.script_path,
+            flag="--operation",
+            value=str(effective_validator_operation),
+            repo_root=repo_root,
+        )
+        _append_supported_flag(
+            cmd,
+            script_path=spec.script_path,
+            flag="--json-only",
+            value=None,
+            repo_root=repo_root,
+        )
         cmd.extend(spec.fixed_args)
-        if (
-            repo_catalog_path.exists()
-            and _script_accepts_flag(spec.script_path, flag="--repo-catalog", repo_root=repo_root)
-        ):
-            cmd.extend(["--repo-catalog", str(repo_catalog_path)])
+        if repo_catalog_path.exists():
+            _append_supported_flag(
+                cmd,
+                script_path=spec.script_path,
+                flag="--repo-catalog",
+                value=str(repo_catalog_path),
+                repo_root=repo_root,
+            )
         if spec.target_name == "prompt_import_executable_coupling":
-            if actor_id:
-                cmd.extend(["--actor-id", actor_id])
-            if session_id:
-                cmd.extend(["--session-id", session_id])
+            _append_supported_flag(
+                cmd,
+                script_path=spec.script_path,
+                flag="--actor-id",
+                value=actor_id,
+                repo_root=repo_root,
+            )
+            _append_supported_flag(
+                cmd,
+                script_path=spec.script_path,
+                flag="--session-id",
+                value=session_id,
+                repo_root=repo_root,
+            )
         if spec.target_name == "headstamp_pre_send_hard_gate":
-            if actor_id:
-                cmd.extend(["--actor-id", actor_id])
-            if session_id:
-                cmd.extend(["--session-id", session_id])
-            if reply_text:
-                cmd.extend(["--reply-text", reply_text])
-            if reply_file:
-                cmd.extend(["--reply-file", reply_file])
-            if reply_log:
-                cmd.extend(["--reply-log", reply_log])
-            if reply_transport_ref:
-                cmd.extend(["--reply-transport-ref", reply_transport_ref])
+            _append_supported_flag(
+                cmd,
+                script_path=spec.script_path,
+                flag="--actor-id",
+                value=actor_id,
+                repo_root=repo_root,
+            )
+            _append_supported_flag(
+                cmd,
+                script_path=spec.script_path,
+                flag="--session-id",
+                value=session_id,
+                repo_root=repo_root,
+            )
+            _append_supported_flag(
+                cmd,
+                script_path=spec.script_path,
+                flag="--reply-text",
+                value=reply_text,
+                repo_root=repo_root,
+            )
+            _append_supported_flag(
+                cmd,
+                script_path=spec.script_path,
+                flag="--reply-file",
+                value=reply_file,
+                repo_root=repo_root,
+            )
+            _append_supported_flag(
+                cmd,
+                script_path=spec.script_path,
+                flag="--reply-log",
+                value=reply_log,
+                repo_root=repo_root,
+            )
+            _append_supported_flag(
+                cmd,
+                script_path=spec.script_path,
+                flag="--reply-transport-ref",
+                value=reply_transport_ref,
+                repo_root=repo_root,
+            )
             if reply_outlet_guard_applied:
-                cmd.append("--reply-outlet-guard-applied")
-            if str(args.final_emit_policy_mode or "").strip():
-                cmd.extend(["--final-emit-policy-mode", str(args.final_emit_policy_mode).strip()])
-            if str(args.final_emit_schema_status or "").strip():
-                cmd.extend(["--final-emit-schema-status", str(args.final_emit_schema_status).strip()])
+                _append_supported_flag(
+                    cmd,
+                    script_path=spec.script_path,
+                    flag="--reply-outlet-guard-applied",
+                    repo_root=repo_root,
+                )
+            _append_supported_flag(
+                cmd,
+                script_path=spec.script_path,
+                flag="--final-emit-policy-mode",
+                value=str(args.final_emit_policy_mode or "").strip(),
+                repo_root=repo_root,
+            )
+            _append_supported_flag(
+                cmd,
+                script_path=spec.script_path,
+                flag="--final-emit-schema-status",
+                value=str(args.final_emit_schema_status or "").strip(),
+                repo_root=repo_root,
+            )
 
         if spec.target_name == "skill_path_integrity":
-            cmd.extend(["--active-repo-root", skill_path_active_repo_root])
+            _append_supported_flag(
+                cmd,
+                script_path=spec.script_path,
+                flag="--active-repo-root",
+                value=skill_path_active_repo_root,
+                repo_root=repo_root,
+            )
 
         if spec.target_name in {
             "multimodal_plugin_enforcement",
             "run_id_report_selection",
         }:
-            cmd.extend(["--run-id", run_id_binding])
+            _append_supported_flag(
+                cmd,
+                script_path=spec.script_path,
+                flag="--run-id",
+                value=run_id_binding,
+                repo_root=repo_root,
+            )
             if report_selected_path:
                 if spec.target_name == "run_id_report_selection":
-                    cmd.extend(["--report", report_selected_path])
+                    _append_supported_flag(
+                        cmd,
+                        script_path=spec.script_path,
+                        flag="--report",
+                        value=report_selected_path,
+                        repo_root=repo_root,
+                    )
                 else:
-                    cmd.extend(["--report-selected-path", report_selected_path])
+                    _append_supported_flag(
+                        cmd,
+                        script_path=spec.script_path,
+                        flag="--report-selected-path",
+                        value=report_selected_path,
+                        repo_root=repo_root,
+                    )
         if spec.target_name == "reasoning_loop_failclose_enforcement":
             if run_id_binding and report_selected_path:
-                cmd.extend(["--run-id", run_id_binding])
+                _append_supported_flag(
+                    cmd,
+                    script_path=spec.script_path,
+                    flag="--run-id",
+                    value=run_id_binding,
+                    repo_root=repo_root,
+                )
             if report_selected_path:
-                cmd.extend(["--report-selected-path", report_selected_path])
+                _append_supported_flag(
+                    cmd,
+                    script_path=spec.script_path,
+                    flag="--report-selected-path",
+                    value=report_selected_path,
+                    repo_root=repo_root,
+                )
         if spec.target_name in {"cross_verification_tracks", "intake_evidence_quorum"}:
-            if cross_verification_bundle_path:
-                cmd.extend(["--bundle", cross_verification_bundle_path])
-            if cross_verification_bundle_id:
-                cmd.extend(["--bundle-id", cross_verification_bundle_id])
+            _append_supported_flag(
+                cmd,
+                script_path=spec.script_path,
+                flag="--bundle",
+                value=cross_verification_bundle_path,
+                repo_root=repo_root,
+            )
+            _append_supported_flag(
+                cmd,
+                script_path=spec.script_path,
+                flag="--bundle-id",
+                value=cross_verification_bundle_id,
+                repo_root=repo_root,
+            )
 
         # RQ-032: if no concrete reply evidence is provided, project the upstream
         # gate signal instead of forcing a synthetic re-validation pass.
@@ -2224,6 +2386,10 @@ def main() -> int:
                 evidence_ref=reply_transport_ref,
             )
             rc = 0 if str(payload.get("send_time_gate_status", "")).strip().upper() != STATUS_FAIL_REQUIRED else 1
+            err = ""
+        elif spec.target_name == "agent_relay_final_answer":
+            payload = _build_agent_relay_skip_payload(evidence_ref=reply_transport_ref)
+            rc = 0
             err = ""
         else:
             rc, out, err = _run(cmd, cwd=repo_root)

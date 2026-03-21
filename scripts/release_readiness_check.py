@@ -18,6 +18,8 @@ from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gate
 from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+    VALIDATOR_ACTOR_ID_REQUIRED_SCRIPTS,
+    VALIDATOR_SESSION_ID_REQUIRED_SCRIPTS,
 )
 from resolve_release_plane_cloud_evidence import resolve_release_cloud_evidence
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
@@ -2407,33 +2409,14 @@ def main() -> int:
                 "scripts/validate_work_layer_gate_set_routing.py",
             } and "--source-layer" not in cmd:
                 cmd.extend(["--source-layer", expected_source_layer])
-    actor_id_required_scripts = {
-        "scripts/validate_required_contract_coverage.py",
-        "scripts/render_identity_response_stamp.py",
-        "scripts/validate_identity_response_stamp.py",
-        "scripts/final_emit_governed.py",
-        "scripts/validate_reply_identity_context_first_line.py",
-        "scripts/validate_headstamp_recurrence_closure.py",
-        "scripts/validate_send_time_reply_gate.py",
-        "scripts/validate_execution_reply_identity_coherence.py",
-    }
     for cmd in seq:
         if len(cmd) < 2:
             continue
-        if cmd[1] in actor_id_required_scripts and "--actor-id" not in cmd:
+        if cmd[1] in VALIDATOR_ACTOR_ID_REQUIRED_SCRIPTS and "--actor-id" not in cmd:
             cmd.extend(["--actor-id", actor_id])
         if (
             session_id
-            and cmd[1] in {
-                "scripts/validate_required_contract_coverage.py",
-                "scripts/render_identity_response_stamp.py",
-                "scripts/validate_identity_response_stamp.py",
-                "scripts/final_emit_governed.py",
-                "scripts/validate_reply_identity_context_first_line.py",
-                "scripts/validate_headstamp_recurrence_closure.py",
-                "scripts/validate_send_time_reply_gate.py",
-                "scripts/validate_execution_reply_identity_coherence.py",
-            }
+            and cmd[1] in VALIDATOR_SESSION_ID_REQUIRED_SCRIPTS
             and "--session-id" not in cmd
         ):
             cmd.extend(["--session-id", session_id])

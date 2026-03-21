@@ -169,16 +169,23 @@ SESSION_ID_FOREIGN="session-gateway-probe-foreign"
 SESSION_ID_CONFLICT="session-gateway-probe-conflict"
 SESSION_CHAIN_RUN_ID="probe-gateway-session-chain-headstamp"
 SESSION_CHAIN_FRESH_RUN_ID="probe-gateway-session-chain-fresh-seed"
+SESSION_CHAIN_POST_CHECK_RECOVERY_RUN_ID="probe-gateway-session-chain-post-check-recovery"
 SESSION_CHAIN_SEED_BLOCK_RUN_ID="probe-gateway-session-chain-seed-blocked"
 INGRESS_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_ingress_wrapper.py"
 EGRESS_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_egress_wrapper.py"
 SESSION_CHAIN_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_session_chain_wrapper.py"
 SESSION_CHAIN_NON_JSON_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_session_chain_wrapper_non_json.py"
 SESSION_CHAIN_SEED_BLOCK_EGRESS_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_egress_wrapper_seed_block.py"
+SESSION_CHAIN_RECOVERY_REPLY_PATH="${WORK_ROOT}/session-chain-headstamp-recovery-reply.txt"
 GATEWAY_WRAPPER_INVOKER_PATH="${WORK_ROOT}/invoke_gateway_wrapper_final_emit_probe.py"
 GATEWAY_VISIBLE_REPLY_INVOKER_PATH="${WORK_ROOT}/invoke_gateway_wrapper_visible_reply_probe.py"
 SESSION_CHAIN_SEED_BLOCK_INVOKER_PATH="${WORK_ROOT}/invoke_session_chain_seed_block_probe.py"
 export IDENTITY_PROTOCOL_GATEWAY_SIGNING_SECRET_PROBE_GATEWAY="gateway-env-secret-only"
+
+cat > "${SESSION_CHAIN_RECOVERY_REPLY_PATH}" <<'EOF'
+Identity-Context: actor_id=assistant:ci-probe; identity_id=probe-gateway; scope=USER; lock=LOCK_MATCH; source=project | Layer-Context: work_layer=instance; source_layer=project
+session chain recovery reply seed
+EOF
 
 python3 scripts/repair_contract_backfill.py \
   --catalog "${CATALOG_PATH}" \
@@ -844,6 +851,19 @@ elif name == "session_chain_fresh_run_receipt_seed_replay_pass":
         first_line = str(preview[0] or "").strip()
     if not first_line.startswith("Identity-Context:"):
         raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: missing Identity-Context first line")
+elif name == "session_chain_post_check_blocker_auto_recovery_pass":
+    if rc != 0:
+        raise SystemExit("session_chain_post_check_blocker_auto_recovery_pass: expected zero rc")
+    if str(doc.get("protocol_session_chain_wrapper_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_post_check_blocker_auto_recovery_pass: expected PASS_REQUIRED wrapper status")
+    if str(doc.get("send_time_gate_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_post_check_blocker_auto_recovery_pass: expected PASS_REQUIRED send-time gate")
+    if str(doc.get("final_emit_guard_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_post_check_blocker_auto_recovery_pass: expected PASS_REQUIRED final emit guard")
+    if str(doc.get("host_visible_surface_live_receipt_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_post_check_blocker_auto_recovery_pass: expected PASS_REQUIRED live receipt status")
+    if doc.get("next_hop_release_allowed") is not True:
+        raise SystemExit("session_chain_post_check_blocker_auto_recovery_pass: next_hop_release_allowed must be true")
 elif name == "session_chain_status_update_operation_pass":
     if rc != 0:
         raise SystemExit("session_chain_status_update_operation_pass: expected zero rc")
@@ -1348,6 +1368,73 @@ run_probe session_chain_fresh_run_receipt_seed_replay_pass \
   --message "session chain fresh run receipt seed replay probe" \
   --json-only
 
+python3 - <<'PY' "${FIXTURE_ROOT}" "${IDENTITY_ID}" "${ACTOR_ID}" "${SESSION_CHAIN_POST_CHECK_RECOVERY_RUN_ID}"
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+import sys
+
+fixture_root = Path(sys.argv[1]).resolve()
+identity_id = str(sys.argv[2]).strip()
+actor_id = str(sys.argv[3]).strip()
+run_id = str(sys.argv[4]).strip()
+state_path = fixture_root / "identity" / identity_id / "runtime" / "state" / "host_visible_surface_live_closure_state.json"
+state_path.parent.mkdir(parents=True, exist_ok=True)
+doc = {
+    "schema_version": "v1",
+    "identity_id": identity_id,
+    "validator": "scripts/validate_host_transport_wiring_attestation.py",
+    "closure_status": "FAIL_REQUIRED",
+    "block_on_active": True,
+    "blocker_active": True,
+    "error_code": "IP-HDSTAMP-003",
+    "stale_reasons": [
+        "host_visible_surface_live_final_channel_relay_status_not_pass",
+    ],
+    "live_receipt_required": True,
+    "required_actor_id": actor_id,
+    "required_session_id": "",
+    "required_run_id": run_id,
+    "checked_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+}
+state_path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+print(json.dumps({"seeded_post_check_blocker_state_path": str(state_path), "required_run_id": run_id}))
+PY
+
+run_probe session_chain_post_check_blocker_auto_recovery_pass \
+  python3 "${SESSION_CHAIN_WRAPPER_PATH}" \
+  --catalog "${CATALOG_PATH}" \
+  --repo-catalog identity/catalog/identities.yaml \
+  --identity-id "${IDENTITY_ID}" \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID}" \
+  --run-id "${SESSION_CHAIN_POST_CHECK_RECOVERY_RUN_ID}" \
+  --work-layer instance \
+  --source-layer project \
+  --operation inspection \
+  --message "session chain post-check auto recovery probe" \
+  --json-only
+
+python3 - <<'PY' "${FIXTURE_ROOT}" "${IDENTITY_ID}"
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import sys
+
+fixture_root = Path(sys.argv[1]).resolve()
+identity_id = str(sys.argv[2]).strip()
+state_path = fixture_root / "identity" / identity_id / "runtime" / "state" / "host_visible_surface_live_closure_state.json"
+doc = json.loads(state_path.read_text(encoding="utf-8"))
+if str(doc.get("closure_status", "")).strip().upper() != "PASS_REQUIRED":
+    raise SystemExit("session_chain_post_check_blocker_auto_recovery_pass: closure_status must be PASS_REQUIRED")
+if bool(doc.get("blocker_active", False)):
+    raise SystemExit("session_chain_post_check_blocker_auto_recovery_pass: blocker_active must be false after recovery")
+print(json.dumps({"post_check_recovery_state_path": str(state_path), "closure_status": doc.get("closure_status", ""), "blocker_active": doc.get("blocker_active", False)}))
+PY
+
 run_probe session_chain_status_update_operation_pass \
   python3 "${SESSION_CHAIN_WRAPPER_PATH}" \
   --catalog "${CATALOG_PATH}" \
@@ -1380,6 +1467,7 @@ python3 scripts/recover_host_visible_post_check_state.py \
   --actor-id "${ACTOR_ID}" \
   --session-id "${SESSION_ID}" \
   --run-id "${SESSION_CHAIN_RUN_ID}" \
+  --reply-transport-ref "${SESSION_CHAIN_RECOVERY_REPLY_PATH}" \
   --json-only >/dev/null
 
 run_probe session_chain_headstamp_first_line_required \

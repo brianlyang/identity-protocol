@@ -26,6 +26,9 @@ from protocol_infra_contract import (
     MULTIMODAL_RUNTIME_STAGE_RECEIPT_DIR as INFRA_MULTIMODAL_RUNTIME_STAGE_RECEIPT_DIR,
     MULTIMODAL_RUNTIME_STAGE_RECEIPT_PREFIX as INFRA_MULTIMODAL_RUNTIME_STAGE_RECEIPT_PREFIX,
     MULTIMODAL_RUNTIME_STAGE_RECEIPT_SOURCE as INFRA_MULTIMODAL_RUNTIME_STAGE_RECEIPT_SOURCE,
+    validator_requires_actor_id,
+    validator_requires_run_id,
+    validator_requires_session_id,
 )
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from resolve_identity_context import collect_protocol_evidence, default_identity_home, resolve_identity
@@ -1026,7 +1029,8 @@ def _build_validator_cmd(
         return ["python3", check]
     cmd = ["python3", check]
     resolved_repo_catalog = str(Path(repo_catalog_path).expanduser().resolve()) if str(repo_catalog_path).strip() else ""
-    script_name = Path(check).name
+    script_path = check.split()[0]
+    script_name = Path(script_path).name
     if check.endswith("validate_changelog_updated.py"):
         base, head = _resolve_git_range()
         return ["python3", check, "--base", base, "--head", head]
@@ -1042,6 +1046,12 @@ def _build_validator_cmd(
         cmd += ["--catalog", catalog_path]
     if check.endswith("required_gate_bundle_runner.py") and "--catalog" not in check:
         cmd += ["--catalog", catalog_path]
+    if validator_requires_run_id(script_path) and str(run_id).strip() and "--run-id" not in check:
+        cmd += ["--run-id", str(run_id).strip()]
+    if validator_requires_actor_id(script_path) and str(actor_id).strip() and "--actor-id" not in check:
+        cmd += ["--actor-id", str(actor_id).strip()]
+    if validator_requires_session_id(script_path) and str(session_id).strip() and "--session-id" not in check:
+        cmd += ["--session-id", str(session_id).strip()]
     if script_name == "validate_cross_cwd_absolute_input.py":
         if resolved_repo_catalog and "--repo-catalog" not in check:
             cmd += ["--repo-catalog", resolved_repo_catalog]

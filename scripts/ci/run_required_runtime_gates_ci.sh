@@ -66,6 +66,10 @@ for ID in ${IDS}; do
 
   python3 scripts/validate_identity_runtime_contract.py --identity-id "$ID" --catalog "${CATALOG_PATH}"
   python3 scripts/validate_identity_instance_pack_topology.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --json-only
+  python3 scripts/validate_instance_script_manifest.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --json-only
+  python3 scripts/validate_identity_instance_script_orchestration.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --work-layer instance --source-layer project --json-only
+  python3 scripts/validate_route_script_receipt_join.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --work-layer instance --source-layer project --json-only
+  python3 scripts/validate_route_execution_lane_admission.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --work-layer instance --source-layer project --json-only
   python3 scripts/validate_identity_prompt_quality.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --scope AUTO
   python3 scripts/validate_identity_role_binding.py --identity-id "$ID" --catalog "${CATALOG_PATH}"
   python3 scripts/validate_identity_home_catalog_alignment.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --identity-home "$CATALOG_PARENT"

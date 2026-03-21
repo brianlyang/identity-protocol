@@ -392,6 +392,7 @@ def run_final_emit_via_instance_wrappers(*, cmd: list[str], protocol_root: Path)
 
     signer_secret_env, signer_secret_value = resolve_gateway_signing_secret(pack_path, host_gateway_contract)
     child_env = dict(os.environ)
+    child_env["PYTHONDONTWRITEBYTECODE"] = "1"
     if signer_secret_env and signer_secret_value and not str(child_env.get(signer_secret_env, "")).strip():
         child_env[signer_secret_env] = signer_secret_value
 
@@ -648,6 +649,7 @@ def run_required_gate_bundle_via_ingress_wrapper(*, cmd: list[str], protocol_roo
 
     signer_secret_env, signer_secret_value = resolve_gateway_signing_secret(pack_path, host_gateway_contract)
     child_env = dict(os.environ)
+    child_env["PYTHONDONTWRITEBYTECODE"] = "1"
     if signer_secret_env and signer_secret_value and not str(child_env.get(signer_secret_env, "")).strip():
         child_env[signer_secret_env] = signer_secret_value
 

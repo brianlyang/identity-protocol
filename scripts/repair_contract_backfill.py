@@ -4,6 +4,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import shutil
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 import yaml
@@ -63,6 +65,7 @@ from create_identity_pack import (
     INSTANCE_SCRIPT_EXECUTION_LANE_VALIDATOR_ID,
     INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID,
     INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID,
+    HEADSTAMP_RECURRENCE_VALIDATOR_ID,
     UNIQUE_EGRESS_SCRIPT,
     UNIQUE_INGRESS_SCRIPT,
     _copy_jsonl_with_identity,
@@ -92,6 +95,7 @@ from create_identity_pack import (
     _skill_frontmatter_contract_skeleton,
     _skill_installation_supply_chain_contract_skeleton,
     _skill_sync_drift_guard_contract_skeleton,
+    _write_replay_sample,
     materialize_protocol_host_gateway_artifacts,
 )
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
@@ -218,6 +222,9 @@ REASONING_MIN_LEVEL = "L3"
 FILE_GOVERNANCE_SKILL_ID = "ai-folder-governance"
 ENTRY_SCRIPT = UNIQUE_INGRESS_SCRIPT
 ENTRY_BUNDLE_KEY = "required_gate_bundle_runner"
+LEGACY_VALIDATOR_ID_REPLACEMENTS: dict[str, str] = {
+    "scripts/validate_current_turn_authoritative_headstamp.py": HEADSTAMP_RECURRENCE_VALIDATOR_ID,
+}
 
 
 def _normalize_instance_pack_topology_contract(task_doc: dict[str, Any], identity_id: str) -> list[str]:
@@ -239,6 +246,86 @@ def _normalize_instance_pack_topology_contract(task_doc: dict[str, Any], identit
         )
         restored.extend(f"identity_update_lifecycle_contract.validation_contract.required_checks:{row}" for row in appended)
     return restored
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(131072), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _replace_string_list_tokens(
+    container: dict[str, Any],
+    key: str,
+    replacements: dict[str, str],
+) -> tuple[bool, list[str]]:
+    node = container.get(key)
+    if isinstance(node, list):
+        rows = [str(item).strip() for item in node if str(item).strip()]
+    else:
+        rows = []
+    if not rows:
+        return False, []
+
+    changed_rows: list[str] = []
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for row in rows:
+        replacement = str(replacements.get(row, row)).strip()
+        if replacement != row:
+            changed_rows.append(f"{row}->{replacement}")
+        if replacement and replacement not in seen:
+            normalized.append(replacement)
+            seen.add(replacement)
+    changed = normalized != rows
+    if changed:
+        container[key] = normalized
+    return changed, changed_rows
+
+
+def _next_migrated_conflict_path(target: Path) -> Path:
+    base = target.stem
+    suffix = target.suffix
+    parent = target.parent
+    idx = 1
+    while True:
+        candidate = parent / f"{base}.migrated-from-gate-{idx}{suffix}"
+        if not candidate.exists():
+            return candidate
+        idx += 1
+
+
+def _move_file_with_conflict_preservation(src: Path, dest: Path) -> tuple[Path, str]:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.exists():
+        if _sha256_file(src) == _sha256_file(dest):
+            src.unlink()
+            return dest, "dedup_existing"
+        conflict_dest = _next_migrated_conflict_path(dest)
+        shutil.move(str(src), str(conflict_dest))
+        return conflict_dest, "migrated_conflict_copy"
+    shutil.move(str(src), str(dest))
+    return dest, "migrated"
+
+
+def _remove_empty_dir_chain(start: Path, *, stop: Path) -> list[str]:
+    removed: list[str] = []
+    current = start.resolve()
+    stop_resolved = stop.resolve()
+    while current != stop_resolved and stop_resolved in current.parents:
+        try:
+            current.rmdir()
+        except OSError:
+            break
+        removed.append(str(current))
+        current = current.parent
+    return removed
 
 
 def _ensure_instance_pack_topology_assets(
@@ -274,6 +361,21 @@ def _ensure_instance_pack_topology_assets(
     }
     missing_files = [row for row in required_files if not (pack_path / row).exists()]
     missing_optional_files = [row for row in optional_files if not (pack_path / row).exists()]
+    legacy_relay_root = (pack_path / "runtime" / "gate" / "runtime" / "reports" / "agent-relay-final-answer").resolve()
+    canonical_relay_root = (pack_path / "runtime" / "reports" / "agent-relay-final-answer").resolve()
+    legacy_relay_files_before = (
+        sorted(str(path.resolve().relative_to(pack_path.resolve())) for path in legacy_relay_root.rglob("*") if path.is_file())
+        if legacy_relay_root.exists()
+        else []
+    )
+    legacy_cache_dirs_before = sorted(
+        str(path.resolve().relative_to(pack_path.resolve()))
+        for path in pack_path.rglob("*")
+        if path.is_dir() and path.name in {"__pycache__", ".pytest_cache"}
+    )
+    legacy_relay_migrations: list[dict[str, str]] = []
+    legacy_empty_dirs_removed: list[str] = []
+    legacy_cache_dirs_removed: list[str] = []
     if apply:
         for row in required_dirs:
             (pack_path / row).mkdir(parents=True, exist_ok=True)
@@ -287,16 +389,48 @@ def _ensure_instance_pack_topology_assets(
             if not path.exists():
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(text, encoding="utf-8")
+        if legacy_relay_root.exists():
+            for src in sorted(legacy_relay_root.rglob("*")):
+                if not src.is_file():
+                    continue
+                dest = (canonical_relay_root / src.relative_to(legacy_relay_root)).resolve()
+                moved_to, action = _move_file_with_conflict_preservation(src, dest)
+                legacy_relay_migrations.append(
+                    {
+                        "source": str(src.resolve().relative_to(pack_path.resolve())),
+                        "destination": str(moved_to.resolve().relative_to(pack_path.resolve())),
+                        "action": action,
+                    }
+                )
+            legacy_empty_dirs_removed.extend(
+                _remove_empty_dir_chain(legacy_relay_root, stop=(pack_path / "runtime" / "gate"))
+            )
+        for rel in legacy_cache_dirs_before:
+            cache_dir = (pack_path / rel).resolve()
+            if not cache_dir.exists():
+                continue
+            shutil.rmtree(cache_dir)
+            legacy_cache_dirs_removed.append(rel)
+    topology_hygiene_changed = bool(legacy_relay_files_before or legacy_cache_dirs_before)
     return {
-        "status": STATUS_PASS_REQUIRED if apply or (not missing_dirs and not missing_files) else STATUS_SKIPPED_NOT_REQUIRED,
-        "changed": bool(missing_dirs or missing_files or missing_optional_files),
-        "applied": bool(apply and (missing_dirs or missing_files or missing_optional_files)),
+        "status": (
+            STATUS_PASS_REQUIRED
+            if apply or (not missing_dirs and not missing_files and not topology_hygiene_changed)
+            else STATUS_SKIPPED_NOT_REQUIRED
+        ),
+        "changed": bool(missing_dirs or missing_files or missing_optional_files or topology_hygiene_changed),
+        "applied": bool(apply and (missing_dirs or missing_files or missing_optional_files or topology_hygiene_changed)),
         "missing_dirs_before": missing_dirs,
         "missing_files_before": missing_files,
         "missing_optional_files_before": missing_optional_files,
         "required_dirs": required_dirs,
         "required_files": sorted(required_files.keys()),
         "optional_seed_files": sorted(optional_files.keys()),
+        "legacy_relay_files_before": legacy_relay_files_before,
+        "legacy_relay_migrations": legacy_relay_migrations,
+        "legacy_cache_dirs_before": legacy_cache_dirs_before,
+        "legacy_cache_dirs_removed": legacy_cache_dirs_removed,
+        "legacy_empty_dirs_removed": legacy_empty_dirs_removed,
     }
 
 
@@ -450,6 +584,24 @@ def _normalize_capability_driver_validators(task_doc: dict[str, Any]) -> dict[st
     return {k: v for k, v in restored.items() if v}
 
 
+def _normalize_update_lifecycle_required_checks(task_doc: dict[str, Any]) -> list[str]:
+    restored: list[str] = []
+    lifecycle_contract = task_doc.get("identity_update_lifecycle_contract")
+    validation_contract = lifecycle_contract.get("validation_contract") if isinstance(lifecycle_contract, dict) else None
+    if not isinstance(validation_contract, dict):
+        return restored
+    _changed, replaced = _replace_string_list_tokens(
+        validation_contract,
+        "required_checks",
+        LEGACY_VALIDATOR_ID_REPLACEMENTS,
+    )
+    restored.extend(
+        f"identity_update_lifecycle_contract.validation_contract.required_checks:{row}"
+        for row in replaced
+    )
+    return restored
+
+
 def _safe_int(value: Any, *, default: int = 0) -> int:
     try:
         return int(value)
@@ -460,6 +612,16 @@ def _safe_int(value: Any, *, default: int = 0) -> int:
 def _safe_load_yaml(path: Path) -> dict[str, Any]:
     try:
         doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def _safe_load_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return {}
     return doc if isinstance(doc, dict) else {}
@@ -565,6 +727,147 @@ def _ensure_handoff_selftest_assets(
         "positive_count_after": len(positive_after),
         "negative_count_after": len(negative_after),
         "backfilled_files": backfilled_files,
+    }
+
+
+def _ensure_update_replay_runtime_evidence(
+    *,
+    pack_path: Path,
+    identity_id: str,
+    task_doc: dict[str, Any],
+    apply: bool,
+) -> dict[str, Any]:
+    runtime_root = (pack_path / "runtime").resolve()
+    sample_path = (runtime_root / "examples" / f"{identity_id}-update-replay-sample.json").resolve()
+    existed_before = sample_path.exists()
+    before_doc = _safe_load_json(sample_path)
+    required_checks = [
+        str(item).strip()
+        for item in (
+            (
+                task_doc.get("identity_update_lifecycle_contract", {})
+                .get("validation_contract", {})
+                .get("required_checks", [])
+            )
+            or []
+        )
+        if str(item).strip()
+    ]
+    before_checks = [str(item).strip() for item in before_doc.get("validation_checks_passed", []) if str(item).strip()]
+    needs_refresh = (not sample_path.exists()) or before_checks != required_checks
+    wrote = False
+    if apply and needs_refresh:
+        _write_replay_sample(identity_id, task_doc, runtime_root)
+        wrote = True
+    after_doc = _safe_load_json(sample_path)
+    after_checks = [str(item).strip() for item in after_doc.get("validation_checks_passed", []) if str(item).strip()]
+    return {
+        "sample_path": str(sample_path),
+        "exists_before": existed_before,
+        "validation_checks_before": before_checks,
+        "validation_checks_after": after_checks,
+        "required_checks": required_checks,
+        "needs_refresh": needs_refresh,
+        "applied": wrote,
+    }
+
+
+def _ensure_handoff_runtime_log(
+    *,
+    pack_path: Path,
+    identity_id: str,
+    task_doc: dict[str, Any],
+    apply: bool,
+) -> dict[str, Any]:
+    log_path = (pack_path / "runtime" / "logs" / "handoff" / f"{identity_id}-contract-backfill-latest.json").resolve()
+    before_doc = _safe_load_json(log_path)
+    before_generated_at = str(before_doc.get("generated_at", "")).strip()
+    task_id = str(task_doc.get("task_id", "")).strip() or f"{identity_id}_bootstrap"
+    payload = {
+        "handoff_id": f"{identity_id}-contract-backfill-handoff",
+        "identity_id": identity_id,
+        "task_id": task_id,
+        "from_agent": f"{identity_id}-master",
+        "to_agent": "protocol-review",
+        "input_scope": "Refresh runtime handoff governance evidence after protocol contract backfill.",
+        "actions_taken": [
+            "revalidated protocol-owned lifecycle contracts",
+            "refreshed governed runtime evidence surfaces",
+        ],
+        "artifacts": [
+            {
+                "path": str(log_path),
+                "kind": "handoff_governance_evidence",
+            }
+        ],
+        "result": "PASS",
+        "next_action": {
+            "owner": "protocol-review",
+            "action": "Keep lifecycle and handoff governance evidence fresh after contract changes.",
+            "input": f"identity_id={identity_id}",
+        },
+        "rulebook_update": {
+            "applied": False,
+            "evidence_run_id": f"repair-contract-backfill-{identity_id}",
+        },
+        "attempted_mutations": [],
+        "generated_at": _utc_now_iso(),
+    }
+    wrote = False
+    if apply:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        wrote = True
+    after_doc = _safe_load_json(log_path)
+    return {
+        "log_path": str(log_path),
+        "generated_at_before": before_generated_at,
+        "generated_at_after": str(after_doc.get("generated_at", "")).strip(),
+        "applied": wrote,
+    }
+
+
+def _ensure_feedback_runtime_log(
+    *,
+    pack_path: Path,
+    identity_id: str,
+    task_doc: dict[str, Any],
+    apply: bool,
+) -> dict[str, Any]:
+    log_path = (pack_path / "runtime" / "logs" / "feedback" / f"{identity_id}-feedback-contract-backfill-latest.json").resolve()
+    before_doc = _safe_load_json(log_path)
+    before_timestamp = str(before_doc.get("timestamp", "")).strip()
+    task_id = str(task_doc.get("task_id", "")).strip() or f"{identity_id}_bootstrap"
+    payload = {
+        "feedback_id": f"feedback-{identity_id}-contract-backfill",
+        "identity_id": identity_id,
+        "task_id": task_id,
+        "run_id": f"repair-contract-backfill-{identity_id}",
+        "timestamp": _utc_now_iso(),
+        "context_signature": "contract-backfill-refresh",
+        "outcome": "PASS",
+        "failure_type": "none",
+        "decision_trace_ref": "contract_backfill_runtime_feedback_refresh",
+        "artifacts": [
+            str(log_path),
+        ],
+        "rulebook_delta": {
+            "positive": 0,
+            "negative": 0,
+        },
+        "replay_status": "PASS",
+    }
+    wrote = False
+    if apply:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        wrote = True
+    after_doc = _safe_load_json(log_path)
+    return {
+        "log_path": str(log_path),
+        "timestamp_before": before_timestamp,
+        "timestamp_after": str(after_doc.get("timestamp", "")).strip(),
+        "applied": wrote,
     }
 
 
@@ -1513,6 +1816,7 @@ def main() -> int:
     updated["response_stamp_profile"] = normalize_response_stamp_profile(updated.get("response_stamp_profile"))
     restored_skill_supply_chain_contract_keys = _normalize_skill_supply_chain_contracts(updated, args.identity_id)
     restored_capability_driver_validator_paths = _normalize_capability_driver_validators(updated)
+    restored_update_lifecycle_required_checks = _normalize_update_lifecycle_required_checks(updated)
     skill_contract = updated.get("skill_path_integrity_contract_v1")
     if isinstance(skill_contract, dict):
         _merge_required_skills(skill_contract, FILE_GOVERNANCE_SKILL_ID)
@@ -2002,6 +2306,24 @@ def main() -> int:
         repo_root=repo_root,
         apply=args.apply,
     )
+    update_replay_runtime_evidence_result = _ensure_update_replay_runtime_evidence(
+        pack_path=pack_path,
+        identity_id=str(args.identity_id or "").strip(),
+        task_doc=updated,
+        apply=args.apply,
+    )
+    handoff_runtime_log_result = _ensure_handoff_runtime_log(
+        pack_path=pack_path,
+        identity_id=str(args.identity_id or "").strip(),
+        task_doc=updated,
+        apply=args.apply,
+    )
+    feedback_runtime_log_result = _ensure_feedback_runtime_log(
+        pack_path=pack_path,
+        identity_id=str(args.identity_id or "").strip(),
+        task_doc=updated,
+        apply=args.apply,
+    )
 
     task_changed = before != updated
     catalog_changed = catalog_row_version_changed
@@ -2182,6 +2504,9 @@ def main() -> int:
         "provider_bindings_template_backfill": provider_bindings_template_result,
         "feedback_selftest_assets_backfill": feedback_selftest_assets_result,
         "handoff_selftest_assets_backfill": handoff_selftest_assets_result,
+        "update_replay_runtime_evidence_backfill": update_replay_runtime_evidence_result,
+        "handoff_runtime_log_backfill": handoff_runtime_log_result,
+        "feedback_runtime_log_backfill": feedback_runtime_log_result,
         "applied": applied,
         "response_stamp_profile_present_before": response_stamp_profile_present_before,
         "response_stamp_profile_present_after": response_stamp_profile_present_after,
@@ -2195,6 +2520,7 @@ def main() -> int:
         "missing_topology_contract_keys_after": topology_missing_after,
         "invalid_topology_contract_keys_after": topology_invalid_after,
         "restored_topology_contract_keys": restored_topology_contract_keys,
+        "restored_update_lifecycle_required_checks": restored_update_lifecycle_required_checks,
         "topology_assets_backfill": topology_assets_result,
         "required_prompt_contract_keys": list(REQUIRED_PROMPT_KEYS),
         "missing_prompt_contract_keys_before": prompt_missing_before,

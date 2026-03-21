@@ -35,7 +35,7 @@ FORBIDDEN_PROTOCOL_TARGETS = tuple(
 OPTIONAL_WORKSPACE_TARGETS = (
     "scripts/codex_native_chat/native_chat_bootstrap_bridge.py",
     "scripts/codex_native_chat/validate_native_chat_entry_bootstrap.py",
-    "scripts/validate_current_turn_authoritative_headstamp.py",
+    "scripts/validate_headstamp_recurrence_closure.py",
 )
 
 

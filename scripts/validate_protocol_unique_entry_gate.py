@@ -6,6 +6,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import sys
 import tempfile
 import time
 from datetime import datetime, timezone
@@ -423,7 +424,12 @@ def _load_python_module_from_path(*, module_path: Path, module_label: str) -> An
     if spec is None or spec.loader is None:
         raise ImportError(f"module_spec_unavailable:{module_path}")
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    original_dont_write_bytecode = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = original_dont_write_bytecode
     return module
 
 

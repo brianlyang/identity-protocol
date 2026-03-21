@@ -296,11 +296,13 @@ DOWNSINK_ANCHOR_IDENTITY_PACK_ROOT_REF = "{identity_pack_root}"
 DOWNSINK_RUNTIME_GATE_DOMAIN = "runtime_gate"
 DOWNSINK_RUNTIME_BROADCAST_DOMAIN = "runtime_broadcast"
 DOWNSINK_RUNTIME_PROTOCOL_FEEDBACK_DOMAIN = "runtime_protocol_feedback"
+DOWNSINK_RUNTIME_EVIDENCE_DOMAIN = "runtime_evidence"
 DOWNSINK_PROTOCOL_BROADCAST_SOURCE_DOMAIN = "protocol_broadcast_source"
 DOWNSINK_REQUIRED_DOMAINS: tuple[str, ...] = (
     DOWNSINK_RUNTIME_GATE_DOMAIN,
     DOWNSINK_RUNTIME_BROADCAST_DOMAIN,
     DOWNSINK_RUNTIME_PROTOCOL_FEEDBACK_DOMAIN,
+    DOWNSINK_RUNTIME_EVIDENCE_DOMAIN,
     DOWNSINK_PROTOCOL_BROADCAST_SOURCE_DOMAIN,
 )
 INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY = "instance_pack_topology_contract_v1"
@@ -318,6 +320,7 @@ INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID = "scripts/validate_instance_script_manife
 INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID = "scripts/validate_identity_instance_script_orchestration.py"
 INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID = "scripts/validate_route_script_receipt_join.py"
 INSTANCE_SCRIPT_EXECUTION_LANE_VALIDATOR_ID = "scripts/validate_route_execution_lane_admission.py"
+HEADSTAMP_RECURRENCE_VALIDATOR_ID = "scripts/validate_headstamp_recurrence_closure.py"
 PROVIDER_BINDINGS_TEMPLATE_RELATIVE_PATH = (
     "identity/protocol/plugins/templates/provider-bindings.local.template.yaml"
 )
@@ -779,6 +782,18 @@ def _ensure_dialogue_governance_contract(task: dict, identity_id: str) -> dict:
     return task
 
 
+def _instance_pack_optional_surface_dirs() -> list[str]:
+    rows: list[str] = []
+    for relpath in (
+        COMMON_IDENTITY_CODEX_LAUNCHER_MANIFEST_REL,
+        COMMON_IDENTITY_CODEX_LAUNCHER_README_REL,
+    ):
+        parent = relpath.parent.as_posix()
+        if parent and parent != "." and parent not in rows:
+            rows.append(parent)
+    return rows
+
+
 def _instance_pack_topology_contract_skeleton(identity_id: str) -> dict:
     return {
         "required": True,
@@ -801,7 +816,7 @@ def _instance_pack_topology_contract_skeleton(identity_id: str) -> dict:
             "runtime",
             "scripts",
         ],
-        "pack_root_optional_dirs": [],
+        "pack_root_optional_dirs": _instance_pack_optional_surface_dirs(),
         "pack_root_legacy_compat_dirs": [],
         "runtime_required_dirs": [
             "runtime/examples",
@@ -827,7 +842,11 @@ def _instance_pack_topology_contract_skeleton(identity_id: str) -> dict:
             "runtime/protocol-feedback",  # downsink-path-lock: allow-nonregistry-literal
             "runtime/protocol-feedback/evidence-index",  # downsink-path-lock: allow-nonregistry-literal
             "runtime/protocol-feedback/outbox-to-protocol",  # downsink-path-lock: allow-nonregistry-literal
+            "runtime/protocol-feedback/review-notes",  # review-note archives remain governed runtime evidence
+            "runtime/protocol-feedback/review-notes/*",
             "runtime/protocol-feedback/upgrade-proposals",  # downsink-path-lock: allow-nonregistry-literal
+            "runtime/memory-absorption",  # absorbed legacy runtime evidence stays pack-local under governance
+            "runtime/memory-absorption/*",
             "runtime/reports",
             "runtime/reports/broadcast",  # downsink-path-lock: allow-nonregistry-literal
             "runtime/reports/agent-relay-final-answer",
@@ -839,6 +858,7 @@ def _instance_pack_topology_contract_skeleton(identity_id: str) -> dict:
             "runtime/reports/instance-script-recovery",
             "runtime/reports/multimodal-runtime-stage",
             "runtime/reports/required-gate-bundle-entry",
+            "runtime/reports/v*-wrapper-*",
             "runtime/rulebooks",
         ],
         "forbidden_dir_patterns": [
@@ -871,7 +891,22 @@ def _ensure_instance_pack_topology_contract(task: dict, identity_id: str) -> dic
     if not isinstance(cur, dict):
         task[INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY] = base
         return task
-    task[INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY] = _deep_merge_defaults(base, cur)
+    merged = _deep_merge_defaults(base, cur)
+    list_fields = (
+        "pack_root_required_files",
+        "pack_root_required_dirs",
+        "pack_root_optional_dirs",
+        "pack_root_legacy_compat_dirs",
+        "runtime_required_dirs",
+        "runtime_optional_dirs",
+        "forbidden_dir_patterns",
+    )
+    for field in list_fields:
+        base_rows = [str(item).strip() for item in (base.get(field) or []) if str(item).strip()]
+        cur_rows = [str(item).strip() for item in (cur.get(field) or []) if str(item).strip()]
+        if base_rows or cur_rows:
+            merged[field] = list(dict.fromkeys([*cur_rows, *base_rows]))
+    task[INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY] = merged
     return task
 
 
@@ -1346,6 +1381,9 @@ def _assert_wrapper_template_constant_bindings(
             f"HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED = {HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED}"
         ),
         "session_chain_template_missing_repo_root_helper": "def _repo_root() -> Path:",
+        "session_chain_template_missing_pack_root_helper": (
+            "def _pack_root_from_contract_path(contract_path: Path) -> Path:"
+        ),
         "session_chain_template_missing_runtime_temp_root_helper": (
             "def identity_runtime_named_temp_root(name: str) -> Path:"
         ),
@@ -1595,9 +1633,39 @@ def _protocol_downsink_path_registry_skeleton() -> dict:
                     "path": "runtime/protocol-feedback/review-notes/*.log",
                 },
                 {
+                    "path_id": "runtime_protocol_feedback.review_notes_dir",
+                    "entry_type": "dir",
+                    "path": "runtime/protocol-feedback/review-notes",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.review_notes_tree",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/review-notes/*",
+                },
+                {
                     "path_id": "runtime_protocol_feedback.validation",
                     "entry_type": "glob",
                     "path": "runtime/protocol-feedback/validation/*.json",
+                },
+            ],
+        },
+        DOWNSINK_RUNTIME_EVIDENCE_DOMAIN: {
+            "anchor_ref": "identity_pack_root_ref",
+            "entries": [
+                {
+                    "path_id": "runtime_evidence.memory_absorption_dir",
+                    "entry_type": "dir",
+                    "path": "runtime/memory-absorption",
+                },
+                {
+                    "path_id": "runtime_evidence.memory_absorption_tree",
+                    "entry_type": "glob",
+                    "path": "runtime/memory-absorption/*",
+                },
+                {
+                    "path_id": "runtime_evidence.legacy_wrapper_report_dirs",
+                    "entry_type": "glob",
+                    "path": "runtime/reports/v*-wrapper-*",
                 },
             ],
         },
@@ -2512,6 +2580,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+sys.dont_write_bytecode = True
+
 
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 CANONICAL_INGRESS_SCRIPT = "scripts/required_gate_bundle_runner.py"
@@ -3209,6 +3279,7 @@ def main() -> int:
         cmd.extend(["--out", str(args.out).strip()])
 
     child_env = dict(os.environ)
+    child_env["PYTHONDONTWRITEBYTECODE"] = "1"
     child_env["IDENTITY_PROTOCOL_INGRESS_WRAPPER_PATH"] = str(Path(__file__).resolve())
     proc = subprocess.run(cmd, capture_output=True, text=True, env=child_env)
     if proc.stderr.strip():
@@ -3255,6 +3326,8 @@ import sys
 import time
 from pathlib import Path
 from typing import Any
+
+sys.dont_write_bytecode = True
 
 
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -3846,6 +3919,7 @@ def main() -> int:
         cmd.extend(["--blocker-receipt-out", blocker_receipt_out])
 
     child_env = dict(os.environ)
+    child_env["PYTHONDONTWRITEBYTECODE"] = "1"
     child_env["IDENTITY_PROTOCOL_EGRESS_WRAPPER_PATH"] = str(Path(__file__).resolve())
     proc = subprocess.run(cmd, capture_output=True, text=True, env=child_env)
     if proc.stderr.strip():
@@ -4065,6 +4139,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+sys.dont_write_bytecode = True
+
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -4154,6 +4230,13 @@ def _resolve_contract_path(raw_contract_path: str) -> Path:
     if str(raw_contract_path or "").strip():
         return Path(raw_contract_path).expanduser().resolve()
     return Path(__file__).resolve().with_name("protocol_gateway_contract.json")
+
+
+def _pack_root_from_contract_path(contract_path: Path) -> Path:
+    resolved = contract_path.resolve()
+    if len(resolved.parents) >= 3:
+        return resolved.parents[2]
+    return resolved.parent
 
 
 def _resolve_runtime_path(contract_path: Path, raw_path: str) -> Path:
@@ -4427,7 +4510,7 @@ def _record_host_visible_surface_receipts(
         "final_emit_contract_status": str(final_emit_contract_status or "").strip().upper(),
     }
     receipt_source = _select_host_visible_receipt_source(operation)
-    pack_path = contract_path.parent.resolve()
+    pack_path = _pack_root_from_contract_path(contract_path)
     final_channel_relay_projection: dict[str, Any] = {}
     if HOST_VISIBLE_FINAL_CHANNEL_ID in required_channels and bool(
         visible_contract.get("final_channel_relay_required", HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED)
@@ -4913,7 +4996,9 @@ def main() -> int:
     ]
     if repo_catalog_path:
         ingress_cmd.extend(["--repo-catalog", repo_catalog_path])
-    ingress_proc = subprocess.run(ingress_cmd, capture_output=True, text=True)
+    ingress_env = dict(os.environ)
+    ingress_env["PYTHONDONTWRITEBYTECODE"] = "1"
+    ingress_proc = subprocess.run(ingress_cmd, capture_output=True, text=True, env=ingress_env)
     ingress_payload = _parse_stdout_json(ingress_proc.stdout)
     if ingress_proc.returncode != 0:
         if ingress_proc.stdout.strip():
@@ -4976,6 +5061,7 @@ def main() -> int:
     if str(args.layer_intent_text or "").strip():
         egress_cmd.extend(["--layer-intent-text", str(args.layer_intent_text).strip()])
     egress_env = dict(os.environ)
+    egress_env["PYTHONDONTWRITEBYTECODE"] = "1"
     egress_env["IDENTITY_PROTOCOL_SESSION_CHAIN_WRAPPER_PATH"] = str(Path(__file__).resolve())
     egress_receipt_seed_attempted = False
     egress_receipt_seed_replay_count = 0
@@ -5852,7 +5938,7 @@ def _default_required_checks() -> list[str]:
         "scripts/validate_replay_archive_contract.py",
         "scripts/validate_gated_switch_guard.py",
         "scripts/validate_protocol_lane_headstamp_continuity.py",
-        "scripts/validate_current_turn_authoritative_headstamp.py",
+        HEADSTAMP_RECURRENCE_VALIDATOR_ID,
     ]
 
 

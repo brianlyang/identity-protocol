@@ -47,6 +47,9 @@ from protocol_infra_contract import (
     HOST_GATEWAY_DEFAULT_INGRESS_WRAPPER as INFRA_HOST_GATEWAY_DEFAULT_INGRESS_WRAPPER,
     HOST_GATEWAY_DEFAULT_SESSION_CHAIN_WRAPPER as INFRA_HOST_GATEWAY_DEFAULT_SESSION_CHAIN_WRAPPER,
     HOST_GATEWAY_DEFAULT_SIGNING_KEY as INFRA_HOST_GATEWAY_DEFAULT_SIGNING_KEY,
+    VALIDATOR_ACTOR_ID_REQUIRED_SCRIPTS,
+    VALIDATOR_RUN_ID_REQUIRED_SCRIPTS,
+    VALIDATOR_SESSION_ID_REQUIRED_SCRIPTS,
 )
 
 ERR_EXEC_ORDER_HEADER_FIRST = "IP-EXEC-ORDER-001"
@@ -3326,39 +3329,14 @@ def main() -> int:
                     "scripts/validate_work_layer_gate_set_routing.py",
                 }:
                     cmd.extend(["--source-layer", expected_source_layer])
-        actor_id_required_scripts = {
-            "scripts/validate_required_contract_coverage.py",
-            "scripts/render_identity_response_stamp.py",
-            "scripts/validate_identity_response_stamp.py",
-            "scripts/final_emit_governed.py",
-            "scripts/validate_headstamp_recurrence_closure.py",
-            "scripts/validate_reply_identity_context_first_line.py",
-            "scripts/validate_send_time_reply_gate.py",
-            "scripts/validate_execution_reply_identity_coherence.py",
-            "scripts/validate_protocol_unique_entry_gate.py",
-        }
-        session_id_required_scripts = {
-            "scripts/validate_required_contract_coverage.py",
-            "scripts/render_identity_response_stamp.py",
-            "scripts/validate_identity_response_stamp.py",
-            "scripts/final_emit_governed.py",
-            "scripts/validate_headstamp_recurrence_closure.py",
-            "scripts/validate_reply_identity_context_first_line.py",
-            "scripts/validate_send_time_reply_gate.py",
-            "scripts/validate_execution_reply_identity_coherence.py",
-            "scripts/validate_protocol_unique_entry_gate.py",
-        }
-        run_id_required_scripts = {
-            "scripts/validate_protocol_unique_entry_gate.py",
-        }
         for cmd in checks:
             if len(cmd) < 2:
                 continue
-            if cmd[1] in run_id_required_scripts and "--run-id" not in cmd:
+            if cmd[1] in VALIDATOR_RUN_ID_REQUIRED_SCRIPTS and "--run-id" not in cmd:
                 cmd.extend(["--run-id", validate_run_token])
-            if cmd[1] in actor_id_required_scripts and "--actor-id" not in cmd:
+            if cmd[1] in VALIDATOR_ACTOR_ID_REQUIRED_SCRIPTS and "--actor-id" not in cmd:
                 cmd.extend(["--actor-id", actor_id_validate])
-            if cmd[1] in session_id_required_scripts and "--session-id" not in cmd:
+            if cmd[1] in VALIDATOR_SESSION_ID_REQUIRED_SCRIPTS and "--session-id" not in cmd:
                 cmd.extend(["--session-id", validate_session_id])
         coverage_authority_script = "scripts/validate_required_contract_coverage.py"
         coverage_governed_scripts = _coverage_governed_validator_scripts()
