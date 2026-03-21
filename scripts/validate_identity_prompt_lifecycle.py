@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+from runtime_temp_path_common import runtime_temp_root
 from typing import Iterable
 
 
@@ -81,7 +82,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Validate IDENTITY_PROMPT lifecycle contract in upgrade reports.")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
-    ap.add_argument("--report-dir", default="/tmp/identity-upgrade-reports")
+    ap.add_argument("--report-dir", default=str(runtime_temp_root() / "identity-upgrade-reports"))
     args = ap.parse_args()
 
     report_path = Path(args.report).expanduser().resolve() if args.report else _latest(

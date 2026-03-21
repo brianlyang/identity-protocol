@@ -18,6 +18,7 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${SOURCE_FILE}")" && pwd)"
 PROTOCOL_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+source "${PROTOCOL_ROOT}/scripts/runtime_temp_path_common.sh"
 if [[ "$(basename "${PROTOCOL_ROOT}")" == "identity-protocol-local" ]]; then
   PROJECT_ROOT="$(cd "${PROTOCOL_ROOT}/.." && pwd)"
 else
@@ -147,10 +148,12 @@ if not str(payload.get("native_chat_machine_verification_line", "")).strip().sta
 PY
 
 if [[ -z "${OUTPUT_PATH}" ]]; then
-  OUTPUT_PATH="/tmp/native-chat-headstamp-smoke-$(date -u +%Y%m%dT%H%M%SZ).txt"
+  OUTPUT_ROOT="$(identity_runtime_named_temp_root_sh "native-chat-headstamp-smoke")"
+  OUTPUT_PATH="${OUTPUT_ROOT}/native-chat-headstamp-smoke-$(date -u +%Y%m%dT%H%M%SZ).txt"
 fi
 
-TURN_BOOTSTRAP_PATH="/tmp/native-chat-headstamp-turn-bootstrap-$(date -u +%Y%m%dT%H%M%SZ).md"
+TURN_BOOTSTRAP_ROOT="$(identity_runtime_named_temp_root_sh "native-chat-headstamp-bootstrap")"
+TURN_BOOTSTRAP_PATH="${TURN_BOOTSTRAP_ROOT}/native-chat-headstamp-turn-bootstrap-$(date -u +%Y%m%dT%H%M%SZ).md"
 python3 - "${TURN_HEADSTAMP_JSON}" "${PROMPT_TEXT}" "${TURN_BOOTSTRAP_PATH}" <<'PY'
 import json
 import sys

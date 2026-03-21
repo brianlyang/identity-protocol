@@ -8,6 +8,7 @@ import shutil
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from runtime_temp_path_common import runtime_temp_root
 from typing import Any
 
 import yaml
@@ -1379,8 +1380,8 @@ def main() -> int:
     common.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     common.add_argument("--scope", default="")
     common.add_argument("--canonical-root", default="")
-    common.add_argument("--report-dir", default="/tmp/identity-install-reports")
-    common.add_argument("--backup-dir", default="/tmp/identity-install-backups")
+    common.add_argument("--report-dir", default=str(runtime_temp_root() / "identity-install-reports"))
+    common.add_argument("--backup-dir", default=str(runtime_temp_root() / "identity-install-backups"))
     common.add_argument("--destructive-replace", action="store_true")
     common.add_argument("--allow-repo-target", action="store_true")
     common.add_argument("--allow-repo-target-confirm", default="")

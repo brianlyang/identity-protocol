@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from runtime_temp_path_common import runtime_temp_root
 from typing import Any
 
 STRICT_OPS = {"update", "readiness", "e2e", "ci", "validate", "activate"}
@@ -40,7 +41,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Validate actor-risk health profile coverage contract.")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
-    ap.add_argument("--report-dir", default="/tmp/identity-health-reports")
+    ap.add_argument("--report-dir", default=str(runtime_temp_root() / "identity-health-reports"))
     ap.add_argument("--execution-report", default="")
     ap.add_argument(
         "--operation",

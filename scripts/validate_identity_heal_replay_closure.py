@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from runtime_temp_path_common import runtime_temp_root
 from typing import Any
 
 ERR_MISSING = "IP-HEAL-001"
@@ -36,7 +37,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Validate health->heal->post-validate replay closure refs.")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--heal-report", default="")
-    ap.add_argument("--report-dir", default="/tmp/identity-heal-reports")
+    ap.add_argument("--report-dir", default=str(runtime_temp_root() / "identity-heal-reports"))
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 

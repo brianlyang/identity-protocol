@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from runtime_temp_path_common import runtime_temp_root
 
 ALLOWED_STATES = {
     "BLOCKED",
@@ -67,7 +68,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Validate permission-state contract in identity upgrade report.")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
-    ap.add_argument("--report-dir", default="/tmp/identity-upgrade-reports")
+    ap.add_argument("--report-dir", default=str(runtime_temp_root() / "identity-upgrade-reports"))
     ap.add_argument("--require-written", action="store_true")
     ap.add_argument("--ci", action="store_true")
     args = ap.parse_args()

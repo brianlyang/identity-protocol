@@ -2,7 +2,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/agent-relay-probes.XXXXXX")"
+source "$ROOT/scripts/runtime_temp_path_common.sh"
+TMP_ROOT="$(identity_runtime_mktemp_dir_sh "agent-relay-probes" "run")"
 trap 'rm -rf "$TMP_ROOT"' EXIT
 
 SNAPSHOT_JSON="$TMP_ROOT/leader_snapshot.json"

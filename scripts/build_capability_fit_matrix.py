@@ -6,6 +6,7 @@ import hashlib
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from runtime_temp_path_common import runtime_temp_root
 from typing import Any
 
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
@@ -108,7 +109,7 @@ def main() -> int:
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--inventory", default="")
     ap.add_argument("--external-candidates", default="")
-    ap.add_argument("--out-root", default="/tmp/capability-fit-matrices")
+    ap.add_argument("--out-root", default=str(runtime_temp_root() / "capability-fit-matrices"))
     ap.add_argument(
         "--operation",
         choices=["activate", "update", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection"],

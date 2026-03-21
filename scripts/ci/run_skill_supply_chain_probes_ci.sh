@@ -4,7 +4,8 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$REPO_ROOT"
 
-TMP_ROOT="$(mktemp -d /tmp/skill-supply-chain-probes.XXXXXX)"
+source "$REPO_ROOT/scripts/runtime_temp_path_common.sh"
+TMP_ROOT="$(identity_runtime_mktemp_dir_sh "skill-supply-chain-probes" "run")"
 cleanup() {
   rm -rf "$TMP_ROOT"
 }

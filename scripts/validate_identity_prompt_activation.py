@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+from runtime_temp_path_common import runtime_temp_root
 
 from resolve_identity_context import resolve_identity
 
@@ -29,7 +30,7 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--report", default="")
-    ap.add_argument("--report-dir", default="/tmp/identity-upgrade-reports")
+    ap.add_argument("--report-dir", default=str(runtime_temp_root() / "identity-upgrade-reports"))
     ap.add_argument("--scope", default="")
     args = ap.parse_args()
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from runtime_temp_path_common import runtime_temp_root
 
 
 def _latest_for_identity(report_dir: Path, identity_id: str) -> Path | None:
@@ -15,7 +16,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity health report contract.")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
-    ap.add_argument("--report-dir", default="/tmp/identity-health-reports")
+    ap.add_argument("--report-dir", default=str(runtime_temp_root() / "identity-health-reports"))
     ap.add_argument("--require-pass", action="store_true")
     args = ap.parse_args()
 
