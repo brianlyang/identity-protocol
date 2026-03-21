@@ -20,6 +20,11 @@ from final_emit_contract_common import (
 )
 from host_visible_final_channel_relay_common import inspect_host_visible_final_channel_relay
 from governed_reply_observability_common import build_headstamp_consistency_projection
+from governed_reply_transport_lifecycle_common import (
+    derive_governed_reply_transport_lifecycle,
+    reply_transport_binding_is_projection_eligible,
+)
+from host_visible_surface_runtime_common import resolve_host_visible_surface_runtime_paths
 from protocol_infra_contract import (
     CHAT_EGRESS_POST_CHECK_STATE_UNAVAILABLE_ERROR_CODE,
     CHAT_EGRESS_RAW_BYPASS_ERROR_CODE,
@@ -150,6 +155,7 @@ def _load_reply_transport_binding(
         "reply_transport_binding_status": STATUS_SKIPPED_NOT_REQUIRED,
         "reply_transport_binding_reason": "reply_transport_binding_not_required",
         "reply_transport_binding_error_code": "",
+        "reply_transport_binding_issues": [],
         "reply_transport_binding_receipt_paths": [],
         "reply_transport_binding_allowed_sources": [],
         "final_channel_relay_required": False,
@@ -172,6 +178,7 @@ def _load_reply_transport_binding(
         payload["reply_transport_binding_status"] = STATUS_FAIL_REQUIRED
         payload["reply_transport_binding_reason"] = "reply_transport_ref_missing"
         payload["reply_transport_binding_error_code"] = ERR_HDSTAMP_RECEIPT_MISSING
+        payload["reply_transport_binding_issues"] = ["reply_transport_ref_missing"]
         return payload
 
     try:
@@ -183,6 +190,7 @@ def _load_reply_transport_binding(
         payload["reply_transport_binding_error_code"] = (
             PRIVILEGE_ESCALATION_ERROR_CODE if _is_privilege_escalation_error(exc) else ERR_HDSTAMP_RECEIPT_MISSING
         )
+        payload["reply_transport_binding_issues"] = [payload["reply_transport_binding_reason"]]
         return payload
 
     host_visible_contract = task.get(HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY)
@@ -190,6 +198,7 @@ def _load_reply_transport_binding(
         payload["reply_transport_binding_status"] = STATUS_FAIL_REQUIRED
         payload["reply_transport_binding_reason"] = "host_visible_surface_contract_missing"
         payload["reply_transport_binding_error_code"] = ERR_HDSTAMP_RECEIPT_MISSING
+        payload["reply_transport_binding_issues"] = ["host_visible_surface_contract_missing"]
         return payload
 
     required_channels = _as_list(host_visible_contract.get("required_channels")) or list(
@@ -247,11 +256,13 @@ def _load_reply_transport_binding(
             payload["reply_transport_binding_error_code"] = (
                 PRIVILEGE_ESCALATION_ERROR_CODE if _is_privilege_escalation_error(exc) else ERR_HDSTAMP_RECEIPT_MISSING
             )
+            payload["reply_transport_binding_issues"] = [payload["reply_transport_binding_reason"]]
             return payload
     if not receipt_files:
         payload["reply_transport_binding_status"] = STATUS_FAIL_REQUIRED
         payload["reply_transport_binding_reason"] = "reply_transport_live_receipts_missing"
         payload["reply_transport_binding_error_code"] = ERR_HDSTAMP_RECEIPT_MISSING
+        payload["reply_transport_binding_issues"] = ["reply_transport_live_receipts_missing"]
         return payload
 
     matched_by_channel: dict[str, tuple[Path, dict[str, Any]]] = {}
@@ -347,20 +358,13 @@ def _load_reply_transport_binding(
         payload["reply_transport_binding_status"] = STATUS_FAIL_REQUIRED
         payload["reply_transport_binding_reason"] = issues[0]
         payload["reply_transport_binding_error_code"] = ERR_HDSTAMP_RECEIPT_MISSING
+        payload["reply_transport_binding_issues"] = issues
         return payload
 
     payload["reply_transport_binding_status"] = STATUS_PASS_REQUIRED
     payload["reply_transport_binding_reason"] = "reply_transport_bound_to_host_visible_live_receipts"
+    payload["reply_transport_binding_issues"] = []
     return payload
-
-
-def _reply_transport_binding_missing_live_receipt_only(reason: Any) -> bool:
-    token = str(reason or "").strip()
-    if not token:
-        return False
-    return token == "reply_transport_live_receipts_missing" or token.startswith(
-        "reply_transport_live_receipt_missing:"
-    )
 
 
 def _inject_current_surface_transport_attestation_fields(payload: dict[str, Any]) -> dict[str, Any]:
@@ -372,6 +376,11 @@ def _inject_current_surface_transport_attestation_fields(payload: dict[str, Any]
     )
     live_binding_status = str(out.get("reply_transport_binding_status", "")).strip().upper()
     live_binding_reason = str(out.get("reply_transport_binding_reason", "")).strip()
+    live_binding_issues = [
+        str(item).strip()
+        for item in (out.get("reply_transport_binding_issues") or [])
+        if str(item).strip()
+    ]
     send_time_status = str(out.get("send_time_gate_status", "")).strip().upper()
     first_line_status = str(out.get("reply_first_line_status", "")).strip().upper()
     final_emit_contract_status = str(out.get("final_emit_contract_status", "")).strip().upper()
@@ -413,7 +422,10 @@ def _inject_current_surface_transport_attestation_fields(payload: dict[str, Any]
                 and _is_final_emit_policy_mode(final_emit_policy_mode)
                 and _is_final_emit_schema_pass(final_emit_schema_status)
             )
-            if prereq_ok and _reply_transport_binding_missing_live_receipt_only(live_binding_reason):
+            if prereq_ok and reply_transport_binding_is_projection_eligible(
+                reason=live_binding_reason,
+                issues=live_binding_issues,
+            ):
                 status = STATUS_PASS_REQUIRED
                 reason = "current_surface_governed_transport_attested_pre_live_receipt"
                 mode = "current_surface_projection"
@@ -734,11 +746,19 @@ def _format_privilege_escalation_reason(*, path: str, scope: str, exc: Exception
     )
 
 
-def _load_host_transport_post_check_state(catalog_path: Path, identity_id: str) -> dict[str, Any]:
+def _load_host_transport_post_check_state(
+    catalog_path: Path,
+    identity_id: str,
+    *,
+    host_visible_shadow_root: str = "",
+) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "state_file": HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
         "state_path": "",
         "state_status": "STATE_UNCHECKED",
+        "state_runtime_scope": "live",
+        "state_runtime_shadow_root": "",
+        "state_live_path": "",
         "block_on_active": bool(HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE),
         "blocker_active": False,
         "closure_status": "",
@@ -770,6 +790,11 @@ def _load_host_transport_post_check_state(catalog_path: Path, identity_id: str) 
         payload["stale_reasons"] = ["host_transport_post_check_contract_missing"]
         return payload
 
+    runtime_paths = resolve_host_visible_surface_runtime_paths(
+        pack_path=pack_path,
+        contract=contract,
+        shadow_root=str(host_visible_shadow_root or "").strip(),
+    )
     closure_state_file = (
         str(contract.get("post_check_closure_state_file", "")).strip()
         or HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE
@@ -778,14 +803,13 @@ def _load_host_transport_post_check_state(catalog_path: Path, identity_id: str) 
         contract.get("post_check_block_on_active", HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE),
         default=bool(HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE),
     )
-    state_path = _resolve_pack_relative_path(
-        pack_path,
-        closure_state_file,
-        HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
-    )
+    state_path = Path(str(runtime_paths.get("post_check_closure_state_path", ""))).resolve()
 
     payload["state_file"] = closure_state_file
     payload["state_path"] = str(state_path)
+    payload["state_runtime_scope"] = str(runtime_paths.get("runtime_scope", "")).strip() or "live"
+    payload["state_runtime_shadow_root"] = str(runtime_paths.get("runtime_shadow_root", "")).strip()
+    payload["state_live_path"] = str(runtime_paths.get("live_post_check_closure_state_path", "")).strip()
     payload["block_on_active"] = bool(block_on_active)
     if not state_path.exists() or not state_path.is_file():
         payload["state_status"] = "STATE_MISSING"
@@ -935,6 +959,19 @@ def _finalize_payload(payload: dict[str, Any]) -> dict[str, Any]:
     payload = _inject_current_surface_transport_attestation_fields(payload)
     payload = _inject_chat_egress_uniqueness_fields(payload)
     payload = _inject_next_hop_admission_fields(payload)
+    payload.update(
+        derive_governed_reply_transport_lifecycle(
+            reply_transport_ref=payload.get("reply_transport_ref", ""),
+            current_surface_transport_attestation_status=payload.get(
+                "current_surface_transport_attestation_status", ""
+            ),
+            reply_transport_binding_status=payload.get("reply_transport_binding_status", ""),
+            final_channel_relay_status=payload.get("final_channel_relay_status", ""),
+            reply_transport_source_status=(
+                STATUS_PASS_REQUIRED if str(payload.get("reply_transport_ref", "")).strip() else STATUS_FAIL_REQUIRED
+            ),
+        )
+    )
     if not str(payload.get("headstamp_consistency_status", "")).strip():
         payload.update(
             build_headstamp_consistency_projection(
@@ -1020,6 +1057,14 @@ def main() -> int:
     ap.add_argument("--force-check", action="store_true")
     ap.add_argument("--enforce-send-time-gate", action="store_true")
     ap.add_argument("--blocker-receipt-out", default="")
+    ap.add_argument(
+        "--host-visible-shadow-root",
+        default="",
+        help=(
+            "optional shadow root that mirrors host-visible runtime closure-state for isolated "
+            "precheck/replay execution without mutating the live singleton state"
+        ),
+    )
     ap.add_argument(
         "--operation",
         choices=[
@@ -1144,7 +1189,11 @@ def main() -> int:
     final_emit_contract_status = STATUS_PASS_REQUIRED if final_emit_contract_ok else STATUS_FAIL_REQUIRED
     strict_outlet_enforced = strict_context and governed_outlet and bool(args.reply_outlet_guard_applied)
     preflight_receipt_ref = str(Path(args.blocker_receipt_out).expanduser().resolve()) if str(args.blocker_receipt_out or "").strip() else ""
-    post_check_state = _load_host_transport_post_check_state(catalog_path, args.identity_id)
+    post_check_state = _load_host_transport_post_check_state(
+        catalog_path,
+        args.identity_id,
+        host_visible_shadow_root=str(args.host_visible_shadow_root or "").strip(),
+    )
     post_check_blocker_active = bool(post_check_state.get("blocker_active", False))
     post_check_block_on_active = bool(post_check_state.get("block_on_active", False))
     post_check_state_file = str(post_check_state.get("state_file", "")).strip()
@@ -1201,6 +1250,9 @@ def main() -> int:
             "reply_transport_binding_error_code": str(
                 reply_transport_binding.get("reply_transport_binding_error_code", "")
             ).strip(),
+            "reply_transport_binding_issues": list(
+                reply_transport_binding.get("reply_transport_binding_issues") or []
+            ),
             "reply_transport_binding_receipt_paths": list(
                 reply_transport_binding.get("reply_transport_binding_receipt_paths") or []
             ),
@@ -1244,6 +1296,15 @@ def main() -> int:
             "host_transport_post_check_state_file": post_check_state_file,
             "host_transport_post_check_state_path": post_check_state_path,
             "host_transport_post_check_state_status": post_check_state_status,
+            "host_transport_post_check_runtime_scope": str(
+                post_check_state.get("state_runtime_scope", "")
+            ).strip(),
+            "host_transport_post_check_runtime_shadow_root": str(
+                post_check_state.get("state_runtime_shadow_root", "")
+            ).strip(),
+            "host_transport_post_check_state_live_path": str(
+                post_check_state.get("state_live_path", "")
+            ).strip(),
             "host_transport_post_check_block_on_active": post_check_block_on_active,
             "host_transport_post_check_blocker_active": post_check_blocker_active,
             "host_transport_post_check_closure_status": post_check_closure_status,
@@ -1287,6 +1348,9 @@ def main() -> int:
             "reply_transport_binding_error_code": str(
                 reply_transport_binding.get("reply_transport_binding_error_code", "")
             ).strip(),
+            "reply_transport_binding_issues": list(
+                reply_transport_binding.get("reply_transport_binding_issues") or []
+            ),
             "reply_transport_binding_receipt_paths": list(
                 reply_transport_binding.get("reply_transport_binding_receipt_paths") or []
             ),
@@ -1330,6 +1394,15 @@ def main() -> int:
             "host_transport_post_check_state_file": post_check_state_file,
             "host_transport_post_check_state_path": post_check_state_path,
             "host_transport_post_check_state_status": post_check_state_status,
+            "host_transport_post_check_runtime_scope": str(
+                post_check_state.get("state_runtime_scope", "")
+            ).strip(),
+            "host_transport_post_check_runtime_shadow_root": str(
+                post_check_state.get("state_runtime_shadow_root", "")
+            ).strip(),
+            "host_transport_post_check_state_live_path": str(
+                post_check_state.get("state_live_path", "")
+            ).strip(),
             "host_transport_post_check_block_on_active": post_check_block_on_active,
             "host_transport_post_check_blocker_active": post_check_blocker_active,
             "host_transport_post_check_closure_status": post_check_closure_status,
@@ -1795,6 +1868,9 @@ def main() -> int:
         "reply_transport_binding_error_code": str(
             reply_transport_binding.get("reply_transport_binding_error_code", "")
         ).strip(),
+        "reply_transport_binding_issues": list(
+            reply_transport_binding.get("reply_transport_binding_issues") or []
+        ),
         "reply_transport_binding_receipt_paths": list(
             reply_transport_binding.get("reply_transport_binding_receipt_paths") or []
         ),
@@ -1839,6 +1915,15 @@ def main() -> int:
         "host_transport_post_check_state_file": post_check_state_file,
         "host_transport_post_check_state_path": post_check_state_path,
         "host_transport_post_check_state_status": post_check_state_status,
+        "host_transport_post_check_runtime_scope": str(
+            post_check_state.get("state_runtime_scope", "")
+        ).strip(),
+        "host_transport_post_check_runtime_shadow_root": str(
+            post_check_state.get("state_runtime_shadow_root", "")
+        ).strip(),
+        "host_transport_post_check_state_live_path": str(
+            post_check_state.get("state_live_path", "")
+        ).strip(),
         "host_transport_post_check_block_on_active": post_check_block_on_active,
         "host_transport_post_check_blocker_active": post_check_blocker_active,
         "host_transport_post_check_closure_status": post_check_closure_status,

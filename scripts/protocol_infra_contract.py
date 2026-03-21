@@ -130,6 +130,17 @@ HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE = (
 )
 HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE = True
 HOST_VISIBLE_SURFACE_POST_CHECK_SCHEMA_VERSION = "v1"
+HOST_VISIBLE_POST_CHECK_AUTO_RECOVERY_BLOCK_STAGES: tuple[str, ...] = (
+    "pre_first_line_post_check_blocker_active",
+    "pre_first_line_post_check_state_unavailable",
+)
+HOST_VISIBLE_POST_CHECK_RECOVERY_REPLY_TRANSPORT_REF = "runtime:host_visible_post_check_recovery"
+HOST_VISIBLE_POST_CHECK_RECOVERY_ARTIFACT_CHANNEL = "host-visible-post-check-recovery"
+HOST_VISIBLE_POST_CHECK_RECOVERY_MATERIALIZATION_REASON = (
+    "host_visible_post_check_recovery_materialized"
+)
+HOST_VISIBLE_SURFACE_RUNTIME_SCOPE_LIVE = "live"
+HOST_VISIBLE_SURFACE_RUNTIME_SCOPE_SHADOW = "shadow"
 HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_CONTRACT_ID = "chat_egress_uniqueness_contract_v1"
 HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_REQUIRED_RATE = 1.0
 HOST_VISIBLE_POST_GATE_COVERAGE_REQUIRED_RATE = 1.0
@@ -151,10 +162,52 @@ CTX_TOOL_TIMEOUT_REASON_PREFIX = "context_tool_timeout"
 GATEWAY_WRAPPER_SUBPROCESS_TIMEOUT_SECONDS_DEFAULT = 30
 GATEWAY_CONTEXT_RESOLVE_TIMEOUT_SECONDS_DEFAULT = 5
 GATEWAY_WRAPPER_TIMEOUT_PROFILE_SECONDS: tuple[tuple[str, int], ...] = (
+    ("scripts/identity_creator.py", 240),
+    ("scripts/repair_contract_backfill.py", 120),
+    ("scripts/required_gate_bundle_runner.py", 120),
     ("scripts/report_three_plane_status.py", 180),
     ("scripts/validate_control_plane_status_sync.py", 180),
     ("scripts/validate_required_contract_coverage.py", 180),
 )
+VALIDATOR_ACTOR_ID_REQUIRED_SCRIPTS: tuple[str, ...] = (
+    "scripts/validate_required_contract_coverage.py",
+    "scripts/render_identity_response_stamp.py",
+    "scripts/validate_identity_response_stamp.py",
+    CANONICAL_FINAL_EMIT_SCRIPT,
+    "scripts/validate_headstamp_recurrence_closure.py",
+    "scripts/validate_reply_identity_context_first_line.py",
+    "scripts/validate_send_time_reply_gate.py",
+    "scripts/validate_execution_reply_identity_coherence.py",
+    "scripts/validate_protocol_unique_entry_gate.py",
+)
+VALIDATOR_SESSION_ID_REQUIRED_SCRIPTS: tuple[str, ...] = (
+    "scripts/validate_required_contract_coverage.py",
+    "scripts/render_identity_response_stamp.py",
+    "scripts/validate_identity_response_stamp.py",
+    CANONICAL_FINAL_EMIT_SCRIPT,
+    "scripts/validate_headstamp_recurrence_closure.py",
+    "scripts/validate_reply_identity_context_first_line.py",
+    "scripts/validate_send_time_reply_gate.py",
+    "scripts/validate_execution_reply_identity_coherence.py",
+    "scripts/validate_protocol_unique_entry_gate.py",
+)
+VALIDATOR_RUN_ID_REQUIRED_SCRIPTS: tuple[str, ...] = (
+    "scripts/validate_protocol_unique_entry_gate.py",
+)
+
+
+def validator_requires_actor_id(script_path: str) -> bool:
+    return str(script_path or "").strip() in VALIDATOR_ACTOR_ID_REQUIRED_SCRIPTS
+
+
+def validator_requires_session_id(script_path: str) -> bool:
+    return str(script_path or "").strip() in VALIDATOR_SESSION_ID_REQUIRED_SCRIPTS
+
+
+def validator_requires_run_id(script_path: str) -> bool:
+    return str(script_path or "").strip() in VALIDATOR_RUN_ID_REQUIRED_SCRIPTS
+
+
 HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS: tuple[str, ...] = (
     "emit_channel_id",
     "wrapper_surface_status",
@@ -219,8 +272,10 @@ HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS: tuple[str, ...] = (
     f'HOST_VISIBLE_FINAL_CHANNEL_ID = "{HOST_VISIBLE_FINAL_CHANNEL_ID}"',
     f"HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED = {HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED}",
     "def _repo_root() -> Path:",
+    "def _pack_root_from_contract_path(contract_path: Path) -> Path:",
     "def _normalize_text(",
     "def _sanitize_token(",
+    "def identity_runtime_named_temp_root(name: str) -> Path:",
     "build_host_visible_final_channel_question_tag(",
     "build_host_visible_final_channel_receipt_path(",
     "build_host_visible_final_channel_relay_receipt(",

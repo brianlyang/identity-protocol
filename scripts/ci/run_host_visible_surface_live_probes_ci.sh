@@ -19,6 +19,9 @@ VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION="${REPO_ROOT}/scripts/validate_host_t
 VALIDATE_SEND_TIME_REPLY_GATE="${REPO_ROOT}/scripts/validate_send_time_reply_gate.py"
 VALIDATE_PROTOCOL_LANE_HEADSTAMP_CONTINUITY="${REPO_ROOT}/scripts/validate_protocol_lane_headstamp_continuity.py"
 RECOVER_HOST_VISIBLE_POST_CHECK_STATE="${REPO_ROOT}/scripts/recover_host_visible_post_check_state.py"
+SHADOW_RUNTIME_ROOT="${WORK_ROOT}/shadow-runtime"
+RECOVERY_MATERIALIZATION_SHADOW_ROOT="${SHADOW_RUNTIME_ROOT}/materialized-governed-source"
+RECOVERY_ISOLATION_SHADOW_ROOT="${SHADOW_RUNTIME_ROOT}/isolated-live-precheck"
 
 rm -rf "${WORK_ROOT}"
 mkdir -p "${FIXTURE_ROOT}" "${RESULT_ROOT}"
@@ -146,12 +149,25 @@ run_probe() {
     rm -f "${stderr_path}"
   fi
 
-  python3 - <<'PY' "${name}" "${rc}" "${stdout_path}"
+  python3 - <<'PY' "${name}" "${rc}" "${stdout_path}" "${REPO_ROOT}"
 from __future__ import annotations
 
 import json
 import sys
 from pathlib import Path
+
+repo_root = Path(sys.argv[4]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from host_visible_surface_runtime_common import (
+    host_visible_surface_runtime_snapshot_changed_sections,
+    host_visible_surface_runtime_snapshot_unchanged,
+    snapshot_host_visible_surface_runtime,
+)
+from governed_reply_transport_lifecycle_common import (
+    REPLY_TRANSPORT_RESOLUTION_MODE_MATERIALIZE_RUNTIME_SENTINEL,
+)
+from protocol_infra_contract import HOST_VISIBLE_POST_CHECK_RECOVERY_REPLY_TRANSPORT_REF
 
 name = sys.argv[1]
 rc = int(sys.argv[2])
@@ -159,6 +175,14 @@ stdout_path = Path(sys.argv[3])
 doc = json.loads(stdout_path.read_text(encoding="utf-8"))
 reasons = [str(x).strip() for x in (doc.get("stale_reasons") or []) if str(x).strip()]
 status = str(doc.get("host_transport_wiring_attestation_status", "")).strip().upper()
+
+
+def _write_doc(payload: dict) -> None:
+    stdout_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _load_doc(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 if name == "host_visible_contract_static":
     if rc != 0:
@@ -196,6 +220,92 @@ elif name == "host_visible_post_check_recovery_reseeds_final_channel_relay":
         raise SystemExit("host_visible_post_check_recovery_reseeds_final_channel_relay: seeded_final_channel_relay_receipt_path missing")
     if reasons:
         raise SystemExit("host_visible_post_check_recovery_reseeds_final_channel_relay: stale_reasons must be empty")
+elif name == "host_visible_post_check_recovery_materializes_governed_source":
+    source_path = Path(str(doc.get("reply_transport_source_path", "")).strip()).expanduser()
+    source_lines = []
+    if source_path.exists():
+        source_lines = source_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    headstamp_present = (
+        len(source_lines) >= 2
+        and source_lines[0].startswith("Identity-Context:")
+        and source_lines[1].startswith("Machine-Verification:")
+    )
+    doc["reply_transport_source_headstamp_present"] = bool(headstamp_present)
+    _write_doc(doc)
+    if rc != 0:
+        raise SystemExit("host_visible_post_check_recovery_materializes_governed_source: expected zero rc")
+    if str(doc.get("recovery_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("host_visible_post_check_recovery_materializes_governed_source: recovery_status must be PASS_REQUIRED")
+    if str(doc.get("attestation_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("host_visible_post_check_recovery_materializes_governed_source: attestation_status must be PASS_REQUIRED")
+    if str(doc.get("reply_transport_requested_ref", "")).strip() != HOST_VISIBLE_POST_CHECK_RECOVERY_REPLY_TRANSPORT_REF:
+        raise SystemExit("host_visible_post_check_recovery_materializes_governed_source: requested ref mismatch")
+    if str(doc.get("reply_transport_resolution_mode", "")).strip() != REPLY_TRANSPORT_RESOLUTION_MODE_MATERIALIZE_RUNTIME_SENTINEL:
+        raise SystemExit("host_visible_post_check_recovery_materializes_governed_source: resolution mode must be materialize_runtime_sentinel")
+    if not bool(doc.get("reply_transport_source_materialized", False)):
+        raise SystemExit("host_visible_post_check_recovery_materializes_governed_source: source must be materialized")
+    if str(doc.get("reply_transport_source_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("host_visible_post_check_recovery_materializes_governed_source: source status must be PASS_REQUIRED")
+    if str(doc.get("host_visible_runtime_scope", "")).strip() != "shadow":
+        raise SystemExit("host_visible_post_check_recovery_materializes_governed_source: runtime scope must be shadow")
+    if not headstamp_present:
+        raise SystemExit("host_visible_post_check_recovery_materializes_governed_source: materialized source must include governed headstamp lines")
+elif name == "host_visible_post_check_recovery_shadow_runtime_isolated":
+    baseline_path = stdout_path.with_name(f"{name}.baseline.json")
+    if not baseline_path.exists():
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: baseline snapshot missing")
+    before_doc = _load_doc(baseline_path)
+    live_state_path = Path(str(doc.get("host_visible_runtime_state_live_path", "")).strip()).expanduser()
+    live_receipt_pattern_path = Path(
+        str(doc.get("host_visible_runtime_receipt_pattern_live_path", "")).strip()
+    ).expanduser()
+    live_closure_state_path = Path(
+        str(doc.get("host_visible_runtime_post_check_closure_state_live_path", "")).strip()
+    ).expanduser()
+    after_doc = snapshot_host_visible_surface_runtime(
+        runtime_state_path=live_state_path,
+        runtime_receipt_pattern_path=live_receipt_pattern_path,
+        post_check_closure_state_path=live_closure_state_path,
+    )
+    live_unchanged = host_visible_surface_runtime_snapshot_unchanged(before_doc, after_doc)
+    changed_sections = host_visible_surface_runtime_snapshot_changed_sections(before_doc, after_doc)
+    shadow_state_path = Path(str(doc.get("host_visible_state_path", "")).strip()).expanduser()
+    shadow_receipt_pattern_path = Path(str(doc.get("host_visible_receipt_pattern", "")).strip()).expanduser()
+    shadow_closure_state_path = Path(
+        str(doc.get("host_transport_post_check_closure_state_path", "")).strip()
+    ).expanduser()
+    shadow_paths_distinct = (
+        shadow_state_path != live_state_path
+        and shadow_receipt_pattern_path != live_receipt_pattern_path
+        and shadow_closure_state_path != live_closure_state_path
+    )
+    doc["live_runtime_snapshot_before"] = before_doc
+    doc["live_runtime_snapshot_after"] = after_doc
+    doc["live_runtime_snapshot_unchanged"] = bool(live_unchanged)
+    doc["live_runtime_snapshot_changed_sections"] = changed_sections
+    doc["shadow_runtime_distinct_from_live"] = bool(shadow_paths_distinct)
+    doc["shadow_runtime_state_exists"] = shadow_state_path.exists()
+    doc["shadow_runtime_post_check_closure_state_exists"] = shadow_closure_state_path.exists()
+    doc["shadow_runtime_seeded_receipt_count"] = len(doc.get("seeded_receipt_paths") or [])
+    _write_doc(doc)
+    if rc != 0:
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: expected zero rc")
+    if str(doc.get("recovery_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: recovery_status must be PASS_REQUIRED")
+    if str(doc.get("attestation_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: attestation_status must be PASS_REQUIRED")
+    if str(doc.get("host_visible_runtime_scope", "")).strip() != "shadow":
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: runtime scope must be shadow")
+    if not shadow_paths_distinct:
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: shadow paths must differ from live paths")
+    if not live_unchanged:
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: live runtime snapshot must remain unchanged")
+    if not shadow_state_path.exists():
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: shadow runtime state file missing")
+    if not shadow_closure_state_path.exists():
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: shadow post-check closure state missing")
+    if int(doc.get("shadow_runtime_seeded_receipt_count", 0)) <= 0:
+        raise SystemExit("host_visible_post_check_recovery_shadow_runtime_isolated: shadow seeded receipts missing")
 elif name == "host_visible_live_run_binding_required_blocked":
     if rc == 0:
         raise SystemExit("host_visible_live_run_binding_required_blocked: expected non-zero rc")
@@ -444,6 +554,45 @@ print(f"[PASS] {name} (rc={rc})")
 PY
 }
 
+capture_host_visible_live_runtime_snapshot() {
+  local out_path="$1"
+  python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}" "${out_path}"
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[3]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from host_visible_surface_runtime_common import (
+    resolve_host_visible_surface_runtime_paths,
+    snapshot_host_visible_surface_runtime,
+)
+from tool_vendor_governance_common import load_json, resolve_pack_and_task
+
+catalog_path = Path(sys.argv[1]).resolve()
+identity_id = sys.argv[2]
+out_path = Path(sys.argv[4]).resolve()
+pack_path, task_path = resolve_pack_and_task(catalog_path, identity_id)
+task = load_json(task_path)
+contract = task.get("host_visible_surface_contract_v1") or {}
+runtime_paths = resolve_host_visible_surface_runtime_paths(
+    pack_path=pack_path,
+    contract=contract,
+    shadow_root="",
+)
+snapshot = snapshot_host_visible_surface_runtime(
+    runtime_state_path=Path(str(runtime_paths.get("runtime_state_path", ""))).resolve(),
+    runtime_receipt_pattern_path=Path(str(runtime_paths.get("runtime_receipt_pattern_path", ""))).resolve(),
+    post_check_closure_state_path=Path(str(runtime_paths.get("post_check_closure_state_path", ""))).resolve(),
+)
+out_path.parent.mkdir(parents=True, exist_ok=True)
+out_path.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+}
+
 run_probe host_visible_contract_static \
   python3 "${VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION}" \
     --catalog "${CATALOG_PATH}" \
@@ -577,6 +726,38 @@ run_probe host_visible_live_receipts_pass \
     --require-actor-id assistant:ci-probe \
     --require-session-id run:ci-probe-session \
     --require-run-id run:ci-probe-receipt \
+    --json-only
+
+run_probe host_visible_post_check_recovery_materializes_governed_source \
+  python3 "${RECOVER_HOST_VISIBLE_POST_CHECK_STATE}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
+    --identity-id "${IDENTITY_ID}" \
+    --operation ci \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --run-id run:ci-probe-recovery-materialized \
+    --receipt-source runtime_dialogue \
+    --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+    --host-visible-shadow-root "${RECOVERY_MATERIALIZATION_SHADOW_ROOT}" \
+    --json-only
+
+capture_host_visible_live_runtime_snapshot \
+  "${RESULT_ROOT}/host_visible_post_check_recovery_shadow_runtime_isolated.baseline.json"
+
+run_probe host_visible_post_check_recovery_shadow_runtime_isolated \
+  python3 "${RECOVER_HOST_VISIBLE_POST_CHECK_STATE}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
+    --identity-id "${IDENTITY_ID}" \
+    --operation ci \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --run-id run:ci-probe-recovery-shadow \
+    --receipt-source runtime_dialogue \
+    --reply-transport-ref "${SEND_TIME_REPLY_FILE}" \
+    --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+    --host-visible-shadow-root "${RECOVERY_ISOLATION_SHADOW_ROOT}" \
     --json-only
 
 python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
@@ -944,6 +1125,8 @@ manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\
 print(f"[PASS] host visible surface probe suite wrote manifest: {manifest_path}")
 PY
 
+rm -rf "${SHADOW_RUNTIME_ROOT}"
+
 if [ "${SNAPSHOT_MODE}" = "canonical" ]; then
   python3 - <<'PY' "${REPO_ROOT}" "${WORK_ROOT}" "${FIXTURE_ROOT}" "${RESULT_ROOT}" "${MANIFEST_PATH}"
 from __future__ import annotations
@@ -980,6 +1163,12 @@ if not real_receipt_path.exists():
 shutil.copyfile(real_receipt_path, relay_receipt_path)
 
 recovery_doc, recovery_src = load_result("host_visible_post_check_recovery_reseeds_final_channel_relay")
+materialization_doc, materialization_src = load_result(
+    "host_visible_post_check_recovery_materializes_governed_source"
+)
+shadow_isolation_doc, shadow_isolation_src = load_result(
+    "host_visible_post_check_recovery_shadow_runtime_isolated"
+)
 send_time_doc, send_time_src = load_result("send_time_governed_pass_headstamp_required")
 continuity_doc, continuity_src = load_result("protocol_lane_headstamp_continuity_live_receipt_pass")
 
@@ -1003,6 +1192,50 @@ minimal_outputs = {
             recovery_doc.get("seeded_final_channel_relay_status", "")
         ).strip(),
         "seeded_final_channel_relay_receipt_path": relay_receipt_rel,
+    },
+    "host_visible_post_check_recovery_materializes_governed_source": {
+        "recovery_status": str(materialization_doc.get("recovery_status", "")).strip(),
+        "attestation_status": str(materialization_doc.get("attestation_status", "")).strip(),
+        "reply_transport_requested_ref": str(
+            materialization_doc.get("reply_transport_requested_ref", "")
+        ).strip(),
+        "reply_transport_resolution_mode": str(
+            materialization_doc.get("reply_transport_resolution_mode", "")
+        ).strip(),
+        "reply_transport_source_materialized": bool(
+            materialization_doc.get("reply_transport_source_materialized", False)
+        ),
+        "reply_transport_source_status": str(
+            materialization_doc.get("reply_transport_source_status", "")
+        ).strip(),
+        "reply_transport_source_headstamp_present": bool(
+            materialization_doc.get("reply_transport_source_headstamp_present", False)
+        ),
+        "host_visible_runtime_scope": str(
+            materialization_doc.get("host_visible_runtime_scope", "")
+        ).strip(),
+    },
+    "host_visible_post_check_recovery_shadow_runtime_isolated": {
+        "recovery_status": str(shadow_isolation_doc.get("recovery_status", "")).strip(),
+        "attestation_status": str(shadow_isolation_doc.get("attestation_status", "")).strip(),
+        "host_visible_runtime_scope": str(
+            shadow_isolation_doc.get("host_visible_runtime_scope", "")
+        ).strip(),
+        "live_runtime_snapshot_unchanged": bool(
+            shadow_isolation_doc.get("live_runtime_snapshot_unchanged", False)
+        ),
+        "shadow_runtime_distinct_from_live": bool(
+            shadow_isolation_doc.get("shadow_runtime_distinct_from_live", False)
+        ),
+        "shadow_runtime_state_exists": bool(
+            shadow_isolation_doc.get("shadow_runtime_state_exists", False)
+        ),
+        "shadow_runtime_post_check_closure_state_exists": bool(
+            shadow_isolation_doc.get("shadow_runtime_post_check_closure_state_exists", False)
+        ),
+        "shadow_runtime_seeded_receipt_count": int(
+            shadow_isolation_doc.get("shadow_runtime_seeded_receipt_count", 0)
+        ),
     },
     "send_time_governed_pass_headstamp_required": {
         "send_time_gate_status": str(send_time_doc.get("send_time_gate_status", "")).strip(),
@@ -1040,6 +1273,8 @@ for probe_name, payload in minimal_outputs.items():
 keep_stdout = {
     "host_visible_live_receipts_pass",
     "host_visible_post_check_recovery_reseeds_final_channel_relay",
+    "host_visible_post_check_recovery_materializes_governed_source",
+    "host_visible_post_check_recovery_shadow_runtime_isolated",
     "send_time_governed_pass_headstamp_required",
     "protocol_lane_headstamp_continuity_live_receipt_pass",
 }

@@ -126,7 +126,8 @@ Execution mode: topic-level canonical SSOT for v1.6.12 native-chat bootstrap ent
 7. Host final surface controlled display remains a stronger sender-side proof enhancement:
    - controlled visible emitter on the final host-visible surface,
    - exact relay receipt at the `final` channel,
-   - post-check recovery that can reseed the exact relay metadata from the actual reply transport ref,
+   - post-check recovery that can reseed the exact relay metadata from an actual governed reply transport artifact or from a protocol-materialized governed source artifact when the recovery sentinel is used,
+   - recurrence/recovery precheck that runs on shadow host-visible runtime surfaces so replay validation cannot mutate the live singleton closure state,
    - `no_silent_headerless_turn` proof, satisfied either by a stable live smoke pass or by the governed host-visible continuity bundle when host runtime smoke is inconclusive but the controlled path is fully machine-attested.
 8. That stronger sender-side proof stays in the same `v1.6.12` stream as a promotion-grade enhancement and must not be used to reopen or invalidate the standard implementation once the standard boundary above is satisfied.
 
@@ -169,6 +170,8 @@ Execution mode: topic-level canonical SSOT for v1.6.12 native-chat bootstrap ent
    - `tuple_present_status`
    - `authoritative_resolve_status`
    - `post_check_recovery_status`
+   - `post_check_recovery_materialization_status`
+   - `post_check_recovery_shadow_isolation_status`
    - `final_channel_relay_receipt_status`
    - `controlled_emitter_path_status`
    - `governed_headstamp_continuity_status`

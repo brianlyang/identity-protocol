@@ -43,6 +43,7 @@ from protocol_infra_contract import (
     PRIVILEGE_ESCALATION_REASON_PREFIX,
     PRIVILEGE_ESCALATION_REMEDIATION_HINT,
 )
+from host_visible_surface_runtime_common import resolve_host_visible_surface_runtime_paths
 from host_visible_final_channel_relay_common import inspect_host_visible_final_channel_relay
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 
@@ -262,15 +263,10 @@ def _utc_now_iso() -> str:
 
 def _write_post_check_closure_state(
     *,
-    pack_path: Path,
-    closure_state_file: str,
+    closure_state_path: Path,
     closure_state_doc: dict[str, Any],
 ) -> tuple[bool, str, str]:
-    state_path = _resolve_pack_relative_path(
-        pack_path,
-        closure_state_file,
-        HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
-    )
+    state_path = closure_state_path.expanduser().resolve()
     try:
         state_path.parent.mkdir(parents=True, exist_ok=True)
     except Exception as exc:
@@ -298,9 +294,9 @@ def _write_post_check_closure_state(
 def _finalize_with_post_check_state(
     *,
     payload: dict[str, Any],
-    pack_path: Path,
     args: argparse.Namespace,
     closure_state_file: str,
+    closure_state_path: Path,
     post_check_block_on_active: bool,
 ) -> int:
     checked_at_utc = _utc_now_iso()
@@ -331,8 +327,7 @@ def _finalize_with_post_check_state(
         "checked_at_utc": checked_at_utc,
     }
     ok, resolved_state_path, write_reason = _write_post_check_closure_state(
-        pack_path=pack_path,
-        closure_state_file=closure_state_file,
+        closure_state_path=closure_state_path,
         closure_state_doc=closure_state_doc,
     )
 
@@ -343,6 +338,9 @@ def _finalize_with_post_check_state(
     payload["host_transport_post_check_closure_status"] = attestation_status
     payload["host_transport_post_check_checked_at_utc"] = checked_at_utc
     payload["host_transport_post_check_state_write_status"] = STATUS_PASS_REQUIRED if ok else STATUS_FAIL_REQUIRED
+    payload["host_transport_post_check_runtime_scope"] = (
+        "shadow" if str(getattr(args, "host_visible_shadow_root", "") or "").strip() else "live"
+    )
 
     if not ok:
         if write_reason and write_reason not in stale_reasons:
@@ -392,6 +390,14 @@ def main() -> int:
             "comma-separated receipt sources accepted for live coverage "
             f"(default: {HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE}; "
             f"CI may extend with {HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE})"
+        ),
+    )
+    ap.add_argument(
+        "--host-visible-shadow-root",
+        default="",
+        help=(
+            "optional shadow root that mirrors host-visible runtime receipts/state/closure-state "
+            "under an isolated workspace instead of mutating live pack runtime surfaces"
         ),
     )
     ap.add_argument("--json-only", action="store_true")
@@ -487,9 +493,9 @@ def main() -> int:
         payload["stale_reasons"] = ["host_visible_surface_contract_missing"]
         return _finalize_with_post_check_state(
             payload=payload,
-            pack_path=pack_path,
             args=args,
             closure_state_file=post_check_closure_state_file,
+            closure_state_path=(pack_path / post_check_closure_state_file).resolve(),
             post_check_block_on_active=post_check_block_on_active,
         )
 
@@ -507,18 +513,41 @@ def main() -> int:
     if not set(HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS).issubset(required_channels):
         issues.append("host_visible_surface_required_channels_missing")
 
+    runtime_paths = resolve_host_visible_surface_runtime_paths(
+        pack_path=pack_path,
+        contract=host_visible_contract,
+        shadow_root=str(args.host_visible_shadow_root or "").strip(),
+    )
     state_file = str(host_visible_contract.get("runtime_state_file", "")).strip() or HOST_VISIBLE_SURFACE_STATE_FILE
     receipt_pattern = str(host_visible_contract.get("runtime_receipt_pattern", "")).strip() or HOST_VISIBLE_SURFACE_RECEIPT_PATTERN
     post_check_closure_state_file = (
         str(host_visible_contract.get("post_check_closure_state_file", "")).strip()
         or HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE
     )
+    state_path = Path(str(runtime_paths.get("runtime_state_path", ""))).resolve()
+    receipt_glob_path = Path(str(runtime_paths.get("runtime_receipt_pattern_path", ""))).resolve()
+    post_check_closure_state_path = Path(
+        str(runtime_paths.get("post_check_closure_state_path", ""))
+    ).resolve()
     post_check_block_on_active = _as_bool(
         host_visible_contract.get("post_check_block_on_active", HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE),
         default=bool(HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE),
     )
     payload["host_transport_post_check_closure_state_file"] = post_check_closure_state_file
     payload["host_transport_post_check_block_on_active"] = bool(post_check_block_on_active)
+    payload["host_transport_post_check_runtime_scope"] = str(runtime_paths.get("runtime_scope", "")).strip()
+    payload["host_transport_post_check_runtime_shadow_root"] = str(
+        runtime_paths.get("runtime_shadow_root", "")
+    ).strip()
+    payload["host_transport_wiring_attestation_runtime_state_live_path"] = str(
+        runtime_paths.get("live_runtime_state_path", "")
+    ).strip()
+    payload["host_transport_wiring_attestation_runtime_receipt_pattern_live_path"] = str(
+        runtime_paths.get("live_runtime_receipt_pattern_path", "")
+    ).strip()
+    payload["host_transport_post_check_closure_state_live_path"] = str(
+        runtime_paths.get("live_post_check_closure_state_path", "")
+    ).strip()
     if not str(host_visible_contract.get("post_check_closure_state_file", "")).strip():
         issues.append("host_visible_surface_post_check_closure_state_file_missing")
     if post_check_block_on_active is not True:
@@ -652,7 +681,6 @@ def main() -> int:
     if release_mode_required != HOST_GATEWAY_REQUIRED_RELEASE_MODE:
         issues.append("host_visible_surface_release_mode_required_mismatch")
 
-    state_path = _resolve_pack_relative_path(pack_path, state_file, HOST_VISIBLE_SURFACE_STATE_FILE)
     if not state_path.exists() or not state_path.is_file():
         issues.append("host_visible_surface_state_file_missing")
 
@@ -729,16 +757,14 @@ def main() -> int:
             else:
                 issues.append("host_visible_surface_live_state_file_invalid")
 
-        receipt_glob_path = _resolve_pack_relative_path(
-            pack_path,
-            receipt_pattern,
-            HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
-        )
         if receipt_glob_path.is_file():
             receipt_files = [receipt_glob_path]
         else:
             try:
-                receipt_files = sorted(pack_path.glob(receipt_pattern), key=lambda item: item.stat().st_mtime)
+                receipt_files = sorted(
+                    receipt_glob_path.parent.glob(receipt_glob_path.name),
+                    key=lambda item: item.stat().st_mtime,
+                )
             except Exception as exc:
                 if _is_privilege_escalation_error(exc):
                     issues.append(
@@ -915,9 +941,9 @@ def main() -> int:
         payload["stale_reasons"] = issues
     return _finalize_with_post_check_state(
         payload=payload,
-        pack_path=pack_path,
         args=args,
         closure_state_file=post_check_closure_state_file,
+        closure_state_path=post_check_closure_state_path,
         post_check_block_on_active=post_check_block_on_active,
     )
 

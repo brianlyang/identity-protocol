@@ -49,6 +49,7 @@ from response_stamp_common import (
 )
 from tool_vendor_governance_common import resolve_pack_and_task
 from protocol_infra_contract import (
+    HOST_VISIBLE_POST_CHECK_AUTO_RECOVERY_BLOCK_STAGES,
     PRIVILEGE_ESCALATION_ERROR_CODE,
     PRIVILEGE_ESCALATION_REASON_PREFIX,
     PRIVILEGE_ESCALATION_REMEDIATION_HINT,
@@ -265,17 +266,7 @@ def _parse_stale_reasons(payload: dict[str, Any] | None) -> list[str]:
 def _should_attempt_post_check_auto_recovery(
     *,
     compose_payload: dict[str, Any] | None,
-    strict_explicit_context_required: bool,
 ) -> bool:
-    """
-    Attempt auto-recovery only when send-time failed before first-line gate due
-    post-check guard path, which manifests as:
-      - strict explicit context mode
-      - send_time_gate_status != PASS_REQUIRED
-      - reply_first_line_status == SKIPPED_NOT_REQUIRED (pre-first-line block)
-    """
-    if not strict_explicit_context_required:
-        return False
     if not isinstance(compose_payload, dict):
         return False
     send_time_status = str(compose_payload.get("send_time_gate_status", "")).strip().upper()
@@ -284,8 +275,21 @@ def _should_attempt_post_check_auto_recovery(
     first_line_status = str(compose_payload.get("reply_first_line_status", "")).strip().upper()
     if first_line_status != STATUS_SKIPPED_NOT_REQUIRED:
         return False
-    error_code = str(compose_payload.get("send_time_error_code", "")).strip().upper()
-    return error_code == ERR_EGRESS_CONTRACT_FAILED
+    if str(compose_payload.get("outlet_channel_id", "")).strip() != FINAL_EMIT_CHANNEL_ID:
+        return False
+    if not bool(compose_payload.get("governed_outlet_enforced", False)):
+        return False
+    if str(compose_payload.get("final_emit_contract_status", "")).strip().upper() != STATUS_PASS_REQUIRED:
+        return False
+    reply_transport_ref = str(
+        compose_payload.get("reply_transport_ref", "") or compose_payload.get("out_reply_file", "")
+    ).strip()
+    if not reply_transport_ref:
+        return False
+    send_time_block_stage = str(compose_payload.get("send_time_block_stage", "")).strip()
+    if send_time_block_stage in HOST_VISIBLE_POST_CHECK_AUTO_RECOVERY_BLOCK_STAGES:
+        return True
+    return bool(compose_payload.get("host_transport_post_check_blocker_active", False))
 
 
 def _run_post_check_auto_recovery(
@@ -1144,7 +1148,6 @@ def main() -> int:
 
     if _should_attempt_post_check_auto_recovery(
         compose_payload=compose_payload,
-        strict_explicit_context_required=bool(strict_explicit_context_required),
     ):
         post_check_auto_recovery_attempted = True
         (
@@ -1212,7 +1215,11 @@ def main() -> int:
         "body_mode": body_mode,
         "send_time_gate_status": send_time_status,
         "send_time_error_code": str(compose_payload.get("send_time_error_code", "")).strip(),
+        "send_time_block_stage": str(compose_payload.get("send_time_block_stage", "")).strip(),
         "reply_first_line_status": str(compose_payload.get("reply_first_line_status", "")).strip(),
+        "reply_first_line_blocked_reason": str(
+            compose_payload.get("reply_first_line_blocked_reason", "")
+        ).strip(),
         "reply_first_line_identity_id": str(compose_payload.get("reply_first_line_identity_id", "")).strip(),
         "reply_transport_ref": str(compose_payload.get("reply_transport_ref", "")).strip(),
         "final_emit_contract_status": final_emit_status,
@@ -1259,6 +1266,27 @@ def main() -> int:
         ).strip(),
         "quoted_identity_context_binding_effect": str(
             compose_payload.get("quoted_identity_context_binding_effect", "")
+        ).strip(),
+        "host_transport_post_check_state_file": str(
+            compose_payload.get("host_transport_post_check_state_file", "")
+        ).strip(),
+        "host_transport_post_check_state_path": str(
+            compose_payload.get("host_transport_post_check_state_path", "")
+        ).strip(),
+        "host_transport_post_check_state_status": str(
+            compose_payload.get("host_transport_post_check_state_status", "")
+        ).strip(),
+        "host_transport_post_check_block_on_active": bool(
+            compose_payload.get("host_transport_post_check_block_on_active", False)
+        ),
+        "host_transport_post_check_blocker_active": bool(
+            compose_payload.get("host_transport_post_check_blocker_active", False)
+        ),
+        "host_transport_post_check_closure_status": str(
+            compose_payload.get("host_transport_post_check_closure_status", "")
+        ).strip(),
+        "host_transport_post_check_error_code": str(
+            compose_payload.get("host_transport_post_check_error_code", "")
         ).strip(),
         "compose_attempt_count": compose_attempt_count,
         "post_check_auto_recovery_attempted": post_check_auto_recovery_attempted,

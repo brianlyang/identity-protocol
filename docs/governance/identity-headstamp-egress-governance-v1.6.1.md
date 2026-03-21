@@ -390,18 +390,25 @@ deepening base for v1.6.1 headstamp semantics.
    - `session_id=run:<id>` => run token `<id>`.
 2. Before compose/send-time checks, three-plane MUST run host-visible post-check recovery with the same tuple:
    - `recover_host_visible_post_check_state --operation three-plane --actor-id --session-id --run-id <session-derived>`.
-3. Required-gate bundle invocations inside three-plane MUST inherit:
+3. The shared recovery primitive MUST accept either:
+   - an actual governed reply transport artifact, or
+   - a protocol-owned runtime sentinel that materializes a governed source artifact before reseeding relay metadata.
+4. Headstamp recurrence / replay precheck MUST execute recovery and send-time validation on shadow host-visible runtime surfaces:
+   - `--host-visible-shadow-root <shadow_root>`
+   - live singleton closure-state and live host-visible receipts are read-only during probe execution.
+5. Required-gate bundle invocations inside three-plane MUST inherit:
    - session-derived run token (highest priority),
    - execution report tuple pointer (`--report-selected-path`) when available.
 
 ### 14.3 Fail-close boundary
 
 1. If host-visible recovery fails (`recovery_status=FAIL_REQUIRED`), three-plane remains blocked.
-2. This is infrastructure fail-close; no identity-specific allowlist or manual receipt editing is permitted.
+2. If runtime sentinel materialization fails or shadow runtime isolation cannot be established, recurrence / strict precheck remains blocked.
+3. This is infrastructure fail-close; no identity-specific allowlist or manual receipt editing is permitted.
 
 ### 14.4 Non-hardcode guarantee
 
-1. Closure uses tuple-derived tokens and runtime report path fallback.
+1. Closure uses tuple-derived tokens, governed source materialization, shadow runtime mirroring, and runtime report path fallback.
 2. No identity id literal pinning and no absolute-path hardcoding is introduced.
 
 ## 15) Operator envelope template + response stamp profile materialization freeze (2026-03-17)

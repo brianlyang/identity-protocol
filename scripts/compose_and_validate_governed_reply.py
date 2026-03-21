@@ -219,6 +219,14 @@ def main() -> int:
     ap.add_argument("--final-emit-receipt-out", default="")
     ap.add_argument("--outlet-channel-id", default=FINAL_EMIT_CHANNEL_ID)
     ap.add_argument(
+        "--host-visible-shadow-root",
+        default="",
+        help=(
+            "optional shadow root that mirrors host-visible runtime closure-state for isolated "
+            "precheck/replay execution without mutating live singleton state"
+        ),
+    )
+    ap.add_argument(
         "--current-surface-native-machine-attested",
         action="store_true",
         help="allow current-surface governed transport attestation for controlled runtime entrypoints",
@@ -635,6 +643,8 @@ def main() -> int:
         validate_cmd += ["--blocker-receipt-out", str(args.blocker_receipt_out).strip()]
     if str(args.layer_intent_text or "").strip():
         validate_cmd += ["--layer-intent-text", str(args.layer_intent_text).strip()]
+    if str(args.host_visible_shadow_root or "").strip():
+        validate_cmd += ["--host-visible-shadow-root", str(args.host_visible_shadow_root).strip()]
     proc = subprocess.run(validate_cmd, capture_output=True, text=True, cwd=str(REPO_ROOT))
     validate_payload = _json_payload(proc.stdout)
 
@@ -779,9 +789,25 @@ def main() -> int:
         "send_time_error_code": str(validate_payload.get("error_code", "")),
         "error_code": str(validate_payload.get("error_code", "")),
         "send_time_rc": proc.returncode,
+        "send_time_block_stage": str(validate_payload.get("send_time_block_stage", "")).strip(),
         "reply_first_line_status": str(validate_payload.get("reply_first_line_status", "")),
+        "reply_first_line_blocked_reason": str(
+            validate_payload.get("reply_first_line_blocked_reason", "")
+        ).strip(),
         "reply_evidence_mode": str(validate_payload.get("reply_evidence_mode", "")),
         "reply_transport_ref": str(validate_payload.get("reply_transport_ref", "")),
+        "reply_transport_binding_issues": list(
+            validate_payload.get("reply_transport_binding_issues") or []
+        ),
+        "governed_reply_transport_lifecycle_phase": str(
+            validate_payload.get("governed_reply_transport_lifecycle_phase", "")
+        ).strip(),
+        "governed_reply_transport_lifecycle_status": str(
+            validate_payload.get("governed_reply_transport_lifecycle_status", "")
+        ).strip(),
+        "governed_reply_transport_lifecycle_reason": str(
+            validate_payload.get("governed_reply_transport_lifecycle_reason", "")
+        ).strip(),
         "current_surface_transport_attestation_contract_id": str(
             validate_payload.get("current_surface_transport_attestation_contract_id", "")
         ).strip(),
@@ -834,6 +860,36 @@ def main() -> int:
         "identity_authority_resolution_mode": str(authority.get("identity_authority_resolution_mode", "")).strip(),
         "identity_authority_next_action": str(authority.get("identity_authority_next_action", "")).strip(),
         "identity_authority_stale_reasons": list(authority.get("identity_authority_stale_reasons") or []),
+        "host_transport_post_check_state_file": str(
+            validate_payload.get("host_transport_post_check_state_file", "")
+        ).strip(),
+        "host_transport_post_check_state_path": str(
+            validate_payload.get("host_transport_post_check_state_path", "")
+        ).strip(),
+        "host_transport_post_check_state_status": str(
+            validate_payload.get("host_transport_post_check_state_status", "")
+        ).strip(),
+        "host_transport_post_check_runtime_scope": str(
+            validate_payload.get("host_transport_post_check_runtime_scope", "")
+        ).strip(),
+        "host_transport_post_check_runtime_shadow_root": str(
+            validate_payload.get("host_transport_post_check_runtime_shadow_root", "")
+        ).strip(),
+        "host_transport_post_check_state_live_path": str(
+            validate_payload.get("host_transport_post_check_state_live_path", "")
+        ).strip(),
+        "host_transport_post_check_block_on_active": bool(
+            validate_payload.get("host_transport_post_check_block_on_active", False)
+        ),
+        "host_transport_post_check_blocker_active": bool(
+            validate_payload.get("host_transport_post_check_blocker_active", False)
+        ),
+        "host_transport_post_check_closure_status": str(
+            validate_payload.get("host_transport_post_check_closure_status", "")
+        ).strip(),
+        "host_transport_post_check_error_code": str(
+            validate_payload.get("host_transport_post_check_error_code", "")
+        ).strip(),
         "display_headstamp_identity_id": str(validate_payload.get("display_headstamp_identity_id", "")).strip(),
         "authoritative_identity_id": str(validate_payload.get("authoritative_identity_id", "")).strip(),
         "headstamp_consistency_status": str(validate_payload.get("headstamp_consistency_status", "")).strip(),

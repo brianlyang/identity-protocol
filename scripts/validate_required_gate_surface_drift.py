@@ -14,6 +14,8 @@ import yaml
 from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+    VALIDATOR_ACTOR_ID_REQUIRED_SCRIPTS as INFRA_VALIDATOR_ACTOR_ID_REQUIRED_SCRIPTS,
+    VALIDATOR_SESSION_ID_REQUIRED_SCRIPTS as INFRA_VALIDATOR_SESSION_ID_REQUIRED_SCRIPTS,
 )
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -373,29 +375,26 @@ BUNDLE_REQUIREMENT_KEYS: tuple[str, ...] = (
     "asb16-rq-041",
 )
 
-ACTOR_ID_REQUIRED_SCRIPTS: tuple[str, ...] = (
-    "scripts/render_identity_response_stamp.py",
-    FINAL_EGRESS_WRAPPER_SCRIPT,
-    "scripts/validate_reply_identity_context_first_line.py",
-    "scripts/validate_send_time_reply_gate.py",
-    "scripts/validate_execution_reply_identity_coherence.py",
-    "scripts/report_three_plane_status.py",
-    "scripts/full_identity_protocol_scan.py",
+ACTOR_ID_REQUIRED_SCRIPTS: tuple[str, ...] = tuple(
+    dict.fromkeys(
+        (
+            *INFRA_VALIDATOR_ACTOR_ID_REQUIRED_SCRIPTS,
+            "scripts/report_three_plane_status.py",
+            "scripts/full_identity_protocol_scan.py",
+        )
+    )
 )
-SESSION_ID_REQUIRED_SCRIPTS: tuple[str, ...] = (
-    "scripts/validate_required_contract_coverage.py",
-    "scripts/render_identity_response_stamp.py",
-    "scripts/validate_identity_response_stamp.py",
-    FINAL_EGRESS_WRAPPER_SCRIPT,
-    "scripts/validate_headstamp_recurrence_closure.py",
-    "scripts/validate_reply_identity_context_first_line.py",
-    "scripts/validate_send_time_reply_gate.py",
-    "scripts/validate_execution_reply_identity_coherence.py",
-    "scripts/validate_actor_session_binding.py",
-    "scripts/validate_actor_session_multibinding_concurrency.py",
-    "scripts/validate_prompt_kernel_executable_coupling.py",
-    "scripts/report_three_plane_status.py",
-    "scripts/full_identity_protocol_scan.py",
+SESSION_ID_REQUIRED_SCRIPTS: tuple[str, ...] = tuple(
+    dict.fromkeys(
+        (
+            *INFRA_VALIDATOR_SESSION_ID_REQUIRED_SCRIPTS,
+            "scripts/validate_actor_session_binding.py",
+            "scripts/validate_actor_session_multibinding_concurrency.py",
+            "scripts/validate_prompt_kernel_executable_coupling.py",
+            "scripts/report_three_plane_status.py",
+            "scripts/full_identity_protocol_scan.py",
+        )
+    )
 )
 BUNDLE_REQUIRED_ARGS: tuple[str, ...] = (
     "--run-id",
@@ -911,6 +910,13 @@ def _detect_dynamic_session_passthrough_scripts(text: str) -> set[str]:
         if "cmd.extend([\"--session-id\"" not in window and "cmd.extend(['--session-id'" not in window:
             continue
         dynamic.update(_parse_script_literals(m.group("body")))
+
+    if (
+        "cmd[1] in VALIDATOR_SESSION_ID_REQUIRED_SCRIPTS" in body_text
+        and "--session-id" in body_text
+        and "cmd.extend([\"--session-id\"" in body_text
+    ):
+        dynamic.update(INFRA_VALIDATOR_SESSION_ID_REQUIRED_SCRIPTS)
 
     return dynamic
 
@@ -1540,6 +1546,26 @@ def main() -> int:
                 "send_time_governed_pass_headstamp_required: chat_egress_uniqueness_status must be PASS_REQUIRED",
             )
         )
+        has_post_check_materialization_probe = all(
+            token in text
+            for token in (
+                "run_probe host_visible_post_check_recovery_materializes_governed_source",
+                "host_visible_post_check_recovery_materializes_governed_source: resolution mode must be materialize_runtime_sentinel",
+                "host_visible_post_check_recovery_materializes_governed_source: source must be materialized",
+                "host_visible_post_check_recovery_materializes_governed_source: materialized source must include governed headstamp lines",
+                "--host-visible-shadow-root",
+            )
+        )
+        has_post_check_shadow_isolation_probe = all(
+            token in text
+            for token in (
+                "run_probe host_visible_post_check_recovery_shadow_runtime_isolated",
+                "host_visible_post_check_recovery_shadow_runtime_isolated: runtime scope must be shadow",
+                "host_visible_post_check_recovery_shadow_runtime_isolated: live runtime snapshot must remain unchanged",
+                "host_visible_post_check_recovery_shadow_runtime_isolated: shadow paths must differ from live paths",
+                "capture_host_visible_live_runtime_snapshot",
+            )
+        )
         has_manual_reply_file_negative_probe = all(
             token in text
             for token in (
@@ -1582,6 +1608,14 @@ def main() -> int:
             host_visible_missing_tokens.append("host_visible_surface_commentary_session_binding_negative_probe_invocation_missing")
         if not has_send_time_positive_probe:
             host_visible_missing_tokens.append("host_visible_surface_send_time_positive_headstamp_probe_invocation_missing")
+        if not has_post_check_materialization_probe:
+            host_visible_missing_tokens.append(
+                "host_visible_surface_post_check_materialization_probe_invocation_missing"
+            )
+        if not has_post_check_shadow_isolation_probe:
+            host_visible_missing_tokens.append(
+                "host_visible_surface_post_check_shadow_isolation_probe_invocation_missing"
+            )
         if not has_manual_reply_file_negative_probe:
             host_visible_missing_tokens.append(
                 "host_visible_surface_manual_reply_file_negative_probe_invocation_missing"

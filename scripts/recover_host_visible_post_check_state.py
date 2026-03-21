@@ -14,6 +14,9 @@ from typing import Any
 from protocol_infra_contract import (
     HOST_VISIBLE_FINAL_CHANNEL_ID,
     HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED,
+    HOST_VISIBLE_POST_CHECK_RECOVERY_ARTIFACT_CHANNEL,
+    HOST_VISIBLE_POST_CHECK_RECOVERY_MATERIALIZATION_REASON,
+    HOST_VISIBLE_POST_CHECK_RECOVERY_REPLY_TRANSPORT_REF,
     HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
     HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS,
     HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
@@ -28,6 +31,8 @@ from protocol_infra_contract import (
     PRIVILEGE_ESCALATION_REASON_PREFIX,
     PRIVILEGE_ESCALATION_REMEDIATION_HINT,
 )
+from governed_reply_transport_lifecycle_common import resolve_governed_reply_transport_artifact
+from host_visible_surface_runtime_common import resolve_host_visible_surface_runtime_paths
 from host_visible_final_channel_relay_common import (
     build_host_visible_final_channel_relay_receipt,
     project_host_visible_final_channel_relay_fields,
@@ -210,7 +215,15 @@ def main() -> int:
     ap.add_argument("--session-id", required=True)
     ap.add_argument("--run-id", required=True)
     ap.add_argument("--receipt-source", default="")
-    ap.add_argument("--reply-transport-ref", default="runtime:host_visible_post_check_recovery")
+    ap.add_argument("--reply-transport-ref", default=HOST_VISIBLE_POST_CHECK_RECOVERY_REPLY_TRANSPORT_REF)
+    ap.add_argument(
+        "--host-visible-shadow-root",
+        default="",
+        help=(
+            "optional shadow root that mirrors host-visible runtime receipts/state/closure-state "
+            "under an isolated workspace instead of mutating live pack runtime surfaces"
+        ),
+    )
     ap.add_argument("--allowed-live-receipt-sources", default="")
     ap.add_argument("--skip-attestation", action="store_true")
     ap.add_argument("--json-only", action="store_true")
@@ -277,16 +290,13 @@ def main() -> int:
     required_pass_status_fields = set(
         _as_list(contract.get("required_pass_status_fields")) or HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS
     )
-    state_path = _resolve_runtime_path(
-        pack_path,
-        str(contract.get("runtime_state_file", "")).strip(),
-        HOST_VISIBLE_SURFACE_STATE_FILE,
+    runtime_paths = resolve_host_visible_surface_runtime_paths(
+        pack_path=pack_path,
+        contract=contract,
+        shadow_root=str(args.host_visible_shadow_root or "").strip(),
     )
-    receipt_glob_path = _resolve_runtime_path(
-        pack_path,
-        str(contract.get("runtime_receipt_pattern", "")).strip(),
-        HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
-    )
+    state_path = Path(str(runtime_paths.get("runtime_state_path", ""))).resolve()
+    receipt_glob_path = Path(str(runtime_paths.get("runtime_receipt_pattern_path", ""))).resolve()
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     now_token = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -300,11 +310,62 @@ def main() -> int:
 
     issues: list[str] = []
     final_channel_relay_projection: dict[str, Any] = {}
-    reply_transport_ref = str(args.reply_transport_ref).strip()
-    if reply_transport_ref:
-        candidate_path = Path(reply_transport_ref).expanduser()
-        if candidate_path.exists():
-            reply_transport_ref = str(candidate_path.resolve())
+    transport_resolution = resolve_governed_reply_transport_artifact(
+        repo_root=REPO_ROOT,
+        catalog_path=catalog_path,
+        repo_catalog_path=repo_catalog_path,
+        identity_id=str(args.identity_id).strip(),
+        actor_id=str(args.actor_id).strip(),
+        session_id=str(args.session_id).strip(),
+        operation=operation,
+        run_id=str(args.run_id).strip(),
+        reply_transport_ref=str(args.reply_transport_ref).strip(),
+        artifact_channel=HOST_VISIBLE_POST_CHECK_RECOVERY_ARTIFACT_CHANNEL,
+        artifact_stem=f"host-visible-post-check-recovery-{args.identity_id}",
+        materialization_reason=HOST_VISIBLE_POST_CHECK_RECOVERY_MATERIALIZATION_REASON,
+    )
+    reply_transport_ref = str(transport_resolution.get("reply_transport_effective_ref", "")).strip()
+    base_payload.update(
+        {
+            "reply_transport_requested_ref": str(
+                transport_resolution.get("reply_transport_requested_ref", "")
+            ).strip(),
+            "reply_transport_resolution_mode": str(
+                transport_resolution.get("reply_transport_resolution_mode", "")
+            ).strip(),
+            "reply_transport_source_materialized": bool(
+                transport_resolution.get("reply_transport_source_materialized", False)
+            ),
+            "reply_transport_source_status": str(
+                transport_resolution.get("reply_transport_source_status", "")
+            ).strip(),
+            "reply_transport_source_path": str(
+                transport_resolution.get("reply_transport_source_path", "")
+            ).strip(),
+            "host_visible_runtime_scope": str(runtime_paths.get("runtime_scope", "")).strip(),
+            "host_visible_runtime_shadow_root": str(
+                runtime_paths.get("runtime_shadow_root", "")
+            ).strip(),
+            "host_visible_runtime_state_live_path": str(
+                runtime_paths.get("live_runtime_state_path", "")
+            ).strip(),
+            "host_visible_runtime_receipt_pattern_live_path": str(
+                runtime_paths.get("live_runtime_receipt_pattern_path", "")
+            ).strip(),
+            "host_visible_runtime_post_check_closure_state_live_path": str(
+                runtime_paths.get("live_post_check_closure_state_path", "")
+            ).strip(),
+        }
+    )
+    if str(transport_resolution.get("reply_transport_source_status", "")).strip().upper() != STATUS_PASS_REQUIRED:
+        base_payload["error_code"] = str(transport_resolution.get("error_code", "")).strip() or ERR_INVALID
+        base_payload["stale_reasons"] = [
+            str(item).strip()
+            for item in (transport_resolution.get("stale_reasons") or [])
+            if str(item).strip()
+        ] or ["reply_transport_source_resolution_not_pass"]
+        _emit(base_payload, json_only=args.json_only)
+        return 1
     if HOST_VISIBLE_FINAL_CHANNEL_ID in required_channels and bool(
         contract.get("final_channel_relay_required", HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED)
     ):
@@ -437,6 +498,8 @@ def main() -> int:
             "task_path": str(task_path),
             "host_visible_state_path": str(state_path),
             "host_visible_receipt_pattern": str(receipt_glob_path),
+            "host_visible_runtime_scope": str(runtime_paths.get("runtime_scope", "")).strip(),
+            "host_visible_runtime_shadow_root": str(runtime_paths.get("runtime_shadow_root", "")).strip(),
             "seeded_channels": required_channels,
             "seeded_receipt_paths": receipt_paths,
             "seeded_receipt_source": receipt_source,
@@ -482,6 +545,10 @@ def main() -> int:
         allowed_live_receipt_sources,
         "--json-only",
     ]
+    if str(args.host_visible_shadow_root or "").strip():
+        attestation_cmd.extend(
+            ["--host-visible-shadow-root", str(args.host_visible_shadow_root).strip()]
+        )
     proc = subprocess.run(attestation_cmd, capture_output=True, text=True, cwd=str(REPO_ROOT))
     attestation_payload = _parse_json_payload(proc.stdout)
     attestation_status = str(attestation_payload.get("host_transport_wiring_attestation_status", "")).strip().upper()
@@ -494,6 +561,9 @@ def main() -> int:
     base_payload["host_transport_post_check_blocker_active"] = bool(
         attestation_payload.get("host_transport_post_check_blocker_active", False)
     )
+    base_payload["host_transport_post_check_runtime_scope"] = str(
+        attestation_payload.get("host_transport_post_check_runtime_scope", "")
+    ).strip()
     base_payload["host_transport_post_check_state_write_status"] = str(
         attestation_payload.get("host_transport_post_check_state_write_status", "")
     ).strip()

@@ -219,6 +219,22 @@ Observed after fix:
 1. Three-plane strict execution should no longer fail headstamp lane solely because of stale recovery run-id.
 2. Remaining failures (if any) must map to real required contracts, not host-visible tuple drift artifacts.
 
+### 11.4 Recurrence/recovery infrastructure reinforcement (2026-03-21)
+
+1. `scripts/recover_host_visible_post_check_state.py`
+   - now resolves governed source evidence through the shared recovery primitive:
+     - actual governed reply transport artifact when available,
+     - protocol-materialized governed source artifact when the runtime sentinel is used.
+2. `scripts/validate_headstamp_recurrence_closure.py`
+   - now runs recovery/send-time replay with `--host-visible-shadow-root`, so probe execution does not mutate the live singleton closure state.
+3. `scripts/ci/run_host_visible_surface_live_probes_ci.sh`
+   - now carries dedicated positive probes for:
+     - governed source materialization (`host_visible_post_check_recovery_materializes_governed_source`)
+     - shadow runtime isolation (`host_visible_post_check_recovery_shadow_runtime_isolated`)
+4. Acceptance intent:
+   - recovery fallback must stay governed, not free-form/manual;
+   - replay isolation must be machine-proven, not assumed from operator discipline.
+
 ## 12) Operator envelope + task-profile rollout audit (2026-03-17)
 
 ### 12.1 Problem restatement

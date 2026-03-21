@@ -22,7 +22,7 @@ from headstamp_error_family_common import (
 )
 from identity_runtime_authority_common import ERR_IDENTITY_AUTHORITY_VIOLATION
 from resolve_identity_context import resolve_repo_catalog_path
-from runtime_temp_path_common import runtime_temp_file
+from runtime_temp_path_common import runtime_temp_dir, runtime_temp_file, runtime_temp_root
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -178,6 +178,7 @@ def _send_time_cmd(
     expected_source_layer: str = "",
     layer_intent_text: str = "",
     current_surface_native_machine_attested: bool = False,
+    host_visible_shadow_root: str = "",
 ) -> list[str]:
     cmd = [
         sys.executable,
@@ -213,6 +214,8 @@ def _send_time_cmd(
         cmd += ["--expected-source-layer", str(expected_source_layer).strip()]
     if str(layer_intent_text or "").strip():
         cmd += ["--layer-intent-text", str(layer_intent_text).strip()]
+    if str(host_visible_shadow_root or "").strip():
+        cmd += ["--host-visible-shadow-root", str(host_visible_shadow_root).strip()]
     if current_surface_native_machine_attested:
         cmd.append("--current-surface-native-machine-attested")
     return cmd
@@ -314,6 +317,7 @@ def _actor_mismatch_probe(
     repo_catalog_path: Path,
     reply_file: Path,
     blocker_receipt: Path,
+    host_visible_shadow_root: str = "",
 ) -> tuple[bool, dict[str, Any], list[str]]:
     stale_reasons: list[str] = []
     actor_binding_store = load_actor_binding_store(catalog_path, actor_id)
@@ -413,6 +417,8 @@ def _actor_mismatch_probe(
         actor_id,
         "--session-id",
         session_id,
+        "--host-visible-shadow-root",
+        str(host_visible_shadow_root).strip(),
         "--json-only",
     ]
     rc, payload, _, _ = _run_json(cmd)
@@ -566,57 +572,60 @@ def main() -> int:
         stale_reasons.append("mandatory_entrypoint_wiring_missing")
         error_code = ERR_STATIC_WIRING
 
+    recovery_run_token = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    probe_suffix = f"{args.identity_id}-{recovery_run_token}"
+    host_visible_shadow_root = runtime_temp_dir(
+        channel="headstamp-closure-shadow",
+        operation=operation or "validate",
+        identity_id=args.identity_id,
+        run_token=probe_suffix,
+        prefix="shadow",
+    ).resolve()
     missing_file = runtime_temp_file(
         channel="headstamp-closure",
         operation=operation or "validate",
         identity_id=args.identity_id,
-        stem=f"headstamp-closure-missing-{args.identity_id}",
+        stem=f"headstamp-closure-missing-{probe_suffix}",
         ext="txt",
     ).resolve()
-    pass_file = runtime_temp_file(
-        channel="headstamp-closure",
-        operation=operation or "validate",
-        identity_id=args.identity_id,
-        stem=f"headstamp-closure-pass-{args.identity_id}",
-        ext="txt",
-    ).resolve()
+    pass_file = (runtime_temp_root() / f"headstamp-closure-pass-{probe_suffix}.txt").resolve()
+    pass_file.parent.mkdir(parents=True, exist_ok=True)
     missing_receipt = runtime_temp_file(
         channel="headstamp-closure",
         operation=operation or "validate",
         identity_id=args.identity_id,
-        stem=f"headstamp-closure-missing-receipt-{args.identity_id}",
+        stem=f"headstamp-closure-missing-receipt-{probe_suffix}",
         ext="json",
     ).resolve()
     inline_receipt = runtime_temp_file(
         channel="headstamp-closure",
         operation=operation or "validate",
         identity_id=args.identity_id,
-        stem=f"headstamp-closure-inline-receipt-{args.identity_id}",
+        stem=f"headstamp-closure-inline-receipt-{probe_suffix}",
         ext="json",
     ).resolve()
     nongov_receipt = runtime_temp_file(
         channel="headstamp-closure",
         operation=operation or "validate",
         identity_id=args.identity_id,
-        stem=f"headstamp-closure-nongov-receipt-{args.identity_id}",
+        stem=f"headstamp-closure-nongov-receipt-{probe_suffix}",
         ext="json",
     ).resolve()
     compose_receipt = runtime_temp_file(
         channel="headstamp-closure",
         operation=operation or "validate",
         identity_id=args.identity_id,
-        stem=f"headstamp-closure-compose-receipt-{args.identity_id}",
+        stem=f"headstamp-closure-compose-receipt-{probe_suffix}",
         ext="json",
     ).resolve()
     coverage_receipt = runtime_temp_file(
         channel="headstamp-closure",
         operation=operation or "validate",
         identity_id=args.identity_id,
-        stem=f"headstamp-closure-coverage-receipt-{args.identity_id}",
+        stem=f"headstamp-closure-coverage-receipt-{probe_suffix}",
         ext="json",
     ).resolve()
     session_bound_run_id = _derive_run_id_from_session_id(session_id_effective)
-    recovery_run_token = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     recovery_run_id = (
         session_bound_run_id
         or f"headstamp-recurrence-recovery-{args.identity_id}-{recovery_run_token}"
@@ -625,18 +634,22 @@ def main() -> int:
         channel="headstamp-closure",
         operation=operation or "validate",
         identity_id=args.identity_id,
-        stem=f"headstamp-closure-mismatch-probe-{args.identity_id}",
+        stem=f"headstamp-closure-mismatch-probe-{probe_suffix}",
         ext="txt",
     ).resolve()
     mismatch_receipt = runtime_temp_file(
         channel="headstamp-closure",
         operation=operation or "validate",
         identity_id=args.identity_id,
-        stem=f"headstamp-closure-mismatch-probe-receipt-{args.identity_id}",
+        stem=f"headstamp-closure-mismatch-probe-receipt-{probe_suffix}",
         ext="json",
     ).resolve()
 
     missing_file.write_text(
+        "[Audit Receipt] identity-protocol v1.5.1 release on main\nDate: 2026-03-05\nFinal verdict: GO\n",
+        encoding="utf-8",
+    )
+    pass_file.write_text(
         "[Audit Receipt] identity-protocol v1.5.1 release on main\nDate: 2026-03-05\nFinal verdict: GO\n",
         encoding="utf-8",
     )
@@ -650,6 +663,7 @@ def main() -> int:
         outlet_channel_id="final_emit_governed",
         blocker_receipt=missing_receipt,
         reply_file=missing_file,
+        host_visible_shadow_root=str(host_visible_shadow_root),
     )
     rc_missing, payload_missing, _, _ = _run_json(negative_missing_cmd)
     dynamic_cases["negative_missing_header"] = {
@@ -694,6 +708,7 @@ def main() -> int:
         outlet_channel_id="final_emit_governed",
         blocker_receipt=inline_receipt,
         reply_text="manual inline reply without governed file evidence",
+        host_visible_shadow_root=str(host_visible_shadow_root),
     )
     rc_inline, payload_inline, _, _ = _run_json(negative_inline_cmd)
     dynamic_cases["negative_inline_synthetic"] = {
@@ -725,6 +740,7 @@ def main() -> int:
         outlet_channel_id="direct_text_channel",
         blocker_receipt=nongov_receipt,
         reply_file=missing_file,
+        host_visible_shadow_root=str(host_visible_shadow_root),
     )
     rc_nongov, payload_nongov, _, _ = _run_json(negative_nongov_cmd)
     dynamic_cases["negative_non_governed_outlet"] = {
@@ -768,6 +784,8 @@ def main() -> int:
         "runtime_dialogue",
         "--allowed-live-receipt-sources",
         "runtime_dialogue",
+        "--host-visible-shadow-root",
+        str(host_visible_shadow_root),
         "--json-only",
     ]
     rc_recovery, payload_recovery, _, _ = _run_json(recovery_cmd)
@@ -776,6 +794,18 @@ def main() -> int:
         "error_code": str(payload_recovery.get("error_code", "")),
         "recovery_status": str(payload_recovery.get("recovery_status", "")),
         "attestation_status": str(payload_recovery.get("attestation_status", "")),
+        "reply_transport_requested_ref": str(
+            payload_recovery.get("reply_transport_requested_ref", "")
+        ),
+        "reply_transport_resolution_mode": str(
+            payload_recovery.get("reply_transport_resolution_mode", "")
+        ),
+        "reply_transport_source_materialized": bool(
+            payload_recovery.get("reply_transport_source_materialized", False)
+        ),
+        "host_visible_runtime_scope": str(
+            payload_recovery.get("host_visible_runtime_scope", "")
+        ),
         "host_transport_post_check_blocker_active": bool(
             payload_recovery.get("host_transport_post_check_blocker_active", True)
         ),
@@ -809,6 +839,8 @@ def main() -> int:
         "final_emit_governed",
         "--actor-id",
         actor_id,
+        "--host-visible-shadow-root",
+        str(host_visible_shadow_root),
         "--current-surface-native-machine-attested",
         "--json-only",
     ]
@@ -831,6 +863,12 @@ def main() -> int:
         "reply_outlet_guard_applied": bool(payload_compose.get("reply_outlet_guard_applied", False)),
         "output_governance_mode": str(payload_compose.get("output_governance_mode", "")),
         "next_hop_admission_status": str(payload_compose.get("next_hop_admission_status", "")),
+        "governed_reply_transport_lifecycle_phase": str(
+            payload_compose.get("governed_reply_transport_lifecycle_phase", "")
+        ),
+        "host_transport_post_check_runtime_scope": str(
+            payload_compose.get("host_transport_post_check_runtime_scope", "")
+        ),
         "first_line_prefix_ok": bool(first_line.startswith("Identity-Context:")),
         "out_reply_file": str(payload_compose.get("out_reply_file", "")),
     }
@@ -863,6 +901,7 @@ def main() -> int:
             expected_work_layer=first_line_work_layer,
             expected_source_layer=first_line_source_layer,
             current_surface_native_machine_attested=True,
+            host_visible_shadow_root=str(host_visible_shadow_root),
         )
         rc_cov, payload_cov, _, _ = _run_json(coverage_cmd)
         coverage_case = {
@@ -898,6 +937,7 @@ def main() -> int:
         repo_catalog_path=repo_catalog_path,
         reply_file=mismatch_reply,
         blocker_receipt=mismatch_receipt,
+        host_visible_shadow_root=str(host_visible_shadow_root),
     )
     dynamic_cases["negative_actor_bound_mismatch"] = mismatch_case
     stale_reasons.extend(mismatch_stale)
@@ -935,6 +975,7 @@ def main() -> int:
         "entrypoint_coverage": coverage_rows,
         "missing_wiring_items": missing_wiring,
         "dynamic_cases": dynamic_cases,
+        "host_visible_shadow_root": str(host_visible_shadow_root),
         "stale_reasons": sorted(set(stale_reasons)),
     }
     _emit(payload, json_only=args.json_only)

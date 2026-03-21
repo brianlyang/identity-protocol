@@ -8,6 +8,10 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from governed_reply_transport_lifecycle_common import (
+    REPLY_TRANSPORT_RESOLUTION_MODE_MATERIALIZE_RUNTIME_SENTINEL,
+)
+from protocol_infra_contract import HOST_VISIBLE_POST_CHECK_RECOVERY_REPLY_TRANSPORT_REF
 from registry_alias_control_plane_common import STREAM_DOC_REGISTRY_CURRENT, resolve_current_yaml_alias
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -60,6 +64,8 @@ HOST_VISIBLE_REQUIRED_PROMOTION_PROBES = {
     "host_visible_live_receipts_pass": 0,
     "host_visible_final_channel_relay_missing_blocked": 1,
     "host_visible_post_check_recovery_reseeds_final_channel_relay": 0,
+    "host_visible_post_check_recovery_materializes_governed_source": 0,
+    "host_visible_post_check_recovery_shadow_runtime_isolated": 0,
     "send_time_governed_pass_headstamp_required": 0,
     "protocol_lane_headstamp_continuity_live_receipt_pass": 0,
 }
@@ -198,6 +204,8 @@ def _inspect_host_visible_probe_manifest(repo_root: Path, manifest_path: Path) -
         "controlled_emitter_path_status": STATUS_FAIL_REQUIRED,
         "unsupported_bypass_status": STATUS_FAIL_REQUIRED,
         "post_check_recovery_status": STATUS_FAIL_REQUIRED,
+        "post_check_recovery_materialization_status": STATUS_FAIL_REQUIRED,
+        "post_check_recovery_shadow_isolation_status": STATUS_FAIL_REQUIRED,
         "governed_headstamp_continuity_status": STATUS_FAIL_REQUIRED,
     }
     if payload["suite"] != HOST_VISIBLE_PROBE_SUITE:
@@ -284,6 +292,106 @@ def _inspect_host_visible_probe_manifest(repo_root: Path, manifest_path: Path) -
             if not str(recovery_doc.get("seeded_final_channel_relay_receipt_path", "")).strip():
                 payload["status"] = STATUS_FAIL_REQUIRED
                 payload["failures"].append("host_visible_post_check_recovery_relay_receipt_path_missing")
+
+    materialization_row = index.get("host_visible_post_check_recovery_materializes_governed_source")
+    if materialization_row is not None:
+        materialization_stdout = str(materialization_row.get("stdout_path", "")).strip()
+        if not materialization_stdout:
+            payload["status"] = STATUS_FAIL_REQUIRED
+            payload["failures"].append("host_visible_post_check_recovery_materialization_stdout_missing")
+        else:
+            materialization_doc = _read_probe_doc(
+                _resolve_manifest_member_path(manifest_path, materialization_stdout)
+            )
+            payload["post_check_recovery_materialization_observed"] = {
+                "recovery_status": str(materialization_doc.get("recovery_status", "")).strip(),
+                "attestation_status": str(materialization_doc.get("attestation_status", "")).strip(),
+                "reply_transport_requested_ref": str(
+                    materialization_doc.get("reply_transport_requested_ref", "")
+                ).strip(),
+                "reply_transport_resolution_mode": str(
+                    materialization_doc.get("reply_transport_resolution_mode", "")
+                ).strip(),
+                "reply_transport_source_materialized": bool(
+                    materialization_doc.get("reply_transport_source_materialized", False)
+                ),
+                "reply_transport_source_status": str(
+                    materialization_doc.get("reply_transport_source_status", "")
+                ).strip(),
+                "reply_transport_source_headstamp_present": bool(
+                    materialization_doc.get("reply_transport_source_headstamp_present", False)
+                ),
+                "host_visible_runtime_scope": str(
+                    materialization_doc.get("host_visible_runtime_scope", "")
+                ).strip(),
+            }
+            observed = payload["post_check_recovery_materialization_observed"]
+            if (
+                observed["recovery_status"] == STATUS_PASS_REQUIRED
+                and observed["attestation_status"] == STATUS_PASS_REQUIRED
+                and observed["reply_transport_requested_ref"]
+                == HOST_VISIBLE_POST_CHECK_RECOVERY_REPLY_TRANSPORT_REF
+                and observed["reply_transport_resolution_mode"]
+                == REPLY_TRANSPORT_RESOLUTION_MODE_MATERIALIZE_RUNTIME_SENTINEL
+                and observed["reply_transport_source_materialized"] is True
+                and observed["reply_transport_source_status"] == STATUS_PASS_REQUIRED
+                and observed["reply_transport_source_headstamp_present"] is True
+                and observed["host_visible_runtime_scope"] == "shadow"
+            ):
+                payload["post_check_recovery_materialization_status"] = STATUS_PASS_REQUIRED
+            else:
+                payload["status"] = STATUS_FAIL_REQUIRED
+                payload["failures"].append(
+                    "host_visible_post_check_recovery_materialization_not_pass_required"
+                )
+
+    shadow_isolation_row = index.get("host_visible_post_check_recovery_shadow_runtime_isolated")
+    if shadow_isolation_row is not None:
+        shadow_isolation_stdout = str(shadow_isolation_row.get("stdout_path", "")).strip()
+        if not shadow_isolation_stdout:
+            payload["status"] = STATUS_FAIL_REQUIRED
+            payload["failures"].append("host_visible_post_check_recovery_shadow_isolation_stdout_missing")
+        else:
+            shadow_isolation_doc = _read_probe_doc(
+                _resolve_manifest_member_path(manifest_path, shadow_isolation_stdout)
+            )
+            payload["post_check_recovery_shadow_isolation_observed"] = {
+                "recovery_status": str(shadow_isolation_doc.get("recovery_status", "")).strip(),
+                "attestation_status": str(shadow_isolation_doc.get("attestation_status", "")).strip(),
+                "host_visible_runtime_scope": str(
+                    shadow_isolation_doc.get("host_visible_runtime_scope", "")
+                ).strip(),
+                "live_runtime_snapshot_unchanged": bool(
+                    shadow_isolation_doc.get("live_runtime_snapshot_unchanged", False)
+                ),
+                "shadow_runtime_distinct_from_live": bool(
+                    shadow_isolation_doc.get("shadow_runtime_distinct_from_live", False)
+                ),
+                "shadow_runtime_state_exists": bool(
+                    shadow_isolation_doc.get("shadow_runtime_state_exists", False)
+                ),
+                "shadow_runtime_post_check_closure_state_exists": bool(
+                    shadow_isolation_doc.get("shadow_runtime_post_check_closure_state_exists", False)
+                ),
+                "shadow_runtime_seeded_receipt_count": int(
+                    shadow_isolation_doc.get("shadow_runtime_seeded_receipt_count", 0) or 0
+                ),
+            }
+            observed = payload["post_check_recovery_shadow_isolation_observed"]
+            if (
+                observed["recovery_status"] == STATUS_PASS_REQUIRED
+                and observed["attestation_status"] == STATUS_PASS_REQUIRED
+                and observed["host_visible_runtime_scope"] == "shadow"
+                and observed["live_runtime_snapshot_unchanged"] is True
+                and observed["shadow_runtime_distinct_from_live"] is True
+                and observed["shadow_runtime_state_exists"] is True
+                and observed["shadow_runtime_post_check_closure_state_exists"] is True
+                and observed["shadow_runtime_seeded_receipt_count"] > 0
+            ):
+                payload["post_check_recovery_shadow_isolation_status"] = STATUS_PASS_REQUIRED
+            else:
+                payload["status"] = STATUS_FAIL_REQUIRED
+                payload["failures"].append("host_visible_post_check_recovery_shadow_isolation_not_pass_required")
 
     send_time_row = index.get("send_time_governed_pass_headstamp_required")
     if send_time_row is not None:
@@ -408,6 +516,18 @@ def _validate_promotion_unlock_bundle(
             payload["post_check_recovery_status"] = str(
                 probe_payload.get("post_check_recovery_status", "")
             ).strip()
+            payload["post_check_recovery_materialization_status"] = str(
+                probe_payload.get("post_check_recovery_materialization_status", "")
+            ).strip()
+            payload["post_check_recovery_materialization_observed"] = probe_payload.get(
+                "post_check_recovery_materialization_observed", {}
+            )
+            payload["post_check_recovery_shadow_isolation_status"] = str(
+                probe_payload.get("post_check_recovery_shadow_isolation_status", "")
+            ).strip()
+            payload["post_check_recovery_shadow_isolation_observed"] = probe_payload.get(
+                "post_check_recovery_shadow_isolation_observed", {}
+            )
             payload["post_check_recovery_observed"] = probe_payload.get("post_check_recovery_observed", {})
             payload["final_channel_relay_receipt_path"] = str(
                 probe_payload.get("final_channel_relay_receipt_path", "")
@@ -445,6 +565,8 @@ def _validate_promotion_unlock_bundle(
         and payload["authoritative_resolve_status"] == STATUS_PASS_REQUIRED
         and str(payload.get("host_visible_surface_probe_status", "")).strip() == STATUS_PASS_REQUIRED
         and payload["final_channel_relay_receipt_status"] == STATUS_PASS_REQUIRED
+        and str(payload.get("post_check_recovery_materialization_status", "")).strip() == STATUS_PASS_REQUIRED
+        and str(payload.get("post_check_recovery_shadow_isolation_status", "")).strip() == STATUS_PASS_REQUIRED
         and payload["controlled_emitter_path_status"] == STATUS_PASS_REQUIRED
         and payload["no_silent_headerless_turn_status"] == STATUS_PASS_REQUIRED
     )

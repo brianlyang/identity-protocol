@@ -84,10 +84,13 @@ Scope: protocol review ledger for native-chat bootstrap entry governance and wor
    - `scripts/validate_protocol_unique_entry_gate.py`
    - `scripts/repair_contract_backfill.py`
    - `scripts/ci/run_host_visible_surface_live_probes_ci.sh`
-3. Local replay on 2026-03-20 confirms that the producer, send-time gate, and host-visible attestation layers now agree on the final-channel relay proof path:
+3. Local replay on 2026-03-20 plus recurrence/recovery hardening on 2026-03-21 confirms that the producer, send-time gate, and host-visible attestation layers now agree on the final-channel relay proof path:
    - `python3 scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` returns `stream_opening_status=PASS_REQUIRED`, `promotion_status=PROMOTION_REVIEW_ELIGIBLE`, `no_silent_headerless_turn_status=PASS_REQUIRED`, and `live_smoke_status=INCONCLUSIVE_HOST_RUNTIME_PANIC`
-   - `bash scripts/ci/run_host_visible_surface_live_probes_ci.sh` returns passing positive/negative probes including `host_visible_live_receipts_pass`, `host_visible_final_channel_relay_missing_blocked`, `host_visible_post_check_recovery_reseeds_final_channel_relay`, `send_time_governed_pass_headstamp_required`, and `protocol_lane_headstamp_continuity_live_receipt_pass`
-4. The host-visible live probe suite now proves that post-check recovery is not a blind backfill: when the `final` channel relay fields are intentionally removed, `scripts/recover_host_visible_post_check_state.py` reseeds the exact relay metadata from the actual reply transport ref and returns `recovery_status=PASS_REQUIRED` together with `seeded_final_channel_relay_status=PASS_REQUIRED`.
+   - `bash scripts/ci/run_host_visible_surface_live_probes_ci.sh` returns passing positive/negative probes including `host_visible_live_receipts_pass`, `host_visible_final_channel_relay_missing_blocked`, `host_visible_post_check_recovery_reseeds_final_channel_relay`, `host_visible_post_check_recovery_materializes_governed_source`, `host_visible_post_check_recovery_shadow_runtime_isolated`, `send_time_governed_pass_headstamp_required`, and `protocol_lane_headstamp_continuity_live_receipt_pass`
+4. The host-visible live probe suite now proves that post-check recovery is not a blind backfill:
+   - when the `final` channel relay fields are intentionally removed, `scripts/recover_host_visible_post_check_state.py` reseeds the exact relay metadata from the actual reply transport ref and returns `recovery_status=PASS_REQUIRED` together with `seeded_final_channel_relay_status=PASS_REQUIRED`;
+   - when no explicit reply transport ref is provided, the same recovery primitive materializes a governed source artifact and still returns `recovery_status=PASS_REQUIRED`;
+   - when recurrence/recovery precheck is executed under `--host-visible-shadow-root`, the live singleton runtime surfaces stay unchanged while the shadow runtime receives the seeded receipts/state needed for attestation.
 5. This progress raises confidence that sender-side controlled visible projection is no longer relying on a naked outer delivery assumption.
 6. Closure blockers identified during review on 2026-03-19 are now reduced on the protocol side:
    - the previously untracked v1.6.12/final-relay protocol files are landed in commit `3e6ca34`
