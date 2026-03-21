@@ -16,6 +16,7 @@ from workbook_control_plane_common import (
     ALLOWED_PROJECTION_FRESHNESS_MODES,
     MINOR_FAMILY_UNIQUENESS_EXACT_CANONICAL_PAIR_ONLY,
     PROJECTION_BOUNDARY_MARKER,
+    PROJECTION_FRESHNESS_BOUNDARY_ONLY,
     PROJECTION_FRESHNESS_PARITY_REQUIRED,
     PROJECTION_MODE_MIRROR_ONLY,
     STREAM_DOC_REGISTRY_CURRENT,
@@ -356,6 +357,53 @@ def _serialize_projection_export(export: ProjectionExport) -> dict[str, Any]:
     }
 
 
+def _build_freshness_contract(projection_exports: tuple[ProjectionExport, ...]) -> dict[str, Any]:
+    boundary_only_roles = sorted(
+        export.projection_role
+        for export in projection_exports
+        if export.freshness_mode == PROJECTION_FRESHNESS_BOUNDARY_ONLY
+    )
+    parity_required_roles = sorted(
+        export.projection_role
+        for export in projection_exports
+        if export.freshness_mode == PROJECTION_FRESHNESS_PARITY_REQUIRED
+    )
+    return {
+        "canonical_workbook_docs_checker_counts_required": True,
+        "canonical_workbook_authority_surfaces": [
+            "issue_register_doc",
+            "deep_audit_workbook_doc",
+        ],
+        "projection_freshness_opt_in_mode": PROJECTION_FRESHNESS_PARITY_REQUIRED,
+        "projection_boundary_only_roles": boundary_only_roles,
+        "projection_docs_checker_parity_required_roles": parity_required_roles,
+        "projection_docs_checker_parity_gate_active": bool(parity_required_roles),
+    }
+
+
+def _partition_violations(violations: list[str]) -> dict[str, list[str]]:
+    return {
+        "canonical_docs_checker": [
+            item
+            for item in violations
+            if item.startswith("issue_register_doc_")
+            or item.startswith("deep_audit_workbook_doc_")
+            or item.startswith("docs_checker_execution:")
+        ],
+        "projection_boundary": [
+            item
+            for item in violations
+            if item.startswith("projection_marker_missing:")
+            or item.startswith("projection_authority_claim:")
+            or item.startswith("projection_doc_inside_protocol_repo:")
+            or item.startswith("projection_unknown_freshness_mode:")
+            or item.startswith("missing_required_projection_doc:")
+        ],
+        "projection_freshness": [item for item in violations if item.startswith("projection_freshness_")],
+        "stream_doc_registry": [item for item in violations if item.startswith("stream_doc_registry_")],
+    }
+
+
 def _validate_historical_boundary_surface(
     *,
     surface_key: str,
@@ -588,6 +636,8 @@ def main() -> int:
         "open_rows_present": False,
         "docs_checker_counts": {},
         "doc_recorded_counts": {},
+        "freshness_contract": {},
+        "violation_partitions": {},
         "violations": [],
     }
 
@@ -626,6 +676,7 @@ def main() -> int:
     payload["issue_register_doc"] = str(issue_register_doc)
     payload["deep_audit_workbook_doc"] = str(deep_audit_workbook_doc)
     payload["projection_exports"] = [_serialize_projection_export(export) for export in projection_exports]
+    payload["freshness_contract"] = _build_freshness_contract(projection_exports)
     issue_register_lines = _load_lines(issue_register_doc)
     deep_audit_workbook_lines = _load_lines(deep_audit_workbook_doc)
     issue_register_text = "\n".join(issue_register_lines)
@@ -753,6 +804,7 @@ def main() -> int:
     if projection_results:
         payload["projection_exports"] = projection_results
 
+    payload["violation_partitions"] = _partition_violations(violations)
     payload["violations"] = violations
     if violations:
         payload["error_code"] = (
