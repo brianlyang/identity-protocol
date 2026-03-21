@@ -15,6 +15,16 @@ STREAM_DOC_REGISTRY_CURRENT = "identity/protocol/mappings/stream-doc-registry.cu
 CONTROL_PLANE_STATUS_CURRENT = "identity/protocol/mappings/control-plane-status.current.yaml"
 WORKBOOK_MINOR_RE = re.compile(r"^v(?P<major>\d+)\.(?P<minor>\d+)$")
 TEMPLATE_PLACEHOLDER_RE = re.compile(r"__[A-Z][A-Z0-9_]*__")
+PROJECTION_MODE_MIRROR_ONLY = "Projection mode: mirror-only"
+PROJECTION_BOUNDARY_MARKER = "Authority boundary: this file is projection-only"
+PROJECTION_FRESHNESS_BOUNDARY_ONLY = "boundary_markers_only"
+PROJECTION_FRESHNESS_PARITY_REQUIRED = "summary_snapshot_parity_required"
+ALLOWED_PROJECTION_FRESHNESS_MODES = frozenset(
+    {
+        PROJECTION_FRESHNESS_BOUNDARY_ONLY,
+        PROJECTION_FRESHNESS_PARITY_REQUIRED,
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -196,3 +206,14 @@ def render_template_text(template_text: str, replacements: dict[str, str]) -> st
 
 def unresolved_template_tokens(text: str) -> list[str]:
     return sorted(set(TEMPLATE_PLACEHOLDER_RE.findall(text)))
+
+
+def validate_projection_freshness_mode(mode: str) -> str:
+    token = _non_empty_text(mode)
+    if token not in ALLOWED_PROJECTION_FRESHNESS_MODES:
+        raise ValueError(f"unknown workbook projection freshness mode: {mode}")
+    return token
+
+
+def projection_freshness_enforces_parity(mode: str) -> bool:
+    return validate_projection_freshness_mode(mode) == PROJECTION_FRESHNESS_PARITY_REQUIRED

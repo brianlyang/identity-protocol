@@ -9,6 +9,8 @@ from typing import Any
 import yaml
 
 from workbook_control_plane_common import (
+    PROJECTION_BOUNDARY_MARKER,
+    PROJECTION_MODE_MIRROR_ONLY,
     WorkbookTemplateContract,
     load_active_workbook_registry,
     resolve_workbook_roots,
@@ -23,10 +25,6 @@ ERR_CONTRACT_DISCOVERY = "IP-WFVC-001"
 ERR_FAMILY_LAYOUT = "IP-WFVC-002"
 ERR_PROJECTION_STUB = "IP-WFVC-003"
 ERR_ACTIVATION_BOUNDARY = "IP-WFVC-004"
-
-PROJECTION_MODE_MARKER = "Projection mode: mirror-only"
-PROJECTION_BOUNDARY_MARKER = "Authority boundary: this file is projection-only"
-
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -79,7 +77,7 @@ def _validate_projection_stub(
         return
     text = path.read_text(encoding="utf-8")
     required_markers = [
-        PROJECTION_MODE_MARKER,
+        PROJECTION_MODE_MIRROR_ONLY,
         PROJECTION_BOUNDARY_MARKER,
         f"Projection source: `{repo_name}/{authority_doc_rel}`",
         f"Workbook registry source: `{repo_name}/{current_pointer_rel}`",

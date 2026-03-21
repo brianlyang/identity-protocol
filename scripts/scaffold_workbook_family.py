@@ -9,6 +9,8 @@ from typing import Any
 import yaml
 
 from workbook_control_plane_common import (
+    PROJECTION_BOUNDARY_MARKER,
+    PROJECTION_MODE_MIRROR_ONLY,
     WorkbookFamilyLayout,
     WorkbookTemplateContract,
     load_active_workbook_registry,
@@ -39,8 +41,8 @@ def _projection_stub_text(
     repo_name = "identity-protocol-local"
     return (
         f"# Identity Protocol {minor} Workbook Projection Stub\n\n"
-        "Projection mode: mirror-only\n"
-        "Authority boundary: this file is projection-only\n"
+        f"{PROJECTION_MODE_MIRROR_ONLY}\n"
+        f"{PROJECTION_BOUNDARY_MARKER}\n"
         f"Projection source: `{repo_name}/{projection_source_rel}`\n"
         f"Workbook registry source: `{repo_name}/{registry_current_rel}`\n"
         f"Activation candidate registry: `{repo_name}/{family_registry_rel}`\n\n"

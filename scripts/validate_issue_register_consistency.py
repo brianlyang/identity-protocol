@@ -12,6 +12,12 @@ from typing import Any
 import yaml
 
 from repo_root_resolution_common import resolve_protocol_repo_root, resolve_workspace_root
+from workbook_control_plane_common import (
+    ALLOWED_PROJECTION_FRESHNESS_MODES,
+    PROJECTION_BOUNDARY_MARKER,
+    PROJECTION_FRESHNESS_PARITY_REQUIRED,
+    PROJECTION_MODE_MIRROR_ONLY,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -50,14 +56,6 @@ PROJECTION_FORBIDDEN_HEADER_RE = re.compile(
 
 SECTION_OPEN = "What remains intentionally open:"
 SECTION_CLOSED = "What no longer remains open on this sheet:"
-PROJECTION_MODE_MARKER = "Projection mode: mirror-only"
-PROJECTION_BOUNDARY_MARKER = "Authority boundary: this file is projection-only"
-PROJECTION_FRESHNESS_BOUNDARY_ONLY = "boundary_markers_only"
-PROJECTION_FRESHNESS_PARITY_REQUIRED = "summary_snapshot_parity_required"
-ALLOWED_PROJECTION_FRESHNESS_MODES = {
-    PROJECTION_FRESHNESS_BOUNDARY_ONLY,
-    PROJECTION_FRESHNESS_PARITY_REQUIRED,
-}
 
 
 @dataclass(frozen=True)
@@ -504,7 +502,7 @@ def _validate_projection_export(
     text = export.path.read_text(encoding="utf-8")
     header_text = "\n".join(text.splitlines()[:40])
     required_markers = [
-        PROJECTION_MODE_MARKER,
+        PROJECTION_MODE_MIRROR_ONLY,
         f"Projection source: `{_workspace_protocol_rel(repo_root, export.authority_doc_rel)}`",
         f"Workbook registry source: `{_workspace_protocol_rel(repo_root, WORKBOOK_REGISTRY_CURRENT)}`",
         PROJECTION_BOUNDARY_MARKER,
