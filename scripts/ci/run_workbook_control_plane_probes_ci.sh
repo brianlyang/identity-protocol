@@ -22,6 +22,10 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str((Path(sys.argv[1]).resolve() / "scripts")))
+
+from workbook_control_plane_common import PROJECTION_BOUNDARY_MARKER  # noqa: E402
+
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -345,12 +349,11 @@ authority_projection_repo = build_probe_repo(
 )
 authority_projection_path = materialize_workspace_file(authority_projection_repo, workspace_root, issue_projection_rel)
 authority_projection_text = authority_projection_path.read_text(encoding="utf-8")
-if "Authority boundary: this file is projection-only" not in authority_projection_text:
+if PROJECTION_BOUNDARY_MARKER not in authority_projection_text:
     raise SystemExit("projection authority-claim probe could not find boundary marker")
 authority_projection_text = authority_projection_text.replace(
-    "Authority boundary: this file is projection-only",
-    "Authority boundary: this file is projection-only\n"
-    + PROJECTION_FORBIDDEN_SENTENCE,
+    PROJECTION_BOUNDARY_MARKER,
+    PROJECTION_BOUNDARY_MARKER + "\n" + PROJECTION_FORBIDDEN_SENTENCE,
     1,
 )
 authority_projection_path.write_text(authority_projection_text, encoding="utf-8")
