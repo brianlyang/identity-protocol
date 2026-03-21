@@ -14,7 +14,7 @@ WORKBOOK_REGISTRY_CURRENT = "identity/protocol/mappings/workbook-registry.curren
 STREAM_DOC_REGISTRY_CURRENT = "identity/protocol/mappings/stream-doc-registry.current.yaml"
 CONTROL_PLANE_STATUS_CURRENT = "identity/protocol/mappings/control-plane-status.current.yaml"
 WORKBOOK_MINOR_RE = re.compile(r"^v(?P<major>\d+)\.(?P<minor>\d+)$")
-TEMPLATE_PLACEHOLDER_RE = re.compile(r"__WORKBOOK_[A-Z0-9_]+__")
+TEMPLATE_PLACEHOLDER_RE = re.compile(r"__[A-Z][A-Z0-9_]*__")
 
 
 @dataclass(frozen=True)
@@ -196,4 +196,3 @@ def render_template_text(template_text: str, replacements: dict[str, str]) -> st
 
 def unresolved_template_tokens(text: str) -> list[str]:
     return sorted(set(TEMPLATE_PLACEHOLDER_RE.findall(text)))
-

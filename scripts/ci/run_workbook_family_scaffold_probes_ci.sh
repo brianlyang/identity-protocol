@@ -20,7 +20,11 @@ from pathlib import Path
 
 sys.path.insert(0, str((Path(sys.argv[1]).resolve() / "scripts")))
 
-from workbook_control_plane_common import derive_probe_minor_from_active, load_active_workbook_registry  # noqa: E402
+from workbook_control_plane_common import (  # noqa: E402
+    derive_probe_minor_from_active,
+    load_active_workbook_registry,
+    workbook_family_layout,
+)
 
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -84,6 +88,7 @@ tmp_root = Path(sys.argv[2]).resolve()
 bundle = load_active_workbook_registry(source_root)
 active_minor = str(bundle.active_family_doc.get("workbook_family", "")).strip()
 probe_minor = derive_probe_minor_from_active(active_minor)
+probe_layout = workbook_family_layout(probe_minor, template_contract=bundle.template_contract)
 
 shadow_workspace = tmp_root / "workspace"
 shadow_repo = build_shadow_repo(source_root, shadow_workspace)
@@ -120,6 +125,30 @@ validator_rc, validator_payload = run_json(validator_cmd, cwd=shadow_repo)
 if validator_rc != 0 or validator_payload.get("status") != STATUS_PASS_REQUIRED:
     raise SystemExit(f"scaffold contract validator failed: {validator_payload}")
 
+negative_placeholder_path = shadow_repo / probe_layout.issue_register_doc_rel
+negative_placeholder_text = negative_placeholder_path.read_text(encoding="utf-8")
+rendered_registry_rel = probe_layout.registry_doc_rel
+placeholder_token = "__FAMILY_REGISTRY_DOC__"
+if rendered_registry_rel not in negative_placeholder_text:
+    raise SystemExit(
+        f"negative placeholder probe target not found in scaffolded issue register: {rendered_registry_rel}"
+    )
+negative_placeholder_path.write_text(
+    negative_placeholder_text.replace(rendered_registry_rel, placeholder_token, 1),
+    encoding="utf-8",
+)
+placeholder_rc, placeholder_payload = run_json(validator_cmd, cwd=shadow_repo)
+if placeholder_rc == 0:
+    raise SystemExit(f"placeholder negative probe unexpectedly passed: {placeholder_payload}")
+placeholder_violations = [str(item) for item in (placeholder_payload.get("violations") or [])]
+expected_placeholder_violation = (
+    f"issue_register_doc_unresolved_placeholders:{probe_layout.issue_register_doc_rel}:{placeholder_token}"
+)
+if placeholder_payload.get("error_code") != "IP-WFVC-002":
+    raise SystemExit(f"placeholder negative probe returned wrong error code: {placeholder_payload}")
+if expected_placeholder_violation not in placeholder_violations:
+    raise SystemExit(f"placeholder negative probe violation missing: {placeholder_payload}")
+
 negative_cmd = [
     "python3",
     str(shadow_repo / "scripts/scaffold_workbook_family.py"),
@@ -149,6 +178,8 @@ print(
             "probe_minor": probe_minor,
             "scaffold_status": scaffold_payload.get("status"),
             "validator_status": validator_payload.get("status"),
+            "placeholder_negative_error_code": placeholder_payload.get("error_code"),
+            "placeholder_negative_violation": expected_placeholder_violation,
             "activation_consent_negative_status": STATUS_FAIL_REQUIRED,
             "tmp_root": str(tmp_root),
         },
