@@ -127,3 +127,27 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
 4. Do not reopen `v1.6.12` bootstrap semantics or `v1.6.13` pack-topology semantics while reviewing this stream.
 5. Do not classify MCP/provider startup failures as proof that the `v1.6.14` launcher contract is wrong.
 6. Do not promote workspace bridge code to canonical launcher motherline by chat text alone; promotion requires protocol-owned install/validate assets.
+
+## 8) Post-closure lane-audit summary control plane
+
+1. The launcher lane now has a dedicated summary renderer/control plane asset:
+   - `scripts/render_protocol_lane_audit_summary.py`
+   - `scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh`
+2. This asset is no longer review-only helper tooling; it is formally consumed by:
+   - `scripts/release_readiness_check.py`
+   - `scripts/ci/run_required_runtime_gates_ci.sh`
+3. The accepted machine interpretation is:
+   - the renderer is a **single-lane formal control-plane asset** for `v1.6.14`,
+   - it supports range metadata pinning through `--base`, `--head`, and `--commit`,
+   - it supports fail-close JSON validator consumption for summary rendering,
+   - it proves summary behavior through **two negative flips plus one applicability flip**.
+4. The required replay classes are:
+   - negative flip: projection freshness changes from boundary-only to parity-required and the summary must mark projection docs-checker gating as active,
+   - negative flip: canonical workbook docs-checker drift forces summary fail-close with non-zero canonical violation count,
+   - applicability flip: stream-touch evidence changes from `NOT_APPLICABLE_NO_STREAM_DOCS_TOUCHED` to `APPLICABLE_*` when the pinned diff truly touches launcher stream docs.
+5. Reviewers must not misstate the third class as fail-close-negative proof; it is applicability-scope proof, not a red-state proof.
+6. Current caveat is frozen explicitly:
+   - the renderer already pins diff/range metadata and stream-touch evidence,
+   - but docs checker / workbook consistency / launcher probes still evaluate against the provided `workspace_root` tree,
+   - therefore the current asset is **not yet** a universal isolated historical replay engine for arbitrary commits unless it is run against an isolated clone/worktree representing that historical tree.
+7. This caveat does **not** downgrade the asset back to “explanatory only”; it only limits how far reviewers may promote the history-replay claim.

@@ -195,3 +195,24 @@ These names and directories are frozen by this stream. The renderer / installer 
    - core implementation is landed,
    - legacy fleet adoption and stricter naked-entry enforcement may continue as follow-on rollout work,
    - workspace bridge remains compatibility evidence rather than launcher motherline.
+
+## 8) Post-closure audit summary boundary
+
+1. `v1.6.14` now also accepts a dedicated launcher-lane audit summary control plane:
+   - `scripts/render_protocol_lane_audit_summary.py`
+   - `scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh`
+2. This control plane is governance-qualified only because it is consumed by required gate surfaces and not merely by ad hoc chat review.
+3. The accepted behavior class for this summary control plane is:
+   - range / commit metadata pinning,
+   - fail-close JSON validator consumption,
+   - **two negative flips plus one applicability flip**.
+4. The two negative flips are:
+   - projection freshness replay that upgrades projection docs-checker from boundary-only to parity-required gating,
+   - canonical workbook docs-checker drift replay that forces summary fail-close.
+5. The applicability flip is:
+   - stream-touch evidence classification moving from `NOT_APPLICABLE_NO_STREAM_DOCS_TOUCHED` to `APPLICABLE_*` when the pinned diff truly touches launcher stream docs.
+6. This stream freezes that third class as applicability proof, not as a fail-close negative proof.
+7. The current boundary is also frozen:
+   - `--base` / `--head` / `--commit` pin diff scope and stream-touch evidence,
+   - but docs checker / workbook consistency / launcher probe execution still runs against the provided workspace tree,
+   - therefore current summary pinning does not by itself claim arbitrary historical full-tree replay unless the caller supplies an isolated historical workspace.
