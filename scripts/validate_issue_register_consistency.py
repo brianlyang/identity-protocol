@@ -77,6 +77,7 @@ class WorkbookFamily:
     registry_path: Path
     workbook_family: str
     minor_family_uniqueness_mode: str
+    template_static_docs: tuple[str, ...]
     governance_doc: Path
     issue_register_doc: Path
     deep_audit_workbook_doc: Path
@@ -109,6 +110,18 @@ def _resolve_family_doc_path(family: dict[str, Any], key: str) -> str:
         if nested_value:
             return nested_value
     return str(family.get(key, "")).strip()
+
+
+def _extract_template_static_docs(registry_doc: dict[str, Any]) -> tuple[str, ...]:
+    template_contract = registry_doc.get("template_contract")
+    if not isinstance(template_contract, dict):
+        return ()
+    template_paths = []
+    for key in ("templates_readme", "issue_register_template", "deep_audit_template"):
+        path_rel = str(template_contract.get(key, "")).strip()
+        if path_rel:
+            template_paths.append(path_rel)
+    return tuple(sorted(set(template_paths)))
 
 
 def _discover_workbook_family(repo_root: Path, workspace_root: Path) -> WorkbookFamily:
@@ -161,6 +174,7 @@ def _discover_workbook_family(repo_root: Path, workspace_root: Path) -> Workbook
         registry_path=registry_path,
         workbook_family=workbook_family,
         minor_family_uniqueness_mode=minor_family_uniqueness_mode,
+        template_static_docs=_extract_template_static_docs(registry_doc),
         governance_doc=(repo_root / governance_doc).resolve(),
         issue_register_doc=(repo_root / issue_register_doc).resolve(),
         deep_audit_workbook_doc=(repo_root / deep_audit_doc).resolve(),
@@ -417,6 +431,7 @@ def _validate_stream_doc_registry_binding(
     repo_root: Path,
     workbook_family: str,
     workbook_registry_path: Path,
+    template_static_docs: tuple[str, ...],
     governance_doc: Path,
     issue_register_doc: Path,
     deep_audit_workbook_doc: Path,
@@ -430,6 +445,7 @@ def _validate_stream_doc_registry_binding(
         _path_rel(repo_root, issue_register_doc),
         _path_rel(repo_root, deep_audit_workbook_doc),
     }
+    expected_static_docs.update(template_static_docs)
     recorded_static_docs = set(stream_registry.mandatory_static_docs)
     missing_static_docs = sorted(expected_static_docs - recorded_static_docs)
     violations: list[str] = []
@@ -665,6 +681,7 @@ def main() -> int:
             repo_root=repo_root,
             workbook_family=workbook_family,
             workbook_registry_path=Path(workbook_registry),
+            template_static_docs=family.template_static_docs,
             governance_doc=governance_doc,
             issue_register_doc=issue_register_doc,
             deep_audit_workbook_doc=deep_audit_workbook_doc,

@@ -5,6 +5,25 @@ description: >
   Canonical workbook registry for cross-stream issue governance inside
   identity-protocol-local.
 
+template_contract:
+  contract_id: minor_family_workbook_template_v1
+  template_dir: docs/workbook/templates
+  templates_readme: docs/workbook/templates/README.md
+  issue_register_template: docs/workbook/templates/protocol-issue-register.template.md
+  deep_audit_template: docs/workbook/templates/protocol-deep-audit-workbook.template.md
+  scaffold_script: scripts/scaffold_workbook_family.py
+  contract_validator: scripts/validate_workbook_family_contract.py
+  scaffold_projection_root: activity/evidence/workbook-projections
+  projection_policy: optional_workspace_projection_exports
+  projection_presence_policy: optional_projection
+  projection_freshness_mode: activation_required_before_freshness
+  current_pointer_activation_mode: explicit_current_pointer_switch_only
+  current_pointer_activation_consent_token: workbook_current_pointer_switch_v1
+  governance_doc: docs/governance/identity-workbook-governance-v1.6.md
+  workbook_registry_current_ref: identity/protocol/mappings/workbook-registry.current.yaml
+  stream_doc_registry_ref: identity/protocol/mappings/stream-doc-registry.current.yaml
+  control_plane_status_ref: identity/protocol/mappings/control-plane-status.current.yaml
+
 active_workbook_family:
   workbook_family: v1.6
   minor_family_uniqueness_mode: exact_canonical_pair_only

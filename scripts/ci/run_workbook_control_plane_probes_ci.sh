@@ -47,6 +47,21 @@ def resolve_family_doc_path(family: dict, key: str) -> str:
     return str(family.get(key, "")).strip()
 
 
+def template_static_doc_paths(registry_doc: dict) -> list[Path]:
+    template_contract = registry_doc.get("template_contract")
+    if not isinstance(template_contract, dict):
+        raise SystemExit("template_contract missing from workbook registry")
+    paths: list[Path] = []
+    for key in ("templates_readme", "issue_register_template", "deep_audit_template"):
+        raw = str(template_contract.get(key, "")).strip()
+        if not raw:
+            raise SystemExit(f"template_contract missing {key}")
+        path = Path(raw)
+        if path not in paths:
+            paths.append(path)
+    return paths
+
+
 def ensure_materialized_dir(probe_root: Path, source_root: Path, rel_dir: Path) -> None:
     if str(rel_dir) in {"", "."}:
         return
@@ -164,6 +179,7 @@ issue_register_rel = Path(resolve_family_doc_path(family, "issue_register_doc"))
 deep_audit_rel = Path(resolve_family_doc_path(family, "deep_audit_workbook_doc"))
 if not workbook_family or not governance_doc_rel or not issue_register_rel or not deep_audit_rel:
     raise SystemExit("workbook registry missing family/governance/authority docs")
+template_doc_rels = template_static_doc_paths(workbook_versioned)
 
 stream_current = load_yaml(root / STREAM_DOC_REGISTRY_CURRENT)
 stream_versioned_rel = Path(str(stream_current.get("active_file", "")).strip())
@@ -179,6 +195,7 @@ materialized_control_plane_paths = [
     WORKBOOK_README,
     issue_register_rel,
     deep_audit_rel,
+    *template_doc_rels,
 ]
 
 positive_rc, positive = run_validator(root, workspace_root)
@@ -239,6 +256,39 @@ if stream_payload.get("error_code") != ERR_STREAM_DOC_REGISTRY:
 if expected_stream_violation not in stream_violations:
     raise SystemExit(f"stream-doc-registry missing-static-doc violation missing: {stream_payload}")
 
+template_doc_rel = template_doc_rels[0]
+template_stream_repo = build_probe_repo(
+    tmp_root / "stream-doc-registry-missing-template-static-doc" / root.name,
+    root,
+    workspace_root,
+    materialized_paths=materialized_control_plane_paths,
+)
+template_stream_registry_path = template_stream_repo / stream_versioned_rel
+template_stream_doc = load_yaml(template_stream_registry_path)
+template_mandatory_static_docs = template_stream_doc.get("mandatory_static_docs") or []
+if template_doc_rel.as_posix() not in template_mandatory_static_docs:
+    raise SystemExit("template doc is not present in mandatory_static_docs for negative probe")
+template_stream_doc["mandatory_static_docs"] = [
+    item for item in template_mandatory_static_docs if str(item).strip() != template_doc_rel.as_posix()
+]
+template_stream_registry_path.write_text(
+    yaml.safe_dump(template_stream_doc, sort_keys=False, allow_unicode=False),
+    encoding="utf-8",
+)
+template_stream_rc, template_stream_payload = run_validator(template_stream_repo, template_stream_repo.parent)
+if template_stream_rc == 0:
+    raise SystemExit("stream-doc-registry missing-template-static-doc negative probe unexpectedly passed")
+template_stream_violations = [str(item) for item in (template_stream_payload.get("violations") or [])]
+expected_template_stream_violation = f"stream_doc_registry_missing_static_doc:{template_doc_rel.as_posix()}"
+if template_stream_payload.get("error_code") != ERR_STREAM_DOC_REGISTRY:
+    raise SystemExit(
+        f"stream-doc-registry missing-template-static-doc probe returned wrong error code: {template_stream_payload}"
+    )
+if expected_template_stream_violation not in template_stream_violations:
+    raise SystemExit(
+        f"stream-doc-registry missing-template-static-doc violation missing: {template_stream_payload}"
+    )
+
 print(
     json.dumps(
         {
@@ -250,6 +300,8 @@ print(
             "negative_extra_doc_violation": expected_extra_rel,
             "negative_stream_doc_error_code": stream_payload.get("error_code"),
             "negative_stream_doc_violation": expected_stream_violation,
+            "negative_template_stream_doc_error_code": template_stream_payload.get("error_code"),
+            "negative_template_stream_doc_violation": expected_template_stream_violation,
             "tmp_root": str(tmp_root),
         },
         ensure_ascii=False,

@@ -32,11 +32,22 @@ Scope: canonical `docs/workbook/` directory contract for cross-stream issue gove
    - `docs/governance/identity-workbook-governance-v1.6.md`,
    - `identity/protocol/mappings/workbook-registry.current.yaml`,
    - `identity/protocol/mappings/workbook-registry.v1.6.yaml`,
+   - `docs/workbook/templates/README.md`,
+   - `docs/workbook/templates/protocol-issue-register.template.md`,
+   - `docs/workbook/templates/protocol-deep-audit-workbook.template.md`,
    - `docs/workbook/protocol-issue-register-v1.6.md`,
    - `docs/workbook/protocol-deep-audit-workbook-v1.6.md`,
-   - `scripts/validate_issue_register_consistency.py`.
+   - `scripts/validate_issue_register_consistency.py`,
+   - `scripts/scaffold_workbook_family.py`,
+   - `scripts/validate_workbook_family_contract.py`.
 2. `identity/protocol/mappings/workbook-registry.v1.6.yaml` selects the authority pair and declares any optional workspace projection exports.
 3. External projections may exist for operator convenience, but current status authority remains inside `identity-protocol-local/docs/workbook/`.
+
+## Template lane
+
+1. `docs/workbook/templates/` freezes the workbook-family scaffold source for future minors.
+2. `scripts/scaffold_workbook_family.py` renders future family docs and registry files without switching the active current pointer by default.
+3. `scripts/validate_workbook_family_contract.py` is the scaffold validator for non-active families and complements the active-family validator.
 
 ## Minor-vs-patch rule
 

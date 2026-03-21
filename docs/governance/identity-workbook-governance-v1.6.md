@@ -10,10 +10,13 @@ Scope: canonical workbook control plane for cross-stream issue governance inside
 2. External workspace notes, mirrors, or evidence packs are never authoritative for protocol workbook truth.
 3. The canonical workbook control plane is the minor-family bundle formed by:
    - `docs/workbook/`,
+   - `docs/workbook/templates/`,
    - `identity/protocol/mappings/workbook-registry.current.yaml`,
    - `identity/protocol/mappings/workbook-registry.v1.6.yaml`,
    - `identity/protocol/mappings/stream-doc-registry.v1.6.yaml`,
-   - `scripts/validate_issue_register_consistency.py`.
+   - `scripts/validate_issue_register_consistency.py`,
+   - `scripts/scaffold_workbook_family.py`,
+   - `scripts/validate_workbook_family_contract.py`.
 4. The active workbook family is selected only by `identity/protocol/mappings/workbook-registry.current.yaml`, and the versioned workbook registry defines both authority surfaces and optional external projections.
 5. Naming discipline is frozen:
    - `workbook = X.X`
@@ -33,6 +36,16 @@ Scope: canonical workbook control plane for cross-stream issue governance inside
 2. After migration, those outer copies are demoted to projection-only artifacts.
 3. Validators must default to the protocol-internal workbook pair, never to the migrated outer copies.
 4. If optional projection copies are kept in the outer workspace, they must be declared through the versioned workbook registry instead of being rediscovered ad hoc.
+
+## 1.2 Template and scaffold boundary
+
+1. `v1.6` is both the first successful active workbook family and the frozen template motherline for future workbook families.
+2. Templateization must therefore stay inside the current `v1.6` workbook control plane instead of being deferred to a future `v1.7` stream.
+3. Future workbook families must be scaffolded from protocol-owned templates and machine validators, not by copying the current active workbook pair by hand.
+4. Workbook-family activation remains separate from scaffold generation:
+   - scaffold generation may create future family docs, versioned registry files, and projection stubs;
+   - scaffold generation must not silently switch `identity/protocol/mappings/workbook-registry.current.yaml`;
+   - activation is a later explicit pointer move governed by this contract.
 
 ## 2) Fixed directory and file roles
 
@@ -61,14 +74,29 @@ Every active workbook family must contain exactly two canonical Markdown files:
 
 This file freezes the workbook model itself and is not a substitute for any individual workbook family.
 
-### 2.4 Registry pointer
+### 2.4 Template directory
+
+- `docs/workbook/templates/README.md`
+- `docs/workbook/templates/protocol-issue-register.template.md`
+- `docs/workbook/templates/protocol-deep-audit-workbook.template.md`
+
+These files are the frozen scaffold source for future workbook families and must not be mixed into the canonical top-level workbook pair for the active family.
+
+### 2.5 Registry pointer
 
 - `identity/protocol/mappings/workbook-registry.current.yaml`
 - `identity/protocol/mappings/workbook-registry.v1.6.yaml`
 
 Validators and CI must resolve the active workbook family through the registry, not by guessing filenames.
 
-### 2.5 Optional projection exports
+### 2.6 Scaffold and contract tools
+
+- `scripts/scaffold_workbook_family.py`
+- `scripts/validate_workbook_family_contract.py`
+
+These tools are part of the workbook control plane and freeze how future workbook families are generated and checked.
+
+### 2.7 Optional projection exports
 
 1. The versioned workbook registry may list optional external projection docs under the active workbook family.
 2. These projections are mirror-only:
@@ -88,6 +116,34 @@ Validators and CI must resolve the active workbook family through the registry, 
 3. These surfaces are related but not interchangeable.
 4. A stream review ledger may be one closure anchor for an issue row, but it is not the issue register itself.
 
+## 3.1 Workbook family template contract
+
+1. The versioned workbook registry must expose one machine-readable `template_contract` block that freezes:
+   - template file paths,
+   - scaffold and validator script paths,
+   - default projection-root policy,
+   - current-pointer activation mode.
+2. Template files must resolve under `docs/workbook/templates/` and remain mandatory static docs in the active stream doc registry.
+3. Template docs are infrastructure docs; they are never current-status authority and never count as the active canonical pair.
+
+## 3.2 Workbook family scaffold and migration contract
+
+1. `scripts/scaffold_workbook_family.py` must accept a target `--minor` token such as `v1.7` and render:
+   - `docs/workbook/protocol-issue-register-<minor>.md`,
+   - `docs/workbook/protocol-deep-audit-workbook-<minor>.md`,
+   - `identity/protocol/mappings/workbook-registry.<minor>.yaml`,
+   - workspace projection stubs declared by the generated registry.
+2. The scaffold step must preserve the active workbook current pointer by default.
+3. If current-pointer activation is requested, the scaffold tool must require the explicit consent token frozen by the template contract.
+4. Projection stubs created at scaffold time remain projection-only and must not be promoted into status authority before activation/backfill.
+
+## 3.3 Workbook family activation contract
+
+1. The current active workbook family changes only through `identity/protocol/mappings/workbook-registry.current.yaml`.
+2. Future family generation and future family activation are different operations and must remain machine-separable.
+3. `scripts/validate_issue_register_consistency.py` remains the active-family authority gate.
+4. `scripts/validate_workbook_family_contract.py` remains the non-active-family scaffold gate.
+
 ## 4) Naming and range rules
 
 1. Workbook names must encode the governed minor family, for example:
@@ -105,8 +161,9 @@ Validators and CI must resolve the active workbook family through the registry, 
    - `identity/protocol/mappings/stream-doc-registry.current.yaml`
    - `identity/protocol/mappings/control-plane-status.current.yaml`
 4. `docs/workbook/README.md` is part of the workbook control plane and must carry the same alias-ref discipline as the canonical workbook pair.
-5. `scripts/docs_command_contract_check.py` must validate workbook docs under the same documentation-governance discipline as `docs/governance/` and `docs/review/`.
-6. Any workbook drift that breaks alias-ref or executable-doc contract must fail in the same doc-governance lane.
+5. `docs/workbook/templates/README.md` and the template Markdown files must carry the same alias-ref discipline as the rest of the workbook control plane.
+6. `scripts/docs_command_contract_check.py` must validate workbook docs under the same documentation-governance discipline as `docs/governance/` and `docs/review/`.
+7. Any workbook drift that breaks alias-ref or executable-doc contract must fail in the same doc-governance lane.
 
 ## 6) Machine-gate binding
 
@@ -120,6 +177,8 @@ Validators and CI must resolve the active workbook family through the registry, 
 3. If the versioned workbook registry declares optional projection exports, the validator may inspect them only to confirm projection-only boundary markers and canonical-source pointers; it must not use them as default status authority.
 4. If the versioned workbook registry opts a projection export into freshness enforcement, the validator must fail-close when the projection's summary counts drift from the active workbook family.
 5. `scripts/release_readiness_check.py` and `scripts/ci/run_required_runtime_gates_ci.sh` must keep the workbook-consistency gate in the formal release/runtime bundle.
+6. `scripts/validate_workbook_family_contract.py` must validate scaffolded future families without depending on the current active pointer.
+7. CI must keep one dry-run workbook-family scaffold probe so the `1 -> N` path stays machine-closed, not just the current active family.
 
 ## 7) Frozen authority boundary
 
