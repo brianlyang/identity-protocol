@@ -12,7 +12,7 @@ plugins:
     gate_mode: fail_close_strict
     ssot_mapping_ref: identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-020
     contract_file: identity/protocol/plugins/skill/ai-folder-governance-enforcement/plugin.contract.yaml
-    validator_script: scripts/validate_v16_skill_path_integrity.py
+    validator_script: scripts/validate_skill_path_integrity.py
     provider_profiles: []
     status: active
   - plugin_id: multimodal-vision-enforcement

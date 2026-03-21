@@ -2,7 +2,7 @@ contract_id: rq_020_skill_path_integrity_contract_v1
 plugin_id: ai-folder-governance-enforcement
 version: v1.6.4
 owner: protocol_base_repo
-validator_script: scripts/validate_v16_skill_path_integrity.py
+validator_script: scripts/validate_skill_path_integrity.py
 integration_kind: skill
 skill_binding:
   required: true

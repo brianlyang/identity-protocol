@@ -38,7 +38,7 @@ plugin_docs:
     required_tokens:
       - asb16-rq-020
       - skill_path_integrity
-      - scripts/validate_v16_skill_path_integrity.py
+      - scripts/validate_skill_path_integrity.py
   - plugin_id: multimodal-vision-enforcement
     readme: identity/protocol/plugins/multimodal-vision-enforcement/README.md
     required_tokens:

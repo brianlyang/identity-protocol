@@ -35,7 +35,7 @@ plugin_failclose_profiles:
     target_name: skill_path_integrity
     registry_file: identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml
     contract_file: identity/protocol/plugins/skill/ai-folder-governance-enforcement/plugin.contract.yaml
-    validator_script: scripts/validate_v16_skill_path_integrity.py
+    validator_script: scripts/validate_skill_path_integrity.py
     strict_surfaces:
       - scripts/identity_creator.py
       - scripts/release_readiness_check.py
