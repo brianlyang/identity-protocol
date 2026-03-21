@@ -35,11 +35,14 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
 
 def _run_json(cmd: tuple[str, ...], *, cwd: Path) -> dict[str, Any]:
     proc = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True, check=False)
-    if proc.returncode != 0:
-        raise RuntimeError(
-            f"command failed rc={proc.returncode}: {' '.join(cmd)}\nstdout={proc.stdout}\nstderr={proc.stderr}"
-        )
-    payload = json.loads(proc.stdout)
+    try:
+        payload = json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"command failed rc={proc.returncode}: {' '.join(cmd)}\nstdout={proc.stdout}\nstderr={proc.stderr}"
+            ) from exc
+        raise RuntimeError(f"expected valid JSON from {' '.join(cmd)}\nstdout={proc.stdout}\nstderr={proc.stderr}") from exc
     if not isinstance(payload, dict):
         raise RuntimeError(f"expected object JSON from {' '.join(cmd)}")
     return payload
