@@ -32,6 +32,7 @@ PROTOCOL_PUBLISH_SCRIPTS = {
 POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["python3", "scripts/docs_command_contract_check.py"],
     ["python3", "scripts/validate_issue_register_consistency.py", "--json-only"],
+    ["bash", "scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh"],
     ["bash", "scripts/ci/run_workbook_control_plane_probes_ci.sh"],
     ["bash", "scripts/ci/run_workbook_family_scaffold_probes_ci.sh"],
 ]
