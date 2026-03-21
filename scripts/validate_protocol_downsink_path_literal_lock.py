@@ -165,10 +165,6 @@ def _iter_scan_files(repo_root: Path, globs: list[str]) -> list[Path]:
     return [files[key] for key in sorted(files.keys())]
 
 
-def _line_number(text: str, idx: int) -> int:
-    return text.count("\n", 0, max(idx, 0)) + 1
-
-
 def _scan_source_file(
     *,
     path: Path,
@@ -182,20 +178,32 @@ def _scan_source_file(
     except Exception:
         return [f"scan_read_failed:{path.relative_to(repo_root).as_posix()}"]
 
+    # Most source files never mention governed runtime roots; skip regex-heavy literal scanning for them.
+    if not any(root in text for root in governed_roots):
+        return []
+
     violations: list[str] = []
     lines = text.splitlines()
+    candidate_rows = [
+        (lineno, line)
+        for lineno, line in enumerate(lines, start=1)
+        if any(root in line for root in governed_roots)
+    ]
+    if not candidate_rows:
+        return []
+
     rel = path.relative_to(repo_root).as_posix()
     marker = str(allow_marker or "").strip()
-    for m in STRING_LITERAL_RE.finditer(text):
-        token = _normalize_path_token(m.group("value"))
-        if not _token_is_governed_path(token, governed_roots):
-            continue
-        if _token_in_registry(token, matchers):
-            continue
-        lineno = _line_number(text, m.start())
-        if marker and 0 < lineno <= len(lines) and marker in lines[lineno - 1]:
-            continue
-        violations.append(f"non_registry_literal:{rel}:{lineno}:{token}")
+    for lineno, line in candidate_rows:
+        for m in STRING_LITERAL_RE.finditer(line):
+            token = _normalize_path_token(m.group("value"))
+            if not _token_is_governed_path(token, governed_roots):
+                continue
+            if _token_in_registry(token, matchers):
+                continue
+            if marker and marker in line:
+                continue
+            violations.append(f"non_registry_literal:{rel}:{lineno}:{token}")
     return violations
 
 

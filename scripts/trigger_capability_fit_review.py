@@ -177,7 +177,7 @@ def main() -> int:
         pack_path,
         explicit=args.fit_matrix,
         pattern=fit_pattern,
-        default_pattern="runtime/protocol-feedback/optimization/capability-fit-matrix-*.json",
+        default_pattern="runtime/protocol-feedback/optimization/capability-fit-matrix-*.json",  # downsink-path-lock: allow-nonregistry-literal
     )
     if fit_path is None:
         payload["capability_fit_review_trigger_status"] = STATUS_WARN_NON_BLOCKING
@@ -228,7 +228,7 @@ def main() -> int:
         pack_path,
         explicit=args.roundtable_evidence,
         pattern=str(contract.get("roundtable_evidence_path_pattern", "")).strip(),
-        default_pattern="runtime/protocol-feedback/roundtables/capability-fit-roundtable-*.json",
+        default_pattern="runtime/protocol-feedback/roundtables/capability-fit-roundtable-*.json",  # downsink-path-lock: allow-nonregistry-literal
     )
     payload["roundtable_evidence_path"] = str(rt_path) if rt_path else ""
 

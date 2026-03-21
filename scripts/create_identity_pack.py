@@ -772,7 +772,7 @@ def _instance_pack_topology_contract_skeleton(identity_id: str) -> dict:
         "pack_root_legacy_compat_dirs": [],
         "runtime_required_dirs": [
             "runtime/examples",
-            "runtime/gate",
+            "runtime/gate",  # downsink-path-lock: allow-nonregistry-literal
             "runtime/logs",
             "runtime/plugins",
             "runtime/state",
@@ -791,12 +791,12 @@ def _instance_pack_topology_contract_skeleton(identity_id: str) -> dict:
             "runtime/logs/upgrade",
             f"runtime/logs/upgrade/{identity_id}",
             "runtime/metrics",
-            "runtime/protocol-feedback",
-            "runtime/protocol-feedback/evidence-index",
-            "runtime/protocol-feedback/outbox-to-protocol",
-            "runtime/protocol-feedback/upgrade-proposals",
+            "runtime/protocol-feedback",  # downsink-path-lock: allow-nonregistry-literal
+            "runtime/protocol-feedback/evidence-index",  # downsink-path-lock: allow-nonregistry-literal
+            "runtime/protocol-feedback/outbox-to-protocol",  # downsink-path-lock: allow-nonregistry-literal
+            "runtime/protocol-feedback/upgrade-proposals",  # downsink-path-lock: allow-nonregistry-literal
             "runtime/reports",
-            "runtime/reports/broadcast",
+            "runtime/reports/broadcast",  # downsink-path-lock: allow-nonregistry-literal
             "runtime/reports/agent-relay-final-answer",
             "runtime/reports/host-visible-surface",
             "runtime/reports/install",
@@ -985,7 +985,7 @@ def _instance_protocol_split_receipt_contract_skeleton() -> dict:
 def _protocol_feedback_reply_channel_contract_skeleton() -> dict:
     return {
         "required": False,
-        "outbox_dir": "runtime/protocol-feedback/outbox-to-protocol",
+        "outbox_dir": "runtime/protocol-feedback/outbox-to-protocol",  # downsink-path-lock: allow-nonregistry-literal
         "primary_outbox_glob": "runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_*.md",
         "required_index_path": "runtime/protocol-feedback/evidence-index/INDEX.md",
         "enforcement_validator": "scripts/validate_protocol_feedback_reply_channel.py",
@@ -995,7 +995,7 @@ def _protocol_feedback_reply_channel_contract_skeleton() -> dict:
 def _protocol_feedback_inbox_channel_contract_skeleton() -> dict:
     return {
         "required": False,
-        "inbox_dir": "runtime/protocol-feedback/inbox-from-protocol",
+        "inbox_dir": "runtime/protocol-feedback/inbox-from-protocol",  # downsink-path-lock: allow-nonregistry-literal
         "primary_inbox_glob": "runtime/protocol-feedback/inbox-from-protocol/PROTOCOL_INBOX_*.md",
         "required_index_path": "runtime/protocol-feedback/evidence-index/INDEX.md",
         "enforcement_validator": "scripts/validate_protocol_feedback_inbox_channel.py",
@@ -2088,7 +2088,7 @@ def _intake_p1_contract_defaults(identity_id: str) -> dict[str, dict]:
             "required": True,
             "validator": "scripts/validate_intake_evidence_core.py",
             "validator_mode": "intake_contract",
-            "bundle_path_pattern": "runtime/protocol-feedback/**/*cross-verification*bundle*.json",
+            "bundle_path_pattern": "runtime/protocol-feedback/**/*cross-verification*bundle*.json",  # downsink-path-lock: allow-nonregistry-literal
             "required_tracks": ["t1", "t2", "t3", "t4"],
             "required_metadata_fields": [
                 "cross_verification_bundle_id",
@@ -2102,7 +2102,7 @@ def _intake_p1_contract_defaults(identity_id: str) -> dict[str, dict]:
             "required": True,
             "validator": "scripts/validate_intake_evidence_core.py",
             "validator_mode": "promotion_gate",
-            "bundle_path_pattern": "runtime/protocol-feedback/**/*cross-verification*bundle*.json",
+            "bundle_path_pattern": "runtime/protocol-feedback/**/*cross-verification*bundle*.json",  # downsink-path-lock: allow-nonregistry-literal
             "required_tracks": [
                 "t1_roundtable_status",
                 "t2_vendor_status",

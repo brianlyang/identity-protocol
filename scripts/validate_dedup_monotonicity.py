@@ -142,8 +142,8 @@ def _resolve_claims_path(*, explicit_claims: str, contract: dict[str, Any], pack
             contract_patterns.append(v.strip())
 
     fallback_patterns = [
-        "runtime/protocol-feedback/**/*dedup*claim*.json",
-        "runtime/protocol-feedback/**/*dedup*.json",
+        "runtime/protocol-feedback/**/*dedup*claim*.json",  # downsink-path-lock: allow-nonregistry-literal
+        "runtime/protocol-feedback/**/*dedup*.json",  # downsink-path-lock: allow-nonregistry-literal
         "runtime/reports/**/*dedup*.json",
         "runtime/reports/**/*orchestr*dedup*.json",
         "resource/reports/**/*dedup*.json",

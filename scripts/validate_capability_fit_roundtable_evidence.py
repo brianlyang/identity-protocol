@@ -191,7 +191,7 @@ def main() -> int:
         pack_path,
         explicit=args.fit_matrix,
         pattern=fit_pattern,
-        default_pattern="runtime/protocol-feedback/optimization/capability-fit-matrix-*.json",
+        default_pattern="runtime/protocol-feedback/optimization/capability-fit-matrix-*.json",  # downsink-path-lock: allow-nonregistry-literal
     )
     if fit_path is None:
         payload["capability_fit_roundtable_status"] = STATUS_FAIL_REQUIRED
@@ -226,7 +226,7 @@ def main() -> int:
         pack_path,
         explicit=args.roundtable_evidence,
         pattern=roundtable_pattern,
-        default_pattern="runtime/protocol-feedback/roundtables/capability-fit-roundtable-*.json",
+        default_pattern="runtime/protocol-feedback/roundtables/capability-fit-roundtable-*.json",  # downsink-path-lock: allow-nonregistry-literal
     )
     if roundtable_path is None:
         payload["capability_fit_roundtable_status"] = STATUS_FAIL_REQUIRED

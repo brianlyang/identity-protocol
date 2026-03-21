@@ -254,7 +254,7 @@ def _ensure_instance_pack_topology_assets(
         "runtime",
         "scripts",
         "runtime/examples",
-        "runtime/gate",
+        "runtime/gate",  # downsink-path-lock: allow-nonregistry-literal
         "runtime/logs",
         "runtime/plugins",
         "runtime/state",

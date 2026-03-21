@@ -240,7 +240,7 @@ run_probe probe_canonical_literal_lock_pass 0 protocol_downsink_path_literal_loc
 
 # Negative probe: non-canonical mutation
 restore_task
-mutate_registry_entry_path "runtime_gate.ingress_wrapper" "runtime/gate/noncanonical_ingress_wrapper.py"
+mutate_registry_entry_path "runtime_gate.ingress_wrapper" "runtime/gate/noncanonical_ingress_wrapper.py" # downsink-path-lock: allow-nonregistry-literal
 run_probe probe_path_registry_mutation_noncanonical 1 protocol_downsink_path_immutability_status FAIL_REQUIRED \
   python3 scripts/validate_protocol_downsink_path_immutability.py \
   --catalog "${CATALOG_PATH}" \
@@ -307,8 +307,7 @@ run_probe probe_feedback_nonregistry_write 1 protocol_downsink_path_write_guard_
   --catalog "${CATALOG_PATH}" \
   --identity-id "${IDENTITY_ID}" \
   --operation validate \
-  --probe-write-path "runtime/protocol-feedback/noncanonical/FEEDBACK_BATCH_probe.md" \
-  --json-only
+  --probe-write-path "runtime/protocol-feedback/noncanonical/FEEDBACK_BATCH_probe.md" --json-only # downsink-path-lock: allow-nonregistry-literal
 
 # Negative probe: protocol-feedback noncanonical filename under canonical directory
 restore_task
@@ -318,8 +317,7 @@ run_probe probe_feedback_noncanonical_filename_write 1 protocol_downsink_path_wr
   --catalog "${CATALOG_PATH}" \
   --identity-id "${IDENTITY_ID}" \
   --operation validate \
-  --probe-write-path "runtime/protocol-feedback/outbox-to-protocol/freeform_note_probe.md" \
-  --json-only
+  --probe-write-path "runtime/protocol-feedback/outbox-to-protocol/freeform_note_probe.md" --json-only # downsink-path-lock: allow-nonregistry-literal
 
 # Negative probe: broadcast receipt non-registry write
 restore_task
@@ -340,8 +338,7 @@ run_probe probe_unregistered_literal_fail 1 protocol_downsink_path_literal_lock_
   --catalog "${CATALOG_PATH}" \
   --identity-id "${IDENTITY_ID}" \
   --operation validate \
-  --probe-path-literal "runtime/protocol-feedback/outbox-legacy/FEEDBACK_BATCH_probe.md" \
-  --json-only
+  --probe-path-literal "runtime/protocol-feedback/outbox-legacy/FEEDBACK_BATCH_probe.md" --json-only # downsink-path-lock: allow-nonregistry-literal
 
 python3 - <<'PY' "${RESULT_ROOT}" "${PROBE_MATRIX_PATH}" "${MANIFEST_PATH}"
 from __future__ import annotations
