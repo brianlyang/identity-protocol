@@ -9,6 +9,11 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from registry_alias_control_plane_common import (
+    STREAM_DOC_REGISTRY_CURRENT,
+    resolve_alias_entry_path,
+    resolve_current_yaml_alias,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -72,22 +77,7 @@ def _load_stream_registry(path: Path) -> list[dict[str, str]]:
 
 
 def _resolve_stream_registry(path: Path) -> tuple[Path, list[dict[str, str]]]:
-    entry_doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    if isinstance(entry_doc, dict) and isinstance(entry_doc.get("stream_docs"), list):
-        return path, _load_stream_registry(path)
-    active_file = str((entry_doc or {}).get("active_file", "")).strip()
-    if not active_file:
-        raise ValueError("stream registry entry missing stream_docs and active_file")
-    active_path = Path(active_file)
-    if not active_path.is_absolute():
-        candidate_from_entry = (path.parent / active_path).resolve()
-        if candidate_from_entry.exists():
-            active_path = candidate_from_entry
-        else:
-            active_path = (Path.cwd() / active_path).resolve()
-    if not active_path.exists():
-        raise ValueError(f"active stream registry file missing: {active_file}")
-    return active_path, _load_stream_registry(active_path)
+    return path, _load_stream_registry(path)
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -103,7 +93,7 @@ def main() -> int:
     ap.add_argument("--head", default="", help="git head sha (default: HEAD)")
     ap.add_argument(
         "--stream-registry",
-        default="identity/protocol/mappings/stream-doc-registry.current.yaml",
+        default=STREAM_DOC_REGISTRY_CURRENT,
         help="stream registry entry file",
     )
     ap.add_argument("--json-only", action="store_true")
@@ -137,17 +127,21 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 0
 
-    registry_entry = Path(args.stream_registry).expanduser().resolve()
+    repo_root = Path(__file__).resolve().parents[1]
+    registry_entry = resolve_alias_entry_path(repo_root, args.stream_registry)
     payload["stream_registry_entry_path"] = str(registry_entry)
-    if not registry_entry.exists():
+    resolved_registry, registry_active_file, registry_alias_error = resolve_current_yaml_alias(
+        repo_root, args.stream_registry
+    )
+    if registry_alias_error:
         payload["stream_version_pr_boundary_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_STREAM_REGISTRY_INVALID
-        payload["stale_reasons"] = ["stream_registry_missing"]
+        payload["stale_reasons"] = [f"stream_registry_alias_error:{registry_alias_error}:{registry_active_file}"]
         _emit(payload, json_only=args.json_only)
         return 1
 
     try:
-        resolved_registry, rows = _resolve_stream_registry(registry_entry)
+        resolved_registry, rows = _resolve_stream_registry(resolved_registry)
     except Exception as exc:
         payload["stream_version_pr_boundary_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_STREAM_REGISTRY_INVALID

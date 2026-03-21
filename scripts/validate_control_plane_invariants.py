@@ -11,6 +11,7 @@ from typing import Any
 import yaml
 
 from contract_binding_mapping_common import collect_requirement_rows, requirement_row_keys
+from registry_alias_control_plane_common import STREAM_DOC_REGISTRY_CURRENT, resolve_current_yaml_alias
 
 try:
     from jsonschema import Draft202012Validator
@@ -24,12 +25,26 @@ PLUGIN_DOC_CONTROL_DEFAULT_REL = "identity/protocol/plugins/PLUGIN_DOC_CONTROL.c
 PLUGIN_FAILCLOSE_GOVERNANCE_CURRENT_DEFAULT_REL = "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml"
 GITHUB_OFFLOAD_CURRENT_DEFAULT_REL = "identity/protocol/mappings/github-control-plane-offload.current.yaml"
 LAYER_TARGETED_GATE_PROFILE_CURRENT_DEFAULT_REL = "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml"
-STREAM_DOC_REGISTRY_CURRENT_DEFAULT_REL = "identity/protocol/mappings/stream-doc-registry.current.yaml"
+STREAM_DOC_REGISTRY_CURRENT_DEFAULT_REL = STREAM_DOC_REGISTRY_CURRENT
 DOC_EVIDENCE_ALLOWLIST_CURRENT_DEFAULT_REL = "identity/protocol/mappings/doc-evidence-allowlist.current.yaml"
 CONTRACT_BINDING_CURRENT_DEFAULT_REL = "identity/protocol/mappings/contract-binding.current.yaml"
 CONTROL_PLANE_INVARIANTS_CURRENT_DEFAULT_REL = "identity/protocol/mappings/control-plane-invariants.current.yaml"
 CONTROL_PLANE_BUDGET_CURRENT_DEFAULT_REL = "identity/protocol/mappings/control-plane-budget.current.yaml"
 CONTROL_PLANE_STATUS_CURRENT_DEFAULT_REL = "identity/protocol/mappings/control-plane-status.current.yaml"
+STREAM_DOC_REGISTRY_LITERAL_SINGLE_SOURCE = "scripts/registry_alias_control_plane_common.py"
+STREAM_DOC_REGISTRY_LITERAL_CONSUMER_FILES: tuple[str, ...] = (
+    "scripts/docs_command_contract_check.py",
+    "scripts/validate_contract_binding_reference_integrity.py",
+    "scripts/validate_contract_mapping_coverage.py",
+    "scripts/validate_control_plane_invariants.py",
+    "scripts/validate_compatibility_legacy_boundary.py",
+    "scripts/validate_doc_evidence_persistence.py",
+    "scripts/validate_native_chat_bootstrap_entry_stream.py",
+    "scripts/validate_runtime_file_boundary_governance.py",
+    "scripts/validate_semantic_term_registry.py",
+    "scripts/validate_stream_scope_semantic_integrity.py",
+    "scripts/validate_stream_version_pr_boundary.py",
+)
 INTEGRATION_KIND_RULES = {
     "skill": {
         "protocol_contract_root": "identity/protocol/plugins/skill",
@@ -120,24 +135,6 @@ def _surface_token_present(repo_root: Path, rel_path: str, token: str) -> tuple[
         return False, "surface_missing"
     text = _read_text(path)
     return (token in text), ""
-
-
-def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
-    configured_path = (repo_root / str(configured_rel or "").strip()).resolve()
-    if not configured_path.exists() or not configured_path.is_file():
-        return configured_path, "", "current_file_missing"
-    if not configured_path.name.endswith(".current.yaml"):
-        return configured_path, "", ""
-    current_doc = _load_yaml(configured_path)
-    if not current_doc:
-        return configured_path, "", "current_file_parse_failed"
-    active_file = str(current_doc.get("active_file", "")).strip()
-    if not active_file:
-        return configured_path, "", "active_file_missing"
-    active_path = (repo_root / active_file).resolve()
-    if not active_path.exists() or not active_path.is_file():
-        return active_path, active_file, "active_file_not_found"
-    return active_path, active_file, ""
 
 
 def _scan_forbidden_versioned_refs(
@@ -232,7 +229,7 @@ def _validate_mapping_alias_contract(
             }
         )
 
-    active_path, active_file, alias_error = _resolve_current_yaml_alias(
+    active_path, active_file, alias_error = resolve_current_yaml_alias(
         repo_root, str(state["current_configured_file"])
     )
     state["active_file"] = active_file
@@ -431,19 +428,19 @@ def main() -> int:
     repo_root = resolve_repo_root(args.repo_root, start=__file__)
     invariants_configured_file = str(args.invariants_file)
     invariants_entry_path = (repo_root / invariants_configured_file).resolve()
-    invariants_path, invariants_active_file, invariants_alias_error = _resolve_current_yaml_alias(
+    invariants_path, invariants_active_file, invariants_alias_error = resolve_current_yaml_alias(
         repo_root,
         invariants_configured_file,
     )
     contract_mapping_configured_file = str(args.contract_mapping)
     contract_mapping_entry_path = (repo_root / contract_mapping_configured_file).resolve()
-    mapping_path, contract_mapping_active_file, contract_mapping_alias_error = _resolve_current_yaml_alias(
+    mapping_path, contract_mapping_active_file, contract_mapping_alias_error = resolve_current_yaml_alias(
         repo_root,
         contract_mapping_configured_file,
     )
     plugin_governance_configured_file = str(args.plugin_governance_file)
     plugin_governance_entry_path = (repo_root / plugin_governance_configured_file).resolve()
-    plugin_governance_path, plugin_governance_active_file, plugin_governance_alias_error = _resolve_current_yaml_alias(
+    plugin_governance_path, plugin_governance_active_file, plugin_governance_alias_error = resolve_current_yaml_alias(
         repo_root,
         plugin_governance_configured_file,
     )
@@ -810,7 +807,7 @@ def main() -> int:
                     current_file=layer_gate_profile_current_configured_file,
                 )
 
-            layer_profile_active_path, layer_profile_active_file, layer_profile_alias_error = _resolve_current_yaml_alias(
+            layer_profile_active_path, layer_profile_active_file, layer_profile_alias_error = resolve_current_yaml_alias(
                 repo_root,
                 layer_gate_profile_current_configured_file,
             )
@@ -1057,7 +1054,7 @@ def main() -> int:
                         alias_key=alias_key,
                         current_file=current_file,
                     )
-                resolved_path, active_file, alias_error = _resolve_current_yaml_alias(repo_root, current_file)
+                resolved_path, active_file, alias_error = resolve_current_yaml_alias(repo_root, current_file)
                 plugin_control_plane_alias_active_files[alias_key] = active_file
                 if alias_error:
                     alias_resolved_ok = False
@@ -1318,6 +1315,7 @@ def main() -> int:
     bundle_entry_violation_count = 0
     prompt_binding_violation_count = 0
     plugin_readability_violation_count = 0
+    stream_doc_registry_current_literal_violation_count = 0
     plugin_doc_control_parse_ok = False
     registry_fail_close_plugin_ids: set[str] = set()
     governance_plugin_ids: set[str] = set()
@@ -1572,7 +1570,7 @@ def main() -> int:
                     registry_source_files.add(registry_file)
 
             for registry_file in sorted(registry_source_files):
-                registry_path, registry_active_file, registry_alias_error = _resolve_current_yaml_alias(
+                registry_path, registry_active_file, registry_alias_error = resolve_current_yaml_alias(
                     repo_root,
                     registry_file,
                 )
@@ -1685,7 +1683,7 @@ def main() -> int:
                         plugin_id=plugin_id,
                     )
                 else:
-                    registry_path, registry_active_file, registry_alias_error = _resolve_current_yaml_alias(
+                    registry_path, registry_active_file, registry_alias_error = resolve_current_yaml_alias(
                         repo_root,
                         registry_file,
                     )
@@ -2141,6 +2139,24 @@ def main() -> int:
                     reason="prompt_failclose_binding_config_missing",
                 )
 
+    stream_doc_registry_literal_source_path = (repo_root / STREAM_DOC_REGISTRY_LITERAL_SINGLE_SOURCE).resolve()
+    if not stream_doc_registry_literal_source_path.exists() or not stream_doc_registry_literal_source_path.is_file():
+        stale_reasons.append(f"stream_doc_registry_literal_source_missing:{STREAM_DOC_REGISTRY_LITERAL_SINGLE_SOURCE}")
+    for rel_path in STREAM_DOC_REGISTRY_LITERAL_CONSUMER_FILES:
+        consumer_path = (repo_root / rel_path).resolve()
+        if not consumer_path.exists() or not consumer_path.is_file():
+            stale_reasons.append(f"stream_doc_registry_literal_consumer_missing:{rel_path}")
+            continue
+        if STREAM_DOC_REGISTRY_CURRENT in _read_text(consumer_path):
+            stream_doc_registry_current_literal_violation_count += 1
+            _append_violation(
+                violations,
+                field="stream_doc_registry_current_literal_contract",
+                reason="literal_current_pointer_reintroduced",
+                current_file=STREAM_DOC_REGISTRY_CURRENT,
+                consumer_file=rel_path,
+            )
+
     plugin_governance_violation_count = sum(
         1
         for row in violations
@@ -2206,6 +2222,9 @@ def main() -> int:
         "stream_doc_registry_active_file": stream_doc_registry_active_file,
         "stream_doc_registry_parse_ok": stream_doc_registry_parse_ok,
         "stream_doc_registry_violation_count": stream_doc_registry_violation_count,
+        "stream_doc_registry_literal_single_source": STREAM_DOC_REGISTRY_LITERAL_SINGLE_SOURCE,
+        "stream_doc_registry_literal_consumer_files": list(STREAM_DOC_REGISTRY_LITERAL_CONSUMER_FILES),
+        "stream_doc_registry_current_literal_violation_count": stream_doc_registry_current_literal_violation_count,
         "doc_evidence_allowlist_alias_enabled": doc_evidence_allowlist_alias_enabled,
         "doc_evidence_allowlist_current_file": str(doc_evidence_allowlist_current_path),
         "doc_evidence_allowlist_current_configured_file": doc_evidence_allowlist_current_configured_file,

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from registry_alias_control_plane_common import STREAM_DOC_REGISTRY_CURRENT, resolve_current_yaml_alias
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -18,7 +19,7 @@ DEFAULT_STREAM_SLUG = "v1612-native-chat-bootstrap-entry"
 DEFAULT_GOV_DOC = "docs/governance/identity-native-chat-bootstrap-entry-governance-v1.6.12.md"
 DEFAULT_REVIEW_DOC = "docs/review/protocol-remediation-audit-ledger-v1.6.12-native-chat-bootstrap-entry.md"
 DEFAULT_AUDIT_INDEX = "docs/governance/AUDIT_SNAPSHOT_INDEX.md"
-DEFAULT_STREAM_DOC_REGISTRY = "identity/protocol/mappings/stream-doc-registry.current.yaml"
+DEFAULT_STREAM_DOC_REGISTRY = STREAM_DOC_REGISTRY_CURRENT
 DEFAULT_DOC_EVIDENCE_ALLOWLIST = "identity/protocol/mappings/doc-evidence-allowlist.current.yaml"
 DEFAULT_SUMMARY_NAME = "bootstrap_entry_summary.v1.6.12.json"
 DEFAULT_MANIFEST_NAME = "EVIDENCE_MANIFEST.v1.6.12-native-chat-bootstrap-entry.json"
@@ -86,22 +87,6 @@ def _norm_path(value: str) -> str:
 
 def _relative(repo_root: Path, path: Path) -> str:
     return _norm_path(str(path.resolve().relative_to(repo_root.resolve())))
-
-
-def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
-    configured_path = (repo_root / _norm_path(configured_rel)).resolve()
-    if not configured_path.exists():
-        return configured_path, "", "current_file_missing"
-    if not configured_path.name.endswith(".current.yaml"):
-        return configured_path, "", ""
-    current_doc = _load_yaml(configured_path)
-    active_file = _norm_path(current_doc.get("active_file", ""))
-    if not active_file:
-        return configured_path, "", "active_file_missing"
-    active_path = (repo_root / active_file).resolve()
-    if not active_path.exists():
-        return active_path, active_file, "active_file_not_found"
-    return active_path, active_file, ""
 
 
 def _discover_latest_bundle_root(repo_root: Path, stream_slug: str) -> tuple[Path, str]:
@@ -509,7 +494,7 @@ def _validate_closure_decision(
 
 
 def _validate_registry(payload: dict[str, Any], *, repo_root: Path, stream_version: str, governance_doc: str, review_doc: str, registry_rel: str) -> None:
-    resolved_path, active_file, alias_error = _resolve_current_yaml_alias(repo_root, registry_rel)
+    resolved_path, active_file, alias_error = resolve_current_yaml_alias(repo_root, registry_rel)
     payload["stream_doc_registry_entry"] = str((repo_root / registry_rel).resolve())
     payload["stream_doc_registry_resolved"] = str(resolved_path)
     payload["stream_doc_registry_active_file"] = active_file
@@ -549,7 +534,7 @@ def _validate_allowlist(
     manifest_rel: str,
     summary_rel: str,
 ) -> None:
-    resolved_path, active_file, alias_error = _resolve_current_yaml_alias(repo_root, allowlist_rel)
+    resolved_path, active_file, alias_error = resolve_current_yaml_alias(repo_root, allowlist_rel)
     payload["doc_evidence_allowlist_entry"] = str((repo_root / allowlist_rel).resolve())
     payload["doc_evidence_allowlist_resolved"] = str(resolved_path)
     payload["doc_evidence_allowlist_active_file"] = active_file

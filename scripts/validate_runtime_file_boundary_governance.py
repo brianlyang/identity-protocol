@@ -8,6 +8,7 @@ from typing import Any
 
 import yaml
 from repo_root_resolution_common import resolve_repo_root
+from registry_alias_control_plane_common import STREAM_DOC_REGISTRY_CURRENT, resolve_current_yaml_alias
 
 from protocol_infra_contract import (
     HOST_GATEWAY_DEFAULT_EGRESS_WRAPPER,
@@ -28,7 +29,7 @@ ERR_BOUNDARY = "IP-RFILE-BDRY-001"
 DEFAULT_GOV_DOC = "docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md"
 DEFAULT_REVIEW_DOC = "docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md"
 DEFAULT_PROTOCOL_OVERVIEW_DOC = "identity/protocol/IDENTITY_PROTOCOL.md"
-DEFAULT_STREAM_REGISTRY = "identity/protocol/mappings/stream-doc-registry.current.yaml"
+DEFAULT_STREAM_REGISTRY = STREAM_DOC_REGISTRY_CURRENT
 DEFAULT_SEMANTIC_REGISTRY = "identity/protocol/mappings/semantic-term-registry.current.yaml"
 TRACKED_COMPILED_BRIEF_ARTIFACT_TERM = "tracked_compiled_brief_artifact"
 TRACKED_COMPILED_BRIEF_FROZEN_PATH_TERM = "tracked_compiled_brief_frozen_path"
@@ -36,28 +37,6 @@ LEGACY_CANONICAL_COMPATIBILITY_PATH_TERM = "legacy_canonical_compatibility_path"
 INSTANCE_OWNED_TECHNICAL_DEBT_TERM = "instance_owned_technical_debt"
 INSTANCE_CLEAN_PROOF_TERM = "instance_clean_proof"
 PROTOCOL_RESIDUAL_ISSUE_TERM = "protocol_residual_issue"
-
-
-def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
-    configured_path = (repo_root / str(configured_rel or "").strip()).resolve()
-    if not configured_path.exists() or not configured_path.is_file():
-        return configured_path, "", "current_file_missing"
-    if not configured_path.name.endswith(".current.yaml"):
-        return configured_path, "", ""
-    try:
-        current_doc = yaml.safe_load(configured_path.read_text(encoding="utf-8")) or {}
-    except Exception:
-        return configured_path, "", "current_file_parse_failed"
-    if not isinstance(current_doc, dict):
-        return configured_path, "", "current_file_parse_failed"
-    active_file = str(current_doc.get("active_file", "")).strip()
-    if not active_file:
-        return configured_path, "", "active_file_missing"
-    active_path = (repo_root / active_file).resolve()
-    if not active_path.exists() or not active_path.is_file():
-        return active_path, active_file, "active_file_not_found"
-    return active_path, active_file, ""
-
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -91,10 +70,10 @@ def main() -> int:
     governance_doc = (repo_root / str(args.governance_doc)).resolve()
     review_doc = (repo_root / str(args.review_doc)).resolve()
     protocol_overview_doc = (repo_root / str(args.protocol_overview_doc)).resolve()
-    stream_registry_path, stream_registry_active_file, stream_registry_alias_error = _resolve_current_yaml_alias(
+    stream_registry_path, stream_registry_active_file, stream_registry_alias_error = resolve_current_yaml_alias(
         repo_root, str(args.stream_registry)
     )
-    semantic_registry_path, semantic_registry_active_file, semantic_registry_alias_error = _resolve_current_yaml_alias(
+    semantic_registry_path, semantic_registry_active_file, semantic_registry_alias_error = resolve_current_yaml_alias(
         repo_root, str(args.semantic_registry)
     )
 

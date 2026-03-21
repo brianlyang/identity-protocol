@@ -8,6 +8,7 @@ from typing import Any
 
 import yaml
 
+from registry_alias_control_plane_common import STREAM_DOC_REGISTRY_CURRENT, resolve_current_yaml_alias
 from repo_root_resolution_common import resolve_repo_root
 from validate_response_authority_consumer_semantics import DEFAULT_TARGET_FILES as AUTHORITY_CONSUMER_TARGETS
 
@@ -15,7 +16,7 @@ STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_LEGACY_BOUNDARY = "IP-COMPAT-LEGACY-001"
 
-DEFAULT_STREAM_REGISTRY = "identity/protocol/mappings/stream-doc-registry.current.yaml"
+DEFAULT_STREAM_REGISTRY = STREAM_DOC_REGISTRY_CURRENT
 DEFAULT_SEMANTIC_REGISTRY = "identity/protocol/mappings/semantic-term-registry.current.yaml"
 LEGACY_TERM_ID = "legacy_canonical_compatibility_path"
 STRICT_USER_VISIBLE_STREAM_VERSION = "v1.6.12"
@@ -36,27 +37,6 @@ OPTIONAL_WORKSPACE_TARGETS = (
     "scripts/codex_native_chat/validate_native_chat_entry_bootstrap.py",
     "scripts/validate_current_turn_authoritative_headstamp.py",
 )
-
-
-def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
-    configured_path = (repo_root / str(configured_rel or "").strip()).resolve()
-    if not configured_path.exists() or not configured_path.is_file():
-        return configured_path, "", "current_file_missing"
-    if not configured_path.name.endswith(".current.yaml"):
-        return configured_path, "", ""
-    try:
-        current_doc = yaml.safe_load(configured_path.read_text(encoding="utf-8")) or {}
-    except Exception:
-        return configured_path, "", "current_file_parse_failed"
-    if not isinstance(current_doc, dict):
-        return configured_path, "", "current_file_parse_failed"
-    active_file = str(current_doc.get("active_file", "")).strip()
-    if not active_file:
-        return configured_path, "", "active_file_missing"
-    active_path = (repo_root / active_file).resolve()
-    if not active_path.exists() or not active_path.is_file():
-        return active_path, active_file, "active_file_not_found"
-    return active_path, active_file, ""
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -157,10 +137,10 @@ def main() -> int:
     repo_root = resolve_repo_root(args.repo_root, start=__file__)
     workspace_root = _workspace_root(repo_root)
 
-    stream_registry_path, stream_registry_active_file, stream_registry_alias_error = _resolve_current_yaml_alias(
+    stream_registry_path, stream_registry_active_file, stream_registry_alias_error = resolve_current_yaml_alias(
         repo_root, str(args.stream_registry)
     )
-    semantic_registry_path, semantic_registry_active_file, semantic_registry_alias_error = _resolve_current_yaml_alias(
+    semantic_registry_path, semantic_registry_active_file, semantic_registry_alias_error = resolve_current_yaml_alias(
         repo_root, str(args.semantic_registry)
     )
 

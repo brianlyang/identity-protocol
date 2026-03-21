@@ -12,6 +12,7 @@ from typing import Any
 import yaml
 
 from contract_binding_mapping_common import is_requirement_id, is_stream_version
+from registry_alias_control_plane_common import STREAM_DOC_REGISTRY_CURRENT, resolve_current_yaml_alias
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -19,7 +20,7 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
 ERR_STREAM_SCOPE = "IP-SSCOPE-001"
 DEFAULT_STREAM_MATRIX_ENTRY = "identity/protocol/mappings/stream-scope-matrix.current.yaml"
-DEFAULT_STREAM_REGISTRY_ENTRY = "identity/protocol/mappings/stream-doc-registry.current.yaml"
+DEFAULT_STREAM_REGISTRY_ENTRY = STREAM_DOC_REGISTRY_CURRENT
 DEFAULT_CONTRACT_BINDING_ENTRY = "identity/protocol/mappings/contract-binding.current.yaml"
 
 REQ_KEY_RE = re.compile(r"^(asb16-rq-(\d{3}))\s*:")
@@ -42,27 +43,6 @@ def _resolve_range(base: str | None, head: str | None, *, repo_root: Path) -> tu
 def _changed_files(base: str, head: str, *, repo_root: Path) -> list[str]:
     out = _run_git(["diff", "--name-only", f"{base}..{head}"], repo_root=repo_root)
     return [line.strip().replace("\\", "/") for line in out.splitlines() if line.strip()]
-
-
-def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
-    configured_path = (repo_root / str(configured_rel or "").strip()).resolve()
-    if not configured_path.exists() or not configured_path.is_file():
-        return configured_path, "", "current_file_missing"
-    if not configured_path.name.endswith(".current.yaml"):
-        return configured_path, "", ""
-    try:
-        current_doc = yaml.safe_load(configured_path.read_text(encoding="utf-8")) or {}
-    except Exception:
-        return configured_path, "", "current_file_parse_failed"
-    if not isinstance(current_doc, dict):
-        return configured_path, "", "current_file_parse_failed"
-    active_file = str(current_doc.get("active_file", "")).strip()
-    if not active_file:
-        return configured_path, "", "active_file_missing"
-    active_path = (repo_root / active_file).resolve()
-    if not active_path.exists() or not active_path.is_file():
-        return active_path, active_file, "active_file_not_found"
-    return active_path, active_file, ""
 
 
 def _relpath(path: Path, *, repo_root: Path) -> str:
@@ -178,19 +158,19 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 0
 
-    matrix_path, matrix_active_file, matrix_alias_error = _resolve_current_yaml_alias(repo_root, str(args.stream_matrix))
+    matrix_path, matrix_active_file, matrix_alias_error = resolve_current_yaml_alias(repo_root, str(args.stream_matrix))
     payload["stream_matrix_path"] = str(matrix_path)
     payload["stream_matrix_active_file"] = matrix_active_file
     payload["stream_matrix_alias_error"] = matrix_alias_error
 
-    stream_registry_path, stream_registry_active_file, stream_registry_alias_error = _resolve_current_yaml_alias(
+    stream_registry_path, stream_registry_active_file, stream_registry_alias_error = resolve_current_yaml_alias(
         repo_root, str(args.stream_registry)
     )
     payload["stream_registry_path"] = str(stream_registry_path)
     payload["stream_registry_active_file"] = stream_registry_active_file
     payload["stream_registry_alias_error"] = stream_registry_alias_error
 
-    contract_binding_path, contract_binding_active_file, contract_binding_alias_error = _resolve_current_yaml_alias(
+    contract_binding_path, contract_binding_active_file, contract_binding_alias_error = resolve_current_yaml_alias(
         repo_root, str(args.contract_binding)
     )
     payload["contract_binding_path"] = str(contract_binding_path)

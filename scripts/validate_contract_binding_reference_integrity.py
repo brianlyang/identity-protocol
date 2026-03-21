@@ -16,6 +16,7 @@ from contract_binding_mapping_common import (
     is_requirement_key,
     is_stream_version,
 )
+from registry_alias_control_plane_common import STREAM_DOC_REGISTRY_CURRENT, resolve_current_yaml_alias
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -52,24 +53,6 @@ WRAPPER_CONTEXT_RE = re.compile(
 def _load_yaml(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     return data if isinstance(data, dict) else {}
-
-
-def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
-    configured_path = (repo_root / str(configured_rel or "").strip()).resolve()
-    if not configured_path.exists() or not configured_path.is_file():
-        return configured_path, "", "current_file_missing"
-    if not configured_path.name.endswith(".current.yaml"):
-        return configured_path, "", ""
-    current_doc = _load_yaml(configured_path)
-    if not current_doc:
-        return configured_path, "", "current_file_parse_failed"
-    active_file = str(current_doc.get("active_file", "")).strip()
-    if not active_file:
-        return configured_path, "", "active_file_missing"
-    active_path = (repo_root / active_file).resolve()
-    if not active_path.exists() or not active_path.is_file():
-        return active_path, active_file, "active_file_not_found"
-    return active_path, active_file, ""
 
 
 def _as_str_list(value: Any) -> list[str]:
@@ -289,18 +272,18 @@ def main() -> int:
     parser.add_argument("--contract-mapping", default="identity/protocol/mappings/contract-binding.current.yaml")
     parser.add_argument(
         "--stream-doc-registry",
-        default="identity/protocol/mappings/stream-doc-registry.current.yaml",
+        default=STREAM_DOC_REGISTRY_CURRENT,
     )
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
     repo_root = resolve_repo_root(args.repo_root, start=__file__)
     mapping_entry_path = (repo_root / str(args.contract_mapping)).resolve()
-    mapping_path, mapping_active_file, mapping_alias_error = _resolve_current_yaml_alias(
+    mapping_path, mapping_active_file, mapping_alias_error = resolve_current_yaml_alias(
         repo_root, str(args.contract_mapping)
     )
     stream_doc_registry_entry_path = (repo_root / str(args.stream_doc_registry)).resolve()
-    stream_doc_registry_path, stream_doc_registry_active_file, stream_doc_registry_alias_error = _resolve_current_yaml_alias(
+    stream_doc_registry_path, stream_doc_registry_active_file, stream_doc_registry_alias_error = resolve_current_yaml_alias(
         repo_root, str(args.stream_doc_registry)
     )
 

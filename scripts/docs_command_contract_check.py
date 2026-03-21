@@ -28,10 +28,11 @@ from typing import List, Set, Tuple
 import yaml
 
 from contract_binding_mapping_common import is_stream_version
+from registry_alias_control_plane_common import STREAM_DOC_REGISTRY_CURRENT, resolve_current_yaml_alias
 
 
 INDEX_PATH = "docs/governance/AUDIT_SNAPSHOT_INDEX.md"
-STREAM_DOC_REGISTRY_PATH = "identity/protocol/mappings/stream-doc-registry.current.yaml"
+STREAM_DOC_REGISTRY_PATH = STREAM_DOC_REGISTRY_CURRENT
 PLUGIN_DOC_CONTROL_PATH = "identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml"
 REQUIRED_CURRENT_DOC_PATTERNS = [
     r"^docs/governance/identity-token-efficiency-and-skill-parity-governance-v\d+\.\d+\.\d+\.md$",
@@ -254,24 +255,6 @@ def _load_yaml(path: Path) -> dict:
     return data if isinstance(data, dict) else {}
 
 
-def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str]:
-    configured_path = (repo_root / str(configured_rel or "").strip()).resolve()
-    if not configured_path.exists() or not configured_path.is_file():
-        return configured_path, "current_file_missing"
-    if not configured_path.name.endswith(".current.yaml"):
-        return configured_path, ""
-    current_doc = _load_yaml(configured_path)
-    if not current_doc:
-        return configured_path, "current_file_parse_failed"
-    active_file = _norm_path(str(current_doc.get("active_file", "")))
-    if not active_file:
-        return configured_path, "active_file_missing"
-    active_path = (repo_root / active_file).resolve()
-    if not active_path.exists() or not active_path.is_file():
-        return active_path, "active_file_not_found"
-    return active_path, ""
-
-
 def _resolve_current_markdown_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str]:
     configured_path = (repo_root / str(configured_rel or "").strip()).resolve()
     if not configured_path.exists() or not configured_path.is_file():
@@ -296,7 +279,9 @@ def _resolve_current_markdown_alias(repo_root: Path, configured_rel: str) -> tup
 
 def _load_playbook_requirements(repo_root: Path) -> tuple[Path | None, List[str], List[str]]:
     errors: List[str] = []
-    doc_control_path, alias_error = _resolve_current_yaml_alias(repo_root, PLUGIN_DOC_CONTROL_PATH)
+    doc_control_path, _doc_control_active_file, alias_error = resolve_current_yaml_alias(
+        repo_root, PLUGIN_DOC_CONTROL_PATH
+    )
     if alias_error:
         return None, [], [f"[INVALID_PLUGIN_DOC_CONTROL] alias resolution failed: {PLUGIN_DOC_CONTROL_PATH}:{alias_error}"]
     if not doc_control_path.exists():
@@ -347,7 +332,9 @@ def _load_stream_doc_registry(
       validation_errors (fail-close reasons)
     """
     registry_entry_path = (repo_root / STREAM_DOC_REGISTRY_PATH).resolve()
-    registry_path, alias_error = _resolve_current_yaml_alias(repo_root, STREAM_DOC_REGISTRY_PATH)
+    registry_path, _stream_registry_active_file, alias_error = resolve_current_yaml_alias(
+        repo_root, STREAM_DOC_REGISTRY_PATH
+    )
     if alias_error:
         return [], [], {}, [], [f"[INVALID_STREAM_DOC_REGISTRY] alias resolution failed: {STREAM_DOC_REGISTRY_PATH}:{alias_error}"]
     if not registry_path.exists():

@@ -9,33 +9,14 @@ from typing import Any
 
 import yaml
 
+from registry_alias_control_plane_common import STREAM_DOC_REGISTRY_CURRENT, resolve_current_yaml_alias
+
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
 ERR_SEMANTIC_TERM_REGISTRY = "IP-SEMREG-001"
 DEFAULT_REGISTRY_ENTRY = "identity/protocol/mappings/semantic-term-registry.current.yaml"
-DEFAULT_STREAM_REGISTRY_ENTRY = "identity/protocol/mappings/stream-doc-registry.current.yaml"
-
-
-def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
-    configured_path = (repo_root / str(configured_rel or "").strip()).resolve()
-    if not configured_path.exists() or not configured_path.is_file():
-        return configured_path, "", "current_file_missing"
-    if not configured_path.name.endswith(".current.yaml"):
-        return configured_path, "", ""
-    try:
-        current_doc = yaml.safe_load(configured_path.read_text(encoding="utf-8")) or {}
-    except Exception:
-        return configured_path, "", "current_file_parse_failed"
-    if not isinstance(current_doc, dict):
-        return configured_path, "", "current_file_parse_failed"
-    active_file = str(current_doc.get("active_file", "")).strip()
-    if not active_file:
-        return configured_path, "", "active_file_missing"
-    active_path = (repo_root / active_file).resolve()
-    if not active_path.exists() or not active_path.is_file():
-        return active_path, active_file, "active_file_not_found"
-    return active_path, active_file, ""
+DEFAULT_STREAM_REGISTRY_ENTRY = STREAM_DOC_REGISTRY_CURRENT
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -71,7 +52,7 @@ def main() -> int:
 
     repo_root = resolve_repo_root(args.repo_root, start=__file__)
     entry_path = (repo_root / str(args.registry)).resolve()
-    registry_path, registry_active_file, registry_alias_error = _resolve_current_yaml_alias(repo_root, str(args.registry))
+    registry_path, registry_active_file, registry_alias_error = resolve_current_yaml_alias(repo_root, str(args.registry))
 
     payload: dict[str, Any] = {
         "semantic_term_registry_status": STATUS_FAIL_REQUIRED,
@@ -173,7 +154,7 @@ def main() -> int:
     stream_registry_path = Path()
     stream_registry_alias_error = ""
     if include_active_stream_docs:
-        stream_registry_path, _stream_active_file, stream_registry_alias_error = _resolve_current_yaml_alias(
+        stream_registry_path, _stream_active_file, stream_registry_alias_error = resolve_current_yaml_alias(
             repo_root, configured_stream_registry or str(args.stream_registry)
         )
         payload["stream_registry_path"] = str(stream_registry_path)

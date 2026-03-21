@@ -10,6 +10,7 @@ from typing import Any
 import yaml
 
 from contract_binding_mapping_common import is_stream_version
+from registry_alias_control_plane_common import STREAM_DOC_REGISTRY_CURRENT, resolve_current_yaml_alias
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -112,24 +113,6 @@ def _load_mapping_rows(mapping_path: Path) -> tuple[dict[str, dict[str, Any]], l
     return rows, sorted(orphan_keys), sorted(set(duplicate_requirement_ids))
 
 
-def _resolve_current_yaml_alias(configured_path: Path) -> tuple[Path, str, str]:
-    if not configured_path.exists() or not configured_path.is_file():
-        return configured_path, "", "current_file_missing"
-    if not configured_path.name.endswith(".current.yaml"):
-        return configured_path, "", ""
-    current_doc = yaml.safe_load(configured_path.read_text(encoding="utf-8")) or {}
-    if not isinstance(current_doc, dict):
-        return configured_path, "", "current_file_parse_failed"
-    active_file = str(current_doc.get("active_file", "")).strip()
-    if not active_file:
-        return configured_path, "", "active_file_missing"
-    repo_root = Path(__file__).resolve().parents[1]
-    active_path = (repo_root / active_file).resolve()
-    if not active_path.exists() or not active_path.is_file():
-        return active_path, active_file, "active_file_not_found"
-    return active_path, active_file, ""
-
-
 def _resolve_governance_docs(
     *,
     repo_root: Path,
@@ -146,7 +129,9 @@ def _resolve_governance_docs(
         return [doc_path], doc_path, "", "", "", []
 
     registry_entry_path = Path(stream_doc_registry_entry).expanduser().resolve()
-    registry_path, registry_active_file, registry_alias_error = _resolve_current_yaml_alias(registry_entry_path)
+    registry_path, registry_active_file, registry_alias_error = resolve_current_yaml_alias(
+        repo_root, registry_entry_path
+    )
     if registry_alias_error:
         return [], registry_entry_path, "", registry_active_file, registry_alias_error, [
             f"stream_doc_registry_alias_error:{registry_alias_error}:{registry_active_file}"
@@ -227,7 +212,7 @@ def main() -> int:
     )
     ap.add_argument(
         "--stream-doc-registry",
-        default="identity/protocol/mappings/stream-doc-registry.current.yaml",
+        default=STREAM_DOC_REGISTRY_CURRENT,
         help="stream registry current alias used when --governance-doc is omitted",
     )
     ap.add_argument("--mapping-file", default="identity/protocol/mappings/contract-binding.current.yaml")
@@ -257,10 +242,9 @@ def main() -> int:
     if args.force_required:
         required = True
 
-    mapping_entry_path = Path(args.mapping_file).expanduser().resolve()
-    mapping_path, mapping_active_file, mapping_alias_error = _resolve_current_yaml_alias(mapping_entry_path)
-
     repo_root = Path(__file__).resolve().parents[1]
+    mapping_entry_path = Path(args.mapping_file).expanduser().resolve()
+    mapping_path, mapping_active_file, mapping_alias_error = resolve_current_yaml_alias(repo_root, mapping_entry_path)
     docs_to_scan, stream_registry_entry_path, stream_registry_path, stream_registry_active_file, stream_registry_alias_error, stream_registry_errors = _resolve_governance_docs(
         repo_root=repo_root,
         explicit_governance_doc=str(args.governance_doc or ""),
