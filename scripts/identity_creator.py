@@ -21,6 +21,7 @@ from actor_session_common import (
 )
 from compatibility_pointer_semantics_common import SESSION_POINTER_COMPATIBILITY_PATH_FIELD
 from create_identity_pack import (
+    IDENTITY_CODEX_LAUNCHER_VALIDATOR_ID,
     INSTANCE_SCRIPT_EXECUTION_LANE_VALIDATOR_ID,
     INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID,
     INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID,
@@ -79,6 +80,7 @@ HOST_GATEWAY_DEFAULT_SIGNING_KEY = INFRA_HOST_GATEWAY_DEFAULT_SIGNING_KEY
 FINAL_EMIT_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
 REQUIRED_GATE_BUNDLE_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
 INSTANCE_SCRIPT_CONTRACT_VALIDATOR_IDS = (
+    IDENTITY_CODEX_LAUNCHER_VALIDATOR_ID,
     INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID,
     INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID,
     INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID,
@@ -195,6 +197,23 @@ def _run_instance_script_contract_validators(
     work_layer: str = "instance",
     source_layer: str = "",
 ) -> int:
+    rc_launcher_install = _run(
+        [
+            "python3",
+            "scripts/install_identity_codex_launcher.py",
+            "--catalog",
+            str(catalog),
+            "--identity-id",
+            identity_id,
+            "--json-only",
+        ]
+    )
+    if rc_launcher_install != 0:
+        print(
+            "[FAIL] identity codex launcher install failed during identity_creator rollout; "
+            f"identity_id={identity_id}"
+        )
+        return rc_launcher_install
     resolved_source_layer = str(source_layer or "").strip().lower() or _infer_source_domain_from_catalog(catalog)
     validator_cmds: list[list[str]] = []
     for validator_id in INSTANCE_SCRIPT_CONTRACT_VALIDATOR_IDS:
@@ -207,7 +226,7 @@ def _run_instance_script_contract_validators(
             identity_id,
             "--json-only",
         ]
-        if validator_id != INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID:
+        if validator_id not in {IDENTITY_CODEX_LAUNCHER_VALIDATOR_ID, INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID}:
             cmd.extend(["--work-layer", str(work_layer or "instance").strip().lower() or "instance"])
             cmd.extend(["--source-layer", resolved_source_layer])
         validator_cmds.append(cmd)
@@ -1210,6 +1229,32 @@ def _activate_identity(
                 "[INFO] shared compiled brief refresh skipped by policy: "
                 f"compiled_brief_refresh_mode={compiled_brief_refresh_mode_resolved}"
             )
+        rc = _run(
+            [
+                "python3",
+                "scripts/install_identity_codex_launcher.py",
+                "--catalog",
+                str(local_catalog),
+                "--identity-id",
+                identity_id,
+                "--json-only",
+            ]
+        )
+        if rc != 0:
+            raise RuntimeError("identity codex launcher install failed during activation")
+        rc = _run(
+            [
+                "python3",
+                IDENTITY_CODEX_LAUNCHER_VALIDATOR_ID,
+                "--catalog",
+                str(local_catalog),
+                "--identity-id",
+                identity_id,
+                "--json-only",
+            ]
+        )
+        if rc != 0:
+            raise RuntimeError("identity codex launcher validation failed during activation")
         print(f"[OK] activated identity in catalog (actor-scoped multi-active): {identity_id}")
         print(f"[OK] switch report: {switch_report}")
         return 0

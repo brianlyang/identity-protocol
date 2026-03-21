@@ -1626,6 +1626,15 @@ def main() -> int:
         ],
         [
             "python3",
+            "scripts/validate_identity_codex_launcher.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--json-only",
+        ],
+        [
+            "python3",
             "scripts/validate_instance_script_manifest.py",
             "--catalog",
             catalog,
@@ -2208,6 +2217,17 @@ def main() -> int:
             identity_id,
             "--report",
             execution_report,
+        ]
+    )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_identity_codex_launcher.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--json-only",
         ]
     )
     seq.append(

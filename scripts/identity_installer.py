@@ -155,6 +155,58 @@ def _ensure_host_gateway_downsink(
     return True, payload, ""
 
 
+def _ensure_identity_codex_launcher(
+    *,
+    catalog_path: Path,
+    identity_id: str,
+    pack_path: Path,
+    protocol_root: Path,
+) -> tuple[bool, dict[str, Any], str]:
+    task_path = (pack_path / "CURRENT_TASK.json").resolve()
+    if not task_path.exists():
+        return False, {}, f"current_task_missing:{task_path}"
+    install_cmd = [
+        "python3",
+        str((protocol_root / "scripts" / "install_identity_codex_launcher.py").resolve()),
+        "--catalog",
+        str(catalog_path.expanduser().resolve()),
+        "--identity-id",
+        str(identity_id).strip(),
+        "--current-task",
+        str(task_path),
+        "--identity-home",
+        str(catalog_path.expanduser().resolve().parent),
+        "--protocol-home",
+        str(protocol_root.expanduser().resolve()),
+        "--json-only",
+    ]
+    validate_cmd = [
+        "python3",
+        str((protocol_root / "scripts" / "validate_identity_codex_launcher.py").resolve()),
+        "--catalog",
+        str(catalog_path.expanduser().resolve()),
+        "--identity-id",
+        str(identity_id).strip(),
+        "--current-task",
+        str(task_path),
+        "--json-only",
+    ]
+    rc_install, out_install, err_install = _run_capture(install_cmd)
+    if rc_install != 0:
+        return False, {"install_stdout": out_install, "install_stderr": err_install}, "launcher_install_failed"
+    rc_validate, out_validate, err_validate = _run_capture(validate_cmd)
+    payload = {
+        "install_stdout": out_install,
+        "install_stderr": err_install,
+        "validate_stdout": out_validate,
+        "validate_stderr": err_validate,
+        "task_path": str(task_path),
+    }
+    if rc_validate != 0:
+        return False, payload, "launcher_validate_failed"
+    return True, payload, ""
+
+
 def _resolve_source_pack(args: argparse.Namespace) -> Path:
     if args.source_pack:
         src = Path(args.source_pack)
@@ -927,6 +979,17 @@ def cmd_adopt(args: argparse.Namespace) -> int:
         if downsink_payload:
             print(json.dumps(downsink_payload, ensure_ascii=False, indent=2))
         return 1
+    launcher_ok, launcher_payload, launcher_reason = _ensure_identity_codex_launcher(
+        catalog_path=catalog_path,
+        identity_id=args.identity_id,
+        pack_path=dst,
+        protocol_root=_repo_root(),
+    )
+    if not launcher_ok:
+        print(f"[FAIL] identity codex launcher rollout failed: {launcher_reason}")
+        if launcher_payload:
+            print(json.dumps(launcher_payload, ensure_ascii=False, indent=2))
+        return 1
 
     print(f"[OK] adopted identity={args.identity_id} canonical={dst}")
     print(
@@ -966,6 +1029,17 @@ def cmd_lock(args: argparse.Namespace) -> int:
     row["instance_uid"] = str(row.get("instance_uid", "")).strip() or f"inst-{uuid.uuid4()}"
     catalog["identities"] = identities
     _dump_yaml(catalog_path, catalog)
+    launcher_ok, launcher_payload, launcher_reason = _ensure_identity_codex_launcher(
+        catalog_path=catalog_path,
+        identity_id=args.identity_id,
+        pack_path=Path(canonical).expanduser().resolve(),
+        protocol_root=_repo_root(),
+    )
+    if not launcher_ok:
+        print(f"[FAIL] identity codex launcher rollout failed: {launcher_reason}")
+        if launcher_payload:
+            print(json.dumps(launcher_payload, ensure_ascii=False, indent=2))
+        return 1
     print(f"[OK] lock applied for identity={args.identity_id}")
     print(f"canonical_pack_path={canonical}")
     return 0
@@ -996,6 +1070,17 @@ def cmd_repair_paths(args: argparse.Namespace) -> int:
         print(f"[FAIL] host gateway downsink failed: {downsink_reason}")
         if downsink_payload:
             print(json.dumps(downsink_payload, ensure_ascii=False, indent=2))
+        return 1
+    launcher_ok, launcher_payload, launcher_reason = _ensure_identity_codex_launcher(
+        catalog_path=catalog_path,
+        identity_id=args.identity_id,
+        pack_path=pack,
+        protocol_root=_repo_root(),
+    )
+    if not launcher_ok:
+        print(f"[FAIL] identity codex launcher rollout failed: {launcher_reason}")
+        if launcher_payload:
+            print(json.dumps(launcher_payload, ensure_ascii=False, indent=2))
         return 1
     print(
         f"[OK] repaired contract paths for {args.identity_id}: "
@@ -1119,6 +1204,9 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
     downsink_status = "SKIPPED_NOT_REQUIRED"
     downsink_reason = ""
     downsink_payload: dict[str, Any] = {}
+    launcher_status = "SKIPPED_NOT_REQUIRED"
+    launcher_reason = ""
+    launcher_payload: dict[str, Any] = {}
     baseline_apply_status = "SKIPPED_NOT_REQUIRED"
     baseline_apply_reason = ""
     baseline_apply_payload: dict[str, Any] = {}
@@ -1227,14 +1315,29 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
                 install_block_reasons.append(f"host_gateway_downsink_failed:{downsink_reason}")
             else:
                 downsink_status = STATUS_PASS_REQUIRED
+        if not install_block_reasons:
+            launcher_ok, launcher_payload, launcher_reason = _ensure_identity_codex_launcher(
+                catalog_path=catalog_path,
+                identity_id=args.identity_id,
+                pack_path=dst,
+                protocol_root=_repo_root(),
+            )
+            if not launcher_ok:
+                launcher_status = "FAIL_REQUIRED"
+                install_block_reasons.append(f"identity_codex_launcher_failed:{launcher_reason}")
+            else:
+                launcher_status = STATUS_PASS_REQUIRED
         else:
             downsink_status = "SKIPPED_NOT_REQUIRED"
             downsink_reason = "host_gateway_downsink_skipped_due_to_baseline_block"
+            launcher_status = "SKIPPED_NOT_REQUIRED"
+            launcher_reason = "identity_codex_launcher_skipped_due_to_baseline_block"
     elif not dry_run:
         baseline_apply_reason = "version_baseline_apply_skipped_target_missing"
         baseline_catalog_sync_reason = "version_baseline_catalog_sync_skipped_target_missing"
         baseline_verify_reason = "version_baseline_verify_skipped_target_missing"
         downsink_reason = "host_gateway_downsink_skipped_target_missing"
+        launcher_reason = "identity_codex_launcher_skipped_target_missing"
         if requested_activate:
             activation_status = "SKIPPED_NOT_REQUIRED"
             activation_reason = "activation_skipped_target_missing"
@@ -1270,6 +1373,9 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
             "host_gateway_downsink_status": downsink_status,
             "host_gateway_downsink_reason": downsink_reason,
             "host_gateway_downsink_payload": downsink_payload,
+            "identity_codex_launcher_status": launcher_status,
+            "identity_codex_launcher_reason": launcher_reason,
+            "identity_codex_launcher_payload": launcher_payload,
             "install_block_reasons": install_block_reasons,
         },
     )

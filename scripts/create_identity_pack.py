@@ -100,6 +100,18 @@ from host_visible_final_channel_relay_common import (
     build_host_visible_final_channel_relay_receipt,
     project_host_visible_final_channel_relay_fields,
 )
+from identity_codex_launcher_common import (
+    IDENTITY_CODEX_LAUNCHER_CONTRACT_ID as COMMON_IDENTITY_CODEX_LAUNCHER_CONTRACT_ID,
+    IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY as COMMON_IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY,
+    IDENTITY_CODEX_LAUNCHER_INSTALLER_ID as COMMON_IDENTITY_CODEX_LAUNCHER_INSTALLER_ID,
+    IDENTITY_CODEX_LAUNCHER_MANIFEST_REL as COMMON_IDENTITY_CODEX_LAUNCHER_MANIFEST_REL,
+    IDENTITY_CODEX_LAUNCHER_README_REL as COMMON_IDENTITY_CODEX_LAUNCHER_README_REL,
+    IDENTITY_CODEX_LAUNCHER_RENDERER_ID as COMMON_IDENTITY_CODEX_LAUNCHER_RENDERER_ID,
+    IDENTITY_CODEX_LAUNCHER_VALIDATOR_ID as COMMON_IDENTITY_CODEX_LAUNCHER_VALIDATOR_ID,
+    ensure_launcher_contract as _ensure_identity_codex_launcher_contract,
+    launcher_manifest_doc as _default_identity_codex_launcher_manifest_doc,
+    launcher_readme_text as _render_identity_codex_launcher_readme,
+)
 from response_stamp_common import default_response_stamp_profile, normalize_response_stamp_profile
 from native_chat_headstamp_common import (
     DEFAULT_NATIVE_CHAT_PROMPT_HARD_GUARD_TEMPLATE_REF,
@@ -294,6 +306,13 @@ DOWNSINK_REQUIRED_DOMAINS: tuple[str, ...] = (
 INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY = "instance_pack_topology_contract_v1"
 INSTANCE_PACK_TOPOLOGY_CONTRACT_ID = "instance_pack_topology_contract_v1"
 INSTANCE_PACK_TOPOLOGY_VALIDATOR_ID = "scripts/validate_identity_instance_pack_topology.py"
+IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY = COMMON_IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY
+IDENTITY_CODEX_LAUNCHER_CONTRACT_ID = COMMON_IDENTITY_CODEX_LAUNCHER_CONTRACT_ID
+IDENTITY_CODEX_LAUNCHER_RENDERER_ID = COMMON_IDENTITY_CODEX_LAUNCHER_RENDERER_ID
+IDENTITY_CODEX_LAUNCHER_INSTALLER_ID = COMMON_IDENTITY_CODEX_LAUNCHER_INSTALLER_ID
+IDENTITY_CODEX_LAUNCHER_VALIDATOR_ID = COMMON_IDENTITY_CODEX_LAUNCHER_VALIDATOR_ID
+IDENTITY_CODEX_LAUNCHER_MANIFEST_RELATIVE_PATH = COMMON_IDENTITY_CODEX_LAUNCHER_MANIFEST_REL.as_posix()
+IDENTITY_CODEX_LAUNCHER_README_RELATIVE_PATH = COMMON_IDENTITY_CODEX_LAUNCHER_README_REL.as_posix()
 INSTANCE_SCRIPT_MANIFEST_RELATIVE_PATH = "scripts/INSTANCE_SCRIPT_MANIFEST.json"
 INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID = "scripts/validate_instance_script_manifest.py"
 INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID = "scripts/validate_identity_instance_script_orchestration.py"
@@ -711,7 +730,8 @@ def _minimal_current_task(
     }
     task = _ensure_dialogue_governance_contract(task, identity_id)
     task = _ensure_tool_vendor_governance_contracts(task, identity_id)
-    return _ensure_instance_pack_topology_contract(task, identity_id)
+    task = _ensure_instance_pack_topology_contract(task, identity_id)
+    return _ensure_identity_codex_launcher_contract(task, identity_id)
 
 
 def _dialogue_governance_contract_skeleton(identity_id: str) -> dict:
@@ -853,6 +873,14 @@ def _ensure_instance_pack_topology_contract(task: dict, identity_id: str) -> dic
         return task
     task[INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY] = _deep_merge_defaults(base, cur)
     return task
+
+
+def _default_identity_codex_launcher_manifest(identity_id: str) -> dict[str, Any]:
+    return _default_identity_codex_launcher_manifest_doc(identity_id)
+
+
+def _default_identity_codex_launcher_readme(identity_id: str) -> str:
+    return _render_identity_codex_launcher_readme(identity_id)
 
 
 def _tool_installation_contract_skeleton(identity_id: str) -> dict:
@@ -1318,6 +1346,9 @@ def _assert_wrapper_template_constant_bindings(
             f"HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED = {HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED}"
         ),
         "session_chain_template_missing_repo_root_helper": "def _repo_root() -> Path:",
+        "session_chain_template_missing_runtime_temp_root_helper": (
+            "def identity_runtime_named_temp_root(name: str) -> Path:"
+        ),
         "session_chain_template_missing_final_channel_relay_builder": (
             "def build_host_visible_final_channel_relay_receipt("
         ),
@@ -4028,6 +4059,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -4154,6 +4186,30 @@ def _safe_int(value: Any, *, default: int = 0) -> int:
         return int(value)
     except Exception:
         return int(default)
+
+
+def _identity_runtime_slug(value: str, *, default: str = "runtime-temp") -> str:
+    raw = "".join(ch if ch.isalnum() or ch in "._-" else "-" for ch in str(value or "").strip())
+    raw = raw.strip("-._")
+    return raw or default
+
+
+def identity_runtime_temp_root() -> Path:
+    for key in ("IDENTITY_RUNTIME_TMP_ROOT", "RUNNER_TEMP", "TMPDIR", "TEMP", "TMP"):
+        raw = str(os.environ.get(key, "")).strip()
+        if raw:
+            root = Path(raw).expanduser().resolve()
+            root.mkdir(parents=True, exist_ok=True)
+            return root
+    root = Path(tempfile.gettempdir()).resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def identity_runtime_named_temp_root(name: str) -> Path:
+    root = identity_runtime_temp_root() / "identity-runtime" / _identity_runtime_slug(name)
+    root.mkdir(parents=True, exist_ok=True)
+    return root.resolve()
 
 
 def _is_privilege_escalation_error(exc: Exception) -> bool:
@@ -5761,6 +5817,7 @@ def _default_required_checks() -> list[str]:
         "scripts/validate_identity_vendor_api_discovery.py",
         "scripts/validate_identity_vendor_api_solution.py",
         "scripts/validate_identity_instance_pack_topology.py",
+        IDENTITY_CODEX_LAUNCHER_VALIDATOR_ID,
         INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID,
         INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID,
         INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID,
@@ -7073,6 +7130,14 @@ def main() -> int:
         pack_dir / INSTANCE_SCRIPT_MANIFEST_RELATIVE_PATH,
         _default_instance_script_manifest(identity_id),
     )
+    write_json(
+        pack_dir / IDENTITY_CODEX_LAUNCHER_MANIFEST_RELATIVE_PATH,
+        _default_identity_codex_launcher_manifest(identity_id),
+    )
+    write(
+        pack_dir / IDENTITY_CODEX_LAUNCHER_README_RELATIVE_PATH,
+        _default_identity_codex_launcher_readme(identity_id),
+    )
 
     runtime_root = pack_dir / "runtime"
     write(
@@ -7111,6 +7176,7 @@ def main() -> int:
     apply_version_baseline_to_task_doc(current_task, version_baseline)
     current_task = _inject_scaffold_metadata(current_task, args.profile, version_baseline=version_baseline)
     current_task = _ensure_instance_pack_topology_contract(current_task, identity_id)
+    current_task = _ensure_identity_codex_launcher_contract(current_task, identity_id)
     current_task = _rewrite_identity_pack_root(current_task, identity_id, pack_dir)
     current_task = _rewrite_runtime_root(current_task, runtime_root)
     gateway_artifacts = materialize_protocol_host_gateway_artifacts(
