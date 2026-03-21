@@ -32,6 +32,7 @@ PROTOCOL_PUBLISH_SCRIPTS = {
 POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["python3", "scripts/docs_command_contract_check.py"],
     ["python3", "scripts/validate_issue_register_consistency.py", "--json-only"],
+    ["bash", "scripts/ci/run_workbook_control_plane_probes_ci.sh"],
 ]
 BUNDLE_RUNNER_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
 FINAL_EMIT_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
