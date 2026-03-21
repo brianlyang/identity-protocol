@@ -15,6 +15,7 @@ Execution mode: governance interpretation layer for how to handle remaining debt
    - `scripts/docs_command_contract_check.py`
    - `scripts/validate_issue_register_consistency.py`
 3. Current-state interpretation for this governance mode must anchor to:
+   - `identity/protocol/mappings/workbook-registry.current.yaml`
    - `identity/protocol/mappings/stream-doc-registry.current.yaml`
    - `identity/protocol/mappings/control-plane-status.current.yaml`
    - `identity/protocol/mappings/doc-evidence-allowlist.current.yaml`
@@ -36,6 +37,10 @@ Execution mode: governance interpretation layer for how to handle remaining debt
    - control-plane growth being mistaken for a new defect class rather than a maintainability problem.
 3. Without a post-closure governance mode, saturation-style issue hunting has poor marginal return and tends to create false reopens.
 4. This document freezes the interpretation model needed to keep later work rigorous without collapsing every residual into the old issue-hunt lane.
+5. The canonical cross-stream issue workbook now lives inside `docs/workbook/`, not in any outer workspace evidence directory.
+6. Naming discipline stays split by governance grain:
+   - `workbook = X.X`
+   - `governance/review = X.X.X`
 
 ## 2) Three-layer debt taxonomy (frozen)
 
@@ -109,13 +114,15 @@ Execution mode: governance interpretation layer for how to handle remaining debt
 
 1. Route non-bug enhancements into explicit versioned lanes.
 2. At current state, the highest-value architecture lanes are:
-   - route-to-script declarative join,
-   - instance script orchestration contract,
-   - execution receipt family standardization,
+   - `v1.6.15` route-to-script declarative join,
+   - `v1.6.15` instance script orchestration contract,
+   - `v1.6.15` execution receipt family standardization,
    - `v1.6.14` launcher implementation landing.
-3. The current roadmap anchor for the first three items is:
+3. The active governance anchor for the first three items is:
+   - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+4. The roadmap companion remains:
    - `docs/governance/identity-instance-script-orchestration-roadmap-2026-03-21.md`
-4. These lanes may add validators and docs, but they must inherit rather than reinterpret already-closed correctness boundaries.
+5. These lanes may add validators and docs, but they must inherit rather than reinterpret already-closed correctness boundaries.
 
 ### 4.3 Release hygiene discipline
 
@@ -123,13 +130,16 @@ Execution mode: governance interpretation layer for how to handle remaining debt
 2. Keep workbook freshness machine-checked.
 3. Prefer shared validators over one-off prose edits.
 4. Prefer simplification and consolidation when a new guard duplicates an existing semantic owner.
+5. Keep the authoritative workbook pair fixed to:
+   - `docs/workbook/protocol-issue-register-v1.6.md`
+   - `docs/workbook/protocol-deep-audit-workbook-v1.6.md`
 
 ## 5) Current remaining deep debts, properly classified
 
 ### 5.1 Architecture-grade debt
 
-1. Route -> instance scripts -> receipt remains under-modeled as a first-class contract family.
-2. This is the next major protocol/platform gap, but it is not evidence that `v1.6.12` or the closed issue register has regressed.
+1. `v1.6.15` now freezes route -> instance-script -> receipt as a first-class contract family, so the remaining debt is implementation landing rather than architecture ambiguity.
+2. The next major protocol/platform gap is therefore shared validator + creator/readiness + capability-activation wiring for that frozen `v1.6.15` contract, not a reopen of `v1.6.12` or the closed issue register.
 
 ### 5.2 Release-grade debt
 
@@ -165,7 +175,8 @@ Execution mode: governance interpretation layer for how to handle remaining debt
 1. `scripts/validate_issue_register_consistency.py` must stay green:
    - issue table and audit workbook statuses agree,
    - historical snapshot language does not silently override current closed rows,
-   - recorded docs-checker counts match the live checker output.
+   - recorded docs-checker counts match the live checker output,
+   - and the active workbook pair resolves through `identity/protocol/mappings/workbook-registry.current.yaml` into `docs/workbook/`.
 2. Stream-owner validators must remain the source of truth for correctness:
    - `scripts/validate_native_chat_bootstrap_entry_stream.py`
    - `scripts/validate_cli_catalog_default_semantics.py`
@@ -184,11 +195,12 @@ Execution mode: governance interpretation layer for how to handle remaining debt
 
 1. Keep issue hunting closed by default unless a live machine gate actually regresses.
 2. Move next major effort into architecture lanes:
-   - route-to-script declarative join,
-   - receipt-family modeling,
-   - launcher implementation landing.
-3. Use `docs/governance/identity-instance-script-orchestration-roadmap-2026-03-21.md` as the non-reopen architecture anchor for route/script/receipt modeling.
-4. Run release hygiene as a separate owner lane:
+   - `v1.6.15` route-to-script declarative join,
+   - `v1.6.15` receipt-family modeling,
+   - `v1.6.14` launcher implementation landing.
+3. Use `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md` as the active non-reopen architecture anchor for route/script/receipt modeling.
+4. Keep `docs/governance/identity-instance-script-orchestration-roadmap-2026-03-21.md` only as the design-history companion.
+5. Run release hygiene as a separate owner lane:
    - clean freeze,
    - workbook freshness,
    - simplification / consolidation of validators and current-authoritative-source boundaries.

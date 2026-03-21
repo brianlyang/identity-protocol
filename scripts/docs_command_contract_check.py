@@ -212,6 +212,7 @@ def _requires_static_alias_ref_row(doc: str) -> bool:
         return False
     return (
         normalized.startswith("docs/governance/")
+        or normalized.startswith("docs/workbook/")
         or normalized.startswith("docs/review/")
         or normalized.startswith("identity/protocol/plugins/")
     )
