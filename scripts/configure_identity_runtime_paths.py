@@ -30,18 +30,27 @@ def _default_protocol_home() -> Path:
 def main() -> int:
     ap = argparse.ArgumentParser(description="Write shared runtime path config for identity protocol tooling.")
     ap.add_argument("--identity-home", default=str(_default_identity_home()))
+    ap.add_argument("--identity-catalog", default="")
     ap.add_argument("--protocol-home", default=str(_default_protocol_home()))
     ap.add_argument("--config-path", default=str(_default_identity_home() / "config" / "runtime-paths.env"))
     args = ap.parse_args()
 
     config_path = Path(args.config_path).expanduser().resolve()
     config_path.parent.mkdir(parents=True, exist_ok=True)
+    identity_home = Path(args.identity_home).expanduser().resolve()
+    identity_catalog = (
+        Path(args.identity_catalog).expanduser().resolve()
+        if str(args.identity_catalog or "").strip()
+        else (identity_home / "catalog.local.yaml").resolve()
+    )
+    protocol_home = Path(args.protocol_home).expanduser().resolve()
 
     payload = (
         "# identity runtime shared path config\n"
         "# priority: environment variable > this file > built-in fallback\n"
-        f"IDENTITY_HOME={Path(args.identity_home).expanduser().resolve()}\n"
-        f"IDENTITY_PROTOCOL_HOME={Path(args.protocol_home).expanduser().resolve()}\n"
+        f"IDENTITY_HOME={identity_home}\n"
+        f"IDENTITY_CATALOG={identity_catalog}\n"
+        f"IDENTITY_PROTOCOL_HOME={protocol_home}\n"
     )
     config_path.write_text(payload, encoding="utf-8")
     print(f"[OK] wrote runtime path config: {config_path}")

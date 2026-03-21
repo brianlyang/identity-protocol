@@ -114,10 +114,12 @@ def runtime_paths_config_path(identity_home: Path | None = None) -> Path:
 def write_runtime_paths_config(*, identity_home: Path, protocol_home: Path) -> Path:
     config_path = runtime_paths_config_path(identity_home)
     config_path.parent.mkdir(parents=True, exist_ok=True)
+    identity_catalog = (identity_home / "catalog.local.yaml").resolve()
     payload = (
         "# identity runtime shared path config\n"
         "# priority: environment variable > this file > built-in fallback\n"
         f"IDENTITY_HOME={identity_home.resolve()}\n"
+        f"IDENTITY_CATALOG={identity_catalog}\n"
         f"IDENTITY_PROTOCOL_HOME={protocol_home.resolve()}\n"
     )
     config_path.write_text(payload, encoding="utf-8")
@@ -311,7 +313,7 @@ load_runtime_paths_file() {
     [[ -n "${key}" ]] || continue
     [[ "${key}" =~ ^# ]] && continue
     case "${key}" in
-      IDENTITY_HOME|IDENTITY_PROTOCOL_HOME)
+      IDENTITY_HOME|IDENTITY_CATALOG|IDENTITY_PROTOCOL_HOME)
         if [[ -z "${!key:-}" ]]; then
           value="${value%$'\\r'}"
           value="${value#\\\"}"
