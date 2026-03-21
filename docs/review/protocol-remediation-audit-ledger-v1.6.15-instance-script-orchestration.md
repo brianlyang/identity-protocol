@@ -1,7 +1,7 @@
 # Protocol Remediation Audit Ledger (v1.6.15 instance-script orchestration stream)
 
-Status: Active (shared validator/probe/consumer landing in place, 2026-03-21; cross-pack adoption rollout still in progress)  
-Scope: protocol review ledger for route -> instance-script declarative join, pack-local script manifest governance, and execution receipt-family modeling
+Status: Active (shared validator/probe/consumer landing in place, including execution-lane admission governance, 2026-03-21; cross-pack adoption rollout still in progress)  
+Scope: protocol review ledger for route -> instance-script declarative join, route -> execution-lane admission, pack-local script manifest governance, and instance-script receipt-family modeling
 
 ## 0) Stream objective
 
@@ -9,6 +9,7 @@ Scope: protocol review ledger for route -> instance-script declarative join, pac
 2. Freeze the canonical pack-local script manifest path under pack-root `scripts/`.
 3. Freeze the lower-capability join model that connects instance scripts to skills, MCP servers, and tool pipelines.
 4. Freeze the canonical receipt-family interpretation for governed instance-script execution.
+5. Freeze the route-level execution-lane admission contract needed to fail-close undeclared manual/editor/webhook fallback.
 
 ## 1) Problem statement frozen for audit
 
@@ -43,6 +44,7 @@ Scope: protocol review ledger for route -> instance-script declarative join, pac
    - `scripts/validate_identity_instance_script_orchestration.py`
    - `scripts/validate_instance_script_manifest.py`
    - `scripts/validate_route_script_receipt_join.py`
+   - `scripts/validate_route_execution_lane_admission.py`
    - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
    - `scripts/release_readiness_check.py`
    - `scripts/validate_identity_capability_activation.py`
@@ -103,21 +105,29 @@ Scope: protocol review ledger for route -> instance-script declarative join, pac
    - `fallback_instance_scripts`
    - `script_preconditions`
    - `script_receipt_pattern`
+   - `allowed_execution_lanes`
+   - `lane_admission_policy`
+   - `lane_receipt_pattern`
+   - `lane_block_on_fallback`
 2. A single route may bind multiple role-distinct `script_id` values when execution legitimately separates probe/render/emit/recovery stages.
 3. Canonical script catalog file is `<pack_path>/scripts/INSTANCE_SCRIPT_MANIFEST.json`.
 4. Manifest entries resolve only to pack-local paths under `scripts/`.
 5. Lower dependencies remain explicit through `primary_skills`, `fallback_skills`, `required_mcp`, and governed tool-route fields.
-6. `script_preconditions.required_contracts` and `script_preconditions.gate_policies` may reference inherited gateway/headstamp/host-visible/relay contracts, but that does not transfer ownership of those contracts into this stream.
-7. Receipt families stay runtime-owned and classify at least:
-   - route admission,
+6. `allowed_execution_lanes` rows stay machine-readable and freeze `lane_id`, `lane_class`, `lane_source`, and `endpoint_class`.
+7. `lane_admission_policy` and `lane_block_on_fallback` are the only canonical route-level controls for fail-closing undeclared lane fallback; operator memory is never an authority surface.
+8. Canonical admission receipt family is `instance_script_admission_receipt`; it must keep `lane_id`, `lane_class`, `lane_source`, `lane_endpoint_class`, `lane_admission_status`, and `fallback_used` machine-visible.
+9. Lower dependencies remain explicit through `primary_skills`, `fallback_skills`, `required_mcp`, and governed tool-route fields.
+10. `script_preconditions.required_contracts` and `script_preconditions.gate_policies` may reference inherited gateway/headstamp/host-visible/relay contracts, but that does not transfer ownership of those contracts into this stream.
+11. Receipt families stay runtime-owned and classify at least:
+   - `instance_script_admission_receipt`
    - execution,
    - emit,
    - recovery.
-8. Route/script join must never rely on operator memory, workspace-global shared helper directories, or filename guessing.
-9. Route-scoped capability admission must be evaluable without blocking a route on lower dependencies that it does not itself declare unless a stronger activation policy explicitly says otherwise.
-10. Receipt outputs must preserve machine-readable route provenance compatible with `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts`.
-11. Reviewers may accept layered receipt mapping where probe/helper scripts satisfy execution receipts first and emitter scripts later satisfy emit receipts plus delegated refs to inherited host-visible or relay receipts.
-12. Any governed user-visible final output route must bind to a pack-local emitter script and declare an emit-family receipt before outer relay or visible-surface handling is considered valid evidence.
+12. Route/script join must never rely on operator memory, workspace-global shared helper directories, or filename guessing.
+13. Route-scoped capability admission must be evaluable without blocking a route on lower dependencies that it does not itself declare unless a stronger activation policy explicitly says otherwise.
+14. Receipt outputs must preserve machine-readable route provenance compatible with `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts`.
+15. Reviewers may accept layered receipt mapping where probe/helper scripts satisfy execution receipts first, admission receipts freeze lane selection, and emitter scripts later satisfy emit receipts plus delegated refs to inherited host-visible or relay receipts.
+16. Any governed user-visible final output route must bind to a pack-local emitter script and declare an emit-family receipt before outer relay or visible-surface handling is considered valid evidence.
 
 ## 5) Audit verdict rules (frozen)
 
@@ -129,7 +139,9 @@ Scope: protocol review ledger for route -> instance-script declarative join, pac
    - audit index discoverability updated in `docs/governance/AUDIT_SNAPSHOT_INDEX.md`.
 2. **Architecture PASS** for this stream requires:
    - route/script binding fields are frozen,
+   - route/execution-lane admission fields are frozen,
    - multi-role route-to-script binding semantics are frozen,
+   - execution-lane admission semantics are frozen,
    - manifest path is frozen,
    - lower capability join is frozen,
    - inherited precondition reference semantics are frozen,
@@ -138,7 +150,7 @@ Scope: protocol review ledger for route -> instance-script declarative join, pac
    - receipt-provenance projection expectations are frozen,
    - reviewer failure-attribution order is explicit.
 3. **Implementation PASS** for this stream is not satisfied by documentation alone. The following implementation pieces are now landed:
-   - protocol-owned manifest, route/script, and route/script-to-receipt validators,
+   - protocol-owned manifest, route/script, route/script-to-receipt, and route/execution-lane validators,
    - positive and negative probes through `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`,
    - readiness wiring through `scripts/release_readiness_check.py`,
    - capability-activation awareness of instance scripts through `scripts/validate_identity_capability_activation.py`,
@@ -146,6 +158,8 @@ Scope: protocol review ledger for route -> instance-script declarative join, pac
 4. Full **Implementation PASS** still requires:
    - route-scoped activation behavior that does not union-block unrelated routes unless an explicit stronger policy is selected,
    - proof-pack adoption without topology drift across target identities,
+   - proof-pack adoption of execution-lane admission fields where external/manual/editor/webhook fallback risk exists,
+   - lane-admission receipts that keep `lane_id`, `lane_class`, `lane_source`, `lane_endpoint_class`, `lane_admission_status`, and `fallback_used` machine-visible under live pack execution,
    - receipt-provenance projection that keeps `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts` machine-visible under live pack execution,
    - future receipt-family specializations, when needed, stay on the same shared validator/probe/control path instead of forking it.
 5. Reviewers must not collapse `Architecture PASS` into `Implementation PASS`.
@@ -153,6 +167,7 @@ Scope: protocol review ledger for route -> instance-script declarative join, pac
    - `route_contract_missing`: one or more of `primary_instance_scripts`, `fallback_instance_scripts`, `script_preconditions`, or `script_receipt_pattern` is absent, contradictory, or unresolved in `CURRENT_TASK.json`.
    - `manifest_binding_missing`: route fields are present, but `scripts/INSTANCE_SCRIPT_MANIFEST.json` has no matching entry or resolves outside pack-root `scripts/`.
    - `script_precondition_blocked`: route and manifest are valid, but `script_preconditions` are unsatisfied before execution starts.
+   - `lane_admission_mismatch`: route/script surfaces are valid, but the selected execution lane is undeclared, fallback is blocked, or the admission receipt does not prove the declared lane.
    - `mcp_capability_unavailable`: route/manifest/preconditions are valid, but a declared `required_mcp` server fails readiness for the required primitive.
    - `tool_pipeline_failure`: declared lower-capability surfaces are ready, but the governed tool pipeline fails during execution.
    - `script_receipt_mismatch`: execution returns, but runtime receipts do not satisfy `script_receipt_pattern`.
@@ -160,7 +175,7 @@ Scope: protocol review ledger for route -> instance-script declarative join, pac
 
 ## 6) Accepted closure boundary
 
-1. `v1.6.15` is closed at the contract-freeze level when the route/script/dependency/receipt model is frozen in protocol docs and mappings.
+1. `v1.6.15` is closed at the contract-freeze level when the route/script/dependency/receipt/execution-lane model is frozen in protocol docs and mappings.
 2. `v1.6.15` is not closed at the full implementation level until cross-pack adoption proves the landed shared validator/probe/consumer family holds without topology drift.
 3. Instance packs may already be able to self-organize around pack-root `scripts/`, but chat evidence alone does not promote a private local pattern into protocol motherline.
 4. This stream remains independent from provider runtime incidents, launcher install incidents, and host-visible final-surface auto-binding work.
@@ -176,3 +191,24 @@ Scope: protocol review ledger for route -> instance-script declarative join, pac
 5. Do not reopen `v1.6.13` or `v1.6.14` while reviewing this stream; `v1.6.15` exists specifically to keep those layers separate.
 6. Do not classify route blocks caused only by undeclared lower dependencies as proof that the route/script contract failed; first verify whether the route actually declared those skills, MCP servers, or tool constraints.
 7. Do not accept receipt families that drop `route_selected` / `skills_used` / `mcp_tools_used` provenance and then compensate with narrative-only explanation.
+
+## 8) 2026-03-21 machine-verified protocol landing snapshot
+
+1. Runtime truth was rechecked through the protocol resolver before interpreting this stream:
+   - `python3 scripts/resolve_identity_context.py resolve --identity-id base-repo-architect`
+   - expected outcome observed: `source_layer=project` with project-local catalog / pack resolution.
+2. The new route-to-execution-lane protocol gate is landed as a first-class validator surface:
+   - `python3 scripts/validate_route_execution_lane_admission.py --help` resolves successfully
+   - `bash scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh` returns `identity_instance_script_orchestration_probe_status=PASS_REQUIRED`
+   - the same probe now proves lane-specific positive / negative coverage:
+     - `positive_execution_lane_status=PASS_REQUIRED`
+     - `negative_lane_contract_failure=missing_field:lane_receipt_pattern`
+     - `negative_lane_receipt_failure=lane_receipt_lane_id_undeclared`
+3. Shared consumers now see the same execution-lane contract family instead of route/script-only semantics:
+   - `python3 scripts/validate_identity_capability_activation.py --identity-id base-repo-closure-orchestrator --catalog ../.identity/catalog.local.yaml --activation-policy route-any-ready`
+   - observed outcome: `capability_activation_status=ACTIVATED`
+   - the payload now exposes `route_execution_lane_rows`, route-level `execution_lane_*` fields, and reserves `IP-CAP-006` for lane-governance closure failures.
+4. Protocol hygiene and inherited motherline checks remain green after the upgrade:
+   - `python3 scripts/docs_command_contract_check.py` -> `docs checked: 79`, `command snippets checked: 853`, `PASS`
+   - `python3 scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `status=PASS_REQUIRED`, `standard_closure_status=CLOSED`, `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
+5. This snapshot closes the protocol-owned execution-lane governance gap for `v1.6.15`, but it does not claim repo-wide clean freeze or cross-pack adoption closure.

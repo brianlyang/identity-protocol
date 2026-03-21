@@ -153,12 +153,18 @@ PY
 POS_MANIFEST_JSON="${TMP_ROOT}/positive-manifest.json"
 POS_ORCH_JSON="${TMP_ROOT}/positive-orchestration.json"
 POS_RECEIPT_JSON="${TMP_ROOT}/positive-receipt.json"
+POS_LANE_JSON="${TMP_ROOT}/positive-lane-admission.json"
 NEG_MANIFEST_PACK="${TMP_ROOT}/negative-manifest-pack"
 NEG_MANIFEST_JSON="${TMP_ROOT}/negative-manifest.json"
 NEG_BINDING_PACK="${TMP_ROOT}/negative-binding-pack"
 NEG_BINDING_JSON="${TMP_ROOT}/negative-binding.json"
 NEG_RECEIPT_JSON="${TMP_ROOT}/negative-receipt.json"
 NEG_RECEIPT_PATH="${TMP_ROOT}/negative-receipt-override.json"
+POS_LANE_PACK="${TMP_ROOT}/positive-lane-pack"
+NEG_LANE_CONTRACT_PACK="${TMP_ROOT}/negative-lane-contract-pack"
+NEG_LANE_CONTRACT_JSON="${TMP_ROOT}/negative-lane-contract.json"
+NEG_LANE_RECEIPT_JSON="${TMP_ROOT}/negative-lane-receipt.json"
+NEG_LANE_RECEIPT_PATH="${TMP_ROOT}/negative-lane-receipt-override.json"
 
 mkdir -p "${NEG_MANIFEST_PACK}/scripts" "${NEG_BINDING_PACK}/scripts"
 cp "${TASK_PATH}" "${NEG_MANIFEST_PACK}/CURRENT_TASK.json"
@@ -187,6 +193,76 @@ python3 "${ROOT}/scripts/validate_route_script_receipt_join.py" \
   --source-layer "${SOURCE_LAYER}" \
   --require-observed \
   --json-only > "${POS_RECEIPT_JSON}"
+
+mkdir -p "${POS_LANE_PACK}/scripts" "${POS_LANE_PACK}/runtime/reports/instance-script-admission"
+cp "${TASK_PATH}" "${POS_LANE_PACK}/CURRENT_TASK.json"
+cp -R "${PACK_ROOT}/scripts/." "${POS_LANE_PACK}/scripts/"
+
+python3 - "${POS_LANE_PACK}/CURRENT_TASK.json" "${POS_LANE_PACK}/runtime/reports/instance-script-admission" "${IDENTITY_ID}" "${RECEIPT_ROUTE}" "${RECEIPT_SCRIPT_ID}" <<'PY'
+import json
+import sys
+from datetime import UTC, datetime
+from pathlib import Path
+
+task_path = Path(sys.argv[1])
+receipt_dir = Path(sys.argv[2])
+identity_id = sys.argv[3]
+route_name = sys.argv[4]
+script_id = sys.argv[5]
+
+task_doc = json.loads(task_path.read_text(encoding="utf-8"))
+routes = (
+    ((task_doc.get("capability_orchestration_contract") or {}).get("task_type_routes") or {})
+    if isinstance(task_doc, dict)
+    else {}
+)
+route_doc = routes.get(route_name)
+if not isinstance(route_doc, dict):
+    raise SystemExit(f"route not found for lane probe: {route_name}")
+
+route_doc["allowed_execution_lanes"] = [
+    {
+        "lane_id": "serialized_single_lane",
+        "lane_class": "webhook_single_flight",
+        "lane_source": "governed_webhook",
+        "endpoint_class": "analysis_webhook",
+    }
+]
+route_doc["lane_admission_policy"] = {
+    "mode": "declared_lane_only",
+    "require_pass_status": True,
+}
+route_doc["lane_receipt_pattern"] = "runtime/reports/instance-script-admission/*.json"
+route_doc["lane_block_on_fallback"] = True
+task_path.write_text(json.dumps(task_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+receipt_path = receipt_dir / f"{route_name}-{script_id}-{timestamp}.json"
+receipt_doc = {
+    "schema_version": "v1",
+    "receipt_family": "instance_script_admission_receipt",
+    "identity_id": identity_id,
+    "route_selected": route_name,
+    "script_id": script_id,
+    "lane_id": "serialized_single_lane",
+    "lane_class": "webhook_single_flight",
+    "lane_source": "governed_webhook",
+    "lane_endpoint_class": "analysis_webhook",
+    "lane_admission_status": "PASS_REQUIRED",
+    "fallback_used": False,
+    "generated_at": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+    "message": "lane admission accepted by declared lane contract",
+}
+receipt_path.write_text(json.dumps(receipt_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+python3 "${ROOT}/scripts/validate_route_execution_lane_admission.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${POS_LANE_PACK}/CURRENT_TASK.json" \
+  --route "${RECEIPT_ROUTE}" \
+  --script-id "${RECEIPT_SCRIPT_ID}" \
+  --require-observed \
+  --json-only > "${POS_LANE_JSON}"
 
 python3 - "${NEG_MANIFEST_PACK}/scripts/INSTANCE_SCRIPT_MANIFEST.json" <<'PY'
 import json
@@ -293,25 +369,93 @@ if python3 "${ROOT}/scripts/validate_route_script_receipt_join.py" \
   exit 1
 fi
 
-python3 - "${POS_MANIFEST_JSON}" "${POS_ORCH_JSON}" "${POS_RECEIPT_JSON}" "${NEG_MANIFEST_JSON}" "${NEG_BINDING_JSON}" "${NEG_RECEIPT_JSON}" "${IDENTITY_ID}" "${TMP_ROOT}" <<'PY'
+cp -R "${POS_LANE_PACK}" "${NEG_LANE_CONTRACT_PACK}"
+
+python3 - "${NEG_LANE_CONTRACT_PACK}/CURRENT_TASK.json" "${RECEIPT_ROUTE}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+task_path = Path(sys.argv[1])
+route_name = sys.argv[2]
+task_doc = json.loads(task_path.read_text(encoding="utf-8"))
+routes = ((task_doc.get("capability_orchestration_contract") or {}).get("task_type_routes") or {})
+route_doc = routes.get(route_name)
+if not isinstance(route_doc, dict):
+    raise SystemExit(f"route not found for negative lane contract probe: {route_name}")
+route_doc.pop("lane_receipt_pattern", None)
+task_path.write_text(json.dumps(task_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+if python3 "${ROOT}/scripts/validate_route_execution_lane_admission.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${NEG_LANE_CONTRACT_PACK}/CURRENT_TASK.json" \
+  --route "${RECEIPT_ROUTE}" \
+  --script-id "${RECEIPT_SCRIPT_ID}" \
+  --json-only > "${NEG_LANE_CONTRACT_JSON}"; then
+  echo "[FAIL] negative lane-contract probe unexpectedly passed"
+  exit 1
+fi
+
+python3 - "${POS_LANE_PACK}/runtime/reports/instance-script-admission" "${NEG_LANE_RECEIPT_PATH}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+receipt_dir = Path(sys.argv[1])
+target_path = Path(sys.argv[2])
+source_path = sorted(receipt_dir.glob("*.json"))[-1]
+receipt_doc = json.loads(source_path.read_text(encoding="utf-8"))
+receipt_doc["lane_id"] = "undeclared_lane"
+target_path.write_text(json.dumps(receipt_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+if python3 "${ROOT}/scripts/validate_route_execution_lane_admission.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${POS_LANE_PACK}/CURRENT_TASK.json" \
+  --route "${RECEIPT_ROUTE}" \
+  --script-id "${RECEIPT_SCRIPT_ID}" \
+  --receipt "${NEG_LANE_RECEIPT_PATH}" \
+  --require-observed \
+  --json-only > "${NEG_LANE_RECEIPT_JSON}"; then
+  echo "[FAIL] negative lane-receipt probe unexpectedly passed"
+  exit 1
+fi
+
+python3 - "${POS_MANIFEST_JSON}" "${POS_ORCH_JSON}" "${POS_RECEIPT_JSON}" "${POS_LANE_JSON}" "${NEG_MANIFEST_JSON}" "${NEG_BINDING_JSON}" "${NEG_RECEIPT_JSON}" "${NEG_LANE_CONTRACT_JSON}" "${NEG_LANE_RECEIPT_JSON}" "${IDENTITY_ID}" "${TMP_ROOT}" <<'PY'
 import json
 import sys
 
-positive_manifest, positive_orch, positive_receipt, negative_manifest, negative_binding, negative_receipt = [
-    json.loads(open(path, encoding="utf-8").read()) for path in sys.argv[1:7]
+(
+    positive_manifest,
+    positive_orch,
+    positive_receipt,
+    positive_lane,
+    negative_manifest,
+    negative_binding,
+    negative_receipt,
+    negative_lane_contract,
+    negative_lane_receipt,
+) = [
+    json.loads(open(path, encoding="utf-8").read()) for path in sys.argv[1:10]
 ]
-identity_id = sys.argv[7]
-tmp_root = sys.argv[8]
+identity_id = sys.argv[10]
+tmp_root = sys.argv[11]
 
 assert positive_manifest["instance_script_manifest_status"] == "PASS_REQUIRED", positive_manifest
 assert positive_orch["instance_script_orchestration_status"] == "PASS_REQUIRED", positive_orch
 assert positive_receipt["route_script_receipt_join_status"] == "PASS_REQUIRED", positive_receipt
+assert positive_lane["route_execution_lane_admission_status"] == "PASS_REQUIRED", positive_lane
 assert negative_manifest["instance_script_manifest_status"] == "FAIL_REQUIRED", negative_manifest
 assert any("entry_target_missing" in reason for reason in negative_manifest.get("stale_reasons", [])), negative_manifest
 assert negative_binding["instance_script_orchestration_status"] == "FAIL_REQUIRED", negative_binding
 assert any("missing_script_id:" in reason for reason in negative_binding.get("stale_reasons", [])), negative_binding
 assert negative_receipt["route_script_receipt_join_status"] == "FAIL_REQUIRED", negative_receipt
 assert any("receipt_route_selected_mismatch" in reason for reason in negative_receipt.get("stale_reasons", [])), negative_receipt
+assert negative_lane_contract["route_execution_lane_admission_status"] == "FAIL_REQUIRED", negative_lane_contract
+assert any("missing_field:lane_receipt_pattern" in reason for reason in negative_lane_contract.get("stale_reasons", [])), negative_lane_contract
+assert negative_lane_receipt["route_execution_lane_admission_status"] == "FAIL_REQUIRED", negative_lane_receipt
+assert any("lane_receipt_lane_id_undeclared:" in reason for reason in negative_lane_receipt.get("stale_reasons", [])), negative_lane_receipt
 
 print(
     json.dumps(
@@ -321,9 +465,12 @@ print(
             "positive_manifest_status": positive_manifest["instance_script_manifest_status"],
             "positive_orchestration_status": positive_orch["instance_script_orchestration_status"],
             "positive_receipt_join_status": positive_receipt["route_script_receipt_join_status"],
+            "positive_execution_lane_status": positive_lane["route_execution_lane_admission_status"],
             "negative_manifest_failure": "entry_target_missing",
             "negative_binding_failure": "missing_script_id",
             "negative_receipt_failure": "receipt_route_selected_mismatch",
+            "negative_lane_contract_failure": "missing_field:lane_receipt_pattern",
+            "negative_lane_receipt_failure": "lane_receipt_lane_id_undeclared",
             "tmp_root": tmp_root,
         },
         ensure_ascii=False,

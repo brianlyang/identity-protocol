@@ -32,12 +32,35 @@ INSTANCE_SCRIPT_ROUTE_FIELDS: tuple[str, ...] = (
     "script_preconditions",
     "script_receipt_pattern",
 )
+INSTANCE_SCRIPT_EXECUTION_LANE_ROUTE_FIELDS: tuple[str, ...] = (
+    "allowed_execution_lanes",
+    "lane_admission_policy",
+    "lane_receipt_pattern",
+    "lane_block_on_fallback",
+)
+INSTANCE_SCRIPT_ADMISSION_RECEIPT_FAMILY = "instance_script_admission_receipt"
+INSTANCE_SCRIPT_EXECUTION_LANE_RECEIPT_FIELDS: tuple[str, ...] = (
+    "route_selected",
+    "script_id",
+    "lane_id",
+    "lane_class",
+    "lane_source",
+    "lane_endpoint_class",
+    "lane_admission_status",
+    "fallback_used",
+)
 PRECONDITION_FIELDS: tuple[str, ...] = (
     "identity_lock",
     "work_layer",
     "source_layer",
     "required_contracts",
     "gate_policies",
+)
+ALLOWED_LANE_ADMISSION_POLICY_MODES = frozenset(
+    {
+        "declared_lane_only",
+        "declared_lane_with_controlled_fallback",
+    }
 )
 TOKEN_RE = re.compile(r"^[a-z][a-z0-9_:-]*$")
 
@@ -106,8 +129,18 @@ def route_uses_instance_scripts(route_doc: dict[str, Any]) -> bool:
     return any(field in route_doc for field in INSTANCE_SCRIPT_ROUTE_FIELDS)
 
 
+def route_uses_execution_lanes(route_doc: dict[str, Any]) -> bool:
+    if not isinstance(route_doc, dict):
+        return False
+    return any(field in route_doc for field in INSTANCE_SCRIPT_EXECUTION_LANE_ROUTE_FIELDS)
+
+
 def orchestration_required(task_doc: dict[str, Any]) -> bool:
     return any(route_uses_instance_scripts(route_doc) for route_doc in task_type_routes(task_doc).values())
+
+
+def execution_lane_required(task_doc: dict[str, Any]) -> bool:
+    return any(route_uses_execution_lanes(route_doc) for route_doc in task_type_routes(task_doc).values())
 
 
 def resolve_manifest_path(pack_root: Path) -> Path:
@@ -324,6 +357,126 @@ def _validate_string_list_field(value: Any, *, field_name: str) -> tuple[list[st
     return tokens, issues
 
 
+def _validate_machine_token_field(value: Any, *, field_name: str) -> tuple[str, list[str]]:
+    token = str(value or "").strip()
+    if not token:
+        return "", [f"{field_name}_missing"]
+    if not TOKEN_RE.match(token):
+        return token, [f"{field_name}_not_machine_token:{token}"]
+    return token, []
+
+
+def _normalize_allowed_execution_lanes(value: Any) -> tuple[list[dict[str, Any]], list[str]]:
+    if not isinstance(value, list):
+        return [], ["allowed_execution_lanes_not_list"]
+    lanes: list[dict[str, Any]] = []
+    issues: list[str] = []
+    seen_lane_ids: set[str] = set()
+    for idx, row in enumerate(value):
+        if not isinstance(row, dict):
+            issues.append(f"allowed_execution_lanes_row_not_object:index={idx}")
+            continue
+        lane_row_issues: list[str] = []
+        lane_id, lane_id_issues = _validate_machine_token_field(row.get("lane_id"), field_name="lane_id")
+        lane_row_issues.extend(lane_id_issues)
+        lane_class, lane_class_issues = _validate_machine_token_field(
+            row.get("lane_class"),
+            field_name="lane_class",
+        )
+        lane_row_issues.extend(lane_class_issues)
+        lane_source, lane_source_issues = _validate_machine_token_field(
+            row.get("lane_source"),
+            field_name="lane_source",
+        )
+        lane_row_issues.extend(lane_source_issues)
+        endpoint_class, endpoint_class_issues = _validate_machine_token_field(
+            row.get("endpoint_class"),
+            field_name="endpoint_class",
+        )
+        lane_row_issues.extend(endpoint_class_issues)
+        if lane_id:
+            if lane_id in seen_lane_ids:
+                lane_row_issues.append(f"lane_id_duplicate:{lane_id}")
+            seen_lane_ids.add(lane_id)
+        lanes.append(
+            {
+                "lane_id": lane_id,
+                "lane_class": lane_class,
+                "lane_source": lane_source,
+                "endpoint_class": endpoint_class,
+                "lane_status": STATUS_FAIL_REQUIRED if lane_row_issues else STATUS_PASS_REQUIRED,
+                "stale_reasons": lane_row_issues,
+            }
+        )
+        issues.extend(f"allowed_execution_lanes[{idx}]:{reason}" for reason in lane_row_issues)
+    if not lanes:
+        issues.append("allowed_execution_lanes_empty")
+    return lanes, issues
+
+
+def _normalize_lane_admission_policy(value: Any) -> tuple[dict[str, Any], list[str]]:
+    if not isinstance(value, dict):
+        return {}, ["lane_admission_policy_not_object"]
+    issues: list[str] = []
+    mode = str(value.get("mode", "")).strip()
+    if mode not in ALLOWED_LANE_ADMISSION_POLICY_MODES:
+        issues.append(f"lane_admission_policy_mode_invalid:{mode or 'missing'}")
+    require_pass_status = value.get("require_pass_status")
+    if not isinstance(require_pass_status, bool):
+        issues.append("lane_admission_policy_require_pass_status_not_bool")
+    return {
+        "mode": mode,
+        "require_pass_status": bool(require_pass_status) if isinstance(require_pass_status, bool) else False,
+    }, issues
+
+
+def validate_route_execution_lane_contract(route_doc: dict[str, Any]) -> dict[str, Any]:
+    if not route_uses_execution_lanes(route_doc):
+        return {
+            "status": STATUS_SKIPPED_NOT_REQUIRED,
+            "lane_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "allowed_execution_lanes": [],
+            "lane_admission_policy": {},
+            "lane_receipt_pattern": "",
+            "lane_block_on_fallback": False,
+            "stale_reasons": [],
+        }
+
+    issues: list[str] = []
+    missing_fields = [
+        field for field in INSTANCE_SCRIPT_EXECUTION_LANE_ROUTE_FIELDS if field not in route_doc
+    ]
+    issues.extend(f"missing_field:{field}" for field in missing_fields)
+
+    allowed_execution_lanes, lane_issues = _normalize_allowed_execution_lanes(
+        route_doc.get("allowed_execution_lanes")
+    )
+    issues.extend(lane_issues)
+
+    lane_admission_policy, policy_issues = _normalize_lane_admission_policy(
+        route_doc.get("lane_admission_policy")
+    )
+    issues.extend(policy_issues)
+
+    lane_receipt_pattern = str(route_doc.get("lane_receipt_pattern", "")).strip()
+    issues.extend(validate_receipt_pattern(lane_receipt_pattern))
+
+    lane_block_on_fallback = route_doc.get("lane_block_on_fallback")
+    if not isinstance(lane_block_on_fallback, bool):
+        issues.append("lane_block_on_fallback_not_bool")
+
+    status = STATUS_PASS_REQUIRED if not issues else STATUS_FAIL_REQUIRED
+    return {
+        "status": status,
+        "lane_contract_status": status,
+        "allowed_execution_lanes": allowed_execution_lanes,
+        "lane_admission_policy": lane_admission_policy,
+        "lane_receipt_pattern": lane_receipt_pattern,
+        "lane_block_on_fallback": bool(lane_block_on_fallback) if isinstance(lane_block_on_fallback, bool) else False,
+        "stale_reasons": issues,
+    }
+
+
 def validate_route_script_receipt_doc(
     *,
     receipt_doc: dict[str, Any],
@@ -427,6 +580,109 @@ def validate_route_script_receipt_doc(
         "status": STATUS_PASS_REQUIRED if not issues else STATUS_FAIL_REQUIRED,
         "receipt_family": receipt_family,
         "expected_receipt_family": expected_family,
+        "stale_reasons": issues,
+    }
+
+
+def validate_route_execution_lane_receipt_doc(
+    *,
+    receipt_doc: dict[str, Any],
+    receipt_path: Path,
+    pack_root: Path,
+    identity_id: str,
+    route_name: str,
+    script_id: str,
+    lane_contract: dict[str, Any],
+    allow_external_receipt: bool = False,
+) -> dict[str, Any]:
+    issues: list[str] = []
+    if str(receipt_doc.get("schema_version", "")).strip() != "v1":
+        issues.append("lane_receipt_schema_version_invalid")
+    receipt_family = str(receipt_doc.get("receipt_family", "")).strip()
+    if receipt_family != INSTANCE_SCRIPT_ADMISSION_RECEIPT_FAMILY:
+        issues.append(
+            "lane_receipt_family_invalid:"
+            f"{receipt_family or 'missing'}!={INSTANCE_SCRIPT_ADMISSION_RECEIPT_FAMILY}"
+        )
+    if str(receipt_doc.get("identity_id", "")).strip() != str(identity_id or "").strip():
+        issues.append("lane_receipt_identity_id_mismatch")
+    if str(receipt_doc.get("route_selected", "")).strip() != str(route_name or "").strip():
+        issues.append("lane_receipt_route_selected_mismatch")
+    if str(receipt_doc.get("script_id", "")).strip() != str(script_id or "").strip():
+        issues.append("lane_receipt_script_id_mismatch")
+
+    if not allow_external_receipt:
+        runtime_root = (pack_root / "runtime").resolve()
+        if not path_within(receipt_path, runtime_root):
+            issues.append("lane_receipt_path_outside_runtime_root")
+
+    lane_id, lane_id_issues = _validate_machine_token_field(receipt_doc.get("lane_id"), field_name="lane_id")
+    issues.extend("lane_receipt_" + reason for reason in lane_id_issues)
+    lane_class, lane_class_issues = _validate_machine_token_field(
+        receipt_doc.get("lane_class"),
+        field_name="lane_class",
+    )
+    issues.extend("lane_receipt_" + reason for reason in lane_class_issues)
+    lane_source, lane_source_issues = _validate_machine_token_field(
+        receipt_doc.get("lane_source"),
+        field_name="lane_source",
+    )
+    issues.extend("lane_receipt_" + reason for reason in lane_source_issues)
+    lane_endpoint_class, lane_endpoint_class_issues = _validate_machine_token_field(
+        receipt_doc.get("lane_endpoint_class"),
+        field_name="lane_endpoint_class",
+    )
+    issues.extend("lane_receipt_" + reason for reason in lane_endpoint_class_issues)
+
+    lane_admission_status = str(receipt_doc.get("lane_admission_status", "")).strip()
+    if not lane_admission_status:
+        issues.append("lane_receipt_lane_admission_status_missing")
+
+    fallback_used = receipt_doc.get("fallback_used")
+    if not isinstance(fallback_used, bool):
+        issues.append("lane_receipt_fallback_used_not_bool")
+
+    declared_lanes = {
+        str(row.get("lane_id", "")).strip(): row
+        for row in (lane_contract.get("allowed_execution_lanes") or [])
+        if str(row.get("lane_id", "")).strip()
+    }
+    declared_lane = declared_lanes.get(lane_id) if lane_id else None
+    if lane_id and declared_lane is None:
+        issues.append(f"lane_receipt_lane_id_undeclared:{lane_id}")
+    elif declared_lane is not None:
+        if lane_class and lane_class != str(declared_lane.get("lane_class", "")).strip():
+            issues.append("lane_receipt_lane_class_mismatch")
+        if lane_source and lane_source != str(declared_lane.get("lane_source", "")).strip():
+            issues.append("lane_receipt_lane_source_mismatch")
+        if lane_endpoint_class and lane_endpoint_class != str(declared_lane.get("endpoint_class", "")).strip():
+            issues.append("lane_receipt_lane_endpoint_class_mismatch")
+
+    lane_policy = lane_contract.get("lane_admission_policy") or {}
+    if (
+        isinstance(lane_policy, dict)
+        and bool(lane_policy.get("require_pass_status"))
+        and lane_admission_status != STATUS_PASS_REQUIRED
+    ):
+        issues.append(f"lane_receipt_lane_admission_status_not_pass_required:{lane_admission_status}")
+
+    if lane_contract.get("lane_block_on_fallback") is True and fallback_used is True:
+        issues.append("lane_receipt_fallback_blocked")
+
+    missing_minimum_fields = [
+        field for field in INSTANCE_SCRIPT_EXECUTION_LANE_RECEIPT_FIELDS if field not in receipt_doc
+    ]
+    if missing_minimum_fields:
+        issues.append("lane_receipt_missing_fields:" + ",".join(sorted(set(missing_minimum_fields))))
+
+    return {
+        "status": STATUS_PASS_REQUIRED if not issues else STATUS_FAIL_REQUIRED,
+        "receipt_family": receipt_family,
+        "lane_id": lane_id,
+        "lane_class": lane_class,
+        "lane_source": lane_source,
+        "lane_endpoint_class": lane_endpoint_class,
+        "lane_admission_status": lane_admission_status,
         "stale_reasons": issues,
     }
 
@@ -727,6 +983,180 @@ def build_route_receipt_join_matrix(
             row["stale_reasons"] = list(validation.get("stale_reasons") or [])
             row["diagnostic_label"] = "ready" if row["receipt_validation_status"] == STATUS_PASS_REQUIRED else "receipt_invalid"
             if row["receipt_validation_status"] != STATUS_PASS_REQUIRED:
+                blocking_reasons.extend(f"{route_name}:{script_id}:{reason}" for reason in row["stale_reasons"])
+            route_rows.append(row)
+
+    status = STATUS_PASS_REQUIRED if not blocking_reasons else STATUS_FAIL_REQUIRED
+    if checked_count == 0:
+        status = STATUS_SKIPPED_NOT_REQUIRED
+    return {
+        "status": status,
+        "route_total_count": len(route_rows),
+        "route_checked_count": checked_count,
+        "route_observed_count": observed_count,
+        "route_rows": route_rows,
+        "stale_reasons": blocking_reasons,
+    }
+
+
+def build_route_execution_lane_matrix(
+    *,
+    pack_root: Path,
+    task_doc: dict[str, Any],
+    manifest_validation: dict[str, Any],
+    route_validation: dict[str, Any],
+    identity_id: str,
+    require_observed: bool = False,
+    receipt_override: str = "",
+    target_route: str = "",
+    target_script_id: str = "",
+) -> dict[str, Any]:
+    routes = task_type_routes(task_doc)
+    target_route_token = str(target_route or "").strip()
+    target_script_token = str(target_script_id or "").strip()
+    route_rows: list[dict[str, Any]] = []
+    blocking_reasons: list[str] = []
+    observed_count = 0
+    checked_count = 0
+
+    for route_row in route_validation.get("route_rows") or []:
+        if not isinstance(route_row, dict):
+            continue
+        route_name = str(route_row.get("route", "")).strip()
+        if not route_name or not bool(route_row.get("adopted")):
+            continue
+        if target_route_token and route_name != target_route_token:
+            continue
+        route_doc = routes.get(route_name) or {}
+        resolved_script_ids = [
+            str(token).strip()
+            for token in (route_row.get("resolved_script_ids") or [])
+            if str(token).strip()
+        ]
+        if route_row.get("route_ready") is not True:
+            for script_id in resolved_script_ids or [""]:
+                if target_script_token and script_id and script_id != target_script_token:
+                    continue
+                row_copy = {
+                    "route": route_name,
+                    "script_id": script_id,
+                    "lane_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
+                    "lane_receipt_validation_status": STATUS_SKIPPED_NOT_REQUIRED,
+                    "diagnostic_label": "orchestration_not_ready",
+                    "receipt_observed_count": 0,
+                    "latest_lane_receipt_path": "",
+                    "allowed_execution_lanes": [],
+                    "lane_admission_policy": {},
+                    "lane_receipt_pattern": "",
+                    "lane_block_on_fallback": False,
+                    "stale_reasons": [],
+                }
+                route_rows.append(row_copy)
+            continue
+
+        for script_id in resolved_script_ids:
+            if target_script_token and script_id != target_script_token:
+                continue
+            row: dict[str, Any] = {
+                "route": route_name,
+                "script_id": script_id,
+                "lane_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
+                "lane_receipt_validation_status": STATUS_SKIPPED_NOT_REQUIRED,
+                "diagnostic_label": "lane_contract_not_required",
+                "receipt_observed_count": 0,
+                "latest_lane_receipt_path": "",
+                "allowed_execution_lanes": [],
+                "lane_admission_policy": {},
+                "lane_receipt_pattern": "",
+                "lane_block_on_fallback": False,
+                "stale_reasons": [],
+            }
+            if not route_uses_execution_lanes(route_doc):
+                route_rows.append(row)
+                continue
+
+            checked_count += 1
+            lane_contract = validate_route_execution_lane_contract(route_doc)
+            row["lane_contract_status"] = str(
+                lane_contract.get("lane_contract_status", STATUS_FAIL_REQUIRED)
+            ).strip() or STATUS_FAIL_REQUIRED
+            row["allowed_execution_lanes"] = list(lane_contract.get("allowed_execution_lanes") or [])
+            row["lane_admission_policy"] = dict(lane_contract.get("lane_admission_policy") or {})
+            row["lane_receipt_pattern"] = str(lane_contract.get("lane_receipt_pattern", "")).strip()
+            row["lane_block_on_fallback"] = bool(lane_contract.get("lane_block_on_fallback"))
+            if row["lane_contract_status"] != STATUS_PASS_REQUIRED:
+                row["lane_receipt_validation_status"] = STATUS_FAIL_REQUIRED
+                row["diagnostic_label"] = "lane_contract_invalid"
+                row["stale_reasons"] = list(lane_contract.get("stale_reasons") or [])
+                blocking_reasons.extend(f"{route_name}:{script_id}:{reason}" for reason in row["stale_reasons"])
+                route_rows.append(row)
+                continue
+
+            receipt_paths, path_issues = _resolve_receipt_paths(
+                pack_root=pack_root,
+                receipt_pattern=row["lane_receipt_pattern"],
+                route_name=route_name,
+                script_id=script_id,
+                receipt_override=receipt_override,
+            )
+            if path_issues:
+                row["lane_receipt_validation_status"] = STATUS_FAIL_REQUIRED
+                row["diagnostic_label"] = "lane_receipt_glob_failed"
+                row["stale_reasons"] = list(path_issues)
+                blocking_reasons.extend(f"{route_name}:{script_id}:{reason}" for reason in row["stale_reasons"])
+                route_rows.append(row)
+                continue
+            row["receipt_observed_count"] = len(receipt_paths)
+            if not receipt_paths:
+                if require_observed:
+                    row["lane_receipt_validation_status"] = STATUS_FAIL_REQUIRED
+                    row["diagnostic_label"] = "lane_receipt_missing"
+                    row["stale_reasons"] = ["lane_receipt_not_observed"]
+                    blocking_reasons.append(f"{route_name}:{script_id}:lane_receipt_not_observed")
+                else:
+                    row["diagnostic_label"] = "lane_receipt_not_observed_yet"
+                route_rows.append(row)
+                continue
+
+            observed_count += 1
+            latest_receipt = receipt_paths[0]
+            row["latest_lane_receipt_path"] = str(latest_receipt)
+            try:
+                receipt_doc = load_json(latest_receipt)
+            except Exception as exc:
+                row["lane_receipt_validation_status"] = STATUS_FAIL_REQUIRED
+                row["diagnostic_label"] = "lane_receipt_invalid_json"
+                row["stale_reasons"] = [f"lane_receipt_invalid_json:{exc}"]
+                blocking_reasons.append(f"{route_name}:{script_id}:lane_receipt_invalid_json")
+                route_rows.append(row)
+                continue
+
+            validation = validate_route_execution_lane_receipt_doc(
+                receipt_doc=receipt_doc,
+                receipt_path=latest_receipt,
+                pack_root=pack_root,
+                identity_id=identity_id,
+                route_name=route_name,
+                script_id=script_id,
+                lane_contract=lane_contract,
+                allow_external_receipt=bool(str(receipt_override or "").strip()),
+            )
+            row["lane_receipt_validation_status"] = str(
+                validation.get("status", STATUS_FAIL_REQUIRED)
+            ).strip() or STATUS_FAIL_REQUIRED
+            row["observed_lane_id"] = str(validation.get("lane_id", "")).strip()
+            row["observed_lane_class"] = str(validation.get("lane_class", "")).strip()
+            row["observed_lane_source"] = str(validation.get("lane_source", "")).strip()
+            row["observed_lane_endpoint_class"] = str(validation.get("lane_endpoint_class", "")).strip()
+            row["observed_lane_admission_status"] = str(
+                validation.get("lane_admission_status", "")
+            ).strip()
+            row["observed_receipt_family"] = str(validation.get("receipt_family", "")).strip()
+            row["stale_reasons"] = list(validation.get("stale_reasons") or [])
+            row["diagnostic_label"] = (
+                "ready" if row["lane_receipt_validation_status"] == STATUS_PASS_REQUIRED else "lane_receipt_invalid"
+            )
+            if row["lane_receipt_validation_status"] != STATUS_PASS_REQUIRED:
                 blocking_reasons.extend(f"{route_name}:{script_id}:{reason}" for reason in row["stale_reasons"])
             route_rows.append(row)
 

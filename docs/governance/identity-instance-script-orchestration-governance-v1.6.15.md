@@ -1,8 +1,8 @@
 # Identity Instance Script Orchestration Governance (v1.6.15)
 
-Status: Active (shared validator/probe/consumer landing in place, 2026-03-21; cross-pack adoption rollout still in progress)  
+Status: Active (shared validator/probe/consumer landing in place, including execution-lane admission governance, 2026-03-21; cross-pack adoption rollout still in progress)  
 Layer: protocol  
-Scope: route -> instance-script declarative join, pack-local script manifest, lower-capability dependency join, and instance-script execution receipt family
+Scope: route -> instance-script declarative join, route -> execution-lane admission, pack-local script manifest, lower-capability dependency join, and instance-script receipt families
 
 Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script orchestration governance.
 
@@ -63,7 +63,7 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
 6. `script_kind` exists to distinguish orchestration roles such as entry helpers, workers, emitters, probes, and recovery helpers without creating extra executable roots.
 7. `default_receipt_pattern` must point only at governed runtime-owned receipt families; source files under `scripts/` are never the receipt sink.
 
-### 2.3 Canonical route-to-script additive contract
+### 2.3 Canonical route-to-script / execution-lane additive contract
 
 1. Route-to-script binding lives inside `CURRENT_TASK.json` under the existing `capability_orchestration_contract.task_type_routes.<route>` family.
 2. The frozen additive route fields in this stream are:
@@ -71,6 +71,10 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
    - `fallback_instance_scripts`
    - `script_preconditions`
    - `script_receipt_pattern`
+   - `allowed_execution_lanes`
+   - `lane_admission_policy`
+   - `lane_receipt_pattern`
+   - `lane_block_on_fallback`
 3. `primary_instance_scripts` and `fallback_instance_scripts` contain only `script_id` values that resolve through `scripts/INSTANCE_SCRIPT_MANIFEST.json`.
 4. A single route may bind multiple role-distinct `script_id` values when the flow legitimately separates probe/render/emit/recovery responsibilities; role separation must stay explicit in the manifest and receipt expectations rather than hidden in prose.
 5. `script_preconditions` is the machine-readable admission surface for script execution and may constrain at least these condition families:
@@ -79,10 +83,19 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
    - `source_layer`
    - `required_contracts`
    - `gate_policies`
-6. `script_receipt_pattern` defines the route-level expected receipt family and may narrow or specialize the manifest default, but it must stay runtime-relative and machine-readable.
-7. Route admission may not silently discover scripts by filename, by operator convention, or by workspace-global helper directories.
-8. When a route declares `primary_instance_scripts`, route readiness depends on those script ids resolving and on `script_preconditions` passing.
-9. Route-scoped admission must remain machine-evaluable against only the lower-capability dependencies declared on that route unless some stronger activation policy explicitly freezes a stricter union rule; unrelated route dependencies are not implicit blockers by default.
+6. `script_receipt_pattern` defines the route-level expected execution/emit/recovery receipt family and may narrow or specialize the manifest default, but it must stay runtime-relative and machine-readable.
+7. `allowed_execution_lanes` contains only machine-readable lane rows; each row freezes:
+   - `lane_id`
+   - `lane_class`
+   - `lane_source`
+   - `endpoint_class`
+8. `lane_admission_policy` freezes how route admission interprets declared lanes and whether admission receipts must report a passing lane-admission result.
+9. `lane_receipt_pattern` defines the route-level expected admission receipt family for the selected lane and must stay runtime-relative and machine-readable.
+10. `lane_block_on_fallback` is the explicit fail-close switch for routes that must not silently fall back to undeclared manual/editor/webhook execution lanes once a declared lane contract exists.
+11. Route admission may not silently discover scripts or execution lanes by filename, operator convention, ambient browser/editor state, or workspace-global helper directories.
+12. When a route declares `primary_instance_scripts`, route readiness depends on those script ids resolving and on `script_preconditions` passing.
+13. When a route declares execution-lane governance, route readiness additionally depends on the lane contract staying machine-evaluable without narrative-only exceptions.
+14. Route-scoped admission must remain machine-evaluable against only the lower-capability dependencies declared on that route unless some stronger activation policy explicitly freezes a stricter union rule; unrelated route dependencies are not implicit blockers by default.
 
 ### 2.4 Lower-capability dependency join is explicit, not implicit
 
@@ -100,7 +113,7 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
 
 1. `v1.6.15` freezes receipt-family classes for route-targeted instance-script execution.
 2. The canonical family is:
-   - `route_admission_receipt`
+   - `instance_script_admission_receipt`
    - `instance_script_execution_receipt`
    - `instance_script_emit_receipt`
    - `instance_script_recovery_receipt`
@@ -109,10 +122,12 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
 5. Receipt families must be reusable across packs; hardcoded per-pack absolute output paths are non-canonical.
 6. A later implementation stream may freeze exact file schemas and validators, but it must preserve these receipt-family roles.
 7. Non-normative interpretation example: a probe/helper script may satisfy `instance_script_execution_receipt` before any host-visible receipt exists, while a later emitter script satisfies `instance_script_emit_receipt` and may carry delegated references to inherited host-visible or relay receipt families.
-8. Receipt-family projection should remain compatible with the route evidence schema already carried by `capability_orchestration_contract`; at minimum, `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts` must remain machine-projectable rather than recoverable only from free-form narrative.
-9. If a governed route produces user-visible final text, that route must bind to at least one pack-local emitter script through `primary_instance_scripts` or `fallback_instance_scripts`.
-10. Direct free-form assistant text is not a substitute for route-bound script emission when a route claims governed output.
-11. Such governed-output routes must declare an emit-family receipt through `script_receipt_pattern` or the manifest default so final-output governance remains machine-checkable before any outer relay/visible-surface stage begins.
+8. Admission-family receipts must preserve machine-readable lane provenance; at minimum, `lane_id`, `lane_class`, `lane_source`, `lane_endpoint_class`, `lane_admission_status`, and `fallback_used` must remain machine-projectable rather than narrative-only.
+9. Receipt-family projection should remain compatible with the route evidence schema already carried by `capability_orchestration_contract`; at minimum, `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts` must remain machine-projectable rather than recoverable only from free-form narrative.
+10. Execution-family receipts do not substitute for admission-family receipts when a route explicitly freezes execution-lane governance.
+11. If a governed route produces user-visible final text, that route must bind to at least one pack-local emitter script through `primary_instance_scripts` or `fallback_instance_scripts`.
+12. Direct free-form assistant text is not a substitute for route-bound script emission when a route claims governed output.
+13. Such governed-output routes must declare an emit-family receipt through `script_receipt_pattern` or the manifest default so final-output governance remains machine-checkable before any outer relay/visible-surface stage begins.
 
 ### 2.6 Failure-attribution ladder (frozen)
 
@@ -126,7 +141,7 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
 8. A topology-ready, exit-ready pack that has not yet adopted `scripts/INSTANCE_SCRIPT_MANIFEST.json` or the additive route fields is an instance-adoption gap for this stream, not a reopen of `v1.6.13` or `v1.6.14`.
 9. A route blocked only by skills, MCP servers, or tools that are not declared on that route is a capability-activation policy or wiring defect, not evidence that route/script semantics are wrong.
 10. A route/script receipt family that omits `route_selected` / `skills_used` / `mcp_tools_used` provenance is a receipt-projection gap; teams must repair the receipt model rather than bypass it with narrative-only explanations.
-11. Review-time diagnostic labels should descend in this order unless a later machine gate freezes a stricter variant: `route_contract_missing`, `manifest_binding_missing`, `script_precondition_blocked`, `mcp_capability_unavailable`, `tool_pipeline_failure`, `script_receipt_mismatch`, `outer_delivery_gap`.
+11. Review-time diagnostic labels should descend in this order unless a later machine gate freezes a stricter variant: `route_contract_missing`, `manifest_binding_missing`, `script_precondition_blocked`, `lane_admission_mismatch`, `mcp_capability_unavailable`, `tool_pipeline_failure`, `script_receipt_mismatch`, `outer_delivery_gap`.
 12. Freezing that diagnostic order does not claim that all labels already have protocol-owned validators today; it prevents review from collapsing lower-layer outages back into route/script semantics while implementation is still landing.
 
 ### 2.7 Canonical protocol implementation targets
@@ -135,6 +150,7 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
    - `scripts/validate_identity_instance_script_orchestration.py`
    - `scripts/validate_instance_script_manifest.py`
    - `scripts/validate_route_script_receipt_join.py`
+   - `scripts/validate_route_execution_lane_admission.py`
    - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
    - `scripts/release_readiness_check.py`
    - `scripts/validate_identity_capability_activation.py`
@@ -185,7 +201,7 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
 
 ## 4) Closure scope and explicit non-goals
 
-1. This stream freezes route-to-script declarative binding, the canonical pack-local script manifest path, and the execution receipt-family model needed to make pack-root `scripts/` a first-class orchestration unit.
+1. This stream freezes route-to-script declarative binding, route-to-execution-lane admission, the canonical pack-local script manifest path, and the receipt-family model needed to make pack-root `scripts/` a first-class orchestration unit.
 2. This stream does not create new pack-root directories or reopen `v1.6.13` topology semantics.
 3. This stream does not reopen `v1.6.14` launcher/install/startup semantics.
 4. This stream does not redefine Codex product behavior, MCP transport semantics, or host-visible final-surface promotion rules.
@@ -222,15 +238,17 @@ Any implementation that claims to follow `v1.6.15` should satisfy this checklist
 
 1. `v1.6.15` promotion beyond contract freeze still requires more than documents.
 2. The following implementation elements are now landed:
-   - protocol-owned validators for manifest integrity, route/script join, and route/script-to-receipt join,
+   - protocol-owned validators for manifest integrity, route/script join, route/script-to-receipt join, and route-to-execution-lane admission,
    - positive and negative probes through `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`,
    - `scripts/release_readiness_check.py` consumption of those validators,
    - `scripts/validate_identity_capability_activation.py` awareness of instance scripts as a first-class route surface,
    - `scripts/create_identity_pack.py`, `scripts/repair_contract_backfill.py`, and `scripts/identity_creator.py` consumption of the same contract family.
 3. Full implementation closure still requires all of the following together:
    - proof packs adopt `scripts/INSTANCE_SCRIPT_MANIFEST.json` and the additive route fields without topology drift,
+   - proof packs adopt `allowed_execution_lanes`, `lane_admission_policy`, `lane_receipt_pattern`, and `lane_block_on_fallback` where external/manual/editor/webhook fallback risk exists,
    - target packs adopt the same shared consumer path through create/backfill/update flows rather than per-pack ad hoc rollout,
    - route-scoped capability activation remains reusable without unrelated-route union blocking unless a stronger activation policy explicitly requires it,
+   - lane-admission receipts keep `lane_id`, `lane_class`, `lane_source`, `lane_endpoint_class`, `lane_admission_status`, and `fallback_used` machine-visible under live pack execution,
    - receipt-family projection keeps route provenance compatible with `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts` under live pack execution,
    - future admission/execution/recovery receipt specializations, if introduced, stay compatible with the landed shared validator family rather than forking it.
 4. Until those conditions are proven, the correct interpretation is:

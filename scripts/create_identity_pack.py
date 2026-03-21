@@ -285,6 +285,7 @@ INSTANCE_SCRIPT_MANIFEST_RELATIVE_PATH = "scripts/INSTANCE_SCRIPT_MANIFEST.json"
 INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID = "scripts/validate_instance_script_manifest.py"
 INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID = "scripts/validate_identity_instance_script_orchestration.py"
 INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID = "scripts/validate_route_script_receipt_join.py"
+INSTANCE_SCRIPT_EXECUTION_LANE_VALIDATOR_ID = "scripts/validate_route_execution_lane_admission.py"
 PROVIDER_BINDINGS_TEMPLATE_RELATIVE_PATH = (
     "identity/protocol/plugins/templates/provider-bindings.local.template.yaml"
 )
@@ -5558,6 +5559,7 @@ def _default_required_checks() -> list[str]:
         INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID,
         INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID,
         INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID,
+        INSTANCE_SCRIPT_EXECUTION_LANE_VALIDATOR_ID,
         "scripts/validate_prompt_bootstrap_capability.py",
         "scripts/validate_prompt_capability_matrix.py",
         "scripts/validate_refresh_strict_business_interference.py",
