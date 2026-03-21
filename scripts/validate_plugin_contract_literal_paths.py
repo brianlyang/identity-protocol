@@ -5,6 +5,7 @@ import argparse
 import json
 import re
 from pathlib import Path, PurePosixPath
+from repo_root_resolution_common import resolve_repo_root
 from typing import Any
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -119,11 +120,11 @@ def _iter_scan_files(repo_root: Path) -> list[Path]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Fail-close when plugin contract/profile literal paths are non-canonical.")
-    ap.add_argument("--repo-root", default=".")
+    ap.add_argument("--repo-root", default="")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
-    repo_root = Path(args.repo_root).expanduser().resolve()
+    repo_root = resolve_repo_root(args.repo_root, start=__file__)
     violations: list[dict[str, Any]] = []
 
     for path in _iter_scan_files(repo_root):

@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from repo_root_resolution_common import resolve_repo_root
 from typing import Any
 
 from response_stamp_common import (
@@ -135,12 +136,12 @@ def _resolve_message_headstamp_requirement(payload: dict[str, Any]) -> dict[str,
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate shared operator response-stamp envelope.")
     ap.add_argument("--stamp-json", required=True)
-    ap.add_argument("--repo-root", default=".")
+    ap.add_argument("--repo-root", default="")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
     stamp_path = Path(args.stamp_json).expanduser().resolve()
-    repo_root = Path(args.repo_root).expanduser().resolve()
+    repo_root = resolve_repo_root(args.repo_root, start=__file__)
     if not stamp_path.exists():
         print(f"[FAIL] stamp json not found: {stamp_path}")
         return 2

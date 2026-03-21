@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from repo_root_resolution_common import resolve_repo_root
 from typing import Any
 
 import yaml
@@ -62,13 +63,13 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate semantic term registry contract and forbidden phrase hygiene.")
-    ap.add_argument("--repo-root", default=".")
+    ap.add_argument("--repo-root", default="")
     ap.add_argument("--registry", default=DEFAULT_REGISTRY_ENTRY)
     ap.add_argument("--stream-registry", default=DEFAULT_STREAM_REGISTRY_ENTRY)
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
-    repo_root = Path(args.repo_root).expanduser().resolve()
+    repo_root = resolve_repo_root(args.repo_root, start=__file__)
     entry_path = (repo_root / str(args.registry)).resolve()
     registry_path, registry_active_file, registry_alias_error = _resolve_current_yaml_alias(repo_root, str(args.registry))
 

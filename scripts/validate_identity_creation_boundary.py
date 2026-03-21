@@ -5,6 +5,7 @@ import argparse
 import subprocess
 import tempfile
 from pathlib import Path
+from repo_root_resolution_common import resolve_repo_root
 from typing import Any
 
 import yaml
@@ -40,10 +41,10 @@ def main() -> int:
     ap = argparse.ArgumentParser(
         description="Boundary regression for create_identity_pack.py (repo fixture escape-hatch hardening)."
     )
-    ap.add_argument("--repo-root", default=".")
+    ap.add_argument("--repo-root", default="")
     args = ap.parse_args()
 
-    repo_root = Path(args.repo_root).expanduser().resolve()
+    repo_root = resolve_repo_root(args.repo_root, start=__file__)
     create_script = repo_root / "scripts" / "create_identity_pack.py"
     if not create_script.exists():
         print(f"[FAIL] create script not found: {create_script}")

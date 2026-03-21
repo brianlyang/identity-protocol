@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from repo_root_resolution_common import resolve_repo_root
 from typing import Any
 
 import yaml
@@ -90,13 +91,13 @@ def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[P
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate layer-targeted gate profile mapping for strict fail-close safety.")
-    ap.add_argument("--repo-root", default=".")
+    ap.add_argument("--repo-root", default="")
     ap.add_argument("--profile-file", default=DEFAULT_PROFILE_FILE)
     ap.add_argument("--contract-mapping", default="")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
-    repo_root = Path(args.repo_root).expanduser().resolve()
+    repo_root = resolve_repo_root(args.repo_root, start=__file__)
     profile_entry_path = (repo_root / str(args.profile_file)).resolve()
     profile_path, profile_active_file, profile_alias_error = _resolve_current_yaml_alias(
         repo_root, str(args.profile_file)

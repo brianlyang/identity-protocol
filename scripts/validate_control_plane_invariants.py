@@ -5,6 +5,7 @@ import argparse
 import json
 import re
 from pathlib import Path
+from repo_root_resolution_common import resolve_repo_root
 from typing import Any
 
 import yaml
@@ -383,7 +384,7 @@ def _validate_mapping_alias_contract(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate control-plane invariants (bundle/mapping parity + fail-close plugin wiring).")
-    parser.add_argument("--repo-root", default=".")
+    parser.add_argument("--repo-root", default="")
     parser.add_argument(
         "--invariants-file",
         default=CONTROL_PLANE_INVARIANTS_CURRENT_DEFAULT_REL,
@@ -427,7 +428,7 @@ def main() -> int:
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
-    repo_root = Path(args.repo_root).expanduser().resolve()
+    repo_root = resolve_repo_root(args.repo_root, start=__file__)
     invariants_configured_file = str(args.invariants_file)
     invariants_entry_path = (repo_root / invariants_configured_file).resolve()
     invariants_path, invariants_active_file, invariants_alias_error = _resolve_current_yaml_alias(

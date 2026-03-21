@@ -6,6 +6,7 @@ import json
 import re
 import subprocess
 from pathlib import Path
+from repo_root_resolution_common import resolve_repo_root
 from typing import Any
 
 import yaml
@@ -110,7 +111,7 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate stream scope semantic integrity against stream scope matrix.")
-    ap.add_argument("--repo-root", default=".")
+    ap.add_argument("--repo-root", default="")
     ap.add_argument("--base", default="")
     ap.add_argument("--head", default="")
     ap.add_argument("--stream-matrix", default=DEFAULT_STREAM_MATRIX_ENTRY)
@@ -119,7 +120,7 @@ def main() -> int:
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
-    repo_root = Path(args.repo_root).expanduser().resolve()
+    repo_root = resolve_repo_root(args.repo_root, start=__file__)
 
     payload: dict[str, Any] = {
         "stream_scope_semantic_integrity_status": STATUS_FAIL_REQUIRED,
@@ -140,6 +141,9 @@ def main() -> int:
         "contract_binding_path": "",
         "contract_binding_active_file": "",
         "contract_binding_alias_error": "",
+        "active_registry_stream_versions": [],
+        "missing_scope_rows": [],
+        "archived_doc_collisions": [],
         "touched_stream_versions": [],
         "touched_stream_docs": [],
         "changed_requirement_ids": [],
@@ -233,6 +237,7 @@ def main() -> int:
         return 1
 
     stream_docs_by_version: dict[str, set[str]] = {}
+    active_registry_paths: set[str] = set()
     for idx, row in enumerate(stream_rows):
         if not isinstance(row, dict):
             payload["violations"].append(f"stream_docs[{idx}]_not_object")
@@ -246,8 +251,10 @@ def main() -> int:
             rel = str(row.get(key_name, "")).strip().replace("\\", "/")
             if rel:
                 paths.add(rel)
+                active_registry_paths.add(rel)
         if paths:
             stream_docs_by_version.setdefault(stream_version, set()).update(paths)
+    payload["active_registry_stream_versions"] = sorted(stream_docs_by_version)
 
     scope_by_stream: dict[str, dict[str, Any]] = {}
     for idx, row in enumerate(matrix_rows):
@@ -259,6 +266,33 @@ def main() -> int:
             payload["violations"].append(f"matrix_streams[{idx}]_stream_version_invalid")
             continue
         scope_by_stream[stream_version] = row
+
+    missing_scope_rows = sorted(stream_version for stream_version in stream_docs_by_version if stream_version not in scope_by_stream)
+    payload["missing_scope_rows"] = missing_scope_rows
+
+    legacy_archival_docs = {
+        str(item).strip().replace("\\", "/")
+        for item in (stream_doc.get("legacy_archival_docs") if isinstance(stream_doc.get("legacy_archival_docs"), list) else [])
+        if str(item).strip()
+    }
+    mandatory_static_docs = {
+        str(item).strip().replace("\\", "/")
+        for item in (stream_doc.get("mandatory_static_docs") if isinstance(stream_doc.get("mandatory_static_docs"), list) else [])
+        if str(item).strip()
+    }
+    static_doc_alias_docs = {
+        str(item.get("doc", "")).strip().replace("\\", "/")
+        for item in (stream_doc.get("static_doc_required_alias_refs") if isinstance(stream_doc.get("static_doc_required_alias_refs"), list) else [])
+        if isinstance(item, dict) and str(item.get("doc", "")).strip()
+    }
+    archived_doc_collisions = sorted(
+        legacy_archival_docs.intersection(active_registry_paths.union(mandatory_static_docs).union(static_doc_alias_docs))
+    )
+    payload["archived_doc_collisions"] = archived_doc_collisions
+    if missing_scope_rows:
+        payload["violations"].append(f"stream_scope_rows_missing:{','.join(missing_scope_rows)}")
+    if archived_doc_collisions:
+        payload["violations"].append(f"archived_docs_in_active_registry:{','.join(archived_doc_collisions)}")
 
     changed_set = set(changed)
     touched_stream_versions: set[str] = set()
@@ -274,6 +308,11 @@ def main() -> int:
 
     contract_binding_rel = _relpath(contract_binding_path, repo_root=repo_root)
     contract_binding_changed = contract_binding_rel in changed_set
+
+    if payload["violations"]:
+        payload["stale_reasons"] = ["stream_scope_semantic_violation"]
+        _emit(payload, json_only=args.json_only)
+        return 1
 
     if not touched_stream_versions:
         if contract_binding_changed:
@@ -295,12 +334,6 @@ def main() -> int:
 
     stream_version = next(iter(touched_stream_versions))
     scope_row = scope_by_stream.get(stream_version)
-    if not isinstance(scope_row, dict):
-        payload["violations"].append(f"stream_scope_row_missing:{stream_version}")
-        payload["stale_reasons"] = ["stream_scope_row_missing"]
-        _emit(payload, json_only=args.json_only)
-        return 1
-
     allowed_ids = {
         str(x).strip().upper()
         for x in (scope_row.get("allowed_requirement_ids") if isinstance(scope_row.get("allowed_requirement_ids"), list) else [])

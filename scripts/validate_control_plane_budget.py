@@ -5,6 +5,7 @@ import argparse
 import json
 import re
 from pathlib import Path
+from repo_root_resolution_common import resolve_repo_root
 from typing import Any
 
 import yaml
@@ -227,7 +228,7 @@ def _parse_threshold(value: Any) -> tuple[int | None, int | None]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Fail-close control-plane growth budget and drift envelope.")
-    parser.add_argument("--repo-root", default=".")
+    parser.add_argument("--repo-root", default="")
     parser.add_argument(
         "--budget-file",
         default="identity/protocol/mappings/control-plane-budget.current.yaml",
@@ -235,7 +236,7 @@ def main() -> int:
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
-    repo_root = Path(args.repo_root).expanduser().resolve()
+    repo_root = resolve_repo_root(args.repo_root, start=__file__)
     budget_entry_path = (repo_root / str(args.budget_file)).resolve()
     budget_path, budget_active_file, budget_alias_error = _resolve_current_yaml_alias(
         repo_root, str(args.budget_file)

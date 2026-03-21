@@ -25,6 +25,7 @@ import json
 import re
 import subprocess
 from pathlib import Path
+from repo_root_resolution_common import resolve_repo_root
 from typing import Any
 
 import yaml
@@ -452,7 +453,7 @@ def _validate_strict_doc_evidence_allowlist(
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate governance/review evidence persistence policy.")
-    ap.add_argument("--repo-root", default=".")
+    ap.add_argument("--repo-root", default="")
     ap.add_argument("--base", default="", help="git diff base sha (optional)")
     ap.add_argument("--head", default="", help="git diff head sha (optional)")
     ap.add_argument(
@@ -463,7 +464,7 @@ def main() -> int:
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
-    repo_root = Path(args.repo_root).expanduser().resolve()
+    repo_root = resolve_repo_root(args.repo_root, start=__file__)
     violations: list[dict[str, Any]] = []
 
     by_mirror, by_tmp, manifest_files = _load_manifest_records(repo_root)
