@@ -42,6 +42,7 @@ Scope: canonical `docs/workbook/` directory contract for cross-stream issue gove
    - `scripts/validate_workbook_family_contract.py`.
 2. `identity/protocol/mappings/workbook-registry.v1.6.yaml` selects the authority pair and declares any optional workspace projection exports.
 3. External projections may exist for operator convenience, but current status authority remains inside `identity-protocol-local/docs/workbook/`.
+4. The active `v1.6` family keeps those projections in boundary-only mode, so stale outer mirror counts do not decide protocol release gates.
 
 ## Template lane
 

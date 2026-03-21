@@ -52,6 +52,12 @@ SECTION_OPEN = "What remains intentionally open:"
 SECTION_CLOSED = "What no longer remains open on this sheet:"
 PROJECTION_MODE_MARKER = "Projection mode: mirror-only"
 PROJECTION_BOUNDARY_MARKER = "Authority boundary: this file is projection-only"
+PROJECTION_FRESHNESS_BOUNDARY_ONLY = "boundary_markers_only"
+PROJECTION_FRESHNESS_PARITY_REQUIRED = "summary_snapshot_parity_required"
+ALLOWED_PROJECTION_FRESHNESS_MODES = {
+    PROJECTION_FRESHNESS_BOUNDARY_ONLY,
+    PROJECTION_FRESHNESS_PARITY_REQUIRED,
+}
 
 
 @dataclass(frozen=True)
@@ -487,6 +493,8 @@ def _validate_projection_export(
         "exists": export.path.exists(),
     }
     violations: list[str] = []
+    if export.freshness_mode not in ALLOWED_PROJECTION_FRESHNESS_MODES:
+        violations.append(f"projection_unknown_freshness_mode:{export.projection_role}:{export.freshness_mode}")
     if not export.path.exists():
         if export.presence_policy != "optional_projection":
             violations.append(f"missing_required_projection_doc:{export.projection_role}")
@@ -524,7 +532,7 @@ def _validate_projection_export(
         if docs_counts
         else None
     )
-    if export.freshness_mode == "summary_snapshot_parity_required":
+    if export.freshness_mode == PROJECTION_FRESHNESS_PARITY_REQUIRED:
         if projection_counts is None:
             violations.append(f"projection_freshness_missing_issue_counts:{export.projection_role}")
         elif projection_counts != (expected_issue_register_count, expected_deep_audit_issue_count):

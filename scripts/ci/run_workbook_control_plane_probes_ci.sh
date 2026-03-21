@@ -14,6 +14,7 @@ python3 - "${ROOT}" "${WORKSPACE_ROOT}" "${TMP_ROOT}" <<'PY'
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -29,6 +30,9 @@ ERR_STREAM_DOC_REGISTRY = "IP-IREG-009"
 WORKBOOK_REGISTRY_CURRENT = Path("identity/protocol/mappings/workbook-registry.current.yaml")
 STREAM_DOC_REGISTRY_CURRENT = Path("identity/protocol/mappings/stream-doc-registry.current.yaml")
 WORKBOOK_README = Path("docs/workbook/README.md")
+PROJECTION_FORBIDDEN_SENTENCE = "Authoritative current status: illegal mirror override"
+DOCS_CHECKED_LINE_RE = re.compile(r"docs checked:\s*\d+")
+ISSUE_REGISTER_COUNT_LINE_RE = re.compile(r"issue_register_issue_count=\d+")
 
 
 def load_yaml(path: Path) -> dict:
@@ -94,6 +98,12 @@ def materialize_file(probe_root: Path, source_root: Path, rel_file: Path) -> Non
         else:
             raise SystemExit(f"cannot materialize file over directory: {target}")
     shutil.copy2(source_root / rel_file, target)
+
+
+def materialize_workspace_file(probe_repo_root: Path, source_workspace_root: Path, rel_file: Path) -> Path:
+    probe_workspace_root = probe_repo_root.parent
+    materialize_file(probe_workspace_root, source_workspace_root, rel_file)
+    return probe_workspace_root / rel_file
 
 
 def build_probe_repo(
@@ -180,6 +190,21 @@ deep_audit_rel = Path(resolve_family_doc_path(family, "deep_audit_workbook_doc")
 if not workbook_family or not governance_doc_rel or not issue_register_rel or not deep_audit_rel:
     raise SystemExit("workbook registry missing family/governance/authority docs")
 template_doc_rels = template_static_doc_paths(workbook_versioned)
+projection_rows = family.get("projection_exports") or []
+if not isinstance(projection_rows, list) or not projection_rows:
+    raise SystemExit("active workbook family missing projection exports")
+issue_projection_rel = None
+for row in projection_rows:
+    if not isinstance(row, dict):
+        raise SystemExit("projection export row must be mapping")
+    if str(row.get("projection_role", "")).strip() == "issue_register_projection":
+        raw_path = str(row.get("path", "")).strip()
+        if not raw_path:
+            raise SystemExit("issue_register_projection missing path")
+        issue_projection_rel = Path(raw_path)
+        break
+if issue_projection_rel is None:
+    raise SystemExit("issue_register_projection row missing from workbook registry")
 
 stream_current = load_yaml(root / STREAM_DOC_REGISTRY_CURRENT)
 stream_versioned_rel = Path(str(stream_current.get("active_file", "")).strip())
@@ -289,6 +314,63 @@ if expected_template_stream_violation not in template_stream_violations:
         f"stream-doc-registry missing-template-static-doc violation missing: {template_stream_payload}"
     )
 
+stale_projection_repo = build_probe_repo(
+    tmp_root / "projection-boundary-only-stale-counts" / root.name,
+    root,
+    workspace_root,
+    materialized_paths=materialized_control_plane_paths,
+)
+stale_projection_path = materialize_workspace_file(stale_projection_repo, workspace_root, issue_projection_rel)
+stale_projection_text = stale_projection_path.read_text(encoding="utf-8")
+if not DOCS_CHECKED_LINE_RE.search(stale_projection_text) or not ISSUE_REGISTER_COUNT_LINE_RE.search(
+    stale_projection_text
+):
+    raise SystemExit("projection stale-count probe could not find expected live counters")
+stale_projection_text = DOCS_CHECKED_LINE_RE.sub("docs checked: 999", stale_projection_text, count=1)
+stale_projection_text = ISSUE_REGISTER_COUNT_LINE_RE.sub(
+    "issue_register_issue_count=999",
+    stale_projection_text,
+    count=1,
+)
+stale_projection_path.write_text(stale_projection_text, encoding="utf-8")
+stale_projection_rc, stale_projection_payload = run_validator(stale_projection_repo, stale_projection_repo.parent)
+if stale_projection_rc != 0 or stale_projection_payload.get("issue_register_consistency_status") != STATUS_PASS_REQUIRED:
+    raise SystemExit(f"boundary-only stale projection probe unexpectedly failed: {stale_projection_payload}")
+
+authority_projection_repo = build_probe_repo(
+    tmp_root / "projection-authority-claim" / root.name,
+    root,
+    workspace_root,
+    materialized_paths=materialized_control_plane_paths,
+)
+authority_projection_path = materialize_workspace_file(authority_projection_repo, workspace_root, issue_projection_rel)
+authority_projection_text = authority_projection_path.read_text(encoding="utf-8")
+if "Authority boundary: this file is projection-only" not in authority_projection_text:
+    raise SystemExit("projection authority-claim probe could not find boundary marker")
+authority_projection_text = authority_projection_text.replace(
+    "Authority boundary: this file is projection-only",
+    "Authority boundary: this file is projection-only\n"
+    + PROJECTION_FORBIDDEN_SENTENCE,
+    1,
+)
+authority_projection_path.write_text(authority_projection_text, encoding="utf-8")
+authority_projection_rc, authority_projection_payload = run_validator(
+    authority_projection_repo,
+    authority_projection_repo.parent,
+)
+if authority_projection_rc == 0:
+    raise SystemExit("projection authority-claim negative probe unexpectedly passed")
+authority_projection_violations = [str(item) for item in (authority_projection_payload.get("violations") or [])]
+expected_authority_projection_violation = "projection_authority_claim:issue_register_projection"
+if authority_projection_payload.get("error_code") != ERR_WORKBOOK_BOUNDARY:
+    raise SystemExit(
+        f"projection authority-claim negative probe returned wrong error code: {authority_projection_payload}"
+    )
+if expected_authority_projection_violation not in authority_projection_violations:
+    raise SystemExit(
+        f"projection authority-claim violation missing: {authority_projection_payload}"
+    )
+
 print(
     json.dumps(
         {
@@ -302,6 +384,9 @@ print(
             "negative_stream_doc_violation": expected_stream_violation,
             "negative_template_stream_doc_error_code": template_stream_payload.get("error_code"),
             "negative_template_stream_doc_violation": expected_template_stream_violation,
+            "boundary_only_stale_projection_status": stale_projection_payload.get("issue_register_consistency_status"),
+            "negative_projection_authority_error_code": authority_projection_payload.get("error_code"),
+            "negative_projection_authority_violation": expected_authority_projection_violation,
             "tmp_root": str(tmp_root),
         },
         ensure_ascii=False,

@@ -39,11 +39,11 @@ active_workbook_family:
       path: activity/evidence/2026-03-20/identity-protocol-v160-v1612-issue-remediation-plan.md
       authority_doc: docs/workbook/protocol-issue-register-v1.6.md
       presence_policy: optional_projection
-      freshness_mode: summary_snapshot_parity_required
+      freshness_mode: boundary_markers_only
     - projection_role: deep_audit_projection
       path: activity/evidence/2026-03-20/identity-protocol-v160-v1612-five-round-deep-audit.md
       authority_doc: docs/workbook/protocol-deep-audit-workbook-v1.6.md
       presence_policy: optional_projection
-      freshness_mode: summary_snapshot_parity_required
+      freshness_mode: boundary_markers_only
   authority_model: minor_family_issue_register_authoritative_with_optional_workspace_projections
   stream_version_mode: workbook_minor_governs_stream_patch_lanes

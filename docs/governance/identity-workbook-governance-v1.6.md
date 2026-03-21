@@ -107,7 +107,8 @@ These tools are part of the workbook control plane and freeze how future workboo
    - projection-only mode,
    - its canonical workbook source,
    - the current workbook registry pointer that governs it.
-4. If the registry opts a projection into freshness enforcement, the projection must also record machine-readable workbook issue counts and docs-checker counts so the validator can prove it still mirrors the active workbook family.
+4. The active `v1.6` workbook family keeps external projections in `boundary_markers_only` mode, so protocol gates verify boundary/pointer discipline without coupling release outcome to outer mirror freshness.
+5. If a later registry opts a projection into freshness enforcement, the projection must also record machine-readable workbook issue counts and docs-checker counts so the validator can prove it still mirrors the active workbook family.
 
 ## 3) Relationship to `docs/review/`
 
@@ -175,7 +176,7 @@ These tools are part of the workbook control plane and freeze how future workboo
    - the active minor family resolves to more or fewer authority-shaped workbook docs than the canonical pair selected by the registry;
    - recorded docs-checker counts drift away from live checker output.
 3. If the versioned workbook registry declares optional projection exports, the validator may inspect them only to confirm projection-only boundary markers and canonical-source pointers; it must not use them as default status authority.
-4. If the versioned workbook registry opts a projection export into freshness enforcement, the validator must fail-close when the projection's summary counts drift from the active workbook family.
+4. Freshness enforcement for projection exports is opt-in; the active `v1.6` family uses boundary-only projection checks, while any future family that opts into freshness enforcement must fail-close when projection summary counts drift from the active workbook family.
 5. `scripts/release_readiness_check.py` and `scripts/ci/run_required_runtime_gates_ci.sh` must keep the workbook-consistency gate in the formal release/runtime bundle.
 6. `scripts/validate_workbook_family_contract.py` must validate scaffolded future families without depending on the current active pointer.
 7. CI must keep one dry-run workbook-family scaffold probe so the `1 -> N` path stays machine-closed, not just the current active family.
