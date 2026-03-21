@@ -207,11 +207,24 @@ MULTIMODAL_RUNTIME_STAGE_RECEIPT_SOURCE = "execute_identity_upgrade_null_proof"
 # Wrapper semantic attestations.
 HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY = "wrapper_template_attestation_policy"
 HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_ID = "host_gateway_wrapper_template_attestation_v1"
+HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_ID = "host_gateway_session_chain_final_branch_smoke_v1"
+HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_REQUIRED_CHANNELS: tuple[str, ...] = (
+    HOST_VISIBLE_FINAL_CHANNEL_ID,
+)
 HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS: tuple[str, ...] = (
     "headstamp_first_line_status",
     "entry_receipt_tuple_status",
     "final_emit_contract_status",
     "Identity-Context:",
+    f'HOST_VISIBLE_FINAL_CHANNEL_ID = "{HOST_VISIBLE_FINAL_CHANNEL_ID}"',
+    f"HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED = {HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED}",
+    "def _repo_root() -> Path:",
+    "def _normalize_text(",
+    "def _sanitize_token(",
+    "build_host_visible_final_channel_question_tag(",
+    "build_host_visible_final_channel_receipt_path(",
+    "build_host_visible_final_channel_relay_receipt(",
+    "project_host_visible_final_channel_relay_fields(",
 )
 
 # Broadcast governance paths.

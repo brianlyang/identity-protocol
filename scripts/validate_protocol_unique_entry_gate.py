@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
+import os
+import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -28,6 +31,8 @@ from protocol_infra_contract import (
     HOST_GATEWAY_REQUIRED_SURFACE_LABEL as INFRA_HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
     HOST_GATEWAY_REQUIRED_SURFACE_STATUS as INFRA_HOST_GATEWAY_REQUIRED_SURFACE_STATUS,
     HOST_GATEWAY_REQUIRED_TUPLE_FIELDS as INFRA_HOST_GATEWAY_REQUIRED_TUPLE_FIELDS,
+    HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_ID as INFRA_HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_ID,
+    HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_REQUIRED_CHANNELS as INFRA_HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_REQUIRED_CHANNELS,
     HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS as INFRA_HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS,
     HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY as INFRA_HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY,
     HOST_VISIBLE_SURFACE_RECEIPT_PATTERN as INFRA_HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
@@ -97,6 +102,10 @@ HOST_GATEWAY_BROADCAST_INDEX_FILE = INFRA_HOST_GATEWAY_BROADCAST_INDEX_FILE
 HOST_GATEWAY_BROADCAST_SCHEMA_FILE = INFRA_HOST_GATEWAY_BROADCAST_SCHEMA_FILE
 HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY = INFRA_HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY
 HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS = set(INFRA_HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS)
+HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_ID = INFRA_HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_ID
+HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_REQUIRED_CHANNELS = sorted(
+    INFRA_HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_REQUIRED_CHANNELS
+)
 HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY = INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY
 HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID = INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID
 HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR = INFRA_HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR
@@ -203,7 +212,14 @@ HOST_GATEWAY_TEMPLATE_ATTESTATION_ALLOWED_FIELDS = {
     "egress_wrapper_template_sha256",
     "session_chain_wrapper_template_sha256",
     "session_chain_required_semantic_tokens",
+    "session_chain_executable_smoke_policy",
     "required_tuple_fields",
+}
+HOST_GATEWAY_TEMPLATE_EXECUTABLE_SMOKE_ALLOWED_FIELDS = {
+    "required",
+    "smoke_id",
+    "required_channels",
+    "final_channel_relay_required",
 }
 HOST_VISIBLE_SURFACE_ALLOWED_FIELDS = {
     "required",
@@ -389,6 +405,173 @@ def _load_canonical_wrapper_template_attestation_policy() -> tuple[dict[str, Any
     if not isinstance(policy, dict):
         return {}, "canonical_wrapper_template_policy_invalid_type"
     return policy, ""
+
+
+def _normalize_session_chain_executable_smoke_policy(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        "required": value.get("required") is True,
+        "smoke_id": str(value.get("smoke_id", "")).strip(),
+        "required_channels": sorted(set(_as_str_list(value.get("required_channels")))),
+        "final_channel_relay_required": _as_bool(value.get("final_channel_relay_required")),
+    }
+
+
+def _load_python_module_from_path(*, module_path: Path, module_label: str) -> Any:
+    spec = importlib.util.spec_from_file_location(module_label, str(module_path))
+    if spec is None or spec.loader is None:
+        raise ImportError(f"module_spec_unavailable:{module_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _run_session_chain_executable_smoke(
+    *,
+    session_chain_wrapper_path: Path,
+    smoke_policy: dict[str, Any],
+) -> tuple[dict[str, Any], list[str]]:
+    repo_root = Path(__file__).resolve().parent.parent
+    payload: dict[str, Any] = {
+        "status": STATUS_FAIL_REQUIRED,
+        "smoke_id": str(smoke_policy.get("smoke_id", "")).strip(),
+        "required_channels": list(smoke_policy.get("required_channels") or []),
+        "final_channel_relay_required": bool(smoke_policy.get("final_channel_relay_required")),
+        "state_file": "",
+        "receipt_paths": [],
+        "final_channel_relay_status": "",
+        "final_channel_relay_receipt_path": "",
+        "exception_type": "",
+        "exception_message": "",
+    }
+    issues: list[str] = []
+    try:
+        module = _load_python_module_from_path(
+            module_path=session_chain_wrapper_path,
+            module_label=(
+                "protocol_session_chain_smoke_"
+                + hashlib.sha256(str(session_chain_wrapper_path).encode("utf-8")).hexdigest()[:12]
+            ),
+        )
+    except Exception as exc:
+        payload["exception_type"] = type(exc).__name__
+        payload["exception_message"] = str(exc)
+        issues.append(
+            "host_gateway_session_chain_wrapper_executable_smoke_load_failed:"
+            f"{type(exc).__name__}:{exc}"
+        )
+        return payload, issues
+
+    record_receipts = getattr(module, "_record_host_visible_surface_receipts", None)
+    if not callable(record_receipts):
+        issues.append("host_gateway_session_chain_wrapper_executable_smoke_entrypoint_missing")
+        return payload, issues
+
+    with tempfile.TemporaryDirectory(prefix="protocol-session-chain-smoke-") as tmp_dir:
+        tmp_root = Path(tmp_dir).resolve()
+        contract_path = tmp_root / "runtime" / "gate" / "protocol_gateway_contract.json"
+        reply_path = tmp_root / "reply.txt"
+        reply_path.write_text("synthetic final-branch smoke reply\n", encoding="utf-8")
+        contract = {
+            HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY: {
+                "required": True,
+                "required_channels": list(smoke_policy.get("required_channels") or []),
+                "runtime_state_file": HOST_VISIBLE_SURFACE_STATE_FILE,
+                "runtime_receipt_pattern": HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
+                "required_attestation_fields": sorted(HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS),
+                "required_pass_status_fields": sorted(HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS),
+                "final_channel_id": HOST_VISIBLE_FINAL_CHANNEL_ID,
+                "final_channel_relay_required": bool(smoke_policy.get("final_channel_relay_required")),
+                "final_channel_relay_surface": HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE,
+                "final_channel_relay_mode": HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE,
+                "final_channel_delivery_authority": HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY,
+                "final_channel_required_attestation_fields": sorted(
+                    HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS
+                ),
+                "final_channel_required_pass_status_fields": sorted(
+                    HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_PASS_STATUS_FIELDS
+                ),
+            }
+        }
+        previous_protocol_home = os.environ.get("IDENTITY_PROTOCOL_HOME")
+        previous_cwd = Path.cwd()
+        os.environ["IDENTITY_PROTOCOL_HOME"] = str(repo_root)
+        os.chdir(repo_root)
+        try:
+            (
+                smoke_status,
+                state_file,
+                receipt_paths,
+                stale_reasons,
+                final_projection,
+            ) = record_receipts(
+                contract=contract,
+                contract_path=contract_path,
+                operation="validate",
+                identity_id="probe-session-chain-smoke",
+                actor_id="assistant:protocol-smoke",
+                session_id="session-chain-smoke-session",
+                run_id="session-chain-smoke-run",
+                wrapper_surface_status=STATUS_PASS_REQUIRED,
+                entry_receipt_tuple_status=STATUS_PASS_REQUIRED,
+                headstamp_first_line_status=STATUS_PASS_REQUIRED,
+                send_time_gate_status=STATUS_PASS_REQUIRED,
+                final_emit_contract_status=STATUS_PASS_REQUIRED,
+                out_reply_file=reply_path,
+            )
+        except Exception as exc:
+            payload["exception_type"] = type(exc).__name__
+            payload["exception_message"] = str(exc)
+            issues.append(
+                "host_gateway_session_chain_wrapper_executable_smoke_failed:"
+                f"{type(exc).__name__}:{exc}"
+            )
+            smoke_status = STATUS_FAIL_REQUIRED
+            state_file = ""
+            receipt_paths = []
+            stale_reasons = []
+            final_projection = {}
+        finally:
+            if previous_protocol_home is None:
+                os.environ.pop("IDENTITY_PROTOCOL_HOME", None)
+            else:
+                os.environ["IDENTITY_PROTOCOL_HOME"] = previous_protocol_home
+            os.chdir(previous_cwd)
+
+    payload["state_file"] = str(state_file or "").strip()
+    payload["receipt_paths"] = [str(item).strip() for item in receipt_paths if str(item).strip()]
+    relay_projection = final_projection if isinstance(final_projection, dict) else {}
+    payload["final_channel_relay_status"] = str(
+        relay_projection.get("agent_relay_final_answer_status", "")
+    ).strip()
+    payload["final_channel_relay_receipt_path"] = str(
+        relay_projection.get("agent_relay_final_answer_receipt_path", "")
+    ).strip()
+    if smoke_status != STATUS_PASS_REQUIRED:
+        issues.append("host_gateway_session_chain_wrapper_executable_smoke_not_pass_required")
+    for reason in stale_reasons:
+        token = str(reason).strip()
+        if token:
+            issues.append("host_gateway_session_chain_wrapper_executable_smoke_reason:" + token)
+    if not payload["state_file"]:
+        issues.append("host_gateway_session_chain_wrapper_executable_smoke_state_path_missing")
+    if not payload["receipt_paths"]:
+        issues.append("host_gateway_session_chain_wrapper_executable_smoke_receipts_missing")
+    final_missing_fields = sorted(
+        field
+        for field in HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS
+        if not str(relay_projection.get(field, "")).strip()
+    )
+    if final_missing_fields:
+        issues.append(
+            "host_gateway_session_chain_wrapper_executable_smoke_final_projection_missing:"
+            + ",".join(final_missing_fields)
+        )
+    if payload["final_channel_relay_status"].upper() != STATUS_PASS_REQUIRED:
+        issues.append("host_gateway_session_chain_wrapper_executable_smoke_final_relay_not_pass_required")
+    payload["status"] = STATUS_PASS_REQUIRED if not issues else STATUS_FAIL_REQUIRED
+    return payload, issues
 
 
 def _validate_signer_policy(node: Any, *, issue_prefix: str, issues: list[str]) -> str:
@@ -857,6 +1040,16 @@ def main() -> int:
         "protocol_host_gateway_wrapper_template_canonical_load_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_host_gateway_wrapper_template_latest_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_host_gateway_session_chain_semantic_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "protocol_host_gateway_session_chain_executable_smoke_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "protocol_host_gateway_session_chain_executable_smoke_id": "",
+        "protocol_host_gateway_session_chain_executable_smoke_required_channels": [],
+        "protocol_host_gateway_session_chain_executable_smoke_final_channel_relay_required": False,
+        "protocol_host_gateway_session_chain_executable_smoke_state_file": "",
+        "protocol_host_gateway_session_chain_executable_smoke_receipt_paths": [],
+        "protocol_host_gateway_session_chain_executable_smoke_final_relay_status": "",
+        "protocol_host_gateway_session_chain_executable_smoke_final_relay_receipt_path": "",
+        "protocol_host_gateway_session_chain_executable_smoke_exception_type": "",
+        "protocol_host_gateway_session_chain_executable_smoke_exception_message": "",
         "protocol_host_gateway_host_visible_surface_contract_ref": "",
         "protocol_host_visible_surface_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_host_visible_surface_contract_key": HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
@@ -897,6 +1090,9 @@ def main() -> int:
     canonical_template_semantic_tokens = set(
         _as_str_list(canonical_template_policy.get("session_chain_required_semantic_tokens"))
     )
+    canonical_template_smoke_policy = _normalize_session_chain_executable_smoke_policy(
+        canonical_template_policy.get("session_chain_executable_smoke_policy")
+    )
     canonical_template_tuple_fields = set(_as_str_list(canonical_template_policy.get("required_tuple_fields")))
     if not canonical_template_policy_error:
         canonical_policy_missing_fields: list[str] = []
@@ -917,6 +1113,20 @@ def main() -> int:
             canonical_policy_missing_fields.append(
                 "session_chain_required_semantic_tokens_missing:" + ",".join(missing_semantic_tokens)
             )
+        if not canonical_template_smoke_policy.get("required"):
+            canonical_policy_missing_fields.append("session_chain_executable_smoke_policy_required_not_true")
+        if canonical_template_smoke_policy.get("smoke_id") != HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_ID:
+            canonical_policy_missing_fields.append("session_chain_executable_smoke_policy_smoke_id_invalid")
+        if sorted(canonical_template_smoke_policy.get("required_channels") or []) != (
+            HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_REQUIRED_CHANNELS
+        ):
+            canonical_policy_missing_fields.append(
+                "session_chain_executable_smoke_policy_required_channels_invalid"
+            )
+        if canonical_template_smoke_policy.get("final_channel_relay_required") is not HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED:
+            canonical_policy_missing_fields.append(
+                "session_chain_executable_smoke_policy_final_channel_relay_required_invalid"
+            )
         missing_tuple_fields = sorted(
             field for field in HOST_GATEWAY_REQUIRED_TUPLE_FIELDS if field not in canonical_template_tuple_fields
         )
@@ -931,6 +1141,15 @@ def main() -> int:
     payload["protocol_host_gateway_wrapper_template_canonical_egress_sha256"] = canonical_template_egress_sha
     payload["protocol_host_gateway_wrapper_template_canonical_session_chain_sha256"] = (
         canonical_template_session_chain_sha
+    )
+    payload["protocol_host_gateway_session_chain_executable_smoke_id"] = str(
+        canonical_template_smoke_policy.get("smoke_id", "")
+    ).strip()
+    payload["protocol_host_gateway_session_chain_executable_smoke_required_channels"] = list(
+        canonical_template_smoke_policy.get("required_channels") or []
+    )
+    payload["protocol_host_gateway_session_chain_executable_smoke_final_channel_relay_required"] = bool(
+        canonical_template_smoke_policy.get("final_channel_relay_required")
     )
     payload["protocol_host_gateway_wrapper_template_canonical_load_status"] = (
         STATUS_FAIL_REQUIRED if canonical_template_policy_error else STATUS_PASS_REQUIRED
@@ -1290,6 +1509,7 @@ def main() -> int:
         if not HOST_GATEWAY_REQUIRED_TUPLE_FIELDS.issubset(tuple_fields):
             host_gateway_issues.append("host_gateway_tuple_fields_missing")
         template_attestation_policy = host_gateway_contract.get(HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY)
+        effective_smoke_policy = dict(canonical_template_smoke_policy)
         if not isinstance(template_attestation_policy, dict):
             host_gateway_issues.append("host_gateway_wrapper_template_attestation_policy_missing")
         else:
@@ -1317,11 +1537,24 @@ def main() -> int:
             semantic_tokens = set(
                 _as_str_list(template_attestation_policy.get("session_chain_required_semantic_tokens"))
             )
+            raw_smoke_policy = template_attestation_policy.get("session_chain_executable_smoke_policy")
+            smoke_policy = _normalize_session_chain_executable_smoke_policy(raw_smoke_policy)
             required_tuple_fields = set(_as_str_list(template_attestation_policy.get("required_tuple_fields")))
             payload["protocol_host_gateway_wrapper_template_attestation_id"] = attestation_id
             payload["protocol_host_gateway_wrapper_template_ingress_sha256"] = ingress_template_sha
             payload["protocol_host_gateway_wrapper_template_egress_sha256"] = egress_template_sha
             payload["protocol_host_gateway_wrapper_template_session_chain_sha256"] = session_chain_template_sha
+            if smoke_policy:
+                effective_smoke_policy = dict(smoke_policy)
+            payload["protocol_host_gateway_session_chain_executable_smoke_id"] = str(
+                effective_smoke_policy.get("smoke_id", "")
+            ).strip()
+            payload["protocol_host_gateway_session_chain_executable_smoke_required_channels"] = list(
+                effective_smoke_policy.get("required_channels") or []
+            )
+            payload["protocol_host_gateway_session_chain_executable_smoke_final_channel_relay_required"] = bool(
+                effective_smoke_policy.get("final_channel_relay_required")
+            )
             if not attestation_id:
                 host_gateway_issues.append("host_gateway_wrapper_template_attestation_id_missing")
             if not ingress_template_sha:
@@ -1332,6 +1565,36 @@ def main() -> int:
                 host_gateway_issues.append("host_gateway_wrapper_template_session_chain_sha256_missing")
             if not HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS.issubset(semantic_tokens):
                 host_gateway_issues.append("host_gateway_wrapper_template_semantic_tokens_missing")
+            if not isinstance(raw_smoke_policy, dict):
+                host_gateway_issues.append("host_gateway_wrapper_template_executable_smoke_policy_missing")
+            else:
+                unknown_smoke_fields = _unknown_keys(
+                    raw_smoke_policy,
+                    HOST_GATEWAY_TEMPLATE_EXECUTABLE_SMOKE_ALLOWED_FIELDS,
+                )
+                if unknown_smoke_fields:
+                    host_gateway_issues.append(
+                        "host_gateway_wrapper_template_executable_smoke_policy_additional_properties:"
+                        + ",".join(unknown_smoke_fields)
+                    )
+                if not smoke_policy.get("required"):
+                    host_gateway_issues.append(
+                        "host_gateway_wrapper_template_executable_smoke_policy_required_not_true"
+                    )
+                if smoke_policy.get("smoke_id") != HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_ID:
+                    host_gateway_issues.append(
+                        "host_gateway_wrapper_template_executable_smoke_policy_smoke_id_invalid"
+                    )
+                if sorted(smoke_policy.get("required_channels") or []) != (
+                    HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_REQUIRED_CHANNELS
+                ):
+                    host_gateway_issues.append(
+                        "host_gateway_wrapper_template_executable_smoke_policy_required_channels_invalid"
+                    )
+                if smoke_policy.get("final_channel_relay_required") is not HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED:
+                    host_gateway_issues.append(
+                        "host_gateway_wrapper_template_executable_smoke_policy_final_channel_relay_required_invalid"
+                    )
             if not HOST_GATEWAY_REQUIRED_TUPLE_FIELDS.issubset(required_tuple_fields):
                 host_gateway_issues.append("host_gateway_wrapper_template_required_tuple_fields_missing")
             if canonical_template_policy_error:
@@ -1356,6 +1619,10 @@ def main() -> int:
                 if semantic_tokens != canonical_template_semantic_tokens:
                     host_gateway_issues.append(
                         "host_gateway_wrapper_template_attestation_not_latest:session_chain_required_semantic_tokens"
+                    )
+                if smoke_policy != canonical_template_smoke_policy:
+                    host_gateway_issues.append(
+                        "host_gateway_wrapper_template_attestation_not_latest:session_chain_executable_smoke_policy"
                     )
                 if required_tuple_fields != canonical_template_tuple_fields:
                     host_gateway_issues.append(
@@ -1616,6 +1883,46 @@ def main() -> int:
                 payload["protocol_host_gateway_wrapper_template_attestation_status"] = STATUS_PASS_REQUIRED
             else:
                 payload["protocol_host_gateway_wrapper_template_attestation_status"] = STATUS_FAIL_REQUIRED
+            if effective_smoke_policy.get("required"):
+                smoke_payload, smoke_issues = _run_session_chain_executable_smoke(
+                    session_chain_wrapper_path=session_chain_wrapper_path,
+                    smoke_policy=effective_smoke_policy,
+                )
+                payload["protocol_host_gateway_session_chain_executable_smoke_status"] = str(
+                    smoke_payload.get("status", STATUS_FAIL_REQUIRED)
+                ).strip().upper()
+                payload["protocol_host_gateway_session_chain_executable_smoke_id"] = str(
+                    smoke_payload.get("smoke_id", "")
+                ).strip()
+                payload["protocol_host_gateway_session_chain_executable_smoke_required_channels"] = list(
+                    smoke_payload.get("required_channels") or []
+                )
+                payload["protocol_host_gateway_session_chain_executable_smoke_final_channel_relay_required"] = bool(
+                    smoke_payload.get("final_channel_relay_required")
+                )
+                payload["protocol_host_gateway_session_chain_executable_smoke_state_file"] = str(
+                    smoke_payload.get("state_file", "")
+                ).strip()
+                payload["protocol_host_gateway_session_chain_executable_smoke_receipt_paths"] = [
+                    str(item).strip()
+                    for item in (smoke_payload.get("receipt_paths") or [])
+                    if str(item).strip()
+                ]
+                payload["protocol_host_gateway_session_chain_executable_smoke_final_relay_status"] = str(
+                    smoke_payload.get("final_channel_relay_status", "")
+                ).strip()
+                payload["protocol_host_gateway_session_chain_executable_smoke_final_relay_receipt_path"] = str(
+                    smoke_payload.get("final_channel_relay_receipt_path", "")
+                ).strip()
+                payload["protocol_host_gateway_session_chain_executable_smoke_exception_type"] = str(
+                    smoke_payload.get("exception_type", "")
+                ).strip()
+                payload["protocol_host_gateway_session_chain_executable_smoke_exception_message"] = str(
+                    smoke_payload.get("exception_message", "")
+                ).strip()
+                host_gateway_issues.extend(smoke_issues)
+            else:
+                payload["protocol_host_gateway_session_chain_executable_smoke_status"] = STATUS_SKIPPED_NOT_REQUIRED
             try:
                 runtime_gateway_contract = _load_receipt(gateway_contract_path)
             except Exception as exc:
@@ -1750,9 +2057,18 @@ def main() -> int:
                             "egress_wrapper_template_sha256",
                             "session_chain_wrapper_template_sha256",
                             "session_chain_required_semantic_tokens",
+                            "session_chain_executable_smoke_policy",
                             "required_tuple_fields",
                         ):
-                            if runtime_template_attestation.get(field) != contract_template_attestation.get(field):
+                            runtime_value = runtime_template_attestation.get(field)
+                            contract_value = contract_template_attestation.get(field)
+                            if field in {"session_chain_required_semantic_tokens", "required_tuple_fields"}:
+                                runtime_value = sorted(_as_str_list(runtime_value))
+                                contract_value = sorted(_as_str_list(contract_value))
+                            elif field == "session_chain_executable_smoke_policy":
+                                runtime_value = _normalize_session_chain_executable_smoke_policy(runtime_value)
+                                contract_value = _normalize_session_chain_executable_smoke_policy(contract_value)
+                            if runtime_value != contract_value:
                                 host_gateway_issues.append(
                                     "host_gateway_runtime_contract_wrapper_template_attestation_parity_mismatch:" + field
                                 )
@@ -1763,12 +2079,15 @@ def main() -> int:
                             "egress_wrapper_template_sha256": canonical_template_egress_sha,
                             "session_chain_wrapper_template_sha256": canonical_template_session_chain_sha,
                             "session_chain_required_semantic_tokens": sorted(canonical_template_semantic_tokens),
+                            "session_chain_executable_smoke_policy": canonical_template_smoke_policy,
                             "required_tuple_fields": sorted(canonical_template_tuple_fields),
                         }
                         for field, expected_value in canonical_runtime_pairs.items():
                             observed_value = runtime_template_attestation.get(field)
                             if field in {"session_chain_required_semantic_tokens", "required_tuple_fields"}:
                                 observed_value = sorted(_as_str_list(observed_value))
+                            elif field == "session_chain_executable_smoke_policy":
+                                observed_value = _normalize_session_chain_executable_smoke_policy(observed_value)
                             if observed_value != expected_value:
                                 host_gateway_issues.append(
                                     "host_gateway_runtime_contract_wrapper_template_attestation_not_latest:" + field
@@ -2054,6 +2373,15 @@ def main() -> int:
         payload["protocol_host_gateway_session_chain_semantic_status"] = STATUS_FAIL_REQUIRED
     elif payload["protocol_host_gateway_session_chain_semantic_status"] == STATUS_SKIPPED_NOT_REQUIRED:
         payload["protocol_host_gateway_session_chain_semantic_status"] = STATUS_PASS_REQUIRED
+
+    if any(
+        "host_gateway_session_chain_wrapper_executable_smoke" in issue
+        or "host_gateway_wrapper_template_executable_smoke_policy" in issue
+        for issue in host_gateway_issues
+    ):
+        payload["protocol_host_gateway_session_chain_executable_smoke_status"] = STATUS_FAIL_REQUIRED
+    elif payload["protocol_host_gateway_session_chain_executable_smoke_status"] == STATUS_SKIPPED_NOT_REQUIRED:
+        payload["protocol_host_gateway_session_chain_executable_smoke_status"] = STATUS_PASS_REQUIRED
 
     wrapper_template_latest_issue_prefixes = (
         "host_gateway_wrapper_template_canonical_policy_unavailable:",

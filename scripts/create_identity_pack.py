@@ -10,6 +10,7 @@ import json
 import os
 import secrets
 import subprocess
+import textwrap
 from datetime import datetime, timezone
 from pathlib import Path
 import sys
@@ -53,6 +54,8 @@ from protocol_infra_contract import (
     HOST_GATEWAY_REQUIRED_SURFACE_LABEL as INFRA_HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
     HOST_GATEWAY_REQUIRED_SURFACE_STATUS as INFRA_HOST_GATEWAY_REQUIRED_SURFACE_STATUS,
     HOST_GATEWAY_REQUIRED_TUPLE_FIELDS as INFRA_HOST_GATEWAY_REQUIRED_TUPLE_FIELDS,
+    HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_ID as INFRA_HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_ID,
+    HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_REQUIRED_CHANNELS as INFRA_HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_REQUIRED_CHANNELS,
     HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_ID as INFRA_HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_ID,
     HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY as INFRA_HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY,
     HOST_GATEWAY_SIGNER_ENV_BOOTSTRAP_FROM_KEY_PATH as INFRA_HOST_GATEWAY_SIGNER_ENV_BOOTSTRAP_FROM_KEY_PATH,
@@ -79,6 +82,8 @@ from protocol_infra_contract import (
     HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY as INFRA_HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY,
     HOST_VISIBLE_FINAL_CHANNEL_ID as INFRA_HOST_VISIBLE_FINAL_CHANNEL_ID,
     HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE as INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE,
+    HOST_VISIBLE_FINAL_CHANNEL_RELAY_RECEIPT_DIR as INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_RECEIPT_DIR,
+    HOST_VISIBLE_FINAL_CHANNEL_RELAY_RECEIPT_PREFIX as INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_RECEIPT_PREFIX,
     HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED as INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED,
     HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE as INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE,
     HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS as INFRA_HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS,
@@ -212,6 +217,12 @@ HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_ID = INFRA_HOST_GATEWAY_WRAPPER_TEMPLA
 HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS = list(
     INFRA_HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS
 )
+HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_ID = (
+    INFRA_HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_ID
+)
+HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_REQUIRED_CHANNELS = list(
+    INFRA_HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_REQUIRED_CHANNELS
+)
 HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY = INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY
 HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID = INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID
 HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR = INFRA_HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR
@@ -228,6 +239,8 @@ HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED = INFRA_HOST_VISIBLE_FINAL_CHANNEL_REL
 HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE = INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE
 HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE = INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE
 HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY = INFRA_HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY
+HOST_VISIBLE_FINAL_CHANNEL_RELAY_RECEIPT_DIR = INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_RECEIPT_DIR
+HOST_VISIBLE_FINAL_CHANNEL_RELAY_RECEIPT_PREFIX = INFRA_HOST_VISIBLE_FINAL_CHANNEL_RELAY_RECEIPT_PREFIX
 HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS = list(
     INFRA_HOST_VISIBLE_FINAL_CHANNEL_REQUIRED_ATTESTATION_FIELDS
 )
@@ -1273,6 +1286,12 @@ def _host_gateway_wrapper_template_attestation_policy() -> dict:
         "egress_wrapper_template_sha256": _sha256_text(egress_template),
         "session_chain_wrapper_template_sha256": _sha256_text(session_chain_template),
         "session_chain_required_semantic_tokens": list(HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS),
+        "session_chain_executable_smoke_policy": {
+            "required": True,
+            "smoke_id": HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_ID,
+            "required_channels": list(HOST_GATEWAY_SESSION_CHAIN_EXECUTABLE_SMOKE_REQUIRED_CHANNELS),
+            "final_channel_relay_required": bool(HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED),
+        },
         "required_tuple_fields": list(HOST_GATEWAY_REQUIRED_TUPLE_FIELDS),
     }
 
@@ -1291,6 +1310,24 @@ def _assert_wrapper_template_constant_bindings(
     )
     if session_chain_expected not in str(session_chain_template):
         missing.append("session_chain_template_missing_fixture_receipt_source_constant_binding")
+    session_chain_required_bindings = {
+        "session_chain_template_missing_final_channel_id_binding": (
+            f'HOST_VISIBLE_FINAL_CHANNEL_ID = "{HOST_VISIBLE_FINAL_CHANNEL_ID}"'
+        ),
+        "session_chain_template_missing_final_channel_relay_required_binding": (
+            f"HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED = {HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED}"
+        ),
+        "session_chain_template_missing_repo_root_helper": "def _repo_root() -> Path:",
+        "session_chain_template_missing_final_channel_relay_builder": (
+            "def build_host_visible_final_channel_relay_receipt("
+        ),
+        "session_chain_template_missing_final_channel_relay_projection": (
+            "def project_host_visible_final_channel_relay_fields("
+        ),
+    }
+    for label, token in session_chain_required_bindings.items():
+        if token not in str(session_chain_template):
+            missing.append(label)
     if missing:
         raise RuntimeError("wrapper_template_constant_binding_invariant_failed:" + ",".join(missing))
 
@@ -3818,6 +3855,168 @@ if __name__ == "__main__":
     return template.replace("__TEMPLATE_FINAL_EMIT_CHANNEL_ID__", FINAL_EMIT_CHANNEL_ID)
 
 
+def _session_chain_wrapper_final_channel_support_template() -> str:
+    return textwrap.dedent(
+        f"""
+        HOST_VISIBLE_FINAL_CHANNEL_ID = "{HOST_VISIBLE_FINAL_CHANNEL_ID}"
+        HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED = {HOST_VISIBLE_FINAL_CHANNEL_RELAY_REQUIRED}
+        HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE = "{HOST_VISIBLE_FINAL_CHANNEL_RELAY_SURFACE}"
+        HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE = "{HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE}"
+        HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY = "{HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY}"
+        HOST_VISIBLE_FINAL_CHANNEL_RELAY_RECEIPT_DIR = "{HOST_VISIBLE_FINAL_CHANNEL_RELAY_RECEIPT_DIR}"
+        HOST_VISIBLE_FINAL_CHANNEL_RELAY_RECEIPT_PREFIX = "{HOST_VISIBLE_FINAL_CHANNEL_RELAY_RECEIPT_PREFIX}"
+
+
+        def _repo_root() -> Path:
+            protocol_home = str(os.environ.get("IDENTITY_PROTOCOL_HOME", "")).strip()
+            if protocol_home:
+                candidate = Path(protocol_home).expanduser().resolve()
+                if (candidate / "scripts" / "build_agent_relay_final_answer.py").exists():
+                    return candidate
+            search_roots = [Path.cwd().resolve(), Path(__file__).resolve().parent]
+            seen: set[str] = set()
+            for base in search_roots:
+                for candidate in [base, *base.parents]:
+                    marker = str(candidate)
+                    if marker in seen:
+                        continue
+                    seen.add(marker)
+                    if (candidate / "scripts" / "build_agent_relay_final_answer.py").exists():
+                        return candidate
+            return Path.cwd().resolve()
+
+
+        def _normalize_text(value: Any) -> str:
+            return str(value or "").strip()
+
+
+        def _sanitize_token(value: Any, *, fallback: str) -> str:
+            raw = _normalize_text(value)
+            safe = "".join(
+                ch if ch.isalnum() or ch in {{"-", "_", "."}} else "_" for ch in raw
+            ).strip("._")
+            return safe or fallback
+
+
+        def build_host_visible_final_channel_question_tag(*, run_id: Any, reply_transport_ref: Any) -> str:
+            run_token = _sanitize_token(run_id, fallback="run")
+            reply_name = Path(_normalize_text(reply_transport_ref) or "reply.txt").name
+            reply_token = _sanitize_token(reply_name, fallback="reply")
+            return f"host_visible_final::{{run_token}}::{{reply_token}}"
+
+
+        def build_host_visible_final_channel_receipt_path(
+            *,
+            pack_path: Path,
+            run_id: Any,
+            now_token: Any,
+        ) -> Path:
+            run_token = _sanitize_token(run_id, fallback="run")
+            ts_token = _sanitize_token(now_token, fallback="ts")
+            filename = f"{{HOST_VISIBLE_FINAL_CHANNEL_RELAY_RECEIPT_PREFIX}}-{{ts_token}}-{{run_token}}.json"
+            return (pack_path / HOST_VISIBLE_FINAL_CHANNEL_RELAY_RECEIPT_DIR / filename).resolve()
+
+
+        def build_host_visible_final_channel_relay_receipt(
+            *,
+            repo_root: Path,
+            pack_path: Path,
+            identity_id: str,
+            run_id: str,
+            reply_transport_ref: str,
+            now_token: str,
+        ) -> tuple[int, dict[str, Any]]:
+            reply_ref = _normalize_text(reply_transport_ref)
+            if not reply_ref:
+                return 1, {{
+                    "build_status": STATUS_FAIL_REQUIRED,
+                    "agent_relay_final_answer_status": STATUS_FAIL_REQUIRED,
+                    "error_code": "IP-RELAY-001",
+                    "stale_reasons": ["reply_transport_ref_missing"],
+                }}
+            source_artifact_path = Path(reply_ref).expanduser().resolve()
+            try:
+                source_snapshot_ts = datetime.fromtimestamp(
+                    source_artifact_path.stat().st_mtime,
+                    tz=timezone.utc,
+                ).strftime("%Y-%m-%dT%H:%M:%SZ")
+            except Exception:
+                source_snapshot_ts = ""
+            question_tag = build_host_visible_final_channel_question_tag(
+                run_id=run_id,
+                reply_transport_ref=reply_ref,
+            )
+            receipt_path = build_host_visible_final_channel_receipt_path(
+                pack_path=pack_path,
+                run_id=run_id,
+                now_token=now_token,
+            )
+            receipt_path.parent.mkdir(parents=True, exist_ok=True)
+            validation_output_path = receipt_path.with_name(receipt_path.stem + ".validation.json")
+            completed = subprocess.run(
+                [
+                    str(sys.executable or "python3"),
+                    str((repo_root / "scripts" / "build_agent_relay_final_answer.py").resolve()),
+                    "--mode",
+                    HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE,
+                    "--target-identity-id",
+                    _normalize_text(identity_id),
+                    "--question-tag",
+                    question_tag,
+                    "--source-artifact",
+                    str(source_artifact_path),
+                    "--source-snapshot-ts",
+                    source_snapshot_ts,
+                    "--output",
+                    str(receipt_path),
+                    "--validate",
+                    "--validation-output",
+                    str(validation_output_path),
+                    "--json-only",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            payload = _parse_stdout_json(completed.stdout)
+            if not payload:
+                payload = {{
+                    "build_status": STATUS_FAIL_REQUIRED,
+                    "agent_relay_final_answer_status": STATUS_FAIL_REQUIRED,
+                    "error_code": "IP-RELAY-001",
+                    "stale_reasons": ["builder_stdout_not_json"],
+                    "builder_stderr": _normalize_text(completed.stderr),
+                }}
+            if not _normalize_text(payload.get("receipt_path", "")):
+                payload["receipt_path"] = str(receipt_path)
+            if not _normalize_text(payload.get("question_tag", "")):
+                payload["question_tag"] = question_tag
+            if not _normalize_text(payload.get("source_artifact", "")):
+                payload["source_artifact"] = str(source_artifact_path)
+            if not _normalize_text(payload.get("relay_mode", "")):
+                payload["relay_mode"] = HOST_VISIBLE_FINAL_CHANNEL_RELAY_MODE
+            if not _normalize_text(payload.get("delivery_authority", "")):
+                payload["delivery_authority"] = HOST_VISIBLE_FINAL_CHANNEL_DELIVERY_AUTHORITY
+            return completed.returncode, payload
+
+
+        def project_host_visible_final_channel_relay_fields(payload: dict[str, Any]) -> dict[str, Any]:
+            doc = payload if isinstance(payload, dict) else {{}}
+            relay_status = _normalize_text(doc.get("agent_relay_final_answer_status", "")) or _normalize_text(
+                doc.get("build_status", "")
+            )
+            return {{
+                "agent_relay_final_answer_receipt_path": _normalize_text(doc.get("receipt_path", "")),
+                "agent_relay_final_answer_status": relay_status,
+                "agent_relay_final_answer_relay_mode": _normalize_text(doc.get("relay_mode", "")),
+                "agent_relay_final_answer_delivery_authority": _normalize_text(doc.get("delivery_authority", "")),
+                "agent_relay_final_answer_source_artifact": _normalize_text(doc.get("source_artifact", "")),
+                "agent_relay_final_answer_question_tag": _normalize_text(doc.get("question_tag", "")),
+            }}
+        """
+    ).strip()
+
+
 def _protocol_session_chain_wrapper_template() -> str:
     template = """#!/usr/bin/env python3
 from __future__ import annotations
@@ -3884,6 +4083,9 @@ def _parse_stdout_json(text: str) -> dict[str, Any]:
     except Exception:
         return {}
     return doc if isinstance(doc, dict) else {}
+
+
+__TEMPLATE_HOST_VISIBLE_FINAL_CHANNEL_SUPPORT__
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool, visible_reply: str = "") -> None:
@@ -5064,6 +5266,9 @@ if __name__ == "__main__":
     return template.replace(
         "__TEMPLATE_HOST_VISIBLE_FIXTURE_RECEIPT_SOURCE__",
         HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
+    ).replace(
+        "__TEMPLATE_HOST_VISIBLE_FINAL_CHANNEL_SUPPORT__",
+        _session_chain_wrapper_final_channel_support_template(),
     ).replace(
         "__TEMPLATE_HOST_VISIBLE_FIXTURE_ALLOWED_OPERATIONS__",
         ",".join(f'"{token}"' for token in HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS),

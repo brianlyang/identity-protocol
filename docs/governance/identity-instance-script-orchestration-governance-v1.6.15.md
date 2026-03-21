@@ -233,6 +233,7 @@ Any implementation that claims to follow `v1.6.15` should satisfy this checklist
 7. Route-scoped capability activation can evaluate script-backed routes without union-blocking unrelated routes unless a stronger activation policy explicitly requires that stricter behavior.
 8. Receipt outputs preserve machine-readable route provenance compatible with `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts`.
 9. Any governed route that returns user-visible final text binds to at least one pack-local emitter script and declares an emit-family receipt.
+10. If a protocol-generated wrapper seeds final-channel relay receipts on behalf of a route-bound emitter, that wrapper must carry the canonical final-relay constants/helpers and remain executable under the wrapper-template smoke contract; SHA freshness and token presence alone are not sufficient.
 
 ## 6) Future promotion exit criteria
 
@@ -242,7 +243,8 @@ Any implementation that claims to follow `v1.6.15` should satisfy this checklist
    - positive and negative probes through `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`,
    - `scripts/release_readiness_check.py` consumption of those validators,
    - `scripts/validate_identity_capability_activation.py` awareness of instance scripts as a first-class route surface,
-   - `scripts/create_identity_pack.py`, `scripts/repair_contract_backfill.py`, and `scripts/identity_creator.py` consumption of the same contract family.
+   - `scripts/create_identity_pack.py`, `scripts/repair_contract_backfill.py`, and `scripts/identity_creator.py` consumption of the same contract family,
+   - generated session-chain wrappers now freeze a `session_chain_executable_smoke_policy`, and the protocol gate executes that smoke against the final-channel relay branch so generator completeness defects fail closed instead of hiding behind template SHA parity.
 3. Full implementation closure still requires all of the following together:
    - proof packs adopt `scripts/INSTANCE_SCRIPT_MANIFEST.json` and the additive route fields without topology drift,
    - proof packs adopt `allowed_execution_lanes`, `lane_admission_policy`, `lane_receipt_pattern`, and `lane_block_on_fallback` where external/manual/editor/webhook fallback risk exists,

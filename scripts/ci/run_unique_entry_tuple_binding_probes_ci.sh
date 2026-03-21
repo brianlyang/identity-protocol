@@ -338,6 +338,9 @@ elif name == "tuple_binding_complete_pass":
         raise SystemExit("tuple_binding_complete_pass: gate status must be PASS_REQUIRED")
     if str(doc.get("protocol_unique_entry_receipt_status", "")).strip().upper() != "PASS_REQUIRED":
         raise SystemExit("tuple_binding_complete_pass: receipt status must be PASS_REQUIRED")
+    smoke_status = str(doc.get("protocol_host_gateway_session_chain_executable_smoke_status", "")).strip().upper()
+    if smoke_status != "PASS_REQUIRED":
+        raise SystemExit("tuple_binding_complete_pass: executable_smoke_status must be PASS_REQUIRED")
 elif name == "tuple_binding_tampered_tuple_blocked":
     if rc == 0:
         raise SystemExit("tuple_binding_tampered_tuple_blocked: expected non-zero rc")
@@ -384,12 +387,17 @@ elif name == "wrapper_template_not_latest_blocked":
     latest_status = str(doc.get("protocol_host_gateway_wrapper_template_latest_status", "")).strip().upper()
     if latest_status != "FAIL_REQUIRED":
         raise SystemExit("wrapper_template_not_latest_blocked: latest_status must be FAIL_REQUIRED")
+    smoke_status = str(doc.get("protocol_host_gateway_session_chain_executable_smoke_status", "")).strip().upper()
+    if smoke_status != "FAIL_REQUIRED":
+        raise SystemExit("wrapper_template_not_latest_blocked: executable_smoke_status must be FAIL_REQUIRED")
     canonical_status = str(doc.get("protocol_host_gateway_wrapper_template_canonical_load_status", "")).strip().upper()
     if canonical_status != "PASS_REQUIRED":
         raise SystemExit("wrapper_template_not_latest_blocked: canonical_load_status must be PASS_REQUIRED")
     stale = [str(x).strip() for x in (doc.get("stale_reasons") or []) if str(x).strip()]
     if not any("_not_latest" in token for token in stale):
         raise SystemExit("wrapper_template_not_latest_blocked: expected not_latest stale reason")
+    if not any("host_gateway_session_chain_wrapper_executable_smoke" in token for token in stale):
+        raise SystemExit("wrapper_template_not_latest_blocked: expected executable smoke stale reason")
 else:
     raise SystemExit(f"unknown probe: {name}")
 PY
@@ -526,7 +534,14 @@ run_probe tuple_binding_stale_receipt_blocked \
 python3 - <<'PY' "${SESSION_CHAIN_WRAPPER_PATH}"
 from pathlib import Path
 path = Path(__import__("sys").argv[1]).resolve()
-path.write_text(path.read_text(encoding="utf-8") + "\n# ci_probe_wrapper_template_not_latest\n", encoding="utf-8")
+path.write_text(
+    path.read_text(encoding="utf-8")
+    + "\n# ci_probe_wrapper_template_not_latest\n"
+    + "\n"
+    + "def build_host_visible_final_channel_relay_receipt(*args, **kwargs):\n"
+    + "    raise RuntimeError('ci_probe_final_branch_smoke')\n",
+    encoding="utf-8",
+)
 PY
 
 run_probe wrapper_template_not_latest_blocked \

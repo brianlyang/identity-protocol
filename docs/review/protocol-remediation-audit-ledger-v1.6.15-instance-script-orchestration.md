@@ -208,7 +208,12 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
    - `python3 scripts/validate_identity_capability_activation.py --identity-id base-repo-closure-orchestrator --catalog ../.identity/catalog.local.yaml --activation-policy route-any-ready`
    - observed outcome: `capability_activation_status=ACTIVATED`
    - the payload now exposes `route_execution_lane_rows`, route-level `execution_lane_*` fields, and reserves `IP-CAP-006` for lane-governance closure failures.
-4. Protocol hygiene and inherited motherline checks remain green after the upgrade:
+4. The inherited host-gateway generator/control plane now fail-closes the final-channel relay branch instead of trusting static template freshness alone:
+   - `scripts/create_identity_pack.py` now freezes final-relay constants/helpers into the generated session-chain wrapper and extends the wrapper-template attestation with `session_chain_executable_smoke_policy`
+   - `scripts/validate_protocol_unique_entry_gate.py` now executes that smoke against the generated final-channel branch and projects `protocol_host_gateway_session_chain_executable_smoke_status`
+   - the positive protocol probe suite keeps the smoke green on canonical generated wrappers, while the negative wrapper-mutation probe now proves that executable-smoke regressions fail closed
+   - a live inherited pack that still carries the broken canonical wrapper now surfaces `protocol_host_gateway_session_chain_semantic_status=FAIL_REQUIRED` together with `protocol_host_gateway_session_chain_executable_smoke_status=FAIL_REQUIRED` instead of hiding behind template-latest PASS
+5. Protocol hygiene and inherited motherline checks remain green after the upgrade:
    - `python3 scripts/docs_command_contract_check.py` -> `docs checked: 79`, `command snippets checked: 853`, `PASS`
    - `python3 scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `status=PASS_REQUIRED`, `standard_closure_status=CLOSED`, `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
-5. This snapshot closes the protocol-owned execution-lane governance gap for `v1.6.15`, but it does not claim repo-wide clean freeze or cross-pack adoption closure.
+6. This snapshot closes the protocol-owned execution-lane governance gap for `v1.6.15`, but it does not claim repo-wide clean freeze or cross-pack adoption closure.
