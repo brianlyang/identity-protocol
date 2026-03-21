@@ -1,6 +1,6 @@
 # Protocol Remediation Audit Ledger (v1.6.14 identity-Codex launcher stream)
 
-Status: Active (contract-first stream frozen, 2026-03-20; implementation landing pending)  
+Status: Active (implementation closure landed, 2026-03-21; legacy fleet rollout continues)  
 Scope: protocol review ledger for identity-bound Codex launcher/install/startup governance
 
 ## 0) Stream objective
@@ -36,7 +36,7 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
 6. `identity/protocol/IDENTITY_PROTOCOL.md`
 7. `identity/protocol/IDENTITY_RUNTIME.md`
 8. `identity/protocol/mappings/control-plane-status.current.yaml`
-9. Future implementation targets stay descriptive until they land as real files under the protocol `scripts` directory:
+9. Landed implementation targets under the protocol `scripts` directory are:
    - render_identity_codex_launcher.py
    - install_identity_codex_launcher.py
    - validate_identity_codex_launcher.py
@@ -104,20 +104,19 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - install directories are frozen,
    - workspace bridge is explicitly downgraded to compatibility evidence,
    - protocol vs instance vs installed-bin ownership is unambiguous.
-3. **Implementation PASS** for this stream is not satisfied by documentation alone. It requires future landing of:
-   - protocol-owned launcher renderer,
-   - protocol-owned launcher installer,
-   - protocol-owned launcher validator,
-   - creator/update/activate wiring,
+3. **Implementation PASS** for this stream now requires the landed assets and lanes to stay green together:
+   - protocol-owned launcher renderer / installer / validator,
+   - creator/update/activate and installer rollout wiring,
    - canonical pack-local launcher manifest + README,
-   - canonical installed `identity-codex` and `id-<identity-id>` shims.
+   - canonical installed `identity-codex` and `id-<identity-id>` shims,
+   - launcher probe lane `scripts/ci/run_identity_codex_launcher_probes_ci.sh`,
+   - required-runtime-gates inclusion for the launcher probe lane.
 4. Reviewers must not collapse `Architecture PASS` into `Implementation PASS`.
 
 ## 6) Accepted closure boundary
 
-1. `v1.6.14` is closed at the contract-freeze level when the command model, directories, and ownership boundary are frozen in protocol docs and mappings.
-2. `v1.6.14` is not closed at the implementation level until protocol-owned launcher render/install/validate assets land.
-3. The workspace bridge may remain operational during that gap, but it must be described as bridge-only.
+1. `v1.6.14` is closed at the implementation level when the command model, directories, ownership boundary, launcher assets, installed shims, and probe lane are all machine-verifiable together.
+2. The workspace bridge may remain operational after that closure, but only as bridge-only compatibility evidence.
 4. This stream is independent from provider/MCP runtime incidents and from host-final visible-surface promotion work.
 
 ## 7) Boundary lock for reviewers

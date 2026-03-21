@@ -1,6 +1,6 @@
 # Identity Codex Launcher Governance (v1.6.14)
 
-Status: Active (contract-first stream frozen, 2026-03-20; implementation landing pending)  
+Status: Active (implementation closure landed, 2026-03-21; legacy fleet rollout continues)  
 Layer: protocol  
 Scope: identity-bound Codex launcher model, install-path ownership, and fail-close startup governance
 
@@ -19,7 +19,7 @@ Execution mode: topic-level canonical SSOT for v1.6.14 identity-Codex launcher g
    - `identity/protocol/IDENTITY_PROTOCOL.md`
    - `identity/protocol/IDENTITY_RUNTIME.md`
 6. This stream freezes launcher/install/startup ownership and canonical paths; it does not certify that every host-native chat surface is already auto-bound.
-7. Workspace helper assets under `scripts/codex_native_chat/` are accepted as compatibility bridge evidence only until the protocol-owned launcher install path is implemented; they are not the canonical installed home.
+7. Workspace helper assets under `scripts/codex_native_chat/` remain compatibility bridge evidence only; the protocol-owned launcher install path is now the canonical installed home for `v1.6.14`.
 
 ## 1) Why v1.6.14 is required
 
@@ -76,7 +76,7 @@ Execution mode: topic-level canonical SSOT for v1.6.14 identity-Codex launcher g
 
 ### 2.4 Canonical launcher surfaces
 
-The frozen development target for `v1.6.14` is:
+The canonical implementation surface for `v1.6.14` is now:
 
 1. Protocol-owned launcher renderer:
    - `identity-protocol-local/scripts/render_identity_codex_launcher.py`
@@ -92,7 +92,7 @@ The frozen development target for `v1.6.14` is:
    - `${CODEX_HOME}/bin/identity-codex`
    - `${CODEX_HOME}/bin/id-<identity-id>`
 
-These names and directories are frozen by this stream. Later implementation may extend fields inside the manifest, but it must not relocate these canonical homes without a new governed stream.
+These names and directories are frozen by this stream. The renderer / installer / validator / pack-local manifest / installed shim family has landed, and later extensions may add manifest fields but must not relocate these canonical homes without a new governed stream.
 
 ### 2.5 Bootstrap ownership rules
 
@@ -173,25 +173,25 @@ These names and directories are frozen by this stream. Later implementation may 
 
 ## 6) Accepted migration path
 
-1. Preserve the current workspace bridge under `scripts/codex_native_chat/` as compatibility evidence while the protocol-owned launcher stack lands.
+1. Preserve the current workspace bridge under `scripts/codex_native_chat/` as compatibility evidence during legacy-operator migration only.
 2. Use `v1.6.13` canonical pack-root `scripts/` topology as the destination for pack-local launcher manifests.
-3. Land protocol-owned renderer/installer/validator before classifying installed launchers as the motherline standard.
-4. After canonical launchers exist, downgrade workspace bridge status from “current operator path” to “migration bridge / replay artifact.”
+3. Protocol-owned renderer / installer / validator are now the motherline standard for this stream.
+4. Workspace bridge status is downgraded to “migration bridge / replay artifact,” not the canonical launcher home.
 5. Only after protocol-owned validator + creator/update/activate wiring are green may reviewers treat non-launcher naked entry as a stricter governance violation.
 
 ## 7) Future promotion exit criteria
 
-1. `v1.6.14` promotion beyond contract freeze requires more than documents.
-2. At minimum, future implementation closure must prove all of the following together:
-   - protocol-owned launcher renderer exists,
-   - protocol-owned launcher installer exists,
-   - protocol-owned launcher validator exists,
-   - creator/update/activate refresh launcher assets deterministically,
-   - pack-local launcher manifest path is canonical and machine-validated,
-   - installed `identity-codex` and `id-<identity-id>` shims are rendered under `${CODEX_HOME}/bin/`,
-   - launcher startup fail-closes on missing tuple or forbidden manual override,
-   - compatibility bridge is clearly classified as bridge-only and no longer mistaken for the canonical installed home.
-3. Until those conditions are proven, the correct interpretation is:
-   - `1.6.14` contract freeze may be active,
-   - implementation landing remains open,
-   - workspace bridge remains compatibility evidence rather than final launcher motherline.
+1. `v1.6.14` implementation closure now requires machine proof, not chat description.
+2. The closure proof for this stream is the combined existence of:
+   - protocol-owned launcher renderer / installer / validator,
+   - `create_identity_pack.py` scaffolding for pack-local launcher manifest + README,
+   - creator/update/activate + installer rollout that refreshes launcher assets deterministically,
+   - installed `identity-codex` and `id-<identity-id>` shims under `${CODEX_HOME}/bin/`,
+   - launcher fail-close on forbidden runtime override or missing tuple truth,
+   - dedicated launcher probes under `scripts/ci/run_identity_codex_launcher_probes_ci.sh`,
+   - required-runtime-gates inclusion for the launcher probe lane.
+3. The correct interpretation after closure is:
+   - `1.6.14` semantic ownership is frozen,
+   - core implementation is landed,
+   - legacy fleet adoption and stricter naked-entry enforcement may continue as follow-on rollout work,
+   - workspace bridge remains compatibility evidence rather than launcher motherline.
