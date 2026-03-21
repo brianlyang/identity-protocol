@@ -9,8 +9,10 @@ from typing import Any
 import yaml
 
 from workbook_control_plane_common import (
+    MINOR_FAMILY_UNIQUENESS_EXACT_CANONICAL_PAIR_ONLY,
     PROJECTION_BOUNDARY_MARKER,
     PROJECTION_MODE_MIRROR_ONLY,
+    WORKBOOK_CONTROL_PLANE_CONTRACT,
     WorkbookFamilyLayout,
     WorkbookTemplateContract,
     load_active_workbook_registry,
@@ -90,7 +92,7 @@ def _registry_doc(
     return {
         "schema_version": 1,
         "version": layout.minor,
-        "control_plane_contract": "minor_family_workbook_control_plane",
+        "control_plane_contract": WORKBOOK_CONTROL_PLANE_CONTRACT,
         "description": "Canonical workbook registry for cross-stream issue governance inside identity-protocol-local.",
         "template_contract": {
             "contract_id": template_contract.contract_id,
@@ -113,7 +115,7 @@ def _registry_doc(
         },
         "active_workbook_family": {
             "workbook_family": layout.minor,
-            "minor_family_uniqueness_mode": "exact_canonical_pair_only",
+            "minor_family_uniqueness_mode": MINOR_FAMILY_UNIQUENESS_EXACT_CANONICAL_PAIR_ONLY,
             "authority_surfaces": {
                 "issue_register_doc": layout.issue_register_doc_rel,
                 "deep_audit_workbook_doc": layout.deep_audit_doc_rel,

@@ -10,15 +10,20 @@ import yaml
 
 from repo_root_resolution_common import resolve_protocol_repo_root, resolve_workspace_root
 
+WORKBOOK_CANONICAL_DIR = "docs/workbook"
+WORKBOOK_README_REL = f"{WORKBOOK_CANONICAL_DIR}/README.md"
 WORKBOOK_REGISTRY_CURRENT = "identity/protocol/mappings/workbook-registry.current.yaml"
 STREAM_DOC_REGISTRY_CURRENT = "identity/protocol/mappings/stream-doc-registry.current.yaml"
 CONTROL_PLANE_STATUS_CURRENT = "identity/protocol/mappings/control-plane-status.current.yaml"
+WORKBOOK_CONTROL_PLANE_CONTRACT = "minor_family_workbook_control_plane"
 WORKBOOK_MINOR_RE = re.compile(r"^v(?P<major>\d+)\.(?P<minor>\d+)$")
 TEMPLATE_PLACEHOLDER_RE = re.compile(r"__[A-Z][A-Z0-9_]*__")
+MINOR_FAMILY_UNIQUENESS_EXACT_CANONICAL_PAIR_ONLY = "exact_canonical_pair_only"
 PROJECTION_MODE_MIRROR_ONLY = "Projection mode: mirror-only"
 PROJECTION_BOUNDARY_MARKER = "Authority boundary: this file is projection-only"
 PROJECTION_FRESHNESS_BOUNDARY_ONLY = "boundary_markers_only"
 PROJECTION_FRESHNESS_PARITY_REQUIRED = "summary_snapshot_parity_required"
+ALLOWED_MINOR_FAMILY_UNIQUENESS_MODES = frozenset({MINOR_FAMILY_UNIQUENESS_EXACT_CANONICAL_PAIR_ONLY})
 ALLOWED_PROJECTION_FRESHNESS_MODES = frozenset(
     {
         PROJECTION_FRESHNESS_BOUNDARY_ONLY,
@@ -206,6 +211,13 @@ def render_template_text(template_text: str, replacements: dict[str, str]) -> st
 
 def unresolved_template_tokens(text: str) -> list[str]:
     return sorted(set(TEMPLATE_PLACEHOLDER_RE.findall(text)))
+
+
+def validate_minor_family_uniqueness_mode(mode: str) -> str:
+    token = _non_empty_text(mode)
+    if token not in ALLOWED_MINOR_FAMILY_UNIQUENESS_MODES:
+        raise ValueError(f"unknown workbook minor-family uniqueness mode: {mode}")
+    return token
 
 
 def validate_projection_freshness_mode(mode: str) -> str:

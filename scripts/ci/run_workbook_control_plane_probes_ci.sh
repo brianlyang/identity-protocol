@@ -24,16 +24,21 @@ import yaml
 
 sys.path.insert(0, str((Path(sys.argv[1]).resolve() / "scripts")))
 
-from workbook_control_plane_common import PROJECTION_BOUNDARY_MARKER  # noqa: E402
+from workbook_control_plane_common import (  # noqa: E402
+    PROJECTION_BOUNDARY_MARKER,
+    STREAM_DOC_REGISTRY_CURRENT,
+    WORKBOOK_README_REL,
+    WORKBOOK_REGISTRY_CURRENT,
+)
 
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_WORKBOOK_BOUNDARY = "IP-IREG-008"
 ERR_STREAM_DOC_REGISTRY = "IP-IREG-009"
-WORKBOOK_REGISTRY_CURRENT = Path("identity/protocol/mappings/workbook-registry.current.yaml")
-STREAM_DOC_REGISTRY_CURRENT = Path("identity/protocol/mappings/stream-doc-registry.current.yaml")
-WORKBOOK_README = Path("docs/workbook/README.md")
+WORKBOOK_REGISTRY_CURRENT = Path(WORKBOOK_REGISTRY_CURRENT)
+STREAM_DOC_REGISTRY_CURRENT = Path(STREAM_DOC_REGISTRY_CURRENT)
+WORKBOOK_README = Path(WORKBOOK_README_REL)
 PROJECTION_FORBIDDEN_SENTENCE = "Authoritative current status: illegal mirror override"
 DOCS_CHECKED_LINE_RE = re.compile(r"docs checked:\s*\d+")
 ISSUE_REGISTER_COUNT_LINE_RE = re.compile(r"issue_register_issue_count=\d+")

@@ -9,8 +9,10 @@ from typing import Any
 import yaml
 
 from workbook_control_plane_common import (
+    MINOR_FAMILY_UNIQUENESS_EXACT_CANONICAL_PAIR_ONLY,
     PROJECTION_BOUNDARY_MARKER,
     PROJECTION_MODE_MIRROR_ONLY,
+    WORKBOOK_CONTROL_PLANE_CONTRACT,
     WorkbookTemplateContract,
     load_active_workbook_registry,
     resolve_workbook_roots,
@@ -169,7 +171,7 @@ def main() -> int:
     violations: list[str] = []
     if _norm(target_registry_doc.get("version")) != minor:
         violations.append(f"registry_version_mismatch:expected={minor}:recorded={_norm(target_registry_doc.get('version'))}")
-    if _norm(target_registry_doc.get("control_plane_contract")) != "minor_family_workbook_control_plane":
+    if _norm(target_registry_doc.get("control_plane_contract")) != WORKBOOK_CONTROL_PLANE_CONTRACT:
         violations.append("registry_control_plane_contract_mismatch")
 
     template_contract_doc = target_registry_doc.get("template_contract")
@@ -204,7 +206,7 @@ def main() -> int:
             violations.append("deep_audit_doc_path_mismatch")
         if _norm(active_family_doc.get("governance_doc")) != registry_bundle.template_contract.governance_doc_rel:
             violations.append("governance_doc_path_mismatch")
-        if _norm(active_family_doc.get("minor_family_uniqueness_mode")) != "exact_canonical_pair_only":
+        if _norm(active_family_doc.get("minor_family_uniqueness_mode")) != MINOR_FAMILY_UNIQUENESS_EXACT_CANONICAL_PAIR_ONLY:
             violations.append("minor_family_uniqueness_mode_mismatch")
         if _norm(active_family_doc.get("projection_policy")) != registry_bundle.template_contract.projection_policy:
             violations.append("projection_policy_mismatch")

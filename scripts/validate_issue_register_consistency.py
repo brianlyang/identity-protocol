@@ -14,9 +14,15 @@ import yaml
 from repo_root_resolution_common import resolve_protocol_repo_root, resolve_workspace_root
 from workbook_control_plane_common import (
     ALLOWED_PROJECTION_FRESHNESS_MODES,
+    MINOR_FAMILY_UNIQUENESS_EXACT_CANONICAL_PAIR_ONLY,
     PROJECTION_BOUNDARY_MARKER,
     PROJECTION_FRESHNESS_PARITY_REQUIRED,
     PROJECTION_MODE_MIRROR_ONLY,
+    STREAM_DOC_REGISTRY_CURRENT,
+    WORKBOOK_CANONICAL_DIR,
+    WORKBOOK_README_REL,
+    WORKBOOK_REGISTRY_CURRENT,
+    validate_minor_family_uniqueness_mode,
 )
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -31,11 +37,6 @@ ERR_CHECKER_MISMATCH = "IP-IREG-006"
 ERR_WORKBOOK_REGISTRY = "IP-IREG-007"
 ERR_WORKBOOK_BOUNDARY = "IP-IREG-008"
 ERR_STREAM_DOC_REGISTRY = "IP-IREG-009"
-
-WORKBOOK_REGISTRY_CURRENT = "identity/protocol/mappings/workbook-registry.current.yaml"
-STREAM_DOC_REGISTRY_CURRENT = "identity/protocol/mappings/stream-doc-registry.current.yaml"
-WORKBOOK_CANONICAL_DIR = "docs/workbook"
-WORKBOOK_README = "docs/workbook/README.md"
 
 ISSUE_ROW_RE = re.compile(r"^\|\s*(ISSUE-\d+)\b.*\|\s*([A-Z_]+)\s*\|")
 ISSUE_HEADER_RE = re.compile(r"^###\s+(ISSUE-\d+)\b")
@@ -146,7 +147,10 @@ def _discover_workbook_family(repo_root: Path, workspace_root: Path) -> Workbook
     workbook_family = str(family.get("workbook_family", "")).strip()
     if not workbook_family:
         raise ValueError(f"workbook_family missing: {registry_path}")
-    minor_family_uniqueness_mode = str(family.get("minor_family_uniqueness_mode", "")).strip() or "exact_canonical_pair_only"
+    minor_family_uniqueness_mode = validate_minor_family_uniqueness_mode(
+        str(family.get("minor_family_uniqueness_mode", "")).strip()
+        or MINOR_FAMILY_UNIQUENESS_EXACT_CANONICAL_PAIR_ONLY
+    )
     governance_doc = str(family.get("governance_doc", "")).strip()
     issue_register_doc = _resolve_family_doc_path(family, "issue_register_doc")
     deep_audit_doc = _resolve_family_doc_path(family, "deep_audit_workbook_doc")
@@ -406,7 +410,7 @@ def _validate_minor_family_uniqueness(
     family_docs = sorted(
         path.resolve()
         for path in docs_root.glob("*.md")
-        if path.name != Path(WORKBOOK_README).name and _is_active_family_workbook_doc(path, workbook_family=workbook_family)
+        if path.name != Path(WORKBOOK_README_REL).name and _is_active_family_workbook_doc(path, workbook_family=workbook_family)
     )
     family_doc_rel = [_path_rel(repo_root, path) for path in family_docs]
     extra_docs = [path for path in family_docs if path not in canonical_docs]
@@ -442,7 +446,7 @@ def _validate_stream_doc_registry_binding(
 ) -> tuple[dict[str, Any], list[str]]:
     stream_registry = _discover_stream_doc_registry(repo_root)
     expected_static_docs = {
-        WORKBOOK_README,
+        WORKBOOK_README_REL,
         WORKBOOK_REGISTRY_CURRENT,
         _path_rel(repo_root, workbook_registry_path),
         _path_rel(repo_root, governance_doc),
@@ -674,7 +678,7 @@ def main() -> int:
     violations.extend(issue_register_boundary_violations)
     violations.extend(deep_audit_boundary_violations)
 
-    if workbook_family and minor_family_uniqueness_mode == "exact_canonical_pair_only":
+    if workbook_family and minor_family_uniqueness_mode == MINOR_FAMILY_UNIQUENESS_EXACT_CANONICAL_PAIR_ONLY:
         minor_family_uniqueness, uniqueness_violations = _validate_minor_family_uniqueness(
             repo_root=repo_root,
             workbook_family=workbook_family,
