@@ -24,9 +24,12 @@ ERR_BOUNDARY_SECTION = "IP-IREG-005"
 ERR_CHECKER_MISMATCH = "IP-IREG-006"
 ERR_WORKBOOK_REGISTRY = "IP-IREG-007"
 ERR_WORKBOOK_BOUNDARY = "IP-IREG-008"
+ERR_STREAM_DOC_REGISTRY = "IP-IREG-009"
 
 WORKBOOK_REGISTRY_CURRENT = "identity/protocol/mappings/workbook-registry.current.yaml"
+STREAM_DOC_REGISTRY_CURRENT = "identity/protocol/mappings/stream-doc-registry.current.yaml"
 WORKBOOK_CANONICAL_DIR = "docs/workbook"
+WORKBOOK_README = "docs/workbook/README.md"
 
 ISSUE_ROW_RE = re.compile(r"^\|\s*(ISSUE-\d+)\b.*\|\s*([A-Z_]+)\s*\|")
 ISSUE_HEADER_RE = re.compile(r"^###\s+(ISSUE-\d+)\b")
@@ -74,9 +77,18 @@ class WorkbookFamily:
     registry_path: Path
     workbook_family: str
     minor_family_uniqueness_mode: str
+    governance_doc: Path
     issue_register_doc: Path
     deep_audit_workbook_doc: Path
     projection_exports: tuple[ProjectionExport, ...]
+
+
+@dataclass(frozen=True)
+class StreamDocRegistry:
+    current_path: Path
+    versioned_path: Path
+    version: str
+    mandatory_static_docs: tuple[str, ...]
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -118,9 +130,10 @@ def _discover_workbook_family(repo_root: Path, workspace_root: Path) -> Workbook
     if not workbook_family:
         raise ValueError(f"workbook_family missing: {registry_path}")
     minor_family_uniqueness_mode = str(family.get("minor_family_uniqueness_mode", "")).strip() or "exact_canonical_pair_only"
+    governance_doc = str(family.get("governance_doc", "")).strip()
     issue_register_doc = _resolve_family_doc_path(family, "issue_register_doc")
     deep_audit_doc = _resolve_family_doc_path(family, "deep_audit_workbook_doc")
-    if not issue_register_doc or not deep_audit_doc:
+    if not governance_doc or not issue_register_doc or not deep_audit_doc:
         raise ValueError(f"workbook registry missing workbook doc paths: {registry_path}")
     projection_rows = family.get("projection_exports") or []
     if not isinstance(projection_rows, list):
@@ -148,9 +161,37 @@ def _discover_workbook_family(repo_root: Path, workspace_root: Path) -> Workbook
         registry_path=registry_path,
         workbook_family=workbook_family,
         minor_family_uniqueness_mode=minor_family_uniqueness_mode,
+        governance_doc=(repo_root / governance_doc).resolve(),
         issue_register_doc=(repo_root / issue_register_doc).resolve(),
         deep_audit_workbook_doc=(repo_root / deep_audit_doc).resolve(),
         projection_exports=tuple(projection_exports),
+    )
+
+
+def _discover_stream_doc_registry(repo_root: Path) -> StreamDocRegistry:
+    current_path = (repo_root / STREAM_DOC_REGISTRY_CURRENT).resolve()
+    if not current_path.exists():
+        raise ValueError(f"missing stream doc registry current pointer: {current_path}")
+    current_doc = _load_yaml(current_path)
+    active_file = str(current_doc.get("active_file", "")).strip()
+    if not active_file:
+        raise ValueError(f"stream doc registry current pointer missing active_file: {current_path}")
+    versioned_path = (repo_root / active_file).resolve()
+    if not versioned_path.exists():
+        raise ValueError(f"missing stream doc registry versioned file: {versioned_path}")
+    versioned_doc = _load_yaml(versioned_path)
+    version = str(versioned_doc.get("version", "")).strip()
+    if not version:
+        raise ValueError(f"stream doc registry missing version: {versioned_path}")
+    mandatory_static_docs_raw = versioned_doc.get("mandatory_static_docs") or []
+    if not isinstance(mandatory_static_docs_raw, list):
+        raise ValueError(f"mandatory_static_docs must be list: {versioned_path}")
+    mandatory_static_docs = tuple(str(item).strip() for item in mandatory_static_docs_raw if str(item).strip())
+    return StreamDocRegistry(
+        current_path=current_path,
+        versioned_path=versioned_path,
+        version=version,
+        mandatory_static_docs=mandatory_static_docs,
     )
 
 
@@ -221,6 +262,26 @@ def _extract_section_issue_refs(lines: list[str], heading: str) -> list[IssueRef
         for issue_id in issue_ids:
             refs.append(IssueReference(issue_id=issue_id, line_no=line_no, text=line.strip()))
     return refs
+
+
+def _path_rel(repo_root: Path, path: Path) -> str:
+    return str(path.resolve().relative_to(repo_root))
+
+
+def _is_active_family_workbook_doc(path: Path, *, workbook_family: str) -> bool:
+    family_token_re = re.compile(rf"(^|[^0-9]){re.escape(workbook_family)}([^0-9]|$)")
+    if family_token_re.search(path.stem):
+        return True
+    header = "\n".join(_load_lines(path)[:20])
+    if not family_token_re.search(header):
+        return False
+    authority_markers = (
+        "Authority boundary:",
+        "Issue Register",
+        "Deep Audit Workbook",
+        "workbook family",
+    )
+    return any(marker in header for marker in authority_markers)
 
 
 def _run_docs_checker(repo_root: Path) -> tuple[int, int, str]:
@@ -324,15 +385,19 @@ def _validate_minor_family_uniqueness(
         issue_register_doc.resolve(),
         deep_audit_workbook_doc.resolve(),
     }
-    family_docs = sorted(path.resolve() for path in docs_root.glob(f"*-{workbook_family}.md"))
-    family_doc_rel = [str(path.relative_to(repo_root)) for path in family_docs]
+    family_docs = sorted(
+        path.resolve()
+        for path in docs_root.glob("*.md")
+        if path.name != Path(WORKBOOK_README).name and _is_active_family_workbook_doc(path, workbook_family=workbook_family)
+    )
+    family_doc_rel = [_path_rel(repo_root, path) for path in family_docs]
     extra_docs = [path for path in family_docs if path not in canonical_docs]
     missing_docs = [path for path in canonical_docs if path not in family_docs]
     violations: list[str] = []
     for path in extra_docs:
-        violations.append(f"minor_family_uniqueness_extra_doc:{workbook_family}:{path.relative_to(repo_root)}")
+        violations.append(f"minor_family_uniqueness_extra_doc:{workbook_family}:{_path_rel(repo_root, path)}")
     for path in missing_docs:
-        violations.append(f"minor_family_uniqueness_missing_doc:{workbook_family}:{path.relative_to(repo_root)}")
+        violations.append(f"minor_family_uniqueness_missing_doc:{workbook_family}:{_path_rel(repo_root, path)}")
     if len(family_docs) != len(canonical_docs):
         violations.append(
             f"minor_family_uniqueness_count_mismatch:{workbook_family}:expected={len(canonical_docs)}:found={len(family_docs)}"
@@ -341,7 +406,46 @@ def _validate_minor_family_uniqueness(
         {
             "workbook_family": workbook_family,
             "family_docs": family_doc_rel,
-            "canonical_docs": sorted(str(path.relative_to(repo_root)) for path in canonical_docs),
+            "canonical_docs": sorted(_path_rel(repo_root, path) for path in canonical_docs),
+        },
+        violations,
+    )
+
+
+def _validate_stream_doc_registry_binding(
+    *,
+    repo_root: Path,
+    workbook_family: str,
+    workbook_registry_path: Path,
+    governance_doc: Path,
+    issue_register_doc: Path,
+    deep_audit_workbook_doc: Path,
+) -> tuple[dict[str, Any], list[str]]:
+    stream_registry = _discover_stream_doc_registry(repo_root)
+    expected_static_docs = {
+        WORKBOOK_README,
+        WORKBOOK_REGISTRY_CURRENT,
+        _path_rel(repo_root, workbook_registry_path),
+        _path_rel(repo_root, governance_doc),
+        _path_rel(repo_root, issue_register_doc),
+        _path_rel(repo_root, deep_audit_workbook_doc),
+    }
+    recorded_static_docs = set(stream_registry.mandatory_static_docs)
+    missing_static_docs = sorted(expected_static_docs - recorded_static_docs)
+    violations: list[str] = []
+    if stream_registry.version != workbook_family:
+        violations.append(
+            f"stream_doc_registry_version_mismatch:expected={workbook_family}:recorded={stream_registry.version}"
+        )
+    for path_rel in missing_static_docs:
+        violations.append(f"stream_doc_registry_missing_static_doc:{path_rel}")
+    return (
+        {
+            "current_path": str(stream_registry.current_path),
+            "versioned_path": str(stream_registry.versioned_path),
+            "version": stream_registry.version,
+            "expected_static_docs": sorted(expected_static_docs),
+            "missing_static_docs": missing_static_docs,
         },
         violations,
     )
@@ -443,6 +547,8 @@ def main() -> int:
         "repo_root": str(repo_root),
         "workspace_root": str(workspace_root),
         "workbook_registry": "",
+        "stream_doc_registry": {},
+        "governance_doc": "",
         "issue_register_doc": "",
         "deep_audit_workbook_doc": "",
         "projection_exports": [],
@@ -469,6 +575,7 @@ def main() -> int:
             workbook_registry = ""
             workbook_family = ""
             minor_family_uniqueness_mode = ""
+            governance_doc = Path()
             issue_register_doc = Path(issue_register_override).expanduser().resolve()
             deep_audit_workbook_doc = Path(deep_audit_override).expanduser().resolve()
         else:
@@ -476,6 +583,7 @@ def main() -> int:
             workbook_registry = str(family.registry_path)
             workbook_family = family.workbook_family
             minor_family_uniqueness_mode = family.minor_family_uniqueness_mode
+            governance_doc = family.governance_doc
             issue_register_doc = family.issue_register_doc
             deep_audit_workbook_doc = family.deep_audit_workbook_doc
             projection_exports = family.projection_exports
@@ -488,6 +596,7 @@ def main() -> int:
         return 1
 
     payload["workbook_registry"] = workbook_registry
+    payload["governance_doc"] = str(governance_doc) if governance_doc else ""
     payload["issue_register_doc"] = str(issue_register_doc)
     payload["deep_audit_workbook_doc"] = str(deep_audit_workbook_doc)
     payload["projection_exports"] = [_serialize_projection_export(export) for export in projection_exports]
@@ -552,6 +661,16 @@ def main() -> int:
         )
         payload["minor_family_uniqueness"] = minor_family_uniqueness
         violations.extend(uniqueness_violations)
+        stream_doc_registry, stream_doc_registry_violations = _validate_stream_doc_registry_binding(
+            repo_root=repo_root,
+            workbook_family=workbook_family,
+            workbook_registry_path=Path(workbook_registry),
+            governance_doc=governance_doc,
+            issue_register_doc=issue_register_doc,
+            deep_audit_workbook_doc=deep_audit_workbook_doc,
+        )
+        payload["stream_doc_registry"] = stream_doc_registry
+        violations.extend(stream_doc_registry_violations)
 
     try:
         docs_checked, snippets_checked, docs_output = _run_docs_checker(repo_root)
@@ -610,7 +729,9 @@ def main() -> int:
     payload["violations"] = violations
     if violations:
         payload["error_code"] = (
-            ERR_WORKBOOK_REGISTRY
+            ERR_STREAM_DOC_REGISTRY
+            if any(item.startswith("stream_doc_registry_") for item in violations)
+            else ERR_WORKBOOK_REGISTRY
             if any(item.startswith("doc_discovery:") for item in violations)
             else ERR_WORKBOOK_BOUNDARY
             if any(
