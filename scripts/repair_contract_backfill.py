@@ -60,15 +60,26 @@ from create_identity_pack import (
     INSTANCE_PACK_TOPOLOGY_CONTRACT_ID,
     INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY,
     INSTANCE_PACK_TOPOLOGY_VALIDATOR_ID,
+    CONTEXT_CONTINUITY_CONTRACT_ID,
+    CONTEXT_CONTINUITY_CONTRACT_KEY,
+    CONTEXT_CONTINUITY_REPORT_ROOT_REL,
+    CONTEXT_CONTINUITY_STATE_ROOT_REL,
+    CONTEXT_CONTINUITY_VALIDATOR_ID,
+    CONTINUITY_RECEIPT_VALIDATOR_ID,
     INSTANCE_SCRIPT_MANIFEST_RELATIVE_PATH,
     INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID,
     INSTANCE_SCRIPT_EXECUTION_LANE_VALIDATOR_ID,
     INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID,
     INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID,
     HEADSTAMP_RECURRENCE_VALIDATOR_ID,
+    REENTRY_BRIEF_CONSUMPTION_CONTRACT_ID,
+    REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY,
+    REENTRY_BRIEF_VALIDATOR_ID,
+    REENTRY_CONSUMPTION_VALIDATOR_ID,
     UNIQUE_EGRESS_SCRIPT,
     UNIQUE_INGRESS_SCRIPT,
     _copy_jsonl_with_identity,
+    _context_continuity_contract_skeleton,
     _copy_sample_with_identity,
     _default_instance_script_manifest,
     _default_identity_agent_yaml,
@@ -91,6 +102,7 @@ from create_identity_pack import (
     _prompt_bootstrap_capability_contract_skeleton,
     _prompt_capability_matrix_contract_skeleton,
     _prompt_kernel_executable_coupling_contract_skeleton,
+    _reentry_brief_consumption_contract_skeleton,
     _reasoning_loop_failclose_contract_skeleton,
     _skill_frontmatter_contract_skeleton,
     _skill_installation_supply_chain_contract_skeleton,
@@ -126,6 +138,10 @@ REQUIRED_INTAKE_KEYS = (
 )
 REQUIRED_TOPOLOGY_KEYS = (
     INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY,
+)
+REQUIRED_CONTINUITY_KEYS = (
+    CONTEXT_CONTINUITY_CONTRACT_KEY,
+    REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY,
 )
 
 REQUIRED_PROMPT_KEYS = (
@@ -185,6 +201,10 @@ HOST_VISIBLE_SURFACE_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
 DOWNSINK_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY: _protocol_downsink_path_immutability_contract_skeleton(),
 }
+CONTINUITY_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
+    CONTEXT_CONTINUITY_CONTRACT_KEY: _context_continuity_contract_skeleton(),
+    REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY: _reentry_brief_consumption_contract_skeleton(),
+}
 SKILL_SUPPLY_CHAIN_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     "skill_installation_supply_chain_contract_v1": _skill_installation_supply_chain_contract_skeleton("default"),
     "skill_frontmatter_contract_v1": _skill_frontmatter_contract_skeleton(),
@@ -199,7 +219,14 @@ CAPABILITY_DRIVER_VALIDATOR_IDS: tuple[str, ...] = (
     INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID,
     INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID,
     INSTANCE_SCRIPT_EXECUTION_LANE_VALIDATOR_ID,
+    CONTEXT_CONTINUITY_VALIDATOR_ID,
+    REENTRY_BRIEF_VALIDATOR_ID,
+    REENTRY_CONSUMPTION_VALIDATOR_ID,
+    CONTINUITY_RECEIPT_VALIDATOR_ID,
 )
+
+ERR_CONTINUITY_WIRE_MISSING = "IP-CONT-WIRE-001"
+ERR_CONTINUITY_WIRE_INVALID = "IP-CONT-WIRE-002"
 
 ERR_PROMPT_WIRE_MISSING = "IP-PROMPT-WIRE-002"
 ERR_PROMPT_WIRE_INVALID = "IP-PROMPT-WIRE-003"
@@ -346,7 +373,12 @@ def _ensure_instance_pack_topology_assets(
         "runtime/plugins",
         "runtime/state",
     ]
+    optional_seed_dirs = [
+        CONTEXT_CONTINUITY_REPORT_ROOT_REL.as_posix(),
+        CONTEXT_CONTINUITY_STATE_ROOT_REL.as_posix(),
+    ]
     missing_dirs = [row for row in required_dirs if not (pack_path / row).exists()]
+    missing_optional_seed_dirs = [row for row in optional_seed_dirs if not (pack_path / row).exists()]
     required_files = {
         "scripts/README.md": _default_instance_scripts_readme(identity_id),
         "agents/identity.yaml": _default_identity_agent_yaml(identity_id, title, description),
@@ -378,6 +410,8 @@ def _ensure_instance_pack_topology_assets(
     legacy_cache_dirs_removed: list[str] = []
     if apply:
         for row in required_dirs:
+            (pack_path / row).mkdir(parents=True, exist_ok=True)
+        for row in optional_seed_dirs:
             (pack_path / row).mkdir(parents=True, exist_ok=True)
         for rel, text in required_files.items():
             path = pack_path / rel
@@ -418,12 +452,29 @@ def _ensure_instance_pack_topology_assets(
             if apply or (not missing_dirs and not missing_files and not topology_hygiene_changed)
             else STATUS_SKIPPED_NOT_REQUIRED
         ),
-        "changed": bool(missing_dirs or missing_files or missing_optional_files or topology_hygiene_changed),
-        "applied": bool(apply and (missing_dirs or missing_files or missing_optional_files or topology_hygiene_changed)),
+        "changed": bool(
+            missing_dirs
+            or missing_optional_seed_dirs
+            or missing_files
+            or missing_optional_files
+            or topology_hygiene_changed
+        ),
+        "applied": bool(
+            apply
+            and (
+                missing_dirs
+                or missing_optional_seed_dirs
+                or missing_files
+                or missing_optional_files
+                or topology_hygiene_changed
+            )
+        ),
         "missing_dirs_before": missing_dirs,
+        "missing_optional_seed_dirs_before": missing_optional_seed_dirs,
         "missing_files_before": missing_files,
         "missing_optional_files_before": missing_optional_files,
         "required_dirs": required_dirs,
+        "optional_seed_dirs": optional_seed_dirs,
         "required_files": sorted(required_files.keys()),
         "optional_seed_files": sorted(optional_files.keys()),
         "legacy_relay_files_before": legacy_relay_files_before,
@@ -1095,6 +1146,63 @@ def _normalize_prompt_contracts(task: dict[str, Any]) -> tuple[list[str], list[s
             if appended_contract_ids:
                 restored_list_fields[f"{key}.derived_from_contract_ids"] = appended_contract_ids
     return forced_required_keys, restored_validator_keys, restored_list_fields
+
+
+def _continuity_contract_invalid_keys(task: dict[str, Any]) -> list[str]:
+    invalid: list[str] = []
+    continuity_contract = task.get(CONTEXT_CONTINUITY_CONTRACT_KEY)
+    if isinstance(continuity_contract, dict):
+        if str(continuity_contract.get("contract_id", "")).strip() != CONTEXT_CONTINUITY_CONTRACT_ID:
+            invalid.append(CONTEXT_CONTINUITY_CONTRACT_KEY)
+        if str(continuity_contract.get("validator", "")).strip() != CONTEXT_CONTINUITY_VALIDATOR_ID:
+            invalid.append(CONTEXT_CONTINUITY_CONTRACT_KEY)
+    reentry_contract = task.get(REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY)
+    if isinstance(reentry_contract, dict):
+        if str(reentry_contract.get("contract_id", "")).strip() != REENTRY_BRIEF_CONSUMPTION_CONTRACT_ID:
+            invalid.append(REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY)
+        validators = reentry_contract.get("validators")
+        normalized = [str(item).strip() for item in validators if str(item).strip()] if isinstance(validators, list) else []
+        expected = {
+            REENTRY_BRIEF_VALIDATOR_ID,
+            REENTRY_CONSUMPTION_VALIDATOR_ID,
+        }
+        if not expected.issubset(set(normalized)):
+            invalid.append(REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY)
+    return sorted(set(invalid))
+
+
+def _normalize_continuity_contracts(task: dict[str, Any]) -> tuple[list[str], list[str]]:
+    restored_contract_keys: list[str] = []
+    restored_validator_keys: list[str] = []
+    for key, default in CONTINUITY_CONTRACT_DEFAULTS.items():
+        node = task.get(key)
+        if not isinstance(node, dict):
+            task[key] = json.loads(json.dumps(default))
+            restored_contract_keys.append(key)
+            restored_validator_keys.append(key)
+            continue
+        merged = _deep_merge(node, default)
+        if merged != node:
+            restored_contract_keys.append(key)
+        task[key] = merged
+        if key == CONTEXT_CONTINUITY_CONTRACT_KEY:
+            if str(merged.get("validator", "")).strip() != CONTEXT_CONTINUITY_VALIDATOR_ID:
+                merged["validator"] = CONTEXT_CONTINUITY_VALIDATOR_ID
+                restored_validator_keys.append(key)
+        elif key == REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY:
+            validators = merged.get("validators")
+            normalized = [str(item).strip() for item in validators if str(item).strip()] if isinstance(validators, list) else []
+            required = [REENTRY_BRIEF_VALIDATOR_ID, REENTRY_CONSUMPTION_VALIDATOR_ID]
+            changed = False
+            for validator_id in required:
+                if validator_id in normalized:
+                    continue
+                normalized.append(validator_id)
+                changed = True
+            if changed or not isinstance(validators, list):
+                merged["validators"] = normalized
+                restored_validator_keys.append(key)
+    return restored_contract_keys, restored_validator_keys
 
 
 def _normalize_multimodal_contracts(task: dict[str, Any]) -> tuple[list[str], list[str], bool]:
@@ -1796,6 +1904,7 @@ def main() -> int:
     response_stamp_profile_before = normalize_response_stamp_profile(before.get("response_stamp_profile"))
     missing_before = [k for k in REQUIRED_INTAKE_KEYS if not isinstance(task_doc.get(k), dict)]
     topology_missing_before = [k for k in REQUIRED_TOPOLOGY_KEYS if not isinstance(task_doc.get(k), dict)]
+    continuity_missing_before = [k for k in REQUIRED_CONTINUITY_KEYS if not isinstance(task_doc.get(k), dict)]
     prompt_missing_before = [k for k in REQUIRED_PROMPT_KEYS if not isinstance(task_doc.get(k), dict)]
     multimodal_missing_before = [k for k in REQUIRED_MULTIMODAL_KEYS if not isinstance(task_doc.get(k), dict)]
     reasoning_missing_before = [k for k in REQUIRED_REASONING_KEYS if not isinstance(task_doc.get(k), dict)]
@@ -1813,6 +1922,7 @@ def main() -> int:
 
     updated = _ensure_intake_p1_contracts(task_doc, args.identity_id)
     restored_topology_contract_keys = _normalize_instance_pack_topology_contract(updated, args.identity_id)
+    restored_continuity_contract_keys, restored_continuity_validator_keys = _normalize_continuity_contracts(updated)
     updated["response_stamp_profile"] = normalize_response_stamp_profile(updated.get("response_stamp_profile"))
     restored_skill_supply_chain_contract_keys = _normalize_skill_supply_chain_contracts(updated, args.identity_id)
     restored_capability_driver_validator_paths = _normalize_capability_driver_validators(updated)
@@ -1861,6 +1971,7 @@ def main() -> int:
         meta_version_changed = apply_version_baseline_to_meta_doc(meta_doc, version_baseline)
     missing_after = [k for k in REQUIRED_INTAKE_KEYS if not isinstance(updated.get(k), dict)]
     topology_missing_after = [k for k in REQUIRED_TOPOLOGY_KEYS if not isinstance(updated.get(k), dict)]
+    continuity_missing_after = [k for k in REQUIRED_CONTINUITY_KEYS if not isinstance(updated.get(k), dict)]
     response_stamp_profile_present_after = isinstance(updated.get("response_stamp_profile"), dict)
     response_stamp_profile_after = normalize_response_stamp_profile(updated.get("response_stamp_profile"))
     response_stamp_profile_changed = (
@@ -1891,6 +2002,7 @@ def main() -> int:
             or str((updated.get(k) or {}).get("fail_mode", "")).strip().lower() != "fail_required"
         )
     ]
+    continuity_invalid_after = _continuity_contract_invalid_keys(updated)
     prompt_invalid_after = [
         k
         for k in REQUIRED_PROMPT_KEYS
@@ -2522,6 +2634,12 @@ def main() -> int:
         "restored_topology_contract_keys": restored_topology_contract_keys,
         "restored_update_lifecycle_required_checks": restored_update_lifecycle_required_checks,
         "topology_assets_backfill": topology_assets_result,
+        "required_continuity_contract_keys": list(REQUIRED_CONTINUITY_KEYS),
+        "missing_continuity_contract_keys_before": continuity_missing_before,
+        "missing_continuity_contract_keys_after": continuity_missing_after,
+        "invalid_continuity_contract_keys_after": continuity_invalid_after,
+        "restored_continuity_contract_keys": restored_continuity_contract_keys,
+        "restored_continuity_validator_keys": restored_continuity_validator_keys,
         "required_prompt_contract_keys": list(REQUIRED_PROMPT_KEYS),
         "missing_prompt_contract_keys_before": prompt_missing_before,
         "missing_prompt_contract_keys_after": prompt_missing_after,
@@ -2588,6 +2706,18 @@ def main() -> int:
             ""
             if not topology_missing_after and not topology_invalid_after
             else ("IP-IPACK-001" if topology_missing_after else "IP-IPACK-002")
+        ),
+        "continuity_contract_auto_wire_status": (
+            STATUS_PASS_REQUIRED if not continuity_missing_after and not continuity_invalid_after else STATUS_FAIL_REQUIRED
+        ),
+        "continuity_contract_auto_wire_error_code": (
+            ""
+            if not continuity_missing_after and not continuity_invalid_after
+            else (
+                ERR_CONTINUITY_WIRE_MISSING
+                if continuity_missing_after
+                else ERR_CONTINUITY_WIRE_INVALID
+            )
         ),
         "unique_entry_contract_auto_wire_status": (
             STATUS_PASS_REQUIRED if not entry_missing_after and not entry_invalid_after else STATUS_FAIL_REQUIRED

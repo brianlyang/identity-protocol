@@ -21,11 +21,15 @@ from actor_session_common import (
 )
 from compatibility_pointer_semantics_common import SESSION_POINTER_COMPATIBILITY_PATH_FIELD
 from create_identity_pack import (
+    CONTEXT_CONTINUITY_VALIDATOR_ID,
+    CONTINUITY_RECEIPT_VALIDATOR_ID,
     IDENTITY_CODEX_LAUNCHER_VALIDATOR_ID,
     INSTANCE_SCRIPT_EXECUTION_LANE_VALIDATOR_ID,
     INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID,
     INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID,
     INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID,
+    REENTRY_BRIEF_VALIDATOR_ID,
+    REENTRY_CONSUMPTION_VALIDATOR_ID,
 )
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
 from resolve_identity_context import (
@@ -82,13 +86,22 @@ HOST_GATEWAY_DEFAULT_SESSION_CHAIN_WRAPPER = INFRA_HOST_GATEWAY_DEFAULT_SESSION_
 HOST_GATEWAY_DEFAULT_SIGNING_KEY = INFRA_HOST_GATEWAY_DEFAULT_SIGNING_KEY
 FINAL_EMIT_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
 REQUIRED_GATE_BUNDLE_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
-INSTANCE_SCRIPT_CONTRACT_VALIDATOR_IDS = (
+INSTANCE_LOCAL_RUNTIME_CONTRACT_VALIDATOR_IDS = (
     IDENTITY_CODEX_LAUNCHER_VALIDATOR_ID,
     INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID,
     INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID,
     INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID,
     INSTANCE_SCRIPT_EXECUTION_LANE_VALIDATOR_ID,
+    CONTEXT_CONTINUITY_VALIDATOR_ID,
+    REENTRY_BRIEF_VALIDATOR_ID,
+    REENTRY_CONSUMPTION_VALIDATOR_ID,
+    CONTINUITY_RECEIPT_VALIDATOR_ID,
 )
+INSTANCE_LOCAL_RUNTIME_LANE_SCOPED_VALIDATOR_IDS = {
+    INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID,
+    INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID,
+    INSTANCE_SCRIPT_EXECUTION_LANE_VALIDATOR_ID,
+}
 
 
 def _coverage_governed_validator_scripts() -> set[str]:
@@ -219,7 +232,7 @@ def _run_instance_script_contract_validators(
         return rc_launcher_install
     resolved_source_layer = str(source_layer or "").strip().lower() or _infer_source_domain_from_catalog(catalog)
     validator_cmds: list[list[str]] = []
-    for validator_id in INSTANCE_SCRIPT_CONTRACT_VALIDATOR_IDS:
+    for validator_id in INSTANCE_LOCAL_RUNTIME_CONTRACT_VALIDATOR_IDS:
         cmd = [
             "python3",
             validator_id,
@@ -229,7 +242,7 @@ def _run_instance_script_contract_validators(
             identity_id,
             "--json-only",
         ]
-        if validator_id not in {IDENTITY_CODEX_LAUNCHER_VALIDATOR_ID, INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID}:
+        if validator_id in INSTANCE_LOCAL_RUNTIME_LANE_SCOPED_VALIDATOR_IDS:
             cmd.extend(["--work-layer", str(work_layer or "instance").strip().lower() or "instance"])
             cmd.extend(["--source-layer", resolved_source_layer])
         validator_cmds.append(cmd)
@@ -237,7 +250,7 @@ def _run_instance_script_contract_validators(
         rc = _run(cmd)
         if rc != 0:
             print(
-                "[FAIL] instance script contract validator failed during identity_creator rollout; "
+                "[FAIL] instance local runtime contract validator failed during identity_creator rollout; "
                 f"validator={cmd[1]}"
             )
             return rc
@@ -1463,11 +1476,11 @@ def _heal_identity(
     )
     report["steps"].append(
         {
-            "name": "instance_script_contract_validators",
+            "name": "instance_local_runtime_contract_validators",
             "command": rollout_cmd,
             "rc": rc,
-            "stdout": "[OK] instance script contract validators completed" if rc == 0 else "",
-            "stderr": "" if rc == 0 else "instance script contract validator rollout failed",
+            "stdout": "[OK] instance local runtime contract validators completed" if rc == 0 else "",
+            "stderr": "" if rc == 0 else "instance local runtime contract validator rollout failed",
         }
     )
     if rc != 0:
@@ -3857,7 +3870,7 @@ def main() -> int:
             source_layer=_infer_source_domain_from_catalog(args.catalog),
         )
         if rc != 0:
-            print("[FAIL] instance script contract validators failed during update; update blocked")
+            print("[FAIL] instance local runtime contract validators failed during update; update blocked")
             return rc
         rc = _run(
             [

@@ -108,9 +108,26 @@ from identity_codex_launcher_common import (
     IDENTITY_CODEX_LAUNCHER_README_REL as COMMON_IDENTITY_CODEX_LAUNCHER_README_REL,
     IDENTITY_CODEX_LAUNCHER_RENDERER_ID as COMMON_IDENTITY_CODEX_LAUNCHER_RENDERER_ID,
     IDENTITY_CODEX_LAUNCHER_VALIDATOR_ID as COMMON_IDENTITY_CODEX_LAUNCHER_VALIDATOR_ID,
-    ensure_launcher_contract as _ensure_identity_codex_launcher_contract,
+    ensure_launcher_contract as _apply_identity_codex_launcher_contract,
     launcher_manifest_doc as _default_identity_codex_launcher_manifest_doc,
     launcher_readme_text as _render_identity_codex_launcher_readme,
+)
+from identity_context_continuity_common import (
+    CHECKPOINT_PATTERN as CONTEXT_CONTINUITY_CHECKPOINT_PATTERN,
+    CONTEXT_CONTINUITY_CONTRACT_ID as COMMON_CONTEXT_CONTINUITY_CONTRACT_ID,
+    CONTEXT_CONTINUITY_CONTRACT_KEY as COMMON_CONTEXT_CONTINUITY_CONTRACT_KEY,
+    CONTEXT_CONTINUITY_VALIDATOR_ID as COMMON_CONTEXT_CONTINUITY_VALIDATOR_ID,
+    CONTINUITY_ARTIFACT_KINDS as COMMON_CONTINUITY_ARTIFACT_KINDS,
+    CONTINUITY_RECEIPT_CONTRACT_ID as COMMON_CONTINUITY_RECEIPT_CONTRACT_ID,
+    CONTINUITY_RECEIPT_KINDS as COMMON_CONTINUITY_RECEIPT_KINDS,
+    CONTINUITY_RECEIPT_VALIDATOR_ID as COMMON_CONTINUITY_RECEIPT_VALIDATOR_ID,
+    REENTRY_BRIEF_CONSUMPTION_CONTRACT_ID as COMMON_REENTRY_BRIEF_CONSUMPTION_CONTRACT_ID,
+    REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY as COMMON_REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY,
+    REENTRY_BRIEF_REL as COMMON_REENTRY_BRIEF_REL,
+    REENTRY_BRIEF_VALIDATOR_ID as COMMON_REENTRY_BRIEF_VALIDATOR_ID,
+    REENTRY_CONSUMPTION_VALIDATOR_ID as COMMON_REENTRY_CONSUMPTION_VALIDATOR_ID,
+    REPORT_ROOT_REL as COMMON_CONTEXT_CONTINUITY_REPORT_ROOT_REL,
+    STATE_ROOT_REL as COMMON_CONTEXT_CONTINUITY_STATE_ROOT_REL,
 )
 from response_stamp_common import default_response_stamp_profile, normalize_response_stamp_profile
 from native_chat_headstamp_common import (
@@ -120,6 +137,11 @@ from native_chat_headstamp_common import (
 )
 
 ensure_native_chat_prompt_hard_guard = _ensure_native_chat_prompt_hard_guard
+
+
+def _ensure_identity_codex_launcher_contract(task: dict, identity_id: str) -> dict:
+    _apply_identity_codex_launcher_contract(task, identity_id)
+    return task
 
 
 MANDATORY_PROTOCOL_SOURCES = [
@@ -320,6 +342,32 @@ INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID = "scripts/validate_instance_script_manife
 INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID = "scripts/validate_identity_instance_script_orchestration.py"
 INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID = "scripts/validate_route_script_receipt_join.py"
 INSTANCE_SCRIPT_EXECUTION_LANE_VALIDATOR_ID = "scripts/validate_route_execution_lane_admission.py"
+CONTEXT_CONTINUITY_CONTRACT_KEY = COMMON_CONTEXT_CONTINUITY_CONTRACT_KEY
+CONTEXT_CONTINUITY_CONTRACT_ID = COMMON_CONTEXT_CONTINUITY_CONTRACT_ID
+CONTEXT_CONTINUITY_VALIDATOR_ID = COMMON_CONTEXT_CONTINUITY_VALIDATOR_ID
+REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY = COMMON_REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY
+REENTRY_BRIEF_CONSUMPTION_CONTRACT_ID = COMMON_REENTRY_BRIEF_CONSUMPTION_CONTRACT_ID
+REENTRY_BRIEF_VALIDATOR_ID = COMMON_REENTRY_BRIEF_VALIDATOR_ID
+REENTRY_CONSUMPTION_VALIDATOR_ID = COMMON_REENTRY_CONSUMPTION_VALIDATOR_ID
+CONTINUITY_RECEIPT_CONTRACT_ID = COMMON_CONTINUITY_RECEIPT_CONTRACT_ID
+CONTINUITY_RECEIPT_VALIDATOR_ID = COMMON_CONTINUITY_RECEIPT_VALIDATOR_ID
+CONTEXT_CONTINUITY_REPORT_ROOT_REL = COMMON_CONTEXT_CONTINUITY_REPORT_ROOT_REL
+CONTEXT_CONTINUITY_STATE_ROOT_REL = COMMON_CONTEXT_CONTINUITY_STATE_ROOT_REL
+REENTRY_BRIEF_RELATIVE_PATH = COMMON_REENTRY_BRIEF_REL.as_posix()
+CONTINUITY_CHECKPOINT_PATTERN = CONTEXT_CONTINUITY_CHECKPOINT_PATTERN
+CONTINUITY_ARTIFACT_KINDS = tuple(COMMON_CONTINUITY_ARTIFACT_KINDS)
+CONTINUITY_RECEIPT_KINDS = dict(COMMON_CONTINUITY_RECEIPT_KINDS)
+CONTINUITY_TRIGGER_PROFILE_ID = "default_turns_15_30_60"
+CONTINUITY_FORCED_TRIGGER_CLASSES: tuple[str, ...] = (
+    "clear_or_context_reset",
+    "compaction_boundary",
+    "launcher_restart_or_recover",
+    "resume_migration",
+    "major_commit",
+    "major_gate_flip",
+    "lane_switch",
+    "root_cause_turn",
+)
 HEADSTAMP_RECURRENCE_VALIDATOR_ID = "scripts/validate_headstamp_recurrence_closure.py"
 PROVIDER_BINDINGS_TEMPLATE_RELATIVE_PATH = (
     "identity/protocol/plugins/templates/provider-bindings.local.template.yaml"
@@ -850,6 +898,7 @@ def _instance_pack_topology_contract_skeleton(identity_id: str) -> dict:
             "runtime/reports",
             "runtime/reports/broadcast",  # downsink-path-lock: allow-nonregistry-literal
             "runtime/reports/agent-relay-final-answer",
+            "runtime/reports/context-continuity",
             "runtime/reports/host-visible-surface",
             "runtime/reports/install",
             "runtime/reports/instance-script-admission",
@@ -860,6 +909,7 @@ def _instance_pack_topology_contract_skeleton(identity_id: str) -> dict:
             "runtime/reports/required-gate-bundle-entry",
             "runtime/reports/v*-wrapper-*",
             "runtime/rulebooks",
+            "runtime/state/context-continuity",
         ],
         "forbidden_dir_patterns": [
             "runtime/scripts*",
@@ -908,6 +958,63 @@ def _ensure_instance_pack_topology_contract(task: dict, identity_id: str) -> dic
             merged[field] = list(dict.fromkeys([*cur_rows, *base_rows]))
     task[INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY] = merged
     return task
+
+
+def _context_continuity_contract_skeleton() -> dict:
+    return {
+        "required": False,
+        "contract_id": CONTEXT_CONTINUITY_CONTRACT_ID,
+        "validator": CONTEXT_CONTINUITY_VALIDATOR_ID,
+        "fail_mode": "fail_required",
+        "named_trigger_profile": CONTINUITY_TRIGGER_PROFILE_ID,
+        "canonical_artifact_kinds": list(CONTINUITY_ARTIFACT_KINDS),
+        "canonical_runtime_families": [
+            CONTEXT_CONTINUITY_REPORT_ROOT_REL.as_posix(),
+            CONTEXT_CONTINUITY_STATE_ROOT_REL.as_posix(),
+        ],
+        "canonical_checkpoint_glob": (
+            CONTEXT_CONTINUITY_REPORT_ROOT_REL / CONTINUITY_CHECKPOINT_PATTERN
+        ).as_posix(),
+        "canonical_reentry_brief_path": REENTRY_BRIEF_RELATIVE_PATH,
+        "producer_surface_policy": {
+            "strategy": "flat_script_first",
+            "root_dir": "scripts",
+            "forbid_unregistered_subtrees": True,
+        },
+        "trigger_policy": {
+            "rolling_turn_interval": 15,
+            "stage_turn_interval": 30,
+            "migration_turn_interval": 60,
+            "forced_trigger_classes": list(CONTINUITY_FORCED_TRIGGER_CLASSES),
+        },
+    }
+
+
+def _reentry_brief_consumption_contract_skeleton() -> dict:
+    return {
+        "required": False,
+        "contract_id": REENTRY_BRIEF_CONSUMPTION_CONTRACT_ID,
+        "validators": [
+            REENTRY_BRIEF_VALIDATOR_ID,
+            REENTRY_CONSUMPTION_VALIDATOR_ID,
+        ],
+        "fail_mode": "fail_required",
+        "bind_object": {
+            "artifact_kind": "reentry_brief",
+            "artifact_ref": REENTRY_BRIEF_RELATIVE_PATH,
+        },
+        "stable_segments": [
+            "stable_prefix",
+            "dynamic_tail",
+        ],
+        "consumption_modes": [
+            "startup",
+            "resume",
+            "recover",
+        ],
+        "required_runtime_receipt_kind": CONTINUITY_RECEIPT_KINDS["reentry_consumption"],
+        "receipt_family_contract_id": CONTINUITY_RECEIPT_CONTRACT_ID,
+    }
 
 
 def _default_identity_codex_launcher_manifest(identity_id: str) -> dict[str, Any]:
@@ -1667,6 +1774,26 @@ def _protocol_downsink_path_registry_skeleton() -> dict:
                     "entry_type": "glob",
                     "path": "runtime/reports/v*-wrapper-*",
                 },
+                {
+                    "path_id": "runtime_evidence.context_continuity_report_dir",
+                    "entry_type": "dir",
+                    "path": CONTEXT_CONTINUITY_REPORT_ROOT_REL.as_posix(),
+                },
+                {
+                    "path_id": "runtime_evidence.context_continuity_report_tree",
+                    "entry_type": "glob",
+                    "path": (CONTEXT_CONTINUITY_REPORT_ROOT_REL / "*.json").as_posix(),
+                },
+                {
+                    "path_id": "runtime_evidence.context_continuity_state_dir",
+                    "entry_type": "dir",
+                    "path": CONTEXT_CONTINUITY_STATE_ROOT_REL.as_posix(),
+                },
+                {
+                    "path_id": "runtime_evidence.context_continuity_reentry_brief",
+                    "entry_type": "file",
+                    "path": REENTRY_BRIEF_RELATIVE_PATH,
+                },
             ],
         },
         DOWNSINK_PROTOCOL_BROADCAST_SOURCE_DOMAIN: {
@@ -2398,6 +2525,8 @@ def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> di
         "derived_prompt_conformance_contract_v1": _derived_prompt_conformance_contract_skeleton(),
         "semantic_single_source_convergence_contract_v1": _semantic_convergence_contract_skeleton(),
         "prompt_import_executable_coupling_contract_v1": _prompt_kernel_executable_coupling_contract_skeleton(),
+        CONTEXT_CONTINUITY_CONTRACT_KEY: _context_continuity_contract_skeleton(),
+        REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY: _reentry_brief_consumption_contract_skeleton(),
         "tool_installation_contract": _tool_installation_contract_skeleton(identity_id),
         "vendor_api_discovery_contract": _vendor_api_discovery_contract_skeleton(identity_id),
         "vendor_api_solution_contract": _vendor_api_solution_contract_skeleton(identity_id),
@@ -5908,6 +6037,10 @@ def _default_required_checks() -> list[str]:
         INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID,
         INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID,
         INSTANCE_SCRIPT_EXECUTION_LANE_VALIDATOR_ID,
+        CONTEXT_CONTINUITY_VALIDATOR_ID,
+        REENTRY_BRIEF_VALIDATOR_ID,
+        REENTRY_CONSUMPTION_VALIDATOR_ID,
+        CONTINUITY_RECEIPT_VALIDATOR_ID,
         "scripts/validate_prompt_bootstrap_capability.py",
         "scripts/validate_prompt_capability_matrix.py",
         "scripts/validate_refresh_strict_business_interference.py",
@@ -7226,6 +7359,8 @@ def main() -> int:
     )
 
     runtime_root = pack_dir / "runtime"
+    (runtime_root / CONTEXT_CONTINUITY_REPORT_ROOT_REL.relative_to("runtime")).mkdir(parents=True, exist_ok=True)
+    (runtime_root / CONTEXT_CONTINUITY_STATE_ROOT_REL.relative_to("runtime")).mkdir(parents=True, exist_ok=True)
     write(
         runtime_root / "plugins" / "provider-bindings.local.yaml",
         _provider_bindings_template_text(repo_root=repo_root),
