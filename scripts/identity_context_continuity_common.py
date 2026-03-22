@@ -26,6 +26,23 @@ CONTINUITY_RECEIPT_KINDS: dict[str, str] = {
     "reentry_brief": "instance_reentry_brief_receipt",
     "reentry_consumption": "instance_reentry_consumption_receipt",
 }
+REENTRY_ANSWER_BUNDLE_CONTRACT_ID = "identity_context_reentry_answer_contract_v1"
+REENTRY_ANSWER_QUESTION_FAMILY = "identity_context_reentry_recovery"
+REENTRY_ANSWER_INTENTS: tuple[str, ...] = (
+    "migrate_new_window",
+    "reload_after_clear",
+)
+REENTRY_ANSWER_INTENT_TRIGGER_CLASS: dict[str, str] = {
+    "migrate_new_window": "resume_migration",
+    "reload_after_clear": "clear_or_context_reset",
+}
+REENTRY_REQUIRED_OUTCOME = CONTINUITY_RECEIPT_KINDS["reentry_consumption"]
+REENTRY_FORBIDDEN_SHORTCUTS: tuple[str, ...] = (
+    "raw_transcript_as_authority",
+    "operator_memory_only_recovery_claim",
+    "thread_uuid_as_continuity_id",
+    "ungoverned_reentry_success_claim",
+)
 
 CONTINUITY_ARTIFACT_KINDS: tuple[str, ...] = (
     "rolling_checkpoint",
@@ -162,6 +179,36 @@ def continuity_state_root(pack_root: Path) -> Path:
 
 def reentry_brief_path(pack_root: Path) -> Path:
     return (pack_root.resolve() / REENTRY_BRIEF_REL).resolve()
+
+
+def build_reentry_task_block(
+    *,
+    identity_id: str,
+    intent: str,
+    task_path: Path,
+    reentry_brief_ref: str,
+    continuity_lineage_ref: str,
+    startup_reentry_readiness_status: str,
+    live_reentry_consumption_proof_status: str,
+) -> dict[str, Any]:
+    trigger_class = REENTRY_ANSWER_INTENT_TRIGGER_CLASS.get(intent, "")
+    return {
+        "task_kind": "governed_identity_context_reentry",
+        "question_family": REENTRY_ANSWER_QUESTION_FAMILY,
+        "trigger_intent": intent,
+        "trigger_class": trigger_class,
+        "identity_id": clean_string(identity_id),
+        "current_task_ref": str(task_path.resolve()),
+        "reentry_brief_ref": clean_string(reentry_brief_ref),
+        "continuity_lineage_ref": clean_string(continuity_lineage_ref),
+        "startup_reentry_readiness_status": clean_string(startup_reentry_readiness_status),
+        "live_reentry_consumption_proof_status": clean_string(live_reentry_consumption_proof_status),
+        "required_outcome_receipt_kind": REENTRY_REQUIRED_OUTCOME,
+        "success_claim_allowed_only_after_receipt_kind": REENTRY_REQUIRED_OUTCOME,
+        "launcher_entry_owner_stream": "v1.6.14",
+        "continuity_owner_stream": "v1.6.16",
+        "forbidden_shortcuts": list(REENTRY_FORBIDDEN_SHORTCUTS),
+    }
 
 
 def discover_continuity_artifact(

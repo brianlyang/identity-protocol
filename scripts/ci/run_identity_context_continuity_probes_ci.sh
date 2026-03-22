@@ -300,6 +300,10 @@ write_json(
     ),
 )
 
+reentry_ready_no_proof_pack = tmp_root / "reentry-ready-no-proof-pack"
+clone_pack(reentry_pass_pack, reentry_ready_no_proof_pack)
+(reentry_ready_no_proof_pack / reentry_consumption_receipt_path.relative_to(reentry_pass_pack)).unlink()
+
 reentry_brief_fail_pack = tmp_root / "reentry-brief-fail-pack"
 clone_pack(reentry_pass_pack, reentry_brief_fail_pack)
 reentry_brief_fail_path = reentry_brief_fail_pack / REENTRY_BRIEF_REL
@@ -486,6 +490,8 @@ exports = {
     "REENTRY_PASS_TASK": reentry_pass_pack / "CURRENT_TASK.json",
     "REENTRY_PASS_BRIEF": reentry_brief_path,
     "REENTRY_PASS_RECEIPT": reentry_consumption_receipt_path,
+    "REENTRY_READY_NO_PROOF_TASK": reentry_ready_no_proof_pack / "CURRENT_TASK.json",
+    "REENTRY_READY_NO_PROOF_BRIEF": reentry_ready_no_proof_pack / REENTRY_BRIEF_REL,
     "REENTRY_BRIEF_FAIL_TASK": reentry_brief_fail_pack / "CURRENT_TASK.json",
     "REENTRY_BRIEF_FAIL_PATH": reentry_brief_fail_path,
     "REENTRY_MISSING_FIELD_TASK": reentry_missing_field_pack / "CURRENT_TASK.json",
@@ -523,6 +529,7 @@ ARTIFACT_STALE_JSON="${TMP_ROOT}/artifact-stale.json"
 ARTIFACT_SELF_CYCLE_JSON="${TMP_ROOT}/artifact-self-cycle.json"
 REENTRY_BRIEF_PASS_JSON="${TMP_ROOT}/reentry-brief-pass.json"
 REENTRY_CONSUMPTION_PASS_JSON="${TMP_ROOT}/reentry-consumption-pass.json"
+REENTRY_READY_NO_PROOF_ANSWER_JSON="${TMP_ROOT}/reentry-ready-no-proof-answer.json"
 REENTRY_BRIEF_FAIL_JSON="${TMP_ROOT}/reentry-brief-fail.json"
 REENTRY_MISSING_FIELD_JSON="${TMP_ROOT}/reentry-missing-field.json"
 REENTRY_TUPLE_FAIL_JSON="${TMP_ROOT}/reentry-tuple-fail.json"
@@ -536,6 +543,9 @@ RECEIPT_BROKEN_JOIN_JSON="${TMP_ROOT}/receipt-family-broken-join.json"
 DORMANT_BUNDLE_JSON="${TMP_ROOT}/dormant-bundle.json"
 REENTRY_BUNDLE_PASS_JSON="${TMP_ROOT}/reentry-bundle-pass.json"
 REENTRY_BUNDLE_FAIL_JSON="${TMP_ROOT}/reentry-bundle-fail.json"
+DORMANT_REENTRY_ANSWER_JSON="${TMP_ROOT}/dormant-reentry-answer.json"
+REENTRY_ANSWER_PASS_JSON="${TMP_ROOT}/reentry-answer-pass.json"
+REENTRY_ANSWER_FAIL_JSON="${TMP_ROOT}/reentry-answer-fail.json"
 
 run_cmd() {
   echo "[RUN] $*" >&2
@@ -566,6 +576,11 @@ run_cmd python3 "${ROOT}/scripts/render_identity_context_continuity_bundle.py" \
   --identity-id "${IDENTITY_ID}" \
   --current-task "${DORMANT_TASK}" \
   --json-only > "${DORMANT_BUNDLE_JSON}"
+
+run_cmd python3 "${ROOT}/scripts/render_identity_context_reentry_answers.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${DORMANT_TASK}" \
+  --json-only > "${DORMANT_REENTRY_ANSWER_JSON}"
 
 run_cmd python3 "${ROOT}/scripts/validate_identity_context_continuity.py" \
   --identity-id "${IDENTITY_ID}" \
@@ -624,6 +639,19 @@ run_cmd python3 "${ROOT}/scripts/render_identity_context_continuity_bundle.py" \
   --receipt "${REENTRY_PASS_RECEIPT}" \
   --json-only > "${REENTRY_BUNDLE_PASS_JSON}"
 
+run_cmd python3 "${ROOT}/scripts/render_identity_context_reentry_answers.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${REENTRY_PASS_TASK}" \
+  --brief "${REENTRY_PASS_BRIEF}" \
+  --receipt "${REENTRY_PASS_RECEIPT}" \
+  --json-only > "${REENTRY_ANSWER_PASS_JSON}"
+
+run_cmd python3 "${ROOT}/scripts/render_identity_context_reentry_answers.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${REENTRY_READY_NO_PROOF_TASK}" \
+  --brief "${REENTRY_READY_NO_PROOF_BRIEF}" \
+  --json-only > "${REENTRY_READY_NO_PROOF_ANSWER_JSON}"
+
 if python3 "${ROOT}/scripts/validate_identity_reentry_brief.py" \
   --identity-id "${IDENTITY_ID}" \
   --current-task "${REENTRY_BRIEF_FAIL_TASK}" \
@@ -641,6 +669,12 @@ if python3 "${ROOT}/scripts/render_identity_context_continuity_bundle.py" \
   echo "[FAIL] continuity bundle negative probe unexpectedly passed"
   exit 1
 fi
+
+run_cmd python3 "${ROOT}/scripts/render_identity_context_reentry_answers.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${REENTRY_BRIEF_FAIL_TASK}" \
+  --brief "${REENTRY_BRIEF_FAIL_PATH}" \
+  --json-only > "${REENTRY_ANSWER_FAIL_JSON}"
 
 if python3 "${ROOT}/scripts/validate_identity_reentry_consumption.py" \
   --identity-id "${IDENTITY_ID}" \
@@ -735,6 +769,7 @@ python3 - "${TMP_ROOT}" \
   "${ARTIFACT_SELF_CYCLE_JSON}" \
   "${REENTRY_BRIEF_PASS_JSON}" \
   "${REENTRY_CONSUMPTION_PASS_JSON}" \
+  "${REENTRY_READY_NO_PROOF_ANSWER_JSON}" \
   "${REENTRY_BRIEF_FAIL_JSON}" \
   "${REENTRY_MISSING_FIELD_JSON}" \
   "${REENTRY_TUPLE_FAIL_JSON}" \
@@ -747,7 +782,10 @@ python3 - "${TMP_ROOT}" \
   "${RECEIPT_BROKEN_JOIN_JSON}" \
   "${DORMANT_BUNDLE_JSON}" \
   "${REENTRY_BUNDLE_PASS_JSON}" \
-  "${REENTRY_BUNDLE_FAIL_JSON}" <<'PY'
+  "${REENTRY_BUNDLE_FAIL_JSON}" \
+  "${DORMANT_REENTRY_ANSWER_JSON}" \
+  "${REENTRY_ANSWER_PASS_JSON}" \
+  "${REENTRY_ANSWER_FAIL_JSON}" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -764,6 +802,7 @@ from pathlib import Path
     artifact_self_cycle_path,
     reentry_brief_pass_path,
     reentry_consumption_pass_path,
+    reentry_ready_no_proof_answer_path,
     reentry_brief_fail_path,
     reentry_missing_field_path,
     reentry_tuple_fail_path,
@@ -777,6 +816,9 @@ from pathlib import Path
     dormant_bundle_path,
     reentry_bundle_pass_path,
     reentry_bundle_fail_path,
+    dormant_reentry_answer_path,
+    reentry_answer_pass_path,
+    reentry_answer_fail_path,
 ) = sys.argv[1:]
 
 def load(path: str) -> dict:
@@ -792,6 +834,7 @@ artifact_stale = load(artifact_stale_path)
 artifact_self_cycle = load(artifact_self_cycle_path)
 reentry_brief_pass = load(reentry_brief_pass_path)
 reentry_consumption_pass = load(reentry_consumption_pass_path)
+reentry_ready_no_proof_answer = load(reentry_ready_no_proof_answer_path)
 reentry_brief_fail = load(reentry_brief_fail_path)
 reentry_missing_field = load(reentry_missing_field_path)
 reentry_tuple_fail = load(reentry_tuple_fail_path)
@@ -805,6 +848,9 @@ receipt_broken_join = load(receipt_broken_join_path)
 dormant_bundle = load(dormant_bundle_path)
 reentry_bundle_pass = load(reentry_bundle_pass_path)
 reentry_bundle_fail = load(reentry_bundle_fail_path)
+dormant_reentry_answer = load(dormant_reentry_answer_path)
+reentry_answer_pass = load(reentry_answer_pass_path)
+reentry_answer_fail = load(reentry_answer_fail_path)
 
 assert dormant_continuity["identity_context_continuity_status"] == "SKIPPED_NOT_REQUIRED", dormant_continuity
 assert dormant_reentry_brief["identity_reentry_brief_status"] == "SKIPPED_NOT_REQUIRED", dormant_reentry_brief
@@ -812,6 +858,11 @@ assert dormant_reentry_consumption["identity_reentry_consumption_status"] == "SK
 assert dormant_receipts["identity_context_continuity_receipt_family_status"] == "SKIPPED_NOT_REQUIRED", dormant_receipts
 assert dormant_bundle["identity_context_continuity_bundle_status"] == "SKIPPED_NOT_REQUIRED", dormant_bundle
 assert dormant_bundle["operator_surface_contract"]["new_user_facing_continuity_command_family_forbidden"] is True, dormant_bundle
+assert dormant_reentry_answer["identity_context_reentry_answer_bundle_status"] == "PASS_REQUIRED", dormant_reentry_answer
+assert dormant_reentry_answer["overall_reentry_readiness_status"] == "SKIPPED_NOT_REQUIRED", dormant_reentry_answer
+assert dormant_reentry_answer["recommended_reentry_answer_mode"] == "fresh_start_only_no_governed_reentry_contract", dormant_reentry_answer
+assert dormant_reentry_answer["intent_answers"]["reload_after_clear"]["status"] == "SKIPPED_NOT_REQUIRED", dormant_reentry_answer
+assert dormant_reentry_answer["operator_surface_contract"]["thread_uuid_injection_by_continuity_surface_forbidden"] is True, dormant_reentry_answer
 
 assert artifact_pass["identity_context_continuity_status"] == "PASS_REQUIRED", artifact_pass
 assert artifact_override["identity_context_continuity_status"] == "FAIL_REQUIRED", artifact_override
@@ -827,10 +878,28 @@ assert reentry_bundle_pass["identity_context_continuity_bundle_status"] == "PASS
 assert reentry_bundle_pass["startup_reentry_readiness_status"] == "PASS_REQUIRED", reentry_bundle_pass
 assert reentry_bundle_pass["live_reentry_consumption_proof_status"] == "PASS_REQUIRED", reentry_bundle_pass
 assert reentry_bundle_pass["recommended_launcher_bind_mode"] == "consume_governed_reentry_brief", reentry_bundle_pass
+assert reentry_answer_pass["identity_context_reentry_answer_bundle_status"] == "PASS_REQUIRED", reentry_answer_pass
+assert reentry_answer_pass["overall_reentry_readiness_status"] == "PASS_REQUIRED", reentry_answer_pass
+assert reentry_answer_pass["live_reentry_consumption_proof_status"] == "PASS_REQUIRED", reentry_answer_pass
+assert reentry_answer_pass["recommended_reentry_answer_mode"] == "governed_reentry_ready_with_live_proof", reentry_answer_pass
+assert reentry_answer_pass["intent_answers"]["migrate_new_window"]["status"] == "PASS_REQUIRED", reentry_answer_pass
+assert reentry_answer_pass["intent_answers"]["reload_after_clear"]["status"] == "PASS_REQUIRED", reentry_answer_pass
+assert reentry_answer_pass["intent_answers"]["reload_after_clear"]["copyable_reentry_task_block"], reentry_answer_pass
+assert "governed_identity_context_reentry" in reentry_answer_pass["intent_answers"]["reload_after_clear"]["copyable_reentry_task_block"], reentry_answer_pass
+assert reentry_ready_no_proof_answer["identity_context_reentry_answer_bundle_status"] == "PASS_REQUIRED", reentry_ready_no_proof_answer
+assert reentry_ready_no_proof_answer["overall_reentry_readiness_status"] == "PASS_REQUIRED", reentry_ready_no_proof_answer
+assert reentry_ready_no_proof_answer["live_reentry_consumption_proof_status"] == "FAIL_REQUIRED", reentry_ready_no_proof_answer
+assert reentry_ready_no_proof_answer["recommended_reentry_answer_mode"] == "governed_reentry_ready_pending_first_live_proof", reentry_ready_no_proof_answer
+assert reentry_ready_no_proof_answer["intent_answers"]["reload_after_clear"]["status"] == "PASS_REQUIRED", reentry_ready_no_proof_answer
+assert reentry_ready_no_proof_answer["intent_answers"]["reload_after_clear"]["post_reentry_evidence_required"] is True, reentry_ready_no_proof_answer
 assert reentry_brief_fail["identity_reentry_brief_status"] == "FAIL_REQUIRED", reentry_brief_fail
 assert reentry_bundle_fail["identity_context_continuity_bundle_status"] == "FAIL_REQUIRED", reentry_bundle_fail
 assert reentry_bundle_fail["startup_reentry_readiness_status"] == "FAIL_REQUIRED", reentry_bundle_fail
 assert reentry_bundle_fail["recommended_launcher_bind_mode"] == "fresh_start_without_governed_reentry_claim", reentry_bundle_fail
+assert reentry_answer_fail["identity_context_reentry_answer_bundle_status"] == "PASS_REQUIRED", reentry_answer_fail
+assert reentry_answer_fail["overall_reentry_readiness_status"] == "FAIL_REQUIRED", reentry_answer_fail
+assert reentry_answer_fail["recommended_reentry_answer_mode"] == "governed_reentry_blocked_until_readiness_repaired", reentry_answer_fail
+assert reentry_answer_fail["intent_answers"]["reload_after_clear"]["status"] == "FAIL_REQUIRED", reentry_answer_fail
 assert any(
     token in reentry_brief_fail.get("stale_reasons", [])
     for token in ("freshness_indicates_stale", "authority_override_attempt")
@@ -882,6 +951,7 @@ print(
                 "reentry_consumption_lineage_not_joinable",
             ],
             "continuity_bundle_surface_status": reentry_bundle_pass["identity_context_continuity_bundle_status"],
+            "reentry_answer_surface_status": reentry_answer_pass["identity_context_reentry_answer_bundle_status"],
             "tmp_root": tmp_root,
         },
         ensure_ascii=False,
