@@ -74,6 +74,9 @@ Quick entrypoint for audit history and remediation closure records.
 - Canonical identity-instance script orchestration governance (v1.6.15 stream):
   - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
   - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md`
+- Canonical identity-context continuity governance (v1.6.16 stream):
+  - `docs/governance/identity-context-continuity-governance-v1.6.16.md`
+  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md`
 
 ## Snapshots
 
@@ -110,3 +113,4 @@ Quick entrypoint for audit history and remediation closure records.
 - `docs/governance/identity-instance-pack-topology-governance-v1.6.13.md` — v1.6.13 dedicated topology-lock stream for canonical identity-pack root layout (`agents/`, `runtime/`, `scripts/`), root-level instance script ownership, and fail-close drift gating.
 - `docs/governance/identity-codex-launcher-governance-v1.6.14.md` — v1.6.14 dedicated launcher-governance stream for canonical identity-bound Codex command names, install-path ownership, compatibility-bridge classification, and fail-close startup boundaries.
 - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md` — v1.6.15 dedicated orchestration stream for route-to-script declarative binding, pack-local script manifests, explicit script-to-skill/MCP/tool joins, and reusable execution receipt-family governance.
+- `docs/governance/identity-context-continuity-governance-v1.6.16.md` — v1.6.16 dedicated continuity stream for governed checkpoints, migration handoff checkpoints, startup-consumable re-entry briefing, and the authority boundary that keeps continuity artifacts subordinate to protocol truth.

@@ -287,3 +287,19 @@ Hard semantics:
 10. Governed receipt families must preserve machine-readable route provenance compatible with `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts`, including layered execution-then-emit receipt mapping.
 11. If a governed route produces user-visible final text, that route must resolve to at least one pack-local emitter script and emit an `instance_script_emit_receipt`; direct free-form assistant text is non-canonical for that route.
 12. Any manifest entry that resolves outside pack-root `scripts/` is non-canonical and falls back to `v1.6.13` topology enforcement.
+
+
+### Canonical identity context continuity boundary (v1.6.16 additive)
+
+Hard semantics:
+
+1. Governed continuity is a machine-readable checkpoint and re-entry system, not raw transcript persistence and not operator memory.
+2. Canonical continuity artifact roles are `rolling_checkpoint`, `stage_checkpoint`, `migration_checkpoint`, and `reentry_brief`.
+3. Continuity artifacts remain derived continuity assets; they must not override `IDENTITY_PROMPT.md`, `CURRENT_TASK.json`, active governance/review docs, workbook surfaces, or governed runtime receipts.
+4. The default trigger policy is the named profile `default_turns_15_30_60`, with canonical forced trigger classes for clear/reset, compaction, launcher restart/recover, resume migration, major commit, major gate flip, lane switch, and root-cause turns.
+5. Continuity producers remain pack-local executable surfaces under pack-root `scripts/`, inheriting `v1.6.13`; continuity outputs remain runtime-owned artifacts.
+6. Canonical target runtime families are `runtime/reports/context-continuity/` and `runtime/state/context-continuity/`; packs may not claim adoption until those targets are registered through the relevant topology/path contracts.
+7. `reentry_brief` is the canonical startup-consumable artifact; it must stay compact, structured, and bounded rather than becoming a long-history replay blob.
+8. Resume thread UUIDs, actor-session tuple ids, and continuity ids are distinct identity classes and must not be semantically collapsed.
+9. Continuity consumption under startup/resume/recover remains subordinate to `v1.6.12` tuple/bootstrap truth and `v1.6.14` launcher ownership.
+10. Optional transcript excerpts remain evidence-only supplements; they are never the authority source for continuity.

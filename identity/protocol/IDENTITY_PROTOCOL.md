@@ -124,6 +124,25 @@ Compatibility note: legacy packs can stay in `identity/<id>/` if catalog `pack_p
 10. If a governed route produces user-visible final text, that route must bind to a pack-local emitter script and declare an emit-family receipt.
 11. Protocol-owned validators/creator/readiness wiring are future implementation targets; this additive section freezes the ownership model first.
 
+### Canonical identity context continuity boundary (v1.6.16 additive)
+
+1. `v1.6.16` freezes governed continuity checkpoints and startup-consumable re-entry briefing; it does not reopen `v1.6.13` / `v1.6.14` / `v1.6.15`.
+2. Canonical continuity roles are:
+   - `rolling_checkpoint`
+   - `stage_checkpoint`
+   - `migration_checkpoint`
+   - `reentry_brief`
+3. Continuity artifacts are derived continuity assets, not authority sources; authority remains in `IDENTITY_PROMPT.md`, `CURRENT_TASK.json`, active governance/review docs, workbook surfaces, and governed runtime receipts.
+4. The frozen default trigger profile is `default_turns_15_30_60`, with forced trigger classes such as clear/reset, compaction boundary, launcher restart/recover, resume migration, major commit, major gate flip, lane switch, and root-cause turns.
+5. Continuity producers remain pack-local scripts under pack-root `scripts/`, inheriting `v1.6.13`; continuity outputs remain runtime-owned artifacts rather than source files.
+6. Canonical target runtime continuity families are:
+   - `runtime/reports/context-continuity/`
+   - `runtime/state/context-continuity/`
+7. `reentry_brief` is the canonical startup-consumable artifact and must stay compact enough for re-entry rather than becoming a long-history replacement.
+8. Raw transcript persistence, vendor session history, and ad hoc operator notes remain non-authoritative by default.
+9. Launcher/startup/resume/recover entry remains owned by `v1.6.14`; `v1.6.16` owns only the continuity artifact model and safe consumption boundary.
+10. No pack may claim `v1.6.16` adoption until continuity target paths are backfilled through the relevant topology and path-governance contracts.
+
 ## Runtime source-of-truth boundary (v1.4.x hardening)
 
 Identity runtime must distinguish demo fixtures from local runtime instances:
