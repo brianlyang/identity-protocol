@@ -94,10 +94,11 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
 7. Instance/runtime consumption also remains protocol-owned:
    - `identity-codex commands --identity-id <identity-id> --json-only`
    must return a structured command bundle so identity instances can answer concretely without inventing launcher logic.
-8. Pack-local launcher assets land only under `<pack_path>/scripts/launchers/`.
-9. Installed launchers land only under `${CODEX_HOME}/bin/`.
-10. Workspace `scripts/codex_native_chat/` remains compatibility bridge only until protocol-owned launcher assets land.
-11. Launcher ownership of `model_instructions_file` and `project_doc_fallback_filenames` injection remains explicit and fail-close.
+8. Embedded internal support bundles from other streams, such as `v1.6.16` continuity support, are acceptable only inside that structured JSON bundle and must not become independent operator command folklore.
+9. Pack-local launcher assets land only under `<pack_path>/scripts/launchers/`.
+10. Installed launchers land only under `${CODEX_HOME}/bin/`.
+11. Workspace `scripts/codex_native_chat/` remains compatibility bridge only until protocol-owned launcher assets land.
+12. Launcher ownership of `model_instructions_file` and `project_doc_fallback_filenames` injection remains explicit and fail-close.
 
 ## 5) Audit verdict rules (frozen)
 
