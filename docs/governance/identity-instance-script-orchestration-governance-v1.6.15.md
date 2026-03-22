@@ -1,6 +1,6 @@
 # Identity Instance Script Orchestration Governance (v1.6.15)
 
-Status: Active (baseline shared validator/probe/consumer closure, including execution-lane admission governance, plus minimal non-empty cross-pack proof verified, 2026-03-22; broader adoption rollout continues)  
+Status: Active (baseline shared validator/probe/consumer closure, including execution-lane admission governance, plus minimal non-empty orchestration-family cross-pack proof verified, 2026-03-22; topology-clean live proof and broader adoption rollout remain open)  
 Layer: protocol  
 Scope: route -> instance-script declarative join, route -> execution-lane admission, pack-local script manifest, lower-capability dependency join, and instance-script receipt families
 
@@ -162,6 +162,7 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
    - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
    - `scripts/release_readiness_check.py`
    - `scripts/validate_identity_capability_activation.py`
+   - `scripts/validate_identity_instance_script_cross_pack_adoption.py`
    - `scripts/create_identity_pack.py`
    - `scripts/repair_contract_backfill.py`
    - `scripts/identity_creator.py`
@@ -297,12 +298,16 @@ Any implementation that claims to follow `v1.6.15` should satisfy this checklist
    - generated session-chain wrappers now freeze a `session_chain_executable_smoke_policy`, and the protocol gate executes that smoke against the final-channel relay branch so generator completeness defects fail closed instead of hiding behind template SHA parity,
    - governed final emit now auto-recovers stale host-visible post-check blockers through `scripts/recover_host_visible_post_check_state.py`, and the gateway trust-boundary probe suite proves under protocol-root invocation that a pre-seeded closure blocker can return to `PASS_REQUIRED` without manual runtime surgery.
    - this consumer citation does not, by itself, claim workspace-root / protocol-root invariance for the trust-boundary suite; cross-cwd invariance must be evidenced separately if needed.
-3. Baseline implementation closure for this stream is now satisfied when the landed shared validator/probe/consumer family is paired with non-empty cross-pack reuse proof. Current-state note (2026-03-22):
+3. Baseline implementation closure for this stream is now satisfied when the landed shared validator/probe/consumer family is paired with non-empty orchestration-family cross-pack reuse proof. Current-state note (2026-03-22):
    - `python3 scripts/validate_identity_instance_script_cross_pack_adoption.py --catalog .identity/catalog.local.yaml --json-only`
    - observed outcome: `PASS_REQUIRED` with `eligible_identity_count=2`, `checked_identity_count=2`, and `adoption_ready_identity_count=2`
-   - current proof packs: `custom-creative-ecom-analyst`, `base-repo-closure-orchestrator`
-4. Broader rollout-breadth closure still requires all of the following together:
-   - wider target-pack adoption beyond the current minimal non-empty proof, without topology drift,
+   - the same payload now projects topology hygiene explicitly through `topology_clean_adoption_ready_count` and `topology_interlock_violation_rows`
+   - current orchestration-family proof packs: `custom-creative-ecom-analyst`, `base-repo-closure-orchestrator`
+   - `python3 scripts/validate_identity_instance_script_cross_pack_adoption.py --catalog .identity/catalog.local.yaml --proof-boundary topology_clean --json-only`
+   - current live outcome: not yet satisfied because `custom-creative-ecom-analyst` still fails the inherited `v1.6.13` topology validator
+   - `bash scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh` now proves both positive topology-clean cross-pack replay and negative topology-interlock fail-close on a synthetic multi-pack catalog
+4. Broader rollout-breadth and topology-clean live closure still requires all of the following together:
+   - wider target-pack adoption beyond the current minimal non-empty orchestration-family proof, without topology drift,
    - additional target packs adopt `allowed_execution_lanes`, `lane_admission_policy`, `lane_receipt_pattern`, and `lane_block_on_fallback` where external/manual/editor/webhook fallback risk exists,
    - target packs continue to use the same shared consumer path through create/backfill/update flows rather than per-pack ad hoc rollout,
    - route-scoped capability activation remains reusable without unrelated-route union blocking unless a stronger activation policy explicitly requires it,
@@ -314,6 +319,7 @@ Any implementation that claims to follow `v1.6.15` should satisfy this checklist
 5. Until that broader rollout evidence is archived, the correct interpretation is:
    - `v1.6.15` contract freeze is active,
    - baseline shared validator/probe/consumer closure is present,
-   - minimal non-empty cross-pack proof is present,
+   - minimal non-empty orchestration-family cross-pack proof is present,
+   - topology-clean live proof remains open,
    - broader adoption rollout remains open,
    - instances must not improvise parallel orchestration standards.
