@@ -10,6 +10,11 @@ from tool_vendor_governance_common import contract_required, load_json, path_wit
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+ROUTE_SCOPE_ROUTE_SCOPED = "route_scoped"
+ROUTE_SCOPE_AGGREGATE = "aggregate"
+ROUTE_SELECTION_CARDINALITY_ZERO = "zero_route"
+ROUTE_SELECTION_CARDINALITY_SINGLE = "single_route"
+ROUTE_SELECTION_CARDINALITY_MULTI = "multi_route"
 
 INSTANCE_SCRIPT_MANIFEST_REL = Path("scripts/INSTANCE_SCRIPT_MANIFEST.json")
 INSTANCE_SCRIPT_RECEIPT_FAMILIES: tuple[str, ...] = (
@@ -77,6 +82,129 @@ def clean_string_list(value: Any) -> list[str]:
         if token:
             out.append(token)
     return out
+
+
+def unique_string_list(value: Any) -> list[str]:
+    tokens = clean_string_list(value)
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for token in tokens:
+        if token in seen:
+            continue
+        seen.add(token)
+        deduped.append(token)
+    return deduped
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def build_route_scope_projection(
+    *,
+    route_scope: str,
+    route_activation_strategy: str = "",
+    route_ready_count: int | None = None,
+    route_total_count: int | None = None,
+) -> dict[str, Any]:
+    route_scope_token = str(route_scope or "").strip() or ROUTE_SCOPE_AGGREGATE
+    ready_count = _safe_int(route_ready_count, 0) if route_ready_count is not None else 0
+    total_count = _safe_int(route_total_count, 0) if route_total_count is not None else 0
+    if route_scope_token == ROUTE_SCOPE_ROUTE_SCOPED:
+        cardinality = ROUTE_SELECTION_CARDINALITY_SINGLE
+    elif ready_count <= 0:
+        cardinality = ROUTE_SELECTION_CARDINALITY_ZERO
+    elif ready_count == 1:
+        cardinality = ROUTE_SELECTION_CARDINALITY_SINGLE
+    else:
+        cardinality = ROUTE_SELECTION_CARDINALITY_MULTI
+    payload: dict[str, Any] = {
+        "route_scope": route_scope_token,
+        "route_selection_cardinality": cardinality,
+    }
+    if str(route_activation_strategy or "").strip():
+        payload["route_activation_strategy"] = str(route_activation_strategy).strip()
+    if route_ready_count is not None:
+        payload["route_ready_count"] = ready_count
+    if route_total_count is not None:
+        payload["route_total_count"] = total_count
+    return payload
+
+
+def _declared_lane_ids(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    lane_ids: list[str] = []
+    for row in value:
+        if not isinstance(row, dict):
+            continue
+        lane_id = str(row.get("lane_id", "")).strip()
+        if lane_id:
+            lane_ids.append(lane_id)
+    return unique_string_list(lane_ids)
+
+
+def build_declared_dependency_projection(
+    *,
+    route_name: str = "",
+    primary_skills: Any = None,
+    fallback_skills: Any = None,
+    required_mcp: Any = None,
+    primary_instance_scripts: Any = None,
+    fallback_instance_scripts: Any = None,
+    allowed_execution_lane_ids: Any = None,
+    route_scope: str = ROUTE_SCOPE_ROUTE_SCOPED,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "route_scope": str(route_scope or "").strip() or ROUTE_SCOPE_ROUTE_SCOPED,
+        "declared_primary_skills": unique_string_list(primary_skills or []),
+        "declared_fallback_skills": unique_string_list(fallback_skills or []),
+        "declared_required_mcp": unique_string_list(required_mcp or []),
+        "declared_primary_instance_scripts": unique_string_list(primary_instance_scripts or []),
+        "declared_fallback_instance_scripts": unique_string_list(fallback_instance_scripts or []),
+        "declared_allowed_execution_lane_ids": unique_string_list(allowed_execution_lane_ids or []),
+    }
+    route_token = str(route_name or "").strip()
+    if route_token:
+        payload["route"] = route_token
+    return payload
+
+
+def build_observed_dependency_projection(
+    *,
+    route_name: str = "",
+    observed_skills: Any = None,
+    observed_mcp_tools: Any = None,
+    observed_instance_scripts: Any = None,
+    observed_execution_lane_ids: Any = None,
+    observed_receipt_family: str = "",
+    observed_route_ready: bool | None = None,
+    route_scope: str = ROUTE_SCOPE_ROUTE_SCOPED,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "route_scope": str(route_scope or "").strip() or ROUTE_SCOPE_ROUTE_SCOPED,
+        "observed_skills": unique_string_list(observed_skills or []),
+        "observed_mcp_tools": unique_string_list(observed_mcp_tools or []),
+        "observed_instance_scripts": unique_string_list(observed_instance_scripts or []),
+        "observed_execution_lane_ids": unique_string_list(observed_execution_lane_ids or []),
+    }
+    route_token = str(route_name or "").strip()
+    if route_token:
+        payload["route"] = route_token
+    if str(observed_receipt_family or "").strip():
+        payload["observed_receipt_family"] = str(observed_receipt_family).strip()
+    if observed_route_ready is not None:
+        payload["observed_route_ready"] = bool(observed_route_ready)
+    return payload
+
+
+def normalize_dependency_gap_reasons(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return unique_string_list(value)
+    return []
 
 
 def normalize_source_layer(catalog_path: Path | None) -> str:
@@ -307,6 +435,149 @@ def route_evidence_schema_fields(task_doc: dict[str, Any]) -> list[str]:
     return merged
 
 
+def build_aggregate_dependency_projection(
+    *,
+    tool_routes: list[dict[str, Any]],
+    route_activation_matrix: list[dict[str, Any]],
+    active_skills: list[str],
+    mcp_tools_used: list[str],
+    route_activation_strategy: str,
+    route_ready_count: int,
+) -> dict[str, Any]:
+    route_index = {
+        str(row.get("route", "")).strip(): row
+        for row in route_activation_matrix
+        if isinstance(row, dict) and str(row.get("route", "")).strip()
+    }
+    declared_route_rows: list[dict[str, Any]] = []
+    observed_route_rows: list[dict[str, Any]] = []
+    dependency_gap_reasons: list[str] = []
+
+    aggregate_declared_primary_skills: list[str] = []
+    aggregate_declared_fallback_skills: list[str] = []
+    aggregate_declared_required_mcp: list[str] = []
+    aggregate_declared_primary_instance_scripts: list[str] = []
+    aggregate_declared_fallback_instance_scripts: list[str] = []
+    aggregate_declared_allowed_execution_lane_ids: list[str] = []
+    aggregate_observed_instance_scripts: list[str] = []
+    aggregate_observed_execution_lane_ids: list[str] = []
+    observed_ready_routes: list[str] = []
+
+    active_skill_set = set(unique_string_list(active_skills))
+    active_mcp_set = set(unique_string_list(mcp_tools_used))
+
+    for route_row in tool_routes:
+        if not isinstance(route_row, dict):
+            continue
+        route_name = str(route_row.get("route", "")).strip()
+        if not route_name:
+            continue
+        declared_primary_skills = unique_string_list(route_row.get("primary_skills") or [])
+        declared_fallback_skills = unique_string_list(route_row.get("fallback_skills") or [])
+        declared_required_mcp = unique_string_list(route_row.get("required_mcp") or [])
+        declared_primary_instance_scripts = unique_string_list(route_row.get("primary_instance_scripts") or [])
+        declared_fallback_instance_scripts = unique_string_list(route_row.get("fallback_instance_scripts") or [])
+        declared_allowed_execution_lane_ids = _declared_lane_ids(route_row.get("allowed_execution_lanes") or [])
+        declared_projection = build_declared_dependency_projection(
+            route_name=route_name,
+            primary_skills=declared_primary_skills,
+            fallback_skills=declared_fallback_skills,
+            required_mcp=declared_required_mcp,
+            primary_instance_scripts=declared_primary_instance_scripts,
+            fallback_instance_scripts=declared_fallback_instance_scripts,
+            allowed_execution_lane_ids=declared_allowed_execution_lane_ids,
+            route_scope=ROUTE_SCOPE_AGGREGATE,
+        )
+        declared_route_rows.append(declared_projection)
+        aggregate_declared_primary_skills.extend(declared_primary_skills)
+        aggregate_declared_fallback_skills.extend(declared_fallback_skills)
+        aggregate_declared_required_mcp.extend(declared_required_mcp)
+        aggregate_declared_primary_instance_scripts.extend(declared_primary_instance_scripts)
+        aggregate_declared_fallback_instance_scripts.extend(declared_fallback_instance_scripts)
+        aggregate_declared_allowed_execution_lane_ids.extend(declared_allowed_execution_lane_ids)
+
+        activation_row = route_index.get(route_name, {})
+        route_missing_skills = unique_string_list(activation_row.get("missing_skills") or [])
+        route_missing_mcp = unique_string_list(activation_row.get("missing_mcp") or [])
+        route_missing_script_ids = unique_string_list(activation_row.get("missing_script_ids") or [])
+        route_observed_execution_lane_ids = unique_string_list(
+            [
+                str(row.get("observed_lane_id", "")).strip()
+                for row in (activation_row.get("execution_lane_rows") or [])
+                if isinstance(row, dict)
+                and str(row.get("lane_receipt_validation_status", "")).strip() == STATUS_PASS_REQUIRED
+                and str(row.get("observed_lane_id", "")).strip()
+            ]
+        )
+        route_observed_instance_scripts = unique_string_list(
+            activation_row.get("resolved_script_ids") or []
+        )
+        observed_projection = build_observed_dependency_projection(
+            route_name=route_name,
+            observed_skills=[token for token in declared_primary_skills + declared_fallback_skills if token in active_skill_set],
+            observed_mcp_tools=[token for token in declared_required_mcp if token in active_mcp_set],
+            observed_instance_scripts=route_observed_instance_scripts,
+            observed_execution_lane_ids=route_observed_execution_lane_ids,
+            observed_route_ready=bool(activation_row.get("ready")),
+            route_scope=ROUTE_SCOPE_AGGREGATE,
+        )
+        observed_route_rows.append(observed_projection)
+        aggregate_observed_instance_scripts.extend(route_observed_instance_scripts)
+        aggregate_observed_execution_lane_ids.extend(route_observed_execution_lane_ids)
+        if bool(activation_row.get("ready")):
+            observed_ready_routes.append(route_name)
+
+        dependency_gap_reasons.extend(
+            f"{route_name}:declared_skill_unavailable:{token}" for token in route_missing_skills
+        )
+        dependency_gap_reasons.extend(
+            f"{route_name}:declared_required_mcp_unavailable:{token}" for token in route_missing_mcp
+        )
+        dependency_gap_reasons.extend(
+            f"{route_name}:declared_instance_script_unresolved:{token}" for token in route_missing_script_ids
+        )
+        if bool(activation_row.get("uses_execution_lanes")) and str(
+            activation_row.get("execution_lane_contract_status", "")
+        ).strip() == STATUS_FAIL_REQUIRED:
+            dependency_gap_reasons.append(f"{route_name}:declared_execution_lane_contract_not_ready")
+        if bool(activation_row.get("uses_execution_lanes")) and str(
+            activation_row.get("execution_lane_receipt_status", "")
+        ).strip() == STATUS_FAIL_REQUIRED:
+            dependency_gap_reasons.append(f"{route_name}:declared_execution_lane_receipt_not_ready")
+
+    declared_dependency_projection = {
+        "route_scope": ROUTE_SCOPE_AGGREGATE,
+        "declared_route_count": len(declared_route_rows),
+        "declared_route_rows": declared_route_rows,
+        "declared_primary_skills": unique_string_list(aggregate_declared_primary_skills),
+        "declared_fallback_skills": unique_string_list(aggregate_declared_fallback_skills),
+        "declared_required_mcp": unique_string_list(aggregate_declared_required_mcp),
+        "declared_primary_instance_scripts": unique_string_list(aggregate_declared_primary_instance_scripts),
+        "declared_fallback_instance_scripts": unique_string_list(aggregate_declared_fallback_instance_scripts),
+        "declared_allowed_execution_lane_ids": unique_string_list(aggregate_declared_allowed_execution_lane_ids),
+    }
+    observed_dependency_projection = {
+        "route_scope": ROUTE_SCOPE_AGGREGATE,
+        "observed_route_count": len(observed_route_rows),
+        "observed_route_rows": observed_route_rows,
+        "observed_skills": unique_string_list(active_skills),
+        "observed_mcp_tools": unique_string_list(mcp_tools_used),
+        "observed_instance_scripts": unique_string_list(aggregate_observed_instance_scripts),
+        "observed_execution_lane_ids": unique_string_list(aggregate_observed_execution_lane_ids),
+        "observed_ready_routes": unique_string_list(observed_ready_routes),
+    }
+    payload = build_route_scope_projection(
+        route_scope=ROUTE_SCOPE_AGGREGATE,
+        route_activation_strategy=route_activation_strategy,
+        route_ready_count=route_ready_count,
+        route_total_count=len(route_activation_matrix),
+    )
+    payload["declared_dependency_projection"] = declared_dependency_projection
+    payload["observed_dependency_projection"] = observed_dependency_projection
+    payload["dependency_gap_reasons"] = normalize_dependency_gap_reasons(dependency_gap_reasons)
+    return payload
+
+
 def expected_receipt_family(*, receipt_pattern: str, script_kind: str) -> str:
     pattern_token = str(receipt_pattern or "").strip().lower()
     kind_token = str(script_kind or "").strip().lower()
@@ -491,6 +762,21 @@ def validate_route_script_receipt_doc(
     allow_external_receipt: bool = False,
 ) -> dict[str, Any]:
     issues: list[str] = []
+    route_scope_projection = build_route_scope_projection(
+        route_scope=ROUTE_SCOPE_ROUTE_SCOPED,
+        route_ready_count=1,
+        route_total_count=1,
+    )
+    declared_dependency_projection = build_declared_dependency_projection(
+        route_name=route_name,
+        primary_skills=route_doc.get("primary_skills"),
+        fallback_skills=route_doc.get("fallback_skills"),
+        required_mcp=route_doc.get("required_mcp"),
+        primary_instance_scripts=route_doc.get("primary_instance_scripts"),
+        fallback_instance_scripts=route_doc.get("fallback_instance_scripts"),
+        allowed_execution_lane_ids=_declared_lane_ids(route_doc.get("allowed_execution_lanes") or []),
+        route_scope=ROUTE_SCOPE_ROUTE_SCOPED,
+    )
     if str(receipt_doc.get("schema_version", "")).strip() != "v1":
         issues.append("receipt_schema_version_invalid")
     receipt_family = str(receipt_doc.get("receipt_family", "")).strip()
@@ -576,11 +862,36 @@ def validate_route_script_receipt_doc(
     if missing_minimum_fields:
         issues.append("missing_provenance_fields:" + ",".join(sorted(set(missing_minimum_fields))))
 
+    observed_dependency_projection = build_observed_dependency_projection(
+        route_name=route_name,
+        observed_skills=skills_used,
+        observed_mcp_tools=mcp_tools_used,
+        observed_instance_scripts=[script_id],
+        observed_receipt_family=receipt_family,
+        observed_route_ready=not issues,
+        route_scope=ROUTE_SCOPE_ROUTE_SCOPED,
+    )
+    dependency_gap_reasons: list[str] = []
+    if required_skills and not skills_used:
+        dependency_gap_reasons.append("declared_skills_not_observed")
+    dependency_gap_reasons.extend(
+        f"undeclared_observed_skill:{token}" for token in sorted(set(undeclared_skills))
+    )
+    if required_mcp and not mcp_tools_used:
+        dependency_gap_reasons.append("declared_required_mcp_not_observed")
+    dependency_gap_reasons.extend(
+        f"undeclared_observed_mcp_tool:{token}" for token in sorted(set(undeclared_mcp))
+    )
+
     return {
         "status": STATUS_PASS_REQUIRED if not issues else STATUS_FAIL_REQUIRED,
         "receipt_family": receipt_family,
         "expected_receipt_family": expected_family,
         "stale_reasons": issues,
+        **route_scope_projection,
+        "declared_dependency_projection": declared_dependency_projection,
+        "observed_dependency_projection": observed_dependency_projection,
+        "dependency_gap_reasons": normalize_dependency_gap_reasons(dependency_gap_reasons),
     }
 
 
@@ -894,15 +1205,51 @@ def build_route_receipt_join_matrix(
             continue
         if target_route_token and route_name != target_route_token:
             continue
+        route_doc = routes.get(route_name) or {}
         if route_row.get("route_ready") is not True:
             row_copy = dict(route_row)
             row_copy["receipt_validation_status"] = STATUS_SKIPPED_NOT_REQUIRED
             row_copy["diagnostic_label"] = "orchestration_not_ready"
             row_copy["receipt_observed_count"] = 0
+            row_copy.update(
+                build_route_scope_projection(
+                    route_scope=ROUTE_SCOPE_ROUTE_SCOPED,
+                    route_ready_count=1,
+                    route_total_count=1,
+                )
+            )
+            row_copy["declared_dependency_projection"] = build_declared_dependency_projection(
+                route_name=route_name,
+                primary_skills=route_doc.get("primary_skills"),
+                fallback_skills=route_doc.get("fallback_skills"),
+                required_mcp=route_doc.get("required_mcp"),
+                primary_instance_scripts=route_doc.get("primary_instance_scripts"),
+                fallback_instance_scripts=route_doc.get("fallback_instance_scripts"),
+                allowed_execution_lane_ids=_declared_lane_ids(route_doc.get("allowed_execution_lanes") or []),
+                route_scope=ROUTE_SCOPE_ROUTE_SCOPED,
+            )
+            row_copy["observed_dependency_projection"] = build_observed_dependency_projection(
+                route_name=route_name,
+                route_scope=ROUTE_SCOPE_ROUTE_SCOPED,
+            )
+            row_copy["dependency_gap_reasons"] = ["route_orchestration_not_ready"]
             route_rows.append(row_copy)
             continue
-
-        route_doc = routes.get(route_name) or {}
+        route_scope_projection = build_route_scope_projection(
+            route_scope=ROUTE_SCOPE_ROUTE_SCOPED,
+            route_ready_count=1,
+            route_total_count=1,
+        )
+        declared_dependency_projection = build_declared_dependency_projection(
+            route_name=route_name,
+            primary_skills=route_doc.get("primary_skills"),
+            fallback_skills=route_doc.get("fallback_skills"),
+            required_mcp=route_doc.get("required_mcp"),
+            primary_instance_scripts=route_doc.get("primary_instance_scripts"),
+            fallback_instance_scripts=route_doc.get("fallback_instance_scripts"),
+            allowed_execution_lane_ids=_declared_lane_ids(route_doc.get("allowed_execution_lanes") or []),
+            route_scope=ROUTE_SCOPE_ROUTE_SCOPED,
+        )
         resolved_script_ids = [
             str(token).strip()
             for token in (route_row.get("resolved_script_ids") or [])
@@ -927,6 +1274,14 @@ def build_route_receipt_join_matrix(
                 "latest_receipt_path": "",
                 "required_provenance_fields": route_evidence_schema_fields(task_doc),
                 "stale_reasons": [],
+                **route_scope_projection,
+                "declared_dependency_projection": declared_dependency_projection,
+                "observed_dependency_projection": build_observed_dependency_projection(
+                    route_name=route_name,
+                    observed_instance_scripts=[script_id],
+                    route_scope=ROUTE_SCOPE_ROUTE_SCOPED,
+                ),
+                "dependency_gap_reasons": [],
             }
             receipt_paths, path_issues = _resolve_receipt_paths(
                 pack_root=pack_root,
@@ -948,6 +1303,7 @@ def build_route_receipt_join_matrix(
                     row["receipt_validation_status"] = STATUS_FAIL_REQUIRED
                     row["diagnostic_label"] = "receipt_missing"
                     row["stale_reasons"] = ["receipt_not_observed"]
+                    row["dependency_gap_reasons"] = ["route_receipt_not_observed"]
                     blocking_reasons.append(f"{route_name}:{script_id}:receipt_not_observed")
                 route_rows.append(row)
                 continue
@@ -981,6 +1337,20 @@ def build_route_receipt_join_matrix(
             row["expected_receipt_family"] = str(validation.get("expected_receipt_family", "")).strip()
             row["observed_receipt_family"] = str(validation.get("receipt_family", "")).strip()
             row["stale_reasons"] = list(validation.get("stale_reasons") or [])
+            row["declared_dependency_projection"] = dict(
+                validation.get("declared_dependency_projection") or declared_dependency_projection
+            )
+            row["observed_dependency_projection"] = dict(
+                validation.get("observed_dependency_projection")
+                or build_observed_dependency_projection(
+                    route_name=route_name,
+                    observed_instance_scripts=[script_id],
+                    observed_receipt_family=str(validation.get("receipt_family", "")).strip(),
+                    observed_route_ready=False,
+                    route_scope=ROUTE_SCOPE_ROUTE_SCOPED,
+                )
+            )
+            row["dependency_gap_reasons"] = list(validation.get("dependency_gap_reasons") or [])
             row["diagnostic_label"] = "ready" if row["receipt_validation_status"] == STATUS_PASS_REQUIRED else "receipt_invalid"
             if row["receipt_validation_status"] != STATUS_PASS_REQUIRED:
                 blocking_reasons.extend(f"{route_name}:{script_id}:{reason}" for reason in row["stale_reasons"])

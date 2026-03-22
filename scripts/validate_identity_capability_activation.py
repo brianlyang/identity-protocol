@@ -16,6 +16,7 @@ from instance_script_orchestration_common import (
     STATUS_FAIL_REQUIRED as ORCHESTRATION_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED as ORCHESTRATION_PASS_REQUIRED,
     build_route_execution_lane_matrix,
+    build_aggregate_dependency_projection,
     build_route_orchestration_matrix,
     clean_string_list,
     execution_lane_required as instance_script_execution_lane_required,
@@ -144,11 +145,13 @@ def _collect_contract(
                 token = str(s).strip()
                 required_skills.add(token)
                 route_skills.add(token)
+        primary_skills = clean_string_list(route.get("primary_skills"))
         for s in route.get("fallback_skills") or []:
             if str(s).strip():
                 token = str(s).strip()
                 required_skills.add(token)
                 route_skills.add(token)
+        fallback_skills = clean_string_list(route.get("fallback_skills"))
         for m in route.get("required_mcp") or []:
             if str(m).strip():
                 token = str(m).strip()
@@ -162,6 +165,8 @@ def _collect_contract(
                 "pipeline": route.get("pipeline") or [],
                 "max_tool_calls": route.get("max_tool_calls"),
                 "max_runtime_minutes": route.get("max_runtime_minutes"),
+                "primary_skills": primary_skills,
+                "fallback_skills": fallback_skills,
                 "required_skills": sorted(route_skills),
                 "required_mcp": sorted(route_mcp),
                 "uses_instance_scripts": route_uses_instance_scripts(route),
@@ -506,6 +511,7 @@ def _build_runtime_payload(
                 "primary_instance_scripts": list(route.get("primary_instance_scripts") or []),
                 "fallback_instance_scripts": list(route.get("fallback_instance_scripts") or []),
                 "missing_script_ids": route_missing_script_ids,
+                "resolved_script_ids": list(route_script_row.get("resolved_script_ids") or []),
                 "script_receipt_pattern": str(route.get("script_receipt_pattern", "")).strip(),
                 "uses_execution_lanes": route_uses_execution_lanes,
                 "allowed_execution_lanes": list(route.get("allowed_execution_lanes") or []),
@@ -606,6 +612,14 @@ def _build_runtime_payload(
         catalog_path.expanduser().resolve(),
         allow_conflict=True,
     )
+    aggregate_dependency_projection = build_aggregate_dependency_projection(
+        tool_routes=list(contract.get("tool_routes") or []),
+        route_activation_matrix=route_activation_matrix,
+        active_skills=active_skills,
+        mcp_tools_used=mcp_tools_used,
+        route_activation_strategy=policy,
+        route_ready_count=route_ready_count,
+    )
     return {
         "identity_id": identity_id,
         "catalog_path": str(catalog_path),
@@ -630,10 +644,8 @@ def _build_runtime_payload(
         "tool_routes": contract["tool_routes"],
         "route_script_rows": list(contract.get("route_script_rows") or []),
         "route_execution_lane_rows": list(contract.get("route_execution_lane_rows") or []),
-        "route_activation_strategy": policy,
         "route_activation_matrix": route_activation_matrix,
-        "route_ready_count": route_ready_count,
-        "route_total_count": len(route_activation_matrix),
+        **aggregate_dependency_projection,
         "instance_script_manifest_required": bool(contract.get("instance_script_manifest_required")),
         "instance_script_manifest_status": str(contract.get("instance_script_manifest_status", "")).strip(),
         "instance_script_manifest_stale_reasons": list(
@@ -677,6 +689,11 @@ def _validate_report(path: Path, require_activated: bool) -> tuple[bool, str]:
         "capability_activation_status",
         "capability_activation_error_code",
         "capability_contract_required",
+        "route_scope",
+        "route_selection_cardinality",
+        "declared_dependency_projection",
+        "observed_dependency_projection",
+        "dependency_gap_reasons",
     ]
     missing = [k for k in required if k not in data]
     if missing:
@@ -696,6 +713,12 @@ def _validate_report(path: Path, require_activated: bool) -> tuple[bool, str]:
         return False, "mcp_servers_checked_must_be_list"
     if not isinstance(data.get("tool_routes"), list):
         return False, "tool_routes_must_be_list"
+    if not isinstance(data.get("declared_dependency_projection"), dict):
+        return False, "declared_dependency_projection_must_be_object"
+    if not isinstance(data.get("observed_dependency_projection"), dict):
+        return False, "observed_dependency_projection_must_be_object"
+    if not isinstance(data.get("dependency_gap_reasons"), list):
+        return False, "dependency_gap_reasons_must_be_list"
     return True, "ok"
 
 

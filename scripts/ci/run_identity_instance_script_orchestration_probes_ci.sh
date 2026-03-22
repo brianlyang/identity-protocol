@@ -153,6 +153,7 @@ PY
 POS_MANIFEST_JSON="${TMP_ROOT}/positive-manifest.json"
 POS_ORCH_JSON="${TMP_ROOT}/positive-orchestration.json"
 POS_RECEIPT_JSON="${TMP_ROOT}/positive-receipt.json"
+POS_CAPABILITY_JSON="${TMP_ROOT}/positive-capability-activation.json"
 POS_LANE_JSON="${TMP_ROOT}/positive-lane-admission.json"
 NEG_MANIFEST_PACK="${TMP_ROOT}/negative-manifest-pack"
 NEG_MANIFEST_JSON="${TMP_ROOT}/negative-manifest.json"
@@ -193,6 +194,14 @@ python3 "${ROOT}/scripts/validate_route_script_receipt_join.py" \
   --source-layer "${SOURCE_LAYER}" \
   --require-observed \
   --json-only > "${POS_RECEIPT_JSON}"
+
+python3 "${ROOT}/scripts/validate_identity_capability_activation.py" \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --work-layer "${WORK_LAYER}" \
+  --source-layer "${SOURCE_LAYER}" \
+  --activation-policy route-any-ready \
+  --out "${POS_CAPABILITY_JSON}" >/dev/null
 
 mkdir -p "${POS_LANE_PACK}/scripts" "${POS_LANE_PACK}/runtime/reports/instance-script-admission"
 cp "${TASK_PATH}" "${POS_LANE_PACK}/CURRENT_TASK.json"
@@ -422,7 +431,7 @@ if python3 "${ROOT}/scripts/validate_route_execution_lane_admission.py" \
   exit 1
 fi
 
-python3 - "${POS_MANIFEST_JSON}" "${POS_ORCH_JSON}" "${POS_RECEIPT_JSON}" "${POS_LANE_JSON}" "${NEG_MANIFEST_JSON}" "${NEG_BINDING_JSON}" "${NEG_RECEIPT_JSON}" "${NEG_LANE_CONTRACT_JSON}" "${NEG_LANE_RECEIPT_JSON}" "${IDENTITY_ID}" "${TMP_ROOT}" <<'PY'
+python3 - "${POS_MANIFEST_JSON}" "${POS_ORCH_JSON}" "${POS_RECEIPT_JSON}" "${POS_CAPABILITY_JSON}" "${POS_LANE_JSON}" "${NEG_MANIFEST_JSON}" "${NEG_BINDING_JSON}" "${NEG_RECEIPT_JSON}" "${NEG_LANE_CONTRACT_JSON}" "${NEG_LANE_RECEIPT_JSON}" "${IDENTITY_ID}" "${TMP_ROOT}" <<'PY'
 import json
 import sys
 
@@ -430,6 +439,7 @@ import sys
     positive_manifest,
     positive_orch,
     positive_receipt,
+    positive_capability,
     positive_lane,
     negative_manifest,
     negative_binding,
@@ -437,14 +447,29 @@ import sys
     negative_lane_contract,
     negative_lane_receipt,
 ) = [
-    json.loads(open(path, encoding="utf-8").read()) for path in sys.argv[1:10]
+    json.loads(open(path, encoding="utf-8").read()) for path in sys.argv[1:11]
 ]
-identity_id = sys.argv[10]
-tmp_root = sys.argv[11]
+identity_id = sys.argv[11]
+tmp_root = sys.argv[12]
 
 assert positive_manifest["instance_script_manifest_status"] == "PASS_REQUIRED", positive_manifest
 assert positive_orch["instance_script_orchestration_status"] == "PASS_REQUIRED", positive_orch
 assert positive_receipt["route_script_receipt_join_status"] == "PASS_REQUIRED", positive_receipt
+assert positive_capability["capability_activation_status"] == "ACTIVATED", positive_capability
+assert positive_capability["route_scope"] == "aggregate", positive_capability
+assert positive_capability["route_selection_cardinality"] in {
+    "zero_route",
+    "single_route",
+    "multi_route",
+}, positive_capability
+assert isinstance(positive_capability.get("declared_dependency_projection"), dict), positive_capability
+assert isinstance(positive_capability.get("observed_dependency_projection"), dict), positive_capability
+assert isinstance(positive_capability.get("dependency_gap_reasons"), list), positive_capability
+assert positive_receipt["route_scope"] == "route_scoped", positive_receipt
+assert positive_receipt["route_selection_cardinality"] == "single_route", positive_receipt
+assert isinstance(positive_receipt.get("declared_dependency_projection"), dict), positive_receipt
+assert isinstance(positive_receipt.get("observed_dependency_projection"), dict), positive_receipt
+assert isinstance(positive_receipt.get("dependency_gap_reasons"), list), positive_receipt
 assert positive_lane["route_execution_lane_admission_status"] == "PASS_REQUIRED", positive_lane
 assert negative_manifest["instance_script_manifest_status"] == "FAIL_REQUIRED", negative_manifest
 assert any("entry_target_missing" in reason for reason in negative_manifest.get("stale_reasons", [])), negative_manifest
@@ -465,6 +490,8 @@ print(
             "positive_manifest_status": positive_manifest["instance_script_manifest_status"],
             "positive_orchestration_status": positive_orch["instance_script_orchestration_status"],
             "positive_receipt_join_status": positive_receipt["route_script_receipt_join_status"],
+            "positive_capability_activation_status": positive_capability["capability_activation_status"],
+            "positive_aggregate_scope": positive_capability["route_scope"],
             "positive_execution_lane_status": positive_lane["route_execution_lane_admission_status"],
             "negative_manifest_failure": "entry_target_missing",
             "negative_binding_failure": "missing_script_id",

@@ -162,6 +162,8 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
    - proof-pack adoption of execution-lane admission fields where external/manual/editor/webhook fallback risk exists,
    - lane-admission receipts that keep `lane_id`, `lane_class`, `lane_source`, `lane_endpoint_class`, `lane_admission_status`, and `fallback_used` machine-visible under live pack execution,
    - receipt-provenance projection that keeps `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts` machine-visible under live pack execution,
+   - aggregate capability-activation output that reuses the frozen `route_scope` / `route_activation_strategy` / `route_ready_count` / `route_total_count` / `route_selection_cardinality` family instead of parallel aliases,
+   - declared-vs-observed dependency output that reuses the frozen `declared_dependency_projection` / `observed_dependency_projection` / `dependency_gap_reasons` family across route-scoped and aggregate artifacts where applicable,
    - future receipt-family specializations, when needed, stay on the same shared validator/probe/control path instead of forking it.
 5. Reviewers must not collapse `Architecture PASS` into `Implementation PASS`.
 6. **Diagnostic Attribution PASS** requires reviewers to classify failures in this order:
@@ -226,6 +228,15 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
      - sentinel hook remains optional, schema-bound, and machine-visible when present,
      - advisory vs fail-close semantics are explicit,
      - protocol does not absorb instance-specific scoring thresholds as universal contract.
+5. `RF-ORCH-005 role_boundary_non_substitution_matrix`
+   - current judgment: the stream already states that instance scripts do not replace skills, MCP servers, or tools, but review can still drift unless the four-role matrix and non-substitution rule are frozen as an explicit canonical clause.
+   - target protocol surfaces:
+     - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+     - `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md`
+   - audit acceptance:
+     - the agent/codex, identity instance/scripts, skills/scripts, and MCP/tool roles are explicitly separated,
+     - reviewer wording classifies “identity instance/scripts must replace skill business scripts” as semantic misuse rather than protocol defect,
+     - the reinforcement does not create a fake new machine gate or reopen inherited streams.
 
 ## 8) Boundary lock for reviewers
 
@@ -236,6 +247,7 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
 5. Do not reopen `v1.6.13` or `v1.6.14` while reviewing this stream; `v1.6.15` exists specifically to keep those layers separate.
 6. Do not classify route blocks caused only by undeclared lower dependencies as proof that the route/script contract failed; first verify whether the route actually declared those skills, MCP servers, or tool constraints.
 7. Do not accept receipt families that drop `route_selected` / `skills_used` / `mcp_tools_used` provenance and then compensate with narrative-only explanation.
+8. Do not demand that `identity instance/scripts` replace skill/business script libraries; that request is a role-boundary semantic misuse for this stream, not a protocol-owned completeness target.
 
 ## 9) 2026-03-21 machine-verified protocol landing snapshot
 
@@ -263,7 +275,7 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
    - `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh` now seeds a synthetic `host_visible_surface_live_closure_state.json` blocker and proves that the session-chain wrapper returns to `PASS_REQUIRED`
    - this keeps stale host-visible closure state in the runtime-repair bucket instead of misclassifying it as a new route/script orchestration regression
 6. Protocol hygiene and inherited motherline checks remain green after the upgrade:
-   - `python3 scripts/docs_command_contract_check.py` -> `docs checked: 79`, `command snippets checked: 853`, `PASS`
+   - `python3 scripts/docs_command_contract_check.py` -> `docs checked: 79`, `command snippets checked: 860`, `PASS`
    - `python3 scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `status=PASS_REQUIRED`, `standard_closure_status=CLOSED`, `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 7. The stream-doc-registry current-pointer lane is also now single-sourced for the touched validator family, and control-plane invariants fail close if the literal current pointer resurfaces outside the shared helper.
 8. This snapshot closes the protocol-owned execution-lane governance gap for `v1.6.15`, but it does not claim repo-wide clean freeze or cross-pack adoption closure.

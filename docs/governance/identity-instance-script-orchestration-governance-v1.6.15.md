@@ -108,6 +108,14 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
 4. Skill guidance remains strategy, MCP remains capability access, and tools remain execution primitives; instance scripts are the pack-local orchestration glue that binds those lower layers to identity-owned flows.
 5. `script_preconditions.required_contracts` and `script_preconditions.gate_policies` may reference inherited gateway, tuple, headstamp, host-visible, or relay contracts when a route depends on them, but that reference does not transfer semantic ownership of those contracts into `v1.6.15`.
 6. Provider-specific MCP incidents and business-tool failures remain lower-layer failures; they must not be relabeled as proof that the script-orchestration contract is wrong.
+7. The canonical responsibility matrix for this stream is:
+   - `agent/codex` = route selection, orchestration decisions, and protocol-gate interpretation
+   - `identity instance/scripts` = pack-local control plane, governed emit/recovery glue, route-bound receipt join, and protocol-to-lower-layer bridge
+   - `skills/scripts` = business execution surface
+   - `mcp/tool` = capability access and execution primitives
+8. Review and implementation must preserve non-substitution between those roles; an identity-pack instance script may bind, gate, or evidence lower execution, but it is not a substitute for a skill/business script library.
+9. A request to make `identity instance/scripts` behave as a full business-execution script pack is semantic misuse against this stream, not proof that the route/script orchestration contract is incomplete.
+10. Lower-layer defects must still be attributed to the correct role boundary after route/script correctness is established; this stream does not authorize role collapse by narrative convenience.
 
 ### 2.5 Canonical receipt-family interpretation
 
@@ -196,7 +204,8 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
    - `outcome_sentinel_schema_id`
    - `outcome_sentinel_status`
 13. Outcome sentinels do not become universal core pass/fail semantics merely by existing; a stream-specific policy must explicitly freeze whether a sentinel is advisory, gating, or ignored for the affected artifact family.
-14. These additive reinforcements belong to `v1.6.15` only insofar as they strengthen route/script/dependency/receipt governance; they must not be used to smuggle workbook-only narrative or instance-specific business heuristics into protocol SSOT.
+14. Additive implementation must reuse the frozen field families above rather than minting parallel aliases for the same semantics; `route_scope` / `route_activation_strategy` / `route_ready_count` / `route_total_count` / `route_selection_cardinality` and `declared_dependency_projection` / `observed_dependency_projection` / `dependency_gap_reasons` remain the canonical motherline names for this stream.
+15. These additive reinforcements belong to `v1.6.15` only insofar as they strengthen route/script/dependency/receipt governance; they must not be used to smuggle workbook-only narrative or instance-specific business heuristics into protocol SSOT.
 
 ## 3) Four-track cross-verification boundary
 

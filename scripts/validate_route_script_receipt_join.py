@@ -164,6 +164,17 @@ def main() -> int:
     payload["route_observed_count"] = int(receipt_validation.get("route_observed_count", 0))
     payload["route_rows"] = list(receipt_validation.get("route_rows") or [])
     payload["stale_reasons"] = list(receipt_validation.get("stale_reasons") or [])
+    if len(payload["route_rows"]) == 1 and isinstance(payload["route_rows"][0], dict):
+        route_row = dict(payload["route_rows"][0])
+        for field in (
+            "route_scope",
+            "route_selection_cardinality",
+            "declared_dependency_projection",
+            "observed_dependency_projection",
+            "dependency_gap_reasons",
+        ):
+            if field in route_row:
+                payload[field] = route_row[field]
 
     if (target_route or target_script_id) and payload["route_checked_count"] == 0:
         payload["route_script_receipt_join_status"] = STATUS_FAIL_REQUIRED

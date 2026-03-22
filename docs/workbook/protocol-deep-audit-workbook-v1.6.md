@@ -645,6 +645,24 @@ Root cause:
   - do not freeze universal business scoring thresholds in protocol core;
   - do not use sentinel refs to relabel business drift as proof that orchestration semantics are wrong.
 
+### RF-ORCH-005 - Role-boundary non-substitution matrix gap
+
+- `classification`: architecture reinforcement intake, non-reopen
+- `judgment`: the stream already freezes that instance scripts do not replace skills / MCP / tools, but review can still drift unless the four-role matrix and non-substitution rule become an explicit canonical clause.
+- `canonical_landings`:
+  - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md`
+- `implementation_follow_on`:
+  - reviewer boundary wording only where a natural diagnostic surface already exists
+  - no standalone fake machine gate for semantic misuse wording
+- `machine_acceptance`:
+  - `agent/codex`, `identity instance/scripts`, `skills/scripts`, and `mcp/tool` roles are explicitly separated;
+  - protocol review wording classifies “identity instance/scripts must replace skill business scripts” as semantic misuse rather than contract defect;
+  - the reinforcement stays on the existing shared consumer / review motherline without reopening inherited streams.
+- `non_goals`:
+  - do not reinterpret identity-pack instance scripts as a replacement for business execution libraries;
+  - do not use this reinforcement to smuggle category heuristics, pricing logic, SKU semantics, or other business vocabulary into protocol SSOT.
+
 ## 6) Frozen operating rule
 
 1. New scans must update the owning stream docs and machine gates before a row here can move to `CLOSED`.
