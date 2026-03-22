@@ -89,6 +89,43 @@ Operational rule:
 - if someone asks “`identity_id=XXX` 如何启动 / 如何续接”, the answer should come from this protocol-owned command bundle,
   not from manual command拼接, python helper invocation, or workspace-specific wrapper folklore.
 
+## Identity continuity recovery quickstart (v1.6.16 ask/answer surface)
+
+`v1.6.16` is independent from launcher startup, but it now freezes a protocol-owned answer surface for
+identity-visible continuity questions such as:
+
+- “开一个新窗口，怎么把我迁过去？”
+- “clear 之后，怎么再加入记忆恢复任务？”
+
+Operator rule:
+
+- the operator should ask the identity instance directly;
+- the identity instance should answer from the governed reentry answer bundle;
+- launcher start/resume command lookup still belongs to `v1.6.14`.
+
+Protocol/internal renderer for that answer surface:
+
+```bash
+python3 scripts/render_identity_context_reentry_answers.py --identity-id <identity-id> --json-only
+```
+
+That bundle returns structured facts such as:
+
+- `overall_reentry_readiness_status`
+- `live_reentry_consumption_proof_status`
+- `recommended_reentry_answer_mode`
+- `intent_answers.migrate_new_window`
+- `intent_answers.reload_after_clear`
+- `copyable_reentry_task_block`
+
+Operational rule for identity instances:
+
+- when asked about new-window migration or clear-after-reset recovery, return the concrete governed reentry task block from this bundle;
+- do **not** manually assemble recovery payloads from transcript memory;
+- do **not** inject or hardcode thread UUIDs on the continuity surface;
+- if readiness is not `PASS_REQUIRED`, do **not** claim memory recovery is ready;
+- if readiness is `PASS_REQUIRED` but live proof is not yet observed, you may return the governed reentry task block, but must explicitly state that successful recovery is only proven after `instance_reentry_consumption_receipt` is emitted.
+
 ### Protocol SSOT governance (canonical source + coupling)
 
 - Canonical protocol-strengthening source:
