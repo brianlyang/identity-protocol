@@ -157,6 +157,7 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - the launcher convergence entry is fully landed as a protocol-owned control-plane asset with governed receipts, probes, and passive-gate separation;
    - the same entry has passed unchanged portability proof across more than one workspace-local runtime catalog with no workspace-specific exceptions;
    - at least one non-launcher family demonstrates reuse of the same convergence control-plane grammar without semantic-owner drift;
+   - the recommendation is framed as consolidation of existing protocol assets (notification/trigger surfaces, protocol-feedback inbox/outbox, family convergence entries, probe/validator fact surfaces, receipt/manifest truth-sync) rather than as invention of a new transport plane, side channel, or parallel command family;
    - the proposed framework does not depend on compatibility downgrades, weaker authority rules, diluted receipt families, or weakened launcher semantics.
 4. Until those gates are met, reviewers must keep future convergence-family discussion in the owner streams for those families rather than implying that a generic framework is already open.
 5. Workbook reminders may help keep this deferred promotion visible, but workbook status alone must never be treated as the approval surface for opening a new framework stream.
@@ -169,7 +170,11 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - `scripts/check_identity_codex_launcher_migration_closure.py`, which now carries the same runtime-path closure family into aggregate active-runtime proof,
    - runtime-only consumers in required gates, readiness, and `identity_creator`.
 3. Cross-workspace portability proof is also now machine-landed through `scripts/ci/run_identity_codex_launcher_cross_workspace_pilot_probes_ci.sh`, which replays the **same** convergence entry against another workspace-local runtime catalog with no workspace-specific wrapper exception.
-4. The closer handoff boundary after this landing is therefore narrow and explicit:
+4. Current-state note (2026-03-22): the cross-workspace pilot now also verifies the direct-entry/runtime-authority conditions raised by the `fqsh` feedback:
+   - fresh convergence apply emits a receipt/manifest bundle that is already truth-synced on the first dry-run;
+   - aggregate closure with `--catalog .identity/catalog.local.yaml` resolves against the caller workspace rather than the protocol repo;
+   - `resolve_identity_context.py resolve --identity-id <id>` from the sibling workspace classifies that runtime catalog as `source_layer=project` with `resolved_scope=USER`.
+5. The closer handoff boundary after this landing is therefore narrow and explicit:
    - continue using the same convergence entry, the same receipt family, and the same runtime-only closure semantics,
    - treat launcher convergence receipt/manifest truth-sync as already landed, and keep remaining work mainly on broader rollout breadth plus additional archival coverage,
    - do **not** reopen launcher semantics,
