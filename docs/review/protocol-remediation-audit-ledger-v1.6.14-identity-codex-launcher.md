@@ -111,8 +111,9 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - canonical installed `identity-codex` and `id-<identity-id>` shims,
    - launcher probe lane `scripts/ci/run_identity_codex_launcher_probes_ci.sh`,
    - active-runtime launcher migration closure checker `scripts/check_identity_codex_launcher_migration_closure.py`,
-   - lifecycle enforcement where `identity_creator validate` / `identity_creator update` no longer accept active-runtime `SKIPPED_NOT_REQUIRED(contract_not_required)` launcher states,
-   - required-runtime-gates inclusion for the launcher probe lane.
+   - lifecycle enforcement where `identity_creator validate` fail-closes on active-runtime launcher migration debt and `identity_creator update` performs governed auto-repair + recheck,
+   - required-runtime-gates inclusion for the launcher probe lane,
+   - explicit `scripts/release_readiness_check.py` consumption of the aggregate launcher migration closure checker so readiness no longer depends only on the single-identity launcher validator.
 4. Reviewers must not collapse `Architecture PASS` into `Implementation PASS`.
 
 ## 6) Accepted closure boundary
