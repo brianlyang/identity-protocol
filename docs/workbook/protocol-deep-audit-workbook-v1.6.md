@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 82`, `command snippets checked: 897`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 82`, `command snippets checked: 901`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -168,6 +168,19 @@ Symptoms:
 Root cause:
 
 - project-runtime selection has been hardened in some core entrypoints, but a separate older script family still carries direct global-home catalog defaults from the `v1.4.x` era; because these scripts remain active and are still referenced by current protocol contracts, the old default semantics continue to leak into live validation and repair paths.
+
+### RC-11 No motherline no-downgrade rule freezes compatibility surfaces to migration-only
+
+Symptoms:
+
+- authoritative actor/session truth can already be correct while shared compatibility pointers still publish an older identity and remain classified as warning-level drift in active health/reporting tooling;
+- pointer validators and health reporters still expose allowlists such as `--allow-compatibility-projection-drift`, so compatibility residue survives on current runtime surfaces instead of being retired behind session-primary truth;
+- active scaffolds and validators still normalize legacy compatibility families (`legacy_alias_bridge`, `legacy-commerce-overlay`, literal actor defaults) as supported options rather than quarantining them to migration/import-only tooling;
+- governance/runtime docs still retain compatibility-bridge / legacy-pack wording without a single bottom-layer clause that forbids protocol downgrade/backstop behavior for instance debt or historical residue.
+
+Root cause:
+
+- the protocol has ownership rules and many local hardenings, but it still lacks one explicit motherline principle that says compatibility, fallback, and bridge surfaces are migration/replay/diagnostic-only and may not re-enter active defaults, validator green paths, or current-turn runtime truth.
 
 ## 4) Routed issue sections
 
@@ -592,6 +605,78 @@ Root cause:
   - launcher runtime authority is now surfaced as `runtime_paths_status` in both the single-identity validator and the aggregate launcher migration-closure checker.
   - `install_identity_codex_launcher.py` now writes launcher config under the launcher config home while binding `IDENTITY_HOME` / `IDENTITY_CATALOG` to the selected runtime catalog surface.
   - the cross-workspace pilot probe now copies a sibling workspace runtime catalog into a temporary workspace, rewrites pack paths to the copied runtime surface, and proves dry-run/apply/closure/validator parity on the same convergence entry with no workspace-specific wrapper branch.
+
+### ISSUE-025 - Authoritative resolver and active health entrypoints still rely on implicit runtime-catalog defaults
+
+- `status`: OPEN
+- `problem_statement`: the deep audit still reproduces a live precedence bug on the authority resolver family: the foreign-project env precedence lane in `scripts/ci/run_semantic_clarity_probes_ci.sh` fails because `scripts/resolve_identity_context.py` does not consume `IDENTITY_CATALOG` as the runtime-local catalog unless `--local-catalog` is passed explicitly, while several active utility surfaces still derive default catalogs from script-root path heuristics instead of explicit runtime-catalog authority.
+- `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `secondary_refs`:
+  - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+  - `identity/protocol/IDENTITY_RUNTIME.md`
+  - `scripts/validate_cli_catalog_default_semantics.py`
+- `machine_gate`:
+  - `scripts/ci/run_semantic_clarity_probes_ci.sh`
+  - `scripts/validate_cli_catalog_default_semantics.py`
+  - direct replay: `python3 scripts/resolve_identity_context.py resolve --identity-id global-authority --repo-catalog identity/catalog/identities.yaml`
+- `root_cause`: RC-03, RC-10, and RC-11
+- `stop_condition`:
+  - `resolve_identity_context.py` consumes explicit runtime-catalog authority (`--local-catalog` / `IDENTITY_CATALOG`) before any script-root-derived fallback and the foreign-project precedence lane turns green;
+  - active health/runtime utilities stop embedding script-root catalog defaults on current runtime surfaces and either resolve through the shared runtime-path contract or fail-close explicitly;
+  - launch-context parity stays machine-checked from both workspace-root and protocol-root launches.
+- `current_evidence`:
+  - reproducing the semantic-clarity probe currently fails with `FileNotFoundError: identity not found in merged context: global-authority`;
+  - the same replay succeeds immediately when `--local-catalog <CODEX_HOME/.identity/catalog.local.yaml>` is passed explicitly, proving the defect is implicit-catalog selection rather than missing data.
+
+### ISSUE-026 - Shared compatibility projection can outlive session-primary truth and is still downgraded to warning-level drift
+
+- `status`: OPEN
+- `problem_statement`: protocol runtime can already hold the correct session-primary authoritative identity while the shared compatibility pointer family (`session/active_identity.json` + `session/mirror/current.json`) still points at an older identity; active health/status tooling downgrades that state to warning-level drift and the canonical repair surface rebuilds pointer payloads from actor-global compatibility projection state rather than from current session-primary truth.
+- `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `secondary_refs`:
+  - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+  - `docs/governance/identity-native-chat-bootstrap-entry-governance-v1.6.12.md`
+  - `scripts/repair_actor_session_authority_residue.py`
+- `machine_gate`:
+  - `scripts/validate_identity_session_pointer_consistency.py`
+  - `scripts/refresh_identity_session_status.py`
+  - `scripts/collect_identity_health_report.py`
+  - supporting runtime feedback: `system-requirements-analyst` active-runtime re-entry report
+- `root_cause`: RC-02 and RC-11
+- `stop_condition`:
+  - current runtime health/status surfaces stop classifying compatibility-pointer drift as warn-level residue once session-primary truth is available;
+  - protocol-owned convergence rewrites canonical/mirror pointer surfaces from authoritative `(actor_id,session_id)->identity_id` truth first and treats compatibility projection as diagnostic metadata only;
+  - pointer-drift repair/convergence becomes a protocol-owned fail-close lane rather than a repeated manual/operator interpretation problem.
+- `current_evidence`:
+  - `system-requirements-analyst` reports authoritative actor/session binding already on the current identity while global shared pointer files remain on `office-ops-expert` with `compatibility_projection_status=AVAILABLE`;
+  - `refresh_identity_session_status.py` currently labels the same state as warning-level drift;
+  - `collect_identity_health_report.py` still invokes the pointer guard with `--allow-compatibility-projection-drift`;
+  - `repair_actor_session_authority_residue.py` currently materializes pointer surface identity from `projection_state` when `projection_status == AVAILABLE`.
+
+### ISSUE-027 - Motherline no-downgrade rule is not yet frozen, so active scaffolds and validators still normalize legacy compatibility overlays
+
+- `status`: OPEN
+- `problem_statement`: the protocol still lacks one bottom-layer no-downgrade / no-backstop rule, and that gap is visible in active surfaces: `create_identity_pack.py` scaffolds `legacy_alias_bridge` and exposes `--profile legacy-commerce-overlay`, blocker validators still treat `mode=legacy_alias_bridge` as a green path, utility code still falls back to literal `assistant:codex` defaults outside the strict-entry scanner family, and protocol/runtime docs still preserve compatibility-bridge / legacy-pack wording in active normative text.
+- `primary_owner_doc`: `identity/protocol/IDENTITY_PROTOCOL.md`
+- `secondary_refs`:
+  - `identity/protocol/IDENTITY_RUNTIME.md`
+  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
+- `machine_gate`:
+  - `scripts/validate_identity_runtime_contract.py`
+  - `scripts/validate_identity_collab_trigger.py`
+  - `scripts/validate_strict_actor_entry_semantics.py`
+  - supporting audit scan: `rg -n 'legacy_alias_bridge|legacy-commerce-overlay|assistant:codex' scripts/create_identity_pack.py scripts/compile_identity_runtime.py scripts/identity_creator.py scripts/identity_codex_launcher_common.py`
+- `root_cause`: RC-11
+- `stop_condition`:
+  - one motherline principle freezes compatibility/fallback/bridge surfaces to migration, replay, or diagnostics only and forbids protocol downgrade/backstop behavior for active runtime truth;
+  - active scaffold/validator families stop normalizing legacy alias bridges, legacy overlays, and literal actor fallbacks as ordinary supported defaults;
+  - active normative docs stop advertising compatibility bridges or legacy-pack survival as open-ended current defaults once dedicated migration windows close.
+- `current_evidence`:
+  - `create_identity_pack.py` still scaffolds `legacy_alias_bridge` into `blocker_taxonomy_contract` / `collaboration_trigger_contract` and still exposes `--profile legacy-commerce-overlay`;
+  - `validate_identity_runtime_contract.py` and `validate_identity_collab_trigger.py` still accept `mode=legacy_alias_bridge`;
+  - `compile_identity_runtime.py`, `identity_creator.py`, and `identity_codex_launcher_common.py` still contain literal `assistant:codex` fallback defaults outside the current strict-entry coverage set;
+  - `identity/protocol/IDENTITY_PROTOCOL.md`, `identity/protocol/IDENTITY_RUNTIME.md`, and `semantic-term-registry.v1.6.yaml` still retain compatibility-bridge / legacy-path wording without one explicit no-downgrade motherline clause.
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 
