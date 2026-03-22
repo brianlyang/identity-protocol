@@ -81,7 +81,7 @@ For each identity id `<id>`:
 - `identity/packs/<id>/agents/identity.yaml`
 - `identity/packs/<id>/scripts/README.md`
 
-Compatibility note: legacy packs can stay in `identity/<id>/` if catalog `pack_path` points there.
+Compatibility note: legacy packs under `identity/<id>/` are migration-only locations; active runtime truth must resolve through catalog `pack_path` and must not treat the legacy tree as an open-ended default runtime backstop.
 
 ### Canonical identity instance pack topology (v1.6.13 additive)
 
@@ -102,7 +102,7 @@ Compatibility note: legacy packs can stay in `identity/<id>/` if catalog `pack_p
 4. Bare identity command names are non-canonical, and overriding the product command `codex` is forbidden.
 5. Canonical pack-local launcher assets belong under pack-root `scripts/launchers/`, building on the `v1.6.13` pack topology freeze.
 6. Canonical installed launcher shims belong under `${CODEX_HOME}/bin/`.
-7. Workspace helper paths such as `scripts/codex_native_chat/` are compatibility bridges only until the protocol-owned launcher installer lands.
+7. Workspace helper paths such as `scripts/codex_native_chat/` are migration/evidence helpers only until the protocol-owned launcher installer lands; they must not survive as active default entry surfaces or compatibility backstops after closure.
 8. Launcher/install governance is separate from MCP provider health, business-tool availability, and host-final visible-surface promotion work.
 9. Active runtime identities may not remain in launcher `SKIPPED_NOT_REQUIRED(contract_not_required)` state inside governed lifecycle surfaces; migration closure is now machine-enforced through launcher closure checks plus contract-backfill / launcher-rollout wiring.
 
