@@ -60,10 +60,11 @@ identity-codex commands --identity-id <identity-id> --thread-id <host-thread-uui
 
 What this prints:
 
-- preferred short start command, for example `zsh -lic 'id-<identity-id>'`
+- preferred short start command, for example `id-<identity-id>`
 - absolute-path fallback start command under `${CODEX_HOME}/bin/`
 - preferred short resume command when a host thread UUID is available
 - generic `identity-codex --identity-id ...` equivalents for repair/documentation flows
+- all commands are terminal-native direct commands; shell-wrapped `zsh -lic '...'` surfaces are non-canonical
 
 For identity instances and other protocol consumers, use the structured surface:
 
