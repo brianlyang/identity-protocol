@@ -197,15 +197,19 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
    - `semantic_anchor_revision`
    - `semantic_anchor_digest`
    - `semantic_anchor_status`
-10. The semantic-anchor envelope is a transfer/control primitive only; it must not hardcode domain-specific scoring fields, search heuristics, or product-level business taxonomy into the core protocol contract.
-11. Protocol-owned artifacts may also expose an optional outcome-sentinel reference hook when downstream risk signals need governed traceability without redefining orchestration ownership.
-12. If an outcome-sentinel hook is present, it must preserve at least:
+10. If any semantic-anchor field is present on a protocol-owned artifact, the complete semantic-anchor family must be present; partial semantic-anchor projection fails closed for the affected route-/report-family validator.
+11. Aggregate/report builders may promote a semantic-anchor family to aggregate top-level only when exactly one fully formed observed family can be projected across contributing route rows without ambiguity; otherwise the route-row evidence remains scoped and a machine-visible ambiguity reason is emitted instead of inventing a merged anchor.
+12. The semantic-anchor envelope is a transfer/control primitive only; it must not hardcode domain-specific scoring fields, search heuristics, or product-level business taxonomy into the core protocol contract.
+13. Protocol-owned artifacts may also expose an optional outcome-sentinel reference hook when downstream risk signals need governed traceability without redefining orchestration ownership.
+14. If an outcome-sentinel hook is present, it must preserve at least:
    - `outcome_sentinel_ref`
    - `outcome_sentinel_schema_id`
    - `outcome_sentinel_status`
-13. Outcome sentinels do not become universal core pass/fail semantics merely by existing; a stream-specific policy must explicitly freeze whether a sentinel is advisory, gating, or ignored for the affected artifact family.
-14. Additive implementation must reuse the frozen field families above rather than minting parallel aliases for the same semantics; `route_scope` / `route_activation_strategy` / `route_ready_count` / `route_total_count` / `route_selection_cardinality` and `declared_dependency_projection` / `observed_dependency_projection` / `dependency_gap_reasons` remain the canonical motherline names for this stream.
-15. These additive reinforcements belong to `v1.6.15` only insofar as they strengthen route/script/dependency/receipt governance; they must not be used to smuggle workbook-only narrative or instance-specific business heuristics into protocol SSOT.
+15. If any outcome-sentinel field is present on a protocol-owned artifact, the complete outcome-sentinel family must be present; partial sentinel projection fails closed for the affected route-/report-family validator.
+16. Aggregate/report builders may promote an outcome-sentinel family to aggregate top-level only when exactly one fully formed observed family can be projected across contributing route rows without ambiguity; otherwise the route-row evidence remains scoped and a machine-visible ambiguity reason is emitted instead of inventing a merged sentinel.
+17. Outcome sentinels do not become universal core pass/fail semantics merely by existing; a stream-specific policy must explicitly freeze whether a sentinel is advisory, gating, or ignored for the affected artifact family.
+18. Additive implementation must reuse the frozen field families above rather than minting parallel aliases for the same semantics; `route_scope` / `route_activation_strategy` / `route_ready_count` / `route_total_count` / `route_selection_cardinality` and `declared_dependency_projection` / `observed_dependency_projection` / `dependency_gap_reasons` remain the canonical motherline names for this stream.
+19. These additive reinforcements belong to `v1.6.15` only insofar as they strengthen route/script/dependency/receipt governance; they must not be used to smuggle workbook-only narrative or instance-specific business heuristics into protocol SSOT.
 
 ## 3) Four-track cross-verification boundary
 
