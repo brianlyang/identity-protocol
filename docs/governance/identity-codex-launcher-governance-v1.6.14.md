@@ -190,8 +190,9 @@ These names and directories are frozen by this stream. The renderer / installer 
    - launcher fail-close on forbidden runtime override or missing tuple truth,
    - dedicated launcher probes under `scripts/ci/run_identity_codex_launcher_probes_ci.sh`,
    - active-runtime launcher migration closure checker under `scripts/check_identity_codex_launcher_migration_closure.py`,
-   - strict `identity_creator validate` / `identity_creator update` enforcement so active runtime identities cannot remain on `SKIPPED_NOT_REQUIRED(contract_not_required)` for launcher governance,
-    - required-runtime-gates inclusion for the launcher probe lane.
+   - strict lifecycle enforcement where `identity_creator validate` fail-closes on active-runtime launcher migration debt and `identity_creator update` performs governed auto-repair + recheck,
+   - required-runtime-gates inclusion for the launcher probe lane,
+   - explicit `scripts/release_readiness_check.py` consumption of the aggregate launcher migration closure checker for readiness symmetry.
 3. The correct interpretation after closure is:
    - `1.6.14` semantic ownership is frozen,
    - core implementation is landed,
