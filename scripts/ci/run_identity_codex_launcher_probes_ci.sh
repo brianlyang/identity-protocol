@@ -68,6 +68,12 @@ assert payload["status"] == "PASS_REQUIRED", payload
 assert payload["command_bundle_contract_id"] == "identity_codex_launcher_command_discovery_contract_v1", payload
 assert payload["question_family"] == "identity_launcher_start_resume", payload
 assert payload["resume_status"] == "PASS_REQUIRED", payload
+assert payload["continuity_support"]["bundle_contract_id"] == "identity_context_continuity_bundle_v1", payload
+assert payload["continuity_support"]["bundle_role"] == "launcher_and_instance_internal_support", payload
+assert payload["continuity_support"]["operator_surface_contract"]["new_user_facing_continuity_command_family_forbidden"] is True, payload
+assert payload["continuity_support"]["startup_reentry_readiness_status"] == "SKIPPED_NOT_REQUIRED", payload
+assert payload["continuity_support"]["live_reentry_consumption_proof_status"] == "SKIPPED_NOT_REQUIRED", payload
+assert payload["continuity_support"]["recommended_launcher_bind_mode"] == "fresh_start_without_continuity_contract", payload
 assert payload["shortcut_command_on_path"] is False, payload
 assert payload["generic_command_on_path"] is False, payload
 assert payload["preferred_start_command"] == f"id-{payload['identity_id']}", payload
@@ -103,11 +109,13 @@ payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["status"] == "PASS_REQUIRED", payload
 assert payload["identity_id"], payload
 assert payload["command_discovery"]["instance_answer_mode"] == "instance_returns_concrete_commands", payload
+assert payload["continuity_support"]["bundle_contract_id"] == "identity_context_continuity_bundle_v1", payload
 assert payload["shortcut_command_on_path"] is False, payload
 assert payload["preferred_start_command"] == f"id-{payload['identity_id']}", payload
 assert payload["preferred_resume_command"].startswith(f"id-{payload['identity_id']} resume "), payload
 assert payload["recommended_start_command"] == payload["absolute_start_command"], payload
 assert payload["recommended_resume_command"] == payload["absolute_resume_command"], payload
+assert payload["instance_answer_guidance"]["continuity_support_internal_only"] is True, payload
 print("launcher_shortcut_command_bundle_status=PASS_REQUIRED")
 PY
 
