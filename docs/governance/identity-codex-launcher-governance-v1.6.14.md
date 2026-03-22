@@ -246,9 +246,11 @@ These names and directories are frozen by this stream. The renderer / installer 
    - dedicated convergence-entry probes under `scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh`,
    - active-runtime launcher migration closure checker under `scripts/check_identity_codex_launcher_migration_closure.py`,
    - protocol-owned workspace-level convergence entry under `scripts/run_identity_codex_launcher_workspace_convergence.py`,
+   - governed launcher convergence evidence bundles whose receipts keep `evidence_ref` / `manifest_ref` machine-visible and whose archival root now carries `EVIDENCE_MANIFEST.<run_token>.json`,
+   - post-closure truth-sync/backfill through `scripts/refresh_identity_codex_launcher_evidence_truth_sync.py` so earlier convergence receipts can be normalized without reopening launcher semantics,
    - strict lifecycle enforcement where `identity_creator validate` fail-closes on active-runtime launcher migration debt and `identity_creator update` performs governed auto-repair + recheck,
    - required-runtime-gates inclusion for the launcher probe lane,
-   - explicit `scripts/release_readiness_check.py` consumption of the aggregate launcher migration closure checker for readiness symmetry.
+   - explicit `scripts/release_readiness_check.py` consumption of both the convergence-entry probe lane and the aggregate launcher migration closure checker for readiness symmetry.
 3. The correct interpretation after closure is:
    - `1.6.14` semantic ownership is frozen,
    - core implementation is landed,
@@ -278,6 +280,6 @@ These names and directories are frozen by this stream. The renderer / installer 
 8. The accepted maturity statement for this stream is scoped precisely as follows:
    - **for the `v1.6.14` identity-Codex-launcher lane**, the stream has advanced from topic governance into a protocol-owned formal control-plane subsystem,
    - current-state note (2026-03-22): `python3 scripts/validate_protocol_lane_isolated_historical_replay.py --repo-root identity-protocol-local --workspace-root . --commit HEAD --json-only` returned `PASS_REQUIRED` with `projection_parity_match=true`,
-   - remaining work is limited primarily to legacy rollout and broader evidence breadth,
+   - launcher convergence evidence truth-sync is now machine-landed through governed receipts plus `EVIDENCE_MANIFEST` archival bundles, so remaining work is limited primarily to legacy rollout and broader evidence breadth beyond the already-synced launcher convergence bundle family,
    - the isolated historical replay capability is landed, but the isolated-workspace caveat above still applies before anyone claims arbitrary full-tree historical replay,
    - reviewers must not restate the residual work as proof that launcher semantics remain unclosed.

@@ -617,6 +617,8 @@ Root cause:
   - launcher runtime authority is now surfaced as `runtime_paths_status` in both the single-identity validator and the aggregate launcher migration-closure checker.
   - `install_identity_codex_launcher.py` now writes launcher config under the launcher config home while binding `IDENTITY_HOME` / `IDENTITY_CATALOG` to the selected runtime catalog surface.
   - the cross-workspace pilot probe now copies a sibling workspace runtime catalog into a temporary workspace, rewrites pack paths to the copied runtime surface, and proves dry-run/apply/closure/validator parity on the same convergence entry with no workspace-specific wrapper branch.
+  - launcher convergence receipts now keep `evidence_ref` / `manifest_ref` machine-visible, emit governed `EVIDENCE_MANIFEST.<run_token>.json` bundles under `activity/evidence/v1614-identity-codex-launcher/<date>/`, and the post-closure truth-sync surface `scripts/refresh_identity_codex_launcher_evidence_truth_sync.py` can normalize older convergence receipts without reopening launcher semantics.
+  - `scripts/release_readiness_check.py` now consumes the convergence-entry probe lane itself, so readiness symmetry covers both the aggregate closure checker and the governed receipt/manifest truth-sync bundle.
 
 ### ISSUE-025 - Authoritative resolver and active health entrypoints still rely on implicit runtime-catalog defaults
 

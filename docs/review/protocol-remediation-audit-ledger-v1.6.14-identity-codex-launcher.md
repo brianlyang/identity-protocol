@@ -113,9 +113,11 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - launcher probe lane `scripts/ci/run_identity_codex_launcher_probes_ci.sh`,
    - convergence-entry probe lane `scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh`,
    - active-runtime launcher migration closure checker `scripts/check_identity_codex_launcher_migration_closure.py`,
+   - governed launcher convergence evidence bundles whose receipts self-pin `evidence_ref` / `manifest_ref` and whose archival root carries `EVIDENCE_MANIFEST.<run_token>.json`,
+   - post-closure evidence truth-sync/backfill through `scripts/refresh_identity_codex_launcher_evidence_truth_sync.py`,
    - lifecycle enforcement where `identity_creator validate` fail-closes on active-runtime launcher migration debt and `identity_creator update` performs governed auto-repair + recheck,
    - required-runtime-gates inclusion for the launcher probe lane,
-   - explicit `scripts/release_readiness_check.py` consumption of the aggregate launcher migration closure checker so readiness no longer depends only on the single-identity launcher validator.
+   - explicit `scripts/release_readiness_check.py` consumption of both the convergence-entry probe lane and the aggregate launcher migration closure checker so readiness no longer depends only on the single-identity launcher validator.
 4. Reviewers must not collapse `Architecture PASS` into `Implementation PASS`.
 
 ## 6) Accepted closure boundary
@@ -133,7 +135,7 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - aggregates launcher migration closure debt for active runtime identities,
    - executes governed backfill + launcher rollout on violating identities,
    - reruns closure validation after repair,
-   - emits a convergence receipt for audit and replay.
+   - emits a convergence receipt plus governed evidence manifest for audit, replay, and post-closure archival truth-sync.
 4. Reviewers must treat that convergence entry as rollout/orchestration infrastructure layered on top of the already frozen `v1.6.14` launcher contract, not as permission to reopen launcher semantics.
 5. Cross-workspace proof should therefore come from running the same convergence entry against another workspace catalog, rather than from granting workspace-specific wrapper exceptions.
 
@@ -169,7 +171,7 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
 3. Cross-workspace portability proof is also now machine-landed through `scripts/ci/run_identity_codex_launcher_cross_workspace_pilot_probes_ci.sh`, which replays the **same** convergence entry against another workspace-local runtime catalog with no workspace-specific wrapper exception.
 4. The closer handoff boundary after this landing is therefore narrow and explicit:
    - continue using the same convergence entry, the same receipt family, and the same runtime-only closure semantics,
-   - treat remaining work mainly as evidence archival / broader rollout breadth / truth-sync,
+   - treat launcher convergence receipt/manifest truth-sync as already landed, and keep remaining work mainly on broader rollout breadth plus additional archival coverage,
    - do **not** reopen launcher semantics,
    - do **not** overclaim that generic workspace convergence promotion is already approved.
 
