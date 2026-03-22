@@ -41,6 +41,7 @@ run_global_protocol_gates() {
   run_cmd bash scripts/ci/run_native_chat_bootstrap_entry_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_instance_pack_topology_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_codex_launcher_probes_ci.sh
+  run_cmd python3 scripts/validate_gateway_wrapper_trust_boundary_cross_cwd.py --json-only
 }
 
 run_global_protocol_gates
