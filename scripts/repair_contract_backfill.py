@@ -111,6 +111,19 @@ from create_identity_pack import (
     materialize_protocol_host_gateway_artifacts,
 )
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
+from identity_codex_launcher_common import (
+    IDENTITY_CODEX_LAUNCHER_CONTRACT_ID,
+    IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY,
+    IDENTITY_CODEX_LAUNCHER_INSTALLER_ID,
+    IDENTITY_CODEX_LAUNCHER_MANIFEST_REL,
+    IDENTITY_CODEX_LAUNCHER_README_REL,
+    IDENTITY_CODEX_LAUNCHER_RENDERER_ID,
+    IDENTITY_CODEX_LAUNCHER_VALIDATOR_ID,
+    ensure_launcher_assets,
+    ensure_launcher_contract,
+    launcher_manifest_doc,
+    launcher_readme_text,
+)
 from response_stamp_common import normalize_response_stamp_profile
 from version_baseline_common import (
     apply_version_baseline_to_catalog_row,
@@ -122,6 +135,8 @@ from version_baseline_common import (
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+ERR_LAUNCHER_WIRE_MISSING = "IP-ILAUNCH-003"
+ERR_LAUNCHER_WIRE_INVALID = "IP-ILAUNCH-004"
 
 
 REQUIRED_INTAKE_KEYS = (
@@ -138,6 +153,9 @@ REQUIRED_INTAKE_KEYS = (
 )
 REQUIRED_TOPOLOGY_KEYS = (
     INSTANCE_PACK_TOPOLOGY_CONTRACT_KEY,
+)
+REQUIRED_LAUNCHER_KEYS = (
+    IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY,
 )
 REQUIRED_CONTINUITY_KEYS = (
     CONTEXT_CONTINUITY_CONTRACT_KEY,
@@ -273,6 +291,63 @@ def _normalize_instance_pack_topology_contract(task_doc: dict[str, Any], identit
         )
         restored.extend(f"identity_update_lifecycle_contract.validation_contract.required_checks:{row}" for row in appended)
     return restored
+
+
+def _normalize_identity_codex_launcher_contract(task_doc: dict[str, Any], identity_id: str) -> list[str]:
+    before = json.loads(json.dumps(task_doc.get(IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY) or {}))
+    ensure_launcher_contract(task_doc, identity_id)
+    node = task_doc.get(IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY)
+    if before != node:
+        return [IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY]
+    return []
+
+
+def _launcher_contract_invalid_keys(task_doc: dict[str, Any]) -> list[str]:
+    node = task_doc.get(IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY)
+    if not isinstance(node, dict):
+        return []
+    invalid = (
+        node.get("required") is not True
+        or str(node.get("contract_id", "")).strip() != IDENTITY_CODEX_LAUNCHER_CONTRACT_ID
+        or str(node.get("validator", "")).strip() != IDENTITY_CODEX_LAUNCHER_VALIDATOR_ID
+        or str(node.get("renderer", "")).strip() != IDENTITY_CODEX_LAUNCHER_RENDERER_ID
+        or str(node.get("installer", "")).strip() != IDENTITY_CODEX_LAUNCHER_INSTALLER_ID
+        or str(node.get("pack_manifest_relpath", "")).strip() != IDENTITY_CODEX_LAUNCHER_MANIFEST_REL.as_posix()
+        or str(node.get("pack_readme_relpath", "")).strip() != IDENTITY_CODEX_LAUNCHER_README_REL.as_posix()
+    )
+    return [IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY] if invalid else []
+
+
+def _ensure_identity_codex_launcher_assets_backfill(
+    *,
+    pack_path: Path,
+    identity_id: str,
+    apply: bool,
+) -> dict[str, Any]:
+    manifest_path = (pack_path / IDENTITY_CODEX_LAUNCHER_MANIFEST_REL).resolve()
+    readme_path = (pack_path / IDENTITY_CODEX_LAUNCHER_README_REL).resolve()
+    manifest_expected = json.dumps(launcher_manifest_doc(identity_id), ensure_ascii=False, indent=2) + "\n"
+    readme_expected = launcher_readme_text(identity_id)
+    manifest_exists_before = manifest_path.exists()
+    readme_exists_before = readme_path.exists()
+    manifest_before = manifest_path.read_text(encoding="utf-8", errors="ignore") if manifest_exists_before else ""
+    readme_before = readme_path.read_text(encoding="utf-8", errors="ignore") if readme_exists_before else ""
+    manifest_changed = (not manifest_exists_before) or manifest_before != manifest_expected
+    readme_changed = (not readme_exists_before) or readme_before != readme_expected
+    applied = False
+    if apply:
+        asset_result = ensure_launcher_assets(pack_path, identity_id)
+        applied = bool(asset_result.get("manifest_changed") or asset_result.get("readme_changed"))
+    return {
+        "manifest_path": str(manifest_path),
+        "readme_path": str(readme_path),
+        "manifest_exists_before": manifest_exists_before,
+        "readme_exists_before": readme_exists_before,
+        "manifest_changed": manifest_changed,
+        "readme_changed": readme_changed,
+        "changed": bool(manifest_changed or readme_changed),
+        "applied": applied,
+    }
 
 
 def _sha256_file(path: Path) -> str:
@@ -1904,6 +1979,7 @@ def main() -> int:
     response_stamp_profile_before = normalize_response_stamp_profile(before.get("response_stamp_profile"))
     missing_before = [k for k in REQUIRED_INTAKE_KEYS if not isinstance(task_doc.get(k), dict)]
     topology_missing_before = [k for k in REQUIRED_TOPOLOGY_KEYS if not isinstance(task_doc.get(k), dict)]
+    launcher_missing_before = [k for k in REQUIRED_LAUNCHER_KEYS if not isinstance(task_doc.get(k), dict)]
     continuity_missing_before = [k for k in REQUIRED_CONTINUITY_KEYS if not isinstance(task_doc.get(k), dict)]
     prompt_missing_before = [k for k in REQUIRED_PROMPT_KEYS if not isinstance(task_doc.get(k), dict)]
     multimodal_missing_before = [k for k in REQUIRED_MULTIMODAL_KEYS if not isinstance(task_doc.get(k), dict)]
@@ -1922,6 +1998,7 @@ def main() -> int:
 
     updated = _ensure_intake_p1_contracts(task_doc, args.identity_id)
     restored_topology_contract_keys = _normalize_instance_pack_topology_contract(updated, args.identity_id)
+    restored_launcher_contract_keys = _normalize_identity_codex_launcher_contract(updated, args.identity_id)
     restored_continuity_contract_keys, restored_continuity_validator_keys = _normalize_continuity_contracts(updated)
     updated["response_stamp_profile"] = normalize_response_stamp_profile(updated.get("response_stamp_profile"))
     restored_skill_supply_chain_contract_keys = _normalize_skill_supply_chain_contracts(updated, args.identity_id)
@@ -1966,11 +2043,17 @@ def main() -> int:
         description=identity_description,
         apply=args.apply,
     )
+    launcher_assets_result = _ensure_identity_codex_launcher_assets_backfill(
+        pack_path=pack_path,
+        identity_id=str(args.identity_id or "").strip(),
+        apply=args.apply,
+    )
     meta_version_changed = False
     if isinstance(meta_doc, dict):
         meta_version_changed = apply_version_baseline_to_meta_doc(meta_doc, version_baseline)
     missing_after = [k for k in REQUIRED_INTAKE_KEYS if not isinstance(updated.get(k), dict)]
     topology_missing_after = [k for k in REQUIRED_TOPOLOGY_KEYS if not isinstance(updated.get(k), dict)]
+    launcher_missing_after = [k for k in REQUIRED_LAUNCHER_KEYS if not isinstance(updated.get(k), dict)]
     continuity_missing_after = [k for k in REQUIRED_CONTINUITY_KEYS if not isinstance(updated.get(k), dict)]
     response_stamp_profile_present_after = isinstance(updated.get("response_stamp_profile"), dict)
     response_stamp_profile_after = normalize_response_stamp_profile(updated.get("response_stamp_profile"))
@@ -2002,6 +2085,7 @@ def main() -> int:
             or str((updated.get(k) or {}).get("fail_mode", "")).strip().lower() != "fail_required"
         )
     ]
+    launcher_invalid_after = _launcher_contract_invalid_keys(updated)
     continuity_invalid_after = _continuity_contract_invalid_keys(updated)
     prompt_invalid_after = [
         k
@@ -2445,6 +2529,7 @@ def main() -> int:
         or catalog_changed
         or meta_changed
         or bool(topology_assets_result.get("changed"))
+        or bool(launcher_assets_result.get("changed"))
         or bool(prompt_runtime_governance_result.get("changed"))
         or bool(provider_bindings_template_result.get("changed"))
         or bool(feedback_selftest_assets_result.get("positive_rulebook_backfilled"))
@@ -2463,6 +2548,8 @@ def main() -> int:
             _safe_dump_yaml(meta_path, meta_doc)
             applied = True
         if topology_assets_result.get("applied"):
+            applied = True
+        if launcher_assets_result.get("applied"):
             applied = True
         if host_gateway_wrapper_artifacts_refreshed:
             applied = True
@@ -2489,6 +2576,14 @@ def main() -> int:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-IPACK-002"
         stale_reasons = ["required_topology_contract_invalid_after_backfill"]
+    elif launcher_missing_after:
+        status = STATUS_FAIL_REQUIRED
+        error_code = ERR_LAUNCHER_WIRE_MISSING
+        stale_reasons = ["required_launcher_contract_keys_missing_after_backfill"]
+    elif launcher_invalid_after:
+        status = STATUS_FAIL_REQUIRED
+        error_code = ERR_LAUNCHER_WIRE_INVALID
+        stale_reasons = ["required_launcher_contract_invalid_after_backfill"]
     elif prompt_missing_after:
         status = STATUS_FAIL_REQUIRED
         error_code = ERR_PROMPT_WIRE_MISSING
@@ -2561,7 +2656,12 @@ def main() -> int:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-CBKF-002"
         stale_reasons = ["legacy_contract_path_drift_after_backfill"]
-    elif changed or host_gateway_wrapper_artifacts_refreshed or bool(topology_assets_result.get("changed")):
+    elif (
+        changed
+        or host_gateway_wrapper_artifacts_refreshed
+        or bool(topology_assets_result.get("changed"))
+        or bool(launcher_assets_result.get("changed"))
+    ):
         status = STATUS_PASS_REQUIRED if applied else STATUS_SKIPPED_NOT_REQUIRED
         error_code = ""
         stale_reasons = [] if applied else ["dry_run_only"]
@@ -2629,6 +2729,12 @@ def main() -> int:
         "missing_contract_keys_after": missing_after,
         "required_topology_contract_keys": list(REQUIRED_TOPOLOGY_KEYS),
         "missing_topology_contract_keys_before": topology_missing_before,
+        "required_launcher_contract_keys": list(REQUIRED_LAUNCHER_KEYS),
+        "missing_launcher_contract_keys_before": launcher_missing_before,
+        "missing_launcher_contract_keys_after": launcher_missing_after,
+        "invalid_launcher_contract_keys_after": launcher_invalid_after,
+        "restored_launcher_contract_keys": restored_launcher_contract_keys,
+        "launcher_assets_backfill": launcher_assets_result,
         "missing_topology_contract_keys_after": topology_missing_after,
         "invalid_topology_contract_keys_after": topology_invalid_after,
         "restored_topology_contract_keys": restored_topology_contract_keys,
