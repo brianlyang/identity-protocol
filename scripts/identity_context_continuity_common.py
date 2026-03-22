@@ -18,6 +18,14 @@ REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY = "reentry_brief_consumption_contract_v1"
 REENTRY_BRIEF_CONSUMPTION_CONTRACT_ID = "rq_045_identity_reentry_brief_consumption_contract_v1"
 REENTRY_BRIEF_VALIDATOR_ID = "scripts/validate_identity_reentry_brief.py"
 REENTRY_CONSUMPTION_VALIDATOR_ID = "scripts/validate_identity_reentry_consumption.py"
+CONTINUITY_RECEIPT_CONTRACT_ID = "rq_046_identity_context_continuity_receipt_family_contract_v1"
+CONTINUITY_RECEIPT_VALIDATOR_ID = "scripts/validate_identity_context_continuity_receipts.py"
+CONTINUITY_RECEIPT_KINDS: dict[str, str] = {
+    "checkpoint": "instance_continuity_checkpoint_receipt",
+    "migration_handoff": "instance_migration_handoff_receipt",
+    "reentry_brief": "instance_reentry_brief_receipt",
+    "reentry_consumption": "instance_reentry_consumption_receipt",
+}
 
 CONTINUITY_ARTIFACT_KINDS: tuple[str, ...] = (
     "rolling_checkpoint",
@@ -462,7 +470,9 @@ def discover_continuity_report_doc(
             continue
         if preferred_kind:
             receipt_kind = clean_string(doc.get("receipt_kind") or doc.get("receipt_family"))
-            if receipt_kind and receipt_kind != preferred_kind:
+            if not receipt_kind:
+                continue
+            if receipt_kind != preferred_kind:
                 continue
         if fallback_candidate is None:
             fallback_candidate = path
