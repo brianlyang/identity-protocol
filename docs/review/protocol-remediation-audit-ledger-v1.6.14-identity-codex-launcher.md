@@ -135,6 +135,21 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
 4. Reviewers must treat that convergence entry as rollout/orchestration infrastructure layered on top of the already frozen `v1.6.14` launcher contract, not as permission to reopen launcher semantics.
 5. Cross-workspace proof should therefore come from running the same convergence entry against another workspace catalog, rather than from granting workspace-specific wrapper exceptions.
 
+### 6.2 Accepted discussion package and reviewer responsibilities
+
+1. Reviewers and auditors should use `docs/governance/identity-codex-launcher-workspace-convergence-roundtable-v1.6.14.md` as the shared discussion package for the convergence-entry landing.
+2. That package is acceptable because it keeps launcher convergence inside `v1.6.14` while exposing the orchestration/control-plane questions that still require explicit decisions before coding.
+3. Reviewers must keep the workbook family in its proper role: workbook surfaces may track decision status, issue routing, and rollout readiness, but they do not replace the stream owner docs as launcher-semantics authority.
+4. The minimum review acceptance for implementation start is explicit agreement on:
+   - one canonical entry surface,
+   - workspace-local catalog authority and mutation scope,
+   - repair composition path,
+   - dry-run / apply / fail-close behavior,
+   - governed convergence receipt family and evidence path,
+   - lifecycle / gate boundary,
+   - and cross-workspace pilot proof rules.
+5. Reviewers should not recommend opening a new stream unless the scope intentionally expands beyond launcher-only convergence into a generic multi-lane convergence framework.
+
 ## 7) Boundary lock for reviewers
 
 1. Do not reinterpret this stream as permission to override the `codex` product command.

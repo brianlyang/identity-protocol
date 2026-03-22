@@ -194,6 +194,23 @@ These names and directories are frozen by this stream. The renderer / installer 
 6. The convergence entry is a rollout/orchestration surface for the already frozen `v1.6.14` launcher standard; it does not reopen command naming or path ownership.
 7. Cross-workspace validation should proceed by running that same convergence entry in another workspace catalog such as `fqsh`, not by introducing workspace-specific wrapper exceptions.
 
+### 6.2 Discussion-package boundary before coding
+
+1. The discussion and decision package for this convergence entry is frozen at `docs/governance/identity-codex-launcher-workspace-convergence-roundtable-v1.6.14.md`.
+2. That package exists to align architecture, audit, and implementation owners on the orchestration/control-plane shape before coding begins.
+3. The package does **not** create a new stream by default; launcher-specific convergence remains owned by `v1.6.14`.
+4. The workbook family may track decision status and rollout readiness, but it does not become the semantic owner of launcher convergence.
+5. The minimum questions that must be frozen before coding are:
+   - canonical entry surface,
+   - workspace-local catalog authority and repo-fixture mutation policy,
+   - repair composition path,
+   - mutation scope,
+   - dry-run / apply / fail-close semantics,
+   - governed convergence receipt family and evidence path,
+   - lifecycle / gate boundary,
+   - and cross-workspace pilot proof rules.
+6. Only if the scope is deliberately promoted from launcher-only convergence into a generic multi-lane convergence framework should reviewers open a new stream after this roundtable.
+
 ## 7) Future promotion exit criteria
 
 1. `v1.6.14` implementation closure now requires machine proof, not chat description.
