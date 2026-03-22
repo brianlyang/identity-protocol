@@ -180,6 +180,7 @@ This stream now contains both the machine-facing contract freeze and the first s
    - `scripts/validate_identity_reentry_brief.py`
    - `scripts/validate_identity_reentry_consumption.py`
    - `scripts/validate_identity_context_continuity_receipts.py`
+   - `scripts/render_identity_context_continuity_bundle.py`
    - `scripts/ci/run_identity_context_continuity_probes_ci.sh`
    - `scripts/release_readiness_check.py`
    - `scripts/ci/run_required_runtime_gates_ci.sh`
@@ -188,6 +189,8 @@ This stream now contains both the machine-facing contract freeze and the first s
    - `scripts/identity_creator.py`
 9. Shared pack-lifecycle registration for continuity runtime families is now landed through topology optional dirs plus downsink runtime-evidence path-registry rows, so future pilot adoption is no longer blocked on missing shared path discipline.
 10. This is enough to support shared protocol coding + rollout wiring, but not enough to claim live launcher closure or fleet adoption.
+11. The structured continuity bundle is intentionally **not** a new user command family; it exists so launcher/internal consumers can read protocol-owned readiness and proof states without pushing continuity interpretation back onto operators.
+12. That bundle must keep `startup_reentry_readiness_status` separate from `live_reentry_consumption_proof_status`, so future launcher integration does not confuse “brief ready to consume” with “live consumption evidence already observed”.
 
 ## 6) Audit hardening absorbed after coding-readiness freeze
 
