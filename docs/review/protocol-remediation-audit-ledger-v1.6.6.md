@@ -2120,6 +2120,7 @@ Checkpoint verdict update:
 
 1. migration closure is now checked as an explicit probe target, not only inferred from generic strict-validate failures.
 2. this reduces “code upgraded but active pack schema stale” blind spots in v1.6.6 closure.
+3. Current-state note (2026-03-22): replaying `python3 scripts/check_unique_entry_contract_migration_closure.py --catalog <project-local absolute catalog> --json-only` against the current workspace runtime surface returned `PASS_REQUIRED` with `checked_identity_count=4`; this is the canonical non-empty active-runtime proof for the current workspace and should be narrated separately from empty-scan wiring sanity.
 
 ### 26.24 Strict receipt default + coverage parity + cross-cwd/live fallback hardening (2026-03-15)
 
