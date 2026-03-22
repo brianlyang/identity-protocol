@@ -557,6 +557,8 @@ assert positive_orch["instance_script_orchestration_status"] == "PASS_REQUIRED",
 assert positive_receipt["route_script_receipt_join_status"] == "PASS_REQUIRED", positive_receipt
 assert positive_capability["capability_activation_status"] == "ACTIVATED", positive_capability
 assert positive_capability["route_scope"] == "aggregate", positive_capability
+assert positive_capability["route_scope_mode"] == "aggregate_summary", positive_capability
+assert isinstance(positive_capability.get("route_ids"), list), positive_capability
 assert positive_capability["route_selection_cardinality"] in {
     "zero_route",
     "single_route",
@@ -565,11 +567,21 @@ assert positive_capability["route_selection_cardinality"] in {
 assert isinstance(positive_capability.get("declared_dependency_projection"), dict), positive_capability
 assert isinstance(positive_capability.get("observed_dependency_projection"), dict), positive_capability
 assert isinstance(positive_capability.get("dependency_gap_reasons"), list), positive_capability
+assert isinstance(positive_capability.get("undeclared_usage_detected"), bool), positive_capability
+assert isinstance(positive_capability.get("undeclared_usage_rows"), list), positive_capability
+assert isinstance(positive_capability.get("missing_declared_dependency_detected"), bool), positive_capability
+assert isinstance(positive_capability.get("missing_declared_dependency_rows"), list), positive_capability
 assert positive_receipt["route_scope"] == "route_scoped", positive_receipt
+assert positive_receipt["route_scope_mode"] == "route_receipt", positive_receipt
+assert positive_receipt["route_ids"] == [positive_receipt["route"]], positive_receipt
 assert positive_receipt["route_selection_cardinality"] == "single_route", positive_receipt
 assert isinstance(positive_receipt.get("declared_dependency_projection"), dict), positive_receipt
 assert isinstance(positive_receipt.get("observed_dependency_projection"), dict), positive_receipt
 assert isinstance(positive_receipt.get("dependency_gap_reasons"), list), positive_receipt
+assert isinstance(positive_receipt.get("undeclared_usage_detected"), bool), positive_receipt
+assert isinstance(positive_receipt.get("undeclared_usage_rows"), list), positive_receipt
+assert isinstance(positive_receipt.get("missing_declared_dependency_detected"), bool), positive_receipt
+assert isinstance(positive_receipt.get("missing_declared_dependency_rows"), list), positive_receipt
 assert positive_lane["route_execution_lane_admission_status"] == "PASS_REQUIRED", positive_lane
 assert negative_manifest["instance_script_manifest_status"] == "FAIL_REQUIRED", negative_manifest
 assert any("entry_target_missing" in reason for reason in negative_manifest.get("stale_reasons", [])), negative_manifest
