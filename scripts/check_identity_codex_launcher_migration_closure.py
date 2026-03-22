@@ -100,13 +100,18 @@ def main() -> int:
         action="store_true",
         help="include $IDENTITY_CATALOG when set",
     )
+    ap.add_argument(
+        "--workspace-runtime-only",
+        action="store_true",
+        help="exclude the repository fixture catalog and check only explicitly provided workspace/runtime catalogs",
+    )
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
     repo_catalog = (repo_root / str(args.repo_catalog)).resolve()
 
-    catalog_candidates: list[Path] = [repo_catalog]
+    catalog_candidates: list[Path] = [] if args.workspace_runtime_only else [repo_catalog]
     for raw in args.catalog:
         token = str(raw or "").strip()
         if not token:
@@ -200,6 +205,7 @@ def main() -> int:
         "identity_codex_launcher_migration_closure_status": status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else ERR_LAUNCHER_MIGRATION_INVALID,
         "repo_catalog": str(repo_catalog),
+        "repo_catalog_included": not args.workspace_runtime_only,
         "catalogs_checked": [str(path) for path in dedup],
         "skipped_catalogs": skipped_catalogs,
         "checked_identity_count": len(checked_rows),
