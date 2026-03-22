@@ -147,6 +147,18 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
 6. Reviewers must keep the workbook family in its proper role: workbook surfaces may track decision status, issue routing, and rollout readiness, but they do not replace the stream owner docs as launcher-semantics authority.
 7. Implementation start still requires explicit architect and audit agreement on the open questions captured in the roundtable package; this subsection does not pre-resolve those decisions by itself.
 
+### 6.3 Deferred promotion rule for generic workspace convergence
+
+1. Reviewers should explicitly record that later promotion to a generic workspace convergence framework is **deferred by design**, not forgotten, and not already approved.
+2. Reviewers must not restate launcher convergence landing as automatic permission to open a generic framework stream.
+3. A future generic-framework recommendation is acceptable only after a new architect + audit promotion review confirms all of the following:
+   - the launcher convergence entry is fully landed as a protocol-owned control-plane asset with governed receipts, probes, and passive-gate separation;
+   - the same entry has passed unchanged portability proof across more than one workspace-local runtime catalog with no workspace-specific exceptions;
+   - at least one non-launcher family demonstrates reuse of the same convergence control-plane grammar without semantic-owner drift;
+   - the proposed framework does not depend on compatibility downgrades, weaker authority rules, diluted receipt families, or weakened launcher semantics.
+4. Until those gates are met, reviewers must keep future convergence-family discussion in the owner streams for those families rather than implying that a generic framework is already open.
+5. Workbook reminders may help keep this deferred promotion visible, but workbook status alone must never be treated as the approval surface for opening a new framework stream.
+
 ## 7) Boundary lock for reviewers
 
 1. Do not reinterpret this stream as permission to override the `codex` product command.
