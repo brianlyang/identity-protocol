@@ -189,11 +189,13 @@ These names and directories are frozen by this stream. The renderer / installer 
    - installed `identity-codex` and `id-<identity-id>` shims under `${CODEX_HOME}/bin/`,
    - launcher fail-close on forbidden runtime override or missing tuple truth,
    - dedicated launcher probes under `scripts/ci/run_identity_codex_launcher_probes_ci.sh`,
-   - required-runtime-gates inclusion for the launcher probe lane.
+   - active-runtime launcher migration closure checker under `scripts/check_identity_codex_launcher_migration_closure.py`,
+   - strict `identity_creator validate` / `identity_creator update` enforcement so active runtime identities cannot remain on `SKIPPED_NOT_REQUIRED(contract_not_required)` for launcher governance,
+    - required-runtime-gates inclusion for the launcher probe lane.
 3. The correct interpretation after closure is:
    - `1.6.14` semantic ownership is frozen,
    - core implementation is landed,
-   - legacy fleet adoption and stricter naked-entry enforcement may continue as follow-on rollout work,
+   - legacy fleet adoption outside the currently repaired catalogs may continue as follow-on rollout work, but active runtime identities inside governed lifecycle surfaces are no longer allowed to remain launcher-unrequired,
    - workspace bridge remains compatibility evidence rather than launcher motherline.
 
 ## 8) Post-closure audit summary boundary
