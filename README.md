@@ -65,6 +65,21 @@ What this prints:
 - preferred short resume command when a host thread UUID is available
 - generic `identity-codex --identity-id ...` equivalents for repair/documentation flows
 
+For identity instances and other protocol consumers, use the structured surface:
+
+```bash
+identity-codex commands --identity-id <identity-id> --json-only
+```
+
+That JSON is the protocol-owned guidance bundle. It now carries:
+
+- `recommended_user_command`
+- `copyable_commands.start`
+- `copyable_commands.resume`
+- `instance_answer_guidance`
+
+So the protocol provides the structured command bundle, while the identity instance gives the concrete final answer to the user.
+
 Operational rule:
 
 - if someone asks “`identity_id=XXX` 如何启动 / 如何续接”, the answer should come from this protocol-owned command bundle,

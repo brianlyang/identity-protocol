@@ -55,6 +55,7 @@ Execution mode: topic-level canonical SSOT for v1.6.14 identity-Codex launcher g
    - `identity-codex commands --identity-id <identity-id>`
    - or, when the per-identity launcher already exists, `id-<identity-id> commands`
 9. That command-discovery surface must print already assembled copyable commands; operators must not need to manually splice identity ids, launcher names, or resume thread UUIDs in chat.
+10. The same command-discovery surface must also expose a structured `--json-only` bundle for instance/runtime consumers, so protocol remains the guidance owner while the concrete user-facing answer remains the identity instance’s responsibility.
 
 ### 2.2 Canonical path contract
 
@@ -218,6 +219,7 @@ These names and directories are frozen by this stream. The renderer / installer 
    - `check_identity_codex_launcher_migration_closure.py --catalog .identity/catalog.local.yaml` must resolve the **caller workspace** catalog rather than rebinding to the protocol repo;
    - `resolve_identity_context.py resolve --identity-id <id>` from a sibling workspace must classify the workspace-local runtime catalog as `source_layer=project` with `resolved_scope=USER` instead of degrading to `unknown`.
    - `identity-codex commands --identity-id <id>` and `id-<id> commands` must emit full copyable start/resume commands from protocol truth instead of requiring operators to manually assemble launcher invocations.
+   - `identity-codex commands --identity-id <id> --json-only` must emit a structured command bundle (`recommended_user_command`, `copyable_commands`, `instance_answer_guidance`) so identity instances can answer concretely without inventing their own launcher logic.
 13. Audit follow-on boundary: some external workspace raw catalog rows may still carry metadata hygiene residue such as `canonical_scope=UNKNOWN`; this does **not** reopen launcher convergence semantics as long as the protocol-owned resolver returns the correct runtime truth (`source_layer=project`, `resolved_scope=USER`). Any cleanup of raw catalog metadata must be tracked as a separate hygiene/backfill follow-on, not folded back into `v1.6.14` launcher semantics.
 
 ### 6.2 Discussion-package boundary before coding

@@ -91,10 +91,13 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - `identity-codex commands --identity-id <identity-id>`
    - `id-<identity-id> commands`
    must return already assembled copyable start/resume commands for the target identity.
-7. Pack-local launcher assets land only under `<pack_path>/scripts/launchers/`.
-8. Installed launchers land only under `${CODEX_HOME}/bin/`.
-9. Workspace `scripts/codex_native_chat/` remains compatibility bridge only until protocol-owned launcher assets land.
-10. Launcher ownership of `model_instructions_file` and `project_doc_fallback_filenames` injection remains explicit and fail-close.
+7. Instance/runtime consumption also remains protocol-owned:
+   - `identity-codex commands --identity-id <identity-id> --json-only`
+   must return a structured command bundle so identity instances can answer concretely without inventing launcher logic.
+8. Pack-local launcher assets land only under `<pack_path>/scripts/launchers/`.
+9. Installed launchers land only under `${CODEX_HOME}/bin/`.
+10. Workspace `scripts/codex_native_chat/` remains compatibility bridge only until protocol-owned launcher assets land.
+11. Launcher ownership of `model_instructions_file` and `project_doc_fallback_filenames` injection remains explicit and fail-close.
 
 ## 5) Audit verdict rules (frozen)
 
@@ -181,6 +184,7 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - aggregate closure with `--catalog .identity/catalog.local.yaml` resolves against the caller workspace rather than the protocol repo;
    - `resolve_identity_context.py resolve --identity-id <id>` from the sibling workspace classifies that runtime catalog as `source_layer=project` with `resolved_scope=USER`.
    - `identity-codex commands --identity-id <id>` and `id-<id> commands` return a ready-to-copy command bundle rather than leaving command assembly to the operator.
+   - `identity-codex commands --identity-id <id> --json-only` returns a structured bundle with `recommended_user_command`, `copyable_commands`, and `instance_answer_guidance`, preserving the boundary “protocol guides, instance answers”.
 5. Audit follow-on note: some external workspace raw catalog rows may still carry metadata hygiene residue such as `canonical_scope=UNKNOWN`; that no longer blocks launcher truth because the protocol-owned resolver now returns the correct runtime classification, but the raw metadata cleanup should be tracked separately and must not be misreported as launcher-semantic debt.
 6. The closer handoff boundary after this landing is therefore narrow and explicit:
    - continue using the same convergence entry, the same receipt family, and the same runtime-only closure semantics,
