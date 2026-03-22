@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import subprocess
 from datetime import datetime, timezone
@@ -17,7 +16,6 @@ from actor_session_common import (
     resolve_required_protocol_actor_id,
 )
 from resolve_identity_context import (
-    default_local_catalog_path,
     resolve_local_catalog_path,
     resolve_repo_catalog_path,
 )
@@ -455,12 +453,7 @@ def main() -> int:
     ap.add_argument("--enforce-pass", action="store_true", help="return non-zero if any check fails")
     args = ap.parse_args()
 
-    catalog = (
-        args.catalog.strip()
-        or str(os.environ.get("IDENTITY_CATALOG", "")).strip()
-        or str(default_local_catalog_path(start=script_ref))
-    )
-    catalog_path = resolve_local_catalog_path(catalog, start=script_ref)
+    catalog_path = resolve_local_catalog_path(args.catalog, start=script_ref)
     repo_catalog_path = resolve_repo_catalog_path(args.repo_catalog, start=script_ref)
     execution_report = str(args.execution_report or "").strip()
     strict_session_bound = str(args.operation or "").strip().lower() in STRICT_SESSION_BOUND_OPERATIONS
