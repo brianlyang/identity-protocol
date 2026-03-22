@@ -1,6 +1,6 @@
 # Protocol Remediation Audit Ledger (v1.6.16 identity-context-continuity stream)
 
-Status: Active (shared validators + probe lane + pack-lifecycle rollout landed, 2026-03-22; launcher live-consumption proof + pilot adoption pending)  
+Status: Active (shared validators + probe lane + pack-lifecycle rollout + instance-visible reentry answer surface landed, 2026-03-23; launcher live-consumption proof + pilot adoption pending)  
 Scope: protocol review ledger for continuity checkpoints, migration handoff checkpoints, and startup-consumable re-entry briefing
 
 ## 0) Stream objective
@@ -181,6 +181,7 @@ This stream now contains both the machine-facing contract freeze and the first s
    - `scripts/validate_identity_reentry_consumption.py`
    - `scripts/validate_identity_context_continuity_receipts.py`
    - `scripts/render_identity_context_continuity_bundle.py`
+   - `scripts/render_identity_context_reentry_answers.py`
    - `scripts/ci/run_identity_context_continuity_probes_ci.sh`
    - `scripts/release_readiness_check.py`
    - `scripts/ci/run_required_runtime_gates_ci.sh`
@@ -191,6 +192,18 @@ This stream now contains both the machine-facing contract freeze and the first s
 10. This is enough to support shared protocol coding + rollout wiring, but not enough to claim live launcher closure or fleet adoption.
 11. The structured continuity bundle is intentionally **not** a new user command family; it exists so launcher/internal consumers can read protocol-owned readiness and proof states without pushing continuity interpretation back onto operators.
 12. That bundle must keep `startup_reentry_readiness_status` separate from `live_reentry_consumption_proof_status`, so future launcher integration does not confuse “brief ready to consume” with “live consumption evidence already observed”.
+13. A second upper-layer surface is now landed for direct identity-instance answers:
+    - `scripts/render_identity_context_reentry_answers.py`
+14. That surface does not reopen launcher semantics and does not create a new terminal command family; instead it lets an identity instance return a governed, copyable reentry task block for `migrate_new_window` and `reload_after_clear` while keeping launcher-command lookup delegated to `v1.6.14`.
+15. The answer bundle explicitly separates:
+    - render-surface success,
+    - overall reentry readiness,
+    - live consumption proof.
+16. The probe lane now proves a non-overclaiming middle state:
+    - startup readiness `PASS_REQUIRED`,
+    - live proof `FAIL_REQUIRED`,
+    - answer surface still returns a governed reentry task block,
+    - successful recovery may not be claimed until `instance_reentry_consumption_receipt` is later emitted.
 
 ## 6) Audit hardening absorbed after coding-readiness freeze
 
