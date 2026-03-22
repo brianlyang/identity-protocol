@@ -382,4 +382,5 @@ Hard semantics:
    - `rq_044_identity_context_continuity_artifact_contract_v1`
    - `rq_045_identity_reentry_brief_consumption_contract_v1`
    - `rq_046_identity_context_continuity_receipt_family_contract_v1`
-12. Day-1 implementation strategy is `flat-script-first`; continuity implementation may begin under pack-root `scripts/` but must not assume new continuity-specific subtrees are topology-legal.
+12. Shared validators, probe lane, and pack-lifecycle rollout wiring are now landed; launcher live-consumption proof and pilot adoption remain the required follow-on stage.
+13. Day-1 implementation strategy is `flat-script-first`; continuity implementation may begin under pack-root `scripts/` but must not assume new continuity-specific subtrees are topology-legal.

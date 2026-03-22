@@ -122,7 +122,7 @@ Compatibility note: legacy packs can stay in `identity/<id>/` if catalog `pack_p
 8. Canonical receipt-family roles are route admission, execution, emit, and recovery, and they remain runtime-owned artifacts rather than source files under `scripts/`.
 9. Receipt-family projections remain compatible with route provenance fields such as `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts`, including layered execution-then-emit patterns.
 10. If a governed route produces user-visible final text, that route must bind to a pack-local emitter script and declare an emit-family receipt.
-11. Protocol-owned validators/creator/readiness wiring are future implementation targets; this additive section freezes the ownership model first.
+11. Protocol-owned validators, continuity probe lane, and pack-lifecycle rollout wiring are now landed shared surfaces; launcher live-consumption proof and pilot adoption remain the follow-on targets.
 
 ### Canonical identity context continuity boundary (v1.6.16 additive)
 

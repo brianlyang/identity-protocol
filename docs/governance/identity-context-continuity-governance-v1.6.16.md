@@ -1,6 +1,6 @@
 # Identity Context Continuity Governance (v1.6.16)
 
-Status: Active (opening-state + implementation-freeze, 2026-03-22; validator/readiness/creator rollout pending)  
+Status: Active (shared validators + probe lane + pack-lifecycle rollout landed, 2026-03-22; launcher live-consumption proof + pilot adoption pending)  
 Layer: protocol  
 Scope: identity-instance continuity checkpoints, migration handoff checkpoints, and startup-consumable re-entry briefing  
 Execution mode: topic-level canonical SSOT for v1.6.16 identity-context-continuity governance.
@@ -137,8 +137,13 @@ Minimum additional requirements:
 5. The recommended canonical file families are:
    - `runtime/reports/context-continuity/continuity-*.json`
    - `runtime/state/context-continuity/active-reentry-brief.json`
-6. This stream freezes those target families as the intended canonical destination, but no pack may claim adoption until the corresponding `v1.6.13` topology rows and `v1.6.8` path-registry rows are backfilled.
-7. Creating uncontrolled new trees such as free-form `scripts/context-continuity/` or unregistered runtime continuity directories is non-canonical.
+6. Shared pack lifecycle surfaces now pre-register those runtime families through:
+   - `instance_pack_topology_contract_v1.runtime_optional_dirs`
+   - `protocol_downsink_path_immutability_contract_v1.path_registry.runtime_evidence`
+   - `scripts/create_identity_pack.py`
+   - `scripts/repair_contract_backfill.py`
+7. Those registrations land the required `v1.6.13` topology + `v1.6.8` path-governance wiring for future adoption, but they still do not let a pack claim `v1.6.16` adoption without real continuity production / consumption evidence.
+8. Creating uncontrolled new trees such as free-form `scripts/context-continuity/` or unregistered runtime continuity directories is non-canonical.
 
 ### 2.6 Canonical producer / consumer split
 
@@ -224,17 +229,20 @@ Minimum additional requirements:
 
 ### 2.12 Implementation landing order (frozen)
 
-1. Shared implementation for this stream must land in this order unless a later governed revision explicitly freezes a stricter replacement:
+1. Shared implementation for this stream has now landed through:
    - `RQ-044` artifact schema / integrity validators
    - `RQ-045` re-entry brief + startup consumption validators
    - `RQ-046` receipt-family validator
    - positive / negative continuity probe lane
    - creator / backfill / readiness / required-gate wiring
-   - pilot identity adoption with live re-entry proof
-2. `RQ-046` must not land as an empty join shell before `RQ-044` and `RQ-045` can already prove artifact validity and startup-consumption validity.
-3. Pilot adoption must not begin until the required `v1.6.13` topology-path and `v1.6.8` path-registration work needed for the continuity runtime families is actually landed.
-4. Launcher-side positive proof is insufficient if it proves only that a brief file exists; it must prove that governed startup consumption emitted governed runtime evidence.
-5. This landing order is frozen so teams do not skip directly from contract prose to adoption claims.
+2. `RQ-046` was not allowed to land as an empty join shell; it lands only after `RQ-044` and `RQ-045` already prove artifact validity and startup-consumption validity.
+3. The required `v1.6.13` topology-path and `v1.6.8` path-registration work for the canonical continuity runtime families is now landed in shared pack-lifecycle surfaces, so pilot adoption is no longer blocked on path discipline alone.
+4. The remaining landing order from this checkpoint forward is:
+   - launcher/startup integration that consumes governed `reentry_brief`
+   - one pilot identity adoption with live continuity production + re-entry proof
+   - stricter readiness promotion once live proof exists
+5. Launcher-side positive proof remains insufficient if it proves only that a brief file exists; it must prove that governed startup consumption emitted governed runtime evidence.
+6. This landing order is frozen so teams do not skip directly from shared wiring to adoption claims.
 
 ### 2.13 Evidence interpretation discipline (frozen)
 
@@ -296,7 +304,7 @@ Minimum additional requirements:
 4. This stream does not reopen `v1.6.13` topology semantics, `v1.6.14` launcher semantics, or `v1.6.15` route/script semantics.
 5. This stream does not redefine MCP capability negotiation or server startup health.
 6. This stream does not authorize arbitrary new pack-root script subtrees or runtime path families outside governed registration.
-7. This stream does not claim that validator, creator, launcher, and fleet rollout are already complete today.
+7. This stream does not claim that launcher live-consumption proof, pilot adoption, or fleet rollout are already complete today.
 
 ## 5) Frozen implementation guidance
 
@@ -311,17 +319,16 @@ Minimum additional requirements:
 
 ## 6) Future promotion exit criteria
 
-1. `v1.6.16` opening-state closure is documentation and boundary freeze only.
-2. Promotion to implementation closure requires, at minimum:
-   - protocol-owned validator(s) for continuity artifact and re-entry brief integrity,
-   - protocol-owned probe lane for positive + negative continuity cases,
-   - creator/backfill rollout for contract and path registration,
+1. `v1.6.16` is no longer documentation-only; the shared validator / probe / pack-lifecycle layer is now landed.
+2. Promotion from this checkpoint to live implementation closure requires, at minimum:
    - launcher/startup integration that consumes continuity artifacts without bypassing tuple/bootstrap truth,
-   - one pilot instance adoption proving continuity production and re-entry consumption under real runtime conditions.
-3. Candidate implementation families for this stream are expected to include:
+   - one pilot instance adoption proving continuity production and re-entry consumption under real runtime conditions,
+   - governed live evidence showing startup consumption emitted the required runtime receipt family.
+3. The shared implementation families now landed for this stream are:
    - protocol-owned validator surfaces for continuity artifacts and re-entry briefs;
-   - protocol-owned CI probe surfaces for positive / negative continuity cases;
-   - shared creator / backfill / updater surfaces that can register continuity contracts and path families;
-   - launcher/startup consumers that can read governed `reentry_brief` artifacts without bypassing tuple/bootstrap truth.
-4. Those implementation families are frozen as the follow-on landing envelope; this opening document does not claim those surfaces are implemented yet.
-5. The document is now intended to be sufficient for implementation planning and code authoring of shared protocol surfaces, but not yet sufficient to claim rollout closure until the validators, probes, shared consumers, and pilot adoption actually land.
+   - protocol-owned CI probe surface for positive / negative continuity cases;
+   - shared creator / backfill / updater surfaces that register continuity contracts and path families.
+4. The remaining follow-on landing envelope is therefore narrower:
+   - launcher/startup consumers that can read governed `reentry_brief` artifacts without bypassing tuple/bootstrap truth;
+   - pilot/runtime proof surfaces that demonstrate real checkpoint production and re-entry consumption.
+5. The document is now sufficient to support shared protocol coding of continuity infrastructure, but not yet sufficient to claim rollout closure until launcher-side live proof and pilot adoption land.

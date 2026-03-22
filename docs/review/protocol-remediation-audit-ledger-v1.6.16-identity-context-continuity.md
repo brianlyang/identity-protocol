@@ -1,6 +1,6 @@
 # Protocol Remediation Audit Ledger (v1.6.16 identity-context-continuity stream)
 
-Status: Active (opening-state + implementation-freeze landed, 2026-03-22; validator/readiness/creator rollout pending)  
+Status: Active (shared validators + probe lane + pack-lifecycle rollout landed, 2026-03-22; launcher live-consumption proof + pilot adoption pending)  
 Scope: protocol review ledger for continuity checkpoints, migration handoff checkpoints, and startup-consumable re-entry briefing
 
 ## 0) Stream objective
@@ -154,9 +154,9 @@ Opening interpretation:
 7. `reentry_brief` is the canonical startup-consumable artifact and must stay compact enough for re-entry instead of becoming long-history replay.
 8. Resume thread UUIDs, actor-session tuples, and continuity ids remain distinct identity classes and must not be semantically collapsed.
 
-## 5) Coding-readiness freeze absorbed after opening
+## 5) Shared implementation landing absorbed after opening
 
-This stream now freezes enough machine-facing contract structure to support shared implementation planning without reopening stream ownership.
+This stream now contains both the machine-facing contract freeze and the first shared infrastructure landing, without reopening stream ownership.
 
 1. Canonical kernel contract family:
    - `rq_044_identity_context_continuity_artifact_contract_v1`
@@ -175,7 +175,19 @@ This stream now freezes enough machine-facing contract structure to support shar
    - `runtime/state/context-continuity/`
 6. The checkpoint family and the `reentry_brief` family are intentionally separated so schema validation, stale detection, and launcher consumption do not collapse into one blob contract.
 7. Launcher-side consumption proof must culminate in governed runtime evidence instead of narrative-only success claims.
-8. This is enough to support code authoring of shared protocol surfaces, but not enough to claim rollout closure.
+8. The following shared surfaces are now landed:
+   - `scripts/validate_identity_context_continuity.py`
+   - `scripts/validate_identity_reentry_brief.py`
+   - `scripts/validate_identity_reentry_consumption.py`
+   - `scripts/validate_identity_context_continuity_receipts.py`
+   - `scripts/ci/run_identity_context_continuity_probes_ci.sh`
+   - `scripts/release_readiness_check.py`
+   - `scripts/ci/run_required_runtime_gates_ci.sh`
+   - `scripts/create_identity_pack.py`
+   - `scripts/repair_contract_backfill.py`
+   - `scripts/identity_creator.py`
+9. Shared pack-lifecycle registration for continuity runtime families is now landed through topology optional dirs plus downsink runtime-evidence path-registry rows, so future pilot adoption is no longer blocked on missing shared path discipline.
+10. This is enough to support shared protocol coding + rollout wiring, but not enough to claim live launcher closure or fleet adoption.
 
 ## 6) Audit hardening absorbed after coding-readiness freeze
 
@@ -196,7 +208,7 @@ The following audit caveats are now frozen as interpretation rules rather than l
 
 ## 7) Opening-state non-goals frozen for audit
 
-1. This opening does not claim validator/readiness/creator rollout is complete.
+1. This stream does not claim launcher live-consumption proof or pilot adoption is complete.
 2. This opening does not claim any fleet pack is already `v1.6.16` adopted.
 3. This opening does not claim raw transcript persistence is the new protocol motherline.
 4. This opening does not reopen `v1.6.13` / `v1.6.14` / `v1.6.15` semantics.
@@ -204,36 +216,29 @@ The following audit caveats are now frozen as interpretation rules rather than l
 
 ## 8) Follow-on implementation obligations
 
-The next implementation stage should land, in order:
+The remaining implementation stage should land, in order:
 
-1. protocol-owned continuity validators and probe lane
-2. contract/path registration rollout through creator/backfill/update flows
-3. launcher/startup re-entry consumption under inherited `v1.6.14` ownership
-4. one real pilot identity adoption proving continuity production + re-entry consumption
-5. only after that, stricter readiness / required-gate promotion
+1. launcher/startup re-entry consumption under inherited `v1.6.14` ownership
+2. one real pilot identity adoption proving continuity production + re-entry consumption
+3. only after that, stricter readiness / required-gate promotion backed by live runtime evidence
 
-Candidate target surfaces for the follow-on stage:
+Primary target surfaces for the remaining stage:
 
-- scripts/validate_identity_context_continuity.py
-- scripts/validate_identity_reentry_brief.py
-- scripts/validate_identity_context_continuity_receipts.py
-- scripts/validate_identity_reentry_consumption.py
-- scripts/ci/run_identity_context_continuity_probes_ci.sh
-- scripts/create_identity_pack.py
-- scripts/repair_contract_backfill.py
-- scripts/identity_creator.py
+- launcher/startup consumers that emit `instance_reentry_consumption_receipt`
+- one pilot identity pack with real continuity artifacts under canonical runtime families
+- live evidence / review artifacts proving governed re-entry consumption
 
 ## 9) Audit conclusion for this opening checkpoint
 
-This checkpoint is acceptable as a **formal stream opening plus implementation-freeze handoff** because it does four things cleanly:
+This checkpoint is acceptable as a **formal stream opening plus shared implementation landing checkpoint** because it does four things cleanly:
 
 1. it converts continuity from a loose idea into an explicit protocol-owned boundary;
 2. it keeps continuity subordinate to existing authority surfaces instead of letting it become a fake memory authority;
 3. it identifies the real implementation constraint up front — topology/path registration discipline — rather than hiding it under later patchwork.
-4. it freezes enough machine-facing contract structure that shared validator / probe / creator / launcher work can now be coded without reopening stream ownership.
+4. it converts the shared validator / probe / creator-backfill-readiness layer into real infrastructure without overstating launcher or pilot completion.
 
 The correct interpretation of this ledger is therefore:
 
 - `v1.6.16` is now a real governed stream;
-- it is open at the boundary/contract/design level and explicit enough to support shared implementation planning;
-- implementation closure is still a follow-on phase, not something this stream falsely claims today.
+- shared validator / probe / pack-lifecycle wiring is landed and machine-consumable;
+- launcher live-consumption proof and pilot adoption remain the follow-on phase, not something this ledger falsely claims today.
