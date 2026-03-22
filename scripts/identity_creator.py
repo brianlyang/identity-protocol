@@ -3668,6 +3668,21 @@ def main() -> int:
         )
         if rc != 0:
             return rc
+        rc = _run(
+            [
+                "python3",
+                "scripts/repair_contract_backfill.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--apply",
+                "--json-only",
+            ]
+        )
+        if rc != 0:
+            print("[FAIL] contract backfill repair failed during update preflight; update blocked")
+            return rc
         creator_run_id = f"identity-upgrade-exec-{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
         update_run_id = str(args.run_id or "").strip() or creator_run_id
         explicit_target_branch = str(args.target_branch or "").strip()
@@ -3848,21 +3863,6 @@ def main() -> int:
         if pre_mutation_gate_error_code:
             print(f"[FAIL] update pre-mutation gate failed: {pre_mutation_gate_error_code}")
             return 1
-        rc = _run(
-            [
-                "python3",
-                "scripts/repair_contract_backfill.py",
-                "--catalog",
-                args.catalog,
-                "--identity-id",
-                args.identity_id,
-                "--apply",
-                "--json-only",
-            ]
-        )
-        if rc != 0:
-            print("[FAIL] contract backfill repair failed during update; update blocked")
-            return rc
         rc = _run_instance_script_contract_validators(
             identity_id=args.identity_id,
             catalog=args.catalog,
