@@ -458,6 +458,7 @@ Checkpoint verdict update:
 1. global active-runtime migration closure can now be enforced from creator preflight path, not only from fixture probes.
 2. closure claim semantics are aligned: global claim requires global active-runtime pass.
 3. A later `PASS_REQUIRED` replay with `checked_identity_count=0` is only empty-scan wiring sanity for the preflight lane; it must not be narrated as active-fleet migration proof.
+4. Current-state note (2026-03-22): replaying `python3 scripts/check_unique_entry_contract_migration_closure.py --catalog <project-local absolute catalog> --json-only` against the current workspace runtime surface returned `PASS_REQUIRED` with `checked_identity_count=4`; this is the canonical non-empty active-runtime migration proof for the current workspace.
 
 ## 17) Round-32 addendum: version-baseline SSOT closure (2026-03-15)
 
@@ -509,6 +510,7 @@ Checkpoint verdict update:
 1. v1.6.8 now closes the scaffold-version anti-forget gap with alias-driven infrastructure controls.
 2. Future stream upgrades can rotate baseline via mapping alias without script hardcoding or identity-specific patches.
 3. "Version governance" is now machine-enforced instead of memory-enforced.
+4. Current-state note (2026-03-22): replaying `python3 scripts/check_version_baseline_migration_closure.py --catalog <project-local absolute catalog> --json-only` against the current workspace runtime surface returned `PASS_REQUIRED` with `checked_identity_count=4`; this is the canonical non-empty version-baseline migration proof for the current workspace.
 
 ## 18) Installer atomic closure + report selector isolation (2026-03-16)
 
