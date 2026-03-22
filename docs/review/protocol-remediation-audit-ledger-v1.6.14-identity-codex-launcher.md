@@ -140,14 +140,14 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
 1. Reviewers and auditors should use `docs/governance/identity-codex-launcher-workspace-convergence-roundtable-v1.6.14.md` as the shared discussion package for the convergence-entry landing.
 2. That package is acceptable because it keeps launcher convergence inside `v1.6.14` while exposing the orchestration/control-plane questions that still require explicit decisions before coding.
 3. Reviewers must keep the workbook family in its proper role: workbook surfaces may track decision status, issue routing, and rollout readiness, but they do not replace the stream owner docs as launcher-semantics authority.
-4. The minimum review acceptance for implementation start is explicit agreement on:
-   - one canonical entry surface,
-   - workspace-local catalog authority and mutation scope,
-   - repair composition path,
-   - dry-run / apply / fail-close behavior,
-   - governed convergence receipt family and evidence path,
-   - lifecycle / gate boundary,
-   - and cross-workspace pilot proof rules.
+4. The accepted implementation-start freeze is:
+   - canonical entry surface = `scripts/run_identity_codex_launcher_workspace_convergence.py`,
+   - workspace-local runtime catalog authority only, with repo fixture catalogs fail-closed out of scope,
+   - repair composition through aggregate checker -> shared backfill -> launcher install -> single-identity validate -> aggregate recheck,
+   - disclosed mutation scope `transitive_backfill_plus_launcher_install`,
+   - governed receipt family `identity_codex_launcher_workspace_convergence_receipt_v1` under the `v1614-identity-codex-launcher` evidence root,
+   - passive gate/readiness live surfaces remain on the aggregate checker while synthetic probes and explicit lifecycle repair delegation may consume the convergence entry,
+   - cross-workspace pilot proof must run the same entry against another workspace-local runtime catalog with no workspace-specific exceptions.
 5. Reviewers should not recommend opening a new stream unless the scope intentionally expands beyond launcher-only convergence into a generic multi-lane convergence framework.
 
 ## 7) Boundary lock for reviewers
