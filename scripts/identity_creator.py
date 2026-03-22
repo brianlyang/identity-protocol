@@ -15,7 +15,6 @@ from actor_session_common import (
     list_actor_bindings,
     load_actor_binding,
     load_actor_binding_store,
-    load_actor_global_compatibility_projection,
     resolve_actor_id,
     resolve_protocol_actor_id,
 )
@@ -1019,29 +1018,23 @@ def _activate_identity(
         compiled_brief_refresh_mode_resolved = COMPILED_BRIEF_REFRESH_MODE_MANUAL_ONLY
     if (
         switch_scope == SWITCH_GUARD_SCOPE_ACTOR_GLOBAL
-        and compatibility_projection_write_mode_resolved
-        != COMPATIBILITY_PROJECTION_WRITE_MODE_LEGACY_ACTOR_GLOBAL_SWITCH
     ):
         print(
-            "[FAIL] actor-global switch guard is sealed by default "
+            "[FAIL] actor-global switch guard has been retired from active protocol lanes "
             f"(error_code={ERR_ACTIVATION_PROJECTION_POLICY}, switch_guard_scope={switch_scope}, "
             f"compatibility_projection_write_mode={compatibility_projection_write_mode_resolved})."
         )
         print(
-            "[HINT] use --switch-guard-scope actor_session for session-primary activation, "
-            "or opt into the audited legacy lane with "
-            f"--compatibility-projection-write-mode {COMPATIBILITY_PROJECTION_WRITE_MODE_LEGACY_ACTOR_GLOBAL_SWITCH}."
+            "[HINT] use --switch-guard-scope actor_session for session-primary activation; "
+            "actor-global compatibility projection is no longer an operational switch lane."
         )
         return 1
     switch_reason_resolved = str(switch_reason or "").strip() or "explicit_activate"
-    if switch_scope == SWITCH_GUARD_SCOPE_ACTOR_GLOBAL:
-        actor_binding = load_actor_global_compatibility_projection(local_catalog, actor_id_resolved)
-    else:
-        actor_binding = load_actor_binding(
-            local_catalog,
-            actor_id_resolved,
-            session_id=session_id_resolved,
-        )
+    actor_binding = load_actor_binding(
+        local_catalog,
+        actor_id_resolved,
+        session_id=session_id_resolved,
+    )
     current_actor_identity = str(actor_binding.get("identity_id", "")).strip()
     switch_intent_payload: dict = {}
     switch_intent_receipt_path = ""
@@ -1993,7 +1986,7 @@ def main() -> int:
         default=SWITCH_GUARD_SCOPE_ACTOR_SESSION,
         help=(
             "switch guard scope: actor_session enforces receipt when same actor+session switches identity; "
-            "actor_global is legacy-only and must be paired with explicit compatibility projection write mode."
+            "actor_global is a retired compatibility token and fail-closes in active protocol lanes."
         ),
     )
     p_activate.add_argument(
@@ -2002,7 +1995,7 @@ def main() -> int:
         default=COMPATIBILITY_PROJECTION_WRITE_MODE_DISABLED,
         help=(
             "compatibility pointer mutation policy for activate: default disabled seals shared actor-global pointer writes; "
-            "legacy_actor_global_switch keeps the legacy compatibility lane explicit."
+            "legacy_actor_global_switch is retained only as a retired compatibility token and fail-closes when selected."
         ),
     )
     p_activate.add_argument(
