@@ -103,7 +103,7 @@ def _source_signature(item: dict[str, Any]) -> str:
 
 
 def _build_alias_map(raw_map: Any) -> dict[str, str]:
-    alias_map = dict(LEGACY_BLOCKER_ALIAS_MAP)
+    alias_map: dict[str, str] = {}
     if isinstance(raw_map, dict):
         for raw_key, raw_value in raw_map.items():
             key = str(raw_key or "").strip()
@@ -157,6 +157,21 @@ def _resolve_pack_root(identity: dict[str, Any]) -> Path | None:
     if not pack_path:
         return None
     return Path(pack_path).expanduser().resolve()
+
+
+def _is_fixture_identity(identity: dict[str, Any] | None) -> bool:
+    row = identity if isinstance(identity, dict) else {}
+    profile = str(row.get("profile", "")).strip().lower()
+    runtime_mode = str(row.get("runtime_mode", "")).strip().lower()
+    return profile == "fixture" or runtime_mode == "demo_only"
+
+
+def _compatibility_overlay_allowed(identity: dict[str, Any] | None, task: dict[str, Any]) -> bool:
+    if _is_fixture_identity(identity):
+        return True
+    scaffold_profile = str(task.get("scaffold_profile", "")).strip().lower()
+    scaffold_generation_mode = str(task.get("scaffold_generation_mode", "")).strip().lower()
+    return scaffold_profile == "legacy-commerce-overlay" or scaffold_generation_mode == "explicit_opt_in"
 
 
 def _runtime_pattern_candidates(pattern: str, pack_root: Path | None, identity_id: str) -> list[str]:
@@ -299,7 +314,13 @@ def _validate_protocol_review_contract(
     return rc, logs
 
 
-def _validate_single_identity(identity_id: str, task_path: Path, *, pack_root: Path | None = None) -> int:
+def _validate_single_identity(
+    identity_id: str,
+    task_path: Path,
+    *,
+    pack_root: Path | None = None,
+    identity_row: dict[str, Any] | None = None,
+) -> int:
     print(f"[INFO] validating CURRENT_TASK for identity={identity_id}: {task_path}")
 
     try:
@@ -417,8 +438,13 @@ def _validate_single_identity(identity_id: str, task_path: Path, *, pack_root: P
         print("[FAIL] blocker_taxonomy_contract must be non-empty object")
         rc = 1
     else:
+        compatibility_overlay_allowed = _compatibility_overlay_allowed(identity_row, data)
+        legacy_alias_bridge = taxonomy.get("legacy_alias_bridge")
+        if legacy_alias_bridge and not compatibility_overlay_allowed:
+            print("[FAIL] blocker_taxonomy_contract.legacy_alias_bridge is migration/fixture-only")
+            rc = 1
         required_blockers = taxonomy.get("required_blocker_types") or []
-        alias_map = _build_alias_map(taxonomy.get("legacy_alias_bridge"))
+        alias_map = _build_alias_map(legacy_alias_bridge)
         normalized_blockers, alias_hits, invalid_blockers = _normalize_blocker_types(
             required_blockers,
             alias_map=alias_map,
@@ -432,6 +458,9 @@ def _validate_single_identity(identity_id: str, task_path: Path, *, pack_root: P
                 "[FAIL] blocker_taxonomy_contract.required_blocker_types missing canonical blockers: "
                 f"{sorted(CANONICAL_BLOCKERS - normalized_blockers)}"
             )
+            rc = 1
+        if alias_hits and not compatibility_overlay_allowed:
+            print(f"[FAIL] blocker taxonomy legacy alias bridge is migration/fixture-only: {alias_hits}")
             rc = 1
         if not invalid_blockers and has_all_canonical:
             mode = "legacy_alias_bridge" if alias_hits else "canonical"
@@ -466,6 +495,9 @@ def _validate_single_identity(identity_id: str, task_path: Path, *, pack_root: P
             rc = 1
         else:
             print("[OK]   collaboration_trigger_contract.must_emit_receipt_in_chat=true")
+        if collab.get("legacy_alias_bridge") and not _compatibility_overlay_allowed(identity_row, data):
+            print("[FAIL] collaboration_trigger_contract.legacy_alias_bridge is migration/fixture-only")
+            rc = 1
 
     install = data.get("install_safety_contract") or {}
     if not isinstance(install, dict) or not install:
@@ -609,7 +641,15 @@ def main() -> int:
             continue
 
         print("\n" + "=" * 72)
-        rc = max(rc, _validate_single_identity(identity_id, task_path, pack_root=_resolve_pack_root(item)))
+        rc = max(
+            rc,
+            _validate_single_identity(
+                identity_id,
+                task_path,
+                pack_root=_resolve_pack_root(item),
+                identity_row=item,
+            ),
+        )
 
     return rc
 
