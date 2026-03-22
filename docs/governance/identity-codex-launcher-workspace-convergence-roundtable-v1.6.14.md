@@ -1,6 +1,6 @@
 # Identity Codex Launcher Workspace-Convergence Roundtable v1.6.14
 
-Status: Discussion package open for architect + audit + implementation alignment
+Status: Decision package frozen for coding; convergence entry landed under `v1.6.14`
 Date: 2026-03-22
 Semantic owner: `v1.6.14` launcher lane
 Workbook role: track decision status, audit checkpoints, and rollout readiness only
