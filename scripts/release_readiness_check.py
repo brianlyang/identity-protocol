@@ -786,6 +786,13 @@ def main() -> int:
             catalog,
             "--json-only",
         ],
+        [
+            "python3",
+            "scripts/check_identity_codex_launcher_migration_closure.py",
+            "--catalog",
+            catalog,
+            "--json-only",
+        ],
         ["python3", "scripts/validate_audit_snapshot_index.py"],
         *POST_CLOSURE_GOVERNANCE_SCRIPTS,
         ["python3", "scripts/validate_native_chat_bootstrap_entry_stream.py", "--json-only"],
@@ -1646,6 +1653,13 @@ def main() -> int:
         ],
         [
             "python3",
+            "scripts/check_identity_codex_launcher_migration_closure.py",
+            "--catalog",
+            catalog,
+            "--json-only",
+        ],
+        [
+            "python3",
             "scripts/validate_instance_script_manifest.py",
             "--catalog",
             catalog,
@@ -2272,6 +2286,15 @@ def main() -> int:
             "scripts/validate_identity_codex_launcher.py",
             "--identity-id",
             identity_id,
+            "--catalog",
+            catalog,
+            "--json-only",
+        ]
+    )
+    seq.append(
+        [
+            "python3",
+            "scripts/check_identity_codex_launcher_migration_closure.py",
             "--catalog",
             catalog,
             "--json-only",
