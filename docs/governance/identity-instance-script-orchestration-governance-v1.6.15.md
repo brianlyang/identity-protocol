@@ -179,38 +179,46 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
 2. Aggregate capability-activation artifacts that summarize multiple route rows under `route-any-ready` or an equivalent multi-route policy are not single-route receipts.
 3. Such aggregate artifacts may omit `route_selected` only when they machine-project aggregate scope/cardinality explicitly; at minimum, the additive projection must preserve:
    - `route_scope`
+   - `route_scope_mode`
    - `route_activation_strategy`
    - `route_ready_count`
    - `route_total_count`
+   - `route_ids`
    - `route_selection_cardinality`
-4. Any route-scoped admission/execution/emit/recovery receipt, or any artifact that explicitly claims single-route scope, continues to require non-empty `route_selected`.
-5. Protocol-owned artifacts may add declared-vs-observed dependency projection when they preserve machine comparability between route contract and runtime evidence.
-6. The preferred additive model is one machine-readable declared/observed pair plus gap reasons, for example:
+4. The shared `v1.6.15` builder/validator family now freezes the aggregate-scope clarifiers above as additive machine-visible contract rather than future follow-on guidance: `route_scope=aggregate`, `route_scope_mode=aggregate_summary`, `route_ids` contains the contributing route identifiers, and `route_selection_cardinality` stays compatible with the existing route-count family instead of inventing a synthetic single-route receipt.
+5. Any route-scoped admission/execution/emit/recovery receipt, or any artifact that explicitly claims single-route scope, continues to require non-empty `route_selected`; the same family now also keeps `route_scope_mode=route_receipt` and `route_ids=[route_selected]` so route-scoped receipts cannot masquerade as aggregate summaries.
+6. Protocol-owned artifacts may add declared-vs-observed dependency projection when they preserve machine comparability between route contract and runtime evidence.
+7. The frozen declared/observed motherline for this stream is:
    - `declared_dependency_projection`
    - `observed_dependency_projection`
    - `dependency_gap_reasons`
-7. A later implementation stream may freeze exact field names, but the semantic minimum is that declared route dependencies, observed activations/executions, and the machine-readable gap between them remain comparable without narrative-only reconciliation.
-8. Protocol-owned route/script consumers may add a governed semantic-anchor envelope by reference, digest, or both when downstream consumers must prove they preserved route-selected semantic basis rather than silently narrowing it.
-9. Any such semantic-anchor envelope must preserve at least:
+   - `undeclared_usage_detected`
+   - `undeclared_usage_rows`
+   - `missing_declared_dependency_detected`
+   - `missing_declared_dependency_rows`
+8. Shared route-receipt join and aggregate activation/report consumers now reuse that same dependency-gap family so route-scoped receipts and aggregate summaries expose one comparable declared-vs-observed projection instead of per-artifact narrative-only diffs.
+9. The standardized dependency-gap partition is descriptive governance evidence, not permission to fork pack-local dialects: undeclared observed usage and missing declared dependency remain machine-visible through one shared gap model, while the canonical route/skill/MCP/script declaration surfaces stay on the existing route contract.
+10. Protocol-owned route/script consumers may add a governed semantic-anchor envelope by reference, digest, or both when downstream consumers must prove they preserved route-selected semantic basis rather than silently narrowing it.
+11. Any such semantic-anchor envelope must preserve at least:
    - `semantic_anchor_ref`
    - `semantic_anchor_schema_id`
    - `semantic_anchor_source`
    - `semantic_anchor_revision`
    - `semantic_anchor_digest`
    - `semantic_anchor_status`
-10. If any semantic-anchor field is present on a protocol-owned artifact, the complete semantic-anchor family must be present; partial semantic-anchor projection fails closed for the affected route-/report-family validator.
-11. Aggregate/report builders may promote a semantic-anchor family to aggregate top-level only when exactly one fully formed observed family can be projected across contributing route rows without ambiguity; otherwise the route-row evidence remains scoped and a machine-visible ambiguity reason is emitted instead of inventing a merged anchor.
-12. The semantic-anchor envelope is a transfer/control primitive only; it must not hardcode domain-specific scoring fields, search heuristics, or product-level business taxonomy into the core protocol contract.
-13. Protocol-owned artifacts may also expose an optional outcome-sentinel reference hook when downstream risk signals need governed traceability without redefining orchestration ownership.
-14. If an outcome-sentinel hook is present, it must preserve at least:
+12. If any semantic-anchor field is present on a protocol-owned artifact, the complete semantic-anchor family must be present; partial semantic-anchor projection fails closed for the affected route-/report-family validator.
+13. Aggregate/report builders may promote a semantic-anchor family to aggregate top-level only when exactly one fully formed observed family can be projected across contributing route rows without ambiguity; otherwise the route-row evidence remains scoped and a machine-visible ambiguity reason is emitted instead of inventing a merged anchor.
+14. The semantic-anchor envelope is a transfer/control primitive only; it must not hardcode domain-specific scoring fields, search heuristics, or product-level business taxonomy into the core protocol contract.
+15. Protocol-owned artifacts may also expose an optional outcome-sentinel reference hook when downstream risk signals need governed traceability without redefining orchestration ownership.
+16. If an outcome-sentinel hook is present, it must preserve at least:
    - `outcome_sentinel_ref`
    - `outcome_sentinel_schema_id`
    - `outcome_sentinel_status`
-15. If any outcome-sentinel field is present on a protocol-owned artifact, the complete outcome-sentinel family must be present; partial sentinel projection fails closed for the affected route-/report-family validator.
-16. Aggregate/report builders may promote an outcome-sentinel family to aggregate top-level only when exactly one fully formed observed family can be projected across contributing route rows without ambiguity; otherwise the route-row evidence remains scoped and a machine-visible ambiguity reason is emitted instead of inventing a merged sentinel.
-17. Outcome sentinels do not become universal core pass/fail semantics merely by existing; a stream-specific policy must explicitly freeze whether a sentinel is advisory, gating, or ignored for the affected artifact family.
-18. Additive implementation must reuse the frozen field families above rather than minting parallel aliases for the same semantics; `route_scope` / `route_activation_strategy` / `route_ready_count` / `route_total_count` / `route_selection_cardinality` and `declared_dependency_projection` / `observed_dependency_projection` / `dependency_gap_reasons` remain the canonical motherline names for this stream.
-19. These additive reinforcements belong to `v1.6.15` only insofar as they strengthen route/script/dependency/receipt governance; they must not be used to smuggle workbook-only narrative or instance-specific business heuristics into protocol SSOT.
+17. If any outcome-sentinel field is present on a protocol-owned artifact, the complete outcome-sentinel family must be present; partial sentinel projection fails closed for the affected route-/report-family validator.
+18. Aggregate/report builders may promote an outcome-sentinel family to aggregate top-level only when exactly one fully formed observed family can be projected across contributing route rows without ambiguity; otherwise the route-row evidence remains scoped and a machine-visible ambiguity reason is emitted instead of inventing a merged sentinel.
+19. Outcome sentinels do not become universal core pass/fail semantics merely by existing; a stream-specific policy must explicitly freeze whether a sentinel is advisory, gating, or ignored for the affected artifact family.
+20. Additive implementation must reuse the frozen field families above rather than minting parallel aliases for the same semantics; `projection_scope`, `route_count`, `cardinality`, and `gap_reason` remain rejected as parallel aliases for this stream, while `route_scope` / `route_scope_mode` / `route_activation_strategy` / `route_ready_count` / `route_total_count` / `route_ids` / `route_selection_cardinality` and `declared_dependency_projection` / `observed_dependency_projection` / `dependency_gap_reasons` / `undeclared_usage_*` / `missing_declared_dependency_*` remain the canonical machine-readable family.
+21. These additive reinforcements belong to `v1.6.15` only insofar as they strengthen route/script/dependency/receipt governance; they must not be used to smuggle workbook-only narrative or instance-specific business heuristics into protocol SSOT.
 
 ## 3) Four-track cross-verification boundary
 
