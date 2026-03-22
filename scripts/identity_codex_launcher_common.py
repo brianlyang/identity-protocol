@@ -299,7 +299,8 @@ Canonical commands:
 - Convenience launcher:
   - `{shortcut} <codex args>`
 - Copyable command discovery:
-  - `python3 scripts/render_identity_codex_launcher.py commands --identity-id {identity_token}`
+  - `identity-codex commands --identity-id {identity_token}`
+  - `{shortcut} commands`
 
 Canonical installed home:
 
@@ -377,6 +378,11 @@ if [[ -z "${IDENTITY_PROTOCOL_HOME:-}" ]]; then
   exit 1
 fi
 
+if [[ "${1:-}" == "commands" ]]; then
+  shift
+  exec python3 "${IDENTITY_PROTOCOL_HOME}/scripts/render_identity_codex_launcher.py" commands "$@"
+fi
+
 exec python3 "${IDENTITY_PROTOCOL_HOME}/scripts/render_identity_codex_launcher.py" exec "$@"
 """
 
@@ -392,6 +398,11 @@ LAUNCHER_DIR="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)"
 # contract_id={IDENTITY_CODEX_LAUNCHER_CONTRACT_ID}
 # identity_id={identity_id}
 # shortcut_name={shortcut}
+
+if [[ "${{1:-}}" == "commands" ]]; then
+  shift
+  exec "${{LAUNCHER_DIR}}/{GENERIC_LAUNCHER_NAME}" commands --identity-id {shlex.quote(identity_id)} "$@"
+fi
 
 exec "${{LAUNCHER_DIR}}/{GENERIC_LAUNCHER_NAME}" --identity-id {shlex.quote(identity_id)} -- "$@"
 """
