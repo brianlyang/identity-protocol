@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 82`, `command snippets checked: 901`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 82`, `command snippets checked: 902`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -181,6 +181,18 @@ Symptoms:
 Root cause:
 
 - the protocol has ownership rules and many local hardenings, but it still lacks one explicit motherline principle that says compatibility, fallback, and bridge surfaces are migration/replay/diagnostic-only and may not re-enter active defaults, validator green paths, or current-turn runtime truth.
+
+### RC-12 Route/lane governance still begins too late in the execution chain
+
+Symptoms:
+
+- declared route contracts can look complete for the route -> instance-script -> receipt path while real rescue execution still happens through direct MCP/browser tool calls in conversation;
+- browser-manual/editor-interactive lanes can become the only live-success path without being declared in `allowed_execution_lanes`, so the system achieves success outside the governed lane family instead of through it;
+- some packs carry only receipt/emitter/recovery helper scripts in `INSTANCE_SCRIPT_MANIFEST.json`, leaving no instance-owned business executor that can actually own lane choice, auth preflight, or session freshness before tools fire.
+
+Root cause:
+
+- `v1.6.15` currently hardens the route -> instance-script -> lane-admission chain, but direct conversation-level tool execution is not yet required to enter through that chain; as a result, undeclared live rescue lanes can still succeed outside protocol-owned route/lane admission.
 
 ## 4) Routed issue sections
 
@@ -677,6 +689,34 @@ Root cause:
   - `validate_identity_runtime_contract.py` and `validate_identity_collab_trigger.py` still accept `mode=legacy_alias_bridge`;
   - `compile_identity_runtime.py`, `identity_creator.py`, and `identity_codex_launcher_common.py` still contain literal `assistant:codex` fallback defaults outside the current strict-entry coverage set;
   - `identity/protocol/IDENTITY_PROTOCOL.md`, `identity/protocol/IDENTITY_RUNTIME.md`, and `semantic-term-registry.v1.6.yaml` still retain compatibility-bridge / legacy-path wording without one explicit no-downgrade motherline clause.
+
+### ISSUE-028 - Declared route/script lane governance still cannot hard-stop direct tool-call rescue lanes
+
+- `status`: OPEN
+- `problem_statement`: live instance evidence from `office-ops-expert` shows a protocol-owned blind spot in `v1.6.15`: the declared route contract for `office_image_sheet_build` only admits a serialized governed webhook lane, while the real business-success path under cloud quota failure is a browser-manual n8n lane reached through direct `n8n_mcp` / `chrome_devtools` tool calls in conversation. Because the pack manifest carries only receipt/emitter/recovery helpers and no true n8n business executor script, the current governance shell cannot own lane choice, auth preflight, or session freshness before tools fire.
+- `primary_owner_doc`: `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+- `secondary_refs`:
+  - `/Users/yangxi/.codex/.identity/office-ops-expert/CURRENT_TASK.json`
+  - `/Users/yangxi/.codex/.identity/office-ops-expert/scripts/INSTANCE_SCRIPT_MANIFEST.json`
+  - `/Users/yangxi/.codex/.identity/office-ops-expert/scripts/office_route_execution_receipt.py`
+  - `/Users/yangxi/.codex/skills/office-ops-regression-self-drive/SKILL.md`
+- `machine_gate`:
+  - `scripts/validate_route_execution_lane_admission.py`
+  - `scripts/validate_identity_capability_activation.py`
+  - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
+  - supporting live audit: office-ops route/manifest/session evidence scan
+- `root_cause`: RC-12 and RC-11
+- `stop_condition`:
+  - direct tool execution for a declared route must either enter through route/script/lane admission or fail-close before MCP/browser tools run;
+  - browser-manual rescue becomes a declared canonical lane class when it is a real supported success path, rather than an undeclared fallback outside the contract;
+  - target packs such as `office-ops-expert` land instance-owned business executor scripts for lane switch, browser auth preflight, editor-run guard, and session-freshness checks instead of relying on receipt-only wrappers;
+  - skill guidance remains optional methodology unless it is explicitly bound into the governed script/lane entry path.
+- `current_evidence`:
+  - `office-ops-expert` route `office_image_sheet_build` currently declares `required_mcp=["n8n-mcp"]`, a single governed webhook lane row, and `lane_block_on_fallback=true`, so the observed browser-manual rescue lane is contract-external rather than contract-governed;
+  - the pack manifest currently contains only four helper scripts (`office_route_execution_receipt`, `emit_protocol_hud_line`, `self_heal_session_chain_tuple`, `run_strict_update_with_self_heal`) and no n8n business executor / auth-preflight / lane-switch controller;
+  - `office_route_execution_receipt.py` writes post-hoc receipts from provided lane parameters, but it does not decide lane admission before tool execution;
+  - `office-ops-regression-self-drive` and `ai-folder-governance` skills do not act as always-on tool-call interceptors for this lane family;
+  - `IDENTITY_PROMPT.md` still advertises `Methodology version: v1.5` / `Prompt version: v1.5` while `CURRENT_TASK.json` advertises `v1.6`, which is a governance-hygiene multiplier though not the primary execution defect.
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 
