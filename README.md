@@ -65,6 +65,8 @@ What this prints:
 - preferred short resume command when a host thread UUID is available
 - generic `identity-codex --identity-id ...` equivalents for repair/documentation flows
 - all commands are terminal-native direct commands; shell-wrapped `zsh -lic '...'` surfaces are non-canonical
+- `recommended_user_command` automatically selects the direct command that works in the current shell:
+  short launcher when `${CODEX_HOME}/bin` is already on `PATH`, otherwise the absolute launcher path fallback
 
 For identity instances and other protocol consumers, use the structured surface:
 
