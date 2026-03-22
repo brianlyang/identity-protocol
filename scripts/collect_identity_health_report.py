@@ -219,7 +219,10 @@ SUGGESTIONS = {
         "Run `validate_cross_actor_isolation --operation validate --actor-id <actor> --scope-mode actor_primary` "
         "and clean current-actor binding contamination before closure."
     ),
-    "pointer_drift_guard": "Run `validate_identity_session_pointer_consistency --require-mirror` and fix canonical/mirror pointer drift.",
+    "pointer_drift_guard": (
+        "Run `validate_identity_session_pointer_consistency --require-mirror --strict-session-primary "
+        "--actor-id <actor> --session-id <run:...>` and fix canonical/mirror pointer drift from session-primary truth."
+    ),
     "session_refresh_status": "Run refresh_identity_session_status and repair actor binding/session pointer drift before re-validating health.",
     "headstamp_recurrence_closure": "Run `validate_headstamp_recurrence_closure --operation validate --actor-id <actor> --session-id <run:...>` and enforce governed final emission (compose + send-time gate + canonical blocker receipt).",
     "semantic_routing_guard": "Add semantic_routing_guard_contract_v1 evidence and ensure intent_domain/intent_confidence/classifier_reason are present in feedback batches.",
@@ -531,8 +534,8 @@ def main() -> int:
             cmd += ["--actor-id", actor_id]
         if name == "pointer_drift_guard" and session_id:
             cmd += ["--session-id", session_id]
-        if name == "pointer_drift_guard":
-            cmd += ["--allow-compatibility-projection-drift"]
+        if name == "pointer_drift_guard" and actor_id and session_id:
+            cmd += ["--strict-session-primary"]
 
         rc, out, err = _run(cmd)
         status = "PASS" if rc == 0 else "FAIL"
