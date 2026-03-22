@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 82`, `command snippets checked: 891`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 82`, `command snippets checked: 897`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -567,9 +567,35 @@ Root cause:
   - `scripts/docs_command_contract_check.py` now recognizes workspace-root invariant `identity-protocol-local/scripts/...` commands and runs workspace semantic probes for safe path-sensitive executables.
   - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md` and `docs/review/protocol-remediation-audit-ledger-v1.6.md` now publish workspace-root invariant commands on the cited headstamp/actor-session-binding snippets.
 
+### ISSUE-024 - `v1.6.14` launcher convergence runtime authority and cross-workspace pilot proof were not yet machine-frozen
+
+- `status`: CLOSED
+- `problem_statement`: the launcher convergence lane had already landed the canonical entry, receipt family, and synthetic convergence probes, but runtime-path authority still was not part of formal launcher closure, live control-plane consumers still mixed launcher closure with non-runtime catalog scope, and cross-workspace pilot proof remained a discussion goal instead of a machine-executed proof lane.
+- `primary_owner_doc`: `docs/governance/identity-codex-launcher-governance-v1.6.14.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md`
+  - `docs/governance/identity-codex-launcher-workspace-convergence-roundtable-v1.6.14.md`
+  - `scripts/ci/run_required_runtime_gates_ci.sh`
+- `machine_gate`:
+  - `scripts/validate_identity_codex_launcher.py`
+  - `scripts/check_identity_codex_launcher_migration_closure.py`
+  - `scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh`
+  - `scripts/ci/run_identity_codex_launcher_cross_workspace_pilot_probes_ci.sh`
+  - supporting consumers: `scripts/release_readiness_check.py`, `scripts/identity_creator.py`
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - launcher install validation proves both asset presence and runtime-path authority against the selected workspace-local runtime catalog; satisfied.
+  - aggregate launcher closure proof, required gates, readiness, and creator enforcement all consume launcher closure in `workspace-runtime-only` mode rather than mixing repo fixture catalogs into live runtime proof; satisfied.
+  - the same convergence entry is machine-proven against more than one workspace-local runtime catalog with no workspace-specific wrapper exception; satisfied for the launcher pilot proof lane.
+  - generic workspace-convergence promotion remains deferred; closer follow-on work stays on evidence breadth / archival / truth-sync rather than on semantic reopening; satisfied.
+- `closure_evidence`:
+  - launcher runtime authority is now surfaced as `runtime_paths_status` in both the single-identity validator and the aggregate launcher migration-closure checker.
+  - `install_identity_codex_launcher.py` now writes launcher config under the launcher config home while binding `IDENTITY_HOME` / `IDENTITY_CATALOG` to the selected runtime catalog surface.
+  - the cross-workspace pilot probe now copies a sibling workspace runtime catalog into a temporary workspace, rewrites pack paths to the copied runtime surface, and proves dry-run/apply/closure/validator parity on the same convergence entry with no workspace-specific wrapper branch.
+
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 
-1. The rows below capture desensitized follow-on reinforcement for active streams; they are routed through this workbook so the protocol architect can land them on canonical governance/review surfaces without reopening the closed `ISSUE-001..023` correctness family.
+1. The rows below capture desensitized follow-on reinforcement for active streams; they are routed through this workbook so the protocol architect can land them on canonical governance/review surfaces without reopening the closed `ISSUE-001..024` correctness family.
 2. These rows are routing/intake metadata only; semantic ownership remains with the target stream governance doc and its review ledger.
 
 ### RF-ORCH-001 - Aggregate route-scope/cardinality projection closure
