@@ -23,6 +23,11 @@ IDENTITY_CODEX_LAUNCHER_CONTRACT_ID = "identity_codex_launcher_contract_v1"
 IDENTITY_CODEX_LAUNCHER_RENDERER_ID = "scripts/render_identity_codex_launcher.py"
 IDENTITY_CODEX_LAUNCHER_INSTALLER_ID = "scripts/install_identity_codex_launcher.py"
 IDENTITY_CODEX_LAUNCHER_VALIDATOR_ID = "scripts/validate_identity_codex_launcher.py"
+IDENTITY_CODEX_LAUNCHER_CONVERGENCE_ENTRY_ID = "scripts/run_identity_codex_launcher_workspace_convergence.py"
+IDENTITY_CODEX_LAUNCHER_CONVERGENCE_RECEIPT_FAMILY = (
+    "identity_codex_launcher_workspace_convergence_receipt_v1"
+)
+IDENTITY_CODEX_LAUNCHER_CONVERGENCE_MUTATION_SCOPE = "transitive_backfill_plus_launcher_install"
 
 IDENTITY_CODEX_LAUNCHERS_DIR_REL = Path("scripts/launchers")
 IDENTITY_CODEX_LAUNCHER_MANIFEST_REL = IDENTITY_CODEX_LAUNCHERS_DIR_REL / "identity-codex-launcher.manifest.json"
