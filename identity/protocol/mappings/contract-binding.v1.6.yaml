@@ -5,7 +5,7 @@ _meta:
   source_layer: protocol
   lifecycle_state: phase6_full_requirement_projection
   last_updated_utc: "2026-03-20T00:00:00Z"
-  row_count: 43
+  row_count: 46
   notes:
     - "Phase-1 mapping seed for ASB16-RQ-017..022/030."
     - "Phase-2 extension adds prompt-kernel rows for ASB16-RQ-014/015/027/031."
@@ -20,6 +20,7 @@ _meta:
     - "v1.6.5 rebound-absorber lane promotes rows RQ-039/040/041 into the motherline required bundle."
     - "v1.6.11 relay-final-answer stream adds motherline row RQ-042 for outer-agent exact/summary relay governance."
     - "v1.6.13 instance-pack-topology stream adds motherline row RQ-043 for canonical pack-root scripts topology governance."
+    - "v1.6.16 context-continuity stream adds motherline rows RQ-044/045/046 for artifact schema, reentry consumption, and continuity receipt-family governance."
     - "Rows intentionally use canonical five-link tuple fields required by governance 4.15."
     - "Validator scripts referenced here may be planned-only until implementation commits land."
 
@@ -1265,6 +1266,104 @@ asb16-rq-043:
     - IP-IPACK-002
     - IP-IPACK-003
   mapping_state: phase6_v1613_instance_pack_topology_motherline
+
+asb16-rq-044:
+  requirement_id: ASB16-RQ-044
+  kernel_contract_id: rq_044_identity_context_continuity_artifact_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_044_identity_context_continuity_artifact_contract_v1
+  validator_ids:
+    - scripts/validate_identity_context_continuity.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-context-continuity-governance-v1.6.16.md#28-machine-contract-frozen-in-this-stream
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md#5-coding-readiness-freeze-absorbed-after-opening
+  report_field_refs:
+    - identity_context_continuity_status
+    - artifact_kind
+    - generation_reason
+    - trigger_class
+    - source_identity_id
+    - authority_refs
+    - receipt_refs
+    - freshness
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-ICONT-001
+    - IP-ICONT-002
+    - IP-ICONT-003
+    - IP-ICONT-004
+  mapping_state: phase6_v1616_continuity_contract_freeze
+
+asb16-rq-045:
+  requirement_id: ASB16-RQ-045
+  kernel_contract_id: rq_045_identity_reentry_brief_consumption_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_045_identity_reentry_brief_consumption_contract_v1
+  validator_ids:
+    - scripts/validate_identity_reentry_brief.py
+    - scripts/validate_identity_reentry_consumption.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-context-continuity-governance-v1.6.16.md#211-launcher-entry-bind-and-receipt-family-freeze
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md#5-coding-readiness-freeze-absorbed-after-opening
+  report_field_refs:
+    - identity_reentry_brief_status
+    - startup_consumption_status
+    - reentry_brief_ref
+    - continuity_lineage_ref
+    - authority_resolution_status
+    - launcher_bind_status
+    - tuple_bootstrap_preserved
+    - consumption_outcome
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-REENTRY-001
+    - IP-REENTRY-002
+    - IP-REENTRY-003
+    - IP-REENTRY-004
+  mapping_state: phase6_v1616_continuity_contract_freeze
+
+asb16-rq-046:
+  requirement_id: ASB16-RQ-046
+  kernel_contract_id: rq_046_identity_context_continuity_receipt_family_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_046_identity_context_continuity_receipt_family_contract_v1
+  validator_ids:
+    - scripts/validate_identity_context_continuity_receipts.py
+  gate_surfaces:
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-context-continuity-governance-v1.6.16.md#211-launcher-entry-bind-and-receipt-family-freeze
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md#5-coding-readiness-freeze-absorbed-after-opening
+  report_field_refs:
+    - identity_context_continuity_receipt_family_status
+    - checkpoint_receipt_status
+    - migration_handoff_receipt_status
+    - reentry_brief_receipt_status
+    - reentry_consumption_receipt_status
+    - receipt_join_status
+    - route_or_entry_scope
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-ICREC-001
+    - IP-ICREC-002
+    - IP-ICREC-003
+    - IP-ICREC-004
+  mapping_state: phase6_v1616_continuity_contract_freeze
 
 asb16-rq-030:
   requirement_id: ASB16-RQ-030

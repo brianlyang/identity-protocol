@@ -259,6 +259,81 @@ Hard semantics:
 4. Generated cache directories such as `__pycache__` and `.pytest_cache` are forbidden inside governed pack topology.
 5. Creator/bootstrap/update strict lanes must keep the topology contract and validator aligned; ad hoc instance-local topology keys are non-canonical.
 
+### rq_044_identity_context_continuity_artifact_contract_v1
+
+Required receipt fields:
+
+- `identity_context_continuity_status`
+- `artifact_kind`
+- `generation_reason`
+- `trigger_class`
+- `source_identity_id`
+- `source_layer`
+- `work_layer`
+- `authority_refs`
+- `task_focus_summary`
+- `completed_since_previous`
+- `open_blockers`
+- `next_actions`
+- `receipt_refs`
+- `supersedes_ref`
+- `freshness`
+- `stale_reasons`
+- `evidence_ref`
+
+Hard semantics:
+
+1. Governed continuity artifacts must be machine-readable derived assets and must never override `IDENTITY_PROMPT.md`, `CURRENT_TASK.json`, active governance/review docs, workbook surfaces, or governed runtime receipts.
+2. `artifact_kind` is constrained to the governed continuity family: `rolling_checkpoint`, `stage_checkpoint`, `migration_checkpoint`, `reentry_brief`.
+3. Unknown artifact kinds, malformed authority refs, malformed receipt refs, stale lineage, or missing required field families are fail-close conditions.
+4. Checkpoint artifacts and `reentry_brief` belong to the same governed stream but are not the same schema family; validators must preserve the distinction.
+5. Continuity artifacts remain runtime-owned evidence and must not be reclassified as actor-session tuple truth, thread ids, or launcher installation state.
+
+### rq_045_identity_reentry_brief_consumption_contract_v1
+
+Required receipt fields:
+
+- `identity_reentry_brief_status`
+- `startup_consumption_status`
+- `reentry_brief_ref`
+- `continuity_lineage_ref`
+- `authority_resolution_status`
+- `tuple_bootstrap_preserved`
+- `launcher_bind_status`
+- `consumption_outcome`
+- `stale_reasons`
+- `evidence_ref`
+
+Hard semantics:
+
+1. Startup/resume/recover consumption of governed continuity must occur through `reentry_brief`; raw transcript or operator prose cannot substitute for this bind object.
+2. Consumption must remain subordinate to `v1.6.12` tuple/bootstrap truth and `v1.6.14` launcher ownership; a green re-entry brief cannot override a red tuple/bootstrap state.
+3. A consumed `reentry_brief` must resolve current authority refs and continuity lineage under policy before startup may claim success.
+4. Successful consumption must emit governed runtime evidence rather than narrative-only claims of restoration.
+5. Missing, stale, or authority-divergent `reentry_brief` state is fail-close.
+
+### rq_046_identity_context_continuity_receipt_family_contract_v1
+
+Required receipt fields:
+
+- `identity_context_continuity_receipt_family_status`
+- `checkpoint_receipt_status`
+- `migration_handoff_receipt_status`
+- `reentry_brief_receipt_status`
+- `reentry_consumption_receipt_status`
+- `receipt_join_status`
+- `route_or_entry_scope`
+- `stale_reasons`
+- `evidence_ref`
+
+Hard semantics:
+
+1. The canonical runtime receipt-family roles for this stream are `instance_continuity_checkpoint_receipt`, `instance_migration_handoff_receipt`, `instance_reentry_brief_receipt`, and `instance_reentry_consumption_receipt`.
+2. These receipt families must remain distinct from actor-session tuple receipts, thread UUIDs, launcher installation receipts, and route/script orchestration receipts.
+3. Receipt-family validation must prove that checkpoint production, migration handoff, startup briefing, and startup consumption remain machine-joinable without collapsing into one undifferentiated blob.
+4. Missing required receipt-family members, unknown receipt kinds, or broken join lineage are fail-close conditions.
+5. Receipt-family closure is runtime evidence only; it does not transfer ownership of startup entry, topology, or route/script semantics away from their inherited streams.
+
 ### Canonical identity-Codex launcher execution boundary (v1.6.14 additive)
 
 Hard semantics:
@@ -303,3 +378,8 @@ Hard semantics:
 8. Resume thread UUIDs, actor-session tuple ids, and continuity ids are distinct identity classes and must not be semantically collapsed.
 9. Continuity consumption under startup/resume/recover remains subordinate to `v1.6.12` tuple/bootstrap truth and `v1.6.14` launcher ownership.
 10. Optional transcript excerpts remain evidence-only supplements; they are never the authority source for continuity.
+11. The machine-contract family for this stream is anchored by:
+   - `rq_044_identity_context_continuity_artifact_contract_v1`
+   - `rq_045_identity_reentry_brief_consumption_contract_v1`
+   - `rq_046_identity_context_continuity_receipt_family_contract_v1`
+12. Day-1 implementation strategy is `flat-script-first`; continuity implementation may begin under pack-root `scripts/` but must not assume new continuity-specific subtrees are topology-legal.

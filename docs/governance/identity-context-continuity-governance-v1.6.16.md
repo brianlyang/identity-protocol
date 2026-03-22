@@ -1,6 +1,6 @@
 # Identity Context Continuity Governance (v1.6.16)
 
-Status: Active (opening-state contract freeze, 2026-03-22; validator/readiness/creator rollout pending)  
+Status: Active (opening-state + implementation-freeze, 2026-03-22; validator/readiness/creator rollout pending)  
 Layer: protocol  
 Scope: identity-instance continuity checkpoints, migration handoff checkpoints, and startup-consumable re-entry briefing  
 Execution mode: topic-level canonical SSOT for v1.6.16 identity-context-continuity governance.
@@ -165,6 +165,63 @@ Minimum additional requirements:
 4. Optional transcript excerpts, if any, are evidence-only supplements and must remain secondary to the structured brief.
 5. A `reentry_brief` must never claim to be the semantic owner of the task; it is an entry accelerator, not a substitute `CURRENT_TASK.json`.
 
+### 2.8 Machine contract frozen in this stream
+
+1. `v1.6.16` is no longer only a narrative opening; it now freezes the coding-facing contract families that later shared validators, probes, creator/backfill flows, and launcher consumers must implement.
+2. The frozen coding-facing families are:
+   - continuity artifact integrity
+   - re-entry brief consumption integrity
+   - continuity receipt-family evidence
+3. Exact requirement ids, mapping rows, and task-contract keys for those families must land together in the corresponding shared mappings rather than being improvised pack-by-pack.
+4. Runtime receipt families remain runtime-owned and therefore are not task-contract keys; they are frozen here as runtime evidence families to be consumed by later validators and probes.
+5. Any implementation that bypasses the future shared mapping/task-key surface and invents private continuity naming is non-canonical, even if the prose intent sounds similar.
+
+### 2.9 Day-1 topology and path strategy (coding-safe)
+
+1. The Day-1 implementation strategy for `v1.6.16` is explicitly `flat-script-first`.
+2. Under that strategy, initial continuity producer surfaces must remain directly under pack-root `scripts/` rather than introducing new governed subtrees.
+3. No implementation may assume `scripts/context-continuity/`, `scripts/checkpoints/`, or any similar new subtree is topology-legal until a later governed topology revision lands.
+4. The runtime destination continues to be the already-frozen target families:
+   - `runtime/reports/context-continuity/`
+   - `runtime/state/context-continuity/`
+5. No pack may claim those runtime families are adopted until the required `v1.6.13` / `v1.6.8` topology-path registration work is present in that pack's consumed contracts.
+6. This means coding may begin now, but first-landing implementations must target canonical filenames and payloads under already-governed roots instead of inventing new directory structure.
+
+### 2.10 Coding-facing schema freeze
+
+1. `rolling_checkpoint`, `stage_checkpoint`, and `migration_checkpoint` share one canonical checkpoint schema family; `reentry_brief` is a distinct consumer-facing schema family.
+2. The checkpoint schema family must preserve, at minimum:
+   - identity tuple: `source_identity_id`, `source_layer`, `work_layer`
+   - artifact tuple: `continuity_id`, `artifact_kind`, `generation_reason`, `trigger_class`
+   - authority tuple: `authority_refs`, `receipt_refs`
+   - task tuple: `task_focus_summary`, `completed_since_previous`, `open_blockers`, `next_actions`
+   - lineage tuple: `supersedes_ref`, `freshness`
+3. `reentry_brief` must preserve two bounded segments:
+   - `stable_prefix`
+   - `dynamic_tail`
+4. `stable_prefix` must be sufficient to re-anchor the new run onto current authority without replaying full history; it must include identity truth, active task truth, active lane, governing refs, and contract refs.
+5. `dynamic_tail` must carry only the minimum dynamic state needed for re-entry: checkpoint lineage, completed work, blockers, next actions, and receipt refs.
+6. Optional transcript excerpts, when present, must live in a clearly secondary evidence field family and must never replace `stable_prefix` or `dynamic_tail`.
+7. Follow-on validators must treat missing required schema families, unknown `artifact_kind`, malformed refs, stale lineage, or authority override attempts as fail-close conditions.
+
+### 2.11 Launcher-entry bind and receipt-family freeze
+
+1. `v1.6.16` does not own launcher entry, but it does freeze the continuity-side bind points that launcher ownership must consume.
+2. The canonical launcher-entry bind object for this stream is a governed `reentry_brief` plus its linked continuity lineage and receipt refs.
+3. Successful startup/resume/recover consumption must prove all of the following:
+   - `reentry_brief` is structurally valid,
+   - tuple/bootstrap truth remains authoritative,
+   - referenced continuity lineage is fresh enough under policy,
+   - required authority refs still resolve,
+   - consumption outcome is emitted as a governed runtime receipt.
+4. The canonical runtime receipt-family roles for this stream are:
+   - `instance_continuity_checkpoint_receipt`
+   - `instance_migration_handoff_receipt`
+   - `instance_reentry_brief_receipt`
+   - `instance_reentry_consumption_receipt`
+5. These receipt families must remain distinct from actor-session tuple ids, thread UUIDs, and launcher installation receipts.
+6. Any startup path that reads continuity artifacts without producing the governed re-entry consumption evidence is incomplete and must not claim `v1.6.16` implementation closure.
+
 ## 3) Four-track cross-verification boundary
 
 ### 3.1 T1 roundtable / internal topology
@@ -246,3 +303,4 @@ Minimum additional requirements:
    - shared creator / backfill / updater surfaces that can register continuity contracts and path families;
    - launcher/startup consumers that can read governed `reentry_brief` artifacts without bypassing tuple/bootstrap truth.
 4. Those implementation families are frozen as the follow-on landing envelope; this opening document does not claim those surfaces are implemented yet.
+5. The document is now intended to be sufficient for implementation planning and code authoring of shared protocol surfaces, but not yet sufficient to claim rollout closure until the validators, probes, shared consumers, and pilot adoption actually land.

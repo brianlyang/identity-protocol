@@ -142,6 +142,12 @@ Compatibility note: legacy packs can stay in `identity/<id>/` if catalog `pack_p
 8. Raw transcript persistence, vendor session history, and ad hoc operator notes remain non-authoritative by default.
 9. Launcher/startup/resume/recover entry remains owned by `v1.6.14`; `v1.6.16` owns only the continuity artifact model and safe consumption boundary.
 10. No pack may claim `v1.6.16` adoption until continuity target paths are backfilled through the relevant topology and path-governance contracts.
+11. The implementation-facing contract family for this stream is anchored by:
+   - `rq_044_identity_context_continuity_artifact_contract_v1`
+   - `rq_045_identity_reentry_brief_consumption_contract_v1`
+   - `rq_046_identity_context_continuity_receipt_family_contract_v1`
+12. The canonical task contract keys are `context_continuity_contract_v1` and `reentry_brief_consumption_contract_v1`; runtime receipt-family roles remain runtime-owned evidence families rather than task keys.
+13. Day-1 implementation strategy is `flat-script-first`; new continuity-specific script subtrees are non-canonical until a later governed topology revision explicitly legalizes them.
 
 ## Runtime source-of-truth boundary (v1.4.x hardening)
 

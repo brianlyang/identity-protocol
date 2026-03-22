@@ -1,6 +1,6 @@
 # Protocol Remediation Audit Ledger (v1.6.16 identity-context-continuity stream)
 
-Status: Active (opening-state contract freeze landed, 2026-03-22; validator/readiness/creator rollout pending)  
+Status: Active (opening-state + implementation-freeze landed, 2026-03-22; validator/readiness/creator rollout pending)  
 Scope: protocol review ledger for continuity checkpoints, migration handoff checkpoints, and startup-consumable re-entry briefing
 
 ## 0) Stream objective
@@ -154,7 +154,30 @@ Opening interpretation:
 7. `reentry_brief` is the canonical startup-consumable artifact and must stay compact enough for re-entry instead of becoming long-history replay.
 8. Resume thread UUIDs, actor-session tuples, and continuity ids remain distinct identity classes and must not be semantically collapsed.
 
-## 5) Opening-state non-goals frozen for audit
+## 5) Coding-readiness freeze absorbed after opening
+
+This stream now freezes enough machine-facing contract structure to support shared implementation planning without reopening stream ownership.
+
+1. Canonical kernel contract family:
+   - `rq_044_identity_context_continuity_artifact_contract_v1`
+   - `rq_045_identity_reentry_brief_consumption_contract_v1`
+   - `rq_046_identity_context_continuity_receipt_family_contract_v1`
+2. Canonical mapping rows:
+   - `ASB16-RQ-044`
+   - `ASB16-RQ-045`
+   - `ASB16-RQ-046`
+3. Canonical task contract keys:
+   - `context_continuity_contract_v1`
+   - `reentry_brief_consumption_contract_v1`
+4. Day-1 implementation strategy is frozen as `flat-script-first`; first implementations must stay under existing pack-root `scripts/` and must not assume new continuity-specific subtrees are topology-legal.
+5. Runtime continuity destinations remain the narrow two-root family only:
+   - `runtime/reports/context-continuity/`
+   - `runtime/state/context-continuity/`
+6. The checkpoint family and the `reentry_brief` family are intentionally separated so schema validation, stale detection, and launcher consumption do not collapse into one blob contract.
+7. Launcher-side consumption proof must culminate in governed runtime evidence instead of narrative-only success claims.
+8. This is enough to support code authoring of shared protocol surfaces, but not enough to claim rollout closure.
+
+## 6) Opening-state non-goals frozen for audit
 
 1. This opening does not claim validator/readiness/creator rollout is complete.
 2. This opening does not claim any fleet pack is already `v1.6.16` adopted.
@@ -162,7 +185,7 @@ Opening interpretation:
 4. This opening does not reopen `v1.6.13` / `v1.6.14` / `v1.6.15` semantics.
 5. This opening does not yet solve isolated historical replay of continuity state.
 
-## 6) Follow-on implementation obligations
+## 7) Follow-on implementation obligations
 
 The next implementation stage should land, in order:
 
@@ -176,21 +199,24 @@ Candidate target surfaces for the follow-on stage:
 
 - scripts/validate_identity_context_continuity.py
 - scripts/validate_identity_reentry_brief.py
+- scripts/validate_identity_context_continuity_receipts.py
+- scripts/validate_identity_reentry_consumption.py
 - scripts/ci/run_identity_context_continuity_probes_ci.sh
 - scripts/create_identity_pack.py
 - scripts/repair_contract_backfill.py
 - scripts/identity_creator.py
 
-## 7) Audit conclusion for this opening checkpoint
+## 8) Audit conclusion for this opening checkpoint
 
-This opening checkpoint is acceptable as a **formal stream opening** because it does three things cleanly:
+This checkpoint is acceptable as a **formal stream opening plus implementation-freeze handoff** because it does four things cleanly:
 
 1. it converts continuity from a loose idea into an explicit protocol-owned boundary;
 2. it keeps continuity subordinate to existing authority surfaces instead of letting it become a fake memory authority;
 3. it identifies the real implementation constraint up front — topology/path registration discipline — rather than hiding it under later patchwork.
+4. it freezes enough machine-facing contract structure that shared validator / probe / creator / launcher work can now be coded without reopening stream ownership.
 
 The correct interpretation of this ledger is therefore:
 
 - `v1.6.16` is now a real governed stream;
-- it is open at the boundary/contract/design level;
-- implementation closure is a follow-on phase, not something this opening falsely claims.
+- it is open at the boundary/contract/design level and explicit enough to support shared implementation planning;
+- implementation closure is still a follow-on phase, not something this stream falsely claims today.
