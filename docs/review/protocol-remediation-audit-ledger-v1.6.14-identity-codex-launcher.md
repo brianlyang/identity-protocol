@@ -185,6 +185,7 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - `resolve_identity_context.py resolve --identity-id <id>` from the sibling workspace classifies that runtime catalog as `source_layer=project` with `resolved_scope=USER`.
    - `identity-codex commands --identity-id <id>` and `id-<id> commands` return a ready-to-copy command bundle rather than leaving command assembly to the operator.
    - that bundle is terminal-native and direct (`id-<id> ...`, `identity-codex --identity-id <id> ...`), not shell-wrapped helper text such as `zsh -lic '...'`.
+   - the protocol-owned `recommended_user_command` is also environment-aware: if the current shell cannot discover the short launcher on `PATH`, the bundle falls back to the absolute direct launcher path instead of leaking shell-profile debugging back to the operator.
    - `identity-codex commands --identity-id <id> --json-only` returns a structured bundle with `recommended_user_command`, `copyable_commands`, and `instance_answer_guidance`, preserving the boundary “protocol guides, instance answers”.
 5. Audit follow-on note: some external workspace raw catalog rows may still carry metadata hygiene residue such as `canonical_scope=UNKNOWN`; that no longer blocks launcher truth because the protocol-owned resolver now returns the correct runtime classification, but the raw metadata cleanup should be tracked separately and must not be misreported as launcher-semantic debt.
 6. The closer handoff boundary after this landing is therefore narrow and explicit:
