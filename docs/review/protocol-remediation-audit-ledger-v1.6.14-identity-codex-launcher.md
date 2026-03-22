@@ -159,6 +159,20 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
 4. Until those gates are met, reviewers must keep future convergence-family discussion in the owner streams for those families rather than implying that a generic framework is already open.
 5. Workbook reminders may help keep this deferred promotion visible, but workbook status alone must never be treated as the approval surface for opening a new framework stream.
 
+### 6.4 Current machine-proof note and closer handoff boundary
+
+1. Current-state note (2026-03-22): reviewers may now treat launcher runtime-path authority as part of formal launcher closure rather than as install-time operator folklore.
+2. The machine-proof family for that claim is:
+   - `scripts/validate_identity_codex_launcher.py`, which now exports `runtime_paths_status`,
+   - `scripts/check_identity_codex_launcher_migration_closure.py`, which now carries the same runtime-path closure family into aggregate active-runtime proof,
+   - runtime-only consumers in required gates, readiness, and `identity_creator`.
+3. Cross-workspace portability proof is also now machine-landed through `scripts/ci/run_identity_codex_launcher_cross_workspace_pilot_probes_ci.sh`, which replays the **same** convergence entry against another workspace-local runtime catalog with no workspace-specific wrapper exception.
+4. The closer handoff boundary after this landing is therefore narrow and explicit:
+   - continue using the same convergence entry, the same receipt family, and the same runtime-only closure semantics,
+   - treat remaining work mainly as evidence archival / broader rollout breadth / truth-sync,
+   - do **not** reopen launcher semantics,
+   - do **not** overclaim that generic workspace convergence promotion is already approved.
+
 ## 7) Boundary lock for reviewers
 
 1. Do not reinterpret this stream as permission to override the `codex` product command.
