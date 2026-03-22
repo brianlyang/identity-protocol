@@ -9,6 +9,9 @@ from pathlib import Path
 from typing import Any
 
 from actor_session_common import (
+    COMPATIBILITY_PROJECTION_STATUS_AVAILABLE,
+    COMPATIBILITY_PROJECTION_STATUS_SUPPRESSED_MULTI_IDENTITY,
+    COMPATIBILITY_PROJECTION_STATUS_UNAVAILABLE,
     actor_session_path,
     load_actor_binding,
     resolve_bound_session_id_for_identity,
@@ -134,7 +137,9 @@ def _pointer_consistency(
                 status = POINTER_WARN
             risks.append("actor_bound_to_different_identity")
 
-    # compatibility mirror consistency (warning-level drift)
+    # shared compatibility pointer surfaces are diagnostic-only; once authoritative
+    # session-primary truth exists, stale/missing compatibility projection state is
+    # fail-close rather than warning-level drift.
     legacy_pointer_path = (catalog_path.parent / "session" / "active_identity.json").resolve()
     legacy_pointer = _load_json(legacy_pointer_path) if legacy_pointer_path.exists() else {}
     legacy_identity = str(legacy_pointer.get("identity_id", "")).strip() if legacy_pointer else ""
@@ -142,25 +147,57 @@ def _pointer_consistency(
     legacy_projection_status = (
         str(legacy_pointer.get("compatibility_projection_status", "")).strip() if legacy_pointer else ""
     )
+    legacy_status = str(legacy_pointer.get("status", "")).strip() if legacy_pointer else ""
+    legacy_authority_role = str(legacy_pointer.get("authority_role", "")).strip() if legacy_pointer else ""
+    legacy_session_pointer_type = str(legacy_pointer.get("session_pointer_type", "")).strip() if legacy_pointer else ""
+    legacy_authoritative_decision_allowed = (
+        legacy_pointer.get("authoritative_decision_allowed") if legacy_pointer else None
+    )
 
     if not legacy_pointer:
-        if status == POINTER_PASS:
-            status = POINTER_WARN
+        status = POINTER_FAIL
         risks.append("legacy_pointer_missing")
     else:
         expected_identity = actor_binding_identity or identity_id
-        if legacy_projection_status == "SUPPRESSED_MULTI_IDENTITY":
-            if status == POINTER_PASS:
-                status = POINTER_WARN
-            risks.append("legacy_pointer_projection_suppressed_multi_identity")
-        elif legacy_identity and expected_identity and legacy_identity != expected_identity:
-            if status == POINTER_PASS:
-                status = POINTER_WARN
-            risks.append("legacy_pointer_identity_mismatch")
+        diagnostic_projection = legacy_projection_status in {
+            COMPATIBILITY_PROJECTION_STATUS_SUPPRESSED_MULTI_IDENTITY,
+            COMPATIBILITY_PROJECTION_STATUS_UNAVAILABLE,
+        }
+        if diagnostic_projection:
+            if legacy_authority_role != "compatibility_mirror":
+                status = POINTER_FAIL
+                risks.append("legacy_pointer_authority_role_invalid")
+            if legacy_authoritative_decision_allowed is not False:
+                status = POINTER_FAIL
+                risks.append("legacy_pointer_authoritative_decision_flag_invalid")
+        if legacy_projection_status == COMPATIBILITY_PROJECTION_STATUS_SUPPRESSED_MULTI_IDENTITY:
+            if legacy_identity:
+                status = POINTER_FAIL
+                risks.append("legacy_pointer_projection_suppressed_identity_not_empty")
+        elif legacy_projection_status == COMPATIBILITY_PROJECTION_STATUS_UNAVAILABLE:
+            if legacy_identity:
+                status = POINTER_FAIL
+                risks.append("legacy_pointer_projection_unavailable_identity_not_empty")
+        else:
+            if not legacy_identity:
+                status = POINTER_FAIL
+                risks.append("legacy_pointer_identity_missing")
+            elif expected_identity and legacy_identity != expected_identity:
+                status = POINTER_FAIL
+                risks.append("legacy_pointer_identity_mismatch")
+                if legacy_projection_status == COMPATIBILITY_PROJECTION_STATUS_AVAILABLE:
+                    risks.append("legacy_pointer_projection_available_diagnostic_only")
+        if legacy_projection_status == COMPATIBILITY_PROJECTION_STATUS_AVAILABLE and legacy_identity == expected_identity:
+            risks.append("legacy_pointer_projection_available_live_surface")
         if legacy_catalog and legacy_catalog != str(catalog_path):
-            if status == POINTER_PASS:
-                status = POINTER_WARN
+            status = POINTER_FAIL
             risks.append("legacy_pointer_catalog_mismatch")
+        if not legacy_catalog:
+            status = POINTER_FAIL
+            risks.append("legacy_pointer_catalog_missing")
+        if legacy_status and legacy_status != "active" and not diagnostic_projection:
+            status = POINTER_FAIL
+            risks.append("legacy_pointer_status_not_active")
 
     detail = {
         "actor_session_path": str(actor_session_file),
@@ -168,6 +205,10 @@ def _pointer_consistency(
         "legacy_pointer_path": str(legacy_pointer_path),
         "legacy_pointer_identity_id": legacy_identity,
         "legacy_pointer_projection_status": legacy_projection_status,
+        "legacy_pointer_status": legacy_status,
+        "legacy_pointer_authority_role": legacy_authority_role,
+        "legacy_pointer_session_pointer_type": legacy_session_pointer_type,
+        "legacy_pointer_authoritative_decision_allowed": legacy_authoritative_decision_allowed,
     }
     return status, risks, detail
 
