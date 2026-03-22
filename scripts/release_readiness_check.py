@@ -779,6 +779,13 @@ def main() -> int:
             "--baseline-policy",
             args.baseline_policy,
         ],
+        [
+            "python3",
+            "scripts/validate_identity_switch_closure_semantics.py",
+            "--catalog",
+            catalog,
+            "--json-only",
+        ],
         ["python3", "scripts/validate_audit_snapshot_index.py"],
         *POST_CLOSURE_GOVERNANCE_SCRIPTS,
         ["python3", "scripts/validate_native_chat_bootstrap_entry_stream.py", "--json-only"],
