@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 81`, `command snippets checked: 866`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 81`, `command snippets checked: 870`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -617,11 +617,15 @@ Root cause:
   - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
   - `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md`
 - `implementation_follow_on`:
-  - shared route/script consumer builders
-  - receipt validators for route-scoped and aggregate artifacts that opt into anchor preservation
+  - `scripts/instance_script_orchestration_common.py`
+  - `scripts/validate_route_script_receipt_join.py`
+  - `scripts/validate_identity_capability_activation.py`
+  - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
 - `machine_acceptance`:
   - anchor ref/schema/source/revision/digest/status remain machine-visible;
   - downstream consumers cannot silently drop a declared anchor without a governed mismatch signal;
+  - partial anchor families fail closed once any anchor field is emitted;
+  - aggregate promotion occurs only under single-family, non-ambiguous projection across contributing route rows;
   - anchor projection remains on the shared validator/probe/control path.
 - `non_goals`:
   - do not freeze product-specific keywords, scoring models, or supplier logic into protocol SSOT;
@@ -635,10 +639,15 @@ Root cause:
   - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
   - `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md`
 - `implementation_follow_on`:
-  - aggregate/report builders that choose to publish sentinel refs
+  - `scripts/instance_script_orchestration_common.py`
+  - `scripts/validate_route_script_receipt_join.py`
+  - `scripts/validate_identity_capability_activation.py`
+  - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
   - release/audit consumers only when a stream explicitly opts into sentinel gating
 - `machine_acceptance`:
   - sentinel ref/schema/status remain machine-visible when present;
+  - partial sentinel families fail closed once any sentinel field is emitted;
+  - aggregate promotion occurs only under single-family, non-ambiguous projection across contributing route rows;
   - advisory vs fail-close semantics are explicit;
   - sentinel support does not bypass route/script/dependency provenance requirements.
 - `non_goals`:
