@@ -345,6 +345,7 @@ Hard semantics:
 3. Canonical pack-local launcher assets belong under `<pack_path>/scripts/launchers/`; `runtime/` and `scripts/identity/` are non-canonical launcher homes.
 4. Launcher-owned startup injection must preserve `v1.6.12` tuple/bootstrap truth and keep manual `model_instructions_file` / `project_doc_fallback_filenames` override attempts fail-closed.
 5. Workspace bridge helpers under `scripts/codex_native_chat/` remain migration/evidence paths only until protocol-owned launcher render/install/validate assets land.
+6. For active runtime identities, launcher closure is not allowed to remain `SKIPPED_NOT_REQUIRED(contract_not_required)` inside governed lifecycle surfaces; contract backfill, launcher install, and migration-closure checks are the machine-owned recovery path.
 
 ### Canonical identity-instance script orchestration boundary (v1.6.15 additive)
 
