@@ -160,6 +160,27 @@ for row in records:
 print("launcher_convergence_apply_status=PASS_REQUIRED")
 PY
 
+FRESH_TRUTH_SYNC_JSON="${TMP_ROOT}/fresh-truth-sync.json"
+python3 "${REPO_ROOT}/scripts/refresh_identity_codex_launcher_evidence_truth_sync.py" \
+  --artifact-root "${EVIDENCE_ROOT}" \
+  --run-token probe \
+  --workspace-root "${WORKSPACE_ROOT}" \
+  --json-only > "${FRESH_TRUTH_SYNC_JSON}"
+
+python3 - "${FRESH_TRUTH_SYNC_JSON}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["truth_sync_status"] == "PASS_REQUIRED", payload
+assert payload["receipts_with_changes"] == 0, payload
+assert payload["manifest_write_count"] == 0, payload
+assert payload["repair_status"] == "already_truth_synced", payload
+print("launcher_convergence_fresh_truth_sync_status=PASS_REQUIRED")
+PY
+
 python3 - "${APPLY_JSON}" <<'PY'
 import json
 import sys
