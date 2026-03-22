@@ -520,9 +520,14 @@ if python3 "${ROOT}/scripts/validate_route_script_receipt_join.py" \
   exit 1
 fi
 
-python3 - "${POS_MANIFEST_JSON}" "${POS_ORCH_JSON}" "${POS_RECEIPT_JSON}" "${POS_CAPABILITY_JSON}" "${POS_LANE_JSON}" "${NEG_MANIFEST_JSON}" "${NEG_BINDING_JSON}" "${NEG_RECEIPT_JSON}" "${NEG_LANE_CONTRACT_JSON}" "${NEG_LANE_RECEIPT_JSON}" "${HOOK_RECEIPT_JSON}" "${HOOK_CAPABILITY_JSON}" "${NEG_HOOK_RECEIPT_JSON}" "${IDENTITY_ID}" "${TMP_ROOT}" <<'PY'
+python3 - "${POS_MANIFEST_JSON}" "${POS_ORCH_JSON}" "${POS_RECEIPT_JSON}" "${POS_CAPABILITY_JSON}" "${POS_LANE_JSON}" "${NEG_MANIFEST_JSON}" "${NEG_BINDING_JSON}" "${NEG_RECEIPT_JSON}" "${NEG_LANE_CONTRACT_JSON}" "${NEG_LANE_RECEIPT_JSON}" "${HOOK_RECEIPT_JSON}" "${HOOK_CAPABILITY_JSON}" "${NEG_HOOK_RECEIPT_JSON}" "${IDENTITY_ID}" "${TMP_ROOT}" "${ROOT}" "${CATALOG_PATH}" "${PACK_ROOT}" <<'PY'
 import json
+import shutil
+import subprocess
 import sys
+from pathlib import Path
+
+import yaml
 
 (
     positive_manifest,
@@ -543,6 +548,9 @@ import sys
 ]
 identity_id = sys.argv[14]
 tmp_root = sys.argv[15]
+root = Path(sys.argv[16]).resolve()
+catalog_path = Path(sys.argv[17]).resolve()
+pack_root = Path(sys.argv[18]).resolve()
 
 assert positive_manifest["instance_script_manifest_status"] == "PASS_REQUIRED", positive_manifest
 assert positive_orch["instance_script_orchestration_status"] == "PASS_REQUIRED", positive_orch
@@ -584,6 +592,240 @@ assert hook_capability["outcome_sentinel_ref"] == "sentinel://continuity/advisor
 assert negative_hook_receipt["route_script_receipt_join_status"] == "FAIL_REQUIRED", negative_hook_receipt
 assert any("semantic_anchor_missing:semantic_anchor_digest" in reason for reason in negative_hook_receipt.get("stale_reasons", [])), negative_hook_receipt
 
+catalog_doc = yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
+catalog_rows = [row for row in (catalog_doc.get("identities") or []) if isinstance(row, dict)]
+source_row = next((dict(row) for row in catalog_rows if str(row.get("id", "")).strip() == identity_id), None)
+assert source_row is not None, {"identity_id": identity_id, "catalog_path": str(catalog_path)}
+
+cross_pack_root = Path(tmp_root) / "cross-pack-adoption-probe"
+good_catalog_path = cross_pack_root / "good-catalog.local.yaml"
+dirty_catalog_path = cross_pack_root / "dirty-catalog.local.yaml"
+cross_pack_root.mkdir(parents=True, exist_ok=True)
+
+
+def _replace_identity_strings(value, source_identity: str, target_identity: str):
+    if isinstance(value, str):
+        return target_identity if value == source_identity else value
+    if isinstance(value, list):
+        return [_replace_identity_strings(item, source_identity, target_identity) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: _replace_identity_strings(item, source_identity, target_identity)
+            for key, item in value.items()
+        }
+    return value
+
+
+def _rewrite_pack_identity(target_pack_root: Path, source_identity: str, target_identity: str) -> None:
+    for json_path in target_pack_root.rglob("*.json"):
+        doc = json.loads(json_path.read_text(encoding="utf-8"))
+        rewritten = _replace_identity_strings(doc, source_identity, target_identity)
+        json_path.write_text(json.dumps(rewritten, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _run_json(cmd: list[str]) -> tuple[int, dict]:
+    proc = subprocess.run(cmd, cwd=str(root), capture_output=True, text=True, check=False)
+    try:
+        payload = json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        raise AssertionError(
+            {
+                "command": cmd,
+                "rc": proc.returncode,
+                "stdout": proc.stdout,
+                "stderr": proc.stderr,
+            }
+        ) from exc
+    assert isinstance(payload, dict), payload
+    return proc.returncode, payload
+
+
+def _write_catalog(path: Path, rows: list[dict]) -> None:
+    path.write_text(yaml.safe_dump({"identities": rows}, sort_keys=False), encoding="utf-8")
+
+
+def _scrub_topology_dirs(catalog_for_pack: Path, target_identity: str, target_pack_root: Path) -> dict:
+    max_passes = 8
+    for _ in range(max_passes):
+        rc, payload = _run_json(
+            [
+                "python3",
+                str((root / "scripts" / "validate_identity_instance_pack_topology.py").resolve()),
+                "--catalog",
+                str(catalog_for_pack),
+                "--identity-id",
+                target_identity,
+                "--json-only",
+            ]
+        )
+        if rc == 0 and payload.get("instance_pack_topology_status") == "PASS_REQUIRED":
+            return payload
+        removable = []
+        for row in (payload.get("unknown_dir_rows") or []) + (payload.get("forbidden_dir_rows") or []):
+            token = str(row).strip()
+            if ":" not in token:
+                continue
+            _, relpath = token.split(":", 1)
+            candidate = target_pack_root / relpath
+            if candidate.exists():
+                removable.append(candidate)
+        if not removable:
+            raise AssertionError(payload)
+        for candidate in removable:
+            if candidate.is_dir():
+                shutil.rmtree(candidate)
+            else:
+                candidate.unlink()
+    raise AssertionError({"topology_scrub_status": "FAIL_REQUIRED", "identity_id": target_identity})
+
+
+def _make_pack_copy(
+    *,
+    source_pack_root: Path,
+    source_identity: str,
+    target_pack_root: Path,
+    target_identity: str,
+    target_catalog_path: Path,
+    target_rows: list[dict],
+    inject_forbidden_cache_dir: bool = False,
+) -> dict:
+    if target_pack_root.exists():
+        shutil.rmtree(target_pack_root)
+    shutil.copytree(source_pack_root, target_pack_root)
+    _rewrite_pack_identity(target_pack_root, source_identity, target_identity)
+    row = dict(source_row)
+    row["id"] = target_identity
+    row["pack_path"] = str(target_pack_root)
+    target_rows.append(row)
+    _write_catalog(target_catalog_path, target_rows)
+    topology_payload = _scrub_topology_dirs(target_catalog_path, target_identity, target_pack_root)
+    if inject_forbidden_cache_dir:
+        cache_dir = target_pack_root / "scripts" / "__pycache__"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        (cache_dir / "probe.pyc").write_bytes(b"v1615-probe")
+        rc, topology_payload = _run_json(
+            [
+                "python3",
+                str((root / "scripts" / "validate_identity_instance_pack_topology.py").resolve()),
+                "--catalog",
+                str(target_catalog_path),
+                "--identity-id",
+                target_identity,
+                "--json-only",
+            ]
+        )
+        assert rc != 0, topology_payload
+        assert topology_payload.get("instance_pack_topology_status") == "FAIL_REQUIRED", topology_payload
+    return topology_payload
+
+
+good_rows: list[dict] = []
+good_pack_a = cross_pack_root / "good-pack-a"
+good_pack_b = cross_pack_root / "good-pack-b"
+_make_pack_copy(
+    source_pack_root=pack_root,
+    source_identity=identity_id,
+    target_pack_root=good_pack_a,
+    target_identity="v1615-cross-pack-good-a",
+    target_catalog_path=good_catalog_path,
+    target_rows=good_rows,
+)
+_make_pack_copy(
+    source_pack_root=pack_root,
+    source_identity=identity_id,
+    target_pack_root=good_pack_b,
+    target_identity="v1615-cross-pack-good-b",
+    target_catalog_path=good_catalog_path,
+    target_rows=good_rows,
+)
+
+dirty_rows: list[dict] = []
+dirty_pack_good = cross_pack_root / "dirty-pack-good"
+dirty_pack_bad = cross_pack_root / "dirty-pack-bad"
+_make_pack_copy(
+    source_pack_root=pack_root,
+    source_identity=identity_id,
+    target_pack_root=dirty_pack_good,
+    target_identity="v1615-cross-pack-dirty-good",
+    target_catalog_path=dirty_catalog_path,
+    target_rows=dirty_rows,
+)
+_make_pack_copy(
+    source_pack_root=pack_root,
+    source_identity=identity_id,
+    target_pack_root=dirty_pack_bad,
+    target_identity="v1615-cross-pack-dirty-bad",
+    target_catalog_path=dirty_catalog_path,
+    target_rows=dirty_rows,
+    inject_forbidden_cache_dir=True,
+)
+
+good_default_rc, good_default = _run_json(
+    [
+        "python3",
+        str((root / "scripts" / "validate_identity_instance_script_cross_pack_adoption.py").resolve()),
+        "--catalog",
+        str(good_catalog_path),
+        "--json-only",
+    ]
+)
+assert good_default_rc == 0, good_default
+assert good_default["instance_script_cross_pack_adoption_status"] == "PASS_REQUIRED", good_default
+assert good_default["proof_boundary_mode"] == "orchestration_family_only", good_default
+assert good_default["adoption_ready_identity_count"] == 2, good_default
+assert good_default["topology_clean_adoption_ready_count"] == 2, good_default
+assert good_default["topology_interlock_violation_count"] == 0, good_default
+
+good_topology_rc, good_topology = _run_json(
+    [
+        "python3",
+        str((root / "scripts" / "validate_identity_instance_script_cross_pack_adoption.py").resolve()),
+        "--catalog",
+        str(good_catalog_path),
+        "--proof-boundary",
+        "topology_clean",
+        "--json-only",
+    ]
+)
+assert good_topology_rc == 0, good_topology
+assert good_topology["instance_script_cross_pack_adoption_status"] == "PASS_REQUIRED", good_topology
+assert good_topology["proof_boundary_mode"] == "topology_clean", good_topology
+assert good_topology["topology_clean_adoption_ready_count"] == 2, good_topology
+
+dirty_default_rc, dirty_default = _run_json(
+    [
+        "python3",
+        str((root / "scripts" / "validate_identity_instance_script_cross_pack_adoption.py").resolve()),
+        "--catalog",
+        str(dirty_catalog_path),
+        "--json-only",
+    ]
+)
+assert dirty_default_rc == 0, dirty_default
+assert dirty_default["instance_script_cross_pack_adoption_status"] == "PASS_REQUIRED", dirty_default
+assert dirty_default["proof_boundary_mode"] == "orchestration_family_only", dirty_default
+assert dirty_default["adoption_ready_identity_count"] == 2, dirty_default
+assert dirty_default["topology_clean_adoption_ready_count"] == 1, dirty_default
+assert dirty_default["topology_interlock_violation_count"] == 1, dirty_default
+assert any("v1615-cross-pack-dirty-bad:" in row for row in dirty_default.get("topology_interlock_violation_rows", [])), dirty_default
+
+dirty_topology_rc, dirty_topology = _run_json(
+    [
+        "python3",
+        str((root / "scripts" / "validate_identity_instance_script_cross_pack_adoption.py").resolve()),
+        "--catalog",
+        str(dirty_catalog_path),
+        "--proof-boundary",
+        "topology_clean",
+        "--json-only",
+    ]
+)
+assert dirty_topology_rc != 0, dirty_topology
+assert dirty_topology["instance_script_cross_pack_adoption_status"] == "FAIL_REQUIRED", dirty_topology
+assert dirty_topology["error_code"] == "IP-ORCH-ADOPT-003", dirty_topology
+assert dirty_topology["topology_clean_adoption_ready_count"] == 1, dirty_topology
+assert any("topology_not_pass" in row.get("stale_reasons", []) for row in dirty_topology.get("identity_rows", [])), dirty_topology
+
 print(
     json.dumps(
         {
@@ -602,6 +844,10 @@ print(
             "negative_lane_receipt_failure": "lane_receipt_lane_id_undeclared",
             "positive_optional_hook_projection_status": "PASS_REQUIRED",
             "negative_optional_hook_failure": "semantic_anchor_missing:semantic_anchor_digest",
+            "positive_cross_pack_adoption_status": good_default["instance_script_cross_pack_adoption_status"],
+            "positive_cross_pack_topology_clean_status": good_topology["instance_script_cross_pack_adoption_status"],
+            "negative_cross_pack_topology_boundary_failure": dirty_topology["error_code"],
+            "negative_cross_pack_topology_interlock_count": dirty_default["topology_interlock_violation_count"],
             "tmp_root": tmp_root,
         },
         ensure_ascii=False,
