@@ -2,6 +2,7 @@
 .identity-protocol/
 .codex/
 .tmp/
+.IDENTITY.run__*.md
 
 # Optional workspace-mapped local catalogs/instances
 identity/catalog.local.yaml
