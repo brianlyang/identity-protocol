@@ -200,15 +200,14 @@ These names and directories are frozen by this stream. The renderer / installer 
 2. That package exists to align architecture, audit, and implementation owners on the orchestration/control-plane shape before coding begins.
 3. The package does **not** create a new stream by default; launcher-specific convergence remains owned by `v1.6.14`.
 4. The workbook family may track decision status and rollout readiness, but it does not become the semantic owner of launcher convergence.
-5. The minimum questions that must be frozen before coding are:
-   - canonical entry surface,
-   - workspace-local catalog authority and repo-fixture mutation policy,
-   - repair composition path,
-   - mutation scope,
-   - dry-run / apply / fail-close semantics,
-   - governed convergence receipt family and evidence path,
-   - lifecycle / gate boundary,
-   - and cross-workspace pilot proof rules.
+5. The accepted control-plane freeze for coding is:
+   - canonical entry surface = `scripts/run_identity_codex_launcher_workspace_convergence.py`,
+   - catalog authority = workspace-local runtime catalog only, with repository fixture catalogs fail-closed out of scope,
+   - repair composition = aggregate checker -> shared backfill -> launcher install -> single-identity validate -> aggregate recheck,
+   - mutation scope = shared transitive backfill reuse is allowed but must be disclosed as `transitive_backfill_plus_launcher_install`,
+   - receipt family = `identity_codex_launcher_workspace_convergence_receipt_v1` under `activity/evidence/v1614-identity-codex-launcher/<YYYY-MM-DD>/..._summary.json`,
+   - gate boundary = passive required gates/readiness stay on the aggregate checker while synthetic probes may test the convergence entry and explicit lifecycle repair surfaces may delegate to it,
+   - cross-workspace pilot = same convergence entry against another workspace-local runtime catalog, never workspace-specific wrapper exceptions.
 6. Only if the scope is deliberately promoted from launcher-only convergence into a generic multi-lane convergence framework should reviewers open a new stream after this roundtable.
 
 ## 7) Future promotion exit criteria
