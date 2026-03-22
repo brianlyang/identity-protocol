@@ -56,6 +56,7 @@ Execution mode: topic-level canonical SSOT for v1.6.14 identity-Codex launcher g
    - or, when the per-identity launcher already exists, `id-<identity-id> commands`
 9. That command-discovery surface must print already assembled copyable commands; operators must not need to manually splice identity ids, launcher names, or resume thread UUIDs in chat.
 10. The same command-discovery surface must also expose a structured `--json-only` bundle for instance/runtime consumers, so protocol remains the guidance owner while the concrete user-facing answer remains the identity instance’s responsibility.
+11. That structured launcher bundle may embed internal support bundles from other governed streams, such as `v1.6.16` continuity support, but those embedded bundles remain internal-only and must not create a second operator-facing command family.
 
 ### 2.2 Canonical path contract
 
