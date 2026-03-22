@@ -40,6 +40,10 @@ def _shell_join(parts: list[str]) -> str:
     return " ".join(shlex.quote(str(part)) for part in parts)
 
 
+def _build_display_command(raw_command: list[str]) -> str:
+    return _shell_join(raw_command)
+
+
 def _resolve_resume_thread(identity_id: str, explicit_thread_id: str) -> tuple[str, str]:
     explicit = str(explicit_thread_id or "").strip()
     if explicit:
@@ -51,12 +55,6 @@ def _resolve_resume_thread(identity_id: str, explicit_thread_id: str) -> tuple[s
     if current_identity_id and current_identity_id != identity_id:
         return "", "current_host_thread_belongs_to_another_identity"
     return host_thread_id, "current_host_thread"
-
-
-def _build_shell_command(raw_command: list[str]) -> str:
-    command_text = _shell_join(raw_command).replace("'", "'\"'\"'")
-    return f"zsh -lic '{command_text}'"
-
 
 def _emit_commands(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
@@ -166,8 +164,8 @@ def _cmd_commands(args: argparse.Namespace) -> int:
 
     start_short = [shortcut]
     start_generic = [GENERIC_LAUNCHER_NAME, "--identity-id", args.identity_id]
-    preferred_start_command = _build_shell_command(start_short)
-    preferred_generic_start_command = _build_shell_command(start_generic)
+    preferred_start_command = _build_display_command(start_short)
+    preferred_generic_start_command = _build_display_command(start_generic)
     command_discovery = launcher_command_discovery_doc(args.identity_id)
 
     thread_id, thread_source = _resolve_resume_thread(args.identity_id, args.thread_id)
@@ -202,7 +200,7 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         "copyable_commands": {
             "start": {
                 "preferred": preferred_start_command,
-                "absolute": _shell_join([str(shortcut_path)]),
+                "absolute": _build_display_command([str(shortcut_path)]),
                 "generic": preferred_generic_start_command,
             },
             "resume": None,
@@ -211,9 +209,9 @@ def _cmd_commands(args: argparse.Namespace) -> int:
     if thread_id:
         resume_short = [shortcut, "resume", thread_id]
         resume_generic = [GENERIC_LAUNCHER_NAME, "--identity-id", args.identity_id, "--", "resume", thread_id]
-        preferred_resume_command = _build_shell_command(resume_short)
-        absolute_resume_command = _shell_join([str(shortcut_path), "resume", thread_id])
-        generic_resume_command = _build_shell_command(resume_generic)
+        preferred_resume_command = _build_display_command(resume_short)
+        absolute_resume_command = _build_display_command([str(shortcut_path), "resume", thread_id])
+        generic_resume_command = _build_display_command(resume_generic)
         payload.update(
             {
                 "preferred_resume_command": preferred_resume_command,
