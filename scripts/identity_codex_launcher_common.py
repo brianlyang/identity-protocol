@@ -10,6 +10,7 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
+from actor_session_common import resolve_required_protocol_actor_id
 from instance_script_orchestration_common import resolve_pack_task
 from resolve_identity_context import default_local_catalog_path, resolve_identity, resolve_protocol_root
 from runtime_temp_path_common import runtime_temp_file
@@ -908,7 +909,7 @@ def exec_identity_codex(
     *,
     identity_id: str,
     codex_args: list[str],
-    actor_id: str = "assistant:codex",
+    actor_id: str = "",
     explicit_session_id: str = "",
     raw_catalog: str = "",
     work_layer: str = "instance",
@@ -924,7 +925,7 @@ def exec_identity_codex(
         )
     protocol_home = resolve_protocol_root(os.environ.get("IDENTITY_PROTOCOL_HOME", ""))
     catalog_path = resolve_catalog_path(raw_catalog)
-    actor_token = str(actor_id or "assistant:codex").strip() or "assistant:codex"
+    actor_token = resolve_required_protocol_actor_id(str(actor_id or ""))
     session_id, session_source = resolve_launcher_tuple(
         identity_id=identity_id,
         actor_id=actor_token,
