@@ -572,28 +572,31 @@ Root cause:
 1. The rows below capture desensitized follow-on reinforcement for active streams; they are routed through this workbook so the protocol architect can land them on canonical governance/review surfaces without reopening the closed `ISSUE-001..023` correctness family.
 2. These rows are routing/intake metadata only; semantic ownership remains with the target stream governance doc and its review ledger.
 
-### RF-ORCH-001 - Aggregate route-scope/cardinality projection gap
+### RF-ORCH-001 - Aggregate route-scope/cardinality projection closure
 
 - `classification`: architecture reinforcement intake, non-reopen
-- `judgment`: aggregate capability-activation artifacts using `route-any-ready` are multi-route status summaries rather than route-scoped receipts; forcing `route_selected` there would mis-model the surface, but leaving scope/cardinality implicit weakens provenance.
+- `judgment`: landed shared builders/validators now freeze aggregate capability-activation artifacts as multi-route summaries rather than route-scoped receipts, so the protocol-owned requirement is explicit scope/cardinality projection instead of a synthetic `route_selected`.
 - `canonical_landings`:
   - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
   - `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md`
 - `implementation_follow_on`:
+  - `scripts/instance_script_orchestration_common.py`
   - `scripts/validate_identity_capability_activation.py`
-  - shared aggregate route-activation report builders/validators
+  - `scripts/validate_route_script_receipt_join.py`
+  - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
 - `machine_acceptance`:
-  - aggregate reports declare route scope/cardinality and route activation counts;
-  - route-scoped admission/execution/emit/recovery receipts continue requiring `route_selected`;
-  - validator/probe coverage fail-closes if an artifact claims single-route scope without route provenance.
+  - aggregate artifacts reuse one canonical field family: `route_scope`, `route_scope_mode`, `route_activation_strategy`, `route_ready_count`, `route_total_count`, `route_ids`, and `route_selection_cardinality`;
+  - route-scoped admission/execution/emit/recovery receipts continue requiring `route_selected` and keep `route_scope_mode=route_receipt` plus `route_ids=[route_selected]`;
+  - validator/probe coverage fail-closes if an artifact claims single-route scope without route provenance or drifts into parallel alias vocabulary.
 - `non_goals`:
   - do not invent an arbitrary selected route for aggregate `route-any-ready` status;
-  - do not weaken `route_selected` on route-scoped receipts.
+  - do not weaken `route_selected` on route-scoped receipts;
+  - do not mint parallel aliases such as `projection_scope`, `route_count`, or `cardinality`.
 
-### RF-ORCH-002 - Declared-vs-observed dependency projection gap
+### RF-ORCH-002 - Declared-vs-observed dependency projection closure
 
 - `classification`: architecture reinforcement intake, non-reopen
-- `judgment`: route contracts already declare primary/fallback skills, required MCP, and instance-script bindings while receipts prove observed usage; the missing hardening is one standard declared-vs-observed projection across report families.
+- `judgment`: landed shared builders/validators now standardize one declared-vs-observed dependency projection across route-scoped and aggregate artifacts instead of leaving the diff fragmented across report families.
 - `canonical_landings`:
   - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
   - `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md`
@@ -601,13 +604,15 @@ Root cause:
   - `scripts/instance_script_orchestration_common.py`
   - `scripts/validate_route_script_receipt_join.py`
   - `scripts/validate_identity_capability_activation.py`
+  - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
 - `machine_acceptance`:
-  - declared dependencies, observed activations/executions, and gap reasons are machine-visible;
-  - undeclared observed usage fails closed or is surfaced through one governed gap model;
+  - declared dependencies, observed activations/executions, and gap reasons are machine-visible through `declared_dependency_projection`, `observed_dependency_projection`, `dependency_gap_reasons`, `undeclared_usage_*`, and `missing_declared_dependency_*`;
+  - undeclared observed usage and missing declared dependency are surfaced through one governed gap model rather than per-artifact narrative-only wording;
   - the same declared/observed projection stays reusable across route-scoped and aggregate artifacts where applicable.
 - `non_goals`:
   - do not replace machine-readable diff with narrative-only explanations;
-  - do not absorb instance-specific business heuristics into dependency provenance.
+  - do not absorb instance-specific business heuristics into dependency provenance;
+  - do not create pack-local dependency dialects outside the shared validator/probe/control family.
 
 ### RF-ORCH-003 - Semantic-anchor extension-hook gap
 
