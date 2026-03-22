@@ -208,6 +208,10 @@ These names and directories are frozen by this stream. The renderer / installer 
    - and `identity_creator` launcher auto-repair enforcement
    must all consume launcher closure in `workspace-runtime-only` mode so repo fixture catalogs never dilute active-runtime launcher proof.
 11. The first cross-workspace pilot proof is now machine-landed through `scripts/ci/run_identity_codex_launcher_cross_workspace_pilot_probes_ci.sh`, which reuses the same convergence entry against another workspace-local runtime catalog inside a temporary workspace and temporary `CODEX_HOME` with no workspace-specific wrapper exception.
+12. Current-state note (2026-03-22): that cross-workspace pilot now also freezes the direct-entry/runtime-authority edge conditions exposed by the `fqsh` feedback:
+   - a fresh `run_identity_codex_launcher_workspace_convergence.py --mode apply` bundle must already be truth-synced, so an immediate `refresh_identity_codex_launcher_evidence_truth_sync.py --json-only` dry-run returns `PASS_REQUIRED` with zero manifest rewrites;
+   - `check_identity_codex_launcher_migration_closure.py --catalog .identity/catalog.local.yaml` must resolve the **caller workspace** catalog rather than rebinding to the protocol repo;
+   - `resolve_identity_context.py resolve --identity-id <id>` from a sibling workspace must classify the workspace-local runtime catalog as `source_layer=project` with `resolved_scope=USER` instead of degrading to `unknown`.
 
 ### 6.2 Discussion-package boundary before coding
 
@@ -229,6 +233,7 @@ These names and directories are frozen by this stream. The renderer / installer 
    - launcher convergence is fully landed as a protocol-owned control-plane asset, including the canonical entry, governed receipt family, probes, and passive-gate boundary;
    - the **same** convergence entry is proven across more than one workspace-local runtime catalog with no workspace-specific wrapper exception;
    - at least one additional non-launcher family proves that it can reuse the same convergence control-plane grammar without transferring semantic ownership away from its existing stream;
+   - the promotion package explicitly shows that the proposed framework is a consolidation of existing protocol assets (notification/trigger surfaces, protocol-feedback inbox/outbox, family convergence entries, probe/validator fact surfaces, receipt/manifest truth-sync) rather than a newly invented transport plane, side channel, or parallel command family;
    - the proposed abstraction does **not** require compatibility downgrades, weaker catalog authority, diluted receipt semantics, or any weakest-common-denominator relaxation of the launcher lane.
 5. Until that explicit promotion review passes, future families such as health/heal, update/adoption, continuity/re-entry, or instance-script-orchestration convergence remain owned by their respective streams and may not be summarized as an already-open generic framework.
 6. Workbook follow-on tracking is acceptable as reminder state only, but it must never be treated as the authority that upgrades this deferred promotion into an approved new stream.
@@ -247,10 +252,11 @@ These names and directories are frozen by this stream. The renderer / installer 
    - active-runtime launcher migration closure checker under `scripts/check_identity_codex_launcher_migration_closure.py`,
    - protocol-owned workspace-level convergence entry under `scripts/run_identity_codex_launcher_workspace_convergence.py`,
    - governed launcher convergence evidence bundles whose receipts keep `evidence_ref` / `manifest_ref` machine-visible and whose archival root now carries `EVIDENCE_MANIFEST.<run_token>.json`,
-   - post-closure truth-sync/backfill through `scripts/refresh_identity_codex_launcher_evidence_truth_sync.py` so earlier convergence receipts can be normalized without reopening launcher semantics,
+   - post-closure truth-sync/backfill through `scripts/refresh_identity_codex_launcher_evidence_truth_sync.py` so earlier convergence receipts can be normalized without reopening launcher semantics, while fresh convergence applies already emit no-op truth-sync bundles on first dry-run,
    - strict lifecycle enforcement where `identity_creator validate` fail-closes on active-runtime launcher migration debt and `identity_creator update` performs governed auto-repair + recheck,
    - required-runtime-gates inclusion for the launcher probe lane,
-   - explicit `scripts/release_readiness_check.py` consumption of both the convergence-entry probe lane and the aggregate launcher migration closure checker for readiness symmetry.
+   - explicit `scripts/release_readiness_check.py` consumption of both the convergence-entry probe lane and the aggregate launcher migration closure checker for readiness symmetry,
+   - direct-entry resolver parity where sibling-workspace `resolve_identity_context.py` and relative `--catalog` closure checks both bind to the caller workspace runtime catalog rather than to protocol-repo defaults.
 3. The correct interpretation after closure is:
    - `1.6.14` semantic ownership is frozen,
    - core implementation is landed,
