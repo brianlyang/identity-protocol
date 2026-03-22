@@ -1,6 +1,6 @@
 # Protocol Remediation Audit Ledger (v1.6.15 instance-script orchestration stream)
 
-Status: Active (baseline shared validator/probe/consumer closure, including execution-lane admission governance, plus minimal non-empty cross-pack proof verified, 2026-03-22; broader adoption rollout continues)  
+Status: Active (baseline shared validator/probe/consumer closure, including execution-lane admission governance, plus minimal non-empty orchestration-family cross-pack proof verified, 2026-03-22; topology-clean live proof and broader adoption rollout remain open)  
 Scope: protocol review ledger for route -> instance-script declarative join, route -> execution-lane admission, pack-local script manifest governance, and instance-script receipt-family modeling
 
 ## 0) Stream objective
@@ -48,6 +48,7 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
    - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
    - `scripts/release_readiness_check.py`
    - `scripts/validate_identity_capability_activation.py`
+   - `scripts/validate_identity_instance_script_cross_pack_adoption.py`
    - `scripts/create_identity_pack.py`
    - `scripts/repair_contract_backfill.py`
    - `scripts/identity_creator.py`
@@ -179,12 +180,16 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
 ## 6) Accepted closure boundary
 
 1. `v1.6.15` is closed at the contract-freeze level when the route/script/dependency/receipt/execution-lane model is frozen in protocol docs and mappings.
-2. Baseline implementation closure for this stream is now satisfied because the landed shared validator/probe/consumer family has non-empty cross-pack reuse proof instead of chat-only adoption claims.
+2. Baseline implementation closure for this stream is now satisfied because the landed shared validator/probe/consumer family has non-empty orchestration-family cross-pack reuse proof instead of chat-only adoption claims.
 3. Current-state note (2026-03-22):
    - `python3 scripts/validate_identity_instance_script_cross_pack_adoption.py --catalog .identity/catalog.local.yaml --json-only`
    - observed `PASS_REQUIRED` with `eligible_identity_count=2`, `checked_identity_count=2`, and `adoption_ready_identity_count=2`
-   - current proof packs: `custom-creative-ecom-analyst`, `base-repo-closure-orchestrator`
-4. Broader rollout breadth remains open until wider target-pack evidence confirms the same shared family continues to hold without topology drift.
+   - the same payload now projects topology hygiene explicitly through `topology_clean_adoption_ready_count` and `topology_interlock_violation_rows`
+   - current orchestration-family proof packs: `custom-creative-ecom-analyst`, `base-repo-closure-orchestrator`
+   - `python3 scripts/validate_identity_instance_script_cross_pack_adoption.py --catalog .identity/catalog.local.yaml --proof-boundary topology_clean --json-only`
+   - current live outcome is not yet satisfied because `custom-creative-ecom-analyst` still fails inherited `v1.6.13` topology hygiene
+   - `bash scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh` now proves positive topology-clean cross-pack replay plus negative topology-interlock fail-close on a synthetic multi-pack catalog
+4. Broader rollout breadth and topology-clean live proof remain open until wider target-pack evidence confirms the same shared family continues to hold without topology drift.
 5. Instance packs may already be able to self-organize around pack-root `scripts/`, but chat evidence alone does not promote a private local pattern into protocol motherline.
 6. This stream remains independent from provider runtime incidents, launcher install incidents, and host-visible final-surface auto-binding work.
 7. A pack may be `topology-ready` and `exit-ready` yet still be pre-adoption for `v1.6.15` until manifest and additive route fields land; that migration state must not be misreported as a reopen of inherited streams.
