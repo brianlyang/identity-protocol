@@ -166,6 +166,12 @@ NEG_LANE_CONTRACT_PACK="${TMP_ROOT}/negative-lane-contract-pack"
 NEG_LANE_CONTRACT_JSON="${TMP_ROOT}/negative-lane-contract.json"
 NEG_LANE_RECEIPT_JSON="${TMP_ROOT}/negative-lane-receipt.json"
 NEG_LANE_RECEIPT_PATH="${TMP_ROOT}/negative-lane-receipt-override.json"
+HOOK_PACK="${TMP_ROOT}/hook-pack"
+HOOK_CATALOG_PATH="${TMP_ROOT}/hook-catalog.local.yaml"
+HOOK_RECEIPT_JSON="${TMP_ROOT}/hook-receipt.json"
+HOOK_CAPABILITY_JSON="${TMP_ROOT}/hook-capability-activation.json"
+NEG_HOOK_RECEIPT_JSON="${TMP_ROOT}/negative-hook-receipt.json"
+NEG_HOOK_RECEIPT_PATH="${TMP_ROOT}/negative-hook-receipt-override.json"
 
 mkdir -p "${NEG_MANIFEST_PACK}/scripts" "${NEG_BINDING_PACK}/scripts"
 cp "${TASK_PATH}" "${NEG_MANIFEST_PACK}/CURRENT_TASK.json"
@@ -431,7 +437,90 @@ if python3 "${ROOT}/scripts/validate_route_execution_lane_admission.py" \
   exit 1
 fi
 
-python3 - "${POS_MANIFEST_JSON}" "${POS_ORCH_JSON}" "${POS_RECEIPT_JSON}" "${POS_CAPABILITY_JSON}" "${POS_LANE_JSON}" "${NEG_MANIFEST_JSON}" "${NEG_BINDING_JSON}" "${NEG_RECEIPT_JSON}" "${NEG_LANE_CONTRACT_JSON}" "${NEG_LANE_RECEIPT_JSON}" "${IDENTITY_ID}" "${TMP_ROOT}" <<'PY'
+mkdir -p "${HOOK_PACK}"
+cp "${TASK_PATH}" "${HOOK_PACK}/CURRENT_TASK.json"
+cp -R "${PACK_ROOT}/scripts" "${HOOK_PACK}/scripts"
+cp -R "${PACK_ROOT}/runtime" "${HOOK_PACK}/runtime"
+
+python3 - "${CATALOG_PATH}" "${HOOK_CATALOG_PATH}" "${IDENTITY_ID}" "${HOOK_PACK}" "${PACK_ROOT}" "${RECEIPT_PATH}" "${NEG_HOOK_RECEIPT_PATH}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+import yaml
+
+catalog_path = Path(sys.argv[1]).resolve()
+hook_catalog_path = Path(sys.argv[2]).resolve()
+identity_id = sys.argv[3]
+hook_pack = Path(sys.argv[4]).resolve()
+pack_root = Path(sys.argv[5]).resolve()
+source_receipt_path = Path(sys.argv[6]).resolve()
+negative_receipt_path = Path(sys.argv[7]).resolve()
+
+catalog_doc = yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
+rows = [row for row in (catalog_doc.get("identities") or []) if isinstance(row, dict)]
+row = next((dict(item) for item in rows if str(item.get("id", "")).strip() == identity_id), None)
+if row is None:
+    raise SystemExit(f"identity not found for hook probe: {identity_id}")
+row["pack_path"] = str(hook_pack)
+hook_catalog_doc = {"identities": [row]}
+hook_catalog_path.write_text(yaml.safe_dump(hook_catalog_doc, sort_keys=False), encoding="utf-8")
+
+target_receipt_path = hook_pack / source_receipt_path.relative_to(pack_root)
+receipt_doc = json.loads(target_receipt_path.read_text(encoding="utf-8"))
+receipt_doc.update(
+    {
+        "semantic_anchor_ref": "anchor://continuity/basis-v1",
+        "semantic_anchor_schema_id": "semantic_anchor_v1",
+        "semantic_anchor_source": "governed_route_receipt",
+        "semantic_anchor_revision": "rev-1",
+        "semantic_anchor_digest": "sha256:123abc",
+        "semantic_anchor_status": "PASS_REQUIRED",
+        "outcome_sentinel_ref": "sentinel://continuity/advisory-v1",
+        "outcome_sentinel_schema_id": "outcome_sentinel_v1",
+        "outcome_sentinel_status": "advisory",
+    }
+)
+target_receipt_path.write_text(json.dumps(receipt_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+negative_doc = dict(receipt_doc)
+negative_doc.pop("semantic_anchor_digest", None)
+negative_receipt_path.write_text(json.dumps(negative_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+python3 "${ROOT}/scripts/validate_route_script_receipt_join.py" \
+  --catalog "${HOOK_CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --route "${RECEIPT_ROUTE}" \
+  --script-id "${RECEIPT_SCRIPT_ID}" \
+  --work-layer "${WORK_LAYER}" \
+  --source-layer "${SOURCE_LAYER}" \
+  --require-observed \
+  --json-only > "${HOOK_RECEIPT_JSON}"
+
+python3 "${ROOT}/scripts/validate_identity_capability_activation.py" \
+  --catalog "${HOOK_CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --work-layer "${WORK_LAYER}" \
+  --source-layer "${SOURCE_LAYER}" \
+  --activation-policy route-any-ready \
+  --out "${HOOK_CAPABILITY_JSON}" >/dev/null
+
+if python3 "${ROOT}/scripts/validate_route_script_receipt_join.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${HOOK_PACK}/CURRENT_TASK.json" \
+  --route "${RECEIPT_ROUTE}" \
+  --script-id "${RECEIPT_SCRIPT_ID}" \
+  --receipt "${NEG_HOOK_RECEIPT_PATH}" \
+  --work-layer "${WORK_LAYER}" \
+  --source-layer "${SOURCE_LAYER}" \
+  --require-observed \
+  --json-only > "${NEG_HOOK_RECEIPT_JSON}"; then
+  echo "[FAIL] negative hook-receipt probe unexpectedly passed"
+  exit 1
+fi
+
+python3 - "${POS_MANIFEST_JSON}" "${POS_ORCH_JSON}" "${POS_RECEIPT_JSON}" "${POS_CAPABILITY_JSON}" "${POS_LANE_JSON}" "${NEG_MANIFEST_JSON}" "${NEG_BINDING_JSON}" "${NEG_RECEIPT_JSON}" "${NEG_LANE_CONTRACT_JSON}" "${NEG_LANE_RECEIPT_JSON}" "${HOOK_RECEIPT_JSON}" "${HOOK_CAPABILITY_JSON}" "${NEG_HOOK_RECEIPT_JSON}" "${IDENTITY_ID}" "${TMP_ROOT}" <<'PY'
 import json
 import sys
 
@@ -446,11 +535,14 @@ import sys
     negative_receipt,
     negative_lane_contract,
     negative_lane_receipt,
+    hook_receipt,
+    hook_capability,
+    negative_hook_receipt,
 ) = [
-    json.loads(open(path, encoding="utf-8").read()) for path in sys.argv[1:11]
+    json.loads(open(path, encoding="utf-8").read()) for path in sys.argv[1:14]
 ]
-identity_id = sys.argv[11]
-tmp_root = sys.argv[12]
+identity_id = sys.argv[14]
+tmp_root = sys.argv[15]
 
 assert positive_manifest["instance_script_manifest_status"] == "PASS_REQUIRED", positive_manifest
 assert positive_orch["instance_script_orchestration_status"] == "PASS_REQUIRED", positive_orch
@@ -481,6 +573,16 @@ assert negative_lane_contract["route_execution_lane_admission_status"] == "FAIL_
 assert any("missing_field:lane_receipt_pattern" in reason for reason in negative_lane_contract.get("stale_reasons", [])), negative_lane_contract
 assert negative_lane_receipt["route_execution_lane_admission_status"] == "FAIL_REQUIRED", negative_lane_receipt
 assert any("lane_receipt_lane_id_undeclared:" in reason for reason in negative_lane_receipt.get("stale_reasons", [])), negative_lane_receipt
+assert hook_receipt["route_script_receipt_join_status"] == "PASS_REQUIRED", hook_receipt
+assert hook_receipt["semantic_anchor_ref"] == "anchor://continuity/basis-v1", hook_receipt
+assert hook_receipt["semantic_anchor_status"] == "PASS_REQUIRED", hook_receipt
+assert hook_receipt["outcome_sentinel_ref"] == "sentinel://continuity/advisory-v1", hook_receipt
+assert hook_receipt["outcome_sentinel_status"] == "advisory", hook_receipt
+assert hook_capability["capability_activation_status"] == "ACTIVATED", hook_capability
+assert hook_capability["semantic_anchor_ref"] == "anchor://continuity/basis-v1", hook_capability
+assert hook_capability["outcome_sentinel_ref"] == "sentinel://continuity/advisory-v1", hook_capability
+assert negative_hook_receipt["route_script_receipt_join_status"] == "FAIL_REQUIRED", negative_hook_receipt
+assert any("semantic_anchor_missing:semantic_anchor_digest" in reason for reason in negative_hook_receipt.get("stale_reasons", [])), negative_hook_receipt
 
 print(
     json.dumps(
@@ -498,6 +600,8 @@ print(
             "negative_receipt_failure": "receipt_route_selected_mismatch",
             "negative_lane_contract_failure": "missing_field:lane_receipt_pattern",
             "negative_lane_receipt_failure": "lane_receipt_lane_id_undeclared",
+            "positive_optional_hook_projection_status": "PASS_REQUIRED",
+            "negative_optional_hook_failure": "semantic_anchor_missing:semantic_anchor_digest",
             "tmp_root": tmp_root,
         },
         ensure_ascii=False,
