@@ -104,6 +104,7 @@ Compatibility note: legacy packs can stay in `identity/<id>/` if catalog `pack_p
 6. Canonical installed launcher shims belong under `${CODEX_HOME}/bin/`.
 7. Workspace helper paths such as `scripts/codex_native_chat/` are compatibility bridges only until the protocol-owned launcher installer lands.
 8. Launcher/install governance is separate from MCP provider health, business-tool availability, and host-final visible-surface promotion work.
+9. Active runtime identities may not remain in launcher `SKIPPED_NOT_REQUIRED(contract_not_required)` state inside governed lifecycle surfaces; migration closure is now machine-enforced through launcher closure checks plus contract-backfill / launcher-rollout wiring.
 
 ### Canonical identity-instance script orchestration boundary (v1.6.15 additive)
 
