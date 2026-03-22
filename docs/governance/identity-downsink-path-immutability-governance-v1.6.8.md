@@ -393,6 +393,7 @@ Interpretation lock:
 1. Per-identity success is insufficient for “global active-runtime closed” claims.
 2. Global closure claims require migration checker pass across active runtime rows, not fixture-only probe pass.
 3. A migration-checker result of `PASS_REQUIRED` is strong active-runtime proof only when checked active runtime rows are present; `checked_identity_count=0` is closure-wiring sanity, not fleet-closure evidence.
+4. Current-state note (2026-03-22): replaying `python3 scripts/check_unique_entry_contract_migration_closure.py --catalog <project-local absolute catalog> --json-only` against the current workspace runtime surface returned `PASS_REQUIRED` with `checked_identity_count=4`; this is the current non-empty active-runtime migration proof and does not replace the standing empty-scan caveat above.
 
 ### 13.3 Non-hardcode guarantee
 
@@ -482,6 +483,7 @@ Interpretation lock:
 1. Stream evolution is handled by alias switch (`*.current.yaml` -> new `active_file`).
 2. Enforcement scripts must not pin fixed stream literals in code paths.
 3. This closure is infrastructure-first: humans do not need to remember version tuples for correctness.
+4. Current-state note (2026-03-22): replaying `python3 scripts/check_version_baseline_migration_closure.py --catalog <project-local absolute catalog> --json-only` against the current workspace runtime surface returned `PASS_REQUIRED` with `checked_identity_count=4`; this is the current non-empty version-baseline migration proof for the workspace.
 
 ## 17) Installer atomic baseline closure + report selector isolation (2026-03-16)
 
