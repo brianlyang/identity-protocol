@@ -80,6 +80,7 @@ That JSON is the protocol-owned guidance bundle. It now carries:
 - `copyable_commands.start`
 - `copyable_commands.resume`
 - `instance_answer_guidance`
+- `continuity_support` for launcher/instance internal consumers only
 
 So the protocol provides the structured command bundle, while the identity instance gives the concrete final answer to the user.
 
