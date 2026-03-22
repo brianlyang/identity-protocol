@@ -169,10 +169,16 @@ def main() -> int:
         route_row = dict(payload["route_rows"][0])
         for field in (
             "route_scope",
+            "route_scope_mode",
+            "route_ids",
             "route_selection_cardinality",
             "declared_dependency_projection",
             "observed_dependency_projection",
             "dependency_gap_reasons",
+            "undeclared_usage_detected",
+            "undeclared_usage_rows",
+            "missing_declared_dependency_detected",
+            "missing_declared_dependency_rows",
         ):
             if field in route_row:
                 payload[field] = route_row[field]
