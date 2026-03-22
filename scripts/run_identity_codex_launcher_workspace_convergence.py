@@ -9,6 +9,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from identity_codex_launcher_evidence_common import (
+    artifact_path,
+    materialize_launcher_convergence_bundle,
+    write_json,
+)
 from identity_codex_launcher_common import (
     IDENTITY_CODEX_LAUNCHER_CONVERGENCE_ENTRY_ID,
     IDENTITY_CODEX_LAUNCHER_CONVERGENCE_MUTATION_SCOPE,
@@ -33,11 +38,6 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
         print(text)
     else:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
-
-
-def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def _run_json(cmd: list[str], *, env: dict[str, str]) -> tuple[int, dict[str, Any], str, str]:
@@ -112,9 +112,7 @@ def _artifact_dir(*, workspace_root: Path, now: datetime) -> Path:
 
 
 def _artifact_path(root: Path, stem: str, run_token: str) -> Path:
-    safe_token = "".join(ch if ch.isalnum() or ch in {"-", "_", "."} else "-" for ch in str(run_token or "").strip())
-    token = safe_token or "run"
-    return (root / f"{stem}.{token}_summary.json").resolve()
+    return artifact_path(root, stem, run_token)
 
 
 def _launcher_env(*, repo_root: Path, catalog_path: Path, codex_home: Path) -> dict[str, str]:
@@ -128,7 +126,13 @@ def _launcher_env(*, repo_root: Path, catalog_path: Path, codex_home: Path) -> d
 
 
 def _check_launcher_closure(*, repo_root: Path, catalog_path: Path, env: dict[str, str]) -> tuple[int, dict[str, Any]]:
-    cmd = [
+    cmd = _launcher_closure_command(repo_root=repo_root, catalog_path=catalog_path)
+    rc, payload, _, _ = _run_json(cmd, env=env)
+    return rc, payload
+
+
+def _launcher_closure_command(*, repo_root: Path, catalog_path: Path) -> list[str]:
+    return [
         "python3",
         str((repo_root / "scripts" / "check_identity_codex_launcher_migration_closure.py").resolve()),
         "--repo-catalog",
@@ -138,8 +142,6 @@ def _check_launcher_closure(*, repo_root: Path, catalog_path: Path, env: dict[st
         "--workspace-runtime-only",
         "--json-only",
     ]
-    rc, payload, _, _ = _run_json(cmd, env=env)
-    return rc, payload
 
 
 def _validate_single_identity(
@@ -247,6 +249,102 @@ def _apply_repair_for_identity(
     return result
 
 
+def _entry_command(
+    *,
+    repo_root: Path,
+    catalog_path: Path,
+    mode: str,
+    codex_home: Path,
+    artifact_root: Path,
+    run_token: str,
+    receipt_out: Path,
+) -> list[str]:
+    return [
+        "python3",
+        str((repo_root / "scripts" / "run_identity_codex_launcher_workspace_convergence.py").resolve()),
+        "--catalog",
+        str(catalog_path.resolve()),
+        "--mode",
+        str(mode or "").strip(),
+        "--codex-home",
+        str(codex_home.resolve()),
+        "--artifact-root",
+        str(artifact_root.resolve()),
+        "--run-token",
+        str(run_token or "").strip(),
+        "--out",
+        str(receipt_out.resolve()),
+        "--json-only",
+    ]
+
+
+def _finalize_bundle(
+    *,
+    workspace_root: Path,
+    artifact_root: Path,
+    receipt_out: Path,
+    run_token: str,
+    payload: dict[str, Any],
+    generated_at: str,
+    mode: str,
+    catalog_path: Path,
+    precheck_out: Path,
+    precheck_rc: int,
+    precheck_timestamp: str,
+    precheck_cmd: list[str],
+    entry_cmd: list[str],
+    entry_rc: int,
+    postcheck_out: Path | None = None,
+    postcheck_rc: int | None = None,
+    postcheck_timestamp: str = "",
+    postcheck_cmd: list[str] | None = None,
+) -> None:
+    evidence_records = [
+        {
+            "kind": "launcher_convergence_receipt",
+            "path": str(receipt_out),
+            "command": entry_cmd,
+            "rc": int(entry_rc),
+            "timestamp": generated_at,
+            "use_prepared_receipt_payload": True,
+        },
+        {
+            "kind": "launcher_convergence_precheck",
+            "path": str(precheck_out),
+            "command": precheck_cmd,
+            "rc": int(precheck_rc),
+            "timestamp": precheck_timestamp,
+        },
+    ]
+    if postcheck_out is not None and postcheck_cmd is not None and postcheck_rc is not None:
+        evidence_records.append(
+            {
+                "kind": "launcher_convergence_postcheck",
+                "path": str(postcheck_out),
+                "command": postcheck_cmd,
+                "rc": int(postcheck_rc),
+                "timestamp": str(postcheck_timestamp or generated_at).strip(),
+            }
+        )
+    materialize_launcher_convergence_bundle(
+        workspace_root=workspace_root,
+        artifact_root=artifact_root,
+        receipt_path=receipt_out,
+        run_token=run_token,
+        generated_at=generated_at,
+        mode=mode,
+        catalog_path=catalog_path,
+        entry_id=IDENTITY_CODEX_LAUNCHER_CONVERGENCE_ENTRY_ID,
+        receipt_family=IDENTITY_CODEX_LAUNCHER_CONVERGENCE_RECEIPT_FAMILY,
+        receipt_payload=payload,
+        evidence_record_inputs=evidence_records,
+        notes=[
+            "Launcher convergence evidence bundle is a workspace-scoped archival artifact.",
+            "Receipt truth-sync must keep evidence_ref and manifest_ref machine-visible inside the receipt payload.",
+        ],
+    )
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Run the canonical workspace-level identity Codex launcher convergence entry."
@@ -291,6 +389,7 @@ def main() -> int:
         "precheck_evidence_ref": "",
         "postcheck_evidence_ref": "",
         "evidence_ref": "",
+        "manifest_ref": "",
         "stale_reasons": [],
     }
 
@@ -324,9 +423,23 @@ def main() -> int:
     precheck_out = _artifact_path(artifact_root, "launcher_convergence_precheck", run_token)
     postcheck_out = _artifact_path(artifact_root, "launcher_convergence_postcheck", run_token)
     env = _launcher_env(repo_root=repo_root, catalog_path=catalog_path, codex_home=codex_home)
+    precheck_cmd = _launcher_closure_command(repo_root=repo_root, catalog_path=catalog_path)
+    entry_cmd = _entry_command(
+        repo_root=repo_root,
+        catalog_path=catalog_path,
+        mode=str(args.mode),
+        codex_home=codex_home,
+        artifact_root=artifact_root,
+        run_token=run_token,
+        receipt_out=receipt_out,
+    )
 
     precheck_rc, precheck_payload = _check_launcher_closure(repo_root=repo_root, catalog_path=catalog_path, env=env)
-    _write_json(precheck_out, precheck_payload)
+    write_json(precheck_out, precheck_payload)
+    precheck_timestamp = datetime.fromtimestamp(precheck_out.stat().st_mtime, tz=timezone.utc).isoformat().replace(
+        "+00:00",
+        "Z",
+    )
 
     checked_rows = precheck_payload.get("checked_rows") if isinstance(precheck_payload, dict) else []
     violation_rows = precheck_payload.get("violations") if isinstance(precheck_payload, dict) else []
@@ -358,8 +471,22 @@ def main() -> int:
                 "stale_reasons": ["launcher_migration_precheck_transport_failed"],
             }
         )
-        _write_json(receipt_out, payload)
-        payload["evidence_ref"] = str(receipt_out)
+        _finalize_bundle(
+            workspace_root=workspace_root,
+            artifact_root=artifact_root,
+            receipt_out=receipt_out,
+            run_token=run_token,
+            payload=payload,
+            generated_at=base_payload["generated_at"],
+            mode=str(args.mode),
+            catalog_path=catalog_path,
+            precheck_out=precheck_out,
+            precheck_rc=precheck_rc,
+            precheck_timestamp=precheck_timestamp,
+            precheck_cmd=precheck_cmd,
+            entry_cmd=entry_cmd,
+            entry_rc=1,
+        )
         _emit(payload, json_only=args.json_only)
         return 1
 
@@ -375,13 +502,31 @@ def main() -> int:
                 "stale_reasons": [] if not violation_ids else ["launcher_migration_closure_pending_apply"],
             }
         )
-        _write_json(receipt_out, payload)
-        payload["evidence_ref"] = str(receipt_out)
+        _finalize_bundle(
+            workspace_root=workspace_root,
+            artifact_root=artifact_root,
+            receipt_out=receipt_out,
+            run_token=run_token,
+            payload=payload,
+            generated_at=base_payload["generated_at"],
+            mode=str(args.mode),
+            catalog_path=catalog_path,
+            precheck_out=precheck_out,
+            precheck_rc=precheck_rc,
+            precheck_timestamp=precheck_timestamp,
+            precheck_cmd=precheck_cmd,
+            entry_cmd=entry_cmd,
+            entry_rc=0 if payload["status"] == STATUS_PASS_REQUIRED else 1,
+        )
         _emit(payload, json_only=args.json_only)
         return 0 if payload["status"] == STATUS_PASS_REQUIRED else 1
 
     if not violation_ids:
-        _write_json(postcheck_out, precheck_payload)
+        write_json(postcheck_out, precheck_payload)
+        postcheck_timestamp = datetime.fromtimestamp(postcheck_out.stat().st_mtime, tz=timezone.utc).isoformat().replace(
+            "+00:00",
+            "Z",
+        )
         payload.update(
             {
                 "status": STATUS_PASS_REQUIRED,
@@ -394,8 +539,26 @@ def main() -> int:
                 "stale_reasons": [],
             }
         )
-        _write_json(receipt_out, payload)
-        payload["evidence_ref"] = str(receipt_out)
+        _finalize_bundle(
+            workspace_root=workspace_root,
+            artifact_root=artifact_root,
+            receipt_out=receipt_out,
+            run_token=run_token,
+            payload=payload,
+            generated_at=base_payload["generated_at"],
+            mode=str(args.mode),
+            catalog_path=catalog_path,
+            precheck_out=precheck_out,
+            precheck_rc=precheck_rc,
+            precheck_timestamp=precheck_timestamp,
+            precheck_cmd=precheck_cmd,
+            entry_cmd=entry_cmd,
+            entry_rc=0,
+            postcheck_out=postcheck_out,
+            postcheck_rc=precheck_rc,
+            postcheck_timestamp=postcheck_timestamp,
+            postcheck_cmd=precheck_cmd,
+        )
         _emit(payload, json_only=args.json_only)
         return 0
 
@@ -414,7 +577,11 @@ def main() -> int:
             repaired_identity_ids.append(identity_id)
 
     postcheck_rc, postcheck_payload = _check_launcher_closure(repo_root=repo_root, catalog_path=catalog_path, env=env)
-    _write_json(postcheck_out, postcheck_payload)
+    write_json(postcheck_out, postcheck_payload)
+    postcheck_timestamp = datetime.fromtimestamp(postcheck_out.stat().st_mtime, tz=timezone.utc).isoformat().replace(
+        "+00:00",
+        "Z",
+    )
     remaining_violation_ids = _identity_ids_from_rows(postcheck_payload.get("violations") if isinstance(postcheck_payload, dict) else [])
     postcheck_status = str(postcheck_payload.get("identity_codex_launcher_migration_closure_status", "")).strip().upper()
     apply_failed = any(str(row.get("final_status", "")).strip().upper() != STATUS_PASS_REQUIRED for row in repair_results)
@@ -441,8 +608,26 @@ def main() -> int:
                 "stale_reasons": [],
             }
         )
-        _write_json(receipt_out, payload)
-        payload["evidence_ref"] = str(receipt_out)
+        _finalize_bundle(
+            workspace_root=workspace_root,
+            artifact_root=artifact_root,
+            receipt_out=receipt_out,
+            run_token=run_token,
+            payload=payload,
+            generated_at=base_payload["generated_at"],
+            mode=str(args.mode),
+            catalog_path=catalog_path,
+            precheck_out=precheck_out,
+            precheck_rc=precheck_rc,
+            precheck_timestamp=precheck_timestamp,
+            precheck_cmd=precheck_cmd,
+            entry_cmd=entry_cmd,
+            entry_rc=0,
+            postcheck_out=postcheck_out,
+            postcheck_rc=postcheck_rc,
+            postcheck_timestamp=postcheck_timestamp,
+            postcheck_cmd=precheck_cmd,
+        )
         _emit(payload, json_only=args.json_only)
         return 0
 
@@ -456,8 +641,26 @@ def main() -> int:
             ),
         }
     )
-    _write_json(receipt_out, payload)
-    payload["evidence_ref"] = str(receipt_out)
+    _finalize_bundle(
+        workspace_root=workspace_root,
+        artifact_root=artifact_root,
+        receipt_out=receipt_out,
+        run_token=run_token,
+        payload=payload,
+        generated_at=base_payload["generated_at"],
+        mode=str(args.mode),
+        catalog_path=catalog_path,
+        precheck_out=precheck_out,
+        precheck_rc=precheck_rc,
+        precheck_timestamp=precheck_timestamp,
+        precheck_cmd=precheck_cmd,
+        entry_cmd=entry_cmd,
+        entry_rc=1,
+        postcheck_out=postcheck_out,
+        postcheck_rc=postcheck_rc,
+        postcheck_timestamp=postcheck_timestamp,
+        postcheck_cmd=precheck_cmd,
+    )
     _emit(payload, json_only=args.json_only)
     return 1
 

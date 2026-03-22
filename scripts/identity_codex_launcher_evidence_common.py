@@ -1,0 +1,224 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import hashlib
+import json
+import shlex
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Iterable
+
+LAUNCHER_CONVERGENCE_STREAM_VERSION = "v1.6.14"
+LAUNCHER_CONVERGENCE_EVIDENCE_TOPIC = "identity_codex_launcher_workspace_convergence"
+LAUNCHER_CONVERGENCE_MANIFEST_PREFIX = "EVIDENCE_MANIFEST"
+
+
+def normalize_run_token(run_token: str) -> str:
+    safe_token = "".join(
+        ch if ch.isalnum() or ch in {"-", "_", "."} else "-" for ch in str(run_token or "").strip()
+    )
+    return safe_token or "run"
+
+
+def artifact_path(root: Path, stem: str, run_token: str) -> Path:
+    return (root / f"{stem}.{normalize_run_token(run_token)}_summary.json").resolve()
+
+
+def manifest_path(root: Path, run_token: str) -> Path:
+    return (root / f"{LAUNCHER_CONVERGENCE_MANIFEST_PREFIX}.{normalize_run_token(run_token)}.json").resolve()
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"expected JSON object at {path}")
+    return data
+
+
+def write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(canonical_json_bytes(payload))
+
+
+def canonical_json_bytes(payload: dict[str, Any]) -> bytes:
+    return (json.dumps(payload, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def path_ref(path: Path, workspace_root: Path) -> str:
+    resolved = path.resolve()
+    try:
+        return resolved.relative_to(workspace_root.resolve()).as_posix()
+    except ValueError:
+        return str(resolved)
+
+
+def file_timestamp(path: Path) -> str:
+    return datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def command_string(command: str | Iterable[str]) -> str:
+    if isinstance(command, str):
+        return command.strip()
+    return shlex.join([str(part) for part in command if str(part).strip()])
+
+
+def build_manifest_record(
+    *,
+    kind: str,
+    path: Path,
+    workspace_root: Path,
+    command: str | Iterable[str],
+    rc: int,
+    timestamp: str = "",
+    tmp_path: str = "",
+    payload_override: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    sha256 = (
+        hashlib.sha256(canonical_json_bytes(payload_override)).hexdigest()
+        if payload_override is not None
+        else sha256_file(path)
+    )
+    record: dict[str, Any] = {
+        "kind": str(kind or "").strip(),
+        "mirror_path": path_ref(path, workspace_root),
+        "sha256": sha256,
+        "command": command_string(command),
+        "rc": int(rc),
+        "timestamp": str(timestamp or file_timestamp(path)).strip(),
+    }
+    tmp_token = str(tmp_path or "").strip()
+    if tmp_token:
+        record["tmp_path"] = tmp_token
+    return record
+
+
+def build_launcher_convergence_manifest(
+    *,
+    workspace_root: Path,
+    artifact_root: Path,
+    receipt_path: Path,
+    run_token: str,
+    generated_at: str,
+    mode: str,
+    catalog_path: Path,
+    entry_id: str,
+    receipt_family: str,
+    evidence_records: list[dict[str, Any]],
+    notes: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "stream_version": LAUNCHER_CONVERGENCE_STREAM_VERSION,
+        "topic": LAUNCHER_CONVERGENCE_EVIDENCE_TOPIC,
+        "entry_id": str(entry_id or "").strip(),
+        "receipt_family": str(receipt_family or "").strip(),
+        "generated_at": str(generated_at or "").strip(),
+        "workspace_root": str(workspace_root.resolve()),
+        "artifact_root": str(artifact_root.resolve()),
+        "evidence_root": path_ref(artifact_root, workspace_root),
+        "summary_ref": path_ref(receipt_path, workspace_root),
+        "run_token": normalize_run_token(run_token),
+        "mode": str(mode or "").strip(),
+        "catalog_path": str(catalog_path.resolve()),
+        "notes": list(notes or []),
+        "evidence_records": evidence_records,
+    }
+
+
+def materialize_launcher_convergence_bundle(
+    *,
+    workspace_root: Path,
+    artifact_root: Path,
+    receipt_path: Path,
+    run_token: str,
+    generated_at: str,
+    mode: str,
+    catalog_path: Path,
+    entry_id: str,
+    receipt_family: str,
+    receipt_payload: dict[str, Any],
+    evidence_record_inputs: list[dict[str, Any]],
+    notes: list[str] | None = None,
+    manifest_out: Path | None = None,
+) -> tuple[dict[str, Any], Path, dict[str, Any]]:
+    receipt_payload, manifest_out, manifest_payload = prepare_launcher_convergence_bundle(
+        workspace_root=workspace_root,
+        artifact_root=artifact_root,
+        receipt_path=receipt_path,
+        run_token=run_token,
+        generated_at=generated_at,
+        mode=mode,
+        catalog_path=catalog_path,
+        entry_id=entry_id,
+        receipt_family=receipt_family,
+        receipt_payload=receipt_payload,
+        evidence_record_inputs=evidence_record_inputs,
+        notes=notes,
+        manifest_out=manifest_out,
+    )
+    write_json(receipt_path, receipt_payload)
+    write_json(manifest_out, manifest_payload)
+    return receipt_payload, manifest_out, manifest_payload
+
+
+def prepare_launcher_convergence_bundle(
+    *,
+    workspace_root: Path,
+    artifact_root: Path,
+    receipt_path: Path,
+    run_token: str,
+    generated_at: str,
+    mode: str,
+    catalog_path: Path,
+    entry_id: str,
+    receipt_family: str,
+    receipt_payload: dict[str, Any],
+    evidence_record_inputs: list[dict[str, Any]],
+    notes: list[str] | None = None,
+    manifest_out: Path | None = None,
+) -> tuple[dict[str, Any], Path, dict[str, Any]]:
+    manifest_out = manifest_out.resolve() if manifest_out is not None else manifest_path(artifact_root, run_token)
+    next_receipt = dict(receipt_payload)
+    next_receipt["evidence_ref"] = str(receipt_path.resolve())
+    next_receipt["manifest_ref"] = str(manifest_out)
+    records: list[dict[str, Any]] = []
+    for row in evidence_record_inputs:
+        if not str(row.get("kind", "")).strip() or not str(row.get("path", "")).strip():
+            continue
+        payload_override = next_receipt if bool(row.get("use_prepared_receipt_payload")) else None
+        if payload_override is None and isinstance(row.get("payload"), dict):
+            payload_override = row.get("payload")
+        records.append(
+            build_manifest_record(
+                kind=str(row.get("kind", "")).strip(),
+                path=Path(str(row.get("path", "")).strip()).resolve(),
+                workspace_root=workspace_root,
+                command=row.get("command", ""),
+                rc=int(row.get("rc", 0)),
+                timestamp=str(row.get("timestamp", "")).strip(),
+                tmp_path=str(row.get("tmp_path", "")).strip(),
+                payload_override=payload_override,
+            )
+        )
+
+    manifest_payload = build_launcher_convergence_manifest(
+        workspace_root=workspace_root,
+        artifact_root=artifact_root,
+        receipt_path=receipt_path,
+        run_token=run_token,
+        generated_at=generated_at,
+        mode=mode,
+        catalog_path=catalog_path,
+        entry_id=entry_id,
+        receipt_family=receipt_family,
+        evidence_records=records,
+        notes=notes,
+    )
+    return next_receipt, manifest_out, manifest_payload
