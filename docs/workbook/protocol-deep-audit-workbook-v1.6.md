@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 82`, `command snippets checked: 906`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 82`, `command snippets checked: 908`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -159,24 +159,23 @@ Root cause:
 
 Symptoms:
 
-- multiple active scope/state/repair scripts still default straight to `~/.codex/.identity/catalog.local.yaml` instead of shared runtime-path resolution or explicit `--catalog`;
-- the same command therefore fails for project-local identities unless the caller manually supplies the project catalog, or worse, silently passes against the wrong global tenant;
-- this produces “false green on the wrong catalog” behavior, which is more dangerous than an explicit fail-close.
+- the original deep audit reproduced active entrypoints defaulting to `~/.codex/.identity/catalog.local.yaml` instead of shared runtime-path resolution or explicit runtime-catalog authority;
+- that defect used to create “false green on the wrong catalog” behavior across project-local identities and launch-context-sensitive replays;
+- current resolver / strict-entry / semantic-clarity lanes are now green, so the remaining RC-10 tail is metadata hygiene and regression prevention rather than live precedence ambiguity.
 
 
 
 Root cause:
 
-- project-runtime selection has been hardened in some core entrypoints, but a separate older script family still carries direct global-home catalog defaults from the `v1.4.x` era; because these scripts remain active and are still referenced by current protocol contracts, the old default semantics continue to leak into live validation and repair paths.
+- the original root cause was a `v1.4.x`-era family of direct global-home catalog defaults that outlived the newer runtime-path contract; resolver / launcher / strict-entry closure has now removed that live leak, so remaining RC-10 work is raw metadata backfill and regression prevention, not active fallback semantics.
 
 ### RC-11 No motherline no-downgrade rule freezes compatibility surfaces to migration-only
 
 Symptoms:
 
-- authoritative actor/session truth can already be correct while shared compatibility pointers still publish an older identity and remain classified as warning-level drift in active health/reporting tooling;
-- pointer validators and health reporters still expose allowlists such as `--allow-compatibility-projection-drift`, so compatibility residue survives on current runtime surfaces instead of being retired behind session-primary truth;
-- active scaffolds and validators still normalize legacy compatibility families (`legacy_alias_bridge`, `legacy-commerce-overlay`, literal actor defaults) as supported options rather than quarantining them to migration/import-only tooling;
-- governance/runtime docs still retain compatibility-bridge / legacy-pack wording without a single bottom-layer clause that forbids protocol downgrade/backstop behavior for instance debt or historical residue.
+- earlier deep scans found live compatibility residue on multiple surfaces: shared pointers were treated as warning-level drift, helper interfaces exposed drift-allow semantics, active scaffolds normalized legacy overlays/aliases, and canonical docs still lacked a bottom-layer no-downgrade clause;
+- the motherline rule is now frozen and the live pointer/control-plane leak has been closed, so the remaining RC-11 surface is residual helper/doc truth-sync and regression prevention;
+- any future compatibility, fallback, or bridge wording must stay quarantined to migration/replay/diagnostic lanes and must not re-enter active defaults, validator green paths, current-turn truth, active execution entry, or protocol-owned success paths.
 
 Root cause:
 
@@ -620,10 +619,10 @@ Root cause:
   - launcher convergence receipts now keep `evidence_ref` / `manifest_ref` machine-visible, emit governed `EVIDENCE_MANIFEST.<run_token>.json` bundles under `activity/evidence/v1614-identity-codex-launcher/<date>/`, and the post-closure truth-sync surface `scripts/refresh_identity_codex_launcher_evidence_truth_sync.py` can normalize older convergence receipts without reopening launcher semantics.
   - `scripts/release_readiness_check.py` now consumes the convergence-entry probe lane itself, so readiness symmetry covers both the aggregate closure checker and the governed receipt/manifest truth-sync bundle.
 
-### ISSUE-025 - Authoritative resolver and active health entrypoints still rely on implicit runtime-catalog defaults
+### ISSUE-025 - Authoritative resolver and active health entrypoints now freeze explicit runtime-catalog authority; remaining raw metadata hygiene stays separate
 
-- `status`: OPEN
-- `problem_statement`: the deep audit still reproduces a live precedence bug on the authority resolver family: the foreign-project env precedence lane in `scripts/ci/run_semantic_clarity_probes_ci.sh` fails because `scripts/resolve_identity_context.py` does not consume `IDENTITY_CATALOG` as the runtime-local catalog unless `--local-catalog` is passed explicitly, while several active utility surfaces still derive default catalogs from script-root path heuristics instead of explicit runtime-catalog authority.
+- `status`: CLOSED
+- `problem_statement`: the deep audit originally reproduced a live precedence bug on the authority resolver family: the foreign-project env precedence lane in `scripts/ci/run_semantic_clarity_probes_ci.sh` failed because `scripts/resolve_identity_context.py` did not consume `IDENTITY_CATALOG` as the runtime-local catalog unless `--local-catalog` was passed explicitly, while several active utility surfaces still derived default catalogs from script-root path heuristics instead of explicit runtime-catalog authority.
 - `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
 - `secondary_refs`:
   - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
@@ -635,17 +634,18 @@ Root cause:
   - direct replay: `python3 scripts/resolve_identity_context.py resolve --identity-id global-authority --repo-catalog identity/catalog/identities.yaml`
 - `root_cause`: RC-03, RC-10, and RC-11
 - `stop_condition`:
-  - `resolve_identity_context.py` consumes explicit runtime-catalog authority (`--local-catalog` / `IDENTITY_CATALOG`) before any script-root-derived fallback and the foreign-project precedence lane turns green;
-  - active health/runtime utilities stop embedding script-root catalog defaults on current runtime surfaces and either resolve through the shared runtime-path contract or fail-close explicitly;
-  - launch-context parity stays machine-checked from both workspace-root and protocol-root launches.
-- `current_evidence`:
-  - reproducing the semantic-clarity probe currently fails with `FileNotFoundError: identity not found in merged context: global-authority`;
-  - the same replay succeeds immediately when `--local-catalog <CODEX_HOME/.identity/catalog.local.yaml>` is passed explicitly, proving the defect is implicit-catalog selection rather than missing data.
+  - `resolve_identity_context.py` consumes explicit runtime-catalog authority (`--local-catalog` / `IDENTITY_CATALOG`) before any script-root-derived fallback and the foreign-project precedence lane turns green; satisfied.
+  - active health/runtime utilities stop embedding script-root catalog defaults on current runtime surfaces and either resolve through the shared runtime-path contract or fail-close explicitly; satisfied.
+  - launch-context parity stays machine-checked from both workspace-root and protocol-root launches; satisfied.
+- `closure_evidence`:
+  - `bash scripts/ci/run_semantic_clarity_probes_ci.sh` now passes both `foreign project env ignored when current project has no session pointer` and `current project session pointer wins over foreign project env`.
+  - `python3 scripts/validate_cli_catalog_default_semantics.py --json-only` now reports `cli_catalog_default_semantics_status=PASS_REQUIRED`, zero runtime global-home default hits, and launch-context parity across workspace-root/protocol-root replays.
+  - resolver truth now stays closed while any remaining raw catalog metadata underdescription is tracked separately by `ISSUE-029`.
 
-### ISSUE-026 - Shared compatibility projection can outlive session-primary truth and is still downgraded to warning-level drift
+### ISSUE-026 - Session-primary authority now fail-closes compatibility drift; remaining compatibility work stays quarantined
 
-- `status`: OPEN
-- `problem_statement`: protocol runtime can already hold the correct session-primary authoritative identity while the shared compatibility pointer family (`session/active_identity.json` + `session/mirror/current.json`) still points at an older identity; active health/status tooling downgrades that state to warning-level drift and the canonical repair surface rebuilds pointer payloads from actor-global compatibility projection state rather than from current session-primary truth.
+- `status`: CLOSED
+- `problem_statement`: protocol runtime originally could hold the correct session-primary authoritative identity while the shared compatibility pointer family (`session/active_identity.json` + `session/mirror/current.json`) still pointed at an older identity; active health/status tooling downgraded that state to warning-level drift and the canonical repair surface rebuilt pointer payloads from actor-global compatibility projection state rather than from current session-primary truth.
 - `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
 - `secondary_refs`:
   - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
@@ -658,14 +658,14 @@ Root cause:
   - supporting runtime feedback: `system-requirements-analyst` active-runtime re-entry report
 - `root_cause`: RC-02 and RC-11
 - `stop_condition`:
-  - current runtime health/status surfaces stop classifying compatibility-pointer drift as warn-level residue once session-primary truth is available;
-  - protocol-owned convergence rewrites canonical/mirror pointer surfaces from authoritative `(actor_id,session_id)->identity_id` truth first and treats compatibility projection as diagnostic metadata only;
-  - pointer-drift repair/convergence becomes a protocol-owned fail-close lane rather than a repeated manual/operator interpretation problem.
-- `current_evidence`:
-  - `system-requirements-analyst` reports authoritative actor/session binding already on the current identity while global shared pointer files remain on `office-ops-expert` with `compatibility_projection_status=AVAILABLE`;
-  - `refresh_identity_session_status.py` currently labels the same state as warning-level drift;
-  - `collect_identity_health_report.py` still invokes the pointer guard with `--allow-compatibility-projection-drift`;
-  - `repair_actor_session_authority_residue.py` currently materializes pointer surface identity from `projection_state` when `projection_status == AVAILABLE`.
+  - current runtime health/status surfaces stop classifying compatibility-pointer drift as warn-level residue once session-primary truth is available; satisfied.
+  - protocol-owned convergence rewrites canonical/mirror pointer surfaces from authoritative `(actor_id,session_id)->identity_id` truth first and treats compatibility projection as diagnostic metadata only; satisfied.
+  - pointer-drift repair/convergence becomes a protocol-owned fail-close lane rather than a repeated manual/operator interpretation problem; satisfied.
+- `closure_evidence`:
+  - `python3 scripts/validate_identity_switch_closure_semantics.py --json-only` now returns `PASS_REQUIRED` with `compatibility_pointer_identity_authority=diagnostic_only`.
+  - `scripts/refresh_identity_session_status.py` now classifies stale/missing compatibility projection under available session-primary truth as `POINTER_FAIL`, not warning-level drift.
+  - `scripts/collect_identity_health_report.py` now invokes the pointer guard through `--strict-session-primary`, and `scripts/repair_actor_session_authority_residue.py` rebuilds canonical/mirror pointer surfaces from authoritative binding first.
+  - `scripts/validate_identity_session_pointer_consistency.py` no longer exposes the old `--allow-compatibility-projection-drift` interface residue on strict lanes.
 
 ### ISSUE-027 - Motherline no-downgrade contract is now frozen; remaining compatibility residue must stay quarantined
 

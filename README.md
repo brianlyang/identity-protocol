@@ -43,15 +43,19 @@ Explicit generic surface:
 Print the full copyable command bundle for any governed identity:
 
 ```bash
-python3 scripts/render_identity_codex_launcher.py commands --identity-id <identity-id>
+identity-codex commands --identity-id <identity-id>
+```
+
+If the per-identity short launcher is already installed, the even shorter surface is:
+
+```bash
+id-<identity-id> commands
 ```
 
 If you want a resume command outside the currently running identity session, pass the host thread UUID explicitly:
 
 ```bash
-python3 scripts/render_identity_codex_launcher.py commands \
-  --identity-id <identity-id> \
-  --thread-id <host-thread-uuid>
+identity-codex commands --identity-id <identity-id> --thread-id <host-thread-uuid>
 ```
 
 What this prints:
@@ -64,7 +68,7 @@ What this prints:
 Operational rule:
 
 - if someone asks “`identity_id=XXX` 如何启动 / 如何续接”, the answer should come from this protocol-owned command bundle,
-  not from manual command拼接 or workspace-specific wrapper folklore.
+  not from manual command拼接, python helper invocation, or workspace-specific wrapper folklore.
 
 ### Protocol SSOT governance (canonical source + coupling)
 

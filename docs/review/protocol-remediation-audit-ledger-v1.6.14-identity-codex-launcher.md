@@ -88,7 +88,8 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
 4. The `codex` product command is never overridden or renamed by protocol launcher governance.
 5. For operator-facing daily entry, the preferred installed surface remains the short generated shortcut `id-<identity-id>`; the longer generic command remains the explicit generic/repair/documentation form.
 6. Operator-facing command discovery is protocol-owned rather than chat-assembled:
-   - `python3 scripts/render_identity_codex_launcher.py commands --identity-id <identity-id>`
+   - `identity-codex commands --identity-id <identity-id>`
+   - `id-<identity-id> commands`
    must return already assembled copyable start/resume commands for the target identity.
 7. Pack-local launcher assets land only under `<pack_path>/scripts/launchers/`.
 8. Installed launchers land only under `${CODEX_HOME}/bin/`.
@@ -114,7 +115,7 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - creator/update/activate and installer rollout wiring,
    - canonical pack-local launcher manifest + README,
    - canonical installed `identity-codex` and `id-<identity-id>` shims,
-   - protocol-owned command-bundle output from `render_identity_codex_launcher.py commands`,
+   - protocol-owned command-bundle output from `identity-codex commands --identity-id <identity-id>` and `id-<identity-id> commands`,
    - launcher probe lane `scripts/ci/run_identity_codex_launcher_probes_ci.sh`,
    - convergence-entry probe lane `scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh`,
    - active-runtime launcher migration closure checker `scripts/check_identity_codex_launcher_migration_closure.py`,
@@ -179,7 +180,7 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - fresh convergence apply emits a receipt/manifest bundle that is already truth-synced on the first dry-run;
    - aggregate closure with `--catalog .identity/catalog.local.yaml` resolves against the caller workspace rather than the protocol repo;
    - `resolve_identity_context.py resolve --identity-id <id>` from the sibling workspace classifies that runtime catalog as `source_layer=project` with `resolved_scope=USER`.
-   - `render_identity_codex_launcher.py commands --identity-id <id>` returns a ready-to-copy command bundle rather than leaving command assembly to the operator.
+   - `identity-codex commands --identity-id <id>` and `id-<id> commands` return a ready-to-copy command bundle rather than leaving command assembly to the operator.
 5. Audit follow-on note: some external workspace raw catalog rows may still carry metadata hygiene residue such as `canonical_scope=UNKNOWN`; that no longer blocks launcher truth because the protocol-owned resolver now returns the correct runtime classification, but the raw metadata cleanup should be tracked separately and must not be misreported as launcher-semantic debt.
 6. The closer handoff boundary after this landing is therefore narrow and explicit:
    - continue using the same convergence entry, the same receipt family, and the same runtime-only closure semantics,
