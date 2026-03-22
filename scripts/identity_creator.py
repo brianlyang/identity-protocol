@@ -482,6 +482,7 @@ def _enforce_identity_codex_launcher_migration_closure(
         str(repo_catalog),
         "--catalog",
         str(catalog),
+        "--workspace-runtime-only",
         "--json-only",
     ]
     rc_check, out_check, _ = _run_capture(check_cmd)
