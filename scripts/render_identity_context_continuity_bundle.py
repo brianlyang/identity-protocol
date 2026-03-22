@@ -141,40 +141,34 @@ def _launcher_recommendation(startup_readiness_status: str) -> str:
     return "fresh_start_without_governed_reentry_claim"
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(
-        description="Render a protocol-owned continuity bundle for launcher/internal consumers without creating a new operator command family."
-    )
-    ap.add_argument("--catalog", default="")
-    ap.add_argument("--identity-id", required=True)
-    ap.add_argument("--current-task", default="")
-    ap.add_argument("--artifact", default="")
-    ap.add_argument("--artifact-kind", default="")
-    ap.add_argument("--brief", default="")
-    ap.add_argument("--receipt", default="")
-    ap.add_argument("--json-only", action="store_true")
-    args = ap.parse_args()
-
-    catalog_raw = clean_string(args.catalog)
+def render_continuity_bundle_payload(
+    *,
+    identity_id: str,
+    catalog: str = "",
+    current_task: str = "",
+    artifact: str = "",
+    artifact_kind: str = "",
+    brief: str = "",
+    receipt: str = "",
+) -> dict[str, Any]:
+    catalog_raw = clean_string(catalog)
     catalog_path = Path(catalog_raw).expanduser().resolve() if catalog_raw else None
 
     try:
         pack_root, task_path, _task_doc = resolve_pack_task(
             catalog_path=catalog_path,
-            current_task=clean_string(args.current_task),
-            identity_id=args.identity_id,
+            current_task=clean_string(current_task),
+            identity_id=identity_id,
         )
     except Exception as exc:
-        payload = {
+        return {
             "status": STATUS_FAIL_REQUIRED,
             "identity_context_continuity_bundle_status": STATUS_FAIL_REQUIRED,
             "bundle_contract_id": BUNDLE_CONTRACT_ID,
             "bundle_role": BUNDLE_ROLE,
-            "identity_id": args.identity_id,
+            "identity_id": identity_id,
             "error": str(exc),
         }
-        _emit(payload, json_only=args.json_only)
-        return 1
 
     validator_payloads: dict[str, dict[str, Any]] = {}
     validator_statuses: dict[str, str] = {}
@@ -185,13 +179,13 @@ def main() -> int:
     for name in VALIDATOR_SPECS:
         cmd = _validator_cmd(
             name=name,
-            identity_id=args.identity_id,
+            identity_id=identity_id,
             catalog=str(catalog_path) if catalog_path is not None else "",
-            current_task=clean_string(args.current_task),
-            artifact=clean_string(args.artifact),
-            artifact_kind=clean_string(args.artifact_kind),
-            brief=clean_string(args.brief),
-            receipt=clean_string(args.receipt),
+            current_task=clean_string(current_task),
+            artifact=clean_string(artifact),
+            artifact_kind=clean_string(artifact_kind),
+            brief=clean_string(brief),
+            receipt=clean_string(receipt),
         )
         payload, _rc = _run_validator_json(cmd)
         if clean_string(payload.get("render_error")):
@@ -241,7 +235,7 @@ def main() -> int:
         "identity_context_continuity_bundle_status": bundle_status,
         "bundle_contract_id": BUNDLE_CONTRACT_ID,
         "bundle_role": BUNDLE_ROLE,
-        "identity_id": args.identity_id,
+        "identity_id": identity_id,
         "catalog_path": str(catalog_path) if catalog_path is not None else "",
         "resolved_pack_path": str(pack_root),
         "task_path": str(task_path),
@@ -269,8 +263,34 @@ def main() -> int:
         "validator_stale_reasons": validator_stale_reasons,
         "validator_payloads": validator_payloads,
     }
+    return payload
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(
+        description="Render a protocol-owned continuity bundle for launcher/internal consumers without creating a new operator command family."
+    )
+    ap.add_argument("--catalog", default="")
+    ap.add_argument("--identity-id", required=True)
+    ap.add_argument("--current-task", default="")
+    ap.add_argument("--artifact", default="")
+    ap.add_argument("--artifact-kind", default="")
+    ap.add_argument("--brief", default="")
+    ap.add_argument("--receipt", default="")
+    ap.add_argument("--json-only", action="store_true")
+    args = ap.parse_args()
+
+    payload = render_continuity_bundle_payload(
+        identity_id=args.identity_id,
+        catalog=args.catalog,
+        current_task=args.current_task,
+        artifact=args.artifact,
+        artifact_kind=args.artifact_kind,
+        brief=args.brief,
+        receipt=args.receipt,
+    )
     _emit(payload, json_only=args.json_only)
-    return 0 if bundle_status != STATUS_FAIL_REQUIRED else 1
+    return 0 if clean_string(payload.get("status")) != STATUS_FAIL_REQUIRED else 1
 
 
 if __name__ == "__main__":
