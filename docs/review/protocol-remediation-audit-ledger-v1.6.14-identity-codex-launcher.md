@@ -1,6 +1,6 @@
 # Protocol Remediation Audit Ledger (v1.6.14 identity-Codex launcher stream)
 
-Status: Active (implementation closure landed, 2026-03-21; legacy fleet rollout continues)  
+Status: Active (implementation closure plus isolated historical replay capability verified, 2026-03-22; legacy fleet rollout continues)  
 Scope: protocol review ledger for identity-bound Codex launcher/install/startup governance
 
 ## 0) Stream objective
@@ -162,6 +162,8 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
      - execution is in required gates,
      - audit is in the lane-summary control plane.
 2. The remaining tail is also frozen precisely:
-   - remaining work belongs mainly to legacy rollout and isolated historical replay enhancement,
+   - current-state note (2026-03-22): `python3 scripts/validate_protocol_lane_isolated_historical_replay.py --repo-root identity-protocol-local --workspace-root . --commit HEAD --json-only` returned `PASS_REQUIRED` with `projection_parity_match=true`,
+   - remaining work belongs mainly to legacy rollout and broader evidence breadth,
+   - the current asset is **not** a universal isolated historical replay engine for arbitrary commits unless it is run against an isolated clone/worktree representing that historical tree,
    - it does **not** belong to unresolved launcher semantics.
 3. Reviewers may use the statement above as the auditable closure summary, but must keep the lane scope and replay caveat attached.
