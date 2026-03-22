@@ -11,6 +11,7 @@ import yaml
 from actor_session_common import (
     ACTOR_GLOBAL_LAST_MUTATION_PROJECTION_SCOPE,
     AUTHORITATIVE_BINDING_RULE,
+    COMPATIBILITY_PROJECTION_STATUS_AVAILABLE,
     COMPATIBILITY_PROJECTION_STATUS_SUPPRESSED_MULTI_IDENTITY,
     COMPATIBILITY_PROJECTION_STATUS_UNAVAILABLE,
     load_actor_binding,
@@ -146,6 +147,8 @@ def _validate_compatibility_projection_exception(
         if str(payload.get("identity_id", "")).strip():
             return False, "compatibility_projection_identity_expected_empty"
         return True, "compatibility_projection_unavailable_by_policy"
+    if projection_status == COMPATIBILITY_PROJECTION_STATUS_AVAILABLE:
+        return False, "compatibility_projection_available_diagnostic_only"
 
     pointer_identity_id = str(payload.get("identity_id", "")).strip()
     if not pointer_identity_id:
