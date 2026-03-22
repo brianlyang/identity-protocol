@@ -130,6 +130,44 @@ Workbook role: track decision status, audit checkpoints, and rollout readiness o
 2. Cross-workspace proof must not be satisfied by workspace-specific wrapper exceptions or alternate launcher shortcuts.
 3. Pilot proof from a single manually repaired identity is acceptable only as evidence that the shared toolchain works end-to-end, not as fleet-closure proof.
 
+### 4.9 Accepted control-plane decision freeze (2026-03-22)
+
+1. **Canonical entry surface**
+   - Freeze one authoritative protocol-owned convergence entry at `scripts/run_identity_codex_launcher_workspace_convergence.py`.
+   - The entry exposes one governed interface with `--mode dry-run|apply`; dry-run remains non-repairing while still emitting governed result artifacts.
+   - `identity_creator update` may delegate to this entry for explicit launcher auto-repair, but that delegation is non-authoritative; launcher convergence semantics still belong to this single script.
+2. **Catalog authority**
+   - Freeze workspace-local runtime catalog authority only: the convergence entry must operate on `<workspace>/.identity/catalog.local.yaml` or an equivalent external workspace-local runtime catalog passed explicitly.
+   - Repository fixture catalogs such as `identity/catalog/identities.yaml` are excluded from the convergence entry and must fail closed instead of being mutated or silently inspected as runtime truth.
+3. **Repair composition path**
+   - Freeze the authoritative repair pipeline as:
+     - aggregate checker `scripts/check_identity_codex_launcher_migration_closure.py`
+     - shared contract backfill `scripts/repair_contract_backfill.py --apply`
+     - launcher rollout `scripts/install_identity_codex_launcher.py`
+     - single-identity validation `scripts/validate_identity_codex_launcher.py --require-installed`
+     - aggregate recheck through the same checker
+   - This keeps fleet truth in the aggregate checker and single-identity truth in the existing launcher validator.
+4. **Mutation scope**
+   - Freeze shared backfill reuse as accepted for this lane; launcher convergence does not get a launcher-only private repair dialect.
+   - The convergence receipt must disclose that the mutation scope is `transitive_backfill_plus_launcher_install` so apply mode cannot pretend it was launcher-only if shared backfill touched other required protocol contract surfaces.
+   - Partial execution may occur operationally, but any unresolved post-repair violation remains fail-close and must surface as a non-green final receipt.
+5. **Receipt family and evidence path**
+   - Freeze the canonical receipt family as `identity_codex_launcher_workspace_convergence_receipt_v1`.
+   - Freeze the canonical archival root at `activity/evidence/v1614-identity-codex-launcher/<YYYY-MM-DD>/`.
+   - The convergence entry must emit:
+     - `launcher_convergence_precheck.<run_token>_summary.json`
+     - `launcher_convergence_receipt.<run_token>_summary.json`
+     - and, for apply mode, `launcher_convergence_postcheck.<run_token>_summary.json`
+   - The receipt must keep workspace-local catalog truth, checked identities, repaired identities, remaining violations, mutation scope, and pre/post evidence refs machine-visible.
+6. **Gate boundary**
+   - Freeze required gates and readiness as passive live-surface consumers of the aggregate checker; they do not directly run the mutating live convergence entry against the active workspace tree.
+   - Synthetic probe coverage for the convergence entry is acceptable inside required gates because it validates the control-plane asset without mutating live workspace runtime state.
+   - Lifecycle delegation is limited to explicit repair surfaces such as `identity_creator update`; passive validate/readiness flows remain fail-close on the checker rather than auto-mutating.
+7. **Cross-workspace pilot rule**
+   - Freeze pilot proof to “same convergence entry, different workspace-local runtime catalog, no workspace-specific exceptions.”
+   - One repaired identity may prove the toolchain works end-to-end, but protocol-owned breadth claims still require multi-identity and eventually multi-workspace evidence through the same entry.
+   - A generic multi-lane convergence framework remains deferred until launcher-specific convergence is landed and replay-proven across more than one workspace.
+
 ## 5) Default recommendation for this roundtable
 
 1. Keep the topic inside `v1.6.14`; do **not** open a new stream while the scope is still launcher-only convergence.
