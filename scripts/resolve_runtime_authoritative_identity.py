@@ -17,7 +17,7 @@ from identity_runtime_authority_common import (
     STATUS_PASS_REQUIRED,
     validate_runtime_egress_identity_authority,
 )
-from resolve_identity_context import default_local_catalog_path
+from resolve_identity_context import resolve_local_catalog_path
 
 ERR_RUNTIME_AUTHORITY_RESOLVE = "IP-AUTH-RESOLVE-001"
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -63,7 +63,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(
         description="Resolve the current session-primary runtime identity and fail-close when only compatibility projection is available."
     )
-    ap.add_argument("--catalog", default=str(default_local_catalog_path(start=SCRIPT_DIR)))
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--actor-id", default="", help="explicit actor id; falls back to CODEX_ACTOR_ID")
     ap.add_argument("--session-id", default="", help="required session-primary selector (run:<id>)")
     ap.add_argument(
@@ -74,7 +74,7 @@ def main() -> int:
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
-    catalog_path = Path(args.catalog).expanduser().resolve()
+    catalog_path = resolve_local_catalog_path(args.catalog, start=SCRIPT_DIR)
     requested_identity_id = str(args.identity_id or "").strip()
     session_id = str(args.session_id or "").strip()
 
