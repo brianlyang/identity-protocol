@@ -533,6 +533,9 @@ RECEIPT_PASS_JSON="${TMP_ROOT}/receipt-family-pass.json"
 RECEIPT_MISSING_MEMBER_JSON="${TMP_ROOT}/receipt-family-missing-member.json"
 RECEIPT_UNKNOWN_KIND_JSON="${TMP_ROOT}/receipt-family-unknown-kind.json"
 RECEIPT_BROKEN_JOIN_JSON="${TMP_ROOT}/receipt-family-broken-join.json"
+DORMANT_BUNDLE_JSON="${TMP_ROOT}/dormant-bundle.json"
+REENTRY_BUNDLE_PASS_JSON="${TMP_ROOT}/reentry-bundle-pass.json"
+REENTRY_BUNDLE_FAIL_JSON="${TMP_ROOT}/reentry-bundle-fail.json"
 
 run_cmd() {
   echo "[RUN] $*" >&2
@@ -558,6 +561,11 @@ run_cmd python3 "${ROOT}/scripts/validate_identity_context_continuity_receipts.p
   --identity-id "${IDENTITY_ID}" \
   --current-task "${DORMANT_TASK}" \
   --json-only > "${DORMANT_RECEIPTS_JSON}"
+
+run_cmd python3 "${ROOT}/scripts/render_identity_context_continuity_bundle.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${DORMANT_TASK}" \
+  --json-only > "${DORMANT_BUNDLE_JSON}"
 
 run_cmd python3 "${ROOT}/scripts/validate_identity_context_continuity.py" \
   --identity-id "${IDENTITY_ID}" \
@@ -609,12 +617,28 @@ run_cmd python3 "${ROOT}/scripts/validate_identity_reentry_consumption.py" \
   --receipt "${REENTRY_PASS_RECEIPT}" \
   --json-only > "${REENTRY_CONSUMPTION_PASS_JSON}"
 
+run_cmd python3 "${ROOT}/scripts/render_identity_context_continuity_bundle.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${REENTRY_PASS_TASK}" \
+  --brief "${REENTRY_PASS_BRIEF}" \
+  --receipt "${REENTRY_PASS_RECEIPT}" \
+  --json-only > "${REENTRY_BUNDLE_PASS_JSON}"
+
 if python3 "${ROOT}/scripts/validate_identity_reentry_brief.py" \
   --identity-id "${IDENTITY_ID}" \
   --current-task "${REENTRY_BRIEF_FAIL_TASK}" \
   --brief "${REENTRY_BRIEF_FAIL_PATH}" \
   --json-only > "${REENTRY_BRIEF_FAIL_JSON}"; then
   echo "[FAIL] reentry brief negative probe unexpectedly passed"
+  exit 1
+fi
+
+if python3 "${ROOT}/scripts/render_identity_context_continuity_bundle.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${REENTRY_BRIEF_FAIL_TASK}" \
+  --brief "${REENTRY_BRIEF_FAIL_PATH}" \
+  --json-only > "${REENTRY_BUNDLE_FAIL_JSON}"; then
+  echo "[FAIL] continuity bundle negative probe unexpectedly passed"
   exit 1
 fi
 
@@ -720,7 +744,10 @@ python3 - "${TMP_ROOT}" \
   "${RECEIPT_PASS_JSON}" \
   "${RECEIPT_MISSING_MEMBER_JSON}" \
   "${RECEIPT_UNKNOWN_KIND_JSON}" \
-  "${RECEIPT_BROKEN_JOIN_JSON}" <<'PY'
+  "${RECEIPT_BROKEN_JOIN_JSON}" \
+  "${DORMANT_BUNDLE_JSON}" \
+  "${REENTRY_BUNDLE_PASS_JSON}" \
+  "${REENTRY_BUNDLE_FAIL_JSON}" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -747,6 +774,9 @@ from pathlib import Path
     receipt_missing_member_path,
     receipt_unknown_kind_path,
     receipt_broken_join_path,
+    dormant_bundle_path,
+    reentry_bundle_pass_path,
+    reentry_bundle_fail_path,
 ) = sys.argv[1:]
 
 def load(path: str) -> dict:
@@ -772,11 +802,16 @@ receipt_pass = load(receipt_pass_path)
 receipt_missing_member = load(receipt_missing_member_path)
 receipt_unknown_kind = load(receipt_unknown_kind_path)
 receipt_broken_join = load(receipt_broken_join_path)
+dormant_bundle = load(dormant_bundle_path)
+reentry_bundle_pass = load(reentry_bundle_pass_path)
+reentry_bundle_fail = load(reentry_bundle_fail_path)
 
 assert dormant_continuity["identity_context_continuity_status"] == "SKIPPED_NOT_REQUIRED", dormant_continuity
 assert dormant_reentry_brief["identity_reentry_brief_status"] == "SKIPPED_NOT_REQUIRED", dormant_reentry_brief
 assert dormant_reentry_consumption["identity_reentry_consumption_status"] == "SKIPPED_NOT_REQUIRED", dormant_reentry_consumption
 assert dormant_receipts["identity_context_continuity_receipt_family_status"] == "SKIPPED_NOT_REQUIRED", dormant_receipts
+assert dormant_bundle["identity_context_continuity_bundle_status"] == "SKIPPED_NOT_REQUIRED", dormant_bundle
+assert dormant_bundle["operator_surface_contract"]["new_user_facing_continuity_command_family_forbidden"] is True, dormant_bundle
 
 assert artifact_pass["identity_context_continuity_status"] == "PASS_REQUIRED", artifact_pass
 assert artifact_override["identity_context_continuity_status"] == "FAIL_REQUIRED", artifact_override
@@ -788,7 +823,14 @@ assert "supersedes_ref_self_cycle" in artifact_self_cycle.get("stale_reasons", [
 
 assert reentry_brief_pass["identity_reentry_brief_status"] == "PASS_REQUIRED", reentry_brief_pass
 assert reentry_consumption_pass["identity_reentry_consumption_status"] == "PASS_REQUIRED", reentry_consumption_pass
+assert reentry_bundle_pass["identity_context_continuity_bundle_status"] == "PASS_REQUIRED", reentry_bundle_pass
+assert reentry_bundle_pass["startup_reentry_readiness_status"] == "PASS_REQUIRED", reentry_bundle_pass
+assert reentry_bundle_pass["live_reentry_consumption_proof_status"] == "PASS_REQUIRED", reentry_bundle_pass
+assert reentry_bundle_pass["recommended_launcher_bind_mode"] == "consume_governed_reentry_brief", reentry_bundle_pass
 assert reentry_brief_fail["identity_reentry_brief_status"] == "FAIL_REQUIRED", reentry_brief_fail
+assert reentry_bundle_fail["identity_context_continuity_bundle_status"] == "FAIL_REQUIRED", reentry_bundle_fail
+assert reentry_bundle_fail["startup_reentry_readiness_status"] == "FAIL_REQUIRED", reentry_bundle_fail
+assert reentry_bundle_fail["recommended_launcher_bind_mode"] == "fresh_start_without_governed_reentry_claim", reentry_bundle_fail
 assert any(
     token in reentry_brief_fail.get("stale_reasons", [])
     for token in ("freshness_indicates_stale", "authority_override_attempt")
@@ -839,6 +881,7 @@ print(
                 "unknown_continuity_receipt_kind",
                 "reentry_consumption_lineage_not_joinable",
             ],
+            "continuity_bundle_surface_status": reentry_bundle_pass["identity_context_continuity_bundle_status"],
             "tmp_root": tmp_root,
         },
         ensure_ascii=False,
