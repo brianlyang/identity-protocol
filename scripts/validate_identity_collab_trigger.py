@@ -42,7 +42,7 @@ REQUIRED_RECEIPT_FIELDS = {
 
 
 def _build_alias_map(*raw_maps: Any) -> dict[str, str]:
-    alias_map = dict(LEGACY_BLOCKER_ALIAS_MAP)
+    alias_map: dict[str, str] = {}
     for raw_map in raw_maps:
         if not isinstance(raw_map, dict):
             continue
@@ -126,6 +126,14 @@ def _is_fixture_identity(row: dict[str, Any] | None) -> bool:
     profile = str((row or {}).get("profile", "")).strip().lower()
     runtime_mode = str((row or {}).get("runtime_mode", "")).strip().lower()
     return profile == "fixture" or runtime_mode == "demo_only"
+
+
+def _compatibility_overlay_allowed(*, fixture_mode: bool, task: dict[str, Any]) -> bool:
+    if fixture_mode:
+        return True
+    scaffold_profile = str(task.get("scaffold_profile", "")).strip().lower()
+    scaffold_generation_mode = str(task.get("scaffold_generation_mode", "")).strip().lower()
+    return scaffold_profile == "legacy-commerce-overlay" or scaffold_generation_mode == "explicit_opt_in"
 
 
 def _parse_iso_dt(value: str) -> datetime:
@@ -389,6 +397,10 @@ def main() -> int:
         print("[FAIL] blocker_taxonomy_contract.required must be true")
         return 1
 
+    compatibility_overlay_allowed = _compatibility_overlay_allowed(fixture_mode=fixture_mode, task=task)
+    if taxonomy.get("legacy_alias_bridge") and not compatibility_overlay_allowed:
+        print("[FAIL] blocker_taxonomy_contract.legacy_alias_bridge is migration/fixture-only")
+        return 1
     alias_map = _build_alias_map(taxonomy.get("legacy_alias_bridge"))
 
     blockers_norm, blockers_alias_hits, blockers_invalid = _normalize_blocker_set(
@@ -403,6 +415,9 @@ def main() -> int:
             "[FAIL] blocker_taxonomy_contract.required_blocker_types missing canonical blockers: "
             f"{sorted(CANONICAL_BLOCKERS - blockers_norm)}"
         )
+        return 1
+    if blockers_alias_hits and not compatibility_overlay_allowed:
+        print(f"[FAIL] blocker taxonomy legacy alias bridge is migration/fixture-only: {blockers_alias_hits}")
         return 1
     mode = "legacy_alias_bridge" if blockers_alias_hits else "canonical"
     print(f"[OK] blocker taxonomy covers canonical classes (mode={mode})")
@@ -438,6 +453,9 @@ def main() -> int:
         print(f"[FAIL] collaboration_trigger_contract missing fields: {miss}")
         return 1
 
+    if contract.get("legacy_alias_bridge") and not compatibility_overlay_allowed:
+        print("[FAIL] collaboration_trigger_contract.legacy_alias_bridge is migration/fixture-only")
+        return 1
     alias_map = _build_alias_map(alias_map, contract.get("legacy_alias_bridge"))
     trig_norm, trig_alias_hits, trig_invalid = _normalize_blocker_set(
         contract.get("trigger_conditions") or [],
@@ -451,6 +469,9 @@ def main() -> int:
             "[FAIL] collaboration_trigger_contract.trigger_conditions missing canonical blockers: "
             f"{sorted(CANONICAL_BLOCKERS - trig_norm)}"
         )
+        return 1
+    if trig_alias_hits and not compatibility_overlay_allowed:
+        print(f"[FAIL] collaboration trigger legacy alias bridge is migration/fixture-only: {trig_alias_hits}")
         return 1
     if trig_alias_hits:
         print(f"[OK] collaboration trigger legacy alias hits: {trig_alias_hits}")
