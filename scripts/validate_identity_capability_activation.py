@@ -550,6 +550,7 @@ def _build_runtime_payload(
                 "missing_script_ids": route_missing_script_ids,
                 "resolved_script_ids": list(route_script_row.get("resolved_script_ids") or []),
                 "script_receipt_pattern": str(route.get("script_receipt_pattern", "")).strip(),
+                "route_receipt_rows": route_receipt_rowset,
                 "uses_execution_lanes": route_uses_execution_lanes,
                 "allowed_execution_lanes": list(route.get("allowed_execution_lanes") or []),
                 "lane_admission_policy": dict(route.get("lane_admission_policy") or {}),
@@ -733,10 +734,16 @@ def _validate_report(path: Path, require_activated: bool) -> tuple[bool, str]:
         "capability_activation_error_code",
         "capability_contract_required",
         "route_scope",
+        "route_scope_mode",
+        "route_ids",
         "route_selection_cardinality",
         "declared_dependency_projection",
         "observed_dependency_projection",
         "dependency_gap_reasons",
+        "undeclared_usage_detected",
+        "undeclared_usage_rows",
+        "missing_declared_dependency_detected",
+        "missing_declared_dependency_rows",
     ]
     missing = [k for k in required if k not in data]
     if missing:
@@ -762,6 +769,16 @@ def _validate_report(path: Path, require_activated: bool) -> tuple[bool, str]:
         return False, "observed_dependency_projection_must_be_object"
     if not isinstance(data.get("dependency_gap_reasons"), list):
         return False, "dependency_gap_reasons_must_be_list"
+    if not isinstance(data.get("route_ids"), list):
+        return False, "route_ids_must_be_list"
+    if not isinstance(data.get("undeclared_usage_detected"), bool):
+        return False, "undeclared_usage_detected_must_be_bool"
+    if not isinstance(data.get("undeclared_usage_rows"), list):
+        return False, "undeclared_usage_rows_must_be_list"
+    if not isinstance(data.get("missing_declared_dependency_detected"), bool):
+        return False, "missing_declared_dependency_detected_must_be_bool"
+    if not isinstance(data.get("missing_declared_dependency_rows"), list):
+        return False, "missing_declared_dependency_rows_must_be_list"
     optional_projection_issues = validate_optional_projection_payload(data)
     if optional_projection_issues:
         return False, optional_projection_issues[0]
