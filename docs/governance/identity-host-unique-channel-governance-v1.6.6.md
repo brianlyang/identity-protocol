@@ -1076,6 +1076,7 @@ Interpretation lock:
 1. code-level freshness guard is not sufficient by itself; migration closure must also hold for active runtime contracts.
 2. probe failures here are migration debt, not tuple-value mismatch noise.
 3. `PASS_REQUIRED` from this checker is active-runtime fleet evidence only when the selected runtime surface contains checked active runtime identities; `checked_identity_count=0` is wiring sanity, not fleet-closure proof.
+4. Current-state note (2026-03-22): replaying `python3 scripts/check_unique_entry_contract_migration_closure.py --catalog <project-local absolute catalog> --json-only` against the current workspace runtime surface returned `PASS_REQUIRED` with `checked_identity_count=4`; this is the current non-empty active-runtime proof and does not replace the standing empty-scan caveat above.
 
 ### 5.18 Strict operation default entry-receipt requiredization (2026-03-15)
 
