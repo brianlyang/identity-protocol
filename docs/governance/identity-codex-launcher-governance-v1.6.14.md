@@ -91,6 +91,8 @@ The canonical implementation surface for `v1.6.14` is now:
 6. Canonical installed launchers:
    - `${CODEX_HOME}/bin/identity-codex`
    - `${CODEX_HOME}/bin/id-<identity-id>`
+7. Canonical workspace-level convergence entry:
+   - `identity-protocol-local/scripts/run_identity_codex_launcher_workspace_convergence.py`
 
 These names and directories are frozen by this stream. The renderer / installer / validator / pack-local manifest / installed shim family has landed, and later extensions may add manifest fields but must not relocate these canonical homes without a new governed stream.
 
@@ -182,8 +184,9 @@ These names and directories are frozen by this stream. The renderer / installer 
 ### 6.1 Workspace-level convergence entry is the canonical rollout path
 
 1. Hand-repairing individual identities may be used as pilot evidence only; it is **not** the target operating model for fleet rollout.
-2. The canonical follow-on rollout path for `v1.6.14` is a **workspace-level launcher convergence entry** owned by protocol infrastructure.
-3. That convergence entry must operate over the workspace-local runtime catalog rather than over ad hoc operator memory.
+2. The canonical follow-on rollout path for `v1.6.14` is the landed **workspace-level launcher convergence entry** owned by protocol infrastructure:
+   - `scripts/run_identity_codex_launcher_workspace_convergence.py`
+3. That convergence entry operates over the workspace-local runtime catalog rather than over ad hoc operator memory.
 4. The frozen minimum behavior of that convergence entry is:
    - discover the local runtime catalog for the current workspace,
    - scan active runtime identities for launcher migration closure debt,
@@ -215,7 +218,9 @@ These names and directories are frozen by this stream. The renderer / installer 
    - installed `identity-codex` and `id-<identity-id>` shims under `${CODEX_HOME}/bin/`,
    - launcher fail-close on forbidden runtime override or missing tuple truth,
    - dedicated launcher probes under `scripts/ci/run_identity_codex_launcher_probes_ci.sh`,
+   - dedicated convergence-entry probes under `scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh`,
    - active-runtime launcher migration closure checker under `scripts/check_identity_codex_launcher_migration_closure.py`,
+   - protocol-owned workspace-level convergence entry under `scripts/run_identity_codex_launcher_workspace_convergence.py`,
    - strict lifecycle enforcement where `identity_creator validate` fail-closes on active-runtime launcher migration debt and `identity_creator update` performs governed auto-repair + recheck,
    - required-runtime-gates inclusion for the launcher probe lane,
    - explicit `scripts/release_readiness_check.py` consumption of the aggregate launcher migration closure checker for readiness symmetry.
