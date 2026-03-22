@@ -208,6 +208,19 @@ These names and directories are frozen by this stream. The renderer / installer 
 7. The workbook family may track decision status and rollout readiness, but it does not become the semantic owner of launcher convergence.
 8. The roundtable package holds the open questions and recommended defaults; reviewers must not treat those questions as pre-resolved by this subsection alone.
 
+### 6.3 Deferred generic-framework promotion guard
+
+1. `v1.6.14` explicitly accepts launcher convergence as the **first family pilot only**; it does **not** automatically promote that pilot into a generic workspace convergence framework.
+2. A new generic-framework stream is therefore **deferred by design** at this stage rather than forgotten or implicitly denied.
+3. That promotion is **not automatic** after launcher convergence code lands, after a single cross-workspace pilot passes, or after workbook follow-on notes are updated.
+4. Opening a later generic workspace convergence framework stream is allowed only through a new architect + audit promotion review after all of the following are machine-proven together:
+   - launcher convergence is fully landed as a protocol-owned control-plane asset, including the canonical entry, governed receipt family, probes, and passive-gate boundary;
+   - the **same** convergence entry is proven across more than one workspace-local runtime catalog with no workspace-specific wrapper exception;
+   - at least one additional non-launcher family proves that it can reuse the same convergence control-plane grammar without transferring semantic ownership away from its existing stream;
+   - the proposed abstraction does **not** require compatibility downgrades, weaker catalog authority, diluted receipt semantics, or any weakest-common-denominator relaxation of the launcher lane.
+5. Until that explicit promotion review passes, future families such as health/heal, update/adoption, continuity/re-entry, or instance-script-orchestration convergence remain owned by their respective streams and may not be summarized as an already-open generic framework.
+6. Workbook follow-on tracking is acceptable as reminder state only, but it must never be treated as the authority that upgrades this deferred promotion into an approved new stream.
+
 ## 7) Future promotion exit criteria
 
 1. `v1.6.14` implementation closure now requires machine proof, not chat description.
