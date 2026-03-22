@@ -14,6 +14,11 @@ trap 'rm -rf "${TMP_ROOT}"' EXIT
 CODEX_HOME="${TMP_ROOT}/codex-home"
 IDENTITY_HOME="${CODEX_HOME}/.identity"
 BIN_DIR="${CODEX_HOME}/bin"
+HOST_THREAD_UUID="$(python3 - <<'PY'
+import uuid
+print(uuid.uuid4())
+PY
+)"
 export CODEX_HOME
 export IDENTITY_HOME
 export IDENTITY_PROTOCOL_HOME="${REPO_ROOT}"
@@ -49,19 +54,20 @@ echo "[RUN] ${BIN_DIR}/identity-codex commands --identity-id ${IDENTITY_ID} --th
 "${BIN_DIR}/identity-codex" \
   commands \
   --identity-id "${IDENTITY_ID}" \
-  --thread-id 019cad9b-f10a-7ba0-9d65-77c3946c03ef \
+  --thread-id "${HOST_THREAD_UUID}" \
   --json-only > "${COMMANDS_JSON}"
 
-python3 - "${COMMANDS_JSON}" <<'PY'
+python3 - "${COMMANDS_JSON}" "${HOST_THREAD_UUID}" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+host_thread_uuid = sys.argv[2]
 assert payload["status"] == "PASS_REQUIRED", payload
 assert payload["resume_status"] == "PASS_REQUIRED", payload
 assert payload["preferred_start_command"].startswith("zsh -lic 'id-"), payload
-assert " resume 019cad9b-f10a-7ba0-9d65-77c3946c03ef'" in payload["preferred_resume_command"], payload
+assert f" resume {host_thread_uuid}'" in payload["preferred_resume_command"], payload
 assert payload["absolute_start_command"].endswith(f"/id-{payload['identity_id']}"), payload
 print("launcher_command_bundle_status=PASS_REQUIRED")
 PY
@@ -69,7 +75,7 @@ PY
 echo "[RUN] ${BIN_DIR}/id-${IDENTITY_ID} commands --thread-id <thread-uuid> --json-only"
 "${BIN_DIR}/id-${IDENTITY_ID}" \
   commands \
-  --thread-id 019cad9b-f10a-7ba0-9d65-77c3946c03ef \
+  --thread-id "${HOST_THREAD_UUID}" \
   --json-only > "${SHORTCUT_COMMANDS_JSON}"
 
 python3 - "${SHORTCUT_COMMANDS_JSON}" <<'PY'
@@ -91,7 +97,7 @@ echo "[RUN] ${BIN_DIR}/identity-codex --identity-id ${IDENTITY_ID} --dry-run --j
   --dry-run \
   --json-only \
   -- \
-  resume 019cad9b-f10a-7ba0-9d65-77c3946c03ef > "${DRY_RUN_JSON}"
+  resume "${HOST_THREAD_UUID}" > "${DRY_RUN_JSON}"
 
 python3 - "${DRY_RUN_JSON}" <<'PY'
 import json
