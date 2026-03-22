@@ -222,6 +222,27 @@ Minimum additional requirements:
 5. These receipt families must remain distinct from actor-session tuple ids, thread UUIDs, and launcher installation receipts.
 6. Any startup path that reads continuity artifacts without producing the governed re-entry consumption evidence is incomplete and must not claim `v1.6.16` implementation closure.
 
+### 2.12 Implementation landing order (frozen)
+
+1. Shared implementation for this stream must land in this order unless a later governed revision explicitly freezes a stricter replacement:
+   - `RQ-044` artifact schema / integrity validators
+   - `RQ-045` re-entry brief + startup consumption validators
+   - `RQ-046` receipt-family validator
+   - positive / negative continuity probe lane
+   - creator / backfill / readiness / required-gate wiring
+   - pilot identity adoption with live re-entry proof
+2. `RQ-046` must not land as an empty join shell before `RQ-044` and `RQ-045` can already prove artifact validity and startup-consumption validity.
+3. Pilot adoption must not begin until the required `v1.6.13` topology-path and `v1.6.8` path-registration work needed for the continuity runtime families is actually landed.
+4. Launcher-side positive proof is insufficient if it proves only that a brief file exists; it must prove that governed startup consumption emitted governed runtime evidence.
+5. This landing order is frozen so teams do not skip directly from contract prose to adoption claims.
+
+### 2.13 Evidence interpretation discipline (frozen)
+
+1. Stream-touch and requirement-touch claims for `v1.6.16` machine-contract changes are authoritative only when evaluated against a pinned commit range or an isolated workspace rooted at the target revision.
+2. A bare current-HEAD run taken on a dirty tree is diagnostic-only when unrelated lane changes are present; it must not be re-labeled as the authoritative stream-touch proof for `v1.6.16`.
+3. Repository dirty-state counts are situational runtime facts, not protocol claims; governance must freeze the interpretation rule rather than embedding transient file counts.
+4. Before rollout or pilot claims, non-`v1.6.16` dirty lanes must be isolated, committed, or otherwise removed from the proof surface so continuity evidence is not cross-contaminated by unrelated deltas.
+
 ## 3) Four-track cross-verification boundary
 
 ### 3.1 T1 roundtable / internal topology

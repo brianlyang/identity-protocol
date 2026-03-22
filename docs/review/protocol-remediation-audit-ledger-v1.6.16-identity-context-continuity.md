@@ -177,7 +177,24 @@ This stream now freezes enough machine-facing contract structure to support shar
 7. Launcher-side consumption proof must culminate in governed runtime evidence instead of narrative-only success claims.
 8. This is enough to support code authoring of shared protocol surfaces, but not enough to claim rollout closure.
 
-## 6) Opening-state non-goals frozen for audit
+## 6) Audit hardening absorbed after coding-readiness freeze
+
+The following audit caveats are now frozen as interpretation rules rather than left as chat-only corrections:
+
+1. Stream-scope semantic-integrity proof for `v1.6.16` machine-contract changes is commit-scoped or isolated-worktree-scoped evidence; current dirty-HEAD bare runs are diagnostic only when unrelated lane changes are present.
+2. Dirty-tree file counts are not protocol semantics and must not be promoted into stability claims; only the scoped commit boundary of the audited lane may be used for formal stream-touch proof.
+3. Shared landing order is frozen as:
+   - `RQ-044`
+   - `RQ-045`
+   - `RQ-046`
+   - continuity probe lane
+   - creator/backfill/readiness wiring
+   - pilot adoption + live re-entry proof
+4. `RQ-046` receipt-family work must not precede meaningful `RQ-044` / `RQ-045` validity proof, or receipt join degenerates into an empty shell.
+5. Pilot adoption must not begin until the corresponding `v1.6.13` topology-path and `v1.6.8` path-registration work is present for the canonical continuity runtime families.
+6. Launcher-side success proof must verify governed re-entry consumption evidence, not merely the existence of a readable brief artifact.
+
+## 7) Opening-state non-goals frozen for audit
 
 1. This opening does not claim validator/readiness/creator rollout is complete.
 2. This opening does not claim any fleet pack is already `v1.6.16` adopted.
@@ -185,7 +202,7 @@ This stream now freezes enough machine-facing contract structure to support shar
 4. This opening does not reopen `v1.6.13` / `v1.6.14` / `v1.6.15` semantics.
 5. This opening does not yet solve isolated historical replay of continuity state.
 
-## 7) Follow-on implementation obligations
+## 8) Follow-on implementation obligations
 
 The next implementation stage should land, in order:
 
@@ -206,7 +223,7 @@ Candidate target surfaces for the follow-on stage:
 - scripts/repair_contract_backfill.py
 - scripts/identity_creator.py
 
-## 8) Audit conclusion for this opening checkpoint
+## 9) Audit conclusion for this opening checkpoint
 
 This checkpoint is acceptable as a **formal stream opening plus implementation-freeze handoff** because it does four things cleanly:
 
