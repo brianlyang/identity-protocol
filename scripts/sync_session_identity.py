@@ -556,7 +556,7 @@ def main() -> int:
         default=COMPATIBILITY_PROJECTION_WRITE_MODE_DISABLED,
         help=(
             "compatibility pointer mutation policy: default disabled seals actor-global projection writes; "
-            "legacy_actor_global_switch is legacy-only and requires audited switch intent for cross-identity refresh."
+            "legacy_actor_global_switch is retained only as a retired compatibility token and fail-closes when selected."
         ),
     )
     ap.add_argument(
