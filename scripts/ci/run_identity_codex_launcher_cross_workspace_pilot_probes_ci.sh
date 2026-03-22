@@ -147,8 +147,15 @@ fi
 
 python3 - "${DRY_JSON}" "${TMP_CATALOG}" "${TMP_WORKSPACE_ROOT}" <<'PY'
 import json
+import hashlib
 import sys
 from pathlib import Path
+
+def resolve_manifest_member(manifest_path: Path, value: str) -> Path:
+    raw = Path(str(value).strip())
+    if raw.is_absolute():
+        return raw.resolve()
+    return (manifest_path.parent / raw).resolve()
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
 expected_catalog = str(Path(sys.argv[2]).resolve())
@@ -160,6 +167,15 @@ assert payload['workspace_root'] == expected_workspace, payload
 assert payload['checked_identity_count'] > 0, payload
 assert payload['planned_repair_count'] > 0, payload
 assert payload['repair_status'] == 'dry_run_preview', payload
+assert Path(payload['manifest_ref']).exists(), payload
+manifest_path = Path(payload['manifest_ref']).resolve()
+manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+kinds = {str(row.get('kind', '')).strip() for row in (manifest.get('evidence_records') or []) if isinstance(row, dict)}
+assert kinds == {'launcher_convergence_receipt', 'launcher_convergence_precheck'}, kinds
+for row in manifest.get('evidence_records') or []:
+    mirror = resolve_manifest_member(manifest_path, str(row['mirror_path']))
+    digest = hashlib.sha256(mirror.read_bytes()).hexdigest()
+    assert digest == str(row['sha256']).strip(), row
 print('launcher_cross_workspace_dry_run_status=FAIL_REQUIRED')
 PY
 
@@ -174,8 +190,15 @@ python3 "${REPO_ROOT}/scripts/run_identity_codex_launcher_workspace_convergence.
 
 python3 - "${APPLY_JSON}" "${TMP_CATALOG}" "${TMP_WORKSPACE_ROOT}" <<'PY'
 import json
+import hashlib
 import sys
 from pathlib import Path
+
+def resolve_manifest_member(manifest_path: Path, value: str) -> Path:
+    raw = Path(str(value).strip())
+    if raw.is_absolute():
+        return raw.resolve()
+    return (manifest_path.parent / raw).resolve()
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
 expected_catalog = str(Path(sys.argv[2]).resolve())
@@ -187,6 +210,19 @@ assert payload['checked_identity_count'] > 0, payload
 assert payload['remaining_violation_count'] == 0, payload
 assert payload['postcheck_status'] == 'PASS_REQUIRED', payload
 assert Path(payload['evidence_ref']).exists(), payload
+assert Path(payload['manifest_ref']).exists(), payload
+manifest_path = Path(payload['manifest_ref']).resolve()
+manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+kinds = {str(row.get('kind', '')).strip() for row in (manifest.get('evidence_records') or []) if isinstance(row, dict)}
+assert kinds == {
+    'launcher_convergence_receipt',
+    'launcher_convergence_precheck',
+    'launcher_convergence_postcheck',
+}, kinds
+for row in manifest.get('evidence_records') or []:
+    mirror = resolve_manifest_member(manifest_path, str(row['mirror_path']))
+    digest = hashlib.sha256(mirror.read_bytes()).hexdigest()
+    assert digest == str(row['sha256']).strip(), row
 print('launcher_cross_workspace_apply_status=PASS_REQUIRED')
 PY
 

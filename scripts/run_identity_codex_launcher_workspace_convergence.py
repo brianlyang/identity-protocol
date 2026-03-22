@@ -326,7 +326,7 @@ def _finalize_bundle(
                 "timestamp": str(postcheck_timestamp or generated_at).strip(),
             }
         )
-    materialize_launcher_convergence_bundle(
+    next_payload, manifest_out, _manifest_payload = materialize_launcher_convergence_bundle(
         workspace_root=workspace_root,
         artifact_root=artifact_root,
         receipt_path=receipt_out,
@@ -343,6 +343,9 @@ def _finalize_bundle(
             "Receipt truth-sync must keep evidence_ref and manifest_ref machine-visible inside the receipt payload.",
         ],
     )
+    payload.clear()
+    payload.update(next_payload)
+    payload["manifest_ref"] = str(manifest_out)
 
 
 def main() -> int:

@@ -74,8 +74,15 @@ fi
 
 python3 - "${DRY_JSON}" <<'PY'
 import json
+import hashlib
 import sys
 from pathlib import Path
+
+def resolve_manifest_member(manifest_path: Path, value: str) -> Path:
+    raw = Path(str(value).strip())
+    if raw.is_absolute():
+        return raw.resolve()
+    return (manifest_path.parent / raw).resolve()
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["status"] == "FAIL_REQUIRED", payload
@@ -86,6 +93,18 @@ assert payload["mutation_applied"] is False, payload
 assert payload["receipt_family"] == "identity_codex_launcher_workspace_convergence_receipt_v1", payload
 assert Path(payload["precheck_evidence_ref"]).exists(), payload
 assert Path(payload["evidence_ref"]).exists(), payload
+assert Path(payload["manifest_ref"]).exists(), payload
+manifest_path = Path(payload["manifest_ref"]).resolve()
+manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+assert str(manifest["summary_ref"]).strip(), manifest
+records = manifest.get("evidence_records") or []
+assert isinstance(records, list) and records, manifest
+kinds = {str(row.get("kind", "")).strip() for row in records if isinstance(row, dict)}
+assert kinds == {"launcher_convergence_receipt", "launcher_convergence_precheck"}, kinds
+for row in records:
+    mirror = resolve_manifest_member(manifest_path, str(row["mirror_path"]))
+    digest = hashlib.sha256(mirror.read_bytes()).hexdigest()
+    assert digest == str(row["sha256"]).strip(), row
 print("launcher_convergence_dry_run_status=FAIL_REQUIRED")
 PY
 
@@ -100,8 +119,15 @@ python3 "${REPO_ROOT}/scripts/run_identity_codex_launcher_workspace_convergence.
 
 python3 - "${APPLY_JSON}" <<'PY'
 import json
+import hashlib
 import sys
 from pathlib import Path
+
+def resolve_manifest_member(manifest_path: Path, value: str) -> Path:
+    raw = Path(str(value).strip())
+    if raw.is_absolute():
+        return raw.resolve()
+    return (manifest_path.parent / raw).resolve()
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["status"] == "PASS_REQUIRED", payload
@@ -113,11 +139,105 @@ assert payload["postcheck_status"] == "PASS_REQUIRED", payload
 assert Path(payload["precheck_evidence_ref"]).exists(), payload
 assert Path(payload["postcheck_evidence_ref"]).exists(), payload
 assert Path(payload["evidence_ref"]).exists(), payload
+assert Path(payload["manifest_ref"]).exists(), payload
 row = payload["repair_results"][0]
 assert row["backfill_status"] == "PASS_REQUIRED", row
 assert row["install_status"] == "PASS_REQUIRED", row
 assert row["validator_status"] == "PASS_REQUIRED", row
+manifest_path = Path(payload["manifest_ref"]).resolve()
+manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+records = manifest.get("evidence_records") or []
+kinds = {str(row.get("kind", "")).strip() for row in records if isinstance(row, dict)}
+assert kinds == {
+    "launcher_convergence_receipt",
+    "launcher_convergence_precheck",
+    "launcher_convergence_postcheck",
+}, kinds
+for row in records:
+    mirror = resolve_manifest_member(manifest_path, str(row["mirror_path"]))
+    digest = hashlib.sha256(mirror.read_bytes()).hexdigest()
+    assert digest == str(row["sha256"]).strip(), row
 print("launcher_convergence_apply_status=PASS_REQUIRED")
+PY
+
+python3 - "${APPLY_JSON}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+receipt_path = Path(payload["evidence_ref"]).resolve()
+manifest_path = Path(payload["manifest_ref"]).resolve()
+receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+receipt["evidence_ref"] = ""
+receipt["manifest_ref"] = ""
+receipt_path.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+if manifest_path.exists():
+    manifest_path.unlink()
+PY
+
+REFRESH_DRY_JSON="${TMP_ROOT}/refresh-dry-run.json"
+if python3 "${REPO_ROOT}/scripts/refresh_identity_codex_launcher_evidence_truth_sync.py" \
+  --artifact-root "${EVIDENCE_ROOT}" \
+  --run-token probe \
+  --workspace-root "${WORKSPACE_ROOT}" \
+  --json-only > "${REFRESH_DRY_JSON}"; then
+  echo "[FAIL] truth-sync dry-run unexpectedly passed on corrupted bundle"
+  exit 1
+fi
+
+python3 - "${REFRESH_DRY_JSON}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["status"] == "FAIL_REQUIRED", payload
+assert payload["truth_sync_status"] == "FAIL_REQUIRED", payload
+assert payload["receipts_with_changes"] == 1, payload
+assert payload["receipt_ref_change_count"] == 1, payload
+assert payload["manifest_write_count"] == 1, payload
+assert payload["repair_status"] == "dry_run_changes_detected", payload
+print("launcher_convergence_truth_sync_dry_run_status=FAIL_REQUIRED")
+PY
+
+REFRESH_APPLY_JSON="${TMP_ROOT}/refresh-apply.json"
+python3 "${REPO_ROOT}/scripts/refresh_identity_codex_launcher_evidence_truth_sync.py" \
+  --artifact-root "${EVIDENCE_ROOT}" \
+  --run-token probe \
+  --workspace-root "${WORKSPACE_ROOT}" \
+  --apply \
+  --json-only > "${REFRESH_APPLY_JSON}"
+
+python3 - "${REFRESH_APPLY_JSON}" "${APPLY_JSON}" <<'PY'
+import json
+import hashlib
+import sys
+from pathlib import Path
+
+def resolve_manifest_member(manifest_path: Path, value: str) -> Path:
+    raw = Path(str(value).strip())
+    if raw.is_absolute():
+        return raw.resolve()
+    return (manifest_path.parent / raw).resolve()
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+apply_payload = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["truth_sync_status"] == "PASS_REQUIRED", payload
+assert payload["repair_status"] == "apply_truth_synced", payload
+receipt_path = Path(apply_payload["evidence_ref"]).resolve()
+receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+assert receipt["evidence_ref"] == str(receipt_path), receipt
+manifest_path = Path(receipt["manifest_ref"]).resolve()
+assert manifest_path.exists(), receipt
+manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+assert str(manifest["summary_ref"]).strip(), manifest
+for row in manifest.get("evidence_records") or []:
+    mirror = resolve_manifest_member(manifest_path, str(row["mirror_path"]))
+    digest = hashlib.sha256(mirror.read_bytes()).hexdigest()
+    assert digest == str(row["sha256"]).strip(), row
+print("launcher_convergence_truth_sync_apply_status=PASS_REQUIRED")
 PY
 
 if python3 "${REPO_ROOT}/scripts/run_identity_codex_launcher_workspace_convergence.py" \
