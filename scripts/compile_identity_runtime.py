@@ -26,7 +26,7 @@ from native_chat_headstamp_common import (
     render_native_chat_success_identity_placeholder_line,
     resolve_native_chat_profile_doc,
 )
-from resolve_identity_context import default_local_catalog_path, resolve_identity
+from resolve_identity_context import resolve_identity, resolve_local_catalog_path
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -341,7 +341,7 @@ def _resolve_compile_actor_id(explicit_actor_id: str = "") -> str:
 
 def main() -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("--catalog", default=str(default_local_catalog_path(start=SCRIPT_DIR)))
+    p.add_argument("--catalog", default="")
     p.add_argument("--output", default=str(DEFAULT_OUTPUT))
     p.add_argument("--identity-id", default="", help="explicit identity id for identity-neutral baseline")
     p.add_argument("--actor-id", default="", help="optional actor id used for actor-scoped identity resolution")
@@ -352,7 +352,7 @@ def main() -> int:
     )
     args = p.parse_args()
 
-    catalog_path = Path(args.catalog).expanduser().resolve()
+    catalog_path = resolve_local_catalog_path(args.catalog, start=SCRIPT_DIR)
     catalog = load_yaml(catalog_path)
     repo_catalog_path = DEFAULT_REPO_CATALOG
 
