@@ -530,16 +530,16 @@ assert refresh.get("identity_id") == "alpha", refresh
 assert refresh.get("actor_id") == "assistant:codex", refresh
 assert refresh.get("session_id") == "run:alpha", refresh
 assert refresh.get("session_id_source") == "actor_binding_identity", refresh
-assert refresh.get("pointer_consistency") == "WARN", refresh
+assert refresh.get("pointer_consistency") == "FAIL", refresh
 assert "legacy_pointer_identity_mismatch" in (refresh.get("risk_flags") or []), refresh
 assert "actor_binding_missing" not in (refresh.get("risk_flags") or []), refresh
-assert validate.get("session_refresh_status") == "PASS_REQUIRED", validate
+assert validate.get("session_refresh_status") == "WARN_NON_BLOCKING", validate
 assert validate.get("actor_id") == "assistant:codex", validate
 assert validate.get("session_id") == "run:alpha", validate
 assert validate.get("session_id_source") == "actor_binding_identity", validate
 assert validate.get("baseline_status") == "WARN", validate
 assert validate.get("baseline_error_code") == "IP-PBL-002", validate
-assert validate.get("error_code") == "", validate
+assert validate.get("error_code") == "IP-ASB-RFS-002", validate
 assert all("can't open file" not in str(reason) for reason in (validate.get("stale_reasons") or [])), validate
 print("[PASS] projection consumer isolation replay")
 PY
@@ -686,8 +686,10 @@ assert validate_obj.get("actor_session_multibinding_status") == "PASS_REQUIRED",
 assert validate_obj.get("last_mutation_projection_scope") == "session_primary", validate_obj
 assert pointer.get("authority_role") == "compatibility_mirror", pointer
 assert pointer.get("authoritative_decision_allowed") is False, pointer
-assert pointer.get("status") == "compatibility_projection_unavailable", pointer
-assert pointer.get("identity_id") == "", pointer
+assert pointer.get("status") == "active", pointer
+assert pointer.get("identity_id") == "probe-identity", pointer
+assert pointer.get("session_primary_truth_available") is True, pointer
+assert pointer.get("session_primary_session_id") == "run:probe", pointer
 assert pointer.get("compatibility_projection_scope") == "", pointer
 assert pointer.get("compatibility_projection_role") == "", pointer
 assert pointer.get("compatibility_projection_actor_id") == "", pointer
