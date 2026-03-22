@@ -116,15 +116,45 @@ def runtime_paths_config_path(identity_home: Path | None = None) -> Path:
     return (root / RUNTIME_PATHS_CONFIG_REL).resolve()
 
 
-def write_runtime_paths_config(*, identity_home: Path, protocol_home: Path) -> Path:
+def runtime_identity_home_for_catalog(catalog_path: Path) -> Path:
+    return catalog_path.parent.resolve()
+
+
+def read_runtime_paths_config(identity_home: Path | None = None) -> dict[str, str]:
     config_path = runtime_paths_config_path(identity_home)
+    if not config_path.exists():
+        return {}
+    payload: dict[str, str] = {}
+    for raw_line in config_path.read_text(encoding="utf-8").splitlines():
+        line = str(raw_line or "").strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = str(key or "").strip()
+        value = str(value or "").strip()
+        if not key:
+            continue
+        payload[key] = value
+    return payload
+
+
+def write_runtime_paths_config(
+    *,
+    identity_home: Path,
+    protocol_home: Path,
+    runtime_identity_home: Path | None = None,
+    runtime_catalog: Path | None = None,
+) -> Path:
+    config_home = identity_home.resolve()
+    target_identity_home = (runtime_identity_home or config_home).resolve()
+    target_catalog = (runtime_catalog or (target_identity_home / "catalog.local.yaml")).resolve()
+    config_path = runtime_paths_config_path(config_home)
     config_path.parent.mkdir(parents=True, exist_ok=True)
-    identity_catalog = (identity_home / "catalog.local.yaml").resolve()
     payload = (
         "# identity runtime shared path config\n"
         "# priority: environment variable > this file > built-in fallback\n"
-        f"IDENTITY_HOME={identity_home.resolve()}\n"
-        f"IDENTITY_CATALOG={identity_catalog}\n"
+        f"IDENTITY_HOME={target_identity_home}\n"
+        f"IDENTITY_CATALOG={target_catalog}\n"
         f"IDENTITY_PROTOCOL_HOME={protocol_home.resolve()}\n"
     )
     config_path.write_text(payload, encoding="utf-8")
