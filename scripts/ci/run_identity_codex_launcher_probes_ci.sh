@@ -42,6 +42,31 @@ run_cmd python3 "${REPO_ROOT}/scripts/validate_identity_codex_launcher.py" \
   --json-only
 
 DRY_RUN_JSON="${TMP_ROOT}/launcher-dry-run.json"
+COMMANDS_JSON="${TMP_ROOT}/launcher-commands.json"
+
+echo "[RUN] python3 ${REPO_ROOT}/scripts/render_identity_codex_launcher.py commands --identity-id ${IDENTITY_ID} --thread-id <thread-uuid> --json-only"
+python3 "${REPO_ROOT}/scripts/render_identity_codex_launcher.py" \
+  commands \
+  --identity-id "${IDENTITY_ID}" \
+  --catalog "${CATALOG_PATH}" \
+  --bin-dir "${BIN_DIR}" \
+  --thread-id 019cad9b-f10a-7ba0-9d65-77c3946c03ef \
+  --json-only > "${COMMANDS_JSON}"
+
+python3 - "${COMMANDS_JSON}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["resume_status"] == "PASS_REQUIRED", payload
+assert payload["preferred_start_command"].startswith("zsh -lic 'id-"), payload
+assert " resume 019cad9b-f10a-7ba0-9d65-77c3946c03ef'" in payload["preferred_resume_command"], payload
+assert payload["absolute_start_command"].endswith(f"/id-{payload['identity_id']}"), payload
+print("launcher_command_bundle_status=PASS_REQUIRED")
+PY
+
 echo "[RUN] ${BIN_DIR}/identity-codex --identity-id ${IDENTITY_ID} --dry-run --json-only -- resume <thread-uuid>"
 "${BIN_DIR}/identity-codex" \
   --identity-id "${IDENTITY_ID}" \

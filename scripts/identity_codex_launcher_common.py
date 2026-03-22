@@ -298,6 +298,8 @@ Canonical commands:
   - `identity-codex --identity-id {identity_token} -- <codex args>`
 - Convenience launcher:
   - `{shortcut} <codex args>`
+- Copyable command discovery:
+  - `python3 scripts/render_identity_codex_launcher.py commands --identity-id {identity_token}`
 
 Canonical installed home:
 
