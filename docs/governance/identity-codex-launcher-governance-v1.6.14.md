@@ -1,6 +1,6 @@
 # Identity Codex Launcher Governance (v1.6.14)
 
-Status: Active (implementation closure landed, 2026-03-21; legacy fleet rollout continues)  
+Status: Active (implementation closure plus isolated historical replay capability verified, 2026-03-22; legacy fleet rollout continues)  
 Layer: protocol  
 Scope: identity-bound Codex launcher model, install-path ownership, and fail-close startup governance
 
@@ -218,5 +218,7 @@ These names and directories are frozen by this stream. The renderer / installer 
    - therefore current summary pinning does not by itself claim arbitrary historical full-tree replay unless the caller supplies an isolated historical workspace.
 8. The accepted maturity statement for this stream is scoped precisely as follows:
    - **for the `v1.6.14` identity-Codex-launcher lane**, the stream has advanced from topic governance into a protocol-owned formal control-plane subsystem,
-   - remaining work is limited primarily to legacy rollout and isolated historical replay enhancement,
+   - current-state note (2026-03-22): `python3 scripts/validate_protocol_lane_isolated_historical_replay.py --repo-root identity-protocol-local --workspace-root . --commit HEAD --json-only` returned `PASS_REQUIRED` with `projection_parity_match=true`,
+   - remaining work is limited primarily to legacy rollout and broader evidence breadth,
+   - the isolated historical replay capability is landed, but the isolated-workspace caveat above still applies before anyone claims arbitrary full-tree historical replay,
    - reviewers must not restate the residual work as proof that launcher semantics remain unclosed.
