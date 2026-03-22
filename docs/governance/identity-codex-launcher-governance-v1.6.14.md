@@ -50,6 +50,7 @@ Execution mode: topic-level canonical SSOT for v1.6.14 identity-Codex launcher g
 4. Bare identity command names such as `<identity-id> ...` are forbidden as canonical launcher names.
 5. Overriding, shadowing, or mutating the product command `codex` is forbidden.
 6. `resume <uuid>` keeps the host-thread UUID as host state only; launcher logic must never reinterpret that UUID as the identity session tuple.
+7. For operator-facing daily use, the preferred already-installed surface is `id-<identity-id>` because the generated shortcut keeps host/UI/tab naming short and stable without weakening protocol ownership; `identity-codex --identity-id <identity-id> -- ...` remains the explicit generic form for documentation, automation, and repair flows.
 
 ### 2.2 Canonical path contract
 
@@ -212,6 +213,7 @@ These names and directories are frozen by this stream. The renderer / installer 
    - a fresh `run_identity_codex_launcher_workspace_convergence.py --mode apply` bundle must already be truth-synced, so an immediate `refresh_identity_codex_launcher_evidence_truth_sync.py --json-only` dry-run returns `PASS_REQUIRED` with zero manifest rewrites;
    - `check_identity_codex_launcher_migration_closure.py --catalog .identity/catalog.local.yaml` must resolve the **caller workspace** catalog rather than rebinding to the protocol repo;
    - `resolve_identity_context.py resolve --identity-id <id>` from a sibling workspace must classify the workspace-local runtime catalog as `source_layer=project` with `resolved_scope=USER` instead of degrading to `unknown`.
+13. Audit follow-on boundary: some external workspace raw catalog rows may still carry metadata hygiene residue such as `canonical_scope=UNKNOWN`; this does **not** reopen launcher convergence semantics as long as the protocol-owned resolver returns the correct runtime truth (`source_layer=project`, `resolved_scope=USER`). Any cleanup of raw catalog metadata must be tracked as a separate hygiene/backfill follow-on, not folded back into `v1.6.14` launcher semantics.
 
 ### 6.2 Discussion-package boundary before coding
 
