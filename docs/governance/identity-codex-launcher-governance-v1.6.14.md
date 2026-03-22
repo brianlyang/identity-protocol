@@ -179,6 +179,21 @@ These names and directories are frozen by this stream. The renderer / installer 
 4. Workspace bridge status is downgraded to “migration bridge / replay artifact,” not the canonical launcher home.
 5. Only after protocol-owned validator + creator/update/activate wiring are green may reviewers treat non-launcher naked entry as a stricter governance violation.
 
+### 6.1 Workspace-level convergence entry is the canonical rollout path
+
+1. Hand-repairing individual identities may be used as pilot evidence only; it is **not** the target operating model for fleet rollout.
+2. The canonical follow-on rollout path for `v1.6.14` is a **workspace-level launcher convergence entry** owned by protocol infrastructure.
+3. That convergence entry must operate over the workspace-local runtime catalog rather than over ad hoc operator memory.
+4. The frozen minimum behavior of that convergence entry is:
+   - discover the local runtime catalog for the current workspace,
+   - scan active runtime identities for launcher migration closure debt,
+   - run protocol-owned backfill + launcher rollout for violating identities,
+   - revalidate launcher migration closure after repair,
+   - emit a governed convergence receipt that records repaired identities, remaining violations, and evidence refs.
+5. The convergence entry must not invent alternate launcher semantics, alternate install directories, or per-workspace shortcut naming.
+6. The convergence entry is a rollout/orchestration surface for the already frozen `v1.6.14` launcher standard; it does not reopen command naming or path ownership.
+7. Cross-workspace validation should proceed by running that same convergence entry in another workspace catalog such as `fqsh`, not by introducing workspace-specific wrapper exceptions.
+
 ## 7) Future promotion exit criteria
 
 1. `v1.6.14` implementation closure now requires machine proof, not chat description.
