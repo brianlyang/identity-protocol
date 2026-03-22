@@ -28,6 +28,7 @@ from identity_codex_launcher_common import (
     resolve_launcher_pack_task,
     shortcut_launcher_name,
 )
+from render_identity_context_continuity_bundle import render_continuity_bundle_payload
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -68,6 +69,40 @@ def _resolve_resume_thread(identity_id: str, explicit_thread_id: str) -> tuple[s
     if current_identity_id and current_identity_id != identity_id:
         return "", "current_host_thread_belongs_to_another_identity"
     return host_thread_id, "current_host_thread"
+
+
+def _load_continuity_support_bundle(
+    *,
+    identity_id: str,
+    catalog_path: Path,
+    task_path: Path,
+) -> dict[str, Any]:
+    try:
+        payload = render_continuity_bundle_payload(
+            identity_id=identity_id,
+            catalog=str(catalog_path),
+            current_task=str(task_path),
+        )
+    except Exception as exc:
+        return {
+            "status": STATUS_FAIL_REQUIRED,
+            "identity_context_continuity_bundle_status": STATUS_FAIL_REQUIRED,
+            "bundle_contract_id": "identity_context_continuity_bundle_v1",
+            "bundle_role": "launcher_and_instance_internal_support",
+            "identity_id": identity_id,
+            "render_error": f"launcher_continuity_support_render_failed:{type(exc).__name__}",
+            "error": str(exc),
+        }
+    if not isinstance(payload, dict):
+        return {
+            "status": STATUS_FAIL_REQUIRED,
+            "identity_context_continuity_bundle_status": STATUS_FAIL_REQUIRED,
+            "bundle_contract_id": "identity_context_continuity_bundle_v1",
+            "bundle_role": "launcher_and_instance_internal_support",
+            "identity_id": identity_id,
+            "render_error": "launcher_continuity_support_render_root_not_object",
+        }
+    return payload
 
 def _emit_commands(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
@@ -188,6 +223,11 @@ def _cmd_commands(args: argparse.Namespace) -> int:
 
     thread_id, thread_source = _resolve_resume_thread(args.identity_id, args.thread_id)
     resume_status = STATUS_PASS_REQUIRED if thread_id else STATUS_SKIPPED_NOT_REQUIRED
+    continuity_support = _load_continuity_support_bundle(
+        identity_id=args.identity_id,
+        catalog_path=catalog_path,
+        task_path=task_path,
+    )
     payload = {
         "status": STATUS_PASS_REQUIRED,
         "command_bundle_contract_id": IDENTITY_LAUNCHER_COMMAND_DISCOVERY_CONTRACT_ID,
@@ -213,11 +253,13 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         "current_host_thread_id": thread_id,
         "resume_thread_source": thread_source,
         "command_discovery": command_discovery,
+        "continuity_support": continuity_support,
         "instance_answer_guidance": {
             "instance_returns_concrete_commands": True,
             "manual_command_assembly_forbidden": True,
             "python_helper_surface_forbidden": True,
             "terminal_native_surface_required": True,
+            "continuity_support_internal_only": True,
         },
         "copyable_commands": {
             "start": {
