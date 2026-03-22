@@ -1,6 +1,6 @@
 # Identity Context Continuity Governance (v1.6.16)
 
-Status: Active (shared validators + probe lane + pack-lifecycle rollout landed, 2026-03-22; launcher live-consumption proof + pilot adoption pending)  
+Status: Active (shared validators + probe lane + pack-lifecycle rollout + instance-visible reentry answer surface landed, 2026-03-23; launcher live-consumption proof + pilot adoption pending)  
 Layer: protocol  
 Scope: identity-instance continuity checkpoints, migration handoff checkpoints, and startup-consumable re-entry briefing  
 Execution mode: topic-level canonical SSOT for v1.6.16 identity-context-continuity governance.
@@ -233,6 +233,21 @@ Minimum additional requirements:
    - `startup_reentry_readiness_status`
    - `live_reentry_consumption_proof_status`
 10. Future launcher integration should consume that protocol-owned bundle rather than re-deriving continuity interpretation ad hoc inside launcher code or instance chat logic.
+11. The canonical instance-visible reentry answer bundle for this stream is:
+   - `scripts/render_identity_context_reentry_answers.py`
+12. That answer bundle exists so an identity instance can answer direct user questions such as “open a new window and migrate me” or “clear now and then rejoin with memory recovery” without manually inventing recovery payloads.
+13. The answer bundle is **not** a new terminal command family:
+   - terminal start/resume command lookup remains owned by `v1.6.14`;
+   - `v1.6.16` only supplies governed reentry answer state plus copyable governed reentry task blocks.
+14. The answer bundle must expose intent-separated answer rows for:
+   - `migrate_new_window`
+   - `reload_after_clear`
+15. The answer bundle must keep three facts separate instead of collapsing them:
+   - answer-surface render status,
+   - `overall_reentry_readiness_status`,
+   - `live_reentry_consumption_proof_status`
+16. When startup readiness is `PASS_REQUIRED` but live proof is not yet observed, the answer bundle may still return a governed reentry task block, but it must explicitly mark that live proof is pending and that successful recovery may only be claimed after `instance_reentry_consumption_receipt` is emitted.
+17. The continuity answer surface must never inject or hardcode thread UUIDs; launcher-command lookup stays delegated to `v1.6.14`, while `v1.6.16` governs only the reentry task and evidence side.
 
 ### 2.12 Implementation landing order (frozen)
 
