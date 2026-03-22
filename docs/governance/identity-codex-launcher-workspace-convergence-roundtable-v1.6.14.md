@@ -19,6 +19,17 @@ Workbook role: track decision status, audit checkpoints, and rollout readiness o
 4. This package does **not** reopen launcher semantics, command naming, install directories, or inherited bootstrap/topology streams.
 5. This package also does **not** create a new stream by default; it keeps the topic inside `v1.6.14` unless scope later expands beyond launcher-only convergence.
 
+## 0.1) Positive reinforcement: why this matters beyond a startup command
+
+1. The launcher convergence entry must not be reduced to a convenience wrapper for `identity-codex` startup.
+2. The deeper governance goal is **protocol-owned authoritative discovery plus family-based convergence dispatch** inside a workspace.
+3. In that model, instances do not wait for operators to remember every protocol upgrade; they discover applicable debt and contract families from authoritative workspace surfaces and then consume the appropriate governed convergence path.
+4. `v1.6.14` is therefore the first **family pilot** for a future generic workspace convergence framework, not the end-state of that framework.
+5. The pilot family in this stream is launcher/install/startup convergence only; future families may later cover health/heal, update/adoption, continuity/re-entry, and instance-script-orchestration, but those owners remain with their respective streams until explicitly promoted.
+6. The roundtable must preserve both truths at once:
+   - do not overclaim that the generic framework is already landed,
+   - and do not underclaim this stream as merely a startup-command discussion.
+
 ## 1) Fixed role boundary
 
 1. Semantic ownership remains in `docs/governance/identity-codex-launcher-governance-v1.6.14.md` and `docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md`.
@@ -171,12 +182,13 @@ Workbook role: track decision status, audit checkpoints, and rollout readiness o
 ## 5) Default recommendation for this roundtable
 
 1. Keep the topic inside `v1.6.14`; do **not** open a new stream while the scope is still launcher-only convergence.
-2. Use the workbook family to track decision status and rollout readiness, but keep stream semantics and implementation contracts in `v1.6.14` governance/review.
-3. Prefer one protocol-owned convergence interface, with any secondary wrapper or alias explicitly delegated and non-authoritative.
-4. Prefer workspace-local catalog authority only.
-5. Prefer explicit dry-run and apply modes.
-6. Prefer governed receipt emission for both dry-run and apply, with fail-close on unresolved post-repair violations.
-7. Defer any generic multi-lane convergence framework until the launcher-specific convergence entry is landed and proven across more than one workspace.
+2. Treat this stream as the first family pilot of a future generic workspace convergence framework, so the interface must be designed for authoritative discovery, family dispatch, governed action, and governed receipts rather than for launcher-command convenience alone.
+3. Use the workbook family to track decision status and rollout readiness, but keep stream semantics and implementation contracts in `v1.6.14` governance/review.
+4. Prefer one protocol-owned convergence interface, with any secondary wrapper or alias explicitly delegated and non-authoritative.
+5. Prefer workspace-local catalog authority only.
+6. Prefer explicit dry-run and apply modes.
+7. Prefer governed receipt emission for both dry-run and apply, with fail-close on unresolved post-repair violations.
+8. Defer any generic multi-lane convergence framework until the launcher-specific convergence entry is landed and proven across more than one workspace.
 
 ## 6) Roundtable exit criteria before coding may start
 

@@ -138,17 +138,12 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
 ### 6.2 Accepted discussion package and reviewer responsibilities
 
 1. Reviewers and auditors should use `docs/governance/identity-codex-launcher-workspace-convergence-roundtable-v1.6.14.md` as the shared discussion package for the convergence-entry landing.
-2. That package is acceptable because it keeps launcher convergence inside `v1.6.14` while exposing the orchestration/control-plane questions that still require explicit decisions before coding.
-3. Reviewers must keep the workbook family in its proper role: workbook surfaces may track decision status, issue routing, and rollout readiness, but they do not replace the stream owner docs as launcher-semantics authority.
-4. The accepted implementation-start freeze is:
-   - canonical entry surface = `scripts/run_identity_codex_launcher_workspace_convergence.py`,
-   - workspace-local runtime catalog authority only, with repo fixture catalogs fail-closed out of scope,
-   - repair composition through aggregate checker -> shared backfill -> launcher install -> single-identity validate -> aggregate recheck,
-   - disclosed mutation scope `transitive_backfill_plus_launcher_install`,
-   - governed receipt family `identity_codex_launcher_workspace_convergence_receipt_v1` under the `v1614-identity-codex-launcher` evidence root,
-   - passive gate/readiness live surfaces remain on the aggregate checker while synthetic probes and explicit lifecycle repair delegation may consume the convergence entry,
-   - cross-workspace pilot proof must run the same entry against another workspace-local runtime catalog with no workspace-specific exceptions.
-5. Reviewers should not recommend opening a new stream unless the scope intentionally expands beyond launcher-only convergence into a generic multi-lane convergence framework.
+2. Reviewers should positively reinforce that this topic is not only about the launcher command line; the accepted framing is protocol-owned authoritative discovery and family-based convergence dispatch, with launcher as the first family pilot.
+3. That framing is acceptable only if reviewers keep the scope honest: launcher convergence remains inside `v1.6.14`, and a generic multi-lane convergence framework must not be overclaimed as already landed.
+4. Future convergence families such as health/heal, update/adoption, continuity/re-entry, or instance-script-orchestration may later reuse the same control-plane shape, but they do not transfer semantic ownership away from their existing streams by implication alone.
+5. That package is acceptable because it keeps launcher convergence inside `v1.6.14` while exposing the orchestration/control-plane questions that still require explicit decisions before coding.
+6. Reviewers must keep the workbook family in its proper role: workbook surfaces may track decision status, issue routing, and rollout readiness, but they do not replace the stream owner docs as launcher-semantics authority.
+7. Implementation start still requires explicit architect and audit agreement on the open questions captured in the roundtable package; this subsection does not pre-resolve those decisions by itself.
 
 ## 7) Boundary lock for reviewers
 

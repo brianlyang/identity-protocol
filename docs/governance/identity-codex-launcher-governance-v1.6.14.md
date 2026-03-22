@@ -197,18 +197,13 @@ These names and directories are frozen by this stream. The renderer / installer 
 ### 6.2 Discussion-package boundary before coding
 
 1. The discussion and decision package for this convergence entry is frozen at `docs/governance/identity-codex-launcher-workspace-convergence-roundtable-v1.6.14.md`.
-2. That package exists to align architecture, audit, and implementation owners on the orchestration/control-plane shape before coding begins.
-3. The package does **not** create a new stream by default; launcher-specific convergence remains owned by `v1.6.14`.
-4. The workbook family may track decision status and rollout readiness, but it does not become the semantic owner of launcher convergence.
-5. The accepted control-plane freeze for coding is:
-   - canonical entry surface = `scripts/run_identity_codex_launcher_workspace_convergence.py`,
-   - catalog authority = workspace-local runtime catalog only, with repository fixture catalogs fail-closed out of scope,
-   - repair composition = aggregate checker -> shared backfill -> launcher install -> single-identity validate -> aggregate recheck,
-   - mutation scope = shared transitive backfill reuse is allowed but must be disclosed as `transitive_backfill_plus_launcher_install`,
-   - receipt family = `identity_codex_launcher_workspace_convergence_receipt_v1` under `activity/evidence/v1614-identity-codex-launcher/<YYYY-MM-DD>/..._summary.json`,
-   - gate boundary = passive required gates/readiness stay on the aggregate checker while synthetic probes may test the convergence entry and explicit lifecycle repair surfaces may delegate to it,
-   - cross-workspace pilot = same convergence entry against another workspace-local runtime catalog, never workspace-specific wrapper exceptions.
-6. Only if the scope is deliberately promoted from launcher-only convergence into a generic multi-lane convergence framework should reviewers open a new stream after this roundtable.
+2. Reviewers must not collapse this topic into a mere startup-command convenience discussion; the accepted positive reinforcement is that launcher convergence acts as the first family pilot for protocol-owned authoritative discovery plus family-based convergence dispatch inside a workspace.
+3. That positive reinforcement does **not** reopen `v1.6.14` semantics and does **not** claim that a generic multi-lane convergence framework is already landed.
+4. Future families may later include health/heal, update/adoption, continuity/re-entry, or instance-script-orchestration convergence, but those semantics remain owned by their respective streams unless explicitly promoted.
+5. The package exists to align architecture, audit, and implementation owners on the orchestration/control-plane shape before coding begins.
+6. The package does **not** create a new stream by default; launcher-specific convergence remains owned by `v1.6.14`.
+7. The workbook family may track decision status and rollout readiness, but it does not become the semantic owner of launcher convergence.
+8. The roundtable package holds the open questions and recommended defaults; reviewers must not treat those questions as pre-resolved by this subsection alone.
 
 ## 7) Future promotion exit criteria
 
