@@ -187,13 +187,13 @@ Identity-Context: actor_id=assistant:ci-probe; identity_id=probe-gateway; scope=
 session chain recovery reply seed
 EOF
 
-python3 scripts/repair_contract_backfill.py \
+python3 "${REPO_ROOT}/scripts/repair_contract_backfill.py" \
   --catalog "${CATALOG_PATH}" \
   --identity-id "${IDENTITY_ID}" \
   --apply \
   --json-only >/dev/null
 
-python3 - <<'PY' "${CATALOG_PATH}" "${ACTOR_ID}" "${IDENTITY_ID}" "${FOREIGN_IDENTITY_ID}" "${SESSION_ID}" "${SESSION_ID_FOREIGN}" "${SESSION_ID_CONFLICT}"
+python3 - <<'PY' "${REPO_ROOT}" "${CATALOG_PATH}" "${ACTOR_ID}" "${IDENTITY_ID}" "${FOREIGN_IDENTITY_ID}" "${SESSION_ID}" "${SESSION_ID_FOREIGN}" "${SESSION_ID_CONFLICT}"
 from __future__ import annotations
 
 import json
@@ -201,18 +201,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 import sys
 
-repo_root = Path.cwd()
+repo_root = Path(sys.argv[1]).expanduser().resolve()
 sys.path.insert(0, str((repo_root / "scripts").resolve()))
 
 from actor_session_common import normalize_actor_binding_store, actor_session_path, write_actor_binding_store
 
-catalog_path = Path(sys.argv[1]).expanduser().resolve()
-actor_id = str(sys.argv[2]).strip()
-identity_id = str(sys.argv[3]).strip()
-foreign_identity_id = str(sys.argv[4]).strip()
-session_id = str(sys.argv[5]).strip()
-session_id_foreign = str(sys.argv[6]).strip()
-session_id_conflict = str(sys.argv[7]).strip()
+catalog_path = Path(sys.argv[2]).expanduser().resolve()
+actor_id = str(sys.argv[3]).strip()
+identity_id = str(sys.argv[4]).strip()
+foreign_identity_id = str(sys.argv[5]).strip()
+session_id = str(sys.argv[6]).strip()
+session_id_foreign = str(sys.argv[7]).strip()
+session_id_conflict = str(sys.argv[8]).strip()
 now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 actor_store_path = actor_session_path(catalog_path, actor_id)
