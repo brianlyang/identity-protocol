@@ -163,8 +163,6 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
    - proof-pack adoption of execution-lane admission fields where external/manual/editor/webhook fallback risk exists,
    - lane-admission receipts that keep `lane_id`, `lane_class`, `lane_source`, `lane_endpoint_class`, `lane_admission_status`, and `fallback_used` machine-visible under live pack execution,
    - receipt-provenance projection that keeps `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts` machine-visible under live pack execution,
-   - aggregate capability-activation output that reuses the frozen `route_scope` / `route_activation_strategy` / `route_ready_count` / `route_total_count` / `route_selection_cardinality` family instead of parallel aliases,
-   - declared-vs-observed dependency output that reuses the frozen `declared_dependency_projection` / `observed_dependency_projection` / `dependency_gap_reasons` family across route-scoped and aggregate artifacts where applicable,
    - future receipt-family specializations, when needed, stay on the same shared validator/probe/control path instead of forking it.
 5. Reviewers must not collapse `Architecture PASS` into `Implementation PASS`.
 6. **Diagnostic Attribution PASS** requires reviewers to classify failures in this order:
@@ -198,26 +196,29 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
 ## 7) Follow-on reinforcement mapping (non-reopen, architect-owned)
 
 1. `RF-ORCH-001 aggregate_route_scope_cardinality_projection`
-   - current judgment: aggregate capability-activation artifacts using `route-any-ready` are multi-route status summaries rather than route-scoped receipts, so the missing hardening is explicit scope/cardinality projection rather than forcing a synthetic `route_selected`.
+   - current judgment: landed shared builders/validators now freeze aggregate capability-activation artifacts as multi-route summaries rather than route-scoped receipts, so the protocol-owned requirement is explicit scope/cardinality projection instead of any synthetic `route_selected`.
    - target protocol surfaces:
      - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
+     - `scripts/instance_script_orchestration_common.py`
      - `scripts/validate_identity_capability_activation.py`
-     - shared aggregate report builders/validators that emit route-activation summaries
+     - `scripts/validate_route_script_receipt_join.py`
+     - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
    - audit acceptance:
-     - aggregate artifacts declare scope/cardinality and route counts,
-     - route-scoped receipts remain strict on `route_selected`,
-     - validator/probe coverage fail-closes when a single-route artifact omits route provenance.
+     - aggregate artifacts now reuse one canonical field family: `route_scope`, `route_scope_mode`, `route_activation_strategy`, `route_ready_count`, `route_total_count`, `route_ids`, and `route_selection_cardinality`,
+     - route-scoped receipts remain strict on `route_selected` and project `route_scope_mode=route_receipt` plus `route_ids=[route_selected]`,
+     - validator/probe coverage fail-closes when a single-route artifact omits route provenance or when an aggregate artifact drifts into parallel alias vocabulary.
 2. `RF-ORCH-002 declared_vs_observed_dependency_projection`
-   - current judgment: route contracts and receipts already expose pieces of the declared/observed diff, but the projection is not yet standardized across report families.
+   - current judgment: landed shared builders/validators now standardize one declared-vs-observed dependency projection across route-scoped and aggregate artifacts instead of leaving the diff fragmented across report families.
    - target protocol surfaces:
      - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
      - `scripts/instance_script_orchestration_common.py`
      - `scripts/validate_route_script_receipt_join.py`
      - `scripts/validate_identity_capability_activation.py`
+     - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
    - audit acceptance:
-     - declared dependencies, observed activations/executions, and gap reasons are machine-visible,
-     - undeclared observed usage fails closed or is surfaced through one governed gap model,
-     - the same field family is reused across route-scoped and aggregate artifacts where applicable.
+     - declared dependencies, observed activations/executions, and gap reasons are machine-visible through `declared_dependency_projection`, `observed_dependency_projection`, `dependency_gap_reasons`, `undeclared_usage_*`, and `missing_declared_dependency_*`,
+     - undeclared observed usage and missing declared dependency are surfaced through one governed gap model rather than per-artifact narrative-only wording,
+     - the same field family is reused across route-scoped and aggregate artifacts where applicable, with no parallel business- or pack-specific dependency dialect.
 3. `RF-ORCH-003 semantic_anchor_extension_hook`
    - current judgment: downstream semantic narrowing can happen even when route/script orchestration remains correct, so the missing control is a governed anchor envelope rather than protocol-owned business scoring.
    - target protocol surfaces:
