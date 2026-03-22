@@ -42,6 +42,7 @@ from resolve_identity_context import (
 )
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 from gateway_wrapper_enforcement import run_gateway_wrapped_command as _gw_run_gateway_wrapped_command
+from identity_codex_launcher_common import IDENTITY_CODEX_LAUNCHER_CONVERGENCE_ENTRY_ID
 from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
@@ -493,35 +494,34 @@ def _enforce_identity_codex_launcher_migration_closure(
     if auto_repair and violation_ids:
         print(
             "[WARN] active runtime identity-codex launcher migration closure not met; "
-            "running contract backfill + launcher rollout for violating identities."
+            "running the canonical workspace-level launcher convergence entry."
         )
-        for violating_id in violation_ids:
-            rc_fix = _run_contract_backfill_with_instance_script_rollout(
-                identity_id=violating_id,
-                catalog=str(catalog),
-                work_layer="instance",
-                source_layer=_infer_source_domain_from_catalog(str(catalog)),
-            )
-            if rc_fix != 0:
-                print(
-                    "[FAIL] active runtime identity-codex launcher migration auto-repair failed "
-                    f"(identity={violating_id}); {operation} blocked"
-                )
-                return rc_fix
-        rc_recheck, out_recheck, _ = _run_capture(check_cmd)
-        payload_recheck = _parse_json_payload(out_recheck) or {}
-        status_recheck = str(
-            payload_recheck.get("identity_codex_launcher_migration_closure_status", "")
-        ).strip().upper()
-        if rc_recheck == 0 and status_recheck == "PASS_REQUIRED":
+        rc_fix, out_fix, _ = _run_capture(
+            [
+                "python3",
+                IDENTITY_CODEX_LAUNCHER_CONVERGENCE_ENTRY_ID,
+                "--catalog",
+                str(catalog),
+                "--mode",
+                "apply",
+                "--json-only",
+            ]
+        )
+        payload_fix = _parse_json_payload(out_fix) or {}
+        status_fix = str(payload_fix.get("status", "")).strip().upper()
+        if rc_fix == 0 and status_fix == "PASS_REQUIRED":
             return 0
-        remaining = _extract_identity_codex_launcher_migration_violation_ids(payload_recheck)
+        remaining = [
+            str(item).strip()
+            for item in (payload_fix.get("remaining_violation_ids") or [])
+            if str(item).strip()
+        ]
         remaining_token = ",".join(remaining) if remaining else "unknown"
         print(
-            "[FAIL] active runtime identity-codex launcher migration closure still failed after auto-repair; "
+            "[FAIL] active runtime identity-codex launcher convergence entry failed; "
             f"{operation} blocked (remaining={remaining_token})"
         )
-        return 1
+        return rc_fix or 1
 
     violation_token = ",".join(violation_ids) if violation_ids else "unknown"
     print(
