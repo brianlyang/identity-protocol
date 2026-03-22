@@ -791,6 +791,7 @@ def main() -> int:
             "scripts/check_identity_codex_launcher_migration_closure.py",
             "--catalog",
             catalog,
+            "--workspace-runtime-only",
             "--json-only",
         ],
         ["python3", "scripts/validate_audit_snapshot_index.py"],
@@ -1656,6 +1657,7 @@ def main() -> int:
             "scripts/check_identity_codex_launcher_migration_closure.py",
             "--catalog",
             catalog,
+            "--workspace-runtime-only",
             "--json-only",
         ],
         [
@@ -2297,6 +2299,7 @@ def main() -> int:
             "scripts/check_identity_codex_launcher_migration_closure.py",
             "--catalog",
             catalog,
+            "--workspace-runtime-only",
             "--json-only",
         ]
     )
