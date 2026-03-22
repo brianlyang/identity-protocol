@@ -122,6 +122,13 @@ def _project_identity_home_from_repo_catalog(repo_root: Path, repo_catalog_path:
     return _default_repo_identity_home(repo_root)
 
 
+def _runtime_identity_home_from_catalog(catalog_path: Path) -> Path | None:
+    resolved = catalog_path.expanduser().resolve()
+    if resolved.name == "catalog.local.yaml" and resolved.parent.name == ".identity":
+        return resolved.parent.resolve()
+    return None
+
+
 def _within(path: Path, root: Path) -> bool:
     try:
         path.resolve().relative_to(root.resolve())
@@ -208,6 +215,13 @@ def _classify_catalog_source_layer(
     repo_catalog_path: Path,
 ) -> str:
     c = catalog_path.expanduser().resolve()
+    if c == repo_catalog_path.expanduser().resolve():
+        return "repo_metadata"
+    runtime_identity_home = _runtime_identity_home_from_catalog(c)
+    if runtime_identity_home is not None:
+        if _within(runtime_identity_home, user_root):
+            return "global"
+        return "project"
     project_root = _project_identity_home_from_repo_catalog(repo_root, repo_catalog_path)
     if _within(c, project_root):
         return "project"
@@ -228,8 +242,6 @@ def _classify_catalog_source_layer(
             return "project"
     if _within(c, user_root):
         return "global"
-    if c == repo_catalog_path.expanduser().resolve():
-        return "repo_metadata"
     return "unknown"
 
 
@@ -491,7 +503,8 @@ def resolve_identity(
     repo_root = _detect_repo_root(repo_catalog_path.parent)
     user_root = _default_user_identity_home()
     admin_root = Path("/etc/codex/identity").resolve()
-    project_root = _project_identity_home_from_repo_catalog(repo_root, repo_catalog_path)
+    repo_project_root = _project_identity_home_from_repo_catalog(repo_root, repo_catalog_path)
+    local_project_root = _runtime_identity_home_from_catalog(local_catalog_path) or repo_project_root
     local_source_layer = _classify_catalog_source_layer(
         local_catalog_path,
         repo_root=repo_root,
@@ -523,7 +536,7 @@ def resolve_identity(
             scope = _classify_scope_from_pack_path(
                 pack,
                 repo_root=repo_root,
-                project_root=project_root,
+                project_root=local_project_root,
                 user_root=user_root,
                 admin_root=admin_root,
             )
@@ -556,7 +569,7 @@ def resolve_identity(
                 scope = _classify_scope_from_pack_path(
                     pack,
                     repo_root=repo_root,
-                    project_root=project_root,
+                    project_root=repo_project_root,
                     user_root=user_root,
                     admin_root=admin_root,
                 )
@@ -627,7 +640,7 @@ def resolve_identity(
 
 def _cmd_resolve(args: argparse.Namespace) -> int:
     repo_catalog = resolve_repo_catalog_path(args.repo_catalog, start=Path(__file__).resolve())
-    local_catalog = resolve_local_catalog_path(args.local_catalog, start=Path(__file__).resolve())
+    local_catalog = resolve_local_catalog_path(args.local_catalog, start=Path.cwd())
     if args.ensure_local_catalog:
         ensure_local_catalog(repo_catalog, local_catalog)
     ctx = resolve_identity(
@@ -643,7 +656,7 @@ def _cmd_resolve(args: argparse.Namespace) -> int:
 
 def _cmd_merge(args: argparse.Namespace) -> int:
     repo_catalog = resolve_repo_catalog_path(args.repo_catalog, start=Path(__file__).resolve())
-    local_catalog = resolve_local_catalog_path(args.local_catalog, start=Path(__file__).resolve())
+    local_catalog = resolve_local_catalog_path(args.local_catalog, start=Path.cwd())
     if args.ensure_local_catalog:
         ensure_local_catalog(repo_catalog, local_catalog)
     out = merged_catalog(repo_catalog, local_catalog)
