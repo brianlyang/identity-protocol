@@ -227,18 +227,25 @@ def _resolve_compatibility_projection_decision(
             "receipt_path": "",
             "previous_identity_id": previous_identity_id,
         }
-    if not previous_identity_id or previous_identity_id == target_identity_id:
-        return {
-            "allowed": True,
-            "reason": "bootstrap_or_same_identity_refresh",
-            "receipt_path": receipt_path,
-            "previous_identity_id": previous_identity_id,
-        }
     if not receipt_path:
         return {
             "allowed": False,
             "reason": "actor_global_projection_switch_receipt_missing",
             "receipt_path": "",
+            "previous_identity_id": previous_identity_id,
+        }
+    if not previous_identity_id:
+        return {
+            "allowed": False,
+            "reason": "actor_global_projection_bootstrap_write_retired",
+            "receipt_path": receipt_path,
+            "previous_identity_id": "",
+        }
+    if previous_identity_id == target_identity_id:
+        return {
+            "allowed": False,
+            "reason": "actor_global_projection_same_identity_refresh_retired",
+            "receipt_path": receipt_path,
             "previous_identity_id": previous_identity_id,
         }
     receipt_errors = _validate_switch_intent_receipt(
@@ -250,8 +257,8 @@ def _resolve_compatibility_projection_decision(
     if receipt_errors:
         raise ValueError(f"{ERR_MB_010}:compatibility_projection_switch_intent_receipt_invalid:{','.join(receipt_errors)}")
     return {
-        "allowed": True,
-        "reason": "actor_global_projection_switch_receipt_validated",
+        "allowed": False,
+        "reason": "actor_global_projection_lane_retired_after_receipt_validation",
         "receipt_path": receipt_path,
         "previous_identity_id": previous_identity_id,
     }
@@ -730,6 +737,12 @@ def main() -> int:
         if token.startswith(f"{ERR_MB_010}:"):
             return _fail(ERR_MB_010, token.split(":", 1)[1])
         raise
+    if (
+        compatibility_projection_write_mode == COMPATIBILITY_PROJECTION_WRITE_MODE_LEGACY_ACTOR_GLOBAL_SWITCH
+        and not bool(compatibility_projection_decision.get("allowed"))
+    ):
+        reason = str(compatibility_projection_decision.get("reason", "")).strip() or "actor_global_projection_lane_retired"
+        return _fail(ERR_MB_008, reason)
     try:
         actor_payload, compare_token_after = _build_actor_payload(
             store=store,
