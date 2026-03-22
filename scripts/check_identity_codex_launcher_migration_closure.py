@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from resolve_identity_context import resolve_local_catalog_path, resolve_repo_catalog_path
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -109,23 +110,21 @@ def main() -> int:
     args = ap.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
-    repo_catalog = (repo_root / str(args.repo_catalog)).resolve()
+    caller_anchor = Path.cwd().resolve()
+    repo_catalog = resolve_repo_catalog_path(args.repo_catalog, start=Path(__file__).resolve())
 
     catalog_candidates: list[Path] = [] if args.workspace_runtime_only else [repo_catalog]
     for raw in args.catalog:
         token = str(raw or "").strip()
         if not token:
             continue
-        p = Path(token).expanduser()
-        if not p.is_absolute():
-            p = (repo_root / p).resolve()
-        catalog_candidates.append(p)
+        catalog_candidates.append(resolve_local_catalog_path(token, start=caller_anchor))
     if args.include_env_catalog:
         import os
 
         env_catalog = str(os.environ.get("IDENTITY_CATALOG", "")).strip()
         if env_catalog:
-            catalog_candidates.append(Path(env_catalog).expanduser().resolve())
+            catalog_candidates.append(resolve_local_catalog_path(env_catalog, start=caller_anchor))
 
     dedup: list[Path] = []
     seen: set[Path] = set()
