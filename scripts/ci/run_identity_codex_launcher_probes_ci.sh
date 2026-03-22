@@ -91,6 +91,32 @@ assert payload["preferred_resume_command"].startswith("zsh -lic 'id-"), payload
 print("launcher_shortcut_command_bundle_status=PASS_REQUIRED")
 PY
 
+python3 - "${REPO_ROOT}" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+repo_root = Path(sys.argv[1]).resolve()
+uuid_re = re.compile(r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b")
+targets = [
+    repo_root / "README.md",
+    repo_root / "scripts" / "render_identity_codex_launcher.py",
+    repo_root / "scripts" / "identity_codex_launcher_common.py",
+    repo_root / "scripts" / "ci" / "run_identity_codex_launcher_probes_ci.sh",
+    repo_root / "docs" / "governance" / "identity-codex-launcher-governance-v1.6.14.md",
+    repo_root / "docs" / "review" / "protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md",
+]
+violations = []
+for path in targets:
+    text = path.read_text(encoding="utf-8")
+    for lineno, line in enumerate(text.splitlines(), start=1):
+        if uuid_re.search(line):
+            violations.append(f"{path}:{lineno}:{line.strip()}")
+if violations:
+    raise SystemExit("launcher_uuid_literal_regression:\n" + "\n".join(violations))
+print("launcher_uuid_literal_guard_status=PASS_REQUIRED")
+PY
+
 echo "[RUN] ${BIN_DIR}/identity-codex --identity-id ${IDENTITY_ID} --dry-run --json-only -- resume <thread-uuid>"
 "${BIN_DIR}/identity-codex" \
   --identity-id "${IDENTITY_ID}" \
