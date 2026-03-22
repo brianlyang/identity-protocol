@@ -58,8 +58,32 @@ def _git(path: Path, args: list[str]) -> str:
         return ""
 
 
+def _normalize_anchor(path: Path | None = None) -> Path:
+    anchor = (path or Path.cwd()).expanduser().resolve()
+    if anchor.is_file():
+        anchor = anchor.parent
+    return anchor
+
+
+def _workspace_root_from_repo_root(repo_root: Path) -> Path:
+    resolved = repo_root.expanduser().resolve()
+    if resolved.name == "identity-protocol-local":
+        return resolved.parent.resolve()
+    return resolved
+
+
+def _runtime_resolution_base(start: Path | None = None) -> Path:
+    anchor = _normalize_anchor(start)
+    cwd = Path.cwd().resolve()
+    repo_root = _detect_repo_root(anchor)
+    workspace_root = _workspace_root_from_repo_root(repo_root)
+    if _within(cwd, workspace_root):
+        return anchor
+    return cwd
+
+
 def _detect_repo_root(start: Path | None = None) -> Path:
-    base = (start or Path.cwd()).resolve()
+    base = _normalize_anchor(start)
     out = _git(base, ["rev-parse", "--show-toplevel"])
     if out:
         return Path(out).expanduser().resolve()
@@ -77,7 +101,7 @@ def _default_user_identity_home() -> Path:
 
 
 def _default_repo_identity_home(start: Path | None = None) -> Path:
-    repo_root = _detect_repo_root(start)
+    repo_root = _detect_repo_root(_runtime_resolution_base(start))
     if repo_root.name == "identity-protocol-local":
         return (repo_root.parent / ".identity").resolve()
     return (repo_root / ".identity").resolve()
@@ -134,8 +158,25 @@ def _guard_forced_project_identity_home(candidate: Path, *, start: Path | None =
     return _default_user_identity_home()
 
 
+def _guard_forced_project_local_catalog_path(candidate: Path, *, start: Path | None = None) -> Path:
+    if _project_runtime_env_source() != PROJECT_RUNTIME_FORCED_ENV_SOURCE:
+        return candidate
+    current_repo_home = _default_repo_identity_home(start)
+    current_repo_catalog = (current_repo_home / "catalog.local.yaml").resolve()
+    cwd = Path.cwd().resolve()
+    if candidate == current_repo_catalog:
+        return candidate
+    if candidate.name == "catalog.local.yaml" and candidate.parent.name == ".identity" and _within(
+        cwd, candidate.parent.parent
+    ):
+        return candidate
+    if _session_pointer_exists(current_repo_home):
+        return current_repo_catalog
+    return (_default_user_identity_home() / "catalog.local.yaml").resolve()
+
+
 def _default_protocol_home_fallback(start: Path | None = None) -> Path:
-    base = (start or Path.cwd()).resolve()
+    base = _runtime_resolution_base(start)
     repo_root = _detect_repo_root(base)
     if repo_root.name == "identity-protocol-local":
         return repo_root.resolve()
@@ -223,7 +264,7 @@ def default_identity_home(start: Path | None = None) -> Path:
     if explicit_identity_home:
         p = _guard_forced_project_identity_home(_expand(explicit_identity_home), start=start)
     elif configured_identity_home:
-        p = _expand(configured_identity_home)
+        p = _guard_forced_project_identity_home(_expand(configured_identity_home), start=start)
     else:
         repo_home = _default_repo_identity_home(start)
         if repo_home.exists():
@@ -239,6 +280,13 @@ def default_identity_home(start: Path | None = None) -> Path:
 
 
 def default_local_catalog_path(identity_home: Path | None = None, *, start: Path | None = None) -> Path:
+    explicit_catalog = str(os.environ.get("IDENTITY_CATALOG", "")).strip()
+    runtime_defaults = _load_runtime_env_defaults()
+    configured_catalog = str(runtime_defaults.get("IDENTITY_CATALOG", "")).strip()
+    if explicit_catalog:
+        return _guard_forced_project_local_catalog_path(_expand(explicit_catalog), start=start)
+    if configured_catalog:
+        return _guard_forced_project_local_catalog_path(_expand(configured_catalog), start=start)
     home = identity_home or default_identity_home(start=start)
     return home / "catalog.local.yaml"
 
@@ -330,7 +378,7 @@ def default_protocol_home(start: Path | None = None) -> Path:
     if explicit:
         p = _guard_forced_project_protocol_home(_expand(explicit), start=start)
     elif configured:
-        p = _expand(configured)
+        p = _guard_forced_project_protocol_home(_expand(configured), start=start)
     else:
         p = _default_protocol_home_fallback(start)
     return p
@@ -578,8 +626,8 @@ def resolve_identity(
 
 
 def _cmd_resolve(args: argparse.Namespace) -> int:
-    repo_catalog = _expand(args.repo_catalog)
-    local_catalog = _expand(args.local_catalog)
+    repo_catalog = resolve_repo_catalog_path(args.repo_catalog, start=Path(__file__).resolve())
+    local_catalog = resolve_local_catalog_path(args.local_catalog, start=Path(__file__).resolve())
     if args.ensure_local_catalog:
         ensure_local_catalog(repo_catalog, local_catalog)
     ctx = resolve_identity(
@@ -594,8 +642,8 @@ def _cmd_resolve(args: argparse.Namespace) -> int:
 
 
 def _cmd_merge(args: argparse.Namespace) -> int:
-    repo_catalog = _expand(args.repo_catalog)
-    local_catalog = _expand(args.local_catalog)
+    repo_catalog = resolve_repo_catalog_path(args.repo_catalog, start=Path(__file__).resolve())
+    local_catalog = resolve_local_catalog_path(args.local_catalog, start=Path(__file__).resolve())
     if args.ensure_local_catalog:
         ensure_local_catalog(repo_catalog, local_catalog)
     out = merged_catalog(repo_catalog, local_catalog)
@@ -604,15 +652,13 @@ def _cmd_merge(args: argparse.Namespace) -> int:
 
 
 def main() -> int:
-    identity_home = default_identity_home(start=Path(__file__).resolve())
-    default_local_catalog = default_local_catalog_path(identity_home)
     ap = argparse.ArgumentParser(description="Resolve identity context across repo catalog and local catalog.")
     sub = ap.add_subparsers(dest="command", required=True)
 
     c1 = sub.add_parser("resolve", help="Resolve an identity from merged catalog context.")
     c1.add_argument("--identity-id", required=True)
     c1.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
-    c1.add_argument("--local-catalog", default=str(default_local_catalog))
+    c1.add_argument("--local-catalog", default="")
     c1.add_argument("--ensure-local-catalog", action="store_true")
     c1.add_argument("--scope", default="", help="optional explicit scope arbitration: REPO/USER/ADMIN/SYSTEM")
     c1.add_argument("--allow-conflict", action="store_true", help="allow conflict and pick preferred runtime layer")
@@ -620,7 +666,7 @@ def main() -> int:
 
     c2 = sub.add_parser("merge", help="Dump merged catalog (local overrides repo).")
     c2.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
-    c2.add_argument("--local-catalog", default=str(default_local_catalog))
+    c2.add_argument("--local-catalog", default="")
     c2.add_argument("--ensure-local-catalog", action="store_true")
     c2.set_defaults(func=_cmd_merge)
 
