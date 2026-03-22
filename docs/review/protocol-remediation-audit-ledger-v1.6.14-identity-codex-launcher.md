@@ -106,10 +106,12 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - protocol vs instance vs installed-bin ownership is unambiguous.
 3. **Implementation PASS** for this stream now requires the landed assets and lanes to stay green together:
    - protocol-owned launcher renderer / installer / validator,
+   - protocol-owned workspace-level convergence entry `scripts/run_identity_codex_launcher_workspace_convergence.py`,
    - creator/update/activate and installer rollout wiring,
    - canonical pack-local launcher manifest + README,
    - canonical installed `identity-codex` and `id-<identity-id>` shims,
    - launcher probe lane `scripts/ci/run_identity_codex_launcher_probes_ci.sh`,
+   - convergence-entry probe lane `scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh`,
    - active-runtime launcher migration closure checker `scripts/check_identity_codex_launcher_migration_closure.py`,
    - lifecycle enforcement where `identity_creator validate` fail-closes on active-runtime launcher migration debt and `identity_creator update` performs governed auto-repair + recheck,
    - required-runtime-gates inclusion for the launcher probe lane,
@@ -126,7 +128,7 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
 
 1. The accepted rollout direction after closure is **not** “continue hand-fixing identities one by one.”
 2. Manual repair of a single identity is acceptable only as pilot proof that the protocol-owned launcher migration toolchain works end-to-end.
-3. The accepted protocol-owned rollout target is a **workspace-level launcher convergence entry** that:
+3. The accepted protocol-owned rollout target is the landed **workspace-level launcher convergence entry** `scripts/run_identity_codex_launcher_workspace_convergence.py`, which:
    - resolves the workspace-local runtime catalog,
    - aggregates launcher migration closure debt for active runtime identities,
    - executes governed backfill + launcher rollout on violating identities,
