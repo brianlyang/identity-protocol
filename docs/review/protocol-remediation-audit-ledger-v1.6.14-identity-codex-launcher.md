@@ -122,6 +122,19 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
 2. The workspace bridge may remain operational after that closure, but only as bridge-only compatibility evidence.
 4. This stream is independent from provider/MCP runtime incidents and from host-final visible-surface promotion work.
 
+## 6.1 Accepted rollout direction after closure
+
+1. The accepted rollout direction after closure is **not** “continue hand-fixing identities one by one.”
+2. Manual repair of a single identity is acceptable only as pilot proof that the protocol-owned launcher migration toolchain works end-to-end.
+3. The accepted protocol-owned rollout target is a **workspace-level launcher convergence entry** that:
+   - resolves the workspace-local runtime catalog,
+   - aggregates launcher migration closure debt for active runtime identities,
+   - executes governed backfill + launcher rollout on violating identities,
+   - reruns closure validation after repair,
+   - emits a convergence receipt for audit and replay.
+4. Reviewers must treat that convergence entry as rollout/orchestration infrastructure layered on top of the already frozen `v1.6.14` launcher contract, not as permission to reopen launcher semantics.
+5. Cross-workspace proof should therefore come from running the same convergence entry against another workspace catalog, rather than from granting workspace-specific wrapper exceptions.
+
 ## 7) Boundary lock for reviewers
 
 1. Do not reinterpret this stream as permission to override the `codex` product command.
