@@ -196,6 +196,18 @@ These names and directories are frozen by this stream. The renderer / installer 
 5. The convergence entry must not invent alternate launcher semantics, alternate install directories, or per-workspace shortcut naming.
 6. The convergence entry is a rollout/orchestration surface for the already frozen `v1.6.14` launcher standard; it does not reopen command naming or path ownership.
 7. Cross-workspace validation should proceed by running that same convergence entry in another workspace catalog such as `fqsh`, not by introducing workspace-specific wrapper exceptions.
+8. Current-state note (2026-03-22): launcher runtime authority is now frozen as a **split but governed** contract:
+   - launcher configuration may continue to live under `${CODEX_HOME}/.identity/config/runtime-paths.env`,
+   - but the recorded `IDENTITY_HOME` and `IDENTITY_CATALOG` inside that file must point at the selected workspace-local runtime surface rather than at the launcher-config home itself.
+9. Current launcher closure therefore includes runtime-path authority as machine truth rather than as post-hoc operator knowledge:
+   - `scripts/validate_identity_codex_launcher.py` now exports `runtime_paths_status`,
+   - `scripts/check_identity_codex_launcher_migration_closure.py` now surfaces the same runtime-path closure family for aggregate active-runtime proof.
+10. Live control-plane consumers are frozen accordingly:
+   - required runtime gates,
+   - readiness checks,
+   - and `identity_creator` launcher auto-repair enforcement
+   must all consume launcher closure in `workspace-runtime-only` mode so repo fixture catalogs never dilute active-runtime launcher proof.
+11. The first cross-workspace pilot proof is now machine-landed through `scripts/ci/run_identity_codex_launcher_cross_workspace_pilot_probes_ci.sh`, which reuses the same convergence entry against another workspace-local runtime catalog inside a temporary workspace and temporary `CODEX_HOME` with no workspace-specific wrapper exception.
 
 ### 6.2 Discussion-package boundary before coding
 
