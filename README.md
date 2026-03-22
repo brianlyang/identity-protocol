@@ -27,6 +27,45 @@ This system is intentionally designed to solve three recurring failure modes:
 - Lower audit cost: every key decision can be traced to report fields and validator outputs.
 - Continuous identity evolution: prompt/rulebook/task-history can evolve with explicit evidence and replayability.
 
+## Identity launcher quickstart (one-shot copyable commands)
+
+`v1.6.14` freezes launcher command discovery as a protocol-owned surface, so operators should not manually assemble
+identity startup/resume commands in chat.
+
+Preferred operator surface:
+
+- short launcher: `id-<identity-id>`
+
+Explicit generic surface:
+
+- `identity-codex --identity-id <identity-id> -- <codex args>`
+
+Print the full copyable command bundle for any governed identity:
+
+```bash
+python3 scripts/render_identity_codex_launcher.py commands --identity-id <identity-id>
+```
+
+If you want a resume command outside the currently running identity session, pass the host thread UUID explicitly:
+
+```bash
+python3 scripts/render_identity_codex_launcher.py commands \
+  --identity-id <identity-id> \
+  --thread-id <host-thread-uuid>
+```
+
+What this prints:
+
+- preferred short start command, for example `zsh -lic 'id-<identity-id>'`
+- absolute-path fallback start command under `${CODEX_HOME}/bin/`
+- preferred short resume command when a host thread UUID is available
+- generic `identity-codex --identity-id ...` equivalents for repair/documentation flows
+
+Operational rule:
+
+- if someone asks “`identity_id=XXX` 如何启动 / 如何续接”, the answer should come from this protocol-owned command bundle,
+  not from manual command拼接 or workspace-specific wrapper folklore.
+
 ### Protocol SSOT governance (canonical source + coupling)
 
 - Canonical protocol-strengthening source:

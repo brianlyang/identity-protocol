@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 82`, `command snippets checked: 904`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 82`, `command snippets checked: 906`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -180,7 +180,7 @@ Symptoms:
 
 Root cause:
 
-- the protocol has ownership rules and many local hardenings, but it still lacks one explicit motherline principle that says compatibility, fallback, and bridge surfaces are migration/replay/diagnostic-only and may not re-enter active defaults, validator green paths, or current-turn runtime truth.
+- the original root cause was the absence of one explicit motherline principle saying compatibility, fallback, and bridge surfaces are migration/replay/diagnostic-only and may not re-enter active defaults, validator green paths, or current-turn runtime truth; `rq_047_protocol_no_downgrade_motherline_contract_v1` now freezes that principle, so the remaining RC-11 work is residual cleanup/truth-sync and regression prevention rather than missing motherline definition.
 
 ### RC-12 Route/lane governance still begins too late in the execution chain
 
@@ -667,30 +667,36 @@ Root cause:
   - `collect_identity_health_report.py` still invokes the pointer guard with `--allow-compatibility-projection-drift`;
   - `repair_actor_session_authority_residue.py` currently materializes pointer surface identity from `projection_state` when `projection_status == AVAILABLE`.
 
-### ISSUE-027 - Motherline no-downgrade rule is not yet frozen, so active scaffolds and validators still normalize legacy compatibility overlays
+### ISSUE-027 - Motherline no-downgrade contract is now frozen; remaining compatibility residue must stay quarantined
 
 - `status`: OPEN
-- `problem_statement`: the protocol still lacks one bottom-layer no-downgrade / no-backstop rule, and that gap is visible in active surfaces: `create_identity_pack.py` scaffolds `legacy_alias_bridge` and exposes `--profile legacy-commerce-overlay`, blocker validators still treat `mode=legacy_alias_bridge` as a green path, utility code still falls back to literal `assistant:codex` defaults outside the strict-entry scanner family, and protocol/runtime docs still preserve compatibility-bridge / legacy-pack wording in active normative text.
+- `problem_statement`: the bottom-layer no-downgrade / no-backstop / no backward-compatibility rule is now frozen, but the protocol still has to keep residual compatibility language and helper tails from re-entering active surfaces. The open work is no longer “define the principle”; it is “hold the principle everywhere so active defaults, validator green paths, current-turn runtime truth, active execution entry, and protocol-owned success paths never regress back into compatibility behavior.”
 - `primary_owner_doc`: `identity/protocol/IDENTITY_PROTOCOL.md`
 - `secondary_refs`:
   - `identity/protocol/IDENTITY_RUNTIME.md`
   - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`
-  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
+  - `identity/protocol/mappings/contract-binding.v1.6.yaml`
+  - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.md`
 - `machine_gate`:
+  - `scripts/validate_compatibility_legacy_boundary.py`
+  - `scripts/validate_strict_actor_entry_semantics.py`
+  - `scripts/validate_identity_switch_closure_semantics.py`
+  - `scripts/validate_identity_session_pointer_consistency.py`
   - `scripts/validate_identity_runtime_contract.py`
   - `scripts/validate_identity_collab_trigger.py`
-  - `scripts/validate_strict_actor_entry_semantics.py`
-  - supporting audit scan: `rg -n 'legacy_alias_bridge|legacy-commerce-overlay|assistant:codex' scripts/create_identity_pack.py scripts/compile_identity_runtime.py scripts/identity_creator.py scripts/identity_codex_launcher_common.py`
+  - supporting audit scan: `rg -n 'legacy_alias_bridge|legacy-commerce-overlay|assistant:codex|compatibility backstop|backward compatibility' identity/protocol docs scripts`
 - `root_cause`: RC-11
 - `stop_condition`:
-  - one motherline principle freezes compatibility/fallback/bridge surfaces to migration, replay, or diagnostics only and forbids protocol downgrade/backstop behavior for active runtime truth;
-  - active scaffold/validator families stop normalizing legacy alias bridges, legacy overlays, and literal actor fallbacks as ordinary supported defaults;
-  - active normative docs stop advertising compatibility bridges or legacy-pack survival as open-ended current defaults once dedicated migration windows close.
+  - `rq_047_protocol_no_downgrade_motherline_contract_v1` remains frozen in protocol kernel text, contract binding, governance, and review surfaces;
+  - active scaffold/validator/helper families stay green only when compatibility residue is quarantined away from active defaults, validator green paths, current-turn runtime truth, active execution entry, and protocol-owned success paths;
+  - canonical docs/workbook/review truth stays synchronized so residual wording cannot quietly reopen downgrade/backstop semantics.
 - `current_evidence`:
-  - `create_identity_pack.py` still scaffolds `legacy_alias_bridge` into `blocker_taxonomy_contract` / `collaboration_trigger_contract` and still exposes `--profile legacy-commerce-overlay`;
-  - `validate_identity_runtime_contract.py` and `validate_identity_collab_trigger.py` still accept `mode=legacy_alias_bridge`;
-  - `compile_identity_runtime.py`, `identity_creator.py`, and `identity_codex_launcher_common.py` still contain literal `assistant:codex` fallback defaults outside the current strict-entry coverage set;
-  - `identity/protocol/IDENTITY_PROTOCOL.md`, `identity/protocol/IDENTITY_RUNTIME.md`, and `semantic-term-registry.v1.6.yaml` still retain compatibility-bridge / legacy-path wording without one explicit no-downgrade motherline clause.
+  - `identity/protocol/IDENTITY_PROTOCOL.md` now freezes `rq_047_protocol_no_downgrade_motherline_contract_v1`;
+  - `identity/protocol/mappings/contract-binding.v1.6.yaml` now binds the rule as `ASB16-RQ-047`;
+  - `identity/protocol/IDENTITY_RUNTIME.md` now hard-freezes active-runtime no-downgrade semantics, including current-turn truth, active entry, and validator-green-path boundaries;
+  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml` now explicitly says the protocol does not provide backward compatibility on active surfaces;
+  - `ISSUE-027` remains OPEN only for residual cleanup/truth-sync and regression-prevention tails, not because the motherline principle is still missing.
 
 ### ISSUE-028 - Declared route/script lane governance still cannot hard-stop direct tool-call rescue lanes
 
