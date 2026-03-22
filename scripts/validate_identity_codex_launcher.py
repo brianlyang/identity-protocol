@@ -29,6 +29,7 @@ from identity_codex_launcher_common import (
     runtime_identity_home_for_catalog,
     runtime_paths_config_path,
     shortcut_launcher_name,
+    validate_launcher_contract_doc,
     validate_launcher_manifest_doc,
 )
 from resolve_identity_context import resolve_identity
@@ -148,18 +149,9 @@ def main() -> int:
     if not isinstance(contract, dict):
         stale_reasons.append("launcher_contract_missing")
     else:
-        if str(contract.get("contract_id", "")).strip() != IDENTITY_CODEX_LAUNCHER_CONTRACT_ID:
-            stale_reasons.append("launcher_contract_id_mismatch")
-        if str(contract.get("validator", "")).strip() != IDENTITY_CODEX_LAUNCHER_VALIDATOR_ID:
-            stale_reasons.append("launcher_contract_validator_mismatch")
-        if str(contract.get("renderer", "")).strip() != IDENTITY_CODEX_LAUNCHER_RENDERER_ID:
-            stale_reasons.append("launcher_contract_renderer_mismatch")
-        if str(contract.get("installer", "")).strip() != IDENTITY_CODEX_LAUNCHER_INSTALLER_ID:
-            stale_reasons.append("launcher_contract_installer_mismatch")
-        if str(contract.get("pack_manifest_relpath", "")).strip() != IDENTITY_CODEX_LAUNCHER_MANIFEST_REL.as_posix():
-            stale_reasons.append("launcher_contract_manifest_relpath_mismatch")
-        if str(contract.get("pack_readme_relpath", "")).strip() != IDENTITY_CODEX_LAUNCHER_README_REL.as_posix():
-            stale_reasons.append("launcher_contract_readme_relpath_mismatch")
+        contract_issues = validate_launcher_contract_doc(contract_doc=contract, identity_id=args.identity_id)
+        for issue in contract_issues:
+            stale_reasons.append(f"launcher_{issue}")
 
     if manifest_doc is not None:
         stale_reasons.extend(validate_launcher_manifest_doc(manifest_doc=manifest_doc, identity_id=args.identity_id))

@@ -37,6 +37,8 @@ IDENTITY_CODEX_LAUNCHER_README_REL = IDENTITY_CODEX_LAUNCHERS_DIR_REL / "README.
 GENERIC_LAUNCHER_NAME = "identity-codex"
 IDENTITY_SHORTCUT_PREFIX = "id-"
 GENERIC_LAUNCHER_BIN_REL = Path("bin") / GENERIC_LAUNCHER_NAME
+IDENTITY_LAUNCHER_COMMAND_DISCOVERY_CONTRACT_ID = "identity_codex_launcher_command_discovery_contract_v1"
+IDENTITY_LAUNCHER_COMMAND_DISCOVERY_QUESTION_FAMILY = "identity_launcher_start_resume"
 
 FORBIDDEN_RUNTIME_OVERRIDE_KEYS: tuple[str, ...] = (
     "model_instructions_file",
@@ -197,6 +199,21 @@ def shortcut_launcher_name(identity_id: str) -> str:
     return f"{IDENTITY_SHORTCUT_PREFIX}{str(identity_id or '').strip()}"
 
 
+def launcher_command_discovery_doc(identity_id: str) -> dict[str, Any]:
+    identity_token = str(identity_id or "").strip()
+    shortcut = shortcut_launcher_name(identity_token)
+    return {
+        "contract_id": IDENTITY_LAUNCHER_COMMAND_DISCOVERY_CONTRACT_ID,
+        "question_family": IDENTITY_LAUNCHER_COMMAND_DISCOVERY_QUESTION_FAMILY,
+        "generic_discovery_command": f"{GENERIC_LAUNCHER_NAME} commands --identity-id {identity_token}",
+        "shortcut_discovery_command": f"{shortcut} commands",
+        "resume_thread_argument": "--thread-id <host-thread-uuid>",
+        "instance_answer_mode": "instance_returns_concrete_commands",
+        "manual_command_assembly_forbidden": True,
+        "python_helper_surface_forbidden": True,
+    }
+
+
 def launcher_contract_skeleton(identity_id: str) -> dict[str, Any]:
     identity_token = str(identity_id or "").strip()
     return {
@@ -214,6 +231,7 @@ def launcher_contract_skeleton(identity_id: str) -> dict[str, Any]:
         "shortcut_launcher_filename": shortcut_launcher_name(identity_token),
         "forbidden_runtime_overrides": list(FORBIDDEN_RUNTIME_OVERRIDE_KEYS),
         "bootstrap_owner_streams": ["v1.6.12", "v1.6.13", "v1.6.14"],
+        "command_discovery": launcher_command_discovery_doc(identity_token),
         "process_entry_injection": {
             "model_instructions_file_owner": True,
             "project_doc_fallback_owner": True,
@@ -276,6 +294,7 @@ def launcher_manifest_doc(identity_id: str) -> dict[str, Any]:
         "generic_launcher_filename": GENERIC_LAUNCHER_NAME,
         "shortcut_launcher_filename": shortcut_launcher_name(identity_token),
         "forbidden_runtime_overrides": list(FORBIDDEN_RUNTIME_OVERRIDE_KEYS),
+        "command_discovery": launcher_command_discovery_doc(identity_token),
         "process_entry_artifacts": {
             "bootstrap_file_kind": "model_instructions_file",
             "fallback_file_kind": "project_doc_fallback_filenames",
@@ -301,6 +320,9 @@ Canonical commands:
 - Copyable command discovery:
   - `identity-codex commands --identity-id {identity_token}`
   - `{shortcut} commands`
+- Instance consumption:
+  - identity instances should consume `commands --json-only` and return the concrete command bundle to the user.
+  - manual command assembly and python helper surfaces are non-canonical.
 
 Canonical installed home:
 
@@ -1000,6 +1022,32 @@ def validate_launcher_manifest_doc(*, manifest_doc: dict[str, Any], identity_id:
         current = manifest_doc.get(key)
         if current != value:
             issues.append(f"manifest_field_mismatch:{key}")
+    return issues
+
+
+def validate_launcher_contract_doc(*, contract_doc: dict[str, Any], identity_id: str) -> list[str]:
+    issues: list[str] = []
+    expected = launcher_contract_skeleton(identity_id)
+    for key in (
+        "contract_id",
+        "validator",
+        "renderer",
+        "installer",
+        "pack_manifest_relpath",
+        "pack_readme_relpath",
+        "generic_command",
+        "shortcut_command",
+        "installed_bin_dir",
+        "generic_launcher_filename",
+        "shortcut_launcher_filename",
+        "forbidden_runtime_overrides",
+        "bootstrap_owner_streams",
+        "process_entry_injection",
+        "command_discovery",
+    ):
+        current = contract_doc.get(key)
+        if current != expected.get(key):
+            issues.append(f"contract_field_mismatch:{key}")
     return issues
 
 

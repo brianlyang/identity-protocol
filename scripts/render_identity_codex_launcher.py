@@ -10,6 +10,8 @@ from typing import Any
 
 from identity_codex_launcher_common import (
     GENERIC_LAUNCHER_NAME,
+    IDENTITY_LAUNCHER_COMMAND_DISCOVERY_CONTRACT_ID,
+    IDENTITY_LAUNCHER_COMMAND_DISCOVERY_QUESTION_FAMILY,
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     STATUS_SKIPPED_NOT_REQUIRED,
@@ -18,6 +20,7 @@ from identity_codex_launcher_common import (
     exec_identity_codex,
     launcher_manifest_doc,
     launcher_readme_text,
+    launcher_command_discovery_doc,
     render_generic_launcher_sh,
     render_shortcut_launcher_sh,
     resolve_catalog_path,
@@ -60,6 +63,7 @@ def _emit_commands(payload: dict[str, Any], *, json_only: bool) -> None:
         _emit(payload, json_only=True)
         return
     print(f"identity_id={payload['identity_id']}")
+    print(f"recommended_command={payload['recommended_user_command']}")
     print(f"preferred_start={payload['preferred_start_command']}")
     print(f"absolute_start={payload['absolute_start_command']}")
     print(f"generic_start={payload['generic_start_command']}")
@@ -164,11 +168,14 @@ def _cmd_commands(args: argparse.Namespace) -> int:
     start_generic = [GENERIC_LAUNCHER_NAME, "--identity-id", args.identity_id]
     preferred_start_command = _build_shell_command(start_short)
     preferred_generic_start_command = _build_shell_command(start_generic)
+    command_discovery = launcher_command_discovery_doc(args.identity_id)
 
     thread_id, thread_source = _resolve_resume_thread(args.identity_id, args.thread_id)
     resume_status = STATUS_PASS_REQUIRED if thread_id else STATUS_SKIPPED_NOT_REQUIRED
     payload = {
         "status": STATUS_PASS_REQUIRED,
+        "command_bundle_contract_id": IDENTITY_LAUNCHER_COMMAND_DISCOVERY_CONTRACT_ID,
+        "question_family": IDENTITY_LAUNCHER_COMMAND_DISCOVERY_QUESTION_FAMILY,
         "identity_id": args.identity_id,
         "catalog_path": str(catalog_path),
         "pack_path": str(pack_root),
@@ -181,20 +188,47 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         "preferred_start_command": preferred_start_command,
         "absolute_start_command": _shell_join([str(shortcut_path)]),
         "generic_start_command": preferred_generic_start_command,
+        "recommended_user_command": preferred_start_command,
         "resume_status": resume_status,
         "current_host_thread_id": thread_id,
         "resume_thread_source": thread_source,
+        "command_discovery": command_discovery,
+        "instance_answer_guidance": {
+            "instance_returns_concrete_commands": True,
+            "manual_command_assembly_forbidden": True,
+            "python_helper_surface_forbidden": True,
+            "terminal_native_surface_required": True,
+        },
+        "copyable_commands": {
+            "start": {
+                "preferred": preferred_start_command,
+                "absolute": _shell_join([str(shortcut_path)]),
+                "generic": preferred_generic_start_command,
+            },
+            "resume": None,
+        },
     }
     if thread_id:
         resume_short = [shortcut, "resume", thread_id]
         resume_generic = [GENERIC_LAUNCHER_NAME, "--identity-id", args.identity_id, "--", "resume", thread_id]
+        preferred_resume_command = _build_shell_command(resume_short)
+        absolute_resume_command = _shell_join([str(shortcut_path), "resume", thread_id])
+        generic_resume_command = _build_shell_command(resume_generic)
         payload.update(
             {
-                "preferred_resume_command": _build_shell_command(resume_short),
-                "absolute_resume_command": _shell_join([str(shortcut_path), "resume", thread_id]),
-                "generic_resume_command": _build_shell_command(resume_generic),
+                "preferred_resume_command": preferred_resume_command,
+                "absolute_resume_command": absolute_resume_command,
+                "generic_resume_command": generic_resume_command,
+                "recommended_user_command": preferred_resume_command,
             }
         )
+        payload["copyable_commands"]["resume"] = {
+            "preferred": preferred_resume_command,
+            "absolute": absolute_resume_command,
+            "generic": generic_resume_command,
+            "thread_id": thread_id,
+            "thread_source": thread_source,
+        }
     else:
         payload["resume_reason"] = thread_source
     _emit_commands(payload, json_only=args.json_only)
