@@ -162,6 +162,12 @@ NEG_BINDING_JSON="${TMP_ROOT}/negative-binding.json"
 NEG_RECEIPT_JSON="${TMP_ROOT}/negative-receipt.json"
 NEG_RECEIPT_PATH="${TMP_ROOT}/negative-receipt-override.json"
 POS_LANE_PACK="${TMP_ROOT}/positive-lane-pack"
+POS_DIRECT_TOOL_PACK="${TMP_ROOT}/positive-direct-tool-pack"
+POS_DIRECT_TOOL_JSON="${TMP_ROOT}/positive-direct-tool-admission.json"
+NEG_DIRECT_TOOL_CONTRACT_PACK="${TMP_ROOT}/negative-direct-tool-contract-pack"
+NEG_DIRECT_TOOL_CONTRACT_JSON="${TMP_ROOT}/negative-direct-tool-contract.json"
+NEG_DIRECT_TOOL_RECEIPT_JSON="${TMP_ROOT}/negative-direct-tool-receipt.json"
+NEG_DIRECT_TOOL_RECEIPT_PATH="${TMP_ROOT}/negative-direct-tool-receipt-override.json"
 NEG_LANE_CONTRACT_PACK="${TMP_ROOT}/negative-lane-contract-pack"
 NEG_LANE_CONTRACT_JSON="${TMP_ROOT}/negative-lane-contract.json"
 NEG_LANE_RECEIPT_JSON="${TMP_ROOT}/negative-lane-receipt.json"
@@ -278,6 +284,140 @@ python3 "${ROOT}/scripts/validate_route_execution_lane_admission.py" \
   --script-id "${RECEIPT_SCRIPT_ID}" \
   --require-observed \
   --json-only > "${POS_LANE_JSON}"
+
+mkdir -p "${POS_DIRECT_TOOL_PACK}/scripts" "${POS_DIRECT_TOOL_PACK}/runtime/reports/instance-script-admission"
+cp "${TASK_PATH}" "${POS_DIRECT_TOOL_PACK}/CURRENT_TASK.json"
+cp -R "${PACK_ROOT}/scripts/." "${POS_DIRECT_TOOL_PACK}/scripts/"
+
+python3 - "${POS_DIRECT_TOOL_PACK}/CURRENT_TASK.json" "${POS_DIRECT_TOOL_PACK}/runtime/reports/instance-script-admission" "${IDENTITY_ID}" "${RECEIPT_ROUTE}" "${RECEIPT_SCRIPT_ID}" <<'PY'
+import json
+import sys
+from datetime import UTC, datetime
+from pathlib import Path
+
+task_path = Path(sys.argv[1])
+receipt_dir = Path(sys.argv[2])
+identity_id = sys.argv[3]
+route_name = sys.argv[4]
+script_id = sys.argv[5]
+
+task_doc = json.loads(task_path.read_text(encoding="utf-8"))
+routes = (
+    ((task_doc.get("capability_orchestration_contract") or {}).get("task_type_routes") or {})
+    if isinstance(task_doc, dict)
+    else {}
+)
+route_doc = routes.get(route_name)
+if not isinstance(route_doc, dict):
+    raise SystemExit(f"route not found for direct-tool probe: {route_name}")
+
+route_doc["allowed_execution_lanes"] = [
+    {
+        "lane_id": "tool_entry_serialized",
+        "lane_class": "tool_admission_serialized",
+        "lane_source": "governed_direct_tool_entry",
+        "endpoint_class": "interactive_session",
+    }
+]
+route_doc["lane_admission_policy"] = {
+    "mode": "declared_lane_only",
+    "require_pass_status": True,
+}
+route_doc["lane_receipt_pattern"] = "runtime/reports/instance-script-admission/*.json"
+route_doc["lane_block_on_fallback"] = True
+route_doc["direct_tool_entry_policy"] = {
+    "mode": "direct_tool_entry_requires_admission",
+    "receipt_timing": "pre_tool_execution",
+    "required_pre_tool_checks": [
+        "auth_preflight",
+        "session_freshness",
+    ],
+}
+task_path.write_text(json.dumps(task_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+receipt_path = receipt_dir / f"{route_name}-{script_id}-{timestamp}.json"
+receipt_doc = {
+    "schema_version": "v1",
+    "receipt_family": "instance_script_admission_receipt",
+    "identity_id": identity_id,
+    "route_selected": route_name,
+    "script_id": script_id,
+    "lane_id": "tool_entry_serialized",
+    "lane_class": "tool_admission_serialized",
+    "lane_source": "governed_direct_tool_entry",
+    "lane_endpoint_class": "interactive_session",
+    "lane_admission_status": "PASS_REQUIRED",
+    "fallback_used": False,
+    "tool_entry_admission_timing": "pre_tool_execution",
+    "auth_preflight_status": "PASS_REQUIRED",
+    "session_freshness_status": "PASS_REQUIRED",
+    "generated_at": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+    "message": "direct tool entry admitted through canonical pre-tool lane contract",
+}
+receipt_path.write_text(json.dumps(receipt_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+python3 "${ROOT}/scripts/validate_route_execution_lane_admission.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${POS_DIRECT_TOOL_PACK}/CURRENT_TASK.json" \
+  --route "${RECEIPT_ROUTE}" \
+  --script-id "${RECEIPT_SCRIPT_ID}" \
+  --require-observed \
+  --json-only > "${POS_DIRECT_TOOL_JSON}"
+
+cp -R "${POS_DIRECT_TOOL_PACK}" "${NEG_DIRECT_TOOL_CONTRACT_PACK}"
+
+python3 - "${NEG_DIRECT_TOOL_CONTRACT_PACK}/CURRENT_TASK.json" "${RECEIPT_ROUTE}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+task_path = Path(sys.argv[1])
+route_name = sys.argv[2]
+task_doc = json.loads(task_path.read_text(encoding="utf-8"))
+routes = ((task_doc.get("capability_orchestration_contract") or {}).get("task_type_routes") or {})
+route_doc = routes.get(route_name)
+if not isinstance(route_doc, dict):
+    raise SystemExit(f"route not found for negative direct-tool contract probe: {route_name}")
+route_doc.pop("direct_tool_entry_policy", None)
+task_path.write_text(json.dumps(task_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+if python3 "${ROOT}/scripts/validate_route_execution_lane_admission.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${NEG_DIRECT_TOOL_CONTRACT_PACK}/CURRENT_TASK.json" \
+  --route "${RECEIPT_ROUTE}" \
+  --script-id "${RECEIPT_SCRIPT_ID}" \
+  --json-only > "${NEG_DIRECT_TOOL_CONTRACT_JSON}"; then
+  echo "[FAIL] negative direct-tool contract probe unexpectedly passed"
+  exit 1
+fi
+
+python3 - "${POS_DIRECT_TOOL_PACK}/runtime/reports/instance-script-admission" "${NEG_DIRECT_TOOL_RECEIPT_PATH}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+receipt_dir = Path(sys.argv[1])
+target_path = Path(sys.argv[2])
+source_path = sorted(receipt_dir.glob("*.json"))[-1]
+receipt_doc = json.loads(source_path.read_text(encoding="utf-8"))
+receipt_doc["tool_entry_admission_timing"] = "post_tool_execution"
+target_path.write_text(json.dumps(receipt_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+if python3 "${ROOT}/scripts/validate_route_execution_lane_admission.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${POS_DIRECT_TOOL_PACK}/CURRENT_TASK.json" \
+  --route "${RECEIPT_ROUTE}" \
+  --script-id "${RECEIPT_SCRIPT_ID}" \
+  --receipt "${NEG_DIRECT_TOOL_RECEIPT_PATH}" \
+  --require-observed \
+  --json-only > "${NEG_DIRECT_TOOL_RECEIPT_JSON}"; then
+  echo "[FAIL] negative direct-tool receipt probe unexpectedly passed"
+  exit 1
+fi
 
 python3 - "${NEG_MANIFEST_PACK}/scripts/INSTANCE_SCRIPT_MANIFEST.json" <<'PY'
 import json
@@ -520,7 +660,7 @@ if python3 "${ROOT}/scripts/validate_route_script_receipt_join.py" \
   exit 1
 fi
 
-python3 - "${POS_MANIFEST_JSON}" "${POS_ORCH_JSON}" "${POS_RECEIPT_JSON}" "${POS_CAPABILITY_JSON}" "${POS_LANE_JSON}" "${NEG_MANIFEST_JSON}" "${NEG_BINDING_JSON}" "${NEG_RECEIPT_JSON}" "${NEG_LANE_CONTRACT_JSON}" "${NEG_LANE_RECEIPT_JSON}" "${HOOK_RECEIPT_JSON}" "${HOOK_CAPABILITY_JSON}" "${NEG_HOOK_RECEIPT_JSON}" "${IDENTITY_ID}" "${TMP_ROOT}" "${ROOT}" "${CATALOG_PATH}" "${PACK_ROOT}" <<'PY'
+python3 - "${POS_MANIFEST_JSON}" "${POS_ORCH_JSON}" "${POS_RECEIPT_JSON}" "${POS_CAPABILITY_JSON}" "${POS_LANE_JSON}" "${POS_DIRECT_TOOL_JSON}" "${NEG_DIRECT_TOOL_CONTRACT_JSON}" "${NEG_DIRECT_TOOL_RECEIPT_JSON}" "${NEG_MANIFEST_JSON}" "${NEG_BINDING_JSON}" "${NEG_RECEIPT_JSON}" "${NEG_LANE_CONTRACT_JSON}" "${NEG_LANE_RECEIPT_JSON}" "${HOOK_RECEIPT_JSON}" "${HOOK_CAPABILITY_JSON}" "${NEG_HOOK_RECEIPT_JSON}" "${IDENTITY_ID}" "${TMP_ROOT}" "${ROOT}" "${CATALOG_PATH}" "${PACK_ROOT}" <<'PY'
 import json
 import shutil
 import subprocess
@@ -535,6 +675,9 @@ import yaml
     positive_receipt,
     positive_capability,
     positive_lane,
+    positive_direct_tool,
+    negative_direct_tool_contract,
+    negative_direct_tool_receipt,
     negative_manifest,
     negative_binding,
     negative_receipt,
@@ -544,13 +687,13 @@ import yaml
     hook_capability,
     negative_hook_receipt,
 ) = [
-    json.loads(open(path, encoding="utf-8").read()) for path in sys.argv[1:14]
+    json.loads(open(path, encoding="utf-8").read()) for path in sys.argv[1:17]
 ]
-identity_id = sys.argv[14]
-tmp_root = sys.argv[15]
-root = Path(sys.argv[16]).resolve()
-catalog_path = Path(sys.argv[17]).resolve()
-pack_root = Path(sys.argv[18]).resolve()
+identity_id = sys.argv[17]
+tmp_root = sys.argv[18]
+root = Path(sys.argv[19]).resolve()
+catalog_path = Path(sys.argv[20]).resolve()
+pack_root = Path(sys.argv[21]).resolve()
 
 assert positive_manifest["instance_script_manifest_status"] == "PASS_REQUIRED", positive_manifest
 assert positive_orch["instance_script_orchestration_status"] == "PASS_REQUIRED", positive_orch
@@ -583,6 +726,25 @@ assert isinstance(positive_receipt.get("undeclared_usage_rows"), list), positive
 assert isinstance(positive_receipt.get("missing_declared_dependency_detected"), bool), positive_receipt
 assert isinstance(positive_receipt.get("missing_declared_dependency_rows"), list), positive_receipt
 assert positive_lane["route_execution_lane_admission_status"] == "PASS_REQUIRED", positive_lane
+assert positive_direct_tool["route_execution_lane_admission_status"] == "PASS_REQUIRED", positive_direct_tool
+positive_direct_tool_row = next(
+    (
+        row
+        for row in (positive_direct_tool.get("route_rows") or [])
+        if str(row.get("route", "")).strip() == positive_direct_tool.get("route", "")
+        and str(row.get("script_id", "")).strip() == positive_direct_tool.get("script_id", "")
+    ),
+    {},
+)
+assert positive_direct_tool_row.get("direct_tool_entry_required") is True, positive_direct_tool
+assert positive_direct_tool_row.get("direct_tool_entry_policy_status") == "PASS_REQUIRED", positive_direct_tool
+assert positive_direct_tool_row.get("observed_tool_entry_admission_timing") == "pre_tool_execution", positive_direct_tool
+assert positive_direct_tool_row.get("observed_auth_preflight_status") == "PASS_REQUIRED", positive_direct_tool
+assert positive_direct_tool_row.get("observed_session_freshness_status") == "PASS_REQUIRED", positive_direct_tool
+assert negative_direct_tool_contract["route_execution_lane_admission_status"] == "FAIL_REQUIRED", negative_direct_tool_contract
+assert any("missing_field:direct_tool_entry_policy" in reason for reason in negative_direct_tool_contract.get("stale_reasons", [])), negative_direct_tool_contract
+assert negative_direct_tool_receipt["route_execution_lane_admission_status"] == "FAIL_REQUIRED", negative_direct_tool_receipt
+assert any("lane_receipt_tool_entry_admission_timing_mismatch:" in reason for reason in negative_direct_tool_receipt.get("stale_reasons", [])), negative_direct_tool_receipt
 assert negative_manifest["instance_script_manifest_status"] == "FAIL_REQUIRED", negative_manifest
 assert any("entry_target_missing" in reason for reason in negative_manifest.get("stale_reasons", [])), negative_manifest
 assert negative_binding["instance_script_orchestration_status"] == "FAIL_REQUIRED", negative_binding
@@ -849,6 +1011,9 @@ print(
             "positive_capability_activation_status": positive_capability["capability_activation_status"],
             "positive_aggregate_scope": positive_capability["route_scope"],
             "positive_execution_lane_status": positive_lane["route_execution_lane_admission_status"],
+            "positive_direct_tool_entry_status": positive_direct_tool["route_execution_lane_admission_status"],
+            "negative_direct_tool_contract_failure": "missing_field:direct_tool_entry_policy",
+            "negative_direct_tool_receipt_failure": "lane_receipt_tool_entry_admission_timing_mismatch",
             "negative_manifest_failure": "entry_target_missing",
             "negative_binding_failure": "missing_script_id",
             "negative_receipt_failure": "receipt_route_selected_mismatch",

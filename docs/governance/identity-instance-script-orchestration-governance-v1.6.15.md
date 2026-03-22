@@ -75,6 +75,7 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
    - `lane_admission_policy`
    - `lane_receipt_pattern`
    - `lane_block_on_fallback`
+   - `direct_tool_entry_policy`
 3. `primary_instance_scripts` and `fallback_instance_scripts` contain only `script_id` values that resolve through `scripts/INSTANCE_SCRIPT_MANIFEST.json`.
 4. A single route may bind multiple role-distinct `script_id` values when the flow legitimately separates probe/render/emit/recovery responsibilities; role separation must stay explicit in the manifest and receipt expectations rather than hidden in prose.
 5. `script_preconditions` is the machine-readable admission surface for script execution and may constrain at least these condition families:
@@ -92,10 +93,20 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
 8. `lane_admission_policy` freezes how route admission interprets declared lanes and whether admission receipts must report a passing lane-admission result.
 9. `lane_receipt_pattern` defines the route-level expected admission receipt family for the selected lane and must stay runtime-relative and machine-readable.
 10. `lane_block_on_fallback` is the explicit fail-close switch for routes that must not silently fall back to undeclared manual/editor/webhook execution lanes once a declared lane contract exists.
-11. Route admission may not silently discover scripts or execution lanes by filename, operator convention, ambient browser/editor state, or workspace-global helper directories.
-12. When a route declares `primary_instance_scripts`, route readiness depends on those script ids resolving and on `script_preconditions` passing.
-13. When a route declares execution-lane governance, route readiness additionally depends on the lane contract staying machine-evaluable without narrative-only exceptions.
-14. Route-scoped admission must remain machine-evaluable against only the lower-capability dependencies declared on that route unless some stronger activation policy explicitly freezes a stricter union rule; unrelated route dependencies are not implicit blockers by default.
+11. `direct_tool_entry_policy` is the additive route-level guard for any declared lane that uses conversation-level direct MCP/browser/tool entry instead of a pure instance-script wrapper; it freezes:
+   - `mode`
+   - `receipt_timing`
+   - `required_pre_tool_checks`
+12. The canonical direct-tool lane source is `governed_direct_tool_entry`; if a real supported success path enters through direct MCP/browser/tool execution, it must declare that lane source instead of surviving as operator memory or per-pack folklore.
+13. When `direct_tool_entry_policy.mode=direct_tool_entry_requires_admission`, the route must still keep `lane_block_on_fallback=true`, and admission receipts must prove pre-tool entry through:
+   - `tool_entry_admission_timing`
+   - `auth_preflight_status`
+   - `session_freshness_status`
+14. `tool_entry_admission_timing` is frozen to pre-tool admission semantics for direct tool lanes; post-hoc receipts do not legalize a direct-tool rescue path that bypassed route/lane admission.
+15. Route admission may not silently discover scripts or execution lanes by filename, operator convention, ambient browser/editor state, or workspace-global helper directories.
+16. When a route declares `primary_instance_scripts`, route readiness depends on those script ids resolving and on `script_preconditions` passing.
+17. When a route declares execution-lane governance, route readiness additionally depends on the lane contract staying machine-evaluable without narrative-only exceptions.
+18. Route-scoped admission must remain machine-evaluable against only the lower-capability dependencies declared on that route unless some stronger activation policy explicitly freezes a stricter union rule; unrelated route dependencies are not implicit blockers by default.
 
 ### 2.4 Lower-capability dependency join is explicit, not implicit
 
@@ -131,11 +142,12 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
 6. A later implementation stream may freeze exact file schemas and validators, but it must preserve these receipt-family roles.
 7. Non-normative interpretation example: a probe/helper script may satisfy `instance_script_execution_receipt` before any host-visible receipt exists, while a later emitter script satisfies `instance_script_emit_receipt` and may carry delegated references to inherited host-visible or relay receipt families.
 8. Admission-family receipts must preserve machine-readable lane provenance; at minimum, `lane_id`, `lane_class`, `lane_source`, `lane_endpoint_class`, `lane_admission_status`, and `fallback_used` must remain machine-projectable rather than narrative-only.
-9. Receipt-family projection should remain compatible with the route evidence schema already carried by `capability_orchestration_contract`; at minimum, `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts` must remain machine-projectable rather than recoverable only from free-form narrative.
-10. Execution-family receipts do not substitute for admission-family receipts when a route explicitly freezes execution-lane governance.
-11. If a governed route produces user-visible final text, that route must bind to at least one pack-local emitter script through `primary_instance_scripts` or `fallback_instance_scripts`.
-12. Direct free-form assistant text is not a substitute for route-bound script emission when a route claims governed output.
-13. Such governed-output routes must declare an emit-family receipt through `script_receipt_pattern` or the manifest default so final-output governance remains machine-checkable before any outer relay/visible-surface stage begins.
+9. Direct-tool admission receipts are still `instance_script_admission_receipt`; when a declared lane uses `lane_source=governed_direct_tool_entry`, the same receipt must additionally keep `tool_entry_admission_timing`, `auth_preflight_status`, and `session_freshness_status` machine-visible.
+10. Receipt-family projection should remain compatible with the route evidence schema already carried by `capability_orchestration_contract`; at minimum, `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts` must remain machine-projectable rather than recoverable only from free-form narrative.
+11. Execution-family receipts do not substitute for admission-family receipts when a route explicitly freezes execution-lane governance.
+12. If a governed route produces user-visible final text, that route must bind to at least one pack-local emitter script through `primary_instance_scripts` or `fallback_instance_scripts`.
+13. Direct free-form assistant text is not a substitute for route-bound script emission when a route claims governed output.
+14. Such governed-output routes must declare an emit-family receipt through `script_receipt_pattern` or the manifest default so final-output governance remains machine-checkable before any outer relay/visible-surface stage begins.
 
 ### 2.6 Failure-attribution ladder (frozen)
 
@@ -292,7 +304,8 @@ Any implementation that claims to follow `v1.6.15` should satisfy this checklist
 9. Any governed route that returns user-visible final text binds to at least one pack-local emitter script and declares an emit-family receipt.
 10. If a protocol-generated wrapper seeds final-channel relay receipts on behalf of a route-bound emitter, that wrapper must carry the canonical final-relay constants/helpers and remain executable under the wrapper-template smoke contract; SHA freshness and token presence alone are not sufficient.
 11. Aggregate activation/report artifacts that summarize multiple routes declare explicit scope/cardinality instead of pretending to be route-scoped receipts.
-12. If declared-vs-observed dependency projection, semantic-anchor projection, or outcome-sentinel hooks are adopted on this lane, they remain machine-readable and stay on the shared validator/probe/control path rather than forking into per-pack narrative-only variants.
+12. Direct MCP/browser/tool entry for a declared route must either remain inside an instance-script wrapper or declare `direct_tool_entry_policy` plus a canonical `governed_direct_tool_entry` lane whose admission receipt proves pre-tool timing and any required auth/session checks.
+13. If declared-vs-observed dependency projection, semantic-anchor projection, or outcome-sentinel hooks are adopted on this lane, they remain machine-readable and stay on the shared validator/probe/control path rather than forking into per-pack narrative-only variants.
 
 ## 6) Future promotion exit criteria
 
@@ -320,6 +333,7 @@ Any implementation that claims to follow `v1.6.15` should satisfy this checklist
    - target packs continue to use the same shared consumer path through create/backfill/update flows rather than per-pack ad hoc rollout,
    - route-scoped capability activation remains reusable without unrelated-route union blocking unless a stronger activation policy explicitly requires it,
    - lane-admission receipts keep `lane_id`, `lane_class`, `lane_source`, `lane_endpoint_class`, `lane_admission_status`, and `fallback_used` machine-visible under live pack execution,
+   - direct-tool admission, when declared, keeps `direct_tool_entry_policy` on the route contract plus `tool_entry_admission_timing`, `auth_preflight_status`, and `session_freshness_status` on the canonical admission receipt instead of legalizing direct-tool rescue through post-hoc narrative,
    - receipt-family projection keeps route provenance compatible with `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts` under live pack execution,
    - aggregate activation/report artifacts that summarize multiple routes keep scope/cardinality machine-visible and do not masquerade as single-route receipts,
    - any adopted declared-vs-observed dependency projection, semantic-anchor envelope, or outcome-sentinel hook stays compatible with one shared validator/probe/control family instead of fragmenting into pack-local dialects,

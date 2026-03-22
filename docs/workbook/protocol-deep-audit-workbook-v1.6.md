@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 82`, `command snippets checked: 903`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 82`, `command snippets checked: 904`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -714,6 +714,8 @@ Root cause:
   - target packs such as `office-ops-expert` land instance-owned business executor scripts for lane switch, browser auth preflight, editor-run guard, and session-freshness checks instead of relying on receipt-only wrappers;
   - skill guidance remains optional methodology unless it is explicitly bound into the governed script/lane entry path.
 - `current_evidence`:
+  - the protocol-owned validator family now freezes additive `direct_tool_entry_policy` semantics on top of the existing execution-lane contract; declared direct-tool lanes must use canonical `lane_source=governed_direct_tool_entry`, carry `receipt_timing=pre_tool_execution`, and report `tool_entry_admission_timing`, `auth_preflight_status`, and `session_freshness_status` through the shared `instance_script_admission_receipt` validator instead of relying on pack-local narrative;
+  - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh` now proves both positive direct-tool admission and negative fail-close on missing `direct_tool_entry_policy` / mismatched `tool_entry_admission_timing`, so the owner lane no longer treats direct-tool rescue semantics as out-of-band folklore;
   - `office-ops-expert` route `office_image_sheet_build` currently declares `required_mcp=["n8n-mcp"]`, a single governed webhook lane row, and `lane_block_on_fallback=true`, so the observed browser-manual rescue lane is contract-external rather than contract-governed;
   - the pack manifest currently contains only four helper scripts (`office_route_execution_receipt`, `emit_protocol_hud_line`, `self_heal_session_chain_tuple`, `run_strict_update_with_self_heal`) and no n8n business executor / auth-preflight / lane-switch controller;
   - `office_route_execution_receipt.py` writes post-hoc receipts from provided lane parameters, but it does not decide lane admission before tool execution;

@@ -182,6 +182,7 @@ def _collect_contract(
                 "lane_admission_policy": dict(route.get("lane_admission_policy") or {}),
                 "lane_receipt_pattern": str(route.get("lane_receipt_pattern", "")).strip(),
                 "lane_block_on_fallback": bool(route.get("lane_block_on_fallback")),
+                "direct_tool_entry_policy": dict(route.get("direct_tool_entry_policy") or {}),
                 **copy_optional_projection_fields(route),
             }
         )
@@ -345,10 +346,13 @@ def _aggregate_lane_rows(route_rows: list[dict[str, Any]]) -> dict[str, Any]:
         return {
             "execution_lane_contract_status": "SKIPPED_NOT_REQUIRED",
             "execution_lane_receipt_status": "SKIPPED_NOT_REQUIRED",
+            "direct_tool_entry_policy_status": "SKIPPED_NOT_REQUIRED",
+            "direct_tool_entry_receipt_status": "SKIPPED_NOT_REQUIRED",
             "execution_lane_diagnostic_label": "",
             "execution_lane_diagnostic_labels": [],
             "execution_lane_stale_reasons": [],
             "execution_lane_scripts": [],
+            "direct_tool_entry_required": False,
             "execution_lane_ready": True,
         }
 
@@ -358,6 +362,14 @@ def _aggregate_lane_rows(route_rows: list[dict[str, Any]]) -> dict[str, Any]:
     ]
     receipt_statuses = [
         str(row.get("lane_receipt_validation_status", "")).strip() or "SKIPPED_NOT_REQUIRED"
+        for row in route_rows
+    ]
+    direct_tool_policy_statuses = [
+        str(row.get("direct_tool_entry_policy_status", "")).strip() or "SKIPPED_NOT_REQUIRED"
+        for row in route_rows
+    ]
+    direct_tool_receipt_statuses = [
+        str(row.get("direct_tool_entry_receipt_status", "")).strip() or "SKIPPED_NOT_REQUIRED"
         for row in route_rows
     ]
     diagnostic_labels = [
@@ -381,9 +393,13 @@ def _aggregate_lane_rows(route_rows: list[dict[str, Any]]) -> dict[str, Any]:
 
     merged_contract_status = _merge_status(contract_statuses)
     merged_receipt_status = _merge_status(receipt_statuses)
+    merged_direct_tool_policy_status = _merge_status(direct_tool_policy_statuses)
+    merged_direct_tool_receipt_status = _merge_status(direct_tool_receipt_statuses)
     route_ready = (
         merged_contract_status != ORCHESTRATION_FAIL_REQUIRED
         and merged_receipt_status != ORCHESTRATION_FAIL_REQUIRED
+        and merged_direct_tool_policy_status != ORCHESTRATION_FAIL_REQUIRED
+        and merged_direct_tool_receipt_status != ORCHESTRATION_FAIL_REQUIRED
     )
     preferred_label = ""
     if not route_ready:
@@ -404,6 +420,8 @@ def _aggregate_lane_rows(route_rows: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "execution_lane_contract_status": merged_contract_status,
         "execution_lane_receipt_status": merged_receipt_status,
+        "direct_tool_entry_policy_status": merged_direct_tool_policy_status,
+        "direct_tool_entry_receipt_status": merged_direct_tool_receipt_status,
         "execution_lane_diagnostic_label": preferred_label,
         "execution_lane_diagnostic_labels": diagnostic_labels,
         "execution_lane_stale_reasons": sorted(set(stale_reasons)),
@@ -412,6 +430,7 @@ def _aggregate_lane_rows(route_rows: list[dict[str, Any]]) -> dict[str, Any]:
             for row in route_rows
             if str(row.get("script_id", "")).strip()
         ],
+        "direct_tool_entry_required": any(bool(row.get("direct_tool_entry_required")) for row in route_rows),
         "execution_lane_ready": route_ready,
     }
 
@@ -556,6 +575,7 @@ def _build_runtime_payload(
                 "lane_admission_policy": dict(route.get("lane_admission_policy") or {}),
                 "lane_receipt_pattern": str(route.get("lane_receipt_pattern", "")).strip(),
                 "lane_block_on_fallback": bool(route.get("lane_block_on_fallback")),
+                "direct_tool_entry_policy": dict(route.get("direct_tool_entry_policy") or {}),
                 "execution_lane_rows": route_execution_lane_rowset,
                 "execution_lane_scripts": list(lane_summary.get("execution_lane_scripts") or []),
                 "script_preconditions_status": script_preconditions_status or "SKIPPED_NOT_REQUIRED",
@@ -571,6 +591,13 @@ def _build_runtime_payload(
                 "execution_lane_receipt_status": str(
                     lane_summary.get("execution_lane_receipt_status", "SKIPPED_NOT_REQUIRED")
                 ).strip(),
+                "direct_tool_entry_policy_status": str(
+                    lane_summary.get("direct_tool_entry_policy_status", "SKIPPED_NOT_REQUIRED")
+                ).strip(),
+                "direct_tool_entry_receipt_status": str(
+                    lane_summary.get("direct_tool_entry_receipt_status", "SKIPPED_NOT_REQUIRED")
+                ).strip(),
+                "direct_tool_entry_required": bool(lane_summary.get("direct_tool_entry_required")),
                 "execution_lane_diagnostic_label": str(
                     lane_summary.get("execution_lane_diagnostic_label", "")
                 ).strip(),

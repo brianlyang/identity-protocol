@@ -58,6 +58,9 @@ INSTANCE_SCRIPT_EXECUTION_LANE_ROUTE_FIELDS: tuple[str, ...] = (
     "lane_receipt_pattern",
     "lane_block_on_fallback",
 )
+INSTANCE_SCRIPT_DIRECT_TOOL_ENTRY_ROUTE_FIELDS: tuple[str, ...] = (
+    "direct_tool_entry_policy",
+)
 INSTANCE_SCRIPT_ADMISSION_RECEIPT_FAMILY = "instance_script_admission_receipt"
 INSTANCE_SCRIPT_EXECUTION_LANE_RECEIPT_FIELDS: tuple[str, ...] = (
     "route_selected",
@@ -68,6 +71,11 @@ INSTANCE_SCRIPT_EXECUTION_LANE_RECEIPT_FIELDS: tuple[str, ...] = (
     "lane_endpoint_class",
     "lane_admission_status",
     "fallback_used",
+)
+INSTANCE_SCRIPT_DIRECT_TOOL_ENTRY_RECEIPT_FIELDS: tuple[str, ...] = (
+    "tool_entry_admission_timing",
+    "auth_preflight_status",
+    "session_freshness_status",
 )
 PRECONDITION_FIELDS: tuple[str, ...] = (
     "identity_lock",
@@ -82,6 +90,29 @@ ALLOWED_LANE_ADMISSION_POLICY_MODES = frozenset(
         "declared_lane_with_controlled_fallback",
     }
 )
+DIRECT_TOOL_ENTRY_POLICY_MODE_INSTANCE_SCRIPT_ONLY = "instance_script_only"
+DIRECT_TOOL_ENTRY_POLICY_MODE_DIRECT_TOOL_ENTRY_REQUIRES_ADMISSION = "direct_tool_entry_requires_admission"
+ALLOWED_DIRECT_TOOL_ENTRY_POLICY_MODES = frozenset(
+    {
+        DIRECT_TOOL_ENTRY_POLICY_MODE_INSTANCE_SCRIPT_ONLY,
+        DIRECT_TOOL_ENTRY_POLICY_MODE_DIRECT_TOOL_ENTRY_REQUIRES_ADMISSION,
+    }
+)
+DIRECT_TOOL_ENTRY_PRE_TOOL_CHECK_AUTH_PREFLIGHT = "auth_preflight"
+DIRECT_TOOL_ENTRY_PRE_TOOL_CHECK_SESSION_FRESHNESS = "session_freshness"
+ALLOWED_DIRECT_TOOL_ENTRY_PRE_TOOL_CHECKS = frozenset(
+    {
+        DIRECT_TOOL_ENTRY_PRE_TOOL_CHECK_AUTH_PREFLIGHT,
+        DIRECT_TOOL_ENTRY_PRE_TOOL_CHECK_SESSION_FRESHNESS,
+    }
+)
+DIRECT_TOOL_ENTRY_RECEIPT_TIMING_PRE_TOOL_EXECUTION = "pre_tool_execution"
+ALLOWED_DIRECT_TOOL_ENTRY_RECEIPT_TIMINGS = frozenset(
+    {
+        DIRECT_TOOL_ENTRY_RECEIPT_TIMING_PRE_TOOL_EXECUTION,
+    }
+)
+DIRECT_TOOL_ENTRY_LANE_SOURCE = "governed_direct_tool_entry"
 TOKEN_RE = re.compile(r"^[a-z][a-z0-9_:-]*$")
 
 
@@ -417,7 +448,27 @@ def route_uses_instance_scripts(route_doc: dict[str, Any]) -> bool:
 def route_uses_execution_lanes(route_doc: dict[str, Any]) -> bool:
     if not isinstance(route_doc, dict):
         return False
-    return any(field in route_doc for field in INSTANCE_SCRIPT_EXECUTION_LANE_ROUTE_FIELDS)
+    return any(
+        field in route_doc
+        for field in (*INSTANCE_SCRIPT_EXECUTION_LANE_ROUTE_FIELDS, *INSTANCE_SCRIPT_DIRECT_TOOL_ENTRY_ROUTE_FIELDS)
+    )
+
+
+def lane_row_uses_direct_tool_entry(lane_row: dict[str, Any]) -> bool:
+    if not isinstance(lane_row, dict):
+        return False
+    return str(lane_row.get("lane_source", "")).strip() == DIRECT_TOOL_ENTRY_LANE_SOURCE
+
+
+def route_uses_direct_tool_entry(route_doc: dict[str, Any]) -> bool:
+    if not isinstance(route_doc, dict):
+        return False
+    if any(field in route_doc for field in INSTANCE_SCRIPT_DIRECT_TOOL_ENTRY_ROUTE_FIELDS):
+        return True
+    lanes = route_doc.get("allowed_execution_lanes")
+    if not isinstance(lanes, list):
+        return False
+    return any(lane_row_uses_direct_tool_entry(row) for row in lanes if isinstance(row, dict))
 
 
 def orchestration_required(task_doc: dict[str, Any]) -> bool:
@@ -1011,6 +1062,60 @@ def _normalize_lane_admission_policy(value: Any) -> tuple[dict[str, Any], list[s
     }, issues
 
 
+def _normalize_direct_tool_entry_policy(value: Any) -> tuple[dict[str, Any], list[str]]:
+    if not isinstance(value, dict):
+        return {}, ["direct_tool_entry_policy_not_object"]
+    issues: list[str] = []
+    mode = str(value.get("mode", "")).strip()
+    if mode not in ALLOWED_DIRECT_TOOL_ENTRY_POLICY_MODES:
+        issues.append(f"direct_tool_entry_policy_mode_invalid:{mode or 'missing'}")
+    receipt_timing = str(value.get("receipt_timing", "")).strip()
+    required_pre_tool_checks_raw = value.get("required_pre_tool_checks")
+    required_pre_tool_checks: list[str] = []
+    if not isinstance(required_pre_tool_checks_raw, list):
+        issues.append("direct_tool_entry_policy_required_pre_tool_checks_not_list")
+    else:
+        required_pre_tool_checks = unique_string_list(required_pre_tool_checks_raw)
+        if len(required_pre_tool_checks) != len(required_pre_tool_checks_raw):
+            issues.append("direct_tool_entry_policy_required_pre_tool_checks_contains_blank_or_duplicate")
+        for token in required_pre_tool_checks:
+            if token not in ALLOWED_DIRECT_TOOL_ENTRY_PRE_TOOL_CHECKS:
+                issues.append(f"direct_tool_entry_policy_required_pre_tool_check_invalid:{token}")
+    if mode == DIRECT_TOOL_ENTRY_POLICY_MODE_DIRECT_TOOL_ENTRY_REQUIRES_ADMISSION:
+        if receipt_timing not in ALLOWED_DIRECT_TOOL_ENTRY_RECEIPT_TIMINGS:
+            issues.append(
+                "direct_tool_entry_policy_receipt_timing_invalid:"
+                f"{receipt_timing or 'missing'}"
+            )
+    elif receipt_timing and receipt_timing not in ALLOWED_DIRECT_TOOL_ENTRY_RECEIPT_TIMINGS:
+        issues.append(
+            "direct_tool_entry_policy_receipt_timing_invalid:"
+            f"{receipt_timing}"
+        )
+    return {
+        "mode": mode,
+        "receipt_timing": receipt_timing,
+        "required_pre_tool_checks": required_pre_tool_checks,
+    }, issues
+
+
+def _validate_status_family_field(
+    value: Any,
+    *,
+    field_name: str,
+    allow_skipped: bool = True,
+) -> tuple[str, list[str]]:
+    token = str(value or "").strip()
+    if not token:
+        return "", [f"{field_name}_missing"]
+    allowed = {STATUS_PASS_REQUIRED, STATUS_FAIL_REQUIRED}
+    if allow_skipped:
+        allowed.add(STATUS_SKIPPED_NOT_REQUIRED)
+    if token not in allowed:
+        return token, [f"{field_name}_invalid:{token}"]
+    return token, []
+
+
 def validate_route_execution_lane_contract(route_doc: dict[str, Any]) -> dict[str, Any]:
     if not route_uses_execution_lanes(route_doc):
         return {
@@ -1020,6 +1125,9 @@ def validate_route_execution_lane_contract(route_doc: dict[str, Any]) -> dict[st
             "lane_admission_policy": {},
             "lane_receipt_pattern": "",
             "lane_block_on_fallback": False,
+            "direct_tool_entry_policy_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "direct_tool_entry_required": False,
+            "direct_tool_entry_policy": {},
             "stale_reasons": [],
         }
 
@@ -1046,6 +1154,34 @@ def validate_route_execution_lane_contract(route_doc: dict[str, Any]) -> dict[st
     if not isinstance(lane_block_on_fallback, bool):
         issues.append("lane_block_on_fallback_not_bool")
 
+    direct_tool_entry_required = route_uses_direct_tool_entry(route_doc)
+    direct_tool_entry_policy_status = STATUS_SKIPPED_NOT_REQUIRED
+    direct_tool_entry_policy: dict[str, Any] = {}
+    declared_direct_tool_lane_count = sum(1 for row in allowed_execution_lanes if lane_row_uses_direct_tool_entry(row))
+    if direct_tool_entry_required:
+        direct_tool_entry_policy_status = STATUS_PASS_REQUIRED
+        if "direct_tool_entry_policy" not in route_doc:
+            issues.append("missing_field:direct_tool_entry_policy")
+            direct_tool_entry_policy_status = STATUS_FAIL_REQUIRED
+        else:
+            direct_tool_entry_policy, policy_issues = _normalize_direct_tool_entry_policy(
+                route_doc.get("direct_tool_entry_policy")
+            )
+            if policy_issues:
+                direct_tool_entry_policy_status = STATUS_FAIL_REQUIRED
+                issues.extend(policy_issues)
+        policy_mode = str(direct_tool_entry_policy.get("mode", "")).strip()
+        if policy_mode == DIRECT_TOOL_ENTRY_POLICY_MODE_DIRECT_TOOL_ENTRY_REQUIRES_ADMISSION:
+            if declared_direct_tool_lane_count <= 0:
+                issues.append("direct_tool_entry_policy_declared_direct_tool_lane_missing")
+                direct_tool_entry_policy_status = STATUS_FAIL_REQUIRED
+            if lane_block_on_fallback is not True:
+                issues.append("direct_tool_entry_requires_lane_block_on_fallback")
+                direct_tool_entry_policy_status = STATUS_FAIL_REQUIRED
+        elif policy_mode == DIRECT_TOOL_ENTRY_POLICY_MODE_INSTANCE_SCRIPT_ONLY and declared_direct_tool_lane_count > 0:
+            issues.append("direct_tool_entry_policy_disallows_declared_direct_tool_lane")
+            direct_tool_entry_policy_status = STATUS_FAIL_REQUIRED
+
     status = STATUS_PASS_REQUIRED if not issues else STATUS_FAIL_REQUIRED
     return {
         "status": status,
@@ -1054,6 +1190,9 @@ def validate_route_execution_lane_contract(route_doc: dict[str, Any]) -> dict[st
         "lane_admission_policy": lane_admission_policy,
         "lane_receipt_pattern": lane_receipt_pattern,
         "lane_block_on_fallback": bool(lane_block_on_fallback) if isinstance(lane_block_on_fallback, bool) else False,
+        "direct_tool_entry_policy_status": direct_tool_entry_policy_status,
+        "direct_tool_entry_required": direct_tool_entry_required,
+        "direct_tool_entry_policy": direct_tool_entry_policy,
         "stale_reasons": issues,
     }
 
@@ -1353,9 +1492,74 @@ def validate_route_execution_lane_receipt_doc(
     if lane_contract.get("lane_block_on_fallback") is True and fallback_used is True:
         issues.append("lane_receipt_fallback_blocked")
 
+    direct_tool_entry_policy = (
+        dict(lane_contract.get("direct_tool_entry_policy") or {})
+        if isinstance(lane_contract.get("direct_tool_entry_policy"), dict)
+        else {}
+    )
+    direct_tool_entry_required = bool(lane_contract.get("direct_tool_entry_required"))
+    receipt_timing = ""
+    auth_preflight_status = ""
+    session_freshness_status = ""
+    if direct_tool_entry_required:
+        receipt_timing = str(receipt_doc.get("tool_entry_admission_timing", "")).strip()
+        expected_receipt_timing = str(direct_tool_entry_policy.get("receipt_timing", "")).strip()
+        if not receipt_timing:
+            issues.append("lane_receipt_tool_entry_admission_timing_missing")
+        elif expected_receipt_timing and receipt_timing != expected_receipt_timing:
+            issues.append(
+                "lane_receipt_tool_entry_admission_timing_mismatch:"
+                f"{expected_receipt_timing}!={receipt_timing}"
+            )
+        auth_preflight_status, auth_preflight_issues = _validate_status_family_field(
+            receipt_doc.get("auth_preflight_status"),
+            field_name="auth_preflight_status",
+        )
+        issues.extend("lane_receipt_" + reason for reason in auth_preflight_issues)
+        session_freshness_status, session_freshness_issues = _validate_status_family_field(
+            receipt_doc.get("session_freshness_status"),
+            field_name="session_freshness_status",
+        )
+        issues.extend("lane_receipt_" + reason for reason in session_freshness_issues)
+        required_pre_tool_checks = {
+            str(token).strip()
+            for token in (direct_tool_entry_policy.get("required_pre_tool_checks") or [])
+            if str(token).strip()
+        }
+        if (
+            DIRECT_TOOL_ENTRY_PRE_TOOL_CHECK_AUTH_PREFLIGHT in required_pre_tool_checks
+            and auth_preflight_status != STATUS_PASS_REQUIRED
+        ):
+            issues.append(
+                "lane_receipt_auth_preflight_status_not_pass_required:"
+                f"{auth_preflight_status or 'missing'}"
+            )
+        elif (
+            auth_preflight_status
+            and auth_preflight_status not in {STATUS_PASS_REQUIRED, STATUS_SKIPPED_NOT_REQUIRED}
+        ):
+            issues.append(f"lane_receipt_auth_preflight_status_invalid:{auth_preflight_status}")
+        if (
+            DIRECT_TOOL_ENTRY_PRE_TOOL_CHECK_SESSION_FRESHNESS in required_pre_tool_checks
+            and session_freshness_status != STATUS_PASS_REQUIRED
+        ):
+            issues.append(
+                "lane_receipt_session_freshness_status_not_pass_required:"
+                f"{session_freshness_status or 'missing'}"
+            )
+        elif (
+            session_freshness_status
+            and session_freshness_status not in {STATUS_PASS_REQUIRED, STATUS_SKIPPED_NOT_REQUIRED}
+        ):
+            issues.append(f"lane_receipt_session_freshness_status_invalid:{session_freshness_status}")
+
     missing_minimum_fields = [
         field for field in INSTANCE_SCRIPT_EXECUTION_LANE_RECEIPT_FIELDS if field not in receipt_doc
     ]
+    if direct_tool_entry_required:
+        missing_minimum_fields.extend(
+            field for field in INSTANCE_SCRIPT_DIRECT_TOOL_ENTRY_RECEIPT_FIELDS if field not in receipt_doc
+        )
     if missing_minimum_fields:
         issues.append("lane_receipt_missing_fields:" + ",".join(sorted(set(missing_minimum_fields))))
 
@@ -1367,6 +1571,14 @@ def validate_route_execution_lane_receipt_doc(
         "lane_source": lane_source,
         "lane_endpoint_class": lane_endpoint_class,
         "lane_admission_status": lane_admission_status,
+        "direct_tool_entry_required": direct_tool_entry_required,
+        "direct_tool_entry_policy_status": str(
+            lane_contract.get("direct_tool_entry_policy_status", STATUS_SKIPPED_NOT_REQUIRED)
+        ).strip()
+        or STATUS_SKIPPED_NOT_REQUIRED,
+        "tool_entry_admission_timing": receipt_timing,
+        "auth_preflight_status": auth_preflight_status,
+        "session_freshness_status": session_freshness_status,
         "stale_reasons": issues,
     }
 
@@ -1802,6 +2014,10 @@ def build_route_execution_lane_matrix(
                     "script_id": script_id,
                     "lane_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
                     "lane_receipt_validation_status": STATUS_SKIPPED_NOT_REQUIRED,
+                    "direct_tool_entry_policy_status": STATUS_SKIPPED_NOT_REQUIRED,
+                    "direct_tool_entry_required": False,
+                    "direct_tool_entry_policy": {},
+                    "direct_tool_entry_receipt_status": STATUS_SKIPPED_NOT_REQUIRED,
                     "diagnostic_label": "orchestration_not_ready",
                     "receipt_observed_count": 0,
                     "latest_lane_receipt_path": "",
@@ -1809,6 +2025,9 @@ def build_route_execution_lane_matrix(
                     "lane_admission_policy": {},
                     "lane_receipt_pattern": "",
                     "lane_block_on_fallback": False,
+                    "observed_tool_entry_admission_timing": "",
+                    "observed_auth_preflight_status": "",
+                    "observed_session_freshness_status": "",
                     "stale_reasons": [],
                 }
                 route_rows.append(row_copy)
@@ -1822,6 +2041,10 @@ def build_route_execution_lane_matrix(
                 "script_id": script_id,
                 "lane_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
                 "lane_receipt_validation_status": STATUS_SKIPPED_NOT_REQUIRED,
+                "direct_tool_entry_policy_status": STATUS_SKIPPED_NOT_REQUIRED,
+                "direct_tool_entry_required": False,
+                "direct_tool_entry_policy": {},
+                "direct_tool_entry_receipt_status": STATUS_SKIPPED_NOT_REQUIRED,
                 "diagnostic_label": "lane_contract_not_required",
                 "receipt_observed_count": 0,
                 "latest_lane_receipt_path": "",
@@ -1829,6 +2052,9 @@ def build_route_execution_lane_matrix(
                 "lane_admission_policy": {},
                 "lane_receipt_pattern": "",
                 "lane_block_on_fallback": False,
+                "observed_tool_entry_admission_timing": "",
+                "observed_auth_preflight_status": "",
+                "observed_session_freshness_status": "",
                 "stale_reasons": [],
             }
             if not route_uses_execution_lanes(route_doc):
@@ -1844,8 +2070,16 @@ def build_route_execution_lane_matrix(
             row["lane_admission_policy"] = dict(lane_contract.get("lane_admission_policy") or {})
             row["lane_receipt_pattern"] = str(lane_contract.get("lane_receipt_pattern", "")).strip()
             row["lane_block_on_fallback"] = bool(lane_contract.get("lane_block_on_fallback"))
+            row["direct_tool_entry_policy_status"] = str(
+                lane_contract.get("direct_tool_entry_policy_status", STATUS_SKIPPED_NOT_REQUIRED)
+            ).strip() or STATUS_SKIPPED_NOT_REQUIRED
+            row["direct_tool_entry_required"] = bool(lane_contract.get("direct_tool_entry_required"))
+            row["direct_tool_entry_policy"] = dict(lane_contract.get("direct_tool_entry_policy") or {})
             if row["lane_contract_status"] != STATUS_PASS_REQUIRED:
                 row["lane_receipt_validation_status"] = STATUS_FAIL_REQUIRED
+                row["direct_tool_entry_receipt_status"] = (
+                    STATUS_FAIL_REQUIRED if row["direct_tool_entry_required"] else STATUS_SKIPPED_NOT_REQUIRED
+                )
                 row["diagnostic_label"] = "lane_contract_invalid"
                 row["stale_reasons"] = list(lane_contract.get("stale_reasons") or [])
                 blocking_reasons.extend(f"{route_name}:{script_id}:{reason}" for reason in row["stale_reasons"])
@@ -1861,6 +2095,9 @@ def build_route_execution_lane_matrix(
             )
             if path_issues:
                 row["lane_receipt_validation_status"] = STATUS_FAIL_REQUIRED
+                row["direct_tool_entry_receipt_status"] = (
+                    STATUS_FAIL_REQUIRED if row["direct_tool_entry_required"] else STATUS_SKIPPED_NOT_REQUIRED
+                )
                 row["diagnostic_label"] = "lane_receipt_glob_failed"
                 row["stale_reasons"] = list(path_issues)
                 blocking_reasons.extend(f"{route_name}:{script_id}:{reason}" for reason in row["stale_reasons"])
@@ -1870,10 +2107,14 @@ def build_route_execution_lane_matrix(
             if not receipt_paths:
                 if require_observed:
                     row["lane_receipt_validation_status"] = STATUS_FAIL_REQUIRED
+                    row["direct_tool_entry_receipt_status"] = (
+                        STATUS_FAIL_REQUIRED if row["direct_tool_entry_required"] else STATUS_SKIPPED_NOT_REQUIRED
+                    )
                     row["diagnostic_label"] = "lane_receipt_missing"
                     row["stale_reasons"] = ["lane_receipt_not_observed"]
                     blocking_reasons.append(f"{route_name}:{script_id}:lane_receipt_not_observed")
                 else:
+                    row["direct_tool_entry_receipt_status"] = STATUS_SKIPPED_NOT_REQUIRED
                     row["diagnostic_label"] = "lane_receipt_not_observed_yet"
                 route_rows.append(row)
                 continue
@@ -1885,6 +2126,9 @@ def build_route_execution_lane_matrix(
                 receipt_doc = load_json(latest_receipt)
             except Exception as exc:
                 row["lane_receipt_validation_status"] = STATUS_FAIL_REQUIRED
+                row["direct_tool_entry_receipt_status"] = (
+                    STATUS_FAIL_REQUIRED if row["direct_tool_entry_required"] else STATUS_SKIPPED_NOT_REQUIRED
+                )
                 row["diagnostic_label"] = "lane_receipt_invalid_json"
                 row["stale_reasons"] = [f"lane_receipt_invalid_json:{exc}"]
                 blocking_reasons.append(f"{route_name}:{script_id}:lane_receipt_invalid_json")
@@ -1912,6 +2156,20 @@ def build_route_execution_lane_matrix(
                 validation.get("lane_admission_status", "")
             ).strip()
             row["observed_receipt_family"] = str(validation.get("receipt_family", "")).strip()
+            row["observed_tool_entry_admission_timing"] = str(
+                validation.get("tool_entry_admission_timing", "")
+            ).strip()
+            row["observed_auth_preflight_status"] = str(
+                validation.get("auth_preflight_status", "")
+            ).strip()
+            row["observed_session_freshness_status"] = str(
+                validation.get("session_freshness_status", "")
+            ).strip()
+            row["direct_tool_entry_receipt_status"] = (
+                row["lane_receipt_validation_status"]
+                if row["direct_tool_entry_required"]
+                else STATUS_SKIPPED_NOT_REQUIRED
+            )
             row["stale_reasons"] = list(validation.get("stale_reasons") or [])
             row["diagnostic_label"] = (
                 "ready" if row["lane_receipt_validation_status"] == STATUS_PASS_REQUIRED else "lane_receipt_invalid"

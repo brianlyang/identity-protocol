@@ -111,25 +111,27 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
    - `lane_admission_policy`
    - `lane_receipt_pattern`
    - `lane_block_on_fallback`
+   - `direct_tool_entry_policy`
 2. A single route may bind multiple role-distinct `script_id` values when execution legitimately separates probe/render/emit/recovery stages.
 3. Canonical script catalog file is `<pack_path>/scripts/INSTANCE_SCRIPT_MANIFEST.json`.
 4. Manifest entries resolve only to pack-local paths under `scripts/`.
 5. Lower dependencies remain explicit through `primary_skills`, `fallback_skills`, `required_mcp`, and governed tool-route fields.
 6. `allowed_execution_lanes` rows stay machine-readable and freeze `lane_id`, `lane_class`, `lane_source`, and `endpoint_class`.
-7. `lane_admission_policy` and `lane_block_on_fallback` are the only canonical route-level controls for fail-closing undeclared lane fallback; operator memory is never an authority surface.
-8. Canonical admission receipt family is `instance_script_admission_receipt`; it must keep `lane_id`, `lane_class`, `lane_source`, `lane_endpoint_class`, `lane_admission_status`, and `fallback_used` machine-visible.
-9. Lower dependencies remain explicit through `primary_skills`, `fallback_skills`, `required_mcp`, and governed tool-route fields.
-10. `script_preconditions.required_contracts` and `script_preconditions.gate_policies` may reference inherited gateway/headstamp/host-visible/relay contracts, but that does not transfer ownership of those contracts into this stream.
-11. Receipt families stay runtime-owned and classify at least:
+7. `lane_admission_policy`, `lane_block_on_fallback`, and additive `direct_tool_entry_policy` are the canonical route-level controls for fail-closing undeclared lane fallback; operator memory is never an authority surface.
+8. Canonical direct-tool lane source is `governed_direct_tool_entry`; if a route supports direct MCP/browser/tool entry as a real governed success path, that lane must be declared instead of surviving as rescue folklore outside the contract.
+9. Canonical admission receipt family is `instance_script_admission_receipt`; it must keep `lane_id`, `lane_class`, `lane_source`, `lane_endpoint_class`, `lane_admission_status`, and `fallback_used` machine-visible, and direct-tool lanes additionally keep `tool_entry_admission_timing`, `auth_preflight_status`, and `session_freshness_status`.
+10. Lower dependencies remain explicit through `primary_skills`, `fallback_skills`, `required_mcp`, and governed tool-route fields.
+11. `script_preconditions.required_contracts` and `script_preconditions.gate_policies` may reference inherited gateway/headstamp/host-visible/relay contracts, but that does not transfer ownership of those contracts into this stream.
+12. Receipt families stay runtime-owned and classify at least:
    - `instance_script_admission_receipt`
    - execution,
    - emit,
    - recovery.
-12. Route/script join must never rely on operator memory, workspace-global shared helper directories, or filename guessing.
-13. Route-scoped capability admission must be evaluable without blocking a route on lower dependencies that it does not itself declare unless a stronger activation policy explicitly says otherwise.
-14. Receipt outputs must preserve machine-readable route provenance compatible with `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts`.
-15. Reviewers may accept layered receipt mapping where probe/helper scripts satisfy execution receipts first, admission receipts freeze lane selection, and emitter scripts later satisfy emit receipts plus delegated refs to inherited host-visible or relay receipts.
-16. Any governed user-visible final output route must bind to a pack-local emitter script and declare an emit-family receipt before outer relay or visible-surface handling is considered valid evidence.
+13. Route/script join must never rely on operator memory, workspace-global shared helper directories, or filename guessing.
+14. Route-scoped capability admission must be evaluable without blocking a route on lower dependencies that it does not itself declare unless a stronger activation policy explicitly says otherwise.
+15. Receipt outputs must preserve machine-readable route provenance compatible with `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts`.
+16. Reviewers may accept layered receipt mapping where probe/helper scripts satisfy execution receipts first, admission receipts freeze lane selection, direct-tool lanes prove pre-tool admission timing/auth/session checks when declared, and emitter scripts later satisfy emit receipts plus delegated refs to inherited host-visible or relay receipts.
+17. Any governed user-visible final output route must bind to a pack-local emitter script and declare an emit-family receipt before outer relay or visible-surface handling is considered valid evidence.
 
 ## 5) Audit verdict rules (frozen)
 
@@ -156,12 +158,14 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
    - positive and negative probes through `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`,
    - readiness wiring through `scripts/release_readiness_check.py`,
    - capability-activation awareness of instance scripts through `scripts/validate_identity_capability_activation.py`,
+   - additive direct-tool admission closure inside `scripts/validate_route_execution_lane_admission.py` / `scripts/instance_script_orchestration_common.py`, so declared direct MCP/browser/tool lanes now fail closed unless they carry a canonical `direct_tool_entry_policy` plus pre-tool timing/auth/session receipt evidence,
    - shared create/backfill/update consumer rollout through `scripts/create_identity_pack.py`, `scripts/repair_contract_backfill.py`, and `scripts/identity_creator.py`.
 4. Full **Implementation PASS** still requires:
    - route-scoped activation behavior that does not union-block unrelated routes unless an explicit stronger policy is selected,
    - proof-pack adoption without topology drift across target identities,
    - proof-pack adoption of execution-lane admission fields where external/manual/editor/webhook fallback risk exists,
    - lane-admission receipts that keep `lane_id`, `lane_class`, `lane_source`, `lane_endpoint_class`, `lane_admission_status`, and `fallback_used` machine-visible under live pack execution,
+   - direct-tool admission receipts, when declared, that also keep `tool_entry_admission_timing`, `auth_preflight_status`, and `session_freshness_status` machine-visible under live pack execution,
    - receipt-provenance projection that keeps `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts` machine-visible under live pack execution,
    - future receipt-family specializations, when needed, stay on the same shared validator/probe/control path instead of forking it.
 5. Reviewers must not collapse `Architecture PASS` into `Implementation PASS`.
