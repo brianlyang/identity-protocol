@@ -388,6 +388,7 @@ legacy_archival_docs:
   - docs/governance/identity-environment-path-deep-audit-and-self-drive-upgrade-v1.4.13.md
   - docs/governance/identity-instance-closure-checklist-v1.4.12.md
   - docs/governance/identity-instance-self-driven-upgrade-and-base-feedback-design-v1.4.6.md
+  - docs/governance/identity-context-continuity-preflight-v1.6.16.md
   - docs/governance/identity-runtime-path-selection-governance-v1.4.12.md
   - docs/governance/local-instance-persistence-boundary-v1.4.6.md
   - docs/governance/office-ops-expert-instance-runtime-retro-and-protocol-feedback-v1.4.13.md
