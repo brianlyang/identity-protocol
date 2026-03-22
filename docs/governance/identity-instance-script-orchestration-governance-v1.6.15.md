@@ -1,6 +1,6 @@
 # Identity Instance Script Orchestration Governance (v1.6.15)
 
-Status: Active (shared validator/probe/consumer landing in place, including execution-lane admission governance, 2026-03-21; cross-pack adoption rollout still in progress)  
+Status: Active (baseline shared validator/probe/consumer closure, including execution-lane admission governance, plus minimal non-empty cross-pack proof verified, 2026-03-22; broader adoption rollout continues)  
 Layer: protocol  
 Scope: route -> instance-script declarative join, route -> execution-lane admission, pack-local script manifest, lower-capability dependency join, and instance-script receipt families
 
@@ -297,18 +297,23 @@ Any implementation that claims to follow `v1.6.15` should satisfy this checklist
    - generated session-chain wrappers now freeze a `session_chain_executable_smoke_policy`, and the protocol gate executes that smoke against the final-channel relay branch so generator completeness defects fail closed instead of hiding behind template SHA parity,
    - governed final emit now auto-recovers stale host-visible post-check blockers through `scripts/recover_host_visible_post_check_state.py`, and the gateway trust-boundary probe suite proves under protocol-root invocation that a pre-seeded closure blocker can return to `PASS_REQUIRED` without manual runtime surgery.
    - this consumer citation does not, by itself, claim workspace-root / protocol-root invariance for the trust-boundary suite; cross-cwd invariance must be evidenced separately if needed.
-3. Full implementation closure still requires all of the following together:
-   - proof packs adopt `scripts/INSTANCE_SCRIPT_MANIFEST.json` and the additive route fields without topology drift,
-   - proof packs adopt `allowed_execution_lanes`, `lane_admission_policy`, `lane_receipt_pattern`, and `lane_block_on_fallback` where external/manual/editor/webhook fallback risk exists,
-   - target packs adopt the same shared consumer path through create/backfill/update flows rather than per-pack ad hoc rollout,
+3. Baseline implementation closure for this stream is now satisfied when the landed shared validator/probe/consumer family is paired with non-empty cross-pack reuse proof. Current-state note (2026-03-22):
+   - `python3 scripts/validate_identity_instance_script_cross_pack_adoption.py --catalog .identity/catalog.local.yaml --json-only`
+   - observed outcome: `PASS_REQUIRED` with `eligible_identity_count=2`, `checked_identity_count=2`, and `adoption_ready_identity_count=2`
+   - current proof packs: `custom-creative-ecom-analyst`, `base-repo-closure-orchestrator`
+4. Broader rollout-breadth closure still requires all of the following together:
+   - wider target-pack adoption beyond the current minimal non-empty proof, without topology drift,
+   - additional target packs adopt `allowed_execution_lanes`, `lane_admission_policy`, `lane_receipt_pattern`, and `lane_block_on_fallback` where external/manual/editor/webhook fallback risk exists,
+   - target packs continue to use the same shared consumer path through create/backfill/update flows rather than per-pack ad hoc rollout,
    - route-scoped capability activation remains reusable without unrelated-route union blocking unless a stronger activation policy explicitly requires it,
    - lane-admission receipts keep `lane_id`, `lane_class`, `lane_source`, `lane_endpoint_class`, `lane_admission_status`, and `fallback_used` machine-visible under live pack execution,
    - receipt-family projection keeps route provenance compatible with `route_selected`, `skills_used`, `mcp_tools_used`, `actions_taken`, `result`, and `artifacts` under live pack execution,
    - aggregate activation/report artifacts that summarize multiple routes keep scope/cardinality machine-visible and do not masquerade as single-route receipts,
    - any adopted declared-vs-observed dependency projection, semantic-anchor envelope, or outcome-sentinel hook stays compatible with one shared validator/probe/control family instead of fragmenting into pack-local dialects,
    - future admission/execution/recovery receipt specializations, if introduced, stay compatible with the landed shared validator family rather than forking it.
-4. Until those conditions are proven, the correct interpretation is:
+5. Until that broader rollout evidence is archived, the correct interpretation is:
    - `v1.6.15` contract freeze is active,
-   - shared validator/probe/consumer landing is present,
-   - cross-pack adoption rollout remains open,
+   - baseline shared validator/probe/consumer closure is present,
+   - minimal non-empty cross-pack proof is present,
+   - broader adoption rollout remains open,
    - instances must not improvise parallel orchestration standards.
