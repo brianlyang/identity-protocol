@@ -12,6 +12,7 @@ from instance_script_orchestration_common import (
     STATUS_SKIPPED_NOT_REQUIRED,
     build_route_orchestration_matrix,
     build_route_receipt_join_matrix,
+    copy_optional_projection_fields,
     load_manifest_doc,
     normalize_source_layer,
     orchestration_required,
@@ -175,6 +176,7 @@ def main() -> int:
         ):
             if field in route_row:
                 payload[field] = route_row[field]
+        payload.update(copy_optional_projection_fields(route_row))
 
     if (target_route or target_script_id) and payload["route_checked_count"] == 0:
         payload["route_script_receipt_join_status"] = STATUS_FAIL_REQUIRED
