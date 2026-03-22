@@ -720,6 +720,30 @@ Root cause:
   - `office-ops-regression-self-drive` and `ai-folder-governance` skills do not act as always-on tool-call interceptors for this lane family;
   - `IDENTITY_PROMPT.md` still advertises `Methodology version: v1.5` / `Prompt version: v1.5` while `CURRENT_TASK.json` advertises `v1.6`, which is a governance-hygiene multiplier though not the primary execution defect.
 
+### ISSUE-029 - Workspace-local runtime catalog metadata can remain underdescribed after resolver truth is repaired
+
+- `status`: OPEN
+- `problem_statement`: the `v1.6.14` launcher convergence follow-on has repaired the protocol-owned runtime truth path for sibling workspaces: `resolve_identity_context.py` now returns `source_layer=project` / `resolved_scope=USER`, and launcher closure checks now bind relative `--catalog .identity/catalog.local.yaml` to the caller workspace. However, live external workspace catalogs can still carry raw metadata residue such as `canonical_scope=UNKNOWN`. That means the resolver truth is now authoritative and correct, but the catalog row itself is not yet fully self-descriptive.
+- `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md`
+  - `docs/governance/identity-codex-launcher-governance-v1.6.14.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md`
+- `machine_gate`:
+  - `scripts/resolve_identity_context.py`
+  - `scripts/check_identity_codex_launcher_migration_closure.py`
+  - `scripts/ci/run_identity_codex_launcher_cross_workspace_pilot_probes_ci.sh`
+  - supporting live replay: sibling-workspace `resolve.json` / `closure.json`
+- `root_cause`: RC-03 and RC-10
+- `stop_condition`:
+  - raw workspace-local runtime catalog rows become self-descriptive enough that protocol-owned truth no longer needs to correct `canonical_scope=UNKNOWN`-class residue for healthy rows;
+  - creator/backfill or equivalent hygiene tooling can normalize catalog metadata without changing the already-correct resolver truth path;
+  - the cleanup remains explicitly separate from `v1.6.14` launcher semantics, so launcher convergence stays closed while metadata hygiene advances on its own lane.
+- `current_evidence`:
+  - sibling-workspace launcher replays now pass with `source_layer=project`, `resolved_scope=USER`, and caller-workspace `catalogs_checked=[<workspace>/.identity/catalog.local.yaml]`;
+  - the same external workspace can still show raw row metadata such as `canonical_scope=UNKNOWN`, proving that runtime truth is repaired earlier than raw metadata hygiene;
+  - governance/review surfaces for `v1.6.14` now explicitly freeze this as a follow-on hygiene boundary instead of treating it as reopened launcher debt.
+
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 
 1. The rows below capture desensitized follow-on reinforcement for active streams; they are routed through this workbook so the protocol architect can land them on canonical governance/review surfaces without reopening the closed `ISSUE-001..024` correctness family.
