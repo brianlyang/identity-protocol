@@ -74,6 +74,22 @@ Workbook role: track decision status, audit checkpoints, and rollout readiness o
 3. `identity/protocol/mappings/workbook-registry.v1.6.yaml`
 4. `scripts/validate_issue_register_consistency.py`
 
+### 3.4 Existing protocol assets that any future promotion must consolidate rather than replace
+
+1. This roundtable positively reinforces one architectural direction while still keeping generic-framework promotion deferred:
+   - if a later generic workspace convergence framework is ever promoted, it must be a **consolidation of existing protocol assets**, not a new transport plane, side channel, instance-private bus, or parallel command family.
+2. The existing asset families already visible in the protocol are sufficient to define the future control-plane shape:
+   - protocol notification / trigger surfaces, including `collaboration_trigger_contract` and its governed notify fields, are the candidate **trigger transport** rather than evidence that a new trigger system should be invented;
+   - `runtime/protocol-feedback/outbox-to-protocol/` and `runtime/protocol-feedback/inbox-from-protocol/` are the candidate **instance I/O channel** rather than justification for a second feedback plane;
+   - a family-owned convergence entry such as `scripts/run_identity_codex_launcher_workspace_convergence.py` is the candidate **family executor**, not permission to create workspace-specific wrapper dialects;
+   - existing probes, validators, and runtime reports are the candidate **observed-state fact layer**, not evidence that a new attestation mechanism is required;
+   - governed receipts, evidence manifests, and truth-sync surfaces are the candidate **archival / audit closure layer**, not a prompt to create parallel state stores;
+   - workbook / governance / review surfaces remain **owner semantics and routing only**, never runtime executors.
+3. The purpose of this section is memory-hardening, not early promotion:
+   - it records which protocol assets must be reused if later framework promotion is proposed,
+   - and it blocks future discussion from drifting into “add one more plane” or weakest-common-denominator compatibility shortcuts.
+4. Until an explicit architect + audit promotion review approves a generic framework, these role bindings are informative constraints on later design packages rather than proof that a generic framework is already open.
+
 ## 4) Questions that must be frozen before coding
 
 ### 4.1 Canonical entry surface
