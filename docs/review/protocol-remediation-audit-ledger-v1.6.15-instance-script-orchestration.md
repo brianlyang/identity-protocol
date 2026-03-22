@@ -212,20 +212,30 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
    - current judgment: downstream semantic narrowing can happen even when route/script orchestration remains correct, so the missing control is a governed anchor envelope rather than protocol-owned business scoring.
    - target protocol surfaces:
      - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
-     - shared route/script consumer builders and receipt validators
+     - `scripts/instance_script_orchestration_common.py`
+     - `scripts/validate_route_script_receipt_join.py`
+     - `scripts/validate_identity_capability_activation.py`
+     - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
      - pack-generation/backfill flows only if the anchor envelope becomes canonical
    - audit acceptance:
      - anchor ref/schema/source/revision/digest/status remain machine-visible,
      - downstream consumers cannot silently drop a declared anchor without a governed mismatch signal,
+     - partial anchor families fail closed once any anchor field is emitted,
+     - aggregate promotion occurs only under single-family, non-ambiguous projection across contributing route rows,
      - no domain-specific business fields become core protocol SSOT.
 4. `RF-ORCH-004 outcome_sentinel_reference_hook`
    - current judgment: downstream risk signals should be referenceable without promoting business KPIs into core orchestration semantics.
    - target protocol surfaces:
      - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
-     - aggregate/report builders that opt into sentinel references
+     - `scripts/instance_script_orchestration_common.py`
+     - `scripts/validate_route_script_receipt_join.py`
+     - `scripts/validate_identity_capability_activation.py`
+     - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
      - release/audit consumers only if a stream explicitly freezes sentinel gating
    - audit acceptance:
      - sentinel hook remains optional, schema-bound, and machine-visible when present,
+     - partial sentinel families fail closed once any sentinel field is emitted,
+     - aggregate promotion occurs only under single-family, non-ambiguous projection across contributing route rows,
      - advisory vs fail-close semantics are explicit,
      - protocol does not absorb instance-specific scoring thresholds as universal contract.
 5. `RF-ORCH-005 role_boundary_non_substitution_matrix`
