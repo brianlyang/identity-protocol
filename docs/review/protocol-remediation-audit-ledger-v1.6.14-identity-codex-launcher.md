@@ -110,6 +110,8 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - canonical pack-local launcher manifest + README,
    - canonical installed `identity-codex` and `id-<identity-id>` shims,
    - launcher probe lane `scripts/ci/run_identity_codex_launcher_probes_ci.sh`,
+   - active-runtime launcher migration closure checker `scripts/check_identity_codex_launcher_migration_closure.py`,
+   - lifecycle enforcement where `identity_creator validate` / `identity_creator update` no longer accept active-runtime `SKIPPED_NOT_REQUIRED(contract_not_required)` launcher states,
    - required-runtime-gates inclusion for the launcher probe lane.
 4. Reviewers must not collapse `Architecture PASS` into `Implementation PASS`.
 
@@ -163,7 +165,7 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
      - audit is in the lane-summary control plane.
 2. The remaining tail is also frozen precisely:
    - current-state note (2026-03-22): `python3 scripts/validate_protocol_lane_isolated_historical_replay.py --repo-root identity-protocol-local --workspace-root . --commit HEAD --json-only` returned `PASS_REQUIRED` with `projection_parity_match=true`,
-   - remaining work belongs mainly to legacy rollout and broader evidence breadth,
+   - remaining work belongs mainly to legacy rollout outside the already governed catalogs and broader evidence breadth,
    - the current asset is **not** a universal isolated historical replay engine for arbitrary commits unless it is run against an isolated clone/worktree representing that historical tree,
    - it does **not** belong to unresolved launcher semantics.
 3. Reviewers may use the statement above as the auditable closure summary, but must keep the lane scope and replay caveat attached.
