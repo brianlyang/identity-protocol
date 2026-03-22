@@ -14,6 +14,7 @@ from identity_codex_launcher_common import (
     ensure_launcher_assets,
     ensure_launcher_contract,
     install_launcher_shims,
+    runtime_identity_home_for_catalog,
     resolve_catalog_path,
     resolve_launcher_pack_task,
     write_runtime_paths_config,
@@ -58,12 +59,18 @@ def main() -> int:
         if str(args.identity_home or "").strip()
         else default_identity_home()
     )
+    runtime_identity_home = runtime_identity_home_for_catalog(catalog_path)
     protocol_home = (
         Path(args.protocol_home).expanduser().resolve()
         if str(args.protocol_home or "").strip()
         else Path(__file__).resolve().parents[1]
     )
-    runtime_paths_env = write_runtime_paths_config(identity_home=identity_home, protocol_home=protocol_home)
+    runtime_paths_env = write_runtime_paths_config(
+        identity_home=identity_home,
+        protocol_home=protocol_home,
+        runtime_identity_home=runtime_identity_home,
+        runtime_catalog=catalog_path,
+    )
 
     payload = {
         "status": STATUS_PASS_REQUIRED,
@@ -71,6 +78,8 @@ def main() -> int:
         "catalog_path": str(catalog_path),
         "pack_path": str(pack_root),
         "task_path": str(task_path),
+        "launcher_config_identity_home": str(identity_home),
+        "runtime_identity_home": str(runtime_identity_home),
         "contract_key": IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY,
         "contract_changed": contract_changed,
         "runtime_paths_env": str(runtime_paths_env),
@@ -83,4 +92,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
