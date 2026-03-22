@@ -1,7 +1,7 @@
 schema_version: 1
 registry_version: v1
 stream_version: v1.6
-updated_at_utc: "2026-03-17T00:00:00Z"
+updated_at_utc: "2026-03-22T00:00:00Z"
 
 terms:
   - term_id: catalog_multi_active
@@ -24,6 +24,19 @@ terms:
     allowed_scope:
       - strict_lane
       - send_time_gate
+
+  - term_id: no_downgrade_motherline
+    canonical_term: no_downgrade_motherline
+    aliases:
+      - "no downgrade motherline"
+      - "no backstop motherline"
+      - "兼容只限迁移诊断"
+    semantics: "Compatibility, fallback, and bridge surfaces may exist only for migration, replay, or diagnostics; they must not re-enter active defaults, validator green paths, or current-turn runtime truth."
+    allowed_scope:
+      - governance
+      - migration_governance
+      - runtime_guard
+      - stream_v1_6_10
 
   - term_id: protocol_generated_gateway_shell
     canonical_term: protocol_generated_gateway_shell
@@ -167,6 +180,14 @@ forbidden_phrases:
   - phrase: "protocol residual may include unresolved instance configuration or skill debt"
     replacement: "protocol_residual_issue is limited to shared defects that remain after instance_clean_proof"
     rationale: "Prevents instance-local obligations from being pushed into protocol scope."
+
+  - phrase: "compatibility bridge may remain as an active runtime default"
+    replacement: "no_downgrade_motherline: compatibility bridges are migration/replay/diagnostic-only"
+    rationale: "Prevents compatibility bridges from surviving as active defaults or runtime backstops."
+
+  - phrase: "fallback/backstop may restore current-turn runtime truth"
+    replacement: "session_primary_binding + no_downgrade_motherline require fail-close when authoritative runtime truth is missing"
+    rationale: "Prevents fallback/backstop language from re-entering current-turn runtime semantics."
 
 scan_roots:
   - identity/protocol/IDENTITY_PROTOCOL.md
