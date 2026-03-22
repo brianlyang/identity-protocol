@@ -226,6 +226,13 @@ Minimum additional requirements:
    - `instance_reentry_consumption_receipt`
 5. These receipt families must remain distinct from actor-session tuple ids, thread UUIDs, and launcher installation receipts.
 6. Any startup path that reads continuity artifacts without producing the governed re-entry consumption evidence is incomplete and must not claim `v1.6.16` implementation closure.
+7. The canonical structured continuity-support bundle for launcher/internal consumers is:
+   - `scripts/render_identity_context_continuity_bundle.py`
+8. That bundle is internal support only; it must not create a new operator-facing continuity command family or shift user entry away from the inherited `v1.6.14` launcher surface.
+9. The bundle must keep two states separate instead of collapsing them:
+   - `startup_reentry_readiness_status`
+   - `live_reentry_consumption_proof_status`
+10. Future launcher integration should consume that protocol-owned bundle rather than re-deriving continuity interpretation ad hoc inside launcher code or instance chat logic.
 
 ### 2.12 Implementation landing order (frozen)
 
