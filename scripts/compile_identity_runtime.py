@@ -335,8 +335,7 @@ def _pick_active_identity(
 
 
 def _resolve_compile_actor_id(explicit_actor_id: str = "") -> str:
-    actor = resolve_protocol_actor_id(explicit_actor_id, allow_host_fallback=False)
-    return actor or "assistant:codex"
+    return resolve_protocol_actor_id(explicit_actor_id, allow_host_fallback=False)
 
 
 def main() -> int:
