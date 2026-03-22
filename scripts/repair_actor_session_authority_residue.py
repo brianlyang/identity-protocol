@@ -14,6 +14,7 @@ from actor_session_common import (
     COMPATIBILITY_PROJECTION_STATUS_AVAILABLE,
     COMPATIBILITY_PROJECTION_STATUS_SUPPRESSED_MULTI_IDENTITY,
     actor_session_dir,
+    load_actor_binding,
     load_actor_global_compatibility_projection_state,
     normalize_actor_binding_store,
     select_actor_global_compatibility_projection,
@@ -98,15 +99,26 @@ def _pointer_metadata(
 
 
 def _pointer_surface_fields(projection_state: dict[str, Any] | None, raw: dict[str, Any]) -> dict[str, str]:
+    return _pointer_surface_fields_from_authority({}, projection_state, raw)
+
+
+def _pointer_surface_fields_from_authority(
+    authoritative_binding: dict[str, Any] | None,
+    projection_state: dict[str, Any] | None,
+    raw: dict[str, Any],
+) -> dict[str, str]:
+    binding = authoritative_binding if isinstance(authoritative_binding, dict) else {}
+    binding_identity = str(binding.get("identity_id", "")).strip()
+    if binding_identity:
+        return {
+            "identity_id": binding_identity,
+            "pack_path": str(binding.get("pack_path", "")).strip() or str(raw.get("pack_path", "")).strip(),
+            "status": str(binding.get("status", "")).strip() or "active",
+        }
+
     state = projection_state if isinstance(projection_state, dict) else {}
     projection = state.get("projection") if isinstance(state.get("projection"), dict) else {}
     projection_status = str(state.get("projection_status", "")).strip()
-    if projection_status == COMPATIBILITY_PROJECTION_STATUS_AVAILABLE and projection:
-        return {
-            "identity_id": str(projection.get("identity_id", "")).strip(),
-            "pack_path": str(raw.get("pack_path", "")).strip(),
-            "status": str(raw.get("status", "")).strip() or "active",
-        }
     if projection_status == COMPATIBILITY_PROJECTION_STATUS_SUPPRESSED_MULTI_IDENTITY:
         return {
             "identity_id": "",
@@ -118,6 +130,43 @@ def _pointer_surface_fields(projection_state: dict[str, Any] | None, raw: dict[s
         "pack_path": "",
         "status": "compatibility_projection_unavailable",
     }
+
+
+def _authoritative_pointer_metadata(authoritative_binding: dict[str, Any] | None) -> dict[str, Any]:
+    binding = authoritative_binding if isinstance(authoritative_binding, dict) else {}
+    return {
+        "session_primary_actor_id": str(binding.get("actor_id", "")).strip(),
+        "session_primary_session_id": str(binding.get("session_id", "")).strip(),
+        "session_primary_identity_id": str(binding.get("identity_id", "")).strip(),
+        "session_primary_pack_path": str(binding.get("pack_path", "")).strip(),
+        "session_primary_status": str(binding.get("status", "")).strip(),
+        "session_primary_binding_ref": str(binding.get("binding_ref", "")).strip(),
+        "session_primary_binding_version": int(binding.get("binding_version", 0) or 0),
+        "session_primary_compare_token": str(binding.get("compare_token", "")).strip(),
+        "session_primary_truth_available": bool(str(binding.get("identity_id", "")).strip()),
+    }
+
+
+def _select_authoritative_pointer_binding(
+    *,
+    catalog_path: Path,
+    actor_id: str,
+    session_id: str = "",
+) -> dict[str, Any]:
+    actor = str(actor_id or "").strip()
+    if not actor:
+        return {}
+    return load_actor_binding(catalog_path, actor, session_id=str(session_id or "").strip())
+
+
+def _infer_single_session_id(actor_result: dict[str, Any]) -> str:
+    payload = actor_result.get("normalized_payload") if isinstance(actor_result, dict) else {}
+    bindings = payload.get("bindings") if isinstance(payload, dict) else {}
+    rows = [row for row in bindings if isinstance(row, dict)] if isinstance(bindings, list) else []
+    session_ids = sorted({str(row.get("session_id", "")).strip() for row in rows if str(row.get("session_id", "")).strip()})
+    if len(session_ids) == 1:
+        return session_ids[0]
+    return ""
 
 
 def _repair_actor_store(path: Path, *, catalog_path: Path) -> dict[str, Any]:
@@ -162,6 +211,7 @@ def _repair_pointer(
     catalog_path: Path,
     canonical_pointer_path: Path,
     actor_id_hint: str = "",
+    session_id_hint: str = "",
 ) -> dict[str, Any]:
     raw = _load_json(path)
     if not raw:
@@ -187,7 +237,16 @@ def _repair_pointer(
         # explicitly requested actor (or a single scanned actor) before treating reason/status as residue.
         actor_id = explicit_actor_id
     projection_state = load_actor_global_compatibility_projection_state(catalog_path, actor_id) if actor_id else {}
-    surface = _pointer_surface_fields(projection_state, raw)
+    authoritative_binding = (
+        _select_authoritative_pointer_binding(
+            catalog_path=catalog_path,
+            actor_id=actor_id,
+            session_id=session_id_hint,
+        )
+        if actor_id
+        else {}
+    )
+    surface = _pointer_surface_fields_from_authority(authoritative_binding, projection_state, raw)
     normalized = dict(raw)
     normalized["identity_id"] = surface["identity_id"]
     normalized["pack_path"] = surface["pack_path"]
@@ -199,6 +258,7 @@ def _repair_pointer(
             projection_state=projection_state,
         )
     )
+    normalized.update(_authoritative_pointer_metadata(authoritative_binding))
     normalized["session_pointer_type"] = "canonical" if pointer_name == "canonical" else "mirror"
     residue_fields: list[str] = []
     for field, expected in _pointer_metadata(
@@ -206,6 +266,9 @@ def _repair_pointer(
         canonical_pointer_path=canonical_pointer_path,
         projection_state=projection_state,
     ).items():
+        if raw.get(field) != expected:
+            residue_fields.append(field)
+    for field, expected in _authoritative_pointer_metadata(authoritative_binding).items():
         if raw.get(field) != expected:
             residue_fields.append(field)
     for field in ("identity_id", "pack_path", "status"):
@@ -227,6 +290,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Repair actor-session authority residue and compatibility pointer metadata.")
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--actor-id", default="", help="optional actor id to restrict actor-session scan")
+    ap.add_argument("--session-id", default="", help="optional authoritative session id for pointer convergence")
     ap.add_argument(
         "--all-actors",
         action="store_true",
@@ -279,6 +343,9 @@ def main() -> int:
     pointer_actor_hint = str(args.actor_id or "").strip()
     if not pointer_actor_hint and len(actor_results) == 1:
         pointer_actor_hint = str(actor_results[0].get("actor_id", "")).strip()
+    pointer_session_hint = str(args.session_id or "").strip()
+    if not pointer_session_hint and len(actor_results) == 1:
+        pointer_session_hint = _infer_single_session_id(actor_results[0])
     pointer_results = [
         _repair_pointer(
             canonical_pointer,
@@ -286,6 +353,7 @@ def main() -> int:
             catalog_path=catalog_path,
             canonical_pointer_path=canonical_pointer,
             actor_id_hint=pointer_actor_hint,
+            session_id_hint=pointer_session_hint,
         ),
         _repair_pointer(
             mirror_pointer,
@@ -293,6 +361,7 @@ def main() -> int:
             catalog_path=catalog_path,
             canonical_pointer_path=canonical_pointer,
             actor_id_hint=pointer_actor_hint,
+            session_id_hint=pointer_session_hint,
         ),
     ]
 
