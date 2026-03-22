@@ -44,6 +44,7 @@ run_global_protocol_gates() {
   run_cmd bash scripts/ci/run_identity_instance_pack_topology_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_codex_launcher_probes_ci.sh
+  run_cmd bash scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh
   run_cmd python3 scripts/check_identity_codex_launcher_migration_closure.py --catalog "${CATALOG_PATH}" --json-only
   run_cmd python3 scripts/validate_identity_instance_script_cross_pack_adoption.py --catalog "${CATALOG_PATH}" --json-only
   run_cmd python3 scripts/validate_gateway_wrapper_trust_boundary_cross_cwd.py --json-only
