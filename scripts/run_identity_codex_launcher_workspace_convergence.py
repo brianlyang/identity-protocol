@@ -11,6 +11,9 @@ from typing import Any
 
 from identity_codex_launcher_evidence_common import (
     artifact_path,
+    launcher_convergence_closure_checker_command,
+    launcher_convergence_entry_command,
+    launcher_convergence_manifest_notes,
     materialize_launcher_convergence_bundle,
     write_json,
 )
@@ -132,16 +135,7 @@ def _check_launcher_closure(*, repo_root: Path, catalog_path: Path, env: dict[st
 
 
 def _launcher_closure_command(*, repo_root: Path, catalog_path: Path) -> list[str]:
-    return [
-        "python3",
-        str((repo_root / "scripts" / "check_identity_codex_launcher_migration_closure.py").resolve()),
-        "--repo-catalog",
-        str((repo_root / "identity" / "catalog" / "identities.yaml").resolve()),
-        "--catalog",
-        str(catalog_path),
-        "--workspace-runtime-only",
-        "--json-only",
-    ]
+    return launcher_convergence_closure_checker_command(repo_root=repo_root, catalog_path=catalog_path)
 
 
 def _validate_single_identity(
@@ -259,23 +253,15 @@ def _entry_command(
     run_token: str,
     receipt_out: Path,
 ) -> list[str]:
-    return [
-        "python3",
-        str((repo_root / "scripts" / "run_identity_codex_launcher_workspace_convergence.py").resolve()),
-        "--catalog",
-        str(catalog_path.resolve()),
-        "--mode",
-        str(mode or "").strip(),
-        "--codex-home",
-        str(codex_home.resolve()),
-        "--artifact-root",
-        str(artifact_root.resolve()),
-        "--run-token",
-        str(run_token or "").strip(),
-        "--out",
-        str(receipt_out.resolve()),
-        "--json-only",
-    ]
+    return launcher_convergence_entry_command(
+        repo_root=repo_root,
+        catalog_path=catalog_path,
+        mode=mode,
+        codex_home=codex_home,
+        artifact_root=artifact_root,
+        run_token=run_token,
+        receipt_path=receipt_out,
+    )
 
 
 def _finalize_bundle(
@@ -338,10 +324,7 @@ def _finalize_bundle(
         receipt_family=IDENTITY_CODEX_LAUNCHER_CONVERGENCE_RECEIPT_FAMILY,
         receipt_payload=payload,
         evidence_record_inputs=evidence_records,
-        notes=[
-            "Launcher convergence evidence bundle is a workspace-scoped archival artifact.",
-            "Receipt truth-sync must keep evidence_ref and manifest_ref machine-visible inside the receipt payload.",
-        ],
+        notes=launcher_convergence_manifest_notes(),
     )
     payload.clear()
     payload.update(next_payload)
