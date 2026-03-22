@@ -291,7 +291,8 @@ Any implementation that claims to follow `v1.6.15` should satisfy this checklist
    - `scripts/validate_identity_capability_activation.py` awareness of instance scripts as a first-class route surface,
    - `scripts/create_identity_pack.py`, `scripts/repair_contract_backfill.py`, and `scripts/identity_creator.py` consumption of the same contract family,
    - generated session-chain wrappers now freeze a `session_chain_executable_smoke_policy`, and the protocol gate executes that smoke against the final-channel relay branch so generator completeness defects fail closed instead of hiding behind template SHA parity,
-   - governed final emit now auto-recovers stale host-visible post-check blockers through `scripts/recover_host_visible_post_check_state.py`, and the gateway trust-boundary probe suite proves that a pre-seeded closure blocker can return to `PASS_REQUIRED` without manual runtime surgery.
+   - governed final emit now auto-recovers stale host-visible post-check blockers through `scripts/recover_host_visible_post_check_state.py`, and the gateway trust-boundary probe suite proves under protocol-root invocation that a pre-seeded closure blocker can return to `PASS_REQUIRED` without manual runtime surgery.
+   - this consumer citation does not, by itself, claim workspace-root / protocol-root invariance for the trust-boundary suite; cross-cwd invariance must be evidenced separately if needed.
 3. Full implementation closure still requires all of the following together:
    - proof packs adopt `scripts/INSTANCE_SCRIPT_MANIFEST.json` and the additive route fields without topology drift,
    - proof packs adopt `allowed_execution_lanes`, `lane_admission_policy`, `lane_receipt_pattern`, and `lane_block_on_fallback` where external/manual/editor/webhook fallback risk exists,

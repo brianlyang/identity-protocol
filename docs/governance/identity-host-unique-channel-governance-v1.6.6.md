@@ -908,6 +908,7 @@ Serialized attach check (base-repo-architect):
 3. trust-boundary CI：
    - `bash scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh` -> `rc=0`
    - 新增 probe 与既有 forged proof/grant probe 全部按预期拦截。
+   - This replay is protocol-root evidence for the suite itself; it must not be restated as workspace-root / protocol-root invariant unless a separate cross-cwd replay is archived.
 
 串行回放证据（本轮本地）：
 
@@ -1074,6 +1075,7 @@ Interpretation lock:
 
 1. code-level freshness guard is not sufficient by itself; migration closure must also hold for active runtime contracts.
 2. probe failures here are migration debt, not tuple-value mismatch noise.
+3. `PASS_REQUIRED` from this checker is active-runtime fleet evidence only when the selected runtime surface contains checked active runtime identities; `checked_identity_count=0` is wiring sanity, not fleet-closure proof.
 
 ### 5.18 Strict operation default entry-receipt requiredization (2026-03-15)
 

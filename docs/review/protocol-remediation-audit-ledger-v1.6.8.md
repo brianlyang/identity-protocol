@@ -457,6 +457,7 @@ Checkpoint verdict update:
 
 1. global active-runtime migration closure can now be enforced from creator preflight path, not only from fixture probes.
 2. closure claim semantics are aligned: global claim requires global active-runtime pass.
+3. A later `PASS_REQUIRED` replay with `checked_identity_count=0` is only empty-scan wiring sanity for the preflight lane; it must not be narrated as active-fleet migration proof.
 
 ## 17) Round-32 addendum: version-baseline SSOT closure (2026-03-15)
 

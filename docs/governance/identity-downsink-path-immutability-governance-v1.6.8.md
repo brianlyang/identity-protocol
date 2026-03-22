@@ -392,6 +392,7 @@ Interpretation lock:
 
 1. Per-identity success is insufficient for “global active-runtime closed” claims.
 2. Global closure claims require migration checker pass across active runtime rows, not fixture-only probe pass.
+3. A migration-checker result of `PASS_REQUIRED` is strong active-runtime proof only when checked active runtime rows are present; `checked_identity_count=0` is closure-wiring sanity, not fleet-closure evidence.
 
 ### 13.3 Non-hardcode guarantee
 

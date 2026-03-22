@@ -272,10 +272,10 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
    - a live inherited pack that still carries the broken canonical wrapper now surfaces `protocol_host_gateway_session_chain_semantic_status=FAIL_REQUIRED` together with `protocol_host_gateway_session_chain_executable_smoke_status=FAIL_REQUIRED` instead of hiding behind template-latest PASS
 5. Governed final emit now repairs stale host-visible post-check blockers instead of treating inherited closure-state drift as a permanent first-line gate failure:
    - `scripts/final_emit_governed.py` now retries through `scripts/recover_host_visible_post_check_state.py` when the governed final outlet fails in the pre-first-line post-check blocker/state-unavailable branch
-   - `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh` now seeds a synthetic `host_visible_surface_live_closure_state.json` blocker and proves that the session-chain wrapper returns to `PASS_REQUIRED`
+   - `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh` now seeds a synthetic `host_visible_surface_live_closure_state.json` blocker and proves under protocol-root invocation that the session-chain wrapper returns to `PASS_REQUIRED`
    - this keeps stale host-visible closure state in the runtime-repair bucket instead of misclassifying it as a new route/script orchestration regression
 6. Protocol hygiene and inherited motherline checks remain green after the upgrade:
    - `python3 scripts/docs_command_contract_check.py` -> `docs checked: 79`, `command snippets checked: 860`, `PASS`
    - `python3 scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `status=PASS_REQUIRED`, `standard_closure_status=CLOSED`, `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 7. The stream-doc-registry current-pointer lane is also now single-sourced for the touched validator family, and control-plane invariants fail close if the literal current pointer resurfaces outside the shared helper.
-8. This snapshot closes the protocol-owned execution-lane governance gap for `v1.6.15`, but it does not claim repo-wide clean freeze or cross-pack adoption closure.
+8. This snapshot closes the protocol-owned execution-lane governance gap for `v1.6.15`, but it does not claim repo-wide clean freeze, whole-repo worktree cleanliness beyond the touched lane, active-fleet migration proof in inherited motherlines, or cross-pack adoption closure.
