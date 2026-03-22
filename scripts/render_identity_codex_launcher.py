@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 import shlex
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +43,18 @@ def _shell_join(parts: list[str]) -> str:
 
 def _build_display_command(raw_command: list[str]) -> str:
     return _shell_join(raw_command)
+
+
+def _command_available_on_path(command_name: str, *, expected_path: Path | None = None) -> bool:
+    resolved = shutil.which(command_name)
+    if not resolved:
+        return False
+    if expected_path is None:
+        return True
+    try:
+        return Path(resolved).expanduser().resolve() == expected_path.resolve()
+    except Exception:
+        return False
 
 
 def _resolve_resume_thread(identity_id: str, explicit_thread_id: str) -> tuple[str, str]:
@@ -166,6 +179,11 @@ def _cmd_commands(args: argparse.Namespace) -> int:
     start_generic = [GENERIC_LAUNCHER_NAME, "--identity-id", args.identity_id]
     preferred_start_command = _build_display_command(start_short)
     preferred_generic_start_command = _build_display_command(start_generic)
+    absolute_start_command = _build_display_command([str(shortcut_path)])
+    absolute_generic_start_command = _build_display_command([str(generic_path), "--identity-id", args.identity_id])
+    shortcut_command_on_path = _command_available_on_path(shortcut, expected_path=shortcut_path)
+    generic_command_on_path = _command_available_on_path(GENERIC_LAUNCHER_NAME, expected_path=generic_path)
+    recommended_start_command = preferred_start_command if shortcut_command_on_path else absolute_start_command
     command_discovery = launcher_command_discovery_doc(args.identity_id)
 
     thread_id, thread_source = _resolve_resume_thread(args.identity_id, args.thread_id)
@@ -183,10 +201,14 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         "generic_command": GENERIC_LAUNCHER_NAME,
         "shortcut_launcher_path": str(shortcut_path),
         "generic_launcher_path": str(generic_path),
+        "shortcut_command_on_path": shortcut_command_on_path,
+        "generic_command_on_path": generic_command_on_path,
         "preferred_start_command": preferred_start_command,
-        "absolute_start_command": _shell_join([str(shortcut_path)]),
+        "absolute_start_command": absolute_start_command,
         "generic_start_command": preferred_generic_start_command,
-        "recommended_user_command": preferred_start_command,
+        "absolute_generic_start_command": absolute_generic_start_command,
+        "recommended_start_command": recommended_start_command,
+        "recommended_user_command": recommended_start_command,
         "resume_status": resume_status,
         "current_host_thread_id": thread_id,
         "resume_thread_source": thread_source,
@@ -200,8 +222,12 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         "copyable_commands": {
             "start": {
                 "preferred": preferred_start_command,
-                "absolute": _build_display_command([str(shortcut_path)]),
+                "recommended": recommended_start_command,
+                "absolute": absolute_start_command,
                 "generic": preferred_generic_start_command,
+                "generic_absolute": absolute_generic_start_command,
+                "shortcut_on_path": shortcut_command_on_path,
+                "generic_on_path": generic_command_on_path,
             },
             "resume": None,
         },
@@ -212,20 +238,28 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         preferred_resume_command = _build_display_command(resume_short)
         absolute_resume_command = _build_display_command([str(shortcut_path), "resume", thread_id])
         generic_resume_command = _build_display_command(resume_generic)
+        absolute_generic_resume_command = _build_display_command([str(generic_path), "--identity-id", args.identity_id, "--", "resume", thread_id])
+        recommended_resume_command = preferred_resume_command if shortcut_command_on_path else absolute_resume_command
         payload.update(
             {
                 "preferred_resume_command": preferred_resume_command,
                 "absolute_resume_command": absolute_resume_command,
                 "generic_resume_command": generic_resume_command,
-                "recommended_user_command": preferred_resume_command,
+                "absolute_generic_resume_command": absolute_generic_resume_command,
+                "recommended_resume_command": recommended_resume_command,
+                "recommended_user_command": recommended_resume_command,
             }
         )
         payload["copyable_commands"]["resume"] = {
             "preferred": preferred_resume_command,
+            "recommended": recommended_resume_command,
             "absolute": absolute_resume_command,
             "generic": generic_resume_command,
+            "generic_absolute": absolute_generic_resume_command,
             "thread_id": thread_id,
             "thread_source": thread_source,
+            "shortcut_on_path": shortcut_command_on_path,
+            "generic_on_path": generic_command_on_path,
         }
     else:
         payload["resume_reason"] = thread_source
