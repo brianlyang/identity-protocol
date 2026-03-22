@@ -34,6 +34,7 @@ run_global_protocol_gates() {
   run_cmd python3 scripts/sync_plugin_join_wiring.py --check --json-only
   run_cmd python3 scripts/docs_command_contract_check.py
   run_cmd python3 scripts/validate_issue_register_consistency.py --json-only
+  run_cmd bash scripts/ci/run_identity_context_continuity_probes_ci.sh
   run_cmd bash scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh
   run_cmd bash scripts/ci/run_workbook_control_plane_probes_ci.sh
   run_cmd bash scripts/ci/run_workbook_family_scaffold_probes_ci.sh
@@ -72,6 +73,10 @@ for ID in ${IDS}; do
   python3 scripts/validate_identity_instance_script_orchestration.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --work-layer instance --source-layer project --json-only
   python3 scripts/validate_route_script_receipt_join.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --work-layer instance --source-layer project --json-only
   python3 scripts/validate_route_execution_lane_admission.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --work-layer instance --source-layer project --json-only
+  python3 scripts/validate_identity_context_continuity.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --json-only
+  python3 scripts/validate_identity_reentry_brief.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --json-only
+  python3 scripts/validate_identity_reentry_consumption.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --json-only
+  python3 scripts/validate_identity_context_continuity_receipts.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --json-only
   python3 scripts/validate_identity_prompt_quality.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --scope AUTO
   python3 scripts/validate_identity_role_binding.py --identity-id "$ID" --catalog "${CATALOG_PATH}"
   python3 scripts/validate_identity_home_catalog_alignment.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --identity-home "$CATALOG_PARENT"

@@ -34,6 +34,7 @@ PROTOCOL_PUBLISH_SCRIPTS = {
 POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["python3", "scripts/docs_command_contract_check.py"],
     ["python3", "scripts/validate_issue_register_consistency.py", "--json-only"],
+    ["bash", "scripts/ci/run_identity_context_continuity_probes_ci.sh"],
     ["bash", "scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh"],
     ["bash", "scripts/ci/run_workbook_control_plane_probes_ci.sh"],
     ["bash", "scripts/ci/run_workbook_family_scaffold_probes_ci.sh"],
@@ -1686,6 +1687,42 @@ def main() -> int:
         ],
         [
             "python3",
+            "scripts/validate_identity_context_continuity.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_identity_reentry_brief.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_identity_reentry_consumption.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_identity_context_continuity_receipts.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--json-only",
+        ],
+        [
+            "python3",
             "scripts/validate_identity_capability_activation.py",
             "--catalog",
             catalog,
@@ -2286,6 +2323,50 @@ def main() -> int:
             (str(args.expected_work_layer or "").strip().lower() or "instance"),
             "--source-layer",
             (str(args.expected_source_layer or "").strip().lower() or _infer_source_layer_from_catalog_path(catalog)),
+            "--json-only",
+        ]
+    )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_identity_context_continuity.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--json-only",
+        ]
+    )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_identity_reentry_brief.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--json-only",
+        ]
+    )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_identity_reentry_consumption.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--json-only",
+        ]
+    )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_identity_context_continuity_receipts.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
             "--json-only",
         ]
     )
