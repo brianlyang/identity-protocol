@@ -15,6 +15,19 @@ ROUTE_SCOPE_AGGREGATE = "aggregate"
 ROUTE_SELECTION_CARDINALITY_ZERO = "zero_route"
 ROUTE_SELECTION_CARDINALITY_SINGLE = "single_route"
 ROUTE_SELECTION_CARDINALITY_MULTI = "multi_route"
+SEMANTIC_ANCHOR_FIELDS: tuple[str, ...] = (
+    "semantic_anchor_ref",
+    "semantic_anchor_schema_id",
+    "semantic_anchor_source",
+    "semantic_anchor_revision",
+    "semantic_anchor_digest",
+    "semantic_anchor_status",
+)
+OUTCOME_SENTINEL_FIELDS: tuple[str, ...] = (
+    "outcome_sentinel_ref",
+    "outcome_sentinel_schema_id",
+    "outcome_sentinel_status",
+)
 
 INSTANCE_SCRIPT_MANIFEST_REL = Path("scripts/INSTANCE_SCRIPT_MANIFEST.json")
 INSTANCE_SCRIPT_RECEIPT_FAMILIES: tuple[str, ...] = (
@@ -205,6 +218,123 @@ def normalize_dependency_gap_reasons(value: Any) -> list[str]:
     if isinstance(value, list):
         return unique_string_list(value)
     return []
+
+
+def _extract_optional_projection_fields(source: Any, *, fields: tuple[str, ...]) -> dict[str, str]:
+    if not isinstance(source, dict):
+        return {}
+    payload: dict[str, str] = {}
+    for field in fields:
+        token = str(source.get(field, "")).strip()
+        if token:
+            payload[field] = token
+    return payload
+
+
+def normalize_optional_projection_fields(
+    source: Any,
+    *,
+    fields: tuple[str, ...],
+    family_name: str,
+) -> tuple[dict[str, str], list[str]]:
+    payload = _extract_optional_projection_fields(source, fields=fields)
+    if not payload:
+        return {}, []
+    missing = [field for field in fields if field not in payload]
+    if missing:
+        return payload, [f"{family_name}_missing:{field}" for field in missing]
+    return payload, []
+
+
+def compare_optional_projection_fields(
+    *,
+    declared: dict[str, str],
+    observed: dict[str, str],
+    fields: tuple[str, ...],
+    family_name: str,
+) -> list[str]:
+    issues: list[str] = []
+    if declared and not observed:
+        return [f"{family_name}_declared_not_observed"]
+    if not declared or not observed:
+        return issues
+    for field in fields:
+        if declared.get(field) != observed.get(field):
+            issues.append(f"{family_name}_field_mismatch:{field}")
+    return issues
+
+
+def optional_projection_field_families() -> tuple[tuple[str, tuple[str, ...]], ...]:
+    return (
+        ("semantic_anchor", SEMANTIC_ANCHOR_FIELDS),
+        ("outcome_sentinel", OUTCOME_SENTINEL_FIELDS),
+    )
+
+
+def copy_optional_projection_fields(source: dict[str, Any]) -> dict[str, str]:
+    payload: dict[str, str] = {}
+    for _, fields in optional_projection_field_families():
+        payload.update(_extract_optional_projection_fields(source, fields=fields))
+    return payload
+
+
+def validate_optional_projection_payload(source: Any) -> list[str]:
+    issues: list[str] = []
+    for family_name, fields in optional_projection_field_families():
+        _, family_issues = normalize_optional_projection_fields(
+            source,
+            fields=fields,
+            family_name=family_name,
+        )
+        issues.extend(family_issues)
+    return issues
+
+
+def promote_uniform_optional_projection(
+    route_rows: list[dict[str, Any]],
+    *,
+    fields: tuple[str, ...],
+    family_name: str,
+) -> tuple[dict[str, str], int]:
+    unique_rows: list[dict[str, str]] = []
+    seen: set[tuple[str, ...]] = set()
+    for row in route_rows:
+        payload, issues = normalize_optional_projection_fields(
+            row,
+            fields=fields,
+            family_name=family_name,
+        )
+        if issues or not payload:
+            continue
+        key = tuple(payload[field] for field in fields)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique_rows.append(payload)
+    if len(unique_rows) == 1:
+        return unique_rows[0], len(unique_rows)
+    return {}, len(unique_rows)
+
+
+def summarize_optional_projection_families(
+    rows: list[dict[str, Any]],
+    *,
+    ambiguity_scope: str,
+) -> tuple[dict[str, str], list[str]]:
+    payload: dict[str, str] = {}
+    reasons: list[str] = []
+    for family_name, fields in optional_projection_field_families():
+        promoted_payload, unique_count = promote_uniform_optional_projection(
+            rows,
+            fields=fields,
+            family_name=family_name,
+        )
+        if promoted_payload:
+            payload.update(promoted_payload)
+            continue
+        if unique_count > 1:
+            reasons.append(f"{family_name}_projection_{ambiguity_scope}_ambiguous")
+    return payload, reasons
 
 
 def normalize_source_layer(catalog_path: Path | None) -> str:
@@ -488,6 +618,18 @@ def build_aggregate_dependency_projection(
             allowed_execution_lane_ids=declared_allowed_execution_lane_ids,
             route_scope=ROUTE_SCOPE_AGGREGATE,
         )
+        declared_semantic_anchor, declared_semantic_anchor_issues = normalize_optional_projection_fields(
+            route_row,
+            fields=SEMANTIC_ANCHOR_FIELDS,
+            family_name="semantic_anchor_declared",
+        )
+        declared_outcome_sentinel, declared_outcome_sentinel_issues = normalize_optional_projection_fields(
+            route_row,
+            fields=OUTCOME_SENTINEL_FIELDS,
+            family_name="outcome_sentinel_declared",
+        )
+        declared_projection.update(declared_semantic_anchor)
+        declared_projection.update(declared_outcome_sentinel)
         declared_route_rows.append(declared_projection)
         aggregate_declared_primary_skills.extend(declared_primary_skills)
         aggregate_declared_fallback_skills.extend(declared_fallback_skills)
@@ -521,11 +663,58 @@ def build_aggregate_dependency_projection(
             observed_route_ready=bool(activation_row.get("ready")),
             route_scope=ROUTE_SCOPE_AGGREGATE,
         )
+        observed_semantic_anchor, observed_semantic_anchor_issues = normalize_optional_projection_fields(
+            activation_row,
+            fields=SEMANTIC_ANCHOR_FIELDS,
+            family_name="semantic_anchor",
+        )
+        observed_outcome_sentinel, observed_outcome_sentinel_issues = normalize_optional_projection_fields(
+            activation_row,
+            fields=OUTCOME_SENTINEL_FIELDS,
+            family_name="outcome_sentinel",
+        )
+        observed_projection.update(observed_semantic_anchor)
+        observed_projection.update(observed_outcome_sentinel)
         observed_route_rows.append(observed_projection)
         aggregate_observed_instance_scripts.extend(route_observed_instance_scripts)
         aggregate_observed_execution_lane_ids.extend(route_observed_execution_lane_ids)
         if bool(activation_row.get("ready")):
             observed_ready_routes.append(route_name)
+
+        dependency_gap_reasons.extend(
+            f"{route_name}:{reason}" for reason in declared_semantic_anchor_issues
+        )
+        dependency_gap_reasons.extend(
+            f"{route_name}:{reason}" for reason in observed_semantic_anchor_issues
+        )
+        dependency_gap_reasons.extend(
+            f"{route_name}:{reason}"
+            for reason in compare_optional_projection_fields(
+                declared=declared_semantic_anchor,
+                observed=observed_semantic_anchor,
+                fields=SEMANTIC_ANCHOR_FIELDS,
+                family_name="semantic_anchor",
+            )
+        )
+        dependency_gap_reasons.extend(
+            f"{route_name}:{reason}" for reason in declared_outcome_sentinel_issues
+        )
+        dependency_gap_reasons.extend(
+            f"{route_name}:{reason}" for reason in observed_outcome_sentinel_issues
+        )
+        dependency_gap_reasons.extend(
+            f"{route_name}:{reason}"
+            for reason in compare_optional_projection_fields(
+                declared=declared_outcome_sentinel,
+                observed=observed_outcome_sentinel,
+                fields=OUTCOME_SENTINEL_FIELDS,
+                family_name="outcome_sentinel",
+            )
+        )
+        dependency_gap_reasons.extend(
+            f"{route_name}:{reason}"
+            for reason in unique_string_list(activation_row.get("optional_projection_reasons") or [])
+        )
 
         dependency_gap_reasons.extend(
             f"{route_name}:declared_skill_unavailable:{token}" for token in route_missing_skills
@@ -574,6 +763,13 @@ def build_aggregate_dependency_projection(
     )
     payload["declared_dependency_projection"] = declared_dependency_projection
     payload["observed_dependency_projection"] = observed_dependency_projection
+    promoted_optional_projection, optional_projection_reasons = summarize_optional_projection_families(
+        observed_route_rows,
+        ambiguity_scope="route_aggregation",
+    )
+    payload.update(promoted_optional_projection)
+    dependency_gap_reasons.extend(optional_projection_reasons)
+
     payload["dependency_gap_reasons"] = normalize_dependency_gap_reasons(dependency_gap_reasons)
     return payload
 
@@ -883,7 +1079,48 @@ def validate_route_script_receipt_doc(
         f"undeclared_observed_mcp_tool:{token}" for token in sorted(set(undeclared_mcp))
     )
 
-    return {
+    declared_semantic_anchor, declared_semantic_anchor_issues = normalize_optional_projection_fields(
+        route_doc,
+        fields=SEMANTIC_ANCHOR_FIELDS,
+        family_name="semantic_anchor_declared",
+    )
+    observed_semantic_anchor, observed_semantic_anchor_issues = normalize_optional_projection_fields(
+        receipt_doc,
+        fields=SEMANTIC_ANCHOR_FIELDS,
+        family_name="semantic_anchor",
+    )
+    issues.extend(declared_semantic_anchor_issues)
+    issues.extend(observed_semantic_anchor_issues)
+    dependency_gap_reasons.extend(
+        compare_optional_projection_fields(
+            declared=declared_semantic_anchor,
+            observed=observed_semantic_anchor,
+            fields=SEMANTIC_ANCHOR_FIELDS,
+            family_name="semantic_anchor",
+        )
+    )
+
+    declared_outcome_sentinel, declared_outcome_sentinel_issues = normalize_optional_projection_fields(
+        route_doc,
+        fields=OUTCOME_SENTINEL_FIELDS,
+        family_name="outcome_sentinel_declared",
+    )
+    observed_outcome_sentinel, observed_outcome_sentinel_issues = normalize_optional_projection_fields(
+        receipt_doc,
+        fields=OUTCOME_SENTINEL_FIELDS,
+        family_name="outcome_sentinel",
+    )
+    issues.extend(declared_outcome_sentinel_issues)
+    issues.extend(observed_outcome_sentinel_issues)
+    dependency_gap_reasons.extend(
+        compare_optional_projection_fields(
+            declared=declared_outcome_sentinel,
+            observed=observed_outcome_sentinel,
+            fields=OUTCOME_SENTINEL_FIELDS,
+            family_name="outcome_sentinel",
+        )
+    )
+    payload = {
         "status": STATUS_PASS_REQUIRED if not issues else STATUS_FAIL_REQUIRED,
         "receipt_family": receipt_family,
         "expected_receipt_family": expected_family,
@@ -893,6 +1130,9 @@ def validate_route_script_receipt_doc(
         "observed_dependency_projection": observed_dependency_projection,
         "dependency_gap_reasons": normalize_dependency_gap_reasons(dependency_gap_reasons),
     }
+    payload.update(observed_semantic_anchor)
+    payload.update(observed_outcome_sentinel)
+    return payload
 
 
 def validate_route_execution_lane_receipt_doc(
@@ -1351,6 +1591,7 @@ def build_route_receipt_join_matrix(
                 )
             )
             row["dependency_gap_reasons"] = list(validation.get("dependency_gap_reasons") or [])
+            row.update(copy_optional_projection_fields(validation))
             row["diagnostic_label"] = "ready" if row["receipt_validation_status"] == STATUS_PASS_REQUIRED else "receipt_invalid"
             if row["receipt_validation_status"] != STATUS_PASS_REQUIRED:
                 blocking_reasons.extend(f"{route_name}:{script_id}:{reason}" for reason in row["stale_reasons"])
