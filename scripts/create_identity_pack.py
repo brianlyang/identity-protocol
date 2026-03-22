@@ -6340,7 +6340,6 @@ def _neutral_full_contract_current_task(
     task["blocker_taxonomy_contract"] = {
         "required": True,
         "required_blocker_types": list(CANONICAL_BLOCKER_TYPES),
-        "legacy_alias_bridge": dict(LEGACY_BLOCKER_ALIAS_MAP),
         "blocker_alias_map_version": "v1",
         "blocker_classification_required_fields": [
             "blocker_type",
@@ -6357,7 +6356,6 @@ def _neutral_full_contract_current_task(
             "If human collaboration blockers are detected, notify immediately and emit chat receipt"
         ),
         "trigger_conditions": list(CANONICAL_BLOCKER_TYPES),
-        "legacy_alias_bridge": dict(LEGACY_BLOCKER_ALIAS_MAP),
         "notify_channel": "ops-notification-router",
         "dedupe_window_hours": 24,
         "state_change_bypass_dedupe": True,
@@ -7228,7 +7226,7 @@ def main() -> int:
         default="full-contract",
         help=(
             "scaffold profile; full-contract is domain-neutral by default. "
-            "legacy-commerce-overlay is explicit opt-in for compatibility fixtures."
+            "legacy-commerce-overlay is explicit opt-in for compatibility fixture/migration scaffolds only."
         ),
     )
     ap.add_argument("--register", action="store_true", help="Register identity in catalog")
@@ -7271,6 +7269,9 @@ def main() -> int:
     catalog_path = Path(args.catalog).expanduser().resolve()
     identity_profile = "fixture" if args.repo_fixture else "runtime"
     identity_runtime_mode = "demo_only" if args.repo_fixture else "local_only"
+    if args.profile == "legacy-commerce-overlay" and not args.repo_fixture:
+        print("[FAIL] --profile legacy-commerce-overlay is migration/fixture-only and requires --repo-fixture.")
+        return 1
     try:
         version_baseline = load_version_baseline_or_raise(repo_root=repo_root)
     except Exception as exc:
