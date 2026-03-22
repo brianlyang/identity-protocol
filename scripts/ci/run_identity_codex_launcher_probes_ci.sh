@@ -68,7 +68,8 @@ assert payload["status"] == "PASS_REQUIRED", payload
 assert payload["command_bundle_contract_id"] == "identity_codex_launcher_command_discovery_contract_v1", payload
 assert payload["question_family"] == "identity_launcher_start_resume", payload
 assert payload["resume_status"] == "PASS_REQUIRED", payload
-assert payload["recommended_user_command"] == payload["preferred_resume_command"], payload
+assert payload["shortcut_command_on_path"] is False, payload
+assert payload["generic_command_on_path"] is False, payload
 assert payload["preferred_start_command"] == f"id-{payload['identity_id']}", payload
 assert payload["preferred_resume_command"] == f"id-{payload['identity_id']} resume {host_thread_uuid}", payload
 assert payload["absolute_start_command"].endswith(f"/id-{payload['identity_id']}"), payload
@@ -76,8 +77,13 @@ assert payload["generic_start_command"] == f"identity-codex --identity-id {paylo
 assert payload["generic_resume_command"] == (
     f"identity-codex --identity-id {payload['identity_id']} -- resume {host_thread_uuid}"
 ), payload
+assert payload["recommended_start_command"] == payload["absolute_start_command"], payload
+assert payload["recommended_resume_command"] == payload["absolute_resume_command"], payload
+assert payload["recommended_user_command"] == payload["recommended_resume_command"], payload
 assert payload["copyable_commands"]["start"]["preferred"] == payload["preferred_start_command"], payload
+assert payload["copyable_commands"]["start"]["recommended"] == payload["recommended_start_command"], payload
 assert payload["copyable_commands"]["resume"]["thread_id"] == host_thread_uuid, payload
+assert payload["copyable_commands"]["resume"]["recommended"] == payload["recommended_resume_command"], payload
 assert payload["instance_answer_guidance"]["manual_command_assembly_forbidden"] is True, payload
 print("launcher_command_bundle_status=PASS_REQUIRED")
 PY
@@ -97,8 +103,11 @@ payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["status"] == "PASS_REQUIRED", payload
 assert payload["identity_id"], payload
 assert payload["command_discovery"]["instance_answer_mode"] == "instance_returns_concrete_commands", payload
+assert payload["shortcut_command_on_path"] is False, payload
 assert payload["preferred_start_command"] == f"id-{payload['identity_id']}", payload
 assert payload["preferred_resume_command"].startswith(f"id-{payload['identity_id']} resume "), payload
+assert payload["recommended_start_command"] == payload["absolute_start_command"], payload
+assert payload["recommended_resume_command"] == payload["absolute_resume_command"], payload
 print("launcher_shortcut_command_bundle_status=PASS_REQUIRED")
 PY
 
