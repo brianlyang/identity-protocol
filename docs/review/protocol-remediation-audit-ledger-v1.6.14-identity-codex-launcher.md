@@ -200,6 +200,7 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - that bundle is terminal-native and direct (`id-<id> ...`, `identity-codex --identity-id <id> ...`), not shell-wrapped helper text such as `zsh -lic '...'`.
    - the protocol-owned `recommended_user_command` is also environment-aware **and** fresh-shell executable: if the current shell cannot discover the short launcher on `PATH`, the bundle falls back to the absolute direct launcher path; if the ambient catalog mismatches the resolved identity catalog, the bundle emits explicit `--catalog`; if resume requires tuple closure, the bundle emits explicit `--session-id run:<...>` rather than a stale short shortcut.
    - host-thread UUID presence alone must not be audited as resume readiness; the machine-visible decomposition must distinguish `host_thread_id_status`, `identity_session_tuple_status`, and `resume_command_fresh_shell_executable_status`.
+   - explicit `--session-id run:<...>` is not sufficient by shape alone: command discovery and dry-run must fail-close unless that tuple is authoritative for the requested identity, and `resume <host-thread-uuid>` must remain the Codex recovery target rather than being semantically replaced by the launcher tuple.
    - `identity-codex commands --identity-id <id> --json-only` returns a structured bundle with `recommended_user_command`, `copyable_commands`, and `instance_answer_guidance`, preserving the boundary “protocol guides, instance answers”.
 5. Audit follow-on closure note (2026-03-23): the raw runtime-catalog metadata follow-on is now closed on its own `v1.6.10` lane:
    - `scripts/validate_runtime_catalog_metadata_hygiene.py` / `scripts/repair_runtime_catalog_metadata_hygiene.py` now own raw row self-description;
@@ -253,7 +254,8 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
      - discovery is in registry,
      - evidence is in allowlist,
      - execution is in required gates,
-     - audit is in the lane-summary control plane.
+     - audit is in the lane-summary control plane,
+     - and launcher command discovery now recommends resume only when the command is fresh-shell executable with both `resume <host-thread-uuid>` recovery targeting and authoritative `--session-id run:<...>` tuple closure preserved as distinct objects.
 2. The remaining tail is also frozen precisely:
    - current-state note (2026-03-22): `python3 scripts/validate_protocol_lane_isolated_historical_replay.py --repo-root identity-protocol-local --workspace-root . --commit HEAD --json-only` returned `PASS_REQUIRED` with `projection_parity_match=true`,
    - remaining work belongs mainly to legacy rollout outside the already governed catalogs and broader evidence breadth,

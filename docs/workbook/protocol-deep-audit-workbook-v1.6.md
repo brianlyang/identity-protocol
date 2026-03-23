@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 87`, `command snippets checked: 938`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 87`, `command snippets checked: 942`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -898,6 +898,34 @@ Root cause:
   - execution closeout may continue whole-matrix validator/probe/gate/readiness/workbook truth-sync work for `ISSUE-032`, but only by extending the frozen routing matrix already accepted here;
   - execution closeout must not redefine family names, fixed roots, canonical producer/consumer roles, or frozen non-goals, and must not promote `runtime/memory-absorption/**` back onto an active success path;
   - audit/review verifies closure and truth-sync state, but does not become a replacement semantic owner.
+
+### ISSUE-033 - `v1.6.14` launcher command discovery now freezes fresh-shell resume semantics instead of promoting resumability from partial facts
+
+- `status`: CLOSED
+- `problem_statement`: the launcher lane had already frozen canonical commands, install paths, runtime-path authority, and cross-workspace convergence, but command discovery still had a narrower bug: it could promote resume readiness from partial facts such as host-thread UUID presence, shortcut availability, or merely explicit-looking `run:<...>` session ids. That created a protocol gap between “bundle says resume is recommended” and “fresh-shell launch is actually executable and semantically correct.”
+- `primary_owner_doc`: `docs/governance/identity-codex-launcher-governance-v1.6.14.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md`
+  - `README.md`
+  - `scripts/render_identity_codex_launcher.py`
+  - `scripts/identity_codex_launcher_common.py`
+- `machine_gate`:
+  - `scripts/ci/run_identity_codex_launcher_probes_ci.sh`
+  - `scripts/docs_command_contract_check.py`
+  - direct replay: `python3 scripts/render_identity_codex_launcher.py commands --identity-id <id> --thread-id <host-thread-uuid> --json-only`
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - command discovery recommendations are judged by fresh-shell executability rather than shortcut discoverability, ambient intuition, or host-thread UUID presence alone;
+  - `resume_status` may be `PASS_REQUIRED` only when both the host thread UUID and the authoritative identity session tuple are resolved;
+  - explicit `--session-id run:<...>` inputs are accepted only when they are authoritative for the requested identity rather than merely syntactically shaped like a run id;
+  - the protocol freezes `resume <host-thread-uuid>` as the Codex recovery target and freezes `--session-id run:<...>` as launcher-side tuple closure only, with no semantic collapse between the two;
+  - positive and negative probe coverage proves the renderer, launcher common, and dry-run path all fail-close together.
+- `current_evidence`:
+  - `scripts/render_identity_codex_launcher.py` now exports `catalog_context_status`, `host_thread_id_status`, `identity_session_tuple_status`, and `resume_command_fresh_shell_executable_status`, and only emits `recommended_resume_command` when that fresh-shell resume status is `PASS_REQUIRED`;
+  - when the ambient shell catalog differs from the resolved identity catalog, the command bundle now emits explicit `--catalog <resolved-catalog>` rather than treating ambient catalog drift as operator folklore;
+  - `scripts/identity_codex_launcher_common.py` now requires authoritative runtime identity resolution for both bound and explicit session tuples, so a non-authoritative explicit `run:<...>` no longer yields a resumable recommendation surface;
+  - `scripts/ci/run_identity_codex_launcher_probes_ci.sh` now proves four cases together: positive authoritative resume, negative missing tuple, negative invalid explicit tuple, and positive dry-run preservation of `resume <host-thread-uuid>` as the recovery tail;
+  - `README.md` plus the `v1.6.14` governance/review pair now explicitly state that `resume <host-thread-uuid>` remains the Codex recovery target for prior records, while `--session-id run:<...>` is launcher tuple closure only.
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 
