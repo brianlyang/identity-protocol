@@ -126,9 +126,11 @@ Operational rule for identity instances:
 - if readiness is not `PASS_REQUIRED`, do **not** claim memory recovery is ready;
 - if readiness is `PASS_REQUIRED` but live proof is not yet observed, you may return the governed reentry task block, but must explicitly state that successful recovery is only proven after `instance_reentry_consumption_receipt` is emitted.
 - live adoption is a **hard-downsink/template-materialization** requirement, not a chat convention:
-  - pack-local scripts must exist at `<pack-root>/scripts/emit_identity_context_checkpoint.py`, `<pack-root>/scripts/materialize_identity_reentry_brief.py`, and `<pack-root>/scripts/emit_identity_reentry_consumption_receipt.py`;
-  - they must be registered in `<pack-root>/scripts/INSTANCE_SCRIPT_MANIFEST.json`;
-  - they must write only to `<pack-root>/runtime/reports/context-continuity/continuity-rolling-*.json`, `<pack-root>/runtime/reports/context-continuity/continuity-stage-*.json`, `<pack-root>/runtime/reports/context-continuity/continuity-migration-*.json`, `<pack-root>/runtime/state/context-continuity/active-reentry-brief.json`, and the corresponding receipt files under `<pack-root>/runtime/reports/context-continuity/`.
+  - pack-local `scripts/` must contain these exact files: `run_identity_context_continuity_guard.sh`, `emit_identity_context_checkpoint.py`, `materialize_identity_reentry_brief.py`, and `emit_identity_reentry_consumption_receipt.py`;
+  - the shell guard is the proactive cadence/trigger dispatcher; the Python scripts are deterministic payload emitters;
+  - the shell guard must persist `runtime/state/context-continuity/guard-state.json` and write `runtime/reports/context-continuity/guard-*.json`;
+  - they must be registered in `scripts/INSTANCE_SCRIPT_MANIFEST.json`;
+  - they must write only to `runtime/reports/context-continuity/continuity-rolling-*.json`, `runtime/reports/context-continuity/continuity-stage-*.json`, `runtime/reports/context-continuity/continuity-migration-*.json`, `runtime/state/context-continuity/active-reentry-brief.json`, and the corresponding receipt files under `runtime/reports/context-continuity/`.
 
 ### Protocol SSOT governance (canonical source + coupling)
 
