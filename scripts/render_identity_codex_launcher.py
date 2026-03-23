@@ -25,7 +25,10 @@ from identity_codex_launcher_common import (
     render_generic_launcher_sh,
     render_shortcut_launcher_sh,
     resolve_catalog_path,
+    resolve_launcher_tuple,
     resolve_launcher_pack_task,
+    resolve_protocol_root,
+    resolve_required_protocol_actor_id,
     shortcut_launcher_name,
 )
 from render_identity_context_continuity_bundle import render_continuity_bundle_payload
@@ -69,6 +72,37 @@ def _resolve_resume_thread(identity_id: str, explicit_thread_id: str) -> tuple[s
     if current_identity_id and current_identity_id != identity_id:
         return "", "current_host_thread_belongs_to_another_identity"
     return host_thread_id, "current_host_thread"
+
+
+def _build_generic_start_command(
+    *,
+    launcher: str,
+    identity_id: str,
+    catalog_path: Path,
+    require_explicit_catalog: bool,
+) -> str:
+    parts = [launcher, "--identity-id", identity_id]
+    if require_explicit_catalog:
+        parts.extend(["--catalog", str(catalog_path)])
+    return _build_display_command(parts)
+
+
+def _build_generic_resume_command(
+    *,
+    launcher: str,
+    identity_id: str,
+    catalog_path: Path,
+    thread_id: str,
+    require_explicit_catalog: bool,
+    session_id: str,
+) -> str:
+    parts = [launcher, "--identity-id", identity_id]
+    if require_explicit_catalog:
+        parts.extend(["--catalog", str(catalog_path)])
+    if session_id:
+        parts.extend(["--session-id", session_id])
+    parts.extend(["--", "resume", thread_id])
+    return _build_display_command(parts)
 
 
 def _load_continuity_support_bundle(
@@ -205,10 +239,21 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         catalog_path=catalog_path,
         current_task=str(args.current_task or ""),
     )
+    protocol_home = resolve_protocol_root(str(os.environ.get("IDENTITY_PROTOCOL_HOME", "")).strip())
+    actor_token = resolve_required_protocol_actor_id(str(args.actor_id or "").strip() or "assistant:codex")
     bin_dir = Path(args.bin_dir).expanduser().resolve() if str(args.bin_dir or "").strip() else default_bin_dir()
     shortcut = shortcut_launcher_name(args.identity_id)
     shortcut_path = (bin_dir / shortcut).resolve()
     generic_path = (bin_dir / GENERIC_LAUNCHER_NAME).resolve()
+    ambient_catalog_path = resolve_catalog_path("")
+    catalog_context_matches = ambient_catalog_path == catalog_path
+    catalog_context_status = STATUS_PASS_REQUIRED if catalog_context_matches else STATUS_FAIL_REQUIRED
+    catalog_context_reason = (
+        "ambient_catalog_matches_resolved_catalog"
+        if catalog_context_matches
+        else "ambient_catalog_mismatch_requires_explicit_catalog"
+    )
+    require_explicit_catalog = not catalog_context_matches
 
     start_short = [shortcut]
     start_generic = [GENERIC_LAUNCHER_NAME, "--identity-id", args.identity_id]
@@ -216,13 +261,54 @@ def _cmd_commands(args: argparse.Namespace) -> int:
     preferred_generic_start_command = _build_display_command(start_generic)
     absolute_start_command = _build_display_command([str(shortcut_path)])
     absolute_generic_start_command = _build_display_command([str(generic_path), "--identity-id", args.identity_id])
+    fresh_shell_start_command = _build_generic_start_command(
+        launcher=GENERIC_LAUNCHER_NAME,
+        identity_id=args.identity_id,
+        catalog_path=catalog_path,
+        require_explicit_catalog=require_explicit_catalog,
+    )
+    absolute_fresh_shell_start_command = _build_generic_start_command(
+        launcher=str(generic_path),
+        identity_id=args.identity_id,
+        catalog_path=catalog_path,
+        require_explicit_catalog=require_explicit_catalog,
+    )
     shortcut_command_on_path = _command_available_on_path(shortcut, expected_path=shortcut_path)
     generic_command_on_path = _command_available_on_path(GENERIC_LAUNCHER_NAME, expected_path=generic_path)
-    recommended_start_command = preferred_start_command if shortcut_command_on_path else absolute_start_command
+    if require_explicit_catalog:
+        recommended_start_command = fresh_shell_start_command if generic_command_on_path else absolute_fresh_shell_start_command
+    else:
+        recommended_start_command = preferred_start_command if shortcut_command_on_path else absolute_start_command
     command_discovery = launcher_command_discovery_doc(args.identity_id)
 
     thread_id, thread_source = _resolve_resume_thread(args.identity_id, args.thread_id)
-    resume_status = STATUS_PASS_REQUIRED if thread_id else STATUS_SKIPPED_NOT_REQUIRED
+    host_thread_id_status = STATUS_PASS_REQUIRED if thread_id else STATUS_SKIPPED_NOT_REQUIRED
+    resolved_resume_session_id = ""
+    resolved_resume_session_source = "resume_session_not_required"
+    identity_session_tuple_status = STATUS_SKIPPED_NOT_REQUIRED
+    identity_session_tuple_reason = "resume_thread_id_missing"
+    if thread_id:
+        try:
+            resolved_resume_session_id, resolved_resume_session_source = resolve_launcher_tuple(
+                identity_id=args.identity_id,
+                actor_id=actor_token,
+                explicit_session_id=str(args.session_id or ""),
+                catalog_path=catalog_path,
+                protocol_home=protocol_home,
+            )
+            identity_session_tuple_status = STATUS_PASS_REQUIRED if resolved_resume_session_id else STATUS_FAIL_REQUIRED
+            identity_session_tuple_reason = (
+                resolved_resume_session_source if resolved_resume_session_id else "session_tuple_unresolved"
+            )
+        except Exception as exc:
+            identity_session_tuple_status = STATUS_FAIL_REQUIRED
+            identity_session_tuple_reason = str(exc)
+    resume_command_fresh_shell_executable_status = (
+        STATUS_PASS_REQUIRED
+        if thread_id and resolved_resume_session_id
+        else (STATUS_FAIL_REQUIRED if thread_id else STATUS_SKIPPED_NOT_REQUIRED)
+    )
+    resume_status = resume_command_fresh_shell_executable_status
     continuity_support = _load_continuity_support_bundle(
         identity_id=args.identity_id,
         catalog_path=catalog_path,
@@ -237,21 +323,35 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         "pack_path": str(pack_root),
         "task_path": str(task_path),
         "bin_dir": str(bin_dir),
+        "ambient_catalog_path": str(ambient_catalog_path),
+        "catalog_context_status": catalog_context_status,
+        "catalog_context_reason": catalog_context_reason,
+        "catalog_explicit_flag_required": require_explicit_catalog,
         "shortcut_command": shortcut,
         "generic_command": GENERIC_LAUNCHER_NAME,
         "shortcut_launcher_path": str(shortcut_path),
         "generic_launcher_path": str(generic_path),
         "shortcut_command_on_path": shortcut_command_on_path,
         "generic_command_on_path": generic_command_on_path,
+        "actor_id": actor_token,
         "preferred_start_command": preferred_start_command,
         "absolute_start_command": absolute_start_command,
         "generic_start_command": preferred_generic_start_command,
         "absolute_generic_start_command": absolute_generic_start_command,
+        "fresh_shell_start_command": fresh_shell_start_command,
+        "absolute_fresh_shell_start_command": absolute_fresh_shell_start_command,
         "recommended_start_command": recommended_start_command,
         "recommended_user_command": recommended_start_command,
         "resume_status": resume_status,
+        "host_thread_id_status": host_thread_id_status,
+        "host_thread_id_present": bool(thread_id),
         "current_host_thread_id": thread_id,
         "resume_thread_source": thread_source,
+        "identity_session_tuple_status": identity_session_tuple_status,
+        "identity_session_tuple_reason": identity_session_tuple_reason,
+        "resolved_resume_session_id": resolved_resume_session_id,
+        "resolved_resume_session_source": resolved_resume_session_source,
+        "resume_command_fresh_shell_executable_status": resume_command_fresh_shell_executable_status,
         "command_discovery": command_discovery,
         "continuity_support": continuity_support,
         "instance_answer_guidance": {
@@ -268,6 +368,9 @@ def _cmd_commands(args: argparse.Namespace) -> int:
                 "absolute": absolute_start_command,
                 "generic": preferred_generic_start_command,
                 "generic_absolute": absolute_generic_start_command,
+                "fresh_shell": fresh_shell_start_command,
+                "fresh_shell_absolute": absolute_fresh_shell_start_command,
+                "catalog_explicit_flag_required": require_explicit_catalog,
                 "shortcut_on_path": shortcut_command_on_path,
                 "generic_on_path": generic_command_on_path,
             },
@@ -281,15 +384,41 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         absolute_resume_command = _build_display_command([str(shortcut_path), "resume", thread_id])
         generic_resume_command = _build_display_command(resume_generic)
         absolute_generic_resume_command = _build_display_command([str(generic_path), "--identity-id", args.identity_id, "--", "resume", thread_id])
-        recommended_resume_command = preferred_resume_command if shortcut_command_on_path else absolute_resume_command
+        fresh_shell_resume_command = _build_generic_resume_command(
+            launcher=GENERIC_LAUNCHER_NAME,
+            identity_id=args.identity_id,
+            catalog_path=catalog_path,
+            thread_id=thread_id,
+            require_explicit_catalog=require_explicit_catalog,
+            session_id=resolved_resume_session_id,
+        )
+        absolute_fresh_shell_resume_command = _build_generic_resume_command(
+            launcher=str(generic_path),
+            identity_id=args.identity_id,
+            catalog_path=catalog_path,
+            thread_id=thread_id,
+            require_explicit_catalog=require_explicit_catalog,
+            session_id=resolved_resume_session_id,
+        )
+        if resume_command_fresh_shell_executable_status == STATUS_PASS_REQUIRED:
+            if require_explicit_catalog or resolved_resume_session_id:
+                recommended_resume_command = (
+                    fresh_shell_resume_command if generic_command_on_path else absolute_fresh_shell_resume_command
+                )
+            else:
+                recommended_resume_command = preferred_resume_command if shortcut_command_on_path else absolute_resume_command
+        else:
+            recommended_resume_command = ""
         payload.update(
             {
                 "preferred_resume_command": preferred_resume_command,
                 "absolute_resume_command": absolute_resume_command,
                 "generic_resume_command": generic_resume_command,
                 "absolute_generic_resume_command": absolute_generic_resume_command,
+                "fresh_shell_resume_command": fresh_shell_resume_command,
+                "absolute_fresh_shell_resume_command": absolute_fresh_shell_resume_command,
                 "recommended_resume_command": recommended_resume_command,
-                "recommended_user_command": recommended_resume_command,
+                "recommended_user_command": recommended_resume_command or recommended_start_command,
             }
         )
         payload["copyable_commands"]["resume"] = {
@@ -298,11 +427,18 @@ def _cmd_commands(args: argparse.Namespace) -> int:
             "absolute": absolute_resume_command,
             "generic": generic_resume_command,
             "generic_absolute": absolute_generic_resume_command,
+            "fresh_shell": fresh_shell_resume_command,
+            "fresh_shell_absolute": absolute_fresh_shell_resume_command,
             "thread_id": thread_id,
             "thread_source": thread_source,
+            "session_id": resolved_resume_session_id,
+            "session_source": resolved_resume_session_source,
+            "catalog_explicit_flag_required": require_explicit_catalog,
             "shortcut_on_path": shortcut_command_on_path,
             "generic_on_path": generic_command_on_path,
         }
+        if resume_command_fresh_shell_executable_status != STATUS_PASS_REQUIRED:
+            payload["resume_reason"] = identity_session_tuple_reason
     else:
         payload["resume_reason"] = thread_source
     _emit_commands(payload, json_only=args.json_only)
@@ -351,6 +487,8 @@ def main() -> int:
     p_commands.add_argument("--current-task", default="")
     p_commands.add_argument("--bin-dir", default="")
     p_commands.add_argument("--thread-id", default="")
+    p_commands.add_argument("--actor-id", default="assistant:codex")
+    p_commands.add_argument("--session-id", default="")
     p_commands.add_argument("--json-only", action="store_true")
     p_commands.set_defaults(func=_cmd_commands)
 

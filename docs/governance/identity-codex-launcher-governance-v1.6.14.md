@@ -57,6 +57,25 @@ Execution mode: topic-level canonical SSOT for v1.6.14 identity-Codex launcher g
 9. That command-discovery surface must print already assembled copyable commands; operators must not need to manually splice identity ids, launcher names, or resume thread UUIDs in chat.
 10. The same command-discovery surface must also expose a structured `--json-only` bundle for instance/runtime consumers, so protocol remains the guidance owner while the concrete user-facing answer remains the identity instance’s responsibility.
 11. That structured launcher bundle may embed internal support bundles from other governed streams, such as `v1.6.16` continuity support, but those embedded bundles remain internal-only and must not create a second operator-facing command family.
+12. The protocol-owned recommendation surface must be **fresh-shell executable**, not merely path-aware:
+   - `recommended_start_command`,
+   - `recommended_resume_command`,
+   - and `recommended_user_command`
+   must already be self-contained for the shell that requested the bundle.
+13. When the resolved identity catalog differs from the ambient shell catalog, the command bundle must switch its recommended start/resume surfaces to the generic launcher form carrying explicit `--catalog <resolved-catalog>`.
+14. Resume readiness is fail-close and decomposed:
+   - host-thread UUID presence alone must **not** upgrade `resume_status` to `PASS_REQUIRED`;
+   - `resume_status` may be `PASS_REQUIRED` only when the host thread id and the authoritative identity session tuple are both resolved;
+   - when resume requires tuple closure, the recommended resume command must carry explicit `--session-id run:<...>` rather than promoting a short launcher shortcut that cannot encode that tuple.
+15. The structured JSON bundle must therefore surface machine-readable readiness decomposition for at least:
+   - `catalog_context_status`,
+   - `host_thread_id_status`,
+   - `identity_session_tuple_status`,
+   - `resume_command_fresh_shell_executable_status`.
+16. Semantic freeze for recovery correctness:
+   - `resume <host-thread-uuid>` remains the Codex-side recovery target for prior transcript/state;
+   - `--session-id run:<...>` is launcher-side tuple closure only;
+   - the launcher must never substitute the session tuple for the host thread UUID, and must never reinterpret the host thread UUID as the session tuple.
 
 ### 2.2 Canonical path contract
 
@@ -221,7 +240,8 @@ These names and directories are frozen by this stream. The renderer / installer 
    - `resolve_identity_context.py resolve --identity-id <id>` from a sibling workspace must classify the workspace-local runtime catalog as `source_layer=project` with `resolved_scope=USER` instead of degrading to `unknown`.
    - `identity-codex commands --identity-id <id>` and `id-<id> commands` must emit full copyable start/resume commands from protocol truth instead of requiring operators to manually assemble launcher invocations.
    - those copyable commands must be terminal-native direct commands (`id-<id> ...`, `identity-codex --identity-id <id> ...`), not shell-wrapped helper strings such as `zsh -lic '...'`.
-   - `recommended_user_command` must remain protocol-owned and environment-aware: when the canonical short launcher is not discoverable on the current `PATH`, the bundle must switch to the absolute direct launcher path instead of forcing the operator to debug shell profile state manually.
+   - `recommended_user_command` must remain protocol-owned, environment-aware, and fresh-shell executable: when the canonical short launcher is not discoverable on the current `PATH`, the bundle must switch to the absolute direct launcher path; when the ambient shell catalog mismatches the resolved identity catalog, it must emit explicit `--catalog`; when resume requires tuple closure, it must emit explicit `--session-id run:<...>` rather than promoting a stale short launcher.
+   - host-thread UUID presence alone must not promote resume readiness; the machine-visible decomposition must distinguish `host_thread_id_status`, `identity_session_tuple_status`, and `resume_command_fresh_shell_executable_status`.
    - `identity-codex commands --identity-id <id> --json-only` must emit a structured command bundle (`recommended_user_command`, `copyable_commands`, `instance_answer_guidance`) so identity instances can answer concretely without inventing their own launcher logic.
 13. Audit follow-on closure note (2026-03-23): the formerly separate raw catalog metadata hygiene boundary is now protocol-owned and closed on `v1.6.10`:
    - `scripts/validate_runtime_catalog_metadata_hygiene.py` and `scripts/repair_runtime_catalog_metadata_hygiene.py` now own raw row self-description such as `canonical_scope` / `canonical_pack_path`;

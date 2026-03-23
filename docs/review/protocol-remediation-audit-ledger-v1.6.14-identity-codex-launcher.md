@@ -95,10 +95,22 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - `identity-codex commands --identity-id <identity-id> --json-only`
    must return a structured command bundle so identity instances can answer concretely without inventing launcher logic.
 8. Embedded internal support bundles from other streams, such as `v1.6.16` continuity support, are acceptable only inside that structured JSON bundle and must not become independent operator command folklore.
-9. Pack-local launcher assets land only under `<pack_path>/scripts/launchers/`.
-10. Installed launchers land only under `${CODEX_HOME}/bin/`.
-11. Workspace `scripts/codex_native_chat/` remains compatibility bridge only until protocol-owned launcher assets land.
-12. Launcher ownership of `model_instructions_file` and `project_doc_fallback_filenames` injection remains explicit and fail-close.
+9. The protocol-owned recommended command surfaces must be judged by **fresh-shell executability**, not by shortcut discoverability or host-thread presence alone.
+10. If the resolved identity catalog differs from the ambient shell catalog, the recommended command must switch to the generic launcher form carrying explicit `--catalog <resolved-catalog>`.
+11. If resume requires identity-session tuple closure, the recommended resume command must carry explicit `--session-id run:<...>`; a short launcher shortcut that cannot encode that tuple is not an auditable recommendation surface.
+12. Audit interpretation of resume readiness is decomposed and fail-close:
+    - `host_thread_id_status`
+    - `identity_session_tuple_status`
+    - `resume_command_fresh_shell_executable_status`
+    together determine whether `resume_status` may be `PASS_REQUIRED`.
+13. Recovery semantics are frozen and must not drift during implementation:
+    - `resume <host-thread-uuid>` remains the Codex recovery target for prior records;
+    - `--session-id run:<...>` is only launcher-side tuple closure;
+    - auditing must fail any implementation that swaps, collapses, or conflates those two identifiers.
+14. Pack-local launcher assets land only under `<pack_path>/scripts/launchers/`.
+15. Installed launchers land only under `${CODEX_HOME}/bin/`.
+16. Workspace `scripts/codex_native_chat/` remains compatibility bridge only until protocol-owned launcher assets land.
+17. Launcher ownership of `model_instructions_file` and `project_doc_fallback_filenames` injection remains explicit and fail-close.
 
 ## 5) Audit verdict rules (frozen)
 
@@ -186,7 +198,8 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - `resolve_identity_context.py resolve --identity-id <id>` from the sibling workspace classifies that runtime catalog as `source_layer=project` with `resolved_scope=USER`.
    - `identity-codex commands --identity-id <id>` and `id-<id> commands` return a ready-to-copy command bundle rather than leaving command assembly to the operator.
    - that bundle is terminal-native and direct (`id-<id> ...`, `identity-codex --identity-id <id> ...`), not shell-wrapped helper text such as `zsh -lic '...'`.
-   - the protocol-owned `recommended_user_command` is also environment-aware: if the current shell cannot discover the short launcher on `PATH`, the bundle falls back to the absolute direct launcher path instead of leaking shell-profile debugging back to the operator.
+   - the protocol-owned `recommended_user_command` is also environment-aware **and** fresh-shell executable: if the current shell cannot discover the short launcher on `PATH`, the bundle falls back to the absolute direct launcher path; if the ambient catalog mismatches the resolved identity catalog, the bundle emits explicit `--catalog`; if resume requires tuple closure, the bundle emits explicit `--session-id run:<...>` rather than a stale short shortcut.
+   - host-thread UUID presence alone must not be audited as resume readiness; the machine-visible decomposition must distinguish `host_thread_id_status`, `identity_session_tuple_status`, and `resume_command_fresh_shell_executable_status`.
    - `identity-codex commands --identity-id <id> --json-only` returns a structured bundle with `recommended_user_command`, `copyable_commands`, and `instance_answer_guidance`, preserving the boundary “protocol guides, instance answers”.
 5. Audit follow-on closure note (2026-03-23): the raw runtime-catalog metadata follow-on is now closed on its own `v1.6.10` lane:
    - `scripts/validate_runtime_catalog_metadata_hygiene.py` / `scripts/repair_runtime_catalog_metadata_hygiene.py` now own raw row self-description;

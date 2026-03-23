@@ -549,11 +549,36 @@ def resolve_launcher_tuple(
     catalog_path: Path,
     protocol_home: Path,
 ) -> tuple[str, str]:
+    def _require_authoritative_tuple(session_id: str, session_source: str) -> tuple[str, str]:
+        try:
+            authority = resolve_launcher_runtime_authority(
+                identity_id=identity_id,
+                actor_id=actor_id,
+                session_id=session_id,
+                catalog_path=catalog_path,
+                protocol_home=protocol_home,
+            )
+        except Exception as exc:
+            raise RuntimeError(
+                "current-turn session tuple unresolved: launcher command discovery requires an authoritative "
+                f"identity session tuple for identity_id={identity_id}; source={session_source}; detail={exc}"
+            ) from exc
+        authority_status = str(authority.get("runtime_authoritative_identity_status", "")).strip()
+        authoritative_identity_id = str(authority.get("authoritative_identity_id", "")).strip()
+        if authority_status != STATUS_PASS_REQUIRED or authoritative_identity_id != identity_id:
+            resolution_mode = str(authority.get("resolution_mode", "")).strip() or "authoritative_identity_unresolved"
+            raise RuntimeError(
+                "current-turn session tuple unresolved: launcher command discovery requires an authoritative "
+                f"identity session tuple for identity_id={identity_id}; source={session_source}; "
+                f"resolution_mode={resolution_mode}; authoritative_identity_id={authoritative_identity_id or '<missing>'}"
+            )
+        return session_id, session_source
+
     explicit = str(explicit_session_id or "").strip()
     if explicit:
         current_session_id, current_session_source = _resolve_explicit_or_env_session_id(explicit)
         if current_session_id:
-            return current_session_id, current_session_source
+            return _require_authoritative_tuple(current_session_id, current_session_source)
     session_id, session_source = resolve_bound_session_id_for_identity(
         protocol_home=protocol_home,
         catalog_path=catalog_path,
@@ -564,7 +589,7 @@ def resolve_launcher_tuple(
         raise RuntimeError(
             "current-turn session tuple unresolved: no authoritative bound session_id found for the current identity"
         )
-    return session_id, session_source
+    return _require_authoritative_tuple(session_id, session_source)
 
 
 def _prompt_version(pack_path: Path) -> str:

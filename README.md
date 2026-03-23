@@ -52,21 +52,38 @@ If the per-identity short launcher is already installed, the even shorter surfac
 id-<identity-id> commands
 ```
 
-If you want a resume command outside the currently running identity session, pass the host thread UUID explicitly:
+If you want the bundle to evaluate resume readiness, pass the host thread UUID explicitly:
 
 ```bash
 identity-codex commands --identity-id <identity-id> --thread-id <host-thread-uuid>
 ```
 
+If you are running the discovery flow outside the currently authoritative identity session binding,
+seed the run tuple explicitly so the bundle can still produce a fresh-shell-executable resume command:
+
+```bash
+identity-codex commands --identity-id <identity-id> --thread-id <host-thread-uuid> --session-id <run:session-id>
+```
+
+Critical semantic boundary:
+
+- `resume <host-thread-uuid>` is still the **Codex transcript recovery target**.
+- `--session-id run:<...>` is only the launcher-side identity session tuple closure.
+- `--session-id` does **not** replace `resume <host-thread-uuid>`.
+- the host thread UUID must **never** be reinterpreted as the identity session tuple.
+
 What this prints:
 
 - preferred short start command, for example `id-<identity-id>`
 - absolute-path fallback start command under `${CODEX_HOME}/bin/`
-- preferred short resume command when a host thread UUID is available
+- preferred short resume command as a reference surface, plus the protocol-owned fresh-shell resume command when resume is actually executable
 - generic `identity-codex --identity-id ...` equivalents for repair/documentation flows
 - all commands are terminal-native direct commands; shell-wrapped `zsh -lic '...'` surfaces are non-canonical
-- `recommended_user_command` automatically selects the direct command that works in the current shell:
-  short launcher when `${CODEX_HOME}/bin` is already on `PATH`, otherwise the absolute launcher path fallback
+- `recommended_user_command` is selected by fresh-shell executability, not by host-thread UUID presence alone
+- when the ambient shell catalog does not match the resolved identity catalog, the recommended command carries explicit `--catalog <resolved-catalog>`
+- when resume needs identity-session tuple closure, the recommended resume command carries explicit `--session-id run:<...>`
+- `resume_status` can be `PASS_REQUIRED` only when both the host thread UUID and the authoritative identity session tuple are resolved
+- when no fresh-shell resume command is available, `recommended_user_command` falls back to the start command instead of promoting a stale shortcut
 
 For identity instances and other protocol consumers, use the structured surface:
 
@@ -77,6 +94,10 @@ identity-codex commands --identity-id <identity-id> --json-only
 That JSON is the protocol-owned guidance bundle. It now carries:
 
 - `recommended_user_command`
+- `catalog_context_status`
+- `host_thread_id_status`
+- `identity_session_tuple_status`
+- `resume_command_fresh_shell_executable_status`
 - `copyable_commands.start`
 - `copyable_commands.resume`
 - `instance_answer_guidance`

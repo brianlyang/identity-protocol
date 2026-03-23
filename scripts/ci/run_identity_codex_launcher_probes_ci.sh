@@ -19,10 +19,29 @@ import uuid
 print(uuid.uuid4())
 PY
 )"
+NEGATIVE_ACTOR_ID="assistant:codex-launcher-negative-probe"
 export CODEX_HOME
 export IDENTITY_HOME
 export IDENTITY_PROTOCOL_HOME="${REPO_ROOT}"
 export IDENTITY_CATALOG="${CATALOG_PATH}"
+
+SESSION_ID="$(python3 - <<PY
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path("${REPO_ROOT}/scripts").resolve()))
+from actor_session_common import resolve_bound_session_id_for_identity  # type: ignore
+
+session_id, _source = resolve_bound_session_id_for_identity(
+    Path("${CATALOG_PATH}").resolve(),
+    "assistant:codex",
+    "${IDENTITY_ID}",
+)
+if not session_id:
+    raise SystemExit("missing authoritative bound session id for launcher probe identity")
+print(session_id)
+PY
+)"
+INVALID_SESSION_ID="run:identity-codex-launcher-invalid-${HOST_THREAD_UUID}"
 
 run_cmd() {
   echo "[RUN] $*"
@@ -48,26 +67,43 @@ run_cmd python3 "${REPO_ROOT}/scripts/validate_identity_codex_launcher.py" \
 
 DRY_RUN_JSON="${TMP_ROOT}/launcher-dry-run.json"
 COMMANDS_JSON="${TMP_ROOT}/launcher-commands.json"
+NO_SESSION_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-no-session.json"
+INVALID_SESSION_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-invalid-session.json"
 SHORTCUT_COMMANDS_JSON="${TMP_ROOT}/shortcut-launcher-commands.json"
+NEGATIVE_DRY_RUN_JSON="${TMP_ROOT}/launcher-dry-run-no-session.json"
+INVALID_SESSION_DRY_RUN_JSON="${TMP_ROOT}/launcher-dry-run-invalid-session.json"
 
-echo "[RUN] ${BIN_DIR}/identity-codex commands --identity-id ${IDENTITY_ID} --thread-id <thread-uuid> --json-only"
+echo "[RUN] ${BIN_DIR}/identity-codex commands --identity-id ${IDENTITY_ID} --thread-id <thread-uuid> --session-id <session-id> --json-only"
 "${BIN_DIR}/identity-codex" \
   commands \
   --identity-id "${IDENTITY_ID}" \
   --thread-id "${HOST_THREAD_UUID}" \
+  --session-id "${SESSION_ID}" \
   --json-only > "${COMMANDS_JSON}"
 
-python3 - "${COMMANDS_JSON}" "${HOST_THREAD_UUID}" <<'PY'
+python3 - "${COMMANDS_JSON}" "${HOST_THREAD_UUID}" "${SESSION_ID}" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 host_thread_uuid = sys.argv[2]
+session_id = sys.argv[3]
 assert payload["status"] == "PASS_REQUIRED", payload
 assert payload["command_bundle_contract_id"] == "identity_codex_launcher_command_discovery_contract_v1", payload
 assert payload["question_family"] == "identity_launcher_start_resume", payload
+assert payload["catalog_context_status"] == "PASS_REQUIRED", payload
+assert payload["catalog_context_reason"] == "ambient_catalog_matches_resolved_catalog", payload
+assert payload["catalog_explicit_flag_required"] is False, payload
 assert payload["resume_status"] == "PASS_REQUIRED", payload
+assert payload["host_thread_id_status"] == "PASS_REQUIRED", payload
+assert payload["host_thread_id_present"] is True, payload
+assert payload["current_host_thread_id"] == host_thread_uuid, payload
+assert payload["identity_session_tuple_status"] == "PASS_REQUIRED", payload
+assert payload["identity_session_tuple_reason"] == "explicit_session_id", payload
+assert payload["resolved_resume_session_id"] == session_id, payload
+assert payload["resolved_resume_session_source"] == "explicit_session_id", payload
+assert payload["resume_command_fresh_shell_executable_status"] == "PASS_REQUIRED", payload
 continuity = payload["continuity_support"]
 assert continuity["bundle_contract_id"] == "identity_context_continuity_bundle_v1", payload
 assert continuity["bundle_role"] == "launcher_and_instance_internal_support", payload
@@ -92,41 +128,112 @@ assert payload["preferred_start_command"] == f"id-{payload['identity_id']}", pay
 assert payload["preferred_resume_command"] == f"id-{payload['identity_id']} resume {host_thread_uuid}", payload
 assert payload["absolute_start_command"].endswith(f"/id-{payload['identity_id']}"), payload
 assert payload["generic_start_command"] == f"identity-codex --identity-id {payload['identity_id']}", payload
+assert payload["fresh_shell_start_command"] == payload["generic_start_command"], payload
+assert payload["absolute_fresh_shell_start_command"] == payload["absolute_generic_start_command"], payload
 assert payload["generic_resume_command"] == (
     f"identity-codex --identity-id {payload['identity_id']} -- resume {host_thread_uuid}"
 ), payload
+assert payload["fresh_shell_resume_command"] == (
+    f"identity-codex --identity-id {payload['identity_id']} --session-id {session_id} -- resume {host_thread_uuid}"
+), payload
 assert payload["recommended_start_command"] == payload["absolute_start_command"], payload
-assert payload["recommended_resume_command"] == payload["absolute_resume_command"], payload
+assert payload["recommended_resume_command"] == payload["absolute_fresh_shell_resume_command"], payload
+assert payload["recommended_resume_command"].endswith(f"resume {host_thread_uuid}"), payload
 assert payload["recommended_user_command"] == payload["recommended_resume_command"], payload
 assert payload["copyable_commands"]["start"]["preferred"] == payload["preferred_start_command"], payload
 assert payload["copyable_commands"]["start"]["recommended"] == payload["recommended_start_command"], payload
 assert payload["copyable_commands"]["resume"]["thread_id"] == host_thread_uuid, payload
+assert payload["copyable_commands"]["resume"]["session_id"] == session_id, payload
+assert payload["copyable_commands"]["resume"]["session_source"] == "explicit_session_id", payload
 assert payload["copyable_commands"]["resume"]["recommended"] == payload["recommended_resume_command"], payload
 assert payload["instance_answer_guidance"]["manual_command_assembly_forbidden"] is True, payload
 print("launcher_command_bundle_status=PASS_REQUIRED")
 PY
 
-echo "[RUN] ${BIN_DIR}/id-${IDENTITY_ID} commands --thread-id <thread-uuid> --json-only"
-"${BIN_DIR}/id-${IDENTITY_ID}" \
+echo "[RUN] ${BIN_DIR}/identity-codex commands --identity-id ${IDENTITY_ID} --thread-id <thread-uuid> --actor-id ${NEGATIVE_ACTOR_ID} --json-only (negative: unresolved session tuple)"
+"${BIN_DIR}/identity-codex" \
   commands \
+  --identity-id "${IDENTITY_ID}" \
   --thread-id "${HOST_THREAD_UUID}" \
-  --json-only > "${SHORTCUT_COMMANDS_JSON}"
+  --actor-id "${NEGATIVE_ACTOR_ID}" \
+  --json-only > "${NO_SESSION_COMMANDS_JSON}"
 
-python3 - "${SHORTCUT_COMMANDS_JSON}" <<'PY'
+python3 - "${NO_SESSION_COMMANDS_JSON}" "${HOST_THREAD_UUID}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+host_thread_uuid = sys.argv[2]
+assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["host_thread_id_status"] == "PASS_REQUIRED", payload
+assert payload["host_thread_id_present"] is True, payload
+assert payload["current_host_thread_id"] == host_thread_uuid, payload
+assert payload["identity_session_tuple_status"] == "FAIL_REQUIRED", payload
+assert "current-turn session tuple unresolved" in payload["identity_session_tuple_reason"], payload
+assert payload["resume_command_fresh_shell_executable_status"] == "FAIL_REQUIRED", payload
+assert payload["resume_status"] == "FAIL_REQUIRED", payload
+assert payload["recommended_resume_command"] == "", payload
+assert payload["recommended_user_command"] == payload["recommended_start_command"], payload
+assert payload["copyable_commands"]["resume"]["session_id"] == "", payload
+assert payload["copyable_commands"]["resume"]["recommended"] == "", payload
+assert payload["resume_reason"] == payload["identity_session_tuple_reason"], payload
+print("launcher_command_bundle_negative_session_gate_status=PASS_REQUIRED")
+PY
+
+echo "[RUN] ${BIN_DIR}/identity-codex commands --identity-id ${IDENTITY_ID} --thread-id <thread-uuid> --session-id <invalid-session-id> --json-only (negative: non-authoritative explicit session tuple)"
+"${BIN_DIR}/identity-codex" \
+  commands \
+  --identity-id "${IDENTITY_ID}" \
+  --thread-id "${HOST_THREAD_UUID}" \
+  --session-id "${INVALID_SESSION_ID}" \
+  --json-only > "${INVALID_SESSION_COMMANDS_JSON}"
+
+python3 - "${INVALID_SESSION_COMMANDS_JSON}" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["identity_session_tuple_status"] == "FAIL_REQUIRED", payload
+assert "current-turn session tuple unresolved" in payload["identity_session_tuple_reason"], payload
+assert payload["resume_command_fresh_shell_executable_status"] == "FAIL_REQUIRED", payload
+assert payload["resume_status"] == "FAIL_REQUIRED", payload
+assert payload["recommended_resume_command"] == "", payload
+assert payload["copyable_commands"]["resume"]["session_id"] == "", payload
+assert payload["copyable_commands"]["resume"]["recommended"] == "", payload
+assert payload["resume_reason"] == payload["identity_session_tuple_reason"], payload
+print("launcher_command_bundle_invalid_explicit_session_status=PASS_REQUIRED")
+PY
+
+echo "[RUN] ${BIN_DIR}/id-${IDENTITY_ID} commands --thread-id <thread-uuid> --session-id <session-id> --json-only"
+"${BIN_DIR}/id-${IDENTITY_ID}" \
+  commands \
+  --thread-id "${HOST_THREAD_UUID}" \
+  --session-id "${SESSION_ID}" \
+  --json-only > "${SHORTCUT_COMMANDS_JSON}"
+
+python3 - "${SHORTCUT_COMMANDS_JSON}" "${SESSION_ID}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+session_id = sys.argv[2]
+assert payload["status"] == "PASS_REQUIRED", payload
 assert payload["identity_id"], payload
 assert payload["command_discovery"]["instance_answer_mode"] == "instance_returns_concrete_commands", payload
 assert payload["continuity_support"]["bundle_contract_id"] == "identity_context_continuity_bundle_v1", payload
 assert payload["shortcut_command_on_path"] is False, payload
+assert payload["identity_session_tuple_status"] == "PASS_REQUIRED", payload
+assert payload["resolved_resume_session_id"] == session_id, payload
 assert payload["preferred_start_command"] == f"id-{payload['identity_id']}", payload
 assert payload["preferred_resume_command"].startswith(f"id-{payload['identity_id']} resume "), payload
 assert payload["recommended_start_command"] == payload["absolute_start_command"], payload
-assert payload["recommended_resume_command"] == payload["absolute_resume_command"], payload
+assert payload["recommended_resume_command"] == payload["absolute_fresh_shell_resume_command"], payload
+assert payload["recommended_resume_command"].endswith(payload["current_host_thread_id"]), payload
+assert payload["copyable_commands"]["resume"]["session_id"] == session_id, payload
 assert payload["instance_answer_guidance"]["continuity_support_internal_only"] is True, payload
 print("launcher_shortcut_command_bundle_status=PASS_REQUIRED")
 PY
@@ -157,9 +264,56 @@ if violations:
 print("launcher_uuid_literal_guard_status=PASS_REQUIRED")
 PY
 
-echo "[RUN] ${BIN_DIR}/identity-codex --identity-id ${IDENTITY_ID} --dry-run --json-only -- resume <thread-uuid>"
+echo "[RUN] ${BIN_DIR}/identity-codex --identity-id ${IDENTITY_ID} --actor-id ${NEGATIVE_ACTOR_ID} --dry-run --json-only -- resume <thread-uuid> (negative: unresolved session tuple)"
+if "${BIN_DIR}/identity-codex" \
+  --identity-id "${IDENTITY_ID}" \
+  --actor-id "${NEGATIVE_ACTOR_ID}" \
+  --dry-run \
+  --json-only \
+  -- \
+  resume "${HOST_THREAD_UUID}" > "${NEGATIVE_DRY_RUN_JSON}"; then
+  echo "[FAIL] launcher missing-session dry-run unexpectedly passed"
+  exit 1
+fi
+
+python3 - "${NEGATIVE_DRY_RUN_JSON}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["status"] == "FAIL_REQUIRED", payload
+assert "current-turn session tuple unresolved" in payload["error"], payload
+print("launcher_dry_run_missing_session_status=PASS_REQUIRED")
+PY
+
+echo "[RUN] ${BIN_DIR}/identity-codex --identity-id ${IDENTITY_ID} --session-id <invalid-session-id> --dry-run --json-only -- resume <thread-uuid> (negative: non-authoritative explicit session tuple)"
+if "${BIN_DIR}/identity-codex" \
+  --identity-id "${IDENTITY_ID}" \
+  --session-id "${INVALID_SESSION_ID}" \
+  --dry-run \
+  --json-only \
+  -- \
+  resume "${HOST_THREAD_UUID}" > "${INVALID_SESSION_DRY_RUN_JSON}"; then
+  echo "[FAIL] launcher invalid-session dry-run unexpectedly passed"
+  exit 1
+fi
+
+python3 - "${INVALID_SESSION_DRY_RUN_JSON}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["status"] == "FAIL_REQUIRED", payload
+assert "current-turn session tuple unresolved" in payload["error"], payload
+print("launcher_dry_run_invalid_session_status=PASS_REQUIRED")
+PY
+
+echo "[RUN] ${BIN_DIR}/identity-codex --identity-id ${IDENTITY_ID} --session-id <session-id> --dry-run --json-only -- resume <thread-uuid>"
 "${BIN_DIR}/identity-codex" \
   --identity-id "${IDENTITY_ID}" \
+  --session-id "${SESSION_ID}" \
   --dry-run \
   --json-only \
   -- \
