@@ -192,6 +192,7 @@ Symptoms:
 Root cause:
 
 - `v1.6.15` currently hardens the route -> instance-script -> lane-admission chain, but direct conversation-level tool execution is not yet required to enter through that chain; as a result, undeclared live rescue lanes can still succeed outside protocol-owned route/lane admission.
+- protocol closure note (2026-03-23): the shared owner lane now closes this blind spot at protocol level by freezing additive direct-tool admission plus the canonical execution-lane taxonomy for webhook and interactive direct-tool lanes. Remaining browser-manual rollout gaps are instance-owned adoption debt, not missing protocol semantics.
 
 ### RC-13 Third/fourth-loop source contracts exist, but runtime-consumable strengthening symmetry is still missing
 
@@ -710,10 +711,10 @@ Root cause:
   - `scripts/collect_identity_health_report.py` now invokes the pointer guard through `--strict-session-primary`, and `scripts/repair_actor_session_authority_residue.py` rebuilds canonical/mirror pointer surfaces from authoritative binding first.
   - `scripts/validate_identity_session_pointer_consistency.py` no longer exposes the old `--allow-compatibility-projection-drift` interface residue on strict lanes.
 
-### ISSUE-027 - Motherline no-downgrade contract is now frozen; remaining compatibility residue must stay quarantined
+### ISSUE-027 - Motherline no-downgrade contract is now frozen and live residue is quarantined off active payloads
 
-- `status`: OPEN
-- `problem_statement`: the bottom-layer no-downgrade / no-backstop / no backward-compatibility rule is now frozen, but the protocol still has to keep residual compatibility language and helper tails from re-entering active surfaces. The open work is no longer “define the principle”; it is “hold the principle everywhere so active defaults, validator green paths, current-turn runtime truth, active execution entry, and protocol-owned success paths never regress back into compatibility behavior.”
+- `status`: CLOSED
+- `problem_statement`: the bottom-layer no-downgrade / no-backstop / no backward-compatibility rule is frozen, and the remaining live compatibility residue has now been pushed off active payload surfaces. The closure target was not “invent a new principle” but “hold the existing principle everywhere so active defaults, validator green paths, current-turn runtime truth, active execution entry, and protocol-owned success paths do not regress back into compatibility behavior.”
 - `primary_owner_doc`: `identity/protocol/IDENTITY_PROTOCOL.md`
 - `secondary_refs`:
   - `identity/protocol/IDENTITY_RUNTIME.md`
@@ -733,43 +734,42 @@ Root cause:
 - `stop_condition`:
   - `rq_047_protocol_no_downgrade_motherline_contract_v1` remains frozen in protocol kernel text, contract binding, governance, and review surfaces;
   - active scaffold/validator/helper families stay green only when compatibility residue is quarantined away from active defaults, validator green paths, current-turn runtime truth, active execution entry, and protocol-owned success paths;
+  - active governed payload families keep canonical `error_code` only; replay/migration alias echo is explicit rather than implicit;
   - canonical docs/workbook/review truth stays synchronized so residual wording cannot quietly reopen downgrade/backstop semantics.
-- `current_evidence`:
+- `closure_evidence`:
   - `identity/protocol/IDENTITY_PROTOCOL.md` now freezes `rq_047_protocol_no_downgrade_motherline_contract_v1`;
   - `identity/protocol/mappings/contract-binding.v1.6.yaml` now binds the rule as `ASB16-RQ-047`;
   - `identity/protocol/IDENTITY_RUNTIME.md` now hard-freezes active-runtime no-downgrade semantics, including current-turn truth, active entry, and validator-green-path boundaries;
   - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml` now explicitly says the protocol does not provide backward compatibility on active surfaces;
-  - `ISSUE-027` remains OPEN only for residual cleanup/truth-sync and regression-prevention tails, not because the motherline principle is still missing.
+  - `scripts/headstamp_error_family_common.py` now keeps active payload projection canonical-only by default and requires explicit replay/migration opt-in before alias echo can appear;
+  - `scripts/validate_compatibility_legacy_boundary.py --json-only` now returns `PASS_REQUIRED` only when active payload projection stays canonical-only and replay alias echo remains explicit/quarantined;
+  - `docs/governance/identity-headstamp-egress-governance-v1.6.1.md` truth-syncs that `legacy_error_code` / `compat_error_code` are replay-only and forbidden on active governed payload surfaces.
 
-### ISSUE-028 - Declared route/script lane governance still cannot hard-stop direct tool-call rescue lanes
+### ISSUE-028 - Declared route/script lane governance is now protocol-owned; remaining browser-manual gaps are instance adoption only
 
-- `status`: OPEN
-- `problem_statement`: live instance evidence from `office-ops-expert` shows a protocol-owned blind spot in `v1.6.15`: the declared route contract for `office_image_sheet_build` only admits a serialized governed webhook lane, while the real business-success path under cloud quota failure is a browser-manual n8n lane reached through direct `n8n_mcp` / `chrome_devtools` tool calls in conversation. Because the pack manifest carries only receipt/emitter/recovery helpers and no true n8n business executor script, the current governance shell cannot own lane choice, auth preflight, or session freshness before tools fire.
+- `status`: CLOSED
+- `problem_statement`: `v1.6.15` originally left a protocol-owned blind spot because direct MCP/browser rescue could still feel extra-contractual. The shared owner lane now closes that gap generically: direct tool entry must enter via route/script/lane admission or fail closed, and the canonical execution-lane taxonomy now freezes both webhook and interactive direct-tool lanes without importing business-scene semantics. Remaining browser-manual rollout gaps belong to pack adoption, not protocol semantics.
 - `primary_owner_doc`: `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md`
 - `secondary_refs`:
-  - `/Users/yangxi/.codex/.identity/office-ops-expert/CURRENT_TASK.json`
-  - `/Users/yangxi/.codex/.identity/office-ops-expert/scripts/INSTANCE_SCRIPT_MANIFEST.json`
-  - `/Users/yangxi/.codex/.identity/office-ops-expert/scripts/office_route_execution_receipt.py`
-  - `/Users/yangxi/.codex/skills/office-ops-regression-self-drive/SKILL.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md`
+  - `scripts/instance_script_orchestration_common.py`
+  - `scripts/validate_route_execution_lane_admission.py`
+  - `scripts/validate_identity_capability_activation.py`
 - `machine_gate`:
   - `scripts/validate_route_execution_lane_admission.py`
   - `scripts/validate_identity_capability_activation.py`
   - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh`
-  - supporting live audit: office-ops route/manifest/session evidence scan
+  - supporting live adoption audit: target-pack route/manifest/session evidence scan
 - `root_cause`: RC-12 and RC-11
 - `stop_condition`:
   - direct tool execution for a declared route must either enter through route/script/lane admission or fail-close before MCP/browser tools run;
-  - browser-manual rescue becomes a declared canonical lane class when it is a real supported success path, rather than an undeclared fallback outside the contract;
-  - target packs such as `office-ops-expert` land instance-owned business executor scripts for lane switch, browser auth preflight, editor-run guard, and session-freshness checks instead of relying on receipt-only wrappers;
-  - skill guidance remains optional methodology unless it is explicitly bound into the governed script/lane entry path.
-- `current_evidence`:
-  - the protocol-owned validator family now freezes additive `direct_tool_entry_policy` semantics on top of the existing execution-lane contract; declared direct-tool lanes must use canonical `lane_source=governed_direct_tool_entry`, carry `receipt_timing=pre_tool_execution`, and report `tool_entry_admission_timing`, `auth_preflight_status`, and `session_freshness_status` through the shared `instance_script_admission_receipt` validator instead of relying on pack-local narrative;
-  - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh` now proves both positive direct-tool admission and negative fail-close on missing `direct_tool_entry_policy` / mismatched `tool_entry_admission_timing`, so the owner lane no longer treats direct-tool rescue semantics as out-of-band folklore;
-  - `office-ops-expert` route `office_image_sheet_build` currently declares `required_mcp=["n8n-mcp"]`, a single governed webhook lane row, and `lane_block_on_fallback=true`, so the observed browser-manual rescue lane is contract-external rather than contract-governed;
-  - the pack manifest currently contains only four helper scripts (`office_route_execution_receipt`, `emit_protocol_hud_line`, `self_heal_session_chain_tuple`, `run_strict_update_with_self_heal`) and no n8n business executor / auth-preflight / lane-switch controller;
-  - `office_route_execution_receipt.py` writes post-hoc receipts from provided lane parameters, but it does not decide lane admission before tool execution;
-  - `office-ops-regression-self-drive` and `ai-folder-governance` skills do not act as always-on tool-call interceptors for this lane family;
-  - `IDENTITY_PROMPT.md` still advertises `Methodology version: v1.5` / `Prompt version: v1.5` while `CURRENT_TASK.json` advertises `v1.6`, which is a governance-hygiene multiplier though not the primary execution defect.
+  - browser/manual rescue, when it is a legitimate supported lane, must be expressed through the canonical lane taxonomy rather than private pack-local token invention;
+  - remaining target-pack business executor rollout, auth preflight scripts, session-freshness scripts, and optional skill binding stay below protocol once the shared lane family is closed.
+- `closure_evidence`:
+  - the protocol-owned validator family freezes additive `direct_tool_entry_policy` semantics on top of the existing execution-lane contract; declared direct-tool lanes must use canonical `lane_source=governed_direct_tool_entry`, carry `receipt_timing=pre_tool_execution`, and report `tool_entry_admission_timing`, `auth_preflight_status`, and `session_freshness_status` through the shared `instance_script_admission_receipt` validator instead of relying on pack-local narrative;
+  - `scripts/instance_script_orchestration_common.py` now also freezes the canonical execution-lane taxonomy for current supported generic lanes: `governed_webhook` -> `webhook_single_flight` + `analysis_webhook`, and `governed_direct_tool_entry` -> `tool_admission_serialized` + `interactive_session`;
+  - `scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh` now proves positive direct-tool admission plus negative fail-close on missing `direct_tool_entry_policy`, mismatched `tool_entry_admission_timing`, and mismatched direct-tool lane taxonomy;
+  - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md` and `docs/review/protocol-remediation-audit-ledger-v1.6.15-instance-script-orchestration.md` now truth-sync that remaining browser-manual gaps are instance adoption only and must not be misreported as missing protocol semantics.
 
 ### ISSUE-029 - Workspace-local runtime catalog metadata hygiene is now protocol-owned and closed on its own lane
 

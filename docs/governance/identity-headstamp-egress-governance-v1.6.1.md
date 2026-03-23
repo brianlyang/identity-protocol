@@ -154,7 +154,7 @@ Strict tuple invariants:
 
 1. `IP-ASB-STAMP-SESSION-*` and `IP-FE-*` are legacy aliases only.
 2. Promotion-grade payload field `error_code` must emit canonical `IP-HDSTAMP-*` only.
-3. Legacy aliases may be retained in `legacy_error_code`/`compat_error_code` for replay migration, but cannot replace canonical `error_code`.
+3. Active runtime/control-plane/governed emit payloads must remain canonical-only; `legacy_error_code` / `compat_error_code` are forbidden on active success/error payloads and may appear only on explicit replay/migration projections that opt into alias echo.
 4. Mixed families in same surface for same defect are treated as non-converged.
 
 ## 4) Mandatory Control-Plane Wiring Matrix

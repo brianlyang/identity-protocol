@@ -8,6 +8,13 @@ from typing import Any
 
 import yaml
 
+from headstamp_error_family_common import (
+    ERR_HDSTAMP_ACTOR_LAYER_MISMATCH,
+    LEGACY_ERR_FINAL_EMIT_CONTEXT_RESOLVE,
+    LEGACY_ERROR_ALIAS_MODE_ACTIVE_CANONICAL_ONLY,
+    LEGACY_ERROR_ALIAS_MODE_REPLAY_MIGRATION,
+    inject_legacy_error_fields,
+)
 from registry_alias_control_plane_common import STREAM_DOC_REGISTRY_CURRENT, resolve_current_yaml_alias
 from repo_root_resolution_common import resolve_repo_root
 from validate_response_authority_consumer_semantics import DEFAULT_TARGET_FILES as AUTHORITY_CONSUMER_TARGETS
@@ -36,6 +43,19 @@ OPTIONAL_WORKSPACE_TARGETS = (
     "scripts/codex_native_chat/native_chat_bootstrap_bridge.py",
     "scripts/codex_native_chat/validate_native_chat_entry_bootstrap.py",
     "scripts/validate_headstamp_recurrence_closure.py",
+)
+ACTIVE_ERROR_ALIAS_TARGETS = (
+    "scripts/compose_and_validate_governed_reply.py",
+    "scripts/final_emit_governed.py",
+    "scripts/validate_headstamp_recurrence_closure.py",
+    "scripts/validate_layer_intent_resolution.py",
+    "scripts/validate_reply_identity_context_first_line.py",
+    "scripts/validate_send_time_reply_gate.py",
+)
+REPLAY_ALIAS_OPT_IN_MARKERS = (
+    "LEGACY_ERROR_ALIAS_MODE_REPLAY_MIGRATION",
+    'alias_mode="replay_migration"',
+    "alias_mode='replay_migration'",
 )
 
 
@@ -120,6 +140,96 @@ def _scan_target(path: Path, *, phrases: list[str], rel_label: str, violations: 
         )
 
 
+def _evaluate_headstamp_alias_policy() -> list[dict[str, Any]]:
+    violations: list[dict[str, Any]] = []
+    legacy_code = LEGACY_ERR_FINAL_EMIT_CONTEXT_RESOLVE
+
+    active_payload = inject_legacy_error_fields(
+        {"error_code": legacy_code},
+        alias_mode=LEGACY_ERROR_ALIAS_MODE_ACTIVE_CANONICAL_ONLY,
+    )
+    if active_payload.get("error_code") != ERR_HDSTAMP_ACTOR_LAYER_MISMATCH:
+        violations.append(
+            {
+                "file": "scripts/headstamp_error_family_common.py",
+                "reason": "active_alias_policy_failed_to_canonicalize",
+                "token": legacy_code,
+                "line_hits": [],
+            }
+        )
+    if "legacy_error_code" in active_payload or "compat_error_code" in active_payload:
+        violations.append(
+            {
+                "file": "scripts/headstamp_error_family_common.py",
+                "reason": "active_alias_policy_still_emits_legacy_alias_fields",
+                "token": legacy_code,
+                "line_hits": [],
+            }
+        )
+
+    replay_payload = inject_legacy_error_fields(
+        {"error_code": legacy_code},
+        alias_mode=LEGACY_ERROR_ALIAS_MODE_REPLAY_MIGRATION,
+    )
+    if replay_payload.get("error_code") != ERR_HDSTAMP_ACTOR_LAYER_MISMATCH:
+        violations.append(
+            {
+                "file": "scripts/headstamp_error_family_common.py",
+                "reason": "replay_alias_policy_failed_to_preserve_canonical_code",
+                "token": legacy_code,
+                "line_hits": [],
+            }
+        )
+    if replay_payload.get("legacy_error_code") != legacy_code or replay_payload.get("compat_error_code") != legacy_code:
+        violations.append(
+            {
+                "file": "scripts/headstamp_error_family_common.py",
+                "reason": "replay_alias_policy_missing_legacy_projection",
+                "token": legacy_code,
+                "line_hits": [],
+            }
+        )
+    return violations
+
+
+def _scan_error_alias_targets(repo_root: Path, violations: list[dict[str, Any]]) -> None:
+    for rel in ACTIVE_ERROR_ALIAS_TARGETS:
+        target = (repo_root / rel).resolve()
+        if not target.exists():
+            violations.append(
+                {
+                    "file": rel,
+                    "reason": "required_active_error_alias_target_missing",
+                    "token": "",
+                    "line_hits": [],
+                }
+            )
+            continue
+        text = target.read_text(encoding="utf-8", errors="ignore")
+        for marker in REPLAY_ALIAS_OPT_IN_MARKERS:
+            hits = _line_hits(text, marker)
+            if hits:
+                violations.append(
+                    {
+                        "file": rel,
+                        "reason": "replay_alias_opt_in_present_on_active_surface",
+                        "token": marker,
+                        "line_hits": hits[:10],
+                    }
+                )
+        if _line_hits(text, "legacy_error_code") or _line_hits(text, "compat_error_code"):
+            violations.append(
+                {
+                    "file": rel,
+                    "reason": "active_surface_mentions_legacy_error_alias_payload_fields",
+                    "token": "legacy_error_code/compat_error_code",
+                    "line_hits": sorted(
+                        set(_line_hits(text, "legacy_error_code") + _line_hits(text, "compat_error_code"))
+                    )[:10],
+                }
+            )
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description=(
@@ -162,6 +272,7 @@ def main() -> int:
         "allowed_scope": [],
         "forbidden_protocol_targets": list(FORBIDDEN_PROTOCOL_TARGETS),
         "forbidden_workspace_targets": list(OPTIONAL_WORKSPACE_TARGETS),
+        "active_error_alias_targets": list(ACTIVE_ERROR_ALIAS_TARGETS),
         "strict_user_visible_docs": [],
         "missing_workspace_targets": [],
         "extra_forbidden_targets": list(args.extra_forbidden_target),
@@ -246,6 +357,9 @@ def main() -> int:
             )
             continue
         _scan_target(target, phrases=guarded_phrases, rel_label=str(target), violations=violations)
+
+    violations.extend(_evaluate_headstamp_alias_policy())
+    _scan_error_alias_targets(repo_root, violations)
 
     payload["violations"] = violations
     payload["compatibility_legacy_boundary_status"] = STATUS_PASS_REQUIRED if not violations else STATUS_FAIL_REQUIRED

@@ -98,15 +98,19 @@ Execution mode: topic-level canonical SSOT for v1.6.15 identity-instance script 
    - `receipt_timing`
    - `required_pre_tool_checks`
 12. The canonical direct-tool lane source is `governed_direct_tool_entry`; if a real supported success path enters through direct MCP/browser/tool execution, it must declare that lane source instead of surviving as operator memory or per-pack folklore.
-13. When `direct_tool_entry_policy.mode=direct_tool_entry_requires_admission`, the route must still keep `lane_block_on_fallback=true`, and admission receipts must prove pre-tool entry through:
+13. The current protocol-owned execution-lane taxonomy for this stream is frozen to the following canonical rows:
+   - `lane_source=governed_webhook` -> `lane_class=webhook_single_flight` + `endpoint_class=analysis_webhook`
+   - `lane_source=governed_direct_tool_entry` -> `lane_class=tool_admission_serialized` + `endpoint_class=interactive_session`
+14. The taxonomy above is generic protocol infrastructure, not a business-lane special case: webhook single-flight and interactive direct-tool admission are the current canonical lane families, and any future lane source/class/endpoint expansion requires a later governed stream instead of pack-local token invention.
+15. When `direct_tool_entry_policy.mode=direct_tool_entry_requires_admission`, the route must still keep `lane_block_on_fallback=true`, and admission receipts must prove pre-tool entry through:
    - `tool_entry_admission_timing`
    - `auth_preflight_status`
    - `session_freshness_status`
-14. `tool_entry_admission_timing` is frozen to pre-tool admission semantics for direct tool lanes; post-hoc receipts do not legalize a direct-tool rescue path that bypassed route/lane admission.
-15. Route admission may not silently discover scripts or execution lanes by filename, operator convention, ambient browser/editor state, or workspace-global helper directories.
-16. When a route declares `primary_instance_scripts`, route readiness depends on those script ids resolving and on `script_preconditions` passing.
-17. When a route declares execution-lane governance, route readiness additionally depends on the lane contract staying machine-evaluable without narrative-only exceptions.
-18. Route-scoped admission must remain machine-evaluable against only the lower-capability dependencies declared on that route unless some stronger activation policy explicitly freezes a stricter union rule; unrelated route dependencies are not implicit blockers by default.
+16. `tool_entry_admission_timing` is frozen to pre-tool admission semantics for direct tool lanes; post-hoc receipts do not legalize a direct-tool rescue path that bypassed route/lane admission.
+17. Route admission may not silently discover scripts or execution lanes by filename, operator convention, ambient browser/editor state, or workspace-global helper directories.
+18. When a route declares `primary_instance_scripts`, route readiness depends on those script ids resolving and on `script_preconditions` passing.
+19. When a route declares execution-lane governance, route readiness additionally depends on the lane contract staying machine-evaluable without narrative-only exceptions.
+20. Route-scoped admission must remain machine-evaluable against only the lower-capability dependencies declared on that route unless some stronger activation policy explicitly freezes a stricter union rule; unrelated route dependencies are not implicit blockers by default.
 
 ### 2.4 Lower-capability dependency join is explicit, not implicit
 

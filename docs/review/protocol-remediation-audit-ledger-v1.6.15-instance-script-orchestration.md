@@ -119,8 +119,11 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
 6. `allowed_execution_lanes` rows stay machine-readable and freeze `lane_id`, `lane_class`, `lane_source`, and `endpoint_class`.
 7. `lane_admission_policy`, `lane_block_on_fallback`, and additive `direct_tool_entry_policy` are the canonical route-level controls for fail-closing undeclared lane fallback; operator memory is never an authority surface.
 8. Canonical direct-tool lane source is `governed_direct_tool_entry`; if a route supports direct MCP/browser/tool entry as a real governed success path, that lane must be declared instead of surviving as rescue folklore outside the contract.
-9. Canonical admission receipt family is `instance_script_admission_receipt`; it must keep `lane_id`, `lane_class`, `lane_source`, `lane_endpoint_class`, `lane_admission_status`, and `fallback_used` machine-visible, and direct-tool lanes additionally keep `tool_entry_admission_timing`, `auth_preflight_status`, and `session_freshness_status`.
-10. Lower dependencies remain explicit through `primary_skills`, `fallback_skills`, `required_mcp`, and governed tool-route fields.
+9. Current protocol-owned lane taxonomy is also frozen for this stream:
+   - `governed_webhook` -> `webhook_single_flight` + `analysis_webhook`
+   - `governed_direct_tool_entry` -> `tool_admission_serialized` + `interactive_session`
+10. Canonical admission receipt family is `instance_script_admission_receipt`; it must keep `lane_id`, `lane_class`, `lane_source`, `lane_endpoint_class`, `lane_admission_status`, and `fallback_used` machine-visible, and direct-tool lanes additionally keep `tool_entry_admission_timing`, `auth_preflight_status`, and `session_freshness_status`.
+11. Lower dependencies remain explicit through `primary_skills`, `fallback_skills`, `required_mcp`, and governed tool-route fields.
 11. `script_preconditions.required_contracts` and `script_preconditions.gate_policies` may reference inherited gateway/headstamp/host-visible/relay contracts, but that does not transfer ownership of those contracts into this stream.
 12. Receipt families stay runtime-owned and classify at least:
    - `instance_script_admission_receipt`
@@ -183,7 +186,7 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
 
 1. `v1.6.15` is closed at the contract-freeze level when the route/script/dependency/receipt/execution-lane model is frozen in protocol docs and mappings.
 2. Baseline implementation closure for this stream is now satisfied because the landed shared validator/probe/consumer family has non-empty orchestration-family cross-pack reuse proof instead of chat-only adoption claims.
-3. Current-state note (2026-03-22):
+3. Current-state note (2026-03-23):
    - `python3 scripts/validate_identity_instance_script_cross_pack_adoption.py --catalog .identity/catalog.local.yaml --json-only`
    - observed `PASS_REQUIRED` with `eligible_identity_count=2`, `checked_identity_count=2`, and `adoption_ready_identity_count=2`
    - the same payload now projects topology hygiene explicitly through `topology_clean_adoption_ready_count` and `topology_interlock_violation_rows`
@@ -196,6 +199,7 @@ Scope: protocol review ledger for route -> instance-script declarative join, rou
 6. This stream remains independent from provider runtime incidents, launcher install incidents, and host-visible final-surface auto-binding work.
 7. A pack may be `topology-ready` and `exit-ready` yet still be pre-adoption for `v1.6.15` until manifest and additive route fields land; that migration state must not be misreported as a reopen of inherited streams.
 8. Even before host auto-binding is solved, `v1.6.15` may require the governed producer for final user-visible text to be a route-bound emitter script instead of direct free-form assistant delivery.
+9. The protocol-owned direct-tool blind spot that once kept `ISSUE-028` open is now considered closed at the shared owner-lane level: additive direct-tool admission plus the frozen canonical lane taxonomy now cover webhook and interactive direct-tool execution generically. Any remaining office-/browser-manual adoption gap is instance-owned rollout debt rather than a missing protocol semantic.
 
 ## 7) Follow-on reinforcement mapping (non-reopen, architect-owned)
 

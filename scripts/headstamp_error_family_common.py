@@ -8,6 +8,9 @@ ERR_HDSTAMP_ACTOR_LAYER_MISMATCH = "IP-HDSTAMP-002"
 ERR_HDSTAMP_RECEIPT_MISSING = "IP-HDSTAMP-003"
 ERR_HDSTAMP_REPLY_EVIDENCE_MISSING = "IP-HDSTAMP-004"
 
+LEGACY_ERROR_ALIAS_MODE_ACTIVE_CANONICAL_ONLY = "active_canonical_only"
+LEGACY_ERROR_ALIAS_MODE_REPLAY_MIGRATION = "replay_migration"
+
 # Legacy/compatibility aliases kept for replay migration and historical receipts.
 LEGACY_ERR_SEND_TIME_GATE = "IP-ASB-STAMP-SESSION-001"
 LEGACY_ERR_SYNTHETIC_EVIDENCE = "IP-ASB-STAMP-SESSION-002"
@@ -63,19 +66,31 @@ def canonicalize_headstamp_error_code(error_code: str) -> tuple[str, str]:
     return token, ""
 
 
-def inject_legacy_error_fields(payload: dict[str, Any], *, legacy_error_code: str = "") -> dict[str, Any]:
+def inject_legacy_error_fields(
+    payload: dict[str, Any],
+    *,
+    legacy_error_code: str = "",
+    alias_mode: str = LEGACY_ERROR_ALIAS_MODE_ACTIVE_CANONICAL_ONLY,
+) -> dict[str, Any]:
     """
     Standardize payload error fields:
     - payload.error_code always carries canonical family when mapping exists.
-    - payload.legacy_error_code / payload.compat_error_code retain original alias if different.
+    - active/runtime/control-plane payloads stay canonical-only by default.
+    - replay/migration callers must opt in explicitly before alias fields are re-projected.
     """
     out = dict(payload or {})
     raw_code = str(out.get("error_code", "")).strip()
     mapped_code, mapped_legacy = canonicalize_headstamp_error_code(raw_code)
     final_code = str(mapped_code or raw_code).strip()
     final_legacy = str(legacy_error_code or mapped_legacy).strip()
+    mode = str(alias_mode or "").strip() or LEGACY_ERROR_ALIAS_MODE_ACTIVE_CANONICAL_ONLY
+    if mode not in {
+        LEGACY_ERROR_ALIAS_MODE_ACTIVE_CANONICAL_ONLY,
+        LEGACY_ERROR_ALIAS_MODE_REPLAY_MIGRATION,
+    }:
+        mode = LEGACY_ERROR_ALIAS_MODE_ACTIVE_CANONICAL_ONLY
     out["error_code"] = final_code
-    if final_legacy and final_legacy != final_code:
+    if mode == LEGACY_ERROR_ALIAS_MODE_REPLAY_MIGRATION and final_legacy and final_legacy != final_code:
         out["legacy_error_code"] = final_legacy
         out["compat_error_code"] = final_legacy
     else:

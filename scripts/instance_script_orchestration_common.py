@@ -113,6 +113,17 @@ ALLOWED_DIRECT_TOOL_ENTRY_RECEIPT_TIMINGS = frozenset(
     }
 )
 DIRECT_TOOL_ENTRY_LANE_SOURCE = "governed_direct_tool_entry"
+GOVERNED_WEBHOOK_LANE_SOURCE = "governed_webhook"
+EXECUTION_LANE_TAXONOMY: dict[str, dict[str, frozenset[str]]] = {
+    GOVERNED_WEBHOOK_LANE_SOURCE: {
+        "lane_classes": frozenset({"webhook_single_flight"}),
+        "endpoint_classes": frozenset({"analysis_webhook"}),
+    },
+    DIRECT_TOOL_ENTRY_LANE_SOURCE: {
+        "lane_classes": frozenset({"tool_admission_serialized"}),
+        "endpoint_classes": frozenset({"interactive_session"}),
+    },
+}
 TOKEN_RE = re.compile(r"^[a-z][a-z0-9_:-]*$")
 
 
@@ -1026,6 +1037,18 @@ def _normalize_allowed_execution_lanes(value: Any) -> tuple[list[dict[str, Any]]
             field_name="endpoint_class",
         )
         lane_row_issues.extend(endpoint_class_issues)
+        taxonomy = EXECUTION_LANE_TAXONOMY.get(lane_source) if lane_source else None
+        if lane_source and taxonomy is None:
+            lane_row_issues.append(f"lane_source_unrecognized:{lane_source}")
+        elif taxonomy is not None:
+            if lane_class and lane_class not in taxonomy["lane_classes"]:
+                lane_row_issues.append(
+                    f"lane_source_lane_class_mismatch:{lane_source}:{lane_class}"
+                )
+            if endpoint_class and endpoint_class not in taxonomy["endpoint_classes"]:
+                lane_row_issues.append(
+                    f"lane_source_endpoint_class_mismatch:{lane_source}:{endpoint_class}"
+                )
         if lane_id:
             if lane_id in seen_lane_ids:
                 lane_row_issues.append(f"lane_id_duplicate:{lane_id}")
