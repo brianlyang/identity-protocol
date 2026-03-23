@@ -127,3 +127,9 @@ streams:
       - ASB16-RQ-050
     forbidden_requirement_ids: []
     forbidden_path_tokens: []
+
+  - stream_version: v1.6.18
+    scope_topic: identity_artifact_family_routing
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []
