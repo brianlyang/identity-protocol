@@ -145,10 +145,16 @@ def _emit_commands(payload: dict[str, Any], *, json_only: bool) -> None:
     print(f"identity_id={payload['identity_id']}")
     print(f"recommended_command={payload['recommended_user_command']}")
     print(f"preferred_start={payload['preferred_start_command']}")
+    shortcut_start_command = str(payload.get("shortcut_start_command", "")).strip()
+    if shortcut_start_command and shortcut_start_command != payload["preferred_start_command"]:
+        print(f"shortcut_start_reference={shortcut_start_command}")
     print(f"absolute_start={payload['absolute_start_command']}")
     print(f"generic_start={payload['generic_start_command']}")
     if str(payload.get("resume_status", "")).strip() == STATUS_PASS_REQUIRED:
         print(f"preferred_resume={payload['preferred_resume_command']}")
+        shortcut_resume_command = str(payload.get("shortcut_resume_command", "")).strip()
+        if shortcut_resume_command and shortcut_resume_command != payload["preferred_resume_command"]:
+            print(f"shortcut_resume_reference={shortcut_resume_command}")
         print(f"absolute_resume={payload['absolute_resume_command']}")
         print(f"generic_resume={payload['generic_resume_command']}")
     else:
@@ -257,7 +263,7 @@ def _cmd_commands(args: argparse.Namespace) -> int:
 
     start_short = [shortcut]
     start_generic = [GENERIC_LAUNCHER_NAME, "--identity-id", args.identity_id]
-    preferred_start_command = _build_display_command(start_short)
+    shortcut_start_command = _build_display_command(start_short)
     preferred_generic_start_command = _build_display_command(start_generic)
     absolute_start_command = _build_display_command([str(shortcut_path)])
     absolute_generic_start_command = _build_display_command([str(generic_path), "--identity-id", args.identity_id])
@@ -276,7 +282,13 @@ def _cmd_commands(args: argparse.Namespace) -> int:
     shortcut_command_on_path = _command_available_on_path(shortcut, expected_path=shortcut_path)
     generic_command_on_path = _command_available_on_path(GENERIC_LAUNCHER_NAME, expected_path=generic_path)
     if require_explicit_catalog:
-        recommended_start_command = fresh_shell_start_command if generic_command_on_path else absolute_fresh_shell_start_command
+        preferred_start_command = fresh_shell_start_command if generic_command_on_path else absolute_fresh_shell_start_command
+        preferred_start_surface_reason = "catalog_mismatch_requires_canonical_primary_surface"
+    else:
+        preferred_start_command = shortcut_start_command
+        preferred_start_surface_reason = "shortcut_reference_surface"
+    if require_explicit_catalog:
+        recommended_start_command = preferred_start_command
     else:
         recommended_start_command = preferred_start_command if shortcut_command_on_path else absolute_start_command
     command_discovery = launcher_command_discovery_doc(args.identity_id)
@@ -335,6 +347,8 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         "generic_command_on_path": generic_command_on_path,
         "actor_id": actor_token,
         "preferred_start_command": preferred_start_command,
+        "preferred_start_surface_reason": preferred_start_surface_reason,
+        "shortcut_start_command": shortcut_start_command,
         "absolute_start_command": absolute_start_command,
         "generic_start_command": preferred_generic_start_command,
         "absolute_generic_start_command": absolute_generic_start_command,
@@ -364,6 +378,8 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         "copyable_commands": {
             "start": {
                 "preferred": preferred_start_command,
+                "preferred_surface_reason": preferred_start_surface_reason,
+                "shortcut": shortcut_start_command,
                 "recommended": recommended_start_command,
                 "absolute": absolute_start_command,
                 "generic": preferred_generic_start_command,
@@ -380,7 +396,7 @@ def _cmd_commands(args: argparse.Namespace) -> int:
     if thread_id:
         resume_short = [shortcut, "resume", thread_id]
         resume_generic = [GENERIC_LAUNCHER_NAME, "--identity-id", args.identity_id, "--", "resume", thread_id]
-        preferred_resume_command = _build_display_command(resume_short)
+        shortcut_resume_command = _build_display_command(resume_short)
         absolute_resume_command = _build_display_command([str(shortcut_path), "resume", thread_id])
         generic_resume_command = _build_display_command(resume_generic)
         absolute_generic_resume_command = _build_display_command([str(generic_path), "--identity-id", args.identity_id, "--", "resume", thread_id])
@@ -402,16 +418,29 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         )
         if resume_command_fresh_shell_executable_status == STATUS_PASS_REQUIRED:
             if require_explicit_catalog or resolved_resume_session_id:
-                recommended_resume_command = (
+                canonical_resume_command = (
                     fresh_shell_resume_command if generic_command_on_path else absolute_fresh_shell_resume_command
                 )
             else:
-                recommended_resume_command = preferred_resume_command if shortcut_command_on_path else absolute_resume_command
+                canonical_resume_command = shortcut_resume_command if shortcut_command_on_path else absolute_resume_command
         else:
-            recommended_resume_command = ""
+            canonical_resume_command = ""
+        recommended_resume_command = canonical_resume_command
+        if require_explicit_catalog:
+            preferred_resume_command = canonical_resume_command
+            preferred_resume_surface_reason = (
+                "catalog_mismatch_requires_canonical_primary_surface"
+                if canonical_resume_command
+                else "catalog_mismatch_resume_surface_unavailable"
+            )
+        else:
+            preferred_resume_command = shortcut_resume_command
+            preferred_resume_surface_reason = "shortcut_reference_surface"
         payload.update(
             {
                 "preferred_resume_command": preferred_resume_command,
+                "preferred_resume_surface_reason": preferred_resume_surface_reason,
+                "shortcut_resume_command": shortcut_resume_command,
                 "absolute_resume_command": absolute_resume_command,
                 "generic_resume_command": generic_resume_command,
                 "absolute_generic_resume_command": absolute_generic_resume_command,
@@ -423,6 +452,8 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         )
         payload["copyable_commands"]["resume"] = {
             "preferred": preferred_resume_command,
+            "preferred_surface_reason": preferred_resume_surface_reason,
+            "shortcut": shortcut_resume_command,
             "recommended": recommended_resume_command,
             "absolute": absolute_resume_command,
             "generic": generic_resume_command,

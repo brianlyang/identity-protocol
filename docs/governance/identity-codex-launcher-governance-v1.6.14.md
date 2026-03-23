@@ -50,7 +50,7 @@ Execution mode: topic-level canonical SSOT for v1.6.14 identity-Codex launcher g
 4. Bare identity command names such as `<identity-id> ...` are forbidden as canonical launcher names.
 5. Overriding, shadowing, or mutating the product command `codex` is forbidden.
 6. `resume <uuid>` keeps the host-thread UUID as host state only; launcher logic must never reinterpret that UUID as the identity session tuple.
-7. For operator-facing daily use, the preferred already-installed surface is `id-<identity-id>` because the generated shortcut keeps host/UI/tab naming short and stable without weakening protocol ownership; `identity-codex --identity-id <identity-id> -- ...` remains the explicit generic form for documentation, automation, and repair flows.
+7. For operator-facing daily use, the preferred already-installed surface is `id-<identity-id>` **only when the ambient shell catalog already matches the resolved identity catalog**, because the generated shortcut keeps host/UI/tab naming short and stable without weakening protocol ownership; when command discovery classifies `ambient_catalog_mismatch_requires_explicit_catalog`, the preferred primary surface must switch to the explicit generic launcher carrying `--catalog <resolved-catalog>`. `identity-codex --identity-id <identity-id> -- ...` remains the explicit generic form for documentation, automation, repair flows, and any mismatch-safe primary surface.
 8. Command discovery is also protocol-owned: when an operator asks “`identity_id=XXX` 如何启动 / 如何续接”, the canonical answer surface is:
    - `identity-codex commands --identity-id <identity-id>`
    - or, when the per-identity launcher already exists, `id-<identity-id> commands`
@@ -62,7 +62,8 @@ Execution mode: topic-level canonical SSOT for v1.6.14 identity-Codex launcher g
    - `recommended_resume_command`,
    - and `recommended_user_command`
    must already be self-contained for the shell that requested the bundle.
-13. When the resolved identity catalog differs from the ambient shell catalog, the command bundle must switch its recommended start/resume surfaces to the generic launcher form carrying explicit `--catalog <resolved-catalog>`.
+13. When the resolved identity catalog differs from the ambient shell catalog, the command bundle must switch its preferred/recommended primary start/resume surfaces to the generic launcher form carrying explicit `--catalog <resolved-catalog>`.
+    - Under that mismatch state, short launcher commands may remain visible only as convenience/reference surfaces (for example `copyable_commands.*.shortcut`); they must not remain labeled as `preferred_*`.
 14. Resume readiness is fail-close and decomposed:
    - host-thread UUID presence alone must **not** upgrade `resume_status` to `PASS_REQUIRED`;
    - `resume_status` may be `PASS_REQUIRED` only when the host thread id and the authoritative identity session tuple are both resolved;
@@ -241,6 +242,7 @@ These names and directories are frozen by this stream. The renderer / installer 
    - `identity-codex commands --identity-id <id>` and `id-<id> commands` must emit full copyable start/resume commands from protocol truth instead of requiring operators to manually assemble launcher invocations.
    - those copyable commands must be terminal-native direct commands (`id-<id> ...`, `identity-codex --identity-id <id> ...`), not shell-wrapped helper strings such as `zsh -lic '...'`.
    - `recommended_user_command` must remain protocol-owned, environment-aware, and fresh-shell executable: when the canonical short launcher is not discoverable on the current `PATH`, the bundle must switch to the absolute direct launcher path; when the ambient shell catalog mismatches the resolved identity catalog, it must emit explicit `--catalog`; when resume requires tuple closure, it must emit explicit `--session-id run:<...>` rather than promoting a stale short launcher.
+   - under `ambient_catalog_mismatch_requires_explicit_catalog`, the bundle must also align `preferred_start_command` / `preferred_resume_command` with that same canonical fresh-shell primary surface; any short launcher form may survive only as a reference/convenience field, not as the preferred operator surface.
    - host-thread UUID presence alone must not promote resume readiness; the machine-visible decomposition must distinguish `host_thread_id_status`, `identity_session_tuple_status`, and `resume_command_fresh_shell_executable_status`.
    - `identity-codex commands --identity-id <id> --json-only` must emit a structured command bundle (`recommended_user_command`, `copyable_commands`, `instance_answer_guidance`) so identity instances can answer concretely without inventing their own launcher logic.
 13. Audit follow-on closure note (2026-03-23): the formerly separate raw catalog metadata hygiene boundary is now protocol-owned and closed on `v1.6.10`:

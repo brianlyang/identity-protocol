@@ -96,8 +96,9 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    must return a structured command bundle so identity instances can answer concretely without inventing launcher logic.
 8. Embedded internal support bundles from other streams, such as `v1.6.16` continuity support, are acceptable only inside that structured JSON bundle and must not become independent operator command folklore.
 9. The protocol-owned recommended command surfaces must be judged by **fresh-shell executability**, not by shortcut discoverability or host-thread presence alone.
-10. If the resolved identity catalog differs from the ambient shell catalog, the recommended command must switch to the generic launcher form carrying explicit `--catalog <resolved-catalog>`.
+10. If the resolved identity catalog differs from the ambient shell catalog, the preferred/recommended primary command surface must switch to the generic launcher form carrying explicit `--catalog <resolved-catalog>`.
 11. If resume requires identity-session tuple closure, the recommended resume command must carry explicit `--session-id run:<...>`; a short launcher shortcut that cannot encode that tuple is not an auditable recommendation surface.
+    - Under catalog mismatch, any retained short launcher form may survive only as a convenience/reference surface; audit must fail any implementation that still labels it `preferred_*`.
 12. Audit interpretation of resume readiness is decomposed and fail-close:
     - `host_thread_id_status`
     - `identity_session_tuple_status`
@@ -199,6 +200,7 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - `identity-codex commands --identity-id <id>` and `id-<id> commands` return a ready-to-copy command bundle rather than leaving command assembly to the operator.
    - that bundle is terminal-native and direct (`id-<id> ...`, `identity-codex --identity-id <id> ...`), not shell-wrapped helper text such as `zsh -lic '...'`.
    - the protocol-owned `recommended_user_command` is also environment-aware **and** fresh-shell executable: if the current shell cannot discover the short launcher on `PATH`, the bundle falls back to the absolute direct launcher path; if the ambient catalog mismatches the resolved identity catalog, the bundle emits explicit `--catalog`; if resume requires tuple closure, the bundle emits explicit `--session-id run:<...>` rather than a stale short shortcut.
+   - under `ambient_catalog_mismatch_requires_explicit_catalog`, the bundle must also promote the same canonical fresh-shell command into `preferred_start_command` / `preferred_resume_command`; any retained short launcher command is audit-acceptable only as a convenience/reference field, not as the preferred operator surface.
    - host-thread UUID presence alone must not be audited as resume readiness; the machine-visible decomposition must distinguish `host_thread_id_status`, `identity_session_tuple_status`, and `resume_command_fresh_shell_executable_status`.
    - explicit `--session-id run:<...>` is not sufficient by shape alone: command discovery and dry-run must fail-close unless that tuple is authoritative for the requested identity, and `resume <host-thread-uuid>` must remain the Codex recovery target rather than being semantically replaced by the launcher tuple.
    - `identity-codex commands --identity-id <id> --json-only` returns a structured bundle with `recommended_user_command`, `copyable_commands`, and `instance_answer_guidance`, preserving the boundary “protocol guides, instance answers”.

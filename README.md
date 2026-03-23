@@ -32,13 +32,17 @@ This system is intentionally designed to solve three recurring failure modes:
 `v1.6.14` freezes launcher command discovery as a protocol-owned surface, so operators should not manually assemble
 identity startup/resume commands in chat.
 
-Preferred operator surface:
+Preferred primary operator surface when the ambient catalog already matches the resolved identity catalog:
 
 - short launcher: `id-<identity-id>`
 
 Explicit generic surface:
 
 - `identity-codex --identity-id <identity-id> -- <codex args>`
+
+If command discovery detects `ambient_catalog_mismatch_requires_explicit_catalog`, the preferred primary
+surface must switch to the explicit generic launcher carrying `--catalog <resolved-catalog>`; any short
+launcher surface may remain visible only as a convenience/reference surface, not as the preferred command.
 
 Print the full copyable command bundle for any governed identity:
 
@@ -74,9 +78,14 @@ Critical semantic boundary:
 
 What this prints:
 
-- preferred short start command, for example `id-<identity-id>`
+- preferred start command for operator use; when the ambient catalog already matches the resolved
+  identity catalog it stays on the short-launcher lane, and under catalog mismatch it upgrades to the
+  canonical explicit generic primary surface
 - absolute-path fallback start command under `${CODEX_HOME}/bin/`
-- preferred short resume command as a reference surface, plus the protocol-owned fresh-shell resume command when resume is actually executable
+- preferred resume command for the current shell; under catalog mismatch it must collapse to the same
+  fresh-shell executable canonical resume command as the recommended surface
+- `copyable_commands.start.shortcut` / `copyable_commands.resume.shortcut` retain the short-launcher
+  reference surface when the preferred surface has to switch to the explicit generic launcher
 - generic `identity-codex --identity-id ...` equivalents for repair/documentation flows
 - all commands are terminal-native direct commands; shell-wrapped `zsh -lic '...'` surfaces are non-canonical
 - `recommended_user_command` is selected by fresh-shell executability, not by host-thread UUID presence alone
@@ -98,6 +107,8 @@ That JSON is the protocol-owned guidance bundle. It now carries:
 - `host_thread_id_status`
 - `identity_session_tuple_status`
 - `resume_command_fresh_shell_executable_status`
+- `shortcut_start_command`
+- `shortcut_resume_command`
 - `copyable_commands.start`
 - `copyable_commands.resume`
 - `instance_answer_guidance`

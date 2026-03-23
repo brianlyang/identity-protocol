@@ -42,6 +42,10 @@ print(session_id)
 PY
 )"
 INVALID_SESSION_ID="run:identity-codex-launcher-invalid-${HOST_THREAD_UUID}"
+ALT_CATALOG_DIR="${TMP_ROOT}/alt-catalog"
+mkdir -p "${ALT_CATALOG_DIR}"
+ALT_CATALOG_PATH="${ALT_CATALOG_DIR}/catalog.local.yaml"
+cp "${CATALOG_PATH}" "${ALT_CATALOG_PATH}"
 
 run_cmd() {
   echo "[RUN] $*"
@@ -69,6 +73,7 @@ DRY_RUN_JSON="${TMP_ROOT}/launcher-dry-run.json"
 COMMANDS_JSON="${TMP_ROOT}/launcher-commands.json"
 NO_SESSION_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-no-session.json"
 INVALID_SESSION_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-invalid-session.json"
+MISMATCH_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-catalog-mismatch.json"
 SHORTCUT_COMMANDS_JSON="${TMP_ROOT}/shortcut-launcher-commands.json"
 NEGATIVE_DRY_RUN_JSON="${TMP_ROOT}/launcher-dry-run-no-session.json"
 INVALID_SESSION_DRY_RUN_JSON="${TMP_ROOT}/launcher-dry-run-invalid-session.json"
@@ -148,6 +153,50 @@ assert payload["copyable_commands"]["resume"]["session_source"] == "explicit_ses
 assert payload["copyable_commands"]["resume"]["recommended"] == payload["recommended_resume_command"], payload
 assert payload["instance_answer_guidance"]["manual_command_assembly_forbidden"] is True, payload
 print("launcher_command_bundle_status=PASS_REQUIRED")
+PY
+
+echo "[RUN] ${BIN_DIR}/identity-codex commands --identity-id ${IDENTITY_ID} --catalog ${ALT_CATALOG_PATH} --thread-id <thread-uuid> --session-id <session-id> --json-only (mismatch: canonical primary surface + no stale preferred shortcut leakage)"
+"${BIN_DIR}/identity-codex" \
+  commands \
+  --identity-id "${IDENTITY_ID}" \
+  --catalog "${ALT_CATALOG_PATH}" \
+  --thread-id "${HOST_THREAD_UUID}" \
+  --session-id "${SESSION_ID}" \
+  --json-only > "${MISMATCH_COMMANDS_JSON}"
+
+python3 - "${MISMATCH_COMMANDS_JSON}" "${HOST_THREAD_UUID}" "${SESSION_ID}" "${ALT_CATALOG_PATH}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+host_thread_uuid = sys.argv[2]
+_session_id = sys.argv[3]
+alt_catalog_path = str(Path(sys.argv[4]).resolve())
+assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["catalog_path"] == alt_catalog_path, payload
+assert payload["catalog_context_status"] == "FAIL_REQUIRED", payload
+assert payload["catalog_context_reason"] == "ambient_catalog_mismatch_requires_explicit_catalog", payload
+assert payload["catalog_explicit_flag_required"] is True, payload
+assert payload["host_thread_id_status"] == "PASS_REQUIRED", payload
+assert payload["preferred_start_surface_reason"] == "catalog_mismatch_requires_canonical_primary_surface", payload
+assert payload["preferred_start_command"] == payload["recommended_start_command"], payload
+assert payload["copyable_commands"]["start"]["preferred"] == payload["preferred_start_command"], payload
+assert payload["copyable_commands"]["start"]["recommended"] == payload["recommended_start_command"], payload
+assert payload["copyable_commands"]["start"]["shortcut"] == f"id-{payload['identity_id']}", payload
+assert payload["preferred_start_command"] != payload["copyable_commands"]["start"]["shortcut"], payload
+assert f"--catalog {alt_catalog_path}" in payload["preferred_start_command"], payload
+assert payload["identity_session_tuple_status"] == "FAIL_REQUIRED", payload
+assert payload["resume_command_fresh_shell_executable_status"] == "FAIL_REQUIRED", payload
+assert payload["preferred_resume_surface_reason"] == "catalog_mismatch_resume_surface_unavailable", payload
+assert payload["preferred_resume_command"] == payload["recommended_resume_command"], payload
+assert payload["copyable_commands"]["resume"]["preferred"] == payload["preferred_resume_command"], payload
+assert payload["copyable_commands"]["resume"]["recommended"] == payload["recommended_resume_command"], payload
+assert payload["copyable_commands"]["resume"]["shortcut"] == f"id-{payload['identity_id']} resume {host_thread_uuid}", payload
+assert payload["preferred_resume_command"] == "", payload
+assert payload["preferred_resume_command"] != payload["copyable_commands"]["resume"]["shortcut"], payload
+assert payload["recommended_user_command"] == payload["recommended_start_command"], payload
+print("launcher_command_bundle_catalog_mismatch_status=PASS_REQUIRED")
 PY
 
 echo "[RUN] ${BIN_DIR}/identity-codex commands --identity-id ${IDENTITY_ID} --thread-id <thread-uuid> --actor-id ${NEGATIVE_ACTOR_ID} --json-only (negative: unresolved session tuple)"
