@@ -52,7 +52,133 @@ run_cmd() {
   "$@"
 }
 
+strip_path_entry() {
+  local raw_path="${1:-}"
+  local target_entry="${2:-}"
+  PATH="${raw_path}" python3 - "${target_entry}" <<'PY'
+import os
+import sys
+
+target = os.path.realpath(sys.argv[1]) if sys.argv[1] else ""
+seen: list[str] = []
+for raw in os.environ.get("PATH", "").split(":"):
+    token = str(raw or "").strip()
+    if not token:
+        continue
+    try:
+        resolved = os.path.realpath(token)
+    except Exception:
+        resolved = token
+    if target and resolved == target:
+        continue
+    if token not in seen:
+        seen.append(token)
+print(":".join(seen))
+PY
+}
+
+assert_env_loader_path_probe() {
+  local label="${1:?label required}"
+  local log_path="${2:?log_path required}"
+  local expected_bin="${3:?expected_bin required}"
+  local expected_cmd="${4:-}"
+  python3 - "${label}" "${log_path}" "${expected_bin}" "${expected_cmd}" <<'PY'
+import os
+import sys
+from pathlib import Path
+
+label = sys.argv[1]
+log_path = Path(sys.argv[2])
+expected_bin = os.path.realpath(sys.argv[3])
+expected_cmd = str(sys.argv[4] or "").strip()
+
+rows = {}
+for raw in log_path.read_text(encoding="utf-8").splitlines():
+    if "=" not in raw:
+        continue
+    key, value = raw.split("=", 1)
+    rows[key.strip()] = value.strip()
+
+path1 = rows.get("PATH", "")
+path2 = rows.get("PATH2", "")
+assert path1, f"{label}: missing PATH"
+assert path2, f"{label}: missing PATH2"
+
+def count_entry(path_value: str, target: str) -> int:
+    count = 0
+    for token in path_value.split(":"):
+        item = str(token or "").strip()
+        if not item:
+            continue
+        try:
+            resolved = os.path.realpath(item)
+        except Exception:
+            resolved = item
+        if resolved == target:
+            count += 1
+    return count
+
+assert count_entry(path1, expected_bin) == 1, (label, path1, expected_bin)
+assert count_entry(path2, expected_bin) == 1, (label, path2, expected_bin)
+assert path1 == path2, (label, path1, path2)
+
+if expected_cmd:
+    resolved_cmd = rows.get("CMD", "")
+    assert os.path.realpath(resolved_cmd) == os.path.realpath(expected_cmd), (
+        label,
+        resolved_cmd,
+        expected_cmd,
+    )
+
+print(f"{label}_env_loader_path_status=PASS_REQUIRED")
+PY
+}
+
 echo "[INFO] launcher probe temp root: ${TMP_ROOT}"
+
+PROJECT_CODEX_BIN="$(python3 - <<'PY'
+from pathlib import Path
+print((Path.home() / ".codex" / "bin").resolve())
+PY
+)"
+BASE_PATH_WITHOUT_PROJECT_CODEX_BIN="$(strip_path_entry "${PATH}" "${PROJECT_CODEX_BIN}")"
+PROJECT_ENV_LOG="${TMP_ROOT}/project-env-loader-path.log"
+
+echo "[RUN] fresh-shell project runtime env loader exposes ${PROJECT_CODEX_BIN} on PATH exactly once"
+env -i HOME="${HOME}" PATH="${BASE_PATH_WITHOUT_PROJECT_CODEX_BIN}" /bin/bash --noprofile --norc -lc '
+  set -euo pipefail
+  source "'"${REPO_ROOT}"'/scripts/use_project_identity_runtime.sh" "'"${TMP_ROOT}/project-runtime-home"'" "'"${REPO_ROOT}"'" >/dev/null
+  printf "PATH=%s\n" "${PATH}"
+  printf "CMD=%s\n" "$(command -v identity-codex)"
+  source "'"${REPO_ROOT}"'/scripts/use_project_identity_runtime.sh" "'"${TMP_ROOT}/project-runtime-home"'" "'"${REPO_ROOT}"'" >/dev/null
+  printf "PATH2=%s\n" "${PATH}"
+' > "${PROJECT_ENV_LOG}"
+
+assert_env_loader_path_probe \
+  "project_runtime" \
+  "${PROJECT_ENV_LOG}" \
+  "${PROJECT_CODEX_BIN}" \
+  "${PROJECT_CODEX_BIN}/identity-codex"
+
+GLOBAL_CODEX_HOME="${TMP_ROOT}/global-codex-home"
+GLOBAL_CODEX_BIN="${GLOBAL_CODEX_HOME}/bin"
+BASE_PATH_WITHOUT_GLOBAL_CODEX_BIN="$(strip_path_entry "${PATH}" "${GLOBAL_CODEX_BIN}")"
+GLOBAL_ENV_LOG="${TMP_ROOT}/global-env-loader-path.log"
+
+echo "[RUN] fresh-shell global runtime env loader derives PATH from CODEX_HOME without duplication"
+env -i HOME="${HOME}" PATH="${BASE_PATH_WITHOUT_GLOBAL_CODEX_BIN}" CODEX_HOME="${GLOBAL_CODEX_HOME}" /bin/bash --noprofile --norc -lc '
+  set -euo pipefail
+  source "'"${REPO_ROOT}"'/scripts/use_local_identity_env.sh" "'"${GLOBAL_CODEX_HOME}/.identity"'" "'"${REPO_ROOT}"'" >/dev/null
+  printf "PATH=%s\n" "${PATH}"
+  source "'"${REPO_ROOT}"'/scripts/use_local_identity_env.sh" "'"${GLOBAL_CODEX_HOME}/.identity"'" "'"${REPO_ROOT}"'" >/dev/null
+  printf "PATH2=%s\n" "${PATH}"
+' > "${GLOBAL_ENV_LOG}"
+
+assert_env_loader_path_probe \
+  "global_runtime" \
+  "${GLOBAL_ENV_LOG}" \
+  "${GLOBAL_CODEX_BIN}" \
+  ""
 
 run_cmd python3 "${REPO_ROOT}/scripts/install_identity_codex_launcher.py" \
   --identity-id "${IDENTITY_ID}" \

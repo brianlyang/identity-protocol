@@ -35,6 +35,13 @@ PROJECT_ROOT="${PROJECT_ROOT:-${PROJECT_ROOT_DEFAULT}}"
 IDENTITY_HOME="${1:-${IDENTITY_HOME_DEFAULT}}"
 IDENTITY_PROTOCOL_HOME="${2:-${REPO_ROOT}}"
 IDENTITY_CATALOG="${IDENTITY_HOME}/catalog.local.yaml"
+CODEX_HOME="${CODEX_HOME:-${HOME}/.codex}"
+IDENTITY_BIN_DIR="${CODEX_HOME}/bin"
+
+case ":${PATH:-}:" in
+  *":${IDENTITY_BIN_DIR}:"*) ;;
+  *) export PATH="${IDENTITY_BIN_DIR}${PATH:+:${PATH}}" ;;
+esac
 
 mkdir -p "${IDENTITY_HOME}/config"
 RUNTIME_ENV_PATH="${IDENTITY_HOME}/config/runtime-paths.env"
@@ -51,6 +58,7 @@ else
   echo "       target=${RUNTIME_ENV_PATH}"
 fi
 
+export CODEX_HOME
 export IDENTITY_HOME
 export IDENTITY_PROTOCOL_HOME
 export IDENTITY_CATALOG
