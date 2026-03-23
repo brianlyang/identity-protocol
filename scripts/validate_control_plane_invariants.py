@@ -39,6 +39,7 @@ STREAM_DOC_REGISTRY_LITERAL_CONSUMER_FILES: tuple[str, ...] = (
     "scripts/validate_control_plane_invariants.py",
     "scripts/validate_compatibility_legacy_boundary.py",
     "scripts/validate_doc_evidence_persistence.py",
+    "scripts/validate_loop_visual_atlas_governance.py",
     "scripts/validate_native_chat_bootstrap_entry_stream.py",
     "scripts/validate_runtime_file_boundary_governance.py",
     "scripts/validate_semantic_term_registry.py",

@@ -215,6 +215,7 @@ def _requires_static_alias_ref_row(doc: str) -> bool:
         normalized.startswith("docs/governance/")
         or normalized.startswith("docs/workbook/")
         or normalized.startswith("docs/review/")
+        or normalized.startswith("docs/references/")
         or normalized.startswith("identity/protocol/plugins/")
     )
 
@@ -960,6 +961,22 @@ def main() -> int:
                 failures.append(
                     f"[PLAYBOOK_TOKEN_MISSING] {playbook_path}: missing `{token}`"
                 )
+
+    loop_visual_atlas_script = repo_root / "scripts/validate_loop_visual_atlas_governance.py"
+    if loop_visual_atlas_script.exists():
+        proc = subprocess.run(
+            [sys.executable, str(loop_visual_atlas_script), "--json-only"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+        )
+        if proc.returncode != 0:
+            failures.append(
+                "[LOOP_VISUAL_ATLAS_GOVERNANCE_FAIL] "
+                + (proc.stdout.strip() or proc.stderr.strip() or "validate_loop_visual_atlas_governance failed")
+            )
+    else:
+        failures.append("[MISSING_SCRIPT] scripts/validate_loop_visual_atlas_governance.py not found")
 
     # Round-29.5: enforce doc evidence persistence policy
     evidence_policy_script = repo_root / "scripts/validate_doc_evidence_persistence.py"

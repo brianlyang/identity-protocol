@@ -39,7 +39,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BRANCH: main
           VALIDATE_ALL_CODEBASE: false
-          FILTER_REGEX_INCLUDE: '(^\\.github/workflows/.*|^identity/protocol/.*|^docs/governance/.*|^docs/review/.*)$'
+          FILTER_REGEX_INCLUDE: '(^\.github/workflows/.*|^identity/protocol/.*|^docs/governance/.*|^docs/review/.*|^docs/references/.*)$'
           VALIDATE_GITHUB_ACTIONS: true
           VALIDATE_JSON: true
           VALIDATE_MARKDOWN: true
@@ -59,6 +59,9 @@ jobs:
 
       - name: Validate protocol SSOT source boundary
         run: python3 scripts/validate_protocol_ssot_source.py
+
+      - name: Validate loop visual atlas governance (SSOT)
+        run: python3 scripts/validate_loop_visual_atlas_governance.py --json-only
 
       - name: Validate control-plane growth budget (v1.6)
         run: python3 scripts/validate_control_plane_budget.py --json-only

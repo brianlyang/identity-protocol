@@ -66,6 +66,11 @@ CHECKS: tuple[CheckSpec, ...] = (
         command=("python3", "scripts/validate_protocol_ssot_source.py"),
         status_key=None,
     ),
+    CheckSpec(
+        name="loop_visual_atlas_governance",
+        command=("python3", "scripts/validate_loop_visual_atlas_governance.py", "--json-only"),
+        status_key="loop_visual_atlas_governance_status",
+    ),
 )
 
 

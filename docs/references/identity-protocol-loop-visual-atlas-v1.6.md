@@ -13,9 +13,20 @@ Classification: protocol-owned explanatory atlas; not a normative contract sourc
    - `docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md`
    - `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md`
    - `docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md`
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
    - `identity/protocol/mappings/contract-binding.current.yaml`
+   - `identity/protocol/mappings/semantic-term-registry.current.yaml`
    - the corresponding validator / probe lanes that machine-consume those contracts
-4. This atlas must stay generic and protocol-only. It must not absorb business scenarios, search heuristics, vendor/product examples, or instance-specific playbooks.
+4. This atlas is SSOT-governed as a canonical reference surface, but it is not itself the normative owner of loop semantics.
+5. This atlas must stay generic and protocol-only. It must not absorb business scenarios, search heuristics, vendor/product examples, or instance-specific playbooks.
+
+## 0.1) Current-pointer anchors (mandatory)
+
+1. This atlas must keep these current-pointer anchors visible in-document so SSOT drift is machine-detectable:
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+   - `identity/protocol/mappings/contract-binding.current.yaml`
+   - `identity/protocol/mappings/semantic-term-registry.current.yaml`
+2. If the atlas drops those current-pointer anchors, the document is stale even when the SVG assets still render.
 
 ## 1) Fixed directory freeze (mandatory)
 
