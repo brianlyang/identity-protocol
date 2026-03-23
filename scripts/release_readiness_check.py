@@ -35,6 +35,7 @@ POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["python3", "scripts/docs_command_contract_check.py"],
     ["python3", "scripts/validate_issue_register_consistency.py", "--json-only"],
     ["bash", "scripts/ci/run_identity_context_continuity_probes_ci.sh"],
+    ["bash", "scripts/ci/run_identity_dialogue_retention_probes_ci.sh"],
     ["bash", "scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh"],
     ["bash", "scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh"],
     ["bash", "scripts/ci/run_workbook_control_plane_probes_ci.sh"],
@@ -1819,6 +1820,15 @@ def main() -> int:
         ],
         [
             "python3",
+            "scripts/validate_identity_dialogue_retention.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--json-only",
+        ],
+        [
+            "python3",
             "scripts/validate_identity_capability_activation.py",
             "--catalog",
             catalog,
@@ -2469,6 +2479,17 @@ def main() -> int:
         [
             "python3",
             "scripts/validate_identity_context_continuity_receipts.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--json-only",
+        ]
+    )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_identity_dialogue_retention.py",
             "--identity-id",
             identity_id,
             "--catalog",

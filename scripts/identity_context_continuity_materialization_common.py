@@ -788,6 +788,15 @@ def emit_reentry_consumption_receipt(
         "route_or_entry_scope": _receipt_scope(scope),
     }
     receipt_changed = _write_json(receipt_path, receipt_doc, apply=apply)
+    guard_state_path = _guard_state_path(ctx.pack_root)
+    guard_state = _load_guard_state(ctx.pack_root, identity_id=ctx.identity_id)
+    guard_state["active_reentry_brief_ref"] = _relative_pack_ref(ctx.pack_root, resolved_brief)
+    guard_state["active_reentry_brief_continuity_id"] = brief_continuity_id
+    guard_state["last_reentry_consumption_receipt_ref"] = _relative_pack_ref(ctx.pack_root, receipt_path)
+    guard_state["last_action"] = "post-recover"
+    guard_state["migration_checkpoint_due"] = False
+    guard_state["last_updated_at"] = utc_iso()
+    guard_state_changed = _write_json(guard_state_path, guard_state, apply=apply)
     return {
         "status": STATUS_PASS_REQUIRED,
         "receipt_path": str(receipt_path),
@@ -795,6 +804,8 @@ def emit_reentry_consumption_receipt(
         "reentry_brief_ref": _relative_pack_ref(ctx.pack_root, resolved_brief),
         "continuity_lineage_ref": brief_continuity_id,
         "receipt_changed": receipt_changed,
+        "guard_state_ref": _relative_pack_ref(ctx.pack_root, guard_state_path),
+        "guard_state_changed": guard_state_changed,
     }
 
 

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 import yaml
 
+from blocker_taxonomy_common import normalize_task_blocker_surfaces
 from create_identity_pack import (
     DOWNSINK_PATH_IMMUTABILITY_CONTRACT_ID,
     DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY,
@@ -113,6 +114,13 @@ from create_identity_pack import (
 from identity_context_continuity_materialization_common import (
     materialize_identity_context_continuity_assets,
 )
+from identity_dialogue_retention_common import (
+    DIALOGUE_RETENTION_CONTRACT_ID,
+    DIALOGUE_RETENTION_CONTRACT_KEY,
+    DIALOGUE_RETENTION_VALIDATOR_ID,
+    dialogue_retention_contract_skeleton,
+    materialize_identity_dialogue_retention_assets,
+)
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 from identity_codex_launcher_common import (
     IDENTITY_CODEX_LAUNCHER_CONTRACT_ID,
@@ -163,6 +171,9 @@ REQUIRED_LAUNCHER_KEYS = (
 REQUIRED_CONTINUITY_KEYS = (
     CONTEXT_CONTINUITY_CONTRACT_KEY,
     REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY,
+)
+REQUIRED_DIALOGUE_RETENTION_KEYS = (
+    DIALOGUE_RETENTION_CONTRACT_KEY,
 )
 
 REQUIRED_PROMPT_KEYS = (
@@ -226,6 +237,9 @@ CONTINUITY_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     CONTEXT_CONTINUITY_CONTRACT_KEY: _context_continuity_contract_skeleton(),
     REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY: _reentry_brief_consumption_contract_skeleton(),
 }
+DIALOGUE_RETENTION_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
+    DIALOGUE_RETENTION_CONTRACT_KEY: dialogue_retention_contract_skeleton(),
+}
 SKILL_SUPPLY_CHAIN_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     "skill_installation_supply_chain_contract_v1": _skill_installation_supply_chain_contract_skeleton("default"),
     "skill_frontmatter_contract_v1": _skill_frontmatter_contract_skeleton(),
@@ -234,6 +248,7 @@ SKILL_SUPPLY_CHAIN_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
 
 CAPABILITY_DRIVER_VALIDATOR_IDS: tuple[str, ...] = (
     "scripts/validate_identity_tool_installation.py",
+    DIALOGUE_RETENTION_VALIDATOR_ID,
     "scripts/validate_identity_vendor_api_discovery.py",
     "scripts/validate_identity_vendor_api_solution.py",
     INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID,
@@ -248,6 +263,8 @@ CAPABILITY_DRIVER_VALIDATOR_IDS: tuple[str, ...] = (
 
 ERR_CONTINUITY_WIRE_MISSING = "IP-CONT-WIRE-001"
 ERR_CONTINUITY_WIRE_INVALID = "IP-CONT-WIRE-002"
+ERR_DRET_WIRE_MISSING = "IP-DRET-WIRE-001"
+ERR_DRET_WIRE_INVALID = "IP-DRET-WIRE-002"
 
 ERR_PROMPT_WIRE_MISSING = "IP-PROMPT-WIRE-002"
 ERR_PROMPT_WIRE_INVALID = "IP-PROMPT-WIRE-003"
@@ -1249,6 +1266,37 @@ def _continuity_contract_invalid_keys(task: dict[str, Any]) -> list[str]:
     return sorted(set(invalid))
 
 
+def _dialogue_retention_contract_invalid_keys(task: dict[str, Any]) -> list[str]:
+    invalid: list[str] = []
+    contract = task.get(DIALOGUE_RETENTION_CONTRACT_KEY)
+    if isinstance(contract, dict):
+        if str(contract.get("contract_id", "")).strip() != DIALOGUE_RETENTION_CONTRACT_ID:
+            invalid.append(DIALOGUE_RETENTION_CONTRACT_KEY)
+        if str(contract.get("validator", "")).strip() != DIALOGUE_RETENTION_VALIDATOR_ID:
+            invalid.append(DIALOGUE_RETENTION_CONTRACT_KEY)
+    return sorted(set(invalid))
+
+
+def _normalize_dialogue_retention_contracts(task: dict[str, Any]) -> tuple[list[str], list[str]]:
+    restored_contract_keys: list[str] = []
+    restored_validator_keys: list[str] = []
+    for key, default in DIALOGUE_RETENTION_CONTRACT_DEFAULTS.items():
+        node = task.get(key)
+        if not isinstance(node, dict):
+            task[key] = json.loads(json.dumps(default))
+            restored_contract_keys.append(key)
+            restored_validator_keys.append(key)
+            continue
+        merged = _deep_merge(node, default)
+        if merged != node:
+            restored_contract_keys.append(key)
+        task[key] = merged
+        if str(merged.get("validator", "")).strip() != DIALOGUE_RETENTION_VALIDATOR_ID:
+            merged["validator"] = DIALOGUE_RETENTION_VALIDATOR_ID
+            restored_validator_keys.append(key)
+    return restored_contract_keys, restored_validator_keys
+
+
 def _normalize_continuity_contracts(task: dict[str, Any]) -> tuple[list[str], list[str]]:
     restored_contract_keys: list[str] = []
     restored_validator_keys: list[str] = []
@@ -1976,6 +2024,12 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Backfill intake contract set into CURRENT_TASK.json.")
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--identity-id", required=True)
+    ap.add_argument(
+        "--scope",
+        choices=["full", "blocker_taxonomy"],
+        default="full",
+        help="limit backfill to a specific shared contract family",
+    )
     ap.add_argument("--apply", action="store_true", help="persist updates to CURRENT_TASK.json")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
@@ -1991,6 +2045,50 @@ def main() -> int:
     except Exception as exc:
         print(f"[FAIL] {exc}")
         return 1
+
+    if args.scope == "blocker_taxonomy":
+        before = json.loads(json.dumps(task_doc))
+        updated = json.loads(json.dumps(task_doc))
+        blocker_surface_backfill = normalize_task_blocker_surfaces(
+            updated,
+            sync_human_collab_blockers_if_present=True,
+            include_default_legacy_aliases=True,
+        )
+        blocker_surface_invalid_after = blocker_surface_backfill.get("invalid_blockers_by_surface") or {}
+        changed = before != updated
+        applied = False
+        if args.apply and changed and not blocker_surface_invalid_after:
+            task_path.write_text(json.dumps(updated, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            applied = True
+        if blocker_surface_invalid_after:
+            status = STATUS_FAIL_REQUIRED
+            error_code = "IP-BLOCKER-WIRE-001"
+            stale_reasons = ["unsupported_blocker_types_after_backfill"]
+        elif changed:
+            status = STATUS_PASS_REQUIRED if applied else STATUS_SKIPPED_NOT_REQUIRED
+            error_code = ""
+            stale_reasons = [] if applied else ["dry_run_only"]
+        else:
+            status = STATUS_PASS_REQUIRED
+            error_code = ""
+            stale_reasons = ["already_backfilled"]
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(catalog),
+            "pack_path": str(pack_path),
+            "task_path": str(task_path),
+            "scope": args.scope,
+            "contract_backfill_status": status,
+            "error_code": error_code,
+            "changed": changed,
+            "applied": applied,
+            "task_changed": changed,
+            "blocker_surface_backfill": blocker_surface_backfill,
+            "stale_reasons": stale_reasons,
+            "evidence_ref": str(task_path),
+        }
+        _emit(payload, json_only=args.json_only)
+        return 0 if status != STATUS_FAIL_REQUIRED else 1
 
     repo_root = Path(__file__).resolve().parent.parent
     try:
@@ -2044,6 +2142,7 @@ def main() -> int:
     topology_missing_before = [k for k in REQUIRED_TOPOLOGY_KEYS if not isinstance(task_doc.get(k), dict)]
     launcher_missing_before = [k for k in REQUIRED_LAUNCHER_KEYS if not isinstance(task_doc.get(k), dict)]
     continuity_missing_before = [k for k in REQUIRED_CONTINUITY_KEYS if not isinstance(task_doc.get(k), dict)]
+    dialogue_retention_missing_before = [k for k in REQUIRED_DIALOGUE_RETENTION_KEYS if not isinstance(task_doc.get(k), dict)]
     prompt_missing_before = [k for k in REQUIRED_PROMPT_KEYS if not isinstance(task_doc.get(k), dict)]
     multimodal_missing_before = [k for k in REQUIRED_MULTIMODAL_KEYS if not isinstance(task_doc.get(k), dict)]
     reasoning_missing_before = [k for k in REQUIRED_REASONING_KEYS if not isinstance(task_doc.get(k), dict)]
@@ -2063,6 +2162,7 @@ def main() -> int:
     restored_topology_contract_keys = _normalize_instance_pack_topology_contract(updated, args.identity_id)
     restored_launcher_contract_keys = _normalize_identity_codex_launcher_contract(updated, args.identity_id)
     restored_continuity_contract_keys, restored_continuity_validator_keys = _normalize_continuity_contracts(updated)
+    restored_dialogue_retention_contract_keys, restored_dialogue_retention_validator_keys = _normalize_dialogue_retention_contracts(updated)
     updated["response_stamp_profile"] = normalize_response_stamp_profile(updated.get("response_stamp_profile"))
     restored_skill_supply_chain_contract_keys = _normalize_skill_supply_chain_contracts(updated, args.identity_id)
     restored_capability_driver_validator_paths = _normalize_capability_driver_validators(updated)
@@ -2119,6 +2219,7 @@ def main() -> int:
     topology_missing_after = [k for k in REQUIRED_TOPOLOGY_KEYS if not isinstance(updated.get(k), dict)]
     launcher_missing_after = [k for k in REQUIRED_LAUNCHER_KEYS if not isinstance(updated.get(k), dict)]
     continuity_missing_after = [k for k in REQUIRED_CONTINUITY_KEYS if not isinstance(updated.get(k), dict)]
+    dialogue_retention_missing_after = [k for k in REQUIRED_DIALOGUE_RETENTION_KEYS if not isinstance(updated.get(k), dict)]
     response_stamp_profile_present_after = isinstance(updated.get("response_stamp_profile"), dict)
     response_stamp_profile_after = normalize_response_stamp_profile(updated.get("response_stamp_profile"))
     response_stamp_profile_changed = (
@@ -2151,6 +2252,7 @@ def main() -> int:
     ]
     launcher_invalid_after = _launcher_contract_invalid_keys(updated)
     continuity_invalid_after = _continuity_contract_invalid_keys(updated)
+    dialogue_retention_invalid_after = _dialogue_retention_contract_invalid_keys(updated)
     prompt_invalid_after = [
         k
         for k in REQUIRED_PROMPT_KEYS
@@ -2531,6 +2633,12 @@ def main() -> int:
         pack_dir=pack_path,
         apply=args.apply,
     )
+    dialogue_retention_assets_result = materialize_identity_dialogue_retention_assets(
+        task=updated,
+        identity_id=args.identity_id,
+        pack_dir=pack_path,
+        apply=args.apply,
+    )
     host_gateway_wrapper_snapshot_after = _collect_host_gateway_wrapper_template_snapshot(
         updated,
         pack_path=pack_path,
@@ -2601,6 +2709,7 @@ def main() -> int:
         or bool(topology_assets_result.get("changed"))
         or bool(launcher_assets_result.get("changed"))
         or bool(continuity_assets_result.get("changed"))
+        or bool(dialogue_retention_assets_result.get("changed"))
         or bool(prompt_runtime_governance_result.get("changed"))
         or bool(provider_bindings_template_result.get("changed"))
         or bool(feedback_selftest_assets_result.get("positive_rulebook_backfilled"))
@@ -2813,17 +2922,24 @@ def main() -> int:
         "restored_launcher_contract_keys": restored_launcher_contract_keys,
         "launcher_assets_backfill": launcher_assets_result,
         "continuity_assets_backfill": continuity_assets_result,
+        "dialogue_retention_assets_backfill": dialogue_retention_assets_result,
         "missing_topology_contract_keys_after": topology_missing_after,
         "invalid_topology_contract_keys_after": topology_invalid_after,
         "restored_topology_contract_keys": restored_topology_contract_keys,
         "restored_update_lifecycle_required_checks": restored_update_lifecycle_required_checks,
         "topology_assets_backfill": topology_assets_result,
         "required_continuity_contract_keys": list(REQUIRED_CONTINUITY_KEYS),
+        "required_dialogue_retention_contract_keys": list(REQUIRED_DIALOGUE_RETENTION_KEYS),
         "missing_continuity_contract_keys_before": continuity_missing_before,
+        "missing_dialogue_retention_contract_keys_before": dialogue_retention_missing_before,
         "missing_continuity_contract_keys_after": continuity_missing_after,
+        "missing_dialogue_retention_contract_keys_after": dialogue_retention_missing_after,
         "invalid_continuity_contract_keys_after": continuity_invalid_after,
+        "invalid_dialogue_retention_contract_keys_after": dialogue_retention_invalid_after,
         "restored_continuity_contract_keys": restored_continuity_contract_keys,
         "restored_continuity_validator_keys": restored_continuity_validator_keys,
+        "restored_dialogue_retention_contract_keys": restored_dialogue_retention_contract_keys,
+        "restored_dialogue_retention_validator_keys": restored_dialogue_retention_validator_keys,
         "required_prompt_contract_keys": list(REQUIRED_PROMPT_KEYS),
         "missing_prompt_contract_keys_before": prompt_missing_before,
         "missing_prompt_contract_keys_after": prompt_missing_after,
@@ -2903,6 +3019,18 @@ def main() -> int:
                 ERR_CONTINUITY_WIRE_MISSING
                 if continuity_missing_after
                 else ERR_CONTINUITY_WIRE_INVALID
+            )
+        ),
+        "dialogue_retention_contract_auto_wire_status": (
+            STATUS_PASS_REQUIRED if not dialogue_retention_missing_after and not dialogue_retention_invalid_after else STATUS_FAIL_REQUIRED
+        ),
+        "dialogue_retention_contract_auto_wire_error_code": (
+            ""
+            if not dialogue_retention_missing_after and not dialogue_retention_invalid_after
+            else (
+                ERR_DRET_WIRE_MISSING
+                if dialogue_retention_missing_after
+                else ERR_DRET_WIRE_INVALID
             )
         ),
         "unique_entry_contract_auto_wire_status": (

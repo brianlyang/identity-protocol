@@ -132,6 +132,16 @@ from identity_context_continuity_common import (
 from identity_context_continuity_materialization_common import (
     materialize_identity_context_continuity_assets,
 )
+from identity_dialogue_retention_common import (
+    DIALOGUE_RETENTION_CONTRACT_ID as COMMON_DIALOGUE_RETENTION_CONTRACT_ID,
+    DIALOGUE_RETENTION_CONTRACT_KEY as COMMON_DIALOGUE_RETENTION_CONTRACT_KEY,
+    DIALOGUE_RETENTION_REPORT_ROOT_REL as COMMON_DIALOGUE_RETENTION_REPORT_ROOT_REL,
+    DIALOGUE_RETENTION_STATE_REL as COMMON_DIALOGUE_RETENTION_STATE_REL,
+    DIALOGUE_RETENTION_STATE_ROOT_REL as COMMON_DIALOGUE_RETENTION_STATE_ROOT_REL,
+    DIALOGUE_RETENTION_VALIDATOR_ID as COMMON_DIALOGUE_RETENTION_VALIDATOR_ID,
+    dialogue_retention_contract_skeleton as _dialogue_retention_contract_skeleton,
+    materialize_identity_dialogue_retention_assets,
+)
 from response_stamp_common import default_response_stamp_profile, normalize_response_stamp_profile
 from native_chat_headstamp_common import (
     DEFAULT_NATIVE_CHAT_PROMPT_HARD_GUARD_TEMPLATE_REF,
@@ -357,6 +367,12 @@ CONTINUITY_RECEIPT_VALIDATOR_ID = COMMON_CONTINUITY_RECEIPT_VALIDATOR_ID
 CONTEXT_CONTINUITY_REPORT_ROOT_REL = COMMON_CONTEXT_CONTINUITY_REPORT_ROOT_REL
 CONTEXT_CONTINUITY_STATE_ROOT_REL = COMMON_CONTEXT_CONTINUITY_STATE_ROOT_REL
 REENTRY_BRIEF_RELATIVE_PATH = COMMON_REENTRY_BRIEF_REL.as_posix()
+DIALOGUE_RETENTION_CONTRACT_KEY = COMMON_DIALOGUE_RETENTION_CONTRACT_KEY
+DIALOGUE_RETENTION_CONTRACT_ID = COMMON_DIALOGUE_RETENTION_CONTRACT_ID
+DIALOGUE_RETENTION_VALIDATOR_ID = COMMON_DIALOGUE_RETENTION_VALIDATOR_ID
+DIALOGUE_RETENTION_REPORT_ROOT_REL = COMMON_DIALOGUE_RETENTION_REPORT_ROOT_REL
+DIALOGUE_RETENTION_STATE_ROOT_REL = COMMON_DIALOGUE_RETENTION_STATE_ROOT_REL
+DIALOGUE_RETENTION_STATE_RELATIVE_PATH = COMMON_DIALOGUE_RETENTION_STATE_REL.as_posix()
 CONTINUITY_CHECKPOINT_PATTERN = CONTEXT_CONTINUITY_CHECKPOINT_PATTERN
 CONTINUITY_ARTIFACT_KINDS = tuple(COMMON_CONTINUITY_ARTIFACT_KINDS)
 CONTINUITY_RECEIPT_KINDS = dict(COMMON_CONTINUITY_RECEIPT_KINDS)
@@ -783,9 +799,20 @@ def _minimal_current_task(
         },
     }
     task = _ensure_dialogue_governance_contract(task, identity_id)
+    task = _ensure_dialogue_retention_contract(task)
     task = _ensure_tool_vendor_governance_contracts(task, identity_id)
     task = _ensure_instance_pack_topology_contract(task, identity_id)
     return _ensure_identity_codex_launcher_contract(task, identity_id)
+
+
+def _ensure_dialogue_retention_contract(task: dict) -> dict:
+    base = _dialogue_retention_contract_skeleton()
+    cur = task.get(DIALOGUE_RETENTION_CONTRACT_KEY)
+    if not isinstance(cur, dict):
+        task[DIALOGUE_RETENTION_CONTRACT_KEY] = base
+        return task
+    task[DIALOGUE_RETENTION_CONTRACT_KEY] = _deep_merge_defaults(base, cur)
+    return task
 
 
 def _dialogue_governance_contract_skeleton(identity_id: str) -> dict:
@@ -902,6 +929,7 @@ def _instance_pack_topology_contract_skeleton(identity_id: str) -> dict:
             "runtime/reports/broadcast",  # downsink-path-lock: allow-nonregistry-literal
             "runtime/reports/agent-relay-final-answer",
             "runtime/reports/context-continuity",
+            "runtime/reports/dialogue-retention",
             "runtime/reports/host-visible-surface",
             "runtime/reports/install",
             "runtime/reports/instance-script-admission",
@@ -913,6 +941,7 @@ def _instance_pack_topology_contract_skeleton(identity_id: str) -> dict:
             "runtime/reports/v*-wrapper-*",
             "runtime/rulebooks",
             "runtime/state/context-continuity",
+            "runtime/state/dialogue-retention",
         ],
         "forbidden_dir_patterns": [
             "runtime/scripts*",
@@ -1796,6 +1825,36 @@ def _protocol_downsink_path_registry_skeleton() -> dict:
                     "path_id": "runtime_evidence.context_continuity_reentry_brief",
                     "entry_type": "file",
                     "path": REENTRY_BRIEF_RELATIVE_PATH,
+                },
+                {
+                    "path_id": "runtime_evidence.dialogue_retention_report_dir",
+                    "entry_type": "dir",
+                    "path": DIALOGUE_RETENTION_REPORT_ROOT_REL.as_posix(),
+                },
+                {
+                    "path_id": "runtime_evidence.dialogue_retention_thread_mirror",
+                    "entry_type": "glob",
+                    "path": (DIALOGUE_RETENTION_REPORT_ROOT_REL / "dialogue-thread-*.jsonl").as_posix(),
+                },
+                {
+                    "path_id": "runtime_evidence.dialogue_retention_sync_receipt",
+                    "entry_type": "glob",
+                    "path": (DIALOGUE_RETENTION_REPORT_ROOT_REL / "dialogue-retention-sync-*.json").as_posix(),
+                },
+                {
+                    "path_id": "runtime_evidence.dialogue_retention_final_reply",
+                    "entry_type": "glob",
+                    "path": (DIALOGUE_RETENTION_REPORT_ROOT_REL / "dialogue-final-reply-*.json").as_posix(),
+                },
+                {
+                    "path_id": "runtime_evidence.dialogue_retention_state_dir",
+                    "entry_type": "dir",
+                    "path": DIALOGUE_RETENTION_STATE_ROOT_REL.as_posix(),
+                },
+                {
+                    "path_id": "runtime_evidence.dialogue_retention_state_file",
+                    "entry_type": "file",
+                    "path": DIALOGUE_RETENTION_STATE_RELATIVE_PATH,
                 },
             ],
         },
@@ -6011,6 +6070,7 @@ def _legacy_full_contract_current_task(
     task["scaffold_profile"] = "legacy-commerce-overlay"
     task["scaffold_generation_mode"] = "explicit_opt_in"
     task = _ensure_dialogue_governance_contract(task, identity_id)
+    task = _ensure_dialogue_retention_contract(task)
     task = _ensure_tool_vendor_governance_contracts(task, identity_id)
     return _ensure_instance_pack_topology_contract(task, identity_id)
 
@@ -6715,6 +6775,7 @@ def _neutral_full_contract_current_task(
         "active_binding_status_required": "BOUND_ACTIVE",
     }
     task = _ensure_dialogue_governance_contract(task, identity_id)
+    task = _ensure_dialogue_retention_contract(task)
     task = _ensure_tool_vendor_governance_contracts(task, identity_id)
     task = _ensure_instance_pack_topology_contract(task, identity_id)
     task["scaffold_profile"] = "full-contract"
@@ -7393,6 +7454,8 @@ def main() -> int:
     runtime_root = pack_dir / "runtime"
     (runtime_root / CONTEXT_CONTINUITY_REPORT_ROOT_REL.relative_to("runtime")).mkdir(parents=True, exist_ok=True)
     (runtime_root / CONTEXT_CONTINUITY_STATE_ROOT_REL.relative_to("runtime")).mkdir(parents=True, exist_ok=True)
+    (runtime_root / DIALOGUE_RETENTION_REPORT_ROOT_REL.relative_to("runtime")).mkdir(parents=True, exist_ok=True)
+    (runtime_root / DIALOGUE_RETENTION_STATE_ROOT_REL.relative_to("runtime")).mkdir(parents=True, exist_ok=True)
     write(
         runtime_root / "plugins" / "provider-bindings.local.yaml",
         _provider_bindings_template_text(repo_root=repo_root),
@@ -7429,6 +7492,7 @@ def main() -> int:
     apply_version_baseline_to_task_doc(current_task, version_baseline)
     current_task = _inject_scaffold_metadata(current_task, args.profile, version_baseline=version_baseline)
     current_task = _ensure_instance_pack_topology_contract(current_task, identity_id)
+    current_task = _ensure_dialogue_retention_contract(current_task)
     current_task = _ensure_identity_codex_launcher_contract(current_task, identity_id)
     current_task = _rewrite_identity_pack_root(current_task, identity_id, pack_dir)
     current_task = _rewrite_runtime_root(current_task, runtime_root)
@@ -7439,7 +7503,14 @@ def main() -> int:
         catalog_path=catalog_path,
         protocol_root=repo_root,
     )
+    write_json(pack_dir / "CURRENT_TASK.json", current_task)
     continuity_assets = materialize_identity_context_continuity_assets(
+        task=current_task,
+        identity_id=identity_id,
+        pack_dir=pack_dir,
+        apply=True,
+    )
+    dialogue_retention_assets = materialize_identity_dialogue_retention_assets(
         task=current_task,
         identity_id=identity_id,
         pack_dir=pack_dir,
@@ -7520,6 +7591,10 @@ def main() -> int:
     print(
         "[OK] materialized continuity guard assets: "
         f"{continuity_assets.get('inspection', {}).get('guard_state_path', '')}"
+    )
+    print(
+        "[OK] materialized dialogue retention assets: "
+        f"{dialogue_retention_assets.get('inspection', {}).get('state_path', '')}"
     )
 
     catalog_original_text: str | None = None

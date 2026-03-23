@@ -18,6 +18,10 @@ from identity_context_continuity_common import (
     REENTRY_BRIEF_CONSUMPTION_CONTRACT_ID,
     REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY,
 )
+from identity_dialogue_retention_common import (
+    DIALOGUE_RETENTION_CONTRACT_ID,
+    DIALOGUE_RETENTION_CONTRACT_KEY,
+)
 from response_stamp_common import resolve_layer_intent
 from tool_vendor_governance_common import (
     contract_required,
@@ -98,6 +102,7 @@ STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_identity_reentry_brief.py": "identity_reentry_brief_status",
     "scripts/validate_identity_reentry_consumption.py": "identity_reentry_consumption_status",
     "scripts/validate_identity_context_continuity_receipts.py": "identity_context_continuity_receipt_family_status",
+    "scripts/validate_identity_dialogue_retention.py": "protocol_dialogue_retention_status",
 }
 PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "release_plane_cloud_evidence",
@@ -133,6 +138,7 @@ PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "identity_reentry_brief",
     "identity_reentry_consumption",
     "identity_context_continuity_receipts",
+    "identity_dialogue_retention",
     "dedup_monotonicity",
     "cross_workflow_schema",
     "skill_path_integrity",
@@ -619,6 +625,16 @@ TARGETS = (
             CONTINUITY_RECEIPT_CONTRACT_ID,
         ),
         validator_script="scripts/validate_identity_context_continuity_receipts.py",
+        validator_args=("--json-only",),
+        instance_adopted_protocol_target=True,
+    ),
+    ContractTarget(
+        name="identity_dialogue_retention",
+        contract_keys=(
+            DIALOGUE_RETENTION_CONTRACT_KEY,
+            DIALOGUE_RETENTION_CONTRACT_ID,
+        ),
+        validator_script="scripts/validate_identity_dialogue_retention.py",
         validator_args=("--json-only",),
         instance_adopted_protocol_target=True,
     ),

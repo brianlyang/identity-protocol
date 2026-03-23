@@ -123,6 +123,7 @@ BUNDLE_REQUIREMENT_ORDER: tuple[str, ...] = (
     "asb16-rq-048",
     "asb16-rq-049",
     "asb16-rq-050",
+    "asb16-rq-051",
 )
 
 TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
@@ -173,6 +174,7 @@ TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
     "asb16-rq-048": "route_discovery_convergence",
     "asb16-rq-049": "feedback_operational_prompt",
     "asb16-rq-050": "feedback_to_judgement_loopback",
+    "asb16-rq-051": "identity_dialogue_retention",
 }
 REQUIREMENT_BY_TARGET: dict[str, str] = {v: k for k, v in TARGET_NAME_BY_REQUIREMENT.items()}
 
@@ -224,6 +226,7 @@ STATUS_FIELD_BY_TARGET: dict[str, str] = {
     "route_discovery_convergence": "route_discovery_convergence_status",
     "feedback_operational_prompt": "feedback_operational_prompt_status",
     "feedback_to_judgement_loopback": "feedback_to_judgement_loopback_status",
+    "identity_dialogue_retention": "protocol_dialogue_retention_status",
 }
 
 ERROR_FIELD_CANDIDATES: tuple[str, ...] = (
