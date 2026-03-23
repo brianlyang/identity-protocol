@@ -181,7 +181,7 @@ def _cmd_render(args: argparse.Namespace) -> int:
         "manifest_doc": launcher_manifest_doc(args.identity_id),
         "readme_text": launcher_readme_text(args.identity_id),
         "generic_launcher_text": render_generic_launcher_sh(),
-        "shortcut_launcher_text": render_shortcut_launcher_sh(args.identity_id),
+        "shortcut_launcher_text": render_shortcut_launcher_sh(args.identity_id, catalog_path),
     }
     _emit(payload, json_only=args.json_only)
     return 0

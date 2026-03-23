@@ -52,7 +52,11 @@ def main() -> int:
 
     asset_result = ensure_launcher_assets(pack_root, args.identity_id)
     bin_dir = Path(args.bin_dir).expanduser().resolve() if str(args.bin_dir or "").strip() else default_bin_dir()
-    shim_result = install_launcher_shims(identity_id=args.identity_id, bin_dir=bin_dir)
+    shim_result = install_launcher_shims(
+        identity_id=args.identity_id,
+        bin_dir=bin_dir,
+        catalog_path=catalog_path,
+    )
 
     identity_home = (
         Path(args.identity_home).expanduser().resolve()

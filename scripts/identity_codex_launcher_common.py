@@ -409,8 +409,9 @@ exec python3 "${IDENTITY_PROTOCOL_HOME}/scripts/render_identity_codex_launcher.p
 """
 
 
-def render_shortcut_launcher_sh(identity_id: str) -> str:
+def render_shortcut_launcher_sh(identity_id: str, catalog_path: Path) -> str:
     shortcut = shortcut_launcher_name(identity_id)
+    catalog_token = shlex.quote(str(catalog_path.expanduser().resolve()))
     return f"""#!/usr/bin/env bash
 set -euo pipefail
 
@@ -420,23 +421,28 @@ LAUNCHER_DIR="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)"
 # contract_id={IDENTITY_CODEX_LAUNCHER_CONTRACT_ID}
 # identity_id={identity_id}
 # shortcut_name={shortcut}
+# catalog_binding={catalog_token}
 
 if [[ "${{1:-}}" == "commands" ]]; then
   shift
-  exec "${{LAUNCHER_DIR}}/{GENERIC_LAUNCHER_NAME}" commands --identity-id {shlex.quote(identity_id)} "$@"
+  exec "${{LAUNCHER_DIR}}/{GENERIC_LAUNCHER_NAME}" commands --identity-id {shlex.quote(identity_id)} --catalog {catalog_token} "$@"
 fi
 
-exec "${{LAUNCHER_DIR}}/{GENERIC_LAUNCHER_NAME}" --identity-id {shlex.quote(identity_id)} -- "$@"
+exec "${{LAUNCHER_DIR}}/{GENERIC_LAUNCHER_NAME}" --identity-id {shlex.quote(identity_id)} --catalog {catalog_token} "$@"
 """
 
 
-def install_launcher_shims(*, identity_id: str, bin_dir: Path) -> dict[str, Any]:
+def install_launcher_shims(*, identity_id: str, bin_dir: Path, catalog_path: Path) -> dict[str, Any]:
     bin_root = bin_dir.expanduser().resolve()
     bin_root.mkdir(parents=True, exist_ok=True)
     generic_path = (bin_root / GENERIC_LAUNCHER_NAME).resolve()
     shortcut_path = (bin_root / shortcut_launcher_name(identity_id)).resolve()
     generic_changed = _write_text_if_changed(generic_path, render_generic_launcher_sh(), executable=True)
-    shortcut_changed = _write_text_if_changed(shortcut_path, render_shortcut_launcher_sh(identity_id), executable=True)
+    shortcut_changed = _write_text_if_changed(
+        shortcut_path,
+        render_shortcut_launcher_sh(identity_id, catalog_path),
+        executable=True,
+    )
     return {
         "bin_dir": str(bin_root),
         "generic_launcher_path": str(generic_path),

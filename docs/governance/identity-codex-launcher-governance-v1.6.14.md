@@ -64,6 +64,8 @@ Execution mode: topic-level canonical SSOT for v1.6.14 identity-Codex launcher g
    must already be self-contained for the shell that requested the bundle.
 13. When the resolved identity catalog differs from the ambient shell catalog, the command bundle must switch its preferred/recommended primary start/resume surfaces to the generic launcher form carrying explicit `--catalog <resolved-catalog>`.
     - Under that mismatch state, short launcher commands may remain visible only as convenience/reference surfaces (for example `copyable_commands.*.shortcut`); they must not remain labeled as `preferred_*`.
+    - The installed `id-<identity-id>` shim itself must remain pinned to its governed install catalog by forwarding explicit `--catalog <resolved-catalog>` internally; ambient shell/catalog drift must not silently rebind that shortcut to another catalog.
+    - That execution-time catalog pinning does **not** promote the short launcher back onto the preferred discovery lane under mismatch; command discovery must still expose the explicit generic primary surface so the catalog requirement stays operator-visible and machine-auditable.
 14. Resume readiness is fail-close and decomposed:
    - host-thread UUID presence alone must **not** upgrade `resume_status` to `PASS_REQUIRED`;
    - `resume_status` may be `PASS_REQUIRED` only when the host thread id and the authoritative identity session tuple are both resolved;

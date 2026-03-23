@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 from pathlib import Path
 from typing import Any
 
@@ -173,6 +174,14 @@ def main() -> int:
             text = shortcut_path.read_text(encoding="utf-8", errors="ignore")
             if f"--identity-id {args.identity_id}" not in text:
                 install_stale.append("shortcut_launcher_identity_binding_missing")
+            expected_catalog = str(catalog_path.resolve())
+            quoted_catalog = shlex.quote(expected_catalog)
+            if "--catalog" not in text or (
+                expected_catalog not in text
+                and quoted_catalog not in text
+                and f"# catalog_binding={quoted_catalog}" not in text
+            ):
+                install_stale.append("shortcut_launcher_catalog_binding_missing")
     runtime_stale: list[str] = []
     if install_required:
         if not runtime_paths_env.exists():

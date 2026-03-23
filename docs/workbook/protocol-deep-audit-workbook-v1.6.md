@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 87`, `command snippets checked: 950`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 87`, `command snippets checked: 953`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -957,6 +957,35 @@ Root cause:
   - the same renderer now canonicalizes `preferred_resume_command` to the canonical resume surface under mismatch, while retaining short launchers only as `shortcut_start_command`, `shortcut_resume_command`, and `copyable_commands.*.shortcut` reference fields;
   - `scripts/ci/run_identity_codex_launcher_probes_ci.sh` now copies the governed catalog to an alternate path and proves that ambient-catalog mismatch forces `preferred_*` and `recommended_*` to converge on the same explicit `--catalog` / `--session-id` primary surface;
   - `README.md` plus the `v1.6.14` governance/review pair now explicitly freeze that short launchers may remain visible as convenience/reference surfaces under mismatch, but must not remain labeled as the preferred operator command surface.
+
+### ISSUE-035 - `v1.6.14` installed short launchers now stay pinned to their governed install catalog instead of inheriting ambient catalog drift
+
+- `status`: CLOSED
+- `problem_statement`: after `ISSUE-034` landed, the command bundle correctly stopped dual-ranking stale shortcuts under catalog mismatch, but a remaining execution-surface gap survived: an already-installed `id-<identity-id>` shortcut could still inherit ambient `IDENTITY_CATALOG` drift from the shell before its own launcher logic ran, causing global identities invoked from a project shell to resolve against the wrong catalog and fail even though the canonical explicit generic command already worked.
+- `primary_owner_doc`: `docs/governance/identity-codex-launcher-governance-v1.6.14.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md`
+  - `README.md`
+  - `scripts/identity_codex_launcher_common.py`
+  - `scripts/install_identity_codex_launcher.py`
+  - `scripts/validate_identity_codex_launcher.py`
+- `machine_gate`:
+  - `scripts/ci/run_identity_codex_launcher_probes_ci.sh`
+  - `scripts/validate_identity_codex_launcher.py`
+  - `scripts/docs_command_contract_check.py`
+  - direct replay: `IDENTITY_CATALOG=<foreign-catalog> ${CODEX_HOME}/bin/id-<identity-id> --dry-run --json-only -- resume <host-thread-uuid>`
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - installed `id-<identity-id>` shims must forward explicit `--catalog <resolved-catalog>` internally for both `commands` and `exec`, so ambient env/catalog drift cannot silently rebind the shortcut to a foreign catalog;
+  - launcher install validation must fail-close if a shortcut exists without that governed catalog binding;
+  - probe coverage must prove both `commands` and `--dry-run -- resume <host-thread-uuid>` succeed for the shortcut even when `IDENTITY_CATALOG` is intentionally pointed at a foreign catalog;
+  - this execution-stability catalog pinning must not be misreported as a change to the mismatch discovery semantics: the command bundle must still keep the explicit generic `--catalog` surface as the preferred/recommended primary command under mismatch.
+- `current_evidence`:
+  - `scripts/identity_codex_launcher_common.py` now renders the shortcut shim with explicit `--catalog <resolved-catalog>` forwarding plus a governed catalog-binding marker comment, covering both `commands` and `exec`;
+  - `scripts/install_identity_codex_launcher.py` and `scripts/render_identity_codex_launcher.py` now pass the selected governed catalog into shortcut rendering instead of leaving the shortcut catalog-agnostic;
+  - `scripts/validate_identity_codex_launcher.py` now fail-closes stale installed shortcuts missing explicit catalog binding;
+  - `scripts/ci/run_identity_codex_launcher_probes_ci.sh` now injects env/catalog mismatch and proves the installed shortcut still returns a valid mismatch-aware command bundle and a valid dry-run resume payload;
+  - `README.md` plus the `v1.6.14` governance/review pair now explicitly separate shortcut execution-time catalog pinning from the operator-visible preferred command surface under mismatch.
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 

@@ -43,6 +43,10 @@ Explicit generic surface:
 If command discovery detects `ambient_catalog_mismatch_requires_explicit_catalog`, the preferred primary
 surface must switch to the explicit generic launcher carrying `--catalog <resolved-catalog>`; any short
 launcher surface may remain visible only as a convenience/reference surface, not as the preferred command.
+The installed short launcher still stays execution-stable under that mismatch because the generated shim
+forwards its governed install catalog internally via explicit `--catalog <resolved-catalog>`; that hidden
+catalog pinning is for fail-close execution stability only and does not move the short launcher back onto
+the preferred discovery lane.
 
 Print the full copyable command bundle for any governed identity:
 
@@ -90,6 +94,7 @@ What this prints:
 - all commands are terminal-native direct commands; shell-wrapped `zsh -lic '...'` surfaces are non-canonical
 - `recommended_user_command` is selected by fresh-shell executability, not by host-thread UUID presence alone
 - when the ambient shell catalog does not match the resolved identity catalog, the recommended command carries explicit `--catalog <resolved-catalog>`
+- the installed short launcher remains pinned to its governed install catalog even if ambient `IDENTITY_CATALOG` drifts, so convenience execution cannot silently hop to another catalog
 - when resume needs identity-session tuple closure, the recommended resume command carries explicit `--session-id run:<...>`
 - `resume_status` can be `PASS_REQUIRED` only when both the host thread UUID and the authoritative identity session tuple are resolved
 - when no fresh-shell resume command is available, `recommended_user_command` falls back to the start command instead of promoting a stale shortcut

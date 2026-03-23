@@ -75,8 +75,10 @@ NO_SESSION_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-no-session.json"
 INVALID_SESSION_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-invalid-session.json"
 MISMATCH_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-catalog-mismatch.json"
 SHORTCUT_COMMANDS_JSON="${TMP_ROOT}/shortcut-launcher-commands.json"
+SHORTCUT_MISMATCH_COMMANDS_JSON="${TMP_ROOT}/shortcut-launcher-commands-env-mismatch.json"
 NEGATIVE_DRY_RUN_JSON="${TMP_ROOT}/launcher-dry-run-no-session.json"
 INVALID_SESSION_DRY_RUN_JSON="${TMP_ROOT}/launcher-dry-run-invalid-session.json"
+SHORTCUT_MISMATCH_DRY_RUN_JSON="${TMP_ROOT}/shortcut-launcher-dry-run-env-mismatch.json"
 
 echo "[RUN] ${BIN_DIR}/identity-codex commands --identity-id ${IDENTITY_ID} --thread-id <thread-uuid> --session-id <session-id> --json-only"
 "${BIN_DIR}/identity-codex" \
@@ -287,6 +289,43 @@ assert payload["instance_answer_guidance"]["continuity_support_internal_only"] i
 print("launcher_shortcut_command_bundle_status=PASS_REQUIRED")
 PY
 
+echo "[RUN] IDENTITY_CATALOG=${ALT_CATALOG_PATH} ${BIN_DIR}/id-${IDENTITY_ID} commands --thread-id <thread-uuid> --session-id <session-id> --json-only (positive: shortcut stays bound to install catalog under env mismatch)"
+IDENTITY_CATALOG="${ALT_CATALOG_PATH}" \
+"${BIN_DIR}/id-${IDENTITY_ID}" \
+  commands \
+  --thread-id "${HOST_THREAD_UUID}" \
+  --session-id "${SESSION_ID}" \
+  --json-only > "${SHORTCUT_MISMATCH_COMMANDS_JSON}"
+
+python3 - "${SHORTCUT_MISMATCH_COMMANDS_JSON}" "${SESSION_ID}" "${CATALOG_PATH}" "${ALT_CATALOG_PATH}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+session_id = sys.argv[2]
+catalog_path = str(Path(sys.argv[3]).resolve())
+ambient_catalog_path = str(Path(sys.argv[4]).resolve())
+assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["catalog_path"] == catalog_path, payload
+assert payload["ambient_catalog_path"] == ambient_catalog_path, payload
+assert payload["catalog_context_status"] == "FAIL_REQUIRED", payload
+assert payload["catalog_context_reason"] == "ambient_catalog_mismatch_requires_explicit_catalog", payload
+assert payload["identity_session_tuple_status"] == "PASS_REQUIRED", payload
+assert payload["resolved_resume_session_id"] == session_id, payload
+assert payload["preferred_start_command"] == payload["recommended_start_command"], payload
+assert payload["preferred_resume_command"] == payload["recommended_resume_command"], payload
+assert payload["copyable_commands"]["start"]["shortcut"] == f"id-{payload['identity_id']}", payload
+assert payload["copyable_commands"]["resume"]["shortcut"] == (
+    f"id-{payload['identity_id']} resume {payload['current_host_thread_id']}"
+), payload
+assert payload["preferred_start_command"] != payload["copyable_commands"]["start"]["shortcut"], payload
+assert payload["preferred_resume_command"] != payload["copyable_commands"]["resume"]["shortcut"], payload
+assert f"--catalog {catalog_path}" in payload["preferred_start_command"], payload
+assert f"--catalog {catalog_path}" in payload["preferred_resume_command"], payload
+print("launcher_shortcut_catalog_binding_commands_status=PASS_REQUIRED")
+PY
+
 python3 - "${REPO_ROOT}" <<'PY'
 import re
 import sys
@@ -357,6 +396,31 @@ payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["status"] == "FAIL_REQUIRED", payload
 assert "current-turn session tuple unresolved" in payload["error"], payload
 print("launcher_dry_run_invalid_session_status=PASS_REQUIRED")
+PY
+
+echo "[RUN] IDENTITY_CATALOG=${ALT_CATALOG_PATH} ${BIN_DIR}/id-${IDENTITY_ID} --dry-run --json-only -- resume <thread-uuid> (positive: shortcut dry-run survives env mismatch)"
+IDENTITY_CATALOG="${ALT_CATALOG_PATH}" \
+"${BIN_DIR}/id-${IDENTITY_ID}" \
+  --dry-run \
+  --json-only \
+  -- \
+  resume "${HOST_THREAD_UUID}" > "${SHORTCUT_MISMATCH_DRY_RUN_JSON}"
+
+python3 - "${SHORTCUT_MISMATCH_DRY_RUN_JSON}" "${CATALOG_PATH}" "${SESSION_ID}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+catalog_path = str(Path(sys.argv[2]).resolve())
+session_id = sys.argv[3]
+assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["catalog_path"] == catalog_path, payload
+assert payload["session_id"] == session_id, payload
+assert payload["session_source"] in {"actor_binding_identity", "explicit_session_id"}, payload
+command = payload.get("command") or []
+assert command[-2:] and command[-2] == "resume", payload
+print("launcher_shortcut_catalog_binding_dry_run_status=PASS_REQUIRED")
 PY
 
 echo "[RUN] ${BIN_DIR}/identity-codex --identity-id ${IDENTITY_ID} --session-id <session-id> --dry-run --json-only -- resume <thread-uuid>"
