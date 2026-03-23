@@ -1,6 +1,6 @@
 # Identity Artifact Family Routing Governance (v1.6.18)
 
-Status: Active (protocol-scoped semantic/path freeze opened 2026-03-23; raw dialogue retention family plus shared validator/creator/readiness consumption landed 2026-03-23; whole cross-family matrix enforcement remains follow-on work)  
+Status: Active (`ISSUE-032` closed on 2026-03-23; protocol-scoped semantic/path freeze, raw dialogue-retention landing, and whole-matrix routing validator/gate closure are now protocol-owned)
 Layer: protocol  
 Scope: protocol-owned persisted artifact families inside governed identity packs/runtime; fixed-path routing and anti-semantic-pollution boundary  
 Execution mode: topic-level canonical SSOT for v1.6.18 artifact-family routing governance.
@@ -301,7 +301,7 @@ Frozen interpretation:
 - the protocol already has multiple distinct persisted families;
 - the missing piece was the motherline routing matrix tying them together so they cannot keep being mislabeled as one “memory” bucket.
 
-## 7) Machine-consumer landing absorbed into v1.6.18
+## 7) Machine-consumer and whole-matrix routing closure landed
 
 This stream is no longer docs-only. The following machine-consumed closure is now part of the stream without reopening owner boundaries:
 
@@ -314,21 +314,32 @@ This stream is no longer docs-only. The following machine-consumed closure is no
    - delivery-hook invocation from the final visible emitter surface,
    - continuity tick coexistence without semantic collapse,
    - active-thread live-drift reporting without reclassifying the recorded mirror as corrupt.
+6. `rq_052_identity_artifact_family_routing_contract_v1` is now bound in the motherline mapping and backed by `scripts/validate_identity_artifact_family_routing.py`.
+7. `scripts/validate_identity_artifact_family_routing.py` now fail-closes on missing routing-contract coverage, `reject_memory_gate` drift, pack rulebook/task-history collisions, protocol-feedback root drift, continuity/reentry anchor drift, and memory-absorption active-path leakage while deliberately leaving family-specific deep semantics with their inherited validator lanes.
+8. `scripts/ci/run_identity_artifact_family_routing_probes_ci.sh` proves:
+   - positive whole-matrix pass on a fixture pack,
+   - missing-contract fail-close,
+   - backfill repair restoring closure,
+   - collision fail-close when runtime experience-feedback is pointed at pack-root `RULEBOOK.jsonl`.
+9. `scripts/required_gate_bundle_runner.py --target-name identity_artifact_family_routing` now stays on registry-lineage target-probe mode instead of misbinding full-bundle ingress wrapper / unique-entry receipt obligations onto single-target routing checks; `run_id` and profile binding remain required, but targeted routing probes no longer fail-close for unrelated wrapper provenance debt.
+10. After contract backfill, the current weixinstore workspace-local runtime catalog now replays `PASS_REQUIRED` for all four active runtime identities (`base-repo-audit-expert-v3`, `custom-creative-ecom-analyst`, `base-repo-architect`, and `base-repo-closure-orchestrator`) on the same `rq_052` validator lane.
 
-## 8) Follow-on closure boundary
+## 8) Closure state after whole-matrix routing landing
 
-This stream has landed raw dialogue retention machine consumers, but one follow-on boundary still remains open without reopening semantic ownership:
+`ISSUE-032` is now closed. The stream’s bounded stop condition is satisfied because:
 
-1. a later whole-matrix validator may enforce cross-family routing for every family, not only the raw dialogue retention lane;
-2. workbook closure should be updated to reflect the new eight-family matrix and the distinction between raw-dialogue retention vs dialogue-governance vs continuity;
-3. future new families must still arrive through governed stream openings rather than ad hoc pack additions.
+1. one canonical matrix freezes each protocol-owned persisted family by owner + fixed path + payload class + producer + consumer;
+2. `memory` is no longer treated as a canonical sink name for these protocol-owned families;
+3. raw dialogue retention remains distinct from dialogue-governance, continuity/reentry, protocol-feedback, and memory-absorption;
+4. the whole-matrix validator/gate lane now extends the frozen routing matrix rather than re-deriving family semantics pack by pack;
+5. future new families must still arrive through governed stream openings rather than ad hoc pack additions.
 
 ## 9) Execution ownership boundary for ISSUE-032 closeout
 
-This stream now explicitly freezes the owner split so whole-matrix closure can proceed without semantic drift:
+This stream now explicitly freezes the owner split so the landed whole-matrix closure remains semantically stable:
 
 1. Semantic ownership remains with this `v1.6.18` governance stream plus the inherited owner streams already referenced here; execution closure must not reinterpret family names, fixed paths, canonical producer/consumer roles, or frozen non-goals.
-2. Execution closeout may continue the protocol-owned machine landing for `ISSUE-032`, including shared validators, probes, required-gate wiring, readiness consumption, workbook truth-sync, and cross-family misuse fail-close, as long as it extends this same routing matrix rather than inventing a new one.
+2. Execution closeout has landed the protocol-owned machine path for `ISSUE-032` through shared validators, probes, required-gate wiring, readiness consumption, workbook truth-sync, and cross-family misuse fail-close; any future follow-on work may extend evidence breadth or archival truth-sync only if it stays on this same routing matrix.
 3. Audit/review lanes verify closure, evidence, and truth-sync state; they do not become replacement semantic owners for any artifact family.
 4. Any proposal that adds a new family, repoints a canonical root, collapses two frozen families into one sink, or promotes `runtime/memory-absorption/**` onto an active success path must reopen governed owner review instead of shipping through execution closeout.
 5. These roles are protocol functions, not person-specific appointments: semantic owner, execution closeout owner, and audit verifier remain stable even if the current humans on those lanes change.

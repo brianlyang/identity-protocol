@@ -102,7 +102,8 @@ Hard semantics:
 7. `runtime/memory-absorption/**` is quarantine/re-materialization only; active validators and success paths must not consume it as continuity, dialogue, learning, or protocol-feedback truth.
 8. `runtime/reports/dialogue-retention/**` and `runtime/state/dialogue-retention/**` are raw dialogue truth mirrors plus governed supplements/receipts; they must not be collapsed into dialogue-governance, continuity/reentry, protocol-feedback, or memory-absorption.
 9. Declaration/gate surfaces such as `reject_memory_gate` and `*_contract` blocks remain control-plane declarations, not artifact-family outputs.
-10. Future validators/creator/readiness wiring must enforce the same routing matrix rather than re-deriving family semantics per pack.
+10. `rq_052_identity_artifact_family_routing_contract_v1` is the machine-consumed whole-matrix routing row for this boundary; it validates the frozen routing matrix without collapsing family-specific owner semantics into one generic super-validator.
+11. Future validators/creator/readiness wiring must enforce the same routing matrix rather than re-deriving family semantics per pack.
 
 ## Batch-6 anchor placeholders (v1.6 intake, non-promotional)
 
@@ -395,6 +396,35 @@ Hard semantics:
 3. Delivery must be bridged through a governed post-delivery hook bound to the final visible emitter surface; narrative claims of “already remembered” without hook-produced runtime evidence are non-compliant.
 4. Mirror exactness is evaluated against the recorded source snapshot captured by the sync receipt/state. When the live current-thread sidecar advances after a successful sync on the active thread, validators may report `source_live_advanced_since_last_sync=true` without treating the recorded mirror as corrupt.
 5. Raw dialogue retention is evidence, not authority: it must not override `CURRENT_TASK.json`, `IDENTITY_PROMPT.md`, tuple/bootstrap truth, continuity/reentry bind objects, learning rulebooks, or protocol-feedback communication lanes.
+
+### rq_052_identity_artifact_family_routing_contract_v1
+
+Required receipt fields:
+
+- `artifact_family_routing_status`
+- `contract_status`
+- `declaration_gate_boundary_status`
+- `family_root_separation_status`
+- `pack_rulebook_family_status`
+- `pack_task_history_family_status`
+- `runtime_dialogue_retention_family_status`
+- `runtime_dialogue_governance_family_status`
+- `runtime_experience_feedback_family_status`
+- `runtime_protocol_feedback_family_status`
+- `runtime_continuity_reentry_family_status`
+- `runtime_memory_absorption_family_status`
+- `family_rows`
+- `stale_reasons`
+- `error_code`
+- `evidence_ref`
+
+Hard semantics:
+
+1. Governed artifact-family routing must fail-close when a protocol-owned persisted artifact cannot be resolved to exactly one frozen family in the `v1.6.18` routing matrix.
+2. `memory` is not a canonical protocol sink name; validators must reject generic `memory` success-path promotion and require `reject_memory_gate=required`.
+3. `RULEBOOK.jsonl` must remain distinct from runtime experience-feedback rulebooks, `TASK_HISTORY.md` must remain distinct from continuity/reentry state, and `runtime/protocol-feedback/**` must remain communication-only rather than a learning or continuity substitute.
+4. The routing row validates canonical roots, anchor paths, cross-family separation, and quarantine-only treatment of `runtime/memory-absorption/**`; it must not silently promote memory-absorption, protocol-feedback, continuity, or dialogue artifacts into one shared fallback sink.
+5. `rq_052` is a routing/control-plane contract, not a replacement semantic owner for the eight families. Family-specific deep semantics remain owned by their inherited streams and dedicated validators; `rq_052` only enforces that those families do not collapse, drift, or cross-wire at the routing layer.
 
 ### Canonical identity-Codex launcher execution boundary (v1.6.14 additive)
 

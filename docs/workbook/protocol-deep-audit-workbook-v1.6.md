@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 87`, `command snippets checked: 942`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 87`, `command snippets checked: 950`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -864,7 +864,7 @@ Root cause:
 
 ### ISSUE-032 - Protocol artifact-family routing remains semantically overloaded under generic "memory" wording
 
-- `status`: OPEN
+- `status`: CLOSED
 - `problem_statement`: protocol-owned persisted artifact families inside identity packs/runtime already exist, but they are still too easy to collapse into generic “memory” language. Without one routing matrix, pack rulebook, pack task-history, runtime dialogue-governance, runtime experience-feedback, runtime protocol-feedback, runtime continuity/reentry, and runtime memory-absorption quarantine can be semantically polluted into one bucket.
 - `primary_owner_doc`: `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md`
 - `secondary_refs`:
@@ -886,16 +886,18 @@ Root cause:
   - `runtime/protocol-feedback/**` stays governance communication-only;
   - `runtime/memory-absorption/**` stays quarantine/re-materialization only;
   - at least one machine-consumed family landing proves the matrix can drive shared validator/creator/readiness/runtime-hook wiring without per-pack folklore;
-  - later broader matrix enforcement reuses the same matrix instead of re-deriving semantics pack by pack.
+  - whole-matrix routing enforcement reuses the same matrix instead of re-deriving semantics pack by pack.
 - `current_evidence`:
   - `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md` now freezes the canonical routing matrix across eight protocol-scoped persisted families and explicitly classifies declaration keys/gates as non-artifact control-plane surfaces;
   - `docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md` now records the current protocol/runtime scan basis, the new raw dialogue-retention family, and the quarantine-only interpretation of `runtime/memory-absorption/**`;
-  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`, `identity/protocol/IDENTITY_PROTOCOL.md`, `identity/protocol/IDENTITY_RUNTIME.md`, and `README.md` now truth-sync the family names, fixed paths, forbidden conflations, and `rq_051_identity_dialogue_retention_contract_v1`;
+  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`, `identity/protocol/IDENTITY_PROTOCOL.md`, `identity/protocol/IDENTITY_RUNTIME.md`, and `identity/protocol/mappings/contract-binding.v1.6.yaml` now truth-sync the family names, fixed paths, forbidden conflations, `rq_051_identity_dialogue_retention_contract_v1`, and `rq_052_identity_artifact_family_routing_contract_v1` / `ASB16-RQ-052`;
   - `scripts/identity_dialogue_retention_common.py`, `scripts/run_identity_dialogue_retention_guard_runtime.py`, `scripts/run_identity_delivery_runtime_hooks.py`, `scripts/validate_identity_dialogue_retention.py`, and `scripts/ci/run_identity_dialogue_retention_probes_ci.sh` now land the first machine-consumed family closure for this stream;
-  - `scripts/create_identity_pack.py`, `scripts/repair_contract_backfill.py`, `scripts/release_readiness_check.py`, `scripts/ci/run_required_runtime_gates_ci.sh`, `scripts/validate_required_contract_coverage.py`, and `scripts/required_gate_bundle_runner.py` now consume the same family instead of leaving raw dialogue truth routing as docs-only guidance.
+  - `scripts/validate_identity_artifact_family_routing.py` and `scripts/ci/run_identity_artifact_family_routing_probes_ci.sh` now land the whole-matrix routing closure and fail-close on missing contract coverage, generic `memory` sink drift, pack/runtime family collisions, protocol-feedback root drift, continuity/reentry anchor drift, and memory-absorption active-path leakage without collapsing family-specific owner semantics into one super-validator;
+  - `scripts/create_identity_pack.py`, `scripts/repair_contract_backfill.py`, `scripts/release_readiness_check.py`, `scripts/ci/run_required_runtime_gates_ci.sh`, `scripts/validate_required_contract_coverage.py`, and `scripts/required_gate_bundle_runner.py` now consume the same routing row instead of leaving whole-matrix routing as docs-only guidance;
+  - after contract backfill, the weixinstore workspace-local runtime catalog replays `PASS_REQUIRED` on `scripts/validate_identity_artifact_family_routing.py` for `base-repo-audit-expert-v3`, `custom-creative-ecom-analyst`, `base-repo-architect`, and `base-repo-closure-orchestrator`.
 - `execution_closeout_boundary`:
   - semantic ownership remains with `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md` plus the inherited owner streams it explicitly references;
-  - execution closeout may continue whole-matrix validator/probe/gate/readiness/workbook truth-sync work for `ISSUE-032`, but only by extending the frozen routing matrix already accepted here;
+  - execution closeout has already landed the bounded whole-matrix validator/probe/gate/readiness/workbook truth-sync path for `ISSUE-032`; any future breadth/archival follow-on may extend evidence only by reusing the same frozen routing matrix;
   - execution closeout must not redefine family names, fixed roots, canonical producer/consumer roles, or frozen non-goals, and must not promote `runtime/memory-absorption/**` back onto an active success path;
   - audit/review verifies closure and truth-sync state, but does not become a replacement semantic owner.
 
@@ -926,6 +928,31 @@ Root cause:
   - `scripts/identity_codex_launcher_common.py` now requires authoritative runtime identity resolution for both bound and explicit session tuples, so a non-authoritative explicit `run:<...>` no longer yields a resumable recommendation surface;
   - `scripts/ci/run_identity_codex_launcher_probes_ci.sh` now proves four cases together: positive authoritative resume, negative missing tuple, negative invalid explicit tuple, and positive dry-run preservation of `resume <host-thread-uuid>` as the recovery tail;
   - `README.md` plus the `v1.6.14` governance/review pair now explicitly state that `resume <host-thread-uuid>` remains the Codex recovery target for prior records, while `--session-id run:<...>` is launcher tuple closure only.
+
+### ISSUE-034 - `v1.6.14` launcher command discovery now canonicalizes preferred command surfaces under catalog mismatch instead of dual-ranking stale shortcuts
+
+- `status`: CLOSED
+- `problem_statement`: after `ISSUE-033` landed, the launcher bundle correctly froze fresh-shell resume executability, but a residual operator-surface gap remained: when command discovery already knew the current shell was in `ambient_catalog_mismatch_requires_explicit_catalog`, the bundle still labeled short launcher commands as `preferred_*` while only placing the real mismatch-safe canonical commands under `recommended_*`. That split semantic ownership between a convenience shortcut and the actual executable primary surface.
+- `primary_owner_doc`: `docs/governance/identity-codex-launcher-governance-v1.6.14.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md`
+  - `README.md`
+  - `scripts/render_identity_codex_launcher.py`
+- `machine_gate`:
+  - `scripts/ci/run_identity_codex_launcher_probes_ci.sh`
+  - `scripts/docs_command_contract_check.py`
+  - direct replay: `python3 scripts/render_identity_codex_launcher.py commands --identity-id <id> --catalog <alt-catalog> --thread-id <host-thread-uuid> --session-id <run:session-id> --json-only`
+- `root_cause`: RC-03 and RC-06
+- `stop_condition`:
+  - when the bundle classifies `ambient_catalog_mismatch_requires_explicit_catalog`, `preferred_start_command` must equal the same canonical fresh-shell primary command as `recommended_start_command`;
+  - under that same mismatch state, `preferred_resume_command` must equal `recommended_resume_command` when resume is fresh-shell executable, or remain empty rather than labeling a stale short shortcut as preferred;
+  - any retained short launcher form must be explicitly demoted to a convenience/reference surface rather than remaining on the preferred operator lane;
+  - positive probe coverage must prove the mismatch lane with explicit `--catalog`, must prove that stale short resume shortcuts are not left on the preferred lane when tuple closure is non-authoritative under that mismatched catalog, and must keep `resume <host-thread-uuid>` semantically distinct from launcher tuple closure.
+- `current_evidence`:
+  - `scripts/render_identity_codex_launcher.py` now canonicalizes `preferred_start_command` to the same mismatch-safe fresh-shell command as `recommended_start_command` whenever `catalog_context_reason=ambient_catalog_mismatch_requires_explicit_catalog`;
+  - the same renderer now canonicalizes `preferred_resume_command` to the canonical resume surface under mismatch, while retaining short launchers only as `shortcut_start_command`, `shortcut_resume_command`, and `copyable_commands.*.shortcut` reference fields;
+  - `scripts/ci/run_identity_codex_launcher_probes_ci.sh` now copies the governed catalog to an alternate path and proves that ambient-catalog mismatch forces `preferred_*` and `recommended_*` to converge on the same explicit `--catalog` / `--session-id` primary surface;
+  - `README.md` plus the `v1.6.14` governance/review pair now explicitly freeze that short launchers may remain visible as convenience/reference surfaces under mismatch, but must not remain labeled as the preferred operator command surface.
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 

@@ -178,8 +178,9 @@ Compatibility note: legacy packs under `identity/<id>/` are migration-only locat
 6. `runtime/protocol-feedback/**` is governed protocol communication, not a generic learning or continuity sink.
 7. `runtime/memory-absorption/**` is quarantine/re-materialization only and cannot satisfy active continuity, dialogue, learning, or protocol-feedback obligations.
 8. Declaration keys and gates such as `reject_memory_gate`, `dialogue_retention_contract_v1`, `dialogue_governance_contract`, `experience_feedback_contract`, `context_continuity_contract_v1`, and `reentry_brief_consumption_contract_v1` are control-plane declarations, not artifact families.
-9. The machine-consumed raw dialogue truth bind for this stream is `rq_051_identity_dialogue_retention_contract_v1`; it mirrors product-sidecar session truth into governed runtime sinks without reclassifying that mirror as continuity or authority.
-10. Any future protocol-owned persisted family must be introduced by a later governed stream rather than silently added under generic “memory” wording.
+9. The first family-specific machine consumer for this stream remains `rq_051_identity_dialogue_retention_contract_v1`; it mirrors product-sidecar session truth into governed runtime sinks without reclassifying that mirror as continuity or authority.
+10. The whole-matrix routing machine consumer for this stream is now `rq_052_identity_artifact_family_routing_contract_v1`; it fail-closes on generic `memory` sink drift, missing routing contract coverage, cross-family path collisions, protocol-feedback root drift, continuity/reentry anchor drift, and memory-absorption active-path leakage while leaving each family’s deeper semantics with its inherited owner validator lane.
+11. Any future protocol-owned persisted family must be introduced by a later governed stream rather than silently added under generic “memory” wording.
 
 ## Runtime source-of-truth boundary (v1.4.x hardening)
 

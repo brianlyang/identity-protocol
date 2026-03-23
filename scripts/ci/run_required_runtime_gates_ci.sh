@@ -37,6 +37,7 @@ run_global_protocol_gates() {
   run_cmd python3 scripts/validate_identity_switch_closure_semantics.py --catalog "${CATALOG_PATH}" --json-only
   run_cmd bash scripts/ci/run_identity_context_continuity_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_dialogue_retention_probes_ci.sh
+  run_cmd bash scripts/ci/run_identity_artifact_family_routing_probes_ci.sh
   run_cmd bash scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh
   run_cmd bash scripts/ci/run_workbook_control_plane_probes_ci.sh
   run_cmd bash scripts/ci/run_workbook_family_scaffold_probes_ci.sh
@@ -85,6 +86,7 @@ for ID in ${IDS}; do
   python3 scripts/validate_identity_reentry_consumption.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --json-only
   python3 scripts/validate_identity_context_continuity_receipts.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --json-only
   python3 scripts/validate_identity_dialogue_retention.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --json-only
+  python3 scripts/validate_identity_artifact_family_routing.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --operation ci --json-only
   python3 scripts/validate_identity_prompt_quality.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --scope AUTO
   python3 scripts/validate_identity_role_binding.py --identity-id "$ID" --catalog "${CATALOG_PATH}"
   python3 scripts/validate_identity_home_catalog_alignment.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --identity-home "$CATALOG_PARENT"

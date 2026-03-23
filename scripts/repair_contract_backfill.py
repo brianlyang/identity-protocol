@@ -121,6 +121,12 @@ from identity_dialogue_retention_common import (
     dialogue_retention_contract_skeleton,
     materialize_identity_dialogue_retention_assets,
 )
+from identity_artifact_family_routing_common import (
+    ARTIFACT_FAMILY_ROUTING_CONTRACT_ID,
+    ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY,
+    ARTIFACT_FAMILY_ROUTING_VALIDATOR_ID,
+    artifact_family_routing_contract_skeleton,
+)
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 from identity_codex_launcher_common import (
     IDENTITY_CODEX_LAUNCHER_CONTRACT_ID,
@@ -174,6 +180,10 @@ REQUIRED_CONTINUITY_KEYS = (
 )
 REQUIRED_DIALOGUE_RETENTION_KEYS = (
     DIALOGUE_RETENTION_CONTRACT_KEY,
+)
+
+REQUIRED_ARTIFACT_FAMILY_ROUTING_KEYS = (
+    ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY,
 )
 
 REQUIRED_PROMPT_KEYS = (
@@ -239,6 +249,9 @@ CONTINUITY_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
 }
 DIALOGUE_RETENTION_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     DIALOGUE_RETENTION_CONTRACT_KEY: dialogue_retention_contract_skeleton(),
+}
+ARTIFACT_FAMILY_ROUTING_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
+    ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY: artifact_family_routing_contract_skeleton(),
 }
 SKILL_SUPPLY_CHAIN_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     "skill_installation_supply_chain_contract_v1": _skill_installation_supply_chain_contract_skeleton("default"),
@@ -1277,6 +1290,37 @@ def _dialogue_retention_contract_invalid_keys(task: dict[str, Any]) -> list[str]
     return sorted(set(invalid))
 
 
+def _artifact_family_routing_contract_invalid_keys(task: dict[str, Any]) -> list[str]:
+    invalid: list[str] = []
+    contract = task.get(ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY)
+    if isinstance(contract, dict):
+        if str(contract.get("contract_id", "")).strip() != ARTIFACT_FAMILY_ROUTING_CONTRACT_ID:
+            invalid.append(ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY)
+        if str(contract.get("validator", "")).strip() != ARTIFACT_FAMILY_ROUTING_VALIDATOR_ID:
+            invalid.append(ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY)
+    return sorted(set(invalid))
+
+
+def _normalize_artifact_family_routing_contracts(task: dict[str, Any]) -> tuple[list[str], list[str]]:
+    restored_contract_keys: list[str] = []
+    restored_validator_keys: list[str] = []
+    for key, default in ARTIFACT_FAMILY_ROUTING_CONTRACT_DEFAULTS.items():
+        node = task.get(key)
+        if not isinstance(node, dict):
+            task[key] = json.loads(json.dumps(default))
+            restored_contract_keys.append(key)
+            restored_validator_keys.append(key)
+            continue
+        merged = _deep_merge(node, default)
+        if merged != node:
+            restored_contract_keys.append(key)
+        task[key] = merged
+        if str(merged.get("validator", "")).strip() != ARTIFACT_FAMILY_ROUTING_VALIDATOR_ID:
+            merged["validator"] = ARTIFACT_FAMILY_ROUTING_VALIDATOR_ID
+            restored_validator_keys.append(key)
+    return restored_contract_keys, restored_validator_keys
+
+
 def _normalize_dialogue_retention_contracts(task: dict[str, Any]) -> tuple[list[str], list[str]]:
     restored_contract_keys: list[str] = []
     restored_validator_keys: list[str] = []
@@ -2143,6 +2187,7 @@ def main() -> int:
     launcher_missing_before = [k for k in REQUIRED_LAUNCHER_KEYS if not isinstance(task_doc.get(k), dict)]
     continuity_missing_before = [k for k in REQUIRED_CONTINUITY_KEYS if not isinstance(task_doc.get(k), dict)]
     dialogue_retention_missing_before = [k for k in REQUIRED_DIALOGUE_RETENTION_KEYS if not isinstance(task_doc.get(k), dict)]
+    artifact_family_routing_missing_before = [k for k in REQUIRED_ARTIFACT_FAMILY_ROUTING_KEYS if not isinstance(task_doc.get(k), dict)]
     prompt_missing_before = [k for k in REQUIRED_PROMPT_KEYS if not isinstance(task_doc.get(k), dict)]
     multimodal_missing_before = [k for k in REQUIRED_MULTIMODAL_KEYS if not isinstance(task_doc.get(k), dict)]
     reasoning_missing_before = [k for k in REQUIRED_REASONING_KEYS if not isinstance(task_doc.get(k), dict)]
@@ -2163,6 +2208,7 @@ def main() -> int:
     restored_launcher_contract_keys = _normalize_identity_codex_launcher_contract(updated, args.identity_id)
     restored_continuity_contract_keys, restored_continuity_validator_keys = _normalize_continuity_contracts(updated)
     restored_dialogue_retention_contract_keys, restored_dialogue_retention_validator_keys = _normalize_dialogue_retention_contracts(updated)
+    restored_artifact_family_routing_contract_keys, restored_artifact_family_routing_validator_keys = _normalize_artifact_family_routing_contracts(updated)
     updated["response_stamp_profile"] = normalize_response_stamp_profile(updated.get("response_stamp_profile"))
     restored_skill_supply_chain_contract_keys = _normalize_skill_supply_chain_contracts(updated, args.identity_id)
     restored_capability_driver_validator_paths = _normalize_capability_driver_validators(updated)
@@ -2220,6 +2266,7 @@ def main() -> int:
     launcher_missing_after = [k for k in REQUIRED_LAUNCHER_KEYS if not isinstance(updated.get(k), dict)]
     continuity_missing_after = [k for k in REQUIRED_CONTINUITY_KEYS if not isinstance(updated.get(k), dict)]
     dialogue_retention_missing_after = [k for k in REQUIRED_DIALOGUE_RETENTION_KEYS if not isinstance(updated.get(k), dict)]
+    artifact_family_routing_missing_after = [k for k in REQUIRED_ARTIFACT_FAMILY_ROUTING_KEYS if not isinstance(updated.get(k), dict)]
     response_stamp_profile_present_after = isinstance(updated.get("response_stamp_profile"), dict)
     response_stamp_profile_after = normalize_response_stamp_profile(updated.get("response_stamp_profile"))
     response_stamp_profile_changed = (
@@ -2253,6 +2300,7 @@ def main() -> int:
     launcher_invalid_after = _launcher_contract_invalid_keys(updated)
     continuity_invalid_after = _continuity_contract_invalid_keys(updated)
     dialogue_retention_invalid_after = _dialogue_retention_contract_invalid_keys(updated)
+    artifact_family_routing_invalid_after = _artifact_family_routing_contract_invalid_keys(updated)
     prompt_invalid_after = [
         k
         for k in REQUIRED_PROMPT_KEYS
@@ -2930,16 +2978,22 @@ def main() -> int:
         "topology_assets_backfill": topology_assets_result,
         "required_continuity_contract_keys": list(REQUIRED_CONTINUITY_KEYS),
         "required_dialogue_retention_contract_keys": list(REQUIRED_DIALOGUE_RETENTION_KEYS),
+        "required_artifact_family_routing_contract_keys": list(REQUIRED_ARTIFACT_FAMILY_ROUTING_KEYS),
         "missing_continuity_contract_keys_before": continuity_missing_before,
         "missing_dialogue_retention_contract_keys_before": dialogue_retention_missing_before,
+        "missing_artifact_family_routing_contract_keys_before": artifact_family_routing_missing_before,
         "missing_continuity_contract_keys_after": continuity_missing_after,
         "missing_dialogue_retention_contract_keys_after": dialogue_retention_missing_after,
+        "missing_artifact_family_routing_contract_keys_after": artifact_family_routing_missing_after,
         "invalid_continuity_contract_keys_after": continuity_invalid_after,
         "invalid_dialogue_retention_contract_keys_after": dialogue_retention_invalid_after,
+        "invalid_artifact_family_routing_contract_keys_after": artifact_family_routing_invalid_after,
         "restored_continuity_contract_keys": restored_continuity_contract_keys,
         "restored_continuity_validator_keys": restored_continuity_validator_keys,
         "restored_dialogue_retention_contract_keys": restored_dialogue_retention_contract_keys,
         "restored_dialogue_retention_validator_keys": restored_dialogue_retention_validator_keys,
+        "restored_artifact_family_routing_contract_keys": restored_artifact_family_routing_contract_keys,
+        "restored_artifact_family_routing_validator_keys": restored_artifact_family_routing_validator_keys,
         "required_prompt_contract_keys": list(REQUIRED_PROMPT_KEYS),
         "missing_prompt_contract_keys_before": prompt_missing_before,
         "missing_prompt_contract_keys_after": prompt_missing_after,
@@ -3032,6 +3086,14 @@ def main() -> int:
                 if dialogue_retention_missing_after
                 else ERR_DRET_WIRE_INVALID
             )
+        ),
+        "artifact_family_routing_contract_auto_wire_status": (
+            STATUS_PASS_REQUIRED if not artifact_family_routing_missing_after and not artifact_family_routing_invalid_after else STATUS_FAIL_REQUIRED
+        ),
+        "artifact_family_routing_contract_auto_wire_error_code": (
+            ""
+            if not artifact_family_routing_missing_after and not artifact_family_routing_invalid_after
+            else ("IP-AFR-001" if artifact_family_routing_missing_after else "IP-AFR-002")
         ),
         "unique_entry_contract_auto_wire_status": (
             STATUS_PASS_REQUIRED if not entry_missing_after and not entry_invalid_after else STATUS_FAIL_REQUIRED

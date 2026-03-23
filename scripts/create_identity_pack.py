@@ -147,6 +147,12 @@ from identity_dialogue_retention_common import (
     dialogue_retention_contract_skeleton as _dialogue_retention_contract_skeleton,
     materialize_identity_dialogue_retention_assets,
 )
+from identity_artifact_family_routing_common import (
+    ARTIFACT_FAMILY_ROUTING_CONTRACT_ID as COMMON_ARTIFACT_FAMILY_ROUTING_CONTRACT_ID,
+    ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY as COMMON_ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY,
+    ARTIFACT_FAMILY_ROUTING_VALIDATOR_ID as COMMON_ARTIFACT_FAMILY_ROUTING_VALIDATOR_ID,
+    artifact_family_routing_contract_skeleton as _artifact_family_routing_contract_skeleton,
+)
 from response_stamp_common import default_response_stamp_profile, normalize_response_stamp_profile
 from native_chat_headstamp_common import (
     DEFAULT_NATIVE_CHAT_PROMPT_HARD_GUARD_TEMPLATE_REF,
@@ -365,6 +371,9 @@ DIALOGUE_RETENTION_VALIDATOR_ID = COMMON_DIALOGUE_RETENTION_VALIDATOR_ID
 DIALOGUE_RETENTION_REPORT_ROOT_REL = COMMON_DIALOGUE_RETENTION_REPORT_ROOT_REL
 DIALOGUE_RETENTION_STATE_ROOT_REL = COMMON_DIALOGUE_RETENTION_STATE_ROOT_REL
 DIALOGUE_RETENTION_STATE_RELATIVE_PATH = COMMON_DIALOGUE_RETENTION_STATE_REL.as_posix()
+ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY = COMMON_ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY
+ARTIFACT_FAMILY_ROUTING_CONTRACT_ID = COMMON_ARTIFACT_FAMILY_ROUTING_CONTRACT_ID
+ARTIFACT_FAMILY_ROUTING_VALIDATOR_ID = COMMON_ARTIFACT_FAMILY_ROUTING_VALIDATOR_ID
 CONTINUITY_CHECKPOINT_PATTERN = CONTEXT_CONTINUITY_CHECKPOINT_PATTERN
 CONTINUITY_ARTIFACT_KINDS = tuple(COMMON_CONTINUITY_ARTIFACT_KINDS)
 CONTINUITY_RECEIPT_KINDS = dict(COMMON_CONTINUITY_RECEIPT_KINDS)
@@ -792,6 +801,7 @@ def _minimal_current_task(
     }
     task = _ensure_dialogue_governance_contract(task, identity_id)
     task = _ensure_dialogue_retention_contract(task)
+    task = _ensure_artifact_family_routing_contract(task)
     task = _ensure_tool_vendor_governance_contracts(task, identity_id)
     task = _ensure_instance_pack_topology_contract(task, identity_id)
     return _ensure_identity_codex_launcher_contract(task, identity_id)
@@ -804,6 +814,16 @@ def _ensure_dialogue_retention_contract(task: dict) -> dict:
         task[DIALOGUE_RETENTION_CONTRACT_KEY] = base
         return task
     task[DIALOGUE_RETENTION_CONTRACT_KEY] = _deep_merge_defaults(base, cur)
+    return task
+
+
+def _ensure_artifact_family_routing_contract(task: dict) -> dict:
+    base = _artifact_family_routing_contract_skeleton()
+    cur = task.get(ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY)
+    if not isinstance(cur, dict):
+        task[ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY] = base
+        return task
+    task[ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY] = _deep_merge_defaults(base, cur)
     return task
 
 
@@ -6063,6 +6083,7 @@ def _legacy_full_contract_current_task(
     task["scaffold_generation_mode"] = "explicit_opt_in"
     task = _ensure_dialogue_governance_contract(task, identity_id)
     task = _ensure_dialogue_retention_contract(task)
+    task = _ensure_artifact_family_routing_contract(task)
     task = _ensure_tool_vendor_governance_contracts(task, identity_id)
     return _ensure_instance_pack_topology_contract(task, identity_id)
 
@@ -6096,6 +6117,7 @@ def _default_required_checks() -> list[str]:
         REENTRY_BRIEF_VALIDATOR_ID,
         REENTRY_CONSUMPTION_VALIDATOR_ID,
         CONTINUITY_RECEIPT_VALIDATOR_ID,
+        ARTIFACT_FAMILY_ROUTING_VALIDATOR_ID,
         "scripts/validate_prompt_bootstrap_capability.py",
         "scripts/validate_prompt_capability_matrix.py",
         "scripts/validate_refresh_strict_business_interference.py",
@@ -6768,6 +6790,7 @@ def _neutral_full_contract_current_task(
     }
     task = _ensure_dialogue_governance_contract(task, identity_id)
     task = _ensure_dialogue_retention_contract(task)
+    task = _ensure_artifact_family_routing_contract(task)
     task = _ensure_tool_vendor_governance_contracts(task, identity_id)
     task = _ensure_instance_pack_topology_contract(task, identity_id)
     task["scaffold_profile"] = "full-contract"

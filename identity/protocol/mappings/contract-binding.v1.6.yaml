@@ -5,7 +5,7 @@ _meta:
   source_layer: protocol
   lifecycle_state: phase6_full_requirement_projection
   last_updated_utc: "2026-03-23T00:00:00Z"
-  row_count: 48
+  row_count: 49
   notes:
     - "Phase-1 mapping seed for ASB16-RQ-017..022/030."
     - "Phase-2 extension adds prompt-kernel rows for ASB16-RQ-014/015/027/031."
@@ -23,6 +23,7 @@ _meta:
     - "v1.6.16 context-continuity stream adds motherline rows RQ-044/045/046 for artifact schema, reentry consumption, and continuity receipt-family governance."
     - "2026-03-22 motherline freeze adds RQ-047 for no-downgrade / no-backstop / no backward-compatibility enforcement."
     - "2026-03-23 v1.6.18 dialogue-retention landing adds RQ-051 for raw dialogue truth mirroring, delivery-hook bridge, and governed runtime validation."
+    - "2026-03-23 v1.6.18 whole-matrix routing closure adds RQ-052 for protocol-owned artifact-family routing enforcement across the frozen eight-family matrix."
     - "Rows intentionally use canonical five-link tuple fields required by governance 4.15."
     - "Validator scripts referenced here may be planned-only until implementation commits land."
 
@@ -1559,8 +1560,8 @@ asb16-rq-051:
     - full-scan
     - three-plane
     - ci
-  governance_anchor: docs/governance/identity-artifact-family-routing-governance-v1.6.18.md#7-machine-consumer-landing-absorbed-into-v1618
-  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md#5-machine-consumer-landing-absorbed-after-opening
+  governance_anchor: docs/governance/identity-artifact-family-routing-governance-v1.6.18.md#7-machine-consumer-and-whole-matrix-routing-closure-landed
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md#5-machine-consumer-and-whole-matrix-routing-closure-landed
   report_field_refs:
     - protocol_dialogue_retention_status
     - delivery_hook_status
@@ -1585,3 +1586,42 @@ asb16-rq-051:
     - IP-DRET-004
     - IP-DRET-005
   mapping_state: phase6_v1618_dialogue_retention_machine_landing
+
+asb16-rq-052:
+  requirement_id: ASB16-RQ-052
+  kernel_contract_id: rq_052_identity_artifact_family_routing_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_052_identity_artifact_family_routing_contract_v1
+  validator_ids:
+    - scripts/validate_identity_artifact_family_routing.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-artifact-family-routing-governance-v1.6.18.md#7-machine-consumer-and-whole-matrix-routing-closure-landed
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md#5-machine-consumer-and-whole-matrix-routing-closure-landed
+  report_field_refs:
+    - artifact_family_routing_status
+    - contract_status
+    - declaration_gate_boundary_status
+    - family_root_separation_status
+    - pack_rulebook_family_status
+    - pack_task_history_family_status
+    - runtime_dialogue_retention_family_status
+    - runtime_dialogue_governance_family_status
+    - runtime_experience_feedback_family_status
+    - runtime_protocol_feedback_family_status
+    - runtime_continuity_reentry_family_status
+    - runtime_memory_absorption_family_status
+    - family_rows
+    - stale_reasons
+    - error_code
+    - evidence_ref
+  error_code_refs:
+    - IP-AFR-001
+    - IP-AFR-002
+    - IP-AFR-003
+    - IP-AFR-004
+  mapping_state: phase6_v1618_artifact_family_routing_whole_matrix_closure

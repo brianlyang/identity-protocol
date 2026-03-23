@@ -22,6 +22,10 @@ from identity_dialogue_retention_common import (
     DIALOGUE_RETENTION_CONTRACT_ID,
     DIALOGUE_RETENTION_CONTRACT_KEY,
 )
+from identity_artifact_family_routing_common import (
+    ARTIFACT_FAMILY_ROUTING_CONTRACT_ID,
+    ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY,
+)
 from response_stamp_common import resolve_layer_intent
 from tool_vendor_governance_common import (
     contract_required,
@@ -103,6 +107,7 @@ STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_identity_reentry_consumption.py": "identity_reentry_consumption_status",
     "scripts/validate_identity_context_continuity_receipts.py": "identity_context_continuity_receipt_family_status",
     "scripts/validate_identity_dialogue_retention.py": "protocol_dialogue_retention_status",
+    "scripts/validate_identity_artifact_family_routing.py": "artifact_family_routing_status",
 }
 PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "release_plane_cloud_evidence",
@@ -139,6 +144,7 @@ PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "identity_reentry_consumption",
     "identity_context_continuity_receipts",
     "identity_dialogue_retention",
+    "identity_artifact_family_routing",
     "dedup_monotonicity",
     "cross_workflow_schema",
     "skill_path_integrity",
@@ -207,6 +213,7 @@ FORCE_REQUIRED_CAPABLE_VALIDATOR_SCRIPTS = {
     "scripts/validate_skill_installation_supply_chain.py",
     "scripts/validate_skill_frontmatter.py",
     "scripts/validate_skill_sync_drift_guard.py",
+    "scripts/validate_identity_artifact_family_routing.py",
 }
 
 
@@ -635,6 +642,16 @@ TARGETS = (
             DIALOGUE_RETENTION_CONTRACT_ID,
         ),
         validator_script="scripts/validate_identity_dialogue_retention.py",
+        validator_args=("--json-only",),
+        instance_adopted_protocol_target=True,
+    ),
+    ContractTarget(
+        name="identity_artifact_family_routing",
+        contract_keys=(
+            ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY,
+            ARTIFACT_FAMILY_ROUTING_CONTRACT_ID,
+        ),
+        validator_script="scripts/validate_identity_artifact_family_routing.py",
         validator_args=("--json-only",),
         instance_adopted_protocol_target=True,
     ),

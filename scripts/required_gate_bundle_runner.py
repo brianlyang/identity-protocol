@@ -124,6 +124,7 @@ BUNDLE_REQUIREMENT_ORDER: tuple[str, ...] = (
     "asb16-rq-049",
     "asb16-rq-050",
     "asb16-rq-051",
+    "asb16-rq-052",
 )
 
 TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
@@ -175,6 +176,7 @@ TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
     "asb16-rq-049": "feedback_operational_prompt",
     "asb16-rq-050": "feedback_to_judgement_loopback",
     "asb16-rq-051": "identity_dialogue_retention",
+    "asb16-rq-052": "identity_artifact_family_routing",
 }
 REQUIREMENT_BY_TARGET: dict[str, str] = {v: k for k, v in TARGET_NAME_BY_REQUIREMENT.items()}
 
@@ -227,6 +229,7 @@ STATUS_FIELD_BY_TARGET: dict[str, str] = {
     "feedback_operational_prompt": "feedback_operational_prompt_status",
     "feedback_to_judgement_loopback": "feedback_to_judgement_loopback_status",
     "identity_dialogue_retention": "protocol_dialogue_retention_status",
+    "identity_artifact_family_routing": "artifact_family_routing_status",
 }
 
 ERROR_FIELD_CANDIDATES: tuple[str, ...] = (
@@ -1923,7 +1926,14 @@ def main() -> int:
     )
     parser.add_argument("--wrapper-proof-json", default="", help="signed dynamic wrapper proof payload (json)")
     parser.add_argument("--wrapper-proof-signature", default="", help="HMAC signature for wrapper proof payload")
-    parser.add_argument("--target-name", default="", help="optional single target probe via bundle registry lineage")
+    parser.add_argument(
+        "--target-name",
+        default="",
+        help=(
+            "optional single target probe via bundle registry lineage; "
+            "target-probe mode keeps run_id/profile binding but skips full ingress wrapper/entry receipt enforcement"
+        ),
+    )
     parser.add_argument("--gate-profile", default="", help="optional gate profile key for requirement selection")
     parser.add_argument(
         "--gate-profile-file",
@@ -2002,6 +2012,7 @@ def main() -> int:
             "gate_profile_file_non_canonical_for_strict_operation:"
             f"{gate_profile_file}:expected={DEFAULT_GATE_PROFILE_FILE}"
         )
+    target_probe_mode = bool(target_name)
     if target_name:
         target_key = effective_requirement_by_target.get(target_name, "")
         if not target_key:
@@ -2107,10 +2118,14 @@ def main() -> int:
         1,
     )
     host_dispatch_mode = str(wrapper_policy.get("host_dispatch_mode", "wrapper_only")).strip().lower()
-    wrapper_surface_required = _operation_requires_wrapper_provenance(
-        operation=operation_normalized,
-        host_dispatch_mode=host_dispatch_mode,
-        wrapper_policy=wrapper_policy,
+    wrapper_surface_required = (
+        False
+        if target_probe_mode
+        else _operation_requires_wrapper_provenance(
+            operation=operation_normalized,
+            host_dispatch_mode=host_dispatch_mode,
+            wrapper_policy=wrapper_policy,
+        )
     )
     wrapper_dispatch_required = wrapper_surface_required
     wrapper_surface_ok = (not wrapper_surface_required) or surface_label == wrapper_required_surface_label
@@ -2585,6 +2600,7 @@ def main() -> int:
     payload: dict[str, Any] = {
         "bundle_contract_id": BUNDLE_CONTRACT_ID,
         "bundle_key": BUNDLE_KEY,
+        "target_probe_mode": target_probe_mode,
         "bundle_status": bundle_status,
         "error_code": error_code,
         "identity_id": str(args.identity_id),
@@ -2673,6 +2689,10 @@ def main() -> int:
         "final_emit_policy_mode": str(args.final_emit_policy_mode or "").strip(),
         "final_emit_schema_status": str(args.final_emit_schema_status or "").strip().upper(),
         "row_contract_error_count": row_contract_error_count,
+        "protocol_unique_entry_receipt_required": False,
+        "protocol_unique_entry_receipt_required_reason": (
+            "target_probe_mode" if target_probe_mode else "strict_operation_or_wrapper_surface"
+        ),
         "protocol_unique_entry_receipt_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_unique_entry_receipt_path": "",
         "protocol_unique_entry_receipt_history_path": "",
@@ -2682,9 +2702,15 @@ def main() -> int:
     receipt_history_path = ""
     receipt_error = ""
     receipt_required = (
-        _is_strict_no_trim_operation(operation_normalized)
-        or wrapper_surface_required
+        (not target_probe_mode)
+        and (
+            _is_strict_no_trim_operation(operation_normalized)
+            or wrapper_surface_required
+        )
     )
+    payload["protocol_unique_entry_receipt_required"] = bool(receipt_required)
+    if receipt_required:
+        payload["protocol_unique_entry_receipt_required_reason"] = "strict_operation_or_wrapper_surface"
     if receipt_required:
         receipt_path, receipt_history_path, receipt_error = _persist_unique_entry_receipt(
             catalog_path=str(args.catalog),
@@ -2731,6 +2757,7 @@ def main() -> int:
                 "auto_required_signal": False,
                 "error_code": "",
                 "stale_reasons": ["target_excluded_by_gate_profile"],
+                "target_probe_mode": target_probe_mode,
                 "bundle_contract_id": BUNDLE_CONTRACT_ID,
                 "bundle_key": BUNDLE_KEY,
                 "bundle_target_name": target_name,
@@ -2760,6 +2787,12 @@ def main() -> int:
                 "final_emit_contract_status": str(args.final_emit_contract_status or "").strip().upper(),
                 "final_emit_policy_mode": str(args.final_emit_policy_mode or "").strip(),
                 "final_emit_schema_status": str(args.final_emit_schema_status or "").strip().upper(),
+                "protocol_unique_entry_receipt_required": payload.get(
+                    "protocol_unique_entry_receipt_required", False
+                ),
+                "protocol_unique_entry_receipt_required_reason": payload.get(
+                    "protocol_unique_entry_receipt_required_reason", ""
+                ),
                 "protocol_unique_entry_receipt_status": payload.get("protocol_unique_entry_receipt_status", ""),
                 "protocol_unique_entry_receipt_path": payload.get("protocol_unique_entry_receipt_path", ""),
                 "protocol_unique_entry_receipt_history_path": payload.get(
@@ -2787,6 +2820,7 @@ def main() -> int:
                 "bundle_contract_id": BUNDLE_CONTRACT_ID,
                 "bundle_key": BUNDLE_KEY,
                 "bundle_target_name": target_name,
+                "target_probe_mode": target_probe_mode,
                 "mapping_errors": mapping_errors,
                 "gate_profile": gate_profile,
                 "gate_profile_mode": (
@@ -2804,6 +2838,12 @@ def main() -> int:
                 "resolved_work_layer": str(args.resolved_work_layer or "").strip(),
                 "resolved_source_layer": str(args.resolved_source_layer or "").strip(),
                 "lock_state": str(args.lock_state or "").strip(),
+                "protocol_unique_entry_receipt_required": payload.get(
+                    "protocol_unique_entry_receipt_required", False
+                ),
+                "protocol_unique_entry_receipt_required_reason": payload.get(
+                    "protocol_unique_entry_receipt_required_reason", ""
+                ),
                 "protocol_unique_entry_receipt_status": payload.get("protocol_unique_entry_receipt_status", ""),
                 "protocol_unique_entry_receipt_path": payload.get("protocol_unique_entry_receipt_path", ""),
                 "protocol_unique_entry_receipt_history_path": payload.get(
@@ -2830,6 +2870,7 @@ def main() -> int:
         target_payload.setdefault("bundle_contract_id", BUNDLE_CONTRACT_ID)
         target_payload.setdefault("bundle_key", BUNDLE_KEY)
         target_payload.setdefault("bundle_target_name", target_name)
+        target_payload.setdefault("target_probe_mode", target_probe_mode)
         target_payload.setdefault("gate_profile", gate_profile)
         target_payload.setdefault(
             "gate_profile_mode",
@@ -2864,6 +2905,14 @@ def main() -> int:
         target_payload.setdefault("final_emit_contract_status", str(args.final_emit_contract_status or "").strip().upper())
         target_payload.setdefault("final_emit_policy_mode", str(args.final_emit_policy_mode or "").strip())
         target_payload.setdefault("final_emit_schema_status", str(args.final_emit_schema_status or "").strip().upper())
+        target_payload.setdefault(
+            "protocol_unique_entry_receipt_required",
+            payload.get("protocol_unique_entry_receipt_required", False),
+        )
+        target_payload.setdefault(
+            "protocol_unique_entry_receipt_required_reason",
+            payload.get("protocol_unique_entry_receipt_required_reason", ""),
+        )
         target_payload.setdefault("protocol_unique_entry_receipt_status", payload.get("protocol_unique_entry_receipt_status", ""))
         target_payload.setdefault("protocol_unique_entry_receipt_path", payload.get("protocol_unique_entry_receipt_path", ""))
         target_payload.setdefault(
