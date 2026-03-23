@@ -18,7 +18,8 @@ This stream freezes one bounded judgment:
 
 - the kernel source contracts for the third and fourth loops already existed,
 - the core strengthening pair is now machine-landed,
-- the remaining open semantic debt is the standalone 4→1 loopback bridge only.
+- the remaining open semantic debt is the standalone 4→1 loopback bridge only,
+- the remaining bridge claim currently stops at docs-side semantic freeze plus governance/review/workbook alignment rather than machine-consumed closure.
 
 ## 1) Audit findings frozen in this stream
 
@@ -135,6 +136,11 @@ Canonical external anchors absorbed into audit reasoning:
 - `https://developers.openai.com/api/docs/guides/function-calling/#best-practices-for-defining-functions`
 - Context7 library id `/websites/modelcontextprotocol_io_specification_2025-06-18`
 
+Frozen audit boundary on external sources:
+
+- these sources support the design direction and boundary discipline used by this stream;
+- they do **not** define the protocol-owned contract names, loop labels, or bounded 4→1 bridge terminology frozen here.
+
 ### 1.7 Business-facing audit judgment is bounded and non-scenario-specific
 
 1. `v1.6.17` is the protocol-side closure for a live execution blocker, not a business-data lane.
@@ -144,6 +150,7 @@ Canonical external anchors absorbed into audit reasoning:
    - a governed demotion / rollback path when current first-loop evidence rejects previously promoted prompt artifacts.
 3. The remaining open protocol-side semantic debt is the bounded 4→1 bridge only.
 4. This stream does **not** claim protocol can guarantee perfect business accuracy, perfect search quality, or perfect vendor/tool behavior.
+5. The present authority-alignment claim is limited to governance / review / workbook surfaces for the docs-owned bridge opening; it must not be read as full machine-consumed bridge closure.
 
 ## 2) Ownership boundary frozen in this stream
 

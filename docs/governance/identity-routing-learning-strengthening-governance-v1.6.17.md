@@ -37,6 +37,9 @@ Execution mode: topic-level canonical SSOT for v1.6.17 routing/learning strength
 10. Frozen current-state interpretation:
    - `ISSUE-030` is **closed** for the core third/fourth-loop strengthening pair;
    - `ISSUE-031` remains **open** only for the standalone 4→1 loopback bridge.
+11. This stream therefore claims **docs-side bridge strengthening only** for the remaining open surface:
+   - governance / review / workbook authority surfaces are aligned for `ISSUE-031`;
+   - dedicated machine-consumed closure for `ASB16-RQ-050` is still pending and is not claimed by this document.
 
 ## 1) Why v1.6.17 is required
 
@@ -225,7 +228,8 @@ This stream therefore judges the third/fourth-loop center as landed protocol inf
 
 1. `ISSUE-030` is closed: the strengthened third/fourth-loop center is now protocol-owned, machine-gated, and consumed by required/readiness lanes.
 2. `ISSUE-031` remains open: the 4→1 loopback bridge is intentionally kept docs-owned until a dedicated machine consumer lane lands.
-3. Therefore the stream as a whole remains active, but the remaining open surface is narrow and explicitly bounded.
+3. Current bridge closure therefore stops at docs-side semantic freeze and governance/review/workbook alignment; it does **not** yet claim machine-consumed loopback closure.
+4. Therefore the stream as a whole remains active, but the remaining open surface is narrow and explicitly bounded.
 
 ## 5) Stream closure boundary
 
