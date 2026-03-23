@@ -1,17 +1,17 @@
 schema_version: 1
 budget_version: v1.6
-last_updated_utc: '2026-03-20T10:26:33Z'
+last_updated_utc: '2026-03-23T14:14:06Z'
 policy_mode: dual_threshold_with_family_convergence
 budgets:
   validator_scripts:
-    warn: 182
-    fail: 185
+    warn: 204
+    fail: 207
   error_codes:
-    warn: 494
-    fail: 500
+    warn: 574
+    fail: 580
   error_code_families:
-    warn: 181
-    fail: 188
+    warn: 209
+    fail: 216
   mapping_rows_missing_in_bundle:
     warn: 0
     fail: 1
@@ -20,8 +20,8 @@ budgets:
       warn: 89
       fail: 94
     scripts/release_readiness_check.py:
-      warn: 108
-      fail: 113
+      warn: 130
+      fail: 135
     scripts/report_three_plane_status.py:
       warn: 79
       fail: 84
@@ -32,25 +32,25 @@ budgets:
       warn: 116
       fail: 121
     .github/workflows/_identity-required-gates.yml:
-      warn: 13
-      fail: 15
+      warn: 14
+      fail: 16
 convergence_guard:
   enabled: true
   mode: no_rebound
   enforce_mode: fail_required
-  baseline_snapshot_utc: '2026-03-20T10:26:33Z'
+  baseline_snapshot_utc: '2026-03-23T14:14:06Z'
   ceilings:
-    validator_scripts: 182
-    error_codes: 494
-    error_code_families: 181
+    validator_scripts: 204
+    error_codes: 574
+    error_code_families: 209
     mapping_rows_missing_in_bundle: 0
     direct_validate_calls:
       scripts/identity_creator.py: 89
-      scripts/release_readiness_check.py: 108
+      scripts/release_readiness_check.py: 130
       scripts/report_three_plane_status.py: 79
       scripts/full_identity_protocol_scan.py: 87
       scripts/e2e_smoke_test.sh: 116
-      .github/workflows/_identity-required-gates.yml: 13
+      .github/workflows/_identity-required-gates.yml: 14
 error_code_family_strategy:
   mode: numeric_suffix_collapse
   rationale: Enforce convergence on stable contract families while preserving raw
