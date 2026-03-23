@@ -1,0 +1,28 @@
+schema_version: 1
+registry_family: reference_visual_atlas
+registry_version: v1.6
+onboarding_contract: shared_reference_visual_atlas_onboarding_v1
+generator_script: scripts/generate_reference_visual_atlas_scaffold.py
+probe_script: scripts/ci/run_reference_visual_atlas_scaffold_probes_ci.sh
+template_root: scripts/templates/reference_visual_atlas
+inventory_doc: docs/references/INDEX.md
+atlas_families:
+  - family_id: loop_visual_atlas
+    canonical_doc: docs/references/identity-protocol-loop-visual-atlas-v1.6.md
+    canonical_asset_root: docs/references/assets/identity-protocol-loop-visual-atlas
+    validator_script: scripts/validate_loop_visual_atlas_governance.py
+    scope_mode: protocol_repo_internal_only
+    onboarding_contract: shared_reference_visual_atlas_onboarding_v1
+    owner_docs:
+      - docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md
+      - docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md
+      - docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md
+  - family_id: artifact_family_routing_visual_atlas
+    canonical_doc: docs/references/identity-protocol-artifact-family-routing-visual-atlas-v1.6.md
+    canonical_asset_root: docs/references/assets/identity-protocol-artifact-family-routing-visual-atlas
+    validator_script: scripts/validate_artifact_family_visual_atlas_governance.py
+    scope_mode: protocol_repo_internal_only
+    onboarding_contract: shared_reference_visual_atlas_onboarding_v1
+    owner_docs:
+      - docs/governance/identity-artifact-family-routing-governance-v1.6.18.md
+      - docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md

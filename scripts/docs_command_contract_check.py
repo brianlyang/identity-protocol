@@ -29,6 +29,7 @@ import yaml
 
 from contract_binding_mapping_common import is_stream_version
 from registry_alias_control_plane_common import STREAM_DOC_REGISTRY_CURRENT, resolve_current_yaml_alias
+from reference_visual_atlas_governance_common import discover_visual_atlas_governance_scripts
 
 
 INDEX_PATH = "docs/governance/AUDIT_SNAPSHOT_INDEX.md"
@@ -279,19 +280,8 @@ def _resolve_current_markdown_alias(repo_root: Path, configured_rel: str) -> tup
     return active_path, ""
 
 
-def _discover_visual_atlas_governance_scripts(repo_root: Path) -> List[Path]:
-    scripts_dir = repo_root / "scripts"
-    if not scripts_dir.exists() or not scripts_dir.is_dir():
-        return []
-    return sorted(
-        path
-        for path in scripts_dir.glob("validate_*_visual_atlas_governance.py")
-        if path.is_file()
-    )
-
-
 def _run_visual_atlas_governance_checks(repo_root: Path, failures: List[str]) -> None:
-    validator_paths = _discover_visual_atlas_governance_scripts(repo_root)
+    validator_paths = discover_visual_atlas_governance_scripts(repo_root)
     if not validator_paths:
         failures.append("[MISSING_SCRIPT] no scripts/validate_*_visual_atlas_governance.py validators found")
         return
@@ -327,6 +317,24 @@ def _run_reference_visual_atlas_scaffold_probe(repo_root: Path, failures: List[s
         failures.append(
             "[VISUAL_ATLAS_SCAFFOLD_PROBE_FAIL] "
             + (proc.stdout.strip() or proc.stderr.strip() or "reference visual atlas scaffold probe failed")
+        )
+
+
+def _run_reference_visual_atlas_inventory_check(repo_root: Path, failures: List[str]) -> None:
+    validator = repo_root / "scripts/validate_reference_visual_atlas_inventory.py"
+    if not validator.exists() or not validator.is_file():
+        failures.append("[MISSING_SCRIPT] scripts/validate_reference_visual_atlas_inventory.py not found")
+        return
+    proc = subprocess.run(
+        [sys.executable, str(validator), "--json-only"],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+    )
+    if proc.returncode != 0:
+        failures.append(
+            "[VISUAL_ATLAS_INVENTORY_FAIL] "
+            + (proc.stdout.strip() or proc.stderr.strip() or "reference visual atlas inventory validator failed")
         )
 
 
@@ -1016,6 +1024,7 @@ def main() -> int:
 
     _run_visual_atlas_governance_checks(repo_root, failures)
     _run_reference_visual_atlas_scaffold_probe(repo_root, failures)
+    _run_reference_visual_atlas_inventory_check(repo_root, failures)
 
     # Round-29.5: enforce doc evidence persistence policy
     evidence_policy_script = repo_root / "scripts/validate_doc_evidence_persistence.py"

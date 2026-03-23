@@ -14,6 +14,7 @@ from repo_root_resolution_common import resolve_repo_root
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+REFERENCE_VISUAL_ATLAS_REGISTRY_CURRENT = "identity/protocol/mappings/reference-visual-atlas-registry.current.yaml"
 
 CONTRACT_BINDING_CURRENT_REF = "identity/protocol/mappings/contract-binding.current.yaml"
 SEMANTIC_TERM_REGISTRY_CURRENT_REF = "identity/protocol/mappings/semantic-term-registry.current.yaml"
@@ -62,6 +63,17 @@ def _load_stream_doc_registry(repo_root: Path, configured_ref: str) -> tuple[dic
     if not active_path.exists():
         return {}, entry_path, active_path, "active_registry_missing"
     return _load_yaml(active_path), entry_path, active_path, ""
+
+
+def discover_visual_atlas_governance_scripts(repo_root: Path) -> list[Path]:
+    scripts_dir = repo_root / "scripts"
+    if not scripts_dir.exists() or not scripts_dir.is_dir():
+        return []
+    return sorted(
+        path
+        for path in scripts_dir.glob("validate_*_visual_atlas_governance.py")
+        if path.is_file()
+    )
 
 
 def _append_violation(violations: list[str], reason: str, detail: str) -> None:

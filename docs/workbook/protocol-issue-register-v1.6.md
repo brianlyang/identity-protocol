@@ -23,7 +23,7 @@ Authority: this file is the authoritative current-status table for the active wo
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 89`, `command snippets checked: 962`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 92`, `command snippets checked: 964`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `standard_closure_status=CLOSED`, `promotion_status=PROMOTION_REVIEW_ELIGIBLE`, and `no_silent_headerless_turn_status=PASS_REQUIRED`
 
 ## 3) Issue table

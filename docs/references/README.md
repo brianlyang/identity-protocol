@@ -9,6 +9,7 @@ Scope: canonical `docs/references/` directory contract for protocol-owned refere
 - `identity/protocol/mappings/stream-doc-registry.current.yaml`
 - `identity/protocol/mappings/contract-binding.current.yaml`
 - `identity/protocol/mappings/semantic-term-registry.current.yaml`
+- `identity/protocol/mappings/reference-visual-atlas-registry.current.yaml`
 
 ## Fixed role
 
@@ -24,6 +25,8 @@ Scope: canonical `docs/references/` directory contract for protocol-owned refere
    - canonical explanatory markdown + version-stamped SVG asset roots used to accelerate review and onboarding.
 3. Cross-vendor / lifecycle references
    - non-owner explanatory surfaces that summarize stable protocol usage patterns while remaining subordinate to governance and validators.
+4. Atlas-family inventory
+   - canonical inventory/discoverability surface at `docs/references/INDEX.md`, backed by `identity/protocol/mappings/reference-visual-atlas-registry.current.yaml`.
 
 ## Standardized visual-atlas onboarding contract
 

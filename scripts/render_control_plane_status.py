@@ -71,6 +71,11 @@ CHECKS: tuple[CheckSpec, ...] = (
         command=("python3", "scripts/validate_loop_visual_atlas_governance.py", "--json-only"),
         status_key="loop_visual_atlas_governance_status",
     ),
+    CheckSpec(
+        name="reference_visual_atlas_inventory",
+        command=("python3", "scripts/validate_reference_visual_atlas_inventory.py", "--json-only"),
+        status_key="reference_visual_atlas_inventory_status",
+    ),
 )
 
 
