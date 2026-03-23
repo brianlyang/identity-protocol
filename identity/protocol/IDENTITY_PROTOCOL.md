@@ -160,6 +160,25 @@ Compatibility note: legacy packs under `identity/<id>/` are migration-only locat
 12. The canonical task contract keys are `context_continuity_contract_v1` and `reentry_brief_consumption_contract_v1`; runtime receipt-family roles remain runtime-owned evidence families rather than task keys.
 13. Day-1 implementation strategy is `flat-script-first`; new continuity-specific script subtrees are non-canonical until a later governed topology revision explicitly legalizes them.
 
+### Canonical artifact-family routing boundary (v1.6.18 additive)
+
+1. `v1.6.18` freezes the protocol-scoped routing matrix for persisted artifact families inside governed identity packs/runtime.
+2. `memory` is not a canonical protocol artifact-family name; every persisted protocol artifact must resolve to an exact governed family.
+3. The frozen protocol-scoped families are:
+   - pack rulebook family -> `RULEBOOK.jsonl`
+   - pack task-history family -> `TASK_HISTORY.md`
+   - runtime dialogue-governance family -> `runtime/reports/dialogue-*.json`
+   - runtime experience-feedback family -> `runtime/rulebooks/*.jsonl`, `runtime/examples/*experience-feedback*.json`, `runtime/logs/feedback/*.json`
+   - runtime protocol-feedback family -> `runtime/protocol-feedback/**`
+   - runtime continuity/reentry family -> `runtime/reports/context-continuity/**` + `runtime/state/context-continuity/**`
+   - runtime memory-absorption family -> `runtime/memory-absorption/**`
+4. `RULEBOOK.jsonl` and `runtime/rulebooks/*.jsonl` are distinct semantic objects and must not be collapsed into one “rule memory” bucket.
+5. `TASK_HISTORY.md` is chronological pack history and must not be misused as continuity/reentry state.
+6. `runtime/protocol-feedback/**` is governed protocol communication, not a generic learning or continuity sink.
+7. `runtime/memory-absorption/**` is quarantine/re-materialization only and cannot satisfy active continuity, dialogue, learning, or protocol-feedback obligations.
+8. Declaration keys and gates such as `reject_memory_gate`, `dialogue_governance_contract`, `experience_feedback_contract`, `context_continuity_contract_v1`, and `reentry_brief_consumption_contract_v1` are control-plane declarations, not artifact families.
+9. Any future protocol-owned persisted family must be introduced by a later governed stream rather than silently added under generic “memory” wording.
+
 ## Runtime source-of-truth boundary (v1.4.x hardening)
 
 Identity runtime must distinguish demo fixtures from local runtime instances:
