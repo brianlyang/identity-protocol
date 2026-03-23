@@ -166,6 +166,18 @@ GATEWAY_WRAPPER_TIMEOUT_PROFILE_SECONDS: tuple[tuple[str, int], ...] = (
     ("scripts/repair_contract_backfill.py", 120),
     ("scripts/required_gate_bundle_runner.py", 120),
     ("scripts/report_three_plane_status.py", 180),
+    # Protocol lane audit summary delegates materialize isolated replay workspaces
+    # and replay commit-pinned control-plane summaries; keep them on an explicit
+    # long-running profile so wrapper-only release gates do not false-red at the
+    # default passthrough timeout.
+    ("scripts/validate_protocol_lane_isolated_historical_replay.py", 300),
+    ("scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh", 600),
+    # Workbook control-plane probes materialize shadow repos, rerender governed
+    # projection outputs, and replay multiple negative-path registry checks.
+    # The direct probe runtime is substantially above the default passthrough
+    # timeout, so release-readiness must route it through an explicit long-run
+    # profile instead of timing out at the wrapper boundary.
+    ("scripts/ci/run_workbook_control_plane_probes_ci.sh", 300),
     ("scripts/validate_control_plane_status_sync.py", 180),
     ("scripts/validate_required_contract_coverage.py", 180),
 )
@@ -194,6 +206,90 @@ VALIDATOR_SESSION_ID_REQUIRED_SCRIPTS: tuple[str, ...] = (
 VALIDATOR_RUN_ID_REQUIRED_SCRIPTS: tuple[str, ...] = (
     "scripts/validate_protocol_unique_entry_gate.py",
 )
+
+
+def resolve_host_gateway_gate_profile(operation: str) -> str:
+    op = str(operation or "").strip().lower()
+    strict_profile_by_operation = {
+        str(key).strip().lower(): str(value).strip()
+        for key, value in HOST_GATEWAY_STRICT_GATE_PROFILE_BY_OPERATION.items()
+        if str(key).strip() and str(value).strip()
+    }
+    if op in {str(item).strip().lower() for item in HOST_GATEWAY_STRICT_OPERATIONS}:
+        return strict_profile_by_operation.get(op, HOST_GATEWAY_STRICT_GATE_PROFILE)
+    if op in {str(item).strip().lower() for item in HOST_GATEWAY_LIGHT_OPERATIONS}:
+        return HOST_GATEWAY_LIGHT_GATE_PROFILE
+    return HOST_GATEWAY_STRICT_GATE_PROFILE
+
+
+def build_required_gate_bundle_cmd(
+    *,
+    catalog: str,
+    identity_id: str,
+    run_id: str,
+    send_time_gate_status: str,
+    outlet_bypass_detected: str,
+    final_emit_contract_status: str,
+    final_emit_policy_mode: str,
+    final_emit_schema_status: str,
+    actor_id: str,
+    session_id: str = "",
+    resolved_work_layer: str,
+    resolved_source_layer: str,
+    lock_state: str,
+    operation: str,
+    surface_label: str = "",
+    target_name: str = "",
+    report_selected_path: str = "",
+    out_path: str = "",
+) -> list[str]:
+    cmd = [
+        "python3",
+        CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+        "--catalog",
+        catalog,
+        "--identity-id",
+        identity_id,
+        "--run-id",
+        run_id,
+        "--send-time-gate-status",
+        send_time_gate_status,
+        "--outlet-bypass-detected",
+        outlet_bypass_detected,
+        "--final-emit-contract-status",
+        final_emit_contract_status,
+        "--final-emit-policy-mode",
+        final_emit_policy_mode,
+        "--final-emit-schema-status",
+        final_emit_schema_status,
+        "--actor-id",
+        actor_id,
+    ]
+    if str(session_id or "").strip():
+        cmd.extend(["--session-id", str(session_id).strip()])
+    cmd.extend([
+        "--resolved-work-layer",
+        resolved_work_layer,
+        "--resolved-source-layer",
+        resolved_source_layer,
+        "--lock-state",
+        lock_state,
+        "--surface-label",
+        str(surface_label or HOST_GATEWAY_REQUIRED_SURFACE_LABEL).strip(),
+        "--operation",
+        operation,
+    ])
+    gate_profile = resolve_host_gateway_gate_profile(operation)
+    if gate_profile:
+        cmd.extend(["--gate-profile", gate_profile])
+    if target_name:
+        cmd.extend(["--target-name", target_name])
+    if report_selected_path:
+        cmd.extend(["--report-selected-path", report_selected_path])
+    if out_path:
+        cmd.extend(["--out", out_path])
+    cmd.append("--json-only")
+    return cmd
 
 
 def validator_requires_actor_id(script_path: str) -> bool:

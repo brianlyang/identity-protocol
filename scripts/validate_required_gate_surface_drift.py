@@ -338,6 +338,14 @@ CURRENT_ROUND_COVERAGE_REPORT_REQUIRED_SURFACES: tuple[str, ...] = (
     "scripts/report_three_plane_status.py",
     "scripts/e2e_smoke_test.sh",
 )
+CURRENT_ROUND_COVERAGE_STAMP_REQUIRED_SURFACES: tuple[str, ...] = (
+    "scripts/release_readiness_check.py",
+    "scripts/report_three_plane_status.py",
+)
+CURRENT_ROUND_COVERAGE_ENTRY_RECEIPT_REQUIRED_SURFACES: tuple[str, ...] = (
+    "scripts/release_readiness_check.py",
+    "scripts/report_three_plane_status.py",
+)
 CURRENT_ROUND_COVERAGE_POST_BUNDLE_SURFACES: tuple[str, ...] = (
     "scripts/release_readiness_check.py",
     "scripts/report_three_plane_status.py",
@@ -352,6 +360,16 @@ for _surface in CURRENT_ROUND_COVERAGE_REPORT_REQUIRED_SURFACES:
     CURRENT_ROUND_COVERAGE_REQUIRED_ARGS_BY_SURFACE[_surface] = tuple(
         list(CURRENT_ROUND_COVERAGE_REQUIRED_ARGS_BY_SURFACE.get(_surface, ()))
         + ["--report-selected-path"]
+    )
+for _surface in CURRENT_ROUND_COVERAGE_STAMP_REQUIRED_SURFACES:
+    CURRENT_ROUND_COVERAGE_REQUIRED_ARGS_BY_SURFACE[_surface] = tuple(
+        list(CURRENT_ROUND_COVERAGE_REQUIRED_ARGS_BY_SURFACE.get(_surface, ()))
+        + ["--current-stamp-json"]
+    )
+for _surface in CURRENT_ROUND_COVERAGE_ENTRY_RECEIPT_REQUIRED_SURFACES:
+    CURRENT_ROUND_COVERAGE_REQUIRED_ARGS_BY_SURFACE[_surface] = tuple(
+        list(CURRENT_ROUND_COVERAGE_REQUIRED_ARGS_BY_SURFACE.get(_surface, ()))
+        + ["--current-entry-receipt"]
     )
 DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_SURFACES: tuple[str, ...] = (
     "scripts/identity_creator.py",
@@ -1124,6 +1142,20 @@ def _current_round_bundle_markers_for_surface(*, surface_path: Path, text: str) 
     return []
 
 
+def _lineage_token_present(*, text: str, token: str) -> bool:
+    body = str(text or "")
+    needle = str(token or "").strip()
+    if not needle:
+        return True
+    if needle == BUNDLE_RUNNER_SCRIPT:
+        return (
+            needle in body
+            or "build_required_gate_bundle_cmd(" in body
+            or "build_required_gate_bundle_cmd_shared(" in body
+        )
+    return needle in body
+
+
 def _current_round_coverage_order_violations_for_surface(*, surface_path: Path, text: str) -> list[dict[str, Any]]:
     coverage_spans = _command_spans_for_script(surface_path=surface_path, text=text, script_path=REQUIRED_CONTRACT_COVERAGE_SCRIPT)
     if not coverage_spans:
@@ -1211,7 +1243,7 @@ def main() -> int:
             # and check lineage scripts on delegated shells instead of workflow comments/text.
             missing = []
         else:
-            missing = [needle for needle in MANDATORY_LINEAGE_SCRIPTS if needle not in text]
+            missing = [needle for needle in MANDATORY_LINEAGE_SCRIPTS if not _lineage_token_present(text=text, token=needle)]
         if rel in DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_SURFACES:
             if DIALOGUE_FEEDBACK_BUNDLE_SCRIPT not in text:
                 existing = list(missing_execution_tokens.get(rel, []))

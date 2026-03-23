@@ -1023,6 +1023,8 @@ def _run_validator(
     layer_intent_text: str,
     run_id: str,
     report_selected_path: str,
+    current_stamp_json: str,
+    current_entry_receipt: str,
     force_required: bool,
     extra_args: tuple[str, ...],
 ) -> tuple[int, str, str]:
@@ -1092,12 +1094,18 @@ def _run_validator(
         if effective_run_id:
             cmd += ["--require-run-id", effective_run_id]
     if script == "scripts/validate_protocol_lane_headstamp_continuity.py":
+        if str(report_selected_path or "").strip():
+            cmd += ["--report", str(report_selected_path).strip()]
+        if str(current_stamp_json or "").strip():
+            cmd += ["--stamp-json", str(current_stamp_json).strip()]
         if expected_work_layer:
             cmd += ["--expected-work-layer", expected_work_layer]
         if expected_source_layer:
             cmd += ["--expected-source-layer", expected_source_layer]
         if layer_intent_text:
             cmd += ["--layer-intent-text", layer_intent_text]
+    if script == "scripts/validate_protocol_unique_entry_gate.py" and str(current_entry_receipt or "").strip():
+        cmd += ["--entry-receipt", str(current_entry_receipt).strip()]
     if script == "scripts/validate_instance_protocol_split_receipt.py":
         cmd += ["--operation", operation, "--repo-catalog", str(repo_catalog_path)]
     if script == "scripts/validate_protocol_feedback_sidecar_contract.py":
@@ -1213,6 +1221,8 @@ def main() -> int:
     ap.add_argument("--layer-intent-text", default="")
     ap.add_argument("--run-id", default="")
     ap.add_argument("--report-selected-path", default="")
+    ap.add_argument("--current-stamp-json", default="")
+    ap.add_argument("--current-entry-receipt", default="")
     ap.add_argument(
         "--operation",
         choices=["activate", "update", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection"],
@@ -1304,6 +1314,8 @@ def main() -> int:
             layer_intent_text=str(args.layer_intent_text or "").strip(),
             run_id=str(args.run_id or "").strip(),
             report_selected_path=str(args.report_selected_path or "").strip(),
+            current_stamp_json=str(args.current_stamp_json or "").strip(),
+            current_entry_receipt=str(args.current_entry_receipt or "").strip(),
             force_required=force_required,
             extra_args=target.validator_args,
         )

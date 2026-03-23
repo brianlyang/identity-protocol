@@ -31,6 +31,14 @@ profiles:
           - asb16-rq-022
           - asb16-rq-018
           - asb16-rq-019
+      readiness:
+        exclude_requirement_keys:
+          - asb16-rq-017
+          - asb16-rq-030
+          - asb16-rq-021
+          - asb16-rq-022
+          - asb16-rq-018
+          - asb16-rq-019
 
   three_plane_core:
     mode: targeted

@@ -19,6 +19,13 @@ def _looks_like_protocol_repo(root: Path) -> bool:
     return all((root / marker).exists() for marker in PROTOCOL_ROOT_MARKERS)
 
 
+def detect_git_repository_root(start: str | Path) -> Path | None:
+    for candidate in _iter_ancestor_dirs(start):
+        if (candidate / ".git").exists():
+            return candidate.resolve()
+    return None
+
+
 def default_repo_root(*, start: str | Path) -> Path:
     for candidate in _iter_ancestor_dirs(start):
         if _looks_like_protocol_repo(candidate):

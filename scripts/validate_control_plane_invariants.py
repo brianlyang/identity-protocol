@@ -159,7 +159,26 @@ def _surface_token_present(repo_root: Path, rel_path: str, token: str) -> tuple[
     if not path.exists():
         return False, "surface_missing"
     text = _read_text(path)
+    if str(token or "").strip() == "scripts/required_gate_bundle_runner.py":
+        return (
+            token in text
+            or "build_required_gate_bundle_cmd(" in text
+            or "build_required_gate_bundle_cmd_shared(" in text
+        ), ""
     return (token in text), ""
+
+
+def _surface_bundle_runner_reference_present(text: str, bundle_script: str) -> bool:
+    needle = str(bundle_script or "").strip()
+    if not needle:
+        return True
+    if needle == "scripts/required_gate_bundle_runner.py":
+        return (
+            needle in text
+            or "build_required_gate_bundle_cmd(" in text
+            or "build_required_gate_bundle_cmd_shared(" in text
+        )
+    return needle in text
 
 
 def _scan_forbidden_versioned_refs(
@@ -2058,7 +2077,7 @@ def main() -> int:
                             surface=rel,
                             validator_script=validator_script,
                         )
-                    if bundle_script and bundle_script not in text:
+                    if bundle_script and not _surface_bundle_runner_reference_present(text, bundle_script):
                         plugin_wiring_violation_count += 1
                         _append_violation(
                             violations,

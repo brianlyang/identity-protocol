@@ -14,14 +14,10 @@ from typing import Any
 from actor_session_common import load_actor_binding, resolve_actor_id
 from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gateway_wrapped_command
 from protocol_infra_contract import (
+    build_required_gate_bundle_cmd as build_required_gate_bundle_cmd_shared,
     CANONICAL_FINAL_EMIT_SCRIPT,
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
-    HOST_GATEWAY_LIGHT_GATE_PROFILE,
-    HOST_GATEWAY_LIGHT_OPERATIONS,
     HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
-    HOST_GATEWAY_STRICT_GATE_PROFILE,
-    HOST_GATEWAY_STRICT_GATE_PROFILE_BY_OPERATION,
-    HOST_GATEWAY_STRICT_OPERATIONS,
 )
 from resolve_release_plane_cloud_evidence import resolve_release_cloud_evidence
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
@@ -142,6 +138,7 @@ def _build_required_gate_bundle_cmd(
     final_emit_policy_mode: str,
     final_emit_schema_status: str,
     actor_id: str,
+    session_id: str = "",
     resolved_work_layer: str,
     resolved_source_layer: str,
     lock_state: str,
@@ -151,60 +148,26 @@ def _build_required_gate_bundle_cmd(
     report_selected_path: str = "",
     out_path: str = "",
 ) -> list[str]:
-    operation_token = str(operation or "").strip().lower()
-    strict_profile_by_operation = {
-        str(key).strip().lower(): str(value).strip()
-        for key, value in HOST_GATEWAY_STRICT_GATE_PROFILE_BY_OPERATION.items()
-        if str(key).strip() and str(value).strip()
-    }
-    if operation_token in {str(item).strip().lower() for item in HOST_GATEWAY_STRICT_OPERATIONS}:
-        requested_gate_profile = strict_profile_by_operation.get(operation_token, HOST_GATEWAY_STRICT_GATE_PROFILE)
-    elif operation_token in {str(item).strip().lower() for item in HOST_GATEWAY_LIGHT_OPERATIONS}:
-        requested_gate_profile = HOST_GATEWAY_LIGHT_GATE_PROFILE
-    else:
-        requested_gate_profile = HOST_GATEWAY_STRICT_GATE_PROFILE
-    cmd = [
-        "python3",
-        REQUIRED_GATE_BUNDLE_SCRIPT,
-        "--catalog",
-        catalog,
-        "--identity-id",
-        identity_id,
-        "--run-id",
-        run_id,
-        "--send-time-gate-status",
-        send_time_gate_status,
-        "--outlet-bypass-detected",
-        outlet_bypass_detected,
-        "--final-emit-contract-status",
-        final_emit_contract_status,
-        "--final-emit-policy-mode",
-        final_emit_policy_mode,
-        "--final-emit-schema-status",
-        final_emit_schema_status,
-        "--actor-id",
-        actor_id,
-        "--resolved-work-layer",
-        resolved_work_layer,
-        "--resolved-source-layer",
-        resolved_source_layer,
-        "--lock-state",
-        lock_state,
-        "--surface-label",
-        surface_label,
-        "--operation",
-        operation,
-    ]
-    if requested_gate_profile:
-        cmd.extend(["--gate-profile", requested_gate_profile])
-    if target_name:
-        cmd.extend(["--target-name", target_name])
-    if report_selected_path:
-        cmd.extend(["--report-selected-path", report_selected_path])
-    if out_path:
-        cmd.extend(["--out", out_path])
-    cmd.append("--json-only")
-    return cmd
+    return build_required_gate_bundle_cmd_shared(
+        catalog=catalog,
+        identity_id=identity_id,
+        run_id=run_id,
+        send_time_gate_status=send_time_gate_status,
+        outlet_bypass_detected=outlet_bypass_detected,
+        final_emit_contract_status=final_emit_contract_status,
+        final_emit_policy_mode=final_emit_policy_mode,
+        final_emit_schema_status=final_emit_schema_status,
+        actor_id=actor_id,
+        session_id=session_id,
+        resolved_work_layer=resolved_work_layer,
+        resolved_source_layer=resolved_source_layer,
+        lock_state=lock_state,
+        surface_label=surface_label,
+        operation=operation,
+        target_name=target_name,
+        report_selected_path=report_selected_path,
+        out_path=out_path,
+    )
 
 
 def _derive_run_id_from_session_id(session_id: str) -> str:
@@ -2331,6 +2294,7 @@ def _instance_plane_status(
             final_emit_policy_mode=bundle_final_emit_policy_mode,
             final_emit_schema_status=bundle_final_emit_schema_status,
             actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
             resolved_work_layer=bundle_resolved_work_layer,
             resolved_source_layer=bundle_resolved_source_layer,
             lock_state=bundle_lock_state,
@@ -2361,6 +2325,7 @@ def _instance_plane_status(
             final_emit_policy_mode=bundle_final_emit_policy_mode,
             final_emit_schema_status=bundle_final_emit_schema_status,
             actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
             resolved_work_layer=bundle_resolved_work_layer,
             resolved_source_layer=bundle_resolved_source_layer,
             lock_state=bundle_lock_state,
@@ -2400,6 +2365,10 @@ def _instance_plane_status(
             bundle_run_token,
             "--report-selected-path",
             str(report_path),
+            "--current-stamp-json",
+            stamp_artifact,
+            "--current-entry-receipt",
+            required_gate_bundle_receipt,
             "--json-only",
         ]
     )
@@ -2472,6 +2441,7 @@ def _instance_plane_status(
             final_emit_policy_mode=bundle_final_emit_policy_mode,
             final_emit_schema_status=bundle_final_emit_schema_status,
             actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
             resolved_work_layer=bundle_resolved_work_layer,
             resolved_source_layer=bundle_resolved_source_layer,
             lock_state=bundle_lock_state,
@@ -2503,6 +2473,7 @@ def _instance_plane_status(
             final_emit_policy_mode=bundle_final_emit_policy_mode,
             final_emit_schema_status=bundle_final_emit_schema_status,
             actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
             resolved_work_layer=bundle_resolved_work_layer,
             resolved_source_layer=bundle_resolved_source_layer,
             lock_state=bundle_lock_state,
@@ -2534,6 +2505,7 @@ def _instance_plane_status(
             final_emit_policy_mode=bundle_final_emit_policy_mode,
             final_emit_schema_status=bundle_final_emit_schema_status,
             actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
             resolved_work_layer=bundle_resolved_work_layer,
             resolved_source_layer=bundle_resolved_source_layer,
             lock_state=bundle_lock_state,
@@ -2564,6 +2536,7 @@ def _instance_plane_status(
             final_emit_policy_mode=bundle_final_emit_policy_mode,
             final_emit_schema_status=bundle_final_emit_schema_status,
             actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
             resolved_work_layer=bundle_resolved_work_layer,
             resolved_source_layer=bundle_resolved_source_layer,
             lock_state=bundle_lock_state,
@@ -2594,6 +2567,7 @@ def _instance_plane_status(
             final_emit_policy_mode=bundle_final_emit_policy_mode,
             final_emit_schema_status=bundle_final_emit_schema_status,
             actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
             resolved_work_layer=bundle_resolved_work_layer,
             resolved_source_layer=bundle_resolved_source_layer,
             lock_state=bundle_lock_state,
@@ -2624,6 +2598,7 @@ def _instance_plane_status(
             final_emit_policy_mode=bundle_final_emit_policy_mode,
             final_emit_schema_status=bundle_final_emit_schema_status,
             actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
             resolved_work_layer=bundle_resolved_work_layer,
             resolved_source_layer=bundle_resolved_source_layer,
             lock_state=bundle_lock_state,
@@ -2654,6 +2629,7 @@ def _instance_plane_status(
             final_emit_policy_mode=bundle_final_emit_policy_mode,
             final_emit_schema_status=bundle_final_emit_schema_status,
             actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
             resolved_work_layer=bundle_resolved_work_layer,
             resolved_source_layer=bundle_resolved_source_layer,
             lock_state=bundle_lock_state,
@@ -2684,6 +2660,7 @@ def _instance_plane_status(
             final_emit_policy_mode=bundle_final_emit_policy_mode,
             final_emit_schema_status=bundle_final_emit_schema_status,
             actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
             resolved_work_layer=bundle_resolved_work_layer,
             resolved_source_layer=bundle_resolved_source_layer,
             lock_state=bundle_lock_state,
@@ -2716,6 +2693,7 @@ def _instance_plane_status(
             final_emit_policy_mode=bundle_final_emit_policy_mode,
             final_emit_schema_status=bundle_final_emit_schema_status,
             actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
             resolved_work_layer=bundle_resolved_work_layer,
             resolved_source_layer=bundle_resolved_source_layer,
             lock_state=bundle_lock_state,
@@ -2749,6 +2727,7 @@ def _instance_plane_status(
             final_emit_policy_mode=bundle_final_emit_policy_mode,
             final_emit_schema_status=bundle_final_emit_schema_status,
             actor_id=actor_id,
+            session_id=str(getattr(args, "session_id", "") or "").strip(),
             resolved_work_layer=bundle_resolved_work_layer,
             resolved_source_layer=bundle_resolved_source_layer,
             lock_state=bundle_lock_state,

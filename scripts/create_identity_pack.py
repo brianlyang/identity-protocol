@@ -25,6 +25,7 @@ from collaboration_trigger_sample_common import materialize_collaboration_trigge
 from contract_binding_doc_defaults_common import resolve_validator_doc_defaults
 from resolve_identity_context import default_identity_home, default_local_catalog_path, default_local_instances_root
 from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID
+from repo_root_resolution_common import detect_git_repository_root, resolve_protocol_repo_root
 from runtime_temp_path_common import identity_runtime_named_temp_root
 from version_baseline_common import (
     apply_version_baseline_to_catalog_row,
@@ -652,11 +653,26 @@ def _is_within(path: Path, root: Path) -> bool:
 
 
 def _repo_root() -> Path:
-    cur = Path.cwd().resolve()
-    for p in [cur, *cur.parents]:
-        if (p / ".git").exists():
-            return p
-    return cur
+    protocol_home = str(os.environ.get("IDENTITY_PROTOCOL_HOME", "")).strip()
+    candidate = resolve_protocol_repo_root(protocol_home, start=__file__)
+    if (candidate / "identity" / "protocol").exists():
+        return candidate
+    return resolve_protocol_repo_root("", start=__file__)
+
+
+def _collect_distinct_git_repo_roots(*paths: Path) -> list[Path]:
+    roots: list[Path] = []
+    seen: set[str] = set()
+    for path in paths:
+        root = detect_git_repository_root(path)
+        if root is None:
+            continue
+        marker = str(root)
+        if marker in seen:
+            continue
+        seen.add(marker)
+        roots.append(root)
+    return roots
 
 
 def _minimal_current_task(
@@ -7376,16 +7392,20 @@ def main() -> int:
         print("[FAIL] --id cannot be empty")
         return 1
 
-    repo_root = _repo_root()
+    protocol_repo_root = _repo_root()
     pack_root = Path(args.pack_root).expanduser().resolve()
     catalog_path = Path(args.catalog).expanduser().resolve()
+    pack_repo_root = detect_git_repository_root(pack_root)
+    catalog_repo_root = detect_git_repository_root(catalog_path)
+    target_repo_roots = _collect_distinct_git_repo_roots(pack_root, catalog_path)
+    target_repo_root = target_repo_roots[0] if len(target_repo_roots) == 1 else None
     identity_profile = "fixture" if args.repo_fixture else "runtime"
     identity_runtime_mode = "demo_only" if args.repo_fixture else "local_only"
     if args.profile == "legacy-commerce-overlay" and not args.repo_fixture:
         print("[FAIL] --profile legacy-commerce-overlay is migration/fixture-only and requires --repo-fixture.")
         return 1
     try:
-        version_baseline = load_version_baseline_or_raise(repo_root=repo_root)
+        version_baseline = load_version_baseline_or_raise(repo_root=protocol_repo_root)
     except Exception as exc:
         print(f"[FAIL] version baseline unavailable: {exc}")
         return 1
@@ -7402,15 +7422,20 @@ def main() -> int:
         if not args.repo_fixture_purpose.strip():
             print("[FAIL] --repo-fixture requires --repo-fixture-purpose for audit intent.")
             return 1
-        if not _is_within(pack_root, repo_root):
+        if pack_repo_root is None:
             print("[FAIL] --repo-fixture requires repository pack root.")
             print(f"       pack_root={pack_root}")
-            print(f"       repo_root={repo_root}")
+            print("       choose a pack root under a tracked repository boundary.")
             return 1
-        if not _is_within(catalog_path, repo_root):
+        if catalog_repo_root is None:
             print("[FAIL] --repo-fixture requires repository catalog path.")
             print(f"       catalog={catalog_path}")
-            print(f"       repo_root={repo_root}")
+            print("       choose a catalog path under the same tracked repository boundary.")
+            return 1
+        if target_repo_root is None:
+            print("[FAIL] --repo-fixture requires pack root and catalog path under the same repository boundary.")
+            print(f"       pack_repo_root={pack_repo_root}")
+            print(f"       catalog_repo_root={catalog_repo_root}")
             return 1
     else:
         if args.repo_fixture_confirm.strip():
@@ -7419,12 +7444,12 @@ def main() -> int:
         if args.repo_fixture_purpose.strip():
             print("[FAIL] --repo-fixture-purpose is only valid with --repo-fixture.")
             return 1
-        if _is_within(pack_root, repo_root):
+        if pack_repo_root is not None:
             print("[FAIL] runtime identity must not be created under repository path.")
             print(f"       pack_root={pack_root}")
             print("       use default IDENTITY_HOME root or pass --repo-fixture explicitly for demo fixtures.")
             return 1
-        if _is_within(catalog_path, repo_root):
+        if catalog_repo_root is not None:
             print("[FAIL] runtime identity catalog must be local (outside repo).")
             print(f"       catalog={catalog_path}")
             print("       pass --repo-fixture only when you intentionally update repo fixture catalog.")
@@ -7478,9 +7503,9 @@ def main() -> int:
     (runtime_root / DIALOGUE_RETENTION_STATE_ROOT_REL.relative_to("runtime")).mkdir(parents=True, exist_ok=True)
     write(
         runtime_root / "plugins" / "provider-bindings.local.yaml",
-        _provider_bindings_template_text(repo_root=repo_root),
+        _provider_bindings_template_text(repo_root=protocol_repo_root),
     )
-    seed_runtime_root = (repo_root / "identity" / "runtime").resolve()
+    seed_runtime_root = (protocol_repo_root / "identity" / "runtime").resolve()
     if runtime_root.resolve() == seed_runtime_root:
         print("[FAIL] runtime root overlaps repository seed runtime templates.")
         print(f"       runtime_root={runtime_root}")
@@ -7521,7 +7546,7 @@ def main() -> int:
         identity_id=identity_id,
         pack_dir=pack_dir,
         catalog_path=catalog_path,
-        protocol_root=repo_root,
+        protocol_root=protocol_repo_root,
     )
     write_json(pack_dir / "CURRENT_TASK.json", current_task)
     continuity_assets = materialize_identity_context_continuity_assets(
