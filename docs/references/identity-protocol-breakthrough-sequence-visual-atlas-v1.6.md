@@ -65,6 +65,16 @@ Classification: protocol-owned explanatory atlas; not a normative contract sourc
    - Relative link: [identity_protocol_breakthrough_sequence_v16x.svg](assets/identity-protocol-breakthrough-sequence-visual-atlas/identity_protocol_breakthrough_sequence_v16x.svg)
    - Purpose: preserve the exact order that made the protocol stable in practice: machine-attested headstamp first, runtime authority second, launcher command surface third, governed continuity proof fourth, and cross-context short-command closure fifth.
 
+## 3.1) PNG preview derivative
+
+1. For markdown surfaces or chat clients that preview raster images more reliably than inline SVG, the canonical SVG now has one non-authoritative PNG derivative preview:
+   - Path: `docs/references/assets/identity-protocol-breakthrough-sequence-visual-atlas/identity_protocol_breakthrough_sequence_v16x.png`
+   - Relative link: [identity_protocol_breakthrough_sequence_v16x.png](assets/identity-protocol-breakthrough-sequence-visual-atlas/identity_protocol_breakthrough_sequence_v16x.png)
+2. Semantic ownership does **not** move to the PNG; the SVG remains the canonical atlas asset and the PNG is a display-friendly projection only.
+3. Inline preview:
+
+![Identity Protocol Breakthrough Sequence preview](assets/identity-protocol-breakthrough-sequence-visual-atlas/identity_protocol_breakthrough_sequence_v16x.png)
+
 ## 4) Stage-by-stage reading guide
 
 | Stage | Frozen meaning | Primary stream anchors | What this prevented |
