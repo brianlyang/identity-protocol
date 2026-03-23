@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1000" viewBox="0 0 1500 1000">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f7fbff"/>
+      <stop offset="100%" stop-color="#eef8f2"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.14"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <style>
+      .title { font: 700 30px Inter, Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 15px Inter, Arial, sans-serif; fill: #334155; }
+      .boxTitle { font: 700 20px Inter, Arial, sans-serif; fill: #0f172a; }
+      .boxSub { font: 600 13px Inter, Arial, sans-serif; fill: #1d4ed8; }
+      .label { font: 700 15px Inter, Arial, sans-serif; fill: #0f172a; }
+      .text { font: 400 13px Inter, Arial, sans-serif; fill: #1e293b; }
+      .tiny { font: 400 12px Inter, Arial, sans-serif; fill: #475569; }
+      .chip { font: 700 12px Inter, Arial, sans-serif; fill: #0f172a; }
+      .footer { font: 600 13px Inter, Arial, sans-serif; fill: #7c2d12; }
+    </style>
+  </defs>
+  <rect width="1500" height="1000" fill="url(#bg)"/>
+  <text x="50" y="54" class="title">Loop 4 Control Plane · Feedback Operational Prompt Strengthening</text>
+  <text x="50" y="84" class="subtitle">Loop 4 does not rewrite the kernel; it turns validated feedback into bounded, replay-gated operational prompt artifacts for the next round</text>
+
+  <rect x="50" y="120" width="280" height="150" rx="24" fill="#dbeafe" stroke="#60a5fa" stroke-width="2" filter="url(#shadow)"/>
+  <text x="72" y="156" class="boxTitle">Loop 1 anchor</text>
+  <text x="72" y="179" class="boxSub">Accurate judgement remains current truth owner</text>
+  <text x="72" y="208" class="text">• Loop 4 may not overwrite first-loop evidence authority</text>
+  <text x="72" y="232" class="tiny">It can only prepare the next round under governed constraints</text>
+
+  <rect x="50" y="300" width="280" height="170" rx="24" fill="#dbeafe" stroke="#60a5fa" stroke-width="2" filter="url(#shadow)"/>
+  <text x="72" y="336" class="boxTitle">Loop 2 anchor</text>
+  <text x="72" y="359" class="boxSub">Reasoning fail-close still governs unresolved chains</text>
+  <text x="72" y="388" class="text">• No-target completion stays invalid</text>
+  <text x="72" y="412" class="text">• Escalation / next_action requirements remain prior constraints</text>
+
+  <rect x="50" y="510" width="280" height="180" rx="24" fill="#dcfce7" stroke="#4ade80" stroke-width="2" filter="url(#shadow)"/>
+  <text x="72" y="546" class="boxTitle">Loop 3 handoff</text>
+  <text x="72" y="569" class="boxSub">route_discovery_convergence_contract_v1</text>
+  <text x="72" y="598" class="text">• Selected route and accepted evidence enter Loop 4</text>
+  <text x="72" y="622" class="text">• Loop 4 uses route truth; it does not redo route discovery</text>
+  <text x="72" y="646" class="tiny">selected_candidate_id / selection_basis / convergence_status stay upstream-owned</text>
+
+  <rect x="390" y="120" width="690" height="640" rx="28" fill="#dcfce7" stroke="#4ade80" stroke-width="2" filter="url(#shadow)"/>
+  <text x="420" y="160" class="boxTitle">Loop 4 strengthened center</text>
+  <text x="420" y="183" class="boxSub">feedback_operational_prompt_contract_v1</text>
+
+  <text x="420" y="228" class="label">What this center freezes</text>
+  <text x="440" y="254" class="text">• Feedback stays append-only and evidence-linked; prompt text alone is never enough</text>
+  <text x="440" y="278" class="text">• Positive and negative feedback accumulation both remain mandatory</text>
+  <text x="440" y="302" class="text">• Derived operational prompts are bounded by replay / rollback / TTL before activation</text>
+  <text x="440" y="326" class="text">• Kernel/system/identity baseline instructions are not mutated by this lane</text>
+
+  <text x="420" y="374" class="label">Machine-visible evidence family</text>
+  <rect x="438" y="392" width="170" height="28" rx="14" fill="#ffffff" stroke="#86efac"/><text x="452" y="411" class="chip">feedback_summary_ref</text>
+  <rect x="622" y="392" width="162" height="28" rx="14" fill="#ffffff" stroke="#86efac"/><text x="639" y="411" class="chip">source_feedback_ids</text>
+  <rect x="798" y="392" width="132" height="28" rx="14" fill="#ffffff" stroke="#86efac"/><text x="824" y="411" class="chip">rulebook_delta</text>
+  <rect x="944" y="392" width="136" height="28" rx="14" fill="#ffffff" stroke="#86efac"/><text x="963" y="411" class="chip">operational_prompt_ref</text>
+
+  <rect x="438" y="432" width="174" height="28" rx="14" fill="#ffffff" stroke="#86efac"/><text x="452" y="451" class="chip">operational_prompt_digest</text>
+  <rect x="626" y="432" width="116" height="28" rx="14" fill="#ffffff" stroke="#86efac"/><text x="653" y="451" class="chip">prompt_scope</text>
+  <rect x="756" y="432" width="146" height="28" rx="14" fill="#ffffff" stroke="#86efac"/><text x="774" y="451" class="chip">prompt_target_route</text>
+  <rect x="916" y="432" width="152" height="28" rx="14" fill="#ffffff" stroke="#86efac"/><text x="934" y="451" class="chip">prompt_target_stage</text>
+
+  <rect x="438" y="472" width="160" height="28" rx="14" fill="#ffffff" stroke="#86efac"/><text x="454" y="491" class="chip">prompt_injection_status</text>
+  <rect x="612" y="472" width="140" height="28" rx="14" fill="#ffffff" stroke="#86efac"/><text x="632" y="491" class="chip">replay_case_ref</text>
+  <rect x="766" y="472" width="120" height="28" rx="14" fill="#ffffff" stroke="#86efac"/><text x="794" y="491" class="chip">replay_status</text>
+  <rect x="900" y="472" width="148" height="28" rx="14" fill="#ffffff" stroke="#86efac"/><text x="919" y="491" class="chip">rollback_prompt_ref</text>
+
+  <rect x="438" y="512" width="106" height="28" rx="14" fill="#ffffff" stroke="#86efac"/><text x="463" y="531" class="chip">ttl_rounds</text>
+  <rect x="558" y="512" width="176" height="28" rx="14" fill="#ffffff" stroke="#86efac"/><text x="575" y="531" class="chip">negative_rulebook_path</text>
+  <rect x="748" y="512" width="198" height="28" rx="14" fill="#ffffff" stroke="#86efac"/><text x="765" y="531" class="chip">feedback_operational_prompt_status</text>
+  <rect x="960" y="512" width="166" height="28" rx="14" fill="#ffffff" stroke="#86efac"/><text x="979" y="531" class="chip">fourth_loop_promotion_status</text>
+
+  <text x="420" y="588" class="label">Shared validator / consumer lane</text>
+  <text x="440" y="614" class="text">• scripts/validate_identity_routing_learning_strengthening.py</text>
+  <text x="440" y="638" class="text">• supporting: validate_identity_experience_feedback_governance / validate_identity_experience_feedback</text>
+  <text x="440" y="662" class="text">• prompt promotion remains subordinate to replay and rollback control, not chat convenience</text>
+  <text x="440" y="686" class="tiny">This lane strengthens learning; it does not invent business prompts inside protocol and does not own first-loop truth.</text>
+
+  <rect x="1140" y="160" width="300" height="200" rx="24" fill="#f8fafc" stroke="#94a3b8" stroke-width="2" stroke-dasharray="8 6" filter="url(#shadow)"/>
+  <text x="1165" y="196" class="boxTitle">Shared primitive</text>
+  <text x="1165" y="219" class="boxSub">roundtable_four_track_cross_validation_contract_v1</text>
+  <text x="1165" y="248" class="text">Promotion basis must remain cross-validated across the four tracks</text>
+  <text x="1165" y="272" class="text">This is required for promotion evidence, not a substitute for loopback admission</text>
+
+  <rect x="1140" y="430" width="300" height="210" rx="24" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1165" y="466" class="boxTitle">Downstream into 4→1 bridge</text>
+  <text x="1165" y="489" class="boxSub">feedback_to_judgement_loopback_contract_v1</text>
+  <text x="1165" y="518" class="text">Derived prompt artifacts may only re-enter through the bounded governed bridge</text>
+  <text x="1165" y="542" class="text">They remain preflight aids only, never current-round first-loop truth</text>
+  <text x="1165" y="566" class="tiny">Conflict after reentry must demote / rollback + write back negative feedback</text>
+
+  <path d="M 330 195 C 360 195, 370 195, 390 195" fill="none" stroke="#2563eb" stroke-width="5" marker-end="url(#arrow)"/>
+  <path d="M 330 390 C 360 390, 370 390, 390 390" fill="none" stroke="#2563eb" stroke-width="5" marker-end="url(#arrow)"/>
+  <path d="M 330 600 C 360 600, 370 600, 390 600" fill="none" stroke="#2563eb" stroke-width="5" marker-end="url(#arrow)"/>
+  <path d="M 1080 255 C 1100 255, 1115 255, 1140 255" fill="none" stroke="#2563eb" stroke-width="5" marker-end="url(#arrow)"/>
+  <path d="M 1080 545 C 1100 545, 1115 545, 1140 545" fill="none" stroke="#2563eb" stroke-width="5" marker-end="url(#arrow)"/>
+
+  <rect x="50" y="820" width="1390" height="140" rx="24" fill="#fff7ed" stroke="#fdba74" stroke-width="2"/>
+  <text x="76" y="858" class="boxTitle">Adjudication freeze for Loop 4</text>
+  <text x="76" y="888" class="footer">1. Loop 4 is now more than “remember the lesson”; it is a governed strengthening lane for bounded operational prompt artifacts.</text>
+  <text x="76" y="914" class="footer">2. Replay, rollback, TTL, and negative feedback are part of the canonical machine surface — not optional documentation narrative.</text>
+  <text x="76" y="940" class="footer">3. Loop 4 still does not own first-loop truth and does not absorb business-domain playbooks into protocol.</text>
+</svg>

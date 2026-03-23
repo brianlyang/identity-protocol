@@ -26,6 +26,10 @@ Quick entrypoint for audit history and remediation closure records.
   - If archival wording conflicts with current-pointer mappings or active stream docs, archival wording is stale by definition.
 - Canonical layer-targeted required-gate profile mapping (scan/inspection-only trims; strict operations stay full):
   - `identity/protocol/mappings/layer-targeted-gate-profile.current.yaml`
+- Canonical loop visual atlas (current visual reference surface with fixed in-repo asset root):
+  - `docs/references/identity-protocol-loop-visual-atlas-v1.6.md`
+  - asset root: `docs/references/assets/identity-protocol-loop-visual-atlas/`
+  - The atlas freezes directory/naming/discoverability only; normative truth remains the owning stream docs, contract bindings, and machine validators.
 - Canonical actor-scoped session binding governance (v1.5.0):
   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
   - Scope is protocol-only; no instance business policy allowed.

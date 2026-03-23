@@ -1096,3 +1096,14 @@ Observed replay summary:
 1. `validate_multimodal_plugin_enforcement --operation validate` must pass on reports produced after this change.
 2. Pass must hold without identity-specific branching or static allowlists.
 3. This section is considered closed only when strict validator pass is reproduced on at least two runtime identities with run-bound report selection.
+
+
+## 24) Canonical four-loop visual atlas boundary (2026-03-23)
+
+1. The protocol-owned four-loop visual atlas is fixed to:
+   - `docs/references/identity-protocol-loop-visual-atlas-v1.6.md`
+   - asset root: `docs/references/assets/identity-protocol-loop-visual-atlas/`
+2. This stream remains the semantic owner for the first-loop / second-loop kernel-authoritative surfaces shown in that atlas; the atlas may visualize those loops, but may not redefine them or downgrade their fail-close meaning.
+3. The atlas is explanatory and reviewer-facing only. Normative truth for Loop 1 / Loop 2 remains this stream, the kernel docs, and the machine validators.
+4. The atlas must stay protocol-generic: no business-specific scenarios, product examples, vendor comparisons, or instance-local playbooks may be introduced into its Loop 1 / Loop 2 panels.
+5. Any future visual change that alters Loop 1 / Loop 2 semantics or path ownership must land together with the owning governance/review update rather than as a standalone diagram-only edit.

@@ -313,3 +313,18 @@ The standalone 4→1 bridge is now machine-landed as follows:
 3. `scripts/validate_identity_routing_learning_strengthening.py` now emits the same closed-loop projection as machine-readable `third_loop_exploration_status`, `fourth_loop_promotion_status`, `first_loop_revalidation_status`, `conflict_demotion_status`, `negative_feedback_writeback_status`, and `live_roundtrip_proof_status`, while `scripts/required_gate_bundle_runner.py`, `scripts/release_readiness_check.py`, and `scripts/ci/run_required_runtime_gates_ci.sh` continue consuming the dedicated `ASB16-RQ-050` lane directly rather than inventing a parallel bridge.
 4. `scripts/ci/run_feedback_to_judgement_loopback_probes_ci.sh` now proves the shared lane with both positive and negative loopback fixtures plus round-trip projection assertions, preventing docs-only regression.
 5. Loopback artifacts remain governed preflight aids only, never current-round truth, and first-loop revalidation remains authoritative.
+
+
+### 6.3 Canonical visual atlas freeze (2026-03-23)
+
+1. The protocol-owned human-facing visual atlas for the four-loop topology and bounded `4→1` bridge is now frozen at:
+   - `docs/references/identity-protocol-loop-visual-atlas-v1.6.md`
+   - asset root: `docs/references/assets/identity-protocol-loop-visual-atlas/`
+2. These visuals are canonical for **directory ownership, naming, and explanatory discoverability** only; they do **not** replace the normative contract sources in this governance stream, the companion review ledger, the kernel docs, or the machine validators/probes.
+3. The atlas must preserve the same frozen semantic split used by this stream:
+   - Loop 3 center = `route_discovery_convergence_contract_v1`
+   - Loop 4 center = `feedback_operational_prompt_contract_v1`
+   - shared primitive = `roundtable_four_track_cross_validation_contract_v1`
+   - bounded bridge = `feedback_to_judgement_loopback_contract_v1`
+4. The atlas and its SVG assets must remain business-neutral. They may not absorb search phrases, vendor/product examples, ranking logic, or instance-specific operating stories.
+5. Any semantic update to this stream that changes those loop labels or bridge boundaries must update the atlas in the same PR/commit so human-facing visuals cannot drift behind machine truth.

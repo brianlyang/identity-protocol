@@ -278,3 +278,14 @@ Frozen audit intake for the standalone 4→1 bridge:
    - loopback artifacts remain governed preflight aids only;
    - first-loop revalidation stays authoritative;
    - the landed machine consumer must continue preserving no-downgrade boundaries.
+
+
+### 6.3 Canonical visual atlas audit boundary (2026-03-23)
+
+1. Audit now treats `docs/references/identity-protocol-loop-visual-atlas-v1.6.md` plus `docs/references/assets/identity-protocol-loop-visual-atlas/` as the single current in-repo visual reference family for the four-loop topology and the bounded `4→1` bridge.
+2. This atlas is review-supporting and protocol-owned, but it is not a standalone semantic owner; conflicts against governance / contract-binding / validator surfaces mean the atlas is stale.
+3. The atlas must continue showing the bounded split that audit froze in this stream:
+   - third-loop exploration remains distinct from fourth-loop promotion;
+   - the shared four-track primitive remains distinct from the `4→1` bridge;
+   - first-loop revalidation remains authoritative after loopback reentry.
+4. Audit must reject future visual drift if assets move out of the canonical directory, reintroduce business payload, or weaken the no-downgrade interpretation of loopback conflict handling.
