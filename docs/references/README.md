@@ -80,6 +80,32 @@ Any future protocol-owned visual atlas must follow this standard path; do not im
    - issue register consistency passes,
    - stream doc registry / alias refs are synchronized.
 
+## Visual-atlas 5-step quick checklist
+
+Use this short checklist when opening any future protocol-owned visual atlas lane.
+
+1. **Create canonical surfaces**
+   - add one atlas markdown under `docs/references/`
+   - add one asset root under `docs/references/assets/<atlas-family>/`
+   - place all version-stamped SVG files under that single asset root
+2. **Anchor the atlas to SSOT**
+   - include current-pointer anchors for stream-doc-registry / contract-binding / semantic-term-registry
+   - explicitly mark the atlas as explanatory, not the semantic owner
+   - add owner-doc backlinks in the owning governance/review stream docs
+3. **Register the atlas family**
+   - add the atlas markdown to `mandatory_static_docs`
+   - add a `static_doc_required_alias_refs` row
+   - register the atlas in `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
+4. **Wire the machine checks**
+   - create a thin atlas validator on top of `scripts/reference_visual_atlas_governance_common.py`
+   - ensure `scripts/docs_command_contract_check.py` consumes it
+   - ensure `scripts/validate_control_plane_invariants.py` knows the validator as a stream-doc literal consumer
+5. **Truth-sync before claiming closure**
+   - rerun docs command contract check
+   - rerun issue register consistency
+   - update workbook docs-checker counts if they changed
+   - keep the tree clean and commit atlas family + truth-sync together
+
 ## Non-goals
 
 1. `docs/references/` does not replace governance/review streams as semantic owners.
