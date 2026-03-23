@@ -240,6 +240,12 @@ This stream now contains both the machine-facing contract freeze and the first s
     - experience-feedback stays on `runtime/rulebooks/**`, `runtime/examples/*experience-feedback*.json`, and `runtime/logs/feedback/*.json`;
     - protocol-feedback stays on `runtime/protocol-feedback/**`;
     - `runtime/memory-absorption/**` remains legacy absorption/quarantine only and must not be consumed as if it were active continuity, dialogue, learning, or protocol-feedback authority.
+25. Required-coverage adoption is now also closed for this stream:
+    - `scripts/validate_required_contract_coverage.py` now classifies `identity_context_continuity`, `identity_reentry_brief`, `identity_reentry_consumption`, and `identity_context_continuity_receipts` as **instance-adopted protocol targets** when the continuity contracts are required and their canonical runtime surfaces are materialized;
+    - they are no longer silently demoted to lane-excluded `SKIPPED_NOT_REQUIRED` inside instance-lane coverage merely because generic current-round protocol-entry correlation is absent.
+26. Evidence for that closure was reproduced on both synthetic and live surfaces:
+    - `bash scripts/ci/run_identity_context_continuity_probes_ci.sh` now asserts a synthetic continuity pack plus synthetic catalog where required coverage returns those four targets as `PASS_REQUIRED` and `instance_adopted_protocol_target=true`;
+    - `python3 scripts/validate_required_contract_coverage.py --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-id base-repo-closure-orchestrator --operation inspection --json-only` now returns `PASS_REQUIRED` (`rc=0`) with `instance_adopted_protocol_targets_included=["identity_context_continuity","identity_context_continuity_receipts","identity_reentry_brief","identity_reentry_consumption"]` and zero required failures for the inspection lane.
 
 ## 6) Audit hardening absorbed after coding-readiness freeze
 

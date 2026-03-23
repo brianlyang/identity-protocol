@@ -226,6 +226,13 @@ Minimum additional requirements:
 15. A live identity must not claim `v1.6.16` adoption merely because the directories exist or because the answer surface renders; adoption requires the materialized scripts above, manifest registration, guard-state persistence, and real runtime artifacts under the exact output paths above.
 16. `base-repo-closure-orchestrator` has now completed the first canonical live pilot adoption for this stream: its own `.identity/base-repo-closure-orchestrator/` root contains the materialized pack-local scripts, manifest rows, guard-state persistence, continuity checkpoint artifacts, governed reentry brief, and the required checkpoint / migration / brief / consumption receipts.
 17. That live pilot proof does **not** upgrade the stream into fleet rollout closure; it only proves that the shared protocol-owned materialization path works on one real runtime identity without workspace-specific patching.
+18. Required-coverage semantics for this family are now frozen as part of adoption:
+   - once `context_continuity_contract_v1` and/or `reentry_brief_consumption_contract_v1` are required in `CURRENT_TASK.json`,
+   - and the canonical continuity runtime surfaces are materialized under `runtime/reports/context-continuity/**` plus `runtime/state/context-continuity/**`,
+   - `scripts/validate_required_contract_coverage.py` must include these four targets inside instance-lane required coverage: `identity_context_continuity`, `identity_reentry_brief`, `identity_reentry_consumption`, `identity_context_continuity_receipts`.
+19. Those four targets are therefore **instance-adopted protocol targets**: protocol owns their semantics, but after adoption they are active runtime obligations and must not be silently downgraded to lane-excluded `SKIPPED_NOT_REQUIRED` just because generic current-round protocol-entry correlation is absent.
+20. This rule is intentionally narrow and does not reopen the generic lane-partition policy for unrelated protocol-governance targets; it applies only to protocol-defined families whose adopted truth is pack-local runtime evidence under the fixed continuity path families above.
+21. Probe coverage for this rule is mandatory in the continuity probe lane so the adapter cannot regress back to “validators green, required-coverage blind”.
 
 ### 2.10 Coding-facing schema freeze
 

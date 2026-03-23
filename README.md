@@ -140,6 +140,9 @@ Operational rule for identity instances:
   - those `guard-*.json` files are auxiliary protocol-owned control receipts and are explicitly outside the four-role `RQ-046` receipt-family join; they may coexist under the same report root without invalidating receipt-family closure;
   - they must be registered in `scripts/INSTANCE_SCRIPT_MANIFEST.json`;
   - they must write only to `runtime/reports/context-continuity/continuity-rolling-*.json`, `runtime/reports/context-continuity/continuity-stage-*.json`, `runtime/reports/context-continuity/continuity-migration-*.json`, `runtime/state/context-continuity/active-reentry-brief.json`, and the corresponding receipt files under `runtime/reports/context-continuity/`.
+- required-coverage semantics for this family are also frozen:
+  - once `context_continuity_contract_v1` / `reentry_brief_consumption_contract_v1` are required in `CURRENT_TASK.json` and the canonical continuity runtime surfaces are materialized, `validate_required_contract_coverage.py` must count `identity_context_continuity`, `identity_reentry_brief`, `identity_reentry_consumption`, and `identity_context_continuity_receipts` as instance-adopted protocol targets;
+  - they must not be silently demoted back to lane-excluded `SKIPPED_NOT_REQUIRED` merely because generic current-round protocol-entry correlation is absent.
 
 ### Artifact-family routing quick reference (v1.6.18)
 
