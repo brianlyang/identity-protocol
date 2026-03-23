@@ -80,6 +80,16 @@ Any future protocol-owned visual atlas must follow this standard path; do not im
    - issue register consistency passes,
    - stream doc registry / alias refs are synchronized.
 
+### G. Scaffold generator standard
+
+1. Future atlas-family onboarding should start from the shared scaffold generator instead of freehand copy/paste:
+   - `python3 scripts/generate_reference_visual_atlas_scaffold.py --help`
+2. The generator templates live under:
+   - `scripts/templates/reference_visual_atlas/`
+3. Generated scaffold output is preview-only. It is **not** canonical until the generated surfaces are copied into the protocol repo, registered in `stream-doc-registry`, backlinked from owner docs, added to `AUDIT_SNAPSHOT_INDEX`, and validated green.
+4. Example preview command:
+   - `python3 scripts/generate_reference_visual_atlas_scaffold.py --atlas-family-slug identity-protocol-example-visual-atlas --doc-version v1.6 --stream-version v1.6.99 --validator-slug example --title "Identity Protocol Example Visual Atlas" --surface-summary "example explanation surface" --purpose-sentence "the example routing model and non-goals" --status-key example_visual_atlas_governance_status --error-code IP-EXAMPLE-ATLAS-001 --svg-name identity_protocol_example_overview_v1699.svg --owner-doc docs/governance/example-governance-v1.6.99.md --owner-doc docs/review/example-review-v1.6.99.md --output-root /tmp/reference-visual-atlas-example --dry-run`
+
 ## Visual-atlas 5-step quick checklist
 
 Use this short checklist when opening any future protocol-owned visual atlas lane.
@@ -98,6 +108,7 @@ Use this short checklist when opening any future protocol-owned visual atlas lan
    - register the atlas in `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
 4. **Wire the machine checks**
    - create a thin atlas validator on top of `scripts/reference_visual_atlas_governance_common.py`
+   - bootstrap the preview tree with `python3 scripts/generate_reference_visual_atlas_scaffold.py --help`
    - ensure `scripts/docs_command_contract_check.py` consumes it
    - ensure `scripts/validate_control_plane_invariants.py` knows the validator as a stream-doc literal consumer
 5. **Truth-sync before claiming closure**

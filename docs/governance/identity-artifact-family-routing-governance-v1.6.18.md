@@ -25,6 +25,10 @@ Execution mode: topic-level canonical SSOT for v1.6.18 artifact-family routing g
    - `docs/references/identity-protocol-artifact-family-routing-visual-atlas-v1.6.md`
    - asset root: `docs/references/assets/identity-protocol-artifact-family-routing-visual-atlas/`
 10. This atlas explains the six-layer interpretation model, the family viability test, and the three-state upgrade-safety rule only. Normative truth remains this governance doc, the protocol motherline, contract binding, and machine validators.
+11. Any future protocol-owned atlas-family growth in this stream must start from the shared reference onboarding path:
+   - `docs/references/README.md`
+   - `python3 scripts/generate_reference_visual_atlas_scaffold.py --help`
+   Freehand atlas onboarding outside that shared scaffold path is non-canonical.
 
 ## 1) Why v1.6.18 is required
 

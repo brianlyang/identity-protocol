@@ -165,6 +165,10 @@ Audit judgment:
    - `docs/references/identity-protocol-artifact-family-routing-visual-atlas-v1.6.md`
    - asset root: `docs/references/assets/identity-protocol-artifact-family-routing-visual-atlas/`
 7. Audit accepts that atlas as discoverability-only explanatory SSOT for this stream, while normative truth remains the governance doc, protocol motherline, contract binding, and machine validators.
+8. Audit also accepts the shared atlas onboarding path as the only canonical bootstrap for future atlas-family growth on this stream:
+   - `docs/references/README.md`
+   - `python3 scripts/generate_reference_visual_atlas_scaffold.py --help`
+   Any generated scaffold remains preview-only until registry/index/backlink truth-sync and validator green closure are complete.
 
 ## 5) Machine-consumer and whole-matrix routing closure landed
 

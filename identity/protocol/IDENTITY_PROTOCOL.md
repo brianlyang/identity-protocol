@@ -187,6 +187,7 @@ Compatibility note: legacy packs under `identity/<id>/` are migration-only locat
 15. Protocol interpretation of memory-like persisted artifacts is layered: language ban on generic `memory`, exact family identity, fixed path, canonical producer/consumer roles, declaration/gate separation, and runtime viability proof.
 16. A family is considered viable only when semantic owner, canonical root, shared producer method, shared consumer/validator lane, and live replay on active identities all remain aligned; docs-only or path-only presence is insufficient.
 17. Upgrade safety is three-state: required/adopted family must remain `PASS_REQUIRED`, optional/not-required family may remain `SKIPPED_NOT_REQUIRED` without dragging the outer routing lane red, and quarantine-only family must never be promoted to active success-path truth.
+18. Future protocol-owned visual atlas growth for this boundary must use the shared reference onboarding path (`docs/references/README.md` plus `python3 scripts/generate_reference_visual_atlas_scaffold.py --help`) rather than freehand atlas sprawl; generator output is preview-only until registry/index/backlink/validator truth-sync is landed.
 
 ## Runtime source-of-truth boundary (v1.4.x hardening)
 
