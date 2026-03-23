@@ -81,6 +81,27 @@ Hard semantics:
 4. Instances and workspaces must self-upgrade to current protocol obligations; protocol runtime does not reopen closed semantics to absorb lagging adoption debt.
 5. Explicit fixture/import lanes are non-runtime only; they cannot be used as active entry surfaces, success-path evidence, or validator green defaults.
 
+## Canonical artifact-family routing boundary (v1.6.18 additive)
+
+Hard semantics:
+
+1. Active runtime must not treat `memory` as a generic sink class; it must route persisted artifacts to one exact governed family.
+2. Pack-root durable families remain:
+   - `RULEBOOK.jsonl` -> durable pack rulebook family
+   - `TASK_HISTORY.md` -> chronological pack task-history family
+3. Governed runtime families remain:
+   - dialogue-governance -> `runtime/reports/dialogue-content-synthesis-<identity-id>-*.json`, `runtime/reports/dialogue-cross-validation-matrix-<identity-id>-*.json`, `runtime/reports/dialogue-result-support-<identity-id>-*.json`
+   - experience-feedback -> `runtime/rulebooks/positive.jsonl`, `runtime/rulebooks/negative.jsonl`, `runtime/examples/*experience-feedback*.json`, `runtime/logs/feedback/*.json`
+   - protocol-feedback -> `runtime/protocol-feedback/**`
+   - continuity/reentry -> `runtime/reports/context-continuity/**`, `runtime/state/context-continuity/**`
+   - memory-absorption quarantine -> `runtime/memory-absorption/**`
+4. Family identity is determined by semantic owner + fixed path + payload class + production method + primary consumer; superficially similar content does not authorize family collapse.
+5. `RULEBOOK.jsonl` is not the same semantic object as runtime experience-feedback rulebooks, and `TASK_HISTORY.md` is not a continuity checkpoint family.
+6. `runtime/protocol-feedback/**` is governance communication only; it cannot substitute for learning, dialogue proof, or startup continuity.
+7. `runtime/memory-absorption/**` is quarantine/re-materialization only; active validators and success paths must not consume it as continuity, dialogue, learning, or protocol-feedback truth.
+8. Declaration/gate surfaces such as `reject_memory_gate` and `*_contract` blocks remain control-plane declarations, not artifact-family outputs.
+9. Future validators/creator/readiness wiring must enforce the same routing matrix rather than re-deriving family semantics per pack.
+
 ## Batch-6 anchor placeholders (v1.6 intake, non-promotional)
 
 The following sections provide stable kernel anchors for v1.6 Batch-6 mapping rows.
