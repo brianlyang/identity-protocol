@@ -307,6 +307,35 @@ Minimum additional requirements:
 3. Repository dirty-state counts are situational runtime facts, not protocol claims; governance must freeze the interpretation rule rather than embedding transient file counts.
 4. Before rollout or pilot claims, non-`v1.6.16` dirty lanes must be isolated, committed, or otherwise removed from the proof surface so continuity evidence is not cross-contaminated by unrelated deltas.
 
+### 2.14 Chat-derived downsink semantic routing (frozen)
+
+1. Runtime may absolutely derive compact, useful artifacts from dialogue / chat records, but `v1.6.16` owns only the **startup/reentry continuity** slice of that universe.
+2. The deciding question is not “did this come from chat?” but “what is this artifact for, how long should it live, and who is allowed to consume it?”
+3. Frozen routing rule:
+   - if the artifact exists to help a fresh session, launcher recovery, clear-after-reset, or new-window migration resume the current task safely, it belongs to `v1.6.16` continuity;
+   - if the artifact exists to prove conversation constraint capture, ambiguity closure, or claim traceability, it belongs to `dialogue_governance_contract`;
+   - if the artifact exists to turn validated outcomes into durable rulebook deltas, replay-backed lessons, or scoped next-round operational prompts, it belongs to `experience_feedback_contract` and `v1.6.17` routing/learning strengthening;
+   - if the artifact exists to report governance debt, escalation, upgrade proposals, or instance-to-protocol issue traffic, it belongs to `runtime/protocol-feedback/**` and the protocol-feedback atomic emit family.
+4. `v1.6.16` continuity artifacts are therefore **bounded startup aids**:
+   - short, structured, lineage-linked, and stale-able;
+   - stored only under `runtime/reports/context-continuity/**` and `runtime/state/context-continuity/**`;
+   - never promoted to long-term learning, protocol escalation, or transcript-archive authority by convenience.
+5. Dialogue-governance artifacts are **traceability objects**, not startup authority:
+   - they may summarize turns, constraints, ambiguities, and supporting artifacts;
+   - they support “did we understand the conversation correctly?” rather than “how do we safely re-enter after reset?”
+6. Experience-feedback / routing-learning artifacts are **durable improvement objects**, not continuity payloads:
+   - they may persist rulebook deltas, validated lessons, replay-backed prompt artifacts, rollback refs, and TTL-bounded operational prompts;
+   - they improve future rounds generically, not merely the next startup of the current interrupted task.
+7. Protocol-feedback artifacts are **governance communication objects**, not continuity or learning shortcuts:
+   - outbox/index/receipt chains are for escalation, reporting, and protocol-owned routing of issues and upgrade signals;
+   - a protocol-feedback batch may cite dialogue or runtime evidence, but it must not masquerade as a `reentry_brief`.
+8. Frozen anti-pollution rule:
+   - do not store feedback-operational prompts, protocol escalation packs, or free-form transcript dumps under `context-continuity`;
+   - do not treat dialogue synthesis reports or protocol-feedback batches as startup-consumable continuity bind objects;
+   - do not turn `reentry_brief` into a generic “valuable memory sink.”
+9. The same conversation may legitimately feed multiple lanes, but each output must be emitted separately under its own contract and path family; shared origin does not permit semantic collapse.
+10. In short: `v1.6.16` answers “how do I safely continue this interrupted task now?”, while dialogue / feedback / protocol-feedback answer “what did we learn, prove, or escalate from the conversation?”
+
 ## 3) Four-track cross-verification boundary
 
 ### 3.1 T1 roundtable / internal topology
