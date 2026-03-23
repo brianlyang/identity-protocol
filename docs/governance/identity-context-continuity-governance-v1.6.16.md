@@ -333,8 +333,16 @@ Minimum additional requirements:
    - do not store feedback-operational prompts, protocol escalation packs, or free-form transcript dumps under `context-continuity`;
    - do not treat dialogue synthesis reports or protocol-feedback batches as startup-consumable continuity bind objects;
    - do not turn `reentry_brief` into a generic “valuable memory sink.”
-9. The same conversation may legitimately feed multiple lanes, but each output must be emitted separately under its own contract and path family; shared origin does not permit semantic collapse.
-10. In short: `v1.6.16` answers “how do I safely continue this interrupted task now?”, while dialogue / feedback / protocol-feedback answer “what did we learn, prove, or escalate from the conversation?”
+9. `~/.codex/memories/**` is **not** a protocol runtime evidence family:
+   - it may exist as tool-side or operator-side auxiliary storage,
+   - but it is not an authoritative sink for `v1.6.16`, dialogue governance, experience feedback, or protocol-feedback outputs,
+   - no identity instance may satisfy protocol contracts by writing only to `~/.codex/memories/**`.
+10. `runtime/memory-absorption/**` is a governed **legacy absorption / quarantine** family only:
+   - it may temporarily absorb migrated or deprecated local artifacts,
+   - but it is not an active continuity root, not a dialogue-governance report root, not a feedback-operational-prompt root, and not a protocol-feedback transport root,
+   - anything promoted out of it must be re-materialized into the correct governed family rather than consumed in place.
+11. The same conversation may legitimately feed multiple lanes, but each output must be emitted separately under its own contract and path family; shared origin does not permit semantic collapse.
+12. In short: `v1.6.16` answers “how do I safely continue this interrupted task now?”, while dialogue / feedback / protocol-feedback answer “what did we learn, prove, or escalate from the conversation?”
 
 ## 3) Four-track cross-verification boundary
 
