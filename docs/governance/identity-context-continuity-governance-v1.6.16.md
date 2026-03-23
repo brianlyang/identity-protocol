@@ -191,6 +191,28 @@ Minimum additional requirements:
    - `runtime/state/context-continuity/`
 5. No pack may claim those runtime families are adopted until the required `v1.6.13` / `v1.6.8` topology-path registration work is present in that pack's consumed contracts.
 6. This means coding may begin now, but first-landing implementations must target canonical filenames and payloads under already-governed roots instead of inventing new directory structure.
+7. Continuity implementation for live identities must be **hard-downsink materialization**, not operator folklore:
+   - protocol owns the template grammar and validators,
+   - identity packs own the materialized executable surfaces,
+   - workspace helpers or chat-only procedures must not become the runtime producer.
+8. The canonical materialization path family is frozen as:
+   - `<pack-root>/scripts/emit_identity_context_checkpoint.py`
+   - `<pack-root>/scripts/materialize_identity_reentry_brief.py`
+   - `<pack-root>/scripts/emit_identity_reentry_consumption_receipt.py`
+9. The canonical registration surface for those materialized executables is frozen as:
+   - `<pack-root>/scripts/INSTANCE_SCRIPT_MANIFEST.json`
+10. The canonical runtime output paths are frozen as:
+   - `<pack-root>/runtime/reports/context-continuity/continuity-rolling-*.json`
+   - `<pack-root>/runtime/reports/context-continuity/continuity-stage-*.json`
+   - `<pack-root>/runtime/reports/context-continuity/continuity-migration-*.json`
+   - `<pack-root>/runtime/state/context-continuity/active-reentry-brief.json`
+   - `<pack-root>/runtime/reports/context-continuity/checkpoint-receipt.json`
+   - `<pack-root>/runtime/reports/context-continuity/migration-receipt.json`
+   - `<pack-root>/runtime/reports/context-continuity/reentry-brief-receipt.json`
+   - `<pack-root>/runtime/reports/context-continuity/reentry-consumption-receipt.json`
+11. `create_identity_pack.py`, `repair_contract_backfill.py`, and later creator/update convergence must be the only canonical materializers for this family; hand-written per-workspace deviations are non-canonical even if they appear to work.
+12. A live identity must not claim `v1.6.16` adoption merely because the directories exist or because the answer surface renders; adoption requires the materialized scripts above, manifest registration, and real runtime artifacts under the exact output paths above.
+13. For `base-repo-closure-orchestrator`, until those pack-local script files and runtime artifact files exist under its own `.identity/base-repo-closure-orchestrator/` root, the stream is protocol-ready but instance-not-adopted.
 
 ### 2.10 Coding-facing schema freeze
 
