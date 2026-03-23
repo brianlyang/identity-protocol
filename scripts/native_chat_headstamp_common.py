@@ -724,7 +724,11 @@ def ensure_native_chat_prompt_hard_guard(
     if PROMPT_HARD_GUARD_BEGIN in source_text and PROMPT_HARD_GUARD_END in source_text:
         start = source_text.index(PROMPT_HARD_GUARD_BEGIN)
         end = source_text.index(PROMPT_HARD_GUARD_END) + len(PROMPT_HARD_GUARD_END)
-        updated = (source_text[:start] + rendered + source_text[end:]).strip() + "\n"
+        prefix = source_text[:start].rstrip("\n")
+        suffix = source_text[end:].lstrip("\n")
+        rendered_body = rendered.rstrip("\n")
+        segments = [segment for segment in [prefix, rendered_body, suffix] if segment]
+        updated = "\n\n".join(segments).strip() + "\n"
         return updated, missing_tokens, updated != source_text
     if not missing_tokens:
         return source_text, [], False

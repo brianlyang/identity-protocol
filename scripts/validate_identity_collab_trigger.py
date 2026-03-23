@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import glob
 import json
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,7 @@ from blocker_taxonomy_common import (
     canonicalize_blocker,
     normalize_blocker_membership,
 )
+from collaboration_trigger_sample_common import materialize_collaboration_trigger_samples
 
 REQUIRED_TAXONOMY_FIELDS = {
     "blocker_type",
@@ -258,7 +260,14 @@ def _validate_log(
     return rc, logs
 
 
-def _run_self_test(sample_root: Path) -> int:
+def _run_self_test() -> int:
+    with tempfile.TemporaryDirectory(prefix="collaboration-trigger-selftest-") as tmp_dir:
+        sample_root = Path(tmp_dir).resolve()
+        materialize_collaboration_trigger_samples(sample_root, apply=True)
+        return _run_self_test_against_root(sample_root)
+
+
+def _run_self_test_against_root(sample_root: Path) -> int:
     alias_map = build_blocker_alias_map()
     pos = sorted((sample_root / "positive").glob("*.json"))
     neg = sorted((sample_root / "negative").glob("*.json"))
@@ -302,7 +311,10 @@ def _run_self_test(sample_root: Path) -> int:
             alias_map=alias_map,
         )
         for ln in logs:
-            print(ln)
+            if ln.startswith("[FAIL] "):
+                print(f"[OK] expected negative probe: {ln[7:]}")
+            else:
+                print(ln)
         if irc == 0:
             print(f"[FAIL] negative sample should fail: {p}")
             rc = 1
@@ -503,8 +515,7 @@ def main() -> int:
         rc = max(rc, irc)
 
     if args.self_test:
-        sample_root = Path("identity/runtime/examples/collaboration-trigger")
-        rc = max(rc, _run_self_test(sample_root))
+        rc = max(rc, _run_self_test())
 
     if rc == 0:
         print("validate_identity_collab_trigger PASSED")

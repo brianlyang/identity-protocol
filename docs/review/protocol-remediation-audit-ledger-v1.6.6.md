@@ -930,6 +930,11 @@ during `identity_creator.py update` pre-mutation flow.
    - no `egress_wrapper_parent_attestation_parent_command_mismatch` observed
 3. update no longer hard-stops at stale-report preflight:
    - `IP-PVA-001` / `IP-REL-001` (`report_older_than_key_inputs`) now follows warn-and-continue path for in-run refresh.
+   - follow-up hardening (2026-03-23): the same refreshable family now correctly includes the derived prompt-side projection where stale report selection also yields:
+     - `prompt_sha_mismatch_or_missing`
+     - `prompt_activation_mismatch`
+     while baseline/scaffold/binding remain green.
+   - audit interpretation: this triple remains one bounded stale-report refresh family, not a second independent blocker.
    - blocking point moves to later strict bundle gates, not wrapper parent-attestation mismatch.
 4. control-plane regression checks after patch remain green:
    - `validate_control_plane_invariants.py --json-only` -> `PASS_REQUIRED`

@@ -4131,6 +4131,7 @@ def main() -> int:
         rc_pva, out_pva, _ = _run_capture(protocol_alignment_cmd)
         pva_payload = _parse_json_payload(out_pva) or {}
         pva_error_code = str(pva_payload.get("error_code", "")).strip()
+        pva_strict_update_refresh_allowed = bool(pva_payload.get("strict_update_refresh_allowed", False))
         tuple_checks = pva_payload.get("tuple_checks", {})
         if not isinstance(tuple_checks, dict):
             tuple_checks = {}
@@ -4139,12 +4140,6 @@ def main() -> int:
         pva_scaffold_ok = bool(tuple_checks.get("scaffold_version_baseline_alignment", False))
         pva_prompt_ok = bool(tuple_checks.get("prompt_activation", False))
         pva_binding_ok = bool(tuple_checks.get("binding_tuple", False))
-        pva_freshness_payload = pva_payload.get("execution_report_freshness", {})
-        if not isinstance(pva_freshness_payload, dict):
-            pva_freshness_payload = {}
-        pva_freshness_stale_reasons = pva_freshness_payload.get("stale_reasons", [])
-        if not isinstance(pva_freshness_stale_reasons, list):
-            pva_freshness_stale_reasons = []
         legacy_tuple_refresh_allowed = (
             str(args.baseline_policy or "").strip().lower() == "strict"
             and pva_error_code in {"IP-PVA-003", "IP-PVA-004"}
@@ -4157,9 +4152,8 @@ def main() -> int:
             and pva_error_code == "IP-PVA-001"
             and not pva_freshness_ok
             and pva_baseline_ok
-            and pva_prompt_ok
             and pva_binding_ok
-            and "report_older_than_key_inputs" in {str(x).strip() for x in pva_freshness_stale_reasons}
+            and pva_strict_update_refresh_allowed
         )
         scaffold_version_backfill_allowed = (
             str(args.baseline_policy or "").strip().lower() == "strict"
@@ -4179,6 +4173,7 @@ def main() -> int:
             rc_pva, out_pva, _ = _run_capture(protocol_alignment_cmd)
             pva_payload = _parse_json_payload(out_pva) or {}
             pva_error_code = str(pva_payload.get("error_code", "")).strip()
+            pva_strict_update_refresh_allowed = bool(pva_payload.get("strict_update_refresh_allowed", False))
             tuple_checks = pva_payload.get("tuple_checks", {})
             if not isinstance(tuple_checks, dict):
                 tuple_checks = {}
@@ -4187,12 +4182,6 @@ def main() -> int:
             pva_scaffold_ok = bool(tuple_checks.get("scaffold_version_baseline_alignment", False))
             pva_prompt_ok = bool(tuple_checks.get("prompt_activation", False))
             pva_binding_ok = bool(tuple_checks.get("binding_tuple", False))
-            pva_freshness_payload = pva_payload.get("execution_report_freshness", {})
-            if not isinstance(pva_freshness_payload, dict):
-                pva_freshness_payload = {}
-            pva_freshness_stale_reasons = pva_freshness_payload.get("stale_reasons", [])
-            if not isinstance(pva_freshness_stale_reasons, list):
-                pva_freshness_stale_reasons = []
             if rc_pva == 0 and not phase_transition_reason:
                 phase_transition_reason = "scaffold_version_baseline_backfill"
                 phase_transition_error_code = "IP-PVA-002"
@@ -4209,9 +4198,8 @@ def main() -> int:
             and pva_error_code == "IP-PVA-001"
             and not pva_freshness_ok
             and pva_baseline_ok
-            and pva_prompt_ok
             and pva_binding_ok
-            and "report_older_than_key_inputs" in {str(x).strip() for x in pva_freshness_stale_reasons}
+            and pva_strict_update_refresh_allowed
         )
 
         if rc_pva != 0 and not legacy_tuple_refresh_allowed and not stale_report_refresh_allowed:

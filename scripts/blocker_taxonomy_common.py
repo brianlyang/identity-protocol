@@ -97,6 +97,16 @@ def normalize_task_blocker_surfaces(
     taxonomy = task.get("blocker_taxonomy_contract")
     collab = task.get("collaboration_trigger_contract")
     escalation = task.get("escalation_policy")
+    gates = task.get("gates")
+    collaboration_gate_required = (
+        isinstance(gates, dict) and str(gates.get("collaboration_trigger_gate", "")).strip() == "required"
+    )
+    surface_contract_present = (
+        isinstance(taxonomy, dict)
+        or isinstance(collab, dict)
+        or (isinstance(escalation, dict) and "human_collab_blockers" in escalation)
+    )
+    applicable = collaboration_gate_required or surface_contract_present
     alias_map = build_blocker_alias_map(
         taxonomy.get("legacy_alias_bridge") if isinstance(taxonomy, dict) else None,
         collab.get("legacy_alias_bridge") if isinstance(collab, dict) else None,
@@ -106,12 +116,20 @@ def normalize_task_blocker_surfaces(
     report: dict[str, Any] = {
         "blocker_alias_map_version": BLOCKER_ALIAS_MAP_VERSION,
         "canonical_blocker_types": canonical_list,
+        "applicable": applicable,
+        "applicability_reason": (
+            "collaboration_trigger_gate_required"
+            if collaboration_gate_required
+            else ("surface_contract_present" if surface_contract_present else "contract_not_required")
+        ),
         "restored_surface_fields": [],
         "restored_version_fields": [],
         "missing_surfaces": [],
         "alias_hits_by_surface": {},
         "invalid_blockers_by_surface": {},
     }
+    if not applicable:
+        return report
 
     def _normalize_surface(
         node: Any,

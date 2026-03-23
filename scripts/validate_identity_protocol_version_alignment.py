@@ -28,6 +28,21 @@ ERR_PROMPT_ALIGNMENT = "IP-PVA-003"
 ERR_BINDING_ALIGNMENT = "IP-PVA-004"
 ERR_SCAFFOLD_BASELINE_ALIGNMENT = ERR_BASELINE_ALIGNMENT
 
+STRICT_UPDATE_REFRESH_ALLOWED_REASONS = frozenset(
+    {
+        "prompt_sha_mismatch_or_missing",
+        "report_older_than_key_inputs",
+        "prompt_activation_mismatch",
+        "live_head_drift_non_blocking",
+    }
+)
+STRICT_UPDATE_FRESHNESS_ALLOWED_REASONS = frozenset(
+    {
+        "prompt_sha_mismatch_or_missing",
+        "report_older_than_key_inputs",
+    }
+)
+
 STRICT_OPERATIONS = {"activate", "update", "readiness", "e2e", "ci", "validate", "mutation"}
 INSPECTION_OPERATIONS = {"scan", "three-plane", "inspection"}
 
@@ -102,6 +117,36 @@ def _meta_snapshot(meta_doc: dict[str, Any]) -> dict[str, str]:
 
 def _catalog_snapshot(catalog_row: dict[str, Any]) -> dict[str, str]:
     return {field: str(catalog_row.get(field, "")).strip() for field in REQUIRED_CATALOG_FIELDS}
+
+
+def _derive_strict_update_refreshability(
+    *,
+    error_code: str,
+    freshness_ok: bool,
+    baseline_ok: bool,
+    scaffold_baseline_ok: bool,
+    binding_ok: bool,
+    freshness_payload: dict[str, Any],
+    stale_reasons: list[str],
+) -> tuple[bool, str]:
+    freshness_stale_reasons = freshness_payload.get("stale_reasons", [])
+    if not isinstance(freshness_stale_reasons, list):
+        freshness_stale_reasons = []
+    freshness_reason_set = {str(reason).strip() for reason in freshness_stale_reasons if str(reason).strip()}
+    stale_reason_set = {str(reason).strip() for reason in stale_reasons if str(reason).strip()}
+    refreshable = (
+        error_code == ERR_REPORT_ALIGNMENT
+        and not freshness_ok
+        and baseline_ok
+        and scaffold_baseline_ok
+        and binding_ok
+        and "report_older_than_key_inputs" in freshness_reason_set
+        and freshness_reason_set.issubset(STRICT_UPDATE_FRESHNESS_ALLOWED_REASONS)
+        and stale_reason_set.issubset(STRICT_UPDATE_REFRESH_ALLOWED_REASONS)
+    )
+    if refreshable:
+        return True, "stale_execution_report_projection"
+    return False, ""
 
 
 def main() -> int:
@@ -383,6 +428,16 @@ def main() -> int:
         seen.add(rr)
         dedup_reasons.append(rr)
 
+    strict_update_refresh_allowed, strict_update_refresh_mode = _derive_strict_update_refreshability(
+        error_code=error_code,
+        freshness_ok=freshness_ok,
+        baseline_ok=baseline_ok,
+        scaffold_baseline_ok=scaffold_baseline_ok,
+        binding_ok=binding_ok,
+        freshness_payload=freshness_payload,
+        stale_reasons=dedup_reasons,
+    )
+
     payload = {
         "identity_id": args.identity_id,
         "catalog_path": str(catalog_path),
@@ -393,6 +448,8 @@ def main() -> int:
         "report_selected_path": str(selected_report).strip(),
         "protocol_version_alignment_status": status,
         "error_code": error_code,
+        "strict_update_refresh_allowed": strict_update_refresh_allowed,
+        "strict_update_refresh_mode": strict_update_refresh_mode,
         "tuple_checks": {
             "execution_report_freshness": freshness_ok,
             "protocol_baseline_freshness": baseline_ok,

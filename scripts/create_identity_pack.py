@@ -21,6 +21,7 @@ from blocker_taxonomy_common import (
     CANONICAL_BLOCKER_TYPES,
     LEGACY_BLOCKER_ALIAS_MAP,
 )
+from collaboration_trigger_sample_common import materialize_collaboration_trigger_samples
 from contract_binding_doc_defaults_common import resolve_validator_doc_defaults
 from resolve_identity_context import default_identity_home, default_local_catalog_path, default_local_instances_root
 from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID
@@ -917,6 +918,8 @@ def _instance_pack_topology_contract_skeleton(identity_id: str) -> dict:
         ],
         "runtime_optional_dirs": [
             "runtime/examples/collaboration-trigger",
+            "runtime/examples/collaboration-trigger/negative",
+            "runtime/examples/collaboration-trigger/positive",
             "runtime/examples/handoff",
             "runtime/examples/handoff/negative",
             "runtime/examples/handoff/positive",
@@ -7003,11 +7006,13 @@ def _bootstrap_legacy_identity_samples(identity_id: str, runtime_root: Path) -> 
     )
 
     _bootstrap_runtime_selftest_assets(identity_id, runtime_root)
-    collab_src = Path("identity/runtime/examples/collaboration-trigger")
     collab_dst = runtime_root / "examples" / "collaboration-trigger"
-    for sample in collab_src.rglob("*.json"):
-        rel = sample.relative_to(collab_src)
-        _copy_sample_with_identity(sample, collab_dst / rel, identity_id)
+    materialize_collaboration_trigger_samples(
+        collab_dst,
+        identity_id=identity_id,
+        task_id=f"{identity_id}_bootstrap",
+        apply=True,
+    )
     _write_install_provenance_reports(identity_id, runtime_root)
 
 

@@ -11,6 +11,7 @@ from typing import Any
 import yaml
 
 from blocker_taxonomy_common import normalize_task_blocker_surfaces
+from collaboration_trigger_sample_common import materialize_collaboration_trigger_samples
 from create_identity_pack import (
     DOWNSINK_PATH_IMMUTABILITY_CONTRACT_ID,
     DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY,
@@ -896,6 +897,34 @@ def _ensure_handoff_selftest_assets(
         "positive_count_after": len(positive_after),
         "negative_count_after": len(negative_after),
         "backfilled_files": backfilled_files,
+    }
+
+
+def _ensure_collaboration_trigger_selftest_assets(
+    *,
+    pack_path: Path,
+    identity_id: str,
+    task_doc: dict[str, Any],
+    apply: bool,
+) -> dict[str, Any]:
+    sample_dst = (pack_path / "runtime/examples/collaboration-trigger").resolve()
+    task_id = str(task_doc.get("task_id") or f"{identity_id}_bootstrap").strip() or f"{identity_id}_bootstrap"
+    positive_before = sorted((sample_dst / "positive").glob("*.json"))
+    negative_before = sorted((sample_dst / "negative").glob("*.json"))
+    materialized = materialize_collaboration_trigger_samples(
+        sample_dst,
+        identity_id=identity_id,
+        task_id=task_id,
+        apply=apply,
+    )
+    positive_after = sorted((sample_dst / "positive").glob("*.json"))
+    negative_after = sorted((sample_dst / "negative").glob("*.json"))
+    return {
+        **materialized,
+        "positive_count_before": len(positive_before),
+        "negative_count_before": len(negative_before),
+        "positive_count_after": len(positive_after),
+        "negative_count_after": len(negative_after),
     }
 
 
@@ -2113,13 +2142,14 @@ def main() -> int:
             sync_human_collab_blockers_if_present=True,
             include_default_legacy_aliases=True,
         )
+        blocker_surface_applicable = bool(blocker_surface_backfill.get("applicable", False))
         blocker_surface_invalid_after = blocker_surface_backfill.get("invalid_blockers_by_surface") or {}
         changed = before != updated
         applied = False
         if args.apply and changed and not blocker_surface_invalid_after:
             task_path.write_text(json.dumps(updated, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             applied = True
-        if blocker_surface_invalid_after:
+        if blocker_surface_applicable and blocker_surface_invalid_after:
             status = STATUS_FAIL_REQUIRED
             error_code = "IP-BLOCKER-WIRE-001"
             stale_reasons = ["unsupported_blocker_types_after_backfill"]
@@ -2219,6 +2249,11 @@ def main() -> int:
     legacy_drift_before = _legacy_path_drift_fields(task_doc, args.identity_id)
 
     updated = _ensure_intake_p1_contracts(task_doc, args.identity_id)
+    blocker_surface_backfill = normalize_task_blocker_surfaces(
+        updated,
+        sync_human_collab_blockers_if_present=True,
+        include_default_legacy_aliases=True,
+    )
     restored_topology_contract_keys = _normalize_instance_pack_topology_contract(updated, args.identity_id)
     restored_launcher_contract_keys = _normalize_identity_codex_launcher_contract(updated, args.identity_id)
     restored_continuity_contract_keys, restored_continuity_validator_keys = _normalize_continuity_contracts(updated)
@@ -2316,6 +2351,9 @@ def main() -> int:
     continuity_invalid_after = _continuity_contract_invalid_keys(updated)
     dialogue_retention_invalid_after = _dialogue_retention_contract_invalid_keys(updated)
     artifact_family_routing_invalid_after = _artifact_family_routing_contract_invalid_keys(updated)
+    blocker_surface_missing_after = blocker_surface_backfill.get("missing_surfaces") or []
+    blocker_surface_invalid_after = blocker_surface_backfill.get("invalid_blockers_by_surface") or {}
+    blocker_surface_applicable = bool(blocker_surface_backfill.get("applicable", False))
     prompt_invalid_after = [
         k
         for k in REQUIRED_PROMPT_KEYS
@@ -2743,6 +2781,12 @@ def main() -> int:
         repo_root=repo_root,
         apply=args.apply,
     )
+    collaboration_selftest_assets_result = _ensure_collaboration_trigger_selftest_assets(
+        pack_path=pack_path,
+        identity_id=str(args.identity_id or "").strip(),
+        task_doc=updated,
+        apply=args.apply,
+    )
     update_replay_runtime_evidence_result = _ensure_update_replay_runtime_evidence(
         pack_path=pack_path,
         identity_id=str(args.identity_id or "").strip(),
@@ -2833,6 +2877,14 @@ def main() -> int:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-ICONT-MAT-001"
         stale_reasons = ["continuity_materialization_incomplete_after_backfill"]
+    elif blocker_surface_applicable and blocker_surface_missing_after:
+        status = STATUS_FAIL_REQUIRED
+        error_code = "IP-BLOCKER-WIRE-001"
+        stale_reasons = ["required_blocker_surface_missing_after_backfill"]
+    elif blocker_surface_applicable and blocker_surface_invalid_after:
+        status = STATUS_FAIL_REQUIRED
+        error_code = "IP-BLOCKER-WIRE-001"
+        stale_reasons = ["unsupported_blocker_types_after_backfill"]
     elif prompt_missing_after:
         status = STATUS_FAIL_REQUIRED
         error_code = ERR_PROMPT_WIRE_MISSING
@@ -2965,6 +3017,7 @@ def main() -> int:
         "provider_bindings_template_backfill": provider_bindings_template_result,
         "feedback_selftest_assets_backfill": feedback_selftest_assets_result,
         "handoff_selftest_assets_backfill": handoff_selftest_assets_result,
+        "collaboration_selftest_assets_backfill": collaboration_selftest_assets_result,
         "update_replay_runtime_evidence_backfill": update_replay_runtime_evidence_result,
         "handoff_runtime_log_backfill": handoff_runtime_log_result,
         "feedback_runtime_log_backfill": feedback_runtime_log_result,
@@ -2994,6 +3047,10 @@ def main() -> int:
         "required_continuity_contract_keys": list(REQUIRED_CONTINUITY_KEYS),
         "required_dialogue_retention_contract_keys": list(REQUIRED_DIALOGUE_RETENTION_KEYS),
         "required_artifact_family_routing_contract_keys": list(REQUIRED_ARTIFACT_FAMILY_ROUTING_KEYS),
+        "blocker_surface_backfill": blocker_surface_backfill,
+        "blocker_surface_backfill_applicable": blocker_surface_applicable,
+        "blocker_surface_missing_after": blocker_surface_missing_after,
+        "blocker_surface_invalid_after": blocker_surface_invalid_after,
         "missing_continuity_contract_keys_before": continuity_missing_before,
         "missing_dialogue_retention_contract_keys_before": dialogue_retention_missing_before,
         "missing_artifact_family_routing_contract_keys_before": artifact_family_routing_missing_before,
@@ -3109,6 +3166,22 @@ def main() -> int:
             ""
             if not artifact_family_routing_missing_after and not artifact_family_routing_invalid_after
             else ("IP-AFR-001" if artifact_family_routing_missing_after else "IP-AFR-002")
+        ),
+        "blocker_surface_auto_wire_status": (
+            (
+                STATUS_PASS_REQUIRED
+                if not blocker_surface_missing_after and not blocker_surface_invalid_after
+                else STATUS_FAIL_REQUIRED
+            )
+            if blocker_surface_applicable
+            else STATUS_SKIPPED_NOT_REQUIRED
+        ),
+        "blocker_surface_auto_wire_error_code": (
+            (
+                "" if not blocker_surface_missing_after and not blocker_surface_invalid_after else "IP-BLOCKER-WIRE-001"
+            )
+            if blocker_surface_applicable
+            else ""
         ),
         "unique_entry_contract_auto_wire_status": (
             STATUS_PASS_REQUIRED if not entry_missing_after and not entry_invalid_after else STATUS_FAIL_REQUIRED

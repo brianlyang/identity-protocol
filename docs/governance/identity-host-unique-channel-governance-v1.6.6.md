@@ -635,6 +635,11 @@ Serialized replay outcome (base-repo-architect):
    - `egress_wrapper_parent_attestation_status=PASS_REQUIRED`
 2. previous mismatch signal (`egress_wrapper_parent_attestation_parent_command_mismatch`) is not reproduced after routing correction.
 3. stale report freshness (`IP-PVA-001` / `IP-REL-001`) is now treated as in-run refreshable preflight drift (warn-and-continue) instead of hard stop; downstream strict bundle gates remain authoritative blockers.
+   - This refreshable family explicitly includes the canonical stale-report projection where:
+     - `report_older_than_key_inputs` is present,
+     - report-side prompt SHA is stale,
+     - and `validate_identity_prompt_activation.py` therefore reports `prompt_activation_mismatch` as a derivative of the stale report rather than as an independent blocker.
+   - The updater must fail-close if extra drift appears outside that bounded family (for example binding tuple mismatch, scaffold baseline mismatch, or non-refreshable baseline failure).
 
 ### 5.5 Attestation strictness uplift + env-forge probes (2026-03-13, serialized)
 
