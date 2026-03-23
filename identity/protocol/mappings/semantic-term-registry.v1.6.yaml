@@ -90,6 +90,115 @@ terms:
       - runtime_contract
       - stream_v1_6_17
 
+  - term_id: artifact_family_routing_matrix
+    canonical_term: artifact_family_routing_matrix_v1
+    aliases:
+      - "artifact family routing matrix"
+      - "artifact routing matrix"
+      - "记忆分流矩阵"
+    semantics: "Protocol-scoped routing matrix that freezes each governed persisted artifact family by semantic owner, canonical fixed paths, payload class, production method, and primary consumer. `memory` is not a canonical family name inside this matrix."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_18
+
+  - term_id: pack_rulebook_family
+    canonical_term: pack_rulebook_family
+    aliases:
+      - "pack rulebook"
+      - "RULEBOOK family"
+      - "包根规则簿"
+    semantics: "Durable pack-root rulebook family anchored at `RULEBOOK.jsonl`. It is the long-lived pack rule surface and is distinct from runtime experience-feedback rulebooks under `runtime/rulebooks/*.jsonl`."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_18
+
+  - term_id: pack_task_history_family
+    canonical_term: pack_task_history_family
+    aliases:
+      - "task history family"
+      - "pack task history"
+      - "任务历史家族"
+    semantics: "Chronological pack-root task/result writeback family anchored at `TASK_HISTORY.md`. It preserves historical chronology and must not be reinterpreted as continuity, dialogue, feedback, or protocol-communication state."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_18
+
+  - term_id: runtime_dialogue_governance_family
+    canonical_term: runtime_dialogue_governance_family
+    aliases:
+      - "dialogue governance family"
+      - "runtime dialogue reports"
+      - "对话治理家族"
+    semantics: "Governed runtime dialogue-report family under `runtime/reports/dialogue-*`. It captures objective/constraint/evidence/result-support extraction from dialogue and must not be reclassified as continuity, learning, or protocol-feedback traffic."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_18
+
+  - term_id: runtime_experience_feedback_family
+    canonical_term: runtime_experience_feedback_family
+    aliases:
+      - "experience feedback family"
+      - "runtime feedback learning family"
+      - "经验反馈家族"
+    semantics: "Governed runtime learning family rooted at `runtime/rulebooks/*.jsonl`, `runtime/examples/*experience-feedback*.json`, and `runtime/logs/feedback/*.json`. It is replay-backed learning state and is distinct from pack rulebook, continuity, and protocol-feedback communication."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_18
+
+  - term_id: runtime_protocol_feedback_family
+    canonical_term: runtime_protocol_feedback_family
+    aliases:
+      - "protocol feedback family"
+      - "runtime protocol feedback"
+      - "协议反馈家族"
+    semantics: "Governed runtime communication family rooted at `runtime/protocol-feedback/**`, including inbox/outbox/index/proposal/issue/roundtable/validation surfaces. It is not a generic learning or continuity sink."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_18
+
+  - term_id: runtime_context_continuity_family
+    canonical_term: runtime_context_continuity_family
+    aliases:
+      - "context continuity family"
+      - "reentry family"
+      - "上下文连续性家族"
+    semantics: "Governed runtime continuity family rooted at `runtime/reports/context-continuity/**` and `runtime/state/context-continuity/**`. It carries checkpoints, reentry brief, and continuity receipts and must remain distinct from task history, learning, and protocol-feedback communication."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_18
+
+  - term_id: runtime_memory_absorption_family
+    canonical_term: runtime_memory_absorption_family
+    aliases:
+      - "memory absorption family"
+      - "absorption quarantine family"
+      - "记忆吸收隔离家族"
+    semantics: "Governed quarantine/migration family rooted at `runtime/memory-absorption/**`. It is re-materialization-only by default and cannot satisfy active continuity, dialogue-governance, experience-feedback, or protocol-feedback obligations."
+    allowed_scope:
+      - governance
+      - migration_governance
+      - runtime_contract
+      - stream_v1_6_18
+
+  - term_id: declaration_gate_not_artifact_family
+    canonical_term: declaration_gate_not_artifact_family
+    aliases:
+      - "gate not artifact family"
+      - "contract key not sink"
+      - "声明键不是产物家族"
+    semantics: "Control-plane declaration keys and gates such as `reject_memory_gate` or `*_contract` blocks declare obligations and validators but are not persisted artifact families or output path roots."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_18
+
   - term_id: protocol_generated_gateway_shell
     canonical_term: protocol_generated_gateway_shell
     aliases:
@@ -260,6 +369,30 @@ forbidden_phrases:
   - phrase: "operational prompt is current-round truth"
     replacement: "operational prompt artifacts are governed preflight aids, not current-round truth"
     rationale: "Prevents prompt-derived artifacts from outranking current evidence."
+
+  - phrase: "all memory-like artifacts may use one generic protocol memory sink"
+    replacement: "artifact_family_routing_matrix_v1 requires exact family resolution by owner + fixed path + producer + consumer"
+    rationale: "Prevents multiple governed families from collapsing into one generic memory bucket."
+
+  - phrase: "RULEBOOK.jsonl and runtime/rulebooks are the same rule memory"
+    replacement: "pack_rulebook_family is distinct from runtime_experience_feedback_family"
+    rationale: "Prevents pack-root durable rulebook semantics from collapsing into replay-backed runtime feedback rulebooks."
+
+  - phrase: "TASK_HISTORY.md is the continuity or recovery sink"
+    replacement: "pack_task_history_family is chronological history; runtime_context_continuity_family owns checkpoint/reentry recovery"
+    rationale: "Prevents task chronology from being misused as startup continuity state."
+
+  - phrase: "runtime/protocol-feedback may serve as continuity or learning sink by default"
+    replacement: "runtime_protocol_feedback_family is governance communication only; continuity and learning stay on their own families"
+    rationale: "Prevents governance traffic from being misclassified as continuity or learning state."
+
+  - phrase: "runtime/memory-absorption may satisfy active protocol obligations"
+    replacement: "runtime_memory_absorption_family is quarantine/re-materialization only"
+    rationale: "Prevents absorbed legacy material from re-entering active success-path semantics."
+
+  - phrase: "reject_memory_gate is the memory storage path"
+    replacement: "declaration_gate_not_artifact_family: reject_memory_gate is a control gate, not a sink"
+    rationale: "Prevents gate declarations from being misclassified as artifact outputs."
 
 scan_roots:
   - identity/protocol/IDENTITY_PROTOCOL.md
