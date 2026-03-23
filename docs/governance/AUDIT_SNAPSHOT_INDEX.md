@@ -30,6 +30,10 @@ Quick entrypoint for audit history and remediation closure records.
   - `docs/references/identity-protocol-loop-visual-atlas-v1.6.md`
   - asset root: `docs/references/assets/identity-protocol-loop-visual-atlas/`
   - The atlas freezes directory/naming/discoverability only; normative truth remains the owning stream docs, contract bindings, and machine validators.
+- Canonical artifact-family routing visual atlas (current visual reference surface for memory-like interpretation):
+  - `docs/references/identity-protocol-artifact-family-routing-visual-atlas-v1.6.md`
+  - asset root: `docs/references/assets/identity-protocol-artifact-family-routing-visual-atlas/`
+  - The atlas explains the six-layer interpretation model, viability checklist, and upgrade-safe three-state rule; normative truth remains the owning stream docs, contract bindings, and machine validators.
 - Canonical actor-scoped session binding governance (v1.5.0):
   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
   - Scope is protocol-only; no instance business policy allowed.

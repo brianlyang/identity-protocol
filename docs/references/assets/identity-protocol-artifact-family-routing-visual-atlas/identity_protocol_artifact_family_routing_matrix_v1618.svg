@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1180" viewBox="0 0 1600 1180">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f8fbff"/>
+      <stop offset="100%" stop-color="#eef7ff"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.14"/>
+    </filter>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowSlate" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+    <style>
+      .title { font: 700 30px Inter, Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 15px Inter, Arial, sans-serif; fill: #334155; }
+      .section { font: 700 18px Inter, Arial, sans-serif; fill: #0f172a; }
+      .legend { font: 600 13px Inter, Arial, sans-serif; fill: #334155; }
+      .boxTitle { font: 700 18px Inter, Arial, sans-serif; fill: #0f172a; }
+      .boxLine { font: 400 13px Inter, Arial, sans-serif; fill: #1e293b; }
+      .tiny { font: 400 12px Inter, Arial, sans-serif; fill: #475569; }
+      .chip { font: 700 12px Inter, Arial, sans-serif; fill: #0f172a; }
+      .calloutTitle { font: 700 16px Inter, Arial, sans-serif; fill: #7c2d12; }
+      .calloutLine { font: 400 13px Inter, Arial, sans-serif; fill: #7c2d12; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1600" height="1180" fill="url(#bg)"/>
+
+  <text x="48" y="56" class="title">Identity Protocol · Artifact-Family Routing Matrix (v1.6.18)</text>
+  <text x="48" y="86" class="subtitle">Human adjudication view · generic “memory” is banned; every persisted artifact must route to one exact governed family</text>
+
+  <rect x="48" y="108" width="1504" height="66" rx="16" fill="#ffffff" stroke="#dbeafe" opacity="0.96"/>
+  <circle cx="84" cy="141" r="10" fill="#dbeafe"/>
+  <text x="102" y="146" class="legend">Interpretation layers: language → family → path → producer/consumer → declaration/gate separation → runtime viability</text>
+  <circle cx="1002" cy="141" r="10" fill="#dcfce7"/>
+  <text x="1020" y="146" class="legend">Endpoints: the eight frozen families, not one generic memory bucket</text>
+
+  <rect x="48" y="210" width="320" height="150" rx="22" fill="#fee2e2" stroke="#ef4444" stroke-width="2" filter="url(#shadow)"/>
+  <text x="72" y="245" class="boxTitle">Layer 1 · Language guard</text>
+  <text x="72" y="273" class="boxLine">Input: “这段记忆 / memory 应该存哪里？”</text>
+  <text x="72" y="296" class="boxLine">Fail-close rule: generic `memory` is non-canonical</text>
+  <text x="72" y="319" class="boxLine">Required rewrite: one exact family + canonical root</text>
+  <rect x="72" y="329" width="162" height="24" rx="12" fill="#fff" stroke="#fca5a5"/>
+  <text x="88" y="345" class="chip">reject_memory_gate=required</text>
+
+  <rect x="432" y="210" width="320" height="150" rx="22" fill="#dbeafe" stroke="#60a5fa" stroke-width="2" filter="url(#shadow)"/>
+  <text x="456" y="245" class="boxTitle">Layer 2 · Exact family resolution</text>
+  <text x="456" y="273" class="boxLine">Resolve to one of the eight frozen families</text>
+  <text x="456" y="296" class="boxLine">Family identity = owner + fixed path + producer + consumer</text>
+  <text x="456" y="319" class="boxLine">Superficially similar payloads do not authorize collapse</text>
+
+  <rect x="816" y="210" width="320" height="150" rx="22" fill="#dcfce7" stroke="#4ade80" stroke-width="2" filter="url(#shadow)"/>
+  <text x="840" y="245" class="boxTitle">Layer 3 · Canonical path freeze</text>
+  <text x="840" y="273" class="boxLine">Check the fixed root for the selected family</text>
+  <text x="840" y="296" class="boxLine">Cross-family root collisions must fail-close</text>
+  <text x="840" y="319" class="boxLine">No ad-hoc new sink under generic wording</text>
+
+  <rect x="1200" y="210" width="352" height="150" rx="22" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1224" y="245" class="boxTitle">Layer 4 / 5 / 6 · Live routing proof</text>
+  <text x="1224" y="273" class="boxLine">Confirm shared producer + consumer/validator lane</text>
+  <text x="1224" y="296" class="boxLine">Keep `*_contract` / gate blocks off the storage plane</text>
+  <text x="1224" y="319" class="boxLine">Replay the family on active identities where expected</text>
+
+  <path d="M 368 285 C 390 285, 404 285, 432 285" fill="none" stroke="#2563eb" stroke-width="5" marker-end="url(#arrowBlue)"/>
+  <path d="M 752 285 C 775 285, 789 285, 816 285" fill="none" stroke="#2563eb" stroke-width="5" marker-end="url(#arrowBlue)"/>
+  <path d="M 1136 285 C 1160 285, 1175 285, 1200 285" fill="none" stroke="#2563eb" stroke-width="5" marker-end="url(#arrowBlue)"/>
+
+  <text x="48" y="420" class="section">Frozen endpoints · Pack families</text>
+  <rect x="48" y="446" width="360" height="132" rx="20" fill="#e0f2fe" stroke="#38bdf8" stroke-width="2" filter="url(#shadow)"/>
+  <text x="72" y="480" class="boxTitle">pack_rulebook_family</text>
+  <text x="72" y="505" class="boxLine">Canonical root: `RULEBOOK.jsonl`</text>
+  <text x="72" y="528" class="boxLine">Durable pack rulebook / patch surface</text>
+  <text x="72" y="551" class="boxLine">Must stay distinct from runtime feedback rulebooks</text>
+
+  <rect x="432" y="446" width="360" height="132" rx="20" fill="#e0f2fe" stroke="#38bdf8" stroke-width="2" filter="url(#shadow)"/>
+  <text x="456" y="480" class="boxTitle">pack_task_history_family</text>
+  <text x="456" y="505" class="boxLine">Canonical root: `TASK_HISTORY.md`</text>
+  <text x="456" y="528" class="boxLine">Chronological pack-local task history</text>
+  <text x="456" y="551" class="boxLine">Must not be promoted to continuity / reentry authority</text>
+
+  <text x="48" y="632" class="section">Frozen endpoints · Governed runtime families</text>
+  <rect x="48" y="658" width="360" height="148" rx="20" fill="#dcfce7" stroke="#4ade80" stroke-width="2" filter="url(#shadow)"/>
+  <text x="72" y="692" class="boxTitle">runtime_dialogue_retention_family</text>
+  <text x="72" y="717" class="boxLine">Roots: `runtime/reports/dialogue-retention/**`</text>
+  <text x="72" y="739" class="boxLine">and `runtime/state/dialogue-retention/**`</text>
+  <text x="72" y="761" class="boxLine">Raw dialogue truth mirror + receipts + rolling state</text>
+  <text x="72" y="783" class="boxLine">Not governance summary, not continuity, not protocol traffic</text>
+
+  <rect x="432" y="658" width="360" height="148" rx="20" fill="#dcfce7" stroke="#4ade80" stroke-width="2" filter="url(#shadow)"/>
+  <text x="456" y="692" class="boxTitle">runtime_dialogue_governance_family</text>
+  <text x="456" y="717" class="boxLine">Root family: `runtime/reports/dialogue-*.json`</text>
+  <text x="456" y="739" class="boxLine">Dialogue synthesis / support / cross-validation reports</text>
+  <text x="456" y="761" class="boxLine">Result-justification surface, not raw dialogue storage</text>
+
+  <rect x="816" y="658" width="360" height="148" rx="20" fill="#dcfce7" stroke="#4ade80" stroke-width="2" filter="url(#shadow)"/>
+  <text x="840" y="692" class="boxTitle">runtime_experience_feedback_family</text>
+  <text x="840" y="717" class="boxLine">Roots: runtime rulebooks / examples / feedback logs</text>
+  <text x="840" y="739" class="boxLine">Replay-backed learning deltas + promotion evidence</text>
+  <text x="840" y="761" class="boxLine">Not pack rulebook, not continuity, not protocol inbox/outbox</text>
+
+  <rect x="1200" y="658" width="352" height="148" rx="20" fill="#dcfce7" stroke="#4ade80" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1224" y="692" class="boxTitle">runtime_protocol_feedback_family</text>
+  <text x="1224" y="717" class="boxLine">Root: `runtime/protocol-feedback/**`</text>
+  <text x="1224" y="739" class="boxLine">Instance ↔ protocol governance communication</text>
+  <text x="1224" y="761" class="boxLine">Not a continuity, learning, or dialogue truth sink</text>
+
+  <rect x="240" y="860" width="360" height="148" rx="20" fill="#dbeafe" stroke="#60a5fa" stroke-width="2" filter="url(#shadow)"/>
+  <text x="264" y="894" class="boxTitle">runtime_continuity_reentry_family</text>
+  <text x="264" y="919" class="boxLine">Roots: `runtime/reports/context-continuity/**`</text>
+  <text x="264" y="941" class="boxLine">and `runtime/state/context-continuity/**`</text>
+  <text x="264" y="963" class="boxLine">Checkpoint / migration / reentry support only</text>
+  <text x="264" y="985" class="boxLine">Not TASK_HISTORY, not rulebook, not protocol feedback</text>
+
+  <rect x="656" y="860" width="360" height="148" rx="20" fill="#dbeafe" stroke="#60a5fa" stroke-width="2" filter="url(#shadow)"/>
+  <text x="680" y="894" class="boxTitle">runtime_memory_absorption_family</text>
+  <text x="680" y="919" class="boxLine">Root: `runtime/memory-absorption/**`</text>
+  <text x="680" y="941" class="boxLine">Quarantine / migration / re-materialization only</text>
+  <text x="680" y="963" class="boxLine">Presence alone does not satisfy any active contract</text>
+  <text x="680" y="985" class="boxLine">Must never be promoted to success-path truth</text>
+
+  <path d="M 1376 360 C 1376 430, 1380 520, 1380 658" fill="none" stroke="#475569" stroke-width="4" marker-end="url(#arrowSlate)"/>
+  <path d="M 1300 360 C 1200 470, 1080 510, 996 658" fill="none" stroke="#475569" stroke-width="4" marker-end="url(#arrowSlate)"/>
+  <path d="M 1260 360 C 1090 470, 760 520, 612 658" fill="none" stroke="#475569" stroke-width="4" marker-end="url(#arrowSlate)"/>
+  <path d="M 1226 360 C 1020 470, 420 520, 228 658" fill="none" stroke="#475569" stroke-width="4" marker-end="url(#arrowSlate)"/>
+  <path d="M 1180 360 C 980 480, 430 520, 228 446" fill="none" stroke="#475569" stroke-width="4" marker-end="url(#arrowSlate)"/>
+  <path d="M 1156 360 C 1000 450, 650 520, 612 446" fill="none" stroke="#475569" stroke-width="4" marker-end="url(#arrowSlate)"/>
+  <path d="M 1400 810 C 1280 860, 1180 915, 1016 934" fill="none" stroke="#475569" stroke-width="4" marker-end="url(#arrowSlate)"/>
+  <path d="M 1220 810 C 1000 860, 760 915, 600 934" fill="none" stroke="#475569" stroke-width="4" marker-end="url(#arrowSlate)"/>
+
+  <rect x="1080" y="858" width="472" height="162" rx="20" fill="#fff7ed" stroke="#fdba74" stroke-width="2"/>
+  <text x="1104" y="894" class="calloutTitle">Canonical reading rule</text>
+  <text x="1104" y="920" class="calloutLine">1. Start by rejecting the generic noun “memory”.</text>
+  <text x="1104" y="943" class="calloutLine">2. Resolve one exact family and its fixed root.</text>
+  <text x="1104" y="966" class="calloutLine">3. Confirm producer + consumer + validator lane.</text>
+  <text x="1104" y="989" class="calloutLine">4. Replay on the active identities where that line is expected to stay alive.</text>
+</svg>

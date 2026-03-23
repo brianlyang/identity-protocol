@@ -148,6 +148,7 @@ def _resolve_repo_root(raw_repo_root: str) -> Path:
 def _resolve_workspace_root(repo_root: Path) -> Path:
     return repo_root.parent if repo_root.name == "identity-protocol-local" else repo_root
 
+
 def extract_backtick_commands(text: str) -> List[str]:
     return re.findall(r"`([^`]+)`", text)
 
@@ -276,6 +277,37 @@ def _resolve_current_markdown_alias(repo_root: Path, configured_rel: str) -> tup
     if not active_path.exists() or not active_path.is_file():
         return active_path, "active_file_not_found"
     return active_path, ""
+
+
+def _discover_visual_atlas_governance_scripts(repo_root: Path) -> List[Path]:
+    scripts_dir = repo_root / "scripts"
+    if not scripts_dir.exists() or not scripts_dir.is_dir():
+        return []
+    return sorted(
+        path
+        for path in scripts_dir.glob("validate_*_visual_atlas_governance.py")
+        if path.is_file()
+    )
+
+
+def _run_visual_atlas_governance_checks(repo_root: Path, failures: List[str]) -> None:
+    validator_paths = _discover_visual_atlas_governance_scripts(repo_root)
+    if not validator_paths:
+        failures.append("[MISSING_SCRIPT] no scripts/validate_*_visual_atlas_governance.py validators found")
+        return
+
+    for validator_path in validator_paths:
+        proc = subprocess.run(
+            [sys.executable, str(validator_path), "--json-only"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+        )
+        if proc.returncode != 0:
+            failures.append(
+                f"[VISUAL_ATLAS_GOVERNANCE_FAIL] {validator_path.relative_to(repo_root).as_posix()}: "
+                + (proc.stdout.strip() or proc.stderr.strip() or "visual atlas governance validator failed")
+            )
 
 
 def _load_playbook_requirements(repo_root: Path) -> tuple[Path | None, List[str], List[str]]:
@@ -962,21 +994,7 @@ def main() -> int:
                     f"[PLAYBOOK_TOKEN_MISSING] {playbook_path}: missing `{token}`"
                 )
 
-    loop_visual_atlas_script = repo_root / "scripts/validate_loop_visual_atlas_governance.py"
-    if loop_visual_atlas_script.exists():
-        proc = subprocess.run(
-            [sys.executable, str(loop_visual_atlas_script), "--json-only"],
-            capture_output=True,
-            text=True,
-            cwd=repo_root,
-        )
-        if proc.returncode != 0:
-            failures.append(
-                "[LOOP_VISUAL_ATLAS_GOVERNANCE_FAIL] "
-                + (proc.stdout.strip() or proc.stderr.strip() or "validate_loop_visual_atlas_governance failed")
-            )
-    else:
-        failures.append("[MISSING_SCRIPT] scripts/validate_loop_visual_atlas_governance.py not found")
+    _run_visual_atlas_governance_checks(repo_root, failures)
 
     # Round-29.5: enforce doc evidence persistence policy
     evidence_policy_script = repo_root / "scripts/validate_doc_evidence_persistence.py"

@@ -161,6 +161,10 @@ Audit judgment:
 3. `runtime/memory-absorption/**` remains quarantine/re-materialization only.
 4. Declaration keys and gates remain control-plane declarations, not sinks.
 5. Any future new protocol-owned persisted family requires a later governed stream rather than silent introduction under “memory” wording.
+6. The canonical explanatory visual atlas for quick reviewer comprehension is:
+   - `docs/references/identity-protocol-artifact-family-routing-visual-atlas-v1.6.md`
+   - asset root: `docs/references/assets/identity-protocol-artifact-family-routing-visual-atlas/`
+7. Audit accepts that atlas as discoverability-only explanatory SSOT for this stream, while normative truth remains the governance doc, protocol motherline, contract binding, and machine validators.
 
 ## 5) Machine-consumer and whole-matrix routing closure landed
 

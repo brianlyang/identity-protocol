@@ -21,6 +21,10 @@ Execution mode: topic-level canonical SSOT for v1.6.18 artifact-family routing g
    - `identity/protocol/IDENTITY_PROTOCOL.md`
    - `identity/protocol/IDENTITY_RUNTIME.md`
 8. Scope is intentionally narrow: only protocol-owned identity-pack/runtime artifact families listed here are in scope. This stream does not create a catch-all “memory layer”, and it does not treat non-protocol product/history/session surfaces as fallback semantic owners.
+9. The canonical explanatory visual atlas for this stream is:
+   - `docs/references/identity-protocol-artifact-family-routing-visual-atlas-v1.6.md`
+   - asset root: `docs/references/assets/identity-protocol-artifact-family-routing-visual-atlas/`
+10. This atlas explains the six-layer interpretation model, the family viability test, and the three-state upgrade-safety rule only. Normative truth remains this governance doc, the protocol motherline, contract binding, and machine validators.
 
 ## 1) Why v1.6.18 is required
 

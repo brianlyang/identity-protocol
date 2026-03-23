@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-21T10:27:53Z",
-  "git_head_short": "36c4e1e",
+  "generated_at_utc": "2026-03-23T12:40:57Z",
+  "git_head_short": "76edd25",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -44,24 +44,28 @@
           ".github/workflows/_identity-required-gates.yml"
         ],
         "observed": {
-          "validator_scripts": 188,
-          "error_codes": 523,
-          "error_code_families": 188,
-          "mapping_rows_missing_in_bundle": 0,
-          "bundle_rows": 43,
-          "missing_mapping_rows": [],
+          "validator_scripts": 203,
+          "error_codes": 572,
+          "error_code_families": 207,
+          "mapping_rows_missing_in_bundle": 3,
+          "bundle_rows": 49,
+          "missing_mapping_rows": [
+            "asb16-rq-044",
+            "asb16-rq-045",
+            "asb16-rq-046"
+          ],
           "strict_direct_validate_calls": {
             "scripts/identity_creator.py": 89,
-            "scripts/release_readiness_check.py": 114,
+            "scripts/release_readiness_check.py": 130,
             "scripts/report_three_plane_status.py": 79,
             "scripts/full_identity_protocol_scan.py": 87,
             "scripts/e2e_smoke_test.sh": 116,
-            ".github/workflows/_identity-required-gates.yml": 13
+            ".github/workflows/_identity-required-gates.yml": 14
           },
-          "required_gate_workflow_python_invocations": 16,
-          "required_gate_workflow_unique_python_scripts": 16,
-          "required_gate_delegate_inclusive_python_invocations": 238,
-          "required_gate_delegate_inclusive_unique_python_scripts": 156
+          "required_gate_workflow_python_invocations": 17,
+          "required_gate_workflow_unique_python_scripts": 17,
+          "required_gate_delegate_inclusive_python_invocations": 255,
+          "required_gate_delegate_inclusive_unique_python_scripts": 174
         },
         "budgets": {
           "validator_scripts": {
@@ -127,103 +131,164 @@
           "violations": [
             {
               "field": "validator_scripts",
-              "observed": 188,
+              "observed": 203,
               "ceiling": 182,
               "reason": "convergence_rebound_detected"
             },
             {
               "field": "error_codes",
-              "observed": 523,
+              "observed": 572,
               "ceiling": 494,
               "reason": "convergence_rebound_detected"
             },
             {
               "field": "error_code_families",
-              "observed": 188,
+              "observed": 207,
               "ceiling": 181,
+              "reason": "convergence_rebound_detected"
+            },
+            {
+              "field": "mapping_rows_missing_in_bundle",
+              "observed": 3,
+              "ceiling": 0,
               "reason": "convergence_rebound_detected"
             },
             {
               "field": "strict_direct_validate_calls",
               "surface": "scripts/release_readiness_check.py",
-              "observed": 114,
+              "observed": 130,
               "ceiling": 108,
+              "reason": "convergence_rebound_detected"
+            },
+            {
+              "field": "strict_direct_validate_calls",
+              "surface": ".github/workflows/_identity-required-gates.yml",
+              "observed": 14,
+              "ceiling": 13,
               "reason": "convergence_rebound_detected"
             }
           ]
         },
-        "warn_violation_count": 4,
+        "warn_violation_count": 6,
         "warn_violations": [
           {
             "field": "validator_scripts",
-            "observed": 188,
+            "observed": 203,
             "budget_warn": 182,
             "reason": "validator_script_count_warn"
           },
           {
             "field": "error_codes",
-            "observed": 523,
+            "observed": 572,
             "budget_warn": 494,
             "reason": "error_code_count_warn"
           },
           {
             "field": "error_code_families",
-            "observed": 188,
+            "observed": 207,
             "budget_warn": 181,
             "reason": "error_code_family_count_warn"
           },
           {
+            "field": "mapping_rows_missing_in_bundle",
+            "observed": 3,
+            "budget_warn": 0,
+            "reason": "bundle_coverage_gap_warn",
+            "missing_rows": [
+              "asb16-rq-044",
+              "asb16-rq-045",
+              "asb16-rq-046"
+            ]
+          },
+          {
             "field": "strict_direct_validate_calls",
             "surface": "scripts/release_readiness_check.py",
-            "observed": 114,
+            "observed": 130,
             "budget_warn": 108,
+            "reason": "strict_surface_direct_calls_warn"
+          },
+          {
+            "field": "strict_direct_validate_calls",
+            "surface": ".github/workflows/_identity-required-gates.yml",
+            "observed": 14,
+            "budget_warn": 13,
             "reason": "strict_surface_direct_calls_warn"
           }
         ],
-        "fail_violation_count": 7,
+        "fail_violation_count": 11,
         "fail_violations": [
           {
             "field": "validator_scripts",
-            "observed": 188,
+            "observed": 203,
             "budget_fail": 185,
             "reason": "validator_script_count_exceeded"
           },
           {
             "field": "error_codes",
-            "observed": 523,
+            "observed": 572,
             "budget_fail": 500,
             "reason": "error_code_count_exceeded"
           },
           {
+            "field": "error_code_families",
+            "observed": 207,
+            "budget_fail": 188,
+            "reason": "error_code_family_count_exceeded"
+          },
+          {
+            "field": "mapping_rows_missing_in_bundle",
+            "observed": 3,
+            "budget_fail": 1,
+            "reason": "bundle_coverage_gap_growth",
+            "missing_rows": [
+              "asb16-rq-044",
+              "asb16-rq-045",
+              "asb16-rq-046"
+            ]
+          },
+          {
             "field": "strict_direct_validate_calls",
             "surface": "scripts/release_readiness_check.py",
-            "observed": 114,
+            "observed": 130,
             "budget_fail": 113,
             "reason": "strict_surface_direct_calls_growth"
           },
           {
             "field": "validator_scripts",
-            "observed": 188,
+            "observed": 203,
             "ceiling": 182,
             "reason": "convergence_rebound_detected"
           },
           {
             "field": "error_codes",
-            "observed": 523,
+            "observed": 572,
             "ceiling": 494,
             "reason": "convergence_rebound_detected"
           },
           {
             "field": "error_code_families",
-            "observed": 188,
+            "observed": 207,
             "ceiling": 181,
+            "reason": "convergence_rebound_detected"
+          },
+          {
+            "field": "mapping_rows_missing_in_bundle",
+            "observed": 3,
+            "ceiling": 0,
             "reason": "convergence_rebound_detected"
           },
           {
             "field": "strict_direct_validate_calls",
             "surface": "scripts/release_readiness_check.py",
-            "observed": 114,
+            "observed": 130,
             "ceiling": 108,
+            "reason": "convergence_rebound_detected"
+          },
+          {
+            "field": "strict_direct_validate_calls",
+            "surface": ".github/workflows/_identity-required-gates.yml",
+            "observed": 14,
+            "ceiling": 13,
             "reason": "convergence_rebound_detected"
           }
         ],
@@ -231,10 +296,16 @@
           "validator_script_count_warn",
           "error_code_count_warn",
           "error_code_family_count_warn",
+          "bundle_coverage_gap_warn",
+          "strict_surface_direct_calls_warn",
           "strict_surface_direct_calls_warn",
           "validator_script_count_exceeded",
           "error_code_count_exceeded",
+          "error_code_family_count_exceeded",
+          "bundle_coverage_gap_growth",
           "strict_surface_direct_calls_growth",
+          "convergence_rebound_detected",
+          "convergence_rebound_detected",
           "convergence_rebound_detected",
           "convergence_rebound_detected",
           "convergence_rebound_detected",
@@ -249,14 +320,14 @@
         "scripts/validate_control_plane_invariants.py",
         "--json-only"
       ],
-      "rc": 0,
-      "status": "PASS_REQUIRED",
-      "error_code": "",
+      "rc": 1,
+      "status": "FAIL_REQUIRED",
+      "error_code": "IP-CP-INV-001",
       "stdout_tail": [],
       "stderr_tail": [],
       "payload": {
-        "control_plane_invariants_status": "PASS_REQUIRED",
-        "error_code": "",
+        "control_plane_invariants_status": "FAIL_REQUIRED",
+        "error_code": "IP-CP-INV-001",
         "invariants_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-invariants.current.yaml",
         "invariants_configured_file": "identity/protocol/mappings/control-plane-invariants.current.yaml",
         "invariants_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-invariants.v1.6.yaml",
@@ -271,10 +342,10 @@
         "contract_binding_current_configured_file": "identity/protocol/mappings/contract-binding.current.yaml",
         "contract_binding_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
         "contract_binding_parse_ok": true,
-        "contract_binding_violation_count": 0,
-        "contract_binding_meta_row_count": 43,
-        "contract_binding_actual_row_count": 43,
-        "contract_binding_row_count_match": true,
+        "contract_binding_violation_count": 1,
+        "contract_binding_meta_row_count": 49,
+        "contract_binding_actual_row_count": 52,
+        "contract_binding_row_count_match": false,
         "plugin_governance_configured_file": "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
         "plugin_governance_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
         "plugin_governance_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml",
@@ -306,6 +377,23 @@
         "stream_doc_registry_active_file": "identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
         "stream_doc_registry_parse_ok": true,
         "stream_doc_registry_violation_count": 0,
+        "stream_doc_registry_literal_single_source": "scripts/registry_alias_control_plane_common.py",
+        "stream_doc_registry_literal_consumer_files": [
+          "scripts/docs_command_contract_check.py",
+          "scripts/validate_contract_binding_reference_integrity.py",
+          "scripts/validate_contract_mapping_coverage.py",
+          "scripts/validate_control_plane_invariants.py",
+          "scripts/validate_compatibility_legacy_boundary.py",
+          "scripts/validate_artifact_family_visual_atlas_governance.py",
+          "scripts/validate_doc_evidence_persistence.py",
+          "scripts/validate_loop_visual_atlas_governance.py",
+          "scripts/validate_native_chat_bootstrap_entry_stream.py",
+          "scripts/validate_runtime_file_boundary_governance.py",
+          "scripts/validate_semantic_term_registry.py",
+          "scripts/validate_stream_scope_semantic_integrity.py",
+          "scripts/validate_stream_version_pr_boundary.py"
+        ],
+        "stream_doc_registry_current_literal_violation_count": 0,
         "doc_evidence_allowlist_alias_enabled": true,
         "doc_evidence_allowlist_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/doc-evidence-allowlist.current.yaml",
         "doc_evidence_allowlist_current_configured_file": "identity/protocol/mappings/doc-evidence-allowlist.current.yaml",
@@ -348,8 +436,12 @@
         "bundle_mapping_parity_reduction_plan_status": "SKIPPED_NOT_REQUIRED",
         "bundle_mapping_parity_reduction_plan_targets": [],
         "bundle_mapping_parity_reduction_plan_zero_target": false,
-        "mapping_rows_missing_in_bundle_count": 0,
-        "mapping_rows_missing_in_bundle": [],
+        "mapping_rows_missing_in_bundle_count": 3,
+        "mapping_rows_missing_in_bundle": [
+          "asb16-rq-044",
+          "asb16-rq-045",
+          "asb16-rq-046"
+        ],
         "bundle_rows_not_in_mapping_count": 0,
         "bundle_rows_not_in_mapping": [],
         "plugin_profile_count": 3,
@@ -374,9 +466,28 @@
         "plugin_readability_violation_count": 0,
         "plugin_governance_parse_ok": true,
         "plugin_doc_control_parse_ok": true,
-        "bundle_target_map_size": 43,
-        "violation_count": 0,
-        "violations": [],
+        "bundle_target_map_size": 49,
+        "violation_count": 2,
+        "violations": [
+          {
+            "field": "contract_binding_row_count",
+            "reason": "meta_row_count_mismatch",
+            "meta_row_count": 49,
+            "actual_row_count": 52
+          },
+          {
+            "field": "mapping_rows_missing_in_bundle",
+            "reason": "bundle_mapping_gap_growth_in_freeze_mode",
+            "mode": "freeze",
+            "missing_count": 3,
+            "baseline_missing_rows": 0,
+            "missing_rows": [
+              "asb16-rq-044",
+              "asb16-rq-045",
+              "asb16-rq-046"
+            ]
+          }
+        ],
         "stale_reasons": []
       }
     },
@@ -404,8 +515,8 @@
         "stream_doc_registry_active_file": "identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
         "stream_doc_registry_alias_error": "",
         "stream_doc_registry_parse_ok": true,
-        "stream_allowed_doc_count": 54,
-        "requirement_row_count": 43,
+        "stream_allowed_doc_count": 63,
+        "requirement_row_count": 52,
         "reference_fields": [
           "governance_anchor",
           "review_anchor",
@@ -459,7 +570,7 @@
           "validate",
           "three-plane"
         ],
-        "requirement_row_count": 43,
+        "requirement_row_count": 52,
         "parse_errors": [],
         "violation_count": 0,
         "violations": [],
@@ -805,11 +916,15 @@
         "infra_contract_missing": [],
         "infra_contract_violations": {},
         "actor_id_required_scripts": [
+          "scripts/validate_required_contract_coverage.py",
           "scripts/render_identity_response_stamp.py",
+          "scripts/validate_identity_response_stamp.py",
           "scripts/final_emit_governed.py",
+          "scripts/validate_headstamp_recurrence_closure.py",
           "scripts/validate_reply_identity_context_first_line.py",
           "scripts/validate_send_time_reply_gate.py",
           "scripts/validate_execution_reply_identity_coherence.py",
+          "scripts/validate_protocol_unique_entry_gate.py",
           "scripts/report_three_plane_status.py",
           "scripts/full_identity_protocol_scan.py"
         ],
@@ -823,6 +938,7 @@
           "scripts/validate_reply_identity_context_first_line.py",
           "scripts/validate_send_time_reply_gate.py",
           "scripts/validate_execution_reply_identity_coherence.py",
+          "scripts/validate_protocol_unique_entry_gate.py",
           "scripts/validate_actor_session_binding.py",
           "scripts/validate_actor_session_multibinding_concurrency.py",
           "scripts/validate_prompt_kernel_executable_coupling.py",
@@ -885,18 +1001,66 @@
       "stdout_tail": [],
       "stderr_tail": [],
       "payload": {}
+    },
+    {
+      "name": "loop_visual_atlas_governance",
+      "command": [
+        "python3",
+        "scripts/validate_loop_visual_atlas_governance.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "payload": {
+        "loop_visual_atlas_governance_status": "PASS_REQUIRED",
+        "error_code": "",
+        "anti_scatter_scope_mode": "protocol_repo_internal_only",
+        "repo_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+        "scan_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+        "workspace_external_surfaces_in_scope": false,
+        "workspace_external_scope_examples": [
+          "activity/evidence/",
+          "sibling-workspace staging copies"
+        ],
+        "stream_doc_registry_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.current.yaml",
+        "stream_doc_registry_active": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+        "stream_doc_registry_alias_error": "",
+        "canonical_atlas_doc": "docs/references/identity-protocol-loop-visual-atlas-v1.6.md",
+        "canonical_asset_root": "docs/references/assets/identity-protocol-loop-visual-atlas",
+        "required_svg_files": [
+          "identity_protocol_four_loops_v1617.svg",
+          "identity_protocol_loop3_route_discovery_control_plane_v1617.svg",
+          "identity_protocol_loop4_feedback_strengthening_control_plane_v1617.svg",
+          "identity_protocol_4to1_bounded_loopback_adjudication_v1617.svg"
+        ],
+        "required_svg_paths": [
+          "docs/references/assets/identity-protocol-loop-visual-atlas/identity_protocol_four_loops_v1617.svg",
+          "docs/references/assets/identity-protocol-loop-visual-atlas/identity_protocol_loop3_route_discovery_control_plane_v1617.svg",
+          "docs/references/assets/identity-protocol-loop-visual-atlas/identity_protocol_loop4_feedback_strengthening_control_plane_v1617.svg",
+          "docs/references/assets/identity-protocol-loop-visual-atlas/identity_protocol_4to1_bounded_loopback_adjudication_v1617.svg"
+        ],
+        "required_svg_count": 4,
+        "stray_atlas_docs": [],
+        "stray_svg_files": [],
+        "violation_count": 0,
+        "violations": []
+      }
     }
   ],
   "summary": {
-    "check_count": 7,
-    "fail_count": 1,
+    "check_count": 8,
+    "fail_count": 2,
     "warn_count": 0,
     "pass_count": 6
   },
   "control_plane_status": "FAIL_REQUIRED",
   "promotion_ready": false,
   "promotion_block_reasons": [
-    "control_plane_budget:FAIL_REQUIRED"
+    "control_plane_budget:FAIL_REQUIRED",
+    "control_plane_invariants:FAIL_REQUIRED"
   ],
   "status_file_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.current.yaml",
   "status_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.v1.6.json",
