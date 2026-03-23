@@ -38,6 +38,13 @@ Classification: protocol-owned explanatory atlas; not a normative contract sourc
 4. Working copies or generation scratch outside this root are non-canonical staging only and must not be cited as current-state protocol truth.
 5. When loop semantics change, the owning governance/review docs and the affected SVG assets must be updated in the same commit or PR so the explanatory surface cannot drift behind the normative one.
 
+## 1.1) Anti-scatter scope boundary (mandatory)
+
+1. The anti-scatter guarantee frozen by this atlas is limited to the `identity-protocol-local` repository surface.
+2. Repo-internal scope means the canonical atlas document plus atlas-family SVG assets under this repository root; that is the only surface scanned by `scripts/validate_loop_visual_atlas_governance.py`.
+3. Workspace-external staging/evidence copies, including `activity/evidence/` mirrors or sibling-workspace scratch outputs, are outside this validator scope and remain non-canonical by definition.
+4. Any future desire to govern workspace-wide staging copies must open a separate workspace-governance lane; it must not be smuggled into protocol SSOT claims by wording inflation.
+
 ## 2) Fixed semantic boundary (mandatory)
 
 1. Loop 1 and Loop 2 remain kernel-authoritative and semantically anchored by the first two capability contracts; this atlas may visualize them, but may not redefine them.

@@ -44,12 +44,16 @@ SVG_FAMILY_RE = re.compile(
 )
 ATLAS_DOC_RE = re.compile(r"^identity-protocol-loop-visual-atlas-v[0-9.]+\.md$")
 
+ANTI_SCATTER_SCOPE_MODE = "protocol_repo_internal_only"
+
 ATLAS_REQUIRED_MARKERS = (
     "Status: Active canonical visual reference for the frozen four-loop / 4→1 loopback explanation surface.",
     "Classification: protocol-owned explanatory atlas; not a normative contract source.",
     "Canonical atlas markdown path is fixed to:",
     "Canonical asset root for all protocol-owned loop visuals is fixed to:",
     "do not scatter them across `docs/governance/`, `docs/review/`, `activity/evidence/`, or ad-hoc workspace folders",
+    "The anti-scatter guarantee frozen by this atlas is limited to the `identity-protocol-local` repository surface.",
+    "Workspace-external staging/evidence copies, including `activity/evidence/` mirrors or sibling-workspace scratch outputs, are outside this validator scope and remain non-canonical by definition.",
     "No diagram in this atlas may introduce backward compatibility, backstop, downgrade, lagging-pack shortcut, or undeclared rescue semantics.",
 )
 
@@ -230,7 +234,11 @@ def main() -> int:
     payload = {
         "loop_visual_atlas_governance_status": STATUS_PASS_REQUIRED if not violations else STATUS_FAIL_REQUIRED,
         "error_code": "" if not violations else ERR_LOOP_VISUAL_ATLAS,
+        "anti_scatter_scope_mode": ANTI_SCATTER_SCOPE_MODE,
         "repo_root": str(repo_root),
+        "scan_root": str(repo_root),
+        "workspace_external_surfaces_in_scope": False,
+        "workspace_external_scope_examples": ["activity/evidence/", "sibling-workspace staging copies"],
         "stream_doc_registry_entry": str(registry_entry_path),
         "stream_doc_registry_active": str(registry_active_path),
         "stream_doc_registry_alias_error": registry_alias_error,
@@ -256,6 +264,7 @@ def main() -> int:
     print("[PASS] loop visual atlas governance validated")
     print(f"       atlas_doc={CANONICAL_ATLAS_DOC}")
     print(f"       asset_root={CANONICAL_ASSET_ROOT}")
+    print(f"       anti_scatter_scope_mode={ANTI_SCATTER_SCOPE_MODE}")
     print(f"       required_svg_count={len(REQUIRED_SVG_FILES)}")
     return 0
 

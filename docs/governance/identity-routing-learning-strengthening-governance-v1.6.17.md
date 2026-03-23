@@ -327,4 +327,6 @@ The standalone 4→1 bridge is now machine-landed as follows:
    - shared primitive = `roundtable_four_track_cross_validation_contract_v1`
    - bounded bridge = `feedback_to_judgement_loopback_contract_v1`
 4. The atlas and its SVG assets must remain business-neutral. They may not absorb search phrases, vendor/product examples, ranking logic, or instance-specific operating stories.
-5. Any semantic update to this stream that changes those loop labels or bridge boundaries must update the atlas in the same PR/commit so human-facing visuals cannot drift behind machine truth.
+5. The anti-scatter guarantee frozen here is repo-internal only: it covers the canonical atlas family inside `identity-protocol-local`, not workspace-external staging/evidence mirrors.
+6. Any future workspace-wide staging hygiene must open a separate governance lane rather than silently widening this protocol stream's SSOT claim.
+7. Any semantic update to this stream that changes those loop labels or bridge boundaries must update the atlas in the same PR/commit so human-facing visuals cannot drift behind machine truth.

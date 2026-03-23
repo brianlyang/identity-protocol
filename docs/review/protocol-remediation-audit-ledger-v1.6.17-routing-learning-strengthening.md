@@ -288,4 +288,5 @@ Frozen audit intake for the standalone 4→1 bridge:
    - third-loop exploration remains distinct from fourth-loop promotion;
    - the shared four-track primitive remains distinct from the `4→1` bridge;
    - first-loop revalidation remains authoritative after loopback reentry.
-4. Audit must reject future visual drift if assets move out of the canonical directory, reintroduce business payload, or weaken the no-downgrade interpretation of loopback conflict handling.
+4. Audit interprets the atlas anti-scatter rule as repo-internal only; workspace-external staging/evidence mirrors are outside this validator scope and therefore cannot be cited as if they were covered by the same machine guarantee.
+5. Audit must reject future visual drift if assets move out of the canonical directory, reintroduce business payload, or weaken the no-downgrade interpretation of loopback conflict handling.
