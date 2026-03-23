@@ -1,6 +1,6 @@
 # Identity Routing/Learning Strengthening Governance (v1.6.17)
 
-Status: Active (`ASB16-RQ-048` / `ASB16-RQ-049` landed as protocol-owned upper-layer runtime contracts on 2026-03-23; `ASB16-RQ-050` remains open as a docs-owned 4→1 loopback bridge pending a dedicated machine consumer lane)  
+Status: Active (`ASB16-RQ-048` / `ASB16-RQ-049` / `ASB16-RQ-050` landed as protocol-owned upper-layer runtime contracts on 2026-03-23; protocol-side strengthening closure verified)  
 Layer: protocol  
 Scope: upper-layer strengthening for the third and fourth core capability contracts plus the bounded fourth-loop-to-first-loop loopback bridge  
 Execution mode: topic-level canonical SSOT for v1.6.17 routing/learning strengthening governance.
@@ -36,10 +36,11 @@ Execution mode: topic-level canonical SSOT for v1.6.17 routing/learning strength
 9. `rq_047_protocol_no_downgrade_motherline_contract_v1` remains active in this stream with full force: no downgrade, no backward compatibility, and no live backstop for lagging packs/workspaces.
 10. Frozen current-state interpretation:
    - `ISSUE-030` is **closed** for the core third/fourth-loop strengthening pair;
-   - `ISSUE-031` remains **open** only for the standalone 4→1 loopback bridge.
-11. This stream therefore claims **docs-side bridge strengthening only** for the remaining open surface:
-   - governance / review / workbook authority surfaces are aligned for `ISSUE-031`;
-   - dedicated machine-consumed closure for `ASB16-RQ-050` is still pending and is not claimed by this document.
+   - `ISSUE-031` is **closed** for the standalone 4→1 loopback bridge.
+11. This stream therefore claims **full protocol-side strengthening closure** for the bounded 4→1 bridge surface:
+   - governance / review / workbook / contract-binding authority surfaces are aligned for `ISSUE-031`;
+   - `scripts/validate_feedback_to_judgement_loopback.py` now owns the dedicated machine-consumed closure for `ASB16-RQ-050`;
+   - required-gate, readiness, and shared probe surfaces consume the same loopback lane without collapsing loopback artifacts into first-loop truth.
 
 ## 1) Why v1.6.17 is required
 
@@ -224,21 +225,21 @@ This stream therefore judges the third/fourth-loop center as landed protocol inf
 7. Do not reopen `v1.6.15` direct-tool admission semantics or `v1.6.16` continuity semantics.
 8. Do not create a backward-compatibility or fallback bridge for lagging packs.
 
-## 4) Current landed state and remaining open state
+## 4) Current landed state and closure state
 
 1. `ISSUE-030` is closed: the strengthened third/fourth-loop center is now protocol-owned, machine-gated, and consumed by required/readiness lanes.
-2. `ISSUE-031` remains open: the 4→1 loopback bridge is intentionally kept docs-owned until a dedicated machine consumer lane lands.
-3. Current bridge closure therefore stops at docs-side semantic freeze and governance/review/workbook alignment; it does **not** yet claim machine-consumed loopback closure.
-4. Therefore the stream as a whole remains active, but the remaining open surface is narrow and explicitly bounded.
+2. `ISSUE-031` is closed: the 4→1 loopback bridge now has a dedicated machine consumer lane that derives canonical loopback projections from already-frozen contract surfaces without reopening `ISSUE-030`.
+3. Current bridge closure therefore includes both docs-side semantic freeze and machine-consumed loopback closure; there is no remaining protocol-owned open debt inside the `v1.6.17` boundary at this time.
+4. This stream remains active only as the canonical governance record; future regressions must reopen via machine evidence rather than narrative reinterpretation.
 
-## 5) Stream closure boundary
+## 5) Stream closure boundary (now satisfied)
 
-`v1.6.17` is not reopened by residual live-quality misses once the strengthened surfaces are present and healthy. The stream closes when all of the following are true:
+`v1.6.17` is not reopened by residual live-quality misses once the strengthened surfaces are present and healthy. The stream is now protocol-closed because all of the following are true:
 
 1. `ASB16-RQ-048` remains machine-landed and consumed on the success path;
 2. `ASB16-RQ-049` remains machine-landed and consumed on the success path;
-3. `ASB16-RQ-050` gains a dedicated machine consumer lane without collapsing loopback artifacts into first-loop truth;
-4. the same lane proves the bounded closed-loop topology (`third-loop exploration -> fourth-loop promotion -> first-loop revalidation`) as a machine-auditable round trip with explicit demotion / rollback on first-loop conflict;
+3. `ASB16-RQ-050` now has a dedicated machine consumer lane without collapsing loopback artifacts into first-loop truth;
+4. the same lane now proves the bounded closed-loop topology (`third-loop exploration -> fourth-loop promotion -> first-loop revalidation`) as a machine-auditable round trip with explicit demotion / rollback on first-loop conflict;
 5. audit can attribute residual live-quality misses below protocol by default unless the `v1.6.17` surfaces are absent, skipped, or semantically broken.
 
 ### 6.1 Opening binding reference freeze (ASB16-RQ-048 ASB16-RQ-049, 2026-03-23)
@@ -278,14 +279,16 @@ The canonical strengthening pair is frozen as follows:
 3. The fourth-loop center continues to govern the wider evidence family frozen in §2.3, especially `feedback_summary_ref`, `operational_prompt_ref`, `operational_prompt_digest`, `prompt_scope`, `prompt_target_route`, `prompt_target_stage`, `rollback_prompt_ref`, and `ttl_rounds`; §6.1 names the minimum opening projection expected on shared machine-visible surfaces.
 4. The strengthening pair is frozen as generic protocol infrastructure only; no business-specific routing policy or prompt content is canonicalized here.
 
-### 6.2 Opening semantic freeze (ASB16-RQ-050, 2026-03-23)
+### 6.2 Machine consumer closure (ASB16-RQ-050, 2026-03-23)
 
-The standalone 4→1 bridge is frozen as follows:
+The standalone 4→1 bridge is now machine-landed as follows:
 
 1. `ASB16-RQ-050`
    - kernel contract: `feedback_to_judgement_loopback_contract_v1`
    - shared primitive consumed by context, but not replaced by it: `roundtable_four_track_cross_validation_contract_v1`
    - canonical machine-visible loopback family includes at least:
+     - `feedback_to_judgement_loopback_status`
+     - `loop_back_to_first_loop_status`
      - `loopback_artifact_ref`
      - `loopback_artifact_kind`
      - `preflight_context_injection_ref`
@@ -297,6 +300,10 @@ The standalone 4→1 bridge is frozen as follows:
      - `conflict_with_current_evidence`
      - `demotion_or_rollback_action`
      - `negative_feedback_ref`
-2. The bridge is considered healthy only when prior fourth-loop artifacts can be accepted, demoted, or rolled back under current first-loop evidence without narrative ambiguity.
-3. Loopback artifacts remain governed preflight aids only, never current-round truth.
-4. First-loop revalidation remains authoritative, and no future machine consumer may weaken that rule.
+2. `scripts/validate_feedback_to_judgement_loopback.py` is the canonical machine consumer lane:
+   - it derives the bridge projection from `experience_feedback_contract`, `accurate_judgement_enforcement`, and `feedback_operational_prompt_enforcement`;
+   - it freezes `adoption_decision=first_loop_revalidate_before_adopt`, `conflict_with_current_evidence=demote_or_rollback_required`, and `demotion_or_rollback_action=rollback_prompt_ref_and_negative_feedback_writeback`;
+   - it fails closed when replay-gated feedback, loopback field anchors, or negative-feedback preservation drift.
+3. `scripts/validate_identity_routing_learning_strengthening.py` now emits `loop_back_to_first_loop_status`, while `scripts/required_gate_bundle_runner.py`, `scripts/release_readiness_check.py`, and `scripts/ci/run_required_runtime_gates_ci.sh` consume the dedicated `ASB16-RQ-050` lane directly.
+4. `scripts/ci/run_feedback_to_judgement_loopback_probes_ci.sh` now proves the shared lane with both positive and negative loopback fixtures, preventing docs-only regression.
+5. Loopback artifacts remain governed preflight aids only, never current-round truth, and first-loop revalidation remains authoritative.

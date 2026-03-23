@@ -8,6 +8,8 @@ from typing import Any
 
 import yaml
 
+from feedback_to_judgement_loopback_common import inspect_feedback_to_judgement_loopback
+
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -172,6 +174,11 @@ def main() -> int:
         status_prefix="feedback_operational_prompt_enforcement",
         required=feedback_required,
     )
+    loopback_projection = inspect_feedback_to_judgement_loopback(
+        task_doc=task,
+        identity_id=args.identity_id,
+        task_path=str(task_path),
+    )
 
     stale_reasons = [*route_reasons, *feedback_reasons]
     overall_status = STATUS_PASS_REQUIRED
@@ -202,6 +209,10 @@ def main() -> int:
             if feedback_status == STATUS_PASS_REQUIRED
             else ("not_required" if feedback_status == STATUS_SKIPPED_NOT_REQUIRED else "strengthening_missing_or_invalid")
         ),
+        "loop_back_to_first_loop_status": str(loopback_projection.get("loop_back_to_first_loop_status", "")).strip(),
+        "feedback_to_judgement_loopback_status": str(
+            loopback_projection.get("feedback_to_judgement_loopback_status", "")
+        ).strip(),
         "stale_reasons": stale_reasons,
     }
     _emit(payload, json_only=args.json_only)

@@ -1283,7 +1283,7 @@ asb16-rq-044:
     - three-plane
     - ci
   governance_anchor: docs/governance/identity-context-continuity-governance-v1.6.16.md#28-machine-contract-frozen-in-this-stream
-  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md#5-coding-readiness-freeze-absorbed-after-opening
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md#5-shared-implementation-landing-absorbed-after-opening
   report_field_refs:
     - identity_context_continuity_status
     - artifact_kind
@@ -1317,7 +1317,7 @@ asb16-rq-045:
     - three-plane
     - ci
   governance_anchor: docs/governance/identity-context-continuity-governance-v1.6.16.md#211-launcher-entry-bind-and-receipt-family-freeze
-  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md#5-coding-readiness-freeze-absorbed-after-opening
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md#5-shared-implementation-landing-absorbed-after-opening
   report_field_refs:
     - identity_reentry_brief_status
     - startup_consumption_status
@@ -1349,7 +1349,7 @@ asb16-rq-046:
     - three-plane
     - ci
   governance_anchor: docs/governance/identity-context-continuity-governance-v1.6.16.md#211-launcher-entry-bind-and-receipt-family-freeze
-  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md#5-coding-readiness-freeze-absorbed-after-opening
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md#5-shared-implementation-landing-absorbed-after-opening
   report_field_refs:
     - identity_context_continuity_receipt_family_status
     - checkpoint_receipt_status
@@ -1509,6 +1509,7 @@ asb16-rq-050:
   shared_primitive_refs:
     - roundtable_four_track_cross_validation_contract_v1
   validator_ids:
+    - scripts/validate_feedback_to_judgement_loopback.py
     - scripts/validate_identity_routing_learning_strengthening.py
     - scripts/validate_identity_experience_feedback.py
     - scripts/validate_multimodal_plugin_enforcement.py
@@ -1516,9 +1517,11 @@ asb16-rq-050:
     - readiness
     - e2e
     - ci
-  governance_anchor: docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md#62-opening-semantic-freeze-asb16-rq-050-2026-03-23
-  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md#62-opening-binding-intake-asb16-rq-050-2026-03-23
+  governance_anchor: docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md#62-machine-consumer-closure-asb16-rq-050-2026-03-23
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md#62-machine-consumer-closure-asb16-rq-050-2026-03-23
   report_field_refs:
+    - feedback_to_judgement_loopback_status
+    - loop_back_to_first_loop_status
     - loopback_artifact_ref
     - loopback_artifact_kind
     - preflight_context_injection_ref
@@ -1532,5 +1535,6 @@ asb16-rq-050:
     - negative_feedback_ref
     - stale_reasons
     - error_code
-  error_code_refs: []
-  mapping_state: phase6_v1617_loopback_semantic_opening
+  error_code_refs:
+    - IP-RLSTR-002
+  mapping_state: phase6_v1617_loopback_machine_closure

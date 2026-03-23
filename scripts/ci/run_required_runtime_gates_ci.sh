@@ -39,6 +39,7 @@ run_global_protocol_gates() {
   run_cmd bash scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh
   run_cmd bash scripts/ci/run_workbook_control_plane_probes_ci.sh
   run_cmd bash scripts/ci/run_workbook_family_scaffold_probes_ci.sh
+  run_cmd bash scripts/ci/run_feedback_to_judgement_loopback_probes_ci.sh
   run_cmd python3 scripts/validate_native_chat_bootstrap_entry_stream.py --json-only
   run_cmd bash scripts/ci/run_native_chat_bootstrap_entry_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_instance_pack_topology_probes_ci.sh
@@ -152,6 +153,7 @@ for ID in ${IDS}; do
   python3 scripts/validate_capability_fit_review_freshness.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
   python3 scripts/validate_capability_fit_roundtable_evidence.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
   python3 scripts/validate_identity_routing_learning_strengthening.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
+  python3 scripts/validate_feedback_to_judgement_loopback.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
   python3 scripts/trigger_capability_fit_review.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
   python3 scripts/build_capability_fit_matrix.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --out-root "${CAPABILITY_FIT_ROOT}" --json-only
   python3 scripts/validate_vendor_namespace_separation.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci

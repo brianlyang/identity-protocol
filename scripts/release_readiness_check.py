@@ -1213,6 +1213,17 @@ def main() -> int:
         ],
         [
             "python3",
+            "scripts/validate_feedback_to_judgement_loopback.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
             "scripts/validate_identity_orchestration_contract.py",
             "--catalog",
             catalog,

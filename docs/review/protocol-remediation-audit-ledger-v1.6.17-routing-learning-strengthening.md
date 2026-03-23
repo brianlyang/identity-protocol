@@ -1,6 +1,6 @@
 # Protocol Remediation Audit Ledger (v1.6.17 routing/learning strengthening stream)
 
-Status: Active (`ISSUE-030` closed on 2026-03-23 for the machine-landed third/fourth-loop strengthening pair; `ISSUE-031` remains open as a docs-owned 4→1 loopback bridge pending a dedicated machine consumer lane)  
+Status: Active (`ISSUE-030` and `ISSUE-031` closed on 2026-03-23; the machine-landed third/fourth-loop strengthening pair plus dedicated 4→1 loopback bridge are now protocol-owned`)  
 Scope: protocol review ledger for upper-layer strengthening of the third and fourth core capability contracts plus the bounded fourth-loop-to-first-loop bridge
 
 ## 0) Stream objective
@@ -18,8 +18,8 @@ This stream freezes one bounded judgment:
 
 - the kernel source contracts for the third and fourth loops already existed,
 - the core strengthening pair is now machine-landed,
-- the remaining open semantic debt is the standalone 4→1 loopback bridge only,
-- the remaining bridge claim currently stops at docs-side semantic freeze plus governance/review/workbook alignment rather than machine-consumed closure.
+- the standalone 4→1 loopback bridge is now machine-consumed on its own lane,
+- no remaining protocol-owned semantic debt stays open inside `v1.6.17` unless a future machine regression reappears.
 
 ## 1) Audit findings frozen in this stream
 
@@ -91,26 +91,22 @@ This center is frozen by:
 - `feedback_operational_prompt_enforcement`
 - shared consumption of `roundtable_four_track_cross_validation_contract_v1`
 
-### 1.5 The remaining open debt is the standalone 4→1 loopback bridge (`ISSUE-031` open)
+### 1.5 The standalone 4→1 loopback bridge is now machine-consumed (`ISSUE-031` closed)
 
 Audit judgment after deep review:
 
 1. `ASB16-RQ-048` / `ASB16-RQ-049` are now machine-landed for the third/fourth-loop center.
-2. The 4→1 return path can still be misread unless it remains a distinct semantic object.
-3. The shared `roundtable_four_track_cross_validation_contract_v1` primitive must not be misclassified as the loopback bridge.
-4. Fourth-loop prompt-derived artifacts must not drift semantically toward “current-round truth”.
-
-Therefore the stream keeps the following standalone semantic object open:
-
-- `feedback_to_judgement_loopback_contract_v1`
+2. `scripts/validate_feedback_to_judgement_loopback.py` now gives the 4→1 return path its own machine-consumed contract lane.
+3. The shared `roundtable_four_track_cross_validation_contract_v1` primitive remains distinct from the loopback bridge rather than being misclassified as it.
+4. Fourth-loop prompt-derived artifacts remain bounded away from “current-round truth” because the dedicated lane freezes explicit revalidation, demotion, rollback, and negative-feedback writeback semantics.
 
 Frozen audit interpretation:
 
 - loopback artifacts are governed preflight aids only;
 - first-loop revalidation remains authoritative;
-- any future machine consumer of `ASB16-RQ-050` must preserve no-downgrade / no-backstop semantics.
+- the now-landed machine consumer of `ASB16-RQ-050` preserves no-downgrade / no-backstop semantics.
 
-### 1.5.1 The bounded learning loop is semantically frozen even while machine adoption remains open
+### 1.5.1 The bounded learning loop is now semantically frozen and machine-landed
 
 1. The frozen topology is `judgement -> reasoning -> route discovery -> operational prompt strengthening -> governed 4→1 loopback -> judgement revalidation`.
 2. This topology is intentionally PDCA-isomorphic as a control structure, but it does **not** replace the kernel semantic owners with generic business-process labels.
@@ -144,13 +140,13 @@ Frozen audit boundary on external sources:
 ### 1.7 Business-facing audit judgment is bounded and non-scenario-specific
 
 1. `v1.6.17` is the protocol-side closure for a live execution blocker, not a business-data lane.
-2. After `ISSUE-030` closure and once `ISSUE-031` is machine-consumed, protocol should no longer be the reason an identity instance lacks:
+2. After `ISSUE-030` / `ISSUE-031` closure, protocol should no longer be the reason an identity instance lacks:
    - a governed mechanism for finding a better route under persistent uncertainty,
    - a governed mechanism for turning validated feedback into next-round operational push,
    - a governed demotion / rollback path when current first-loop evidence rejects previously promoted prompt artifacts.
-3. The remaining open protocol-side semantic debt is the bounded 4→1 bridge only.
+3. No remaining protocol-owned semantic debt stays open inside the bounded 4→1 bridge lane unless a future machine regression reappears.
 4. This stream does **not** claim protocol can guarantee perfect business accuracy, perfect search quality, or perfect vendor/tool behavior.
-5. The present authority-alignment claim is limited to governance / review / workbook surfaces for the docs-owned bridge opening; it must not be read as full machine-consumed bridge closure.
+5. The present authority-alignment claim now includes governance / review / workbook surfaces plus the dedicated machine-consumed bridge closure lane.
 
 ## 2) Ownership boundary frozen in this stream
 
@@ -176,9 +172,7 @@ Frozen audit boundary on external sources:
 
 ### 2.3 Remaining governed-later surface
 
-The remaining open surface is narrow and explicit:
-
-- future dedicated machine consumer lane for `feedback_to_judgement_loopback_contract_v1` / `ASB16-RQ-050`
+No additional protocol-owned governed-later surface remains open inside this stream boundary today. Future regressions must reopen through machine evidence rather than through narrative reinterpretation.
 
 ## 3) Frozen implementation checklist
 
@@ -203,12 +197,12 @@ The remaining open surface is narrow and explicit:
 
 ## 5) Exit criteria routed forward from audit
 
-This stream should remain open only until audit can prove all of the following:
+This stream should remain protocol-closed unless audit later disproves any of the following:
 
 1. `ASB16-RQ-048` remains machine-landed and healthy on the governed path;
 2. `ASB16-RQ-049` remains machine-landed and healthy on the governed path;
-3. `ASB16-RQ-050` gains a dedicated machine consumer lane without semantic collapse into either the fourth-loop center or first-loop truth;
-4. the same lane proves the bounded closed-loop topology as a machine-auditable round trip with explicit demotion / rollback on first-loop conflict;
+3. `ASB16-RQ-050` remains machine-landed on a dedicated consumer lane without semantic collapse into either the fourth-loop center or first-loop truth;
+4. the same lane remains able to prove the bounded closed-loop topology as a machine-auditable round trip with explicit demotion / rollback on first-loop conflict;
 5. residual live-quality failures can be attributed below protocol by default unless the `v1.6.17` surfaces are absent, skipped, or semantically broken.
 
 ### 6.1 Opening binding intake (ASB16-RQ-048 ASB16-RQ-049, 2026-03-23)
@@ -250,7 +244,7 @@ Frozen audit intake for the landed strengthening pair:
    - it remains generic and non-business-specific;
    - no asymmetric fallback path may re-enter the strengthening lane.
 
-### 6.2 Opening binding intake (ASB16-RQ-050, 2026-03-23)
+### 6.2 Machine consumer closure (ASB16-RQ-050, 2026-03-23)
 
 Frozen audit intake for the standalone 4→1 bridge:
 
@@ -258,6 +252,8 @@ Frozen audit intake for the standalone 4→1 bridge:
    - kernel contract: `feedback_to_judgement_loopback_contract_v1`
    - shared primitive consumed by context, but not replaced by it: `roundtable_four_track_cross_validation_contract_v1`
    - machine-visible loopback family includes at least:
+     - `feedback_to_judgement_loopback_status`
+     - `loop_back_to_first_loop_status`
      - `loopback_artifact_ref`
      - `loopback_artifact_kind`
      - `preflight_context_injection_ref`
@@ -269,8 +265,10 @@ Frozen audit intake for the standalone 4→1 bridge:
      - `conflict_with_current_evidence`
      - `demotion_or_rollback_action`
      - `negative_feedback_ref`
-2. Frozen audit interpretation:
+2. The canonical machine consumer lane is `scripts/validate_feedback_to_judgement_loopback.py`; it derives loopback projections from already-frozen `CURRENT_TASK.json` surfaces instead of introducing a second semantic owner.
+3. `scripts/ci/run_feedback_to_judgement_loopback_probes_ci.sh`, `scripts/ci/run_required_runtime_gates_ci.sh`, and `scripts/release_readiness_check.py` now consume the same lane, so the bridge is no longer docs-only debt.
+4. Frozen audit interpretation:
    - the bridge is healthy only when prior fourth-loop artifacts can be accepted, demoted, or rolled back under current first-loop evidence without narrative ambiguity;
    - loopback artifacts remain governed preflight aids only;
    - first-loop revalidation stays authoritative;
-   - future machine adoption must not weaken no-downgrade boundaries.
+   - the landed machine consumer must continue preserving no-downgrade boundaries.

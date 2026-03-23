@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 84`, `command snippets checked: 924`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 84`, `command snippets checked: 930`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -819,10 +819,10 @@ Root cause:
   - `required_gate_bundle_runner.py` now binds `ASB16-RQ-048` / `ASB16-RQ-049`, while `scripts/ci/run_required_runtime_gates_ci.sh` and `scripts/release_readiness_check.py` now include the strengthening validator family;
   - the strengthening lane remains generic protocol infrastructure only: no business-specific routing policy, prompt content, or backward-compatibility bridge was introduced.
 
-### ISSUE-031 - Fourth-loop-to-first-loop loopback bridge is now opened as a standalone docs-owned contract and must not be semantically collapsed back into ISSUE-030
+### ISSUE-031 - Fourth-loop-to-first-loop loopback bridge is now machine-consumed and closed without semantic collapse back into ISSUE-030
 
-- `status`: OPEN
-- `problem_statement`: the third/fourth-loop strengthening centers are now landed under `ISSUE-030`, but the 4→1 return path still needs its own explicit semantic object. Without a standalone bridge contract, fourth-loop prompt artifacts can be misread as first-loop truth, or the shared four-track primitive can be misread as the loopback transport/admission surface.
+- `status`: CLOSED
+- `problem_statement`: the third/fourth-loop strengthening centers were landed under `ISSUE-030`, and the remaining 4→1 return path required its own explicit machine consumer lane so that fourth-loop prompt artifacts could not be misread as first-loop truth, and the shared four-track primitive could not be misread as the loopback transport/admission surface.
 - `primary_owner_doc`: `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md`
 - `secondary_refs`:
   - `docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md`
@@ -833,6 +833,8 @@ Root cause:
   - `scripts/validate_issue_register_consistency.py`
   - `scripts/validate_contract_binding_reference_integrity.py`
   - `scripts/validate_identity_routing_learning_strengthening.py`
+  - `scripts/validate_feedback_to_judgement_loopback.py`
+  - `scripts/ci/run_feedback_to_judgement_loopback_probes_ci.sh`
 - `root_cause`: RC-14
 - `stop_condition`:
   - `feedback_to_judgement_loopback_contract_v1` remains frozen as a standalone bridge contract rather than being folded into either the fourth-loop center or the shared four-track primitive;
@@ -841,9 +843,10 @@ Root cause:
   - first-loop revalidation authority, TTL expiry, conflict demotion, rollback, and negative-feedback writeback are all machine-visible on the canonical bridge evidence family;
   - a dedicated machine consumer lane can consume `ASB16-RQ-050` without reopening `ISSUE-030` or weakening no-downgrade boundaries.
 - `current_evidence`:
-  - `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md` now freezes `feedback_to_judgement_loopback_contract_v1` as the standalone 4→1 bridge, explicitly frames the loop as PDCA-isomorphic control logic, and separates it from both `feedback_operational_prompt_contract_v1` and the first-loop `Accurate judgement contract`;
-  - `docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md` now keeps the bridge as a docs-owned semantic opening while leaving the 048/049 strengthening pair closed on their own machine-landed lane, explicitly limiting the remaining claim to governance/review/workbook alignment, and cross-validating the anti-pollution boundary with OpenAI/MCP primary sources;
-  - `identity/protocol/mappings/contract-binding.v1.6.yaml` now binds `ASB16-RQ-050` with canonical loopback evidence fields, and `identity/protocol/mappings/semantic-term-registry.v1.6.yaml` now freezes the anti-pollution vocabulary for this bridge.
+  - `scripts/validate_feedback_to_judgement_loopback.py` now owns the canonical `ASB16-RQ-050` machine consumer lane and fail-closes on replay-gate drift, missing loopback field anchors, broken first-loop revalidation requirements, or missing negative-feedback preservation;
+  - `scripts/validate_identity_routing_learning_strengthening.py` now emits `loop_back_to_first_loop_status` so the closed-loop bridge remains visible without reopening the third/fourth-loop center;
+  - `scripts/required_gate_bundle_runner.py`, `scripts/release_readiness_check.py`, and `scripts/ci/run_required_runtime_gates_ci.sh` now consume the dedicated loopback validator lane directly, while `scripts/ci/run_feedback_to_judgement_loopback_probes_ci.sh` proves positive and negative fixture coverage;
+  - `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md`, `docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md`, and `identity/protocol/mappings/contract-binding.v1.6.yaml` now truth-sync the bridge as machine-consumed closure instead of a docs-only opening.
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 
