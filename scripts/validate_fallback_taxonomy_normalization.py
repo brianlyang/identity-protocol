@@ -7,6 +7,11 @@ import re
 from pathlib import Path
 from typing import Any
 
+from blocker_taxonomy_common import (
+    CANONICAL_BLOCKER_TYPES,
+    build_blocker_alias_map,
+    normalize_blocker_sequence,
+)
 from response_stamp_common import FALLBACK_TAXONOMY_VERSION, normalize_fallback_taxonomy_class
 from tool_vendor_governance_common import (
     contract_required,
@@ -42,18 +47,6 @@ OBSERVATION_OPERATIONS = {
     "three-plane",
     "inspection",
     "validate",
-}
-
-CANONICAL_BLOCKER_TYPES = {
-    "auth_login_required",
-    "anti_automation_challenge_required",
-    "session_reauthentication_required",
-    "manual_verification_required",
-}
-LEGACY_BLOCKER_ALIAS_MAP = {
-    "login_required": "auth_login_required",
-    "captcha_required": "anti_automation_challenge_required",
-    "session_expired": "session_reauthentication_required",
 }
 
 REPORT_REASON_KEYS = {"fallback_reason", "fallback_reason_raw", "layer_intent_fallback_reason"}
@@ -139,14 +132,11 @@ def _dedupe_keep_order(values: list[str]) -> list[str]:
 
 
 def _normalize_blocker_types(raw_blockers: list[Any]) -> list[str]:
-    out: list[str] = []
-    for b in raw_blockers:
-        token = str(b or "").strip().lower()
-        if not token:
-            continue
-        token = LEGACY_BLOCKER_ALIAS_MAP.get(token, token)
-        out.append(token)
-    return _dedupe_keep_order(out)
+    normalized, _alias_hits, _invalid = normalize_blocker_sequence(
+        raw_blockers,
+        alias_map=build_blocker_alias_map(include_default_legacy_aliases=True),
+    )
+    return _dedupe_keep_order(normalized)
 
 
 def _resolve_report_path(pack_path: Path, identity_id: str, explicit_report: str) -> Path | None:

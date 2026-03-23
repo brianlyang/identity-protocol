@@ -16,6 +16,11 @@ from pathlib import Path
 import sys
 import yaml
 
+from blocker_taxonomy_common import (
+    BLOCKER_ALIAS_MAP_VERSION,
+    CANONICAL_BLOCKER_TYPES,
+    LEGACY_BLOCKER_ALIAS_MAP,
+)
 from contract_binding_doc_defaults_common import resolve_validator_doc_defaults
 from resolve_identity_context import default_identity_home, default_local_catalog_path, default_local_instances_root
 from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID
@@ -198,19 +203,6 @@ MANDATORY_PROTOCOL_SOURCES = [
 ]
 
 REPO_FIXTURE_CONFIRM_TOKEN = "I_UNDERSTAND_REPO_FIXTURE_WRITE"
-
-CANONICAL_BLOCKER_TYPES = [
-    "auth_login_required",
-    "anti_automation_challenge_required",
-    "session_reauthentication_required",
-    "manual_verification_required",
-]
-
-LEGACY_BLOCKER_ALIAS_MAP = {
-    "login_required": "auth_login_required",
-    "captcha_required": "anti_automation_challenge_required",
-    "session_expired": "session_reauthentication_required",
-}
 
 DOMAIN_NEUTRALITY_BLOCKLIST = [
     "store-manager",
@@ -6403,7 +6395,7 @@ def _neutral_full_contract_current_task(
     task["blocker_taxonomy_contract"] = {
         "required": True,
         "required_blocker_types": list(CANONICAL_BLOCKER_TYPES),
-        "blocker_alias_map_version": "v1",
+        "blocker_alias_map_version": BLOCKER_ALIAS_MAP_VERSION,
         "blocker_classification_required_fields": [
             "blocker_type",
             "source",
@@ -7270,7 +7262,7 @@ def _inject_scaffold_metadata(task: dict, profile: str, *, version_baseline: dic
         "scaffold_generation_mode": "neutral-default" if profile == "full-contract" else "explicit_opt_in",
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "blocker_taxonomy_mode": "canonical",
-        "blocker_alias_map_version": "v1",
+        "blocker_alias_map_version": BLOCKER_ALIAS_MAP_VERSION,
         "domain_neutrality_required": profile != "legacy-commerce-overlay",
     }
     for field, raw in scaffold_versions.items():

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from actor_session_common import load_actor_binding, resolve_protocol_actor_id
+from blocker_taxonomy_common import CANONICAL_BLOCKER_TYPE_SET
 from resolve_identity_context import resolve_identity
 
 
@@ -154,12 +155,7 @@ FALLBACK_REASON_CLASS_MAP = {
     "synthetic_reply_evidence_forbidden": "policy_blocked",
     "reply_outlet_guard_missing": "policy_blocked",
 }
-BLOCKER_TAXONOMY_RESERVED = {
-    "auth_login_required",
-    "anti_automation_challenge_required",
-    "session_reauthentication_required",
-    "manual_verification_required",
-}
+BLOCKER_TAXONOMY_RESERVED = CANONICAL_BLOCKER_TYPE_SET
 TRANSPORT_ERROR_HINTS = (
     "transport",
     "network",

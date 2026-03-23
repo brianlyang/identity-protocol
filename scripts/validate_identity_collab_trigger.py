@@ -9,19 +9,12 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-
-CANONICAL_BLOCKERS = {
-    "auth_login_required",
-    "anti_automation_challenge_required",
-    "session_reauthentication_required",
-    "manual_verification_required",
-}
-
-LEGACY_BLOCKER_ALIAS_MAP = {
-    "login_required": "auth_login_required",
-    "captcha_required": "anti_automation_challenge_required",
-    "session_expired": "session_reauthentication_required",
-}
+from blocker_taxonomy_common import (
+    CANONICAL_BLOCKER_TYPE_SET as CANONICAL_BLOCKERS,
+    build_blocker_alias_map,
+    canonicalize_blocker,
+    normalize_blocker_membership,
+)
 
 REQUIRED_TAXONOMY_FIELDS = {
     "blocker_type",
@@ -39,49 +32,6 @@ REQUIRED_RECEIPT_FIELDS = {
     "dedupe_key",
     "status",
 }
-
-
-def _build_alias_map(*raw_maps: Any) -> dict[str, str]:
-    alias_map: dict[str, str] = {}
-    for raw_map in raw_maps:
-        if not isinstance(raw_map, dict):
-            continue
-        for raw_key, raw_value in raw_map.items():
-            key = str(raw_key or "").strip()
-            value = str(raw_value or "").strip()
-            if key and value in CANONICAL_BLOCKERS:
-                alias_map[key] = value
-    return alias_map
-
-
-def _canonicalize_blocker(raw: Any, *, alias_map: dict[str, str]) -> tuple[str, str]:
-    value = str(raw or "").strip()
-    if value in CANONICAL_BLOCKERS:
-        return value, "canonical"
-    mapped = alias_map.get(value)
-    if mapped:
-        return mapped, "legacy_alias_bridge"
-    return "", "invalid"
-
-
-def _normalize_blocker_set(values: Any, *, alias_map: dict[str, str]) -> tuple[set[str], list[str], list[str]]:
-    normalized: set[str] = set()
-    alias_hits: list[str] = []
-    invalid: list[str] = []
-    if not isinstance(values, list):
-        return normalized, alias_hits, invalid
-    for raw in values:
-        canonical, mode = _canonicalize_blocker(raw, alias_map=alias_map)
-        if mode == "canonical":
-            normalized.add(canonical)
-        elif mode == "legacy_alias_bridge":
-            normalized.add(canonical)
-            alias_hits.append(str(raw))
-        else:
-            invalid.append(str(raw))
-    return normalized, sorted(set(alias_hits)), sorted(set(invalid))
-
-
 def _load_yaml(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     if not isinstance(data, dict):
@@ -245,7 +195,7 @@ def _validate_log(
         rc = 1
 
     blocker = str(rec.get("blocker_type") or "")
-    blocker_canonical, blocker_mode = _canonicalize_blocker(blocker, alias_map=alias_map)
+    blocker_canonical, blocker_mode = canonicalize_blocker(blocker, alias_map=alias_map)
     if not blocker_canonical:
         allowed = sorted(set(CANONICAL_BLOCKERS).union(alias_map.keys()))
         logs.append(f"[FAIL] {p} blocker_type must be one of {allowed}")
@@ -309,7 +259,7 @@ def _validate_log(
 
 
 def _run_self_test(sample_root: Path) -> int:
-    alias_map = _build_alias_map()
+    alias_map = build_blocker_alias_map()
     pos = sorted((sample_root / "positive").glob("*.json"))
     neg = sorted((sample_root / "negative").glob("*.json"))
     if not pos or not neg:
@@ -401,9 +351,9 @@ def main() -> int:
     if taxonomy.get("legacy_alias_bridge") and not compatibility_overlay_allowed:
         print("[FAIL] blocker_taxonomy_contract.legacy_alias_bridge is migration/fixture-only")
         return 1
-    alias_map = _build_alias_map(taxonomy.get("legacy_alias_bridge"))
+    alias_map = build_blocker_alias_map(taxonomy.get("legacy_alias_bridge"))
 
-    blockers_norm, blockers_alias_hits, blockers_invalid = _normalize_blocker_set(
+    blockers_norm, blockers_alias_hits, blockers_invalid = normalize_blocker_membership(
         taxonomy.get("required_blocker_types") or [],
         alias_map=alias_map,
     )
@@ -456,8 +406,8 @@ def main() -> int:
     if contract.get("legacy_alias_bridge") and not compatibility_overlay_allowed:
         print("[FAIL] collaboration_trigger_contract.legacy_alias_bridge is migration/fixture-only")
         return 1
-    alias_map = _build_alias_map(alias_map, contract.get("legacy_alias_bridge"))
-    trig_norm, trig_alias_hits, trig_invalid = _normalize_blocker_set(
+    alias_map = build_blocker_alias_map(alias_map, contract.get("legacy_alias_bridge"))
+    trig_norm, trig_alias_hits, trig_invalid = normalize_blocker_membership(
         contract.get("trigger_conditions") or [],
         alias_map=alias_map,
     )

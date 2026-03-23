@@ -9,6 +9,12 @@ from typing import Any, Iterable
 
 import yaml
 
+from blocker_taxonomy_common import (
+    CANONICAL_BLOCKER_TYPE_SET as CANONICAL_BLOCKERS,
+    build_blocker_alias_map,
+    normalize_blocker_membership,
+)
+
 REQ_TOP_LEVEL = [
     "objective",
     "state_machine",
@@ -64,20 +70,6 @@ REQUIRED_PROTOCOL_SOURCES = [
     "https://modelcontextprotocol.io/specification/latest",
 ]
 
-CANONICAL_BLOCKERS = {
-    "auth_login_required",
-    "anti_automation_challenge_required",
-    "session_reauthentication_required",
-    "manual_verification_required",
-}
-
-LEGACY_BLOCKER_ALIAS_MAP = {
-    "login_required": "auth_login_required",
-    "captcha_required": "anti_automation_challenge_required",
-    "session_expired": "session_reauthentication_required",
-}
-
-
 def _fail(msg: str) -> int:
     print(f"[FAIL] {msg}")
     return 1
@@ -100,43 +92,6 @@ def _source_signature(item: dict[str, Any]) -> str:
     if item.get("url"):
         return str(item.get("url"))
     return ""
-
-
-def _build_alias_map(raw_map: Any) -> dict[str, str]:
-    alias_map: dict[str, str] = {}
-    if isinstance(raw_map, dict):
-        for raw_key, raw_value in raw_map.items():
-            key = str(raw_key or "").strip()
-            value = str(raw_value or "").strip()
-            if key and value in CANONICAL_BLOCKERS:
-                alias_map[key] = value
-    return alias_map
-
-
-def _normalize_blocker_types(
-    values: Iterable[Any],
-    *,
-    alias_map: dict[str, str],
-) -> tuple[set[str], list[str], list[str]]:
-    canonical: set[str] = set()
-    alias_hits: list[str] = []
-    invalid: list[str] = []
-    for raw in values:
-        value = str(raw or "").strip()
-        if not value:
-            continue
-        if value in CANONICAL_BLOCKERS:
-            canonical.add(value)
-            continue
-        mapped = alias_map.get(value)
-        if mapped:
-            canonical.add(mapped)
-            alias_hits.append(value)
-            continue
-        invalid.append(value)
-    return canonical, sorted(set(alias_hits)), sorted(set(invalid))
-
-
 def _resolve_task_path(identity: dict[str, Any]) -> Path:
     identity_id = str(identity.get("id", "")).strip()
     pack_path = str(identity.get("pack_path", "")).strip()
@@ -444,8 +399,8 @@ def _validate_single_identity(
             print("[FAIL] blocker_taxonomy_contract.legacy_alias_bridge is migration/fixture-only")
             rc = 1
         required_blockers = taxonomy.get("required_blocker_types") or []
-        alias_map = _build_alias_map(legacy_alias_bridge)
-        normalized_blockers, alias_hits, invalid_blockers = _normalize_blocker_types(
+        alias_map = build_blocker_alias_map(legacy_alias_bridge)
+        normalized_blockers, alias_hits, invalid_blockers = normalize_blocker_membership(
             required_blockers,
             alias_map=alias_map,
         )
