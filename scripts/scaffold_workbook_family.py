@@ -102,6 +102,7 @@ def _registry_doc(
             "deep_audit_template": template_contract.deep_audit_template_rel,
             "scaffold_script": template_contract.scaffold_script_rel,
             "contract_validator": template_contract.contract_validator_rel,
+            "projection_renderer": template_contract.projection_renderer_rel,
             "scaffold_projection_root": template_contract.scaffold_projection_root_rel,
             "projection_policy": template_contract.projection_policy,
             "projection_presence_policy": template_contract.projection_presence_policy,

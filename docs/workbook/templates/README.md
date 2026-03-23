@@ -23,3 +23,4 @@ Scope: template and scaffold contract for future workbook families under `docs/w
 1. Template files are never current-status authority by themselves.
 2. Generated workbook families remain scaffold-only until `identity/protocol/mappings/workbook-registry.current.yaml` is switched explicitly.
 3. External projection stubs generated from these templates remain projection-only and do not participate in status authority before activation/backfill.
+4. Once a family is active, any kept workspace projection must be regenerated through `scripts/render_active_workbook_projections.py`, not promoted from a hand-edited stub.

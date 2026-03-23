@@ -107,6 +107,7 @@ def _compare_template_contract(
         "deep_audit_template": expected.deep_audit_template_rel,
         "scaffold_script": expected.scaffold_script_rel,
         "contract_validator": expected.contract_validator_rel,
+        "projection_renderer": expected.projection_renderer_rel,
         "scaffold_projection_root": expected.scaffold_projection_root_rel,
         "projection_policy": expected.projection_policy,
         "projection_presence_policy": expected.projection_presence_policy,

@@ -180,6 +180,41 @@ def run_validator(repo_root: Path, workspace_root: Path) -> tuple[int, dict]:
     return proc.returncode, payload
 
 
+def run_projection_renderer(repo_root: Path, workspace_root: Path, *, write: bool) -> tuple[int, dict]:
+    cmd = [
+        "python3",
+        str(repo_root / "scripts/render_active_workbook_projections.py"),
+        "--repo-root",
+        str(repo_root),
+        "--workspace-root",
+        str(workspace_root),
+        "--json-only",
+    ]
+    if write:
+        cmd.append("--write")
+    proc = subprocess.run(
+        cmd,
+        cwd=str(repo_root),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    stdout = proc.stdout.strip()
+    stderr = proc.stderr.strip()
+    if not stdout:
+        raise SystemExit(f"projection renderer produced no stdout (rc={proc.returncode}): {stderr}")
+    try:
+        payload = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(
+            "projection renderer did not emit JSON "
+            f"(rc={proc.returncode}): {exc}: stdout={stdout!r} stderr={stderr!r}"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise SystemExit("projection renderer JSON root not object")
+    return proc.returncode, payload
+
+
 root = Path(sys.argv[1]).resolve()
 workspace_root = Path(sys.argv[2]).resolve()
 tmp_root = Path(sys.argv[3]).resolve()
@@ -236,6 +271,13 @@ positive_rc, positive = run_validator(root, workspace_root)
 if positive_rc != 0 or positive.get("issue_register_consistency_status") != STATUS_PASS_REQUIRED:
     raise SystemExit(f"positive workbook validator failed: {positive}")
 
+renderer_rc, renderer_payload = run_projection_renderer(root, workspace_root, write=False)
+if renderer_rc != 0 or renderer_payload.get("workbook_projection_render_status") != STATUS_PASS_REQUIRED:
+    raise SystemExit(f"positive projection renderer failed: {renderer_payload}")
+projection_results = renderer_payload.get("projection_results") or []
+if not isinstance(projection_results, list) or len(projection_results) < 2:
+    raise SystemExit(f"projection renderer did not report both projection exports: {renderer_payload}")
+
 baseline_shadow = build_probe_repo(
     tmp_root / "baseline-shadow" / root.name,
     root,
@@ -245,6 +287,23 @@ baseline_shadow = build_probe_repo(
 baseline_shadow_rc, baseline_shadow_payload = run_validator(baseline_shadow, baseline_shadow.parent)
 if baseline_shadow_rc != 0 or baseline_shadow_payload.get("issue_register_consistency_status") != STATUS_PASS_REQUIRED:
     raise SystemExit(f"baseline shadow repo did not preserve positive status: {baseline_shadow_payload}")
+
+render_workspace = tmp_root / "projection-render"
+render_workspace.mkdir(parents=True, exist_ok=True)
+render_repo = render_workspace / root.name
+render_repo.symlink_to(root, target_is_directory=True)
+render_rc, render_payload = run_projection_renderer(render_repo, render_workspace, write=True)
+if render_rc != 0 or render_payload.get("workbook_projection_render_status") != STATUS_PASS_REQUIRED:
+    raise SystemExit(f"projection render write probe failed: {render_payload}")
+for row in render_payload.get("projection_results") or []:
+    rendered_path = Path(str(row.get("path", "")).strip())
+    if not rendered_path.exists():
+        raise SystemExit(f"projection renderer failed to materialize output: {row}")
+    text = rendered_path.read_text(encoding="utf-8")
+    if PROJECTION_BOUNDARY_MARKER not in text:
+        raise SystemExit(f"projection renderer output missing boundary marker: {row}")
+    if "Projection renderer:" not in text:
+        raise SystemExit(f"projection renderer output missing renderer marker: {row}")
 
 extra_doc_repo = build_probe_repo(
     tmp_root / "minor-family-extra-doc" / root.name,

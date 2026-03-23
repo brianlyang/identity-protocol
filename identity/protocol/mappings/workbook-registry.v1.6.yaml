@@ -13,6 +13,7 @@ template_contract:
   deep_audit_template: docs/workbook/templates/protocol-deep-audit-workbook.template.md
   scaffold_script: scripts/scaffold_workbook_family.py
   contract_validator: scripts/validate_workbook_family_contract.py
+  projection_renderer: scripts/render_active_workbook_projections.py
   scaffold_projection_root: activity/evidence/workbook-projections
   projection_policy: optional_workspace_projection_exports
   projection_presence_policy: optional_projection

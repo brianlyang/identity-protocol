@@ -96,6 +96,10 @@ Validators and CI must resolve the active workbook family through the registry, 
 
 These tools are part of the workbook control plane and freeze how future workbook families are generated and checked.
 
+- `scripts/render_active_workbook_projections.py`
+
+This renderer is the shared projection-export surface for optional outer-workspace workbook mirrors; if a projection is kept, it must be regenerated through the renderer rather than hand-edited.
+
 ### 2.7 Optional projection exports
 
 1. The versioned workbook registry may list optional external projection docs under the active workbook family.
@@ -106,9 +110,11 @@ These tools are part of the workbook control plane and freeze how future workboo
 3. If a projection is present, it must declare:
    - projection-only mode,
    - its canonical workbook source,
-   - the current workbook registry pointer that governs it.
+   - the current workbook registry pointer that governs it,
+   - the shared projection renderer that produced it.
 4. The active `v1.6` workbook family keeps external projections in `boundary_markers_only` mode, so protocol gates verify boundary/pointer discipline without coupling release outcome to outer mirror freshness.
-5. If a later registry opts a projection into freshness enforcement, the projection must also record machine-readable workbook issue counts and docs-checker counts so the validator can prove it still mirrors the active workbook family.
+5. The active renderer is declared by `identity/protocol/mappings/workbook-registry.v1.6.yaml -> template_contract.projection_renderer` and currently resolves to `scripts/render_active_workbook_projections.py`.
+6. If a later registry opts a projection into freshness enforcement, the projection must also record machine-readable workbook issue counts and docs-checker counts so the validator can prove it still mirrors the active workbook family.
 
 ## 3) Relationship to `docs/review/`
 

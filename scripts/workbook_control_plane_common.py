@@ -41,6 +41,7 @@ class WorkbookTemplateContract:
     deep_audit_template_rel: str
     scaffold_script_rel: str
     contract_validator_rel: str
+    projection_renderer_rel: str
     scaffold_projection_root_rel: str
     projection_policy: str
     projection_presence_policy: str
@@ -126,6 +127,7 @@ def _load_template_contract(template_doc: dict[str, Any]) -> WorkbookTemplateCon
     deep_audit_template_rel = _non_empty_text(template_doc.get("deep_audit_template"))
     scaffold_script_rel = _non_empty_text(template_doc.get("scaffold_script"))
     contract_validator_rel = _non_empty_text(template_doc.get("contract_validator"))
+    projection_renderer_rel = _non_empty_text(template_doc.get("projection_renderer"))
     scaffold_projection_root_rel = _non_empty_text(template_doc.get("scaffold_projection_root"))
     governance_doc_rel = _non_empty_text(template_doc.get("governance_doc"))
     current_pointer_activation_consent_token = _non_empty_text(
@@ -138,6 +140,7 @@ def _load_template_contract(template_doc: dict[str, Any]) -> WorkbookTemplateCon
         "deep_audit_template": deep_audit_template_rel,
         "scaffold_script": scaffold_script_rel,
         "contract_validator": contract_validator_rel,
+        "projection_renderer": projection_renderer_rel,
         "scaffold_projection_root": scaffold_projection_root_rel,
         "governance_doc": governance_doc_rel,
         "current_pointer_activation_consent_token": current_pointer_activation_consent_token,
@@ -153,6 +156,7 @@ def _load_template_contract(template_doc: dict[str, Any]) -> WorkbookTemplateCon
         deep_audit_template_rel=deep_audit_template_rel,
         scaffold_script_rel=scaffold_script_rel,
         contract_validator_rel=contract_validator_rel,
+        projection_renderer_rel=projection_renderer_rel,
         scaffold_projection_root_rel=scaffold_projection_root_rel,
         projection_policy=_non_empty_text(template_doc.get("projection_policy"))
         or "optional_workspace_projection_exports",
