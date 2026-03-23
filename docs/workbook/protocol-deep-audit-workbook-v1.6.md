@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 84`, `command snippets checked: 930`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 86`, `command snippets checked: 930`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -221,6 +221,20 @@ Symptoms:
 Root cause:
 
 - the protocol now has independent third-loop and fourth-loop strengthening centers plus a shared four-track primitive, but the fourth-loop-to-first-loop reentry path still needs its own frozen bridge contract (`feedback_to_judgement_loopback_contract_v1`) so that promotion evidence, prompt derivation, and first-loop truth are not semantically collapsed into one object.
+
+### RC-15 Protocol artifact families remain semantically overloaded under generic "memory" wording
+
+Symptoms:
+
+- pack-root `RULEBOOK.jsonl` and runtime `runtime/rulebooks/*.jsonl` are easy to miscall as one undifferentiated rule memory;
+- `TASK_HISTORY.md` can be misread as continuity or recovery state instead of chronology;
+- runtime dialogue-governance, experience-feedback, protocol-feedback, and continuity families already exist but were frozen in separate owner streams with no single motherline routing matrix;
+- `runtime/memory-absorption/**` is path-registered and therefore easy to over-read as an active generic sink unless explicitly quarantined;
+- declaration keys and gates such as `reject_memory_gate` or `*_contract` blocks are easy to misreport as if they were the storage family itself.
+
+Root cause:
+
+- the protocol froze individual lanes over time, but it never froze one cross-family routing matrix that classifies protocol-owned persisted artifacts by semantic owner, fixed path family, payload class, production method, and primary consumer. Without that matrix, multiple distinct families keep collapsing into generic “memory” wording.
 
 ## 4) Routed issue sections
 
@@ -847,6 +861,34 @@ Root cause:
   - `scripts/validate_identity_routing_learning_strengthening.py` now emits `loop_back_to_first_loop_status` so the closed-loop bridge remains visible without reopening the third/fourth-loop center;
   - `scripts/required_gate_bundle_runner.py`, `scripts/release_readiness_check.py`, and `scripts/ci/run_required_runtime_gates_ci.sh` now consume the dedicated loopback validator lane directly, while `scripts/ci/run_feedback_to_judgement_loopback_probes_ci.sh` proves positive and negative fixture coverage;
   - `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md`, `docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md`, and `identity/protocol/mappings/contract-binding.v1.6.yaml` now truth-sync the bridge as machine-consumed closure instead of a docs-only opening.
+
+### ISSUE-032 - Protocol artifact-family routing remains semantically overloaded under generic "memory" wording
+
+- `status`: OPEN
+- `problem_statement`: protocol-owned persisted artifact families inside identity packs/runtime already exist, but they are still too easy to collapse into generic “memory” language. Without one routing matrix, pack rulebook, pack task-history, runtime dialogue-governance, runtime experience-feedback, runtime protocol-feedback, runtime continuity/reentry, and runtime memory-absorption quarantine can be semantically polluted into one bucket.
+- `primary_owner_doc`: `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md`
+  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`
+  - `identity/protocol/IDENTITY_PROTOCOL.md`
+  - `identity/protocol/IDENTITY_RUNTIME.md`
+  - `README.md`
+- `machine_gate`:
+  - `scripts/docs_command_contract_check.py`
+  - `scripts/validate_issue_register_consistency.py`
+- `root_cause`: RC-15
+- `stop_condition`:
+  - one canonical matrix freezes each protocol-owned persisted family by semantic owner, fixed path, payload class, production method, and primary consumer;
+  - `memory` is no longer used as a canonical sink name in active protocol docs for these families;
+  - `RULEBOOK.jsonl` stays distinct from runtime experience-feedback rulebooks;
+  - `TASK_HISTORY.md` stays distinct from continuity/reentry state;
+  - `runtime/protocol-feedback/**` stays governance communication-only;
+  - `runtime/memory-absorption/**` stays quarantine/re-materialization only;
+  - later shared validator/creator/readiness consumption reuses the same matrix instead of re-deriving semantics pack by pack.
+- `current_evidence`:
+  - `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md` now freezes the canonical routing matrix across the seven protocol-scoped persisted families and explicitly classifies declaration keys/gates as non-artifact control-plane surfaces;
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md` now records the current protocol/runtime scan basis and the quarantine-only interpretation of `runtime/memory-absorption/**`;
+  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`, `identity/protocol/IDENTITY_PROTOCOL.md`, `identity/protocol/IDENTITY_RUNTIME.md`, and `README.md` now truth-sync the family names, fixed paths, and forbidden conflations, but machine enforcement is still follow-on work.
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 
