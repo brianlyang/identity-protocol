@@ -6,11 +6,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+PROTOCOL_FEEDBACK_ROOT_REL = Path("runtime/protocol-feedback")
+PROTOCOL_FEEDBACK_ROOT = PROTOCOL_FEEDBACK_ROOT_REL.as_posix()
+
 CANONICAL_REQUIRED_DIRS = (
     "outbox-to-protocol",
     "inbox-from-protocol",
     "evidence-index",
     "upgrade-proposals",
+)
+CANONICAL_REQUIRED_DIR_PATHS = tuple(
+    (PROTOCOL_FEEDBACK_ROOT_REL / subdir).as_posix() for subdir in CANONICAL_REQUIRED_DIRS
 )
 
 DEFAULT_ACTIVITY_DIRS = (
@@ -42,7 +48,7 @@ def write_json(path: Path, payload: dict[str, Any]) -> Path:
 def resolve_feedback_root(pack_path: Path, feedback_root: str = "") -> Path:
     if str(feedback_root or "").strip():
         return Path(feedback_root).expanduser().resolve()
-    return (pack_path / "runtime" / "protocol-feedback").resolve()
+    return (pack_path / PROTOCOL_FEEDBACK_ROOT_REL).resolve()
 
 
 def canonical_dirs(feedback_root: Path) -> dict[str, Path]:

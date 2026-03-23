@@ -107,9 +107,13 @@ def _mapping_bundle_gap(repo_root: Path) -> tuple[int, list[str], int]:
     data = yaml.safe_load(mapping_path.read_text(encoding="utf-8")) or {}
     mapping_rows = requirement_row_keys(data if isinstance(data, dict) else {})
 
-    from required_gate_bundle_runner import BUNDLE_REQUIREMENT_ORDER  # local import to avoid boot issues
+    from required_gate_bundle_runner import load_effective_requirement_maps  # local import to avoid boot issues
 
-    bundle_rows = list(BUNDLE_REQUIREMENT_ORDER)
+    requirement_order, _target_map, _status_map, _errors = load_effective_requirement_maps(
+        repo_root=repo_root,
+        mapping_path=mapping_path,
+    )
+    bundle_rows = list(requirement_order)
     missing_rows = sorted(k for k in mapping_rows if k not in bundle_rows)
     return len(missing_rows), missing_rows, len(bundle_rows)
 

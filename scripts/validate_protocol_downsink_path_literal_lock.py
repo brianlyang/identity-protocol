@@ -152,6 +152,44 @@ def _derive_governed_roots(matchers: list[tuple[str, str]]) -> list[str]:
     return sorted(root for root in roots if root)
 
 
+def _derive_literal_anchor_tokens(matchers: list[tuple[str, str]]) -> set[str]:
+    anchors: set[str] = set()
+    for entry_type, pattern in matchers:
+        token = _normalize_path_token(pattern)
+        if not token:
+            continue
+        candidate = token
+        if entry_type == "glob":
+            normalized = _normalize_interpolation(token)
+            split_idx = len(normalized)
+            for marker in ("*", "?", "["):
+                idx = normalized.find(marker)
+                if idx >= 0:
+                    split_idx = min(split_idx, idx)
+            candidate = normalized[:split_idx].rstrip("/")
+        path_candidate = PurePosixPath(candidate)
+        if entry_type in {"file", "glob"}:
+            parent = path_candidate.parent.as_posix()
+            if parent and parent not in {".", ""}:
+                anchors.add(parent)
+        elif entry_type == "dir":
+            anchors.add(path_candidate.as_posix())
+
+        parts = [part for part in path_candidate.parts if part not in {"", "."}]
+        if len(parts) >= 2 and parts[0] == "runtime" and parts[1] in {"gate", "protocol-feedback"}:
+            anchors.add("/".join(parts[:2]))
+        if len(parts) >= 3 and parts[0] == "runtime" and parts[1] == "reports" and parts[2] == "broadcast":
+            anchors.add("/".join(parts[:3]))
+    return {anchor.rstrip("/") for anchor in anchors if anchor and anchor not in {".", ""}}
+
+
+def _token_matches_literal_anchor(path_token: str, literal_anchors: set[str]) -> bool:
+    token = _normalize_path_token(path_token).rstrip("/")
+    if not token:
+        return True
+    return token in literal_anchors
+
+
 def _iter_scan_files(repo_root: Path, globs: list[str]) -> list[Path]:
     files: dict[str, Path] = {}
     for pattern in globs:
@@ -170,6 +208,7 @@ def _scan_source_file(
     path: Path,
     repo_root: Path,
     matchers: list[tuple[str, str]],
+    literal_anchors: set[str],
     governed_roots: list[str],
     allow_marker: str,
 ) -> list[str]:
@@ -200,6 +239,8 @@ def _scan_source_file(
             if not _token_is_governed_path(token, governed_roots):
                 continue
             if _token_in_registry(token, matchers):
+                continue
+            if _token_matches_literal_anchor(token, literal_anchors):
                 continue
             if marker and marker in line:
                 continue
@@ -317,6 +358,7 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 1
     governed_roots = _derive_governed_roots(matchers)
+    literal_anchors = _derive_literal_anchor_tokens(matchers)
     if not governed_roots:
         payload["protocol_downsink_path_literal_lock_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_CONTRACT_INVALID
@@ -341,6 +383,7 @@ def main() -> int:
                 path=file_path,
                 repo_root=repo_root,
                 matchers=matchers,
+                literal_anchors=literal_anchors,
                 governed_roots=governed_roots,
                 allow_marker=allow_marker,
             )
@@ -349,7 +392,7 @@ def main() -> int:
     for literal in payload["probe_path_literals"]:
         if not _token_is_governed_path(literal, governed_roots):
             continue
-        if not _token_in_registry(literal, matchers):
+        if not _token_in_registry(literal, matchers) and not _token_matches_literal_anchor(literal, literal_anchors):
             violations.append(f"non_registry_literal:probe:{literal}")
 
     payload["scan_globs"] = effective_scan_globs

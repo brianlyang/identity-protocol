@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from protocol_feedback_contract_common import PROTOCOL_FEEDBACK_ROOT_REL
 from tool_vendor_governance_common import contract_required, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -26,7 +27,6 @@ DIALOGUE_GOVERNANCE_REPORT_ROOT_REL = Path("runtime/reports")
 EXPERIENCE_RULEBOOK_DIR_REL = Path("runtime/rulebooks")
 EXPERIENCE_EXAMPLES_DIR_REL = Path("runtime/examples")
 EXPERIENCE_LOGS_DIR_REL = Path("runtime/logs/feedback")
-PROTOCOL_FEEDBACK_ROOT_REL = Path("runtime/protocol-feedback")
 CONTINUITY_REPORT_ROOT_REL = Path("runtime/reports/context-continuity")
 CONTINUITY_STATE_ROOT_REL = Path("runtime/state/context-continuity")
 MEMORY_ABSORPTION_ROOT_REL = Path("runtime/memory-absorption")

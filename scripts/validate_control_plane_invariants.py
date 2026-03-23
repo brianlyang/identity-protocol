@@ -86,19 +86,41 @@ def _mapping_rows(mapping_doc: dict[str, Any]) -> list[str]:
 
 
 def _bundle_rows() -> list[str]:
-    from required_gate_bundle_runner import BUNDLE_REQUIREMENT_ORDER  # local import for script stability
+    repo_root = resolve_repo_root("", start=__file__)
+    contract_mapping_path = _resolve_contract_mapping_path(repo_root)
+    from required_gate_bundle_runner import load_effective_requirement_maps  # local import for script stability
 
-    return sorted(set(str(x).strip() for x in BUNDLE_REQUIREMENT_ORDER if str(x).strip()))
+    requirement_order, _target_map, _status_map, _errors = load_effective_requirement_maps(
+        repo_root=repo_root,
+        mapping_path=contract_mapping_path,
+    )
+    return sorted(set(str(x).strip() for x in requirement_order if str(x).strip()))
 
 
 def _bundle_target_map() -> dict[str, str]:
-    from required_gate_bundle_runner import TARGET_NAME_BY_REQUIREMENT  # local import for script stability
+    repo_root = resolve_repo_root("", start=__file__)
+    contract_mapping_path = _resolve_contract_mapping_path(repo_root)
+    from required_gate_bundle_runner import load_effective_requirement_maps  # local import for script stability
 
+    _requirement_order, target_map, _status_map, _errors = load_effective_requirement_maps(
+        repo_root=repo_root,
+        mapping_path=contract_mapping_path,
+    )
     return {
         str(k).strip(): str(v).strip()
-        for k, v in TARGET_NAME_BY_REQUIREMENT.items()
+        for k, v in target_map.items()
         if str(k).strip() and str(v).strip()
     }
+
+
+def _resolve_contract_mapping_path(repo_root: Path) -> Path:
+    mapping_path, _active_file, alias_error = resolve_current_yaml_alias(
+        repo_root,
+        CONTRACT_BINDING_CURRENT_DEFAULT_REL,
+    )
+    if alias_error or not mapping_path.exists() or not mapping_path.is_file():
+        return (repo_root / CONTRACT_BINDING_CURRENT_DEFAULT_REL).resolve()
+    return mapping_path
 
 
 def _as_list(value: Any) -> list[Any]:

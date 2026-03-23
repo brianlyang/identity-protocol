@@ -238,6 +238,22 @@ run_probe probe_canonical_literal_lock_pass 0 protocol_downsink_path_literal_loc
   --operation validate \
   --json-only
 
+run_probe probe_protocol_feedback_root_literal_allowed 0 protocol_downsink_path_literal_lock_status PASS_REQUIRED \
+  python3 scripts/validate_protocol_downsink_path_literal_lock.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --operation validate \
+  --probe-path-literal "runtime/protocol-feedback" \
+  --json-only # downsink-path-lock: allow-nonregistry-literal
+
+run_probe probe_protocol_feedback_outbox_dir_literal_allowed 0 protocol_downsink_path_literal_lock_status PASS_REQUIRED \
+  python3 scripts/validate_protocol_downsink_path_literal_lock.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --operation validate \
+  --probe-path-literal "runtime/protocol-feedback/outbox-to-protocol" \
+  --json-only # downsink-path-lock: allow-nonregistry-literal
+
 # Negative probe: non-canonical mutation
 restore_task
 mutate_registry_entry_path "runtime_gate.ingress_wrapper" "runtime/gate/noncanonical_ingress_wrapper.py" # downsink-path-lock: allow-nonregistry-literal

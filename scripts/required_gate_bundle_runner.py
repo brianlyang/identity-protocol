@@ -18,6 +18,7 @@ from typing import Any
 
 import yaml
 
+from contract_binding_mapping_common import requirement_row_keys
 from protocol_infra_contract import (
     CTX_TOOL_TIMEOUT_ERROR_CODE,
     CTX_TOOL_TIMEOUT_MARKER,
@@ -119,6 +120,9 @@ BUNDLE_REQUIREMENT_ORDER: tuple[str, ...] = (
     "asb16-rq-041",
     "asb16-rq-042",
     "asb16-rq-043",
+    "asb16-rq-044",
+    "asb16-rq-045",
+    "asb16-rq-046",
     "asb16-rq-047",
     "asb16-rq-048",
     "asb16-rq-049",
@@ -171,6 +175,9 @@ TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
     "asb16-rq-041": "skill_sync_drift_guard",
     "asb16-rq-042": "agent_relay_final_answer",
     "asb16-rq-043": "identity_instance_pack_topology",
+    "asb16-rq-044": "identity_context_continuity",
+    "asb16-rq-045": "identity_reentry_brief",
+    "asb16-rq-046": "identity_context_continuity_receipts",
     "asb16-rq-047": "protocol_no_downgrade_motherline",
     "asb16-rq-048": "route_discovery_convergence",
     "asb16-rq-049": "feedback_operational_prompt",
@@ -224,6 +231,9 @@ STATUS_FIELD_BY_TARGET: dict[str, str] = {
     "skill_sync_drift_guard": "skill_sync_drift_guard_status",
     "agent_relay_final_answer": "agent_relay_final_answer_status",
     "identity_instance_pack_topology": "instance_pack_topology_status",
+    "identity_context_continuity": "identity_context_continuity_status",
+    "identity_reentry_brief": "identity_reentry_brief_status",
+    "identity_context_continuity_receipts": "identity_context_continuity_receipt_family_status",
     "protocol_no_downgrade_motherline": "compatibility_legacy_boundary_status",
     "route_discovery_convergence": "route_discovery_convergence_status",
     "feedback_operational_prompt": "feedback_operational_prompt_status",
@@ -1111,6 +1121,22 @@ def _build_effective_requirement_maps(
         errors.append(f"contract_mapping_invalid_root:{mapping_path}")
         mapping_doc = {}
 
+    for requirement_key in requirement_row_keys(mapping_doc):
+        mapping_row = mapping_doc.get(requirement_key)
+        if not isinstance(mapping_row, dict):
+            continue
+        bundle_target_name = str(mapping_row.get("bundle_target_name", "")).strip()
+        if not bundle_target_name:
+            continue
+        target_name_by_requirement[requirement_key] = bundle_target_name
+        if requirement_key not in requirement_order:
+            requirement_order.append(requirement_key)
+        bundle_status_field = str(mapping_row.get("bundle_status_field", "")).strip()
+        if not bundle_status_field:
+            bundle_status_field = _pick_primary_status_field(mapping_row)
+        if bundle_status_field:
+            status_field_by_target[bundle_target_name] = bundle_status_field
+
     registry_entry = "identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml"
     registry_path, _registry_active_file, registry_alias_error = _resolve_current_yaml_alias(repo_root, registry_entry)
     if registry_alias_error:
@@ -1161,6 +1187,14 @@ def _build_effective_requirement_maps(
     return tuple(requirement_order), target_name_by_requirement, status_field_by_target, errors
 
 
+def load_effective_requirement_maps(
+    *,
+    repo_root: Path,
+    mapping_path: Path,
+) -> tuple[tuple[str, ...], dict[str, str], dict[str, str], list[str]]:
+    return _build_effective_requirement_maps(repo_root=repo_root, mapping_path=mapping_path)
+
+
 def _parse_validator_entry(raw_entry: str) -> tuple[str, tuple[str, ...]]:
     # Example raw entries:
     # - scripts/validate_v16_intake_evidence_core.py::mode=intake_contract
@@ -1189,6 +1223,16 @@ def _select_validator_spec(
     target_name_by_requirement: dict[str, str],
 ) -> ValidatorSpec | None:
     target_name = target_name_by_requirement.get(requirement_key, requirement_key)
+    bundle_validator_id = str(row.get("bundle_validator_id", "")).strip()
+    if bundle_validator_id:
+        script_path, fixed_args = _parse_validator_entry(bundle_validator_id)
+        if script_path:
+            return ValidatorSpec(
+                requirement_key=requirement_key,
+                target_name=target_name,
+                script_path=script_path,
+                fixed_args=fixed_args,
+            )
     validator_ids = list(row.get("validator_ids") or [])
     parsed: list[tuple[str, tuple[str, ...]]] = [
         _parse_validator_entry(entry) for entry in validator_ids if str(entry or "").strip()
@@ -2034,6 +2078,10 @@ def main() -> int:
         target_name_by_requirement=effective_target_name_by_requirement,
     )
     mapping_errors.extend(spec_errors)
+    needs_cross_verification_bundle = any(
+        spec.target_name in {"cross_verification_tracks", "intake_evidence_quorum"}
+        for spec in specs
+    )
     result_rows: list[dict[str, Any]] = []
     failure_count = 0
     row_contract_error_count = 0
@@ -2056,7 +2104,7 @@ def main() -> int:
 
     if mapping_errors:
         failure_count += len(mapping_errors)
-    if not run_id_binding:
+    if needs_cross_verification_bundle and not run_id_binding:
         mapping_errors.append("run_id_binding_missing")
         failure_count += 1
 
@@ -2064,24 +2112,25 @@ def main() -> int:
     cross_verification_bundle_id = ""
     cross_verification_bundle_source = ""
     cross_verification_bundle_error = ""
-    try:
-        pack_path_for_bundle, _task_path = resolve_pack_and_task(
-            Path(args.catalog).expanduser().resolve(),
-            str(args.identity_id),
-        )
-        (
-            cross_verification_bundle_path,
-            cross_verification_bundle_id,
-            cross_verification_bundle_source,
-        ) = _resolve_cross_verification_bundle_context(
-            pack_path=pack_path_for_bundle,
-            run_id=run_id_binding,
-        )
-    except Exception as exc:
-        cross_verification_bundle_error = f"cross_verification_bundle_context_resolve_failed:{exc}"
-    if cross_verification_bundle_error:
-        mapping_errors.append(cross_verification_bundle_error)
-        failure_count += 1
+    if needs_cross_verification_bundle:
+        try:
+            pack_path_for_bundle, _task_path = resolve_pack_and_task(
+                Path(args.catalog).expanduser().resolve(),
+                str(args.identity_id),
+            )
+            (
+                cross_verification_bundle_path,
+                cross_verification_bundle_id,
+                cross_verification_bundle_source,
+            ) = _resolve_cross_verification_bundle_context(
+                pack_path=pack_path_for_bundle,
+                run_id=run_id_binding,
+            )
+        except Exception as exc:
+            cross_verification_bundle_error = f"cross_verification_bundle_context_resolve_failed:{exc}"
+        if cross_verification_bundle_error:
+            mapping_errors.append(cross_verification_bundle_error)
+            failure_count += 1
 
     wrapper_policy, wrapper_policy_errors = _resolve_wrapper_enforcement_policy(
         catalog_path=str(args.catalog),
