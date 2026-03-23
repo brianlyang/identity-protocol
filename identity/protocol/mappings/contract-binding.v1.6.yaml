@@ -1362,6 +1362,11 @@ asb16-rq-046:
   governance_anchor: docs/governance/identity-context-continuity-governance-v1.6.16.md#211-launcher-entry-bind-and-receipt-family-freeze
   review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md#5-shared-implementation-landing-absorbed-after-opening
   report_field_refs:
+    - required_contract
+    - auto_required_signal
+    - contract_key
+    - contract_id
+    - contract_derivation_mode
     - identity_context_continuity_receipt_family_status
     - checkpoint_receipt_status
     - migration_handoff_receipt_status
@@ -1376,6 +1381,7 @@ asb16-rq-046:
     - IP-ICREC-002
     - IP-ICREC-003
     - IP-ICREC-004
+    - IP-ICREC-005
   mapping_state: phase6_v1616_continuity_contract_freeze
 
 asb16-rq-030:

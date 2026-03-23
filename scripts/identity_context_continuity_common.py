@@ -18,6 +18,7 @@ REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY = "reentry_brief_consumption_contract_v1"
 REENTRY_BRIEF_CONSUMPTION_CONTRACT_ID = "rq_045_identity_reentry_brief_consumption_contract_v1"
 REENTRY_BRIEF_VALIDATOR_ID = "scripts/validate_identity_reentry_brief.py"
 REENTRY_CONSUMPTION_VALIDATOR_ID = "scripts/validate_identity_reentry_consumption.py"
+CONTINUITY_RECEIPT_CONTRACT_KEY = "context_continuity_receipt_family_contract_v1"
 CONTINUITY_RECEIPT_CONTRACT_ID = "rq_046_identity_context_continuity_receipt_family_contract_v1"
 CONTINUITY_RECEIPT_VALIDATOR_ID = "scripts/validate_identity_context_continuity_receipts.py"
 CONTINUITY_RECEIPT_KINDS: dict[str, str] = {
@@ -173,6 +174,56 @@ def continuity_contract_required(task_doc: dict[str, Any]) -> tuple[bool, dict[s
 def reentry_contract_required(task_doc: dict[str, Any]) -> tuple[bool, dict[str, Any], str]:
     contract, contract_key = resolve_contract(task_doc, REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY)
     return contract_required(contract), contract, contract_key
+
+
+def continuity_receipt_contract_required(
+    task_doc: dict[str, Any],
+) -> tuple[bool, dict[str, Any], str, str, list[str]]:
+    explicit_contract, explicit_key = resolve_contract(task_doc, CONTINUITY_RECEIPT_CONTRACT_KEY)
+    if explicit_contract:
+        return (
+            contract_required(explicit_contract),
+            explicit_contract,
+            explicit_key,
+            "explicit_contract",
+            [],
+        )
+
+    continuity_required, continuity_contract, continuity_key = continuity_contract_required(task_doc)
+    reentry_required, reentry_contract, reentry_key = reentry_contract_required(task_doc)
+
+    derived_required = bool(continuity_required or reentry_required)
+    derived_from = reentry_key if reentry_contract else continuity_key
+    contract_doc: dict[str, Any] = {
+        "required": derived_required,
+        "contract_id": CONTINUITY_RECEIPT_CONTRACT_ID,
+        "validator": CONTINUITY_RECEIPT_VALIDATOR_ID,
+        "fail_mode": "fail_required",
+        "derived_from_contract_key": derived_from,
+        "source_contract_keys": [
+            key
+            for key in (continuity_key if continuity_contract else "", reentry_key if reentry_contract else "")
+            if clean_string(key)
+        ],
+        "derivation_mode": "upstream_contract_projection",
+    }
+
+    issues: list[str] = []
+    receipt_family_contract_id = clean_string(reentry_contract.get("receipt_family_contract_id"))
+    if reentry_contract:
+        if receipt_family_contract_id:
+            contract_doc["contract_id"] = receipt_family_contract_id
+        contract_doc["fail_mode"] = clean_string(reentry_contract.get("fail_mode")) or "fail_required"
+        contract_doc["receipt_family_contract_id"] = receipt_family_contract_id
+
+    if derived_required and not reentry_contract:
+        issues.append("receipt_family_binding_missing_reentry_contract")
+    if derived_required and receipt_family_contract_id and receipt_family_contract_id != CONTINUITY_RECEIPT_CONTRACT_ID:
+        issues.append("receipt_family_contract_id_mismatch")
+    if derived_required and reentry_contract and not receipt_family_contract_id:
+        issues.append("receipt_family_contract_id_missing")
+
+    return derived_required, contract_doc, derived_from or CONTINUITY_RECEIPT_CONTRACT_KEY, "derived_from_upstream_contracts", issues
 
 
 def continuity_report_root(pack_root: Path) -> Path:

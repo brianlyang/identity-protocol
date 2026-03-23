@@ -189,7 +189,7 @@ The stream has now moved beyond a docs-only opening. Audit-accepted machine land
 10. Current execution-closeout strengthening on live identities is now also proven through shared infrastructure rather than pack-local edits:
    - `scripts/validate_identity_context_continuity_receipts.py` now accepts multi-hop migration ancestry only when the chain still joins back to the bounded checkpoint root, eliminating the prior false red on repeated `pre-migrate` cycles without weakening fail-close;
    - `scripts/repair_contract_backfill.py` now restores the three `rq_039` dependent contract skeletons (`tool_installation_contract`, `vendor_api_discovery_contract`, `vendor_api_solution_contract`) so required coverage no longer fails on missing dependent-contract drift;
-   - `scripts/validate_required_contract_coverage.py --operation inspection` now replays `failed_required_contract_count=0` for `base-repo-audit-expert-v3`, while `rq_052` stays green across all four active runtime identities after the live dialogue-retention resync on `base-repo-closure-orchestrator`.
+   - `base-repo-audit-expert-v3` no longer carries protocol-owned required failures on the adopted continuity/artifact-family subset, while `rq_052` stays green across all four active runtime identities after the live dialogue-retention resync on `base-repo-closure-orchestrator`; any remaining required coverage red on tool/vendor evidence stays classified as instance-owned capability delivery debt outside `v1.6.18` routing semantics.
 11. Audit now explicitly accepts the six-layer interpretation model for memory-like persisted artifacts:
    - generic `memory` wording is non-canonical;
    - every persisted artifact must resolve to exactly one frozen family;

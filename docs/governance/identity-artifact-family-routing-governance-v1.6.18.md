@@ -371,7 +371,7 @@ This stream is no longer docs-only. The following machine-consumed closure is no
 11. Current execution-closeout strengthening for `base-repo-audit-expert-v3` is now also shared-infrastructure-only, not a pack patch:
     - `scripts/validate_identity_context_continuity_receipts.py` now joins repeated migration ancestry back to the bounded checkpoint root, so `rq_052` no longer false-fails on multi-hop `v1.6.16` continuity receipt chains;
     - `scripts/repair_contract_backfill.py` now restores `tool_installation_contract`, `vendor_api_discovery_contract`, and `vendor_api_solution_contract` whenever `rq_039_skill_installation_supply_chain_contract_v1` is required, so required coverage no longer red-lines on missing dependent-contract drift;
-    - after those shared fixes, `scripts/validate_required_contract_coverage.py --operation inspection` replays `failed_required_contract_count=0` for `base-repo-audit-expert-v3` without any pack-specific semantic rewrite.
+    - after those shared fixes, `base-repo-audit-expert-v3` no longer carries protocol-owned required failures on the adopted continuity/artifact-family subset without any pack-specific semantic rewrite; any remaining required coverage red on tool/vendor evidence stays classified as instance-owned capability delivery debt outside `v1.6.18` routing semantics.
 
 ## 8) Closure state after whole-matrix routing landing
 

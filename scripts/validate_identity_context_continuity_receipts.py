@@ -10,6 +10,7 @@ from typing import Any
 from identity_context_continuity_common import (
     CHECKPOINT_ARTIFACT_KINDS,
     CONTINUITY_AUXILIARY_RECEIPT_KINDS,
+    CONTINUITY_RECEIPT_CONTRACT_ID,
     CONTINUITY_RECEIPT_KINDS,
     STATUS_FAIL_REQUIRED,
     build_continuity_lineage_index,
@@ -17,17 +18,20 @@ from identity_context_continuity_common import (
     STATUS_SKIPPED_NOT_REQUIRED,
     clean_string,
     collect_continuity_joinable_ids,
+    continuity_receipt_contract_required,
     continuity_report_location_status,
     continuity_report_root,
     discover_continuity_report_doc,
     load_json,
     resolve_pack_task,
+    validate_contract_tuple,
 )
 
 ERR_MEMBER_MISSING = "IP-ICREC-001"
 ERR_MEMBER_INVALID = "IP-ICREC-002"
 ERR_JOIN_INVALID = "IP-ICREC-003"
 ERR_UNKNOWN_KIND = "IP-ICREC-004"
+ERR_CONTRACT_INVALID = "IP-ICREC-005"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
@@ -475,7 +479,7 @@ def main() -> int:
     catalog_path = Path(catalog_raw).expanduser().resolve() if catalog_raw else None
 
     try:
-        pack_root, task_path, _task_doc = resolve_pack_task(
+        pack_root, task_path, task_doc = resolve_pack_task(
             catalog_path=catalog_path,
             current_task=clean_string(args.current_task),
             identity_id=args.identity_id,
@@ -492,6 +496,11 @@ def main() -> int:
         "resolved_pack_path": str(pack_root),
         "task_path": str(task_path),
         "identity_context_continuity_receipt_family_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "required_contract": False,
+        "auto_required_signal": False,
+        "contract_key": "",
+        "contract_id": "",
+        "contract_derivation_mode": "",
         "checkpoint_receipt_status": STATUS_SKIPPED_NOT_REQUIRED,
         "migration_handoff_receipt_status": STATUS_SKIPPED_NOT_REQUIRED,
         "reentry_brief_receipt_status": STATUS_SKIPPED_NOT_REQUIRED,
@@ -512,6 +521,31 @@ def main() -> int:
         "error_code": "",
         "evidence_ref": str(task_path),
     }
+
+    required_contract, contract_doc, contract_key, contract_derivation_mode, contract_issues = continuity_receipt_contract_required(task_doc)
+    payload["required_contract"] = bool(required_contract)
+    payload["auto_required_signal"] = bool(required_contract)
+    payload["contract_key"] = clean_string(contract_key)
+    payload["contract_id"] = clean_string(contract_doc.get("contract_id")) or CONTINUITY_RECEIPT_CONTRACT_ID
+    payload["contract_derivation_mode"] = clean_string(contract_derivation_mode)
+
+    if required_contract:
+        tuple_issues = validate_contract_tuple(
+            contract_doc,
+            expected_contract_id=CONTINUITY_RECEIPT_CONTRACT_ID,
+            accepted_validator_ids=("scripts/validate_identity_context_continuity_receipts.py",),
+        )
+        contract_issues = [*contract_issues, *tuple_issues]
+    if contract_issues:
+        for role in ROLE_ORDER:
+            payload[ROLE_STATUS_FIELDS[role]] = STATUS_FAIL_REQUIRED
+        payload["identity_context_continuity_receipt_family_status"] = STATUS_FAIL_REQUIRED
+        payload["receipt_join_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_CONTRACT_INVALID
+        payload["stale_reasons"] = list(dict.fromkeys(contract_issues))
+        payload["evidence_ref"] = str(task_path)
+        _emit(payload, json_only=args.json_only)
+        return 1
 
     discovered: dict[str, tuple[Path | None, str]] = {}
     explicit_inputs = {

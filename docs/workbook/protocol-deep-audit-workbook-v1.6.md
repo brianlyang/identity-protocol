@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 92`, `command snippets checked: 970`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 92`, `command snippets checked: 980`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -895,7 +895,7 @@ Root cause:
   - `scripts/validate_identity_artifact_family_routing.py` and `scripts/ci/run_identity_artifact_family_routing_probes_ci.sh` now land the whole-matrix routing closure and fail-close on missing contract coverage, generic `memory` sink drift, pack/runtime family collisions, protocol-feedback root drift, continuity/reentry anchor drift, and memory-absorption active-path leakage without collapsing family-specific owner semantics into one super-validator;
   - `scripts/create_identity_pack.py`, `scripts/repair_contract_backfill.py`, `scripts/release_readiness_check.py`, `scripts/ci/run_required_runtime_gates_ci.sh`, `scripts/validate_required_contract_coverage.py`, and `scripts/required_gate_bundle_runner.py` now consume the same routing row instead of leaving whole-matrix routing as docs-only guidance;
   - current workspace-local replay stays `PASS_REQUIRED` on `scripts/validate_identity_artifact_family_routing.py` for all four active runtime identities: `base-repo-audit-expert-v3`, `custom-creative-ecom-analyst`, `base-repo-architect`, and `base-repo-closure-orchestrator`;
-  - `base-repo-audit-expert-v3` now also replays `failed_required_contract_count=0` on `scripts/validate_required_contract_coverage.py --operation inspection` after two shared closeout-strengthening moves landed together: `scripts/validate_identity_context_continuity_receipts.py` now joins repeated migration ancestry back to the bounded checkpoint root, and `scripts/repair_contract_backfill.py` now restores the three `rq_039` dependent contract skeletons (`tool_installation_contract`, `vendor_api_discovery_contract`, `vendor_api_solution_contract`) instead of leaving required coverage red on missing dependent-contract drift;
+  - `base-repo-audit-expert-v3` no longer carries protocol-owned required failures on the adopted continuity/artifact-family subset after two shared closeout-strengthening moves landed together: `scripts/validate_identity_context_continuity_receipts.py` now joins repeated migration ancestry back to the bounded checkpoint root and projects bundle-compatible `RQ-046` contract truth, while `scripts/repair_contract_backfill.py` restores the three `rq_039` dependent contract skeletons (`tool_installation_contract`, `vendor_api_discovery_contract`, `vendor_api_solution_contract`) instead of leaving protocol-owned routing closure blocked on missing dependent-contract drift; any remaining required coverage red on tool/vendor evidence stays classified as instance-owned capability delivery debt outside `ISSUE-032`;
   - `base-repo-closure-orchestrator` now also replays `PASS_REQUIRED` on `rq_052` after the protocol-owned post-delivery runtime hook bridge (`scripts/run_identity_delivery_runtime_hooks.py` -> `scripts/run_identity_dialogue_retention_guard_runtime.py`) refreshed live dialogue-retention evidence without reopening routing semantics;
   - `base-repo-architect` remains green on `rq_052` while its optional dialogue-retention family is `SKIPPED_NOT_REQUIRED`, confirming the routing lane preserves optional-family semantics instead of forcing synthetic replay debt.
 - `execution_closeout_boundary`:
@@ -988,6 +988,37 @@ Root cause:
   - `scripts/ci/run_identity_codex_launcher_probes_ci.sh` now injects env/catalog mismatch and proves the installed shortcut still returns a valid mismatch-aware command bundle and a valid dry-run resume payload;
   - the fresh-shell ingress path is now hardened by the protocol-owned env loaders (`scripts/use_local_identity_env.sh` and related launcher probe coverage), which expose `${CODEX_HOME}/bin` on `PATH` idempotently instead of leaving short-launcher availability to manual shell edits;
   - `README.md` plus the `v1.6.14` governance/review pair now explicitly separate shortcut execution-time catalog pinning from the operator-visible preferred command surface under mismatch.
+
+### ISSUE-036 - `RQ-046` receipt-family bundle projection and release-freeze budget ceiling lagged final 1.6.x hardening
+
+- `status`: CLOSED
+- `problem_statement`: late `1.6.x` hardening exposed two release-freeze gaps that were both shared-infrastructure issues rather than pack patches:
+  - `scripts/validate_identity_context_continuity_receipts.py` returned a correct direct PASS/FAIL verdict but did not project bundle-compatible contract truth for `required_gate_bundle_runner.py --target-name identity_context_continuity_receipts`, so single-target bundle probes could still fail-close on `bundle_entry_contract_failed`;
+  - the final continuity hardening introduced one new `IP-ICREC-005` code, leaving the machine-maintained control-plane budget ceiling one raw error-code behind audited head.
+- `primary_owner_doc`: `docs/governance/identity-context-continuity-governance-v1.6.16.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md`
+  - `identity/protocol/mappings/control-plane-budget.v1.6.yaml`
+  - `identity/protocol/mappings/control-plane-status.v1.6.json`
+  - `scripts/required_gate_bundle_runner.py`
+- `machine_gate`:
+  - `scripts/validate_identity_context_continuity_receipts.py`
+  - direct replay: `python3 scripts/required_gate_bundle_runner.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --operation scan --target-name identity_context_continuity_receipts --json-only`
+  - `scripts/ci/run_identity_context_continuity_probes_ci.sh`
+  - `scripts/validate_control_plane_budget.py`
+  - `scripts/validate_control_plane_status_sync.py`
+- `root_cause`: RC-01 and RC-03
+- `stop_condition`:
+  - inherited `RQ-046` requirement truth is projected as bundle-compatible runtime fields instead of being available only to direct validator consumers;
+  - non-canonical `receipt_family_contract_id` drift fail-closes before receipt-join interpretation;
+  - single-target bundle replay for `identity_context_continuity_receipts` returns `PASS_REQUIRED` on a live adopted identity;
+  - the final `1.6.x` control-plane budget/status baseline is refreshed through the machine renderers and returns green without hand-edited budget shortcuts.
+- `current_evidence`:
+  - `scripts/identity_context_continuity_common.py` now derives receipt-family requirement truth from the inherited `context_continuity_contract_v1` / `reentry_brief_consumption_contract_v1` pair when no standalone task key exists;
+  - `scripts/validate_identity_context_continuity_receipts.py` now emits `required_contract`, `auto_required_signal`, `contract_key`, `contract_id`, and `contract_derivation_mode`, and it now fail-closes non-canonical receipt-family binding drift with `IP-ICREC-005`;
+  - `scripts/ci/run_identity_context_continuity_probes_ci.sh` now proves both the positive bundle-compatible projection and a negative contract-drift fixture while keeping the existing multi-hop join proof intact;
+  - direct live replay on `base-repo-audit-expert-v3` now returns `bundle_status=PASS_REQUIRED` for `python3 scripts/required_gate_bundle_runner.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --operation scan --target-name identity_context_continuity_receipts --json-only`;
+  - `python3 scripts/render_control_plane_budget.py --write --json-only` and `python3 scripts/render_control_plane_status.py --write --json-only` now re-anchor the final `1.6.x` release-freeze baseline to `error_codes=575`, and both `scripts/validate_control_plane_budget.py --json-only` and `scripts/validate_control_plane_status_sync.py --json-only` return `PASS_REQUIRED`.
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 

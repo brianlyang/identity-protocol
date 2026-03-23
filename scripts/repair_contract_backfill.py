@@ -66,6 +66,7 @@ from create_identity_pack import (
     CONTEXT_CONTINUITY_REPORT_ROOT_REL,
     CONTEXT_CONTINUITY_STATE_ROOT_REL,
     CONTEXT_CONTINUITY_VALIDATOR_ID,
+    CONTINUITY_RECEIPT_CONTRACT_ID,
     CONTINUITY_RECEIPT_VALIDATOR_ID,
     INSTANCE_SCRIPT_MANIFEST_RELATIVE_PATH,
     INSTANCE_SCRIPT_MANIFEST_VALIDATOR_ID,
@@ -1277,6 +1278,8 @@ def _continuity_contract_invalid_keys(task: dict[str, Any]) -> list[str]:
     if isinstance(reentry_contract, dict):
         if str(reentry_contract.get("contract_id", "")).strip() != REENTRY_BRIEF_CONSUMPTION_CONTRACT_ID:
             invalid.append(REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY)
+        if str(reentry_contract.get("receipt_family_contract_id", "")).strip() != CONTINUITY_RECEIPT_CONTRACT_ID:
+            invalid.append(REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY)
         validators = reentry_contract.get("validators")
         normalized = [str(item).strip() for item in validators if str(item).strip()] if isinstance(validators, list) else []
         expected = {
@@ -1369,6 +1372,9 @@ def _normalize_continuity_contracts(task: dict[str, Any]) -> tuple[list[str], li
                 merged["validator"] = CONTEXT_CONTINUITY_VALIDATOR_ID
                 restored_validator_keys.append(key)
         elif key == REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY:
+            if str(merged.get("receipt_family_contract_id", "")).strip() != CONTINUITY_RECEIPT_CONTRACT_ID:
+                merged["receipt_family_contract_id"] = CONTINUITY_RECEIPT_CONTRACT_ID
+                restored_contract_keys.append(key)
             validators = merged.get("validators")
             normalized = [str(item).strip() for item in validators if str(item).strip()] if isinstance(validators, list) else []
             required = [REENTRY_BRIEF_VALIDATOR_ID, REENTRY_CONSUMPTION_VALIDATOR_ID]

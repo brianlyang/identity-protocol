@@ -371,7 +371,9 @@ Hard semantics:
 2. These receipt families must remain distinct from actor-session tuple receipts, thread UUIDs, launcher installation receipts, and route/script orchestration receipts.
 3. Receipt-family validation must prove that checkpoint production, migration handoff, startup briefing, and startup consumption remain machine-joinable without collapsing into one undifferentiated blob.
 4. Missing required receipt-family members, unknown receipt kinds, or broken join lineage are fail-close conditions.
-5. Receipt-family closure is runtime evidence only; it does not transfer ownership of startup entry, topology, or route/script semantics away from their inherited streams.
+5. The receipt-family obligation may be declared through an explicit `context_continuity_receipt_family_contract_v1` block or inherited from required `context_continuity_contract_v1` / `reentry_brief_consumption_contract_v1`; in either case shared validators must still emit bundle-consumable contract metadata (`required_contract`, `auto_required_signal`, `contract_key`, `contract_id`, `contract_derivation_mode`).
+6. When `reentry_brief_consumption_contract_v1` carries the inherited receipt-family binding, its `receipt_family_contract_id` must remain the canonical `rq_046_identity_context_continuity_receipt_family_contract_v1`. Missing or non-canonical bindings are fail-close and shared creator/backfill surfaces must restore the canonical binding instead of relying on pack-local exceptions.
+7. Receipt-family closure is runtime evidence only; it does not transfer ownership of startup entry, topology, or route/script semantics away from their inherited streams.
 
 ### rq_051_identity_dialogue_retention_contract_v1
 

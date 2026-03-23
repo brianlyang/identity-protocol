@@ -208,16 +208,21 @@ This stream now contains both the machine-facing contract freeze and the first s
     - `scripts/validate_identity_context_continuity_receipts.py` now joins migration handoff ancestry back to the anchored checkpoint root instead of assuming the latest migration must point directly at the checkpoint receipt;
     - `scripts/ci/run_identity_context_continuity_probes_ci.sh` now proves that repeated `pre-migrate -> pre-migrate -> post-recover` lineage remains canonical without manual receipt rewrites;
     - this is a shared validator/probe strengthening, not a pack-specific exception.
-18. This answer-surface landing does **not** by itself complete instance adoption; audit therefore froze the required hard-downsink/template materialization target under pack-local `scripts/` as:
+18. Audit also now freezes `RQ-046` as a bundle-compatible contract projection instead of a direct-validator-only shape:
+    - `scripts/validate_identity_context_continuity_receipts.py` now emits `required_contract`, `auto_required_signal`, `contract_key`, `contract_id`, and `contract_derivation_mode` even when the receipt-family requirement is inherited from `context_continuity_contract_v1` + `reentry_brief_consumption_contract_v1` rather than a standalone task key;
+    - direct live replay on `base-repo-audit-expert-v3` now shows `python3 scripts/required_gate_bundle_runner.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --operation scan --target-name identity_context_continuity_receipts --json-only` returning `bundle_status=PASS_REQUIRED`;
+    - the continuity probe lane now also includes a negative fixture where `receipt_family_contract_id` is deliberately rewritten to a non-canonical id, and the validator now fail-closes that drift with `IP-ICREC-005` instead of letting receipt-join semantics silently continue.
+    - `scripts/repair_contract_backfill.py` now treats that rewritten `receipt_family_contract_id` as shared continuity contract drift and restores the canonical `rq_046_identity_context_continuity_receipt_family_contract_v1` binding instead of leaving repair semantics to pack-local hand edits.
+19. This answer-surface landing does **not** by itself complete instance adoption; audit therefore froze the required hard-downsink/template materialization target under pack-local `scripts/` as:
     - `run_identity_context_continuity_guard.sh`
     - `emit_identity_context_checkpoint.py`
     - `materialize_identity_reentry_brief.py`
     - `emit_identity_reentry_consumption_receipt.py`
     - `INSTANCE_SCRIPT_MANIFEST.json`
-19. Audit freezes the guard-state and guard-receipt targets under the pack-local runtime roots as:
+20. Audit freezes the guard-state and guard-receipt targets under the pack-local runtime roots as:
     - `runtime/state/context-continuity/guard-state.json`
     - `runtime/reports/context-continuity/guard-*.json`
-20. Audit also freezes the exact runtime artifact targets that those pack-local executables must produce:
+21. Audit also freezes the exact runtime artifact targets that those pack-local executables must produce:
     - `runtime/reports/context-continuity/continuity-rolling-*.json`
     - `runtime/reports/context-continuity/continuity-stage-*.json`
     - `runtime/reports/context-continuity/continuity-migration-*.json`
@@ -226,35 +231,35 @@ This stream now contains both the machine-facing contract freeze and the first s
     - `runtime/reports/context-continuity/migration-receipt.json`
     - `runtime/reports/context-continuity/reentry-brief-receipt.json`
     - `runtime/reports/context-continuity/reentry-consumption-receipt.json`
-21. Audit freezes the semantic split as non-negotiable:
+22. Audit freezes the semantic split as non-negotiable:
     - the shell guard is the proactive lifecycle/tick dispatcher,
     - Python writers are deterministic payload emitters,
     - neither side may absorb the other's role without reopening semantics.
-22. That adoption gap is now closed for the first live pilot: `base-repo-closure-orchestrator` has those pack-local script files, manifest rows, guard-state files, continuity artifacts, governed reentry brief, and the required checkpoint / migration / brief / consumption receipts under `.identity/base-repo-closure-orchestrator/`.
-23. Audit also freezes one important interpretation rule discovered during live proof: `runtime/reports/context-continuity/guard-*.json` with `receipt_family=identity_context_continuity_guard_receipt_v1` are auxiliary protocol-owned control receipts, but they are not members of the four-role `RQ-046` receipt-family join and therefore must be ignored by the join validator rather than treated as unknown continuity-family violations.
-24. The first live pilot proof was reproduced through the shared protocol-owned path rather than operator patching:
+23. That adoption gap is now closed for the first live pilot: `base-repo-closure-orchestrator` has those pack-local script files, manifest rows, guard-state files, continuity artifacts, governed reentry brief, and the required checkpoint / migration / brief / consumption receipts under `.identity/base-repo-closure-orchestrator/`.
+24. Audit also freezes one important interpretation rule discovered during live proof: `runtime/reports/context-continuity/guard-*.json` with `receipt_family=identity_context_continuity_guard_receipt_v1` are auxiliary protocol-owned control receipts, but they are not members of the four-role `RQ-046` receipt-family join and therefore must be ignored by the join validator rather than treated as unknown continuity-family violations.
+25. The first live pilot proof was reproduced through the shared protocol-owned path rather than operator patching:
     - `python3 scripts/repair_contract_backfill.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-closure-orchestrator --apply --json-only`
     - `.identity/base-repo-closure-orchestrator/scripts/run_identity_context_continuity_guard.sh tick --turn-count 15 --json-only`
     - `.identity/base-repo-closure-orchestrator/scripts/run_identity_context_continuity_guard.sh pre-migrate --json-only`
     - `.identity/base-repo-closure-orchestrator/scripts/run_identity_context_continuity_guard.sh post-recover --json-only`
     - followed by the four continuity validators plus `scripts/render_identity_context_continuity_bundle.py` and `scripts/render_identity_context_reentry_answers.py`, all returning `PASS_REQUIRED` for the live pilot state.
-25. Additional routing clarification is now frozen around **fixed canonical lane paths**:
+26. Additional routing clarification is now frozen around **fixed canonical lane paths**:
     - continuity / reentry stays only under `runtime/reports/context-continuity/**` plus `runtime/state/context-continuity/active-reentry-brief.json`;
     - dialogue-governance stays only under the dialogue report family in `runtime/reports/`;
     - experience-feedback stays on `runtime/rulebooks/**`, `runtime/examples/*experience-feedback*.json`, and `runtime/logs/feedback/*.json`;
     - protocol-feedback stays on `runtime/protocol-feedback/**`;
     - `runtime/memory-absorption/**` remains legacy absorption/quarantine only and must not be consumed as if it were active continuity, dialogue, learning, or protocol-feedback authority.
-26. Required-coverage adoption is now also closed for this stream:
+27. Required-coverage adoption is now also closed for this stream:
     - `scripts/validate_required_contract_coverage.py` now classifies `identity_context_continuity`, `identity_reentry_brief`, `identity_reentry_consumption`, and `identity_context_continuity_receipts` as **instance-adopted protocol targets** when the continuity contracts are required and their canonical runtime surfaces are materialized;
     - they are no longer silently demoted to lane-excluded `SKIPPED_NOT_REQUIRED` inside instance-lane coverage merely because generic current-round protocol-entry correlation is absent.
-27. Evidence for that closure was reproduced on both synthetic and live surfaces:
+28. Evidence for that closure was reproduced on both synthetic and live surfaces:
     - `bash scripts/ci/run_identity_context_continuity_probes_ci.sh` now asserts a synthetic continuity pack plus synthetic catalog where required coverage returns those four targets as `PASS_REQUIRED` and `instance_adopted_protocol_target=true`;
     - `python3 scripts/validate_required_contract_coverage.py --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-id base-repo-closure-orchestrator --operation inspection --json-only` now returns `PASS_REQUIRED` (`rc=0`) with `instance_adopted_protocol_targets_included=["identity_context_continuity","identity_context_continuity_receipts","identity_reentry_brief","identity_reentry_consumption"]` and zero required failures for the inspection lane.
-28. The formerly pending launcher/startup consumer bridge is now machine-landed through the inherited `v1.6.14` launcher path rather than through a continuity-side ad hoc helper:
+29. The formerly pending launcher/startup consumer bridge is now machine-landed through the inherited `v1.6.14` launcher path rather than through a continuity-side ad hoc helper:
     - `scripts/identity_codex_launcher_common.py` now consumes the protocol-owned continuity-support bundle and, when it recommends `consume_governed_reentry_brief`, invokes the canonical pack-local `run_identity_context_continuity_guard.sh post-recover --json-only` path before handing control to Codex;
     - `bash scripts/ci/run_identity_codex_launcher_probes_ci.sh` now proves the real sequence `pre-migrate -> launcher exec/startup -> reentry-consumption-receipt` in an isolated runtime;
     - live runtime replay on `base-repo-closure-orchestrator` now shows `pre-migrate` degrading `receipt_family_observation_status` to `FAIL_REQUIRED`, followed by launcher exec/startup restoring it to `PASS_REQUIRED` without manual post-recover intervention.
-29. Audit then reproduced the same launcher-owned bridge on a second real runtime identity in the same workspace, `base-repo-audit-expert-v3`, without manual continuity-side receipt emission:
+30. Audit then reproduced the same launcher-owned bridge on a second real runtime identity in the same workspace, `base-repo-audit-expert-v3`, without manual continuity-side receipt emission:
     - `python3 scripts/resolve_identity_context.py resolve --identity-id base-repo-audit-expert-v3 --repo-catalog identity/catalog/identities.yaml --local-catalog ../.identity/catalog.local.yaml` returned `source_layer=project`, `catalog_path=/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml`, and the canonical pack root under `.identity/base-repo-audit-expert-v3/`;
     - `.identity/base-repo-audit-expert-v3/scripts/run_identity_context_continuity_guard.sh --catalog .identity/catalog.local.yaml pre-migrate --json-only` refreshed the governed migration checkpoint and `active-reentry-brief.json`;
     - `python3 scripts/render_identity_context_continuity_bundle.py --identity-id base-repo-audit-expert-v3 --catalog ../.identity/catalog.local.yaml --json-only` then showed `startup_reentry_readiness_status=PASS_REQUIRED` while `receipt_family_observation_status=FAIL_REQUIRED`, proving the bridge was still incomplete immediately after `pre-migrate`;

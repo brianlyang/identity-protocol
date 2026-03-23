@@ -234,11 +234,17 @@ Minimum additional requirements:
 20. This rule is intentionally narrow and does not reopen the generic lane-partition policy for unrelated protocol-governance targets; it applies only to protocol-defined families whose adopted truth is pack-local runtime evidence under the fixed continuity path families above.
 21. Probe coverage for this rule is mandatory in the continuity probe lane so the adapter cannot regress back to “validators green, required-coverage blind”.
 22. Continuity receipt-family join semantics are now explicitly frozen as **lineage-graph joins**, not single-hop-only joins:
-   - `checkpoint-receipt.json` still anchors the bounded family root;
-   - `migration-receipt.json` may legitimately supersede an earlier migration checkpoint, so long as the current migration ancestry remains joinable back to the anchored checkpoint;
-   - `reentry-brief-receipt.json` and `reentry-consumption-receipt.json` must still bind only through canonical continuity ids emitted by the same bounded family.
+    - `checkpoint-receipt.json` still anchors the bounded family root;
+    - `migration-receipt.json` may legitimately supersede an earlier migration checkpoint, so long as the current migration ancestry remains joinable back to the anchored checkpoint;
+    - `reentry-brief-receipt.json` and `reentry-consumption-receipt.json` must still bind only through canonical continuity ids emitted by the same bounded family.
 23. Shared validators/probes must therefore prove repeated `pre-migrate -> pre-migrate -> post-recover` cycles without hand-edited receipt rewrites; a newer migration handoff chained through an earlier migration is canonical evidence, not drift.
-24. This does **not** weaken fail-close behavior: a migration lineage still fails if its ancestry cannot be joined back to the bounded checkpoint root, and reentry consumption still fails if it no longer joins through the canonical reentry brief lineage.
+24. `RQ-046` receipt-family validation is also frozen as a **bundle-compatible contract projection**, not just a direct validator verdict:
+    - when the family is required through the inherited `context_continuity_contract_v1` / `reentry_brief_consumption_contract_v1` pair instead of a standalone task key,
+    - `scripts/validate_identity_context_continuity_receipts.py` must still emit bundle-consumable fields `required_contract`, `auto_required_signal`, `contract_key`, `contract_id`, and `contract_derivation_mode`.
+25. That projection rule exists so single-target `required_gate_bundle_runner.py --target-name identity_context_continuity_receipts` probes, required-gate bundle rows, and other shared control-plane consumers can reuse the same `RQ-046` truth without pack-specific shims or ad hoc bundle exceptions.
+26. If the inherited reentry contract points at a missing or non-canonical `receipt_family_contract_id`, the receipt-family validator must fail-close before receipt-join interpretation rather than silently treating the join as valid evidence.
+27. Shared creator/backfill surfaces must therefore restore `reentry_brief_consumption_contract_v1.receipt_family_contract_id` back to the canonical `rq_046_identity_context_continuity_receipt_family_contract_v1` binding whenever drift is detected; leaving a pack in a permanently fail-close state is not a canonical repair strategy.
+28. This does **not** weaken fail-close behavior: a migration lineage still fails if its ancestry cannot be joined back to the bounded checkpoint root, and reentry consumption still fails if it no longer joins through the canonical reentry brief lineage.
 
 ### 2.10 Coding-facing schema freeze
 

@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-23T14:15:02Z",
-  "git_head_short": "1291e0d",
+  "generated_at_utc": "2026-03-23T14:28:36Z",
+  "git_head_short": "eb6743f",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -45,7 +45,7 @@
         ],
         "observed": {
           "validator_scripts": 204,
-          "error_codes": 574,
+          "error_codes": 575,
           "error_code_families": 209,
           "mapping_rows_missing_in_bundle": 0,
           "bundle_rows": 52,
@@ -69,8 +69,8 @@
             "fail": 207
           },
           "error_codes": {
-            "warn": 574,
-            "fail": 580
+            "warn": 575,
+            "fail": 581
           },
           "error_code_families": {
             "warn": 209,

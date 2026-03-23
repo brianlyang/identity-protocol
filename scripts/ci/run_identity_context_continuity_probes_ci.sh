@@ -586,6 +586,16 @@ broken_join_doc = reentry_consumption_receipt_doc(
 )
 write_json(broken_join_receipt_path, broken_join_doc)
 
+receipt_contract_drift_pack = tmp_root / "receipt-family-contract-drift-pack"
+clone_pack(receipt_pass_pack, receipt_contract_drift_pack)
+receipt_contract_drift_task = json.loads((receipt_contract_drift_pack / "CURRENT_TASK.json").read_text(encoding="utf-8"))
+receipt_contract_drift_task[REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY]["receipt_family_contract_id"] = (
+    "rq_046_non_canonical_receipt_family_contract_v1"
+)
+write_json(receipt_contract_drift_pack / "CURRENT_TASK.json", receipt_contract_drift_task)
+receipt_contract_drift_catalog = tmp_root / "receipt-family-contract-drift-catalog.local.yaml"
+write_catalog(receipt_contract_drift_catalog, pack_root=receipt_contract_drift_pack)
+
 coverage_pass_catalog = tmp_root / "coverage-pass-catalog.local.yaml"
 write_catalog(coverage_pass_catalog, pack_root=receipt_pass_pack)
 
@@ -623,6 +633,8 @@ exports = {
     "REENTRY_RECEIPT_BAD_LOCATION_PATH": reentry_receipt_bad_location_path,
     "RECEIPT_PASS_TASK": receipt_pass_pack / "CURRENT_TASK.json",
     "RECEIPT_MULTIHOP_TASK": receipt_multihop_pack / "CURRENT_TASK.json",
+    "RECEIPT_CONTRACT_DRIFT_TASK": receipt_contract_drift_pack / "CURRENT_TASK.json",
+    "RECEIPT_CONTRACT_DRIFT_CATALOG": receipt_contract_drift_catalog,
     "COVERAGE_PASS_CATALOG": coverage_pass_catalog,
     "RECEIPT_MISSING_MEMBER_TASK": receipt_missing_member_pack / "CURRENT_TASK.json",
     "RECEIPT_UNKNOWN_KIND_TASK": receipt_unknown_kind_pack / "CURRENT_TASK.json",
@@ -654,6 +666,9 @@ REENTRY_RECEIPT_LOCATION_JSON="${TMP_ROOT}/reentry-receipt-location.json"
 RECEIPT_PASS_JSON="${TMP_ROOT}/receipt-family-pass.json"
 RECEIPT_MULTIHOP_JSON="${TMP_ROOT}/receipt-family-multihop.json"
 REQUIRED_COVERAGE_PASS_JSON="${TMP_ROOT}/required-coverage-pass.json"
+RECEIPT_CONTRACT_DRIFT_JSON="${TMP_ROOT}/receipt-family-contract-drift.json"
+RECEIPT_CONTRACT_REPAIR_JSON="${TMP_ROOT}/receipt-family-contract-repair.json"
+RECEIPT_CONTRACT_REPAIRED_JSON="${TMP_ROOT}/receipt-family-contract-repaired.json"
 RECEIPT_MISSING_MEMBER_JSON="${TMP_ROOT}/receipt-family-missing-member.json"
 RECEIPT_UNKNOWN_KIND_JSON="${TMP_ROOT}/receipt-family-unknown-kind.json"
 RECEIPT_BROKEN_JOIN_JSON="${TMP_ROOT}/receipt-family-broken-join.json"
@@ -863,6 +878,27 @@ run_cmd python3 "${ROOT}/scripts/validate_required_contract_coverage.py" \
 
 if python3 "${ROOT}/scripts/validate_identity_context_continuity_receipts.py" \
   --identity-id "${IDENTITY_ID}" \
+  --current-task "${RECEIPT_CONTRACT_DRIFT_TASK}" \
+  --require-observed \
+  --json-only > "${RECEIPT_CONTRACT_DRIFT_JSON}"; then
+  echo "[FAIL] continuity receipt-family contract-drift probe unexpectedly passed"
+  exit 1
+fi
+
+run_cmd python3 "${ROOT}/scripts/repair_contract_backfill.py" \
+  --catalog "${RECEIPT_CONTRACT_DRIFT_CATALOG}" \
+  --identity-id "${IDENTITY_ID}" \
+  --apply \
+  --json-only > "${RECEIPT_CONTRACT_REPAIR_JSON}"
+
+run_cmd python3 "${ROOT}/scripts/validate_identity_context_continuity_receipts.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${RECEIPT_CONTRACT_DRIFT_TASK}" \
+  --require-observed \
+  --json-only > "${RECEIPT_CONTRACT_REPAIRED_JSON}"
+
+if python3 "${ROOT}/scripts/validate_identity_context_continuity_receipts.py" \
+  --identity-id "${IDENTITY_ID}" \
   --current-task "${RECEIPT_MISSING_MEMBER_TASK}" \
   --require-observed \
   --json-only > "${RECEIPT_MISSING_MEMBER_JSON}"; then
@@ -909,6 +945,9 @@ python3 - "${TMP_ROOT}" \
   "${RECEIPT_PASS_JSON}" \
   "${RECEIPT_MULTIHOP_JSON}" \
   "${REQUIRED_COVERAGE_PASS_JSON}" \
+  "${RECEIPT_CONTRACT_DRIFT_JSON}" \
+  "${RECEIPT_CONTRACT_REPAIR_JSON}" \
+  "${RECEIPT_CONTRACT_REPAIRED_JSON}" \
   "${RECEIPT_MISSING_MEMBER_JSON}" \
   "${RECEIPT_UNKNOWN_KIND_JSON}" \
   "${RECEIPT_BROKEN_JOIN_JSON}" \
@@ -944,6 +983,9 @@ from pathlib import Path
     receipt_pass_path,
     receipt_multihop_path,
     required_coverage_pass_path,
+    receipt_contract_drift_path,
+    receipt_contract_repair_path,
+    receipt_contract_repaired_path,
     receipt_missing_member_path,
     receipt_unknown_kind_path,
     receipt_broken_join_path,
@@ -978,6 +1020,9 @@ reentry_receipt_location = load(reentry_receipt_location_path)
 receipt_pass = load(receipt_pass_path)
 receipt_multihop = load(receipt_multihop_path)
 required_coverage_pass = load(required_coverage_pass_path)
+receipt_contract_drift = load(receipt_contract_drift_path)
+receipt_contract_repair = load(receipt_contract_repair_path)
+receipt_contract_repaired = load(receipt_contract_repaired_path)
 receipt_missing_member = load(receipt_missing_member_path)
 receipt_unknown_kind = load(receipt_unknown_kind_path)
 receipt_broken_join = load(receipt_broken_join_path)
@@ -1052,6 +1097,10 @@ assert reentry_receipt_location["identity_reentry_consumption_status"] == "FAIL_
 assert "report_under_state_surface" in reentry_receipt_location.get("stale_reasons", []), reentry_receipt_location
 
 assert receipt_pass["identity_context_continuity_receipt_family_status"] == "PASS_REQUIRED", receipt_pass
+assert receipt_pass["required_contract"] is True, receipt_pass
+assert receipt_pass["auto_required_signal"] is True, receipt_pass
+assert receipt_pass["contract_id"] == "rq_046_identity_context_continuity_receipt_family_contract_v1", receipt_pass
+assert receipt_pass["contract_derivation_mode"] == "derived_from_upstream_contracts", receipt_pass
 assert receipt_pass["receipt_join_status"] == "PASS_REQUIRED", receipt_pass
 assert receipt_multihop["identity_context_continuity_receipt_family_status"] == "PASS_REQUIRED", receipt_multihop
 assert receipt_multihop["receipt_join_status"] == "PASS_REQUIRED", receipt_multihop
@@ -1079,6 +1128,13 @@ for row in coverage_rows.values():
     assert row["validator_status"] == "PASS_REQUIRED", row
     assert row["lane_target_included"] is True, row
     assert row["instance_adopted_protocol_target"] is True, row
+assert receipt_contract_drift["identity_context_continuity_receipt_family_status"] == "FAIL_REQUIRED", receipt_contract_drift
+assert receipt_contract_drift["error_code"] == "IP-ICREC-005", receipt_contract_drift
+assert "receipt_family_contract_id_mismatch" in receipt_contract_drift.get("stale_reasons", []), receipt_contract_drift
+assert receipt_contract_repair["contract_backfill_status"] == "PASS_REQUIRED", receipt_contract_repair
+assert "reentry_brief_consumption_contract_v1" in receipt_contract_repair.get("restored_continuity_contract_keys", []), receipt_contract_repair
+assert receipt_contract_repaired["identity_context_continuity_receipt_family_status"] == "PASS_REQUIRED", receipt_contract_repaired
+assert receipt_contract_repaired["receipt_join_status"] == "PASS_REQUIRED", receipt_contract_repaired
 assert receipt_missing_member["identity_context_continuity_receipt_family_status"] == "FAIL_REQUIRED", receipt_missing_member
 assert receipt_missing_member["error_code"] == "IP-ICREC-001", receipt_missing_member
 assert receipt_unknown_kind["identity_context_continuity_receipt_family_status"] == "FAIL_REQUIRED", receipt_unknown_kind
@@ -1108,7 +1164,9 @@ print(
             ],
             "rq_046_positive_status": receipt_pass["identity_context_continuity_receipt_family_status"],
             "rq_046_multihop_positive_status": receipt_multihop["identity_context_continuity_receipt_family_status"],
+            "rq_046_backfill_repair_status": receipt_contract_repaired["identity_context_continuity_receipt_family_status"],
             "rq_046_negative_failures": [
+                "receipt_family_contract_id_mismatch",
                 "missing_receipt_role",
                 "unknown_continuity_receipt_kind",
                 "reentry_consumption_lineage_not_joinable",
