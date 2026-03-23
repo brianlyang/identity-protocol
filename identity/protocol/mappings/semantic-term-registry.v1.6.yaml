@@ -138,6 +138,18 @@ terms:
       - runtime_contract
       - stream_v1_6_18
 
+  - term_id: runtime_dialogue_retention_family
+    canonical_term: runtime_dialogue_retention_family
+    aliases:
+      - "dialogue retention family"
+      - "raw dialogue truth family"
+      - "对话留存家族"
+    semantics: "Governed runtime raw-dialogue retention family rooted at `runtime/reports/dialogue-retention/**` and `runtime/state/dialogue-retention/**`. It mirrors product-sidecar session truth plus governed supplements/receipts and must remain distinct from dialogue-governance, continuity/reentry, protocol-feedback, and memory-absorption quarantine."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_18
+
   - term_id: runtime_experience_feedback_family
     canonical_term: runtime_experience_feedback_family
     aliases:
@@ -373,6 +385,10 @@ forbidden_phrases:
   - phrase: "all memory-like artifacts may use one generic protocol memory sink"
     replacement: "artifact_family_routing_matrix_v1 requires exact family resolution by owner + fixed path + producer + consumer"
     rationale: "Prevents multiple governed families from collapsing into one generic memory bucket."
+
+  - phrase: "raw dialogue history may stay in generic memory or continuity by default"
+    replacement: "runtime_dialogue_retention_family owns governed raw dialogue mirrors; runtime_context_continuity_family remains bounded checkpoint/reentry support"
+    rationale: "Prevents raw dialogue truth from collapsing into continuity or generic memory wording."
 
   - phrase: "RULEBOOK.jsonl and runtime/rulebooks are the same rule memory"
     replacement: "pack_rulebook_family is distinct from runtime_experience_feedback_family"

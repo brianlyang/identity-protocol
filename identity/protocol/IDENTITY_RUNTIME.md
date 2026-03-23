@@ -90,6 +90,7 @@ Hard semantics:
    - `RULEBOOK.jsonl` -> durable pack rulebook family
    - `TASK_HISTORY.md` -> chronological pack task-history family
 3. Governed runtime families remain:
+   - dialogue-retention -> `runtime/reports/dialogue-retention/**`, `runtime/state/dialogue-retention/**`
    - dialogue-governance -> `runtime/reports/dialogue-content-synthesis-<identity-id>-*.json`, `runtime/reports/dialogue-cross-validation-matrix-<identity-id>-*.json`, `runtime/reports/dialogue-result-support-<identity-id>-*.json`
    - experience-feedback -> `runtime/rulebooks/positive.jsonl`, `runtime/rulebooks/negative.jsonl`, `runtime/examples/*experience-feedback*.json`, `runtime/logs/feedback/*.json`
    - protocol-feedback -> `runtime/protocol-feedback/**`
@@ -99,8 +100,9 @@ Hard semantics:
 5. `RULEBOOK.jsonl` is not the same semantic object as runtime experience-feedback rulebooks, and `TASK_HISTORY.md` is not a continuity checkpoint family.
 6. `runtime/protocol-feedback/**` is governance communication only; it cannot substitute for learning, dialogue proof, or startup continuity.
 7. `runtime/memory-absorption/**` is quarantine/re-materialization only; active validators and success paths must not consume it as continuity, dialogue, learning, or protocol-feedback truth.
-8. Declaration/gate surfaces such as `reject_memory_gate` and `*_contract` blocks remain control-plane declarations, not artifact-family outputs.
-9. Future validators/creator/readiness wiring must enforce the same routing matrix rather than re-deriving family semantics per pack.
+8. `runtime/reports/dialogue-retention/**` and `runtime/state/dialogue-retention/**` are raw dialogue truth mirrors plus governed supplements/receipts; they must not be collapsed into dialogue-governance, continuity/reentry, protocol-feedback, or memory-absorption.
+9. Declaration/gate surfaces such as `reject_memory_gate` and `*_contract` blocks remain control-plane declarations, not artifact-family outputs.
+10. Future validators/creator/readiness wiring must enforce the same routing matrix rather than re-deriving family semantics per pack.
 
 ## Batch-6 anchor placeholders (v1.6 intake, non-promotional)
 
@@ -364,6 +366,35 @@ Hard semantics:
 3. Receipt-family validation must prove that checkpoint production, migration handoff, startup briefing, and startup consumption remain machine-joinable without collapsing into one undifferentiated blob.
 4. Missing required receipt-family members, unknown receipt kinds, or broken join lineage are fail-close conditions.
 5. Receipt-family closure is runtime evidence only; it does not transfer ownership of startup entry, topology, or route/script semantics away from their inherited streams.
+
+### rq_051_identity_dialogue_retention_contract_v1
+
+Required receipt fields:
+
+- `protocol_dialogue_retention_status`
+- `delivery_hook_status`
+- `report_root_status`
+- `state_status`
+- `sync_receipt_status`
+- `mirror_status`
+- `delivery_supplement_status`
+- `source_snapshot_alignment_status`
+- `source_live_alignment_status`
+- `source_live_advanced_since_last_sync`
+- `source_live_drift_reason`
+- `thread_id`
+- `source_session_file`
+- `mirror_path`
+- `receipt_path`
+- `evidence_ref`
+
+Hard semantics:
+
+1. Governed raw dialogue retention must mirror the product-sidecar session truth from `${CODEX_HOME}/sessions/**/*.jsonl`, bound by `CODEX_THREAD_ID`, into the canonical runtime family `runtime/reports/dialogue-retention/**` + `runtime/state/dialogue-retention/**`.
+2. The canonical runtime outputs for this family are current-thread mirrors, delivery supplements for the just-emitted visible reply, sync receipts, and the rolling state file; `~/.codex/memories/**` or ad hoc operator notes are not protocol-owned substitutes.
+3. Delivery must be bridged through a governed post-delivery hook bound to the final visible emitter surface; narrative claims of “already remembered” without hook-produced runtime evidence are non-compliant.
+4. Mirror exactness is evaluated against the recorded source snapshot captured by the sync receipt/state. When the live current-thread sidecar advances after a successful sync on the active thread, validators may report `source_live_advanced_since_last_sync=true` without treating the recorded mirror as corrupt.
+5. Raw dialogue retention is evidence, not authority: it must not override `CURRENT_TASK.json`, `IDENTITY_PROMPT.md`, tuple/bootstrap truth, continuity/reentry bind objects, learning rulebooks, or protocol-feedback communication lanes.
 
 ### Canonical identity-Codex launcher execution boundary (v1.6.14 additive)
 

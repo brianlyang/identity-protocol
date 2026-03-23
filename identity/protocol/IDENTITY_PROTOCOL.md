@@ -150,7 +150,7 @@ Compatibility note: legacy packs under `identity/<id>/` are migration-only locat
    - `runtime/reports/context-continuity/`
    - `runtime/state/context-continuity/`
 7. `reentry_brief` is the canonical startup-consumable artifact and must stay compact enough for re-entry rather than becoming a long-history replacement.
-8. Raw transcript persistence, vendor session history, and ad hoc operator notes remain non-authoritative by default.
+8. Raw transcript persistence and vendor session history remain non-authoritative by default; when protocol mirrors them into governed runtime sinks, that ownership belongs to `v1.6.18` dialogue retention rather than continuity.
 9. Launcher/startup/resume/recover entry remains owned by `v1.6.14`; `v1.6.16` owns only the continuity artifact model and safe consumption boundary.
 10. No pack may claim `v1.6.16` adoption until continuity target paths are backfilled through the relevant topology and path-governance contracts.
 11. The implementation-facing contract family for this stream is anchored by:
@@ -167,6 +167,7 @@ Compatibility note: legacy packs under `identity/<id>/` are migration-only locat
 3. The frozen protocol-scoped families are:
    - pack rulebook family -> `RULEBOOK.jsonl`
    - pack task-history family -> `TASK_HISTORY.md`
+   - runtime dialogue-retention family -> `runtime/reports/dialogue-retention/**` + `runtime/state/dialogue-retention/**`
    - runtime dialogue-governance family -> `runtime/reports/dialogue-*.json`
    - runtime experience-feedback family -> `runtime/rulebooks/*.jsonl`, `runtime/examples/*experience-feedback*.json`, `runtime/logs/feedback/*.json`
    - runtime protocol-feedback family -> `runtime/protocol-feedback/**`
@@ -176,8 +177,9 @@ Compatibility note: legacy packs under `identity/<id>/` are migration-only locat
 5. `TASK_HISTORY.md` is chronological pack history and must not be misused as continuity/reentry state.
 6. `runtime/protocol-feedback/**` is governed protocol communication, not a generic learning or continuity sink.
 7. `runtime/memory-absorption/**` is quarantine/re-materialization only and cannot satisfy active continuity, dialogue, learning, or protocol-feedback obligations.
-8. Declaration keys and gates such as `reject_memory_gate`, `dialogue_governance_contract`, `experience_feedback_contract`, `context_continuity_contract_v1`, and `reentry_brief_consumption_contract_v1` are control-plane declarations, not artifact families.
-9. Any future protocol-owned persisted family must be introduced by a later governed stream rather than silently added under generic “memory” wording.
+8. Declaration keys and gates such as `reject_memory_gate`, `dialogue_retention_contract_v1`, `dialogue_governance_contract`, `experience_feedback_contract`, `context_continuity_contract_v1`, and `reentry_brief_consumption_contract_v1` are control-plane declarations, not artifact families.
+9. The machine-consumed raw dialogue truth bind for this stream is `rq_051_identity_dialogue_retention_contract_v1`; it mirrors product-sidecar session truth into governed runtime sinks without reclassifying that mirror as continuity or authority.
+10. Any future protocol-owned persisted family must be introduced by a later governed stream rather than silently added under generic “memory” wording.
 
 ## Runtime source-of-truth boundary (v1.4.x hardening)
 

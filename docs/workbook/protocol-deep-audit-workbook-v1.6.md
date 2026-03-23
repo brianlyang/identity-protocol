@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 87`, `command snippets checked: 930`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 87`, `command snippets checked: 938`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -882,13 +882,17 @@ Root cause:
   - `memory` is no longer used as a canonical sink name in active protocol docs for these families;
   - `RULEBOOK.jsonl` stays distinct from runtime experience-feedback rulebooks;
   - `TASK_HISTORY.md` stays distinct from continuity/reentry state;
+  - raw dialogue retention stays distinct from dialogue-governance summaries and continuity/reentry bind artifacts;
   - `runtime/protocol-feedback/**` stays governance communication-only;
   - `runtime/memory-absorption/**` stays quarantine/re-materialization only;
-  - later shared validator/creator/readiness consumption reuses the same matrix instead of re-deriving semantics pack by pack.
+  - at least one machine-consumed family landing proves the matrix can drive shared validator/creator/readiness/runtime-hook wiring without per-pack folklore;
+  - later broader matrix enforcement reuses the same matrix instead of re-deriving semantics pack by pack.
 - `current_evidence`:
-  - `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md` now freezes the canonical routing matrix across the seven protocol-scoped persisted families and explicitly classifies declaration keys/gates as non-artifact control-plane surfaces;
-  - `docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md` now records the current protocol/runtime scan basis and the quarantine-only interpretation of `runtime/memory-absorption/**`;
-  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`, `identity/protocol/IDENTITY_PROTOCOL.md`, `identity/protocol/IDENTITY_RUNTIME.md`, and `README.md` now truth-sync the family names, fixed paths, and forbidden conflations, but machine enforcement is still follow-on work.
+  - `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md` now freezes the canonical routing matrix across eight protocol-scoped persisted families and explicitly classifies declaration keys/gates as non-artifact control-plane surfaces;
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md` now records the current protocol/runtime scan basis, the new raw dialogue-retention family, and the quarantine-only interpretation of `runtime/memory-absorption/**`;
+  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`, `identity/protocol/IDENTITY_PROTOCOL.md`, `identity/protocol/IDENTITY_RUNTIME.md`, and `README.md` now truth-sync the family names, fixed paths, forbidden conflations, and `rq_051_identity_dialogue_retention_contract_v1`;
+  - `scripts/identity_dialogue_retention_common.py`, `scripts/run_identity_dialogue_retention_guard_runtime.py`, `scripts/run_identity_delivery_runtime_hooks.py`, `scripts/validate_identity_dialogue_retention.py`, and `scripts/ci/run_identity_dialogue_retention_probes_ci.sh` now land the first machine-consumed family closure for this stream;
+  - `scripts/create_identity_pack.py`, `scripts/repair_contract_backfill.py`, `scripts/release_readiness_check.py`, `scripts/ci/run_required_runtime_gates_ci.sh`, `scripts/validate_required_contract_coverage.py`, and `scripts/required_gate_bundle_runner.py` now consume the same family instead of leaving raw dialogue truth routing as docs-only guidance.
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 

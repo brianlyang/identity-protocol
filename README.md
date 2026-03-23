@@ -150,6 +150,7 @@ Operational rule for identity instances:
 
 - pack rulebook family -> `RULEBOOK.jsonl`
 - pack task-history family -> `TASK_HISTORY.md`
+- runtime dialogue-retention family -> `runtime/reports/dialogue-retention/**`, `runtime/state/dialogue-retention/**`
 - runtime dialogue-governance family -> `runtime/reports/dialogue-content-synthesis-<identity-id>-*.json`, `runtime/reports/dialogue-cross-validation-matrix-<identity-id>-*.json`, `runtime/reports/dialogue-result-support-<identity-id>-*.json`
 - runtime experience-feedback family -> `runtime/rulebooks/positive.jsonl`, `runtime/rulebooks/negative.jsonl`, `runtime/examples/*experience-feedback*.json`, `runtime/logs/feedback/*.json`
 - runtime protocol-feedback family -> `runtime/protocol-feedback/**`
@@ -160,9 +161,10 @@ Hard routing rules:
 
 - `RULEBOOK.jsonl` and `runtime/rulebooks/*.jsonl` are not the same object.
 - `TASK_HISTORY.md` is chronology, not continuity.
+- `runtime/reports/dialogue-retention/**` and `runtime/state/dialogue-retention/**` are governed raw-dialogue mirrors plus receipts/supplements, not continuity or dialogue-governance summaries.
 - `runtime/protocol-feedback/**` is governance communication, not generic learning/continuity storage.
 - `runtime/memory-absorption/**` cannot satisfy active continuity, dialogue, learning, or protocol-feedback obligations.
-- declaration keys and gates such as `reject_memory_gate`, `dialogue_governance_contract`, `experience_feedback_contract`, `context_continuity_contract_v1`, and `reentry_brief_consumption_contract_v1` are control-plane declarations, not artifact sinks.
+- declaration keys and gates such as `reject_memory_gate`, `dialogue_retention_contract_v1`, `dialogue_governance_contract`, `experience_feedback_contract`, `context_continuity_contract_v1`, and `reentry_brief_consumption_contract_v1` are control-plane declarations, not artifact sinks.
 
 ### Protocol SSOT governance (canonical source + coupling)
 

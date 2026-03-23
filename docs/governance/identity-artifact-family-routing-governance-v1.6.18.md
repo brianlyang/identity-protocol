@@ -1,6 +1,6 @@
 # Identity Artifact Family Routing Governance (v1.6.18)
 
-Status: Active (protocol-scoped semantic/path freeze opened 2026-03-23; shared validator and creator/readiness consumption remain follow-on work)  
+Status: Active (protocol-scoped semantic/path freeze opened 2026-03-23; raw dialogue retention family plus shared validator/creator/readiness consumption landed 2026-03-23; whole cross-family matrix enforcement remains follow-on work)  
 Layer: protocol  
 Scope: protocol-owned persisted artifact families inside governed identity packs/runtime; fixed-path routing and anti-semantic-pollution boundary  
 Execution mode: topic-level canonical SSOT for v1.6.18 artifact-family routing governance.
@@ -69,7 +69,7 @@ Execution mode: topic-level canonical SSOT for v1.6.18 artifact-family routing g
 ### 2.3 Declaration keys and gates are not artifact families
 
 1. `reject_memory_gate` is a gate, not a storage sink.
-2. `dialogue_governance_contract`, `experience_feedback_contract`, `context_continuity_contract_v1`, and `reentry_brief_consumption_contract_v1` are declaration/contract surfaces, not persisted artifact families.
+2. `dialogue_retention_contract_v1`, `dialogue_governance_contract`, `experience_feedback_contract`, `context_continuity_contract_v1`, and `reentry_brief_consumption_contract_v1` are declaration/contract surfaces, not persisted artifact families.
 3. `INSTANCE_SCRIPT_MANIFEST.json` is a script-catalog/manifest surface, not a “memory” sink.
 4. Validators and creators may consume those declarations, but no declaration key may be misreported as the canonical output family.
 
@@ -79,6 +79,7 @@ Execution mode: topic-level canonical SSOT for v1.6.18 artifact-family routing g
 | --- | --- | --- | --- | --- | --- |
 | Pack rulebook family | `RULEBOOK.jsonl` | durable identity rulebook / patch surface | append-only durable rule rows | identity update lifecycle + governed rule writeback | identity update / learning validators and durable pack evolution |
 | Pack task-history family | `TASK_HISTORY.md` | chronological task/result writeback | human-readable task chronology | post-execution append / governed task writeback | operator audit, lifecycle chronology, pack-local historical trace |
+| Runtime dialogue-retention family | `runtime/reports/dialogue-retention/**`; `runtime/state/dialogue-retention/**` | governed raw dialogue truth mirror | current-thread jsonl mirror, delivery supplement, sync receipt, rolling state | shared post-delivery hook + dialogue-retention validator | operator truth inspection, raw-dialogue audit, downstream bounded analysis |
 | Runtime dialogue-governance family | `runtime/reports/dialogue-content-synthesis-<identity-id>-*.json`; `runtime/reports/dialogue-cross-validation-matrix-<identity-id>-*.json`; `runtime/reports/dialogue-result-support-<identity-id>-*.json` | conversation-to-result justification | structured dialogue synthesis / cross-validation / result-support reports | dialogue-governance bundle + validators | dialogue/result proof / done-state support |
 | Runtime experience-feedback family | `runtime/rulebooks/positive.jsonl`; `runtime/rulebooks/negative.jsonl`; `runtime/examples/*experience-feedback*.json`; `runtime/logs/feedback/*.json` | replay-backed learning deltas | positive/negative rule deltas, feedback samples, feedback logs | governed experience-feedback writeback and replay-backed learning flows | fourth-loop strengthening, learning replay, rule promotion |
 | Runtime protocol-feedback family | `runtime/protocol-feedback/**` | instance↔protocol governance communication | feedback batches, inbox/outbox traffic, proposals, issues, roundtables, validation, indexes, receipts | protocol-feedback emit/inbox/index/upgrade helpers | protocol remediation / audit / governance circulation |
@@ -121,7 +122,30 @@ Execution mode: topic-level canonical SSOT for v1.6.18 artifact-family routing g
 7. Hard boundary:
    - `TASK_HISTORY.md` is not a continuity checkpoint, not a reentry brief, and not a protocol-feedback or learning sink.
 
-### 4.3 Runtime dialogue-governance family
+### 4.3 Runtime dialogue-retention family
+
+1. Canonical fixed roots:
+   - `runtime/reports/dialogue-retention/**`
+   - `runtime/state/dialogue-retention/**`
+2. Canonical payload families include at minimum:
+   - `dialogue-thread-<thread-id>.jsonl` current-thread mirror,
+   - `dialogue-final-reply-<thread-id>-*.json` delivery supplement,
+   - `dialogue-retention-sync-*.json` governed sync receipt,
+   - `current-thread.json` rolling state.
+3. Semantic owner:
+   - governed raw dialogue truth retention bridged from the product-sidecar session stream.
+4. Payload/content class:
+   - exact source snapshot mirror plus delivery supplement/receipt/state metadata for the current thread.
+5. Production standard:
+   - mirror exactness is measured against the recorded source snapshot captured by the sync receipt/state; live sidecar advance after sync on the active thread does not reclassify the recorded mirror as corrupt.
+6. Production method:
+   - shared post-delivery runtime hook calling `scripts/run_identity_delivery_runtime_hooks.py` -> `scripts/run_identity_dialogue_retention_guard_runtime.py sync`, bound from pack-local `scripts/emit_current_thread_final_reply.py`.
+7. Primary consumer surface:
+   - operator truth inspection, governed raw-dialogue validation, and downstream bounded analysis that needs exact delivered dialogue rather than synthesized summaries.
+8. Hard boundary:
+   - raw dialogue retention is not dialogue-governance summary, not continuity/reentry bind state, not protocol-feedback traffic, and not `runtime/memory-absorption/**`.
+
+### 4.4 Runtime dialogue-governance family
 
 1. Canonical fixed paths:
    - `runtime/reports/dialogue-content-synthesis-<identity-id>-*.json`
@@ -140,7 +164,7 @@ Execution mode: topic-level canonical SSOT for v1.6.18 artifact-family routing g
 7. Hard boundary:
    - dialogue reports are not continuity, not protocol-feedback traffic, and not the learning rulebook sink.
 
-### 4.4 Runtime experience-feedback family
+### 4.5 Runtime experience-feedback family
 
 1. Canonical fixed paths:
    - `runtime/rulebooks/positive.jsonl`
@@ -160,7 +184,7 @@ Execution mode: topic-level canonical SSOT for v1.6.18 artifact-family routing g
 7. Hard boundary:
    - runtime experience-feedback rulebooks are distinct from pack-root `RULEBOOK.jsonl`, and they are not protocol-feedback or continuity sinks.
 
-### 4.5 Runtime protocol-feedback family
+### 4.6 Runtime protocol-feedback family
 
 1. Canonical fixed root:
    - `runtime/protocol-feedback/**`
@@ -188,7 +212,7 @@ Execution mode: topic-level canonical SSOT for v1.6.18 artifact-family routing g
 8. Hard boundary:
    - protocol-feedback is not the canonical sink for continuity checkpoints, dialogue result proof, or learning rule promotion.
 
-### 4.6 Runtime context-continuity / reentry family
+### 4.7 Runtime context-continuity / reentry family
 
 1. Canonical fixed roots:
    - `runtime/reports/context-continuity/**`
@@ -211,7 +235,7 @@ Execution mode: topic-level canonical SSOT for v1.6.18 artifact-family routing g
 8. Hard boundary:
    - continuity artifacts are not task history, not protocol-feedback, and not the generic learning sink.
 
-### 4.7 Runtime memory-absorption family
+### 4.8 Runtime memory-absorption family
 
 1. Canonical fixed root:
    - `runtime/memory-absorption/**`
@@ -228,22 +252,23 @@ Execution mode: topic-level canonical SSOT for v1.6.18 artifact-family routing g
 7. Hard boundary:
    - `runtime/memory-absorption/**` may not be consumed as if it were active continuity, dialogue-governance, experience-feedback, protocol-feedback, or durable pack rulebook/task-history truth.
 
-### 4.8 Gates and declaration keys (control plane, not storage)
+### 4.9 Gates and declaration keys (control plane, not storage)
 
 1. `reject_memory_gate` remains a mandatory semantic guard rail, not a persisted artifact family.
-2. `dialogue_governance_contract`, `experience_feedback_contract`, `context_continuity_contract_v1`, and `reentry_brief_consumption_contract_v1` declare obligations and canonical validators; they do not themselves store the resulting artifacts.
+2. `dialogue_retention_contract_v1`, `dialogue_governance_contract`, `experience_feedback_contract`, `context_continuity_contract_v1`, and `reentry_brief_consumption_contract_v1` declare obligations and canonical validators; they do not themselves store the resulting artifacts.
 3. Any implementation or answer surface that confuses a declaration key with an output family is semantically non-compliant.
 
 ## 5) Cross-family hard boundaries
 
 1. `RULEBOOK.jsonl` and `runtime/rulebooks/*.jsonl` must never be collapsed into one “rule memory” object.
 2. `TASK_HISTORY.md` must never be promoted to continuity/reentry authority.
-3. Dialogue-governance reports must never be used as the canonical learning sink or protocol-feedback channel.
-4. Protocol-feedback traffic must never be used as a substitute continuity or dialogue-proof family.
-5. Continuity artifacts must never become durable pack history or learning rulebooks.
-6. `runtime/memory-absorption/**` must never satisfy active continuity, dialogue, experience-feedback, or protocol-feedback obligations.
-7. New protocol-owned persisted artifact families require a later governed stream; they must not silently appear under generic “memory” wording.
-8. When an identity instance or operator asks “这段记忆应该存哪里”, the only canonical answer is: resolve it to the exact family name and canonical path family above.
+3. `runtime/reports/dialogue-retention/**` and `runtime/state/dialogue-retention/**` must never be collapsed into dialogue-governance summaries or continuity/reentry artifacts.
+4. Dialogue-governance reports must never be used as the canonical learning sink or protocol-feedback channel.
+5. Protocol-feedback traffic must never be used as a substitute continuity or dialogue-proof family.
+6. Continuity artifacts must never become durable pack history or learning rulebooks.
+7. `runtime/memory-absorption/**` must never satisfy active continuity, dialogue, experience-feedback, or protocol-feedback obligations.
+8. New protocol-owned persisted artifact families require a later governed stream; they must not silently appear under generic “memory” wording.
+9. When an identity instance or operator asks “这段记忆应该存哪里”, the only canonical answer is: resolve it to the exact family name and canonical path family above.
 
 ## 6) Current scan anchors absorbed into this stream
 
@@ -263,25 +288,42 @@ Current local runtime inspection of `base-repo-closure-orchestrator` confirms th
    - `context_continuity_contract_v1`
    - `reentry_brief_consumption_contract_v1`
    - canonical roots `runtime/reports/context-continuity/` and `runtime/state/context-continuity/`
-5. dialogue-governance is already a distinct contract family even when not required:
+5. raw dialogue retention is now a distinct governed family and live bridge:
+   - `dialogue_retention_contract_v1`
+   - canonical roots `runtime/reports/dialogue-retention/` and `runtime/state/dialogue-retention/`
+   - shared producer bridge `scripts/run_identity_delivery_runtime_hooks.py` + `scripts/run_identity_dialogue_retention_guard_runtime.py`
+6. dialogue-governance is already a distinct contract family even when not required:
    - `dialogue_governance_contract.required=false`
-6. `reject_memory_gate` is already required.
+7. `reject_memory_gate` is already required.
 
 Frozen interpretation:
 
 - the protocol already has multiple distinct persisted families;
 - the missing piece was the motherline routing matrix tying them together so they cannot keep being mislabeled as one “memory” bucket.
 
-## 7) Follow-on closure boundary
+## 7) Machine-consumer landing absorbed into v1.6.18
 
-This stream freezes semantics and routing first. The follow-on closure work, without reopening the semantic owner boundary, is:
+This stream is no longer docs-only. The following machine-consumed closure is now part of the stream without reopening owner boundaries:
 
-1. semantic-term registry truth-sync for the family names and forbidden conflations;
-2. workbook routing of the ambiguity as a protocol-owned issue instead of instance folklore;
-3. protocol/runtime overview truth-sync so pack/runtime readers see one canonical matrix;
-4. later shared validator / creator / readiness consumption that checks active artifacts land in the correct family and blocks cross-family misuse.
+1. `rq_051_identity_dialogue_retention_contract_v1` is now bound in the motherline mapping and backed by `scripts/validate_identity_dialogue_retention.py`.
+2. `scripts/identity_dialogue_retention_common.py`, `scripts/run_identity_dialogue_retention_guard_runtime.py`, and `scripts/run_identity_delivery_runtime_hooks.py` now provide the shared raw-dialogue retention bridge.
+3. `scripts/create_identity_pack.py` and `scripts/repair_contract_backfill.py` now materialize `dialogue_retention_contract_v1`, the canonical runtime roots, and validator/readiness wiring instead of leaving raw dialogue retention as per-pack folklore.
+4. `scripts/release_readiness_check.py`, `scripts/ci/run_required_runtime_gates_ci.sh`, `scripts/validate_required_contract_coverage.py`, and `scripts/required_gate_bundle_runner.py` now consume the dialogue-retention machine lane.
+5. `scripts/ci/run_identity_dialogue_retention_probes_ci.sh` proves:
+   - exact source snapshot mirror on the canonical family,
+   - delivery-hook invocation from the final visible emitter surface,
+   - continuity tick coexistence without semantic collapse,
+   - active-thread live-drift reporting without reclassifying the recorded mirror as corrupt.
 
-## 8) Frozen non-goals
+## 8) Follow-on closure boundary
+
+This stream has landed raw dialogue retention machine consumers, but one follow-on boundary still remains open without reopening semantic ownership:
+
+1. a later whole-matrix validator may enforce cross-family routing for every family, not only the raw dialogue retention lane;
+2. workbook closure should be updated to reflect the new eight-family matrix and the distinction between raw-dialogue retention vs dialogue-governance vs continuity;
+3. future new families must still arrive through governed stream openings rather than ad hoc pack additions.
+
+## 9) Frozen non-goals
 
 1. This stream does not create a new generic “memory subsystem”.
 2. This stream does not reopen `v1.6.13`, `v1.6.16`, or `v1.6.17` as owner streams.

@@ -1,6 +1,6 @@
 # Protocol Remediation Audit Ledger (v1.6.18 artifact-family routing stream)
 
-Status: Active (protocol-owned semantic/path freeze opened 2026-03-23; workbook routing + semantic registry truth-sync + shared validator follow-on remain open)  
+Status: Active (protocol-owned semantic/path freeze opened 2026-03-23; raw dialogue retention family plus shared validator/creator/readiness landing absorbed 2026-03-23; whole-matrix enforcement follow-on remains open)  
 Scope: protocol review ledger for canonical artifact-family routing across governed identity pack/runtime surfaces
 
 ## 0) Stream objective
@@ -31,19 +31,23 @@ Current local runtime inspection of `base-repo-closure-orchestrator` confirms th
 1. pack-root durable families exist:
    - `RULEBOOK.jsonl`
    - `TASK_HISTORY.md`
-2. runtime experience-feedback families exist:
+2. runtime raw dialogue-retention family now exists as a governed sink:
+   - `runtime/reports/dialogue-retention/**`
+   - `runtime/state/dialogue-retention/**`
+   - shared producer bridge `scripts/run_identity_delivery_runtime_hooks.py` -> `scripts/run_identity_dialogue_retention_guard_runtime.py`
+3. runtime experience-feedback families exist:
    - `runtime/examples/base-repo-closure-orchestrator-experience-feedback-sample.json`
    - `runtime/logs/feedback/*.json`
-3. runtime protocol-feedback families exist:
+4. runtime protocol-feedback families exist:
    - `runtime/protocol-feedback/evidence-index/INDEX.md`
    - `runtime/protocol-feedback/outbox-to-protocol/*.json`
-4. continuity families are already declared:
+5. continuity families are already declared:
    - `context_continuity_contract_v1`
    - `reentry_brief_consumption_contract_v1`
    - canonical continuity roots under `runtime/reports/context-continuity/` and `runtime/state/context-continuity/`
-5. dialogue-governance is already a distinct contract family even while optional:
+6. dialogue-governance is already a distinct contract family even while optional:
    - `dialogue_governance_contract.required=false`
-6. `reject_memory_gate` is already required.
+7. `reject_memory_gate` is already required.
 
 Frozen audit interpretation:
 
@@ -59,6 +63,7 @@ Audit judgment after cross-scan:
    - pack rulebook,
    - pack task-history,
    - runtime dialogue-governance,
+   - runtime dialogue-retention,
    - runtime experience-feedback,
    - runtime protocol-feedback,
    - runtime continuity/reentry,
@@ -130,14 +135,15 @@ Audit judgment:
 
 1. `RULEBOOK.jsonl` must not collapse into `runtime/rulebooks/*.jsonl`.
 2. `TASK_HISTORY.md` must not collapse into continuity or feedback.
-3. `runtime/protocol-feedback/**` must not collapse into learning or dialogue proof.
-4. `runtime/memory-absorption/**` must not collapse into any active family.
-5. declaration keys/gates must not be misreported as the family outputs themselves.
+3. `runtime/reports/dialogue-retention/**` and `runtime/state/dialogue-retention/**` must not collapse into dialogue-governance summaries or continuity.
+4. `runtime/protocol-feedback/**` must not collapse into learning or dialogue proof.
+5. `runtime/memory-absorption/**` must not collapse into any active family.
+6. declaration keys/gates must not be misreported as the family outputs themselves.
 
 ### 3.4 T4 implementation readiness review
 
 1. Governance must freeze the routing matrix before validators or creator/readiness wiring can enforce it.
-2. The later validator must check path-family alignment, not just file existence.
+2. `rq_051_identity_dialogue_retention_contract_v1` now demonstrates the first machine-consumed family landing for this stream: it checks governed path-family alignment, delivery-hook production, exact snapshot mirroring, and live-thread drift semantics.
 3. Future creator/backfill/readiness integration must reuse the same matrix instead of re-deriving family semantics pack by pack.
 
 ## 4) Frozen implementation checklist
@@ -146,6 +152,7 @@ Audit judgment:
 2. The canonical persisted families now frozen for protocol scope are:
    - pack rulebook family,
    - pack task-history family,
+   - runtime dialogue-retention family,
    - runtime dialogue-governance family,
    - runtime experience-feedback family,
    - runtime protocol-feedback family,
@@ -155,21 +162,30 @@ Audit judgment:
 4. Declaration keys and gates remain control-plane declarations, not sinks.
 5. Any future new protocol-owned persisted family requires a later governed stream rather than silent introduction under “memory” wording.
 
-## 5) Opening-state closure target
+## 5) Machine-consumer landing absorbed after opening
 
-This stream is not complete merely because the governance doc exists. The remaining protocol-owned follow-on work is narrow and explicit:
+The stream has now moved beyond a docs-only opening. Audit-accepted machine landing in this round is:
 
-1. workbook routing of this ambiguity as a protocol issue;
-2. semantic-term registry truth-sync;
-3. protocol/runtime/README truth-sync to one compact matrix;
-4. later shared validator and creator/readiness consumption.
+1. `scripts/identity_dialogue_retention_common.py`, `scripts/run_identity_dialogue_retention_guard_runtime.py`, and `scripts/run_identity_delivery_runtime_hooks.py` define the protocol-owned raw dialogue retention bridge instead of leaving raw transcript handling to per-pack folklore.
+2. `scripts/validate_identity_dialogue_retention.py` now fail-closes on missing delivery-hook installation, missing runtime roots, broken snapshot mirror exactness, broken sync receipts, or broken supplement/state joins.
+3. `scripts/ci/run_identity_dialogue_retention_probes_ci.sh` proves the bridge on a fixture pack and verifies coexistence with continuity tick/post-recover semantics.
+4. `scripts/create_identity_pack.py`, `scripts/repair_contract_backfill.py`, `scripts/release_readiness_check.py`, `scripts/ci/run_required_runtime_gates_ci.sh`, `scripts/validate_required_contract_coverage.py`, and `scripts/required_gate_bundle_runner.py` now consume the same family rather than treating raw dialogue retention as docs-only guidance.
+
+## 6) Remaining closure target
+
+This stream is still not fully complete. The remaining protocol-owned follow-on work is narrow and explicit:
+
+1. workbook closure must be updated from the old docs-only opening wording to the new machine-consumed eight-family matrix;
+2. a later whole-matrix validator may enforce routing alignment across every frozen family, not only the raw dialogue retention pilot lane;
+3. future new families must still open through governed streams instead of being silently attached under “memory”.
 
 Frozen audit interpretation:
 
-- the semantic owner problem is now correctly identified and protocol-owned;
-- later machine enforcement should extend this stream rather than reinvent the family boundaries in each validator.
+- the semantic owner problem is correctly protocol-owned;
+- the first machine-consumed family landing is real and reusable;
+- later broader matrix enforcement must extend this same stream rather than reinvent family boundaries in each validator.
 
-## 6) Non-goals frozen for audit
+## 7) Non-goals frozen for audit
 
 1. This opening does not claim a new generic memory subsystem exists.
 2. This opening does not claim `runtime/memory-absorption/**` is an active success-path sink.
