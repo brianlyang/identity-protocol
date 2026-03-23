@@ -323,6 +323,36 @@ REQUIRED_GATES_SUPER_LINTER_TOKENS: tuple[str, ...] = (
     "VALIDATE_YAML: true",
 )
 DIALOGUE_FEEDBACK_BUNDLE_SCRIPT = "scripts/run_identity_dialogue_feedback_bundle.py"
+REQUIRED_CONTRACT_COVERAGE_SCRIPT = "scripts/validate_required_contract_coverage.py"
+CURRENT_ROUND_COVERAGE_RUN_ID_REQUIRED_SURFACES: tuple[str, ...] = (
+    "scripts/identity_creator.py",
+    "scripts/release_readiness_check.py",
+    "scripts/report_three_plane_status.py",
+    "scripts/full_identity_protocol_scan.py",
+    "scripts/e2e_smoke_test.sh",
+    REQUIRED_GATE_CI_DELEGATE_SCRIPT,
+)
+CURRENT_ROUND_COVERAGE_REPORT_REQUIRED_SURFACES: tuple[str, ...] = (
+    "scripts/identity_creator.py",
+    "scripts/release_readiness_check.py",
+    "scripts/report_three_plane_status.py",
+    "scripts/e2e_smoke_test.sh",
+)
+CURRENT_ROUND_COVERAGE_POST_BUNDLE_SURFACES: tuple[str, ...] = (
+    "scripts/release_readiness_check.py",
+    "scripts/report_three_plane_status.py",
+    "scripts/e2e_smoke_test.sh",
+    REQUIRED_GATE_CI_DELEGATE_SCRIPT,
+)
+CURRENT_ROUND_COVERAGE_REQUIRED_ARGS_BY_SURFACE: dict[str, tuple[str, ...]] = {
+    surface: ("--run-id",)
+    for surface in CURRENT_ROUND_COVERAGE_RUN_ID_REQUIRED_SURFACES
+}
+for _surface in CURRENT_ROUND_COVERAGE_REPORT_REQUIRED_SURFACES:
+    CURRENT_ROUND_COVERAGE_REQUIRED_ARGS_BY_SURFACE[_surface] = tuple(
+        list(CURRENT_ROUND_COVERAGE_REQUIRED_ARGS_BY_SURFACE.get(_surface, ()))
+        + ["--report-selected-path"]
+    )
 DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_SURFACES: tuple[str, ...] = (
     "scripts/identity_creator.py",
 )
@@ -342,7 +372,6 @@ FINAL_EGRESS_REQUIRED_SURFACES: tuple[str, ...] = (
     "scripts/identity_creator.py",
     "scripts/release_readiness_check.py",
     "scripts/report_three_plane_status.py",
-    "scripts/full_identity_protocol_scan.py",
     "scripts/e2e_smoke_test.sh",
 )
 
@@ -1032,6 +1061,97 @@ def _scan_host_transport_forbidden_defaults(repo_root: Path) -> dict[str, list[s
     return hits
 
 
+def _command_spans_for_script(*, surface_path: Path, text: str, script_path: str) -> list[tuple[int, str]]:
+    suffix = surface_path.suffix.lower()
+    if suffix == ".py":
+        pattern = re.compile(
+            r'\[\s*["\']python3["\']\s*,\s*["\']' + re.escape(script_path) + r'["\'](?P<body>.*?)\]',
+            re.DOTALL,
+        )
+        return [(m.start(), m.group(0)) for m in pattern.finditer(text)]
+
+    spans: list[tuple[int, str]] = []
+    lines = text.splitlines(keepends=True)
+    idx = 0
+    char_offset = 0
+    while idx < len(lines):
+        line = lines[idx]
+        current_offset = char_offset
+        if script_path not in line or "python3" not in line:
+            char_offset += len(line)
+            idx += 1
+            continue
+        block_lines = [line.strip()]
+        char_offset += len(line)
+        while line.rstrip().endswith("\\") and idx + 1 < len(lines):
+            idx += 1
+            line = lines[idx]
+            block_lines.append(line.strip())
+            char_offset += len(line)
+        spans.append((current_offset, f"line:{idx + 1}:" + "\n".join(block_lines)))
+        idx += 1
+    return spans
+
+
+def _missing_current_round_coverage_args_for_surface(*, surface_path: Path, text: str, required_args: tuple[str, ...]) -> list[dict[str, Any]]:
+    spans = _command_spans_for_script(surface_path=surface_path, text=text, script_path=REQUIRED_CONTRACT_COVERAGE_SCRIPT)
+    if not spans:
+        return []
+    dynamic_args: set[str] = set()
+    surface_rel = str(surface_path).replace("\\", "/")
+    if surface_rel.endswith("scripts/release_readiness_check.py"):
+        if '_replace_flag_value(cmd, "--run-id", bundle_run_token)' in text:
+            dynamic_args.add("--run-id")
+        if '_replace_flag_value(cmd, "--report-selected-path", execution_report)' in text:
+            dynamic_args.add("--report-selected-path")
+    rows: list[dict[str, Any]] = []
+    for idx, (_, block) in enumerate(spans, start=1):
+        missing = [flag for flag in required_args if flag not in block and flag not in dynamic_args]
+        if missing:
+            rows.append({
+                "command_index": idx,
+                "missing_args": missing,
+                "command_excerpt": block,
+            })
+    return rows
+
+
+def _current_round_bundle_markers_for_surface(*, surface_path: Path, text: str) -> list[tuple[int, str]]:
+    surface_rel = str(surface_path).replace("\\", "/")
+    if surface_rel.endswith("scripts/report_three_plane_status.py"):
+        pattern = re.compile(r"_run\(\s*_build_required_gate_bundle_cmd\(", re.DOTALL)
+        return [(m.start(), "_run(_build_required_gate_bundle_cmd(...))") for m in pattern.finditer(text)]
+    return []
+
+
+def _current_round_coverage_order_violations_for_surface(*, surface_path: Path, text: str) -> list[dict[str, Any]]:
+    coverage_spans = _command_spans_for_script(surface_path=surface_path, text=text, script_path=REQUIRED_CONTRACT_COVERAGE_SCRIPT)
+    if not coverage_spans:
+        return []
+    surface_rel = str(surface_path).replace("\\", "/")
+    if surface_rel.endswith("scripts/release_readiness_check.py") and "seq = seq_without_coverage + coverage_cmds" in text:
+        return []
+    bundle_spans = _command_spans_for_script(surface_path=surface_path, text=text, script_path=BUNDLE_RUNNER_SCRIPT)
+    bundle_spans.extend(_current_round_bundle_markers_for_surface(surface_path=surface_path, text=text))
+    if not bundle_spans:
+        return [{
+            "reason": "bundle_runner_missing_before_required_contract_coverage",
+            "coverage_command_excerpt": coverage_spans[0][1],
+        }]
+    first_bundle_pos = min(pos for pos, _ in bundle_spans)
+    first_bundle_excerpt = next(block for pos, block in bundle_spans if pos == first_bundle_pos)
+    rows: list[dict[str, Any]] = []
+    for idx, (pos, block) in enumerate(coverage_spans, start=1):
+        if pos < first_bundle_pos:
+            rows.append({
+                "command_index": idx,
+                "reason": "required_contract_coverage_precedes_current_round_bundle_materialization",
+                "coverage_command_excerpt": block,
+                "bundle_command_excerpt": first_bundle_excerpt,
+            })
+    return rows
+
+
 def _missing_bundle_skill_path_active_repo_root_tokens(text: str) -> list[str]:
     body = str(text or "")
     if not body:
@@ -1076,6 +1196,8 @@ def main() -> int:
     bundle_arg_value_invalid: dict[str, list[dict[str, Any]]] = {}
     bundle_runner_skill_path_active_repo_root_missing: list[str] = []
     dialogue_bundle_missing: dict[str, list[str]] = {}
+    current_round_coverage_arg_missing: dict[str, list[dict[str, Any]]] = {}
+    current_round_coverage_order_violations: dict[str, list[dict[str, Any]]] = {}
     host_transport_forbidden_default_hits = _scan_host_transport_forbidden_defaults(repo_root)
 
     for rel in STRICT_SURFACES:
@@ -2028,6 +2150,38 @@ def main() -> int:
                 set(existing + [f"runtime_file_governance_forbidden_phrase_detected:{tok}" for tok in forbidden_phrase_hits])
             )
 
+    coverage_surfaces = set(CURRENT_ROUND_COVERAGE_RUN_ID_REQUIRED_SURFACES) | set(CURRENT_ROUND_COVERAGE_REPORT_REQUIRED_SURFACES) | set(CURRENT_ROUND_COVERAGE_POST_BUNDLE_SURFACES)
+    for rel in sorted(coverage_surfaces):
+        path = repo_root / rel
+        if not path.exists():
+            if rel not in missing_surface_files:
+                missing_surface_files.append(rel)
+            continue
+        text = _read_text(path)
+        required_args = CURRENT_ROUND_COVERAGE_REQUIRED_ARGS_BY_SURFACE.get(rel, ())
+        if required_args:
+            rows = _missing_current_round_coverage_args_for_surface(
+                surface_path=path,
+                text=text,
+                required_args=required_args,
+            )
+            if rows:
+                current_round_coverage_arg_missing[rel] = rows
+                existing_tokens = list(missing_execution_tokens.get(rel, []))
+                for row in rows:
+                    existing_tokens.extend(
+                        f"required_contract_coverage_missing_arg:{flag}"
+                        for flag in row.get("missing_args", [])
+                    )
+                missing_execution_tokens[rel] = sorted(set(existing_tokens))
+        if rel in CURRENT_ROUND_COVERAGE_POST_BUNDLE_SURFACES:
+            rows = _current_round_coverage_order_violations_for_surface(surface_path=path, text=text)
+            if rows:
+                current_round_coverage_order_violations[rel] = rows
+                existing_tokens = list(missing_execution_tokens.get(rel, []))
+                existing_tokens.append("required_contract_coverage_ordering_drift")
+                missing_execution_tokens[rel] = sorted(set(existing_tokens))
+
     dialogue_bundle_path = repo_root / DIALOGUE_FEEDBACK_BUNDLE_SCRIPT
     if not dialogue_bundle_path.exists():
         missing_surface_files.append(DIALOGUE_FEEDBACK_BUNDLE_SCRIPT)
@@ -2209,6 +2363,12 @@ def main() -> int:
         "missing_lineage_refs": missing_lineage_refs,
         "missing_execution_tokens": missing_execution_tokens,
         "dialogue_bundle_missing": dialogue_bundle_missing,
+        "current_round_coverage_run_id_required_surfaces": list(CURRENT_ROUND_COVERAGE_RUN_ID_REQUIRED_SURFACES),
+        "current_round_coverage_report_required_surfaces": list(CURRENT_ROUND_COVERAGE_REPORT_REQUIRED_SURFACES),
+        "current_round_coverage_post_bundle_surfaces": list(CURRENT_ROUND_COVERAGE_POST_BUNDLE_SURFACES),
+        "current_round_coverage_required_args_by_surface": {k: list(v) for k, v in CURRENT_ROUND_COVERAGE_REQUIRED_ARGS_BY_SURFACE.items()},
+        "current_round_coverage_arg_missing": current_round_coverage_arg_missing,
+        "current_round_coverage_order_violations": current_round_coverage_order_violations,
         "forbidden_hits": forbidden_hits,
         "host_transport_forbidden_default_literals": list(HOST_TRANSPORT_FORBIDDEN_DEFAULT_LITERALS),
         "host_transport_forbidden_default_scan_dirs": list(HOST_TRANSPORT_FORBIDDEN_DEFAULT_SCAN_DIRS),

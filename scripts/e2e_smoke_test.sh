@@ -374,7 +374,7 @@ for ID in $IDS; do
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$REPLY_FIRST_LINE_BLOCKER_RECEIPT"
 
   echo "[12.465/30][$ID] compose governed send-time reply sample + preflight"
-  compose_cmd=(python3 scripts/final_emit_governed.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --body-text "E2E_SEND_TIME_REPLY_BODY" --out-reply-file "$SEND_TIME_REPLY_FILE" --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT" --outlet-channel-id final_emit_governed --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --json-only)
+  compose_cmd=(python3 scripts/final_emit_governed.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --body-text "E2E_SEND_TIME_REPLY_BODY" --out-reply-file "$SEND_TIME_REPLY_FILE" --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT" --outlet-channel-id final_emit_governed --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --run-id "$BUNDLE_RUN_TOKEN" --json-only)
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     compose_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
   fi
@@ -527,14 +527,6 @@ for ID in $IDS; do
   echo "[23.43/30][$ID] validate vendor namespace separation contract (Track-B)"
   python3 scripts/validate_vendor_namespace_separation.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e
 
-  echo "[23.45/30][$ID] summarize required-contract coverage semantics (PASS_REQUIRED/SKIPPED_NOT_REQUIRED)"
-  python3 scripts/validate_required_contract_coverage.py \
-    --catalog "$CATALOG_PATH" \
-    --repo-catalog identity/catalog/identities.yaml \
-    --identity-id "$ID" \
-    --actor-id "$HEADSTAMP_ACTOR_ID" \
-    --session-id "$TARGET_SESSION_ID" \
-    --operation e2e
 
   echo "[23.4505/30][$ID] validate release unlock formula contract (RQ-001)"
   python3 scripts/validate_unlock_formula.py \
@@ -943,6 +935,17 @@ PY
     --identity-id "$ID" \
     --catalog "$CATALOG_PATH" \
     --repo-catalog identity/catalog/identities.yaml \
+    --operation e2e
+
+  echo "[26.15/30][$ID] summarize required-contract coverage semantics (PASS_REQUIRED/SKIPPED_NOT_REQUIRED)"
+  python3 scripts/validate_required_contract_coverage.py \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --identity-id "$ID" \
+    --actor-id "$HEADSTAMP_ACTOR_ID" \
+    --session-id "$TARGET_SESSION_ID" \
+    --run-id "$BUNDLE_RUN_TOKEN" \
+    --report-selected-path "$UPGRADE_REPORT" \
     --operation e2e
 
   UPG_META_LINE=$(python3 - "$UPGRADE_REPORT" <<'PY'

@@ -1530,6 +1530,8 @@ def _instance_plane_status(
         actor_id,
         "--session-id",
         str(getattr(args, "session_id", "") or "").strip(),
+        "--run-id",
+        bundle_run_token,
         "--json-only",
     ]
     if layer_intent_text:
@@ -1756,32 +1758,6 @@ def _instance_plane_status(
     )
     validators["dialogue_result_support"] = {"rc": rc_drs, "ok": rc_drs == 0, "out": out_drs, "err": err_drs}
 
-    rc_cov, out_cov, err_cov = _run(
-        [
-            "python3",
-            "scripts/validate_required_contract_coverage.py",
-            "--catalog",
-            args.catalog,
-            "--repo-catalog",
-            args.repo_catalog,
-            "--identity-id",
-            args.identity_id,
-            "--operation",
-            "three-plane",
-            "--actor-id",
-            args.actor_id,
-            "--session-id",
-            str(getattr(args, "session_id", "") or "").strip(),
-            "--json-only",
-        ]
-    )
-    coverage_payload = _parse_json_payload(out_cov) or {}
-    validators["required_contract_coverage"] = {
-        "rc": rc_cov,
-        "ok": rc_cov == 0,
-        "out": out_cov,
-        "err": err_cov,
-    }
 
     rc_unlock_formula, out_unlock_formula, err_unlock_formula = _run(
         [
@@ -2403,6 +2379,37 @@ def _instance_plane_status(
     required_bundle_shadow_status = str(required_bundle_shadow_payload.get("bundle_status", "")).strip().upper()
     if rc_required_bundle_shadow != 0 or required_bundle_shadow_status == "FAIL_REQUIRED":
         hard_boundary = True
+
+    rc_cov, out_cov, err_cov = _run(
+        [
+            "python3",
+            "scripts/validate_required_contract_coverage.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--actor-id",
+            args.actor_id,
+            "--session-id",
+            str(getattr(args, "session_id", "") or "").strip(),
+            "--run-id",
+            bundle_run_token,
+            "--report-selected-path",
+            str(report_path),
+            "--json-only",
+        ]
+    )
+    coverage_payload = _parse_json_payload(out_cov) or {}
+    validators["required_contract_coverage"] = {
+        "rc": rc_cov,
+        "ok": rc_cov == 0,
+        "out": out_cov,
+        "err": err_cov,
+    }
 
     rc_recurrence, out_recurrence, err_recurrence = _run(
         [

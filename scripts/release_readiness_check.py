@@ -463,7 +463,7 @@ def main() -> int:
             ext="json",
         )
     )
-    bundle_run_token = required_gates_run_id or f"local-{identity_id}"
+    bundle_run_token = required_gates_run_id or f"readiness-{identity_id}"
     required_gate_bundle_receipt = str(
         runtime_temp_file(
             channel="required-gate-bundle",
@@ -940,6 +940,10 @@ def main() -> int:
             "final_emit_governed",
             "--actor-id",
             actor_id,
+            "--session-id",
+            session_id,
+            "--run-id",
+            bundle_run_token,
             "--json-only",
         ],
         [
@@ -966,6 +970,8 @@ def main() -> int:
             send_time_reply_gate_blocker_receipt,
             "--actor-id",
             actor_id,
+            "--session-id",
+            session_id,
             "--json-only",
         ],
         [
@@ -1311,6 +1317,10 @@ def main() -> int:
             actor_id,
             "--session-id",
             session_id,
+            "--run-id",
+            bundle_run_token,
+            "--report-selected-path",
+            str(args.execution_report or "").strip(),
         ],
         [
             "python3",
@@ -2355,6 +2365,17 @@ def main() -> int:
     except Exception:
         report_meta = {}
     _apply_bundle_passthrough_from_report(seq, report_meta, execution_report)
+    coverage_cmds: list[list[str]] = []
+    seq_without_coverage: list[list[str]] = []
+    for cmd in seq:
+        if len(cmd) >= 2 and cmd[1] == "scripts/validate_required_contract_coverage.py":
+            _replace_flag_value(cmd, "--run-id", bundle_run_token)
+            _replace_flag_value(cmd, "--report-selected-path", execution_report)
+            coverage_cmds.append(cmd)
+            continue
+        seq_without_coverage.append(cmd)
+    if coverage_cmds:
+        seq = seq_without_coverage + coverage_cmds
     permission_cmd = [
         "python3",
         "scripts/validate_identity_permission_state.py",

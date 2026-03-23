@@ -161,7 +161,6 @@ for ID in ${IDS}; do
   python3 scripts/trigger_capability_fit_review.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
   python3 scripts/build_capability_fit_matrix.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --out-root "${CAPABILITY_FIT_ROOT}" --json-only
   python3 scripts/validate_vendor_namespace_separation.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci
-  python3 scripts/validate_required_contract_coverage.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --operation ci --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID"
   python3 scripts/validate_gated_switch_guard.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --operation ci --json-only
   python3 scripts/validate_protocol_lane_headstamp_continuity.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --stamp-json "${STAMP_JSON}" --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --run-id "${GITHUB_RUN_ID:-ci-local}" --expected-work-layer protocol --expected-source-layer project --operation ci --json-only
   python3 scripts/validate_unlock_formula.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
@@ -189,6 +188,7 @@ for ID in ${IDS}; do
   python3 scripts/required_gate_bundle_runner.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --run-id "$BUNDLE_RUN_TOKEN" --send-time-gate-status NOT_APPLICABLE --outlet-bypass-detected false --final-emit-contract-status NOT_APPLICABLE --final-emit-policy-mode tool_choice_required --final-emit-schema-status NOT_APPLICABLE --actor-id "$HEADSTAMP_ACTOR_ID" --resolved-work-layer protocol --resolved-source-layer project --lock-state LOCK_MATCH --surface-label ci_three_plane --operation three-plane --out "$REQUIRED_GATE_BUNDLE_RECEIPT_THREE_PLANE" --json-only
   python3 scripts/validate_required_gate_recurrence_escalator.py --identity-id "$ID" --surface ci --operation ci --receipt "$REQUIRED_GATE_BUNDLE_RECEIPT_VALIDATE" --enforce-blocking --json-only
   python3 scripts/validate_required_gate_tuple_parity.py --receipt "$REQUIRED_GATE_BUNDLE_RECEIPT_VALIDATE" --receipt "$REQUIRED_GATE_BUNDLE_RECEIPT_THREE_PLANE" --require-distinct-operations --json-only
+  python3 scripts/validate_required_contract_coverage.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --operation ci --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --run-id "$BUNDLE_RUN_TOKEN"
   python3 scripts/validate_replay_archive_contract.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
   python3 scripts/validate_identity_experience_feedback_governance.py --identity-id "$ID"
   if [ "${IS_FIXTURE_ID}" = "1" ]; then
