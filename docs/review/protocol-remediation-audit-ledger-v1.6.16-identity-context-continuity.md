@@ -204,6 +204,21 @@ This stream now contains both the machine-facing contract freeze and the first s
     - live proof `FAIL_REQUIRED`,
     - answer surface still returns a governed reentry task block,
     - successful recovery may not be claimed until `instance_reentry_consumption_receipt` is later emitted.
+17. This answer-surface landing does **not** by itself complete instance adoption; audit now freezes the required hard-downsink/template materialization target as:
+    - `<pack-root>/scripts/emit_identity_context_checkpoint.py`
+    - `<pack-root>/scripts/materialize_identity_reentry_brief.py`
+    - `<pack-root>/scripts/emit_identity_reentry_consumption_receipt.py`
+    - `<pack-root>/scripts/INSTANCE_SCRIPT_MANIFEST.json`
+18. Audit also freezes the exact runtime artifact targets that those pack-local executables must produce:
+    - `<pack-root>/runtime/reports/context-continuity/continuity-rolling-*.json`
+    - `<pack-root>/runtime/reports/context-continuity/continuity-stage-*.json`
+    - `<pack-root>/runtime/reports/context-continuity/continuity-migration-*.json`
+    - `<pack-root>/runtime/state/context-continuity/active-reentry-brief.json`
+    - `<pack-root>/runtime/reports/context-continuity/checkpoint-receipt.json`
+    - `<pack-root>/runtime/reports/context-continuity/migration-receipt.json`
+    - `<pack-root>/runtime/reports/context-continuity/reentry-brief-receipt.json`
+    - `<pack-root>/runtime/reports/context-continuity/reentry-consumption-receipt.json`
+19. Therefore the correct current interpretation for `base-repo-closure-orchestrator` is: protocol answer surface landed, but live instance adoption remains open until those script files, manifest rows, and runtime artifacts exist under `.identity/base-repo-closure-orchestrator/`.
 
 ## 6) Audit hardening absorbed after coding-readiness freeze
 
