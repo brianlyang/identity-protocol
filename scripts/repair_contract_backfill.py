@@ -110,6 +110,9 @@ from create_identity_pack import (
     _write_replay_sample,
     materialize_protocol_host_gateway_artifacts,
 )
+from identity_context_continuity_materialization_common import (
+    materialize_identity_context_continuity_assets,
+)
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 from identity_codex_launcher_common import (
     IDENTITY_CODEX_LAUNCHER_CONTRACT_ID,
@@ -2522,6 +2525,12 @@ def main() -> int:
             catalog_path=catalog,
             protocol_root=repo_root,
         )
+    continuity_assets_result = materialize_identity_context_continuity_assets(
+        task=updated,
+        identity_id=args.identity_id,
+        pack_dir=pack_path,
+        apply=args.apply,
+    )
     host_gateway_wrapper_snapshot_after = _collect_host_gateway_wrapper_template_snapshot(
         updated,
         pack_path=pack_path,
@@ -2591,6 +2600,7 @@ def main() -> int:
         or meta_changed
         or bool(topology_assets_result.get("changed"))
         or bool(launcher_assets_result.get("changed"))
+        or bool(continuity_assets_result.get("changed"))
         or bool(prompt_runtime_governance_result.get("changed"))
         or bool(provider_bindings_template_result.get("changed"))
         or bool(feedback_selftest_assets_result.get("positive_rulebook_backfilled"))
@@ -2611,6 +2621,8 @@ def main() -> int:
         if topology_assets_result.get("applied"):
             applied = True
         if launcher_assets_result.get("applied"):
+            applied = True
+        if continuity_assets_result.get("changed"):
             applied = True
         if host_gateway_wrapper_artifacts_refreshed:
             applied = True
@@ -2645,6 +2657,10 @@ def main() -> int:
         status = STATUS_FAIL_REQUIRED
         error_code = ERR_LAUNCHER_WIRE_INVALID
         stale_reasons = ["required_launcher_contract_invalid_after_backfill"]
+    elif str(continuity_assets_result.get("status", "")).strip() != STATUS_PASS_REQUIRED:
+        status = STATUS_FAIL_REQUIRED
+        error_code = "IP-ICONT-MAT-001"
+        stale_reasons = ["continuity_materialization_incomplete_after_backfill"]
     elif prompt_missing_after:
         status = STATUS_FAIL_REQUIRED
         error_code = ERR_PROMPT_WIRE_MISSING
@@ -2796,6 +2812,7 @@ def main() -> int:
         "invalid_launcher_contract_keys_after": launcher_invalid_after,
         "restored_launcher_contract_keys": restored_launcher_contract_keys,
         "launcher_assets_backfill": launcher_assets_result,
+        "continuity_assets_backfill": continuity_assets_result,
         "missing_topology_contract_keys_after": topology_missing_after,
         "invalid_topology_contract_keys_after": topology_invalid_after,
         "restored_topology_contract_keys": restored_topology_contract_keys,

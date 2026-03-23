@@ -9,6 +9,7 @@ from typing import Any
 
 from identity_context_continuity_common import (
     CHECKPOINT_ARTIFACT_KINDS,
+    CONTINUITY_AUXILIARY_RECEIPT_KINDS,
     CONTINUITY_RECEIPT_KINDS,
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -157,6 +158,8 @@ def _scan_unknown_continuity_receipt_kinds(report_root: Path) -> list[str]:
         if not kind:
             continue
         if kind in ALLOWED_CONTINUITY_RECEIPT_KINDS:
+            continue
+        if kind in CONTINUITY_AUXILIARY_RECEIPT_KINDS:
             continue
         lowered = kind.lower()
         if any(token in lowered for token in ("continuity", "reentry", "migration")):

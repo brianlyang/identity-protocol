@@ -25,6 +25,7 @@ from identity_context_continuity_common import (  # noqa: E402
     CONTEXT_CONTINUITY_CONTRACT_ID,
     CONTEXT_CONTINUITY_CONTRACT_KEY,
     CONTEXT_CONTINUITY_VALIDATOR_ID,
+    CONTINUITY_GUARD_RECEIPT_KIND,
     CONTINUITY_RECEIPT_CONTRACT_ID,
     CONTINUITY_RECEIPT_KINDS,
     REENTRY_BRIEF_CONSUMPTION_CONTRACT_ID,
@@ -206,6 +207,23 @@ def reentry_consumption_receipt_doc(*, pack_root: Path, brief_path: Path, contin
         "launcher_bind_status": "PASS_REQUIRED",
         "consumption_outcome": "governed_reentry_brief_consumed",
         "route_or_entry_scope": "startup_resume_recover",
+    }
+
+
+def guard_receipt_doc(*, action: str) -> dict:
+    return {
+        "receipt_family": CONTINUITY_GUARD_RECEIPT_KIND,
+        "identity_id": IDENTITY_ID,
+        "catalog_path": ".identity/catalog.local.yaml",
+        "guard_action": action,
+        "turn_count": 15 if action == "tick" else 0,
+        "trigger_profile": "default_turns_15_30_60",
+        "generated_at": "2026-03-23T00:00:00Z",
+        "event_payload": {
+            "action": action,
+            "synthetic": True,
+        },
+        "guard_state_ref": "runtime/state/context-continuity/guard-state.json",
     }
 
 
@@ -449,6 +467,10 @@ write_json(
         brief_path=receipt_brief_path,
         continuity_lineage_ref="cont-family-reentry",
     ),
+)
+write_json(
+    receipt_pass_pack / "runtime" / "reports" / "context-continuity" / "guard-tick-pass.json",
+    guard_receipt_doc(action="tick"),
 )
 
 receipt_missing_member_pack = tmp_root / "receipt-family-missing-member-pack"

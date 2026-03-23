@@ -26,6 +26,12 @@ CONTINUITY_RECEIPT_KINDS: dict[str, str] = {
     "reentry_brief": "instance_reentry_brief_receipt",
     "reentry_consumption": "instance_reentry_consumption_receipt",
 }
+CONTINUITY_GUARD_RECEIPT_KIND = "identity_context_continuity_guard_receipt_v1"
+CONTINUITY_AUXILIARY_RECEIPT_KINDS: frozenset[str] = frozenset(
+    {
+        CONTINUITY_GUARD_RECEIPT_KIND,
+    }
+)
 REENTRY_ANSWER_BUNDLE_CONTRACT_ID = "identity_context_reentry_answer_contract_v1"
 REENTRY_ANSWER_QUESTION_FAMILY = "identity_context_reentry_recovery"
 REENTRY_ANSWER_INTENTS: tuple[str, ...] = (

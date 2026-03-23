@@ -129,6 +129,9 @@ from identity_context_continuity_common import (
     REPORT_ROOT_REL as COMMON_CONTEXT_CONTINUITY_REPORT_ROOT_REL,
     STATE_ROOT_REL as COMMON_CONTEXT_CONTINUITY_STATE_ROOT_REL,
 )
+from identity_context_continuity_materialization_common import (
+    materialize_identity_context_continuity_assets,
+)
 from response_stamp_common import default_response_stamp_profile, normalize_response_stamp_profile
 from native_chat_headstamp_common import (
     DEFAULT_NATIVE_CHAT_PROMPT_HARD_GUARD_TEMPLATE_REF,
@@ -7436,6 +7439,12 @@ def main() -> int:
         catalog_path=catalog_path,
         protocol_root=repo_root,
     )
+    continuity_assets = materialize_identity_context_continuity_assets(
+        task=current_task,
+        identity_id=identity_id,
+        pack_dir=pack_dir,
+        apply=True,
+    )
     write_json(pack_dir / "CURRENT_TASK.json", current_task)
 
     write(pack_dir / "TASK_HISTORY.md", "# Task History\n\n## Entries\n")
@@ -7507,6 +7516,10 @@ def main() -> int:
         f"{gateway_artifacts.get('gateway_contract_path')}, "
         f"{gateway_artifacts.get('ingress_wrapper_path')}, "
         f"{gateway_artifacts.get('egress_wrapper_path')}"
+    )
+    print(
+        "[OK] materialized continuity guard assets: "
+        f"{continuity_assets.get('inspection', {}).get('guard_state_path', '')}"
     )
 
     catalog_original_text: str | None = None

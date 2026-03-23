@@ -68,12 +68,24 @@ assert payload["status"] == "PASS_REQUIRED", payload
 assert payload["command_bundle_contract_id"] == "identity_codex_launcher_command_discovery_contract_v1", payload
 assert payload["question_family"] == "identity_launcher_start_resume", payload
 assert payload["resume_status"] == "PASS_REQUIRED", payload
-assert payload["continuity_support"]["bundle_contract_id"] == "identity_context_continuity_bundle_v1", payload
-assert payload["continuity_support"]["bundle_role"] == "launcher_and_instance_internal_support", payload
-assert payload["continuity_support"]["operator_surface_contract"]["new_user_facing_continuity_command_family_forbidden"] is True, payload
-assert payload["continuity_support"]["startup_reentry_readiness_status"] == "SKIPPED_NOT_REQUIRED", payload
-assert payload["continuity_support"]["live_reentry_consumption_proof_status"] == "SKIPPED_NOT_REQUIRED", payload
-assert payload["continuity_support"]["recommended_launcher_bind_mode"] == "fresh_start_without_continuity_contract", payload
+continuity = payload["continuity_support"]
+assert continuity["bundle_contract_id"] == "identity_context_continuity_bundle_v1", payload
+assert continuity["bundle_role"] == "launcher_and_instance_internal_support", payload
+assert continuity["operator_surface_contract"]["new_user_facing_continuity_command_family_forbidden"] is True, payload
+mode = continuity["recommended_launcher_bind_mode"]
+if mode == "fresh_start_without_continuity_contract":
+    assert continuity["startup_reentry_readiness_status"] == "SKIPPED_NOT_REQUIRED", payload
+    assert continuity["live_reentry_consumption_proof_status"] == "SKIPPED_NOT_REQUIRED", payload
+    assert continuity["continuity_contract_required"] is False, payload
+    assert continuity["reentry_contract_required"] is False, payload
+elif mode == "consume_governed_reentry_brief":
+    assert continuity["startup_reentry_readiness_status"] == "PASS_REQUIRED", payload
+    assert continuity["live_reentry_consumption_proof_status"] in {"FAIL_REQUIRED", "PASS_REQUIRED"}, payload
+    assert continuity["receipt_family_observation_status"] in {"FAIL_REQUIRED", "PASS_REQUIRED"}, payload
+    assert continuity["continuity_contract_required"] is True, payload
+    assert continuity["reentry_contract_required"] is True, payload
+else:
+    raise AssertionError(payload)
 assert payload["shortcut_command_on_path"] is False, payload
 assert payload["generic_command_on_path"] is False, payload
 assert payload["preferred_start_command"] == f"id-{payload['identity_id']}", payload

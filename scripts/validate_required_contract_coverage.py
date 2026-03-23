@@ -11,6 +11,13 @@ from typing import Any
 
 import yaml
 
+from identity_context_continuity_common import (
+    CONTEXT_CONTINUITY_CONTRACT_ID,
+    CONTEXT_CONTINUITY_CONTRACT_KEY,
+    CONTINUITY_RECEIPT_CONTRACT_ID,
+    REENTRY_BRIEF_CONSUMPTION_CONTRACT_ID,
+    REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY,
+)
 from response_stamp_common import resolve_layer_intent
 from tool_vendor_governance_common import (
     contract_required,
@@ -87,6 +94,10 @@ STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_skill_installation_supply_chain.py": "skill_installation_supply_chain_status",
     "scripts/validate_skill_frontmatter.py": "skill_frontmatter_status",
     "scripts/validate_skill_sync_drift_guard.py": "skill_sync_drift_guard_status",
+    "scripts/validate_identity_context_continuity.py": "identity_context_continuity_status",
+    "scripts/validate_identity_reentry_brief.py": "identity_reentry_brief_status",
+    "scripts/validate_identity_reentry_consumption.py": "identity_reentry_consumption_status",
+    "scripts/validate_identity_context_continuity_receipts.py": "identity_context_continuity_receipt_family_status",
 }
 PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "release_plane_cloud_evidence",
@@ -118,6 +129,10 @@ PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "intake_evidence_quorum",
     "route_version_pinning",
     "fallback_taxonomy_normalization",
+    "identity_context_continuity",
+    "identity_reentry_brief",
+    "identity_reentry_consumption",
+    "identity_context_continuity_receipts",
     "dedup_monotonicity",
     "cross_workflow_schema",
     "skill_path_integrity",
@@ -561,6 +576,45 @@ TARGETS = (
             "rq_041_skill_sync_drift_guard_contract_v1",
         ),
         validator_script="scripts/validate_skill_sync_drift_guard.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="identity_context_continuity",
+        contract_keys=(
+            CONTEXT_CONTINUITY_CONTRACT_KEY,
+            CONTEXT_CONTINUITY_CONTRACT_ID,
+        ),
+        validator_script="scripts/validate_identity_context_continuity.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="identity_reentry_brief",
+        contract_keys=(
+            REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY,
+            REENTRY_BRIEF_CONSUMPTION_CONTRACT_ID,
+        ),
+        validator_script="scripts/validate_identity_reentry_brief.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="identity_reentry_consumption",
+        contract_keys=(
+            REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY,
+            REENTRY_BRIEF_CONSUMPTION_CONTRACT_ID,
+        ),
+        validator_script="scripts/validate_identity_reentry_consumption.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="identity_context_continuity_receipts",
+        contract_keys=(
+            CONTEXT_CONTINUITY_CONTRACT_KEY,
+            CONTEXT_CONTINUITY_CONTRACT_ID,
+            REENTRY_BRIEF_CONSUMPTION_CONTRACT_KEY,
+            REENTRY_BRIEF_CONSUMPTION_CONTRACT_ID,
+            CONTINUITY_RECEIPT_CONTRACT_ID,
+        ),
+        validator_script="scripts/validate_identity_context_continuity_receipts.py",
         validator_args=("--json-only",),
     ),
     ContractTarget(

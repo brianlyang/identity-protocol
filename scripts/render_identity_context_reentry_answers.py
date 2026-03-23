@@ -163,7 +163,6 @@ def render_reentry_answers_payload(
         identity_id=identity_id,
         catalog=catalog,
         current_task=current_task,
-        artifact_kind="reentry_brief",
         brief=brief,
         receipt=receipt,
     )
