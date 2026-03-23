@@ -182,6 +182,15 @@ The stream has now moved beyond a docs-only opening. Audit-accepted machine land
    - `scripts/validate_identity_context_continuity_receipts.py` now accepts multi-hop migration ancestry only when the chain still joins back to the bounded checkpoint root, eliminating the prior false red on repeated `pre-migrate` cycles without weakening fail-close;
    - `scripts/repair_contract_backfill.py` now restores the three `rq_039` dependent contract skeletons (`tool_installation_contract`, `vendor_api_discovery_contract`, `vendor_api_solution_contract`) so required coverage no longer fails on missing dependent-contract drift;
    - `scripts/validate_required_contract_coverage.py --operation inspection` now replays `failed_required_contract_count=0` for `base-repo-audit-expert-v3`, while `rq_052` stays green across all four active runtime identities after the live dialogue-retention resync on `base-repo-closure-orchestrator`.
+11. Audit now explicitly accepts the six-layer interpretation model for memory-like persisted artifacts:
+   - generic `memory` wording is non-canonical;
+   - every persisted artifact must resolve to exactly one frozen family;
+   - viability is judged by semantic owner + canonical root + shared producer + shared consumer/validator + live replay;
+   - routing closure and family-specific deep semantics stay split rather than collapsing into one super-validator.
+12. Audit also accepts the runtime three-state non-regression rule as the correct live interpretation of `rq_052`:
+   - required/adopted family -> must remain `PASS_REQUIRED`;
+   - optional/not-required family -> may remain `SKIPPED_NOT_REQUIRED` without dragging the outer routing lane red;
+   - quarantine-only family -> must never be promoted to active success-path truth.
 
 ## 6) Closure state
 

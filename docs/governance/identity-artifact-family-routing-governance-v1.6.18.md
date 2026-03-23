@@ -270,6 +270,40 @@ Execution mode: topic-level canonical SSOT for v1.6.18 artifact-family routing g
 8. New protocol-owned persisted artifact families require a later governed stream; they must not silently appear under generic “memory” wording.
 9. When an identity instance or operator asks “这段记忆应该存哪里”, the only canonical answer is: resolve it to the exact family name and canonical path family above.
 
+### 5.1 Governed layered interpretation model
+
+1. Interpretation of any colloquial “memory” request must proceed through six governed layers rather than one generic bucket:
+   - language layer -> reject generic `memory` as a canonical sink name;
+   - family layer -> resolve the request to exactly one frozen family;
+   - path layer -> confirm the fixed canonical root for that family;
+   - producer/consumer layer -> confirm the shared producer method and primary consumer surface;
+   - declaration/gate layer -> keep `reject_memory_gate` and `*_contract` blocks on the control plane instead of mistaking them for storage;
+   - runtime viability layer -> verify that the family is alive on the applicable runtime lane.
+2. A reply such as “放到 memory 里” is semantically invalid unless it is immediately rewritten as one exact family plus its canonical path family.
+3. Similar payload wording does not collapse two families into one layer; family identity is still decided by semantic owner + fixed path + producer + consumer.
+
+### 5.2 Family viability judgment
+
+1. A protocol-owned family is considered viable only when all of the following remain true together:
+   - semantic owner is frozen on the motherline;
+   - canonical fixed path family is frozen;
+   - a shared producer path exists;
+   - a shared consumer/validator lane exists;
+   - active runtime replay proves the family on non-deprecated identities where it is expected to run.
+2. Docs-only presence is insufficient.
+3. Path-only existence is insufficient.
+4. A pack-local one-off workaround is insufficient.
+5. The minimum canonical proof is therefore: governance/motherline freeze + creator/backfill/readiness consumption + validator/probe coverage + active runtime replay.
+
+### 5.3 Upgrade-safe runtime truth
+
+1. Upgrade safety is not measured by forcing every family to return `PASS_REQUIRED` on every identity.
+2. Required/adopted families must remain `PASS_REQUIRED` after the upgrade and remain backed by the inherited family-owner validator lane where applicable.
+3. Optional/not-required families may remain `SKIPPED_NOT_REQUIRED`, and that skip must not poison the outer routing lane into false red.
+4. Quarantine-only families such as `runtime/memory-absorption/**` may exist, but they must never be promoted onto an active success path to manufacture synthetic green.
+5. Whole-matrix routing and family-specific deep semantics must be checked together: `rq_052` protects routing closure, while inherited owner validators continue to prove the family-specific semantics.
+6. Any change that would collapse this three-state runtime truth model back into “all families must always be green” or “routing green hides inherited-family red” is a semantic-owner change and must return to governed review.
+
 ## 6) Current scan anchors absorbed into this stream
 
 Current local runtime inspection of `base-repo-closure-orchestrator` confirms that the ambiguity is real and must be frozen protocol-side rather than left to per-instance folklore:

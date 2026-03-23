@@ -106,6 +106,9 @@ Hard semantics:
 11. Runtime closeout may extend validators, probes, creator/readiness wiring, replay breadth, and truth-sync only inside the frozen routing matrix; it must not redefine family names, canonical roots, canonical producer/consumer roles, or frozen non-goals.
 12. If `rq_052` projects a red state from an inherited family-owner validator, runtime must preserve that inherited failure truth rather than masking it with generic routing green, compatibility shortcuts, or backstop promotion.
 13. Future validators/creator/readiness wiring must enforce the same routing matrix rather than re-deriving family semantics per pack.
+14. Runtime interpretation of memory-like persisted artifacts is layered: reject generic `memory`, resolve one exact family, enforce its fixed path, preserve canonical producer/consumer roles, keep declarations/gates off the storage plane, and then prove runtime viability.
+15. Runtime viability is achieved only when the family remains aligned across semantic owner, canonical root, shared producer path, shared consumer/validator lane, and active replay on the identities where that family is expected to operate.
+16. Runtime upgrade safety uses a three-state discipline rather than a one-state “all green” fiction: required/adopted families must stay `PASS_REQUIRED`, optional/not-required families may stay `SKIPPED_NOT_REQUIRED` without poisoning the outer routing lane, and quarantine-only families must never be promoted onto active success paths.
 
 ## Batch-6 anchor placeholders (v1.6 intake, non-promotional)
 
@@ -429,6 +432,8 @@ Hard semantics:
 5. `rq_052` is a routing/control-plane contract, not a replacement semantic owner for the eight families. Family-specific deep semantics remain owned by their inherited streams and dedicated validators; `rq_052` only enforces that those families do not collapse, drift, or cross-wire at the routing layer.
 6. When an inherited family-owner validator fails, `rq_052` must surface that inherited-family red as routed evidence rather than normalizing it away; execution closeout on that residual remains inherited-family work unless the proposed fix changes the frozen routing semantics themselves.
 7. Any change to the routing row that adds/renames a family, repoints a canonical root, changes canonical producer/consumer roles, relaxes the `memory` anti-pollution boundary, promotes `runtime/memory-absorption/**` onto an active success path, or introduces compatibility/backstop shortcuts must return to semantic-owner governance before implementation.
+8. `rq_052` must preserve three-state runtime truth: required/adopted family obligations remain blocking and replay-backed, optional/not-required families may remain explicit `SKIPPED_NOT_REQUIRED` without forcing synthetic debt, and quarantine-only families remain non-promotable.
+9. A routing green state is valid only when the routing row and any applicable inherited family-owner validators jointly satisfy the active replay contract; docs-only presence, directory-only presence, or compatibility masking is non-canonical.
 
 ### Canonical identity-Codex launcher execution boundary (v1.6.14 additive)
 
