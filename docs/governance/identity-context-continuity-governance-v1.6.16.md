@@ -1,6 +1,6 @@
 # Identity Context Continuity Governance (v1.6.16)
 
-Status: Active (shared validators + probe lane + pack-lifecycle rollout + instance-visible reentry answer surface + first live pilot adoption + launcher-owned startup consumer landing verified, 2026-03-23; broader workspace rollout and multi-pilot breadth still pending)
+Status: Active (shared validators + probe lane + pack-lifecycle rollout + instance-visible reentry answer surface + first live pilot adoption + launcher-owned startup consumer landing verified + same-workspace second live identity replay verified, 2026-03-23; cross-workspace breadth still pending)
 Layer: protocol  
 Scope: identity-instance continuity checkpoints, migration handoff checkpoints, and startup-consumable re-entry briefing  
 Execution mode: topic-level canonical SSOT for v1.6.16 identity-context-continuity governance.
@@ -312,12 +312,16 @@ Minimum additional requirements:
 2. `RQ-046` was not allowed to land as an empty join shell; it lands only after `RQ-044` and `RQ-045` already prove artifact validity and startup-consumption validity.
 3. The required `v1.6.13` topology-path and `v1.6.8` path-registration work for the canonical continuity runtime families is now landed in shared pack-lifecycle surfaces, so pilot adoption is no longer blocked on path discipline alone.
 4. The first live pilot adoption is now frozen as `base-repo-closure-orchestrator`, proven through shared backfill/materialization plus real `tick` -> `pre-migrate` -> `post-recover` runtime evidence under its own pack root.
-5. The remaining landing order from this checkpoint forward is:
-   - more real workspace/identity pilots through the same shared materialization path and the same launcher-owned startup-consumer bridge
-   - stricter readiness promotion only after live proof breadth is no longer single-pilot
-6. Launcher-side positive proof remains insufficient if it proves only that a brief file exists; it must prove that governed startup consumption emitted governed runtime evidence.
-7. The launcher-owned startup-consumer bridge is now machine-proven through the launcher probe lane, including real `pre-migrate -> launcher exec/startup -> reentry-consumption-receipt` proof in an isolated runtime.
-8. This landing order is frozen so teams do not skip directly from shared wiring to fleet-rollout claims.
+5. Launcher-owned startup consumption is now also replayed on a second real runtime identity in the same workspace:
+   - `base-repo-audit-expert-v3` reproduces `pre-migrate -> launcher exec/startup -> reentry-consumption-receipt` through the inherited `v1.6.14` entry surface, using runtime-local catalog truth and the governed `post-recover` bridge rather than a manual continuity-side helper;
+   - immediately after `pre-migrate`, the continuity bundle holds `startup_reentry_readiness_status=PASS_REQUIRED` while `receipt_family_observation_status=FAIL_REQUIRED`, proving that live-consumption proof is not being pre-credited;
+   - after launcher exec/startup, the same bundle returns `live_reentry_consumption_proof_status=PASS_REQUIRED` plus `receipt_family_observation_status=PASS_REQUIRED`, proving the bridge now closes on more than one live identity without pack-specific hardcoding.
+6. The remaining landing order from this checkpoint forward is:
+   - more real workspace pilots through the same shared materialization path and the same launcher-owned startup-consumer bridge
+   - stricter readiness promotion only after live proof breadth is no longer single-workspace
+7. Launcher-side positive proof remains insufficient if it proves only that a brief file exists; it must prove that governed startup consumption emitted governed runtime evidence.
+8. The launcher-owned startup-consumer bridge is now machine-proven through the launcher probe lane, including real `pre-migrate -> launcher exec/startup -> reentry-consumption-receipt` proof in an isolated runtime, and the same bridge now has same-workspace replay on both `base-repo-closure-orchestrator` and `base-repo-audit-expert-v3`.
+9. This landing order is frozen so teams do not skip directly from shared wiring to fleet-rollout claims.
 
 ### 2.13 Evidence interpretation discipline (frozen)
 
@@ -446,7 +450,7 @@ Minimum additional requirements:
 4. This stream does not reopen `v1.6.13` topology semantics, `v1.6.14` launcher semantics, or `v1.6.15` route/script semantics.
 5. This stream does not redefine MCP capability negotiation or server startup health.
 6. This stream does not authorize arbitrary new pack-root script subtrees or runtime path families outside governed registration.
-7. This stream now claims one real live pilot adoption plus governed re-entry consumption proof for `base-repo-closure-orchestrator`, and it also claims the first shared launcher-owned startup-consumer bridge; it still does not claim fleet rollout closure or multi-pilot breadth.
+7. This stream now claims one real live pilot adoption plus governed re-entry consumption proof for `base-repo-closure-orchestrator`, and it also claims that the shared launcher-owned startup-consumer bridge has replayed on a second live identity (`base-repo-audit-expert-v3`) in the same workspace; it still does not claim fleet rollout closure or cross-workspace breadth.
 
 ## 5) Frozen implementation guidance
 
@@ -463,7 +467,7 @@ Minimum additional requirements:
 
 1. `v1.6.16` is no longer documentation-only; the shared validator / probe / pack-lifecycle layer is now landed.
 2. Promotion from this checkpoint to live implementation closure requires, at minimum:
-   - more than one pilot/workspace proving the same shared materialization path plus the same launcher-owned startup-consumer bridge under real runtime conditions,
+   - more than one workspace proving the same shared materialization path plus the same launcher-owned startup-consumer bridge under real runtime conditions,
    - governed live evidence breadth showing startup consumption emitted the required runtime receipt family beyond a single pilot.
 3. The shared implementation families now landed for this stream are:
    - protocol-owned validator surfaces for continuity artifacts and re-entry briefs;
@@ -471,4 +475,4 @@ Minimum additional requirements:
    - shared creator / backfill / updater surfaces that register continuity contracts and path families.
 4. The remaining follow-on landing envelope is therefore narrower:
    - pilot/runtime proof surfaces that demonstrate the same outcome across more than one workspace or identity.
-5. The document is now sufficient to support shared protocol coding, first live pilot adoption, and the first launcher-owned startup-consumer bridge, but not yet sufficient to claim rollout closure until multi-pilot proof lands.
+5. The document is now sufficient to support shared protocol coding, first live pilot adoption, the first launcher-owned startup-consumer bridge, and a same-workspace second live replay of that bridge, but not yet sufficient to claim rollout closure until cross-workspace proof lands.

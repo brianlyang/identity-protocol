@@ -1,6 +1,6 @@
 # Protocol Remediation Audit Ledger (v1.6.16 identity-context-continuity stream)
 
-Status: Active (shared validators + probe lane + pack-lifecycle rollout + instance-visible reentry answer surface + first live pilot adoption + launcher-owned startup consumer landing verified, 2026-03-23; broader workspace rollout and multi-pilot breadth still pending)
+Status: Active (shared validators + probe lane + pack-lifecycle rollout + instance-visible reentry answer surface + first live pilot adoption + launcher-owned startup consumer landing verified + same-workspace second live identity replay verified, 2026-03-23; cross-workspace breadth still pending)
 Scope: protocol review ledger for continuity checkpoints, migration handoff checkpoints, and startup-consumable re-entry briefing
 
 ## 0) Stream objective
@@ -254,6 +254,12 @@ This stream now contains both the machine-facing contract freeze and the first s
     - `scripts/identity_codex_launcher_common.py` now consumes the protocol-owned continuity-support bundle and, when it recommends `consume_governed_reentry_brief`, invokes the canonical pack-local `run_identity_context_continuity_guard.sh post-recover --json-only` path before handing control to Codex;
     - `bash scripts/ci/run_identity_codex_launcher_probes_ci.sh` now proves the real sequence `pre-migrate -> launcher exec/startup -> reentry-consumption-receipt` in an isolated runtime;
     - live runtime replay on `base-repo-closure-orchestrator` now shows `pre-migrate` degrading `receipt_family_observation_status` to `FAIL_REQUIRED`, followed by launcher exec/startup restoring it to `PASS_REQUIRED` without manual post-recover intervention.
+29. Audit then reproduced the same launcher-owned bridge on a second real runtime identity in the same workspace, `base-repo-audit-expert-v3`, without manual continuity-side receipt emission:
+    - `python3 scripts/resolve_identity_context.py resolve --identity-id base-repo-audit-expert-v3 --repo-catalog identity/catalog/identities.yaml --local-catalog ../.identity/catalog.local.yaml` returned `source_layer=project`, `catalog_path=/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml`, and the canonical pack root under `.identity/base-repo-audit-expert-v3/`;
+    - `.identity/base-repo-audit-expert-v3/scripts/run_identity_context_continuity_guard.sh --catalog .identity/catalog.local.yaml pre-migrate --json-only` refreshed the governed migration checkpoint and `active-reentry-brief.json`;
+    - `python3 scripts/render_identity_context_continuity_bundle.py --identity-id base-repo-audit-expert-v3 --catalog ../.identity/catalog.local.yaml --json-only` then showed `startup_reentry_readiness_status=PASS_REQUIRED` while `receipt_family_observation_status=FAIL_REQUIRED`, proving the bridge was still incomplete immediately after `pre-migrate`;
+    - `/Users/yangxi/.codex/bin/identity-codex --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --session-id run:switch-back-base-repo-audit-expert-v3-20260319T000000Z -- --version` exercised the inherited launcher entry surface;
+    - the post-launcher continuity bundle then returned `live_reentry_consumption_proof_status=PASS_REQUIRED` and `receipt_family_observation_status=PASS_REQUIRED`, proving that the earlier “reentry-ready but not live-consumption-proof complete” ceiling is now stale for the shared launcher bridge.
 
 ## 6) Audit hardening absorbed after coding-readiness freeze
 
@@ -274,7 +280,7 @@ The following audit caveats are now frozen as interpretation rules rather than l
 
 ## 7) Current-state non-goals frozen for audit
 
-1. This stream now claims one real live pilot adoption plus live governed re-entry proof for `base-repo-closure-orchestrator`, and it also claims the first shared launcher-owned startup-consumer bridge; it still does **not** claim fleet rollout closure or multi-workspace breadth.
+1. This stream now claims one real live pilot adoption plus live governed re-entry proof for `base-repo-closure-orchestrator`, and it also claims that the shared launcher-owned startup-consumer bridge has replayed on a second live runtime identity (`base-repo-audit-expert-v3`) in the same workspace; it still does **not** claim fleet rollout closure or cross-workspace breadth.
 2. This checkpoint does not claim raw transcript persistence is the new protocol motherline.
 3. This checkpoint does not reopen `v1.6.13` / `v1.6.14` / `v1.6.15` semantics.
 4. This checkpoint does not yet solve isolated historical replay of continuity state.
@@ -283,8 +289,8 @@ The following audit caveats are now frozen as interpretation rules rather than l
 
 The remaining implementation stage should land, in order:
 
-1. more real workspace/identity pilots using the same shared materialization/backfill path plus the same launcher-owned startup-consumer bridge
-2. only after that, stricter readiness / required-gate promotion backed by multi-pilot live runtime evidence
+1. more real workspace pilots using the same shared materialization/backfill path plus the same launcher-owned startup-consumer bridge
+2. only after that, stricter readiness / required-gate promotion backed by cross-workspace live runtime evidence
 
 Primary target surfaces for the remaining stage:
 
@@ -304,5 +310,6 @@ The correct interpretation of this ledger is therefore:
 
 - `v1.6.16` is now a real governed stream;
 - shared validator / probe / pack-lifecycle wiring is landed and machine-consumable;
-- `base-repo-closure-orchestrator` is now the first real live pilot with governed continuity production + re-entry consumption proof;
-- broader workspace rollout and multi-pilot breadth remain the follow-on phase, not something this ledger falsely claims today.
+- `base-repo-closure-orchestrator` remains the first real live pilot with governed continuity production + re-entry consumption proof;
+- `base-repo-audit-expert-v3` now also replays the shared launcher-owned startup-consumer bridge end to end inside the same workspace without manual receipt emission;
+- broader workspace rollout and cross-workspace breadth remain the follow-on phase, not something this ledger falsely claims today.
