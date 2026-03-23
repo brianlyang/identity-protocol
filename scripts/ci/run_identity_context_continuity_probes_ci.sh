@@ -43,6 +43,23 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def write_catalog(path: Path, *, pack_root: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "identities": [
+            {
+                "id": IDENTITY_ID,
+                "pack_path": str(pack_root.resolve()),
+                "status": "active",
+                "profile": "runtime",
+                "runtime_mode": "local_only",
+                "scope": "USER",
+            }
+        ]
+    }
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def continuity_contract(*, required: bool) -> dict:
     return {
         "required": bool(required),
@@ -498,6 +515,9 @@ broken_join_doc = reentry_consumption_receipt_doc(
 )
 write_json(broken_join_receipt_path, broken_join_doc)
 
+coverage_pass_catalog = tmp_root / "coverage-pass-catalog.local.yaml"
+write_catalog(coverage_pass_catalog, pack_root=receipt_pass_pack)
+
 exports = {
     "IDENTITY_ID": IDENTITY_ID,
     "DORMANT_TASK": dormant_pack / "CURRENT_TASK.json",
@@ -531,6 +551,7 @@ exports = {
     "REENTRY_RECEIPT_LOCATION_BRIEF": reentry_receipt_location_pack / REENTRY_BRIEF_REL,
     "REENTRY_RECEIPT_BAD_LOCATION_PATH": reentry_receipt_bad_location_path,
     "RECEIPT_PASS_TASK": receipt_pass_pack / "CURRENT_TASK.json",
+    "COVERAGE_PASS_CATALOG": coverage_pass_catalog,
     "RECEIPT_MISSING_MEMBER_TASK": receipt_missing_member_pack / "CURRENT_TASK.json",
     "RECEIPT_UNKNOWN_KIND_TASK": receipt_unknown_kind_pack / "CURRENT_TASK.json",
     "RECEIPT_BROKEN_JOIN_TASK": receipt_broken_join_pack / "CURRENT_TASK.json",
@@ -559,6 +580,7 @@ REENTRY_OUTCOME_FAIL_JSON="${TMP_ROOT}/reentry-outcome-fail.json"
 REENTRY_BRIEF_LOCATION_JSON="${TMP_ROOT}/reentry-brief-location.json"
 REENTRY_RECEIPT_LOCATION_JSON="${TMP_ROOT}/reentry-receipt-location.json"
 RECEIPT_PASS_JSON="${TMP_ROOT}/receipt-family-pass.json"
+REQUIRED_COVERAGE_PASS_JSON="${TMP_ROOT}/required-coverage-pass.json"
 RECEIPT_MISSING_MEMBER_JSON="${TMP_ROOT}/receipt-family-missing-member.json"
 RECEIPT_UNKNOWN_KIND_JSON="${TMP_ROOT}/receipt-family-unknown-kind.json"
 RECEIPT_BROKEN_JOIN_JSON="${TMP_ROOT}/receipt-family-broken-join.json"
@@ -753,6 +775,13 @@ run_cmd python3 "${ROOT}/scripts/validate_identity_context_continuity_receipts.p
   --require-observed \
   --json-only > "${RECEIPT_PASS_JSON}"
 
+run_cmd python3 "${ROOT}/scripts/validate_required_contract_coverage.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --catalog "${COVERAGE_PASS_CATALOG}" \
+  --repo-catalog "${ROOT}/identity/catalog/identities.yaml" \
+  --operation inspection \
+  --json-only > "${REQUIRED_COVERAGE_PASS_JSON}"
+
 if python3 "${ROOT}/scripts/validate_identity_context_continuity_receipts.py" \
   --identity-id "${IDENTITY_ID}" \
   --current-task "${RECEIPT_MISSING_MEMBER_TASK}" \
@@ -799,6 +828,7 @@ python3 - "${TMP_ROOT}" \
   "${REENTRY_BRIEF_LOCATION_JSON}" \
   "${REENTRY_RECEIPT_LOCATION_JSON}" \
   "${RECEIPT_PASS_JSON}" \
+  "${REQUIRED_COVERAGE_PASS_JSON}" \
   "${RECEIPT_MISSING_MEMBER_JSON}" \
   "${RECEIPT_UNKNOWN_KIND_JSON}" \
   "${RECEIPT_BROKEN_JOIN_JSON}" \
@@ -832,6 +862,7 @@ from pathlib import Path
     reentry_brief_location_path,
     reentry_receipt_location_path,
     receipt_pass_path,
+    required_coverage_pass_path,
     receipt_missing_member_path,
     receipt_unknown_kind_path,
     receipt_broken_join_path,
@@ -864,6 +895,7 @@ reentry_outcome_fail = load(reentry_outcome_fail_path)
 reentry_brief_location = load(reentry_brief_location_path)
 reentry_receipt_location = load(reentry_receipt_location_path)
 receipt_pass = load(receipt_pass_path)
+required_coverage_pass = load(required_coverage_pass_path)
 receipt_missing_member = load(receipt_missing_member_path)
 receipt_unknown_kind = load(receipt_unknown_kind_path)
 receipt_broken_join = load(receipt_broken_join_path)
@@ -939,6 +971,30 @@ assert "report_under_state_surface" in reentry_receipt_location.get("stale_reaso
 
 assert receipt_pass["identity_context_continuity_receipt_family_status"] == "PASS_REQUIRED", receipt_pass
 assert receipt_pass["receipt_join_status"] == "PASS_REQUIRED", receipt_pass
+assert required_coverage_pass["failed_required_contract_count"] == 0, required_coverage_pass
+assert required_coverage_pass["required_contract_total"] == 4, required_coverage_pass
+assert required_coverage_pass["required_contract_passed"] == 4, required_coverage_pass
+assert sorted(required_coverage_pass["instance_adopted_protocol_targets_included"]) == [
+    "identity_context_continuity",
+    "identity_context_continuity_receipts",
+    "identity_reentry_brief",
+    "identity_reentry_consumption",
+], required_coverage_pass
+coverage_rows = {
+    row["name"]: row
+    for row in required_coverage_pass["contracts"]
+    if row["name"].startswith("identity_context") or row["name"].startswith("identity_reentry")
+}
+assert sorted(coverage_rows) == [
+    "identity_context_continuity",
+    "identity_context_continuity_receipts",
+    "identity_reentry_brief",
+    "identity_reentry_consumption",
+], coverage_rows
+for row in coverage_rows.values():
+    assert row["validator_status"] == "PASS_REQUIRED", row
+    assert row["lane_target_included"] is True, row
+    assert row["instance_adopted_protocol_target"] is True, row
 assert receipt_missing_member["identity_context_continuity_receipt_family_status"] == "FAIL_REQUIRED", receipt_missing_member
 assert receipt_missing_member["error_code"] == "IP-ICREC-001", receipt_missing_member
 assert receipt_unknown_kind["identity_context_continuity_receipt_family_status"] == "FAIL_REQUIRED", receipt_unknown_kind
@@ -972,6 +1028,8 @@ print(
                 "unknown_continuity_receipt_kind",
                 "reentry_consumption_lineage_not_joinable",
             ],
+            "required_coverage_instance_adopted_status": "PASS_REQUIRED",
+            "required_coverage_instance_adopted_targets": sorted(coverage_rows),
             "continuity_bundle_surface_status": reentry_bundle_pass["identity_context_continuity_bundle_status"],
             "reentry_answer_surface_status": reentry_answer_pass["identity_context_reentry_answer_bundle_status"],
             "tmp_root": tmp_root,

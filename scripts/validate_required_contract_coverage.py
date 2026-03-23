@@ -234,6 +234,7 @@ class ContractTarget:
     contract_keys: tuple[str, ...]
     validator_script: str
     validator_args: tuple[str, ...] = ()
+    instance_adopted_protocol_target: bool = False
 
 
 TARGETS = (
@@ -586,6 +587,7 @@ TARGETS = (
         ),
         validator_script="scripts/validate_identity_context_continuity.py",
         validator_args=("--json-only",),
+        instance_adopted_protocol_target=True,
     ),
     ContractTarget(
         name="identity_reentry_brief",
@@ -595,6 +597,7 @@ TARGETS = (
         ),
         validator_script="scripts/validate_identity_reentry_brief.py",
         validator_args=("--json-only",),
+        instance_adopted_protocol_target=True,
     ),
     ContractTarget(
         name="identity_reentry_consumption",
@@ -604,6 +607,7 @@ TARGETS = (
         ),
         validator_script="scripts/validate_identity_reentry_consumption.py",
         validator_args=("--json-only",),
+        instance_adopted_protocol_target=True,
     ),
     ContractTarget(
         name="identity_context_continuity_receipts",
@@ -616,6 +620,7 @@ TARGETS = (
         ),
         validator_script="scripts/validate_identity_context_continuity_receipts.py",
         validator_args=("--json-only",),
+        instance_adopted_protocol_target=True,
     ),
     ContractTarget(
         name="gated_switch_guard",
@@ -757,6 +762,76 @@ def _extract_reason(out: str, err: str, default_reason: str) -> str:
     if m:
         return m.group(1)
     return default_reason
+
+
+def _runtime_path_like(value: Any) -> bool:
+    token = str(value or "").strip()
+    if not token:
+        return False
+    if token.startswith("runtime/"):
+        return True
+    normalized = token.replace("\\", "/")
+    return "/runtime/" in normalized
+
+
+def _contract_declares_runtime_surface(contract: dict[str, Any]) -> bool:
+    if not isinstance(contract, dict) or not contract:
+        return False
+
+    runtime_families = contract.get("canonical_runtime_families")
+    if isinstance(runtime_families, list) and any(_runtime_path_like(row) for row in runtime_families):
+        return True
+
+    for key in (
+        "canonical_reentry_brief_path",
+        "canonical_checkpoint_glob",
+        "report_root",
+        "state_root",
+        "artifact_ref",
+        "brief_ref",
+        "receipt_ref",
+        "evidence_ref",
+    ):
+        if _runtime_path_like(contract.get(key)):
+            return True
+
+    bind_object = contract.get("bind_object")
+    if isinstance(bind_object, dict):
+        for key in ("artifact_ref", "receipt_ref", "evidence_ref"):
+            if _runtime_path_like(bind_object.get(key)):
+                return True
+    return False
+
+
+def _payload_points_to_runtime_surface(payload: dict[str, Any] | None) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    for key in (
+        "artifact_path",
+        "brief_path",
+        "receipt_path",
+        "report_root",
+        "canonical_report_root",
+        "canonical_state_root",
+        "canonical_reentry_brief_path",
+        "evidence_ref",
+    ):
+        if _runtime_path_like(payload.get(key)):
+            return True
+    return False
+
+
+def _instance_adopted_protocol_target(
+    *,
+    target: ContractTarget,
+    contract: dict[str, Any],
+    payload: dict[str, Any] | None,
+) -> bool:
+    if not target.instance_adopted_protocol_target:
+        return False
+    if not contract_required(contract):
+        return False
+    return _contract_declares_runtime_surface(contract) or _payload_points_to_runtime_surface(payload)
 
 
 def _parse_json_payload(raw: str) -> dict[str, Any] | None:
@@ -1137,6 +1212,8 @@ def main() -> int:
     discovery_required_passed = 0
     protocol_targets_included: list[str] = []
     protocol_targets_blocking: list[str] = []
+    instance_adopted_protocol_targets_included: list[str] = []
+    instance_adopted_protocol_targets_blocking: list[str] = []
     strict_instance_floor_promoted: list[str] = []
     strict_instance_floor_blocking: list[str] = []
     strict_instance_floor_missing: list[str] = []
@@ -1209,6 +1286,12 @@ def main() -> int:
             if not requiredization_current_round_linked and str(payload.get("activity_correlation_status", "")).strip().upper() == "CORRELATED_CURRENT_ROUND":
                 requiredization_current_round_linked = True
 
+        instance_adopted_protocol_target = _instance_adopted_protocol_target(
+            target=target,
+            contract=contract,
+            payload=payload,
+        )
+
         if lane_floor_target and not required_effective:
             strict_instance_floor_promoted.append(target.name)
             required_effective = True
@@ -1218,11 +1301,14 @@ def main() -> int:
             and coverage_lane == "instance"
             and not requiredization_current_round_linked
             and not lane_floor_target
+            and not instance_adopted_protocol_target
         ):
             required_effective = False
             lane_target_included = False
         if target.name in PROTOCOL_GOVERNANCE_TARGET_NAMES and required_effective:
             protocol_targets_included.append(target.name)
+        if instance_adopted_protocol_target and required_effective:
+            instance_adopted_protocol_targets_included.append(target.name)
         required_total += 1 if required_effective else 0
 
         if isinstance(payload, dict):
@@ -1275,6 +1361,8 @@ def main() -> int:
             failed_required += 1
             if target.name in PROTOCOL_GOVERNANCE_TARGET_NAMES and required_effective:
                 protocol_targets_blocking.append(target.name)
+            if instance_adopted_protocol_target and required_effective:
+                instance_adopted_protocol_targets_blocking.append(target.name)
             if lane_floor_target:
                 strict_instance_floor_blocking.append(target.name)
         elif validator_status == STATUS_FAIL_OPTIONAL:
@@ -1297,6 +1385,7 @@ def main() -> int:
                 "coverage_lane": coverage_lane,
                 "coverage_target_set": coverage_target_set,
                 "lane_target_included": lane_target_included,
+                "instance_adopted_protocol_target": instance_adopted_protocol_target,
                 "lane_required_floor_target": lane_floor_target,
                 "validator_force_required": force_required,
                 "prompt_routing_work_layer": prompt_routing_work_layer,
@@ -1335,6 +1424,8 @@ def main() -> int:
         "protocol_trigger_reasons": list(layer_intent.get("protocol_trigger_reasons") or []),
         "coverage_protocol_targets_included": sorted(set(protocol_targets_included)),
         "coverage_protocol_targets_blocking": sorted(set(protocol_targets_blocking)),
+        "instance_adopted_protocol_targets_included": sorted(set(instance_adopted_protocol_targets_included)),
+        "instance_adopted_protocol_targets_blocking": sorted(set(instance_adopted_protocol_targets_blocking)),
         "strict_instance_floor_enabled": strict_instance_floor_enabled,
         "strict_instance_floor_targets": (
             sorted(INSTANCE_STRICT_REQUIRED_FLOOR_TARGET_NAMES) if strict_instance_floor_enabled else []
