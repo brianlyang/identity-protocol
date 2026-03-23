@@ -1,6 +1,6 @@
 # Identity Context Continuity Governance (v1.6.16)
 
-Status: Active (shared validators + probe lane + pack-lifecycle rollout + instance-visible reentry answer surface landed, 2026-03-23; launcher live-consumption proof + pilot adoption pending)  
+Status: Active (shared validators + probe lane + pack-lifecycle rollout + instance-visible reentry answer surface + first live pilot adoption landed, 2026-03-23; broader workspace rollout and launcher-consumer breadth still pending)  
 Layer: protocol  
 Scope: identity-instance continuity checkpoints, migration handoff checkpoints, and startup-consumable re-entry briefing  
 Execution mode: topic-level canonical SSOT for v1.6.16 identity-context-continuity governance.
@@ -224,7 +224,8 @@ Minimum additional requirements:
    - `post-recover` -> emit `reentry-consumption-receipt.json` after governed reentry succeeds.
 14. `create_identity_pack.py`, `repair_contract_backfill.py`, and later creator/update convergence must be the only canonical materializers for this family; hand-written per-workspace deviations are non-canonical even if they appear to work.
 15. A live identity must not claim `v1.6.16` adoption merely because the directories exist or because the answer surface renders; adoption requires the materialized scripts above, manifest registration, guard-state persistence, and real runtime artifacts under the exact output paths above.
-16. For `base-repo-closure-orchestrator`, until those pack-local script files and runtime artifact files exist under its own `.identity/base-repo-closure-orchestrator/` root, the stream is protocol-ready but instance-not-adopted.
+16. `base-repo-closure-orchestrator` has now completed the first canonical live pilot adoption for this stream: its own `.identity/base-repo-closure-orchestrator/` root contains the materialized pack-local scripts, manifest rows, guard-state persistence, continuity checkpoint artifacts, governed reentry brief, and the required checkpoint / migration / brief / consumption receipts.
+17. That live pilot proof does **not** upgrade the stream into fleet rollout closure; it only proves that the shared protocol-owned materialization path works on one real runtime identity without workspace-specific patching.
 
 ### 2.10 Coding-facing schema freeze
 
@@ -259,29 +260,31 @@ Minimum additional requirements:
    - `instance_reentry_brief_receipt`
    - `instance_reentry_consumption_receipt`
 5. These receipt families must remain distinct from actor-session tuple ids, thread UUIDs, and launcher installation receipts.
-6. Any startup path that reads continuity artifacts without producing the governed re-entry consumption evidence is incomplete and must not claim `v1.6.16` implementation closure.
-7. The canonical structured continuity-support bundle for launcher/internal consumers is:
+6. Auxiliary guard receipts written as `runtime/reports/context-continuity/guard-*.json` with `receipt_family=identity_context_continuity_guard_receipt_v1` are protocol-owned runtime control receipts, but they are **not** members of the four-role `RQ-046` join family and therefore must neither satisfy nor invalidate the receipt-family join on their own.
+7. Any startup path that reads continuity artifacts without producing the governed re-entry consumption evidence is incomplete and must not claim `v1.6.16` implementation closure.
+8. The canonical structured continuity-support bundle for launcher/internal consumers is:
    - `scripts/render_identity_context_continuity_bundle.py`
-8. That bundle is internal support only; it must not create a new operator-facing continuity command family or shift user entry away from the inherited `v1.6.14` launcher surface.
-9. The bundle must keep two states separate instead of collapsing them:
+9. That bundle is internal support only; it must not create a new operator-facing continuity command family or shift user entry away from the inherited `v1.6.14` launcher surface.
+10. The bundle must keep two states separate instead of collapsing them:
    - `startup_reentry_readiness_status`
    - `live_reentry_consumption_proof_status`
-10. Future launcher integration should consume that protocol-owned bundle rather than re-deriving continuity interpretation ad hoc inside launcher code or instance chat logic.
-11. The canonical instance-visible reentry answer bundle for this stream is:
+11. Future launcher integration should consume that protocol-owned bundle rather than re-deriving continuity interpretation ad hoc inside launcher code or instance chat logic.
+12. The canonical instance-visible reentry answer bundle for this stream is:
    - `scripts/render_identity_context_reentry_answers.py`
-12. That answer bundle exists so an identity instance can answer direct user questions such as “open a new window and migrate me” or “clear now and then rejoin with memory recovery” without manually inventing recovery payloads.
-13. The answer bundle is **not** a new terminal command family:
+13. That answer bundle exists so an identity instance can answer direct user questions such as “open a new window and migrate me” or “clear now and then rejoin with memory recovery” without manually inventing recovery payloads.
+14. The answer bundle is **not** a new terminal command family:
    - terminal start/resume command lookup remains owned by `v1.6.14`;
    - `v1.6.16` only supplies governed reentry answer state plus copyable governed reentry task blocks.
-14. The answer bundle must expose intent-separated answer rows for:
+15. The answer bundle must expose intent-separated answer rows for:
    - `migrate_new_window`
    - `reload_after_clear`
-15. The answer bundle must keep three facts separate instead of collapsing them:
+16. The answer bundle must keep three facts separate instead of collapsing them:
    - answer-surface render status,
    - `overall_reentry_readiness_status`,
    - `live_reentry_consumption_proof_status`
-16. When startup readiness is `PASS_REQUIRED` but live proof is not yet observed, the answer bundle may still return a governed reentry task block, but it must explicitly mark that live proof is pending and that successful recovery may only be claimed after `instance_reentry_consumption_receipt` is emitted.
-17. The continuity answer surface must never inject or hardcode thread UUIDs; launcher-command lookup stays delegated to `v1.6.14`, while `v1.6.16` governs only the reentry task and evidence side.
+17. When startup readiness is `PASS_REQUIRED` but live proof is not yet observed, the answer bundle may still return a governed reentry task block, but it must explicitly mark that live proof is pending and that successful recovery may only be claimed after `instance_reentry_consumption_receipt` is emitted.
+18. Once live proof is `PASS_REQUIRED`, the answer bundle may report governed recovery as live-proven, but it still must not assemble launcher commands itself.
+19. The continuity answer surface must never inject or hardcode thread UUIDs; launcher-command lookup stays delegated to `v1.6.14`, while `v1.6.16` governs only the reentry task and evidence side.
 
 ### 2.12 Implementation landing order (frozen)
 
@@ -293,12 +296,13 @@ Minimum additional requirements:
    - creator / backfill / readiness / required-gate wiring
 2. `RQ-046` was not allowed to land as an empty join shell; it lands only after `RQ-044` and `RQ-045` already prove artifact validity and startup-consumption validity.
 3. The required `v1.6.13` topology-path and `v1.6.8` path-registration work for the canonical continuity runtime families is now landed in shared pack-lifecycle surfaces, so pilot adoption is no longer blocked on path discipline alone.
-4. The remaining landing order from this checkpoint forward is:
-   - launcher/startup integration that consumes governed `reentry_brief`
-   - one pilot identity adoption with live continuity production + re-entry proof
-   - stricter readiness promotion once live proof exists
-5. Launcher-side positive proof remains insufficient if it proves only that a brief file exists; it must prove that governed startup consumption emitted governed runtime evidence.
-6. This landing order is frozen so teams do not skip directly from shared wiring to adoption claims.
+4. The first live pilot adoption is now frozen as `base-repo-closure-orchestrator`, proven through shared backfill/materialization plus real `tick` -> `pre-migrate` -> `post-recover` runtime evidence under its own pack root.
+5. The remaining landing order from this checkpoint forward is:
+   - broader launcher/startup integration breadth that consumes governed `reentry_brief`
+   - more real workspace/identity pilots through the same shared materialization path
+   - stricter readiness promotion only after live proof breadth is no longer single-pilot
+6. Launcher-side positive proof remains insufficient if it proves only that a brief file exists; it must prove that governed startup consumption emitted governed runtime evidence.
+7. This landing order is frozen so teams do not skip directly from shared wiring to fleet-rollout claims.
 
 ### 2.13 Evidence interpretation discipline (frozen)
 
@@ -427,7 +431,7 @@ Minimum additional requirements:
 4. This stream does not reopen `v1.6.13` topology semantics, `v1.6.14` launcher semantics, or `v1.6.15` route/script semantics.
 5. This stream does not redefine MCP capability negotiation or server startup health.
 6. This stream does not authorize arbitrary new pack-root script subtrees or runtime path families outside governed registration.
-7. This stream does not claim that launcher live-consumption proof, pilot adoption, or fleet rollout are already complete today.
+7. This stream now claims one real live pilot adoption plus governed re-entry consumption proof for `base-repo-closure-orchestrator`, but it still does not claim fleet rollout closure or broad launcher-consumer breadth.
 
 ## 5) Frozen implementation guidance
 
@@ -444,14 +448,14 @@ Minimum additional requirements:
 
 1. `v1.6.16` is no longer documentation-only; the shared validator / probe / pack-lifecycle layer is now landed.
 2. Promotion from this checkpoint to live implementation closure requires, at minimum:
-   - launcher/startup integration that consumes continuity artifacts without bypassing tuple/bootstrap truth,
-   - one pilot instance adoption proving continuity production and re-entry consumption under real runtime conditions,
-   - governed live evidence showing startup consumption emitted the required runtime receipt family.
+   - broader launcher/startup integration that consumes continuity artifacts without bypassing tuple/bootstrap truth,
+   - more than one pilot/workspace proving the same shared materialization path under real runtime conditions,
+   - governed live evidence breadth showing startup consumption emitted the required runtime receipt family beyond a single pilot.
 3. The shared implementation families now landed for this stream are:
    - protocol-owned validator surfaces for continuity artifacts and re-entry briefs;
    - protocol-owned CI probe surface for positive / negative continuity cases;
    - shared creator / backfill / updater surfaces that register continuity contracts and path families.
 4. The remaining follow-on landing envelope is therefore narrower:
    - launcher/startup consumers that can read governed `reentry_brief` artifacts without bypassing tuple/bootstrap truth;
-   - pilot/runtime proof surfaces that demonstrate real checkpoint production and re-entry consumption.
-5. The document is now sufficient to support shared protocol coding of continuity infrastructure, but not yet sufficient to claim rollout closure until launcher-side live proof and pilot adoption land.
+   - pilot/runtime proof surfaces that demonstrate the same outcome across more than one workspace or identity.
+5. The document is now sufficient to support shared protocol coding and first live pilot adoption of continuity infrastructure, but not yet sufficient to claim rollout closure until launcher-consumer breadth and multi-pilot proof land.

@@ -125,6 +125,7 @@ Operational rule for identity instances:
 - do **not** inject or hardcode thread UUIDs on the continuity surface;
 - if readiness is not `PASS_REQUIRED`, do **not** claim memory recovery is ready;
 - if readiness is `PASS_REQUIRED` but live proof is not yet observed, you may return the governed reentry task block, but must explicitly state that successful recovery is only proven after `instance_reentry_consumption_receipt` is emitted.
+- if readiness and live proof are both `PASS_REQUIRED`, you may state that governed recovery is live-proven, but launcher start/resume command lookup still remains delegated to `v1.6.14`.
 - continuity outputs must land only in these fixed runtime families:
   - `runtime/reports/context-continuity/continuity-rolling-*.json`
   - `runtime/reports/context-continuity/continuity-stage-*.json`
@@ -136,6 +137,7 @@ Operational rule for identity instances:
   - pack-local `scripts/` must contain these exact files: `run_identity_context_continuity_guard.sh`, `emit_identity_context_checkpoint.py`, `materialize_identity_reentry_brief.py`, and `emit_identity_reentry_consumption_receipt.py`;
   - the shell guard is the proactive cadence/trigger dispatcher; the Python scripts are deterministic payload emitters;
   - the shell guard must persist `runtime/state/context-continuity/guard-state.json` and write `runtime/reports/context-continuity/guard-*.json`;
+  - those `guard-*.json` files are auxiliary protocol-owned control receipts and are explicitly outside the four-role `RQ-046` receipt-family join; they may coexist under the same report root without invalidating receipt-family closure;
   - they must be registered in `scripts/INSTANCE_SCRIPT_MANIFEST.json`;
   - they must write only to `runtime/reports/context-continuity/continuity-rolling-*.json`, `runtime/reports/context-continuity/continuity-stage-*.json`, `runtime/reports/context-continuity/continuity-migration-*.json`, `runtime/state/context-continuity/active-reentry-brief.json`, and the corresponding receipt files under `runtime/reports/context-continuity/`.
 

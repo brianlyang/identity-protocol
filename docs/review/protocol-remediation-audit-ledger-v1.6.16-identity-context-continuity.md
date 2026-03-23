@@ -1,6 +1,6 @@
 # Protocol Remediation Audit Ledger (v1.6.16 identity-context-continuity stream)
 
-Status: Active (shared validators + probe lane + pack-lifecycle rollout + instance-visible reentry answer surface landed, 2026-03-23; launcher live-consumption proof + pilot adoption pending)  
+Status: Active (shared validators + probe lane + pack-lifecycle rollout + instance-visible reentry answer surface + first live pilot adoption landed, 2026-03-23; broader workspace rollout and launcher-consumer breadth still pending)  
 Scope: protocol review ledger for continuity checkpoints, migration handoff checkpoints, and startup-consumable re-entry briefing
 
 ## 0) Stream objective
@@ -204,7 +204,7 @@ This stream now contains both the machine-facing contract freeze and the first s
     - live proof `FAIL_REQUIRED`,
     - answer surface still returns a governed reentry task block,
     - successful recovery may not be claimed until `instance_reentry_consumption_receipt` is later emitted.
-17. This answer-surface landing does **not** by itself complete instance adoption; audit now freezes the required hard-downsink/template materialization target under pack-local `scripts/` as:
+17. This answer-surface landing does **not** by itself complete instance adoption; audit therefore froze the required hard-downsink/template materialization target under pack-local `scripts/` as:
     - `run_identity_context_continuity_guard.sh`
     - `emit_identity_context_checkpoint.py`
     - `materialize_identity_reentry_brief.py`
@@ -226,8 +226,15 @@ This stream now contains both the machine-facing contract freeze and the first s
     - the shell guard is the proactive lifecycle/tick dispatcher,
     - Python writers are deterministic payload emitters,
     - neither side may absorb the other's role without reopening semantics.
-21. Therefore the correct current interpretation for `base-repo-closure-orchestrator` is: protocol answer surface landed, but live instance adoption remains open until those script files, manifest rows, guard-state files, and runtime artifacts exist under `.identity/base-repo-closure-orchestrator/`.
-22. Additional routing clarification is now frozen around **fixed canonical lane paths**:
+21. That adoption gap is now closed for the first live pilot: `base-repo-closure-orchestrator` has those pack-local script files, manifest rows, guard-state files, continuity artifacts, governed reentry brief, and the required checkpoint / migration / brief / consumption receipts under `.identity/base-repo-closure-orchestrator/`.
+22. Audit also freezes one important interpretation rule discovered during live proof: `runtime/reports/context-continuity/guard-*.json` with `receipt_family=identity_context_continuity_guard_receipt_v1` are auxiliary protocol-owned control receipts, but they are not members of the four-role `RQ-046` receipt-family join and therefore must be ignored by the join validator rather than treated as unknown continuity-family violations.
+23. The first live pilot proof was reproduced through the shared protocol-owned path rather than operator patching:
+    - `python3 scripts/repair_contract_backfill.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-closure-orchestrator --apply --json-only`
+    - `.identity/base-repo-closure-orchestrator/scripts/run_identity_context_continuity_guard.sh tick --turn-count 15 --json-only`
+    - `.identity/base-repo-closure-orchestrator/scripts/run_identity_context_continuity_guard.sh pre-migrate --json-only`
+    - `.identity/base-repo-closure-orchestrator/scripts/run_identity_context_continuity_guard.sh post-recover --json-only`
+    - followed by the four continuity validators plus `scripts/render_identity_context_continuity_bundle.py` and `scripts/render_identity_context_reentry_answers.py`, all returning `PASS_REQUIRED` for the live pilot state.
+24. Additional routing clarification is now frozen around **fixed canonical lane paths**:
     - continuity / reentry stays only under `runtime/reports/context-continuity/**` plus `runtime/state/context-continuity/active-reentry-brief.json`;
     - dialogue-governance stays only under the dialogue report family in `runtime/reports/`;
     - experience-feedback stays on `runtime/rulebooks/**`, `runtime/examples/*experience-feedback*.json`, and `runtime/logs/feedback/*.json`;
@@ -251,39 +258,39 @@ The following audit caveats are now frozen as interpretation rules rather than l
 5. Pilot adoption must not begin until the corresponding `v1.6.13` topology-path and `v1.6.8` path-registration work is present for the canonical continuity runtime families.
 6. Launcher-side success proof must verify governed re-entry consumption evidence, not merely the existence of a readable brief artifact.
 
-## 7) Opening-state non-goals frozen for audit
+## 7) Current-state non-goals frozen for audit
 
-1. This stream does not claim launcher live-consumption proof or pilot adoption is complete.
-2. This opening does not claim any fleet pack is already `v1.6.16` adopted.
-3. This opening does not claim raw transcript persistence is the new protocol motherline.
-4. This opening does not reopen `v1.6.13` / `v1.6.14` / `v1.6.15` semantics.
-5. This opening does not yet solve isolated historical replay of continuity state.
+1. This stream now claims one real live pilot adoption plus live governed re-entry proof for `base-repo-closure-orchestrator`; it still does **not** claim fleet rollout closure or multi-workspace breadth.
+2. This checkpoint does not claim raw transcript persistence is the new protocol motherline.
+3. This checkpoint does not reopen `v1.6.13` / `v1.6.14` / `v1.6.15` semantics.
+4. This checkpoint does not yet solve isolated historical replay of continuity state.
 
 ## 8) Follow-on implementation obligations
 
 The remaining implementation stage should land, in order:
 
-1. launcher/startup re-entry consumption under inherited `v1.6.14` ownership
-2. one real pilot identity adoption proving continuity production + re-entry consumption
-3. only after that, stricter readiness / required-gate promotion backed by live runtime evidence
+1. broader launcher/startup re-entry consumption breadth under inherited `v1.6.14` ownership
+2. more real workspace/identity pilots using the same shared materialization/backfill path
+3. only after that, stricter readiness / required-gate promotion backed by multi-pilot live runtime evidence
 
 Primary target surfaces for the remaining stage:
 
 - launcher/startup consumers that emit `instance_reentry_consumption_receipt`
-- one pilot identity pack with real continuity artifacts under canonical runtime families
-- live evidence / review artifacts proving governed re-entry consumption
+- more pilot identity packs with real continuity artifacts under canonical runtime families
+- live evidence / review artifacts proving governed re-entry consumption breadth rather than one-off success
 
-## 9) Audit conclusion for this opening checkpoint
+## 9) Audit conclusion for the current checkpoint
 
-This checkpoint is acceptable as a **formal stream opening plus shared implementation landing checkpoint** because it does four things cleanly:
+This checkpoint is acceptable as a **formal stream opening plus shared implementation + first live-pilot checkpoint** because it does four things cleanly:
 
 1. it converts continuity from a loose idea into an explicit protocol-owned boundary;
 2. it keeps continuity subordinate to existing authority surfaces instead of letting it become a fake memory authority;
 3. it identifies the real implementation constraint up front — topology/path registration discipline — rather than hiding it under later patchwork.
-4. it converts the shared validator / probe / creator-backfill-readiness layer into real infrastructure without overstating launcher or pilot completion.
+4. it converts the shared validator / probe / creator-backfill-readiness layer into real infrastructure and proves the first live pilot without overstating fleet rollout.
 
 The correct interpretation of this ledger is therefore:
 
 - `v1.6.16` is now a real governed stream;
 - shared validator / probe / pack-lifecycle wiring is landed and machine-consumable;
-- launcher live-consumption proof and pilot adoption remain the follow-on phase, not something this ledger falsely claims today.
+- `base-repo-closure-orchestrator` is now the first real live pilot with governed continuity production + re-entry consumption proof;
+- broader workspace rollout and launcher-consumer breadth remain the follow-on phase, not something this ledger falsely claims today.
