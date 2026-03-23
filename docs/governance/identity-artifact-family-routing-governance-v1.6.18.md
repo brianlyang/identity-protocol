@@ -323,8 +323,8 @@ This stream is no longer docs-only. The following machine-consumed closure is no
    - collision fail-close when runtime experience-feedback is pointed at pack-root `RULEBOOK.jsonl`.
 9. `scripts/required_gate_bundle_runner.py --target-name identity_artifact_family_routing` now stays on registry-lineage target-probe mode instead of misbinding full-bundle ingress wrapper / unique-entry receipt obligations onto single-target routing checks; `run_id` and profile binding remain required, but targeted routing probes no longer fail-close for unrelated wrapper provenance debt.
 10. Current live proof breadth is no longer fixture-only:
-    - the current weixinstore workspace-local runtime catalog replays `PASS_REQUIRED` for `base-repo-audit-expert-v3`, `custom-creative-ecom-analyst`, and `base-repo-architect` on the `rq_052` validator lane;
-    - `base-repo-closure-orchestrator` currently fails outer `rq_052` only through inherited `rq_051_identity_dialogue_retention_contract_v1` drift (`IP-DRET-004 source_session_size_mismatch` projected as `IP-AFR-002 runtime_dialogue_retention_family_invalid`);
+    - the current weixinstore workspace-local runtime catalog now replays `PASS_REQUIRED` for all four active runtime identities on the `rq_052` validator lane: `base-repo-audit-expert-v3`, `custom-creative-ecom-analyst`, `base-repo-architect`, and `base-repo-closure-orchestrator`;
+    - `base-repo-closure-orchestrator` no longer carries the earlier inherited `rq_051_identity_dialogue_retention_contract_v1` residual on this lane, which confirms the routed closure stays truthful when inherited family-owner evidence turns green rather than leaving stale red carried in workbook prose;
     - `base-repo-architect` remains `PASS_REQUIRED` on `rq_052` while `runtime_dialogue_retention_family_status=SKIPPED_NOT_REQUIRED`, confirming the routing lane preserves optional-family semantics instead of forcing synthetic replay debt.
 
 ## 8) Closure state after whole-matrix routing landing
