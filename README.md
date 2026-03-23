@@ -139,6 +139,26 @@ Operational rule for identity instances:
   - they must be registered in `scripts/INSTANCE_SCRIPT_MANIFEST.json`;
   - they must write only to `runtime/reports/context-continuity/continuity-rolling-*.json`, `runtime/reports/context-continuity/continuity-stage-*.json`, `runtime/reports/context-continuity/continuity-migration-*.json`, `runtime/state/context-continuity/active-reentry-brief.json`, and the corresponding receipt files under `runtime/reports/context-continuity/`.
 
+### Artifact-family routing quick reference (v1.6.18)
+
+`memory` is not a canonical protocol sink. Inside identity protocol scope, every persisted artifact must resolve to one exact governed family:
+
+- pack rulebook family -> `RULEBOOK.jsonl`
+- pack task-history family -> `TASK_HISTORY.md`
+- runtime dialogue-governance family -> `runtime/reports/dialogue-content-synthesis-<identity-id>-*.json`, `runtime/reports/dialogue-cross-validation-matrix-<identity-id>-*.json`, `runtime/reports/dialogue-result-support-<identity-id>-*.json`
+- runtime experience-feedback family -> `runtime/rulebooks/positive.jsonl`, `runtime/rulebooks/negative.jsonl`, `runtime/examples/*experience-feedback*.json`, `runtime/logs/feedback/*.json`
+- runtime protocol-feedback family -> `runtime/protocol-feedback/**`
+- runtime continuity/reentry family -> `runtime/reports/context-continuity/**`, `runtime/state/context-continuity/**`
+- runtime memory-absorption family -> `runtime/memory-absorption/**` (quarantine/re-materialization only)
+
+Hard routing rules:
+
+- `RULEBOOK.jsonl` and `runtime/rulebooks/*.jsonl` are not the same object.
+- `TASK_HISTORY.md` is chronology, not continuity.
+- `runtime/protocol-feedback/**` is governance communication, not generic learning/continuity storage.
+- `runtime/memory-absorption/**` cannot satisfy active continuity, dialogue, learning, or protocol-feedback obligations.
+- declaration keys and gates such as `reject_memory_gate`, `dialogue_governance_contract`, `experience_feedback_contract`, `context_continuity_contract_v1`, and `reentry_brief_consumption_contract_v1` are control-plane declarations, not artifact sinks.
+
 ### Protocol SSOT governance (canonical source + coupling)
 
 - Canonical protocol-strengthening source:
