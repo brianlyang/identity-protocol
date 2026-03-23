@@ -175,8 +175,8 @@ The stream has now moved beyond a docs-only opening. Audit-accepted machine land
 7. `scripts/create_identity_pack.py`, `scripts/repair_contract_backfill.py`, `scripts/release_readiness_check.py`, `scripts/ci/run_required_runtime_gates_ci.sh`, `scripts/validate_required_contract_coverage.py`, and `scripts/required_gate_bundle_runner.py` now consume the same `rq_052` routing row instead of leaving whole-matrix routing as governance prose only.
 8. `scripts/required_gate_bundle_runner.py --target-name identity_artifact_family_routing` now preserves target-probe compatibility mode under the same registry lineage: `run_id` and profile binding remain enforced, but full-bundle ingress wrapper / unique-entry receipt obligations no longer incorrectly fail-close isolated routing probes.
 9. Current live proof breadth is no longer fixture-only:
-   - the current weixinstore workspace-local runtime catalog replays `PASS_REQUIRED` on `scripts/validate_identity_artifact_family_routing.py` for all four active runtime identities: `base-repo-audit-expert-v3`, `custom-creative-ecom-analyst`, `base-repo-architect`, and `base-repo-closure-orchestrator`;
-   - `base-repo-closure-orchestrator` no longer carries the earlier inherited `rq_051_identity_dialogue_retention_contract_v1` residual on the routed lane, so the routing closeout now reflects current live truth instead of preserving stale inherited-red prose;
+   - the current weixinstore workspace-local runtime catalog replays `PASS_REQUIRED` on `scripts/validate_identity_artifact_family_routing.py` for `base-repo-audit-expert-v3`, `custom-creative-ecom-analyst`, and `base-repo-architect`;
+   - `base-repo-closure-orchestrator` currently fails outer `rq_052` through inherited `rq_051_identity_dialogue_retention_contract_v1` drift (`IP-DRET-004 source_session_size_mismatch` projected as `IP-AFR-002 runtime_dialogue_retention_family_invalid`);
    - `base-repo-architect` remains green on `rq_052` while its optional dialogue-retention family stays `SKIPPED_NOT_REQUIRED`, confirming the routing lane is not overreaching into optional-family debt.
 
 ## 6) Closure state
@@ -194,7 +194,7 @@ Audit interpretation after cross-check:
 Audit acceptance in this round also freezes the execution boundary so later follow-on work does not drift:
 
 1. semantic ownership remains with `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md` and the inherited owner streams it explicitly references;
-2. execution closeout owns the bounded whole-matrix machine path, live replay breadth, truth-sync maintenance, and any future inherited-family residual triage so long as it stays inside the frozen routing matrix;
+2. architectural final lock is accepted: execution closeout owns the bounded whole-matrix machine path, live replay breadth, truth-sync maintenance, and any future inherited-family residual triage so long as it stays inside the frozen routing matrix;
 3. execution closeout must return to semantic-owner review before shipping any change that adds/renames a family, repoints a canonical root, changes canonical producer/consumer roles, relaxes the `memory` anti-pollution boundary, promotes `runtime/memory-absorption/**` back onto an active success path, or uses compatibility/backstop shortcuts to hide inherited-family failures;
 4. audit verifies whether the closeout extends the frozen matrix faithfully and whether truth surfaces stay synchronized; audit does not become a replacement semantic owner;
 5. raw dialogue retention remains the first machine-landed family, while `rq_052` now closes the routing matrix without becoming a replacement semantic owner for the eight families;

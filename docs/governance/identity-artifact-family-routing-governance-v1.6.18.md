@@ -323,8 +323,8 @@ This stream is no longer docs-only. The following machine-consumed closure is no
    - collision fail-close when runtime experience-feedback is pointed at pack-root `RULEBOOK.jsonl`.
 9. `scripts/required_gate_bundle_runner.py --target-name identity_artifact_family_routing` now stays on registry-lineage target-probe mode instead of misbinding full-bundle ingress wrapper / unique-entry receipt obligations onto single-target routing checks; `run_id` and profile binding remain required, but targeted routing probes no longer fail-close for unrelated wrapper provenance debt.
 10. Current live proof breadth is no longer fixture-only:
-    - the current weixinstore workspace-local runtime catalog now replays `PASS_REQUIRED` for all four active runtime identities on the `rq_052` validator lane: `base-repo-audit-expert-v3`, `custom-creative-ecom-analyst`, `base-repo-architect`, and `base-repo-closure-orchestrator`;
-    - `base-repo-closure-orchestrator` no longer carries the earlier inherited `rq_051_identity_dialogue_retention_contract_v1` residual on this lane, which confirms the routed closure stays truthful when inherited family-owner evidence turns green rather than leaving stale red carried in workbook prose;
+    - the current weixinstore workspace-local runtime catalog replays `PASS_REQUIRED` for `base-repo-audit-expert-v3`, `custom-creative-ecom-analyst`, and `base-repo-architect` on the `rq_052` validator lane;
+    - `base-repo-closure-orchestrator` currently fails outer `rq_052` through inherited `rq_051_identity_dialogue_retention_contract_v1` drift (`IP-DRET-004 source_session_size_mismatch` projected as `IP-AFR-002 runtime_dialogue_retention_family_invalid`);
     - `base-repo-architect` remains `PASS_REQUIRED` on `rq_052` while `runtime_dialogue_retention_family_status=SKIPPED_NOT_REQUIRED`, confirming the routing lane preserves optional-family semantics instead of forcing synthetic replay debt.
 
 ## 8) Closure state after whole-matrix routing landing
@@ -343,7 +343,7 @@ This stream now explicitly freezes the owner split so the landed whole-matrix cl
 
 1. Semantic ownership remains with this `v1.6.18` governance stream plus the inherited owner streams already referenced here; execution closure must not reinterpret family names, fixed paths, canonical producer/consumer roles, or frozen non-goals.
 2. Execution closeout owns validator/probe/gate/readiness wiring, live replay breadth, workbook/review truth-sync, and any future inherited-family residual triage inside the already-frozen routing matrix.
-3. Execution closeout has landed the protocol-owned machine path for `ISSUE-032` through shared validators, probes, required-gate wiring, readiness consumption, workbook truth-sync, and cross-family misuse fail-close; the current next-step path is inherited-family evidence closure plus broader replay/archival truth-sync on this same routing matrix rather than reopening `v1.6.18` semantics.
+3. Architectural final lock is now frozen for `ISSUE-032`: execution closeout has landed the protocol-owned machine path through shared validators, probes, required-gate wiring, readiness consumption, workbook truth-sync, and cross-family misuse fail-close; the current next-step path is inherited-family evidence closure plus broader replay/archival truth-sync on this same routing matrix rather than reopening `v1.6.18` semantics.
 4. Execution closeout must escalate back to semantic-owner review before shipping any change that:
    - adds a new artifact family or renames an existing family;
    - repoints a canonical root or reassigns canonical producer/consumer roles;
