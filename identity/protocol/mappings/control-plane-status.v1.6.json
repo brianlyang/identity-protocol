@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-23T16:19:36Z",
-  "git_head_short": "6881f1e",
+  "generated_at_utc": "2026-03-23T16:57:05Z",
+  "git_head_short": "941a690",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -23,14 +23,14 @@
         "scripts/validate_control_plane_budget.py",
         "--json-only"
       ],
-      "rc": 0,
-      "status": "PASS_REQUIRED",
-      "error_code": "",
+      "rc": 1,
+      "status": "FAIL_REQUIRED",
+      "error_code": "IP-CP-BUDGET-001",
       "stdout_tail": [],
       "stderr_tail": [],
       "payload": {
-        "control_plane_budget_status": "PASS_REQUIRED",
-        "error_code": "",
+        "control_plane_budget_status": "FAIL_REQUIRED",
+        "error_code": "IP-CP-BUDGET-001",
         "budget_file_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.current.yaml",
         "budget_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
@@ -45,8 +45,8 @@
         ],
         "observed": {
           "validator_scripts": 205,
-          "error_codes": 576,
-          "error_code_families": 210,
+          "error_codes": 579,
+          "error_code_families": 211,
           "mapping_rows_missing_in_bundle": 0,
           "bundle_rows": 52,
           "missing_mapping_rows": [],
@@ -124,13 +124,57 @@
           "mode": "no_rebound",
           "enforce_mode": "fail_required",
           "ceiling_count": 5,
-          "violations": []
+          "violations": [
+            {
+              "field": "error_codes",
+              "observed": 579,
+              "ceiling": 576,
+              "reason": "convergence_rebound_detected"
+            },
+            {
+              "field": "error_code_families",
+              "observed": 211,
+              "ceiling": 210,
+              "reason": "convergence_rebound_detected"
+            }
+          ]
         },
-        "warn_violation_count": 0,
-        "warn_violations": [],
-        "fail_violation_count": 0,
-        "fail_violations": [],
-        "stale_reasons": []
+        "warn_violation_count": 2,
+        "warn_violations": [
+          {
+            "field": "error_codes",
+            "observed": 579,
+            "budget_warn": 576,
+            "reason": "error_code_count_warn"
+          },
+          {
+            "field": "error_code_families",
+            "observed": 211,
+            "budget_warn": 210,
+            "reason": "error_code_family_count_warn"
+          }
+        ],
+        "fail_violation_count": 2,
+        "fail_violations": [
+          {
+            "field": "error_codes",
+            "observed": 579,
+            "ceiling": 576,
+            "reason": "convergence_rebound_detected"
+          },
+          {
+            "field": "error_code_families",
+            "observed": 211,
+            "ceiling": 210,
+            "reason": "convergence_rebound_detected"
+          }
+        ],
+        "stale_reasons": [
+          "error_code_count_warn",
+          "error_code_family_count_warn",
+          "convergence_rebound_detected",
+          "convergence_rebound_detected"
+        ]
       }
     },
     {
@@ -667,6 +711,52 @@
         "missing_lineage_refs": {},
         "missing_execution_tokens": {},
         "dialogue_bundle_missing": {},
+        "current_round_coverage_run_id_required_surfaces": [
+          "scripts/identity_creator.py",
+          "scripts/release_readiness_check.py",
+          "scripts/report_three_plane_status.py",
+          "scripts/full_identity_protocol_scan.py",
+          "scripts/e2e_smoke_test.sh",
+          "scripts/ci/run_required_runtime_gates_ci.sh"
+        ],
+        "current_round_coverage_report_required_surfaces": [
+          "scripts/identity_creator.py",
+          "scripts/release_readiness_check.py",
+          "scripts/report_three_plane_status.py",
+          "scripts/e2e_smoke_test.sh"
+        ],
+        "current_round_coverage_post_bundle_surfaces": [
+          "scripts/release_readiness_check.py",
+          "scripts/report_three_plane_status.py",
+          "scripts/e2e_smoke_test.sh",
+          "scripts/ci/run_required_runtime_gates_ci.sh"
+        ],
+        "current_round_coverage_required_args_by_surface": {
+          "scripts/identity_creator.py": [
+            "--run-id",
+            "--report-selected-path"
+          ],
+          "scripts/release_readiness_check.py": [
+            "--run-id",
+            "--report-selected-path"
+          ],
+          "scripts/report_three_plane_status.py": [
+            "--run-id",
+            "--report-selected-path"
+          ],
+          "scripts/full_identity_protocol_scan.py": [
+            "--run-id"
+          ],
+          "scripts/e2e_smoke_test.sh": [
+            "--run-id",
+            "--report-selected-path"
+          ],
+          "scripts/ci/run_required_runtime_gates_ci.sh": [
+            "--run-id"
+          ]
+        },
+        "current_round_coverage_arg_missing": {},
+        "current_round_coverage_order_violations": {},
         "forbidden_hits": {},
         "host_transport_forbidden_default_scan_dirs": [
           "scripts",
@@ -677,7 +767,6 @@
           "scripts/identity_creator.py",
           "scripts/release_readiness_check.py",
           "scripts/report_three_plane_status.py",
-          "scripts/full_identity_protocol_scan.py",
           "scripts/e2e_smoke_test.sh"
         ],
         "missing_final_egress_wrapper": [],
@@ -981,13 +1070,15 @@
   ],
   "summary": {
     "check_count": 11,
-    "fail_count": 0,
+    "fail_count": 1,
     "warn_count": 0,
-    "pass_count": 11
+    "pass_count": 10
   },
-  "control_plane_status": "PASS_REQUIRED",
-  "promotion_ready": true,
-  "promotion_block_reasons": [],
+  "control_plane_status": "FAIL_REQUIRED",
+  "promotion_ready": false,
+  "promotion_block_reasons": [
+    "control_plane_budget:FAIL_REQUIRED"
+  ],
   "status_file_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.current.yaml",
   "status_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.v1.6.json",
   "status_file_active_file": "identity/protocol/mappings/control-plane-status.v1.6.json",
