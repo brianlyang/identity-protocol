@@ -80,6 +80,9 @@ Quick entrypoint for audit history and remediation closure records.
 - Canonical identity-routing/learning strengthening governance (v1.6.17 stream):
   - `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md`
   - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md`
+- Canonical identity artifact-family routing governance (v1.6.18 stream):
+  - `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md`
+  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md`
 
 ## Snapshots
 
@@ -118,3 +121,4 @@ Quick entrypoint for audit history and remediation closure records.
 - `docs/governance/identity-instance-script-orchestration-governance-v1.6.15.md` — v1.6.15 dedicated orchestration stream for route-to-script declarative binding, pack-local script manifests, explicit script-to-skill/MCP/tool joins, and reusable execution receipt-family governance.
 - `docs/governance/identity-context-continuity-governance-v1.6.16.md` — v1.6.16 dedicated continuity stream for governed checkpoints, migration handoff checkpoints, startup-consumable re-entry briefing, and the authority boundary that keeps continuity artifacts subordinate to protocol truth.
 - `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md` — v1.6.17 dedicated strengthening stream for lifting the kernel `Auto-routing contract` and `Rule learning contract` into symmetric runtime-consumable upper-layer bindings, without redefining the kernel source contracts or introducing backward-compatibility backstops.
+- `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md` — v1.6.18 dedicated routing stream for freezing the protocol-scoped artifact-family matrix across pack rulebook, pack task-history, dialogue-governance, experience-feedback, protocol-feedback, continuity/reentry, and memory-absorption quarantine surfaces so they cannot collapse back into generic "memory" wording.
