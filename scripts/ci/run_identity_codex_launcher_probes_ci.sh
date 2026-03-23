@@ -180,20 +180,80 @@ assert_env_loader_path_probe \
   "${GLOBAL_CODEX_BIN}" \
   ""
 
-run_cmd python3 "${REPO_ROOT}/scripts/install_identity_codex_launcher.py" \
+INSTALL_JSON="${TMP_ROOT}/launcher-install.json"
+VALIDATE_JSON="${TMP_ROOT}/launcher-validate.json"
+
+echo "[RUN] install launcher assets and capture install-vs-discoverability projection"
+python3 "${REPO_ROOT}/scripts/install_identity_codex_launcher.py" \
   --identity-id "${IDENTITY_ID}" \
   --catalog "${CATALOG_PATH}" \
   --bin-dir "${BIN_DIR}" \
   --identity-home "${IDENTITY_HOME}" \
   --protocol-home "${REPO_ROOT}" \
-  --json-only
+  --json-only > "${INSTALL_JSON}"
 
-run_cmd python3 "${REPO_ROOT}/scripts/validate_identity_codex_launcher.py" \
+python3 - "${INSTALL_JSON}" "${BIN_DIR}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+bin_dir = str(Path(sys.argv[2]).resolve())
+assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["operator_shell_path_hint"] == bin_dir, payload
+assert payload["generic_launcher_install_status"] == "PASS_REQUIRED", payload
+assert payload["shortcut_launcher_install_status"] == "PASS_REQUIRED", payload
+assert payload["generic_launcher_shell_discoverability_status"] == "FAIL_REQUIRED", payload
+assert payload["shortcut_launcher_shell_discoverability_status"] == "FAIL_REQUIRED", payload
+assert payload["generic_launcher_shell_discoverability_reason"] in {
+    "launcher_not_discoverable_in_current_shell",
+    "current_shell_resolves_foreign_launcher",
+}, payload
+assert payload["shortcut_launcher_shell_discoverability_reason"] in {
+    "launcher_not_discoverable_in_current_shell",
+    "current_shell_resolves_foreign_launcher",
+}, payload
+assert payload["generic_command_on_path"] is False, payload
+assert payload["shortcut_command_on_path"] is False, payload
+print("launcher_install_projection_status=PASS_REQUIRED")
+PY
+
+echo "[RUN] validate launcher assets with separate install/discoverability states"
+python3 "${REPO_ROOT}/scripts/validate_identity_codex_launcher.py" \
   --identity-id "${IDENTITY_ID}" \
   --catalog "${CATALOG_PATH}" \
   --bin-dir "${BIN_DIR}" \
   --require-installed \
-  --json-only
+  --json-only > "${VALIDATE_JSON}"
+
+python3 - "${VALIDATE_JSON}" "${BIN_DIR}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+bin_dir = str(Path(sys.argv[2]).resolve())
+assert payload["identity_codex_launcher_status"] == "PASS_REQUIRED", payload
+assert payload["installed_launcher_status"] == "PASS_REQUIRED", payload
+assert payload["runtime_paths_status"] == "PASS_REQUIRED", payload
+assert payload["operator_shell_path_hint"] == bin_dir, payload
+assert payload["generic_launcher_install_status"] == "PASS_REQUIRED", payload
+assert payload["shortcut_launcher_install_status"] == "PASS_REQUIRED", payload
+assert payload["generic_launcher_shell_discoverability_status"] == "FAIL_REQUIRED", payload
+assert payload["shortcut_launcher_shell_discoverability_status"] == "FAIL_REQUIRED", payload
+assert payload["generic_launcher_shell_discoverability_reason"] in {
+    "launcher_not_discoverable_in_current_shell",
+    "current_shell_resolves_foreign_launcher",
+}, payload
+assert payload["shortcut_launcher_shell_discoverability_reason"] in {
+    "launcher_not_discoverable_in_current_shell",
+    "current_shell_resolves_foreign_launcher",
+}, payload
+assert payload["generic_command_on_path"] is False, payload
+assert payload["shortcut_command_on_path"] is False, payload
+assert payload["stale_reasons"] == [], payload
+print("launcher_validator_install_vs_discoverability_status=PASS_REQUIRED")
+PY
 
 PROBE_RUNTIME_ROOT="${TMP_ROOT}/probe-runtime"
 PROBE_IDENTITY_HOME="${PROBE_RUNTIME_ROOT}/.identity"
@@ -271,6 +331,7 @@ cp -R "${PROBE_RUNTIME_ROOT}" "${PROBE_REPAIR_RUNTIME_ROOT}"
 
 DRY_RUN_JSON="${TMP_ROOT}/launcher-dry-run.json"
 COMMANDS_JSON="${TMP_ROOT}/launcher-commands.json"
+HEALTHY_PATH_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-healthy-path.json"
 NO_SESSION_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-no-session.json"
 INVALID_SESSION_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-invalid-session.json"
 MISMATCH_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-catalog-mismatch.json"
@@ -331,8 +392,23 @@ else:
     raise AssertionError(payload)
 assert payload["shortcut_command_on_path"] is False, payload
 assert payload["generic_command_on_path"] is False, payload
-assert payload["preferred_start_command"] == f"id-{payload['identity_id']}", payload
-assert payload["preferred_resume_command"] == f"id-{payload['identity_id']} resume {host_thread_uuid}", payload
+assert payload["shortcut_install_status"] == "PASS_REQUIRED", payload
+assert payload["generic_launcher_install_status"] == "PASS_REQUIRED", payload
+assert payload["shortcut_shell_discoverability_status"] == "FAIL_REQUIRED", payload
+assert payload["generic_launcher_shell_discoverability_status"] == "FAIL_REQUIRED", payload
+assert payload["shortcut_shell_discoverability_reason"] in {
+    "launcher_not_discoverable_in_current_shell",
+    "current_shell_resolves_foreign_launcher",
+}, payload
+assert payload["generic_launcher_shell_discoverability_reason"] in {
+    "launcher_not_discoverable_in_current_shell",
+    "current_shell_resolves_foreign_launcher",
+}, payload
+assert payload["operator_shell_path_hint"].endswith("/bin"), payload
+assert payload["preferred_start_command"] == payload["absolute_start_command"], payload
+assert payload["preferred_start_surface_reason"] == "shortcut_shell_undiscoverable_promote_absolute_shortcut_surface", payload
+assert payload["preferred_resume_command"] == payload["absolute_fresh_shell_resume_command"], payload
+assert payload["preferred_resume_surface_reason"] == "shortcut_shell_undiscoverable_promote_absolute_resume_surface", payload
 assert payload["absolute_start_command"].endswith(f"/id-{payload['identity_id']}"), payload
 assert payload["generic_start_command"] == f"identity-codex --identity-id {payload['identity_id']}", payload
 assert payload["fresh_shell_start_command"] == payload["generic_start_command"], payload
@@ -343,18 +419,57 @@ assert payload["generic_resume_command"] == (
 assert payload["fresh_shell_resume_command"] == (
     f"identity-codex --identity-id {payload['identity_id']} --session-id {session_id} -- resume {host_thread_uuid}"
 ), payload
-assert payload["recommended_start_command"] == payload["absolute_start_command"], payload
+assert payload["recommended_start_command"] == payload["preferred_start_command"], payload
 assert payload["recommended_resume_command"] == payload["absolute_fresh_shell_resume_command"], payload
+assert payload["recommended_resume_command"] == payload["preferred_resume_command"], payload
 assert payload["recommended_resume_command"].endswith(f"resume {host_thread_uuid}"), payload
 assert payload["recommended_user_command"] == payload["recommended_resume_command"], payload
 assert payload["copyable_commands"]["start"]["preferred"] == payload["preferred_start_command"], payload
 assert payload["copyable_commands"]["start"]["recommended"] == payload["recommended_start_command"], payload
+assert payload["copyable_commands"]["start"]["shortcut"] == f"id-{payload['identity_id']}", payload
+assert payload["copyable_commands"]["start"]["preferred"] != payload["copyable_commands"]["start"]["shortcut"], payload
+assert payload["copyable_commands"]["resume"]["preferred"] == payload["preferred_resume_command"], payload
+assert payload["copyable_commands"]["resume"]["shortcut"] == f"id-{payload['identity_id']} resume {host_thread_uuid}", payload
+assert payload["copyable_commands"]["resume"]["preferred"] != payload["copyable_commands"]["resume"]["shortcut"], payload
 assert payload["copyable_commands"]["resume"]["thread_id"] == host_thread_uuid, payload
 assert payload["copyable_commands"]["resume"]["session_id"] == session_id, payload
 assert payload["copyable_commands"]["resume"]["session_source"] == "explicit_session_id", payload
 assert payload["copyable_commands"]["resume"]["recommended"] == payload["recommended_resume_command"], payload
 assert payload["instance_answer_guidance"]["manual_command_assembly_forbidden"] is True, payload
-print("launcher_command_bundle_status=PASS_REQUIRED")
+print("launcher_command_bundle_stripped_path_status=PASS_REQUIRED")
+PY
+
+echo "[RUN] PATH=${BIN_DIR}:<base> ${BIN_DIR}/identity-codex commands --identity-id ${IDENTITY_ID} --thread-id <thread-uuid> --session-id <session-id> --json-only (healthy PATH: short launcher preferred)"
+PATH="${BIN_DIR}:${PATH}" \
+"${BIN_DIR}/identity-codex" \
+  commands \
+  --identity-id "${IDENTITY_ID}" \
+  --thread-id "${HOST_THREAD_UUID}" \
+  --session-id "${SESSION_ID}" \
+  --json-only > "${HEALTHY_PATH_COMMANDS_JSON}"
+
+python3 - "${HEALTHY_PATH_COMMANDS_JSON}" "${HOST_THREAD_UUID}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+host_thread_uuid = sys.argv[2]
+assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["shortcut_command_on_path"] is True, payload
+assert payload["generic_command_on_path"] is True, payload
+assert payload["shortcut_shell_discoverability_status"] == "PASS_REQUIRED", payload
+assert payload["generic_launcher_shell_discoverability_status"] == "PASS_REQUIRED", payload
+assert payload["preferred_start_command"] == f"id-{payload['identity_id']}", payload
+assert payload["preferred_start_surface_reason"] == "shortcut_shell_discoverable_primary_surface", payload
+assert payload["preferred_resume_command"] == f"id-{payload['identity_id']} resume {host_thread_uuid}", payload
+assert payload["preferred_resume_surface_reason"] == "shortcut_shell_discoverable_primary_surface", payload
+assert payload["recommended_start_command"] == payload["preferred_start_command"], payload
+assert payload["recommended_resume_command"] != payload["preferred_resume_command"], payload
+assert payload["recommended_resume_command"] == payload["fresh_shell_resume_command"], payload
+assert payload["copyable_commands"]["start"]["preferred"] == payload["preferred_start_command"], payload
+assert payload["copyable_commands"]["resume"]["preferred"] == payload["preferred_resume_command"], payload
+print("launcher_command_bundle_healthy_path_status=PASS_REQUIRED")
 PY
 
 echo "[RUN] ${BIN_DIR}/identity-codex commands --identity-id ${IDENTITY_ID} --catalog ${ALT_CATALOG_PATH} --thread-id <thread-uuid> --session-id <session-id> --json-only (mismatch: canonical primary surface + no stale preferred shortcut leakage)"
@@ -424,9 +539,12 @@ assert payload["identity_session_tuple_status"] == "FAIL_REQUIRED", payload
 assert "current-turn session tuple unresolved" in payload["identity_session_tuple_reason"], payload
 assert payload["resume_command_fresh_shell_executable_status"] == "FAIL_REQUIRED", payload
 assert payload["resume_status"] == "FAIL_REQUIRED", payload
+assert payload["preferred_resume_command"] == "", payload
+assert payload["preferred_resume_surface_reason"] == "resume_surface_unavailable_without_authoritative_session_tuple", payload
 assert payload["recommended_resume_command"] == "", payload
 assert payload["recommended_user_command"] == payload["recommended_start_command"], payload
 assert payload["copyable_commands"]["resume"]["session_id"] == "", payload
+assert payload["copyable_commands"]["resume"]["preferred"] == "", payload
 assert payload["copyable_commands"]["resume"]["recommended"] == "", payload
 assert payload["resume_reason"] == payload["identity_session_tuple_reason"], payload
 print("launcher_command_bundle_negative_session_gate_status=PASS_REQUIRED")
@@ -451,8 +569,11 @@ assert payload["identity_session_tuple_status"] == "FAIL_REQUIRED", payload
 assert "current-turn session tuple unresolved" in payload["identity_session_tuple_reason"], payload
 assert payload["resume_command_fresh_shell_executable_status"] == "FAIL_REQUIRED", payload
 assert payload["resume_status"] == "FAIL_REQUIRED", payload
+assert payload["preferred_resume_command"] == "", payload
+assert payload["preferred_resume_surface_reason"] == "resume_surface_unavailable_without_authoritative_session_tuple", payload
 assert payload["recommended_resume_command"] == "", payload
 assert payload["copyable_commands"]["resume"]["session_id"] == "", payload
+assert payload["copyable_commands"]["resume"]["preferred"] == "", payload
 assert payload["copyable_commands"]["resume"]["recommended"] == "", payload
 assert payload["resume_reason"] == payload["identity_session_tuple_reason"], payload
 print("launcher_command_bundle_invalid_explicit_session_status=PASS_REQUIRED")
@@ -477,12 +598,16 @@ assert payload["identity_id"], payload
 assert payload["command_discovery"]["instance_answer_mode"] == "instance_returns_concrete_commands", payload
 assert payload["continuity_support"]["bundle_contract_id"] == "identity_context_continuity_bundle_v1", payload
 assert payload["shortcut_command_on_path"] is False, payload
+assert payload["shortcut_shell_discoverability_status"] == "FAIL_REQUIRED", payload
 assert payload["identity_session_tuple_status"] == "PASS_REQUIRED", payload
 assert payload["resolved_resume_session_id"] == session_id, payload
-assert payload["preferred_start_command"] == f"id-{payload['identity_id']}", payload
-assert payload["preferred_resume_command"].startswith(f"id-{payload['identity_id']} resume "), payload
-assert payload["recommended_start_command"] == payload["absolute_start_command"], payload
+assert payload["preferred_start_command"] == payload["absolute_start_command"], payload
+assert payload["preferred_start_surface_reason"] == "shortcut_shell_undiscoverable_promote_absolute_shortcut_surface", payload
+assert payload["preferred_resume_command"] == payload["absolute_fresh_shell_resume_command"], payload
+assert payload["preferred_resume_surface_reason"] == "shortcut_shell_undiscoverable_promote_absolute_resume_surface", payload
+assert payload["recommended_start_command"] == payload["preferred_start_command"], payload
 assert payload["recommended_resume_command"] == payload["absolute_fresh_shell_resume_command"], payload
+assert payload["recommended_resume_command"] == payload["preferred_resume_command"], payload
 assert payload["recommended_resume_command"].endswith(payload["current_host_thread_id"]), payload
 assert payload["copyable_commands"]["resume"]["session_id"] == session_id, payload
 assert payload["instance_answer_guidance"]["continuity_support_internal_only"] is True, payload

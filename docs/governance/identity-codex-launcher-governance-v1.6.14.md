@@ -1,6 +1,6 @@
 # Identity Codex Launcher Governance (v1.6.14)
 
-Status: Active (implementation closure + shell ingress hardening + launcher-owned continuity consumer bridge verified, 2026-03-23; legacy fleet rollout continues)
+Status: Active (implementation closure + shell ingress hardening + launcher-owned continuity consumer bridge + install-vs-shell-discoverability command projection verified, 2026-03-24; legacy fleet rollout continues)
 Layer: protocol  
 Scope: identity-bound Codex launcher model, install-path ownership, and fail-close startup governance
 
@@ -70,25 +70,39 @@ Execution mode: topic-level canonical SSOT for v1.6.14 identity-Codex launcher g
    - `recommended_resume_command`,
    - and `recommended_user_command`
    must already be self-contained for the shell that requested the bundle.
-13. When the resolved identity catalog differs from the ambient shell catalog, the command bundle must switch its preferred/recommended primary start/resume surfaces to the generic launcher form carrying explicit `--catalog <resolved-catalog>`.
+13. `installed` and `discoverable in the current shell` are separate protocol facts:
+   - `installed` means the governed launcher file exists at the protocol-owned `${CODEX_HOME}/bin/` target and passes install validation;
+   - `discoverable in the current shell` means the requesting shell can actually resolve the bare launcher command through its live `PATH`.
+14. The structured launcher bundle and launcher validator must surface those facts separately for both launcher families, including at least:
+   - `shortcut_install_status`,
+   - `shortcut_shell_discoverability_status`,
+   - `generic_launcher_install_status`,
+   - `generic_launcher_shell_discoverability_status`.
+15. When the resolved identity catalog differs from the ambient shell catalog, the command bundle must switch its preferred/recommended primary start/resume surfaces to the generic launcher form carrying explicit `--catalog <resolved-catalog>`.
     - Under that mismatch state, short launcher commands may remain visible only as convenience/reference surfaces (for example `copyable_commands.*.shortcut`); they must not remain labeled as `preferred_*`.
     - The installed `id-<identity-id>` shim itself must remain pinned to its governed install catalog by forwarding explicit `--catalog <resolved-catalog>` internally; ambient shell/catalog drift must not silently rebind that shortcut to another catalog.
     - That execution-time catalog pinning does **not** promote the short launcher back onto the preferred discovery lane under mismatch; command discovery must still expose the explicit generic primary surface so the catalog requirement stays operator-visible and machine-auditable.
-14. Resume readiness is fail-close and decomposed:
+16. Even when the ambient catalog already matches, the bundle must never label bare `id-<identity-id>` as `preferred_start_command` / `preferred_resume_command` unless `shortcut_shell_discoverability_status=PASS_REQUIRED` for the requesting shell; if current-shell discoverability is absent, the preferred lane must downgrade to a discoverability-safe generic or absolute launcher surface while leaving the short launcher visible only as a convenience/reference field.
+17. Shell `command not found` is therefore a launcher-preflight shell ingress failure, not a post-launch runtime failure:
+   - the shell either resolves `id-<identity-id>` or it does not;
+   - if it does not, launcher code has not started yet;
+   - protocol may detect that state, project it, and downgrade the preferred surface,
+   - but protocol must not misdescribe that shell failure as a runtime resume failure that the launcher itself can recover after the command was never invoked.
+18. Resume readiness is fail-close and decomposed:
    - host-thread UUID presence alone must **not** upgrade `resume_status` to `PASS_REQUIRED`;
    - `resume_status` may be `PASS_REQUIRED` only when the host thread id and the authoritative identity session tuple are both resolved;
    - when resume requires tuple closure, the recommended resume command must carry explicit `--session-id run:<...>` rather than promoting a short launcher shortcut that cannot encode that tuple.
-15. The structured JSON bundle must therefore surface machine-readable readiness decomposition for at least:
+19. The structured JSON bundle must therefore surface machine-readable readiness decomposition for at least:
    - `catalog_context_status`,
    - `host_thread_id_status`,
    - `identity_session_tuple_status`,
    - `resume_command_fresh_shell_executable_status`.
-16. Semantic freeze for recovery correctness:
+20. Semantic freeze for recovery correctness:
    - `resume <host-thread-uuid>` remains the Codex-side recovery target for prior transcript/state;
    - `--session-id run:<...>` is launcher-side tuple closure only;
    - the launcher must never substitute the session tuple for the host thread UUID, and must never reinterpret the host thread UUID as the session tuple.
-17. When the embedded internal support bundle from `v1.6.16` recommends `consume_governed_reentry_brief`, the launcher-owned startup path must consume that governed brief through the canonical pack-local continuity guard and must emit/verify the governed runtime `instance_reentry_consumption_receipt` before handing control to Codex.
-18. That continuity bridge remains launcher-internal:
+21. When the embedded internal support bundle from `v1.6.16` recommends `consume_governed_reentry_brief`, the launcher-owned startup path must consume that governed brief through the canonical pack-local continuity guard and must emit/verify the governed runtime `instance_reentry_consumption_receipt` before handing control to Codex.
+22. That continuity bridge remains launcher-internal:
    - it must not invent a second user-facing startup command family,
    - it must not duplicate continuity semantics inside launcher code,
    - it must reuse the protocol-owned continuity bundle plus canonical pack-local producer path.
@@ -257,7 +271,9 @@ These names and directories are frozen by this stream. The renderer / installer 
    - `identity-codex commands --identity-id <id>` and `id-<id> commands` must emit full copyable start/resume commands from protocol truth instead of requiring operators to manually assemble launcher invocations.
    - those copyable commands must be terminal-native direct commands (`id-<id> ...`, `identity-codex --identity-id <id> ...`), not shell-wrapped helper strings such as `zsh -lic '...'`.
    - `recommended_user_command` must remain protocol-owned, environment-aware, and fresh-shell executable: when the canonical short launcher is not discoverable on the current `PATH`, the bundle must switch to the absolute direct launcher path; when the ambient shell catalog mismatches the resolved identity catalog, it must emit explicit `--catalog`; when resume requires tuple closure, it must emit explicit `--session-id run:<...>` rather than promoting a stale short launcher.
+   - launcher install truth and launcher shell-discoverability truth must remain separately machine-visible (`*_install_status` vs `*_shell_discoverability_status`) so “installed but not discoverable in this shell” is not misreported as either “not installed” or “runtime resume failed”.
    - the protocol-owned shell env loaders must expose `${CODEX_HOME}/bin` on `PATH` idempotently in fresh shells, so launcher availability is not left to manual operator shell edits; this PATH hardening reinforces the canonical install root rather than replacing it.
+   - even under ambient catalog match, `preferred_start_command` / `preferred_resume_command` may use bare `id-<id>` only when the current shell actually resolves that shortcut; otherwise the preferred lane must downgrade to a discoverability-safe generic or absolute launcher surface while leaving the short launcher visible only as a reference field.
    - under `ambient_catalog_mismatch_requires_explicit_catalog`, the bundle must also align `preferred_start_command` / `preferred_resume_command` with that same canonical fresh-shell primary surface; any short launcher form may survive only as a reference/convenience field, not as the preferred operator surface.
    - host-thread UUID presence alone must not promote resume readiness; the machine-visible decomposition must distinguish `host_thread_id_status`, `identity_session_tuple_status`, and `resume_command_fresh_shell_executable_status`.
    - `identity-codex commands --identity-id <id> --json-only` must emit a structured command bundle (`recommended_user_command`, `copyable_commands`, `instance_answer_guidance`) so identity instances can answer concretely without inventing their own launcher logic.

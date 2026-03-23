@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import tempfile
 import tomllib
@@ -153,6 +154,84 @@ def read_runtime_paths_config(identity_home: Path | None = None) -> dict[str, st
             continue
         payload[key] = value
     return payload
+
+
+def _path_entry_present(target_entry: Path, *, path_value: str | None = None) -> bool:
+    target = target_entry.expanduser().resolve()
+    raw_path = str(path_value if path_value is not None else os.environ.get("PATH", "")).strip()
+    if not raw_path:
+        return False
+    for raw_token in raw_path.split(":"):
+        token = str(raw_token or "").strip()
+        if not token:
+            continue
+        try:
+            if Path(token).expanduser().resolve() == target:
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def observe_launcher_surface(command_name: str, expected_path: Path) -> dict[str, Any]:
+    expected = expected_path.expanduser().resolve()
+    exists = expected.exists()
+    is_file = expected.is_file() if exists else False
+    is_executable = os.access(expected, os.X_OK) if exists else False
+    if not exists:
+        install_status = STATUS_FAIL_REQUIRED
+        install_reason = "launcher_missing"
+    elif not is_file:
+        install_status = STATUS_FAIL_REQUIRED
+        install_reason = "launcher_not_file"
+    elif not is_executable:
+        install_status = STATUS_FAIL_REQUIRED
+        install_reason = "launcher_not_executable"
+    else:
+        install_status = STATUS_PASS_REQUIRED
+        install_reason = "launcher_installed"
+
+    resolved = shutil.which(command_name)
+    resolved_path = ""
+    resolved_matches_expected = False
+    if resolved:
+        try:
+            resolved_path = str(Path(resolved).expanduser().resolve())
+            resolved_matches_expected = Path(resolved_path) == expected
+        except Exception:
+            resolved_path = str(resolved)
+            resolved_matches_expected = resolved_path == str(expected)
+
+    if resolved_matches_expected and install_status == STATUS_PASS_REQUIRED:
+        shell_discoverability_status = STATUS_PASS_REQUIRED
+        shell_discoverability_reason = "current_shell_resolves_expected_launcher"
+    elif resolved_path:
+        shell_discoverability_status = STATUS_FAIL_REQUIRED
+        shell_discoverability_reason = "current_shell_resolves_foreign_launcher"
+    elif install_status == STATUS_PASS_REQUIRED:
+        shell_discoverability_status = STATUS_FAIL_REQUIRED
+        shell_discoverability_reason = "launcher_not_discoverable_in_current_shell"
+    else:
+        shell_discoverability_status = STATUS_FAIL_REQUIRED
+        shell_discoverability_reason = "launcher_not_installed"
+
+    bin_dir = expected.parent.resolve()
+    return {
+        "command_name": str(command_name or "").strip(),
+        "expected_path": str(expected),
+        "bin_dir": str(bin_dir),
+        "bin_dir_on_path": _path_entry_present(bin_dir),
+        "install_status": install_status,
+        "install_reason": install_reason,
+        "shell_discoverability_status": shell_discoverability_status,
+        "shell_discoverability_reason": shell_discoverability_reason,
+        "resolved_command_path": resolved_path,
+        "resolved_matches_expected": resolved_matches_expected,
+        "command_on_path": shell_discoverability_status == STATUS_PASS_REQUIRED,
+        "exists": exists,
+        "is_file": is_file,
+        "is_executable": is_executable,
+    }
 
 
 def write_runtime_paths_config(
@@ -607,6 +686,13 @@ Boundary:
 - Launcher-owned startup injection owns `model_instructions_file` and
   `project_doc_fallback_filenames` for the launched process and fail-closes on
   manual override attempts.
+- `installed` and `discoverable in the current shell` are separate facts:
+  - install truth is owned by the protocol launcher assets under `${{CODEX_HOME}}/bin/`;
+  - shell discoverability truth is owned by the current operator shell `PATH`.
+- Protocol command discovery must never label `{shortcut}` as `preferred_*`
+  unless the current shell can actually resolve that command; otherwise the
+  preferred lane must downgrade to a discoverability-safe generic or absolute
+  launcher surface.
 """
 
 

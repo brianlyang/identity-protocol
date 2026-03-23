@@ -14,10 +14,13 @@ from identity_codex_launcher_common import (
     ensure_launcher_assets,
     ensure_launcher_contract,
     install_launcher_shims,
+    observe_launcher_surface,
     runtime_identity_home_for_catalog,
     resolve_catalog_path,
     resolve_launcher_pack_task,
+    shortcut_launcher_name,
     write_runtime_paths_config,
+    GENERIC_LAUNCHER_NAME,
 )
 
 
@@ -75,6 +78,11 @@ def main() -> int:
         runtime_identity_home=runtime_identity_home,
         runtime_catalog=catalog_path,
     )
+    generic_surface = observe_launcher_surface(GENERIC_LAUNCHER_NAME, Path(shim_result["generic_launcher_path"]))
+    shortcut_surface = observe_launcher_surface(
+        shortcut_launcher_name(args.identity_id),
+        Path(shim_result["shortcut_launcher_path"]),
+    )
 
     payload = {
         "status": STATUS_PASS_REQUIRED,
@@ -87,6 +95,21 @@ def main() -> int:
         "contract_key": IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY,
         "contract_changed": contract_changed,
         "runtime_paths_env": str(runtime_paths_env),
+        "operator_shell_path_hint": str(bin_dir),
+        "absolute_generic_launcher_path": shim_result["generic_launcher_path"],
+        "absolute_shortcut_path": shim_result["shortcut_launcher_path"],
+        "generic_launcher_install_status": generic_surface["install_status"],
+        "generic_launcher_install_reason": generic_surface["install_reason"],
+        "generic_launcher_shell_discoverability_status": generic_surface["shell_discoverability_status"],
+        "generic_launcher_shell_discoverability_reason": generic_surface["shell_discoverability_reason"],
+        "generic_command_on_path": generic_surface["command_on_path"],
+        "generic_resolved_command_path": generic_surface["resolved_command_path"],
+        "shortcut_launcher_install_status": shortcut_surface["install_status"],
+        "shortcut_launcher_install_reason": shortcut_surface["install_reason"],
+        "shortcut_launcher_shell_discoverability_status": shortcut_surface["shell_discoverability_status"],
+        "shortcut_launcher_shell_discoverability_reason": shortcut_surface["shell_discoverability_reason"],
+        "shortcut_command_on_path": shortcut_surface["command_on_path"],
+        "shortcut_resolved_command_path": shortcut_surface["resolved_command_path"],
         **asset_result,
         **shim_result,
     }

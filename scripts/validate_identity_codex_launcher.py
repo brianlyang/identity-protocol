@@ -24,6 +24,7 @@ from identity_codex_launcher_common import (
     launcher_manifest_path,
     launcher_readme_path,
     launcher_required,
+    observe_launcher_surface,
     read_runtime_paths_config,
     resolve_catalog_path,
     resolve_launcher_pack_task,
@@ -91,6 +92,8 @@ def main() -> int:
     protocol_home = Path(__file__).resolve().parents[1]
     generic_path = (bin_dir / GENERIC_LAUNCHER_NAME).resolve()
     shortcut_path = (bin_dir / shortcut_launcher_name(args.identity_id)).resolve()
+    generic_surface = observe_launcher_surface(GENERIC_LAUNCHER_NAME, generic_path)
+    shortcut_surface = observe_launcher_surface(shortcut_launcher_name(args.identity_id), shortcut_path)
     contract = task_doc.get(IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY)
     try:
         resolved_identity = resolve_identity(
@@ -118,6 +121,23 @@ def main() -> int:
         "runtime_paths_env": str(runtime_paths_env),
         "generic_launcher_path": str(generic_path),
         "shortcut_launcher_path": str(shortcut_path),
+        "absolute_generic_launcher_path": str(generic_path),
+        "absolute_shortcut_path": str(shortcut_path),
+        "operator_shell_path_hint": str(bin_dir),
+        "generic_launcher_install_status": generic_surface["install_status"],
+        "generic_launcher_install_reason": generic_surface["install_reason"],
+        "generic_launcher_shell_discoverability_status": generic_surface["shell_discoverability_status"],
+        "generic_launcher_shell_discoverability_reason": generic_surface["shell_discoverability_reason"],
+        "generic_command_on_path": generic_surface["command_on_path"],
+        "generic_resolved_command_path": generic_surface["resolved_command_path"],
+        "generic_bin_dir_on_path": generic_surface["bin_dir_on_path"],
+        "shortcut_launcher_install_status": shortcut_surface["install_status"],
+        "shortcut_launcher_install_reason": shortcut_surface["install_reason"],
+        "shortcut_launcher_shell_discoverability_status": shortcut_surface["shell_discoverability_status"],
+        "shortcut_launcher_shell_discoverability_reason": shortcut_surface["shell_discoverability_reason"],
+        "shortcut_command_on_path": shortcut_surface["command_on_path"],
+        "shortcut_resolved_command_path": shortcut_surface["resolved_command_path"],
+        "shortcut_bin_dir_on_path": shortcut_surface["bin_dir_on_path"],
         "identity_status": identity_status,
         "launcher_required": required,
         "install_required": install_required,
@@ -164,12 +184,16 @@ def main() -> int:
     if install_required:
         if not generic_path.exists():
             install_stale.append("generic_launcher_missing")
+        elif not generic_surface["is_executable"]:
+            install_stale.append("generic_launcher_not_executable")
         else:
             text = generic_path.read_text(encoding="utf-8", errors="ignore")
             if "render_identity_codex_launcher.py" not in text:
                 install_stale.append("generic_launcher_renderer_binding_missing")
         if not shortcut_path.exists():
             install_stale.append("shortcut_launcher_missing")
+        elif not shortcut_surface["is_executable"]:
+            install_stale.append("shortcut_launcher_not_executable")
         else:
             text = shortcut_path.read_text(encoding="utf-8", errors="ignore")
             if f"--identity-id {args.identity_id}" not in text:

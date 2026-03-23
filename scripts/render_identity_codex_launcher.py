@@ -5,7 +5,6 @@ import argparse
 import json
 import os
 import shlex
-import shutil
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +18,7 @@ from identity_codex_launcher_common import (
     default_bin_dir,
     ensure_launcher_assets,
     exec_identity_codex,
+    observe_launcher_surface,
     launcher_manifest_doc,
     launcher_readme_text,
     launcher_command_discovery_doc,
@@ -45,18 +45,6 @@ def _shell_join(parts: list[str]) -> str:
 
 def _build_display_command(raw_command: list[str]) -> str:
     return _shell_join(raw_command)
-
-
-def _command_available_on_path(command_name: str, *, expected_path: Path | None = None) -> bool:
-    resolved = shutil.which(command_name)
-    if not resolved:
-        return False
-    if expected_path is None:
-        return True
-    try:
-        return Path(resolved).expanduser().resolve() == expected_path.resolve()
-    except Exception:
-        return False
 
 
 def _resolve_resume_thread(identity_id: str, explicit_thread_id: str) -> tuple[str, str]:
@@ -256,18 +244,36 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         catalog_path=catalog_path,
         require_explicit_catalog=require_explicit_catalog,
     )
-    shortcut_command_on_path = _command_available_on_path(shortcut, expected_path=shortcut_path)
-    generic_command_on_path = _command_available_on_path(GENERIC_LAUNCHER_NAME, expected_path=generic_path)
+    shortcut_surface = observe_launcher_surface(shortcut, shortcut_path)
+    generic_surface = observe_launcher_surface(GENERIC_LAUNCHER_NAME, generic_path)
+    shortcut_command_on_path = bool(shortcut_surface["command_on_path"])
+    generic_command_on_path = bool(generic_surface["command_on_path"])
+    shortcut_install_status = str(shortcut_surface["install_status"])
+    generic_install_status = str(generic_surface["install_status"])
     if require_explicit_catalog:
-        preferred_start_command = fresh_shell_start_command if generic_command_on_path else absolute_fresh_shell_start_command
+        preferred_start_command = (
+            fresh_shell_start_command
+            if generic_command_on_path or generic_install_status != STATUS_PASS_REQUIRED
+            else absolute_fresh_shell_start_command
+        )
         preferred_start_surface_reason = "catalog_mismatch_requires_canonical_primary_surface"
     else:
-        preferred_start_command = shortcut_start_command
-        preferred_start_surface_reason = "shortcut_reference_surface"
-    if require_explicit_catalog:
-        recommended_start_command = preferred_start_command
-    else:
-        recommended_start_command = preferred_start_command if shortcut_command_on_path else absolute_start_command
+        if shortcut_command_on_path:
+            preferred_start_command = shortcut_start_command
+            preferred_start_surface_reason = "shortcut_shell_discoverable_primary_surface"
+        elif generic_command_on_path:
+            preferred_start_command = preferred_generic_start_command
+            preferred_start_surface_reason = "shortcut_shell_undiscoverable_promote_generic_primary_surface"
+        elif shortcut_install_status == STATUS_PASS_REQUIRED:
+            preferred_start_command = absolute_start_command
+            preferred_start_surface_reason = "shortcut_shell_undiscoverable_promote_absolute_shortcut_surface"
+        elif generic_install_status == STATUS_PASS_REQUIRED:
+            preferred_start_command = absolute_generic_start_command
+            preferred_start_surface_reason = "shortcut_shell_undiscoverable_promote_absolute_generic_surface"
+        else:
+            preferred_start_command = preferred_generic_start_command
+            preferred_start_surface_reason = "launcher_install_missing_falls_back_to_generic_reference_surface"
+    recommended_start_command = preferred_start_command
     command_discovery = launcher_command_discovery_doc(args.identity_id)
 
     thread_id, thread_source = _resolve_resume_thread(args.identity_id, args.thread_id)
@@ -320,8 +326,23 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         "generic_command": GENERIC_LAUNCHER_NAME,
         "shortcut_launcher_path": str(shortcut_path),
         "generic_launcher_path": str(generic_path),
+        "absolute_shortcut_path": str(shortcut_path),
+        "absolute_generic_launcher_path": str(generic_path),
+        "operator_shell_path_hint": str(bin_dir),
         "shortcut_command_on_path": shortcut_command_on_path,
         "generic_command_on_path": generic_command_on_path,
+        "shortcut_install_status": shortcut_install_status,
+        "shortcut_install_reason": shortcut_surface["install_reason"],
+        "shortcut_shell_discoverability_status": shortcut_surface["shell_discoverability_status"],
+        "shortcut_shell_discoverability_reason": shortcut_surface["shell_discoverability_reason"],
+        "shortcut_resolved_command_path": shortcut_surface["resolved_command_path"],
+        "shortcut_bin_dir_on_path": shortcut_surface["bin_dir_on_path"],
+        "generic_launcher_install_status": generic_install_status,
+        "generic_launcher_install_reason": generic_surface["install_reason"],
+        "generic_launcher_shell_discoverability_status": generic_surface["shell_discoverability_status"],
+        "generic_launcher_shell_discoverability_reason": generic_surface["shell_discoverability_reason"],
+        "generic_resolved_command_path": generic_surface["resolved_command_path"],
+        "generic_bin_dir_on_path": generic_surface["bin_dir_on_path"],
         "actor_id": actor_token,
         "preferred_start_command": preferred_start_command,
         "preferred_start_surface_reason": preferred_start_surface_reason,
@@ -366,6 +387,10 @@ def _cmd_commands(args: argparse.Namespace) -> int:
                 "catalog_explicit_flag_required": require_explicit_catalog,
                 "shortcut_on_path": shortcut_command_on_path,
                 "generic_on_path": generic_command_on_path,
+                "shortcut_install_status": shortcut_install_status,
+                "shortcut_shell_discoverability_status": shortcut_surface["shell_discoverability_status"],
+                "generic_launcher_install_status": generic_install_status,
+                "generic_launcher_shell_discoverability_status": generic_surface["shell_discoverability_status"],
             },
             "resume": None,
         },
@@ -396,10 +421,21 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         if resume_command_fresh_shell_executable_status == STATUS_PASS_REQUIRED:
             if require_explicit_catalog or resolved_resume_session_id:
                 canonical_resume_command = (
-                    fresh_shell_resume_command if generic_command_on_path else absolute_fresh_shell_resume_command
+                    fresh_shell_resume_command
+                    if generic_command_on_path or generic_install_status != STATUS_PASS_REQUIRED
+                    else absolute_fresh_shell_resume_command
                 )
             else:
-                canonical_resume_command = shortcut_resume_command if shortcut_command_on_path else absolute_resume_command
+                if shortcut_command_on_path:
+                    canonical_resume_command = shortcut_resume_command
+                elif shortcut_install_status == STATUS_PASS_REQUIRED:
+                    canonical_resume_command = absolute_resume_command
+                elif generic_command_on_path:
+                    canonical_resume_command = generic_resume_command
+                elif generic_install_status == STATUS_PASS_REQUIRED:
+                    canonical_resume_command = absolute_generic_resume_command
+                else:
+                    canonical_resume_command = generic_resume_command
         else:
             canonical_resume_command = ""
         recommended_resume_command = canonical_resume_command
@@ -411,8 +447,20 @@ def _cmd_commands(args: argparse.Namespace) -> int:
                 else "catalog_mismatch_resume_surface_unavailable"
             )
         else:
-            preferred_resume_command = shortcut_resume_command
-            preferred_resume_surface_reason = "shortcut_reference_surface"
+            if shortcut_command_on_path and resume_command_fresh_shell_executable_status == STATUS_PASS_REQUIRED:
+                preferred_resume_command = shortcut_resume_command
+                preferred_resume_surface_reason = "shortcut_shell_discoverable_primary_surface"
+            elif canonical_resume_command:
+                preferred_resume_command = canonical_resume_command
+                if generic_command_on_path:
+                    preferred_resume_surface_reason = "shortcut_shell_undiscoverable_promote_canonical_resume_surface"
+                elif generic_install_status == STATUS_PASS_REQUIRED or shortcut_install_status == STATUS_PASS_REQUIRED:
+                    preferred_resume_surface_reason = "shortcut_shell_undiscoverable_promote_absolute_resume_surface"
+                else:
+                    preferred_resume_surface_reason = "launcher_install_missing_falls_back_to_resume_reference_surface"
+            else:
+                preferred_resume_command = ""
+                preferred_resume_surface_reason = "resume_surface_unavailable_without_authoritative_session_tuple"
         payload.update(
             {
                 "preferred_resume_command": preferred_resume_command,
@@ -444,6 +492,10 @@ def _cmd_commands(args: argparse.Namespace) -> int:
             "catalog_explicit_flag_required": require_explicit_catalog,
             "shortcut_on_path": shortcut_command_on_path,
             "generic_on_path": generic_command_on_path,
+            "shortcut_install_status": shortcut_install_status,
+            "shortcut_shell_discoverability_status": shortcut_surface["shell_discoverability_status"],
+            "generic_launcher_install_status": generic_install_status,
+            "generic_launcher_shell_discoverability_status": generic_surface["shell_discoverability_status"],
         }
         if resume_command_fresh_shell_executable_status != STATUS_PASS_REQUIRED:
             payload["resume_reason"] = identity_session_tuple_reason

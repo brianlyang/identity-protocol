@@ -48,6 +48,18 @@ forwards its governed install catalog internally via explicit `--catalog <resolv
 catalog pinning is for fail-close execution stability only and does not move the short launcher back onto
 the preferred discovery lane.
 
+Critical `v1.6.14` boundary:
+
+- `installed` and `discoverable in the current shell` are separate facts.
+- `installed` means the governed launcher file exists under `${CODEX_HOME}/bin/` and passes install validation.
+- `discoverable` means the current operator shell can actually resolve the bare command through its live `PATH`.
+- Shell `command not found: id-<identity-id>` happens **before** launcher logic starts, so the protocol must
+  detect and project that boundary, but it must not misdescribe it as a runtime resume failure that the launcher
+  itself can recover after the fact.
+- Therefore `preferred_start_command` / `preferred_resume_command` may use bare `id-<identity-id>` only when
+  `shortcut_shell_discoverability_status=PASS_REQUIRED`; otherwise the preferred lane must downgrade to a
+  discoverability-safe generic or absolute launcher surface.
+
 Print the full copyable command bundle for any governed identity:
 
 ```bash
@@ -83,12 +95,14 @@ Critical semantic boundary:
 What this prints:
 
 - preferred start command for operator use; when the ambient catalog already matches the resolved
-  identity catalog it stays on the short-launcher lane, and under catalog mismatch it upgrades to the
-  canonical explicit generic primary surface
+  identity catalog it stays on the short-launcher lane only if the current shell can actually resolve that
+  command, and under catalog mismatch or current-shell short-launcher undiscoverability it upgrades to the
+  canonical explicit/generic or absolute primary surface
 - absolute-path fallback start command under `${CODEX_HOME}/bin/`
 - protocol-owned fresh-shell env loaders keep `${CODEX_HOME}/bin` on `PATH` idempotently, so short-launcher discovery is not left to manual shell edits
 - preferred resume command for the current shell; under catalog mismatch it must collapse to the same
-  fresh-shell executable canonical resume command as the recommended surface
+  fresh-shell executable canonical resume command as the recommended surface, and when the short launcher is
+  not discoverable in the current shell it must also collapse away from the bare shortcut
 - `copyable_commands.start.shortcut` / `copyable_commands.resume.shortcut` retain the short-launcher
   reference surface when the preferred surface has to switch to the explicit generic launcher
 - generic `identity-codex --identity-id ...` equivalents for repair/documentation flows
@@ -113,6 +127,10 @@ That JSON is the protocol-owned guidance bundle. It now carries:
 - `host_thread_id_status`
 - `identity_session_tuple_status`
 - `resume_command_fresh_shell_executable_status`
+- `shortcut_install_status`
+- `shortcut_shell_discoverability_status`
+- `generic_launcher_install_status`
+- `generic_launcher_shell_discoverability_status`
 - `shortcut_start_command`
 - `shortcut_resume_command`
 - `copyable_commands.start`

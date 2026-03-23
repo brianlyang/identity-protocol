@@ -1,6 +1,6 @@
 # Protocol Remediation Audit Ledger (v1.6.14 identity-Codex launcher stream)
 
-Status: Active (implementation closure + shell ingress hardening + launcher-owned continuity consumer bridge verified, 2026-03-23; legacy fleet rollout continues)
+Status: Active (implementation closure + shell ingress hardening + launcher-owned continuity consumer bridge + install-vs-shell-discoverability command projection verified, 2026-03-24; legacy fleet rollout continues)
 Scope: protocol review ledger for identity-bound Codex launcher/install/startup governance
 
 ## 0) Stream objective
@@ -104,23 +104,37 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    must return a structured command bundle so identity instances can answer concretely without inventing launcher logic.
 8. Embedded internal support bundles from other streams, such as `v1.6.16` continuity support, are acceptable only inside that structured JSON bundle and must not become independent operator command folklore.
 9. The protocol-owned recommended command surfaces must be judged by **fresh-shell executability**, not by shortcut discoverability or host-thread presence alone.
-10. If the resolved identity catalog differs from the ambient shell catalog, the preferred/recommended primary command surface must switch to the generic launcher form carrying explicit `--catalog <resolved-catalog>`.
-11. If resume requires identity-session tuple closure, the recommended resume command must carry explicit `--session-id run:<...>`; a short launcher shortcut that cannot encode that tuple is not an auditable recommendation surface.
+10. Audit must keep `installed` separate from `discoverable in the current shell`:
+    - `installed` means the governed launcher file exists at the canonical `${CODEX_HOME}/bin/` target and passes install validation;
+    - `discoverable in the current shell` means the requesting shell actually resolves that bare command on its live `PATH`.
+11. Audit therefore requires separate machine-readable fields for both launcher families, including:
+    - `shortcut_install_status`,
+    - `shortcut_shell_discoverability_status`,
+    - `generic_launcher_install_status`,
+    - `generic_launcher_shell_discoverability_status`.
+12. If the resolved identity catalog differs from the ambient shell catalog, the preferred/recommended primary command surface must switch to the generic launcher form carrying explicit `--catalog <resolved-catalog>`.
+13. Even when the catalog already matches, audit must fail any implementation that continues to label bare `id-<identity-id>` as `preferred_*` after `shortcut_shell_discoverability_status` has already gone red; under current-shell undiscoverability the preferred lane must downgrade to a discoverability-safe generic or absolute launcher surface while leaving the short launcher only as a convenience/reference field.
+14. If resume requires identity-session tuple closure, the recommended resume command must carry explicit `--session-id run:<...>`; a short launcher shortcut that cannot encode that tuple is not an auditable recommendation surface.
     - Under catalog mismatch, any retained short launcher form may survive only as a convenience/reference surface; audit must fail any implementation that still labels it `preferred_*`.
-12. Audit interpretation of resume readiness is decomposed and fail-close:
+15. Audit interpretation of resume readiness is decomposed and fail-close:
     - `host_thread_id_status`
     - `identity_session_tuple_status`
     - `resume_command_fresh_shell_executable_status`
     together determine whether `resume_status` may be `PASS_REQUIRED`.
-13. Recovery semantics are frozen and must not drift during implementation:
+16. Shell `command not found` remains outside launcher runtime semantics:
+    - the shell either resolves `id-<identity-id>` or it does not;
+    - if it does not, launcher code never started;
+    - audit accepts protocol detection/projection/downgrade of that state,
+    - and rejects any wording that misclassifies it as a runtime resume failure the launcher recovered after the shell never invoked it.
+17. Recovery semantics are frozen and must not drift during implementation:
     - `resume <host-thread-uuid>` remains the Codex recovery target for prior records;
     - `--session-id run:<...>` is only launcher-side tuple closure;
     - auditing must fail any implementation that swaps, collapses, or conflates those two identifiers.
-14. Pack-local launcher assets land only under `<pack_path>/scripts/launchers/`.
-15. Installed launchers land only under `${CODEX_HOME}/bin/`.
-16. Workspace `scripts/codex_native_chat/` remains compatibility bridge only until protocol-owned launcher assets land.
-17. Launcher ownership of `model_instructions_file` and `project_doc_fallback_filenames` injection remains explicit and fail-close.
-18. Launcher ownership now also includes the first governed `v1.6.16` startup-consumer bridge:
+18. Pack-local launcher assets land only under `<pack_path>/scripts/launchers/`.
+19. Installed launchers land only under `${CODEX_HOME}/bin/`.
+20. Workspace `scripts/codex_native_chat/` remains compatibility bridge only until protocol-owned launcher assets land.
+21. Launcher ownership of `model_instructions_file` and `project_doc_fallback_filenames` injection remains explicit and fail-close.
+22. Launcher ownership now also includes the first governed `v1.6.16` startup-consumer bridge:
     - launcher exec/startup must consume the protocol-owned continuity bundle rather than re-derive continuity semantics;
     - when the bundle recommends `consume_governed_reentry_brief`, launcher exec/startup must call the canonical pack-local `run_identity_context_continuity_guard.sh post-recover --json-only` producer path before handing off to Codex;
     - when startup readiness is already green but receipt-family proof is only recoverably stale (`migration_handoff` missing or joinable lineage drift), launcher exec/startup must repair via the canonical `run_identity_context_continuity_guard.sh pre-migrate --json-only` producer path before running `post-recover`, which closes the short-command resume gap without adding a second operator command family;
@@ -214,7 +228,9 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - `identity-codex commands --identity-id <id>` and `id-<id> commands` return a ready-to-copy command bundle rather than leaving command assembly to the operator.
    - that bundle is terminal-native and direct (`id-<id> ...`, `identity-codex --identity-id <id> ...`), not shell-wrapped helper text such as `zsh -lic '...'`.
    - the protocol-owned `recommended_user_command` is also environment-aware **and** fresh-shell executable: if the current shell cannot discover the short launcher on `PATH`, the bundle falls back to the absolute direct launcher path; if the ambient catalog mismatches the resolved identity catalog, the bundle emits explicit `--catalog`; if resume requires tuple closure, the bundle emits explicit `--session-id run:<...>` rather than a stale short shortcut.
+   - the same bundle now separates launcher install truth from shell discoverability truth through explicit `*_install_status` and `*_shell_discoverability_status` fields, so “installed but not discoverable in this shell” is projected as its own machine state rather than being collapsed into install failure or runtime failure.
    - fresh-shell ingress is now also hardened through protocol-owned env loaders that expose `${CODEX_HOME}/bin` on `PATH` exactly once, so short-launcher discoverability is no longer dependent on one-off manual shell edits.
+   - even under catalog match, the bundle must not keep a bare short launcher on the preferred lane once `shortcut_shell_discoverability_status` is red; the preferred lane must downgrade to a discoverability-safe absolute or generic surface while leaving short launchers only in reference fields.
    - under `ambient_catalog_mismatch_requires_explicit_catalog`, the bundle must also promote the same canonical fresh-shell command into `preferred_start_command` / `preferred_resume_command`; any retained short launcher command is audit-acceptable only as a convenience/reference field, not as the preferred operator surface.
    - the installed `id-<id>` shim must nevertheless stay execution-stable under that same mismatch by forwarding its governed install catalog through explicit `--catalog <resolved-catalog>` internally, so ambient `IDENTITY_CATALOG` drift cannot silently rebind the shortcut to a foreign catalog.
    - that internal catalog pinning is an execution-stability guarantee only; it must not be misread as permission to relabel the mismatch bundle’s preferred discovery surface back to the short launcher.
