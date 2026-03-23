@@ -75,10 +75,16 @@ def _repo_catalog_path(protocol_home: Path) -> Path:
     return (protocol_home / "identity" / "catalog" / "identities.yaml").resolve()
 
 
-def _run_json(cmd: list[str], *, cwd: Path | None = None) -> dict[str, Any]:
+def _run_json(
+    cmd: list[str],
+    *,
+    cwd: Path | None = None,
+    env: dict[str, str] | None = None,
+) -> dict[str, Any]:
     proc = subprocess.run(
         cmd,
         cwd=str(cwd) if cwd is not None else None,
+        env=env,
         capture_output=True,
         text=True,
         check=False,
@@ -185,6 +191,195 @@ def resolve_launcher_pack_task(
         current_task=current_task,
         identity_id=identity_id,
     )
+
+
+def load_launcher_continuity_support_bundle(
+    *,
+    identity_id: str,
+    catalog_path: Path,
+    task_path: Path,
+) -> dict[str, Any]:
+    try:
+        from render_identity_context_continuity_bundle import render_continuity_bundle_payload  # type: ignore
+
+        payload = render_continuity_bundle_payload(
+            identity_id=identity_id,
+            catalog=str(catalog_path),
+            current_task=str(task_path),
+        )
+    except Exception as exc:
+        return {
+            "status": STATUS_FAIL_REQUIRED,
+            "identity_context_continuity_bundle_status": STATUS_FAIL_REQUIRED,
+            "bundle_contract_id": "identity_context_continuity_bundle_v1",
+            "bundle_role": "launcher_and_instance_internal_support",
+            "identity_id": identity_id,
+            "render_error": f"launcher_continuity_support_render_failed:{type(exc).__name__}",
+            "error": str(exc),
+        }
+    if not isinstance(payload, dict):
+        return {
+            "status": STATUS_FAIL_REQUIRED,
+            "identity_context_continuity_bundle_status": STATUS_FAIL_REQUIRED,
+            "bundle_contract_id": "identity_context_continuity_bundle_v1",
+            "bundle_role": "launcher_and_instance_internal_support",
+            "identity_id": identity_id,
+            "render_error": "launcher_continuity_support_render_root_not_object",
+        }
+    return payload
+
+
+def _continuity_token(payload: dict[str, Any], key: str, *, default: str = "") -> str:
+    value = payload.get(key)
+    return str(value).strip() if value is not None else default
+
+
+def resolve_launcher_reentry_binding(
+    *,
+    identity_id: str,
+    catalog_path: Path,
+    pack_root: Path,
+    task_path: Path,
+    protocol_home: Path,
+    env: dict[str, str],
+    dry_run: bool,
+) -> dict[str, Any]:
+    continuity_support = load_launcher_continuity_support_bundle(
+        identity_id=identity_id,
+        catalog_path=catalog_path,
+        task_path=task_path,
+    )
+    bind_mode = _continuity_token(continuity_support, "recommended_launcher_bind_mode")
+    startup_status = _continuity_token(
+        continuity_support,
+        "startup_reentry_readiness_status",
+        default=STATUS_FAIL_REQUIRED,
+    )
+    live_status_before = _continuity_token(
+        continuity_support,
+        "live_reentry_consumption_proof_status",
+        default=STATUS_FAIL_REQUIRED,
+    )
+    receipt_status_before = _continuity_token(
+        continuity_support,
+        "receipt_family_observation_status",
+        default=STATUS_FAIL_REQUIRED,
+    )
+    result: dict[str, Any] = {
+        "status": STATUS_PASS_REQUIRED,
+        "launcher_reentry_binding_status": STATUS_PASS_REQUIRED,
+        "launcher_reentry_binding_required": bind_mode == "consume_governed_reentry_brief",
+        "recommended_launcher_bind_mode": bind_mode,
+        "startup_reentry_readiness_status": startup_status,
+        "live_reentry_consumption_proof_status_before": live_status_before,
+        "receipt_family_observation_status_before": receipt_status_before,
+        "current_reentry_brief_ref": _continuity_token(continuity_support, "current_reentry_brief_ref"),
+        "continuity_lineage_ref": _continuity_token(continuity_support, "continuity_lineage_ref"),
+        "continuity_support": continuity_support,
+    }
+    if bind_mode != "consume_governed_reentry_brief":
+        result.update(
+            {
+                "bind_action": "skipped_not_required",
+                "bind_reason": bind_mode or "launcher_bind_mode_not_required",
+            }
+        )
+        return result
+    if startup_status != STATUS_PASS_REQUIRED:
+        return {
+            **result,
+            "status": STATUS_FAIL_REQUIRED,
+            "launcher_reentry_binding_status": STATUS_FAIL_REQUIRED,
+            "bind_action": "blocked_startup_readiness",
+            "bind_reason": startup_status or "startup_reentry_readiness_not_pass",
+        }
+    if dry_run:
+        result.update(
+            {
+                "bind_action": "dry_run_preview_post_recover",
+                "bind_reason": "launcher_would_consume_governed_reentry_brief",
+            }
+        )
+        return result
+
+    guard_script = (pack_root / "scripts" / "run_identity_context_continuity_guard.sh").resolve()
+    if not guard_script.is_file():
+        return {
+            **result,
+            "status": STATUS_FAIL_REQUIRED,
+            "launcher_reentry_binding_status": STATUS_FAIL_REQUIRED,
+            "bind_action": "guard_missing",
+            "bind_reason": f"context_continuity_guard_missing:{guard_script}",
+        }
+    post_recover_payload = _run_json(
+        [
+            str(guard_script),
+            "--catalog",
+            str(catalog_path),
+            "post-recover",
+            "--json-only",
+        ],
+        cwd=protocol_home.parent.resolve(),
+        env=env,
+    )
+    if _continuity_token(post_recover_payload, "status", default=STATUS_FAIL_REQUIRED) != STATUS_PASS_REQUIRED:
+        return {
+            **result,
+            "status": STATUS_FAIL_REQUIRED,
+            "launcher_reentry_binding_status": STATUS_FAIL_REQUIRED,
+            "bind_action": "post_recover_failed",
+            "bind_reason": _continuity_token(post_recover_payload, "error")
+            or "launcher_post_recover_failed",
+            "post_recover_payload": post_recover_payload,
+        }
+    verified_bundle = load_launcher_continuity_support_bundle(
+        identity_id=identity_id,
+        catalog_path=catalog_path,
+        task_path=task_path,
+    )
+    verified_live_status = _continuity_token(
+        verified_bundle,
+        "live_reentry_consumption_proof_status",
+        default=STATUS_FAIL_REQUIRED,
+    )
+    verified_receipt_status = _continuity_token(
+        verified_bundle,
+        "receipt_family_observation_status",
+        default=STATUS_FAIL_REQUIRED,
+    )
+    if verified_live_status != STATUS_PASS_REQUIRED or verified_receipt_status != STATUS_PASS_REQUIRED:
+        return {
+            **result,
+            "status": STATUS_FAIL_REQUIRED,
+            "launcher_reentry_binding_status": STATUS_FAIL_REQUIRED,
+            "bind_action": "post_recover_verification_failed",
+            "bind_reason": "launcher_post_recover_failed_to_materialize_governed_runtime_proof",
+            "post_recover_payload": post_recover_payload,
+            "verified_continuity_support": verified_bundle,
+            "live_reentry_consumption_proof_status_after": verified_live_status,
+            "receipt_family_observation_status_after": verified_receipt_status,
+        }
+    result.update(
+        {
+            "bind_action": "post_recover_applied",
+            "bind_reason": "launcher_consumed_governed_reentry_brief",
+            "post_recover_payload": post_recover_payload,
+            "verified_continuity_support": verified_bundle,
+            "live_reentry_consumption_proof_status_after": verified_live_status,
+            "receipt_family_observation_status_after": verified_receipt_status,
+            "current_reentry_brief_ref": _continuity_token(
+                verified_bundle,
+                "current_reentry_brief_ref",
+            )
+            or result["current_reentry_brief_ref"],
+            "continuity_lineage_ref": _continuity_token(
+                verified_bundle,
+                "continuity_lineage_ref",
+            )
+            or result["continuity_lineage_ref"],
+        }
+    )
+    return result
 
 
 def launcher_manifest_path(pack_root: Path) -> Path:
@@ -999,6 +1194,39 @@ def exec_identity_codex(
         catalog_path=catalog_path,
         protocol_home=protocol_home,
     )
+    pack_root, task_path, _task_doc = resolve_launcher_pack_task(
+        identity_id=identity_id,
+        catalog_path=catalog_path,
+    )
+    env = os.environ.copy()
+    env["CODEX_ACTOR_ID"] = actor_token
+    env["CODEX_SESSION_ID"] = session_id
+    env["IDENTITY_SESSION_ID"] = session_id
+    env["IDENTITY_BOOTSTRAP_IDENTITY_ID"] = identity_id
+    env["IDENTITY_BOOTSTRAP_IDENTITY_SOURCE"] = "explicit_identity_id"
+    env["IDENTITY_BOOTSTRAP_TUPLE_SOURCE"] = session_source
+    env["IDENTITY_CATALOG"] = str(catalog_path)
+    env["IDENTITY_HOME"] = str(catalog_path.parent)
+    env["IDENTITY_PROTOCOL_HOME"] = str(protocol_home)
+    env["OTEL_SDK_DISABLED"] = env.get("OTEL_SDK_DISABLED", "true") or "true"
+    launcher_reentry_binding = resolve_launcher_reentry_binding(
+        identity_id=identity_id,
+        catalog_path=catalog_path,
+        pack_root=pack_root,
+        task_path=task_path,
+        protocol_home=protocol_home,
+        env=env,
+        dry_run=dry_run,
+    )
+    if _continuity_token(
+        launcher_reentry_binding,
+        "launcher_reentry_binding_status",
+        default=STATUS_FAIL_REQUIRED,
+    ) != STATUS_PASS_REQUIRED:
+        raise RuntimeError(
+            _continuity_token(launcher_reentry_binding, "bind_reason")
+            or "launcher_reentry_binding_failed"
+        )
     bootstrap_payload = write_process_local_bootstrap_artifacts(
         identity_id=identity_id,
         actor_id=actor_token,
@@ -1012,17 +1240,6 @@ def exec_identity_codex(
         workspace_root=Path.cwd(),
     )
     cmd = build_codex_exec_command(bootstrap_payload=bootstrap_payload, codex_args=codex_args)
-    env = os.environ.copy()
-    env["CODEX_ACTOR_ID"] = actor_token
-    env["CODEX_SESSION_ID"] = session_id
-    env["IDENTITY_SESSION_ID"] = session_id
-    env["IDENTITY_BOOTSTRAP_IDENTITY_ID"] = identity_id
-    env["IDENTITY_BOOTSTRAP_IDENTITY_SOURCE"] = "explicit_identity_id"
-    env["IDENTITY_BOOTSTRAP_TUPLE_SOURCE"] = session_source
-    env["IDENTITY_CATALOG"] = str(catalog_path)
-    env["IDENTITY_HOME"] = str(catalog_path.parent)
-    env["IDENTITY_PROTOCOL_HOME"] = str(protocol_home)
-    env["OTEL_SDK_DISABLED"] = env.get("OTEL_SDK_DISABLED", "true") or "true"
 
     result = {
         "status": STATUS_PASS_REQUIRED,
@@ -1037,6 +1254,10 @@ def exec_identity_codex(
         "project_doc_fallback_basename": str(bootstrap_payload["project_doc_fallback_basename"]),
         "line_1": str(bootstrap_payload["line_1"]),
         "line_2": str(bootstrap_payload["line_2"]),
+        "pack_path": str(pack_root),
+        "task_path": str(task_path),
+        "continuity_support": dict(launcher_reentry_binding.get("continuity_support") or {}),
+        "launcher_reentry_binding": launcher_reentry_binding,
         "command": cmd,
         "command_string": " ".join(shlex.quote(part) for part in cmd),
     }

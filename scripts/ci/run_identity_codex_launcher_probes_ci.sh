@@ -195,6 +195,68 @@ run_cmd python3 "${REPO_ROOT}/scripts/validate_identity_codex_launcher.py" \
   --require-installed \
   --json-only
 
+PROBE_RUNTIME_ROOT="${TMP_ROOT}/probe-runtime"
+PROBE_IDENTITY_HOME="${PROBE_RUNTIME_ROOT}/.identity"
+PROBE_CATALOG_PATH="${PROBE_IDENTITY_HOME}/catalog.local.yaml"
+PROBE_PACK_ROOT="${PROBE_IDENTITY_HOME}/${IDENTITY_ID}"
+PROBE_PRE_MIGRATE_JSON="${TMP_ROOT}/launcher-reentry-pre-migrate.json"
+PROBE_BUNDLE_BEFORE_JSON="${TMP_ROOT}/launcher-reentry-before.json"
+PROBE_EXEC_STDOUT="${TMP_ROOT}/launcher-reentry-exec.out"
+PROBE_BUNDLE_AFTER_JSON="${TMP_ROOT}/launcher-reentry-after.json"
+PROBE_EXEC_CODEX_HOME="${TMP_ROOT}/launcher-exec-codex-home"
+mkdir -p "${PROBE_EXEC_CODEX_HOME}"
+
+run_cmd python3 - "${REPO_ROOT}" "${CATALOG_PATH}" "${IDENTITY_ID}" "${PROBE_CATALOG_PATH}" <<'PY'
+import json
+import shutil
+import sys
+from pathlib import Path
+
+repo_root = Path(sys.argv[1]).resolve()
+source_catalog = Path(sys.argv[2]).resolve()
+identity_id = sys.argv[3]
+probe_catalog = Path(sys.argv[4]).resolve()
+
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+from actor_session_common import actor_session_path  # type: ignore
+
+source_pack = (source_catalog.parent / identity_id).resolve()
+probe_identity_home = probe_catalog.parent.resolve()
+probe_pack = (probe_identity_home / identity_id).resolve()
+if probe_pack.exists():
+    shutil.rmtree(probe_pack)
+probe_pack.parent.mkdir(parents=True, exist_ok=True)
+shutil.copytree(source_pack, probe_pack)
+
+probe_catalog.write_text(
+    json.dumps(
+        {
+            "identities": [
+                {
+                    "id": identity_id,
+                    "pack_path": str(probe_pack),
+                    "status": "active",
+                    "profile": "runtime",
+                    "runtime_mode": "local_only",
+                    "scope": "USER",
+                }
+            ]
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+    + "\n",
+    encoding="utf-8",
+)
+
+source_actor_store = actor_session_path(source_catalog, "assistant:codex")
+if not source_actor_store.exists():
+    raise SystemExit(f"missing_actor_session_store:{source_actor_store}")
+probe_actor_store = actor_session_path(probe_catalog, "assistant:codex")
+probe_actor_store.parent.mkdir(parents=True, exist_ok=True)
+shutil.copy2(source_actor_store, probe_actor_store)
+PY
+
 DRY_RUN_JSON="${TMP_ROOT}/launcher-dry-run.json"
 COMMANDS_JSON="${TMP_ROOT}/launcher-commands.json"
 NO_SESSION_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-no-session.json"
@@ -570,7 +632,74 @@ assert any("model_instructions_file" in part for part in command), payload
 assert any("project_doc_fallback_filenames" in part for part in command), payload
 assert str(payload.get("line_1", "")).startswith("Identity-Context:"), payload
 assert str(payload.get("line_2", "")).startswith("Machine-Verification:"), payload
+binding = payload["launcher_reentry_binding"]
+assert binding["launcher_reentry_binding_status"] == "PASS_REQUIRED", payload
+mode = binding["recommended_launcher_bind_mode"]
+if mode == "consume_governed_reentry_brief":
+    assert binding["bind_action"] == "dry_run_preview_post_recover", payload
+    assert binding["bind_reason"] == "launcher_would_consume_governed_reentry_brief", payload
+else:
+    assert binding["bind_action"] == "skipped_not_required", payload
 print("launcher_dry_run_status=PASS_REQUIRED")
+PY
+
+echo "[RUN] continuity pre-migrate on isolated probe pack to force pending startup consumption"
+"${PROBE_PACK_ROOT}/scripts/run_identity_context_continuity_guard.sh" \
+  --catalog "${PROBE_CATALOG_PATH}" \
+  pre-migrate \
+  --json-only > "${PROBE_PRE_MIGRATE_JSON}"
+
+echo "[RUN] render continuity bundle before launcher exec (expect startup ready + live proof red)"
+python3 "${REPO_ROOT}/scripts/render_identity_context_continuity_bundle.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --catalog "${PROBE_CATALOG_PATH}" \
+  --json-only > "${PROBE_BUNDLE_BEFORE_JSON}"
+
+python3 - "${PROBE_BUNDLE_BEFORE_JSON}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["identity_context_continuity_bundle_status"] == "PASS_REQUIRED", payload
+assert payload["recommended_launcher_bind_mode"] == "consume_governed_reentry_brief", payload
+assert payload["startup_reentry_readiness_status"] == "PASS_REQUIRED", payload
+assert payload["receipt_family_observation_status"] == "FAIL_REQUIRED", payload
+assert payload["live_reentry_consumption_proof_status"] in {"FAIL_REQUIRED", "PASS_REQUIRED"}, payload
+print("launcher_exec_continuity_preflight_status=PASS_REQUIRED")
+PY
+
+echo "[RUN] actual launcher exec consumes governed reentry brief before codex startup"
+CODEX_HOME="${PROBE_EXEC_CODEX_HOME}" \
+IDENTITY_PROTOCOL_HOME="${REPO_ROOT}" \
+IDENTITY_CATALOG="${PROBE_CATALOG_PATH}" \
+"${BIN_DIR}/identity-codex" \
+  --identity-id "${IDENTITY_ID}" \
+  --catalog "${PROBE_CATALOG_PATH}" \
+  --session-id "${SESSION_ID}" \
+  -- \
+  --version > "${PROBE_EXEC_STDOUT}"
+
+echo "[RUN] render continuity bundle after launcher exec (expect live proof green)"
+python3 "${REPO_ROOT}/scripts/render_identity_context_continuity_bundle.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --catalog "${PROBE_CATALOG_PATH}" \
+  --json-only > "${PROBE_BUNDLE_AFTER_JSON}"
+
+python3 - "${PROBE_BUNDLE_AFTER_JSON}" "${PROBE_EXEC_STDOUT}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+stdout = Path(sys.argv[2]).read_text(encoding="utf-8").strip()
+assert payload["identity_context_continuity_bundle_status"] == "PASS_REQUIRED", payload
+assert payload["recommended_launcher_bind_mode"] == "consume_governed_reentry_brief", payload
+assert payload["startup_reentry_readiness_status"] == "PASS_REQUIRED", payload
+assert payload["live_reentry_consumption_proof_status"] == "PASS_REQUIRED", payload
+assert payload["receipt_family_observation_status"] == "PASS_REQUIRED", payload
+assert stdout, "launcher exec did not produce codex output"
+print("launcher_exec_continuity_binding_status=PASS_REQUIRED")
 PY
 
 echo "[RUN] ${BIN_DIR}/identity-codex forbidden override negative probe"

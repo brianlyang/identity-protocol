@@ -494,6 +494,77 @@ receipt_missing_member_pack = tmp_root / "receipt-family-missing-member-pack"
 clone_pack(receipt_pass_pack, receipt_missing_member_pack)
 (receipt_missing_member_pack / checkpoint_receipt_path.relative_to(receipt_pass_pack)).unlink()
 
+receipt_multihop_pack = tmp_root / "receipt-family-multihop-pack"
+seed_pack(receipt_multihop_pack, continuity_required=True, reentry_required=True)
+receipt_multihop_checkpoint_path = receipt_multihop_pack / "runtime" / "reports" / "context-continuity" / "continuity-stage-family.json"
+receipt_multihop_prev_migration_path = receipt_multihop_pack / "runtime" / "reports" / "context-continuity" / "continuity-migration-family-prev.json"
+receipt_multihop_latest_migration_path = receipt_multihop_pack / "runtime" / "reports" / "context-continuity" / "continuity-migration-family-latest.json"
+receipt_multihop_brief_path = receipt_multihop_pack / REENTRY_BRIEF_REL
+write_json(
+    receipt_multihop_checkpoint_path,
+    checkpoint_doc(
+        continuity_id="cont-family-stage-root",
+        artifact_kind="stage_checkpoint",
+    ),
+)
+write_json(
+    receipt_multihop_prev_migration_path,
+    checkpoint_doc(
+        continuity_id="cont-family-migration-prev",
+        artifact_kind="migration_checkpoint",
+        supersedes_ref="cont-family-stage-root",
+    ),
+)
+write_json(
+    receipt_multihop_latest_migration_path,
+    checkpoint_doc(
+        continuity_id="cont-family-migration-latest",
+        artifact_kind="migration_checkpoint",
+        supersedes_ref="cont-family-migration-prev",
+    ),
+)
+write_json(
+    receipt_multihop_brief_path,
+    reentry_brief_doc(
+        continuity_id="cont-family-reentry-multihop",
+        supersedes_ref="cont-family-migration-latest",
+    ),
+)
+write_json(
+    receipt_multihop_pack / "runtime" / "reports" / "context-continuity" / "checkpoint-receipt.json",
+    checkpoint_receipt_doc(
+        pack_root=receipt_multihop_pack,
+        artifact_path=receipt_multihop_checkpoint_path,
+        artifact_kind="stage_checkpoint",
+        role="checkpoint",
+    ),
+)
+write_json(
+    receipt_multihop_pack / "runtime" / "reports" / "context-continuity" / "migration-receipt.json",
+    checkpoint_receipt_doc(
+        pack_root=receipt_multihop_pack,
+        artifact_path=receipt_multihop_latest_migration_path,
+        artifact_kind="migration_checkpoint",
+        role="migration_handoff",
+    ),
+)
+write_json(
+    receipt_multihop_pack / "runtime" / "reports" / "context-continuity" / "reentry-brief-receipt.json",
+    reentry_brief_receipt_doc(
+        pack_root=receipt_multihop_pack,
+        brief_path=receipt_multihop_brief_path,
+        continuity_lineage_ref="cont-family-migration-latest",
+    ),
+)
+write_json(
+    receipt_multihop_pack / "runtime" / "reports" / "context-continuity" / "reentry-consumption-receipt.json",
+    reentry_consumption_receipt_doc(
+        pack_root=receipt_multihop_pack,
+        brief_path=receipt_multihop_brief_path,
+        continuity_lineage_ref="cont-family-reentry-multihop",
+    ),
+)
+
 receipt_unknown_kind_pack = tmp_root / "receipt-family-unknown-kind-pack"
 clone_pack(receipt_pass_pack, receipt_unknown_kind_pack)
 write_json(
@@ -551,6 +622,7 @@ exports = {
     "REENTRY_RECEIPT_LOCATION_BRIEF": reentry_receipt_location_pack / REENTRY_BRIEF_REL,
     "REENTRY_RECEIPT_BAD_LOCATION_PATH": reentry_receipt_bad_location_path,
     "RECEIPT_PASS_TASK": receipt_pass_pack / "CURRENT_TASK.json",
+    "RECEIPT_MULTIHOP_TASK": receipt_multihop_pack / "CURRENT_TASK.json",
     "COVERAGE_PASS_CATALOG": coverage_pass_catalog,
     "RECEIPT_MISSING_MEMBER_TASK": receipt_missing_member_pack / "CURRENT_TASK.json",
     "RECEIPT_UNKNOWN_KIND_TASK": receipt_unknown_kind_pack / "CURRENT_TASK.json",
@@ -580,6 +652,7 @@ REENTRY_OUTCOME_FAIL_JSON="${TMP_ROOT}/reentry-outcome-fail.json"
 REENTRY_BRIEF_LOCATION_JSON="${TMP_ROOT}/reentry-brief-location.json"
 REENTRY_RECEIPT_LOCATION_JSON="${TMP_ROOT}/reentry-receipt-location.json"
 RECEIPT_PASS_JSON="${TMP_ROOT}/receipt-family-pass.json"
+RECEIPT_MULTIHOP_JSON="${TMP_ROOT}/receipt-family-multihop.json"
 REQUIRED_COVERAGE_PASS_JSON="${TMP_ROOT}/required-coverage-pass.json"
 RECEIPT_MISSING_MEMBER_JSON="${TMP_ROOT}/receipt-family-missing-member.json"
 RECEIPT_UNKNOWN_KIND_JSON="${TMP_ROOT}/receipt-family-unknown-kind.json"
@@ -775,6 +848,12 @@ run_cmd python3 "${ROOT}/scripts/validate_identity_context_continuity_receipts.p
   --require-observed \
   --json-only > "${RECEIPT_PASS_JSON}"
 
+run_cmd python3 "${ROOT}/scripts/validate_identity_context_continuity_receipts.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${RECEIPT_MULTIHOP_TASK}" \
+  --require-observed \
+  --json-only > "${RECEIPT_MULTIHOP_JSON}"
+
 run_cmd python3 "${ROOT}/scripts/validate_required_contract_coverage.py" \
   --identity-id "${IDENTITY_ID}" \
   --catalog "${COVERAGE_PASS_CATALOG}" \
@@ -828,6 +907,7 @@ python3 - "${TMP_ROOT}" \
   "${REENTRY_BRIEF_LOCATION_JSON}" \
   "${REENTRY_RECEIPT_LOCATION_JSON}" \
   "${RECEIPT_PASS_JSON}" \
+  "${RECEIPT_MULTIHOP_JSON}" \
   "${REQUIRED_COVERAGE_PASS_JSON}" \
   "${RECEIPT_MISSING_MEMBER_JSON}" \
   "${RECEIPT_UNKNOWN_KIND_JSON}" \
@@ -862,6 +942,7 @@ from pathlib import Path
     reentry_brief_location_path,
     reentry_receipt_location_path,
     receipt_pass_path,
+    receipt_multihop_path,
     required_coverage_pass_path,
     receipt_missing_member_path,
     receipt_unknown_kind_path,
@@ -895,6 +976,7 @@ reentry_outcome_fail = load(reentry_outcome_fail_path)
 reentry_brief_location = load(reentry_brief_location_path)
 reentry_receipt_location = load(reentry_receipt_location_path)
 receipt_pass = load(receipt_pass_path)
+receipt_multihop = load(receipt_multihop_path)
 required_coverage_pass = load(required_coverage_pass_path)
 receipt_missing_member = load(receipt_missing_member_path)
 receipt_unknown_kind = load(receipt_unknown_kind_path)
@@ -971,6 +1053,8 @@ assert "report_under_state_surface" in reentry_receipt_location.get("stale_reaso
 
 assert receipt_pass["identity_context_continuity_receipt_family_status"] == "PASS_REQUIRED", receipt_pass
 assert receipt_pass["receipt_join_status"] == "PASS_REQUIRED", receipt_pass
+assert receipt_multihop["identity_context_continuity_receipt_family_status"] == "PASS_REQUIRED", receipt_multihop
+assert receipt_multihop["receipt_join_status"] == "PASS_REQUIRED", receipt_multihop
 assert required_coverage_pass["failed_required_contract_count"] == 0, required_coverage_pass
 assert required_coverage_pass["required_contract_total"] == 4, required_coverage_pass
 assert required_coverage_pass["required_contract_passed"] == 4, required_coverage_pass
@@ -1023,6 +1107,7 @@ print(
                 "report_under_state_surface",
             ],
             "rq_046_positive_status": receipt_pass["identity_context_continuity_receipt_family_status"],
+            "rq_046_multihop_positive_status": receipt_multihop["identity_context_continuity_receipt_family_status"],
             "rq_046_negative_failures": [
                 "missing_receipt_role",
                 "unknown_continuity_receipt_kind",

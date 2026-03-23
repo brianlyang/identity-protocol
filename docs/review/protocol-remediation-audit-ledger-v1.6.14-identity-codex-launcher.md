@@ -1,6 +1,6 @@
 # Protocol Remediation Audit Ledger (v1.6.14 identity-Codex launcher stream)
 
-Status: Active (implementation closure plus isolated historical replay capability verified, 2026-03-22; legacy fleet rollout continues)  
+Status: Active (implementation closure + shell ingress hardening + launcher-owned continuity consumer bridge verified, 2026-03-23; legacy fleet rollout continues)
 Scope: protocol review ledger for identity-bound Codex launcher/install/startup governance
 
 ## 0) Stream objective
@@ -112,6 +112,10 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
 15. Installed launchers land only under `${CODEX_HOME}/bin/`.
 16. Workspace `scripts/codex_native_chat/` remains compatibility bridge only until protocol-owned launcher assets land.
 17. Launcher ownership of `model_instructions_file` and `project_doc_fallback_filenames` injection remains explicit and fail-close.
+18. Launcher ownership now also includes the first governed `v1.6.16` startup-consumer bridge:
+    - launcher exec/startup must consume the protocol-owned continuity bundle rather than re-derive continuity semantics;
+    - when the bundle recommends `consume_governed_reentry_brief`, launcher exec/startup must call the canonical pack-local `run_identity_context_continuity_guard.sh post-recover --json-only` producer path before handing off to Codex;
+    - audit must fail any implementation that claims launcher-owned continuity startup consumption without the governed runtime `instance_reentry_consumption_receipt`.
 
 ## 5) Audit verdict rules (frozen)
 
@@ -134,6 +138,7 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - canonical installed `identity-codex` and `id-<identity-id>` shims,
    - protocol-owned command-bundle output from `identity-codex commands --identity-id <identity-id>` and `id-<identity-id> commands`,
    - launcher probe lane `scripts/ci/run_identity_codex_launcher_probes_ci.sh`,
+   - launcher-owned continuity bind proof inside that same launcher probe lane, proving `pre-migrate -> launcher exec/startup -> reentry-consumption-receipt` through the protocol-owned launcher path rather than through ad hoc manual post-recover calls,
    - convergence-entry probe lane `scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh`,
    - active-runtime launcher migration closure checker `scripts/check_identity_codex_launcher_migration_closure.py`,
    - governed launcher convergence evidence bundles whose receipts self-pin `evidence_ref` / `manifest_ref` and whose archival root carries `EVIDENCE_MANIFEST.<run_token>.json`,

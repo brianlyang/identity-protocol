@@ -1,6 +1,6 @@
 # Identity Codex Launcher Governance (v1.6.14)
 
-Status: Active (implementation closure plus isolated historical replay capability verified, 2026-03-22; legacy fleet rollout continues)  
+Status: Active (implementation closure + shell ingress hardening + launcher-owned continuity consumer bridge verified, 2026-03-23; legacy fleet rollout continues)
 Layer: protocol  
 Scope: identity-bound Codex launcher model, install-path ownership, and fail-close startup governance
 
@@ -79,6 +79,11 @@ Execution mode: topic-level canonical SSOT for v1.6.14 identity-Codex launcher g
    - `resume <host-thread-uuid>` remains the Codex-side recovery target for prior transcript/state;
    - `--session-id run:<...>` is launcher-side tuple closure only;
    - the launcher must never substitute the session tuple for the host thread UUID, and must never reinterpret the host thread UUID as the session tuple.
+17. When the embedded internal support bundle from `v1.6.16` recommends `consume_governed_reentry_brief`, the launcher-owned startup path must consume that governed brief through the canonical pack-local continuity guard and must emit/verify the governed runtime `instance_reentry_consumption_receipt` before handing control to Codex.
+18. That continuity bridge remains launcher-internal:
+   - it must not invent a second user-facing startup command family,
+   - it must not duplicate continuity semantics inside launcher code,
+   - it must reuse the protocol-owned continuity bundle plus canonical pack-local producer path.
 
 ### 2.2 Canonical path contract
 
@@ -248,6 +253,10 @@ These names and directories are frozen by this stream. The renderer / installer 
    - under `ambient_catalog_mismatch_requires_explicit_catalog`, the bundle must also align `preferred_start_command` / `preferred_resume_command` with that same canonical fresh-shell primary surface; any short launcher form may survive only as a reference/convenience field, not as the preferred operator surface.
    - host-thread UUID presence alone must not promote resume readiness; the machine-visible decomposition must distinguish `host_thread_id_status`, `identity_session_tuple_status`, and `resume_command_fresh_shell_executable_status`.
    - `identity-codex commands --identity-id <id> --json-only` must emit a structured command bundle (`recommended_user_command`, `copyable_commands`, `instance_answer_guidance`) so identity instances can answer concretely without inventing their own launcher logic.
+13. Startup continuity bridge note (2026-03-23): launcher ownership now also covers the first governed `v1.6.16` startup-consumer bridge through the same protocol-owned launcher path:
+   - `scripts/identity_codex_launcher_common.py` must consume the internal continuity bundle rather than re-deriving continuity semantics ad hoc;
+   - when the bundle reports `recommended_launcher_bind_mode=consume_governed_reentry_brief`, launcher exec/startup must invoke the canonical pack-local `run_identity_context_continuity_guard.sh post-recover --json-only` path before handing off to Codex;
+   - `scripts/ci/run_identity_codex_launcher_probes_ci.sh` must prove the real sequence `pre-migrate -> launcher exec/startup -> reentry-consumption-receipt` in an isolated runtime, not merely a dry-run prediction.
 13. Audit follow-on closure note (2026-03-23): the formerly separate raw catalog metadata hygiene boundary is now protocol-owned and closed on `v1.6.10`:
    - `scripts/validate_runtime_catalog_metadata_hygiene.py` and `scripts/repair_runtime_catalog_metadata_hygiene.py` now own raw row self-description such as `canonical_scope` / `canonical_pack_path`;
    - `scripts/check_identity_codex_launcher_migration_closure.py` now projects `runtime_catalog_metadata_hygiene_status`;

@@ -12,9 +12,11 @@ from identity_context_continuity_common import (
     CONTINUITY_AUXILIARY_RECEIPT_KINDS,
     CONTINUITY_RECEIPT_KINDS,
     STATUS_FAIL_REQUIRED,
+    build_continuity_lineage_index,
     STATUS_PASS_REQUIRED,
     STATUS_SKIPPED_NOT_REQUIRED,
     clean_string,
+    collect_continuity_joinable_ids,
     continuity_report_location_status,
     continuity_report_root,
     discover_continuity_report_doc,
@@ -403,7 +405,11 @@ def _validate_reentry_consumption_receipt(
     return payload, issues
 
 
-def _join_family(role_rows: dict[str, dict[str, Any]]) -> list[str]:
+def _join_family(
+    role_rows: dict[str, dict[str, Any]],
+    *,
+    lineage_index: dict[str, dict[str, str]],
+) -> list[str]:
     issues: list[str] = []
     distinct_paths = [clean_string(role_rows[role].get("receipt_path")) for role in ROLE_ORDER]
     if len(set(distinct_paths)) != len(distinct_paths):
@@ -417,12 +423,17 @@ def _join_family(role_rows: dict[str, dict[str, Any]]) -> list[str]:
     allowed_lineage = {checkpoint_current}
     migration_parent = clean_string(role_rows["migration_handoff"].get("parent_continuity_ref"))
     migration_current = clean_string(role_rows["migration_handoff"].get("current_continuity_id"))
+    if not migration_current:
+        issues.append("migration_continuity_id_missing")
+    migration_chain = collect_continuity_joinable_ids(lineage_index, migration_current)
+    if migration_chain:
+        allowed_lineage.update(migration_chain)
     if not migration_parent:
         issues.append("migration_parent_lineage_missing")
     elif migration_parent not in allowed_lineage:
         issues.append(f"migration_parent_not_joinable:{migration_parent}")
-    if migration_current:
-        allowed_lineage.add(migration_current)
+    if checkpoint_current and migration_chain and checkpoint_current not in migration_chain:
+        issues.append(f"migration_chain_not_rooted_in_checkpoint:{checkpoint_current}")
 
     brief_lineage = clean_string(role_rows["reentry_brief"].get("continuity_lineage_ref"))
     if not brief_lineage:
@@ -473,6 +484,8 @@ def main() -> int:
         print(f"[FAIL] {exc}")
         return 1
 
+    report_root = continuity_report_root(pack_root)
+
     payload: dict[str, Any] = {
         "identity_id": args.identity_id,
         "catalog_path": str(catalog_path) if catalog_path is not None else "",
@@ -486,7 +499,7 @@ def main() -> int:
         "receipt_join_status": STATUS_SKIPPED_NOT_REQUIRED,
         "route_or_entry_scope": clean_string(args.route_or_entry_scope),
         "receipt_observed_count": 0,
-        "report_root": str(continuity_report_root(pack_root)),
+        "report_root": str(report_root),
         "checkpoint_receipt_path": "",
         "migration_handoff_receipt_path": "",
         "reentry_brief_receipt_path": "",
@@ -535,7 +548,7 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 1
 
-    unknown_kind_issues = _scan_unknown_continuity_receipt_kinds(continuity_report_root(pack_root))
+    unknown_kind_issues = _scan_unknown_continuity_receipt_kinds(report_root)
     if unknown_kind_issues:
         for role in ROLE_ORDER:
             payload[ROLE_STATUS_FIELDS[role]] = STATUS_FAIL_REQUIRED
@@ -543,7 +556,7 @@ def main() -> int:
         payload["receipt_join_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_UNKNOWN_KIND
         payload["stale_reasons"] = unknown_kind_issues
-        payload["evidence_ref"] = str(continuity_report_root(pack_root))
+        payload["evidence_ref"] = str(report_root)
         _emit(payload, json_only=args.json_only)
         return 1
 
@@ -605,26 +618,27 @@ def main() -> int:
             row = role_rows.get(role)
             if row and clean_string(row.get("receipt_path")):
                 payload[f"{role}_receipt_path"] = clean_string(row.get("receipt_path"))
-        payload["evidence_ref"] = str(continuity_report_root(pack_root))
+        payload["evidence_ref"] = str(report_root)
         _emit(payload, json_only=args.json_only)
         return 1
 
     if not payload["route_or_entry_scope"]:
         payload["route_or_entry_scope"] = "startup_resume_recover"
 
-    join_issues = _join_family(role_rows)
+    lineage_index = build_continuity_lineage_index(report_root)
+    join_issues = _join_family(role_rows, lineage_index=lineage_index)
     if join_issues:
         payload["identity_context_continuity_receipt_family_status"] = STATUS_FAIL_REQUIRED
         payload["receipt_join_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_JOIN_INVALID
         payload["stale_reasons"] = join_issues
-        payload["evidence_ref"] = str(continuity_report_root(pack_root))
+        payload["evidence_ref"] = str(report_root)
         _emit(payload, json_only=args.json_only)
         return 1
 
     payload["identity_context_continuity_receipt_family_status"] = STATUS_PASS_REQUIRED
     payload["receipt_join_status"] = STATUS_PASS_REQUIRED
-    payload["evidence_ref"] = str(continuity_report_root(pack_root))
+    payload["evidence_ref"] = str(report_root)
     _emit(payload, json_only=args.json_only)
     return 0
 

@@ -22,6 +22,7 @@ from identity_codex_launcher_common import (
     launcher_manifest_doc,
     launcher_readme_text,
     launcher_command_discovery_doc,
+    load_launcher_continuity_support_bundle,
     render_generic_launcher_sh,
     render_shortcut_launcher_sh,
     resolve_catalog_path,
@@ -31,9 +32,6 @@ from identity_codex_launcher_common import (
     resolve_required_protocol_actor_id,
     shortcut_launcher_name,
 )
-from render_identity_context_continuity_bundle import render_continuity_bundle_payload
-
-
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
@@ -111,32 +109,11 @@ def _load_continuity_support_bundle(
     catalog_path: Path,
     task_path: Path,
 ) -> dict[str, Any]:
-    try:
-        payload = render_continuity_bundle_payload(
-            identity_id=identity_id,
-            catalog=str(catalog_path),
-            current_task=str(task_path),
-        )
-    except Exception as exc:
-        return {
-            "status": STATUS_FAIL_REQUIRED,
-            "identity_context_continuity_bundle_status": STATUS_FAIL_REQUIRED,
-            "bundle_contract_id": "identity_context_continuity_bundle_v1",
-            "bundle_role": "launcher_and_instance_internal_support",
-            "identity_id": identity_id,
-            "render_error": f"launcher_continuity_support_render_failed:{type(exc).__name__}",
-            "error": str(exc),
-        }
-    if not isinstance(payload, dict):
-        return {
-            "status": STATUS_FAIL_REQUIRED,
-            "identity_context_continuity_bundle_status": STATUS_FAIL_REQUIRED,
-            "bundle_contract_id": "identity_context_continuity_bundle_v1",
-            "bundle_role": "launcher_and_instance_internal_support",
-            "identity_id": identity_id,
-            "render_error": "launcher_continuity_support_render_root_not_object",
-        }
-    return payload
+    return load_launcher_continuity_support_bundle(
+        identity_id=identity_id,
+        catalog_path=catalog_path,
+        task_path=task_path,
+    )
 
 def _emit_commands(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:

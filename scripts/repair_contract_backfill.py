@@ -108,6 +108,9 @@ from create_identity_pack import (
     _skill_frontmatter_contract_skeleton,
     _skill_installation_supply_chain_contract_skeleton,
     _skill_sync_drift_guard_contract_skeleton,
+    _tool_installation_contract_skeleton,
+    _vendor_api_discovery_contract_skeleton,
+    _vendor_api_solution_contract_skeleton,
     _write_replay_sample,
     materialize_protocol_host_gateway_artifacts,
 )
@@ -254,6 +257,9 @@ ARTIFACT_FAMILY_ROUTING_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY: artifact_family_routing_contract_skeleton(),
 }
 SKILL_SUPPLY_CHAIN_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
+    "tool_installation_contract": _tool_installation_contract_skeleton("default"),
+    "vendor_api_discovery_contract": _vendor_api_discovery_contract_skeleton("default"),
+    "vendor_api_solution_contract": _vendor_api_solution_contract_skeleton("default"),
     "skill_installation_supply_chain_contract_v1": _skill_installation_supply_chain_contract_skeleton("default"),
     "skill_frontmatter_contract_v1": _skill_frontmatter_contract_skeleton(),
     "skill_sync_drift_guard_contract_v1": _skill_sync_drift_guard_contract_skeleton(),
@@ -697,6 +703,9 @@ def _merge_required_string_list(
 def _normalize_skill_supply_chain_contracts(task_doc: dict[str, Any], identity_id: str) -> list[str]:
     restored: list[str] = []
     defaults = {
+        "tool_installation_contract": _tool_installation_contract_skeleton(identity_id),
+        "vendor_api_discovery_contract": _vendor_api_discovery_contract_skeleton(identity_id),
+        "vendor_api_solution_contract": _vendor_api_solution_contract_skeleton(identity_id),
         "skill_installation_supply_chain_contract_v1": _skill_installation_supply_chain_contract_skeleton(identity_id),
         "skill_frontmatter_contract_v1": _skill_frontmatter_contract_skeleton(),
         "skill_sync_drift_guard_contract_v1": _skill_sync_drift_guard_contract_skeleton(),

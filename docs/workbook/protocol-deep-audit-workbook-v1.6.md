@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 87`, `command snippets checked: 954`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 87`, `command snippets checked: 955`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -895,6 +895,7 @@ Root cause:
   - `scripts/validate_identity_artifact_family_routing.py` and `scripts/ci/run_identity_artifact_family_routing_probes_ci.sh` now land the whole-matrix routing closure and fail-close on missing contract coverage, generic `memory` sink drift, pack/runtime family collisions, protocol-feedback root drift, continuity/reentry anchor drift, and memory-absorption active-path leakage without collapsing family-specific owner semantics into one super-validator;
   - `scripts/create_identity_pack.py`, `scripts/repair_contract_backfill.py`, `scripts/release_readiness_check.py`, `scripts/ci/run_required_runtime_gates_ci.sh`, `scripts/validate_required_contract_coverage.py`, and `scripts/required_gate_bundle_runner.py` now consume the same routing row instead of leaving whole-matrix routing as docs-only guidance;
   - current workspace-local replay stays `PASS_REQUIRED` on `scripts/validate_identity_artifact_family_routing.py` for `base-repo-audit-expert-v3`, `custom-creative-ecom-analyst`, and `base-repo-architect`;
+  - `base-repo-audit-expert-v3` now also replays `failed_required_contract_count=0` on `scripts/validate_required_contract_coverage.py --operation inspection` after two shared closeout-strengthening moves landed together: `scripts/validate_identity_context_continuity_receipts.py` now joins repeated migration ancestry back to the bounded checkpoint root, and `scripts/repair_contract_backfill.py` now restores the three `rq_039` dependent contract skeletons (`tool_installation_contract`, `vendor_api_discovery_contract`, `vendor_api_solution_contract`) instead of leaving required coverage red on missing dependent-contract drift;
   - `base-repo-closure-orchestrator` currently fails outer `rq_052` through inherited `rq_051_identity_dialogue_retention_contract_v1` drift (`IP-DRET-004 source_session_size_mismatch` projected as `IP-AFR-002 runtime_dialogue_retention_family_invalid`), which confirms routing closure is consuming inherited family-owner truth instead of masking it;
   - `base-repo-architect` remains green on `rq_052` while its optional dialogue-retention family is `SKIPPED_NOT_REQUIRED`, confirming the routing lane preserves optional-family semantics instead of forcing synthetic replay debt.
 - `execution_closeout_boundary`:

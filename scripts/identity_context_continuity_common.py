@@ -251,6 +251,44 @@ def discover_continuity_artifact(
     return None, "artifact_not_found"
 
 
+def build_continuity_lineage_index(report_root: Path) -> dict[str, dict[str, str]]:
+    index: dict[str, dict[str, str]] = {}
+    if not report_root.exists():
+        return index
+    for path in sorted(report_root.glob("continuity-*.json")):
+        if not path.is_file():
+            continue
+        try:
+            doc = load_json(path)
+        except Exception:
+            continue
+        continuity_id = clean_string(doc.get("continuity_id"))
+        if not continuity_id:
+            continue
+        index[continuity_id] = {
+            "path": str(path.resolve()),
+            "artifact_kind": clean_string(doc.get("artifact_kind")),
+            "parent_continuity_ref": clean_string(doc.get("supersedes_ref")),
+        }
+    return index
+
+
+def collect_continuity_joinable_ids(
+    lineage_index: dict[str, dict[str, str]],
+    *seed_ids: str,
+) -> set[str]:
+    joinable: set[str] = set()
+    for seed in seed_ids:
+        current = clean_string(seed)
+        visited: set[str] = set()
+        while current and current not in visited:
+            visited.add(current)
+            joinable.add(current)
+            row = lineage_index.get(current) or {}
+            current = clean_string(row.get("parent_continuity_ref"))
+    return joinable
+
+
 def load_artifact_doc(path: Path) -> dict[str, Any]:
     return load_json(path)
 

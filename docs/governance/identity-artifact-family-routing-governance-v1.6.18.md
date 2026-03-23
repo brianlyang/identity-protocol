@@ -326,6 +326,10 @@ This stream is no longer docs-only. The following machine-consumed closure is no
     - the current weixinstore workspace-local runtime catalog replays `PASS_REQUIRED` for `base-repo-audit-expert-v3`, `custom-creative-ecom-analyst`, and `base-repo-architect` on the `rq_052` validator lane;
     - `base-repo-closure-orchestrator` currently fails outer `rq_052` through inherited `rq_051_identity_dialogue_retention_contract_v1` drift (`IP-DRET-004 source_session_size_mismatch` projected as `IP-AFR-002 runtime_dialogue_retention_family_invalid`);
     - `base-repo-architect` remains `PASS_REQUIRED` on `rq_052` while `runtime_dialogue_retention_family_status=SKIPPED_NOT_REQUIRED`, confirming the routing lane preserves optional-family semantics instead of forcing synthetic replay debt.
+11. Current execution-closeout strengthening for `base-repo-audit-expert-v3` is now also shared-infrastructure-only, not a pack patch:
+    - `scripts/validate_identity_context_continuity_receipts.py` now joins repeated migration ancestry back to the bounded checkpoint root, so `rq_052` no longer false-fails on multi-hop `v1.6.16` continuity receipt chains;
+    - `scripts/repair_contract_backfill.py` now restores `tool_installation_contract`, `vendor_api_discovery_contract`, and `vendor_api_solution_contract` whenever `rq_039_skill_installation_supply_chain_contract_v1` is required, so required coverage no longer red-lines on missing dependent-contract drift;
+    - after those shared fixes, `scripts/validate_required_contract_coverage.py --operation inspection` replays `failed_required_contract_count=0` for `base-repo-audit-expert-v3` without any pack-specific semantic rewrite.
 
 ## 8) Closure state after whole-matrix routing landing
 
