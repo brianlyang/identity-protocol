@@ -179,13 +179,22 @@ This stream is still not fully complete. The remaining protocol-owned follow-on 
 2. a later whole-matrix validator may enforce routing alignment across every frozen family, not only the raw dialogue retention pilot lane;
 3. future new families must still open through governed streams instead of being silently attached under “memory”.
 
+## 7) Accepted role split for whole-matrix closeout
+
+Audit acceptance in this round also freezes the execution boundary so later closure work does not drift:
+
+1. semantic ownership remains with `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md` and the inherited owner streams it explicitly references;
+2. execution closeout may continue machine enforcement for the remaining whole-matrix scope, including shared validators/probes/gates/readiness/workbook truth-sync, but may not redefine family semantics, fixed roots, or non-goals;
+3. audit verifies whether the closeout extends the frozen matrix faithfully and whether truth surfaces stay synchronized; audit does not become a replacement semantic owner;
+4. raw dialogue retention remains the first machine-landed family, while the still-open follow-on target is whole-matrix closure rather than semantic redesign.
+
 Frozen audit interpretation:
 
 - the semantic owner problem is correctly protocol-owned;
 - the first machine-consumed family landing is real and reusable;
 - later broader matrix enforcement must extend this same stream rather than reinvent family boundaries in each validator.
 
-## 7) Non-goals frozen for audit
+## 8) Non-goals frozen for audit
 
 1. This opening does not claim a new generic memory subsystem exists.
 2. This opening does not claim `runtime/memory-absorption/**` is an active success-path sink.

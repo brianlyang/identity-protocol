@@ -893,6 +893,11 @@ Root cause:
   - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`, `identity/protocol/IDENTITY_PROTOCOL.md`, `identity/protocol/IDENTITY_RUNTIME.md`, and `README.md` now truth-sync the family names, fixed paths, forbidden conflations, and `rq_051_identity_dialogue_retention_contract_v1`;
   - `scripts/identity_dialogue_retention_common.py`, `scripts/run_identity_dialogue_retention_guard_runtime.py`, `scripts/run_identity_delivery_runtime_hooks.py`, `scripts/validate_identity_dialogue_retention.py`, and `scripts/ci/run_identity_dialogue_retention_probes_ci.sh` now land the first machine-consumed family closure for this stream;
   - `scripts/create_identity_pack.py`, `scripts/repair_contract_backfill.py`, `scripts/release_readiness_check.py`, `scripts/ci/run_required_runtime_gates_ci.sh`, `scripts/validate_required_contract_coverage.py`, and `scripts/required_gate_bundle_runner.py` now consume the same family instead of leaving raw dialogue truth routing as docs-only guidance.
+- `execution_closeout_boundary`:
+  - semantic ownership remains with `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md` plus the inherited owner streams it explicitly references;
+  - execution closeout may continue whole-matrix validator/probe/gate/readiness/workbook truth-sync work for `ISSUE-032`, but only by extending the frozen routing matrix already accepted here;
+  - execution closeout must not redefine family names, fixed roots, canonical producer/consumer roles, or frozen non-goals, and must not promote `runtime/memory-absorption/**` back onto an active success path;
+  - audit/review verifies closure and truth-sync state, but does not become a replacement semantic owner.
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 

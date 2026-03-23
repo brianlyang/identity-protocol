@@ -323,7 +323,17 @@ This stream has landed raw dialogue retention machine consumers, but one follow-
 2. workbook closure should be updated to reflect the new eight-family matrix and the distinction between raw-dialogue retention vs dialogue-governance vs continuity;
 3. future new families must still arrive through governed stream openings rather than ad hoc pack additions.
 
-## 9) Frozen non-goals
+## 9) Execution ownership boundary for ISSUE-032 closeout
+
+This stream now explicitly freezes the owner split so whole-matrix closure can proceed without semantic drift:
+
+1. Semantic ownership remains with this `v1.6.18` governance stream plus the inherited owner streams already referenced here; execution closure must not reinterpret family names, fixed paths, canonical producer/consumer roles, or frozen non-goals.
+2. Execution closeout may continue the protocol-owned machine landing for `ISSUE-032`, including shared validators, probes, required-gate wiring, readiness consumption, workbook truth-sync, and cross-family misuse fail-close, as long as it extends this same routing matrix rather than inventing a new one.
+3. Audit/review lanes verify closure, evidence, and truth-sync state; they do not become replacement semantic owners for any artifact family.
+4. Any proposal that adds a new family, repoints a canonical root, collapses two frozen families into one sink, or promotes `runtime/memory-absorption/**` onto an active success path must reopen governed owner review instead of shipping through execution closeout.
+5. These roles are protocol functions, not person-specific appointments: semantic owner, execution closeout owner, and audit verifier remain stable even if the current humans on those lanes change.
+
+## 10) Frozen non-goals
 
 1. This stream does not create a new generic “memory subsystem”.
 2. This stream does not reopen `v1.6.13`, `v1.6.16`, or `v1.6.17` as owner streams.
