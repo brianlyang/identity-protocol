@@ -195,24 +195,36 @@ Minimum additional requirements:
    - protocol owns the template grammar and validators,
    - identity packs own the materialized executable surfaces,
    - workspace helpers or chat-only procedures must not become the runtime producer.
-8. The canonical materialization path family is frozen as:
-   - `<pack-root>/scripts/emit_identity_context_checkpoint.py`
-   - `<pack-root>/scripts/materialize_identity_reentry_brief.py`
-   - `<pack-root>/scripts/emit_identity_reentry_consumption_receipt.py`
-9. The canonical registration surface for those materialized executables is frozen as:
-   - `<pack-root>/scripts/INSTANCE_SCRIPT_MANIFEST.json`
-10. The canonical runtime output paths are frozen as:
-   - `<pack-root>/runtime/reports/context-continuity/continuity-rolling-*.json`
-   - `<pack-root>/runtime/reports/context-continuity/continuity-stage-*.json`
-   - `<pack-root>/runtime/reports/context-continuity/continuity-migration-*.json`
-   - `<pack-root>/runtime/state/context-continuity/active-reentry-brief.json`
-   - `<pack-root>/runtime/reports/context-continuity/checkpoint-receipt.json`
-   - `<pack-root>/runtime/reports/context-continuity/migration-receipt.json`
-   - `<pack-root>/runtime/reports/context-continuity/reentry-brief-receipt.json`
-   - `<pack-root>/runtime/reports/context-continuity/reentry-consumption-receipt.json`
-11. `create_identity_pack.py`, `repair_contract_backfill.py`, and later creator/update convergence must be the only canonical materializers for this family; hand-written per-workspace deviations are non-canonical even if they appear to work.
-12. A live identity must not claim `v1.6.16` adoption merely because the directories exist or because the answer surface renders; adoption requires the materialized scripts above, manifest registration, and real runtime artifacts under the exact output paths above.
-13. For `base-repo-closure-orchestrator`, until those pack-local script files and runtime artifact files exist under its own `.identity/base-repo-closure-orchestrator/` root, the stream is protocol-ready but instance-not-adopted.
+8. The canonical materialization path family is frozen under the pack-local `scripts/` directory with these exact filenames:
+   - `run_identity_context_continuity_guard.sh`
+   - `emit_identity_context_checkpoint.py`
+   - `materialize_identity_reentry_brief.py`
+   - `emit_identity_reentry_consumption_receipt.py`
+9. `run_identity_context_continuity_guard.sh` is the canonical proactive guard entry for this stream:
+   - it owns cadence counting and forced-trigger dispatch,
+   - it is invoked by lifecycle surfaces rather than by ad hoc operator memory,
+   - it must not write checkpoint payloads directly; it orchestrates the Python writers below.
+10. The canonical guard state / guard receipt paths are frozen under the pack-local runtime roots as:
+   - `runtime/state/context-continuity/guard-state.json`
+   - `runtime/reports/context-continuity/guard-*.json`
+11. The canonical registration surface for those materialized executables is frozen as:
+   - `scripts/INSTANCE_SCRIPT_MANIFEST.json`
+12. The canonical runtime output paths are frozen as:
+   - `runtime/reports/context-continuity/continuity-rolling-*.json`
+   - `runtime/reports/context-continuity/continuity-stage-*.json`
+   - `runtime/reports/context-continuity/continuity-migration-*.json`
+   - `runtime/state/context-continuity/active-reentry-brief.json`
+   - `runtime/reports/context-continuity/checkpoint-receipt.json`
+   - `runtime/reports/context-continuity/migration-receipt.json`
+   - `runtime/reports/context-continuity/reentry-brief-receipt.json`
+   - `runtime/reports/context-continuity/reentry-consumption-receipt.json`
+13. The canonical guard dispatch semantics are frozen as:
+   - `tick` -> evaluate `default_turns_15_30_60`, update `guard-state.json`, and invoke checkpoint writer when cadence hits;
+   - `pre-clear` / `pre-migrate` -> emit `continuity-migration-*.json`, refresh `active-reentry-brief.json`, and write `guard-*.json`;
+   - `post-recover` -> emit `reentry-consumption-receipt.json` after governed reentry succeeds.
+14. `create_identity_pack.py`, `repair_contract_backfill.py`, and later creator/update convergence must be the only canonical materializers for this family; hand-written per-workspace deviations are non-canonical even if they appear to work.
+15. A live identity must not claim `v1.6.16` adoption merely because the directories exist or because the answer surface renders; adoption requires the materialized scripts above, manifest registration, guard-state persistence, and real runtime artifacts under the exact output paths above.
+16. For `base-repo-closure-orchestrator`, until those pack-local script files and runtime artifact files exist under its own `.identity/base-repo-closure-orchestrator/` root, the stream is protocol-ready but instance-not-adopted.
 
 ### 2.10 Coding-facing schema freeze
 
