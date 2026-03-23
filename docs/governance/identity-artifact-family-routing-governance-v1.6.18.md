@@ -30,6 +30,15 @@ Execution mode: topic-level canonical SSOT for v1.6.18 artifact-family routing g
    - `python3 scripts/generate_reference_visual_atlas_scaffold.py --help`
    Freehand atlas onboarding outside that shared scaffold path is non-canonical.
 
+### 0.1A Cross-stream breakthrough sequence atlas (2026-03-24)
+
+1. The canonical explanatory visual atlas for this stream is:
+   - `docs/references/identity-protocol-breakthrough-sequence-visual-atlas-v1.6.md`
+   - asset root: `docs/references/assets/identity-protocol-breakthrough-sequence-visual-atlas/`
+2. This atlas preserves the fixed order `headstamp -> runtime authority -> launcher command surface -> governed continuity proof -> cross-context stable short-command closure`.
+3. For this stream, the atlas highlights the stabilizer role: `v1.6.18` prevents continuity, dialogue retention, protocol feedback, and memory-absorption from collapsing back into a generic `memory` bucket after the earlier breakthrough sequence landed.
+4. Normative truth remains this governance doc, the protocol motherline, contract binding, and machine validators.
+
 ## 1) Why v1.6.18 is required
 
 1. The protocol already froze multiple individual artifact lanes:

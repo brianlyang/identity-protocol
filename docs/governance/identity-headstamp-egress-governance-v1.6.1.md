@@ -41,6 +41,14 @@ Hard rule:
 5. `docs/review/protocol-remediation-audit-ledger-v1.6.md:89` (`HOTFIX16-P0-002` headstamp continuity gap)
 6. `docs/review/protocol-remediation-audit-ledger-v1.6.md:97` (`HOTFIX16-P0-010` HUD tuple hardening)
 
+### 0.2B Cross-stream breakthrough sequence atlas (2026-03-24)
+
+1. The canonical explanatory visual atlas for this stream is:
+   - `docs/references/identity-protocol-breakthrough-sequence-visual-atlas-v1.6.md`
+   - asset root: `docs/references/assets/identity-protocol-breakthrough-sequence-visual-atlas/`
+2. This atlas preserves the fixed order `headstamp -> runtime authority -> launcher command surface -> governed continuity proof -> cross-context stable short-command closure`.
+3. For this stream, the atlas highlights that the **first real break** was machine-attested headstamp truth; normative truth remains this governance doc, the protocol motherline, contract binding, and machine validators.
+
 ## 1) Problem Model and Recurrence Taxonomy
 
 ### 1.1 Scope definition

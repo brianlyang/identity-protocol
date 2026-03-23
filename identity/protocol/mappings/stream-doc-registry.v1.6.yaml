@@ -73,6 +73,7 @@ mandatory_static_docs:
   - docs/references/INDEX.md
   - docs/references/identity-protocol-loop-visual-atlas-v1.6.md
   - docs/references/identity-protocol-artifact-family-routing-visual-atlas-v1.6.md
+  - docs/references/identity-protocol-breakthrough-sequence-visual-atlas-v1.6.md
   - identity/protocol/mappings/reference-visual-atlas-registry.current.yaml
   - identity/protocol/mappings/reference-visual-atlas-registry.v1.6.yaml
   - docs/governance/identity-codex-launcher-workspace-convergence-roundtable-v1.6.14.md
@@ -381,6 +382,13 @@ static_doc_required_alias_refs:
       - identity/protocol/mappings/stream-doc-registry.current.yaml
       - identity/protocol/mappings/contract-binding.current.yaml
       - identity/protocol/mappings/semantic-term-registry.current.yaml
+      - identity/protocol/mappings/reference-visual-atlas-registry.current.yaml
+  - doc: docs/references/identity-protocol-breakthrough-sequence-visual-atlas-v1.6.md
+    alias_refs:
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/semantic-term-registry.current.yaml
+      - identity/protocol/mappings/reference-visual-atlas-registry.current.yaml
   - doc: docs/governance/identity-codex-launcher-workspace-convergence-roundtable-v1.6.14.md
     alias_refs:
       - identity/protocol/mappings/workbook-registry.current.yaml

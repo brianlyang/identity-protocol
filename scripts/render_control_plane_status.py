@@ -10,6 +10,10 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from reference_visual_atlas_governance_common import (
+    load_reference_visual_atlas_registry,
+    reference_visual_atlas_control_plane_checks,
+)
 from repo_root_resolution_common import resolve_protocol_repo_root
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -30,7 +34,7 @@ class CheckSpec:
     status_key: str | None
 
 
-CHECKS: tuple[CheckSpec, ...] = (
+BASE_CHECKS: tuple[CheckSpec, ...] = (
     CheckSpec(
         name="control_plane_budget",
         command=("python3", "scripts/validate_control_plane_budget.py", "--json-only"),
@@ -67,16 +71,32 @@ CHECKS: tuple[CheckSpec, ...] = (
         status_key=None,
     ),
     CheckSpec(
-        name="loop_visual_atlas_governance",
-        command=("python3", "scripts/validate_loop_visual_atlas_governance.py", "--json-only"),
-        status_key="loop_visual_atlas_governance_status",
-    ),
-    CheckSpec(
         name="reference_visual_atlas_inventory",
         command=("python3", "scripts/validate_reference_visual_atlas_inventory.py", "--json-only"),
         status_key="reference_visual_atlas_inventory_status",
     ),
 )
+
+
+def _atlas_check_specs(repo_root: Path) -> tuple[CheckSpec, ...]:
+    registry_doc, _registry_entry, _registry_active, _registry_alias_error = load_reference_visual_atlas_registry(
+        repo_root
+    )
+    checks: list[CheckSpec] = []
+    for row in reference_visual_atlas_control_plane_checks(registry_doc):
+        validator_script = str(row.get("validator_script") or "").strip()
+        status_key = str(row.get("status_key") or "").strip() or None
+        name = str(row.get("name") or "").strip()
+        if not validator_script or not name:
+            continue
+        checks.append(
+            CheckSpec(
+                name=name,
+                command=("python3", validator_script, "--json-only"),
+                status_key=status_key,
+            )
+        )
+    return tuple(checks)
 
 
 def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
@@ -199,7 +219,8 @@ def _derive_overall_status(checks: list[dict[str, Any]]) -> tuple[str, bool, lis
 
 
 def build_status(repo_root: Path) -> dict[str, Any]:
-    checks = [_run_check(spec, repo_root) for spec in CHECKS]
+    ordered_specs = (*BASE_CHECKS[:-1], *_atlas_check_specs(repo_root), BASE_CHECKS[-1])
+    checks = [_run_check(spec, repo_root) for spec in ordered_specs]
     overall_status, promotion_ready, reasons = _derive_overall_status(checks)
     status = {
         "schema_version": 1,

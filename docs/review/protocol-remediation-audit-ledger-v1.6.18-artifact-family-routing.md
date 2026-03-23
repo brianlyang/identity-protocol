@@ -170,6 +170,15 @@ Audit judgment:
    - `python3 scripts/generate_reference_visual_atlas_scaffold.py --help`
    Any generated scaffold remains preview-only until registry/index/backlink truth-sync and validator green closure are complete.
 
+## 4.1 Cross-stream breakthrough sequence atlas (2026-03-24)
+
+1. The canonical explanatory visual atlas for this stream is:
+   - `docs/references/identity-protocol-breakthrough-sequence-visual-atlas-v1.6.md`
+   - asset root: `docs/references/assets/identity-protocol-breakthrough-sequence-visual-atlas/`
+2. Audit accepts that atlas as the discoverability-only historical explanation surface for the fixed order `headstamp -> runtime authority -> launcher command surface -> governed continuity proof -> cross-context stable short-command closure`.
+3. For this stream specifically, the atlas records the stabilizer truth: once the earlier sequence landed, `v1.6.18` stopped the continuity/dialogue/protocol-feedback layer from collapsing back into generic `memory` wording.
+4. Normative truth remains this review ledger, the governance doc, the protocol motherline, contract binding, and machine validators.
+
 ## 5) Machine-consumer and whole-matrix routing closure landed
 
 The stream has now moved beyond a docs-only opening. Audit-accepted machine landing in this round is:

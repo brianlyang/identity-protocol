@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120" role="img" aria-labelledby="title desc">
+  <title id="title">Identity Protocol Breakthrough Sequence</title>
+  <desc id="desc">Five-stage historical breakthrough sequence: headstamp and machine verification first, runtime authority second, launcher command surface third, governed continuity proof fourth, cross-context stable short-command closure fifth, with artifact-family routing as stabilizer.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#081225"/>
+      <stop offset="100%" stop-color="#101b35"/>
+    </linearGradient>
+    <linearGradient id="hero" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f2e64"/>
+      <stop offset="100%" stop-color="#1d5fd1"/>
+    </linearGradient>
+    <linearGradient id="cardA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#15355f"/>
+      <stop offset="100%" stop-color="#204a7d"/>
+    </linearGradient>
+    <linearGradient id="cardB" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#173c54"/>
+      <stop offset="100%" stop-color="#215d73"/>
+    </linearGradient>
+    <linearGradient id="cardC" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#24405d"/>
+      <stop offset="100%" stop-color="#3a5f89"/>
+    </linearGradient>
+    <linearGradient id="cardD" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3b315c"/>
+      <stop offset="100%" stop-color="#5a4a91"/>
+    </linearGradient>
+    <linearGradient id="cardE" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#234452"/>
+      <stop offset="100%" stop-color="#2f6978"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000000" flood-opacity="0.28"/>
+    </filter>
+    <marker id="arrow" markerWidth="14" markerHeight="14" refX="11" refY="7" orient="auto">
+      <path d="M0,0 L14,7 L0,14 z" fill="#87b8ff"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="1120" fill="url(#bg)"/>
+  <rect x="52" y="48" width="1496" height="156" rx="28" fill="url(#hero)" filter="url(#shadow)"/>
+  <text x="92" y="106" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="700">Identity Protocol Breakthrough Sequence</text>
+  <text x="92" y="146" fill="#d7e6ff" font-family="Inter, Arial, sans-serif" font-size="24">First real break = headstamp / machine-verification. Everything else became stable only after current-turn identity stopped being chat folklore.</text>
+  <text x="92" y="182" fill="#b8d2ff" font-family="Inter, Arial, sans-serif" font-size="20">Historical order: Headstamp truth → Runtime authority → Launcher command surface → Governed continuity proof → Cross-context stable short-command closure</text>
+
+  <g transform="translate(70,250)">
+    <rect x="0" y="0" width="276" height="510" rx="26" fill="url(#cardA)" filter="url(#shadow)"/>
+    <rect x="22" y="20" width="80" height="42" rx="21" fill="#eaf3ff" opacity="0.96"/>
+    <text x="62" y="48" text-anchor="middle" fill="#184a7a" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">Stage 1</text>
+    <text x="24" y="96" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="700">Headstamp /</text>
+    <text x="24" y="132" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="700">Machine Verification</text>
+    <text x="24" y="174" fill="#d8e8ff" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="600">The first real break</text>
+    <text x="24" y="220" fill="#f5fbff" font-family="Inter, Arial, sans-serif" font-size="18">
+      <tspan x="24" dy="0">• Identity-Context and</tspan>
+      <tspan x="24" dy="28">  Machine-Verification become</tspan>
+      <tspan x="24" dy="28">  machine-attested before body text.</tspan>
+      <tspan x="24" dy="36">• display truth and machine truth</tspan>
+      <tspan x="24" dy="28">  are separated.</tspan>
+      <tspan x="24" dy="36">• withheld/conflict envelope</tspan>
+      <tspan x="24" dy="28">  fail-closes ambiguity.</tspan>
+      <tspan x="24" dy="36">• current-turn actor/session tuple</tspan>
+      <tspan x="24" dy="28">  becomes the gate.</tspan>
+    </text>
+    <rect x="22" y="414" width="232" height="72" rx="18" fill="#0a1730" opacity="0.9"/>
+    <text x="40" y="446" fill="#92c7ff" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700">What it killed</text>
+    <text x="40" y="472" fill="#eaf4ff" font-family="Inter, Arial, sans-serif" font-size="16">self-claimed identity, drifting headers,</text>
+    <text x="40" y="494" fill="#eaf4ff" font-family="Inter, Arial, sans-serif" font-size="16">body-first replies, stale machine state</text>
+  </g>
+
+  <g transform="translate(378,250)">
+    <rect x="0" y="0" width="250" height="510" rx="26" fill="url(#cardB)" filter="url(#shadow)"/>
+    <rect x="18" y="20" width="80" height="42" rx="21" fill="#ecfbff" opacity="0.96"/>
+    <text x="58" y="48" text-anchor="middle" fill="#1d5f6e" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">Stage 2</text>
+    <text x="20" y="96" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Runtime Authority</text>
+    <text x="20" y="132" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">/ Source of Truth</text>
+    <text x="20" y="220" fill="#f3fbff" font-family="Inter, Arial, sans-serif" font-size="18">
+      <tspan x="20" dy="0">• resolve `source_layer`,</tspan>
+      <tspan x="20" dy="28">  `catalog_path`, `pack_path` first.</tspan>
+      <tspan x="20" dy="36">• runtime local catalog beats</tspan>
+      <tspan x="20" dy="28">  fixture/demo folklore.</tspan>
+      <tspan x="20" dy="36">• project/global ambiguity is</tspan>
+      <tspan x="20" dy="28">  machine-classified, not guessed.</tspan>
+    </text>
+    <rect x="18" y="414" width="214" height="72" rx="18" fill="#091821" opacity="0.9"/>
+    <text x="34" y="446" fill="#8de7ff" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700">What it killed</text>
+    <text x="34" y="472" fill="#effcff" font-family="Inter, Arial, sans-serif" font-size="16">wrong runtime pack binding,</text>
+    <text x="34" y="494" fill="#effcff" font-family="Inter, Arial, sans-serif" font-size="16">project/global drift, fake current truth</text>
+  </g>
+
+  <g transform="translate(660,250)">
+    <rect x="0" y="0" width="250" height="510" rx="26" fill="url(#cardC)" filter="url(#shadow)"/>
+    <rect x="18" y="20" width="80" height="42" rx="21" fill="#eef2ff" opacity="0.96"/>
+    <text x="58" y="48" text-anchor="middle" fill="#435ea7" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">Stage 3</text>
+    <text x="20" y="96" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Launcher Command</text>
+    <text x="20" y="132" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Surface (v1.6.14)</text>
+    <text x="20" y="220" fill="#f7f9ff" font-family="Inter, Arial, sans-serif" font-size="18">
+      <tspan x="20" dy="0">• `commands --json-only` returns</tspan>
+      <tspan x="20" dy="28">  assembled start/resume answers.</tspan>
+      <tspan x="20" dy="36">• `identity-codex` and</tspan>
+      <tspan x="20" dy="28">  `id-&lt;identity-id&gt;` are protocol-owned.</tspan>
+      <tspan x="20" dy="36">• humans stop hand-splicing</tspan>
+      <tspan x="20" dy="28">  command names and UUIDs.</tspan>
+    </text>
+    <rect x="18" y="414" width="214" height="72" rx="18" fill="#11162b" opacity="0.9"/>
+    <text x="34" y="446" fill="#bfd0ff" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700">What it killed</text>
+    <text x="34" y="472" fill="#f5f7ff" font-family="Inter, Arial, sans-serif" font-size="16">manual launcher folklore,</text>
+    <text x="34" y="494" fill="#f5f7ff" font-family="Inter, Arial, sans-serif" font-size="16">wrapper drift, command assembly pain</text>
+  </g>
+
+  <g transform="translate(942,250)">
+    <rect x="0" y="0" width="250" height="510" rx="26" fill="url(#cardD)" filter="url(#shadow)"/>
+    <rect x="18" y="20" width="80" height="42" rx="21" fill="#f3efff" opacity="0.96"/>
+    <text x="58" y="48" text-anchor="middle" fill="#6a55b3" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">Stage 4</text>
+    <text x="20" y="96" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Governed Continuity</text>
+    <text x="20" y="132" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Proof (v1.6.16)</text>
+    <text x="20" y="220" fill="#fbf7ff" font-family="Inter, Arial, sans-serif" font-size="18">
+      <tspan x="20" dy="0">• checkpoint → migration_handoff</tspan>
+      <tspan x="20" dy="28">  → reentry_brief → consumption.</tspan>
+      <tspan x="20" dy="36">• launcher consumes governed brief</tspan>
+      <tspan x="20" dy="28">  and emits receipts.</tspan>
+      <tspan x="20" dy="36">• continuity is bounded support,</tspan>
+      <tspan x="20" dy="28">  not a new authority source.</tspan>
+    </text>
+    <rect x="18" y="414" width="214" height="72" rx="18" fill="#16122d" opacity="0.9"/>
+    <text x="34" y="446" fill="#dbc3ff" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700">What it killed</text>
+    <text x="34" y="472" fill="#fbf7ff" font-family="Inter, Arial, sans-serif" font-size="16">hand-written “memory restore”,</text>
+    <text x="34" y="494" fill="#fbf7ff" font-family="Inter, Arial, sans-serif" font-size="16">unverifiable reentry, stale handoff joins</text>
+  </g>
+
+  <g transform="translate(1224,250)">
+    <rect x="0" y="0" width="306" height="510" rx="26" fill="url(#cardE)" filter="url(#shadow)"/>
+    <rect x="18" y="20" width="80" height="42" rx="21" fill="#edffff" opacity="0.96"/>
+    <text x="58" y="48" text-anchor="middle" fill="#1f6975" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="700">Stage 5</text>
+    <text x="20" y="96" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Cross-Context Stable</text>
+    <text x="20" y="132" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Short-Command Closure</text>
+    <text x="20" y="220" fill="#f3ffff" font-family="Inter, Arial, sans-serif" font-size="18">
+      <tspan x="20" dy="0">• same short command survives</tspan>
+      <tspan x="20" dy="28">  project/global/fresh-shell shifts.</tspan>
+      <tspan x="20" dy="36">• no hardcoded thread IDs, no</tspan>
+      <tspan x="20" dy="28">  user-specific path stitching.</tspan>
+      <tspan x="20" dy="36">• stability now comes from the</tspan>
+      <tspan x="20" dy="28">  earlier machine-owned stages.</tspan>
+    </text>
+    <rect x="18" y="414" width="270" height="72" rx="18" fill="#081a1e" opacity="0.92"/>
+    <text x="36" y="446" fill="#9cf4f4" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700">What it killed</text>
+    <text x="36" y="472" fill="#f1ffff" font-family="Inter, Arial, sans-serif" font-size="16">project works / global breaks,</text>
+    <text x="36" y="494" fill="#f1ffff" font-family="Inter, Arial, sans-serif" font-size="16">fresh-shell mismatch, operator confusion</text>
+  </g>
+
+  <path d="M346 504 C362 504 364 504 378 504" stroke="#87b8ff" stroke-width="8" fill="none" marker-end="url(#arrow)" opacity="0.9"/>
+  <path d="M628 504 C644 504 646 504 660 504" stroke="#87b8ff" stroke-width="8" fill="none" marker-end="url(#arrow)" opacity="0.9"/>
+  <path d="M910 504 C926 504 928 504 942 504" stroke="#87b8ff" stroke-width="8" fill="none" marker-end="url(#arrow)" opacity="0.9"/>
+  <path d="M1192 504 C1208 504 1210 504 1224 504" stroke="#87b8ff" stroke-width="8" fill="none" marker-end="url(#arrow)" opacity="0.9"/>
+
+  <rect x="70" y="808" width="1460" height="132" rx="28" fill="#0d1930" stroke="#2d4471" stroke-width="2"/>
+  <text x="100" y="854" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="700">Stabilizer after the sequence</text>
+  <text x="100" y="892" fill="#cfe0ff" font-family="Inter, Arial, sans-serif" font-size="20">v1.6.18 artifact-family routing keeps dialogue retention, continuity, protocol feedback, and memory-absorption from collapsing back into one generic “memory” bucket.</text>
+  <text x="100" y="922" fill="#9fb7de" font-family="Inter, Arial, sans-serif" font-size="18">Result: launcher and continuity stay protocol-owned infrastructure instead of pack-specific patches, hardcoded commands, or chat-only explanations.</text>
+
+  <rect x="70" y="968" width="1460" height="98" rx="24" fill="#07111f" stroke="#1e3354" stroke-width="2"/>
+  <text x="100" y="1010" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700">Non-goals frozen by this atlas</text>
+  <text x="100" y="1044" fill="#c5d8ff" font-family="Inter, Arial, sans-serif" font-size="18">No hardcoded UUIDs. No user-specific path assumptions. No manual command splicing. No generic memory bucket. No “it worked in chat once” as protocol truth.</text>
+</svg>

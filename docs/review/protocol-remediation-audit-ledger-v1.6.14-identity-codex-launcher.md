@@ -10,6 +10,14 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
 3. Freeze the canonical install-path split between protocol, instance pack, and `${CODEX_HOME}/bin/`.
 4. Freeze the interpretation that workspace wrappers are migration bridge evidence, not the final launcher motherline.
 
+## 0.1 Cross-stream breakthrough sequence atlas (2026-03-24)
+
+1. The canonical explanatory visual atlas for this stream is:
+   - `docs/references/identity-protocol-breakthrough-sequence-visual-atlas-v1.6.md`
+   - asset root: `docs/references/assets/identity-protocol-breakthrough-sequence-visual-atlas/`
+2. Audit accepts that atlas as the discoverability-only historical explanation surface for why launcher command closure had to follow headstamp truth and runtime source resolution.
+3. Normative truth remains this review ledger, the governance doc, the protocol motherline, and machine validators.
+
 ## 1) Problem statement frozen for audit
 
 1. `v1.6.12` and `v1.6.13` reduced semantic ambiguity, but users still lacked one simple installed identity-bound command that is protocol-owned and repeatable.

@@ -38,6 +38,10 @@ Quick entrypoint for audit history and remediation closure records.
   - `docs/references/INDEX.md`
   - registry: `identity/protocol/mappings/reference-visual-atlas-registry.current.yaml`
   - The inventory is discoverability-only and must stay synchronized with the machine-readable registry, the atlas-family docs, and the thin validators.
+- Canonical breakthrough-sequence visual atlas (historical five-step explanation surface from headstamp truth to stable short-command closure):
+  - `docs/references/identity-protocol-breakthrough-sequence-visual-atlas-v1.6.md`
+  - asset root: `docs/references/assets/identity-protocol-breakthrough-sequence-visual-atlas/`
+  - The atlas is discoverability-only and preserves the fixed order `headstamp -> runtime authority -> launcher surface -> governed continuity proof -> cross-context stable short-command closure`; normative truth remains the owner stream docs, protocol motherline, and machine validators.
 - Canonical actor-scoped session binding governance (v1.5.0):
   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
   - Scope is protocol-only; no instance business policy allowed.

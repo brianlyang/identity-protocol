@@ -17,6 +17,14 @@ Purpose: single review ledger for all headstamp/HUD issues moved from v1.6.0
 6. Multimodal-plugin review entries are out of scope for this ledger and must be tracked in:
    - `docs/review/protocol-remediation-audit-ledger-v1.6.2.md`
 
+## 0.1 Cross-stream breakthrough sequence atlas (2026-03-24)
+
+1. The canonical explanatory visual atlas for this stream is:
+   - `docs/references/identity-protocol-breakthrough-sequence-visual-atlas-v1.6.md`
+   - asset root: `docs/references/assets/identity-protocol-breakthrough-sequence-visual-atlas/`
+2. Audit accepts that atlas as the discoverability-only historical explanation surface for why headstamp truth had to land before launcher or continuity stability could become believable.
+3. Normative truth remains this review ledger, the governance doc, the protocol motherline, and machine validators.
+
 ## 1) Extracted baseline (from v1.6)
 
 | Source fix/hotfix | Legacy file anchor | Extracted reason |

@@ -165,6 +165,7 @@ def validate_reference_visual_atlas_inventory(repo_root_override: str = "") -> d
         canonical_doc = row.canonical_doc
         asset_root = row.canonical_asset_root
         validator_script = row.validator_script
+        status_key = row.status_key
         scope_mode = row.scope_mode
         onboarding_contract = row.onboarding_contract
         owner_docs = list(row.owner_docs)
@@ -176,6 +177,8 @@ def validate_reference_visual_atlas_inventory(repo_root_override: str = "") -> d
         if not owner_docs:
             violations.append(f"owner_docs_missing:{family_id}")
             owner_docs = []
+        if not status_key:
+            violations.append(f"status_key_missing:{family_id}")
 
         for label, rel_path in (
             ("canonical_doc_missing", canonical_doc),
@@ -198,6 +201,8 @@ def validate_reference_visual_atlas_inventory(repo_root_override: str = "") -> d
             violations.append(f"inventory_doc_missing_asset_root:{family_id}:{asset_root}")
         if validator_script and inventory_text and validator_script not in inventory_text:
             violations.append(f"inventory_doc_missing_validator:{family_id}:{validator_script}")
+        if status_key and inventory_text and f"`{status_key}`" not in inventory_text:
+            violations.append(f"inventory_doc_missing_status_key:{family_id}:{status_key}")
         if family_id and inventory_text and f"`{family_id}`" not in inventory_text:
             violations.append(f"inventory_doc_missing_family_id:{family_id}")
 

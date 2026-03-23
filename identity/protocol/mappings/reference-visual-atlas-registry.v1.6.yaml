@@ -8,10 +8,27 @@ renderer_script: scripts/render_reference_visual_atlas_inventory.py
 template_root: scripts/templates/reference_visual_atlas
 inventory_doc: docs/references/INDEX.md
 atlas_families:
+  - family_id: breakthrough_sequence_visual_atlas
+    canonical_doc: docs/references/identity-protocol-breakthrough-sequence-visual-atlas-v1.6.md
+    canonical_asset_root: docs/references/assets/identity-protocol-breakthrough-sequence-visual-atlas
+    validator_script: scripts/validate_breakthrough_sequence_visual_atlas_governance.py
+    status_key: breakthrough_sequence_visual_atlas_governance_status
+    scope_mode: protocol_repo_internal_only
+    onboarding_contract: shared_reference_visual_atlas_onboarding_v1
+    owner_docs:
+      - docs/governance/identity-headstamp-egress-governance-v1.6.1.md
+      - docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md
+      - docs/governance/identity-codex-launcher-governance-v1.6.14.md
+      - docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md
+      - docs/governance/identity-context-continuity-governance-v1.6.16.md
+      - docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md
+      - docs/governance/identity-artifact-family-routing-governance-v1.6.18.md
+      - docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md
   - family_id: loop_visual_atlas
     canonical_doc: docs/references/identity-protocol-loop-visual-atlas-v1.6.md
     canonical_asset_root: docs/references/assets/identity-protocol-loop-visual-atlas
     validator_script: scripts/validate_loop_visual_atlas_governance.py
+    status_key: loop_visual_atlas_governance_status
     scope_mode: protocol_repo_internal_only
     onboarding_contract: shared_reference_visual_atlas_onboarding_v1
     owner_docs:
@@ -22,6 +39,7 @@ atlas_families:
     canonical_doc: docs/references/identity-protocol-artifact-family-routing-visual-atlas-v1.6.md
     canonical_asset_root: docs/references/assets/identity-protocol-artifact-family-routing-visual-atlas
     validator_script: scripts/validate_artifact_family_visual_atlas_governance.py
+    status_key: artifact_family_visual_atlas_governance_status
     scope_mode: protocol_repo_internal_only
     onboarding_contract: shared_reference_visual_atlas_onboarding_v1
     owner_docs:

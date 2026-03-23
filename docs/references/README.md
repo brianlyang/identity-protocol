@@ -38,6 +38,7 @@ Any future protocol-owned visual atlas must follow this standard path; do not im
 2. Create one canonical asset root under `docs/references/assets/<atlas-family>/`.
 3. All protocol-owned SVG files for that atlas family must stay under that single asset root.
 4. Atlas filenames must be version-stamped and topic-descriptive.
+5. Each atlas-family registry row must declare one control-plane status key so atlas-family health can be rendered from SSOT rather than hand-maintained per family.
 
 ### B. SSOT anchors
 
@@ -73,8 +74,9 @@ Any future protocol-owned visual atlas must follow this standard path; do not im
 1. New atlas-family validators must be consumed through:
    - `scripts/docs_command_contract_check.py`
    - `scripts/validate_control_plane_invariants.py`
+   - `scripts/render_control_plane_status.py` through registry-driven atlas-family status rows declared in `identity/protocol/mappings/reference-visual-atlas-registry.current.yaml`
 2. Direct addition to top-level required-gates workflow steps is **not** the default path; that requires separate budget/invariant review.
-3. This rule prevents visual-atlas growth from silently expanding strict workflow fan-out or direct validator-call budgets.
+3. This rule prevents visual-atlas growth from silently expanding strict workflow fan-out or direct validator-call budgets while still keeping atlas-family health visible on the machine control-plane status surface.
 
 ### F. Truth-sync standard
 
@@ -123,6 +125,8 @@ Use this short checklist when opening any future protocol-owned visual atlas lan
    - create a thin atlas validator on top of `scripts/reference_visual_atlas_governance_common.py`
    - bootstrap the preview tree with `python3 scripts/generate_reference_visual_atlas_scaffold.py --help`
    - ensure `scripts/docs_command_contract_check.py` consumes it
+   - ensure `identity/protocol/mappings/reference-visual-atlas-registry.current.yaml` carries the atlas-family `status_key`
+   - ensure `scripts/render_control_plane_status.py` picks it up through the registry-driven atlas-family status row set
    - ensure `scripts/validate_control_plane_invariants.py` knows the validator as a stream-doc literal consumer
 5. **Truth-sync before claiming closure**
    - rerun `bash scripts/ci/run_reference_visual_atlas_scaffold_probes_ci.sh` if the scaffold generator or its templates changed

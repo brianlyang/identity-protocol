@@ -18,6 +18,14 @@ Current-state judgment for this stream must remain anchored to:
 4. Freeze the canonical producer / consumer split so startup re-entry can consume continuity safely without reopening launcher, topology, or route/script semantics.
 5. Freeze the target runtime continuity families and implementation path without pretending rollout is already complete.
 
+## 0.1 Cross-stream breakthrough sequence atlas (2026-03-24)
+
+1. The canonical explanatory visual atlas for this stream is:
+   - `docs/references/identity-protocol-breakthrough-sequence-visual-atlas-v1.6.md`
+   - asset root: `docs/references/assets/identity-protocol-breakthrough-sequence-visual-atlas/`
+2. Audit accepts that atlas as the discoverability-only historical explanation surface for why governed continuity proof had to arrive after headstamp truth, runtime authority, and launcher command ownership were already fixed.
+3. Normative truth remains this review ledger, the governance doc, the protocol motherline, and machine validators.
+
 ## 1) Opening findings absorbed into this stream
 
 ### 1.1 Current local protocol base is strong enough to open this stream

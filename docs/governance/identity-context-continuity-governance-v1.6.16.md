@@ -21,6 +21,14 @@ Execution mode: topic-level canonical SSOT for v1.6.16 identity-context-continui
 7. `docs/governance/identity-context-continuity-preflight-v1.6.16.md` is retained as the pre-opening research record; this file is the active governance source.
 8. This stream freezes continuity artifacts and re-entry semantics, not Codex product history semantics, not MCP capability negotiation semantics, and not raw transcript persistence as a new authority layer.
 
+### 0.1A Cross-stream breakthrough sequence atlas (2026-03-24)
+
+1. The canonical explanatory visual atlas for this stream is:
+   - `docs/references/identity-protocol-breakthrough-sequence-visual-atlas-v1.6.md`
+   - asset root: `docs/references/assets/identity-protocol-breakthrough-sequence-visual-atlas/`
+2. This atlas preserves the fixed order `headstamp -> runtime authority -> launcher command surface -> governed continuity proof -> cross-context stable short-command closure`.
+3. For this stream, the atlas highlights that continuity is a bounded support layer consumed by launcher/runtime proof, not a replacement authority source; normative truth remains this governance doc, the protocol motherline, and machine validators.
+
 ## 1) Why v1.6.16 is required
 
 1. `v1.6.13` solved where instance-owned executable helpers belong.

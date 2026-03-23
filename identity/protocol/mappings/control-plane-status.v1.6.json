@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-23T14:28:36Z",
-  "git_head_short": "eb6743f",
+  "generated_at_utc": "2026-03-23T16:19:36Z",
+  "git_head_short": "6881f1e",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -44,9 +44,9 @@
           ".github/workflows/_identity-required-gates.yml"
         ],
         "observed": {
-          "validator_scripts": 204,
-          "error_codes": 575,
-          "error_code_families": 209,
+          "validator_scripts": 205,
+          "error_codes": 576,
+          "error_code_families": 210,
           "mapping_rows_missing_in_bundle": 0,
           "bundle_rows": 52,
           "missing_mapping_rows": [],
@@ -65,16 +65,16 @@
         },
         "budgets": {
           "validator_scripts": {
-            "warn": 204,
-            "fail": 207
+            "warn": 205,
+            "fail": 208
           },
           "error_codes": {
-            "warn": 575,
-            "fail": 581
+            "warn": 576,
+            "fail": 582
           },
           "error_code_families": {
-            "warn": 209,
-            "fail": 216
+            "warn": 210,
+            "fail": 217
           },
           "mapping_rows_missing_in_bundle": {
             "warn": 0,
@@ -313,7 +313,7 @@
         "stream_doc_registry_active_file": "identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
         "stream_doc_registry_alias_error": "",
         "stream_doc_registry_parse_ok": true,
-        "stream_allowed_doc_count": 67,
+        "stream_allowed_doc_count": 68,
         "requirement_row_count": 52,
         "reference_fields": [
           "governance_anchor",
@@ -801,6 +801,47 @@
       "payload": {}
     },
     {
+      "name": "breakthrough_sequence_visual_atlas_governance",
+      "command": [
+        "python3",
+        "scripts/validate_breakthrough_sequence_visual_atlas_governance.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "payload": {
+        "breakthrough_sequence_visual_atlas_governance_status": "PASS_REQUIRED",
+        "error_code": "",
+        "anti_scatter_scope_mode": "protocol_repo_internal_only",
+        "repo_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+        "scan_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+        "workspace_external_surfaces_in_scope": false,
+        "workspace_external_scope_examples": [
+          "activity/evidence/",
+          "sibling-workspace staging copies"
+        ],
+        "stream_doc_registry_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.current.yaml",
+        "stream_doc_registry_active": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+        "stream_doc_registry_alias_error": "",
+        "canonical_atlas_doc": "docs/references/identity-protocol-breakthrough-sequence-visual-atlas-v1.6.md",
+        "canonical_asset_root": "docs/references/assets/identity-protocol-breakthrough-sequence-visual-atlas",
+        "required_svg_files": [
+          "identity_protocol_breakthrough_sequence_v16x.svg"
+        ],
+        "required_svg_paths": [
+          "docs/references/assets/identity-protocol-breakthrough-sequence-visual-atlas/identity_protocol_breakthrough_sequence_v16x.svg"
+        ],
+        "required_svg_count": 1,
+        "stray_atlas_docs": [],
+        "stray_svg_files": [],
+        "violation_count": 0,
+        "violations": []
+      }
+    },
+    {
       "name": "loop_visual_atlas_governance",
       "command": [
         "python3",
@@ -848,6 +889,51 @@
       }
     },
     {
+      "name": "artifact_family_visual_atlas_governance",
+      "command": [
+        "python3",
+        "scripts/validate_artifact_family_visual_atlas_governance.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "payload": {
+        "artifact_family_visual_atlas_governance_status": "PASS_REQUIRED",
+        "error_code": "",
+        "anti_scatter_scope_mode": "protocol_repo_internal_only",
+        "repo_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+        "scan_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+        "workspace_external_surfaces_in_scope": false,
+        "workspace_external_scope_examples": [
+          "activity/evidence/",
+          "sibling-workspace staging copies"
+        ],
+        "stream_doc_registry_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.current.yaml",
+        "stream_doc_registry_active": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+        "stream_doc_registry_alias_error": "",
+        "canonical_atlas_doc": "docs/references/identity-protocol-artifact-family-routing-visual-atlas-v1.6.md",
+        "canonical_asset_root": "docs/references/assets/identity-protocol-artifact-family-routing-visual-atlas",
+        "required_svg_files": [
+          "identity_protocol_artifact_family_routing_matrix_v1618.svg",
+          "identity_protocol_artifact_family_viability_model_v1618.svg",
+          "identity_protocol_artifact_family_upgrade_truth_v1618.svg"
+        ],
+        "required_svg_paths": [
+          "docs/references/assets/identity-protocol-artifact-family-routing-visual-atlas/identity_protocol_artifact_family_routing_matrix_v1618.svg",
+          "docs/references/assets/identity-protocol-artifact-family-routing-visual-atlas/identity_protocol_artifact_family_viability_model_v1618.svg",
+          "docs/references/assets/identity-protocol-artifact-family-routing-visual-atlas/identity_protocol_artifact_family_upgrade_truth_v1618.svg"
+        ],
+        "required_svg_count": 3,
+        "stray_atlas_docs": [],
+        "stray_svg_files": [],
+        "violation_count": 0,
+        "violations": []
+      }
+    },
+    {
       "name": "reference_visual_atlas_inventory",
       "command": [
         "python3",
@@ -872,16 +958,19 @@
         "inventory_renderer_script": "scripts/render_reference_visual_atlas_inventory.py",
         "registered_family_ids": [
           "artifact_family_routing_visual_atlas",
+          "breakthrough_sequence_visual_atlas",
           "loop_visual_atlas"
         ],
-        "atlas_family_count": 2,
+        "atlas_family_count": 3,
         "discovered_validator_scripts": [
           "scripts/validate_artifact_family_visual_atlas_governance.py",
+          "scripts/validate_breakthrough_sequence_visual_atlas_governance.py",
           "scripts/validate_loop_visual_atlas_governance.py"
         ],
         "mandatory_static_docs_checked": [
           "docs/references/INDEX.md",
           "docs/references/identity-protocol-artifact-family-routing-visual-atlas-v1.6.md",
+          "docs/references/identity-protocol-breakthrough-sequence-visual-atlas-v1.6.md",
           "docs/references/identity-protocol-loop-visual-atlas-v1.6.md",
           "identity/protocol/mappings/reference-visual-atlas-registry.current.yaml"
         ],
@@ -891,10 +980,10 @@
     }
   ],
   "summary": {
-    "check_count": 9,
+    "check_count": 11,
     "fail_count": 0,
     "warn_count": 0,
-    "pass_count": 9
+    "pass_count": 11
   },
   "control_plane_status": "PASS_REQUIRED",
   "promotion_ready": true,

@@ -55,6 +55,7 @@ class ReferenceVisualAtlasFamily:
     canonical_doc: str
     canonical_asset_root: str
     validator_script: str
+    status_key: str
     scope_mode: str
     onboarding_contract: str
     owner_docs: tuple[str, ...]
@@ -113,6 +114,7 @@ def reference_visual_atlas_families_from_registry(
                 canonical_doc=_norm_path(row.get("canonical_doc")),
                 canonical_asset_root=_norm_path(row.get("canonical_asset_root")),
                 validator_script=_norm_path(row.get("validator_script")),
+                status_key=_norm_path(row.get("status_key")),
                 scope_mode=_norm_path(row.get("scope_mode")),
                 onboarding_contract=_norm_path(row.get("onboarding_contract")),
                 owner_docs=owner_docs,
@@ -171,8 +173,8 @@ def render_reference_visual_atlas_inventory_markdown(registry_doc: Mapping[str, 
         "",
         "## Canonical atlas families",
         "",
-        "| Family | Canonical doc | Asset root | Validator | Owner docs | Scope mode |",
-        "| --- | --- | --- | --- | --- | --- |",
+        "| Family | Canonical doc | Asset root | Validator | Status key | Owner docs | Scope mode |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
     ]
     for family in families:
         owner_docs_cell = "; ".join(f"`{owner_doc}`" for owner_doc in family.owner_docs) or "—"
@@ -183,6 +185,7 @@ def render_reference_visual_atlas_inventory_markdown(registry_doc: Mapping[str, 
             f"`{family.canonical_doc or 'UNKNOWN'}` | "
             f"{asset_root_cell} | "
             f"`{family.validator_script or 'UNKNOWN'}` | "
+            f"`{family.status_key or 'UNKNOWN'}` | "
             f"{owner_docs_cell} | "
             f"`{family.scope_mode or 'UNKNOWN'}` |"
         )
@@ -199,6 +202,7 @@ def render_reference_visual_atlas_inventory_markdown(registry_doc: Mapping[str, 
             "   - one canonical atlas markdown doc,",
             "   - one canonical asset root,",
             "   - one thin validator script,",
+            "   - one control-plane status key,",
             "   - one or more owner docs.",
             "4. Future atlas-family growth must update the registry row, owner-doc backlinks, stream-doc-registry entry, and validator landing, then rerender this inventory in the same closure.",
             "5. The inventory is stale if it omits a landed atlas validator, lists a family whose canonical doc/asset root/validator no longer exists, or drifts from the rendered registry projection.",
@@ -217,6 +221,31 @@ def discover_visual_atlas_governance_scripts(repo_root: Path) -> list[Path]:
         for path in scripts_dir.glob("validate_*_visual_atlas_governance.py")
         if path.is_file()
     )
+
+
+def reference_visual_atlas_control_plane_checks(
+    registry_doc: Mapping[str, Any],
+) -> tuple[dict[str, str], ...]:
+    checks: list[dict[str, str]] = []
+    seen_names: set[str] = set()
+    for family in reference_visual_atlas_families_from_registry(registry_doc):
+        validator_script = _norm_path(family.validator_script)
+        status_key = _norm_path(family.status_key)
+        if not validator_script or not status_key:
+            continue
+        name = Path(validator_script).stem.removeprefix("validate_")
+        if not name or name in seen_names:
+            continue
+        seen_names.add(name)
+        checks.append(
+            {
+                "name": name,
+                "validator_script": validator_script,
+                "status_key": status_key,
+                "family_id": family.family_id,
+            }
+        )
+    return tuple(checks)
 
 
 def _append_violation(violations: list[str], reason: str, detail: str) -> None:

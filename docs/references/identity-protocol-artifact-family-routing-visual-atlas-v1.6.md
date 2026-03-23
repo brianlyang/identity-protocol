@@ -15,6 +15,7 @@ Classification: protocol-owned explanatory atlas; not a normative contract sourc
    - `identity/protocol/mappings/stream-doc-registry.current.yaml`
    - `identity/protocol/mappings/contract-binding.current.yaml`
    - `identity/protocol/mappings/semantic-term-registry.current.yaml`
+   - `identity/protocol/mappings/reference-visual-atlas-registry.current.yaml`
    - the corresponding validator / probe lanes that machine-consume those contracts
 4. This atlas is SSOT-governed as a canonical reference surface, but it is not the normative owner of family semantics.
 5. The atlas visualizes the six-layer interpretation model, the viability checklist, and the three-state upgrade-safety discipline so future readers can quickly understand why generic `memory` language is non-canonical.
@@ -25,6 +26,7 @@ Classification: protocol-owned explanatory atlas; not a normative contract sourc
    - `identity/protocol/mappings/stream-doc-registry.current.yaml`
    - `identity/protocol/mappings/contract-binding.current.yaml`
    - `identity/protocol/mappings/semantic-term-registry.current.yaml`
+   - `identity/protocol/mappings/reference-visual-atlas-registry.current.yaml`
 2. If the atlas drops those current-pointer anchors, the document is stale even when the SVG assets still render.
 
 ## 1) Fixed directory freeze (mandatory)

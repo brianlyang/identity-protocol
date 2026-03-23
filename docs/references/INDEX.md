@@ -36,10 +36,11 @@ Generation: machine-rendered from `identity/protocol/mappings/reference-visual-a
 
 ## Canonical atlas families
 
-| Family | Canonical doc | Asset root | Validator | Owner docs | Scope mode |
-| --- | --- | --- | --- | --- | --- |
-| `loop_visual_atlas` | `docs/references/identity-protocol-loop-visual-atlas-v1.6.md` | `docs/references/assets/identity-protocol-loop-visual-atlas/` | `scripts/validate_loop_visual_atlas_governance.py` | `docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md`; `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md`; `docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md` | `protocol_repo_internal_only` |
-| `artifact_family_routing_visual_atlas` | `docs/references/identity-protocol-artifact-family-routing-visual-atlas-v1.6.md` | `docs/references/assets/identity-protocol-artifact-family-routing-visual-atlas/` | `scripts/validate_artifact_family_visual_atlas_governance.py` | `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md`; `docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md` | `protocol_repo_internal_only` |
+| Family | Canonical doc | Asset root | Validator | Status key | Owner docs | Scope mode |
+| --- | --- | --- | --- | --- | --- | --- |
+| `breakthrough_sequence_visual_atlas` | `docs/references/identity-protocol-breakthrough-sequence-visual-atlas-v1.6.md` | `docs/references/assets/identity-protocol-breakthrough-sequence-visual-atlas/` | `scripts/validate_breakthrough_sequence_visual_atlas_governance.py` | `breakthrough_sequence_visual_atlas_governance_status` | `docs/governance/identity-headstamp-egress-governance-v1.6.1.md`; `docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md`; `docs/governance/identity-codex-launcher-governance-v1.6.14.md`; `docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md`; `docs/governance/identity-context-continuity-governance-v1.6.16.md`; `docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md`; `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md`; `docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md` | `protocol_repo_internal_only` |
+| `loop_visual_atlas` | `docs/references/identity-protocol-loop-visual-atlas-v1.6.md` | `docs/references/assets/identity-protocol-loop-visual-atlas/` | `scripts/validate_loop_visual_atlas_governance.py` | `loop_visual_atlas_governance_status` | `docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md`; `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md`; `docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md` | `protocol_repo_internal_only` |
+| `artifact_family_routing_visual_atlas` | `docs/references/identity-protocol-artifact-family-routing-visual-atlas-v1.6.md` | `docs/references/assets/identity-protocol-artifact-family-routing-visual-atlas/` | `scripts/validate_artifact_family_visual_atlas_governance.py` | `artifact_family_visual_atlas_governance_status` | `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md`; `docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md` | `protocol_repo_internal_only` |
 
 ## Inventory discipline
 
@@ -51,6 +52,7 @@ Generation: machine-rendered from `identity/protocol/mappings/reference-visual-a
    - one canonical atlas markdown doc,
    - one canonical asset root,
    - one thin validator script,
+   - one control-plane status key,
    - one or more owner docs.
 4. Future atlas-family growth must update the registry row, owner-doc backlinks, stream-doc-registry entry, and validator landing, then rerender this inventory in the same closure.
 5. The inventory is stale if it omits a landed atlas validator, lists a family whose canonical doc/asset root/validator no longer exists, or drifts from the rendered registry projection.

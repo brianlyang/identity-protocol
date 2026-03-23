@@ -21,6 +21,14 @@ Execution mode: topic-level canonical SSOT for v1.6.14 identity-Codex launcher g
 6. This stream freezes launcher/install/startup ownership and canonical paths; it does not certify that every host-native chat surface is already auto-bound.
 7. Workspace helper assets under `scripts/codex_native_chat/` remain compatibility bridge evidence only; the protocol-owned launcher install path is now the canonical installed home for `v1.6.14`.
 
+### 0.1A Cross-stream breakthrough sequence atlas (2026-03-24)
+
+1. The canonical explanatory visual atlas for this stream is:
+   - `docs/references/identity-protocol-breakthrough-sequence-visual-atlas-v1.6.md`
+   - asset root: `docs/references/assets/identity-protocol-breakthrough-sequence-visual-atlas/`
+2. This atlas preserves the fixed order `headstamp -> runtime authority -> launcher command surface -> governed continuity proof -> cross-context stable short-command closure`.
+3. For this stream, the atlas highlights that launcher stability became real only after headstamp truth and runtime authority were already machine-owned; normative truth remains this governance doc, the protocol motherline, and machine validators.
+
 ## 1) Why v1.6.14 is required
 
 1. `v1.6.12` froze wrapper-bound bootstrap semantics, and `v1.6.13` froze where instance-owned helper code belongs, but neither stream froze how a user gets a simple, installed, repeatable identity-bound Codex command.
