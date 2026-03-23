@@ -103,7 +103,9 @@ Hard semantics:
 8. `runtime/reports/dialogue-retention/**` and `runtime/state/dialogue-retention/**` are raw dialogue truth mirrors plus governed supplements/receipts; they must not be collapsed into dialogue-governance, continuity/reentry, protocol-feedback, or memory-absorption.
 9. Declaration/gate surfaces such as `reject_memory_gate` and `*_contract` blocks remain control-plane declarations, not artifact-family outputs.
 10. `rq_052_identity_artifact_family_routing_contract_v1` is the machine-consumed whole-matrix routing row for this boundary; it validates the frozen routing matrix without collapsing family-specific owner semantics into one generic super-validator.
-11. Future validators/creator/readiness wiring must enforce the same routing matrix rather than re-deriving family semantics per pack.
+11. Runtime closeout may extend validators, probes, creator/readiness wiring, replay breadth, and truth-sync only inside the frozen routing matrix; it must not redefine family names, canonical roots, canonical producer/consumer roles, or frozen non-goals.
+12. If `rq_052` projects a red state from an inherited family-owner validator, runtime must preserve that inherited failure truth rather than masking it with generic routing green, compatibility shortcuts, or backstop promotion.
+13. Future validators/creator/readiness wiring must enforce the same routing matrix rather than re-deriving family semantics per pack.
 
 ## Batch-6 anchor placeholders (v1.6 intake, non-promotional)
 
@@ -425,6 +427,8 @@ Hard semantics:
 3. `RULEBOOK.jsonl` must remain distinct from runtime experience-feedback rulebooks, `TASK_HISTORY.md` must remain distinct from continuity/reentry state, and `runtime/protocol-feedback/**` must remain communication-only rather than a learning or continuity substitute.
 4. The routing row validates canonical roots, anchor paths, cross-family separation, and quarantine-only treatment of `runtime/memory-absorption/**`; it must not silently promote memory-absorption, protocol-feedback, continuity, or dialogue artifacts into one shared fallback sink.
 5. `rq_052` is a routing/control-plane contract, not a replacement semantic owner for the eight families. Family-specific deep semantics remain owned by their inherited streams and dedicated validators; `rq_052` only enforces that those families do not collapse, drift, or cross-wire at the routing layer.
+6. When an inherited family-owner validator fails, `rq_052` must surface that inherited-family red as routed evidence rather than normalizing it away; execution closeout on that residual remains inherited-family work unless the proposed fix changes the frozen routing semantics themselves.
+7. Any change to the routing row that adds/renames a family, repoints a canonical root, changes canonical producer/consumer roles, relaxes the `memory` anti-pollution boundary, promotes `runtime/memory-absorption/**` onto an active success path, or introduces compatibility/backstop shortcuts must return to semantic-owner governance before implementation.
 
 ### Canonical identity-Codex launcher execution boundary (v1.6.14 additive)
 

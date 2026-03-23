@@ -180,7 +180,10 @@ Compatibility note: legacy packs under `identity/<id>/` are migration-only locat
 8. Declaration keys and gates such as `reject_memory_gate`, `dialogue_retention_contract_v1`, `dialogue_governance_contract`, `experience_feedback_contract`, `context_continuity_contract_v1`, and `reentry_brief_consumption_contract_v1` are control-plane declarations, not artifact families.
 9. The first family-specific machine consumer for this stream remains `rq_051_identity_dialogue_retention_contract_v1`; it mirrors product-sidecar session truth into governed runtime sinks without reclassifying that mirror as continuity or authority.
 10. The whole-matrix routing machine consumer for this stream is now `rq_052_identity_artifact_family_routing_contract_v1`; it fail-closes on generic `memory` sink drift, missing routing contract coverage, cross-family path collisions, protocol-feedback root drift, continuity/reentry anchor drift, and memory-absorption active-path leakage while leaving each family’s deeper semantics with its inherited owner validator lane.
-11. Any future protocol-owned persisted family must be introduced by a later governed stream rather than silently added under generic “memory” wording.
+11. Semantic ownership for family names, canonical roots, canonical producer/consumer roles, and frozen non-goals remains with the `v1.6.18` governance stream plus its inherited owner streams; execution closeout may extend validators, probes, readiness wiring, replay breadth, and truth-sync only inside that frozen routing matrix.
+12. Any future protocol-owned persisted family must be introduced by a later governed stream rather than silently added under generic “memory” wording.
+13. Any change that adds/renames a family, repoints a canonical root, changes canonical producer/consumer roles, relaxes the `memory` anti-pollution boundary, promotes `runtime/memory-absorption/**` onto an active success path, or uses compatibility/backstop shortcuts to hide inherited-family failures must reopen governed semantic-owner review.
+14. A routed red caused by an inherited family-owner validator is inherited-family execution/evidence debt unless the proposed fix crosses one of the semantic-owner boundaries above; that residual does not by itself reopen `v1.6.18` routing semantics.
 
 ## Runtime source-of-truth boundary (v1.4.x hardening)
 
