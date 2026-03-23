@@ -322,7 +322,10 @@ This stream is no longer docs-only. The following machine-consumed closure is no
    - backfill repair restoring closure,
    - collision fail-close when runtime experience-feedback is pointed at pack-root `RULEBOOK.jsonl`.
 9. `scripts/required_gate_bundle_runner.py --target-name identity_artifact_family_routing` now stays on registry-lineage target-probe mode instead of misbinding full-bundle ingress wrapper / unique-entry receipt obligations onto single-target routing checks; `run_id` and profile binding remain required, but targeted routing probes no longer fail-close for unrelated wrapper provenance debt.
-10. After contract backfill, the current weixinstore workspace-local runtime catalog now replays `PASS_REQUIRED` for all four active runtime identities (`base-repo-audit-expert-v3`, `custom-creative-ecom-analyst`, `base-repo-architect`, and `base-repo-closure-orchestrator`) on the same `rq_052` validator lane.
+10. Current live proof breadth is no longer fixture-only:
+    - the current weixinstore workspace-local runtime catalog replays `PASS_REQUIRED` for `base-repo-audit-expert-v3`, `custom-creative-ecom-analyst`, and `base-repo-architect` on the `rq_052` validator lane;
+    - `base-repo-closure-orchestrator` currently fails outer `rq_052` only through inherited `rq_051_identity_dialogue_retention_contract_v1` drift (`IP-DRET-004 source_session_size_mismatch` projected as `IP-AFR-002 runtime_dialogue_retention_family_invalid`);
+    - that residual does not reopen `v1.6.18` semantics; it proves the routing lane is correctly consuming inherited family-owner status instead of masking it.
 
 ## 8) Closure state after whole-matrix routing landing
 
@@ -339,10 +342,17 @@ This stream is no longer docs-only. The following machine-consumed closure is no
 This stream now explicitly freezes the owner split so the landed whole-matrix closure remains semantically stable:
 
 1. Semantic ownership remains with this `v1.6.18` governance stream plus the inherited owner streams already referenced here; execution closure must not reinterpret family names, fixed paths, canonical producer/consumer roles, or frozen non-goals.
-2. Execution closeout has landed the protocol-owned machine path for `ISSUE-032` through shared validators, probes, required-gate wiring, readiness consumption, workbook truth-sync, and cross-family misuse fail-close; any future follow-on work may extend evidence breadth or archival truth-sync only if it stays on this same routing matrix.
-3. Audit/review lanes verify closure, evidence, and truth-sync state; they do not become replacement semantic owners for any artifact family.
-4. Any proposal that adds a new family, repoints a canonical root, collapses two frozen families into one sink, or promotes `runtime/memory-absorption/**` onto an active success path must reopen governed owner review instead of shipping through execution closeout.
-5. These roles are protocol functions, not person-specific appointments: semantic owner, execution closeout owner, and audit verifier remain stable even if the current humans on those lanes change.
+2. Execution closeout owns validator/probe/gate/readiness wiring, live replay breadth, inherited-family residual triage, and workbook/review truth-sync inside the already-frozen routing matrix.
+3. Execution closeout has landed the protocol-owned machine path for `ISSUE-032` through shared validators, probes, required-gate wiring, readiness consumption, workbook truth-sync, and cross-family misuse fail-close; any future follow-on work may extend evidence breadth or archival truth-sync only if it stays on this same routing matrix.
+4. Execution closeout must escalate back to semantic-owner review before shipping any change that:
+   - adds a new artifact family or renames an existing family;
+   - repoints a canonical root or reassigns canonical producer/consumer roles;
+   - collapses two frozen families into one sink or relaxes the `memory` anti-pollution boundary;
+   - promotes `runtime/memory-absorption/**` onto an active success path;
+   - introduces compatibility/backstop/pack-specific shortcut behavior to mask inherited family failures.
+5. Inherited-family red states discovered by `rq_052` remain execution-closeout work unless they require one of the semantic changes listed above; a routed failure caused by an inherited owner validator does not by itself reopen `ISSUE-032`.
+6. Audit/review lanes verify closure, evidence, and truth-sync state; they do not become replacement semantic owners for any artifact family.
+7. These roles are protocol functions, not person-specific appointments: semantic owner, execution closeout owner, and audit verifier remain stable even if the current humans on those lanes change.
 
 ## 10) Frozen non-goals
 
