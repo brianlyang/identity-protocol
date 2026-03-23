@@ -115,6 +115,7 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
 18. Launcher ownership now also includes the first governed `v1.6.16` startup-consumer bridge:
     - launcher exec/startup must consume the protocol-owned continuity bundle rather than re-derive continuity semantics;
     - when the bundle recommends `consume_governed_reentry_brief`, launcher exec/startup must call the canonical pack-local `run_identity_context_continuity_guard.sh post-recover --json-only` producer path before handing off to Codex;
+    - when startup readiness is already green but receipt-family proof is only recoverably stale (`migration_handoff` missing or joinable lineage drift), launcher exec/startup must repair via the canonical `run_identity_context_continuity_guard.sh pre-migrate --json-only` producer path before running `post-recover`, which closes the short-command resume gap without adding a second operator command family;
     - audit must fail any implementation that claims launcher-owned continuity startup consumption without the governed runtime `instance_reentry_consumption_receipt`.
 
 ## 5) Audit verdict rules (frozen)

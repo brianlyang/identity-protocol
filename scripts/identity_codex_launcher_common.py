@@ -46,6 +46,14 @@ FORBIDDEN_RUNTIME_OVERRIDE_KEYS: tuple[str, ...] = (
 )
 RUNTIME_PATHS_CONFIG_REL = Path("config") / "runtime-paths.env"
 PROJECT_DOC_FALLBACK_PREFIX = ".IDENTITY."
+REPAIRABLE_CONTINUITY_RECEIPT_STALE_PREFIXES: tuple[str, ...] = (
+    "missing_receipt_role:migration_handoff",
+    "migration_parent_lineage_missing",
+    "migration_parent_not_joinable:",
+    "migration_chain_not_rooted_in_checkpoint:",
+    "reentry_brief_lineage_not_joinable:",
+    "reentry_consumption_lineage_not_joinable:",
+)
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -234,6 +242,43 @@ def _continuity_token(payload: dict[str, Any], key: str, *, default: str = "") -
     return str(value).strip() if value is not None else default
 
 
+def _continuity_list(payload: dict[str, Any], key: str) -> list[str]:
+    value = payload.get(key)
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _receipt_family_stale_reasons(continuity_support: dict[str, Any]) -> list[str]:
+    validator_stale = continuity_support.get("validator_stale_reasons")
+    if isinstance(validator_stale, dict):
+        reasons = validator_stale.get("receipt_family")
+        if isinstance(reasons, list):
+            return [str(item).strip() for item in reasons if str(item).strip()]
+    validator_payloads = continuity_support.get("validator_payloads")
+    if isinstance(validator_payloads, dict):
+        receipt_payload = validator_payloads.get("receipt_family")
+        if isinstance(receipt_payload, dict):
+            return _continuity_list(receipt_payload, "stale_reasons")
+    return []
+
+
+def _receipt_family_repair_needed(continuity_support: dict[str, Any]) -> bool:
+    if _continuity_token(
+        continuity_support,
+        "receipt_family_observation_status",
+        default=STATUS_FAIL_REQUIRED,
+    ) == STATUS_PASS_REQUIRED:
+        return False
+    stale_reasons = _receipt_family_stale_reasons(continuity_support)
+    if not stale_reasons:
+        return False
+    return any(
+        any(reason.startswith(prefix) for prefix in REPAIRABLE_CONTINUITY_RECEIPT_STALE_PREFIXES)
+        for reason in stale_reasons
+    )
+
+
 def resolve_launcher_reentry_binding(
     *,
     identity_id: str,
@@ -265,6 +310,8 @@ def resolve_launcher_reentry_binding(
         "receipt_family_observation_status",
         default=STATUS_FAIL_REQUIRED,
     )
+    repair_before_post_recover_needed = _receipt_family_repair_needed(continuity_support)
+    repair_stale_reasons = _receipt_family_stale_reasons(continuity_support)
     result: dict[str, Any] = {
         "status": STATUS_PASS_REQUIRED,
         "launcher_reentry_binding_status": STATUS_PASS_REQUIRED,
@@ -276,6 +323,8 @@ def resolve_launcher_reentry_binding(
         "current_reentry_brief_ref": _continuity_token(continuity_support, "current_reentry_brief_ref"),
         "continuity_lineage_ref": _continuity_token(continuity_support, "continuity_lineage_ref"),
         "continuity_support": continuity_support,
+        "repair_before_post_recover_needed": repair_before_post_recover_needed,
+        "repair_before_post_recover_stale_reasons": repair_stale_reasons,
     }
     if bind_mode != "consume_governed_reentry_brief":
         result.update(
@@ -311,6 +360,31 @@ def resolve_launcher_reentry_binding(
             "bind_action": "guard_missing",
             "bind_reason": f"context_continuity_guard_missing:{guard_script}",
         }
+    if repair_before_post_recover_needed:
+        repair_payload = _run_json(
+            [
+                str(guard_script),
+                "--catalog",
+                str(catalog_path),
+                "pre-migrate",
+                "--json-only",
+            ],
+            cwd=protocol_home.parent.resolve(),
+            env=env,
+        )
+        if _continuity_token(repair_payload, "status", default=STATUS_FAIL_REQUIRED) != STATUS_PASS_REQUIRED:
+            return {
+                **result,
+                "status": STATUS_FAIL_REQUIRED,
+                "launcher_reentry_binding_status": STATUS_FAIL_REQUIRED,
+                "bind_action": "pre_recover_repair_failed",
+                "bind_reason": _continuity_token(repair_payload, "error")
+                or "launcher_pre_recover_repair_failed",
+                "pre_recover_repair_payload": repair_payload,
+            }
+        result["pre_recover_repair_payload"] = repair_payload
+        result["pre_recover_repair_action"] = "pre_migrate_refresh"
+        result["pre_recover_repair_status"] = STATUS_PASS_REQUIRED
     post_recover_payload = _run_json(
         [
             str(guard_script),
@@ -367,6 +441,7 @@ def resolve_launcher_reentry_binding(
             "verified_continuity_support": verified_bundle,
             "live_reentry_consumption_proof_status_after": verified_live_status,
             "receipt_family_observation_status_after": verified_receipt_status,
+            "pre_recover_repair_status": result.get("pre_recover_repair_status") or STATUS_SKIPPED_NOT_REQUIRED,
             "current_reentry_brief_ref": _continuity_token(
                 verified_bundle,
                 "current_reentry_brief_ref",
