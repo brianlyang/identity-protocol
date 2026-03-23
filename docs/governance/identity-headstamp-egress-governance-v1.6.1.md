@@ -81,9 +81,9 @@ Headstamp/HUD issue means any failure in:
 3. The compose output must be validated by `scripts/validate_send_time_reply_gate.py` before release to user channel.
 4. Any path that emits text without this chain is protocol violation (fail-close).
 
-### 2.2 Canonical first-line tuple
+### 2.2 Raw canonical artifact first-line tuple
 
-Required first two lines:
+Required raw artifact first two lines:
 
 1. `Identity-Context: actor_id=...; identity_id=...; scope=...; lock=...; source=...`
 2. `Layer-Context: work_layer=...; source_layer=...`
@@ -96,6 +96,30 @@ Strict tuple invariants:
 4. `resolved_source_layer`
 5. `lock_state`
 6. `run_id_binding`
+
+### 2.2A First-line surface modes for validation and send-time (2026-03-23)
+
+1. v1.6.1 freezes three first-line surface modes for headstamp admission:
+   - `raw_canonical`
+   - `visible_projection`
+   - `invalid`
+2. `raw_canonical` means the first non-empty line literally starts with `Identity-Context:`.
+   - This remains mandatory for raw governed artifacts and native-chat success-state injection.
+3. `visible_projection` means the first non-empty line literally starts with:
+   - `Display-Headstamp: Identity-Context: ... | Layer-Context: ...`
+   - This is valid only for governed/explanatory host-visible surfaces that intentionally project the shared operator envelope.
+4. Validators MUST canonicalize `visible_projection` back to the same underlying `Identity-Context` tuple before evaluating identity/layer/lock consistency.
+5. `invalid` means the first non-empty line is neither a raw canonical stamp nor a valid `Display-Headstamp` projection carrying the canonical tuple.
+   - `invalid` is deterministic fail-close.
+6. `scripts/validate_reply_identity_context_first_line.py` owns the shared first-line parser contract.
+   - Default accepted surface mode remains `raw_canonical`.
+7. `scripts/validate_send_time_reply_gate.py` MUST consume the same parser contract and, for governed host-visible send-time evaluation, MUST explicitly allow both:
+   - `raw_canonical`
+   - `visible_projection`
+8. This clause is additive only:
+   - raw canonical strictness stays frozen;
+   - visible projection must not create a second authority source;
+   - post-hoc receipt generation still cannot legalize a bypassed send path.
 
 ### 2.3 Strict lane actor rule
 
@@ -449,12 +473,18 @@ deepening base for v1.6.1 headstamp semantics.
 ### 15.4 Machine-verification segment boundary
 
 1. `Machine-Verification` is an operator envelope segment, not a replacement for canonical governed artifact internals.
-2. Governed reply artifact first line remains the raw `Identity-Context: ... | Layer-Context: ...` stamp.
-3. Operator envelope machine fields must reuse existing protocol field names, especially:
+2. Governed/controlled-runtime artifact first line remains the raw `Identity-Context: ... | Layer-Context: ...` stamp.
+3. Governed host-visible/send-time validation MUST report `reply_first_line_surface_mode` using the shared parser contract:
+   - `raw_canonical`
+   - `visible_projection`
+   - `invalid`
+4. `Display-Headstamp` is a visible projection only. When accepted at send-time, it MUST be canonicalized back to the same underlying `Identity-Context` tuple before any verdict is emitted.
+5. Operator envelope machine fields must reuse existing protocol field names, especially:
    - `display_headstamp_identity_id`
    - `authoritative_identity_id`
    - `headstamp_consistency_status`
-4. New synonymous truth fields are forbidden.
+6. New synonymous truth fields are forbidden.
+7. Raw canonical strictness remains the default parser mode for artifact-level validation; visible projection is an explicit additive allowance for governed host-visible evaluation, not a general relaxation.
 
 ### 15.5 Regression prevention
 

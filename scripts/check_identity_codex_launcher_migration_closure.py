@@ -9,9 +9,11 @@ from typing import Any
 
 import yaml
 from resolve_identity_context import resolve_local_catalog_path, resolve_repo_catalog_path
+from runtime_catalog_metadata_hygiene_common import inspect_runtime_catalog_metadata_hygiene
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 ERR_LAUNCHER_MIGRATION_INVALID = "IP-ILAUNCH-003"
 
 
@@ -165,16 +167,31 @@ def main() -> int:
                 catalog_path=catalog_path,
                 identity_id=identity_id,
             )
+            metadata_payload = inspect_runtime_catalog_metadata_hygiene(
+                catalog_path=catalog_path,
+                repo_catalog_path=repo_catalog,
+                identity_id=identity_id,
+                require_active=True,
+            )
             launcher_status = str(validator_payload.get("identity_codex_launcher_status", "")).strip().upper()
+            metadata_status = str(metadata_payload.get("runtime_catalog_metadata_hygiene_status", "")).strip().upper()
             stale = validator_payload.get("stale_reasons")
             if not isinstance(stale, list):
                 stale = []
             stale = [str(item).strip() for item in stale if str(item).strip()]
+            metadata_rows = metadata_payload.get("checked_rows") if isinstance(metadata_payload, dict) else []
+            metadata_row = metadata_rows[0] if isinstance(metadata_rows, list) and metadata_rows else {}
+            metadata_stale = metadata_row.get("stale_reasons") if isinstance(metadata_row, dict) else []
+            if not isinstance(metadata_stale, list):
+                metadata_stale = []
+            metadata_stale = [str(item).strip() for item in metadata_stale if str(item).strip()]
             reason = ""
             if validator_rc != 0:
                 reason = ",".join(stale) if stale else str(validator_payload.get("error_code", "")).strip() or "launcher_validator_failed"
             elif launcher_status != STATUS_PASS_REQUIRED:
                 reason = ",".join(stale) if stale else "launcher_not_pass_required"
+            elif metadata_status != STATUS_PASS_REQUIRED:
+                reason = ",".join(metadata_stale) if metadata_stale else "runtime_catalog_metadata_hygiene_not_pass_required"
 
             row_state = {
                 "identity_id": identity_id,
@@ -184,6 +201,10 @@ def main() -> int:
                 "canonical_scope": str(row.get("canonical_scope", "")).strip(),
                 "validator_rc": validator_rc,
                 "launcher_status": launcher_status,
+                "runtime_catalog_metadata_hygiene_status": metadata_status,
+                "runtime_catalog_metadata_hygiene_stale_reasons": metadata_stale,
+                "resolved_scope": str(metadata_row.get("resolved_scope", "")).strip() if isinstance(metadata_row, dict) else "",
+                "resolved_pack_path": str(metadata_row.get("resolved_pack_path", "")).strip() if isinstance(metadata_row, dict) else "",
                 "launcher_required": bool(validator_payload.get("launcher_required", False)),
                 "install_required": bool(validator_payload.get("install_required", False)),
                 "pack_assets_status": str(validator_payload.get("pack_assets_status", "")).strip().upper(),
@@ -194,7 +215,13 @@ def main() -> int:
                 "runtime_paths_env": str(validator_payload.get("runtime_paths_env", "")).strip(),
                 "stale_reasons": stale,
                 "reason": reason,
-                "status": STATUS_PASS_REQUIRED if validator_rc == 0 and launcher_status == STATUS_PASS_REQUIRED else STATUS_FAIL_REQUIRED,
+                "status": (
+                    STATUS_PASS_REQUIRED
+                    if validator_rc == 0
+                    and launcher_status == STATUS_PASS_REQUIRED
+                    and metadata_status == STATUS_PASS_REQUIRED
+                    else STATUS_FAIL_REQUIRED
+                ),
             }
             checked_rows.append(row_state)
             if row_state["status"] != STATUS_PASS_REQUIRED:
@@ -215,6 +242,16 @@ def main() -> int:
         "violation_count": len(violations),
         "checked_rows": checked_rows,
         "violations": violations,
+        "runtime_catalog_metadata_hygiene_status": (
+            STATUS_PASS_REQUIRED
+            if checked_rows and all(
+                str(row.get("runtime_catalog_metadata_hygiene_status", "")).strip().upper() == STATUS_PASS_REQUIRED
+                for row in checked_rows
+            )
+            else (
+                STATUS_SKIPPED_NOT_REQUIRED if not checked_rows else STATUS_FAIL_REQUIRED
+            )
+        ),
         "stale_reasons": stale_reasons,
     }
     if args.json_only:

@@ -1,6 +1,6 @@
 # Protocol Remediation Audit Ledger (v1.6.10 runtime file governance)
 
-Status: Active review ledger draft (boundary freeze, 2026-03-17)
+Status: Active review ledger (boundary freeze + metadata hygiene closure, 2026-03-23)
 Scope: audit ledger for runtime dynamic file governance boundary closure in v1.6.x stream
 
 ## 0) Audit objective
@@ -178,9 +178,9 @@ Interpretation contract:
 4. `scripts/validate_actor_session_multibinding_concurrency.py`
    - when `--session-id` is supplied, session-primary projection is read from `last_mutation_by_session`.
 5. `scripts/validate_identity_session_pointer_consistency.py`
-   - strict pointer validation still fail-closes on shared-pointer mismatch by default;
-   - explicit `--allow-compatibility-projection-drift` only acknowledges mismatch when the shared pointer proves
-     actor-global compatibility provenance for a different session.
+   - strict pointer validation fail-closes on shared-pointer mismatch for active lanes;
+   - `compatibility_projection_status=AVAILABLE` is diagnostic-only and cannot reopen a strict green path;
+   - strict session-primary surfaces no longer advertise an explicit drift-allow flag.
 6. governed response/headstamp consumers
    - `scripts/identity_runtime_authority_common.py` now treats compatibility pointers as non-authoritative
      unless explicit legacy fallback is enabled;
@@ -214,9 +214,9 @@ Interpretation contract:
    - repaired compatibility pointers now expose explicit actor/session/binding provenance, not only demotion flags
    - no actor context + compatibility pointer only => render path fail-closes instead of adopting pointer authority
    - env actor + bound session => render path restores headstamp output deterministically
-   - cross-session pointer drift without explicit allowance => strict pointer validator fail-closes
-   - cross-session pointer drift with explicit compatibility provenance => strict pointer validator acknowledges
-     non-authoritative drift while tuple-bound session authority stays intact
+   - cross-session pointer drift that tries to remain active => strict pointer validator fail-closes
+   - diagnostic-only projection metadata may remain only to explain unavailable/suppressed projection state while
+     tuple-bound session authority stays intact
    - actor-global switch guard now blocks later cross-session overwrite attempts before role-binding validation
    - negative authority-consumer drift probe => static validator blocks missing session passthrough, host fallback
      resolver reuse, compatibility-pointer literal reuse, and unregistered authority-consumer surfaces
@@ -261,6 +261,25 @@ Interpretation contract:
    - direct manual semantic editing of `identity/runtime/IDENTITY_COMPILED.md` is non-compliant.
 6. The legacy compatibility-path term is now guarded from current-turn authority resolution and strict user-visible native-chat lanes by `scripts/validate_compatibility_legacy_boundary.py`.
 7. `scripts/validate_compiled_brief_projection_boundary.py` separately proves pass-default compiled-brief outputs depend on `tracked_compiled_brief_frozen_path`, not on the legacy compatibility-path term.
+
+### 10.7 Runtime catalog metadata hygiene closure (2026-03-23)
+
+1. Review verdict: the former raw-metadata follow-on is now protocol-owned and closed on the `v1.6.10` lane.
+2. Machine-proof family:
+   - `scripts/validate_runtime_catalog_metadata_hygiene.py`
+   - `scripts/repair_runtime_catalog_metadata_hygiene.py`
+   - `scripts/check_identity_codex_launcher_migration_closure.py`
+   - `scripts/run_identity_codex_launcher_workspace_convergence.py`
+   - `scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh`
+   - `scripts/ci/run_identity_codex_launcher_cross_workspace_pilot_probes_ci.sh`
+3. Required-gate / readiness citizenship is also now explicit because:
+   - `scripts/ci/run_required_runtime_gates_ci.sh` executes the metadata validator;
+   - `scripts/release_readiness_check.py` executes the same validator family during readiness.
+4. Current-state note (2026-03-23): `python3 scripts/validate_runtime_catalog_metadata_hygiene.py --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --require-active --json-only` returned `PASS_REQUIRED` with `checked_identity_count=4` and `violation_count=0`.
+5. Review interpretation is frozen:
+   - launcher semantics remain closed;
+   - raw runtime-catalog metadata hygiene is a separate fail-close lane;
+   - future raw-row cleanup must not be misreported as resolver or launcher-semantic debt.
 ## 2026-03-20 Closure Addendum - temp-path and compatibility-pointer terminology
 
 - `ISSUE-006` review verdict: `PASS_REQUIRED` once `scripts/validate_runtime_temp_path_contract.py` proves repaired live temp/probe surfaces no longer hardcode `/tmp` or raw probe `mktemp`.

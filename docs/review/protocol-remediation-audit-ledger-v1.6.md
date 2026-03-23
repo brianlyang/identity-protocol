@@ -4295,3 +4295,10 @@ Round-21 runtime identity authority bypass closure (`HEAD=dirty`, 2026-03-16):
 - `ISSUE-005` review verdict: `PASS_REQUIRED` once versioned current carriers declare and satisfy the frozen alias policy enforced by `scripts/validate_current_alias_versioned_carrier.py`.
 - `ISSUE-007` review verdict: `PASS_REQUIRED` once active task/control-plane/coverage/replay surfaces stop referencing `validate_v16_*` validators except where contract-binding marks them `wrapper_compatibility_optional`; `scripts/validate_active_validator_alias_residue.py` is the machine gate.
 - These rows close residual cleanup debt; they do not reopen earlier batch semantics.
+
+## 2026-03-22 Closure Addendum - No-downgrade motherline freeze
+
+- Review verdict: `PASS_REQUIRED` once `rq_047_protocol_no_downgrade_motherline_contract_v1` is frozen in `IDENTITY_PROTOCOL.md`, bound as `ASB16-RQ-047`, and mirrored by the runtime hard-semantics clause.
+- Review interpretation: the protocol does not downgrade, does not provide downward compatibility, and does not backstop lagging instance/workspace adoption on active surfaces.
+- Compatibility/fallback/bridge residue may survive only on governed migration/replay/diagnostic lanes; any return to active defaults, validator green paths, current-turn runtime truth, active entry, or protocol-owned success paths is a fail-close regression.
+- `ISSUE-027` remains the canonical workbook tracker only for residual cleanup/truth-sync tails; the missing motherline principle itself is no longer the open gap.

@@ -147,6 +147,8 @@ def main() -> int:
     payload: dict[str, Any] = {
         "compatibility_legacy_boundary_status": STATUS_FAIL_REQUIRED,
         "error_code": ERR_LEGACY_BOUNDARY,
+        "required_contract": True,
+        "auto_required_signal": False,
         "repo_root": str(repo_root),
         "workspace_root": str(workspace_root),
         "stream_registry_path": str(stream_registry_path),

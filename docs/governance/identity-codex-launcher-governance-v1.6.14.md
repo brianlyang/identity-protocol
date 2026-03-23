@@ -223,7 +223,11 @@ These names and directories are frozen by this stream. The renderer / installer 
    - those copyable commands must be terminal-native direct commands (`id-<id> ...`, `identity-codex --identity-id <id> ...`), not shell-wrapped helper strings such as `zsh -lic '...'`.
    - `recommended_user_command` must remain protocol-owned and environment-aware: when the canonical short launcher is not discoverable on the current `PATH`, the bundle must switch to the absolute direct launcher path instead of forcing the operator to debug shell profile state manually.
    - `identity-codex commands --identity-id <id> --json-only` must emit a structured command bundle (`recommended_user_command`, `copyable_commands`, `instance_answer_guidance`) so identity instances can answer concretely without inventing their own launcher logic.
-13. Audit follow-on boundary: some external workspace raw catalog rows may still carry metadata hygiene residue such as `canonical_scope=UNKNOWN`; this does **not** reopen launcher convergence semantics as long as the protocol-owned resolver returns the correct runtime truth (`source_layer=project`, `resolved_scope=USER`). Any cleanup of raw catalog metadata must be tracked as a separate hygiene/backfill follow-on, not folded back into `v1.6.14` launcher semantics.
+13. Audit follow-on closure note (2026-03-23): the formerly separate raw catalog metadata hygiene boundary is now protocol-owned and closed on `v1.6.10`:
+   - `scripts/validate_runtime_catalog_metadata_hygiene.py` and `scripts/repair_runtime_catalog_metadata_hygiene.py` now own raw row self-description such as `canonical_scope` / `canonical_pack_path`;
+   - `scripts/check_identity_codex_launcher_migration_closure.py` now projects `runtime_catalog_metadata_hygiene_status`;
+   - launcher convergence probes seed stale metadata and prove apply-time repair through the same convergence entry.
+   This remains **separate** from launcher semantics: launcher convergence stays closed, and raw metadata cleanup must not be folded back into `v1.6.14`.
 
 ### 6.2 Discussion-package boundary before coding
 

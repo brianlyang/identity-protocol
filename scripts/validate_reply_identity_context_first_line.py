@@ -17,8 +17,11 @@ from identity_runtime_authority_common import validate_runtime_egress_identity_a
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
+    REPLY_FIRST_LINE_SURFACE_INVALID,
+    REPLY_FIRST_LINE_SURFACE_RAW_CANONICAL,
+    REPLY_FIRST_LINE_SURFACE_VISIBLE_PROJECTION,
     blocker_receipt,
-    parse_identity_context_stamp,
+    parse_reply_first_line_surface,
     resolve_layer_intent,
     resolve_stamp_context,
 )
@@ -43,6 +46,10 @@ STRICT_LOCK_OPERATIONS = {
     "ci",
     "validate",
     "three-plane",
+}
+ALLOWED_REPLY_FIRST_LINE_SURFACE_MODES = {
+    REPLY_FIRST_LINE_SURFACE_RAW_CANONICAL,
+    REPLY_FIRST_LINE_SURFACE_VISIBLE_PROJECTION,
 }
 
 
@@ -212,6 +219,18 @@ def _emit_blocker(receipt_path: Path, payload: dict[str, Any]) -> None:
     receipt_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _parse_allowed_surface_modes(raw_value: str) -> list[str]:
+    tokens = [
+        str(item).strip()
+        for item in str(raw_value or "").replace(";", ",").split(",")
+        if str(item).strip()
+    ]
+    modes = [token for token in tokens if token in ALLOWED_REPLY_FIRST_LINE_SURFACE_MODES]
+    if modes:
+        return modes
+    return [REPLY_FIRST_LINE_SURFACE_RAW_CANONICAL]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate that user-visible assistant replies start with Identity-Context first line.")
     ap.add_argument("--identity-id", required=True)
@@ -223,6 +242,14 @@ def main() -> int:
     ap.add_argument("--reply-file", default="", help="single reply text file")
     ap.add_argument("--reply-text", default="", help="inline single reply text")
     ap.add_argument("--stamp-json", default="", help="optional rendered stamp payload json (external_stamp field)")
+    ap.add_argument(
+        "--accepted-surface-modes",
+        default=REPLY_FIRST_LINE_SURFACE_RAW_CANONICAL,
+        help=(
+            "comma-separated accepted first-line surface modes. "
+            "Supported: raw_canonical, visible_projection"
+        ),
+    )
     ap.add_argument("--expected-work-layer", default="")
     ap.add_argument("--expected-source-layer", default="")
     ap.add_argument("--layer-intent-text", default="", help="optional natural-language intent text for layer auto-resolution")
@@ -335,9 +362,16 @@ def main() -> int:
     first_lines = [_first_nonempty_line(x) for x in reply_samples]
     first_lines = [x for x in first_lines if x]
 
+    accepted_surface_modes = _parse_allowed_surface_modes(args.accepted_surface_modes)
+    parsed_surface_entries = [parse_reply_first_line_surface(line) for line in first_lines]
+
     missing_refs: list[str] = []
-    for idx, line in enumerate(first_lines, start=1):
-        if not line.startswith("Identity-Context:"):
+    for idx, entry in enumerate(parsed_surface_entries, start=1):
+        surface_mode = str(entry.get("surface_mode", "")).strip()
+        if surface_mode == REPLY_FIRST_LINE_SURFACE_INVALID:
+            missing_refs.append(f"sample:{idx}")
+            continue
+        if surface_mode not in accepted_surface_modes:
             missing_refs.append(f"sample:{idx}")
 
     stale_reasons: list[str] = []
@@ -353,12 +387,23 @@ def main() -> int:
             stale_reasons.append("reply_evidence_missing_strict_default_gate")
         error_code = ERR_REPLY_EVIDENCE_MISSING
 
+    first_surface_entry = parsed_surface_entries[0] if parsed_surface_entries else {}
+    first_surface_mode = str(first_surface_entry.get("surface_mode", "")).strip() or REPLY_FIRST_LINE_SURFACE_INVALID
+    if first_lines and first_surface_mode == REPLY_FIRST_LINE_SURFACE_INVALID:
+        stale_reasons.append("reply_first_line_surface_mode_invalid")
+    elif first_lines and first_surface_mode not in accepted_surface_modes:
+        stale_reasons.append("reply_first_line_surface_mode_not_allowed")
+
     if len(missing_refs) > 0:
         stale_reasons.append("reply_first_line_identity_context_missing")
         if not error_code:
             error_code = ERR_REPLY_FIRST_LINE
 
-    parsed_first: dict[str, Any] = parse_identity_context_stamp(first_lines[0]) if first_lines else {}
+    parsed_first: dict[str, Any] = (
+        dict(first_surface_entry.get("parsed_stamp") or {})
+        if isinstance(first_surface_entry.get("parsed_stamp"), dict)
+        else {}
+    )
     expected_source_layer_input = str(args.expected_source_layer or "").strip().lower()
     expected_source_layer_input_invalid = bool(
         expected_source_layer_input and expected_source_layer_input not in ALLOWED_SOURCE_LAYERS
@@ -512,6 +557,8 @@ def main() -> int:
             if strict_format_enforced and not args.enforce_first_line_gate
             else ("explicit" if args.enforce_first_line_gate else "contract")
         ),
+        "reply_first_line_surface_mode": first_surface_mode if first_lines else "",
+        "reply_first_line_allowed_surface_modes": accepted_surface_modes,
         "error_code": error_code,
         "layer_intent_resolution_status": STATUS_PASS_REQUIRED if not error_code else STATUS_FAIL_REQUIRED,
         "resolved_work_layer": expected_work_layer,

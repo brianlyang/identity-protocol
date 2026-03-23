@@ -219,14 +219,6 @@ def main() -> int:
             "canonical/mirror identity mismatches and missing mirror become fail-close even under multi-active."
         ),
     )
-    ap.add_argument(
-        "--allow-compatibility-projection-drift",
-        action="store_true",
-        help=(
-            "allow cross-session shared-pointer drift only when the pointer is explicitly marked "
-            "as a non-authoritative actor-global compatibility projection."
-        ),
-    )
     args = ap.parse_args()
 
     catalog_path = Path(args.catalog).expanduser().resolve()

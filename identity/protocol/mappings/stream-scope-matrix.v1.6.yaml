@@ -118,3 +118,12 @@ streams:
     allowed_requirement_ids: []
     forbidden_requirement_ids: []
     forbidden_path_tokens: []
+
+  - stream_version: v1.6.17
+    scope_topic: identity_routing_learning_strengthening
+    allowed_requirement_ids:
+      - ASB16-RQ-048
+      - ASB16-RQ-049
+      - ASB16-RQ-050
+    forbidden_requirement_ids: []
+    forbidden_path_tokens: []

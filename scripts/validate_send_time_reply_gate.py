@@ -53,7 +53,10 @@ from headstamp_error_family_common import (
     ERR_HDSTAMP_RECEIPT_MISSING,
     inject_legacy_error_fields,
 )
-from response_stamp_common import parse_identity_context_stamp
+from response_stamp_common import (
+    REPLY_FIRST_LINE_SURFACE_INVALID,
+    parse_reply_first_line_surface,
+)
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 
 ERR_SEND_TIME_GATE = ERR_HDSTAMP_MISSING_OR_MALFORMED
@@ -918,16 +921,19 @@ def _reply_transport_ref(args: argparse.Namespace, evidence_mode: str) -> str:
     return "unresolved"
 
 
-def _extract_display_headstamp_identity(reply_text: str) -> str:
+def _extract_reply_first_line_surface(reply_text: str) -> dict[str, Any]:
     for raw_line in str(reply_text or "").splitlines():
         line = str(raw_line or "").strip()
         if not line:
             continue
-        if "Identity-Context:" not in line:
-            return ""
-        parsed = parse_identity_context_stamp(line)
-        return str(parsed.get("identity_id", "")).strip()
-    return ""
+        return parse_reply_first_line_surface(line)
+    return {
+        "surface_mode": REPLY_FIRST_LINE_SURFACE_INVALID,
+        "raw_first_line": "",
+        "canonical_identity_context_line": "",
+        "display_headstamp_prefix": "",
+        "parsed_stamp": {},
+    }
 
 
 def _is_governed_outlet(channel_id: str) -> bool:
@@ -1161,7 +1167,11 @@ def main() -> int:
         return 1
 
     strict_context = _is_strict_send_time_context(args.operation, args.enforce_send_time_gate)
-    display_headstamp_identity_id = _extract_display_headstamp_identity(reply_text)
+    reply_first_line_surface = _extract_reply_first_line_surface(reply_text)
+    display_headstamp_identity_id = str(
+        (reply_first_line_surface.get("parsed_stamp") or {}).get("identity_id", "")
+    ).strip()
+    reply_first_line_surface_mode = str(reply_first_line_surface.get("surface_mode", "")).strip()
     reply_transport_ref = _reply_transport_ref(args, evidence_mode)
     reply_transport_binding = _load_reply_transport_binding(
         catalog_path=catalog_path,
@@ -1275,6 +1285,7 @@ def main() -> int:
             "reply_first_line_missing_refs": [],
             "expected_identity_id": args.identity_id,
             "reply_first_line_identity_id": display_headstamp_identity_id,
+            "reply_first_line_surface_mode": reply_first_line_surface_mode,
             "display_headstamp_identity_id": display_headstamp_identity_id,
             "reply_first_line_work_layer": "",
             "reply_first_line_source_layer": "",
@@ -1373,6 +1384,7 @@ def main() -> int:
             "reply_first_line_missing_refs": [],
             "expected_identity_id": args.identity_id,
             "reply_first_line_identity_id": display_headstamp_identity_id,
+            "reply_first_line_surface_mode": reply_first_line_surface_mode,
             "display_headstamp_identity_id": display_headstamp_identity_id,
             "reply_first_line_work_layer": "",
             "reply_first_line_source_layer": "",
@@ -1801,6 +1813,7 @@ def main() -> int:
         cmd.extend(["--reply-log", str(args.reply_log).strip()])
     elif reply_text:
         cmd.extend(["--reply-text", reply_text])
+    cmd.extend(["--accepted-surface-modes", "raw_canonical,visible_projection"])
 
     p = subprocess.run(cmd, capture_output=True, text=True)
     validator_payload = _parse_json_payload(p.stdout)
@@ -1883,6 +1896,7 @@ def main() -> int:
         "reply_first_line_missing_refs": validator_payload.get("reply_first_line_missing_refs", []),
         "expected_identity_id": validator_payload.get("expected_identity_id", ""),
         "reply_first_line_identity_id": validator_payload.get("reply_first_line_identity_id", ""),
+        "reply_first_line_surface_mode": validator_payload.get("reply_first_line_surface_mode", ""),
         "reply_first_line_work_layer": validator_payload.get("reply_first_line_work_layer", ""),
         "reply_first_line_source_layer": validator_payload.get("reply_first_line_source_layer", ""),
         "expected_source_layer_input": validator_payload.get("expected_source_layer_input", ""),

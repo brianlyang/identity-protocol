@@ -37,6 +37,10 @@ ALLOWED_RESPONSE_STAMP_REDACTION_POLICIES = {"strict", "standard"}
 ALLOWED_RESPONSE_STAMP_MISMATCH_ACTIONS = {"blocker_receipt"}
 ALLOWED_WORK_LAYERS = {"protocol", "instance", "dual"}
 ALLOWED_SOURCE_LAYERS = {"project", "global"}
+DISPLAY_HEADSTAMP_PREFIX = "Display-Headstamp:"
+REPLY_FIRST_LINE_SURFACE_RAW_CANONICAL = "raw_canonical"
+REPLY_FIRST_LINE_SURFACE_VISIBLE_PROJECTION = "visible_projection"
+REPLY_FIRST_LINE_SURFACE_INVALID = "invalid"
 LEGACY_SOURCE_LAYER_ALIASES = {
     "local": "project",
     "repo": "global",
@@ -942,7 +946,7 @@ def render_operator_headstamp_lines(
     machine_payload: dict[str, Any] | None = None,
 ) -> list[str]:
     lines = [
-        "Display-Headstamp: "
+        DISPLAY_HEADSTAMP_PREFIX + " "
         + render_external_stamp_with_layer_context(
             ctx,
             disclosure_level=disclosure_level,
@@ -1217,6 +1221,33 @@ def parse_identity_context_stamp(stamp_line: str) -> dict[str, Any]:
     fields["_raw_identity_segment"] = identity_segment.strip()
     fields["_raw_layer_segment"] = layer_segment.strip()
     return fields
+
+
+def parse_reply_first_line_surface(first_line: str) -> dict[str, Any]:
+    raw = str(first_line or "").strip()
+    payload: dict[str, Any] = {
+        "surface_mode": REPLY_FIRST_LINE_SURFACE_INVALID,
+        "raw_first_line": raw,
+        "canonical_identity_context_line": "",
+        "display_headstamp_prefix": "",
+        "parsed_stamp": {},
+    }
+    if not raw:
+        return payload
+    if raw.startswith("Identity-Context:"):
+        payload["surface_mode"] = REPLY_FIRST_LINE_SURFACE_RAW_CANONICAL
+        payload["canonical_identity_context_line"] = raw
+        payload["parsed_stamp"] = parse_identity_context_stamp(raw)
+        return payload
+    if raw.startswith(DISPLAY_HEADSTAMP_PREFIX):
+        candidate = raw[len(DISPLAY_HEADSTAMP_PREFIX) :].strip()
+        if candidate.startswith("Identity-Context:"):
+            payload["surface_mode"] = REPLY_FIRST_LINE_SURFACE_VISIBLE_PROJECTION
+            payload["canonical_identity_context_line"] = candidate
+            payload["display_headstamp_prefix"] = DISPLAY_HEADSTAMP_PREFIX
+            payload["parsed_stamp"] = parse_identity_context_stamp(candidate)
+            return payload
+    return payload
 
 
 def blocker_receipt(

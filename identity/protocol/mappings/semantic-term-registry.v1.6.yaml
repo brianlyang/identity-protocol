@@ -1,7 +1,7 @@
 schema_version: 1
 registry_version: v1
 stream_version: v1.6
-updated_at_utc: "2026-03-22T00:00:00Z"
+updated_at_utc: "2026-03-23T00:00:00Z"
 
 terms:
   - term_id: catalog_multi_active
@@ -30,13 +30,65 @@ terms:
     aliases:
       - "no downgrade motherline"
       - "no backstop motherline"
+      - "no backward compatibility"
+      - "不做向下兼容"
       - "兼容只限迁移诊断"
-    semantics: "Compatibility, fallback, and bridge surfaces may exist only for migration, replay, or diagnostics; they must not re-enter active defaults, validator green paths, or current-turn runtime truth."
+    semantics: "Compatibility, fallback, and bridge surfaces may exist only for migration, replay, or diagnostics. Active protocol/runtime surfaces do not downgrade or provide backward compatibility, and those compatibility surfaces must not re-enter active defaults, validator green paths, current-turn runtime truth, active execution entry, or protocol-owned success paths."
     allowed_scope:
       - governance
       - migration_governance
       - runtime_guard
       - stream_v1_6_10
+
+  - term_id: route_discovery_convergence_contract
+    canonical_term: route_discovery_convergence_contract_v1
+    aliases:
+      - "route discovery convergence"
+      - "auto-routing strengthening"
+      - "第三环上浮补强"
+    semantics: "Upper-layer strengthening contract above the kernel Auto-routing contract. Under persistent uncertainty, route discovery may fan out across candidates, but acceptance must converge serially with explicit selection basis, selected candidate, and governed fallback."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_17
+
+  - term_id: roundtable_four_track_cross_validation_contract
+    canonical_term: roundtable_four_track_cross_validation_contract_v1
+    aliases:
+      - "roundtable four-track cross validation"
+      - "four-track cross validation"
+      - "圆桌四轨交叉核验"
+      - "第三四环共享四轨核验原语"
+    semantics: "Shared cross-validation primitive consumed by the strengthened third and fourth loops. The frozen tracks are roundtable, vendor/official capability, reference/specification, and search/runtime probe. First-loop multimodal evidence may feed these tracks but does not become a fifth track. The third loop and fourth loop keep independent centers; they both consume this primitive. Third-loop parallel probes require serial acceptance through this primitive. Fourth-loop artifacts may promote only after this primitive is satisfied, and any next-round first-loop reentry must occur separately through feedback_to_judgement_loopback_contract_v1."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_17
+
+  - term_id: feedback_operational_prompt_contract
+    canonical_term: feedback_operational_prompt_contract_v1
+    aliases:
+      - "feedback operational prompt"
+      - "rule-learning strengthening"
+      - "第四环上浮补强"
+    semantics: "Upper-layer strengthening contract above the kernel Rule learning contract. Evidence-linked feedback derives scoped operational prompts that remain replay-verified, rollback-capable, TTL-bounded, and non-authoritative relative to kernel/system/identity baseline instructions."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_17
+
+  - term_id: feedback_to_judgement_loopback_contract
+    canonical_term: feedback_to_judgement_loopback_contract_v1
+    aliases:
+      - "feedback to judgement loopback"
+      - "4→1 loopback"
+      - "第四环回挂第一环"
+      - "operational prompt preflight binding"
+    semantics: "Standalone bridge contract governing how fourth-loop governed artifacts re-enter next-round first-loop preflight. It does not replace the fourth-loop center and does not replace first-loop truth. Loopback artifacts are governed preflight aids only: they remain scope-bounded, TTL-bounded, replay/rollback-controlled, and subordinate to current-round first-loop evidence revalidation."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_17
 
   - term_id: protocol_generated_gateway_shell
     canonical_term: protocol_generated_gateway_shell
@@ -188,6 +240,26 @@ forbidden_phrases:
   - phrase: "fallback/backstop may restore current-turn runtime truth"
     replacement: "session_primary_binding + no_downgrade_motherline require fail-close when authoritative runtime truth is missing"
     rationale: "Prevents fallback/backstop language from re-entering current-turn runtime semantics."
+
+  - phrase: "protocol may provide downward compatibility for lagging instances"
+    replacement: "instances must self-upgrade; active protocol surfaces do not provide downward compatibility"
+    rationale: "Prevents lagging adoption from reopening the motherline as a compatibility backstop."
+
+  - phrase: "compatibility/backstop may remain on active entry or success path"
+    replacement: "no_downgrade_motherline forbids compatibility/backstop on active execution entry and protocol-owned success paths"
+    rationale: "Keeps compatibility residue out of live execution and success semantics."
+
+  - phrase: "third and fourth loops share one center"
+    replacement: "third and fourth loops keep independent centers and share one roundtable four-track cross-validation primitive"
+    rationale: "Prevents the shared primitive from being misclassified as a shared loop center."
+
+  - phrase: "fourth loop directly rewrites first-loop truth"
+    replacement: "fourth-loop artifacts may only re-enter through feedback_to_judgement_loopback_contract_v1 and first-loop revalidation remains authoritative"
+    rationale: "Prevents loopback guidance from being misclassified as first-loop truth."
+
+  - phrase: "operational prompt is current-round truth"
+    replacement: "operational prompt artifacts are governed preflight aids, not current-round truth"
+    rationale: "Prevents prompt-derived artifacts from outranking current evidence."
 
 scan_roots:
   - identity/protocol/IDENTITY_PROTOCOL.md

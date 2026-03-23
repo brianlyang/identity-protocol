@@ -4989,3 +4989,11 @@ Mandatory behavior:
 - `ISSUE-005` is closed by freezing versioned `*.current.yaml` carriers as intentional compatibility aliases with `pointer_contract=frozen_versioned_active_carrier`, `upgrade_switch_mode=pointer_only`, and `replay_snapshot_immutable=true`; `scripts/validate_current_alias_versioned_carrier.py` is the machine gate.
 - `ISSUE-007` is closed by promoting canonical active validators (`scripts/validate_intake_evidence_core.py`, `scripts/validate_cross_verification_tracks.py`, `scripts/validate_intake_evidence_quorum.py`) and demoting `validate_v16_*` entries to explicit `wrapper_compatibility_optional` aliases only; `scripts/validate_active_validator_alias_residue.py` is the machine gate.
 - These closures are protocol-bucket only and do not reopen `v1.6.12` headstamp semantics.
+
+### A7) No-downgrade / no-backstop / no backward-compatibility motherline freeze (2026-03-22)
+
+- `rq_047_protocol_no_downgrade_motherline_contract_v1` is the bottom-layer kernel contract for this rule; `ASB16-RQ-047` binds it in `contract-binding.v1.6.yaml`.
+- The identity protocol is a standard and upgrade target, not a compatibility shelter for lagging instances, workspaces, or one-off scenes.
+- Active defaults, validator green paths, current-turn runtime truth, active execution entry, and protocol-owned success paths must not downgrade themselves or provide backward compatibility for historical residue.
+- Compatibility / fallback / bridge behavior is limited to governed migration, replay, and diagnostics surfaces; explicit fixture/import lanes remain non-runtime only and do not create active-runtime precedent.
+- Instances and workspaces must self-upgrade to the current protocol; unresolved lagging adoption remains instance-owned debt until closed through governed migration/repair.

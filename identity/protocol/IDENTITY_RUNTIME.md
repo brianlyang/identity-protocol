@@ -71,6 +71,16 @@ After each high-impact action:
 - append TASK_HISTORY entry
 - persist evidence artifact paths
 
+## Active runtime no-downgrade boundary (motherline freeze)
+
+Hard semantics:
+
+1. Current-turn runtime truth must resolve from current authoritative contract/session-primary truth; compatibility projection, legacy alias bridges, literal actor defaults, and historical overlays are not active truth sources.
+2. Active runtime entry, launcher/startup entry, route/tool admission, and validator green paths must not use downward compatibility or backstop semantics to keep lagging instances alive.
+3. Repair, migration, replay, and diagnostics tooling may observe historical/compatibility surfaces only as non-success-path evidence and must not project them back into current-turn runtime truth.
+4. Instances and workspaces must self-upgrade to current protocol obligations; protocol runtime does not reopen closed semantics to absorb lagging adoption debt.
+5. Explicit fixture/import lanes are non-runtime only; they cannot be used as active entry surfaces, success-path evidence, or validator green defaults.
+
 ## Batch-6 anchor placeholders (v1.6 intake, non-promotional)
 
 The following sections provide stable kernel anchors for v1.6 Batch-6 mapping rows.

@@ -1537,13 +1537,24 @@ def main() -> int:
                 "--require-run-id",
             )
         )
-        has_send_time_positive_probe = all(
-            token in text
-            for token in (
-                "run_probe send_time_governed_pass_headstamp_required",
-                "send_time_governed_pass_headstamp_required: send_time_gate_status must be PASS_REQUIRED",
-                "send_time_governed_pass_headstamp_required: reply_first_line_status must be PASS_REQUIRED",
-                "send_time_governed_pass_headstamp_required: chat_egress_uniqueness_status must be PASS_REQUIRED",
+        has_send_time_positive_probe = (
+            all(
+                token in text
+                for token in (
+                    "run_probe send_time_governed_pass_headstamp_required",
+                    "send_time_governed_pass_headstamp_required: send_time_gate_status must be PASS_REQUIRED",
+                    "send_time_governed_pass_headstamp_required: reply_first_line_status must be PASS_REQUIRED",
+                    "send_time_governed_pass_headstamp_required: chat_egress_uniqueness_status must be PASS_REQUIRED",
+                )
+            )
+            or all(
+                token in text
+                for token in (
+                    'elif name in {"send_time_governed_pass_headstamp_required", "send_time_governed_visible_projection_pass"}:',
+                    'raise SystemExit(f"{name}: send_time_gate_status must be PASS_REQUIRED")',
+                    'raise SystemExit(f"{name}: reply_first_line_status must be PASS_REQUIRED")',
+                    'raise SystemExit(f"{name}: chat_egress_uniqueness_status must be PASS_REQUIRED")',
+                )
             )
         )
         has_post_check_materialization_probe = all(

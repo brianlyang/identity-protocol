@@ -79,9 +79,13 @@ assert lane_summary["protocol_gate_depends_on_projection_docs_checker_counts"] i
 assert lane_summary["lane_change_scope"], lane_summary
 
 stream_scope = payload["stream_scope"]
+stream_scope_status = stream_scope["stream_scope_semantic_integrity_status"]
 if lane_summary["stream_touch_evidence_status"] == "NOT_APPLICABLE_NO_STREAM_DOCS_TOUCHED":
-    assert stream_scope["stream_scope_semantic_integrity_status"] == "SKIPPED_NOT_REQUIRED", stream_scope
+    assert stream_scope_status == "SKIPPED_NOT_REQUIRED", stream_scope
     assert stream_scope.get("touched_stream_versions") == [], stream_scope
+elif stream_scope_status == "FAIL_REQUIRED":
+    assert lane_summary["stream_touch_evidence_status"] == "APPLICABLE_FAIL_REQUIRED", lane_summary
+    assert lane_summary["stream_touch_applicability_reason"] == "stream_scope_semantic_integrity_red", lane_summary
 else:
     assert lane_summary["stream_touch_evidence_status"] == "APPLICABLE_PASS_REQUIRED", lane_summary
 

@@ -1399,6 +1399,66 @@ def _normalize_reasoning_contracts(task: dict[str, Any]) -> tuple[list[str], lis
     return forced_required_keys, restored_validator_keys, arbitration_link_restored
 
 
+def _normalize_routing_learning_strengthening(task: dict[str, Any]) -> tuple[bool, bool]:
+    route_link_restored = False
+    feedback_link_restored = False
+    arbitration = task.get("capability_arbitration_contract")
+    if not isinstance(arbitration, dict):
+        return route_link_restored, feedback_link_restored
+
+    route_desired = {
+        "contract_ref": "route_discovery_convergence_contract_v1",
+        "validator": "scripts/validate_capability_fit_roundtable_evidence.py",
+        "supporting_validators": [
+            "scripts/validate_discovery_requiredization.py",
+            "scripts/validate_identity_orchestration_contract.py",
+            "scripts/validate_identity_knowledge_contract.py",
+        ],
+        "candidate_rows_required": True,
+        "selected_candidate_field": "selected_candidate_id",
+        "selection_basis_field": "selection_basis",
+        "serial_convergence_required": True,
+        "convergence_status_field": "convergence_status",
+        "fallback_route_field": "fallback_route_if_selected_fails",
+    }
+    route_current = arbitration.get("route_discovery_enforcement")
+    if not isinstance(route_current, dict):
+        arbitration["route_discovery_enforcement"] = json.loads(json.dumps(route_desired))
+        route_link_restored = True
+    else:
+        for key, value in route_desired.items():
+            if route_current.get(key) != value:
+                route_current[key] = json.loads(json.dumps(value))
+                route_link_restored = True
+        arbitration["route_discovery_enforcement"] = route_current
+
+    feedback_desired = {
+        "contract_ref": "feedback_operational_prompt_contract_v1",
+        "validator": "scripts/validate_identity_experience_feedback_governance.py",
+        "supporting_validators": [
+            "scripts/validate_identity_experience_feedback.py",
+        ],
+        "rulebook_delta_required": True,
+        "operational_prompt_ref_field": "operational_prompt_ref",
+        "prompt_injection_status_field": "prompt_injection_status",
+        "replay_status_field": "replay_status",
+        "rollback_prompt_ref_required": True,
+        "ttl_rounds_required": True,
+    }
+    feedback_current = arbitration.get("feedback_operational_prompt_enforcement")
+    if not isinstance(feedback_current, dict):
+        arbitration["feedback_operational_prompt_enforcement"] = json.loads(json.dumps(feedback_desired))
+        feedback_link_restored = True
+    else:
+        for key, value in feedback_desired.items():
+            if feedback_current.get(key) != value:
+                feedback_current[key] = json.loads(json.dumps(value))
+                feedback_link_restored = True
+        arbitration["feedback_operational_prompt_enforcement"] = feedback_current
+
+    return route_link_restored, feedback_link_restored
+
+
 def _normalize_unique_entry_contracts(task: dict[str, Any]) -> tuple[list[str], list[str]]:
     forced_required_keys: list[str] = []
     restored_validator_keys: list[str] = []
@@ -2014,6 +2074,7 @@ def main() -> int:
     ) = _normalize_prompt_contracts(updated)
     forced_mm_required_keys, restored_mm_validator_keys, arbitration_link_restored = _normalize_multimodal_contracts(updated)
     forced_rl_required_keys, restored_rl_validator_keys, reasoning_arbitration_link_restored = _normalize_reasoning_contracts(updated)
+    route_discovery_link_restored, feedback_operational_prompt_link_restored = _normalize_routing_learning_strengthening(updated)
     forced_entry_required_keys, restored_entry_validator_keys = _normalize_unique_entry_contracts(updated)
     (
         forced_lane_headstamp_required_keys,
@@ -2767,6 +2828,8 @@ def main() -> int:
         "forced_reasoning_required_keys": forced_rl_required_keys,
         "restored_reasoning_validator_keys": restored_rl_validator_keys,
         "reasoning_arbitration_link_restored": reasoning_arbitration_link_restored,
+        "route_discovery_arbitration_link_restored": route_discovery_link_restored,
+        "feedback_operational_prompt_arbitration_link_restored": feedback_operational_prompt_link_restored,
         "required_unique_entry_contract_keys": list(REQUIRED_ENTRY_KEYS),
         "missing_unique_entry_contract_keys_before": entry_missing_before,
         "missing_unique_entry_contract_keys_after": entry_missing_after,

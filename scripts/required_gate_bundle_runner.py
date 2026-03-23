@@ -119,6 +119,9 @@ BUNDLE_REQUIREMENT_ORDER: tuple[str, ...] = (
     "asb16-rq-041",
     "asb16-rq-042",
     "asb16-rq-043",
+    "asb16-rq-047",
+    "asb16-rq-048",
+    "asb16-rq-049",
 )
 
 TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
@@ -165,6 +168,9 @@ TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
     "asb16-rq-041": "skill_sync_drift_guard",
     "asb16-rq-042": "agent_relay_final_answer",
     "asb16-rq-043": "identity_instance_pack_topology",
+    "asb16-rq-047": "protocol_no_downgrade_motherline",
+    "asb16-rq-048": "route_discovery_convergence",
+    "asb16-rq-049": "feedback_operational_prompt",
 }
 REQUIREMENT_BY_TARGET: dict[str, str] = {v: k for k, v in TARGET_NAME_BY_REQUIREMENT.items()}
 
@@ -212,6 +218,9 @@ STATUS_FIELD_BY_TARGET: dict[str, str] = {
     "skill_sync_drift_guard": "skill_sync_drift_guard_status",
     "agent_relay_final_answer": "agent_relay_final_answer_status",
     "identity_instance_pack_topology": "instance_pack_topology_status",
+    "protocol_no_downgrade_motherline": "compatibility_legacy_boundary_status",
+    "route_discovery_convergence": "route_discovery_convergence_status",
+    "feedback_operational_prompt": "feedback_operational_prompt_status",
 }
 
 ERROR_FIELD_CANDIDATES: tuple[str, ...] = (

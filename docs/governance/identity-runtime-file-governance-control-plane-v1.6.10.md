@@ -1,6 +1,6 @@
 # Identity Runtime File Governance Control Plane (v1.6.10)
 
-Status: Active protocol stream draft (boundary freeze, 2026-03-17)
+Status: Active protocol stream (boundary freeze + metadata hygiene closure, 2026-03-23)
 Layer: protocol
 Scope: runtime dynamic file governance boundary only; this stream does **not** blanket-own instance runtime state and does **not** absorb skill supply-chain semantics.
 
@@ -248,11 +248,12 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
      entry set (`scripts/ci/run_full_scan_target_regression_ci.sh`, `scripts/ci/run_required_runtime_gates_ci.sh`,
      `scripts/e2e_smoke_test.sh`);
    - probe / fixture shell surfaces may stay exempt only through an explicit exemption registry, never by omission.
-10. cross-session pointer drift is only acceptable as compatibility residue, never as authority:
+10. compatibility projection is diagnostic-only, never authority and never a strict green-path allowance:
     - tuple-bound session renders continue to resolve from `(actor_id,session_id)->identity_id`;
-    - shared pointer drift may pass only when validators can prove the pointer carries explicit
-      actor-global compatibility provenance for a different session;
-    - absent that provenance, shared-pointer drift remains fail-close.
+    - strict pointer / health lanes must run on session-primary truth and fail-close when shared pointers remain stale
+      or when compatibility projection attempts to stay `AVAILABLE` on active surfaces;
+    - diagnostic projection metadata may remain only to explain `UNAVAILABLE` / `SUPPRESSED_MULTI_IDENTITY`
+      states, not to legalize cross-session drift on current runtime truth.
 
 ### 10.1 Addendum (2026-03-18): compile/replay compatibility mirror clarification
 
@@ -280,6 +281,24 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
    - semantic/content changes land in governance/template/script sources first,
    - then `scripts/compile_identity_runtime.py` regenerates the compiled brief,
    - direct manual semantic editing of the compiled brief is forbidden.
+
+### 10.3 Addendum (2026-03-23): runtime catalog metadata hygiene closure without launcher-semantic reopen
+
+1. Raw workspace-local runtime catalog self-description is now a dedicated `v1.6.10` hygiene lane:
+   - `scripts/validate_runtime_catalog_metadata_hygiene.py`
+   - `scripts/repair_runtime_catalog_metadata_hygiene.py`
+2. This lane exists to repair raw row underdescription such as `canonical_scope=UNKNOWN` or empty `canonical_pack_path` **without** weakening resolver truth and **without** reopening `v1.6.14` launcher semantics.
+3. The closure family is now wired through the launcher-control-plane surfaces while staying semantically separate from launcher ownership:
+   - `scripts/check_identity_codex_launcher_migration_closure.py` now projects `runtime_catalog_metadata_hygiene_status`;
+   - `scripts/run_identity_codex_launcher_workspace_convergence.py` now performs metadata hygiene repair before launcher closure;
+   - `scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh` and `scripts/ci/run_identity_codex_launcher_cross_workspace_pilot_probes_ci.sh` seed stale metadata and prove apply-time repair.
+4. Required gates and readiness now consume the same metadata hygiene validator, so raw-row cleanup is no longer a chat-only or workbook-only follow-on.
+5. Current closure note (2026-03-23): `python3 scripts/validate_runtime_catalog_metadata_hygiene.py --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --require-active --json-only` returns `PASS_REQUIRED` with `checked_identity_count=4` and `violation_count=0`.
+6. Interpretation is frozen:
+   - resolver truth remains authority-first;
+   - raw metadata hygiene is protocol-owned and fail-close;
+   - launcher convergence remains closed on its own lane;
+   - future cleanup must extend this validator/repair family rather than reintroducing weaker resolver logic or launcher-semantic drift.
 
 ## 11) References
 

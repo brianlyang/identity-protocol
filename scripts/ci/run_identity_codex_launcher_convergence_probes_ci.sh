@@ -48,9 +48,9 @@ minimal_row = {
     "status": str(row.get("status", "active") or "active"),
     "profile": str(row.get("profile", "runtime") or "runtime"),
     "runtime_mode": str(row.get("runtime_mode", "local_only") or "local_only"),
-    "canonical_scope": str(row.get("canonical_scope", "USER") or "USER"),
+    "canonical_scope": "UNKNOWN",
     "pack_path": str(pack_dst),
-    "canonical_pack_path": str(pack_dst),
+    "canonical_pack_path": "",
 }
 catalog_doc = {"identities": [minimal_row]}
 catalog_dst = (workspace_root / ".identity" / "catalog.local.yaml").resolve()
@@ -141,6 +141,8 @@ assert Path(payload["postcheck_evidence_ref"]).exists(), payload
 assert Path(payload["evidence_ref"]).exists(), payload
 assert Path(payload["manifest_ref"]).exists(), payload
 row = payload["repair_results"][0]
+assert row["metadata_repair_status"] == "PASS_REQUIRED", row
+assert row["metadata_hygiene_status"] == "PASS_REQUIRED", row
 assert row["backfill_status"] == "PASS_REQUIRED", row
 assert row["install_status"] == "PASS_REQUIRED", row
 assert row["validator_status"] == "PASS_REQUIRED", row
@@ -158,6 +160,23 @@ for row in records:
     digest = hashlib.sha256(mirror.read_bytes()).hexdigest()
     assert digest == str(row["sha256"]).strip(), row
 print("launcher_convergence_apply_status=PASS_REQUIRED")
+PY
+
+python3 - "${TMP_CATALOG}" <<'PY'
+import sys
+from pathlib import Path
+
+import yaml
+
+catalog_path = Path(sys.argv[1]).resolve()
+doc = yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
+rows = [row for row in (doc.get("identities") or []) if isinstance(row, dict)]
+assert len(rows) == 1, rows
+row = rows[0]
+assert str(row.get("canonical_scope", "")).strip() == "USER", row
+assert str(row.get("canonical_pack_path", "")).strip(), row
+assert str(row.get("canonical_pack_path", "")).strip() == str(Path(str(row.get("pack_path", "")).strip()).resolve()), row
+print("launcher_convergence_metadata_hygiene_apply_status=PASS_REQUIRED")
 PY
 
 FRESH_TRUTH_SYNC_JSON="${TMP_ROOT}/fresh-truth-sync.json"

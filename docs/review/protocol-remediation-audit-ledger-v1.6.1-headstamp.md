@@ -36,6 +36,7 @@ Purpose: single review ledger for all headstamp/HUD issues moved from v1.6.0
 | HS16-103 | 2026-03-09 | protocol | canonicalize headstamp error family to `IP-HDSTAMP-*` across strict wrappers/validators and projection classifiers | local-replay-validated | ACCEPT_WITH_FIX | REPLAYED_LOCAL |
 | HS16-104 | 2026-03-09 | protocol | cross-surface replay confirms canonical family in three-plane/full-scan strict actor-session bound mode | local-replay-validated | ACCEPT_WITH_FIX | REPLAYED_LOCAL |
 | HS16-105 | 2026-03-15 | protocol | strict-default first-line evidence fail-close (no HUD evidence cannot pass strict even without `--enforce-first-line-gate`) + CI negative probe lock | pending-commit | ACCEPT_WITH_FIX | REPLAYED_LOCAL |
+| HS16-106 | 2026-03-23 | protocol | unify raw-canonical vs governed-visible first-line semantics under one shared parser contract and emit `reply_first_line_surface_mode` evidence | local-replay-validated | ACCEPT_WITH_FIX | REPLAYED_LOCAL |
 
 ## 3) Current blocker map (headstamp only)
 
@@ -337,3 +338,59 @@ Observed after fix:
    - host-native official chat panels can keep the standardized two-line envelope,
    - the envelope remains explanatory-only,
    - aggregator consumers now have a frozen machine tuple they can use to exclude this surface from blocker sets without inventing a synthetic pass.
+
+## 14) HS16-106 send-time visible-projection first-line semantics (2026-03-23)
+
+### 14.1 Problem statement
+
+1. `scripts/validate_reply_identity_context_first_line.py` originally treated the first non-empty reply line as valid only when it literally began with `Identity-Context:`.
+2. Governed visible reply surfaces legitimately begin with:
+   - `Display-Headstamp: Identity-Context: ... | Layer-Context: ...`
+3. `scripts/validate_send_time_reply_gate.py` had already grown partial visible-projection parsing logic, so the protocol was carrying two overlapping but non-identical interpretations of the same first-line contract.
+4. Audit consequence:
+   - the same governed visible payload could be treated as a valid projection in one place and a missing headstamp in another.
+
+### 14.2 Landed shared closure
+
+1. `scripts/response_stamp_common.py`
+   - now owns the shared first-line parser and the frozen surface-mode enum:
+     - `raw_canonical`
+     - `visible_projection`
+     - `invalid`
+2. `scripts/validate_reply_identity_context_first_line.py`
+   - now consumes that shared parser,
+   - defaults to `raw_canonical` only,
+   - emits `reply_first_line_surface_mode` and `reply_first_line_allowed_surface_modes` for audit replay.
+3. `scripts/validate_send_time_reply_gate.py`
+   - now consumes the same parser contract,
+   - explicitly allows `raw_canonical,visible_projection` for governed host-visible send-time validation,
+   - projects `reply_first_line_surface_mode` into send-time output.
+4. `scripts/ci/run_host_visible_surface_live_probes_ci.sh`
+   - now carries positive/negative probes that prove:
+     - visible projection remains blocked by default raw-only validation,
+     - visible projection passes when the governed send-time surface explicitly allows it,
+     - send-time and first-line validator no longer disagree on the same governed visible payload.
+
+### 14.3 Replay evidence
+
+1. Real protocol-feedback evidence was replayed from:
+   - `/Users/yangxi/.codex/.identity/system-requirements-analyst/runtime/reports/instance-script-emit-preview/emit-business-headstamp-check-20260322T153715Z.txt`
+   - `/Users/yangxi/.codex/.identity/system-requirements-analyst/runtime/protocol-feedback/issues/2026-03-22-send-time-visible-projection-first-line-semantic-gap/first_line_validate_20260322T154332Z.json`
+2. Observed historical failure:
+   - raw-only first-line validation classified the governed visible reply as `FAIL_REQUIRED` with `IP-HDSTAMP-001` even though the canonical tuple was present inside `Display-Headstamp`.
+3. Post-fix local replay now proves the split is closed:
+   - default raw-only validation still blocks `visible_projection`,
+   - explicit governed visible evaluation passes,
+   - send-time governed visible probe passes,
+   - all three outputs expose the detected `reply_first_line_surface_mode`.
+4. Probe names frozen for regression audit:
+   - `reply_first_line_visible_projection_default_blocked`
+   - `reply_first_line_visible_projection_allowed_pass`
+   - `send_time_governed_visible_projection_pass`
+
+### 14.4 Review verdict
+
+1. Raw canonical artifact semantics remain unchanged and strict.
+2. Governed visible projection is now an additive, machine-classified admission surface rather than an ad-hoc parser exception.
+3. v1.6.1 now owns one shared first-line parser contract across first-line validation and send-time admission.
+4. This closes the protocol-internal semantic split without introducing any business-scene logic or weakening fail-close behavior for truly missing/conflicting headstamps.

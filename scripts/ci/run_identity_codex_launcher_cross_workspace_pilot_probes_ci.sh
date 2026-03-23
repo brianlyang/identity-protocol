@@ -127,7 +127,8 @@ for row in rows:
     if identity_id:
         pack_path = (target_identity / identity_id).resolve()
         next_row['pack_path'] = str(pack_path)
-        next_row['canonical_pack_path'] = str(pack_path)
+        next_row['canonical_pack_path'] = ""
+        next_row['canonical_scope'] = "UNKNOWN"
     rewritten.append(next_row)
 doc['identities'] = rewritten
 catalog_path.write_text(yaml.safe_dump(doc, allow_unicode=True, sort_keys=False), encoding='utf-8')
@@ -211,6 +212,13 @@ assert payload['remaining_violation_count'] == 0, payload
 assert payload['postcheck_status'] == 'PASS_REQUIRED', payload
 assert Path(payload['evidence_ref']).exists(), payload
 assert Path(payload['manifest_ref']).exists(), payload
+assert payload['repair_results'], payload
+row = payload['repair_results'][0]
+assert row['metadata_repair_status'] == 'PASS_REQUIRED', row
+assert row['metadata_hygiene_status'] == 'PASS_REQUIRED', row
+assert row['backfill_status'] == 'PASS_REQUIRED', row
+assert row['install_status'] == 'PASS_REQUIRED', row
+assert row['validator_status'] == 'PASS_REQUIRED', row
 manifest_path = Path(payload['manifest_ref']).resolve()
 manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
 kinds = {str(row.get('kind', '')).strip() for row in (manifest.get('evidence_records') or []) if isinstance(row, dict)}
@@ -224,6 +232,23 @@ for row in manifest.get('evidence_records') or []:
     digest = hashlib.sha256(mirror.read_bytes()).hexdigest()
     assert digest == str(row['sha256']).strip(), row
 print('launcher_cross_workspace_apply_status=PASS_REQUIRED')
+PY
+
+python3 - "${TMP_CATALOG}" <<'PY'
+import sys
+from pathlib import Path
+
+import yaml
+
+catalog_path = Path(sys.argv[1]).resolve()
+doc = yaml.safe_load(catalog_path.read_text(encoding='utf-8')) or {}
+rows = [row for row in (doc.get('identities') or []) if isinstance(row, dict)]
+assert rows, rows
+for row in rows:
+    assert str(row.get('canonical_scope', '')).strip() == 'USER', row
+    assert str(row.get('canonical_pack_path', '')).strip(), row
+    assert str(row.get('canonical_pack_path', '')).strip() == str(Path(str(row.get('pack_path', '')).strip()).resolve()), row
+print('launcher_cross_workspace_metadata_hygiene_apply_status=PASS_REQUIRED')
 PY
 
 FRESH_TRUTH_SYNC_JSON="${TMP_ROOT}/fresh-truth-sync.json"

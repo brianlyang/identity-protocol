@@ -17,6 +17,7 @@ REPO_CATALOG_PATH="${REPO_ROOT}/identity/catalog/identities.yaml"
 REPAIR_CONTRACT_BACKFILL="${REPO_ROOT}/scripts/repair_contract_backfill.py"
 VALIDATE_HOST_TRANSPORT_WIRING_ATTESTATION="${REPO_ROOT}/scripts/validate_host_transport_wiring_attestation.py"
 VALIDATE_SEND_TIME_REPLY_GATE="${REPO_ROOT}/scripts/validate_send_time_reply_gate.py"
+VALIDATE_REPLY_FIRST_LINE="${REPO_ROOT}/scripts/validate_reply_identity_context_first_line.py"
 VALIDATE_PROTOCOL_LANE_HEADSTAMP_CONTINUITY="${REPO_ROOT}/scripts/validate_protocol_lane_headstamp_continuity.py"
 RECOVER_HOST_VISIBLE_POST_CHECK_STATE="${REPO_ROOT}/scripts/recover_host_visible_post_check_state.py"
 SHADOW_RUNTIME_ROOT="${WORK_ROOT}/shadow-runtime"
@@ -107,6 +108,7 @@ PY
 CATALOG_PATH="${FIXTURE_ROOT}/catalog.yaml"
 IDENTITY_ID="probe-visible"
 SEND_TIME_REPLY_FILE="${FIXTURE_ROOT}/send-time-governed-reply.txt"
+SEND_TIME_VISIBLE_REPLY_FILE="${FIXTURE_ROOT}/send-time-governed-visible-projection-reply.txt"
 MANUAL_REPLY_FILE="${FIXTURE_ROOT}/manual-display-only-reply.txt"
 
 python3 "${REPAIR_CONTRACT_BACKFILL}" \
@@ -118,6 +120,12 @@ python3 "${REPAIR_CONTRACT_BACKFILL}" \
 cat >"${SEND_TIME_REPLY_FILE}" <<'EOF'
 Identity-Context: actor_id=assistant:ci-probe; identity_id=probe-visible; scope=USER; lock=LOCK_MATCH; source=project | Layer-Context: work_layer=protocol; source_layer=project
 SEND_TIME_GATE_PROBE_BODY
+EOF
+
+cat >"${SEND_TIME_VISIBLE_REPLY_FILE}" <<'EOF'
+Display-Headstamp: Identity-Context: actor_id=assistant:ci-probe; identity_id=probe-visible; scope=USER; lock=LOCK_MATCH; source=project | Layer-Context: work_layer=protocol; source_layer=project
+Machine-Verification: verification_source=host_visible_surface_probe; display_headstamp_identity_id=probe-visible; authoritative_identity_id=probe-visible; headstamp_consistency_status=PASS_REQUIRED; headstamp_consistency_mode=exact_match; headstamp_consistency_reason=display_matches_authoritative_identity; current_chat_surface_native_machine_attested=false; output_governance_mode=governed; control_lane_attestation_status=PASS_REQUIRED; post_check_blocker_status=PASS_REQUIRED; next_hop_admission_status=PASS_REQUIRED
+SEND_TIME_VISIBLE_PROJECTION_BODY
 EOF
 
 cat >"${MANUAL_REPLY_FILE}" <<'EOF'
@@ -318,47 +326,74 @@ elif name == "host_visible_commentary_bypass_blocked":
     token = "host_visible_surface_live_channel_status_not_pass:commentary:headstamp_first_line_status"
     if token not in reasons:
         raise SystemExit("host_visible_commentary_bypass_blocked: expected commentary fail-close token")
-elif name == "send_time_governed_pass_headstamp_required":
+elif name == "reply_first_line_visible_projection_default_blocked":
+    if rc == 0:
+        raise SystemExit("reply_first_line_visible_projection_default_blocked: expected non-zero rc")
+    first_line_status = str(doc.get("reply_first_line_status", "")).strip().upper()
+    if first_line_status != "FAIL_REQUIRED":
+        raise SystemExit("reply_first_line_visible_projection_default_blocked: reply_first_line_status must be FAIL_REQUIRED")
+    surface_mode = str(doc.get("reply_first_line_surface_mode", "")).strip()
+    if surface_mode != "visible_projection":
+        raise SystemExit("reply_first_line_visible_projection_default_blocked: surface_mode must be visible_projection")
+    token = "reply_first_line_surface_mode_not_allowed"
+    if token not in reasons:
+        raise SystemExit("reply_first_line_visible_projection_default_blocked: expected surface-mode-not-allowed token")
+elif name == "reply_first_line_visible_projection_allowed_pass":
     if rc != 0:
-        raise SystemExit("send_time_governed_pass_headstamp_required: expected zero rc")
-    gate_status = str(doc.get("send_time_gate_status", "")).strip().upper()
-    if gate_status != "PASS_REQUIRED":
-        raise SystemExit("send_time_governed_pass_headstamp_required: send_time_gate_status must be PASS_REQUIRED")
+        raise SystemExit("reply_first_line_visible_projection_allowed_pass: expected zero rc")
     first_line_status = str(doc.get("reply_first_line_status", "")).strip().upper()
     if first_line_status != "PASS_REQUIRED":
-        raise SystemExit("send_time_governed_pass_headstamp_required: reply_first_line_status must be PASS_REQUIRED")
+        raise SystemExit("reply_first_line_visible_projection_allowed_pass: reply_first_line_status must be PASS_REQUIRED")
+    surface_mode = str(doc.get("reply_first_line_surface_mode", "")).strip()
+    if surface_mode != "visible_projection":
+        raise SystemExit("reply_first_line_visible_projection_allowed_pass: surface_mode must be visible_projection")
+    if str(doc.get("reply_first_line_identity_id", "")).strip() != "probe-visible":
+        raise SystemExit("reply_first_line_visible_projection_allowed_pass: identity_id mismatch")
+elif name in {"send_time_governed_pass_headstamp_required", "send_time_governed_visible_projection_pass"}:
+    if rc != 0:
+        raise SystemExit(f"{name}: expected zero rc")
+    gate_status = str(doc.get("send_time_gate_status", "")).strip().upper()
+    if gate_status != "PASS_REQUIRED":
+        raise SystemExit(f"{name}: send_time_gate_status must be PASS_REQUIRED")
+    first_line_status = str(doc.get("reply_first_line_status", "")).strip().upper()
+    if first_line_status != "PASS_REQUIRED":
+        raise SystemExit(f"{name}: reply_first_line_status must be PASS_REQUIRED")
     if not bool(doc.get("reply_first_line_gate_executed", False)):
-        raise SystemExit("send_time_governed_pass_headstamp_required: reply_first_line_gate_executed must be true")
+        raise SystemExit(f"{name}: reply_first_line_gate_executed must be true")
     uniqueness_contract_id = str(doc.get("chat_egress_uniqueness_contract_id", "")).strip()
     if uniqueness_contract_id != "chat_egress_uniqueness_contract_v1":
-        raise SystemExit("send_time_governed_pass_headstamp_required: chat_egress_uniqueness_contract_id mismatch")
+        raise SystemExit(f"{name}: chat_egress_uniqueness_contract_id mismatch")
     uniqueness_status = str(doc.get("chat_egress_uniqueness_status", "")).strip().upper()
     if uniqueness_status != "PASS_REQUIRED":
-        raise SystemExit("send_time_governed_pass_headstamp_required: chat_egress_uniqueness_status must be PASS_REQUIRED")
+        raise SystemExit(f"{name}: chat_egress_uniqueness_status must be PASS_REQUIRED")
     uniqueness_reason = str(doc.get("chat_egress_uniqueness_reason", "")).strip()
     if uniqueness_reason != "governed_single_egress_enforced":
-        raise SystemExit("send_time_governed_pass_headstamp_required: chat_egress_uniqueness_reason mismatch")
+        raise SystemExit(f"{name}: chat_egress_uniqueness_reason mismatch")
     observed_status = str(doc.get("chat_egress_uniqueness_observed_send_time_status", "")).strip().upper()
     if observed_status != "PASS_REQUIRED":
-        raise SystemExit("send_time_governed_pass_headstamp_required: chat_egress_uniqueness_observed_send_time_status mismatch")
+        raise SystemExit(f"{name}: chat_egress_uniqueness_observed_send_time_status mismatch")
     next_hop_admission_status = str(doc.get("next_hop_admission_status", "")).strip().upper()
     if next_hop_admission_status != "PASS_REQUIRED":
-        raise SystemExit("send_time_governed_pass_headstamp_required: next_hop_admission_status must be PASS_REQUIRED")
+        raise SystemExit(f"{name}: next_hop_admission_status must be PASS_REQUIRED")
     output_governance_mode = str(doc.get("output_governance_mode", "")).strip()
     if output_governance_mode != "governed":
-        raise SystemExit("send_time_governed_pass_headstamp_required: output_governance_mode must be governed")
+        raise SystemExit(f"{name}: output_governance_mode must be governed")
     control_lane_attestation_status = str(doc.get("control_lane_attestation_status", "")).strip().upper()
     if control_lane_attestation_status != "PASS_REQUIRED":
-        raise SystemExit("send_time_governed_pass_headstamp_required: control_lane_attestation_status must be PASS_REQUIRED")
+        raise SystemExit(f"{name}: control_lane_attestation_status must be PASS_REQUIRED")
     reply_transport_binding_status = str(doc.get("reply_transport_binding_status", "")).strip().upper()
     if reply_transport_binding_status != "PASS_REQUIRED":
-        raise SystemExit("send_time_governed_pass_headstamp_required: reply_transport_binding_status must be PASS_REQUIRED")
+        raise SystemExit(f"{name}: reply_transport_binding_status must be PASS_REQUIRED")
     headstamp_consistency_status = str(doc.get("headstamp_consistency_status", "")).strip().upper()
     if headstamp_consistency_status != "PASS_REQUIRED":
-        raise SystemExit("send_time_governed_pass_headstamp_required: headstamp_consistency_status must be PASS_REQUIRED")
+        raise SystemExit(f"{name}: headstamp_consistency_status must be PASS_REQUIRED")
     headstamp_consistency_mode = str(doc.get("headstamp_consistency_mode", "")).strip()
     if headstamp_consistency_mode != "exact_match":
-        raise SystemExit("send_time_governed_pass_headstamp_required: headstamp_consistency_mode mismatch")
+        raise SystemExit(f"{name}: headstamp_consistency_mode mismatch")
+    surface_mode = str(doc.get("reply_first_line_surface_mode", "")).strip()
+    expected_surface_mode = "visible_projection" if name == "send_time_governed_visible_projection_pass" else "raw_canonical"
+    if surface_mode != expected_surface_mode:
+        raise SystemExit(f"{name}: reply_first_line_surface_mode mismatch")
 elif name == "protocol_lane_headstamp_continuity_live_receipt_pass":
     if rc != 0:
         raise SystemExit("protocol_lane_headstamp_continuity_live_receipt_pass: expected zero rc")
@@ -826,6 +861,58 @@ run_probe send_time_governed_pass_headstamp_required \
     --reply-outlet-guard-applied \
     --json-only
 
+run_probe reply_first_line_visible_projection_default_blocked \
+  python3 "${VALIDATE_REPLY_FIRST_LINE}" \
+    --identity-id "${IDENTITY_ID}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --operation ci \
+    --expected-work-layer protocol \
+    --expected-source-layer project \
+    --layer-intent-text "work_layer=protocol source_layer=project" \
+    --force-check \
+    --enforce-first-line-gate \
+    --reply-file "${SEND_TIME_VISIBLE_REPLY_FILE}" \
+    --json-only
+
+run_probe reply_first_line_visible_projection_allowed_pass \
+  python3 "${VALIDATE_REPLY_FIRST_LINE}" \
+    --identity-id "${IDENTITY_ID}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --operation ci \
+    --expected-work-layer protocol \
+    --expected-source-layer project \
+    --layer-intent-text "work_layer=protocol source_layer=project" \
+    --force-check \
+    --enforce-first-line-gate \
+    --accepted-surface-modes raw_canonical,visible_projection \
+    --reply-file "${SEND_TIME_VISIBLE_REPLY_FILE}" \
+    --json-only
+
+run_probe send_time_governed_visible_projection_pass \
+  python3 "${VALIDATE_SEND_TIME_REPLY_GATE}" \
+    --identity-id "${IDENTITY_ID}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog "${REPO_CATALOG_PATH}" \
+    --actor-id assistant:ci-probe \
+    --session-id run:ci-probe-session \
+    --operation ci \
+    --expected-work-layer protocol \
+    --expected-source-layer project \
+    --layer-intent-text "work_layer=protocol source_layer=project" \
+    --force-check \
+    --enforce-send-time-gate \
+    --reply-file "${SEND_TIME_VISIBLE_REPLY_FILE}" \
+    --reply-transport-ref "${SEND_TIME_REPLY_FILE}" \
+    --outlet-channel-id commentary \
+    --reply-outlet-guard-applied \
+    --json-only
+
 run_probe protocol_lane_headstamp_continuity_live_receipt_pass \
   python3 "${VALIDATE_PROTOCOL_LANE_HEADSTAMP_CONTINUITY}" \
     --identity-id "${IDENTITY_ID}" \
@@ -863,11 +950,11 @@ run_probe send_time_inline_reply_text_host_direct_blocked \
     --identity-id "${IDENTITY_ID}" \
     --catalog "${CATALOG_PATH}" \
     --repo-catalog "${REPO_CATALOG_PATH}" \
-    --actor-id assistant:codex \
+    --actor-id assistant:ci-probe \
     --operation validate \
     --force-check \
     --enforce-send-time-gate \
-    --reply-text "Identity-Context: actor_id=assistant:codex; identity_id=${IDENTITY_ID}; scope=USER; lock=LOCK_MATCH; source=project | Layer-Context: work_layer=protocol; source_layer=project" \
+    --reply-text "Identity-Context: actor_id=assistant:ci-probe; identity_id=${IDENTITY_ID}; scope=USER; lock=LOCK_MATCH; source=project | Layer-Context: work_layer=protocol; source_layer=project" \
     --outlet-channel-id commentary \
     --reply-outlet-guard-applied \
     --json-only

@@ -163,6 +163,9 @@ def _apply_repair_for_identity(
     result: dict[str, Any] = {
         "identity_id": identity_id,
         "mutation_scope": IDENTITY_CODEX_LAUNCHER_CONVERGENCE_MUTATION_SCOPE,
+        "metadata_repair_status": "",
+        "metadata_changed": False,
+        "metadata_hygiene_status": "",
         "backfill_status": "",
         "backfill_changed": False,
         "backfill_evidence_ref": "",
@@ -177,6 +180,29 @@ def _apply_repair_for_identity(
         "validator_stale_reasons": [],
         "final_status": STATUS_FAIL_REQUIRED,
     }
+
+    metadata_cmd = [
+        "python3",
+        str((repo_root / "scripts" / "repair_runtime_catalog_metadata_hygiene.py").resolve()),
+        "--catalog",
+        str(catalog_path),
+        "--identity-id",
+        identity_id,
+        "--require-active",
+        "--apply",
+        "--json-only",
+    ]
+    rc_metadata, metadata_payload, _, _ = _run_json(metadata_cmd, env=env)
+    result["metadata_repair_status"] = str(metadata_payload.get("runtime_catalog_metadata_repair_status", "")).strip().upper()
+    result["metadata_changed"] = bool(metadata_payload.get("changed", False))
+    result["metadata_hygiene_status"] = str(metadata_payload.get("runtime_catalog_metadata_hygiene_status", "")).strip().upper()
+    if (
+        rc_metadata != 0
+        or result["metadata_repair_status"] != STATUS_PASS_REQUIRED
+        or result["metadata_hygiene_status"] != STATUS_PASS_REQUIRED
+    ):
+        result["final_status"] = STATUS_FAIL_REQUIRED
+        return result
 
     backfill_cmd = [
         "python3",

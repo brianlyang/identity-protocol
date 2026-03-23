@@ -15,6 +15,8 @@ REQ_KEYS = [
     "conflict_rules",
     "trigger_thresholds",
     "accurate_judgement_enforcement",
+    "route_discovery_enforcement",
+    "feedback_operational_prompt_enforcement",
     "decision_record_required_fields",
     "sample_report_path_pattern",
     "fail_action",
@@ -244,6 +246,107 @@ def main() -> int:
                 rc = 1
     else:
         print("[WARN] reasoning_loop_enforcement not required until reasoning_loop_failclose_contract_v1 is backfilled")
+
+    route_discovery_required = (
+        isinstance(task.get("capability_orchestration_contract"), dict)
+        and (task.get("capability_orchestration_contract") or {}).get("required") is True
+        and isinstance(task.get("knowledge_acquisition_contract"), dict)
+        and (task.get("knowledge_acquisition_contract") or {}).get("required") is True
+    )
+    route_discovery_enforcement = c.get("route_discovery_enforcement") or {}
+    if route_discovery_required or isinstance(route_discovery_enforcement, dict):
+        if not isinstance(route_discovery_enforcement, dict) or not route_discovery_enforcement:
+            print("[WARN] route_discovery_enforcement missing; run repair_contract_backfill to materialize strengthening link")
+        else:
+            if str(route_discovery_enforcement.get("contract_ref", "")).strip() != "route_discovery_convergence_contract_v1":
+                print("[FAIL] route_discovery_enforcement.contract_ref must be route_discovery_convergence_contract_v1")
+                rc = 1
+            if str(route_discovery_enforcement.get("validator", "")).strip() != "scripts/validate_capability_fit_roundtable_evidence.py":
+                print("[FAIL] route_discovery_enforcement.validator must be scripts/validate_capability_fit_roundtable_evidence.py")
+                rc = 1
+            supporting = route_discovery_enforcement.get("supporting_validators") or []
+            expected_supporting = {
+                "scripts/validate_discovery_requiredization.py",
+                "scripts/validate_identity_orchestration_contract.py",
+                "scripts/validate_identity_knowledge_contract.py",
+            }
+            if not expected_supporting.issubset(set(supporting if isinstance(supporting, list) else [])):
+                print(
+                    "[FAIL] route_discovery_enforcement.supporting_validators missing required entries: "
+                    f"{sorted(expected_supporting - set(supporting if isinstance(supporting, list) else []))}"
+                )
+                rc = 1
+            if route_discovery_enforcement.get("candidate_rows_required") is not True:
+                print("[FAIL] route_discovery_enforcement.candidate_rows_required must be true")
+                rc = 1
+            if str(route_discovery_enforcement.get("selected_candidate_field", "")).strip() != "selected_candidate_id":
+                print("[FAIL] route_discovery_enforcement.selected_candidate_field must be selected_candidate_id")
+                rc = 1
+            if str(route_discovery_enforcement.get("selection_basis_field", "")).strip() != "selection_basis":
+                print("[FAIL] route_discovery_enforcement.selection_basis_field must be selection_basis")
+                rc = 1
+            if route_discovery_enforcement.get("serial_convergence_required") is not True:
+                print("[FAIL] route_discovery_enforcement.serial_convergence_required must be true")
+                rc = 1
+            if str(route_discovery_enforcement.get("convergence_status_field", "")).strip() != "convergence_status":
+                print("[FAIL] route_discovery_enforcement.convergence_status_field must be convergence_status")
+                rc = 1
+            if str(route_discovery_enforcement.get("fallback_route_field", "")).strip() != "fallback_route_if_selected_fails":
+                print("[FAIL] route_discovery_enforcement.fallback_route_field must be fallback_route_if_selected_fails")
+                rc = 1
+    else:
+        print("[WARN] route_discovery_enforcement not required until routing/knowledge strengthening is backfilled")
+
+    feedback_contract_required = isinstance(task.get("experience_feedback_contract"), dict) and (
+        task.get("experience_feedback_contract") or {}
+    ).get("required") is True
+    feedback_enforcement = c.get("feedback_operational_prompt_enforcement") or {}
+    if feedback_contract_required or isinstance(feedback_enforcement, dict):
+        if not isinstance(feedback_enforcement, dict) or not feedback_enforcement:
+            print("[WARN] feedback_operational_prompt_enforcement missing; run repair_contract_backfill to materialize strengthening link")
+        else:
+            if str(feedback_enforcement.get("contract_ref", "")).strip() != "feedback_operational_prompt_contract_v1":
+                print("[FAIL] feedback_operational_prompt_enforcement.contract_ref must be feedback_operational_prompt_contract_v1")
+                rc = 1
+            if str(feedback_enforcement.get("validator", "")).strip() != "scripts/validate_identity_experience_feedback_governance.py":
+                print(
+                    "[FAIL] feedback_operational_prompt_enforcement.validator must be "
+                    "scripts/validate_identity_experience_feedback_governance.py"
+                )
+                rc = 1
+            supporting = feedback_enforcement.get("supporting_validators") or []
+            if "scripts/validate_identity_experience_feedback.py" not in (supporting if isinstance(supporting, list) else []):
+                print(
+                    "[FAIL] feedback_operational_prompt_enforcement.supporting_validators must include "
+                    "scripts/validate_identity_experience_feedback.py"
+                )
+                rc = 1
+            if feedback_enforcement.get("rulebook_delta_required") is not True:
+                print("[FAIL] feedback_operational_prompt_enforcement.rulebook_delta_required must be true")
+                rc = 1
+            if str(feedback_enforcement.get("operational_prompt_ref_field", "")).strip() != "operational_prompt_ref":
+                print(
+                    "[FAIL] feedback_operational_prompt_enforcement.operational_prompt_ref_field must be "
+                    "operational_prompt_ref"
+                )
+                rc = 1
+            if str(feedback_enforcement.get("prompt_injection_status_field", "")).strip() != "prompt_injection_status":
+                print(
+                    "[FAIL] feedback_operational_prompt_enforcement.prompt_injection_status_field must be "
+                    "prompt_injection_status"
+                )
+                rc = 1
+            if str(feedback_enforcement.get("replay_status_field", "")).strip() != "replay_status":
+                print("[FAIL] feedback_operational_prompt_enforcement.replay_status_field must be replay_status")
+                rc = 1
+            if feedback_enforcement.get("rollback_prompt_ref_required") is not True:
+                print("[FAIL] feedback_operational_prompt_enforcement.rollback_prompt_ref_required must be true")
+                rc = 1
+            if feedback_enforcement.get("ttl_rounds_required") is not True:
+                print("[FAIL] feedback_operational_prompt_enforcement.ttl_rounds_required must be true")
+                rc = 1
+    else:
+        print("[WARN] feedback_operational_prompt_enforcement not required until experience feedback strengthening is backfilled")
 
     decision_fields = c.get("decision_record_required_fields") or []
     if any(x not in decision_fields for x in REQ_DECISION_FIELDS):

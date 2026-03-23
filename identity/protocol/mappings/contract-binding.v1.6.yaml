@@ -4,8 +4,8 @@ _meta:
   schema_version: 1
   source_layer: protocol
   lifecycle_state: phase6_full_requirement_projection
-  last_updated_utc: "2026-03-20T00:00:00Z"
-  row_count: 46
+  last_updated_utc: "2026-03-22T00:00:00Z"
+  row_count: 47
   notes:
     - "Phase-1 mapping seed for ASB16-RQ-017..022/030."
     - "Phase-2 extension adds prompt-kernel rows for ASB16-RQ-014/015/027/031."
@@ -21,6 +21,7 @@ _meta:
     - "v1.6.11 relay-final-answer stream adds motherline row RQ-042 for outer-agent exact/summary relay governance."
     - "v1.6.13 instance-pack-topology stream adds motherline row RQ-043 for canonical pack-root scripts topology governance."
     - "v1.6.16 context-continuity stream adds motherline rows RQ-044/045/046 for artifact schema, reentry consumption, and continuity receipt-family governance."
+    - "2026-03-22 motherline freeze adds RQ-047 for no-downgrade / no-backstop / no backward-compatibility enforcement."
     - "Rows intentionally use canonical five-link tuple fields required by governance 4.15."
     - "Validator scripts referenced here may be planned-only until implementation commits land."
 
@@ -855,13 +856,14 @@ asb16-rq-032:
     - full-scan
     - three-plane
     - ci
-  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#88-batch-4-row-level-strengthening-profile-asb16-rq-029031032007008-2026-03-06
-  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-029---outbound-headstamp-pre-send-hard-gate-intake-asb16-rq-032
+  governance_anchor: docs/governance/identity-headstamp-egress-governance-v1.6.1.md#22a-first-line-surface-modes-for-validation-and-send-time-2026-03-23
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md#14-hs16-106-send-time-visible-projection-first-line-semantics-2026-03-23
   report_field_refs:
     - headstamp_status
     - error_code
     - evidence_ref
     - actor_binding_ref
+    - reply_first_line_surface_mode
     - pre_send_headstamp_gate_status
   error_code_refs:
     - IP-HDSTAMP-001
@@ -1394,3 +1396,141 @@ asb16-rq-030:
     - conflict_reconciliation_note
   error_code_refs: []
   mapping_state: phase1_seed
+
+asb16-rq-047:
+  requirement_id: ASB16-RQ-047
+  kernel_contract_id: rq_047_protocol_no_downgrade_motherline_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_047_protocol_no_downgrade_motherline_contract_v1
+  validator_ids:
+    - scripts/validate_compatibility_legacy_boundary.py
+    - scripts/validate_strict_actor_entry_semantics.py
+    - scripts/validate_identity_switch_closure_semantics.py
+    - scripts/validate_identity_session_pointer_consistency.py
+    - scripts/validate_identity_runtime_contract.py
+    - scripts/validate_identity_collab_trigger.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#a7-no-downgrade--no-backstop--no-backward-compatibility-motherline-freeze-2026-03-22
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#2026-03-22-closure-addendum---no-downgrade-motherline-freeze
+  report_field_refs:
+    - compatibility_legacy_boundary_status
+    - strict_actor_entry_semantics_status
+    - identity_switch_closure_status
+    - pointer_consistency
+    - compatibility_pointer_identity_authority
+    - violation_count
+    - violations
+    - stale_reasons
+    - error_code
+  error_code_refs: []
+  mapping_state: phase6_v160_no_downgrade_motherline_freeze
+
+
+asb16-rq-048:
+  requirement_id: ASB16-RQ-048
+  kernel_contract_id: route_discovery_convergence_contract_v1
+  kernel_source_path: docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md#22-auto-routing-upper-layer-strengthening-third-loop
+  shared_primitive_refs:
+    - roundtable_four_track_cross_validation_contract_v1
+  validator_ids:
+    - scripts/validate_identity_routing_learning_strengthening.py
+    - scripts/validate_discovery_requiredization.py
+    - scripts/validate_capability_fit_roundtable_evidence.py
+  gate_surfaces:
+    - readiness
+    - e2e
+    - ci
+  governance_anchor: docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md#61-opening-binding-reference-freeze-asb16-rq-048-asb16-rq-049-2026-03-23
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md#61-opening-binding-intake-asb16-rq-048-asb16-rq-049-2026-03-23
+  report_field_refs:
+    - route_discovery_convergence_status
+    - route_discovery_enforcement
+    - selected_candidate_id
+    - selection_basis
+    - convergence_status
+    - discovery_requiredization_status
+    - parallel_probe_allowed
+    - four_track_cross_validation_required
+    - roundtable_track_status
+    - vendor_track_status
+    - reference_track_status
+    - runtime_probe_status
+    - stale_reasons
+    - error_code
+  error_code_refs:
+    - IP-DREQ-001
+    - IP-DREQ-002
+    - IP-DREQ-003
+  mapping_state: phase6_v1617_routing_strengthening_opening
+
+asb16-rq-049:
+  requirement_id: ASB16-RQ-049
+  kernel_contract_id: feedback_operational_prompt_contract_v1
+  kernel_source_path: docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md#23-rule-learning-upper-layer-strengthening-fourth-loop
+  shared_primitive_refs:
+    - roundtable_four_track_cross_validation_contract_v1
+  validator_ids:
+    - scripts/validate_identity_routing_learning_strengthening.py
+    - scripts/validate_identity_experience_feedback.py
+    - scripts/validate_identity_experience_feedback_governance.py
+  gate_surfaces:
+    - readiness
+    - e2e
+    - ci
+  governance_anchor: docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md#61-opening-binding-reference-freeze-asb16-rq-048-asb16-rq-049-2026-03-23
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md#61-opening-binding-intake-asb16-rq-048-asb16-rq-049-2026-03-23
+  report_field_refs:
+    - feedback_operational_prompt_status
+    - feedback_operational_prompt_enforcement
+    - rulebook_delta
+    - replay_status
+    - prompt_injection_status
+    - experience_feedback_status
+    - four_track_cross_validation_required
+    - roundtable_track_status
+    - vendor_track_status
+    - reference_track_status
+    - runtime_probe_status
+    - loop_back_to_first_loop_status
+    - stale_reasons
+    - error_code
+  error_code_refs: []
+  mapping_state: phase6_v1617_learning_strengthening_opening
+
+asb16-rq-050:
+  requirement_id: ASB16-RQ-050
+  kernel_contract_id: feedback_to_judgement_loopback_contract_v1
+  kernel_source_path: docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md#24-feedback-to-judgement-loopback-bridge-41
+  shared_primitive_refs:
+    - roundtable_four_track_cross_validation_contract_v1
+  validator_ids:
+    - scripts/validate_identity_routing_learning_strengthening.py
+    - scripts/validate_identity_experience_feedback.py
+    - scripts/validate_multimodal_plugin_enforcement.py
+  gate_surfaces:
+    - readiness
+    - e2e
+    - ci
+  governance_anchor: docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md#62-opening-semantic-freeze-asb16-rq-050-2026-03-23
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md#62-opening-binding-intake-asb16-rq-050-2026-03-23
+  report_field_refs:
+    - loopback_artifact_ref
+    - loopback_artifact_kind
+    - preflight_context_injection_ref
+    - loopback_scope
+    - loopback_ttl_rounds
+    - first_loop_revalidation_required
+    - judgement_reentry_status
+    - adoption_decision
+    - conflict_with_current_evidence
+    - demotion_or_rollback_action
+    - negative_feedback_ref
+    - stale_reasons
+    - error_code
+  error_code_refs: []
+  mapping_state: phase6_v1617_loopback_semantic_opening

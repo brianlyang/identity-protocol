@@ -57,6 +57,16 @@ This protocol is scenario-agnostic by design.
 7. Host/runtime entry gaps remain a separate boundary and must not be relabeled as either `instance_owned_technical_debt` or `protocol_residual_issue`.
 8. Closed protocol layers must not be reopened by unresolved instance-owned technical debt.
 
+## Bottom-layer no-downgrade / no-backstop / no backward-compatibility contract (motherline freeze)
+
+1. `identity protocol` is a standard and upgrade target, not a compatibility shelter for lagging instances, workspaces, or one-off scenes.
+2. Active protocol surfaces must not downgrade themselves or provide downward/backward compatibility in order to keep historical residue, partial adoption, or instance-local debt alive.
+3. Instances and workspaces must self-upgrade to the current protocol contract; unresolved lagging adoption remains `instance_owned_technical_debt` until closed through governed upgrade/migration work.
+4. Compatibility, fallback, bridge, and legacy-overlay behavior may survive only inside governed migration, replay, and diagnostics surfaces; they must not re-enter active defaults, validator green paths, current-turn runtime truth, active execution entry, or protocol-owned success paths.
+5. Explicit fixture/import lanes may preserve historical literals only as non-runtime test/import material; they do not create backward-compatibility rights and must not be cited as active-runtime precedent.
+6. When authoritative current-turn truth is missing, the protocol fail-closes; it does not rebuild live truth from compatibility projection, literal actor fallback, legacy alias bridges, or workspace-local backstops.
+7. Kernel anchor: `rq_047_protocol_no_downgrade_motherline_contract_v1`.
+
 ## Layer contract
 
 1. Canon layer (hard governance)
@@ -901,11 +911,16 @@ Required receipt fields:
 - `error_code`
 - `evidence_ref`
 - `actor_binding_ref`
+- `reply_first_line_surface_mode`
 
 Hard constraints:
 
 1. Missing/malformed/mismatched headstamp must block outbound send.
 2. Governed and direct/manual send paths must share canonical pre-send verdict semantics.
+3. Raw canonical artifact validation must accept only a literal first line beginning with `Identity-Context:` and must classify that surface as `reply_first_line_surface_mode=raw_canonical`.
+4. Governed host-visible validation MAY accept a first line beginning with `Display-Headstamp: Identity-Context: ... | Layer-Context: ...`, but only as `reply_first_line_surface_mode=visible_projection`; validators must canonicalize that visible projection back to the same underlying `Identity-Context` stamp before verdict.
+5. Any other first-line surface is `reply_first_line_surface_mode=invalid` and is deterministic fail-close.
+6. Visible-projection acceptance is additive only: it must not weaken raw canonical strictness and must not create a second authority source.
 
 ### rq_036_host_visible_post_check_next_hop_block_contract_v1
 
@@ -959,6 +974,29 @@ Machine projection (required in strict scans):
 1. `host_visible_post_check_metrics.host_visible_post_check_metrics_status`
 2. `host_visible_post_check_metrics.metrics.*`
 3. `host_visible_post_check_metrics.metric_statuses.*`
+
+### rq_047_protocol_no_downgrade_motherline_contract_v1
+
+Required receipt/state fields:
+
+- `compatibility_legacy_boundary_status`
+- `strict_actor_entry_semantics_status`
+- `identity_switch_closure_status`
+- `pointer_consistency`
+- `compatibility_pointer_identity_authority`
+- `violation_count`
+- `violations`
+- `stale_reasons`
+- `error_code`
+
+Hard constraints:
+
+1. Active protocol surfaces must not downgrade themselves or provide downward/backward compatibility for lagging instances, historical residue, or scene-specific exceptions.
+2. Compatibility, fallback, bridge, and legacy-overlay surfaces are forbidden on active defaults, active execution entry, validator green paths, current-turn runtime truth, and protocol-owned success paths.
+3. Instance/workspace adoption debt must be closed by instance-owned upgrade, governed migration, or explicit repair; protocol success surfaces must not act as backstops.
+4. When authoritative current-turn truth is missing or drifted, the only valid result is fail-close plus repair guidance; literal actor fallback, compatibility projection, legacy alias bridges, and workspace-local backstops must not reconstitute live truth.
+5. Historical fixture/import material is allowed only as explicit non-runtime test/migration input and must not be promoted into green-path runtime semantics.
+6. Any attempt to normalize downgrade/backstop behavior on active protocol surfaces is a deterministic protocol violation.
 
 ## Batch-6/7 anchor placeholders (v1.6 intake, non-promotional)
 

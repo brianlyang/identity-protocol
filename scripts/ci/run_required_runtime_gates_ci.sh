@@ -46,6 +46,7 @@ run_global_protocol_gates() {
   run_cmd bash scripts/ci/run_identity_codex_launcher_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh
   run_cmd python3 scripts/check_identity_codex_launcher_migration_closure.py --catalog "${CATALOG_PATH}" --workspace-runtime-only --json-only
+  run_cmd python3 scripts/validate_runtime_catalog_metadata_hygiene.py --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --require-active --json-only
   run_cmd python3 scripts/validate_identity_instance_script_cross_pack_adoption.py --catalog "${CATALOG_PATH}" --json-only
   run_cmd python3 scripts/validate_gateway_wrapper_trust_boundary_cross_cwd.py --json-only
 }
@@ -150,6 +151,7 @@ for ID in ${IDS}; do
   python3 scripts/validate_capability_composition_before_discovery.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
   python3 scripts/validate_capability_fit_review_freshness.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
   python3 scripts/validate_capability_fit_roundtable_evidence.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
+  python3 scripts/validate_identity_routing_learning_strengthening.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
   python3 scripts/trigger_capability_fit_review.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
   python3 scripts/build_capability_fit_matrix.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --out-root "${CAPABILITY_FIT_ROOT}" --json-only
   python3 scripts/validate_vendor_namespace_separation.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci
