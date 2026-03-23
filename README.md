@@ -86,6 +86,7 @@ What this prints:
   identity catalog it stays on the short-launcher lane, and under catalog mismatch it upgrades to the
   canonical explicit generic primary surface
 - absolute-path fallback start command under `${CODEX_HOME}/bin/`
+- protocol-owned fresh-shell env loaders keep `${CODEX_HOME}/bin` on `PATH` idempotently, so short-launcher discovery is not left to manual shell edits
 - preferred resume command for the current shell; under catalog mismatch it must collapse to the same
   fresh-shell executable canonical resume command as the recommended surface
 - `copyable_commands.start.shortcut` / `copyable_commands.resume.shortcut` retain the short-launcher

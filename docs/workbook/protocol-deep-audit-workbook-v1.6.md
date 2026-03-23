@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 87`, `command snippets checked: 953`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 87`, `command snippets checked: 954`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -985,6 +985,7 @@ Root cause:
   - `scripts/install_identity_codex_launcher.py` and `scripts/render_identity_codex_launcher.py` now pass the selected governed catalog into shortcut rendering instead of leaving the shortcut catalog-agnostic;
   - `scripts/validate_identity_codex_launcher.py` now fail-closes stale installed shortcuts missing explicit catalog binding;
   - `scripts/ci/run_identity_codex_launcher_probes_ci.sh` now injects env/catalog mismatch and proves the installed shortcut still returns a valid mismatch-aware command bundle and a valid dry-run resume payload;
+  - the fresh-shell ingress path is now hardened by the protocol-owned env loaders (`scripts/use_local_identity_env.sh` and related launcher probe coverage), which expose `${CODEX_HOME}/bin` on `PATH` idempotently instead of leaving short-launcher availability to manual shell edits;
   - `README.md` plus the `v1.6.14` governance/review pair now explicitly separate shortcut execution-time catalog pinning from the operator-visible preferred command surface under mismatch.
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
