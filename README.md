@@ -125,6 +125,8 @@ Operational rule for identity instances:
 - do **not** inject or hardcode thread UUIDs on the continuity surface;
 - if readiness is not `PASS_REQUIRED`, do **not** claim memory recovery is ready;
 - if readiness is `PASS_REQUIRED` but live proof is not yet observed, you may return the governed reentry task block, but must explicitly state that successful recovery is only proven after `instance_reentry_consumption_receipt` is emitted.
+- do **not** write continuity, dialogue-governance, experience-feedback, or protocol-feedback outputs into `~/.codex/memories/**`; that path is not a protocol runtime evidence family.
+- treat `runtime/memory-absorption/**` as legacy absorption/quarantine only; if something becomes canonical, re-materialize it into the correct governed lane instead of consuming it in place.
 - live adoption is a **hard-downsink/template-materialization** requirement, not a chat convention:
   - pack-local `scripts/` must contain these exact files: `run_identity_context_continuity_guard.sh`, `emit_identity_context_checkpoint.py`, `materialize_identity_reentry_brief.py`, and `emit_identity_reentry_consumption_receipt.py`;
   - the shell guard is the proactive cadence/trigger dispatcher; the Python scripts are deterministic payload emitters;
@@ -174,6 +176,7 @@ Rollout semantics are contract-driven:
 - `required=true` + `rollout_mode=warn`: issues are reported but non-blocking.
 - `required=true` + `rollout_mode=enforce`: violations fail with deterministic codes
   (`IP-DCIC-001..004`).
+- dialogue synthesis belongs under governed dialogue report paths, not under `runtime/state/context-continuity/**`, `runtime/protocol-feedback/**`, or `~/.codex/memories/**`.
 
 Scaffold default:
 
