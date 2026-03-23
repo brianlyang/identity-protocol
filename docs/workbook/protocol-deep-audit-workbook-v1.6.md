@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 82`, `command snippets checked: 908`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 84`, `command snippets checked: 924`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -192,6 +192,35 @@ Symptoms:
 Root cause:
 
 - `v1.6.15` currently hardens the route -> instance-script -> lane-admission chain, but direct conversation-level tool execution is not yet required to enter through that chain; as a result, undeclared live rescue lanes can still succeed outside protocol-owned route/lane admission.
+
+### RC-13 Third/fourth-loop source contracts exist, but runtime-consumable strengthening symmetry is still missing
+
+Symptoms:
+
+- `identity/protocol/IDENTITY_PROTOCOL.md` already freezes the third/fourth source contracts as `Auto-routing contract` and `Rule learning contract`, so the kernel has not forgotten these loops;
+- the active runtime contract family and validator family already touch nearby surfaces such as orchestration, knowledge acquisition, experience feedback, discovery requiredization, and capability arbitration;
+- `scripts/ci/run_required_runtime_gates_ci.sh` already executes those validators, proving the problem is not complete absence from required CI;
+- active packs such as `office-ops-expert` and `custom-creative-ecom-analyst` already expose `accurate_judgement_enforcement` and `reasoning_loop_enforcement` under `capability_arbitration_contract`, but do not yet expose symmetric `route_discovery_enforcement` / `feedback_operational_prompt_enforcement` hooks;
+- the third loop still lacks one frozen roundtable/vendor/reference/runtime-probe four-track cross-validation primitive, so AI-parallel discovery can degrade into scattered probes rather than governed serial convergence;
+- the fourth loop still lacks the same shared cross-validation primitive plus a governed loop-back into the first loop, so prompt optimization can drift into self-reinforcing injection instead of returning through multimodal accurate judgement;
+- required-gate bundle status and release-readiness projection still do not expose the same class of loop-level strengthening citizenship for the third/fourth loops that the protocol already provides for the first two.
+
+Root cause:
+
+- the protocol froze the third/fourth loops at kernel-source level and partial validator/runtime-contract level, but never fully lifted them into symmetric upper-layer strengthening surfaces that instances can consume as first-class runtime capability primitives while preserving independent third-loop and fourth-loop centers over one shared four-track cross-validation primitive plus a fourth-loop-to-first-loop governed reentry path.
+
+### RC-14 Fourth-loop-to-first-loop loopback semantics can still collapse into generic fourth-loop wording unless frozen as a distinct bridge
+
+Symptoms:
+
+- `ASB16-RQ-048` / `ASB16-RQ-049` are now machine-landed for third/fourth-loop strengthening, but the 4→1 return path can still be misread as merely a fourth-loop sub-bullet unless it is tracked as its own semantic object;
+- the shared `roundtable_four_track_cross_validation_contract_v1` primitive can be misclassified as the loopback bridge unless the bridge is named and bounded separately;
+- without a standalone bridge contract, prompt-derived artifacts can drift semantically toward “current-round truth” instead of staying governed preflight aids that must re-enter first-loop revalidation;
+- workbook/register surfaces previously had no standalone row to keep this bridge open as docs-owned debt after `ISSUE-030` closure.
+
+Root cause:
+
+- the protocol now has independent third-loop and fourth-loop strengthening centers plus a shared four-track primitive, but the fourth-loop-to-first-loop reentry path still needs its own frozen bridge contract (`feedback_to_judgement_loopback_contract_v1`) so that promotion evidence, prompt derivation, and first-loop truth are not semantically collapsed into one object.
 
 ## 4) Routed issue sections
 
@@ -728,29 +757,92 @@ Root cause:
   - `office-ops-regression-self-drive` and `ai-folder-governance` skills do not act as always-on tool-call interceptors for this lane family;
   - `IDENTITY_PROMPT.md` still advertises `Methodology version: v1.5` / `Prompt version: v1.5` while `CURRENT_TASK.json` advertises `v1.6`, which is a governance-hygiene multiplier though not the primary execution defect.
 
-### ISSUE-029 - Workspace-local runtime catalog metadata can remain underdescribed after resolver truth is repaired
+### ISSUE-029 - Workspace-local runtime catalog metadata hygiene is now protocol-owned and closed on its own lane
 
-- `status`: OPEN
-- `problem_statement`: the `v1.6.14` launcher convergence follow-on has repaired the protocol-owned runtime truth path for sibling workspaces: `resolve_identity_context.py` now returns `source_layer=project` / `resolved_scope=USER`, and launcher closure checks now bind relative `--catalog .identity/catalog.local.yaml` to the caller workspace. However, live external workspace catalogs can still carry raw metadata residue such as `canonical_scope=UNKNOWN`. That means the resolver truth is now authoritative and correct, but the catalog row itself is not yet fully self-descriptive.
+- `status`: CLOSED
+- `problem_statement`: the raw metadata follow-on that used to remain after resolver repair is now owned by a dedicated protocol hygiene lane rather than by launcher semantics. Runtime resolver truth stays authority-first, while raw workspace-local catalog self-description is now validated and repaired directly through shared infrastructure.
 - `primary_owner_doc`: `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
 - `secondary_refs`:
   - `docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md`
   - `docs/governance/identity-codex-launcher-governance-v1.6.14.md`
   - `docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md`
 - `machine_gate`:
-  - `scripts/resolve_identity_context.py`
+  - `scripts/validate_runtime_catalog_metadata_hygiene.py`
+  - `scripts/repair_runtime_catalog_metadata_hygiene.py`
   - `scripts/check_identity_codex_launcher_migration_closure.py`
+  - `scripts/run_identity_codex_launcher_workspace_convergence.py`
+  - `scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh`
   - `scripts/ci/run_identity_codex_launcher_cross_workspace_pilot_probes_ci.sh`
-  - supporting live replay: sibling-workspace `resolve.json` / `closure.json`
 - `root_cause`: RC-03 and RC-10
 - `stop_condition`:
   - raw workspace-local runtime catalog rows become self-descriptive enough that protocol-owned truth no longer needs to correct `canonical_scope=UNKNOWN`-class residue for healthy rows;
-  - creator/backfill or equivalent hygiene tooling can normalize catalog metadata without changing the already-correct resolver truth path;
+  - creator/backfill-equivalent hygiene tooling normalizes catalog metadata without changing the already-correct resolver truth path;
   - the cleanup remains explicitly separate from `v1.6.14` launcher semantics, so launcher convergence stays closed while metadata hygiene advances on its own lane.
 - `current_evidence`:
-  - sibling-workspace launcher replays now pass with `source_layer=project`, `resolved_scope=USER`, and caller-workspace `catalogs_checked=[<workspace>/.identity/catalog.local.yaml]`;
-  - the same external workspace can still show raw row metadata such as `canonical_scope=UNKNOWN`, proving that runtime truth is repaired earlier than raw metadata hygiene;
-  - governance/review surfaces for `v1.6.14` now explicitly freeze this as a follow-on hygiene boundary instead of treating it as reopened launcher debt.
+  - `python3 scripts/validate_runtime_catalog_metadata_hygiene.py --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --require-active --json-only` now returns `PASS_REQUIRED` with `checked_identity_count=4`, `violation_count=0`;
+  - `scripts/check_identity_codex_launcher_migration_closure.py --catalog ../.identity/catalog.local.yaml --workspace-runtime-only --json-only` now projects `runtime_catalog_metadata_hygiene_status=PASS_REQUIRED` alongside launcher closure for all active runtime identities;
+  - `scripts/run_identity_codex_launcher_workspace_convergence.py` now performs metadata hygiene repair before launcher closure, and both launcher convergence probe families seed `canonical_scope=UNKNOWN` / empty `canonical_pack_path` and prove apply-time repair;
+  - required gates and readiness now consume `scripts/validate_runtime_catalog_metadata_hygiene.py`, so raw metadata hygiene is no longer an informal follow-on note.
+
+### ISSUE-030 - Routing/learning strengthening symmetry is now landed as a protocol-owned upper-layer runtime contract
+
+- `status`: CLOSED
+- `problem_statement`: the protocol kernel already froze the third/fourth source contracts as `Auto-routing contract` and `Rule learning contract`; the remaining work was to land symmetric runtime-consumable strengthening above them. That symmetry is now protocol-owned: packs can carry the strengthening hooks, validators can fail-close them, and required-gate/readiness surfaces now project them directly.
+- `primary_owner_doc`: `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md`
+  - `identity/protocol/IDENTITY_PROTOCOL.md`
+  - `/Users/yangxi/.codex/.identity/office-ops-expert/CURRENT_TASK.json`
+  - `/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/CURRENT_TASK.json`
+- `machine_gate`:
+  - `scripts/validate_identity_routing_learning_strengthening.py`
+  - `scripts/validate_identity_capability_arbitration.py`
+  - `scripts/validate_discovery_requiredization.py`
+  - `scripts/validate_capability_fit_roundtable_evidence.py`
+  - `scripts/validate_identity_orchestration_contract.py`
+  - `scripts/validate_identity_knowledge_contract.py`
+  - `scripts/validate_identity_experience_feedback.py`
+  - `scripts/validate_identity_experience_feedback_governance.py`
+  - `scripts/required_gate_bundle_runner.py`
+  - `scripts/release_readiness_check.py`
+- `root_cause`: RC-13
+- `stop_condition`:
+  - third-loop strengthening lands above the kernel `Auto-routing contract` as a symmetric runtime-consumable binding with explicit route-discovery convergence evidence;
+  - fourth-loop strengthening lands above the kernel `Rule learning contract` as a symmetric runtime-consumable binding with scoped operational-prompt injection, replay verification, and rollback semantics;
+  - both loops consume the same `roundtable_four_track_cross_validation_contract_v1` primitive without introducing a fallback/backstop compatibility bridge;
+  - active packs gain governed `route_discovery_enforcement` and `feedback_operational_prompt_enforcement` surfaces beside the already-landed first-two-loop hooks;
+  - required-gate bundle and release-readiness surfaces project the strengthened third/fourth loops as first-class citizenship.
+- `current_evidence`:
+  - `create_identity_pack.py` and `repair_contract_backfill.py` now materialize `route_discovery_enforcement` / `feedback_operational_prompt_enforcement` under `capability_arbitration_contract`;
+  - `scripts/validate_identity_routing_learning_strengthening.py` now fail-closes the strengthening pair and currently returns `PASS_REQUIRED` for all four active workspace-local runtime identities (`base-repo-audit-expert-v3`, `custom-creative-ecom-analyst`, `base-repo-architect`, `base-repo-closure-orchestrator`);
+  - `scripts/validate_identity_capability_arbitration.py` now consumes the strengthening hooks directly and replays `Capability arbitration contract validation PASSED` across the same four active runtime identities;
+  - `required_gate_bundle_runner.py` now binds `ASB16-RQ-048` / `ASB16-RQ-049`, while `scripts/ci/run_required_runtime_gates_ci.sh` and `scripts/release_readiness_check.py` now include the strengthening validator family;
+  - the strengthening lane remains generic protocol infrastructure only: no business-specific routing policy, prompt content, or backward-compatibility bridge was introduced.
+
+### ISSUE-031 - Fourth-loop-to-first-loop loopback bridge is now opened as a standalone docs-owned contract and must not be semantically collapsed back into ISSUE-030
+
+- `status`: OPEN
+- `problem_statement`: the third/fourth-loop strengthening centers are now landed under `ISSUE-030`, but the 4→1 return path still needs its own explicit semantic object. Without a standalone bridge contract, fourth-loop prompt artifacts can be misread as first-loop truth, or the shared four-track primitive can be misread as the loopback transport/admission surface.
+- `primary_owner_doc`: `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md`
+  - `identity/protocol/mappings/contract-binding.v1.6.yaml`
+  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`
+- `machine_gate`:
+  - `scripts/docs_command_contract_check.py`
+  - `scripts/validate_issue_register_consistency.py`
+  - `scripts/validate_contract_binding_reference_integrity.py`
+  - `scripts/validate_identity_routing_learning_strengthening.py`
+- `root_cause`: RC-14
+- `stop_condition`:
+  - `feedback_to_judgement_loopback_contract_v1` remains frozen as a standalone bridge contract rather than being folded into either the fourth-loop center or the shared four-track primitive;
+  - loopback artifacts are explicitly bounded as governed preflight aids only, never as current-round truth;
+  - first-loop revalidation authority, TTL expiry, conflict demotion, rollback, and negative-feedback writeback are all machine-visible on the canonical bridge evidence family;
+  - a dedicated machine consumer lane can consume `ASB16-RQ-050` without reopening `ISSUE-030` or weakening no-downgrade boundaries.
+- `current_evidence`:
+  - `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md` now freezes `feedback_to_judgement_loopback_contract_v1` as the standalone 4→1 bridge and separates it from both `feedback_operational_prompt_contract_v1` and the first-loop `Accurate judgement contract`;
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md` now keeps the bridge as a docs-owned semantic opening while leaving the 048/049 strengthening pair closed on their own machine-landed lane;
+  - `identity/protocol/mappings/contract-binding.v1.6.yaml` now binds `ASB16-RQ-050` with canonical loopback evidence fields, and `identity/protocol/mappings/semantic-term-registry.v1.6.yaml` now freezes the anti-pollution vocabulary for this bridge.
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 
