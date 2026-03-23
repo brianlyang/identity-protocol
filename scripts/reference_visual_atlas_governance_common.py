@@ -15,6 +15,12 @@ from repo_root_resolution_common import resolve_repo_root
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 REFERENCE_VISUAL_ATLAS_REGISTRY_CURRENT = "identity/protocol/mappings/reference-visual-atlas-registry.current.yaml"
+REFERENCE_VISUAL_ATLAS_ONBOARDING_CONTRACT = "shared_reference_visual_atlas_onboarding_v1"
+REFERENCE_VISUAL_ATLAS_GENERATOR_SCRIPT = "scripts/generate_reference_visual_atlas_scaffold.py"
+REFERENCE_VISUAL_ATLAS_PROBE_SCRIPT = "scripts/ci/run_reference_visual_atlas_scaffold_probes_ci.sh"
+REFERENCE_VISUAL_ATLAS_RENDERER_SCRIPT = "scripts/render_reference_visual_atlas_inventory.py"
+REFERENCE_VISUAL_ATLAS_TEMPLATE_ROOT = "scripts/templates/reference_visual_atlas"
+REFERENCE_VISUAL_ATLAS_INVENTORY_DOC = "docs/references/INDEX.md"
 
 CONTRACT_BINDING_CURRENT_REF = "identity/protocol/mappings/contract-binding.current.yaml"
 SEMANTIC_TERM_REGISTRY_CURRENT_REF = "identity/protocol/mappings/semantic-term-registry.current.yaml"
@@ -43,6 +49,17 @@ class VisualAtlasConfig:
     anti_scatter_scope_mode: str = "protocol_repo_internal_only"
 
 
+@dataclass(frozen=True)
+class ReferenceVisualAtlasFamily:
+    family_id: str
+    canonical_doc: str
+    canonical_asset_root: str
+    validator_script: str
+    scope_mode: str
+    onboarding_contract: str
+    owner_docs: tuple[str, ...]
+
+
 def _norm_path(value: Any) -> str:
     return str(value or "").strip().replace("\\", "/")
 
@@ -63,6 +80,132 @@ def _load_stream_doc_registry(repo_root: Path, configured_ref: str) -> tuple[dic
     if not active_path.exists():
         return {}, entry_path, active_path, "active_registry_missing"
     return _load_yaml(active_path), entry_path, active_path, ""
+
+
+def load_reference_visual_atlas_registry(repo_root: Path) -> tuple[dict[str, Any], Path, Path, str]:
+    entry_path = (repo_root / REFERENCE_VISUAL_ATLAS_REGISTRY_CURRENT).resolve()
+    active_path, _active_file, alias_error = resolve_current_yaml_alias(
+        repo_root, REFERENCE_VISUAL_ATLAS_REGISTRY_CURRENT
+    )
+    if alias_error:
+        return {}, entry_path, active_path, alias_error
+    if not active_path.exists():
+        return {}, entry_path, active_path, "active_registry_missing"
+    return _load_yaml(active_path), entry_path, active_path, ""
+
+
+def reference_visual_atlas_families_from_registry(
+    registry_doc: Mapping[str, Any],
+) -> tuple[ReferenceVisualAtlasFamily, ...]:
+    rows = registry_doc.get("atlas_families")
+    if not isinstance(rows, list):
+        return ()
+    families: list[ReferenceVisualAtlasFamily] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        owner_docs_raw = row.get("owner_docs")
+        owner_docs_values = owner_docs_raw if isinstance(owner_docs_raw, list) else []
+        owner_docs = tuple(_norm_path(item) for item in owner_docs_values if _norm_path(item))
+        families.append(
+            ReferenceVisualAtlasFamily(
+                family_id=_norm_path(row.get("family_id")),
+                canonical_doc=_norm_path(row.get("canonical_doc")),
+                canonical_asset_root=_norm_path(row.get("canonical_asset_root")),
+                validator_script=_norm_path(row.get("validator_script")),
+                scope_mode=_norm_path(row.get("scope_mode")),
+                onboarding_contract=_norm_path(row.get("onboarding_contract")),
+                owner_docs=owner_docs,
+            )
+        )
+    return tuple(families)
+
+
+def render_reference_visual_atlas_inventory_markdown(registry_doc: Mapping[str, Any]) -> str:
+    generator_script = _norm_path(registry_doc.get("generator_script")) or REFERENCE_VISUAL_ATLAS_GENERATOR_SCRIPT
+    probe_script = _norm_path(registry_doc.get("probe_script")) or REFERENCE_VISUAL_ATLAS_PROBE_SCRIPT
+    renderer_script = _norm_path(registry_doc.get("renderer_script")) or REFERENCE_VISUAL_ATLAS_RENDERER_SCRIPT
+    template_root = _norm_path(registry_doc.get("template_root")) or REFERENCE_VISUAL_ATLAS_TEMPLATE_ROOT
+    inventory_doc = _norm_path(registry_doc.get("inventory_doc")) or REFERENCE_VISUAL_ATLAS_INVENTORY_DOC
+    onboarding_contract = (
+        _norm_path(registry_doc.get("onboarding_contract")) or REFERENCE_VISUAL_ATLAS_ONBOARDING_CONTRACT
+    )
+    families = reference_visual_atlas_families_from_registry(registry_doc)
+
+    lines: list[str] = [
+        "# Protocol Reference Visual Atlas Inventory",
+        "",
+        "Status: Active canonical inventory for protocol-owned visual atlas families.",
+        "Layer: protocol",
+        "Scope: canonical inventory and discoverability surface for atlas-family docs, asset roots, validators, and onboarding ownership.",
+        f"Generation: machine-rendered from `{REFERENCE_VISUAL_ATLAS_REGISTRY_CURRENT}`; manual edits are stale until `python3 {renderer_script} --write` is rerun.",
+        "",
+        "## Current control-plane alias refs",
+        "",
+        f"- `{STREAM_DOC_REGISTRY_CURRENT}`",
+        f"- `{CONTRACT_BINDING_CURRENT_REF}`",
+        f"- `{SEMANTIC_TERM_REGISTRY_CURRENT_REF}`",
+        f"- `{REFERENCE_VISUAL_ATLAS_REGISTRY_CURRENT}`",
+        "",
+        "## Fixed role boundary",
+        "",
+        "1. This file is the canonical inventory/discoverability surface for protocol-owned visual atlas families under `docs/references/`.",
+        "2. `docs/references/README.md` remains the onboarding contract and generator/probe playbook; this file is the atlas-family inventory, not the onboarding guide.",
+        "3. Individual atlas markdown docs remain the family-specific explanatory surfaces.",
+        "4. Normative semantic truth remains with owner governance/review docs, the protocol motherline, contract binding, and machine validators.",
+        f"5. This markdown is the rendered projection of `{REFERENCE_VISUAL_ATLAS_REGISTRY_CURRENT}`, not a hand-maintained parallel truth surface.",
+        f"6. The frozen onboarding contract for every row below is `{onboarding_contract}`.",
+        "",
+        "## Shared onboarding control surfaces",
+        "",
+        "- Inventory renderer:",
+        f"  - `python3 {renderer_script} --write`",
+        "- Scaffold generator:",
+        f"  - `python3 {generator_script} --help`",
+        "- Shared anti-rot probe:",
+        f"  - `bash {probe_script}`",
+        "- Shared validator common:",
+        "  - `scripts/reference_visual_atlas_governance_common.py`",
+        "- Shared template root:",
+        f"  - `{template_root}`",
+        "",
+        "## Canonical atlas families",
+        "",
+        "| Family | Canonical doc | Asset root | Validator | Owner docs | Scope mode |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    for family in families:
+        owner_docs_cell = "; ".join(f"`{owner_doc}`" for owner_doc in family.owner_docs) or "—"
+        asset_root_cell = f"`{family.canonical_asset_root}/`" if family.canonical_asset_root else "—"
+        lines.append(
+            "| "
+            f"`{family.family_id or 'UNKNOWN'}` | "
+            f"`{family.canonical_doc or 'UNKNOWN'}` | "
+            f"{asset_root_cell} | "
+            f"`{family.validator_script or 'UNKNOWN'}` | "
+            f"{owner_docs_cell} | "
+            f"`{family.scope_mode or 'UNKNOWN'}` |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Inventory discipline",
+            "",
+            "1. Every canonical atlas family must appear in both:",
+            f"   - `{REFERENCE_VISUAL_ATLAS_REGISTRY_CURRENT}`",
+            f"   - `{inventory_doc}`",
+            f"2. `{inventory_doc}` is a rendered projection of the registry row set; manual edits are stale until `python3 {renderer_script} --write` reproduces the checked-in file exactly.",
+            "3. Every registered family must point to:",
+            "   - one canonical atlas markdown doc,",
+            "   - one canonical asset root,",
+            "   - one thin validator script,",
+            "   - one or more owner docs.",
+            "4. Future atlas-family growth must update the registry row, owner-doc backlinks, stream-doc-registry entry, and validator landing, then rerender this inventory in the same closure.",
+            "5. The inventory is stale if it omits a landed atlas validator, lists a family whose canonical doc/asset root/validator no longer exists, or drifts from the rendered registry projection.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def discover_visual_atlas_governance_scripts(repo_root: Path) -> list[Path]:

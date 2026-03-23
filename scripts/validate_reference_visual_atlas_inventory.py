@@ -11,23 +11,34 @@ import yaml
 from registry_alias_control_plane_common import STREAM_DOC_REGISTRY_CURRENT, resolve_current_yaml_alias
 from repo_root_resolution_common import resolve_repo_root
 from reference_visual_atlas_governance_common import (
+    REFERENCE_VISUAL_ATLAS_INVENTORY_DOC,
+    REFERENCE_VISUAL_ATLAS_ONBOARDING_CONTRACT,
+    REFERENCE_VISUAL_ATLAS_PROBE_SCRIPT,
+    REFERENCE_VISUAL_ATLAS_GENERATOR_SCRIPT,
     REFERENCE_VISUAL_ATLAS_REGISTRY_CURRENT,
+    REFERENCE_VISUAL_ATLAS_RENDERER_SCRIPT,
+    REFERENCE_VISUAL_ATLAS_TEMPLATE_ROOT,
     discover_visual_atlas_governance_scripts,
+    load_reference_visual_atlas_registry,
+    reference_visual_atlas_families_from_registry,
+    render_reference_visual_atlas_inventory_markdown,
 )
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_CODE = "IP-REF-ATLAS-INV-001"
-INVENTORY_DOC = "docs/references/INDEX.md"
+INVENTORY_DOC = REFERENCE_VISUAL_ATLAS_INVENTORY_DOC
 EXPECTED_TOP_LEVEL = {
-    "onboarding_contract": "shared_reference_visual_atlas_onboarding_v1",
-    "generator_script": "scripts/generate_reference_visual_atlas_scaffold.py",
-    "probe_script": "scripts/ci/run_reference_visual_atlas_scaffold_probes_ci.sh",
-    "template_root": "scripts/templates/reference_visual_atlas",
+    "onboarding_contract": REFERENCE_VISUAL_ATLAS_ONBOARDING_CONTRACT,
+    "generator_script": REFERENCE_VISUAL_ATLAS_GENERATOR_SCRIPT,
+    "probe_script": REFERENCE_VISUAL_ATLAS_PROBE_SCRIPT,
+    "renderer_script": REFERENCE_VISUAL_ATLAS_RENDERER_SCRIPT,
+    "template_root": REFERENCE_VISUAL_ATLAS_TEMPLATE_ROOT,
     "inventory_doc": INVENTORY_DOC,
 }
 EXPECTED_INDEX_MARKERS = (
     "`identity/protocol/mappings/reference-visual-atlas-registry.current.yaml`",
+    "`python3 scripts/render_reference_visual_atlas_inventory.py --write`",
     "`python3 scripts/generate_reference_visual_atlas_scaffold.py --help`",
     "`bash scripts/ci/run_reference_visual_atlas_scaffold_probes_ci.sh`",
 )
@@ -79,10 +90,8 @@ def _static_alias_row(registry_doc: dict[str, Any], doc_rel: str) -> list[str]:
 
 def validate_reference_visual_atlas_inventory(repo_root_override: str = "") -> dict[str, Any]:
     repo_root = resolve_repo_root(repo_root_override, start=__file__)
-    registry_entry = (repo_root / REFERENCE_VISUAL_ATLAS_REGISTRY_CURRENT).resolve()
-    registry_active, registry_active_file, registry_alias_error = resolve_current_yaml_alias(
-        repo_root, REFERENCE_VISUAL_ATLAS_REGISTRY_CURRENT
-    )
+    registry_doc, registry_entry, registry_active, registry_alias_error = load_reference_visual_atlas_registry(repo_root)
+    registry_active_file = registry_active.relative_to(repo_root).as_posix() if registry_active.exists() else ""
     inventory_doc = (repo_root / INVENTORY_DOC).resolve()
     stream_doc_registry, stream_doc_registry_error = _load_stream_doc_registry(repo_root)
     mandatory_docs = _mandatory_static_docs(stream_doc_registry)
@@ -90,20 +99,17 @@ def validate_reference_visual_atlas_inventory(repo_root_override: str = "") -> d
     violations: list[str] = []
     if registry_alias_error:
         violations.append(f"atlas_registry_alias_error:{registry_alias_error}:{registry_active_file}")
-        registry_doc: dict[str, Any] = {}
     elif not registry_active.exists():
         violations.append(f"atlas_registry_missing:{registry_active}")
-        registry_doc = {}
-    else:
-        registry_doc = _load_yaml(registry_active)
-        if not registry_doc:
-            violations.append(f"atlas_registry_parse_failed:{registry_active}")
+    elif not registry_doc:
+        violations.append(f"atlas_registry_parse_failed:{registry_active}")
 
     for key, expected in EXPECTED_TOP_LEVEL.items():
         actual = _norm_path(registry_doc.get(key))
         if actual != expected:
             violations.append(f"registry_field_mismatch:{key}:{actual or '<missing>'}:{expected}")
 
+    rendered_inventory_text = render_reference_visual_atlas_inventory_markdown(registry_doc) if registry_doc else ""
     if not inventory_doc.exists():
         violations.append(f"inventory_doc_missing:{INVENTORY_DOC}")
         inventory_text = ""
@@ -112,6 +118,8 @@ def validate_reference_visual_atlas_inventory(repo_root_override: str = "") -> d
         for marker in EXPECTED_INDEX_MARKERS:
             if marker not in inventory_text:
                 violations.append(f"inventory_doc_marker_missing:{marker}")
+        if rendered_inventory_text and inventory_text != rendered_inventory_text:
+            violations.append("inventory_render_sync_drift")
 
     if stream_doc_registry_error:
         violations.append(f"stream_doc_registry_error:{stream_doc_registry_error}")
@@ -135,10 +143,9 @@ def validate_reference_visual_atlas_inventory(repo_root_override: str = "") -> d
         for alias_ref in missing_aliases:
             violations.append(f"inventory_alias_ref_missing:{alias_ref}")
 
-    atlas_rows = registry_doc.get("atlas_families")
-    if not isinstance(atlas_rows, list) or not atlas_rows:
+    atlas_rows = reference_visual_atlas_families_from_registry(registry_doc)
+    if not atlas_rows:
         violations.append("atlas_families_missing")
-        atlas_rows = []
 
     discovered_validators = {
         path.relative_to(repo_root).as_posix(): path for path in discover_visual_atlas_governance_scripts(repo_root)
@@ -147,10 +154,7 @@ def validate_reference_visual_atlas_inventory(repo_root_override: str = "") -> d
     registered_validator_paths: set[str] = set()
 
     for row in atlas_rows:
-        if not isinstance(row, dict):
-            violations.append("atlas_family_row_invalid")
-            continue
-        family_id = _norm_path(row.get("family_id"))
+        family_id = row.family_id
         if not family_id:
             violations.append("atlas_family_missing_id")
             continue
@@ -158,18 +162,18 @@ def validate_reference_visual_atlas_inventory(repo_root_override: str = "") -> d
             violations.append(f"atlas_family_duplicate:{family_id}")
         seen_family_ids.add(family_id)
 
-        canonical_doc = _norm_path(row.get("canonical_doc"))
-        asset_root = _norm_path(row.get("canonical_asset_root"))
-        validator_script = _norm_path(row.get("validator_script"))
-        scope_mode = _norm_path(row.get("scope_mode"))
-        onboarding_contract = _norm_path(row.get("onboarding_contract"))
-        owner_docs = row.get("owner_docs")
+        canonical_doc = row.canonical_doc
+        asset_root = row.canonical_asset_root
+        validator_script = row.validator_script
+        scope_mode = row.scope_mode
+        onboarding_contract = row.onboarding_contract
+        owner_docs = list(row.owner_docs)
 
         if scope_mode != "protocol_repo_internal_only":
             violations.append(f"scope_mode_invalid:{family_id}:{scope_mode or '<missing>'}")
         if onboarding_contract != EXPECTED_TOP_LEVEL["onboarding_contract"]:
             violations.append(f"row_onboarding_contract_invalid:{family_id}:{onboarding_contract or '<missing>'}")
-        if not isinstance(owner_docs, list) or not owner_docs:
+        if not owner_docs:
             violations.append(f"owner_docs_missing:{family_id}")
             owner_docs = []
 
@@ -233,6 +237,8 @@ def validate_reference_visual_atlas_inventory(repo_root_override: str = "") -> d
         "atlas_registry_active_file": registry_active_file,
         "atlas_registry_alias_error": registry_alias_error,
         "inventory_doc": INVENTORY_DOC,
+        "inventory_render_sync_status": "PASS_REQUIRED" if not rendered_inventory_text or inventory_text == rendered_inventory_text else "FAIL_REQUIRED",
+        "inventory_renderer_script": REFERENCE_VISUAL_ATLAS_RENDERER_SCRIPT,
         "registered_family_ids": sorted(seen_family_ids),
         "atlas_family_count": len(seen_family_ids),
         "discovered_validator_scripts": sorted(discovered_validators),

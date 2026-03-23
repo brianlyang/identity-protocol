@@ -26,7 +26,7 @@ Scope: canonical `docs/references/` directory contract for protocol-owned refere
 3. Cross-vendor / lifecycle references
    - non-owner explanatory surfaces that summarize stable protocol usage patterns while remaining subordinate to governance and validators.
 4. Atlas-family inventory
-   - canonical inventory/discoverability surface at `docs/references/INDEX.md`, backed by `identity/protocol/mappings/reference-visual-atlas-registry.current.yaml`.
+   - canonical inventory/discoverability surface at `docs/references/INDEX.md`, machine-rendered from `identity/protocol/mappings/reference-visual-atlas-registry.current.yaml`.
 
 ## Standardized visual-atlas onboarding contract
 
@@ -52,7 +52,10 @@ Any future protocol-owned visual atlas must follow this standard path; do not im
 
 1. Register the atlas markdown in `identity/protocol/mappings/stream-doc-registry.v1.6.yaml` as a `mandatory_static_doc`.
 2. Add a `static_doc_required_alias_refs` row for that atlas markdown.
-3. Add an entry to `docs/governance/AUDIT_SNAPSHOT_INDEX.md` describing the atlas family and asset root.
+3. Register the atlas family row in `identity/protocol/mappings/reference-visual-atlas-registry.v1.6.yaml`.
+4. Regenerate `docs/references/INDEX.md` from the registry instead of hand-editing it:
+   - `python3 scripts/render_reference_visual_atlas_inventory.py --write`
+5. Add an entry to `docs/governance/AUDIT_SNAPSHOT_INDEX.md` describing the atlas family and asset root.
 
 ### D. Validator standard
 
@@ -81,18 +84,21 @@ Any future protocol-owned visual atlas must follow this standard path; do not im
    - atlas validator passes,
    - docs command contract check passes,
    - issue register consistency passes,
-   - stream doc registry / alias refs are synchronized.
+   - stream doc registry / alias refs are synchronized,
+   - `docs/references/INDEX.md` is re-rendered from the current atlas registry.
 
 ### G. Scaffold generator standard
 
 1. Future atlas-family onboarding should start from the shared scaffold generator instead of freehand copy/paste:
    - `python3 scripts/generate_reference_visual_atlas_scaffold.py --help`
-2. The generator templates live under:
+2. The atlas-family inventory surface is rendered through:
+   - `python3 scripts/render_reference_visual_atlas_inventory.py --write`
+3. The generator templates live under:
    - `scripts/templates/reference_visual_atlas/`
-3. Generated scaffold output is preview-only. It is **not** canonical until the generated surfaces are copied into the protocol repo, registered in `stream-doc-registry`, backlinked from owner docs, added to `AUDIT_SNAPSHOT_INDEX`, and validated green.
-4. Example preview command:
+4. Generated scaffold output is preview-only. It is **not** canonical until the generated surfaces are copied into the protocol repo, registered in `stream-doc-registry`, added to `reference-visual-atlas-registry`, backlinked from owner docs, re-rendered into `docs/references/INDEX.md`, added to `AUDIT_SNAPSHOT_INDEX`, and validated green.
+5. Example preview command:
    - `python3 scripts/generate_reference_visual_atlas_scaffold.py --atlas-family-slug identity-protocol-example-visual-atlas --doc-version v1.6 --stream-version v1.6.99 --validator-slug example --title "Identity Protocol Example Visual Atlas" --surface-summary "example explanation surface" --purpose-sentence "the example routing model and non-goals" --status-key example_visual_atlas_governance_status --error-code IP-EXAMPLE-ATLAS-001 --svg-name identity_protocol_example_overview_v1699.svg --owner-doc docs/governance/example-governance-v1.6.99.md --owner-doc docs/review/example-review-v1.6.99.md --output-root /tmp/reference-visual-atlas-example --dry-run`
-5. Shared anti-rot smoke probe for the scaffold generator:
+6. Shared anti-rot smoke probe for the scaffold generator:
    - `bash scripts/ci/run_reference_visual_atlas_scaffold_probes_ci.sh`
 
 ## Visual-atlas 5-step quick checklist
@@ -110,6 +116,8 @@ Use this short checklist when opening any future protocol-owned visual atlas lan
 3. **Register the atlas family**
    - add the atlas markdown to `mandatory_static_docs`
    - add a `static_doc_required_alias_refs` row
+   - add the atlas row to `identity/protocol/mappings/reference-visual-atlas-registry.v1.6.yaml`
+   - rerender `docs/references/INDEX.md` via `python3 scripts/render_reference_visual_atlas_inventory.py --write`
    - register the atlas in `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
 4. **Wire the machine checks**
    - create a thin atlas validator on top of `scripts/reference_visual_atlas_governance_common.py`

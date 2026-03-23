@@ -4,6 +4,7 @@ registry_version: v1.6
 onboarding_contract: shared_reference_visual_atlas_onboarding_v1
 generator_script: scripts/generate_reference_visual_atlas_scaffold.py
 probe_script: scripts/ci/run_reference_visual_atlas_scaffold_probes_ci.sh
+renderer_script: scripts/render_reference_visual_atlas_inventory.py
 template_root: scripts/templates/reference_visual_atlas
 inventory_doc: docs/references/INDEX.md
 atlas_families:

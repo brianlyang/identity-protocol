@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-23T13:46:36Z",
-  "git_head_short": "7340e4f",
+  "generated_at_utc": "2026-03-23T14:09:06Z",
+  "git_head_short": "265fada",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -45,15 +45,11 @@
         ],
         "observed": {
           "validator_scripts": 204,
-          "error_codes": 573,
-          "error_code_families": 208,
-          "mapping_rows_missing_in_bundle": 3,
-          "bundle_rows": 49,
-          "missing_mapping_rows": [
-            "asb16-rq-044",
-            "asb16-rq-045",
-            "asb16-rq-046"
-          ],
+          "error_codes": 574,
+          "error_code_families": 209,
+          "mapping_rows_missing_in_bundle": 0,
+          "bundle_rows": 52,
+          "missing_mapping_rows": [],
           "strict_direct_validate_calls": {
             "scripts/identity_creator.py": 89,
             "scripts/release_readiness_check.py": 130,
@@ -64,7 +60,7 @@
           },
           "required_gate_workflow_python_invocations": 17,
           "required_gate_workflow_unique_python_scripts": 17,
-          "required_gate_delegate_inclusive_python_invocations": 255,
+          "required_gate_delegate_inclusive_python_invocations": 257,
           "required_gate_delegate_inclusive_unique_python_scripts": 174
         },
         "budgets": {
@@ -137,20 +133,14 @@
             },
             {
               "field": "error_codes",
-              "observed": 573,
+              "observed": 574,
               "ceiling": 494,
               "reason": "convergence_rebound_detected"
             },
             {
               "field": "error_code_families",
-              "observed": 208,
+              "observed": 209,
               "ceiling": 181,
-              "reason": "convergence_rebound_detected"
-            },
-            {
-              "field": "mapping_rows_missing_in_bundle",
-              "observed": 3,
-              "ceiling": 0,
               "reason": "convergence_rebound_detected"
             },
             {
@@ -169,7 +159,7 @@
             }
           ]
         },
-        "warn_violation_count": 6,
+        "warn_violation_count": 5,
         "warn_violations": [
           {
             "field": "validator_scripts",
@@ -179,26 +169,15 @@
           },
           {
             "field": "error_codes",
-            "observed": 573,
+            "observed": 574,
             "budget_warn": 494,
             "reason": "error_code_count_warn"
           },
           {
             "field": "error_code_families",
-            "observed": 208,
+            "observed": 209,
             "budget_warn": 181,
             "reason": "error_code_family_count_warn"
-          },
-          {
-            "field": "mapping_rows_missing_in_bundle",
-            "observed": 3,
-            "budget_warn": 0,
-            "reason": "bundle_coverage_gap_warn",
-            "missing_rows": [
-              "asb16-rq-044",
-              "asb16-rq-045",
-              "asb16-rq-046"
-            ]
           },
           {
             "field": "strict_direct_validate_calls",
@@ -215,7 +194,7 @@
             "reason": "strict_surface_direct_calls_warn"
           }
         ],
-        "fail_violation_count": 11,
+        "fail_violation_count": 9,
         "fail_violations": [
           {
             "field": "validator_scripts",
@@ -225,26 +204,15 @@
           },
           {
             "field": "error_codes",
-            "observed": 573,
+            "observed": 574,
             "budget_fail": 500,
             "reason": "error_code_count_exceeded"
           },
           {
             "field": "error_code_families",
-            "observed": 208,
+            "observed": 209,
             "budget_fail": 188,
             "reason": "error_code_family_count_exceeded"
-          },
-          {
-            "field": "mapping_rows_missing_in_bundle",
-            "observed": 3,
-            "budget_fail": 1,
-            "reason": "bundle_coverage_gap_growth",
-            "missing_rows": [
-              "asb16-rq-044",
-              "asb16-rq-045",
-              "asb16-rq-046"
-            ]
           },
           {
             "field": "strict_direct_validate_calls",
@@ -261,20 +229,14 @@
           },
           {
             "field": "error_codes",
-            "observed": 573,
+            "observed": 574,
             "ceiling": 494,
             "reason": "convergence_rebound_detected"
           },
           {
             "field": "error_code_families",
-            "observed": 208,
+            "observed": 209,
             "ceiling": 181,
-            "reason": "convergence_rebound_detected"
-          },
-          {
-            "field": "mapping_rows_missing_in_bundle",
-            "observed": 3,
-            "ceiling": 0,
             "reason": "convergence_rebound_detected"
           },
           {
@@ -296,15 +258,12 @@
           "validator_script_count_warn",
           "error_code_count_warn",
           "error_code_family_count_warn",
-          "bundle_coverage_gap_warn",
           "strict_surface_direct_calls_warn",
           "strict_surface_direct_calls_warn",
           "validator_script_count_exceeded",
           "error_code_count_exceeded",
           "error_code_family_count_exceeded",
-          "bundle_coverage_gap_growth",
           "strict_surface_direct_calls_growth",
-          "convergence_rebound_detected",
           "convergence_rebound_detected",
           "convergence_rebound_detected",
           "convergence_rebound_detected",
@@ -320,14 +279,14 @@
         "scripts/validate_control_plane_invariants.py",
         "--json-only"
       ],
-      "rc": 1,
-      "status": "FAIL_REQUIRED",
-      "error_code": "IP-CP-INV-001",
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
       "stdout_tail": [],
       "stderr_tail": [],
       "payload": {
-        "control_plane_invariants_status": "FAIL_REQUIRED",
-        "error_code": "IP-CP-INV-001",
+        "control_plane_invariants_status": "PASS_REQUIRED",
+        "error_code": "",
         "invariants_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-invariants.current.yaml",
         "invariants_configured_file": "identity/protocol/mappings/control-plane-invariants.current.yaml",
         "invariants_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-invariants.v1.6.yaml",
@@ -342,10 +301,10 @@
         "contract_binding_current_configured_file": "identity/protocol/mappings/contract-binding.current.yaml",
         "contract_binding_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
         "contract_binding_parse_ok": true,
-        "contract_binding_violation_count": 1,
-        "contract_binding_meta_row_count": 49,
+        "contract_binding_violation_count": 0,
+        "contract_binding_meta_row_count": 52,
         "contract_binding_actual_row_count": 52,
-        "contract_binding_row_count_match": false,
+        "contract_binding_row_count_match": true,
         "plugin_governance_configured_file": "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
         "plugin_governance_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
         "plugin_governance_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml",
@@ -437,12 +396,8 @@
         "bundle_mapping_parity_reduction_plan_status": "SKIPPED_NOT_REQUIRED",
         "bundle_mapping_parity_reduction_plan_targets": [],
         "bundle_mapping_parity_reduction_plan_zero_target": false,
-        "mapping_rows_missing_in_bundle_count": 3,
-        "mapping_rows_missing_in_bundle": [
-          "asb16-rq-044",
-          "asb16-rq-045",
-          "asb16-rq-046"
-        ],
+        "mapping_rows_missing_in_bundle_count": 0,
+        "mapping_rows_missing_in_bundle": [],
         "bundle_rows_not_in_mapping_count": 0,
         "bundle_rows_not_in_mapping": [],
         "plugin_profile_count": 3,
@@ -467,28 +422,9 @@
         "plugin_readability_violation_count": 0,
         "plugin_governance_parse_ok": true,
         "plugin_doc_control_parse_ok": true,
-        "bundle_target_map_size": 49,
-        "violation_count": 2,
-        "violations": [
-          {
-            "field": "contract_binding_row_count",
-            "reason": "meta_row_count_mismatch",
-            "meta_row_count": 49,
-            "actual_row_count": 52
-          },
-          {
-            "field": "mapping_rows_missing_in_bundle",
-            "reason": "bundle_mapping_gap_growth_in_freeze_mode",
-            "mode": "freeze",
-            "missing_count": 3,
-            "baseline_missing_rows": 0,
-            "missing_rows": [
-              "asb16-rq-044",
-              "asb16-rq-045",
-              "asb16-rq-046"
-            ]
-          }
-        ],
+        "bundle_target_map_size": 52,
+        "violation_count": 0,
+        "violations": [],
         "stale_reasons": []
       }
     },
@@ -1071,6 +1007,8 @@
         "atlas_registry_active_file": "identity/protocol/mappings/reference-visual-atlas-registry.v1.6.yaml",
         "atlas_registry_alias_error": "",
         "inventory_doc": "docs/references/INDEX.md",
+        "inventory_render_sync_status": "PASS_REQUIRED",
+        "inventory_renderer_script": "scripts/render_reference_visual_atlas_inventory.py",
         "registered_family_ids": [
           "artifact_family_routing_visual_atlas",
           "loop_visual_atlas"
@@ -1093,15 +1031,14 @@
   ],
   "summary": {
     "check_count": 9,
-    "fail_count": 2,
+    "fail_count": 1,
     "warn_count": 0,
-    "pass_count": 7
+    "pass_count": 8
   },
   "control_plane_status": "FAIL_REQUIRED",
   "promotion_ready": false,
   "promotion_block_reasons": [
-    "control_plane_budget:FAIL_REQUIRED",
-    "control_plane_invariants:FAIL_REQUIRED"
+    "control_plane_budget:FAIL_REQUIRED"
   ],
   "status_file_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.current.yaml",
   "status_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.v1.6.json",
