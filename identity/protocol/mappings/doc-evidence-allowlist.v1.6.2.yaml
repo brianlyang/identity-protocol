@@ -307,3 +307,15 @@ strict_docs:
     allowed_activity_patterns:
       - '^activity/evidence/v1617-identity-routing-learning-strengthening/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
       - '^activity/evidence/v1617-identity-routing-learning-strengthening/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
+
+  docs/governance/identity-artifact-family-routing-governance-v1.6.18.md:
+    max_activity_refs: 20
+    allowed_activity_patterns:
+      - '^activity/evidence/v1618-identity-artifact-family-routing/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v1618-identity-artifact-family-routing/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
+
+  docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md:
+    max_activity_refs: 20
+    allowed_activity_patterns:
+      - '^activity/evidence/v1618-identity-artifact-family-routing/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v1618-identity-artifact-family-routing/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
