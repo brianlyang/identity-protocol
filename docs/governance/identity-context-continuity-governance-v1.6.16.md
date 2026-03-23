@@ -329,20 +329,50 @@ Minimum additional requirements:
 7. Protocol-feedback artifacts are **governance communication objects**, not continuity or learning shortcuts:
    - outbox/index/receipt chains are for escalation, reporting, and protocol-owned routing of issues and upgrade signals;
    - a protocol-feedback batch may cite dialogue or runtime evidence, but it must not masquerade as a `reentry_brief`.
-8. Frozen anti-pollution rule:
+8. Canonical fixed-path routing matrix:
+   - continuity / reentry lane:
+     - `runtime/reports/context-continuity/continuity-rolling-*.json`
+     - `runtime/reports/context-continuity/continuity-stage-*.json`
+     - `runtime/reports/context-continuity/continuity-migration-*.json`
+     - `runtime/state/context-continuity/active-reentry-brief.json`
+     - `runtime/reports/context-continuity/checkpoint-receipt.json`
+     - `runtime/reports/context-continuity/migration-receipt.json`
+     - `runtime/reports/context-continuity/reentry-brief-receipt.json`
+     - `runtime/reports/context-continuity/reentry-consumption-receipt.json`
+   - dialogue-governance lane:
+     - `runtime/reports/dialogue-content-synthesis-<identity-id>-*.json`
+     - `runtime/reports/dialogue-cross-validation-matrix-<identity-id>-*.json`
+     - `runtime/reports/dialogue-result-support-<identity-id>-*.json`
+   - experience-feedback / learning lane:
+     - `runtime/rulebooks/positive.jsonl`
+     - `runtime/rulebooks/negative.jsonl`
+     - `runtime/examples/*experience-feedback*.json`
+     - `runtime/logs/feedback/*.json`
+   - protocol-feedback lane:
+     - `runtime/protocol-feedback/outbox-to-protocol/**`
+     - `runtime/protocol-feedback/inbox-from-protocol/**`
+     - `runtime/protocol-feedback/evidence-index/INDEX.md`
+     - `runtime/protocol-feedback/upgrade-proposals/*.md`
+     - `runtime/protocol-feedback/atomic/*.receipt.json`
+     - `runtime/protocol-feedback/atomic/*.batch.json`
+     - `runtime/protocol-feedback/atomic/*.index.json`
+     - `runtime/protocol-feedback/roundtables/ROUNDTABLE_*.md`
+     - `runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_*.md`
+     - `runtime/protocol-feedback/business-partner-intel/BUSINESS_PARTNER_*.md`
+     - `runtime/protocol-feedback/vendor-intel/VENDOR_*.md`
+     - `runtime/protocol-feedback/issues/ISSUE_*.md`
+     - `runtime/protocol-feedback/review-notes/*`
+     - `runtime/protocol-feedback/validation/*.json`
+9. Frozen anti-pollution rule:
+   - the same conversation may legitimately feed multiple lanes, but each emitted artifact must land in its lane’s fixed canonical path family above;
    - do not store feedback-operational prompts, protocol escalation packs, or free-form transcript dumps under `context-continuity`;
    - do not treat dialogue synthesis reports or protocol-feedback batches as startup-consumable continuity bind objects;
    - do not turn `reentry_brief` into a generic “valuable memory sink.”
-9. `~/.codex/memories/**` is **not** a protocol runtime evidence family:
-   - it may exist as tool-side or operator-side auxiliary storage,
-   - but it is not an authoritative sink for `v1.6.16`, dialogue governance, experience feedback, or protocol-feedback outputs,
-   - no identity instance may satisfy protocol contracts by writing only to `~/.codex/memories/**`.
 10. `runtime/memory-absorption/**` is a governed **legacy absorption / quarantine** family only:
    - it may temporarily absorb migrated or deprecated local artifacts,
-   - but it is not an active continuity root, not a dialogue-governance report root, not a feedback-operational-prompt root, and not a protocol-feedback transport root,
-   - anything promoted out of it must be re-materialized into the correct governed family rather than consumed in place.
-11. The same conversation may legitimately feed multiple lanes, but each output must be emitted separately under its own contract and path family; shared origin does not permit semantic collapse.
-12. In short: `v1.6.16` answers “how do I safely continue this interrupted task now?”, while dialogue / feedback / protocol-feedback answer “what did we learn, prove, or escalate from the conversation?”
+   - but it is not an active continuity root, not a dialogue-governance report root, not an experience-feedback root, and not a protocol-feedback transport root,
+   - anything promoted out of it must be re-materialized into the correct canonical family above rather than consumed in place.
+11. In short: `v1.6.16` answers “how do I safely continue this interrupted task now?”, while dialogue / feedback / protocol-feedback answer “what did we learn, prove, or escalate from the conversation?”
 
 ## 3) Four-track cross-verification boundary
 
