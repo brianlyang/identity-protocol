@@ -109,29 +109,39 @@ Frozen audit interpretation:
 - first-loop revalidation remains authoritative;
 - any future machine consumer of `ASB16-RQ-050` must preserve no-downgrade / no-backstop semantics.
 
+### 1.5.1 The bounded learning loop is semantically frozen even while machine adoption remains open
+
+1. The frozen topology is `judgement -> reasoning -> route discovery -> operational prompt strengthening -> governed 4→1 loopback -> judgement revalidation`.
+2. This topology is intentionally PDCA-isomorphic as a control structure, but it does **not** replace the kernel semantic owners with generic business-process labels.
+3. The bridge exists so validated feedback can improve next-round preflight without bypassing first-loop evidence authority.
+4. Any first-loop conflict after reentry must demote or roll back prior prompt artifacts and write back negative feedback instead of leaving silent residue.
+
 ### 1.6 Cross-verified boundary and anti-pollution interpretation
 
 This stream opening/closure state was cross-checked against external capability models before freeze.
 
 1. OpenAI Codex guidance/config materials document layered guidance discovery and explicit startup-scoped instruction surfaces.
-2. MCP specification materials document `tools`, `resources`, and `prompts` as distinct capability surfaces negotiated through initialization.
-3. Therefore the fourth loop may govern a **derived operational prompt layer** without claiming ownership of kernel/system/identity prompt sources.
-4. The third loop may arbitrate across multiple lower capability surfaces without collapsing them into one undifferentiated runtime blob.
-5. None of those facts authorize protocol docs to absorb business payload, search words, product examples, or live ranking heuristics.
+2. OpenAI function/tool best-practice materials document the value of clear, structured, bounded tool surfaces and explicit usage conditions instead of ambient improvisation.
+3. MCP specification materials document `tools`, `resources`, and `prompts` as distinct capability surfaces negotiated through initialization.
+4. Therefore the fourth loop may govern a **derived operational prompt layer** without claiming ownership of kernel/system/identity prompt sources.
+5. The third loop may arbitrate across multiple lower capability surfaces without collapsing them into one undifferentiated runtime blob.
+6. None of those facts authorize protocol docs to absorb business payload, search words, product examples, or live ranking heuristics.
 
 Canonical external anchors absorbed into audit reasoning:
 
 - `https://developers.openai.com/codex/guides/agents-md/#how-codex-discovers-guidance`
 - `https://developers.openai.com/codex/config-advanced/#project-instructions-discovery`
 - `https://developers.openai.com/codex/config-reference/#configtoml`
+- `https://developers.openai.com/api/docs/guides/function-calling/#best-practices-for-defining-functions`
 - Context7 library id `/websites/modelcontextprotocol_io_specification_2025-06-18`
 
 ### 1.7 Business-facing audit judgment is bounded and non-scenario-specific
 
 1. `v1.6.17` is the protocol-side closure for a live execution blocker, not a business-data lane.
-2. After `ISSUE-030` closure, protocol should no longer be the reason an identity instance lacks:
+2. After `ISSUE-030` closure and once `ISSUE-031` is machine-consumed, protocol should no longer be the reason an identity instance lacks:
    - a governed mechanism for finding a better route under persistent uncertainty,
-   - a governed mechanism for turning validated feedback into next-round operational push.
+   - a governed mechanism for turning validated feedback into next-round operational push,
+   - a governed demotion / rollback path when current first-loop evidence rejects previously promoted prompt artifacts.
 3. The remaining open protocol-side semantic debt is the bounded 4→1 bridge only.
 4. This stream does **not** claim protocol can guarantee perfect business accuracy, perfect search quality, or perfect vendor/tool behavior.
 
@@ -173,7 +183,8 @@ The remaining open surface is narrow and explicit:
 6. The third-loop center must preserve: trigger -> candidate set -> probe -> cross-validation -> serial acceptance -> fallback / escalation.
 7. The fourth-loop center must preserve: feedback capture -> rulebook delta -> derived prompt -> scope/TTL bind -> replay -> activation or rollback.
 8. The fourth-loop strengthening must preserve prompt-layer separation between kernel/system, identity, derived operational prompt, and narrower node/route prompts.
-9. Future implementation must keep business data, scenario payload, search words, and ranking heuristics out of protocol SSOT.
+9. The bounded loop must preserve `third-loop exploration -> fourth-loop promotion -> first-loop revalidation`, with negative-feedback writeback on first-loop conflict.
+10. Future implementation must keep business data, scenario payload, search words, and ranking heuristics out of protocol SSOT.
 
 ## 4) Opening non-goals frozen for audit
 
@@ -190,7 +201,8 @@ This stream should remain open only until audit can prove all of the following:
 1. `ASB16-RQ-048` remains machine-landed and healthy on the governed path;
 2. `ASB16-RQ-049` remains machine-landed and healthy on the governed path;
 3. `ASB16-RQ-050` gains a dedicated machine consumer lane without semantic collapse into either the fourth-loop center or first-loop truth;
-4. residual live-quality failures can be attributed below protocol by default unless the `v1.6.17` surfaces are absent, skipped, or semantically broken.
+4. the same lane proves the bounded closed-loop topology as a machine-auditable round trip with explicit demotion / rollback on first-loop conflict;
+5. residual live-quality failures can be attributed below protocol by default unless the `v1.6.17` surfaces are absent, skipped, or semantically broken.
 
 ### 6.1 Opening binding intake (ASB16-RQ-048 ASB16-RQ-049, 2026-03-23)
 
@@ -225,7 +237,8 @@ Frozen audit intake for the landed strengthening pair:
      - `vendor_track_status`
      - `reference_track_status`
      - `runtime_probe_status`
-3. Frozen audit interpretation:
+3. The fourth-loop center continues to govern the wider evidence family frozen in governance §2.3, especially `feedback_summary_ref`, `operational_prompt_ref`, `operational_prompt_digest`, `prompt_scope`, `prompt_target_route`, `prompt_target_stage`, `rollback_prompt_ref`, and `ttl_rounds`; this intake row names the minimum shared machine-visible opening.
+4. Frozen audit interpretation:
    - the strengthening pair is landed protocol infrastructure;
    - it remains generic and non-business-specific;
    - no asymmetric fallback path may re-enter the strengthening lane.
@@ -250,6 +263,7 @@ Frozen audit intake for the standalone 4→1 bridge:
      - `demotion_or_rollback_action`
      - `negative_feedback_ref`
 2. Frozen audit interpretation:
+   - the bridge is healthy only when prior fourth-loop artifacts can be accepted, demoted, or rolled back under current first-loop evidence without narrative ambiguity;
    - loopback artifacts remain governed preflight aids only;
    - first-loop revalidation stays authoritative;
    - future machine adoption must not weaken no-downgrade boundaries.

@@ -837,11 +837,12 @@ Root cause:
 - `stop_condition`:
   - `feedback_to_judgement_loopback_contract_v1` remains frozen as a standalone bridge contract rather than being folded into either the fourth-loop center or the shared four-track primitive;
   - loopback artifacts are explicitly bounded as governed preflight aids only, never as current-round truth;
+  - the bounded closed-loop topology (`third-loop exploration -> fourth-loop promotion -> first-loop revalidation`) is machine-visible as a round trip rather than a narrative claim;
   - first-loop revalidation authority, TTL expiry, conflict demotion, rollback, and negative-feedback writeback are all machine-visible on the canonical bridge evidence family;
   - a dedicated machine consumer lane can consume `ASB16-RQ-050` without reopening `ISSUE-030` or weakening no-downgrade boundaries.
 - `current_evidence`:
-  - `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md` now freezes `feedback_to_judgement_loopback_contract_v1` as the standalone 4→1 bridge and separates it from both `feedback_operational_prompt_contract_v1` and the first-loop `Accurate judgement contract`;
-  - `docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md` now keeps the bridge as a docs-owned semantic opening while leaving the 048/049 strengthening pair closed on their own machine-landed lane;
+  - `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md` now freezes `feedback_to_judgement_loopback_contract_v1` as the standalone 4→1 bridge, explicitly frames the loop as PDCA-isomorphic control logic, and separates it from both `feedback_operational_prompt_contract_v1` and the first-loop `Accurate judgement contract`;
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.17-routing-learning-strengthening.md` now keeps the bridge as a docs-owned semantic opening while leaving the 048/049 strengthening pair closed on their own machine-landed lane and cross-validating the anti-pollution boundary with OpenAI/MCP primary sources;
   - `identity/protocol/mappings/contract-binding.v1.6.yaml` now binds `ASB16-RQ-050` with canonical loopback evidence fields, and `identity/protocol/mappings/semantic-term-registry.v1.6.yaml` now freezes the anti-pollution vocabulary for this bridge.
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)

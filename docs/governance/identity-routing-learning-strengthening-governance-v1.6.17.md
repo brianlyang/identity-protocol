@@ -157,6 +157,16 @@ Frozen fail-close interpretation:
    - loopback must remain subordinate to first-loop evidence revalidation;
    - any future machine consumer of the bridge must preserve no-downgrade / no-backstop semantics.
 
+#### 2.4.1 Closed-loop topology and PDCA-isomorphic interpretation
+
+1. The frozen topology is `first-loop judgement -> second-loop reasoning -> third-loop route discovery -> fourth-loop operational prompt strengthening -> governed 4→1 loopback -> first-loop revalidation`.
+2. This topology is intentionally **PDCA-isomorphic as a control structure**, but it does **not** rewrite the protocol kernel into generic business-process jargon; the semantic owners remain judgement / reasoning / routing / learning.
+3. The first loop stays authoritative for current-round evidence truth even after loopback reentry.
+4. The third loop may fan out across governed parallel probes only while the shared four-track primitive is still unsatisfied.
+5. The fourth loop may promote a derived operational prompt only after evidence-linked feedback and shared four-track cross-validation satisfy promotion requirements.
+6. The 4→1 bridge may return only governed preflight aids, never current-round truth, so the loop improves preparation without collapsing revalidation.
+7. A first-loop conflict after reentry must write back into fourth-loop negative feedback and/or rollback action rather than lingering as silent prompt residue.
+
 ### 2.5 Shared four-track cross-validation primitive
 
 1. `roundtable_four_track_cross_validation_contract_v1` is the shared cross-validation primitive consumed by the strengthened third and fourth loops.
@@ -169,6 +179,9 @@ Frozen fail-close interpretation:
 4. The third loop and fourth loop keep independent centers; they both consume this primitive.
 5. Third-loop parallel probes require serial acceptance through this primitive.
 6. Fourth-loop promotion may occur only after this primitive is satisfied, and any next-round first-loop reentry must occur separately through `feedback_to_judgement_loopback_contract_v1`.
+7. Candidate rows promoted inside the third loop must preserve per-track evidence linkage and explicit rejection rationale for non-selected candidates.
+8. Derived operational prompts promoted inside the fourth loop must preserve the same four-track promotion basis before activation, not merely before archival.
+9. The 4→1 bridge may reuse promotion outputs from this primitive, but loopback admission and first-loop truth remain separately governed rather than implied by the shared primitive alone.
 
 ### 2.6 Symmetry rule for CURRENT_TASK, gates, and readiness
 
@@ -197,14 +210,16 @@ This stream therefore judges the third/fourth-loop center as landed protocol inf
 
 1. `v1.6.17` solves a protocol-side structural blocker: instances already confirm better and reason better, but previously lacked equally explicit motherline strengthening for “find a better route” and “turn validated feedback into the next-round operational push”.
 2. The stream does **not** claim protocol can guarantee perfect business outcomes, perfect search quality, or perfect vendor/tool behavior.
-3. It claims that once the stream is consumed correctly, protocol should no longer be the reason an identity instance lacks:
+3. It claims that once the stream is fully built and consumed correctly, protocol should no longer be the reason an identity instance lacks:
    - a governed mechanism for route discovery under persistent uncertainty,
    - a governed mechanism for validated feedback reinjection,
-   - a bounded 4→1 preflight bridge that does not pollute first-loop truth.
-4. Do not invent business-specific routing tables, search phrases, operating heuristics, example products, or scenario datasets inside protocol docs.
-5. Do not mutate `IDENTITY_PROMPT.md` directly as the learning surface.
-6. Do not reopen `v1.6.15` direct-tool admission semantics or `v1.6.16` continuity semantics.
-7. Do not create a backward-compatibility or fallback bridge for lagging packs.
+   - a bounded 4→1 preflight bridge that does not pollute first-loop truth,
+   - a governed demotion / rollback path when current first-loop evidence conflicts with previously promoted prompt artifacts.
+4. This claim remains **generic across business domains**: it resolves control-plane absence, not business scoring, ranking, content generation, or domain data quality by itself.
+5. Do not invent business-specific routing tables, search phrases, operating heuristics, example products, or scenario datasets inside protocol docs.
+6. Do not mutate `IDENTITY_PROMPT.md` directly as the learning surface.
+7. Do not reopen `v1.6.15` direct-tool admission semantics or `v1.6.16` continuity semantics.
+8. Do not create a backward-compatibility or fallback bridge for lagging packs.
 
 ## 4) Current landed state and remaining open state
 
@@ -219,7 +234,8 @@ This stream therefore judges the third/fourth-loop center as landed protocol inf
 1. `ASB16-RQ-048` remains machine-landed and consumed on the success path;
 2. `ASB16-RQ-049` remains machine-landed and consumed on the success path;
 3. `ASB16-RQ-050` gains a dedicated machine consumer lane without collapsing loopback artifacts into first-loop truth;
-4. audit can attribute residual live-quality misses below protocol by default unless the `v1.6.17` surfaces are absent, skipped, or semantically broken.
+4. the same lane proves the bounded closed-loop topology (`third-loop exploration -> fourth-loop promotion -> first-loop revalidation`) as a machine-auditable round trip with explicit demotion / rollback on first-loop conflict;
+5. audit can attribute residual live-quality misses below protocol by default unless the `v1.6.17` surfaces are absent, skipped, or semantically broken.
 
 ### 6.1 Opening binding reference freeze (ASB16-RQ-048 ASB16-RQ-049, 2026-03-23)
 
@@ -255,7 +271,8 @@ The canonical strengthening pair is frozen as follows:
      - `reference_track_status`
      - `runtime_probe_status`
      - `loop_back_to_first_loop_status`
-3. The strengthening pair is frozen as generic protocol infrastructure only; no business-specific routing policy or prompt content is canonicalized here.
+3. The fourth-loop center continues to govern the wider evidence family frozen in §2.3, especially `feedback_summary_ref`, `operational_prompt_ref`, `operational_prompt_digest`, `prompt_scope`, `prompt_target_route`, `prompt_target_stage`, `rollback_prompt_ref`, and `ttl_rounds`; §6.1 names the minimum opening projection expected on shared machine-visible surfaces.
+4. The strengthening pair is frozen as generic protocol infrastructure only; no business-specific routing policy or prompt content is canonicalized here.
 
 ### 6.2 Opening semantic freeze (ASB16-RQ-050, 2026-03-23)
 
@@ -276,5 +293,6 @@ The standalone 4→1 bridge is frozen as follows:
      - `conflict_with_current_evidence`
      - `demotion_or_rollback_action`
      - `negative_feedback_ref`
-2. Loopback artifacts remain governed preflight aids only, never current-round truth.
-3. First-loop revalidation remains authoritative, and no future machine consumer may weaken that rule.
+2. The bridge is considered healthy only when prior fourth-loop artifacts can be accepted, demoted, or rolled back under current first-loop evidence without narrative ambiguity.
+3. Loopback artifacts remain governed preflight aids only, never current-round truth.
+4. First-loop revalidation remains authoritative, and no future machine consumer may weaken that rule.
