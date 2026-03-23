@@ -310,6 +310,26 @@ def _run_visual_atlas_governance_checks(repo_root: Path, failures: List[str]) ->
             )
 
 
+def _run_reference_visual_atlas_scaffold_probe(repo_root: Path, failures: List[str]) -> None:
+    probe_script = repo_root / "scripts/ci/run_reference_visual_atlas_scaffold_probes_ci.sh"
+    if not probe_script.exists() or not probe_script.is_file():
+        failures.append(
+            "[MISSING_SCRIPT] scripts/ci/run_reference_visual_atlas_scaffold_probes_ci.sh not found"
+        )
+        return
+    proc = subprocess.run(
+        ["bash", str(probe_script)],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+    )
+    if proc.returncode != 0:
+        failures.append(
+            "[VISUAL_ATLAS_SCAFFOLD_PROBE_FAIL] "
+            + (proc.stdout.strip() or proc.stderr.strip() or "reference visual atlas scaffold probe failed")
+        )
+
+
 def _load_playbook_requirements(repo_root: Path) -> tuple[Path | None, List[str], List[str]]:
     errors: List[str] = []
     doc_control_path, _doc_control_active_file, alias_error = resolve_current_yaml_alias(
@@ -995,6 +1015,7 @@ def main() -> int:
                 )
 
     _run_visual_atlas_governance_checks(repo_root, failures)
+    _run_reference_visual_atlas_scaffold_probe(repo_root, failures)
 
     # Round-29.5: enforce doc evidence persistence policy
     evidence_policy_script = repo_root / "scripts/validate_doc_evidence_persistence.py"
