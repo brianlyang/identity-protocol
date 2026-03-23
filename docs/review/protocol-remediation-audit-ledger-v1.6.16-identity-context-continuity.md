@@ -227,9 +227,12 @@ This stream now contains both the machine-facing contract freeze and the first s
     - Python writers are deterministic payload emitters,
     - neither side may absorb the other's role without reopening semantics.
 21. Therefore the correct current interpretation for `base-repo-closure-orchestrator` is: protocol answer surface landed, but live instance adoption remains open until those script files, manifest rows, guard-state files, and runtime artifacts exist under `.identity/base-repo-closure-orchestrator/`.
-22. Additional anti-pollution clarification is now frozen:
-    - `~/.codex/memories/**` is not a protocol-owned runtime evidence family and cannot satisfy continuity, dialogue-governance, experience-feedback, or protocol-feedback obligations;
-    - `runtime/memory-absorption/**` is legacy absorption/quarantine only and must not be consumed as if it were active continuity, dialogue, learning, or protocol-feedback authority.
+22. Additional routing clarification is now frozen around **fixed canonical lane paths**:
+    - continuity / reentry stays only under `runtime/reports/context-continuity/**` plus `runtime/state/context-continuity/active-reentry-brief.json`;
+    - dialogue-governance stays only under the dialogue report family in `runtime/reports/`;
+    - experience-feedback stays on `runtime/rulebooks/**`, `runtime/examples/*experience-feedback*.json`, and `runtime/logs/feedback/*.json`;
+    - protocol-feedback stays on `runtime/protocol-feedback/**`;
+    - `runtime/memory-absorption/**` remains legacy absorption/quarantine only and must not be consumed as if it were active continuity, dialogue, learning, or protocol-feedback authority.
 
 ## 6) Audit hardening absorbed after coding-readiness freeze
 
