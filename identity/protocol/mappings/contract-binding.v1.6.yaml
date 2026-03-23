@@ -4,7 +4,7 @@ _meta:
   schema_version: 1
   source_layer: protocol
   lifecycle_state: phase6_full_requirement_projection
-  last_updated_utc: "2026-03-22T00:00:00Z"
+  last_updated_utc: "2026-03-23T00:00:00Z"
   row_count: 47
   notes:
     - "Phase-1 mapping seed for ASB16-RQ-017..022/030."
@@ -1530,9 +1530,15 @@ asb16-rq-050:
     - first_loop_revalidation_required
     - judgement_reentry_status
     - adoption_decision
+    - fourth_loop_promotion_status
+    - first_loop_revalidation_status
+    - conflict_demotion_status
     - conflict_with_current_evidence
     - demotion_or_rollback_action
     - negative_feedback_ref
+    - negative_feedback_writeback_status
+    - loopback_roundtrip_status
+    - live_roundtrip_proof_status
     - stale_reasons
     - error_code
   error_code_refs:

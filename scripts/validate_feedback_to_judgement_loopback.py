@@ -52,6 +52,11 @@ def main() -> int:
             "required_contract": True,
             "identity_id": identity_id,
             "task_path": str(Path(current_task).expanduser().resolve()) if current_task else "",
+            "fourth_loop_promotion_status": STATUS_FAIL_REQUIRED,
+            "first_loop_revalidation_status": STATUS_FAIL_REQUIRED,
+            "conflict_demotion_status": STATUS_FAIL_REQUIRED,
+            "negative_feedback_writeback_status": STATUS_FAIL_REQUIRED,
+            "loopback_roundtrip_status": STATUS_FAIL_REQUIRED,
             "stale_reasons": [f"current_task_resolve_failed:{type(exc).__name__}"],
             "error_code": ERR_FEEDBACK_TO_JUDGEMENT_LOOPBACK_INVALID,
         }

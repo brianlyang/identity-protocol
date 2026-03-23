@@ -84,15 +84,23 @@ PY
 )"
 
 POSITIVE_JSON="${TMP_ROOT}/positive.json"
+POSITIVE_ROUTING_JSON="${TMP_ROOT}/positive-routing.json"
 NEGATIVE_MISSING_RULEBOOK_TASK="${TMP_ROOT}/negative-missing-rulebook.json"
 NEGATIVE_MISSING_RULEBOOK_JSON="${TMP_ROOT}/negative-missing-rulebook.out.json"
+NEGATIVE_MISSING_RULEBOOK_ROUTING_JSON="${TMP_ROOT}/negative-missing-rulebook.routing.out.json"
 NEGATIVE_JUDGEMENT_TASK="${TMP_ROOT}/negative-judgement-gate.json"
 NEGATIVE_JUDGEMENT_JSON="${TMP_ROOT}/negative-judgement-gate.out.json"
+NEGATIVE_JUDGEMENT_ROUTING_JSON="${TMP_ROOT}/negative-judgement-gate.routing.out.json"
 
 python3 "${ROOT}/scripts/validate_feedback_to_judgement_loopback.py" \
   --catalog "${CATALOG_PATH}" \
   --identity-id "${IDENTITY_ID}" \
   --json-only > "${POSITIVE_JSON}"
+
+python3 "${ROOT}/scripts/validate_identity_routing_learning_strengthening.py" \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --json-only > "${POSITIVE_ROUTING_JSON}"
 
 python3 - "${TASK_PATH}" "${NEGATIVE_MISSING_RULEBOOK_TASK}" <<'PY'
 import json
@@ -119,6 +127,11 @@ if [ "${NEGATIVE_RULEBOOK_RC}" -eq 0 ]; then
   echo "[FAIL] negative missing-rulebook probe unexpectedly passed"
   exit 1
 fi
+
+python3 "${ROOT}/scripts/validate_identity_routing_learning_strengthening.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${NEGATIVE_MISSING_RULEBOOK_TASK}" \
+  --json-only > "${NEGATIVE_MISSING_RULEBOOK_ROUTING_JSON}"
 
 python3 - "${TASK_PATH}" "${NEGATIVE_JUDGEMENT_TASK}" <<'PY'
 import json
@@ -148,14 +161,28 @@ if [ "${NEGATIVE_JUDGEMENT_RC}" -eq 0 ]; then
   exit 1
 fi
 
-python3 - "${POSITIVE_JSON}" "${NEGATIVE_MISSING_RULEBOOK_JSON}" "${NEGATIVE_JUDGEMENT_JSON}" <<'PY'
+python3 "${ROOT}/scripts/validate_identity_routing_learning_strengthening.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --current-task "${NEGATIVE_JUDGEMENT_TASK}" \
+  --json-only > "${NEGATIVE_JUDGEMENT_ROUTING_JSON}"
+
+python3 - \
+  "${POSITIVE_JSON}" \
+  "${POSITIVE_ROUTING_JSON}" \
+  "${NEGATIVE_MISSING_RULEBOOK_JSON}" \
+  "${NEGATIVE_MISSING_RULEBOOK_ROUTING_JSON}" \
+  "${NEGATIVE_JUDGEMENT_JSON}" \
+  "${NEGATIVE_JUDGEMENT_ROUTING_JSON}" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 positive = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-negative_rulebook = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
-negative_judgement = json.loads(Path(sys.argv[3]).read_text(encoding="utf-8"))
+positive_routing = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+negative_rulebook = json.loads(Path(sys.argv[3]).read_text(encoding="utf-8"))
+negative_rulebook_routing = json.loads(Path(sys.argv[4]).read_text(encoding="utf-8"))
+negative_judgement = json.loads(Path(sys.argv[5]).read_text(encoding="utf-8"))
+negative_judgement_routing = json.loads(Path(sys.argv[6]).read_text(encoding="utf-8"))
 
 if positive.get("feedback_to_judgement_loopback_status") != "PASS_REQUIRED":
     raise SystemExit("positive loopback probe must PASS_REQUIRED")
@@ -165,22 +192,63 @@ if positive.get("adoption_decision") != "first_loop_revalidate_before_adopt":
     raise SystemExit("positive loopback adoption_decision mismatch")
 if positive.get("conflict_with_current_evidence") != "demote_or_rollback_required":
     raise SystemExit("positive loopback conflict policy mismatch")
+for key in (
+    "fourth_loop_promotion_status",
+    "first_loop_revalidation_status",
+    "conflict_demotion_status",
+    "negative_feedback_writeback_status",
+    "loopback_roundtrip_status",
+):
+    if positive.get(key) != "PASS_REQUIRED":
+        raise SystemExit(f"positive loopback {key} must PASS_REQUIRED")
+
+if positive_routing.get("routing_learning_strengthening_status") != "PASS_REQUIRED":
+    raise SystemExit("positive routing/learning strengthening probe must PASS_REQUIRED")
+if positive_routing.get("live_roundtrip_proof_status") != "PASS_REQUIRED":
+    raise SystemExit("positive routing/learning live_roundtrip_proof_status must PASS_REQUIRED")
+for key in (
+    "third_loop_exploration_status",
+    "fourth_loop_promotion_status",
+    "first_loop_revalidation_status",
+    "conflict_demotion_status",
+    "negative_feedback_writeback_status",
+):
+    if positive_routing.get(key) != "PASS_REQUIRED":
+        raise SystemExit(f"positive routing/learning {key} must PASS_REQUIRED")
 
 rulebook_reasons = [str(x).strip() for x in (negative_rulebook.get("stale_reasons") or []) if str(x).strip()]
 if negative_rulebook.get("feedback_to_judgement_loopback_status") != "FAIL_REQUIRED":
     raise SystemExit("negative missing-rulebook probe must FAIL_REQUIRED")
 if "experience_feedback_contract_negative_rulebook_path_missing" not in rulebook_reasons:
     raise SystemExit("negative missing-rulebook probe missing expected stale reason")
+if negative_rulebook.get("negative_feedback_writeback_status") != "FAIL_REQUIRED":
+    raise SystemExit("negative missing-rulebook negative_feedback_writeback_status must FAIL_REQUIRED")
+if negative_rulebook.get("loopback_roundtrip_status") != "FAIL_REQUIRED":
+    raise SystemExit("negative missing-rulebook loopback_roundtrip_status must FAIL_REQUIRED")
+if negative_rulebook_routing.get("live_roundtrip_proof_status") != "FAIL_REQUIRED":
+    raise SystemExit("negative missing-rulebook live_roundtrip_proof_status must FAIL_REQUIRED")
+if negative_rulebook_routing.get("negative_feedback_writeback_status") != "FAIL_REQUIRED":
+    raise SystemExit("negative missing-rulebook routing negative_feedback_writeback_status must FAIL_REQUIRED")
 
 judgement_reasons = [str(x).strip() for x in (negative_judgement.get("stale_reasons") or []) if str(x).strip()]
 if negative_judgement.get("feedback_to_judgement_loopback_status") != "FAIL_REQUIRED":
     raise SystemExit("negative judgement probe must FAIL_REQUIRED")
 if "accurate_judgement_enforcement_requires_multimodal_evidence_consistency_false" not in judgement_reasons:
     raise SystemExit("negative judgement probe missing expected stale reason")
+if negative_judgement.get("first_loop_revalidation_status") != "FAIL_REQUIRED":
+    raise SystemExit("negative judgement first_loop_revalidation_status must FAIL_REQUIRED")
+if negative_judgement.get("loopback_roundtrip_status") != "FAIL_REQUIRED":
+    raise SystemExit("negative judgement loopback_roundtrip_status must FAIL_REQUIRED")
+if negative_judgement_routing.get("live_roundtrip_proof_status") != "FAIL_REQUIRED":
+    raise SystemExit("negative judgement live_roundtrip_proof_status must FAIL_REQUIRED")
+if negative_judgement_routing.get("first_loop_revalidation_status") != "FAIL_REQUIRED":
+    raise SystemExit("negative judgement routing first_loop_revalidation_status must FAIL_REQUIRED")
 
 summary = {
     "feedback_to_judgement_loopback_probe_status": "PASS_REQUIRED",
     "positive_loopback_status": positive.get("feedback_to_judgement_loopback_status"),
+    "positive_loopback_roundtrip_status": positive.get("loopback_roundtrip_status"),
+    "positive_live_roundtrip_proof_status": positive_routing.get("live_roundtrip_proof_status"),
     "negative_missing_rulebook_failure": "experience_feedback_contract_negative_rulebook_path_missing",
     "negative_judgement_gate_failure": "accurate_judgement_enforcement_requires_multimodal_evidence_consistency_false",
     "identity_id": positive.get("identity_id"),

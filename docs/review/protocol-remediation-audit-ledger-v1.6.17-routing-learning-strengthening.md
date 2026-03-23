@@ -262,11 +262,17 @@ Frozen audit intake for the standalone 4→1 bridge:
      - `first_loop_revalidation_required`
      - `judgement_reentry_status`
      - `adoption_decision`
+     - `fourth_loop_promotion_status`
+     - `first_loop_revalidation_status`
+     - `conflict_demotion_status`
      - `conflict_with_current_evidence`
      - `demotion_or_rollback_action`
      - `negative_feedback_ref`
-2. The canonical machine consumer lane is `scripts/validate_feedback_to_judgement_loopback.py`; it derives loopback projections from already-frozen `CURRENT_TASK.json` surfaces instead of introducing a second semantic owner.
-3. `scripts/ci/run_feedback_to_judgement_loopback_probes_ci.sh`, `scripts/ci/run_required_runtime_gates_ci.sh`, and `scripts/release_readiness_check.py` now consume the same lane, so the bridge is no longer docs-only debt.
+     - `negative_feedback_writeback_status`
+     - `loopback_roundtrip_status`
+     - `live_roundtrip_proof_status`
+2. The canonical machine consumer lane is `scripts/validate_feedback_to_judgement_loopback.py`; it derives loopback projections from already-frozen `CURRENT_TASK.json` surfaces instead of introducing a second semantic owner, and it now fails closed on missing first-loop revalidation prerequisites as well as replay/writeback drift.
+3. `scripts/validate_identity_routing_learning_strengthening.py` now republishes the same closed-loop proof as machine-visible round-trip component statuses, while `scripts/ci/run_feedback_to_judgement_loopback_probes_ci.sh`, `scripts/ci/run_required_runtime_gates_ci.sh`, and `scripts/release_readiness_check.py` continue consuming the same lane, so the bridge is no longer docs-only debt.
 4. Frozen audit interpretation:
    - the bridge is healthy only when prior fourth-loop artifacts can be accepted, demoted, or rolled back under current first-loop evidence without narrative ambiguity;
    - loopback artifacts remain governed preflight aids only;

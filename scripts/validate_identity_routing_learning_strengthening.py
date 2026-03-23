@@ -8,7 +8,10 @@ from typing import Any
 
 import yaml
 
-from feedback_to_judgement_loopback_common import inspect_feedback_to_judgement_loopback
+from feedback_to_judgement_loopback_common import (
+    derive_live_roundtrip_projection,
+    inspect_feedback_to_judgement_loopback,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -124,17 +127,32 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Validate v1.6.17 routing/learning strengthening symmetry.")
     ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
+    ap.add_argument("--current-task", default="", help="optional CURRENT_TASK.json path for probe/fixture validation")
     ap.add_argument("--operation", default="", help="accepted for gate-runner compatibility")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
     try:
-        task_path = _resolve_current_task(Path(args.catalog), args.identity_id)
+        current_task = str(args.current_task or "").strip()
+        if current_task:
+            task_path = Path(current_task).expanduser().resolve()
+            if not task_path.exists():
+                raise FileNotFoundError(f"current_task not found: {task_path}")
+        else:
+            task_path = _resolve_current_task(Path(args.catalog), args.identity_id)
     except Exception as exc:
         payload = {
             "routing_learning_strengthening_status": STATUS_FAIL_REQUIRED,
             "route_discovery_convergence_status": STATUS_FAIL_REQUIRED,
             "feedback_operational_prompt_status": STATUS_FAIL_REQUIRED,
+            "feedback_to_judgement_loopback_status": STATUS_FAIL_REQUIRED,
+            "loop_back_to_first_loop_status": STATUS_FAIL_REQUIRED,
+            "third_loop_exploration_status": STATUS_FAIL_REQUIRED,
+            "fourth_loop_promotion_status": STATUS_FAIL_REQUIRED,
+            "first_loop_revalidation_status": STATUS_FAIL_REQUIRED,
+            "conflict_demotion_status": STATUS_FAIL_REQUIRED,
+            "negative_feedback_writeback_status": STATUS_FAIL_REQUIRED,
+            "live_roundtrip_proof_status": STATUS_FAIL_REQUIRED,
             "required_contract": True,
             "error_code": ERR_ROUTING_LEARNING_STRENGTHENING_INVALID,
             "stale_reasons": [f"current_task_resolve_failed:{type(exc).__name__}"],
@@ -187,6 +205,16 @@ def main() -> int:
     elif route_status == STATUS_SKIPPED_NOT_REQUIRED and feedback_status == STATUS_SKIPPED_NOT_REQUIRED:
         overall_status = STATUS_SKIPPED_NOT_REQUIRED
 
+    if (
+        str(loopback_projection.get("fourth_loop_promotion_status", "")).strip() == ""
+        and feedback_status != STATUS_SKIPPED_NOT_REQUIRED
+    ):
+        loopback_projection["fourth_loop_promotion_status"] = feedback_status
+    roundtrip_projection = derive_live_roundtrip_projection(
+        third_loop_exploration_status=route_status,
+        loopback_projection=loopback_projection,
+    )
+
     payload = {
         "routing_learning_strengthening_status": overall_status,
         "route_discovery_convergence_status": route_status,
@@ -213,6 +241,7 @@ def main() -> int:
         "feedback_to_judgement_loopback_status": str(
             loopback_projection.get("feedback_to_judgement_loopback_status", "")
         ).strip(),
+        **roundtrip_projection,
         "stale_reasons": stale_reasons,
     }
     _emit(payload, json_only=args.json_only)

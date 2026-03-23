@@ -297,13 +297,19 @@ The standalone 4→1 bridge is now machine-landed as follows:
      - `first_loop_revalidation_required`
      - `judgement_reentry_status`
      - `adoption_decision`
+     - `fourth_loop_promotion_status`
+     - `first_loop_revalidation_status`
+     - `conflict_demotion_status`
      - `conflict_with_current_evidence`
      - `demotion_or_rollback_action`
      - `negative_feedback_ref`
+     - `negative_feedback_writeback_status`
+     - `loopback_roundtrip_status`
+     - `live_roundtrip_proof_status`
 2. `scripts/validate_feedback_to_judgement_loopback.py` is the canonical machine consumer lane:
    - it derives the bridge projection from `experience_feedback_contract`, `accurate_judgement_enforcement`, and `feedback_operational_prompt_enforcement`;
    - it freezes `adoption_decision=first_loop_revalidate_before_adopt`, `conflict_with_current_evidence=demote_or_rollback_required`, and `demotion_or_rollback_action=rollback_prompt_ref_and_negative_feedback_writeback`;
-   - it fails closed when replay-gated feedback, loopback field anchors, or negative-feedback preservation drift.
-3. `scripts/validate_identity_routing_learning_strengthening.py` now emits `loop_back_to_first_loop_status`, while `scripts/required_gate_bundle_runner.py`, `scripts/release_readiness_check.py`, and `scripts/ci/run_required_runtime_gates_ci.sh` consume the dedicated `ASB16-RQ-050` lane directly.
-4. `scripts/ci/run_feedback_to_judgement_loopback_probes_ci.sh` now proves the shared lane with both positive and negative loopback fixtures, preventing docs-only regression.
+   - it fails closed when replay-gated feedback, loopback field anchors, first-loop revalidation prerequisites, or negative-feedback preservation drift.
+3. `scripts/validate_identity_routing_learning_strengthening.py` now emits the same closed-loop projection as machine-readable `third_loop_exploration_status`, `fourth_loop_promotion_status`, `first_loop_revalidation_status`, `conflict_demotion_status`, `negative_feedback_writeback_status`, and `live_roundtrip_proof_status`, while `scripts/required_gate_bundle_runner.py`, `scripts/release_readiness_check.py`, and `scripts/ci/run_required_runtime_gates_ci.sh` continue consuming the dedicated `ASB16-RQ-050` lane directly rather than inventing a parallel bridge.
+4. `scripts/ci/run_feedback_to_judgement_loopback_probes_ci.sh` now proves the shared lane with both positive and negative loopback fixtures plus round-trip projection assertions, preventing docs-only regression.
 5. Loopback artifacts remain governed preflight aids only, never current-round truth, and first-loop revalidation remains authoritative.
