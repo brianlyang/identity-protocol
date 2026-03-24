@@ -140,6 +140,12 @@ from identity_artifact_family_routing_common import (
     ARTIFACT_FAMILY_ROUTING_VALIDATOR_ID,
     artifact_family_routing_contract_skeleton,
 )
+from identity_weak_live_linkage_common import (
+    WEAK_LIVE_LINKAGE_CONTRACT_ID,
+    WEAK_LIVE_LINKAGE_CONTRACT_KEY,
+    WEAK_LIVE_LINKAGE_VALIDATOR_ID,
+    weak_live_linkage_contract_skeleton,
+)
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 from identity_codex_launcher_common import (
     IDENTITY_CODEX_LAUNCHER_CONTRACT_ID,
@@ -236,6 +242,9 @@ REQUIRED_COMMUNICATION_KEYS = (
     "identity_broadcast_delivery_contract_v1",
     "identity_communication_transport_contract_v1",
 )
+REQUIRED_WEAK_LIVE_LINKAGE_KEYS = (
+    WEAK_LIVE_LINKAGE_CONTRACT_KEY,
+)
 
 PROMPT_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     "prompt_bootstrap_capability_contract_v1": _prompt_bootstrap_capability_contract_skeleton(),
@@ -283,6 +292,9 @@ DIALOGUE_RETENTION_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
 }
 ARTIFACT_FAMILY_ROUTING_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY: artifact_family_routing_contract_skeleton(),
+}
+WEAK_LIVE_LINKAGE_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
+    WEAK_LIVE_LINKAGE_CONTRACT_KEY: weak_live_linkage_contract_skeleton(),
 }
 SKILL_SUPPLY_CHAIN_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     "tool_installation_contract": _tool_installation_contract_skeleton("default"),
@@ -1619,6 +1631,37 @@ def _normalize_artifact_family_routing_contracts(task: dict[str, Any]) -> tuple[
     return restored_contract_keys, restored_validator_keys
 
 
+def _weak_live_linkage_contract_invalid_keys(task: dict[str, Any]) -> list[str]:
+    invalid: list[str] = []
+    contract = task.get(WEAK_LIVE_LINKAGE_CONTRACT_KEY)
+    if isinstance(contract, dict):
+        if str(contract.get("contract_id", "")).strip() != WEAK_LIVE_LINKAGE_CONTRACT_ID:
+            invalid.append(WEAK_LIVE_LINKAGE_CONTRACT_KEY)
+        if str(contract.get("validator", "")).strip() != WEAK_LIVE_LINKAGE_VALIDATOR_ID:
+            invalid.append(WEAK_LIVE_LINKAGE_CONTRACT_KEY)
+    return sorted(set(invalid))
+
+
+def _normalize_weak_live_linkage_contracts(task: dict[str, Any]) -> tuple[list[str], list[str]]:
+    restored_contract_keys: list[str] = []
+    restored_validator_keys: list[str] = []
+    for key, default in WEAK_LIVE_LINKAGE_CONTRACT_DEFAULTS.items():
+        node = task.get(key)
+        if not isinstance(node, dict):
+            task[key] = json.loads(json.dumps(default))
+            restored_contract_keys.append(key)
+            restored_validator_keys.append(key)
+            continue
+        merged = _deep_merge(node, default)
+        if merged != node:
+            restored_contract_keys.append(key)
+        task[key] = merged
+        if str(merged.get("validator", "")).strip() != WEAK_LIVE_LINKAGE_VALIDATOR_ID:
+            merged["validator"] = WEAK_LIVE_LINKAGE_VALIDATOR_ID
+            restored_validator_keys.append(key)
+    return restored_contract_keys, restored_validator_keys
+
+
 def _normalize_dialogue_retention_contracts(task: dict[str, Any]) -> tuple[list[str], list[str]]:
     restored_contract_keys: list[str] = []
     restored_validator_keys: list[str] = []
@@ -2490,6 +2533,7 @@ def main() -> int:
     continuity_missing_before = [k for k in REQUIRED_CONTINUITY_KEYS if not isinstance(task_doc.get(k), dict)]
     dialogue_retention_missing_before = [k for k in REQUIRED_DIALOGUE_RETENTION_KEYS if not isinstance(task_doc.get(k), dict)]
     artifact_family_routing_missing_before = [k for k in REQUIRED_ARTIFACT_FAMILY_ROUTING_KEYS if not isinstance(task_doc.get(k), dict)]
+    weak_live_linkage_missing_before = [k for k in REQUIRED_WEAK_LIVE_LINKAGE_KEYS if not isinstance(task_doc.get(k), dict)]
     prompt_missing_before = [k for k in REQUIRED_PROMPT_KEYS if not isinstance(task_doc.get(k), dict)]
     multimodal_missing_before = [k for k in REQUIRED_MULTIMODAL_KEYS if not isinstance(task_doc.get(k), dict)]
     reasoning_missing_before = [k for k in REQUIRED_REASONING_KEYS if not isinstance(task_doc.get(k), dict)]
@@ -2521,6 +2565,7 @@ def main() -> int:
     restored_continuity_contract_keys, restored_continuity_validator_keys = _normalize_continuity_contracts(updated)
     restored_dialogue_retention_contract_keys, restored_dialogue_retention_validator_keys = _normalize_dialogue_retention_contracts(updated)
     restored_artifact_family_routing_contract_keys, restored_artifact_family_routing_validator_keys = _normalize_artifact_family_routing_contracts(updated)
+    restored_weak_live_linkage_contract_keys, restored_weak_live_linkage_validator_keys = _normalize_weak_live_linkage_contracts(updated)
     updated["response_stamp_profile"] = normalize_response_stamp_profile(updated.get("response_stamp_profile"))
     restored_skill_supply_chain_contract_keys = _normalize_skill_supply_chain_contracts(updated, args.identity_id)
     restored_capability_driver_validator_paths = _normalize_capability_driver_validators(updated)
@@ -2579,6 +2624,7 @@ def main() -> int:
     continuity_missing_after = [k for k in REQUIRED_CONTINUITY_KEYS if not isinstance(updated.get(k), dict)]
     dialogue_retention_missing_after = [k for k in REQUIRED_DIALOGUE_RETENTION_KEYS if not isinstance(updated.get(k), dict)]
     artifact_family_routing_missing_after = [k for k in REQUIRED_ARTIFACT_FAMILY_ROUTING_KEYS if not isinstance(updated.get(k), dict)]
+    weak_live_linkage_missing_after = [k for k in REQUIRED_WEAK_LIVE_LINKAGE_KEYS if not isinstance(updated.get(k), dict)]
     response_stamp_profile_present_after = isinstance(updated.get("response_stamp_profile"), dict)
     response_stamp_profile_after = normalize_response_stamp_profile(updated.get("response_stamp_profile"))
     response_stamp_profile_changed = (
@@ -2614,6 +2660,7 @@ def main() -> int:
     continuity_invalid_after = _continuity_contract_invalid_keys(updated)
     dialogue_retention_invalid_after = _dialogue_retention_contract_invalid_keys(updated)
     artifact_family_routing_invalid_after = _artifact_family_routing_contract_invalid_keys(updated)
+    weak_live_linkage_invalid_after = _weak_live_linkage_contract_invalid_keys(updated)
     blocker_surface_missing_after = blocker_surface_backfill.get("missing_surfaces") or []
     blocker_surface_invalid_after = blocker_surface_backfill.get("invalid_blockers_by_surface") or {}
     blocker_surface_applicable = bool(blocker_surface_backfill.get("applicable", False))
@@ -3319,6 +3366,7 @@ def main() -> int:
         "required_continuity_contract_keys": list(REQUIRED_CONTINUITY_KEYS),
         "required_dialogue_retention_contract_keys": list(REQUIRED_DIALOGUE_RETENTION_KEYS),
         "required_artifact_family_routing_contract_keys": list(REQUIRED_ARTIFACT_FAMILY_ROUTING_KEYS),
+        "required_weak_live_linkage_contract_keys": list(REQUIRED_WEAK_LIVE_LINKAGE_KEYS),
         "blocker_surface_backfill": blocker_surface_backfill,
         "blocker_surface_backfill_applicable": blocker_surface_applicable,
         "blocker_surface_missing_after": blocker_surface_missing_after,
@@ -3332,18 +3380,23 @@ def main() -> int:
         "missing_continuity_contract_keys_before": continuity_missing_before,
         "missing_dialogue_retention_contract_keys_before": dialogue_retention_missing_before,
         "missing_artifact_family_routing_contract_keys_before": artifact_family_routing_missing_before,
+        "missing_weak_live_linkage_contract_keys_before": weak_live_linkage_missing_before,
         "missing_continuity_contract_keys_after": continuity_missing_after,
         "missing_dialogue_retention_contract_keys_after": dialogue_retention_missing_after,
         "missing_artifact_family_routing_contract_keys_after": artifact_family_routing_missing_after,
+        "missing_weak_live_linkage_contract_keys_after": weak_live_linkage_missing_after,
         "invalid_continuity_contract_keys_after": continuity_invalid_after,
         "invalid_dialogue_retention_contract_keys_after": dialogue_retention_invalid_after,
         "invalid_artifact_family_routing_contract_keys_after": artifact_family_routing_invalid_after,
+        "invalid_weak_live_linkage_contract_keys_after": weak_live_linkage_invalid_after,
         "restored_continuity_contract_keys": restored_continuity_contract_keys,
         "restored_continuity_validator_keys": restored_continuity_validator_keys,
         "restored_dialogue_retention_contract_keys": restored_dialogue_retention_contract_keys,
         "restored_dialogue_retention_validator_keys": restored_dialogue_retention_validator_keys,
         "restored_artifact_family_routing_contract_keys": restored_artifact_family_routing_contract_keys,
         "restored_artifact_family_routing_validator_keys": restored_artifact_family_routing_validator_keys,
+        "restored_weak_live_linkage_contract_keys": restored_weak_live_linkage_contract_keys,
+        "restored_weak_live_linkage_validator_keys": restored_weak_live_linkage_validator_keys,
         "required_prompt_contract_keys": list(REQUIRED_PROMPT_KEYS),
         "missing_prompt_contract_keys_before": prompt_missing_before,
         "missing_prompt_contract_keys_after": prompt_missing_after,
@@ -3444,6 +3497,14 @@ def main() -> int:
             ""
             if not artifact_family_routing_missing_after and not artifact_family_routing_invalid_after
             else ("IP-AFR-001" if artifact_family_routing_missing_after else "IP-AFR-002")
+        ),
+        "weak_live_linkage_contract_auto_wire_status": (
+            STATUS_PASS_REQUIRED if not weak_live_linkage_missing_after and not weak_live_linkage_invalid_after else STATUS_FAIL_REQUIRED
+        ),
+        "weak_live_linkage_contract_auto_wire_error_code": (
+            ""
+            if not weak_live_linkage_missing_after and not weak_live_linkage_invalid_after
+            else "IP-WLL-001"
         ),
         "blocker_surface_auto_wire_status": (
             (

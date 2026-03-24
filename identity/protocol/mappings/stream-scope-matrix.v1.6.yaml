@@ -136,7 +136,8 @@ streams:
 
   - stream_version: v1.6.19
     scope_topic: identity_weak_live_linkage
-    allowed_requirement_ids: []
+    allowed_requirement_ids:
+      - ASB16-RQ-055
     forbidden_requirement_ids: []
     forbidden_path_tokens:
       - "runtime/memory-absorption"

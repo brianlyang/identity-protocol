@@ -228,6 +228,16 @@ Primary reference family:
 - `https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/api.md`
 - `https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/context/api-propagators.md`
 
+### 4.3 Root philosophy and roundtable inheritance
+
+Deep review confirms that `v1.6.19` is best understood as a machine-world projection of the root philosophy, not a local validator workaround:
+
+1. truth may exist without being operationally possessed;
+2. possession may exist without current-run binding;
+3. current-run binding may exist without next-hop consumption.
+
+The review also confirms that the shared `roundtable_four_track_cross_validation_contract_v1` primitive is the correct reusable cross-validation intake for the route/loop side of this stream, while staying explicitly below the semantic ownership of `v1.6.17` and outside artifact-family ownership of `v1.6.18`.
+
 ## 5) Audit verdict
 
 The additive `v1.6.19` stream should remain open and should now be documented as the protocol's weak-live-linkage strengthening lane.
@@ -245,7 +255,16 @@ The additive `v1.6.19` stream should remain open and should now be documented as
 3. loop semantic-center vs live-bridge split,
 4. same-run binding where freshness-only gates are insufficient.
 
-### 5.3 What must not happen
+### 5.3 Machine-law landing target ASB16-RQ-055 (2026-03-24)
+
+The immediate positive-strengthening move is now clear and bounded:
+
+1. land `ASB16-RQ-055` as the dedicated machine-consumed intake row for the weak-live-linkage differential audit;
+2. land `scripts/validate_identity_weak_live_linkage.py` plus `scripts/ci/run_identity_weak_live_linkage_probes_ci.sh`;
+3. wire the row into contract binding, required-gate bundle routing, required-contract coverage, release/readiness, and CI;
+4. keep `ISSUE-037` open until the downstream consumer families themselves absorb the stronger live-binding semantics.
+
+### 5.4 What must not happen
 
 1. no pack-local fixes,
 2. no validator loosening,

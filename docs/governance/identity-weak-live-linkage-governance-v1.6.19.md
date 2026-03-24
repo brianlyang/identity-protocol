@@ -270,11 +270,55 @@ External references align with the strengthening direction rather than contradic
 
 These references are justificatory only. Normative truth remains protocol-owned inside this repository.
 
+### 6.4 Root philosophy inheritance and truth-lifecycle anchor
+
+`v1.6.19` is not a validator convenience stream. It is a direct operationalization of the root philosophy frozen in:
+
+1. `identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`
+2. `identity/protocol/README.md`
+
+The inherited runtime rule is:
+
+- truth existence != operational possession;
+- operational possession != current-run binding;
+- current-run binding != next-hop consumption.
+
+So this stream must keep those layers machine-separate rather than narratively collapsed into one generic green.
+
+### 6.5 Roundtable four-track primitive alignment
+
+`v1.6.19` reuses the shared `roundtable_four_track_cross_validation_contract_v1` primitive as a bounded cross-validation intake for route/loop evidence discrimination.
+
+Frozen boundary:
+
+1. the primitive may help prove whether a route/loop surface is only semantically green or actually run-bound;
+2. the primitive does **not** become a new loop;
+3. the primitive does **not** become a new artifact family;
+4. the primitive does **not** replace the semantic owners of `v1.6.17` or `v1.6.18`.
+
+### 6.6 Machine-law landing target ASB16-RQ-055 (2026-03-24)
+
+`v1.6.19` now requires one dedicated machine-consumed intake row:
+
+- `ASB16-RQ-055`
+- kernel contract: `rq_055_identity_weak_live_linkage_differential_audit_contract_v1`
+- shared validator: `scripts/validate_identity_weak_live_linkage.py`
+- shared probe runner: `scripts/ci/run_identity_weak_live_linkage_probes_ci.sh`
+
+This row closes the machine-law differential-audit intake for weak live linkage, but it does **not** by itself close `ISSUE-037`.
+
+Its required role is narrower and stricter:
+
+1. freeze the four-layer closure model on machine-consumed runtime payloads;
+2. freeze the allowed verdict classes on machine-consumed runtime payloads;
+3. project current runtime state as closure class instead of narrating every green as full closure;
+4. keep the stream additive and compatible with the frozen `v1.6.17` / `v1.6.18` ownership split.
+
 ## 7) Stop condition
 
 `ISSUE-037` may close only when all of the following are simultaneously true:
 
-1. `weak_live_linkage` terminology and the four-layer differential-audit method are frozen on canonical protocol surfaces;
+1. `weak_live_linkage` terminology, the four-layer differential-audit method, and `ASB16-RQ-055` machine-law intake are frozen on canonical protocol surfaces;
 2. prompt-side validators fail-close or downgrade interpretation when only prompt presence/configured drivers exist without current-run driver receipts;
 3. sample-report-only validators explicitly distinguish sample/self-test closure from strict live closure;
 4. loop-center validators expose separate `semantic_center_status` and `live_bridge_status` semantics instead of narrating center-green as full route/loop closure;

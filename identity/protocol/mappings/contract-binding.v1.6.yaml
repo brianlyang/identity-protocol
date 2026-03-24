@@ -4,8 +4,8 @@ _meta:
   schema_version: 1
   source_layer: protocol
   lifecycle_state: phase6_full_requirement_projection
-  last_updated_utc: "2026-03-24T00:00:00Z"
-  row_count: 54
+  last_updated_utc: "2026-03-24T10:35:00Z"
+  row_count: 55
   notes:
     - "Phase-1 mapping seed for ASB16-RQ-017..022/030."
     - "Phase-2 extension adds prompt-kernel rows for ASB16-RQ-014/015/027/031."
@@ -25,6 +25,7 @@ _meta:
     - "2026-03-23 v1.6.18 dialogue-retention landing adds RQ-051 for raw dialogue truth mirroring, delivery-hook bridge, and governed runtime validation."
     - "2026-03-23 v1.6.18 whole-matrix routing closure adds RQ-052 for protocol-owned artifact-family routing enforcement across the frozen eight-family matrix."
     - "2026-03-24 v1.6.20 broadcast/transport convergence adds RQ-053 dedicated broadcast-delivery adoption and RQ-054 aggregate identity-communication-transport closure."
+    - "2026-03-24 v1.6.19 weak-live-linkage landing adds RQ-055 for differential audit of contract/artifact/run-binding/consumption closure against false-green families."
     - "Rows intentionally use canonical five-link tuple fields required by governance 4.15."
     - "Validator scripts referenced here may be planned-only until implementation commits land."
 
@@ -1724,3 +1725,49 @@ asb16-rq-054:
     - IP-COMM-005
   mapping_state: phase6_v1620_communication_transport_machine_closure
 
+asb16-rq-055:
+  requirement_id: ASB16-RQ-055
+  kernel_contract_id: rq_055_identity_weak_live_linkage_differential_audit_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_055_identity_weak_live_linkage_differential_audit_contract_v1
+  shared_primitive_refs:
+    - roundtable_four_track_cross_validation_contract_v1
+  validator_ids:
+    - scripts/validate_identity_weak_live_linkage.py
+    - scripts/validate_prompt_bootstrap_capability.py
+    - scripts/validate_prompt_capability_matrix.py
+    - scripts/validate_prompt_derivation_conformance.py
+    - scripts/validate_identity_routing_learning_strengthening.py
+    - scripts/validate_feedback_to_judgement_loopback.py
+    - scripts/validate_capability_fit_roundtable_evidence.py
+    - scripts/validate_identity_experience_feedback_governance.py
+  gate_surfaces:
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-weak-live-linkage-governance-v1.6.19.md#66-machine-law-landing-target-asb16-rq-055-2026-03-24
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.19-weak-live-linkage.md#53-machine-law-landing-target-asb16-rq-055-2026-03-24
+  report_field_refs:
+    - identity_weak_live_linkage_status
+    - weak_live_linkage_contract_status
+    - contract_layer_status
+    - artifact_layer_status
+    - run_binding_layer_status
+    - consumption_layer_status
+    - overall_linkage_status
+    - operational_closure_class
+    - false_green_family
+    - evidence_origin
+    - live_binding_strength
+    - next_hop_consumption_status
+    - semantic_center_status
+    - live_bridge_status
+    - roundtable_alignment_status
+    - philosophy_truth_lifecycle_status
+    - stale_reasons
+    - error_code
+  error_code_refs:
+    - IP-WLL-001
+    - IP-WLL-002
+  mapping_state: phase6_v1619_differential_audit_machine_landing

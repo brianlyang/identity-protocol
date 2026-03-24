@@ -38,6 +38,7 @@ run_global_protocol_gates() {
   run_cmd bash scripts/ci/run_identity_context_continuity_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_dialogue_retention_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_artifact_family_routing_probes_ci.sh
+  run_cmd bash scripts/ci/run_identity_weak_live_linkage_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_broadcast_delivery_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_communication_transport_probes_ci.sh
   run_cmd bash scripts/ci/run_executable_surface_runtime_literal_lock_probes_ci.sh
@@ -93,6 +94,7 @@ for ID in ${IDS}; do
   python3 scripts/validate_identity_context_continuity_receipts.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --json-only
   python3 scripts/validate_identity_dialogue_retention.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --json-only
   python3 scripts/validate_identity_artifact_family_routing.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --operation ci --json-only
+  python3 scripts/validate_identity_weak_live_linkage.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
   python3 scripts/validate_identity_broadcast_delivery.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --json-only
   python3 scripts/validate_identity_communication_transport.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --json-only
   python3 scripts/validate_identity_prompt_quality.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --scope AUTO

@@ -205,6 +205,25 @@ Compatibility note: legacy packs under `identity/<id>/` are migration-only locat
 17. Upgrade safety is three-state: required/adopted family must remain `PASS_REQUIRED`, optional/not-required family may remain `SKIPPED_NOT_REQUIRED` without dragging the outer routing lane red, and quarantine-only family must never be promoted to active success-path truth.
 18. Future protocol-owned visual atlas growth for this boundary must use the shared reference onboarding path (`docs/references/README.md` plus `python3 scripts/generate_reference_visual_atlas_scaffold.py --help`) rather than freehand atlas sprawl; generator output is preview-only until registry/index/backlink/validator truth-sync is landed.
 
+### Canonical weak-live-linkage differential-audit boundary (v1.6.19 additive)
+
+1. `v1.6.19` freezes `weak_live_linkage` as a protocol-owned differential-audit lane across trio, prompt, sample/self-test, and loop-consumer surfaces; it does not reopen `v1.6.17`, `v1.6.18`, or invent a new artifact family.
+2. The stream inherits the root philosophy truth lifecycle: truth exists, truth is discoverable, truth is admissible, truth is bound, and truth is consumed. Presence alone does not satisfy possession, and possession alone does not satisfy current-run consumption.
+3. The machine-consumed intake row for this stream is `rq_055_identity_weak_live_linkage_differential_audit_contract_v1`.
+4. `rq_055` green means the differential-audit law is installed, machine-consumed, and able to classify weak live-linkage patterns; it does **not** by itself claim that every affected consumer already reached `full_operational_closure`.
+5. The frozen four-layer audit model is:
+   - `contract_layer`
+   - `artifact_layer`
+   - `run_binding_layer`
+   - `consumption_layer`
+6. The frozen verdict classes are:
+   - `structure_green`
+   - `sample_or_history_green`
+   - `unabsorbed_green`
+   - `full_operational_closure`
+7. The shared `roundtable_four_track_cross_validation_contract_v1` primitive may be reused as cross-validation intake for route/loop evidence discrimination, but it does not become a new loop, a new artifact family, or the semantic owner of weak-live-linkage law.
+8. History/sample/meta artifacts may remain valid for sample/self-test, review, or semantic-center proof; they must not silently satisfy strict current-run success once the stream requires live-binding and next-hop-consumption interpretation.
+
 ## Runtime source-of-truth boundary (v1.4.x hardening)
 
 Identity runtime must distinguish demo fixtures from local runtime instances:

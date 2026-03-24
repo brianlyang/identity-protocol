@@ -183,6 +183,47 @@ Hard semantics:
 4. Aggregate green requires bounded live bootstrap in canonical order: broadcast-delivery sync, protocol-feedback atomic bootstrap emit, then aggregate validator replay.
 5. Closure must stay protocol-owned shared infrastructure through creator/backfill/runner/closure-checker wiring; pack-local scripts, validator loosening, and compatibility shortcuts are non-canonical.
 
+### rq_055_identity_weak_live_linkage_differential_audit_contract_v1
+
+Required report fields:
+
+- `identity_weak_live_linkage_status`
+- `weak_live_linkage_contract_status`
+- `contract_layer_status`
+- `artifact_layer_status`
+- `run_binding_layer_status`
+- `consumption_layer_status`
+- `overall_linkage_status`
+- `operational_closure_class`
+- `false_green_family`
+- `evidence_origin`
+- `live_binding_strength`
+- `next_hop_consumption_status`
+- `semantic_center_status`
+- `live_bridge_status`
+- `roundtable_alignment_status`
+- `philosophy_truth_lifecycle_status`
+- `stale_reasons`
+- `error_code`
+
+Hard semantics:
+
+1. `rq_055` is the machine-consumed intake row for `v1.6.19` weak-live-linkage differential audit; it turns the stream from docs-only explanation into protocol-owned machine-law classification without claiming stream closure by itself.
+2. Differential audit must preserve the frozen four-layer model:
+   - `contract_layer`
+   - `artifact_layer`
+   - `run_binding_layer`
+   - `consumption_layer`
+3. Differential audit must preserve the frozen verdict classes:
+   - `structure_green`
+   - `sample_or_history_green`
+   - `unabsorbed_green`
+   - `full_operational_closure`
+4. Top-level `identity_weak_live_linkage_status` judges whether the shared audit lane is installed and machine-consumed; `overall_linkage_status` judges the currently observed closure class. Those two meanings must not be collapsed.
+5. The contract inherits the root philosophy truth lifecycle frozen in `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`: truth existence, discoverability, admissibility, binding, and consumption must remain distinguishable in runtime payloads.
+6. The shared `roundtable_four_track_cross_validation_contract_v1` primitive may be reused for route/loop cross-validation intake, but it does not become a fifth loop, a new artifact family, or the semantic owner of runtime truth.
+7. History/sample/meta artifacts may remain valid for sample/self-test, replay, or semantic-center proof, but they must be projected as closure-class evidence rather than silently promoted to strict current-run success.
+
 ## Batch-6 anchor placeholders (v1.6 intake, non-promotional)
 
 The following sections provide stable kernel anchors for v1.6 Batch-6 mapping rows.

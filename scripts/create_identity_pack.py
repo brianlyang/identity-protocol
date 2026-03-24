@@ -156,6 +156,12 @@ from identity_artifact_family_routing_common import (
     ARTIFACT_FAMILY_ROUTING_VALIDATOR_ID as COMMON_ARTIFACT_FAMILY_ROUTING_VALIDATOR_ID,
     artifact_family_routing_contract_skeleton as _artifact_family_routing_contract_skeleton,
 )
+from identity_weak_live_linkage_common import (
+    WEAK_LIVE_LINKAGE_CONTRACT_ID as COMMON_WEAK_LIVE_LINKAGE_CONTRACT_ID,
+    WEAK_LIVE_LINKAGE_CONTRACT_KEY as COMMON_WEAK_LIVE_LINKAGE_CONTRACT_KEY,
+    WEAK_LIVE_LINKAGE_VALIDATOR_ID as COMMON_WEAK_LIVE_LINKAGE_VALIDATOR_ID,
+    weak_live_linkage_contract_skeleton as _weak_live_linkage_contract_skeleton,
+)
 from response_stamp_common import default_response_stamp_profile, normalize_response_stamp_profile
 from native_chat_headstamp_common import (
     DEFAULT_NATIVE_CHAT_PROMPT_HARD_GUARD_TEMPLATE_REF,
@@ -821,6 +827,7 @@ def _minimal_current_task(
     task = _ensure_dialogue_governance_contract(task, identity_id)
     task = _ensure_dialogue_retention_contract(task)
     task = _ensure_artifact_family_routing_contract(task)
+    task = _ensure_weak_live_linkage_contract(task)
     task = _ensure_tool_vendor_governance_contracts(task, identity_id)
     task = _ensure_instance_pack_topology_contract(task, identity_id)
     return _ensure_identity_codex_launcher_contract(task, identity_id)
@@ -843,6 +850,16 @@ def _ensure_artifact_family_routing_contract(task: dict) -> dict:
         task[ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY] = base
         return task
     task[ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY] = _deep_merge_defaults(base, cur)
+    return task
+
+
+def _ensure_weak_live_linkage_contract(task: dict) -> dict:
+    base = _weak_live_linkage_contract_skeleton()
+    cur = task.get(COMMON_WEAK_LIVE_LINKAGE_CONTRACT_KEY)
+    if not isinstance(cur, dict):
+        task[COMMON_WEAK_LIVE_LINKAGE_CONTRACT_KEY] = base
+        return task
+    task[COMMON_WEAK_LIVE_LINKAGE_CONTRACT_KEY] = _deep_merge_defaults(base, cur)
     return task
 
 
@@ -2793,6 +2810,7 @@ def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> di
         HOST_GATEWAY_CONTRACT_KEY: _protocol_host_unique_channel_contract_skeleton(identity_id),
         "multimodal_plugin_enforcement_contract_v1": _multimodal_plugin_enforcement_contract_skeleton(),
         "reasoning_loop_failclose_contract_v1": _reasoning_loop_failclose_contract_skeleton(),
+        COMMON_WEAK_LIVE_LINKAGE_CONTRACT_KEY: _weak_live_linkage_contract_skeleton(),
     }
     for key, default in defaults.items():
         cur = task.get(key)

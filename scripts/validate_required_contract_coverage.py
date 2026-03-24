@@ -26,6 +26,10 @@ from identity_artifact_family_routing_common import (
     ARTIFACT_FAMILY_ROUTING_CONTRACT_ID,
     ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY,
 )
+from identity_weak_live_linkage_common import (
+    WEAK_LIVE_LINKAGE_CONTRACT_ID,
+    WEAK_LIVE_LINKAGE_CONTRACT_KEY,
+)
 from response_stamp_common import resolve_layer_intent
 from tool_vendor_governance_common import (
     contract_required,
@@ -108,6 +112,7 @@ STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_identity_context_continuity_receipts.py": "identity_context_continuity_receipt_family_status",
     "scripts/validate_identity_dialogue_retention.py": "protocol_dialogue_retention_status",
     "scripts/validate_identity_artifact_family_routing.py": "artifact_family_routing_status",
+    "scripts/validate_identity_weak_live_linkage.py": "identity_weak_live_linkage_status",
 }
 PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "release_plane_cloud_evidence",
@@ -145,6 +150,7 @@ PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "identity_context_continuity_receipts",
     "identity_dialogue_retention",
     "identity_artifact_family_routing",
+    "identity_weak_live_linkage",
     "dedup_monotonicity",
     "cross_workflow_schema",
     "skill_path_integrity",
@@ -169,6 +175,7 @@ INSTANCE_STRICT_REQUIRED_FLOOR_TARGET_NAMES = {
     "kernel_ssot_source",
     "prompt_derivation_conformance",
     "prompt_kernel_executable_coupling",
+    "identity_weak_live_linkage",
     "tool_installation",
     "vendor_api_discovery",
     "vendor_api_solution",
@@ -214,6 +221,7 @@ FORCE_REQUIRED_CAPABLE_VALIDATOR_SCRIPTS = {
     "scripts/validate_skill_frontmatter.py",
     "scripts/validate_skill_sync_drift_guard.py",
     "scripts/validate_identity_artifact_family_routing.py",
+    "scripts/validate_identity_weak_live_linkage.py",
 }
 
 
@@ -652,6 +660,16 @@ TARGETS = (
             ARTIFACT_FAMILY_ROUTING_CONTRACT_ID,
         ),
         validator_script="scripts/validate_identity_artifact_family_routing.py",
+        validator_args=("--json-only",),
+        instance_adopted_protocol_target=True,
+    ),
+    ContractTarget(
+        name="identity_weak_live_linkage",
+        contract_keys=(
+            WEAK_LIVE_LINKAGE_CONTRACT_KEY,
+            WEAK_LIVE_LINKAGE_CONTRACT_ID,
+        ),
+        validator_script="scripts/validate_identity_weak_live_linkage.py",
         validator_args=("--json-only",),
         instance_adopted_protocol_target=True,
     ),

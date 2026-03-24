@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 97`, `command snippets checked: 1025`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 97`, `command snippets checked: 1029`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -1048,9 +1048,10 @@ Root cause:
   - `scripts/validate_prompt_capability_matrix.py`
   - `scripts/validate_prompt_derivation_conformance.py`
   - `scripts/validate_identity_experience_feedback_governance.py`
+  - `scripts/validate_identity_weak_live_linkage.py`
 - `root_cause`: RC-01 and RC-06
 - `stop_condition`:
-  - the canonical governance/review/workbook surfaces freeze `weak_live_linkage` plus the four-layer differential-audit method;
+  - the canonical governance/review/workbook surfaces freeze `weak_live_linkage` plus the four-layer differential-audit method, and `ASB16-RQ-055` keeps the machine-law intake row landed;
   - prompt-side validators no longer claim current-round linkage from prompt presence or configured driver literals alone;
   - sample-report validators explicitly distinguish sample/self-test closure from strict live closure;
   - loop-center validators expose separate `semantic_center_status` and `live_bridge_status` semantics instead of narrating hook alignment as full route/loop closure;
@@ -1069,6 +1070,7 @@ Root cause:
   - `python3 identity-protocol-local/scripts/validate_feedback_to_judgement_loopback.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --json-only` returns `PASS_REQUIRED` on generic loopback semantics without yet requiring route-specific live bridge absorption fields;
   - `python3 identity-protocol-local/scripts/validate_capability_fit_roundtable_evidence.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --json-only` returns `SKIPPED_NOT_REQUIRED`, which helps bound the issue correctly: the defect is not “all routing failed”, but “upper consumers can remain green without live trio consumer proof”;
   - `python3 identity-protocol-local/scripts/validate_identity_experience_feedback_governance.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst` currently fails on `latest feedback log too old: 15d > max_log_age_days=7`, which confirms freshness is already enforced on this lane and should be treated as a secondary same-run-binding strengthening target rather than the primary false-green family;
+  - `ASB16-RQ-055` now anchors the machine-law differential-audit intake for this stream through `identity/protocol/IDENTITY_RUNTIME.md#rq_055_identity_weak_live_linkage_differential_audit_contract_v1`, `identity/protocol/mappings/contract-binding.v1.6.yaml`, `scripts/validate_identity_weak_live_linkage.py`, and `scripts/ci/run_identity_weak_live_linkage_probes_ci.sh`; this positive strengthening keeps `ISSUE-037` open while moving the stream beyond docs-only governance;
   - repo deep-sweep rechecks also verified that protocol-feedback current-round lanes using `scripts/protocol_feedback_lane_common.py` already derive correlated current-round linkage and therefore must not be misclassified into this stream.
 
 ### ISSUE-038 - Broadcast-delivery and identity communication transport convergence are now protocol-owned and fleet-closed
