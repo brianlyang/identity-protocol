@@ -34,6 +34,13 @@ class RootCorpusEntry:
 
 
 @dataclass(frozen=True)
+class CorpusClassProfile:
+    corpus_class: str
+    required_markers: tuple[str, ...] = field(default_factory=tuple)
+    forbidden_content_classes: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
 class ForbiddenHit:
     class_id: str
     pattern: str
@@ -70,6 +77,11 @@ def _iter_forbidden_class_rows(registry_doc: Mapping[str, Any]) -> list[Mapping[
     return raw if isinstance(raw, list) else []
 
 
+def _iter_corpus_class_profile_rows(registry_doc: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    raw = registry_doc.get("corpus_class_profiles")
+    return raw if isinstance(raw, list) else []
+
+
 def load_root_corpus_registry(repo_root: Path) -> tuple[dict[str, Any], Path, Path, str]:
     entry_path = (repo_root / ROOT_CORPUS_REGISTRY_CURRENT).resolve()
     active_path, _active_file, alias_error = resolve_current_yaml_alias(repo_root, ROOT_CORPUS_REGISTRY_CURRENT)
@@ -98,6 +110,22 @@ def forbidden_classes_from_registry(registry_doc: Mapping[str, Any]) -> dict[str
     return classes
 
 
+def corpus_class_profiles_from_registry(registry_doc: Mapping[str, Any]) -> dict[str, CorpusClassProfile]:
+    profiles: dict[str, CorpusClassProfile] = {}
+    for row in _iter_corpus_class_profile_rows(registry_doc):
+        if not isinstance(row, dict):
+            continue
+        corpus_class = _norm_path(row.get("corpus_class"))
+        if not corpus_class:
+            continue
+        profiles[corpus_class] = CorpusClassProfile(
+            corpus_class=corpus_class,
+            required_markers=_as_str_tuple(row.get("required_markers")),
+            forbidden_content_classes=_as_str_tuple(row.get("forbidden_content_classes")),
+        )
+    return profiles
+
+
 def root_corpus_entries_from_registry(registry_doc: Mapping[str, Any]) -> tuple[RootCorpusEntry, ...]:
     rows = registry_doc.get("registered_top_level_entries")
     if not isinstance(rows, list):
@@ -123,6 +151,32 @@ def root_corpus_entries_from_registry(registry_doc: Mapping[str, Any]) -> tuple[
             )
         )
     return tuple(entries)
+
+
+def merge_required_markers(
+    entry: RootCorpusEntry,
+    *,
+    class_profiles: Mapping[str, CorpusClassProfile],
+) -> tuple[str, ...]:
+    profile = class_profiles.get(entry.corpus_class)
+    merged: list[str] = []
+    for marker in ((profile.required_markers if profile else ()) + entry.required_markers):
+        if marker and marker not in merged:
+            merged.append(marker)
+    return tuple(merged)
+
+
+def merge_forbidden_content_classes(
+    entry: RootCorpusEntry,
+    *,
+    class_profiles: Mapping[str, CorpusClassProfile],
+) -> tuple[str, ...]:
+    profile = class_profiles.get(entry.corpus_class)
+    merged: list[str] = []
+    for class_id in ((profile.forbidden_content_classes if profile else ()) + entry.forbidden_content_classes):
+        if class_id and class_id not in merged:
+            merged.append(class_id)
+    return tuple(merged)
 
 
 def collect_protocol_root_top_level_entries(repo_root: Path, root_dir_rel: str) -> list[str]:

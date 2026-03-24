@@ -14,12 +14,14 @@ It is not:
 2. a stream-closure summary;
 3. a replacement for compiled prompt evidence, validators, mappings, or runtime truth surfaces.
 
-## Scope and non-goals
+## Root-law scope and non-goals
 
 1. This file is the protocol-kernel prompt contract source for governed prompt bootstrap.
 2. It is not a runtime artifact and must not be consumed as `pack_path/IDENTITY_PROMPT.md`.
 3. Runtime `IDENTITY_PROMPT.md` remains a compiled pack-level artifact.
 4. Stream/release labels, when referenced for governance history, are freeze markers rather than philosophical sources of identity protocol existence.
+5. It is not a substitute for constitutional law in `IDENTITY_PROTOCOL.md` / `IDENTITY_RUNTIME.md`.
+6. It is not a current-turn verdict surface and must not be mistaken for compiled runtime proof.
 
 ## Foundational design philosophy anchor
 
@@ -33,6 +35,43 @@ Interpretive boundary:
 2. this file freezes the concrete prompt-kernel law: source order, required capability drivers, canonical fields, executable coupling, hard-guard literals, drift triggers, and acceptance baselines;
 3. the design philosophy is philosophically prior, but this file remains the authoritative root-domain contract for prompt bootstrap behavior;
 4. current-turn prompt legality and coverage still depend on machine-consumed mappings, validators, compiled prompt artifacts, and runtime evidence rather than philosophy text alone.
+
+## Constitutional inheritance and authority boundary
+
+This root-domain contract lives under the constitutional layer defined by:
+
+- `identity/protocol/IDENTITY_PROTOCOL.md`
+- `identity/protocol/IDENTITY_RUNTIME.md`
+
+Constitutional inheritance rule:
+
+1. `IDENTITY_PROTOCOL.md` freezes the shared protocol-law order that prompt bootstrap must absorb rather than reinterpret.
+2. `IDENTITY_RUNTIME.md` freezes how compiled prompt law is embodied inside startup, execution guards, and runtime enforcement.
+3. this file freezes the root-domain prompt contract that sits beneath those constitutions and above machine-consumed prompt validators, mappings, compiled prompt artifacts, and receipts.
+4. root-contract authority must not be collapsed into either philosophical primacy or current-turn runtime adjudication.
+
+## Machine-world audience
+
+This contract is written primarily for:
+
+- identity instances consuming prompt-kernel law;
+- protocol maintainers authoring prompt-bootstrap strengthening;
+- validators, probes, and runtime gates checking prompt coverage and conformance;
+- creator/update tooling that compiles governed prompt artifacts from root law.
+
+It is not optimized as an operator memory aid or stream-local explainer.
+
+## Runtime adjudication boundary
+
+This file does not itself decide whether a present-turn prompt is legal.
+
+Current-turn prompt legality must still resolve from machine-consumed enforcement surfaces such as:
+
+1. contract bindings and prompt-capability mappings;
+2. compiled `IDENTITY_PROMPT.md` artifacts and their metadata chains;
+3. validators, probes, runtime state, and receipts bound to the current run.
+
+So this file governs what prompt-bootstrap law must be, while runtime adjudication determines whether that law has actually been satisfied in the present turn.
 
 ## Source model
 

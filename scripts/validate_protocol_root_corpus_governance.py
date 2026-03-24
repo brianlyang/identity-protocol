@@ -10,9 +10,12 @@ from root_corpus_governance_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     collect_protocol_root_top_level_entries,
+    corpus_class_profiles_from_registry,
     forbidden_classes_from_registry,
     find_missing_markers,
     load_root_corpus_registry,
+    merge_forbidden_content_classes,
+    merge_required_markers,
     root_corpus_entries_from_registry,
     scan_forbidden_content,
 )
@@ -53,6 +56,7 @@ def main() -> int:
     root_dir_rel = str(registry_doc.get("root_dir") or "identity/protocol").strip() if registry_doc else "identity/protocol"
     entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     content_classes = forbidden_classes_from_registry(registry_doc) if registry_doc else {}
+    class_profiles = corpus_class_profiles_from_registry(registry_doc) if registry_doc else {}
 
     if not stale_reasons:
         if str(registry_doc.get("registry_family") or "").strip() != "protocol_root_corpus":
@@ -63,6 +67,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if not entries:
             stale_reasons.append("root_corpus_entries_missing")
+            error_code = ERR_REGISTRY
+        if not class_profiles:
+            stale_reasons.append("root_corpus_class_profiles_missing")
             error_code = ERR_REGISTRY
         for key in ("validator_script", "probe_script", "common_script"):
             rel_path = str(registry_doc.get(key) or "").strip()
@@ -76,6 +83,10 @@ def main() -> int:
         for class_id, content_class in content_classes.items():
             if not content_class.patterns:
                 stale_reasons.append(f"root_corpus_forbidden_class_missing_patterns:{class_id}")
+                error_code = ERR_REGISTRY
+        for entry in entries:
+            if entry.law_bearing and entry.entry_kind == "file" and entry.corpus_class not in class_profiles:
+                stale_reasons.append(f"root_corpus_class_profile_missing:{entry.corpus_class}:{entry.rel_path}")
                 error_code = ERR_REGISTRY
 
     root_dir = (repo_root / root_dir_rel).resolve()
@@ -108,7 +119,10 @@ def main() -> int:
                     file_violations.append({"rel_path": entry.rel_path, "reason": "file_missing"})
                     continue
                 text = path.read_text(encoding="utf-8", errors="ignore")
-                missing_markers = find_missing_markers(text, entry.required_markers)
+                missing_markers = find_missing_markers(
+                    text,
+                    merge_required_markers(entry, class_profiles=class_profiles),
+                )
                 for marker in missing_markers:
                     file_violations.append(
                         {"rel_path": entry.rel_path, "reason": "required_marker_missing", "marker": marker}
@@ -116,7 +130,7 @@ def main() -> int:
                 for hit in scan_forbidden_content(
                     text,
                     content_classes=content_classes,
-                    class_ids=entry.forbidden_content_classes,
+                    class_ids=merge_forbidden_content_classes(entry, class_profiles=class_profiles),
                 ):
                     forbidden_hits.append(
                         {
@@ -173,6 +187,8 @@ def main() -> int:
         "law_bearing_entry_count": sum(1 for entry in entries if entry.law_bearing),
         "validated_file_count": sum(1 for entry in entries if entry.entry_kind == "file"),
         "validated_directory_count": sum(1 for entry in entries if entry.entry_kind == "directory"),
+        "corpus_class_profile_ids": sorted(class_profiles.keys()),
+        "corpus_class_profile_count": len(class_profiles),
         "forbidden_content_class_ids": sorted(content_classes.keys()),
         "file_violations": file_violations,
         "directory_violations": directory_violations,

@@ -27,14 +27,47 @@ forbidden_content_classes:
       - '\bSKU\b'
       - '\bofferId\b'
       - '\bstore manager\b'
+corpus_class_profiles:
+  - corpus_class: bottom_theory
+    required_markers:
+      - '## Document Positioning'
+      - '### Boundary relative to streams, releases, and the protocol-root corpus'
+      - '## One-line motherline'
+      - '### Constitutional derivation order'
+  - corpus_class: root_index
+    required_markers:
+      - '## Root reading order'
+      - '## What belongs at protocol root'
+      - '## What must not be treated as protocol-root law'
+      - '## Root maintenance guardrails'
+      - '## Machine-world entry summary'
+  - corpus_class: constitution
+    required_markers:
+      - '## Normative source map (current governed execution)'
+      - '## Governance execution stack (how work is controlled)'
+      - '## Foundational design philosophy boundary'
+      - '## Conflict resolution'
+  - corpus_class: runtime_constitution
+    required_markers:
+      - '## Integration objective'
+      - '## Native vs extension boundary'
+      - '## Foundational design philosophy anchor'
+      - '## Startup sequence'
+      - '## Execution guard checks'
+  - corpus_class: root_contract
+    required_markers:
+      - '## Document positioning'
+      - '## Root-law scope and non-goals'
+      - '## Foundational design philosophy anchor'
+      - '## Constitutional inheritance and authority boundary'
+      - '## Machine-world audience'
+      - '## Runtime adjudication boundary'
 registered_top_level_entries:
   - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
     entry_kind: file
     corpus_class: bottom_theory
     law_bearing: true
     required_markers:
-      - '## Document Positioning'
-      - '### Boundary relative to streams, releases, and the protocol-root corpus'
       - '### Three orders must never be collapsed'
       - 'In philosophical order, the identity protocol exists because this bottom theory exists first.'
       - 'root-corpus admission law must be projected into machine-consumed registry and validation surfaces'
@@ -47,11 +80,7 @@ registered_top_level_entries:
     corpus_class: root_index
     law_bearing: true
     required_markers:
-      - '## Root reading order'
-      - '## What belongs at protocol root'
-      - '## What must not be treated as protocol-root law'
       - '## Source-order, reading-order, and adjudication-order'
-      - '## Root maintenance guardrails'
       - 'root-corpus admission must be machine-governed'
     forbidden_content_classes:
       - workbook_issue_projection
@@ -62,9 +91,6 @@ registered_top_level_entries:
     corpus_class: constitution
     law_bearing: true
     required_markers:
-      - '## Normative source map (current governed execution)'
-      - '## Governance execution stack (how work is controlled)'
-      - '## Foundational design philosophy boundary'
       - 'This file is therefore a protocol-law constitution derived from that bottom theory'
     forbidden_content_classes:
       - workbook_issue_projection
@@ -75,9 +101,6 @@ registered_top_level_entries:
     corpus_class: runtime_constitution
     law_bearing: true
     required_markers:
-      - '## Integration objective'
-      - '## Foundational design philosophy anchor'
-      - '## Startup sequence'
       - 'runtime is an operational embodiment of protocol bottom theory'
     forbidden_content_classes:
       - workbook_issue_projection
@@ -88,9 +111,6 @@ registered_top_level_entries:
     corpus_class: root_contract
     law_bearing: true
     required_markers:
-      - '## Document positioning'
-      - '## Scope and non-goals'
-      - '## Foundational design philosophy anchor'
       - 'this file remains the authoritative root-domain contract for prompt bootstrap behavior'
     forbidden_content_classes:
       - workbook_issue_projection
@@ -101,9 +121,7 @@ registered_top_level_entries:
     corpus_class: root_contract
     law_bearing: true
     required_markers:
-      - '## Document positioning'
       - '## Purpose'
-      - '## Foundational design philosophy anchor'
       - 'this file freezes the concrete discovery law'
     forbidden_content_classes:
       - workbook_issue_projection
@@ -114,9 +132,7 @@ registered_top_level_entries:
     corpus_class: root_contract
     law_bearing: true
     required_markers:
-      - '## Document positioning'
       - '## Purpose'
-      - '## Foundational design philosophy anchor'
       - 'This contract is written primarily for:'
     forbidden_content_classes:
       - workbook_issue_projection

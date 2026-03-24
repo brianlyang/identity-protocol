@@ -13,6 +13,13 @@ It is not:
 2. a business-facing identity showcase;
 3. a substitute for current runtime resolver truth or machine adjudication.
 
+## Root-law scope and non-goals
+
+1. This file freezes deterministic discovery law for root-domain identity discovery surfaces.
+2. It is not a runtime resolver output, cached catalogue snapshot, or operator convenience note.
+3. It is not a substitute for constitutional law in `IDENTITY_PROTOCOL.md` / `IDENTITY_RUNTIME.md`.
+4. It must not be treated as a shortcut that bypasses canonical resolver outputs, validation, or current-run binding.
+
 ## Purpose
 
 Define a deterministic discovery contract for identity packs, similar to skill discovery.
@@ -32,6 +39,42 @@ Interpretive boundary:
 2. this file freezes the concrete discovery law: request/response shapes, precedence, activation policy, error reporting, and minimal implementation requirements;
 3. this file is authoritative for root-domain discovery law, but current-turn discovery legality still depends on machine-consumed resolver, catalog, validator, and runtime truth surfaces;
 4. philosophical grounding does not replace the contract authority of this discovery specification.
+
+## Constitutional inheritance and authority boundary
+
+This root-domain discovery contract lives beneath the constitutional layer defined by:
+
+- `identity/protocol/IDENTITY_PROTOCOL.md`
+- `identity/protocol/IDENTITY_RUNTIME.md`
+
+Constitutional inheritance rule:
+
+1. `IDENTITY_PROTOCOL.md` freezes the protocol-law boundaries for identity objects, source-of-truth discipline, and governed selection semantics that discovery must preserve.
+2. `IDENTITY_RUNTIME.md` freezes how discovery becomes embodied in runtime startup, active identity resolution, and operational guard checks.
+3. this file freezes the root-domain discovery contract that must be obeyed by resolvers and discovery validators without inventing local compatibility semantics.
+4. root-contract authority must not be mistaken for either bottom-theory primacy or present-turn runtime verdict.
+
+## Machine-world audience
+
+This contract is written primarily for:
+
+- identity instances and launchers performing governed discovery;
+- resolvers, validators, and probes that adjudicate discovery legality;
+- protocol maintainers strengthening discovery law without reopening local convenience heuristics.
+
+It is not optimized as a business-facing catalogue or operator browsing aid.
+
+## Runtime adjudication boundary
+
+This file does not itself decide which identity is legal for the present turn.
+
+Current-turn discovery legality must still resolve from machine-consumed enforcement surfaces such as:
+
+1. the governed resolver and canonical catalog outputs;
+2. identity context resolution, scope/path validation, and active-runtime checks;
+3. validators, probes, runtime state, and receipts bound to the current run.
+
+So this file freezes discovery law, while runtime adjudication determines whether discovery has actually been executed lawfully in the present turn.
 
 ## Method: `identity/list`
 

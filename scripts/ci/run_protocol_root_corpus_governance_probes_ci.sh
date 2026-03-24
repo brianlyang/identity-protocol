@@ -30,6 +30,7 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_governance_status"] == "PASS_REQUIRED", payload
 assert payload["registered_top_level_count"] == payload["actual_top_level_count"], payload
+assert "root_contract" in payload["corpus_class_profile_ids"], payload
 assert "business_domain_example" in payload["forbidden_content_class_ids"], payload
 PY
 
@@ -140,6 +141,42 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_governance_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCG-003", payload
 assert any(hit["class_id"] == "business_domain_example" for hit in payload["forbidden_content_hits"]), payload
+PY
+
+ROOT_CONTRACT_REPO="${TMP_ROOT}/root-contract-profile-repo"
+mirror_repo "${ROOT_CONTRACT_REPO}"
+python3 - <<'PY' "${ROOT_CONTRACT_REPO}/identity/protocol/IDENTITY_DISCOVERY.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "## Runtime adjudication boundary"
+new = "## Runtime resolution boundary"
+assert old in text, text[:400]
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+ROOT_CONTRACT_JSON="${TMP_ROOT}/root-contract-profile.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" \
+  --repo-root "${ROOT_CONTRACT_REPO}" \
+  --json-only >"${ROOT_CONTRACT_JSON}"; then
+  echo "[FAIL] root corpus validator unexpectedly passed after root-contract class marker drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ROOT_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_governance_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCG-002", payload
+assert any(
+    "IDENTITY_DISCOVERY.md:required_marker_missing:## Runtime adjudication boundary" in reason
+    for reason in payload["stale_reasons"]
+), payload
 PY
 
 echo "[PASS] protocol root-corpus governance probes passed"

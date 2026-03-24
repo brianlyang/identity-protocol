@@ -15,6 +15,13 @@ It is not:
 4. a substitute for machine-consumed adjudication surfaces such as validators,
    runtime logs, or receipts.
 
+## Root-law scope and non-goals
+
+1. This file freezes root-domain handoff law for governed coordination between master and sub agents.
+2. It is not an execution playbook for any single stream, workspace, or business scenario.
+3. It is not a substitute for constitutional law in `IDENTITY_PROTOCOL.md` / `IDENTITY_RUNTIME.md`.
+4. It must not be treated as a current-turn success receipt or as a shortcut around machine-consumed handoff evidence.
+
 ## Purpose
 
 Define a strict, auditable handoff protocol between master and sub agents to prevent scope drift.
@@ -34,6 +41,20 @@ Interpretive boundary:
 3. this file is authoritative for root-domain handoff law, but current-turn legality is still adjudicated through machine-consumed validators, logs, and receipts;
 4. philosophical grounding does not replace the fail-close authority of this contract.
 
+## Constitutional inheritance and authority boundary
+
+This root-domain handoff contract lives beneath the constitutional layer defined by:
+
+- `identity/protocol/IDENTITY_PROTOCOL.md`
+- `identity/protocol/IDENTITY_RUNTIME.md`
+
+Constitutional inheritance rule:
+
+1. `IDENTITY_PROTOCOL.md` freezes the shared-law boundaries for delegation, ownership split, escalation, and protocol-governed control loops that handoff must preserve.
+2. `IDENTITY_RUNTIME.md` freezes how governed handoff becomes embodied in runtime execution, evidence production, and merge/replay blocking.
+3. this file freezes the root-domain handoff contract that must be obeyed by orchestrators, validators, and replay lanes without scenario-specific reinterpretation.
+4. root-contract authority must not be collapsed into either philosophical primacy or present-turn runtime verdict.
+
 ## Machine-world audience
 
 This contract is written primarily for:
@@ -46,6 +67,18 @@ This contract is written primarily for:
 
 It is not optimized as a human-memory aid. Its job is to make handoff law
 stable enough for machine-world consumption.
+
+## Runtime adjudication boundary
+
+This file does not itself decide whether a concrete handoff was legal in the present turn.
+
+Current-turn handoff legality must still resolve from machine-consumed enforcement surfaces such as:
+
+1. governed handoff validators and probes;
+2. runtime logs, evidence artifacts, and receipts produced for the current run;
+3. merge/replay gates that fail-close on missing or contradictory evidence.
+
+So this file freezes handoff law, while runtime adjudication determines whether that law has actually been satisfied in execution.
 
 ---
 
