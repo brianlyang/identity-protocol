@@ -56,6 +56,13 @@ Runtime meaning:
 3. Runtime motivation entering a gateway still requires governed refreezing or governed projection before it becomes shared law.
 4. Current-turn runtime legality remains machine-consumed registry and enforcement truth, not raw runtime motivation records.
 
+## Runtime conflict-precedence boundary
+
+1. Runtime must not use local convenience, recency, or familiarity to override source-order meaning.
+2. Runtime current-turn legality still resolves at machine-consumed enforcement terminals rather than philosophy prose or frozen contract prose alone.
+3. Runtime-origin motivation does not gain gateway authorship merely by being admitted into a governed gateway.
+4. Runtime reuse of demoted or support-only material does not restore law-bearing status without governed reclassification.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

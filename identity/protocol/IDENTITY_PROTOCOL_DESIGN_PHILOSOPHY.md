@@ -221,6 +221,22 @@ So the protocol must reject the following confusions:
 - an outer evidence surface being treated as if admission at root-contract gateway gave it bottom-theory standing;
 - machine-registry projection being treated as if it erased the philosophical or constitutional source order above it.
 
+### Conflict precedence must preserve both origin and terminality
+
+Different kinds of conflict terminate at different layers, and that distinction must not collapse.
+
+1. semantic-origin conflict resolves by source order;
+2. current-turn legality conflict resolves by machine-consumed terminal enforcement;
+3. gateway-authorship conflict resolves by gateway effect scope plus source order;
+4. demotion-status conflict resolves by governed reclassification rather than later reuse;
+5. no local vividness, recency, or convenience may change which layer rightfully terminates a given kind of conflict.
+
+So the protocol must reject the following confusions:
+
+- treating a present-turn checker result as if it replaced bottom-theory meaning;
+- treating gateway admission as if it transferred authorship to an incoming motivating surface;
+- treating reused demoted support as if reuse itself were a lawful reinstatement event.
+
 ### Question class and answer surface must stay paired
 
 Different layers of the root corpus answer different classes of questions, and

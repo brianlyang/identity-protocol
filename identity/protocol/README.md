@@ -223,6 +223,23 @@ So the protocol must preserve two distinctions at once:
 
 ---
 
+## Root conflict-precedence discipline
+
+Conflict precedence must stay scoped to the kind of conflict being resolved.
+
+1. semantic-meaning conflict resolves by source order, not by convenience, recency, or current checker vividness;
+2. current-turn legality conflict resolves at machine-consumed enforcement terminals, not at philosophy prose, README text, or frozen contract prose alone;
+3. gateway-authorship conflict resolves by gateway effect scope plus source order, not by the identity of the incoming motivating surface;
+4. demotion-status conflict resolves by governed reclassification, not by later reuse, copying, or local familiarity.
+
+So the protocol must reject these precedence collapses:
+
+- a current validator result being treated as if it rewrote bottom theory;
+- a motivating runtime artifact being treated as if gateway admission made it the author of gateway output;
+- a reused demoted support artifact being treated as if it automatically recovered law-bearing status.
+
+---
+
 ## Root question-routing discipline
 
 Different root entries answer different classes of machine-world questions.

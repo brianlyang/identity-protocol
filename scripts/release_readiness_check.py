@@ -54,6 +54,7 @@ POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["bash", "scripts/ci/run_protocol_root_corpus_derivation_probes_ci.sh"],
     ["bash", "scripts/ci/run_protocol_root_corpus_transition_probes_ci.sh"],
     ["bash", "scripts/ci/run_protocol_root_corpus_gateway_admissibility_probes_ci.sh"],
+    ["bash", "scripts/ci/run_protocol_root_corpus_precedence_probes_ci.sh"],
     ["bash", "scripts/ci/run_protocol_root_corpus_question_routing_probes_ci.sh"],
     ["bash", "scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh"],
     ["bash", "scripts/ci/run_workbook_control_plane_probes_ci.sh"],

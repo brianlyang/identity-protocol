@@ -83,6 +83,18 @@ Status transitions are controlled by governance/review, not by script commit alo
 4. Gateway admission does not transfer authorship from an incoming surface to the gateway output.
 5. Machine-registry gateway may terminate current-turn legality, but that does not let incoming motivation surfaces author upstream law.
 
+## Root conflict-precedence boundary
+
+1. Semantic-meaning conflict resolves by source-order law:
+   - bottom theory
+   - protocol constitution
+   - runtime constitution
+   - root contract law
+2. Current-turn legality conflict resolves by machine-consumed enforcement terminals, with machine-registry law as the only terminal root gateway.
+3. Gateway-authorship conflict resolves by gateway effect scope and preserved source order, not by incoming motivating surface identity.
+4. Demotion-status conflict resolves by governed reclassification, not by later reuse, copying, or convenience.
+5. No layer may use local recency, vividness, or implementation familiarity to seize precedence that belongs to another layer.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

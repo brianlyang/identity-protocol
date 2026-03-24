@@ -216,3 +216,20 @@ invariants:
       surfaces:
         - scripts
         - .github/workflows
+  root_corpus_precedence_alias:
+    current_file: identity/protocol/mappings/root-corpus-precedence.current.yaml
+    required_fields:
+      - precedence_family
+      - precedence_version
+      - root_dir
+      - ordering_current_file
+      - authority_current_file
+      - question_routing_current_file
+      - transition_current_file
+      - gateway_admissibility_current_file
+      - precedence_profiles
+    forbid_versioned_reference:
+      regex: root-corpus-precedence\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
