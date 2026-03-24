@@ -49,6 +49,23 @@ SAMPLE_CONTRACT_KEYS: tuple[str, ...] = (
     "knowledge_acquisition_contract",
     "trigger_regression_contract",
 )
+SAMPLE_VALIDATOR_SPECS: tuple[tuple[str, str, str], ...] = (
+    ("capability_arbitration", "scripts/validate_identity_capability_arbitration.py", "capability_arbitration_status"),
+    ("experience_feedback", "scripts/validate_identity_experience_feedback.py", "experience_feedback_status"),
+    ("knowledge_acquisition", "scripts/validate_identity_knowledge_acquisition.py", "knowledge_acquisition_status"),
+    ("trigger_regression", "scripts/validate_identity_trigger_regression.py", "trigger_regression_status"),
+)
+SAMPLE_STRICT_PROJECTION_FIELDS: tuple[str, ...] = (
+    "evidence_origin",
+    "report_freshness_status",
+    "run_id_binding_status",
+    "strict_live_proof_status",
+    "strict_live_operational_status",
+    "operational_closure_class",
+    "live_binding_strength",
+    "next_hop_consumption_status",
+    "report_selection_mode",
+)
 TRIO_CONTRACT_KEYS: tuple[str, ...] = (
     "tool_installation_contract",
     "vendor_api_discovery_contract",
@@ -308,9 +325,17 @@ def _prompt_family(
 
     contract_status = STATUS_PASS_REQUIRED if contracts else STATUS_FAIL_REQUIRED
     artifact_status = STATUS_PASS_REQUIRED if prompt_path.exists() else STATUS_FAIL_REQUIRED
-    live_binding_present = _all_fields_present(contracts, PROMPT_LIVE_BINDING_FIELDS)
-    run_binding_status = STATUS_PASS_REQUIRED if live_binding_present else STATUS_FAIL_REQUIRED
     prompt_payloads = [prompt_bootstrap.get("payload", {}), prompt_matrix.get("payload", {}), prompt_derivation.get("payload", {})]
+    prompt_projection_present = all(
+        isinstance(payload, dict) and all(field in payload for field in PROMPT_LIVE_BINDING_FIELDS)
+        for payload in prompt_payloads
+    )
+    live_binding_present = prompt_projection_present and all(
+        clean_string(payload.get("current_run_driver_binding_status")).upper() == STATUS_PASS_REQUIRED
+        for payload in prompt_payloads
+        if isinstance(payload, dict)
+    )
+    run_binding_status = STATUS_PASS_REQUIRED if live_binding_present else STATUS_FAIL_REQUIRED
     next_hop_absorbed = live_binding_present and all(
         clean_string(payload.get("requiredization_current_round_linked")).lower() in {"true", "1"}
         for payload in prompt_payloads
@@ -320,10 +345,20 @@ def _prompt_family(
     reasons: list[str] = []
     if artifact_status != STATUS_PASS_REQUIRED:
         reasons.append("identity_prompt_missing")
-    if run_binding_status != STATUS_PASS_REQUIRED:
-        reasons.append("prompt_live_driver_binding_fields_missing")
+    if not prompt_projection_present:
+        reasons.append("prompt_live_driver_projection_missing")
+    elif run_binding_status != STATUS_PASS_REQUIRED:
+        reasons.append("prompt_live_driver_binding_unproven")
     if any(row.get("status") == STATUS_PASS_REQUIRED for row in (prompt_bootstrap, prompt_matrix, prompt_derivation)) and run_binding_status != STATUS_PASS_REQUIRED:
         reasons.append("prompt_green_survives_without_live_driver_binding")
+    evidence_origin = next(
+        (
+            clean_string(payload.get("evidence_origin"))
+            for payload in prompt_payloads
+            if isinstance(payload, dict) and clean_string(payload.get("evidence_origin"))
+        ),
+        "prompt_presence" if prompt_path.exists() else "missing",
+    )
     return (
         _family_result(
             family="prompt_presence_only",
@@ -332,7 +367,7 @@ def _prompt_family(
             artifact_status=artifact_status,
             run_binding_status=run_binding_status,
             consumption_status=consumption_status,
-            evidence_origin="prompt_presence" if prompt_path.exists() else "missing",
+            evidence_origin=evidence_origin,
             reasons=reasons,
             extra={
                 "prompt_path": str(prompt_path),
@@ -346,22 +381,42 @@ def _prompt_family(
 
 def _sample_family(
     *,
+    catalog_path: Path,
+    identity_id: str,
+    operation: str,
     pack_root: Path,
     task_doc: dict[str, Any],
     current_run_pointer: Path | None,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], dict[str, Any]]:
     contracts = _first_existing_contract(task_doc, SAMPLE_CONTRACT_KEYS + TRIO_CONTRACT_KEYS)
     applicable = bool(contracts)
+    sample_validator_rows: dict[str, Any] = {}
+    for family_name, script_path, status_field in SAMPLE_VALIDATOR_SPECS:
+        sample_validator_rows[family_name] = _run_json_validator(
+            [
+                "python3",
+                script_path,
+                "--catalog",
+                str(catalog_path),
+                "--identity-id",
+                identity_id,
+                "--json-only",
+            ],
+            status_field,
+        )
     if not applicable:
-        return _family_result(
-            family="sample_report_only",
-            applicable=False,
-            contract_status=STATUS_SKIPPED_NOT_REQUIRED,
-            artifact_status=STATUS_SKIPPED_NOT_REQUIRED,
-            run_binding_status=STATUS_SKIPPED_NOT_REQUIRED,
-            consumption_status=STATUS_SKIPPED_NOT_REQUIRED,
-            evidence_origin="not_applicable",
-            reasons=["sample_history_family_not_required"],
+        return (
+            _family_result(
+                family="sample_report_only",
+                applicable=False,
+                contract_status=STATUS_SKIPPED_NOT_REQUIRED,
+                artifact_status=STATUS_SKIPPED_NOT_REQUIRED,
+                run_binding_status=STATUS_SKIPPED_NOT_REQUIRED,
+                consumption_status=STATUS_SKIPPED_NOT_REQUIRED,
+                evidence_origin="not_applicable",
+                reasons=["sample_history_family_not_required"],
+            ),
+            sample_validator_rows,
         )
 
     selected_paths: list[Path] = []
@@ -371,11 +426,48 @@ def _sample_family(
             if path not in selected_paths:
                 selected_paths.append(path)
                 origins.append(_path_origin(path, pack_root=pack_root, current_run_pointer=current_run_pointer))
-    artifact_status = STATUS_PASS_REQUIRED if selected_paths else STATUS_FAIL_REQUIRED
-    history_or_sample = next((origin for origin in origins if origin in {"sample", "history"}), "missing")
+
+    sample_payloads = [
+        row.get("payload")
+        for row in sample_validator_rows.values()
+        if isinstance(row, dict) and isinstance(row.get("payload"), dict)
+    ]
+    for payload in sample_payloads:
+        sample_path = clean_string(payload.get("selected_report_path"))
+        if sample_path:
+            p = Path(sample_path).expanduser().resolve()
+            if p.exists() and p not in selected_paths:
+                selected_paths.append(p)
+                origins.append(clean_string(payload.get("evidence_origin")) or _path_origin(p, pack_root=pack_root, current_run_pointer=current_run_pointer))
+
+    artifact_status = STATUS_PASS_REQUIRED if selected_paths or sample_payloads else STATUS_FAIL_REQUIRED
+    history_or_sample = next(
+        (origin for origin in origins if origin in {"sample", "history", "live"}),
+        "missing",
+    )
     live_binding_present = _all_fields_present(contracts, ("report_freshness_status", "run_id_binding_status", "strict_live_proof_status"))
-    run_binding_status = STATUS_PASS_REQUIRED if live_binding_present and all(origin == "live" for origin in origins) else STATUS_FAIL_REQUIRED
-    consumption_status = STATUS_PASS_REQUIRED if run_binding_status == STATUS_PASS_REQUIRED else STATUS_FAIL_REQUIRED
+    downstream_projection_present = all(
+        all(clean_string(payload.get(field)) for field in SAMPLE_STRICT_PROJECTION_FIELDS)
+        for payload in sample_payloads
+    )
+    downstream_all_live_proof = bool(sample_payloads) and all(
+        clean_string(payload.get("strict_live_operational_status")).upper() == STATUS_PASS_REQUIRED
+        for payload in sample_payloads
+    )
+    run_binding_status = (
+        STATUS_PASS_REQUIRED
+        if downstream_all_live_proof or (live_binding_present and origins and all(origin == "live" for origin in origins))
+        else STATUS_FAIL_REQUIRED
+    )
+    downstream_next_hop_absorbed = bool(sample_payloads) and all(
+        clean_string(payload.get("next_hop_consumption_status")).upper() == STATUS_PASS_REQUIRED
+        for payload in sample_payloads
+    )
+    consumption_status = (
+        STATUS_PASS_REQUIRED
+        if downstream_projection_present and (downstream_next_hop_absorbed or run_binding_status == STATUS_PASS_REQUIRED)
+        else STATUS_FAIL_REQUIRED
+    )
     reasons: list[str] = []
     if artifact_status != STATUS_PASS_REQUIRED:
         reasons.append("sample_or_history_artifact_missing")
@@ -383,18 +475,28 @@ def _sample_family(
         reasons.append("sample_or_history_artifact_selected_on_strict_lane")
     if run_binding_status != STATUS_PASS_REQUIRED:
         reasons.append("sample_or_history_live_run_binding_unproven")
-    return _family_result(
-        family="sample_report_only",
-        applicable=True,
-        contract_status=STATUS_PASS_REQUIRED,
-        artifact_status=artifact_status,
-        run_binding_status=run_binding_status,
-        consumption_status=consumption_status,
-        evidence_origin=history_or_sample,
-        reasons=reasons,
-        extra={
-            "selected_paths": [str(path) for path in selected_paths],
-        },
+    if not downstream_projection_present:
+        reasons.append("downstream_sample_validator_projection_missing")
+    for family_name, row in sample_validator_rows.items():
+        payload = row.get("payload") if isinstance(row, dict) and isinstance(row.get("payload"), dict) else {}
+        if clean_string(payload.get("strict_live_operational_status")).upper() != STATUS_PASS_REQUIRED:
+            reasons.append(f"{family_name}_strict_live_operational_status_unproven")
+    return (
+        _family_result(
+            family="sample_report_only",
+            applicable=True,
+            contract_status=STATUS_PASS_REQUIRED,
+            artifact_status=artifact_status,
+            run_binding_status=run_binding_status,
+            consumption_status=consumption_status,
+            evidence_origin=history_or_sample,
+            reasons=sorted(set(reasons)),
+            extra={
+                "selected_paths": [str(path) for path in selected_paths],
+                "downstream_projection_present": downstream_projection_present,
+            },
+        ),
+        sample_validator_rows,
     )
 
 
@@ -630,7 +732,14 @@ def main() -> int:
         pack_root=pack_root,
         task_doc=task_doc,
     )
-    sample_family = _sample_family(pack_root=pack_root, task_doc=task_doc, current_run_pointer=current_run_pointer)
+    sample_family, sample_validator_rows = _sample_family(
+        catalog_path=catalog_path or Path(""),
+        identity_id=args.identity_id,
+        operation=args.operation,
+        pack_root=pack_root,
+        task_doc=task_doc,
+        current_run_pointer=current_run_pointer,
+    )
     loop_family, routing_validator, loopback_validator, roundtable_validator = _loop_family(
         catalog_path=catalog_path or Path(""),
         identity_id=args.identity_id,
@@ -719,6 +828,7 @@ def main() -> int:
             "prompt_bootstrap": prompt_bootstrap,
             "prompt_capability_matrix": prompt_matrix,
             "prompt_derivation_conformance": prompt_derivation_rows[0] if prompt_derivation_rows else {},
+            "sample_family_consumers": sample_validator_rows,
             "routing_learning_strengthening": routing_validator,
             "feedback_to_judgement_loopback": loopback_validator,
             "capability_fit_roundtable_evidence": roundtable_validator,

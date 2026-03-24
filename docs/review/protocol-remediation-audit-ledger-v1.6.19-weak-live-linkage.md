@@ -67,7 +67,7 @@ Interpretation:
 - requiredization is genuinely landed;
 - it still proves required structure more strongly than live current-run consumption.
 
-### 2.3 Prompt validators currently prove presence/coverage, not live driver absorption
+### 2.3 Prompt validators now distinguish declaration/coverage green from live driver absorption
 
 Direct replays:
 
@@ -78,14 +78,19 @@ Direct replays:
 Confirmed facts:
 
 1. all three return `PASS_REQUIRED`;
-2. `validate_prompt_bootstrap_capability.py` sets `requiredization_current_round_linked=true` directly from `prompt_path.exists()`;
-3. `validate_prompt_capability_matrix.py` sets `requiredization_current_round_linked=true` from `prompt_path.exists()` or configured validator presence, and can keep `prompt_capability_matrix_status=PASS_REQUIRED` while `discovery_requiredized_all=false`;
-4. `validate_prompt_derivation_conformance.py` also derives `requiredization_current_round_linked=true` from prompt existence.
+2. all three now emit the same current-run driver projection:
+   - `driver_receipt_refs`
+   - `driver_run_id`
+   - `driver_projection_digest`
+   - `current_run_driver_binding_status`
+3. `requiredization_current_round_linked` now resolves from active execution pointer + current-run report + `runtime/state/prompt_contract.json` + prompt path/hash agreement, not from prompt existence or configured validator presence alone;
+4. after replaying `scripts/repair_identity_prompt_runtime_state.py` where needed, both `base-repo-audit-expert-v3` and `custom-creative-ecom-analyst` return `current_run_driver_binding_status=PASS_REQUIRED` with `evidence_origin=live`.
 
 Interpretation:
 
 - current prompt green is real as a declaration/coverage green;
-- it is not yet a live-driver-consumption green.
+- current-run prompt binding is now machine-proven instead of narratively inferred;
+- the residual weak-live-linkage family therefore shifts away from prompt presence and into the remaining downstream families.
 
 ### 2.4 Sample validators currently prove sample/self-test closure, not strict live closure
 
@@ -111,6 +116,16 @@ Interpretation:
 
 - these validators are not fake; they correctly validate sample/self-test families;
 - but the protocol currently lacks an explicit sample-vs-live interpretation boundary on the strict lane.
+
+Latest additive strengthening:
+
+1. `scripts/strict_live_evidence_resolution_common.py` now materializes a shared machine interpretation for the four sample-family validators;
+2. the same helper now also governs report selection, so validators emit `report_selection_mode`, `live_candidate_paths`, and `live_candidate_selected_path` instead of silently relying on `runtime/examples/*`;
+3. each validator now emits `evidence_origin`, `report_freshness_status`, `run_id_binding_status`, `strict_live_proof_status`, `semantic_contract_status`, `strict_live_operational_status`, `operational_closure_class`, `live_binding_strength`, and `next_hop_consumption_status`;
+4. `scripts/ci/run_identity_weak_live_linkage_probes_ci.sh` now proves the positive and negative sides of the split:
+   - default sample replay remains sample/self-test only,
+   - active-run-linked live reports can now be auto-selected onto the strict lane without per-validator `--report` overrides;
+5. `scripts/validate_identity_weak_live_linkage.py` now consumes those downstream projections instead of relying only on static path-family interpretation.
 
 ### 2.5 Loop-center validators currently prove semantic-center readiness more strongly than live bridge closure
 
@@ -250,10 +265,9 @@ The additive `v1.6.19` stream should remain open and should now be documented as
 
 ### 5.2 What remains open
 
-1. prompt live-driver join,
-2. sample/live interpretation split,
-3. loop semantic-center vs live-bridge split,
-4. same-run binding where freshness-only gates are insufficient.
+1. sample-family strict-lane verdict tightening,
+2. loop semantic-center vs live-bridge split,
+3. same-run binding where freshness-only gates are insufficient.
 
 ### 5.3 Machine-law landing target ASB16-RQ-055 (2026-03-24)
 
@@ -273,7 +287,27 @@ The next additive strengthening after machine-law intake is now also clear and l
 3. the projection reuses `report_field_refs`, so future required-gate targets inherit the same observability lane without target-specific hardcoding;
 4. this improves fleet auditability and release observability, but it still does **not** close `ISSUE-037` by itself because the downstream validator families must still absorb stricter live-binding semantics.
 
-### 5.5 What must not happen
+### 5.5 Downstream sample-family absorption landed (2026-03-24)
+
+The next additive strengthening is now also landed:
+
+1. the sample-family downstream validators now self-describe their live-vs-sample boundary on machine-readable payloads;
+2. the weak-live-linkage shared audit lane now republishes those downstream payloads under `component_validator_rows.sample_family_consumers`;
+3. this is positive strengthening rather than semantic downgrade:
+   - sample/self-test families remain valid,
+   - live proof becomes explicit and testable,
+   - no pack-local workaround or validator loosening was used.
+
+### 5.6 Prompt-family live-driver absorption landed (2026-03-24)
+
+The next additive strengthening is now also landed:
+
+1. `scripts/prompt_live_driver_binding_common.py` freezes one shared prompt-binding interpretation;
+2. the three prompt validators now consume that helper and emit one common machine-readable driver-binding payload;
+3. `scripts/validate_identity_weak_live_linkage.py` now sees the prompt family as `full_operational_closure` on real replayed identities where current-run prompt binding is actually present;
+4. `rq_055` therefore continues to stay open for the right reason: sample, loop, and latest-log closure are still incomplete, but prompt presence is no longer silently misclassified as current-run linkage.
+
+### 5.7 What must not happen
 
 1. no pack-local fixes,
 2. no validator loosening,

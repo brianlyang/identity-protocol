@@ -76,10 +76,34 @@ REQUIRED_COMPONENT_VALIDATORS: tuple[str, ...] = (
     "scripts/validate_prompt_bootstrap_capability.py",
     "scripts/validate_prompt_capability_matrix.py",
     "scripts/validate_prompt_derivation_conformance.py",
+    "scripts/validate_identity_capability_arbitration.py",
+    "scripts/validate_identity_experience_feedback.py",
+    "scripts/validate_identity_knowledge_acquisition.py",
+    "scripts/validate_identity_trigger_regression.py",
     "scripts/validate_identity_routing_learning_strengthening.py",
     "scripts/validate_feedback_to_judgement_loopback.py",
     "scripts/validate_capability_fit_roundtable_evidence.py",
     "scripts/validate_identity_experience_feedback_governance.py",
+)
+
+CANONICAL_STRICT_FIELDS: tuple[str, ...] = (
+    "required",
+    "contract_id",
+    "validator",
+    "probe_runner",
+    "fail_mode",
+    "shared_cross_validation_primitive_refs",
+    "truth_lifecycle_order",
+    "primary_false_green_families",
+    "secondary_false_green_families",
+    "allowed_verdict_classes",
+    "required_layer_fields",
+    "required_report_fields",
+    "required_component_validators",
+    "strict_current_run_required",
+    "distinguish_semantic_center_vs_live_bridge",
+    "history_or_sample_not_strict_truth",
+    "philosophy_anchor_refs",
 )
 
 
@@ -110,6 +134,18 @@ def weak_live_linkage_contract_skeleton() -> dict[str, Any]:
             "identity/protocol/README.md",
         ],
     }
+
+
+def canonicalize_weak_live_linkage_contract_doc(contract_doc: dict[str, Any] | None) -> dict[str, Any]:
+    default = weak_live_linkage_contract_skeleton()
+    current = clone_json(contract_doc) if isinstance(contract_doc, dict) else {}
+    for key, value in default.items():
+        if key not in current:
+            current[key] = clone_json(value)
+    for key in CANONICAL_STRICT_FIELDS:
+        if key in default:
+            current[key] = clone_json(default[key])
+    return current
 
 
 def resolve_pack_task(

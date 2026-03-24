@@ -144,8 +144,10 @@ from identity_weak_live_linkage_common import (
     WEAK_LIVE_LINKAGE_CONTRACT_ID,
     WEAK_LIVE_LINKAGE_CONTRACT_KEY,
     WEAK_LIVE_LINKAGE_VALIDATOR_ID,
+    canonicalize_weak_live_linkage_contract_doc,
     weak_live_linkage_contract_skeleton,
 )
+from strict_live_evidence_resolution_common import merge_strict_live_contract_defaults
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 from identity_codex_launcher_common import (
     IDENTITY_CODEX_LAUNCHER_CONTRACT_ID,
@@ -1549,18 +1551,20 @@ def _normalize_prompt_contracts(task: dict[str, Any]) -> tuple[list[str], list[s
         if not isinstance(node, dict):
             task[key] = json.loads(json.dumps(default))
             continue
-        if node.get("required") is not True:
-            node["required"] = True
+        merged = _deep_merge(node, default)
+        if merged.get("required") is not True:
+            merged["required"] = True
             forced_required_keys.append(key)
-        validator = str(node.get("validator", "")).strip()
+        validator = str(merged.get("validator", "")).strip()
         if not validator:
-            node["validator"] = str(default.get("validator", "")).strip()
+            merged["validator"] = str(default.get("validator", "")).strip()
             restored_validator_keys.append(key)
         default_contract_ids = default.get("derived_from_contract_ids")
         if key == "derived_prompt_conformance_contract_v1" and isinstance(default_contract_ids, list):
-            _, appended_contract_ids = _merge_required_string_list(node, "derived_from_contract_ids", default_contract_ids)
+            _, appended_contract_ids = _merge_required_string_list(merged, "derived_from_contract_ids", default_contract_ids)
             if appended_contract_ids:
                 restored_list_fields[f"{key}.derived_from_contract_ids"] = appended_contract_ids
+        task[key] = merged
     return forced_required_keys, restored_validator_keys, restored_list_fields
 
 
@@ -1652,7 +1656,7 @@ def _normalize_weak_live_linkage_contracts(task: dict[str, Any]) -> tuple[list[s
             restored_contract_keys.append(key)
             restored_validator_keys.append(key)
             continue
-        merged = _deep_merge(node, default)
+        merged = canonicalize_weak_live_linkage_contract_doc(_deep_merge(node, default))
         if merged != node:
             restored_contract_keys.append(key)
         task[key] = merged
@@ -1660,6 +1664,27 @@ def _normalize_weak_live_linkage_contracts(task: dict[str, Any]) -> tuple[list[s
             merged["validator"] = WEAK_LIVE_LINKAGE_VALIDATOR_ID
             restored_validator_keys.append(key)
     return restored_contract_keys, restored_validator_keys
+
+
+STRICT_LIVE_EVIDENCE_CONTRACT_KEYS: tuple[str, ...] = (
+    "capability_arbitration_contract",
+    "experience_feedback_contract",
+    "knowledge_acquisition_contract",
+    "trigger_regression_contract",
+)
+
+
+def _normalize_strict_live_evidence_contracts(task: dict[str, Any]) -> list[str]:
+    restored_contract_keys: list[str] = []
+    for key in STRICT_LIVE_EVIDENCE_CONTRACT_KEYS:
+        node = task.get(key)
+        if not isinstance(node, dict):
+            continue
+        merged = merge_strict_live_contract_defaults(node)
+        if merged != node:
+            task[key] = merged
+            restored_contract_keys.append(key)
+    return restored_contract_keys
 
 
 def _normalize_dialogue_retention_contracts(task: dict[str, Any]) -> tuple[list[str], list[str]]:
@@ -2566,6 +2591,7 @@ def main() -> int:
     restored_dialogue_retention_contract_keys, restored_dialogue_retention_validator_keys = _normalize_dialogue_retention_contracts(updated)
     restored_artifact_family_routing_contract_keys, restored_artifact_family_routing_validator_keys = _normalize_artifact_family_routing_contracts(updated)
     restored_weak_live_linkage_contract_keys, restored_weak_live_linkage_validator_keys = _normalize_weak_live_linkage_contracts(updated)
+    restored_strict_live_evidence_contract_keys = _normalize_strict_live_evidence_contracts(updated)
     updated["response_stamp_profile"] = normalize_response_stamp_profile(updated.get("response_stamp_profile"))
     restored_skill_supply_chain_contract_keys = _normalize_skill_supply_chain_contracts(updated, args.identity_id)
     restored_capability_driver_validator_paths = _normalize_capability_driver_validators(updated)
@@ -3397,6 +3423,7 @@ def main() -> int:
         "restored_artifact_family_routing_validator_keys": restored_artifact_family_routing_validator_keys,
         "restored_weak_live_linkage_contract_keys": restored_weak_live_linkage_contract_keys,
         "restored_weak_live_linkage_validator_keys": restored_weak_live_linkage_validator_keys,
+        "restored_strict_live_evidence_contract_keys": restored_strict_live_evidence_contract_keys,
         "required_prompt_contract_keys": list(REQUIRED_PROMPT_KEYS),
         "missing_prompt_contract_keys_before": prompt_missing_before,
         "missing_prompt_contract_keys_after": prompt_missing_after,

@@ -529,6 +529,12 @@ asb16-rq-014:
     - capability_driver_coverage_rate
     - missing_capability_drivers
     - prompt_bootstrap_contract_status
+    - driver_receipt_refs
+    - driver_run_id
+    - driver_projection_digest
+    - current_run_driver_binding_status
+    - requiredization_current_round_linked
+    - evidence_origin
     - error_code
   error_code_refs: []
   mapping_state: phase2_prompt_seed
@@ -553,7 +559,13 @@ asb16-rq-015:
     - capability_driver_present_total
     - capability_driver_coverage_rate
     - missing_capability_drivers
-    - prompt_bootstrap_contract_status
+    - prompt_capability_matrix_status
+    - driver_receipt_refs
+    - driver_run_id
+    - driver_projection_digest
+    - current_run_driver_binding_status
+    - requiredization_current_round_linked
+    - evidence_origin
     - error_code
   error_code_refs: []
   mapping_state: phase2_prompt_seed
@@ -579,6 +591,12 @@ asb16-rq-027:
     - kernel_contract_digest
     - derived_from_contract_ids
     - overlay_digest
+    - driver_receipt_refs
+    - driver_run_id
+    - driver_projection_digest
+    - current_run_driver_binding_status
+    - requiredization_current_round_linked
+    - evidence_origin
   error_code_refs: []
   mapping_state: phase2_prompt_seed
 
@@ -1736,6 +1754,10 @@ asb16-rq-055:
     - scripts/validate_prompt_bootstrap_capability.py
     - scripts/validate_prompt_capability_matrix.py
     - scripts/validate_prompt_derivation_conformance.py
+    - scripts/validate_identity_capability_arbitration.py
+    - scripts/validate_identity_experience_feedback.py
+    - scripts/validate_identity_knowledge_acquisition.py
+    - scripts/validate_identity_trigger_regression.py
     - scripts/validate_identity_routing_learning_strengthening.py
     - scripts/validate_feedback_to_judgement_loopback.py
     - scripts/validate_capability_fit_roundtable_evidence.py

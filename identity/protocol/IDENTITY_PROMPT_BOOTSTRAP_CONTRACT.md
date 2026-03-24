@@ -130,6 +130,7 @@ Canonical output fields (must not be renamed):
 Fail-close rule:
 
 1. Coverage below `100%` for required drivers is `FAIL_REQUIRED`.
+2. `requiredization_current_round_linked` must not be promoted from prompt presence, configured driver literals, or metadata coverage alone.
 
 ### rq_027_derived_prompt_conformance_contract_v1
 
@@ -143,6 +144,32 @@ Required compile/runtime metadata:
 Conformance rule:
 
 1. Missing or mismatched metadata chain is `FAIL_REQUIRED`.
+
+### Shared prompt current-run driver binding projection (v1.6.19 additive)
+
+The prompt-kernel validators under `rq_014`, `rq_015`, and `rq_027` must also
+emit one shared current-run driver binding projection. Required fields:
+
+1. `driver_receipt_refs`
+2. `driver_run_id`
+3. `driver_projection_digest`
+4. `current_run_driver_binding_status`
+5. `requiredization_current_round_linked`
+
+Binding rule:
+
+1. prompt presence, configured validator literals, and coverage green remain
+   declaration/coverage truth only;
+2. current-run linkage is stronger and must resolve from active runtime
+   evidence;
+3. the minimum binding chain is:
+   - `runtime/state/active_execution_report.json`
+   - the selected current-run execution report
+   - `runtime/state/prompt_contract.json`
+   - prompt path/hash agreement across those runtime artifacts and the current
+     `IDENTITY_PROMPT.md`
+4. `requiredization_current_round_linked=true` is legal only when that binding
+   chain is machine-proven for the current run.
 
 ### rq_031_prompt_import_executable_coupling_contract_v1
 

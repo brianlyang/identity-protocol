@@ -89,16 +89,24 @@ These achievements are protocol assets and must remain green on their own terms.
 
 ### 3.1 Prompt presence-only family
 
-The following prompt-side consumers can currently return `PASS_REQUIRED` while proving prompt presence / declared driver coverage rather than current-run live consumption:
+The following prompt-side consumers can still return `PASS_REQUIRED` on declaration/coverage truth, but they no longer silently collapse that green into current-run linkage:
 
 1. `scripts/validate_prompt_bootstrap_capability.py`
 2. `scripts/validate_prompt_capability_matrix.py`
 3. `scripts/validate_prompt_derivation_conformance.py`
 
-Current deep-sweep signature:
+Current machine signature after additive strengthening:
 
-- `requiredization_current_round_linked` can become true from prompt existence and/or configured driver literals;
-- `validate_prompt_capability_matrix.py` can keep `prompt_capability_matrix_status=PASS_REQUIRED` while `discovery_requiredized_all=false`.
+1. the three validators now share `scripts/prompt_live_driver_binding_common.py`;
+2. they now emit the same current-run driver projection:
+   - `driver_receipt_refs`
+   - `driver_run_id`
+   - `driver_projection_digest`
+   - `current_run_driver_binding_status`
+3. `requiredization_current_round_linked` now resolves from the active execution pointer + current-run report + `runtime/state/prompt_contract.json` + prompt path/hash join, not from prompt existence or configured driver literals alone;
+4. direct replay on `base-repo-audit-expert-v3` and `custom-creative-ecom-analyst` now returns `current_run_driver_binding_status=PASS_REQUIRED` and `evidence_origin=live`, which shifts the residual weak-live-linkage classification away from the prompt family and onto the remaining downstream families.
+
+This does **not** close `ISSUE-037` by itself because sample, loop, and latest-log strengthening still remain open.
 
 ### 3.2 Sample-report-only family
 
@@ -110,6 +118,32 @@ The following validators currently default to `runtime/examples/*` or `sample_re
 4. `scripts/validate_identity_trigger_regression.py`
 
 This is valid for sample/self-test hygiene, but not sufficient for strict live closure.
+
+As of the latest positive-strengthening pass, this family is no longer purely narrative:
+
+1. `scripts/strict_live_evidence_resolution_common.py` now freezes one shared machine interpretation for these downstream consumers;
+2. the four validators above now share one governed report-selection lane:
+   - `report_selection_mode`
+   - `live_candidate_paths`
+   - `live_candidate_selected_path`
+   - default fallback remains valid for sample/self-test hygiene,
+   - current-run live reports are now auto-preferred when the active execution report exposes a matching live artifact family that is fresh and run-id-bound;
+3. the same validators now emit the same machine-readable strict-lane split:
+   - `evidence_origin`
+   - `report_freshness_status`
+   - `run_id_binding_status`
+   - `strict_live_proof_status`
+   - `semantic_contract_status`
+   - `strict_live_operational_status`
+   - `operational_closure_class`
+   - `live_binding_strength`
+   - `next_hop_consumption_status`
+4. `scripts/ci/run_identity_weak_live_linkage_probes_ci.sh` now proves both sides of the boundary:
+   - default sample execution stays `sample` + `strict_live_operational_status=FAIL_REQUIRED`;
+   - active-run-linked live reports are auto-selected without per-validator `--report` overrides and replay `strict_live_operational_status=PASS_REQUIRED`;
+   - once prompt-family and sample-family are both live-bound in the hermetic probe, the residual `rq_055` classification advances from `sample_report_only` to `loop_meta_only`.
+
+This does **not** close `ISSUE-037` by itself, but it does land the sample/live interpretation split as shared infrastructure rather than leaving it as governance-only wording.
 
 ### 3.3 Loop meta-only family
 
@@ -197,7 +231,7 @@ The method freezes four probe styles for detecting false-green strength mismatch
 
 ### 5.1 Prompt-live-driver join
 
-Prompt-side validators must strengthen from presence coverage to current-run driver absorption. Minimum shared fields to freeze:
+Prompt-side validators must strengthen from presence coverage to current-run driver absorption. The shared additive strengthening is now landed as protocol-owned infrastructure, and the following fields remain frozen:
 
 1. `driver_receipt_refs`
 2. `driver_run_id`
@@ -328,6 +362,38 @@ Its required role is narrower and stricter:
    - it does not change bundle verdict semantics,
    - it does not close `ISSUE-037`,
    - it does not loosen any validator or required gate.
+
+### 6.8 Downstream sample-family machine absorption (2026-03-24)
+
+The next additive strengthening after projection observability is now also landed:
+
+1. downstream sample-family validators no longer hide their evidence interpretation behind a single human-readable PASS line;
+2. they now share `scripts/strict_live_evidence_resolution_common.py` as a protocol-owned machine interpretation helper;
+3. `scripts/validate_identity_weak_live_linkage.py` now consumes those downstream machine projections under `component_validator_rows.sample_family_consumers`;
+4. the strengthening remains additive:
+   - default sample/self-test execution still passes as sample/self-test hygiene,
+   - strict live proof only passes when the selected report is active-run-linked and run-id-bound,
+   - sample-family validators now self-describe `semantic_contract_status` versus `strict_live_operational_status` rather than leaking a single ambiguous green,
+   - `ISSUE-037` remains open because real fleet identities still need more current-run sample-family producer coverage, plus loop live-bridge and latest-log same-run strengthening remain incomplete.
+
+### 6.9 Prompt-family live-driver absorption landed (2026-03-24)
+
+The next additive strengthening is now also landed:
+
+1. `scripts/prompt_live_driver_binding_common.py` freezes one shared current-run prompt binding interpretation;
+2. `scripts/validate_prompt_bootstrap_capability.py`, `scripts/validate_prompt_capability_matrix.py`, and `scripts/validate_prompt_derivation_conformance.py` now all emit:
+   - `driver_receipt_refs`
+   - `driver_run_id`
+   - `driver_projection_digest`
+   - `current_run_driver_binding_status`
+3. `requiredization_current_round_linked` no longer upgrades from prompt existence or configured driver literals alone;
+4. direct replay on `base-repo-audit-expert-v3` and `custom-creative-ecom-analyst` now proves prompt-family `full_operational_closure`, so the residual `rq_055` weak-live-linkage classification moves to `sample_report_only` rather than `prompt_presence_only`.
+
+This is positive strengthening rather than semantic downgrade:
+
+1. prompt coverage/declaration truth is preserved;
+2. current-run binding becomes explicit and machine-checkable;
+3. no pack-local workaround, validator loosening, or hardcoded identity exception was introduced.
 
 ## 7) Stop condition
 

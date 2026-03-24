@@ -160,8 +160,13 @@ from identity_weak_live_linkage_common import (
     WEAK_LIVE_LINKAGE_CONTRACT_ID as COMMON_WEAK_LIVE_LINKAGE_CONTRACT_ID,
     WEAK_LIVE_LINKAGE_CONTRACT_KEY as COMMON_WEAK_LIVE_LINKAGE_CONTRACT_KEY,
     WEAK_LIVE_LINKAGE_VALIDATOR_ID as COMMON_WEAK_LIVE_LINKAGE_VALIDATOR_ID,
+    canonicalize_weak_live_linkage_contract_doc as _canonicalize_weak_live_linkage_contract_doc,
     weak_live_linkage_contract_skeleton as _weak_live_linkage_contract_skeleton,
 )
+from prompt_live_driver_binding_common import (
+    merge_prompt_live_driver_binding_contract_defaults as _merge_prompt_live_driver_binding_contract_defaults,
+)
+from strict_live_evidence_resolution_common import merge_strict_live_contract_defaults
 from response_stamp_common import default_response_stamp_profile, normalize_response_stamp_profile
 from native_chat_headstamp_common import (
     DEFAULT_NATIVE_CHAT_PROMPT_HARD_GUARD_TEMPLATE_REF,
@@ -859,7 +864,9 @@ def _ensure_weak_live_linkage_contract(task: dict) -> dict:
     if not isinstance(cur, dict):
         task[COMMON_WEAK_LIVE_LINKAGE_CONTRACT_KEY] = base
         return task
-    task[COMMON_WEAK_LIVE_LINKAGE_CONTRACT_KEY] = _deep_merge_defaults(base, cur)
+    task[COMMON_WEAK_LIVE_LINKAGE_CONTRACT_KEY] = _canonicalize_weak_live_linkage_contract_doc(
+        _deep_merge_defaults(base, cur)
+    )
     return task
 
 
@@ -2508,7 +2515,7 @@ def _protocol_feedback_atomic_emit_contract_skeleton() -> dict:
 
 
 def _prompt_bootstrap_capability_contract_skeleton() -> dict:
-    return {
+    return _merge_prompt_live_driver_binding_contract_defaults({
         "required": True,
         "validator": "scripts/validate_prompt_bootstrap_capability.py",
         "required_capability_drivers": [
@@ -2517,11 +2524,11 @@ def _prompt_bootstrap_capability_contract_skeleton() -> dict:
             "scripts/validate_identity_vendor_api_solution.py",
         ],
         "fail_action": "block_when_prompt_bootstrap_missing_required_drivers",
-    }
+    })
 
 
 def _prompt_capability_matrix_contract_skeleton() -> dict:
-    return {
+    return _merge_prompt_live_driver_binding_contract_defaults({
         "required": True,
         "validator": "scripts/validate_prompt_capability_matrix.py",
         "required_driver_ids": ["tool_installation", "vendor_api_discovery", "vendor_api_solution"],
@@ -2532,7 +2539,7 @@ def _prompt_capability_matrix_contract_skeleton() -> dict:
             "missing_capability_drivers",
         ],
         "fail_action": "fail_closed_when_prompt_capability_matrix_incomplete",
-    }
+    })
 
 
 def _refresh_strict_business_interference_contract_skeleton() -> dict:
@@ -2566,7 +2573,7 @@ def _kernel_canonical_source_contract_skeleton() -> dict:
 
 
 def _derived_prompt_conformance_contract_skeleton() -> dict:
-    return {
+    return _merge_prompt_live_driver_binding_contract_defaults({
         "required": True,
         "validator": "scripts/validate_prompt_derivation_conformance.py",
         "kernel_contract_version": "v1.6",
@@ -2576,7 +2583,7 @@ def _derived_prompt_conformance_contract_skeleton() -> dict:
             "rq_033_native_chat_headstamp_prompt_contract_v1",
         ],
         "fail_action": "block_when_prompt_derivation_metadata_incomplete",
-    }
+    })
 
 
 def _semantic_convergence_contract_skeleton() -> dict:
@@ -6263,9 +6270,11 @@ def _legacy_full_contract_current_task(
     trig = task.setdefault("trigger_regression_contract", {})
     if isinstance(trig, dict):
         trig["sample_report_path_pattern"] = f"identity/runtime/examples/{identity_id}-trigger-regression-sample.json"
+        task["trigger_regression_contract"] = merge_strict_live_contract_defaults(trig)
     arb = task.setdefault("capability_arbitration_contract", {})
     if isinstance(arb, dict):
         arb["sample_report_path_pattern"] = f"identity/runtime/examples/{identity_id}-capability-arbitration-sample.json"
+        task["capability_arbitration_contract"] = merge_strict_live_contract_defaults(arb)
     rbc = task.setdefault("identity_role_binding_contract", {})
     if isinstance(rbc, dict):
         rbc["role_type"] = f"{identity_id.replace('-', '_')}_runtime_operator"
@@ -6473,7 +6482,7 @@ def _neutral_full_contract_current_task(
             ],
         },
     }
-    task["trigger_regression_contract"] = {
+    task["trigger_regression_contract"] = merge_strict_live_contract_defaults({
         "required": True,
         "required_suites": [
             "positive_cases",
@@ -6483,7 +6492,7 @@ def _neutral_full_contract_current_task(
         "result_enum": ["PASS", "FAIL"],
         "sample_report_path_pattern": "identity/runtime/examples/*trigger-regression*.json",
         "fail_action": "block_merge_and_reenter_identity_update",
-    }
+    })
     task["route_quality_contract"] = {
         "required": True,
         "source_pattern": "identity/runtime/logs/handoff/*.json",
@@ -6661,7 +6670,7 @@ def _neutral_full_contract_current_task(
             "artifacts",
         ],
     }
-    task["knowledge_acquisition_contract"] = {
+    task["knowledge_acquisition_contract"] = merge_strict_live_contract_defaults({
         "required": True,
         "must_research_when": [
             "new_api_domain",
@@ -6689,8 +6698,8 @@ def _neutral_full_contract_current_task(
                 "required_validators": ["scripts/validate_identity_knowledge_contract.py"],
             }
         },
-    }
-    task["experience_feedback_contract"] = {
+    })
+    task["experience_feedback_contract"] = merge_strict_live_contract_defaults({
         "required": True,
         "positive_rulebook_path": "identity/runtime/rulebooks/positive.jsonl",
         "negative_rulebook_path": "identity/runtime/rulebooks/negative.jsonl",
@@ -6725,7 +6734,7 @@ def _neutral_full_contract_current_task(
         "minimum_logs_required": 1,
         "feedback_log_path_pattern": "identity/runtime/logs/feedback/*.json",
         "promotion_requires_replay_pass": True,
-    }
+    })
     task["install_safety_contract"] = {
         "required": True,
         "preserve_existing_default": True,
@@ -6783,7 +6792,7 @@ def _neutral_full_contract_current_task(
             "scripts/validate_identity_feedback_promotion.py",
         ],
     }
-    task["capability_arbitration_contract"] = {
+    task["capability_arbitration_contract"] = merge_strict_live_contract_defaults({
         "required": True,
         "priority_order": [
             "accurate_judgement",
@@ -6893,7 +6902,7 @@ def _neutral_full_contract_current_task(
                 "scripts/validate_*",
             ],
         },
-    }
+    })
     task["self_upgrade_enforcement_contract"] = {
         "required": True,
         "core_paths": [
