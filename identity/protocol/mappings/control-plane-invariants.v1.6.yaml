@@ -108,3 +108,17 @@ invariants:
       surfaces:
         - scripts
         - .github/workflows
+  root_corpus_registry_alias:
+    current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+    required_fields:
+      - registry_family
+      - registry_version
+      - root_dir
+      - validator_script
+      - probe_script
+      - registered_top_level_entries
+    forbid_versioned_reference:
+      regex: root-corpus-registry\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
