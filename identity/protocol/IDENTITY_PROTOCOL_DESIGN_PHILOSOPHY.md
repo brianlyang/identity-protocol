@@ -103,6 +103,45 @@ identity 协议不接受“我记得”“大概是这样”“上一次成功�
 
 **机器凭什么知道现在的事实是什么，而不是误把历史、兼容残留、推测或派生摘要当成真相。**
 
+### 3.1 truth 的存在、发现、准入、绑定与消费不是同一件事
+
+在 identity 协议里，一个 truth 处于 protocol law 中存在，并不自动等于实例已经在运行中真正拥有了它。
+
+协议必须明确区分至少五层不同状态：
+
+1. **truth exists in protocol law**  
+   该 truth 已被协议定义、冻结或注册，作为 shared law 的组成部分存在。
+2. **truth is discoverable by instance**  
+   实例能够从正确的 canonical source 找到它，而不是只在文档、历史讨论或旁路脚本里“理论存在”。
+3. **truth is admissible as current-turn authority**  
+   该 truth 已通过当前回合所需的身份、路径、state、receipt、validator、gate 约束，具备被当作当前权威依据的资格。
+4. **truth is bound to current run / current thread**  
+   该 truth 不只是抽象正确，而且已经与当前 run、当前 thread、当前实例上下文完成绑定。
+5. **truth is consumed by the next operational step**  
+   该 truth 已被下一跳真实消费，驱动了 launcher、runtime hook、route、receipt、gate 或 operator-facing answer surface。
+
+这五层不是同义反复，而是一条严格的 operational chain。
+
+因此，协议必须拒绝以下混淆：
+
+- protocol 中“有这个 truth” ≠ 实例已经真正发现它；
+- 实例“发现了它” ≠ 实例有资格把它当 current truth；
+- “有资格当 current truth” ≠ 已经绑定到当前 run / thread；
+- “已绑定到当前 run / thread” ≠ 下一跳已经真实消费；
+- “有了某个产物或声明” ≠ full operational closure 已经成立。
+
+这条区分解释了许多看似“纸面闭合、运行不闭合”的真实问题：
+
+- shared contract / validator / family / hook 已存在；
+- 但实例没有 discover 到；
+- 或 discover 到了，却没有通过 admissibility；
+- 或通过了 admissibility，却没有绑定到当前 run；
+- 或已经绑定，却没有驱动下一跳消费与留证。
+
+所以 identity 协议里的成熟 closure，永远不只是“truth 存在”，而必须看 **truth lifecycle 是否被完整打穿**。
+
+凡只满足前层而未满足后层者，都不得宣称为 full operational closure。
+
 ---
 
 ## 4. identity 协议的规范论：什么能做，什么不能做
@@ -304,7 +343,7 @@ identity 实例首先不是 prompt 里的自称，而是被协议约束的运行
 任何新的协议 stream、shared strengthening、owner split、runtime extension，在进入实现之前，都应先回答这五个问题：
 
 1. **本体问**：你新增的对象到底是什么，本体是否单义？
-2. **真相问**：你的 canonical truth 在哪里，state / receipt / validator / bundle 是否闭合？
+2. **真相生命周期问**：你的 canonical truth 在哪里；它如何被实例发现、准入、绑定到当前 run / current thread，并被下一跳消费；state / receipt / validator / bundle 是否围绕这条 lifecycle 闭合？
 3. **规范问**：你规定了哪些可行动作、哪些 fail-close 边界、哪些 success-path 条件？
 4. **分责问**：这是 shared law 问题，还是 instance adaptation 问题？
 5. **答案面问**：最终给 operator 的稳定 answer surface 是什么？
