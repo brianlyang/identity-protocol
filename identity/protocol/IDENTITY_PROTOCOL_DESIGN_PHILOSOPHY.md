@@ -40,6 +40,27 @@ This document is not intended to be:
 
 Its job is narrower and harder: to give the machine world a stable bottom-layer philosophy for interpreting why protocol law is shaped the way it is.
 
+### Boundary relative to `IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`
+
+This document must not be mistaken for a second prompt-kernel law book.
+
+The boundary is:
+
+1. `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md` defines the **bottom theory**, interpretive priorities, and meta-principles behind protocol law.
+2. `IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md` defines the **prompt-kernel contract law**: source order, required capability drivers, canonical fields, executable coupling, hard-guard literals, drift triggers, and acceptance baselines.
+
+So the relation is not duplication, and not competition. It is layered:
+
+- this document explains **why** the machine-law system is shaped the way it is;
+- the bootstrap contract defines **what prompt-kernel law must concretely contain and how it must fail-close**.
+
+Interpretive rule:
+
+1. this document may guide how protocol maintainers understand, extend, and strengthen machine law;
+2. it must not replace machine-consumed contract files;
+3. it must not override canonical runtime truth sources;
+4. when executable prompt behavior is being decided, the relevant contract file remains authoritative over this philosophy text.
+
 ---
 
 ## One-line motherline
