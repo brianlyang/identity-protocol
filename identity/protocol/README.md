@@ -271,6 +271,24 @@ Current-turn legality must instead resolve from machine-consumed enforcement sur
 
 ---
 
+## Root-law bundle discipline
+
+The root corpus is not governed by one monolithic text or one isolated
+validator.
+
+Root admission/governance, source-order, authority layering, question-routing,
+derivation, promotion/demotion transition, gateway-admissibility, and conflict
+precedence must stay explicit and machine-governed together.
+
+No single slice is sufficient by itself; the machine world must preserve them
+as one governed root-law bundle.
+
+If one slice drifts while the others stay green, the root corpus is not
+partially healthy; it has a coherence failure that must fail-close and be
+repaired at the matching root-law layer.
+
+---
+
 ## Conflict-handling rule
 
 If two layers seem to disagree, resolve them with the following discipline:

@@ -63,6 +63,19 @@ Runtime meaning:
 3. Runtime-origin motivation does not gain gateway authorship merely by being admitted into a governed gateway.
 4. Runtime reuse of demoted or support-only material does not restore law-bearing status without governed reclassification.
 
+## Runtime consumption of the root-law bundle
+
+Runtime does not consume root law as isolated slogans.
+
+Runtime must consume the governed root-law bundle together: admission/governance,
+ordering, authority, question-routing, derivation, transition,
+gateway-admissibility, and conflict precedence.
+
+Runtime may terminate current-turn legality only through machine-consumed
+enforcement surfaces shaped by that bundle.
+
+Runtime must not select the most convenient slice in isolation.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

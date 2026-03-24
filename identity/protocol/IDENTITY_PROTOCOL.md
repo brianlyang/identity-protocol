@@ -95,6 +95,27 @@ Status transitions are controlled by governance/review, not by script commit alo
 4. Demotion-status conflict resolves by governed reclassification, not by later reuse, copying, or convenience.
 5. No layer may use local recency, vividness, or implementation familiarity to seize precedence that belongs to another layer.
 
+## Root-law bundle boundary
+
+The protocol constitution depends on a governed root-law bundle across:
+
+1. root admission/governance;
+2. ordering;
+3. authority;
+4. question-routing;
+5. derivation;
+6. transition;
+7. gateway-admissibility;
+8. conflict precedence.
+
+These are separate machine-law slices so that origin, navigation, authorship,
+promotion, admissibility, and terminal legality do not collapse into one
+informal rule.
+
+Strengthening one slice must not silently weaken or bypass another; any
+protocol-root change that alters the bundle requires governed updates in the
+matching mapping, validator, and negative-probe surfaces.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

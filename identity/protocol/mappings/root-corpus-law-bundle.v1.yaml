@@ -1,0 +1,79 @@
+schema_version: 1
+law_bundle_family: protocol_root_corpus_law_bundle
+law_bundle_version: v1
+root_dir: identity/protocol
+bundle_anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Root-law bundle must stay explicit and jointly governed'
+      - 'Root admission/governance, source-order, authority, question-routing, derivation, transition, gateway-admissibility, and conflict precedence are not'
+      - 'Weakening one slice while keeping the others green is a root-law coherence'
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root-law bundle discipline'
+      - 'No single slice is sufficient by itself; the machine world must preserve them as one governed root-law bundle.'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root-law bundle boundary'
+      - 'Strengthening one slice must not silently weaken or bypass another; any'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime consumption of the root-law bundle'
+      - 'Runtime must not select the most convenient slice in isolation.'
+component_rows:
+  - order: 1
+    component_id: root_corpus_governance
+    component_role: root_admission_and_corpus_structure
+    current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+    validator_script: scripts/validate_protocol_root_corpus_governance.py
+    probe_script: scripts/ci/run_protocol_root_corpus_governance_probes_ci.sh
+    status_key: protocol_root_corpus_governance_status
+  - order: 2
+    component_id: root_corpus_ordering
+    component_role: source_order_and_reading_order
+    current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+    validator_script: scripts/validate_protocol_root_corpus_ordering.py
+    probe_script: scripts/ci/run_protocol_root_corpus_ordering_probes_ci.sh
+    status_key: protocol_root_corpus_ordering_status
+  - order: 3
+    component_id: root_corpus_authority
+    component_role: authority_layering_and_terminality_split
+    current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+    validator_script: scripts/validate_protocol_root_corpus_authority.py
+    probe_script: scripts/ci/run_protocol_root_corpus_authority_probes_ci.sh
+    status_key: protocol_root_corpus_authority_status
+  - order: 4
+    component_id: root_corpus_question_routing
+    component_role: question_class_and_answer_surface_pairing
+    current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+    validator_script: scripts/validate_protocol_root_corpus_question_routing.py
+    probe_script: scripts/ci/run_protocol_root_corpus_question_routing_probes_ci.sh
+    status_key: protocol_root_corpus_question_routing_status
+  - order: 5
+    component_id: root_corpus_derivation
+    component_role: one_way_derivation_and_non_reverse_authorship
+    current_file: identity/protocol/mappings/root-corpus-derivation.current.yaml
+    validator_script: scripts/validate_protocol_root_corpus_derivation.py
+    probe_script: scripts/ci/run_protocol_root_corpus_derivation_probes_ci.sh
+    status_key: protocol_root_corpus_derivation_status
+  - order: 6
+    component_id: root_corpus_transition
+    component_role: promotion_demotion_and_reentry_governance
+    current_file: identity/protocol/mappings/root-corpus-transition.current.yaml
+    validator_script: scripts/validate_protocol_root_corpus_transition.py
+    probe_script: scripts/ci/run_protocol_root_corpus_transition_probes_ci.sh
+    status_key: protocol_root_corpus_transition_status
+  - order: 7
+    component_id: root_corpus_gateway_admissibility
+    component_role: gateway_input_and_effect_scope
+    current_file: identity/protocol/mappings/root-corpus-gateway-admissibility.current.yaml
+    validator_script: scripts/validate_protocol_root_corpus_gateway_admissibility.py
+    probe_script: scripts/ci/run_protocol_root_corpus_gateway_admissibility_probes_ci.sh
+    status_key: protocol_root_corpus_gateway_admissibility_status
+  - order: 8
+    component_id: root_corpus_precedence
+    component_role: conflict_precedence_and_terminal_machine_enforcement
+    current_file: identity/protocol/mappings/root-corpus-precedence.current.yaml
+    validator_script: scripts/validate_protocol_root_corpus_precedence.py
+    probe_script: scripts/ci/run_protocol_root_corpus_precedence_probes_ci.sh
+    status_key: protocol_root_corpus_precedence_status
