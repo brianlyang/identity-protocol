@@ -56,14 +56,17 @@ reading_order:
     rel_path: identity/protocol/AGENT_HANDOFF_CONTRACT.md
     entry_role: root_contract_entry
   - order: 8
+    rel_path: identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md
+    entry_role: root_contract_entry
+  - order: 9
     rel_path: identity/protocol/mappings
     entry_role: machine_registry_directory_entry
-  - order: 9
+  - order: 10
     rel_path: identity/protocol/broadcast
     entry_role: governed_subdomain_extension_entry
-  - order: 10
+  - order: 11
     rel_path: identity/protocol/plugins
     entry_role: governed_subdomain_extension_entry
-  - order: 11
+  - order: 12
     rel_path: identity/protocol/fixtures
     entry_role: demoted_support_entry

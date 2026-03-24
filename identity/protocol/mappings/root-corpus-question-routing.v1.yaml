@@ -26,6 +26,10 @@ question_routing_anchor_checks:
     required_markers:
       - '## Runtime adjudication boundary'
       - 'Current-turn handoff legality must still resolve from machine-consumed enforcement surfaces'
+  - rel_path: identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md
+    required_markers:
+      - '## Runtime adjudication boundary'
+      - 'Current-turn stream-design legality must still resolve from machine-consumed enforcement surfaces'
 question_class_profiles:
   - question_class: generative_why
     answer_mode: interpretive_answer_only
@@ -83,6 +87,9 @@ entry_question_projection:
     question_classes:
       - frozen_domain_contract_law
   - rel_path: identity/protocol/AGENT_HANDOFF_CONTRACT.md
+    question_classes:
+      - frozen_domain_contract_law
+  - rel_path: identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md
     question_classes:
       - frozen_domain_contract_law
   - rel_path: identity/protocol/mappings

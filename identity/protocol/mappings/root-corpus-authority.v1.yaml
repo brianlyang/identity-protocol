@@ -26,6 +26,10 @@ authority_anchor_checks:
     required_markers:
       - '## Runtime adjudication boundary'
       - 'Current-turn handoff legality must still resolve from machine-consumed enforcement surfaces'
+  - rel_path: identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md
+    required_markers:
+      - '## Runtime adjudication boundary'
+      - 'Current-turn stream-design legality must still resolve from machine-consumed enforcement surfaces'
 authority_class_profiles:
   - corpus_class: bottom_theory
     authority_role: interpretive_bottom_theory
@@ -93,6 +97,10 @@ entry_authority_projection:
     authority_role: root_domain_contract_law
     authority_mode: frozen_law_only
   - rel_path: identity/protocol/AGENT_HANDOFF_CONTRACT.md
+    corpus_class: root_contract
+    authority_role: root_domain_contract_law
+    authority_mode: frozen_law_only
+  - rel_path: identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md
     corpus_class: root_contract
     authority_role: root_domain_contract_law
     authority_mode: frozen_law_only

@@ -51,6 +51,7 @@ Status transitions are controlled by governance/review, not by script commit alo
 3. This file operationalizes and freezes those bottom-theory commitments into protocol-law structure, governance execution, contract boundaries, and runtime-facing constitutions.
 4. The design philosophy document is therefore philosophically prior, but it is **not** a direct machine-consumed contract row, validator schema, or runtime success-path artifact sink.
 5. Machine-consumed truth remains frozen in governance/review docs, mappings, validators, probes, runtime state, and receipts; the design philosophy document explains why those laws exist and how they should be interpreted, but does not replace them.
+6. The root-domain admissibility law for new protocol streams and shared strengthenings is frozen separately in `identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md`.
 
 ## Constitutional derivation discipline
 

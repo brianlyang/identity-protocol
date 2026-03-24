@@ -138,6 +138,19 @@ registered_top_level_entries:
       - workbook_issue_projection
       - closure_ledger_narration
       - business_domain_example
+  - rel_path: identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for stream-design admissibility'
+      - '## Admissibility law'
+      - '## Five required design questions'
+      - '## Mandatory projection surfaces'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
   - rel_path: identity/protocol/mappings
     entry_kind: directory
     corpus_class: machine_registry_directory
@@ -159,6 +172,8 @@ registered_top_level_entries:
       - root-corpus-question-routing.v1.yaml
       - root-corpus-ordering.current.yaml
       - root-corpus-ordering.v1.yaml
+      - root-stream-design-admissibility.current.yaml
+      - root-stream-design-admissibility.v1.yaml
       - contract-binding.current.yaml
       - stream-doc-registry.current.yaml
       - semantic-term-registry.current.yaml

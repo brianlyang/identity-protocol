@@ -1,0 +1,56 @@
+schema_version: 1
+admissibility_family: protocol_root_stream_design_admissibility
+admissibility_version: v1
+contract_file: identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_stream_design_admissibility.py
+probe_script: scripts/ci/run_protocol_root_stream_design_admissibility_probes_ci.sh
+common_script: scripts/root_stream_design_admissibility_common.py
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Admissibility law'
+  - '## Five required design questions'
+  - '## Mandatory projection surfaces'
+  - '## Admissibility outcome classes'
+  - 'No protocol stream, shared strengthening, owner split, or runtime extension may enter governed implementation unless'
+required_question_rows:
+  - order: 1
+    question_id: ontology
+    contract_heading: '### 1. Ontology question'
+    normative_focus: object_identity_and_non_collapse
+  - order: 2
+    question_id: truth_lifecycle
+    contract_heading: '### 2. Truth-lifecycle question'
+    normative_focus: canonical_truth_discoverability_admissibility_binding_consumption
+  - order: 3
+    question_id: normative
+    contract_heading: '### 3. Normative question'
+    normative_focus: allowed_actions_fail_close_success_path_and_forbidden_shortcuts
+  - order: 4
+    question_id: responsibility_split
+    contract_heading: '### 4. Responsibility-split question'
+    normative_focus: protocol_instance_operator_boundary
+  - order: 5
+    question_id: answer_surface
+    contract_heading: '### 5. Answer-surface question'
+    normative_focus: stable_operator_delivery_surface
+admissibility_outcome_rows:
+  - order: 1
+    outcome_class: local_technique_only
+  - order: 2
+    outcome_class: instance_adaptation_only
+  - order: 3
+    outcome_class: governed_extension_strengthening
+  - order: 4
+    outcome_class: root_contract_strengthening
+  - order: 5
+    outcome_class: constitutional_strengthening
+required_projection_surfaces:
+  - governed_governance_surface
+  - governed_review_surface
+  - root_contract_or_machine_registry_surface
+  - validator_and_probe_surface
+  - runtime_answer_surface_if_applicable
