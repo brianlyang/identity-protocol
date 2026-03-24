@@ -182,6 +182,12 @@ Operational rule for identity instances:
 - if readiness is not `PASS_REQUIRED`, do **not** claim memory recovery is ready;
 - if readiness is `PASS_REQUIRED` but live proof is not yet observed, you may return the governed reentry task block, but must explicitly state that successful recovery is only proven after `instance_reentry_consumption_receipt` is emitted.
 - if readiness and live proof are both `PASS_REQUIRED`, you may state that governed recovery is live-proven, but launcher start/resume command lookup still remains delegated to `v1.6.14`.
+Executable-surface hard rule:
+
+- protocol executable surfaces (`scripts/**/*.py`, `scripts/**/*.sh`, `.github/workflows/*.yml`) and active pack-local `scripts/**` lanes scanned through the local runtime catalog must never embed fixed thread/session UUID literals or fixed `rollout-YYYY-...` sidecar literals;
+- those identifiers must always be generated dynamically at execution time;
+- the hard gate is `scripts/validate_executable_surface_runtime_literal_lock.py`, with negative probes in `scripts/ci/run_executable_surface_runtime_literal_lock_probes_ci.sh`.
+
 - continuity outputs must land only in these fixed runtime families:
   - `runtime/reports/context-continuity/continuity-rolling-*.json`
   - `runtime/reports/context-continuity/continuity-stage-*.json`

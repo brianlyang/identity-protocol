@@ -38,6 +38,8 @@ run_global_protocol_gates() {
   run_cmd bash scripts/ci/run_identity_context_continuity_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_dialogue_retention_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_artifact_family_routing_probes_ci.sh
+  run_cmd bash scripts/ci/run_executable_surface_runtime_literal_lock_probes_ci.sh
+  run_cmd python3 scripts/validate_executable_surface_runtime_literal_lock.py --catalog "${CATALOG_PATH}" --include-active-pack-scripts --json-only
   run_cmd bash scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh
   run_cmd bash scripts/ci/run_workbook_control_plane_probes_ci.sh
   run_cmd bash scripts/ci/run_workbook_family_scaffold_probes_ci.sh
