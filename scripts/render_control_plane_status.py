@@ -61,6 +61,11 @@ BASE_CHECKS: tuple[CheckSpec, ...] = (
         status_key="required_gate_surface_drift_status",
     ),
     CheckSpec(
+        name="executable_surface_runtime_literal_lock",
+        command=("python3", "scripts/validate_executable_surface_runtime_literal_lock.py", "--json-only"),
+        status_key="executable_surface_runtime_literal_lock_status",
+    ),
+    CheckSpec(
         name="docs_command_contract",
         command=("python3", "scripts/docs_command_contract_check.py"),
         status_key=None,

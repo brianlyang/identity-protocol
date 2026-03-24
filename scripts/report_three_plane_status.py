@@ -79,6 +79,9 @@ DOWNSINK_PATH_GOVERNANCE_VALIDATOR_NAMES: set[str] = {
     "downsink_path_write_guard",
     "downsink_path_literal_lock",
 }
+EXECUTABLE_SURFACE_GOVERNANCE_VALIDATOR_NAMES: set[str] = {
+    "executable_surface_runtime_literal_lock",
+}
 VALIDATOR_ERROR_CODE_KEYS: tuple[str, ...] = (
     "error_code",
     "sidecar_error_code",
@@ -405,6 +408,8 @@ def _classify_m2m_projection(
         non_m2m_scope.append("protocol_feedback_observability")
     if any(row["validator"] in DOWNSINK_PATH_GOVERNANCE_VALIDATOR_NAMES for row in non_m2m_failed):
         non_m2m_scope.append("downsink_path_immutability")
+    if any(row["validator"] in EXECUTABLE_SURFACE_GOVERNANCE_VALIDATOR_NAMES for row in non_m2m_failed):
+        non_m2m_scope.append("executable_surface_runtime_literals")
     if repo_status != "CLOSED":
         non_m2m_scope.append("repo_plane")
     if release_status != "CLOSED":
@@ -3530,6 +3535,29 @@ def _instance_plane_status(
     if rc_downsink_literal_lock != 0 or downsink_literal_lock_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_exec_surface_lock, out_exec_surface_lock, err_exec_surface_lock = _run(
+        [
+            "python3",
+            "scripts/validate_executable_surface_runtime_literal_lock.py",
+            "--catalog",
+            args.catalog,
+            "--include-active-pack-scripts",
+            "--json-only",
+        ]
+    )
+    exec_surface_lock_payload = _parse_json_payload(out_exec_surface_lock) or {}
+    validators["executable_surface_runtime_literal_lock"] = {
+        "rc": rc_exec_surface_lock,
+        "ok": rc_exec_surface_lock == 0,
+        "out": out_exec_surface_lock,
+        "err": err_exec_surface_lock,
+    }
+    exec_surface_lock_status = str(
+        exec_surface_lock_payload.get("executable_surface_runtime_literal_lock_status", "")
+    ).strip().upper()
+    if rc_exec_surface_lock != 0 or exec_surface_lock_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_fresh, out_fresh, err_fresh = _run(
         [
             "python3",
@@ -4638,6 +4666,20 @@ def _instance_plane_status(
             "scan_globs": downsink_literal_lock_payload.get("scan_globs", []),
             "registry_rule_count": downsink_literal_lock_payload.get("registry_rule_count"),
             "stale_reasons": downsink_literal_lock_payload.get("stale_reasons", []),
+        },
+        "executable_surface_runtime_literal_lock": {
+            "executable_surface_runtime_literal_lock_status": exec_surface_lock_payload.get(
+                "executable_surface_runtime_literal_lock_status"
+            ),
+            "error_code": exec_surface_lock_payload.get("error_code", ""),
+            "repo_root": exec_surface_lock_payload.get("repo_root", ""),
+            "catalog_path": exec_surface_lock_payload.get("catalog_path", ""),
+            "include_active_pack_scripts": exec_surface_lock_payload.get("include_active_pack_scripts"),
+            "active_pack_identity_ids": exec_surface_lock_payload.get("active_pack_identity_ids", []),
+            "scan_file_count": exec_surface_lock_payload.get("scan_file_count"),
+            "violation_count": exec_surface_lock_payload.get("violation_count"),
+            "violations": exec_surface_lock_payload.get("violations", []),
+            "stale_reasons": exec_surface_lock_payload.get("stale_reasons", []),
         },
         "identity_home_catalog_alignment": {
             "path_governance_status": home_align_payload.get("path_governance_status"),
