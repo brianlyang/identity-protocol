@@ -49,6 +49,13 @@ Runtime meaning:
 3. A runtime artifact that has been demoted, quarantined, or classified as support material must not silently regain root authority through later reuse.
 4. Runtime does not acquire bottom-theory or constitutional authorship merely by being the latest execution surface.
 
+## Runtime-origin gateway-admissibility boundary
+
+1. Runtime-origin material may motivate only the gateways whose admissibility contract explicitly allows it;
+2. Runtime admission into a gateway does not let runtime state inherit bottom-theory, constitutional, or root-contract authorship.
+3. Runtime motivation entering a gateway still requires governed refreezing or governed projection before it becomes shared law.
+4. Current-turn runtime legality remains machine-consumed registry and enforcement truth, not raw runtime motivation records.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

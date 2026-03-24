@@ -1,0 +1,94 @@
+schema_version: 1
+admissibility_family: protocol_root_corpus_gateway_admissibility
+admissibility_version: v1
+root_dir: identity/protocol
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+transition_current_file: identity/protocol/mappings/root-corpus-transition.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+gateway_anchor_checks:
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root gateway-admissibility discipline'
+      - 'gateway admission decides which non-origin surfaces may legally motivate each root gateway;'
+      - "gateway admission does not let an incoming surface inherit the gateway's authorship."
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Gateway admission must preserve source order'
+      - 'a gateway is a legal re-entry port, not an origin substitute;'
+      - 'entering a gateway does not let an incoming surface inherit bottom-theory or constitutional authorship;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root gateway-admissibility boundary'
+      - 'Gateway admission is narrower than general motivation to strengthen.'
+      - 'Machine-registry gateway may terminate current-turn legality, but that does not let incoming motivation surfaces author upstream law.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime-origin gateway-admissibility boundary'
+      - 'Runtime-origin material may motivate only the gateways whose admissibility contract explicitly allows it;'
+      - 'Runtime motivation entering a gateway still requires governed refreezing or governed projection before it becomes shared law.'
+gateway_profiles:
+  - gateway_class: constitution
+    gateway_scope: root
+    admissibility_mode: governed_refreeze_gateway
+    gateway_effect_scope: constitutional_law_refreeze
+    current_turn_legality_terminal: false
+    admissible_nonorigin_surface_classes:
+      - root_index
+      - machine_registry_directory
+      - governed_subdomain_extension
+      - demoted_support_directory
+      - outer_governance_surface
+      - outer_review_surface
+      - outer_workbook_surface
+      - outer_evidence_surface
+  - gateway_class: runtime_constitution
+    gateway_scope: root
+    admissibility_mode: governed_refreeze_gateway
+    gateway_effect_scope: runtime_constitutional_law_refreeze
+    current_turn_legality_terminal: false
+    admissible_nonorigin_surface_classes:
+      - root_index
+      - machine_registry_directory
+      - governed_subdomain_extension
+      - demoted_support_directory
+      - outer_governance_surface
+      - outer_review_surface
+      - outer_workbook_surface
+      - outer_evidence_surface
+      - outer_runtime_state_surface
+  - gateway_class: root_contract
+    gateway_scope: root
+    admissibility_mode: governed_refreeze_gateway
+    gateway_effect_scope: root_contract_law_refreeze
+    current_turn_legality_terminal: false
+    admissible_nonorigin_surface_classes:
+      - root_index
+      - machine_registry_directory
+      - governed_subdomain_extension
+      - demoted_support_directory
+      - outer_governance_surface
+      - outer_review_surface
+      - outer_workbook_surface
+      - outer_reference_surface
+      - outer_evidence_surface
+      - outer_runtime_state_surface
+      - outer_receipt_surface
+      - outer_implementation_surface
+  - gateway_class: machine_registry_directory
+    gateway_scope: root
+    admissibility_mode: governed_projection_gateway
+    gateway_effect_scope: machine_registry_projection
+    current_turn_legality_terminal: true
+    admissible_nonorigin_surface_classes:
+      - root_index
+      - governed_subdomain_extension
+      - demoted_support_directory
+      - outer_governance_surface
+      - outer_review_surface
+      - outer_workbook_surface
+      - outer_reference_surface
+      - outer_evidence_surface
+      - outer_runtime_state_surface
+      - outer_receipt_surface
+      - outer_implementation_surface

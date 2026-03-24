@@ -71,6 +71,18 @@ Status transitions are controlled by governance/review, not by script commit alo
 4. Machine-registry or governed-extension surfaces may reveal a need for upstream strengthening, but that revelation does not reverse-author bottom theory, constitution, or runtime constitution.
 5. Promotion into root law without governed refreezing is non-compliant, even if the motivating surface contains true evidence.
 
+## Root gateway-admissibility boundary
+
+1. Gateway admission is narrower than general motivation to strengthen.
+2. Non-origin surfaces may enter only the root gateways explicitly admitted by governed gateway-admissibility law.
+3. Gateway effect remains bounded by gateway class:
+   - constitution gateway refreezes constitutional law;
+   - runtime constitution gateway refreezes runtime law;
+   - root contract gateway refreezes root-contract law;
+   - machine-registry gateway projects machine-consumed registry truth.
+4. Gateway admission does not transfer authorship from an incoming surface to the gateway output.
+5. Machine-registry gateway may terminate current-turn legality, but that does not let incoming motivation surfaces author upstream law.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

@@ -91,6 +91,11 @@ BASE_CHECKS: tuple[CheckSpec, ...] = (
         status_key="protocol_root_corpus_transition_status",
     ),
     CheckSpec(
+        name="protocol_root_corpus_gateway_admissibility",
+        command=("python3", "scripts/validate_protocol_root_corpus_gateway_admissibility.py", "--json-only"),
+        status_key="protocol_root_corpus_gateway_admissibility_status",
+    ),
+    CheckSpec(
         name="protocol_root_corpus_question_routing",
         command=("python3", "scripts/validate_protocol_root_corpus_question_routing.py", "--json-only"),
         status_key="protocol_root_corpus_question_routing_status",

@@ -206,6 +206,23 @@ No outer or demoted surface may directly self-promote into root law without that
 
 ---
 
+## Root gateway-admissibility discipline
+
+Gateway admission must stay narrower than general motivation to strengthen.
+
+1. gateway admission decides which non-origin surfaces may legally motivate each root gateway;
+2. a gateway is not an origin substitute; admission only permits governed re-entry at that gateway's own effect scope;
+3. constitutional, runtime-constitutional, and root-contract gateways refreeze law at their own layer;
+4. machine-registry gateway projects machine-consumable registry truth and may terminate current-turn legality, but it does not let incoming motivation surfaces author upstream law;
+5. gateway admission does not let an incoming surface inherit the gateway's authorship.
+
+So the protocol must preserve two distinctions at once:
+
+- a surface may be strong enough to motivate a gateway without becoming the semantic author of the gateway output;
+- current-turn legality may terminate at machine-registry law while still preserving philosophy, constitution, and root-contract source order above it.
+
+---
+
 ## Root question-routing discipline
 
 Different root entries answer different classes of machine-world questions.

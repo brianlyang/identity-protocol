@@ -201,6 +201,26 @@ So the protocol must reject the following confusions:
 - a demoted support artifact being treated as if it silently regained law-bearing status without governed refreezing;
 - implementation detail being treated as if it authored protocol law merely by being the latest executable shape.
 
+### Gateway admission must preserve source order
+
+Allowed gateways are legal re-entry ports, not origin substitutes.
+
+1. a gateway is a legal re-entry port, not an origin substitute;
+2. gateway admission decides which non-origin surfaces may legally motivate strengthening at a given root gateway;
+3. entering a gateway does not let an incoming surface inherit bottom-theory or constitutional authorship;
+4. gateway effect stays bounded by gateway kind:
+   - constitutional gateway refreezes constitutional law;
+   - runtime-constitutional gateway refreezes runtime law;
+   - root-contract gateway refreezes contract law;
+   - machine-registry gateway projects machine-consumable registry truth;
+5. machine-registry gateway may terminate current-turn legality, but that does not let incoming motivation surfaces reverse-author upstream law.
+
+So the protocol must reject the following confusions:
+
+- a runtime artifact being treated as if gateway admission made it the author of constitutional law;
+- an outer evidence surface being treated as if admission at root-contract gateway gave it bottom-theory standing;
+- machine-registry projection being treated as if it erased the philosophical or constitutional source order above it.
+
 ### Question class and answer surface must stay paired
 
 Different layers of the root corpus answer different classes of questions, and

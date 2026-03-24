@@ -36,6 +36,7 @@ ROOT_CORPUS_ORDERING_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corp
 ROOT_CORPUS_AUTHORITY_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-authority.current.yaml"
 ROOT_CORPUS_DERIVATION_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-derivation.current.yaml"
 ROOT_CORPUS_TRANSITION_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-transition.current.yaml"
+ROOT_CORPUS_GATEWAY_ADMISSIBILITY_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-gateway-admissibility.current.yaml"
 ROOT_CORPUS_QUESTION_ROUTING_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-question-routing.current.yaml"
 STREAM_DOC_REGISTRY_LITERAL_SINGLE_SOURCE = "scripts/registry_alias_control_plane_common.py"
 STREAM_DOC_REGISTRY_LITERAL_CONSUMER_FILES: tuple[str, ...] = (
@@ -493,6 +494,10 @@ def main() -> int:
         default=ROOT_CORPUS_TRANSITION_CURRENT_DEFAULT_REL,
     )
     parser.add_argument(
+        "--root-corpus-gateway-admissibility-current-file",
+        default=ROOT_CORPUS_GATEWAY_ADMISSIBILITY_CURRENT_DEFAULT_REL,
+    )
+    parser.add_argument(
         "--root-corpus-question-routing-current-file",
         default=ROOT_CORPUS_QUESTION_ROUTING_CURRENT_DEFAULT_REL,
     )
@@ -601,6 +606,15 @@ def main() -> int:
     root_corpus_transition_alias_enabled = False
     root_corpus_transition_parse_ok = False
     root_corpus_transition_violation_count = 0
+    root_corpus_gateway_admissibility_current_configured_file = str(args.root_corpus_gateway_admissibility_current_file)
+    root_corpus_gateway_admissibility_current_path = (
+        repo_root / root_corpus_gateway_admissibility_current_configured_file
+    ).resolve()
+    root_corpus_gateway_admissibility_current_resolved_path = root_corpus_gateway_admissibility_current_path
+    root_corpus_gateway_admissibility_active_file = ""
+    root_corpus_gateway_admissibility_alias_enabled = False
+    root_corpus_gateway_admissibility_parse_ok = False
+    root_corpus_gateway_admissibility_violation_count = 0
     root_corpus_question_routing_current_configured_file = str(args.root_corpus_question_routing_current_file)
     root_corpus_question_routing_current_path = (repo_root / root_corpus_question_routing_current_configured_file).resolve()
     root_corpus_question_routing_current_resolved_path = root_corpus_question_routing_current_path
@@ -1256,6 +1270,51 @@ def main() -> int:
         root_corpus_transition_parse_ok = bool(root_transition_state.get("parse_ok", False))
         root_corpus_transition_violation_count = root_transition_violation_count
         for row in root_transition_violations:
+            violations.append(row)
+
+        root_corpus_gateway_admissibility_alias_cfg = (
+            (invariants.get("root_corpus_gateway_admissibility_alias") or {}) if isinstance(invariants, dict) else {}
+        )
+        (
+            root_gateway_admissibility_state,
+            root_gateway_admissibility_violations,
+            root_gateway_admissibility_violation_count,
+        ) = _validate_mapping_alias_contract(
+            repo_root=repo_root,
+            alias_field="root_corpus_gateway_admissibility_alias",
+            alias_cfg=(
+                root_corpus_gateway_admissibility_alias_cfg
+                if isinstance(root_corpus_gateway_admissibility_alias_cfg, dict)
+                else {}
+            ),
+            configured_current_file=root_corpus_gateway_admissibility_current_configured_file,
+            expected_active_prefix="identity/protocol/mappings/root-corpus-gateway-admissibility.v",
+        )
+        root_corpus_gateway_admissibility_alias_enabled = bool(
+            root_gateway_admissibility_state.get("alias_enabled", False)
+        )
+        root_corpus_gateway_admissibility_current_configured_file = str(
+            root_gateway_admissibility_state.get("current_configured_file", "")
+        )
+        root_corpus_gateway_admissibility_current_path = Path(
+            root_gateway_admissibility_state.get(
+                "current_path", root_corpus_gateway_admissibility_current_path
+            )
+        )
+        root_corpus_gateway_admissibility_current_resolved_path = Path(
+            root_gateway_admissibility_state.get(
+                "current_resolved_path",
+                root_corpus_gateway_admissibility_current_resolved_path,
+            )
+        )
+        root_corpus_gateway_admissibility_active_file = str(
+            root_gateway_admissibility_state.get("active_file", "")
+        )
+        root_corpus_gateway_admissibility_parse_ok = bool(
+            root_gateway_admissibility_state.get("parse_ok", False)
+        )
+        root_corpus_gateway_admissibility_violation_count = root_gateway_admissibility_violation_count
+        for row in root_gateway_admissibility_violations:
             violations.append(row)
 
         root_corpus_question_routing_alias_cfg = (
@@ -2559,6 +2618,15 @@ def main() -> int:
         "root_corpus_transition_active_file": root_corpus_transition_active_file,
         "root_corpus_transition_parse_ok": root_corpus_transition_parse_ok,
         "root_corpus_transition_violation_count": root_corpus_transition_violation_count,
+        "root_corpus_gateway_admissibility_alias_enabled": root_corpus_gateway_admissibility_alias_enabled,
+        "root_corpus_gateway_admissibility_current_file": str(root_corpus_gateway_admissibility_current_path),
+        "root_corpus_gateway_admissibility_current_configured_file": root_corpus_gateway_admissibility_current_configured_file,
+        "root_corpus_gateway_admissibility_current_resolved_file": str(
+            root_corpus_gateway_admissibility_current_resolved_path
+        ),
+        "root_corpus_gateway_admissibility_active_file": root_corpus_gateway_admissibility_active_file,
+        "root_corpus_gateway_admissibility_parse_ok": root_corpus_gateway_admissibility_parse_ok,
+        "root_corpus_gateway_admissibility_violation_count": root_corpus_gateway_admissibility_violation_count,
         "root_corpus_question_routing_alias_enabled": root_corpus_question_routing_alias_enabled,
         "root_corpus_question_routing_current_file": str(root_corpus_question_routing_current_path),
         "root_corpus_question_routing_current_configured_file": root_corpus_question_routing_current_configured_file,

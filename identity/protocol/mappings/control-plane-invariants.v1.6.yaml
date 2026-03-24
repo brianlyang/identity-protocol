@@ -200,3 +200,19 @@ invariants:
       surfaces:
         - scripts
         - .github/workflows
+  root_corpus_gateway_admissibility_alias:
+    current_file: identity/protocol/mappings/root-corpus-gateway-admissibility.current.yaml
+    required_fields:
+      - admissibility_family
+      - admissibility_version
+      - root_dir
+      - registry_current_file
+      - transition_current_file
+      - authority_current_file
+      - question_routing_current_file
+      - gateway_profiles
+    forbid_versioned_reference:
+      regex: root-corpus-gateway-admissibility\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
