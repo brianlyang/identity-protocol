@@ -41,6 +41,8 @@ POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["bash", "scripts/ci/run_identity_artifact_family_routing_probes_ci.sh"],
     ["bash", "scripts/ci/run_identity_weak_live_linkage_probes_ci.sh"],
     ["bash", "scripts/ci/run_identity_broadcast_delivery_probes_ci.sh"],
+    ["python3", "scripts/validate_protocol_broadcast_doc_control.py", "--json-only"],
+    ["bash", "scripts/ci/run_protocol_broadcast_doc_control_probes_ci.sh"],
     ["bash", "scripts/ci/run_identity_communication_transport_probes_ci.sh"],
     ["python3", "scripts/check_identity_broadcast_migration_closure.py", "--workspace-runtime-only", "--json-only"],
     ["python3", "scripts/check_identity_communication_transport_closure.py", "--workspace-runtime-only", "--json-only"],

@@ -76,6 +76,10 @@ Audit judgment:
 
 - `rq_053` is now a dedicated machine-consumed lane rather than piggybacking on host-gateway structure.
 
+Additional extension-law judgment:
+
+- the broadcast subdomain now carries explicit philosophy inheritance, truth-lifecycle language, and runtime adjudication boundaries through `identity/protocol/broadcast/README.md` + `BROADCAST_DOC_CONTROL.current.yaml`, with machine checks in `scripts/validate_protocol_broadcast_doc_control.py` and `scripts/ci/run_protocol_broadcast_doc_control_probes_ci.sh`; this prevents subdomain law from collapsing into prose-only explanation.
+
 ### 2.2 ASB16-RQ-054 identity-communication-transport remediation landed
 
 Landed shared remediation:
@@ -100,6 +104,10 @@ Shared infrastructure now also consumes the stream through:
 4. `scripts/required_gate_bundle_runner.py`
 5. `scripts/ci/run_required_runtime_gates_ci.sh`
 6. `scripts/release_readiness_check.py`
+7. `identity/protocol/broadcast/README.md`
+8. `identity/protocol/broadcast/BROADCAST_DOC_CONTROL.current.yaml`
+9. `scripts/validate_protocol_broadcast_doc_control.py`
+10. `scripts/ci/run_protocol_broadcast_doc_control_probes_ci.sh`
 
 Audit judgment:
 

@@ -1,12 +1,43 @@
-# Identity Protocol Plugins (v1.6.2 baseline)
+# Identity Protocol Plugins
 
 This directory is the canonical plugin governance root for protocol-level plugin enforcement.
 
-## Scope
+## Foundational philosophy inheritance
+
+1. This governed extension inherits `identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md` as the bottom-theory source for semantic singularity, fail-close preference, and lifecycle closure.
+2. It inherits `identity/protocol/IDENTITY_RUNTIME.md` as the runtime constitution for execution, recovery, and current-turn authority boundaries.
+3. Plugin law is an extension surface under the root protocol. It does not weaken, replace, or re-author root constitutions or runtime law.
+
+## Extension authority boundary
 
 1. Keep plugin contracts, schemas, provider profiles, and registry metadata here.
 2. Do not store plaintext API credentials in this tree.
 3. Instances consume this governance data and should store runtime receipts only.
+4. Plugin onboarding prose and frozen contract prose explain governed extension law, but they are not machine verdict surfaces by themselves.
+
+## Runtime adjudication boundary
+
+1. Plugin READMEs and contract prose are interpretive/onboarding surfaces only.
+2. They are not terminal surfaces for current-turn legality.
+3. Current-turn legality must resolve from machine-consumed enforcement surfaces such as:
+   - `PLUGIN_REGISTRY.current.yaml`
+   - `FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml`
+   - `identity/protocol/mappings/contract-binding.current.yaml`
+   - validators
+   - probes
+   - runtime state
+   - receipts
+
+## Truth lifecycle discipline
+
+1. Plugin contract existence is not operational closure.
+2. The lifecycle must remain explicit and ordered:
+   - `truth_exists`
+   - `truth_discoverable`
+   - `truth_admissible`
+   - `truth_bound`
+   - `truth_consumed`
+3. A plugin may be documented and registered yet still fail operational closure if it is not discoverable by the instance, admissible for the current turn, bound to the current run, or consumed by the next operational step.
 
 ## Canonical files
 

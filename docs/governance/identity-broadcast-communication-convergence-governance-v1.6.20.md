@@ -97,6 +97,10 @@ Shared protocol-owned surfaces landed in this stream:
 14. `scripts/required_gate_bundle_runner.py`
 15. `scripts/ci/run_required_runtime_gates_ci.sh`
 16. `scripts/release_readiness_check.py`
+17. `identity/protocol/broadcast/README.md`
+18. `identity/protocol/broadcast/BROADCAST_DOC_CONTROL.current.yaml`
+19. `scripts/validate_protocol_broadcast_doc_control.py`
+20. `scripts/ci/run_protocol_broadcast_doc_control_probes_ci.sh`
 
 ## 4) Machine closure landed
 
@@ -109,6 +113,7 @@ Shared protocol-owned surfaces landed in this stream:
 5. `scripts/ci/run_identity_broadcast_delivery_probes_ci.sh` proves the positive sync path, the missing-contract fail-close path, the shared backfill repair path, and the closure-checker green path.
 6. `scripts/identity_broadcast_delivery_common.py`, `scripts/validate_identity_broadcast_delivery.py`, and `scripts/run_identity_broadcast_delivery.py` now emit a bundle-compatible required-contract projection (`required_contract`, canonical contract identity, and shared evidence reference) so `scripts/required_gate_bundle_runner.py` can consume `ASB16-RQ-053` without special-casing or validator loosening.
 7. `scripts/execute_identity_upgrade.py` now forwards explicit actor context into `scripts/validate_work_layer_gate_set_routing.py` during live replay, preventing false `IP-LAYER-GATE-007` lane-gate failures when the owning identity is correctly bound to an active protocol lane lock.
+8. `identity/protocol/broadcast/README.md` plus `BROADCAST_DOC_CONTROL.current.yaml` now freeze extension-law readability, philosophy inheritance, and runtime adjudication boundaries for the broadcast subdomain; `scripts/validate_protocol_broadcast_doc_control.py` and `scripts/ci/run_protocol_broadcast_doc_control_probes_ci.sh` make that boundary machine-checkable instead of prose-only.
 
 ### 4.2 ASB16-RQ-054 identity-communication-transport machine closure landed
 

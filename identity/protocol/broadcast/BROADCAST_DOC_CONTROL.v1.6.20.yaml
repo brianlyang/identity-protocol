@@ -1,0 +1,40 @@
+schema_version: 1
+doc_control_family: governed_subdomain_doc_control
+governance_version: v1.6.20
+subdomain_id: broadcast
+last_updated_utc: "2026-03-24T00:00:00Z"
+
+docs:
+  root_readme: identity/protocol/broadcast/README.md
+  root_required_tokens:
+    - identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    - identity/protocol/IDENTITY_RUNTIME.md
+    - Foundational philosophy inheritance
+    - Runtime adjudication boundary
+    - current-turn legality
+    - machine-consumed enforcement surfaces
+    - truth_exists
+    - truth_discoverable
+    - truth_admissible
+    - truth_bound
+    - truth_consumed
+    - identity/protocol/broadcast/index.json
+    - identity/protocol/broadcast/schema/broadcast-item.v1.json
+    - scripts/validate_identity_broadcast_delivery.py
+    - scripts/run_identity_broadcast_delivery.py
+    - scripts/check_identity_broadcast_migration_closure.py
+    - scripts/validate_protocol_broadcast_doc_control.py
+    - scripts/ci/run_protocol_broadcast_doc_control_probes_ci.sh
+    - docs/governance/identity-broadcast-communication-convergence-governance-v1.6.20.md
+    - docs/review/protocol-remediation-audit-ledger-v1.6.20-broadcast-communication-convergence.md
+  required_files:
+    - identity/protocol/broadcast/index.json
+    - identity/protocol/broadcast/schema/broadcast-item.v1.json
+    - identity/protocol/broadcast/README.md
+    - scripts/validate_identity_broadcast_delivery.py
+    - scripts/run_identity_broadcast_delivery.py
+    - scripts/check_identity_broadcast_migration_closure.py
+    - scripts/validate_protocol_broadcast_doc_control.py
+    - scripts/ci/run_protocol_broadcast_doc_control_probes_ci.sh
+    - docs/governance/identity-broadcast-communication-convergence-governance-v1.6.20.md
+    - docs/review/protocol-remediation-audit-ledger-v1.6.20-broadcast-communication-convergence.md
