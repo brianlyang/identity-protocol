@@ -50,6 +50,54 @@ When entering `identity/protocol/`, read in this order:
 
 ---
 
+## What belongs at protocol root
+
+`identity/protocol/` is the law-bearing root corpus of the identity protocol
+for the machine world.
+
+The following classes belong here:
+
+1. **bottom theory / interpretive source**
+   - `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`
+2. **constitutions**
+   - `IDENTITY_PROTOCOL.md`
+   - `IDENTITY_RUNTIME.md`
+3. **root contract law**
+   - prompt bootstrap, discovery, handoff, and other root-domain contracts
+4. **machine-consumed registries and mappings**
+   - canonical bindings, term registries, stream registries, scope matrices, and related SSOT rows
+5. **governed subdomain protocol extensions**
+   - subdirectories such as `broadcast/` and `plugins/`
+6. **clearly demoted support material**
+   - only when it is explicit that the material is not active-runtime truth
+
+The root directory should remain sparse, law-bearing, and semantically stable.
+
+---
+
+## What must not be treated as protocol-root law
+
+The following do **not** belong in `identity/protocol/` as law-bearing root
+material:
+
+1. stream-local closure chatter or temporary remediation narration;
+2. workbook issue projections or cross-stream cleanup ledgers;
+3. workspace-specific convenience notes;
+4. business strategy, domain tactics, or scenario heuristics;
+5. instance-local residue diaries, one-off troubleshooting notes, or operator memory aids;
+6. temporary persuasion text that is not part of bottom theory, constitutional law, contract law, or machine-consumed registry truth.
+
+When such material is valuable, it should live in the appropriate outer surface
+instead:
+
+- `docs/governance/`
+- `docs/review/`
+- `docs/workbook/`
+- `activity/evidence/`
+- runtime-pack or instance-local governed roots
+
+---
+
 ## Why philosophy comes first
 
 In philosophical order, the identity protocol exists because `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md` exists first.
@@ -120,6 +168,9 @@ When root protocol files are authored or updated, the following guardrails must 
    - each root contract should state what bottom-theory commitments it inherits;
    - each root contract should also state which concrete law it freezes;
    - no root contract should blur philosophical grounding, contract freezing, and runtime-source authority into one layer.
+4. **root corpus admission must stay law-bearing**
+   - the root directory should accept only bottom theory, constitutions, root contracts, machine-consumed registries/mappings, governed subdomain protocol packs, and clearly demoted support material;
+   - stream-local commentary, workbook material, business strategy, or workspace residue must not be promoted into protocol-root law-bearing position.
 
 ---
 

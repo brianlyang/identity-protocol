@@ -65,6 +65,39 @@ Interpretive rule:
 5. philosophical primacy does not mean runtime-source primacy; this document is the generative reason for protocol law, while machine-consumed authority still lives in frozen contracts, mappings, validators, runtime state, and receipts.
 6. current validator/probe/runtime verdicts must not be reverse-projected back into philosophy as if the latest machine judgement were the source of bottom theory.
 
+### Boundary relative to streams, releases, and the protocol-root corpus
+
+This document must also not be mistaken for a versioned stream note, release
+appendix, or decorative manifesto attached to an already-existing protocol.
+
+The boundary is:
+
+1. stream and release labels record governed freeze history, bounded
+   strengthening, and temporal manifestation;
+2. they do **not** become the semantic origin of protocol existence;
+3. the semantic origin remains the bottom theory frozen here;
+4. `identity/protocol/` is therefore a law-bearing root corpus for the machine
+   world, not a scrapbook for temporary closure chatter, scenario advice, local
+   convenience notes, or instance residue narratives;
+5. root-corpus admission must remain strict: only bottom theory,
+   constitutions, root contracts, machine-consumed mappings/registries,
+   governed subdomain protocol packs, and clearly demoted support material may
+   live here as protocol-root surfaces;
+6. if a text is mainly temporal, persuasive, workspace-specific, optimized for
+   human memory, or oriented around business/scenario tactics rather than
+   machine interpretation, it should not enter the protocol root as law-bearing
+   material.
+
+Interpretive rule:
+
+1. root-directory discipline is part of protocol philosophy, not merely a file
+   organization preference;
+2. semantic singularity can be lost through corpus pollution just as easily as
+   through validator drift;
+3. a root corpus that accepts temporary or mixed-layer materials will
+   eventually produce philosophical ambiguity, constitutional ambiguity, and
+   runtime ambiguity together.
+
 ---
 
 ## One-line motherline
@@ -80,6 +113,27 @@ When this document is read by any machine-governed participant in the protocol e
 3. prefer lifecycle closure over declarative existence;
 4. prefer fail-close exposure over silent compatibility absorption;
 5. prefer law-preserving adaptation over law-weakening convenience.
+
+### Constitutional derivation order
+
+In semantic order, the protocol should be read as a derivation chain:
+
+1. **bottom theory**
+   - why identity protocol law must exist in this shape at all.
+2. **constitutions**
+   - `IDENTITY_PROTOCOL.md` and `IDENTITY_RUNTIME.md`
+   - how bottom theory is frozen into protocol-law and runtime-law structure.
+3. **root contract law**
+   - prompt bootstrap, discovery, handoff, and other root domain contracts
+   - how concrete governed domains are fail-closed under the constitutions.
+4. **machine-consumed enforcement surfaces**
+   - mappings, governance/review docs, validators, probes, runtime state, and receipts
+   - how present-turn legality is actually adjudicated.
+
+This order must not be inverted. A later enforcement verdict may reveal that a
+contract is incomplete or that a stream must be strengthened, but it does not
+become the semantic parent of the bottom theory that made law possible in the
+first place.
 
 ---
 
@@ -444,3 +498,11 @@ Therefore, the identity protocol is able to keep expanding not because it keeps 
 
 Without design philosophy, extension degenerates into a patch collection.
 With design philosophy, extension becomes growth with internal order.
+
+The same logic applies to the protocol root corpus itself:
+
+- without corpus discipline, root materials degenerate into a mixed archive of
+  law, explanation, workaround, and temporary persuasion;
+- with corpus discipline, the root remains a coherent machine-world law library
+  whose later constitutions, contracts, mappings, validators, and runtimes can
+  all be interpreted without losing semantic origin.
