@@ -1,0 +1,71 @@
+schema_version: 1
+truth_lifecycle_family: protocol_root_truth_lifecycle
+truth_lifecycle_version: v1
+contract_file: identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_truth_lifecycle.py
+probe_script: scripts/ci/run_protocol_root_truth_lifecycle_probes_ci.sh
+common_script: scripts/root_truth_lifecycle_common.py
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Truth-lifecycle law'
+  - '## Five lifecycle stages'
+  - '## Required lifecycle differentiations'
+  - '## Non-compliant lifecycle collapses'
+  - 'No truth claim may be treated as full operational closure unless all required lifecycle stages have been carried through.'
+required_lifecycle_rows:
+  - order: 1
+    lifecycle_id: truth_exists
+    contract_heading: '### 1. Truth exists in protocol law'
+    lifecycle_role: truth_exists
+  - order: 2
+    lifecycle_id: truth_discoverable
+    contract_heading: '### 2. Truth is discoverable by instance'
+    lifecycle_role: truth_discoverable
+  - order: 3
+    lifecycle_id: truth_admissible
+    contract_heading: '### 3. Truth is admissible as current-turn authority'
+    lifecycle_role: truth_admissible
+  - order: 4
+    lifecycle_id: truth_bound
+    contract_heading: '### 4. Truth is bound to current run / current thread'
+    lifecycle_role: truth_bound
+  - order: 5
+    lifecycle_id: truth_consumed
+    contract_heading: '### 5. Truth is consumed by the next operational step'
+    lifecycle_role: truth_consumed
+required_differentiation_rows:
+  - order: 1
+    differentiation_id: existence_vs_discovery
+    contract_phrase: 'truth exists in protocol law ≠ the instance has actually discovered it;'
+  - order: 2
+    differentiation_id: discovery_vs_admissibility
+    contract_phrase: 'the instance discovered it ≠ it is admissible as current-turn authority;'
+  - order: 3
+    differentiation_id: admissibility_vs_binding
+    contract_phrase: 'it is admissible as current-turn authority ≠ it is bound to the current run / current thread;'
+  - order: 4
+    differentiation_id: binding_vs_consumption
+    contract_phrase: 'it is bound to the current run / current thread ≠ the next operational step has actually consumed it;'
+  - order: 5
+    differentiation_id: artifact_vs_operational_closure
+    contract_phrase: 'some artifact or declaration exists ≠ full operational closure has been achieved.'
+required_collapse_rows:
+  - order: 1
+    collapse_id: existence_equals_discovery
+    contract_phrase: 'shared-law existence is treated as if the instance has already discovered the truth.'
+  - order: 2
+    collapse_id: discovery_equals_admissibility
+    contract_phrase: 'discovery alone is treated as if current-turn authority has already been granted.'
+  - order: 3
+    collapse_id: admissibility_equals_binding
+    contract_phrase: 'admissibility is treated as if current-run or current-thread binding has already happened.'
+  - order: 4
+    collapse_id: binding_equals_consumption
+    contract_phrase: 'bound truth is treated as if the next hop has already consumed it.'
+  - order: 5
+    collapse_id: artifact_presence_equals_operational_closure
+    contract_phrase: 'the existence of an artifact or declaration is treated as full operational closure.'

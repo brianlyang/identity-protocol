@@ -53,6 +53,7 @@ Status transitions are controlled by governance/review, not by script commit alo
 5. Machine-consumed truth remains frozen in governance/review docs, mappings, validators, probes, runtime state, and receipts; the design philosophy document explains why those laws exist and how they should be interpreted, but does not replace them.
 6. The root-domain admissibility law for new protocol streams and shared strengthenings is frozen separately in `identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md`.
 7. The root-domain responsibility and escalation boundary between protocol law and instance adaptation is frozen separately in `identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md`.
+8. The root-domain truth lifecycle law for existence, discoverability, admissibility, run-binding, and next-hop consumption is frozen separately in `identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md`.
 
 ## Constitutional derivation discipline
 
