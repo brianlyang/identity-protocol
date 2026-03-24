@@ -1,0 +1,77 @@
+schema_version: 1
+responsibility_family: protocol_root_protocol_instance_responsibility
+responsibility_version: v1
+contract_file: identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_protocol_instance_responsibility.py
+probe_script: scripts/ci/run_protocol_root_protocol_instance_responsibility_probes_ci.sh
+common_script: scripts/root_protocol_instance_responsibility_common.py
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Four-layer relation'
+  - '## Responsibility law'
+  - '## Escalation admission law'
+  - '## Non-compliant boundary collapses'
+  - 'The protocol defines the law of the world; the instance converges its runtime back to that law.'
+required_layer_rows:
+  - order: 1
+    layer_id: standard_codex
+    contract_heading: '### 1. Standard Codex layer'
+    layer_role: general_execution_substrate
+  - order: 2
+    layer_id: identity_protocol
+    contract_heading: '### 2. Identity protocol layer'
+    layer_role: machine_governance_law_layer
+  - order: 3
+    layer_id: identity_instance
+    contract_heading: '### 3. Identity instance layer'
+    layer_role: embodied_role_runtime
+  - order: 4
+    layer_id: operator
+    contract_heading: '### 4. Operator layer'
+    layer_role: natural_language_collaboration_entry
+required_responsibility_rows:
+  - order: 1
+    owner_id: protocol_layer
+    contract_heading: '### 1. Protocol-layer obligations'
+    responsibility_role: defines_the_law_of_the_world
+  - order: 2
+    owner_id: instance_layer
+    contract_heading: '### 2. Instance-layer obligations'
+    responsibility_role: continuous_convergence_under_law
+  - order: 3
+    owner_id: operator_surface
+    contract_heading: '### 3. Operator-surface compression boundary'
+    responsibility_role: stable_answer_surface_without_memory_burden
+required_escalation_rows:
+  - order: 1
+    trigger_id: protocol_semantics_not_unambiguous
+    contract_phrase: 'protocol semantics themselves are not unambiguous.'
+  - order: 2
+    trigger_id: shared_implementation_contradicts_shared_law
+    contract_phrase: 'shared implementation contradicts shared documentation or shared law.'
+  - order: 3
+    trigger_id: multi_instance_structural_gap
+    contract_phrase: 'multiple instances will reliably hit the same structural gap.'
+  - order: 4
+    trigger_id: machine_truth_incomplete
+    contract_phrase: 'machine truth itself is incomplete, so no amount of instance self-repair can achieve alignment.'
+required_boundary_collapse_rows:
+  - order: 1
+    collapse_id: instance_residue_laundering
+    contract_phrase: 'instance residue is relabeled as protocol debt without responsibility proof.'
+  - order: 2
+    collapse_id: protocol_backstop_laundering
+    contract_phrase: 'the protocol is treated as a shelter for unresolved instance convergence debt.'
+  - order: 3
+    collapse_id: operator_memory_dumping
+    contract_phrase: 'low-level protocol burden is pushed directly onto the operator instead of being compressed by the governed instance surface.'
+  - order: 4
+    collapse_id: runtime_authorship_inversion
+    contract_phrase: 'runtime evidence or current vividness is treated as if it authored the upstream law that interprets it.'
+  - order: 5
+    collapse_id: local_vividness_promotion
+    contract_phrase: 'one local pressure point is treated as sufficient proof of shared-law promotion.'
