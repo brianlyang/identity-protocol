@@ -22,6 +22,10 @@ authority_anchor_checks:
     required_markers:
       - '## Runtime adjudication boundary'
       - 'Current-turn discovery legality must still resolve from machine-consumed enforcement surfaces'
+  - rel_path: identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md
+    required_markers:
+      - '## Runtime adjudication boundary'
+      - 'Current-turn self-judgement legality must still resolve from machine-consumed enforcement surfaces'
   - rel_path: identity/protocol/AGENT_HANDOFF_CONTRACT.md
     required_markers:
       - '## Runtime adjudication boundary'
@@ -105,6 +109,10 @@ entry_authority_projection:
     authority_role: root_domain_contract_law
     authority_mode: frozen_law_only
   - rel_path: identity/protocol/IDENTITY_DISCOVERY.md
+    corpus_class: root_contract
+    authority_role: root_domain_contract_law
+    authority_mode: frozen_law_only
+  - rel_path: identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md
     corpus_class: root_contract
     authority_role: root_domain_contract_law
     authority_mode: frozen_law_only

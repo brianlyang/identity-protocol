@@ -22,6 +22,10 @@ question_routing_anchor_checks:
     required_markers:
       - '## Runtime adjudication boundary'
       - 'Current-turn discovery legality must still resolve from machine-consumed enforcement surfaces'
+  - rel_path: identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md
+    required_markers:
+      - '## Runtime adjudication boundary'
+      - 'Current-turn self-judgement legality must still resolve from machine-consumed enforcement surfaces'
   - rel_path: identity/protocol/AGENT_HANDOFF_CONTRACT.md
     required_markers:
       - '## Runtime adjudication boundary'
@@ -96,6 +100,9 @@ entry_question_projection:
     question_classes:
       - frozen_domain_contract_law
   - rel_path: identity/protocol/IDENTITY_DISCOVERY.md
+    question_classes:
+      - frozen_domain_contract_law
+  - rel_path: identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md
     question_classes:
       - frozen_domain_contract_law
   - rel_path: identity/protocol/AGENT_HANDOFF_CONTRACT.md

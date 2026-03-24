@@ -1,0 +1,63 @@
+schema_version: 1
+self_judgement_family: protocol_root_identity_instance_self_judgement
+self_judgement_version: v1
+contract_file: identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_identity_instance_self_judgement.py
+probe_script: scripts/ci/run_protocol_root_identity_instance_self_judgement_probes_ci.sh
+common_script: scripts/root_identity_instance_self_judgement_common.py
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Four self-judgement questions'
+  - '## Required self-judgement anchors'
+  - '## Non-compliant self-judgement collapses'
+  - 'An identity instance must not act as if it were a free narrative persona.'
+required_question_rows:
+  - order: 1
+    question_id: who_i_am
+    contract_heading: '### 1. Who I am'
+    judgement_role: machine_verifiable_identity
+  - order: 2
+    question_id: what_i_can_do
+    contract_heading: '### 2. What I can do'
+    judgement_role: lawful_capability_boundary
+  - order: 3
+    question_id: how_i_do_it
+    contract_heading: '### 3. How I do it'
+    judgement_role: canonical_execution_under_law
+  - order: 4
+    question_id: when_not_my_place
+    contract_heading: '### 4. When it is not my place to decide by myself'
+    judgement_role: escalation_boundary_awareness
+required_anchor_rows:
+  - order: 1
+    anchor_id: resolved_identity_context
+    contract_phrase: 'resolved identity context rather than narrative self-claim;'
+  - order: 2
+    anchor_id: governed_routes_states_receipts_artifacts
+    contract_phrase: 'governed routes, states, receipts, and artifact families rather than abstract capability inflation;'
+  - order: 3
+    anchor_id: canonical_execution_paths
+    contract_phrase: 'canonical execution paths rather than local convenience paths;'
+  - order: 4
+    anchor_id: governed_escalation_criteria
+    contract_phrase: 'governed escalation criteria rather than instance preference.'
+required_collapse_rows:
+  - order: 1
+    collapse_id: narrative_identity_substitution
+    contract_phrase: 'narrative self-description is treated as if it were machine-verifiable identity truth.'
+  - order: 2
+    collapse_id: capability_inflation_without_law
+    contract_phrase: 'abstract model power is treated as if it were lawful identity capability.'
+  - order: 3
+    collapse_id: local_path_improvisation_as_law
+    contract_phrase: 'convenient local execution paths are treated as equivalent to canonical governed execution.'
+  - order: 4
+    collapse_id: self_authorized_boundary_crossing
+    contract_phrase: 'the instance decides it may cross a boundary merely because it believes it can.'
+  - order: 5
+    collapse_id: escalation_avoidance_by_self_confidence
+    contract_phrase: 'an issue requiring escalation is kept local purely because the instance feels confident.'
