@@ -364,7 +364,9 @@ This stream is no longer docs-only. The following machine-consumed closure is no
    - exact source snapshot mirror on the canonical family,
    - delivery-hook invocation from the final visible emitter surface,
    - continuity tick coexistence without semantic collapse,
-   - active-thread live-drift reporting without reclassifying the recorded mirror as corrupt.
+   - active-thread live-drift reporting without reclassifying the recorded mirror as corrupt,
+   - historical thread refresh no longer rebinding `runtime/state/dialogue-retention/current-thread.json`,
+   - validator receipt selection now preferring the state-bound current-thread receipt over `mtime`-latest historical replay artifacts.
 6. `rq_052_identity_artifact_family_routing_contract_v1` is now bound in the motherline mapping and backed by `scripts/validate_identity_artifact_family_routing.py`.
 7. `scripts/validate_identity_artifact_family_routing.py` now fail-closes on missing routing-contract coverage, `reject_memory_gate` drift, pack rulebook/task-history collisions, protocol-feedback root drift, continuity/reentry anchor drift, and memory-absorption active-path leakage while deliberately leaving family-specific deep semantics with their inherited validator lanes.
 8. `scripts/ci/run_identity_artifact_family_routing_probes_ci.sh` proves:
@@ -375,7 +377,7 @@ This stream is no longer docs-only. The following machine-consumed closure is no
 9. `scripts/required_gate_bundle_runner.py --target-name identity_artifact_family_routing` now stays on registry-lineage target-probe mode instead of misbinding full-bundle ingress wrapper / unique-entry receipt obligations onto single-target routing checks; `run_id` and profile binding remain required, but targeted routing probes no longer fail-close for unrelated wrapper provenance debt.
 10. Current live proof breadth is no longer fixture-only:
     - the current weixinstore workspace-local runtime catalog replays `PASS_REQUIRED` for all four active runtime identities on the `rq_052` validator lane: `base-repo-audit-expert-v3`, `custom-creative-ecom-analyst`, `base-repo-architect`, and `base-repo-closure-orchestrator`;
-    - `base-repo-closure-orchestrator` no longer carries the earlier inherited `rq_051_identity_dialogue_retention_contract_v1` residual on this routed lane after replaying the protocol-owned post-delivery runtime hook bridge (`scripts/run_identity_delivery_runtime_hooks.py` -> `scripts/run_identity_dialogue_retention_guard_runtime.py`) against the live pack runtime;
+    - `base-repo-closure-orchestrator` no longer carries the earlier inherited `rq_051_identity_dialogue_retention_contract_v1` residual on this routed lane after shared dialogue-retention hardening split historical-thread refresh from active current-thread binding, taught the validator to resolve the state-bound receipt before `mtime`-latest fallback, and replayed the protocol-owned guard runtime against the live pack runtime;
     - `base-repo-architect` remains `PASS_REQUIRED` on `rq_052` while `runtime_dialogue_retention_family_status=SKIPPED_NOT_REQUIRED`, confirming the routing lane preserves optional-family semantics instead of forcing synthetic replay debt.
 11. Current execution-closeout strengthening for `base-repo-audit-expert-v3` is now also shared-infrastructure-only, not a pack patch:
     - `scripts/validate_identity_context_continuity_receipts.py` now joins repeated migration ancestry back to the bounded checkpoint root, so `rq_052` no longer false-fails on multi-hop `v1.6.16` continuity receipt chains;

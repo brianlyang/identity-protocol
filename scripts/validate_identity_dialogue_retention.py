@@ -21,10 +21,10 @@ from identity_dialogue_retention_common import (
     dialogue_retention_contract_required,
     dialogue_retention_report_root,
     dialogue_retention_state_path,
-    latest_dialogue_retention_receipt,
     latest_dialogue_retention_supplement,
     load_optional_state,
     resolve_dialogue_retention_reference,
+    resolve_dialogue_retention_validation_receipt,
     resolve_pack_task,
     thread_mirror_path,
 )
@@ -117,8 +117,12 @@ def main() -> int:
 
     report_root = dialogue_retention_report_root(pack_root)
     state_path = Path(clean_string(args.state)).expanduser().resolve() if clean_string(args.state) else dialogue_retention_state_path(pack_root)
-    receipt_path = Path(clean_string(args.receipt)).expanduser().resolve() if clean_string(args.receipt) else latest_dialogue_retention_receipt(pack_root)
     state_doc = load_optional_state(pack_root, identity_id=args.identity_id)
+    receipt_discovery_mode = "explicit_argument" if clean_string(args.receipt) else ""
+    if clean_string(args.receipt):
+        receipt_path = Path(clean_string(args.receipt)).expanduser().resolve()
+    else:
+        receipt_path, receipt_discovery_mode = resolve_dialogue_retention_validation_receipt(pack_root, state_doc=state_doc)
     mirror_path = None
     if clean_string(args.mirror):
         mirror_path = Path(clean_string(args.mirror)).expanduser().resolve()
@@ -145,8 +149,10 @@ def main() -> int:
         "source_live_alignment_status": STATUS_SKIPPED_NOT_REQUIRED,
         "source_live_advanced_since_last_sync": False,
         "source_live_drift_reason": "",
+        "source_live_binding_mode": "",
         "state_path": str(state_path),
         "receipt_path": str(receipt_path) if receipt_path is not None else "",
+        "receipt_discovery_mode": receipt_discovery_mode,
         "mirror_path": str(mirror_path) if mirror_path is not None else "",
         "thread_id": clean_string(state_doc.get("current_thread_id")),
         "source_session_file": clean_string(state_doc.get("source_session_file")),
@@ -154,6 +160,9 @@ def main() -> int:
         "recorded_source_session_sha256": "",
         "recorded_source_session_size_bytes": 0,
         "recorded_source_session_line_count": 0,
+        "sync_binding_mode": "",
+        "state_binding_update_applied": True,
+        "state_binding_status": STATUS_SKIPPED_NOT_REQUIRED,
         "stale_reasons": [],
         "error_code": "",
         "evidence_ref": str(task_path),
@@ -234,6 +243,8 @@ def main() -> int:
     payload["recorded_source_session_sha256"] = clean_string(receipt_doc.get("source_session_sha256"))
     payload["recorded_source_session_size_bytes"] = int(receipt_doc.get("source_session_size_bytes") or 0)
     payload["recorded_source_session_line_count"] = int(receipt_doc.get("source_session_line_count") or 0)
+    payload["sync_binding_mode"] = clean_string(receipt_doc.get("sync_binding_mode")) or "active_current_thread"
+    payload["state_binding_update_applied"] = bool(receipt_doc.get("state_binding_update_applied", True))
     payload["evidence_ref"] = str(receipt_path)
 
     if clean_string(receipt_doc.get("receipt_family")) != "identity_dialogue_retention_sync_receipt_v1":
@@ -259,6 +270,42 @@ def main() -> int:
     source_path = Path(source_session_file).expanduser().resolve() if source_session_file else None
     expected_source_sha = clean_string(payload.get("recorded_source_session_sha256"))
     expected_source_size = int(payload.get("recorded_source_session_size_bytes") or 0)
+    live_state: dict[str, Any] = {}
+    expected_receipt_ref = receipt_path.relative_to(pack_root).as_posix() if _path_under(pack_root, receipt_path) else str(receipt_path)
+    state_bound_current_thread = False
+    if state_exists:
+        try:
+            live_state = _load_json(state_path)
+        except Exception as exc:
+            issues.append(f"state_invalid_json:{exc}")
+            payload["state_status"] = STATUS_FAIL_REQUIRED
+            live_state = {}
+        else:
+            payload["state_status"] = STATUS_PASS_REQUIRED
+            latest_sync_receipt_ref = clean_string(live_state.get("latest_sync_receipt_ref"))
+            state_current_thread_id = clean_string(live_state.get("current_thread_id"))
+            state_source_session_file = clean_string(live_state.get("source_session_file"))
+            state_mirror_ref = clean_string(live_state.get("current_thread_mirror_ref"))
+            state_bound_current_thread = bool(
+                payload["state_binding_update_applied"]
+                and latest_sync_receipt_ref
+                and latest_sync_receipt_ref == expected_receipt_ref
+                and state_current_thread_id
+                and state_current_thread_id == clean_string(payload.get("thread_id"))
+            )
+            if payload["state_binding_update_applied"]:
+                if latest_sync_receipt_ref and latest_sync_receipt_ref != expected_receipt_ref:
+                    issues.append("state_latest_sync_receipt_ref_mismatch")
+                if state_current_thread_id and state_current_thread_id != clean_string(payload.get("thread_id")):
+                    issues.append("state_thread_id_mismatch")
+                if state_mirror_ref and mirror_ref and state_mirror_ref != mirror_ref:
+                    issues.append("state_mirror_ref_mismatch")
+                if state_source_session_file and source_session_file and state_source_session_file != source_session_file:
+                    issues.append("state_source_session_file_mismatch")
+            payload["state_binding_status"] = STATUS_PASS_REQUIRED
+            if payload["state_binding_update_applied"]:
+                payload["state_binding_status"] = STATUS_PASS_REQUIRED if state_bound_current_thread else STATUS_FAIL_REQUIRED
+
     if source_path is None or not source_path.is_file():
         issues.append("source_session_file_missing")
         payload["source_session_status"] = STATUS_FAIL_REQUIRED
@@ -278,6 +325,7 @@ def main() -> int:
         live_source_size = source_path.stat().st_size
         current_thread_id = clean_string(payload.get("thread_id"))
         active_thread_id = clean_string(os.environ.get("CODEX_THREAD_ID"))
+        active_thread_bound = bool(active_thread_id and active_thread_id == current_thread_id)
         if expected_source_size and live_source_size == expected_source_size:
             live_source_sha = _file_sha256(source_path)
             if expected_source_sha and live_source_sha != expected_source_sha:
@@ -285,40 +333,23 @@ def main() -> int:
                 payload["source_live_alignment_status"] = STATUS_FAIL_REQUIRED
             else:
                 payload["source_live_alignment_status"] = STATUS_PASS_REQUIRED
-        elif expected_source_size and live_source_size > expected_source_size and active_thread_id and active_thread_id == current_thread_id:
+        elif expected_source_size and live_source_size > expected_source_size and (active_thread_bound or state_bound_current_thread):
             payload["source_live_alignment_status"] = STATUS_PASS_REQUIRED
             payload["source_live_advanced_since_last_sync"] = True
             payload["source_live_drift_reason"] = "source_session_advanced_since_last_sync"
+            payload["source_live_binding_mode"] = "env_active_thread" if active_thread_bound else "state_bound_current_thread"
         elif expected_source_size and live_source_size < expected_source_size:
             issues.append("source_session_size_regressed_below_snapshot")
             payload["source_live_alignment_status"] = STATUS_FAIL_REQUIRED
         elif expected_source_size:
-            issues.append("source_session_size_mismatch")
+            payload["source_live_advanced_since_last_sync"] = live_source_size > expected_source_size
+            payload["source_live_drift_reason"] = "source_session_advanced_since_last_sync" if live_source_size > expected_source_size else ""
+            issues.append("source_session_advanced_since_last_sync_unbound" if live_source_size > expected_source_size else "source_session_size_mismatch")
             payload["source_live_alignment_status"] = STATUS_FAIL_REQUIRED
         else:
             payload["source_live_alignment_status"] = STATUS_NOT_APPLICABLE
 
     payload["mirror_status"] = STATUS_PASS_REQUIRED if mirror_path is not None and mirror_path.is_file() else STATUS_FAIL_REQUIRED
-
-    if state_exists:
-        try:
-            live_state = _load_json(state_path)
-        except Exception as exc:
-            issues.append(f"state_invalid_json:{exc}")
-            payload["state_status"] = STATUS_FAIL_REQUIRED
-            live_state = {}
-        else:
-            payload["state_status"] = STATUS_PASS_REQUIRED
-            latest_sync_receipt_ref = clean_string(live_state.get("latest_sync_receipt_ref"))
-            expected_receipt_ref = receipt_path.relative_to(pack_root).as_posix() if _path_under(pack_root, receipt_path) else str(receipt_path)
-            if latest_sync_receipt_ref and latest_sync_receipt_ref != expected_receipt_ref:
-                issues.append("state_latest_sync_receipt_ref_mismatch")
-            if clean_string(live_state.get("current_thread_id")) and clean_string(live_state.get("current_thread_id")) != clean_string(payload.get("thread_id")):
-                issues.append("state_thread_id_mismatch")
-            if clean_string(live_state.get("current_thread_mirror_ref")) and mirror_ref and clean_string(live_state.get("current_thread_mirror_ref")) != mirror_ref:
-                issues.append("state_mirror_ref_mismatch")
-            if clean_string(live_state.get("source_session_file")) and source_session_file and clean_string(live_state.get("source_session_file")) != source_session_file:
-                issues.append("state_source_session_file_mismatch")
 
     supplement_ref = clean_string(receipt_doc.get("delivery_supplement_ref"))
     if supplement_ref:

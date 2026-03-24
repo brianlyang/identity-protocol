@@ -409,6 +409,29 @@ def latest_dialogue_retention_receipt(pack_root: Path) -> Path | None:
     return hits[-1] if hits else None
 
 
+def state_bound_dialogue_retention_receipt(pack_root: Path, *, state_doc: dict[str, Any] | None = None) -> Path | None:
+    live_state = state_doc if isinstance(state_doc, dict) else load_optional_state(pack_root, identity_id=pack_root.name)
+    token = clean_string(live_state.get("latest_sync_receipt_ref"))
+    if not token:
+        return None
+    resolved = resolve_dialogue_retention_reference(token, pack_root=pack_root)
+    return resolved if resolved is not None and resolved.is_file() else None
+
+
+def resolve_dialogue_retention_validation_receipt(
+    pack_root: Path,
+    *,
+    state_doc: dict[str, Any] | None = None,
+) -> tuple[Path | None, str]:
+    state_receipt = state_bound_dialogue_retention_receipt(pack_root, state_doc=state_doc)
+    if state_receipt is not None:
+        return state_receipt, "state_bound_receipt"
+    latest = latest_dialogue_retention_receipt(pack_root)
+    if latest is not None:
+        return latest, "latest_matching_report"
+    return None, "receipt_not_found"
+
+
 def latest_dialogue_retention_supplement(pack_root: Path, *, thread_id: str = "") -> Path | None:
     report_root = dialogue_retention_report_root(pack_root)
     pattern = f"{DIALOGUE_RETENTION_SUPPLEMENT_PREFIX}{clean_string(thread_id)}-*{DIALOGUE_RETENTION_SUPPLEMENT_SUFFIX}" if clean_string(thread_id) else f"{DIALOGUE_RETENTION_SUPPLEMENT_PREFIX}*{DIALOGUE_RETENTION_SUPPLEMENT_SUFFIX}"
@@ -558,6 +581,17 @@ def _resolve_source_session_file(
     return hits[-1]
 
 
+def _resolve_sync_binding_mode(*, requested_thread_id: str, resolved_thread_id: str, state_doc: dict[str, Any]) -> str:
+    env_thread = clean_string(os.environ.get("CODEX_THREAD_ID"))
+    state_thread = clean_string(state_doc.get("current_thread_id"))
+    requested = clean_string(requested_thread_id)
+    if env_thread:
+        return "active_current_thread" if env_thread == clean_string(resolved_thread_id) else "historical_thread_refresh"
+    if requested and state_thread and requested != state_thread:
+        return "historical_thread_refresh"
+    return "active_current_thread"
+
+
 def sync_dialogue_retention(
     ctx: DialogueRetentionPackContext,
     *,
@@ -586,6 +620,13 @@ def sync_dialogue_retention(
     mirror_ref = _relative_pack_ref(ctx.pack_root, mirror_path)
     previous_sha = clean_string(state_doc.get("latest_source_sha256"))
     mirror_changed = (not mirror_path.exists()) or previous_sha != clean_string(source_metrics.get("sha256"))
+    sync_binding_mode = _resolve_sync_binding_mode(
+        requested_thread_id=thread_id,
+        resolved_thread_id=resolved_thread_id,
+        state_doc=state_doc,
+    )
+    state_binding_update_applied = sync_binding_mode == "active_current_thread"
+    preserved_current_thread_id = clean_string(state_doc.get("current_thread_id"))
     if apply and mirror_changed:
         _copy_file(source_path, mirror_path)
     supplement_result = {
@@ -630,6 +671,9 @@ def sync_dialogue_retention(
         "mirror_ref": mirror_ref,
         "mirror_exact_source_match": True,
         "mirror_changed": bool(mirror_changed),
+        "sync_binding_mode": sync_binding_mode,
+        "state_binding_update_applied": state_binding_update_applied,
+        "preserved_current_thread_id": preserved_current_thread_id if not state_binding_update_applied else "",
         "delivery_supplement_status": supplement_result.get("status", STATUS_NOT_APPLICABLE),
         "delivery_supplement_ref": clean_string(supplement_result.get("supplement_ref")),
         "current_thread_state_ref": DIALOGUE_RETENTION_STATE_REL.as_posix(),
@@ -637,27 +681,29 @@ def sync_dialogue_retention(
         "stale_reasons": [],
     }
     receipt_changed = _write_json(receipt_path, receipt_doc, apply=apply)
-    updated_state = dict(state_doc)
-    updated_state.update(
-        {
-            "identity_id": ctx.identity_id,
-            "dialogue_retention_contract_version": "v1.6.18",
-            "current_thread_id": clean_string(resolved_thread_id),
-            "source_session_file": str(source_path),
-            "current_thread_mirror_ref": mirror_ref,
-            "current_thread_mirror_sha256": clean_string(source_metrics.get("sha256")),
-            "latest_source_sha256": clean_string(source_metrics.get("sha256")),
-            "latest_source_size_bytes": int(source_metrics.get("size_bytes") or 0),
-            "latest_source_line_count": int(source_metrics.get("line_count") or 0),
-            "latest_source_last_modified_at": clean_string(source_metrics.get("last_modified_at")),
-            "latest_sync_receipt_ref": _relative_pack_ref(ctx.pack_root, receipt_path),
-            "latest_delivery_supplement_ref": clean_string(supplement_result.get("supplement_ref")),
-            "rolling_mode": "thread_mirror_in_place",
-            "sync_count": int(state_doc.get("sync_count") or 0) + 1,
-            "last_synced_at": utc_iso(),
-        }
-    )
-    state_changed = _write_json(state_path, updated_state, apply=apply)
+    state_changed = False
+    if state_binding_update_applied:
+        updated_state = dict(state_doc)
+        updated_state.update(
+            {
+                "identity_id": ctx.identity_id,
+                "dialogue_retention_contract_version": "v1.6.18",
+                "current_thread_id": clean_string(resolved_thread_id),
+                "source_session_file": str(source_path),
+                "current_thread_mirror_ref": mirror_ref,
+                "current_thread_mirror_sha256": clean_string(source_metrics.get("sha256")),
+                "latest_source_sha256": clean_string(source_metrics.get("sha256")),
+                "latest_source_size_bytes": int(source_metrics.get("size_bytes") or 0),
+                "latest_source_line_count": int(source_metrics.get("line_count") or 0),
+                "latest_source_last_modified_at": clean_string(source_metrics.get("last_modified_at")),
+                "latest_sync_receipt_ref": _relative_pack_ref(ctx.pack_root, receipt_path),
+                "latest_delivery_supplement_ref": clean_string(supplement_result.get("supplement_ref")),
+                "rolling_mode": "thread_mirror_in_place",
+                "sync_count": int(state_doc.get("sync_count") or 0) + 1,
+                "last_synced_at": utc_iso(),
+            }
+        )
+        state_changed = _write_json(state_path, updated_state, apply=apply)
     return {
         "status": STATUS_PASS_REQUIRED,
         "identity_id": ctx.identity_id,
@@ -670,6 +716,9 @@ def sync_dialogue_retention(
         "mirror_path": str(mirror_path),
         "mirror_ref": mirror_ref,
         "mirror_changed": bool(mirror_changed),
+        "sync_binding_mode": sync_binding_mode,
+        "state_binding_update_applied": state_binding_update_applied,
+        "preserved_current_thread_id": preserved_current_thread_id if not state_binding_update_applied else "",
         "delivery_supplement_status": supplement_result.get("status", STATUS_NOT_APPLICABLE),
         "delivery_supplement_ref": clean_string(supplement_result.get("supplement_ref")),
         "receipt_path": str(receipt_path),
