@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 95`, `command snippets checked: 992`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 97`, `command snippets checked: 1025`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -1025,9 +1025,9 @@ Root cause:
 
 - `status`: OPEN
 - `problem_statement`: the protocol already has strong owner lanes for trio structure, prompt coverage, sample/self-test validation, loop semantic centers, and freshness governance. The remaining gap is that several consumers can still pass on declaration/prompt/sample/meta/latest-log signals where current-run binding and next-hop consumption should be required. This is a weak-live-linkage problem, not a missing-structure problem.
-- `primary_owner_doc`: `docs/governance/identity-tool-vendor-live-link-strengthening-governance-v1.6.19.md`
+- `primary_owner_doc`: `docs/governance/identity-weak-live-linkage-governance-v1.6.19.md`
 - `secondary_refs`:
-  - `docs/review/protocol-remediation-audit-ledger-v1.6.19-tool-vendor-live-link-strengthening.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.19-weak-live-linkage.md`
   - `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md`
   - `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md`
   - `identity/protocol/IDENTITY_PROTOCOL.md`
@@ -1070,6 +1070,41 @@ Root cause:
   - `python3 identity-protocol-local/scripts/validate_capability_fit_roundtable_evidence.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --json-only` returns `SKIPPED_NOT_REQUIRED`, which helps bound the issue correctly: the defect is not “all routing failed”, but “upper consumers can remain green without live trio consumer proof”;
   - `python3 identity-protocol-local/scripts/validate_identity_experience_feedback_governance.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst` currently fails on `latest feedback log too old: 15d > max_log_age_days=7`, which confirms freshness is already enforced on this lane and should be treated as a secondary same-run-binding strengthening target rather than the primary false-green family;
   - repo deep-sweep rechecks also verified that protocol-feedback current-round lanes using `scripts/protocol_feedback_lane_common.py` already derive correlated current-round linkage and therefore must not be misclassified into this stream.
+
+### ISSUE-038 - Broadcast-delivery and identity communication transport convergence are now protocol-owned and fleet-closed
+
+- `status`: CLOSED
+- `problem_statement`: component-owner semantics already existed for host-gateway broadcast, agent handoff, collaboration trigger, protocol-feedback reply/inbox, and protocol-feedback atomic emit, but active identities adopted them unevenly and there was no shared convergence executor or fleet closure checker for the end-to-end transport surface. That left the protocol with owner-green semantics but adoption-red runtime packs.
+- `primary_owner_doc`: `docs/governance/identity-broadcast-communication-convergence-governance-v1.6.20.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.20-broadcast-communication-convergence.md`
+  - `docs/governance/identity-host-unique-channel-governance-v1.6.6.md`
+  - `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md`
+  - `identity/protocol/IDENTITY_RUNTIME.md`
+  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`
+- `machine_gate`:
+  - `scripts/validate_identity_broadcast_delivery.py`
+  - `scripts/run_identity_broadcast_delivery.py`
+  - `scripts/check_identity_broadcast_migration_closure.py`
+  - `scripts/validate_identity_communication_transport.py`
+  - `scripts/run_identity_communication_transport.py`
+  - `scripts/check_identity_communication_transport_closure.py`
+  - `scripts/ci/run_identity_broadcast_delivery_probes_ci.sh`
+  - `scripts/ci/run_identity_communication_transport_probes_ci.sh`
+- `root_cause`: RC-06
+- `stop_condition`:
+  - dedicated broadcast-delivery adoption is restored and validated through shared backfill + shared sync executor + fleet closure checker;
+  - aggregate communication transport is restored and validated through one bounded shared convergence executor instead of structure-only green or manual bootstrap;
+  - creator/update/gate/readiness surfaces consume the same shared lanes;
+  - direct live replay on `base-repo-audit-expert-v3` plus workspace-fleet closure replay are green without pack-local repair logic;
+  - semantic ownership stays clean: broadcast delivery does not collapse into protocol-feedback or learning, and identity communication transport does not collapse into strict identity-to-identity-only messaging or a new artifact family.
+- `current_evidence`:
+  - `bash scripts/ci/run_identity_broadcast_delivery_probes_ci.sh` returns `PASS`;
+  - `bash scripts/ci/run_identity_communication_transport_probes_ci.sh` returns `PASS`;
+  - `python3 scripts/check_identity_broadcast_migration_closure.py --catalog ../.identity/catalog.local.yaml --workspace-runtime-only --json-only` returns `PASS_REQUIRED`;
+  - `python3 scripts/check_identity_communication_transport_closure.py --catalog ../.identity/catalog.local.yaml --workspace-runtime-only --json-only` returns `PASS_REQUIRED`;
+  - direct runtime replay on `base-repo-audit-expert-v3` through `python3 scripts/repair_contract_backfill.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --apply --json-only` followed by `python3 scripts/run_identity_communication_transport.py --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-id base-repo-audit-expert-v3 --json-only` now returns `PASS_REQUIRED` with green `broadcast_sync_executor_status`, `atomic_emit_bootstrap_status`, and `transport_projection_status`;
+  - the same shared backfill + shared convergence lane also replays green on `custom-creative-ecom-analyst`, `base-repo-architect`, and `base-repo-closure-orchestrator`, proving this stream closes as shared infrastructure rather than a one-pack workaround.
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 

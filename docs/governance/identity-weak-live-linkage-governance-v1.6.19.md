@@ -1,13 +1,13 @@
-# Identity Tool/Vendor Live-Link Strengthening Governance (v1.6.19)
+# Identity Weak Live Linkage Governance (v1.6.19)
 
 Status: Active (`ISSUE-037` opened on 2026-03-24; the stream opened from the tool/vendor trio path, and deep-sweep review now confirms a broader weak-live-linkage consumer-gap family that still lacks strict current-run closure)
 Layer: protocol
 Scope: additive strengthening for current-run live evidence binding across trio, prompt, sample, and loop-consumer surfaces so protocol-owned validators stop equating declaration/presence/sample/meta success with full operational closure
-Execution mode: topic-level canonical SSOT for v1.6.19 tool/vendor live-link strengthening governance.
+Execution mode: topic-level canonical SSOT for v1.6.19 weak-live-linkage governance.
 
 ## 0) State interpretation guard (mandatory)
 
-1. This document is the active governance source for `identity_tool_vendor_live_link_strengthening`.
+1. This document is the active governance source for `identity_weak_live_linkage`.
 2. The stream name remains stable because the opening signal came from the tool-installation / vendor-api-discovery / vendor-api-solution trio. That naming stability does **not** limit the stream to trio-only symptoms once deep-sweep review proves the same weak-live-linkage pattern on adjacent protocol-owned consumers.
 3. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` and `docs/governance/identity-actor-session-binding-governance-v1.6.0.md` remain the semantic owners for the trio contract family and discovery-requiredization baseline.
 4. `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md` remains the semantic owner for third-loop / fourth-loop strengthening and the bounded `4 -> 1` loopback bridge.

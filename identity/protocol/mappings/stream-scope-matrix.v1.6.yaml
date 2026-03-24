@@ -1,7 +1,7 @@
 schema_version: 1
 matrix_version: v1
 stream_version: v1.6
-updated_at_utc: "2026-03-20T00:00:00Z"
+updated_at_utc: "2026-03-24T00:00:00Z"
 
 streams:
   - stream_version: v1.6.1
@@ -135,8 +135,17 @@ streams:
     forbidden_path_tokens: []
 
   - stream_version: v1.6.19
-    scope_topic: identity_tool_vendor_live_link_strengthening
+    scope_topic: identity_weak_live_linkage
     allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens:
+      - "runtime/memory-absorption"
+
+  - stream_version: v1.6.20
+    scope_topic: identity_broadcast_delivery_communication_transport_convergence
+    allowed_requirement_ids:
+      - ASB16-RQ-053
+      - ASB16-RQ-054
     forbidden_requirement_ids: []
     forbidden_path_tokens:
       - "runtime/memory-absorption"

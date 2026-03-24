@@ -335,6 +335,30 @@ terms:
       - runtime_contract
       - stream_v1_6_19
 
+  - term_id: identity_broadcast_delivery
+    canonical_term: identity_broadcast_delivery
+    aliases:
+      - "broadcast delivery"
+      - "identity broadcast delivery"
+      - "广播投递"
+    semantics: "Dedicated runtime adoption lane that consumes host-gateway broadcast source truth and materializes pack-local visibility/read/pending-ack projection plus governed delivery receipts. It is delivery/projection only, not reply/inbox/atomic emit, not a learning or continuity sink, and not the upstream broadcast-source semantic owner."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_20
+
+  - term_id: identity_communication_transport
+    canonical_term: identity_communication_transport
+    aliases:
+      - "identity communication transport"
+      - "communication transport convergence"
+      - "身份通信传输"
+    semantics: "Aggregate convergence surface across agent handoff, collaboration trigger, protocol-feedback reply/inbox/atomic emit, and broadcast delivery. It remains broader than strict identity-to-identity messaging, does not replace the component-owner semantics, is not a new artifact family, and reaches green only when bounded live bootstrap plus component validator truth jointly pass."
+    allowed_scope:
+      - governance
+      - runtime_contract
+      - stream_v1_6_20
+
 forbidden_phrases:
   - phrase: "multi-active state is a protocol violation"
     replacement: "catalog_multi_active is allowed; enforce session_primary_binding in strict lanes"

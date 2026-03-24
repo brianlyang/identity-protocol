@@ -1,9 +1,9 @@
-# Protocol Remediation Audit Ledger (v1.6.19 Tool/Vendor Live-Link Strengthening)
+# Protocol Remediation Audit Ledger (v1.6.19 Weak Live Linkage)
 
 Status: Active (`ISSUE-037` opened on 2026-03-24; the stream opened from trio live-link review and now captures the broader weak-live-linkage consumer-gap family confirmed by deep-sweep rechecks)
 Layer: protocol
 Scope: audit evidence for the additive stream that strengthens current-run binding and next-hop consumption across trio, prompt, sample, and loop-consumer surfaces without reopening `v1.6.17` or `v1.6.18`
-Execution mode: canonical review ledger for the v1.6.19 tool/vendor live-link strengthening stream.
+Execution mode: canonical review ledger for the v1.6.19 weak-live-linkage stream.
 
 ## 0) Current control-plane alias refs
 

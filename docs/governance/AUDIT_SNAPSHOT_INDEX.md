@@ -99,9 +99,12 @@ Quick entrypoint for audit history and remediation closure records.
 - Canonical identity artifact-family routing governance (v1.6.18 stream):
   - `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md`
   - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.18-artifact-family-routing.md`
-- Canonical identity tool/vendor live-link strengthening governance (v1.6.19 stream):
-  - `docs/governance/identity-tool-vendor-live-link-strengthening-governance-v1.6.19.md`
-  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.19-tool-vendor-live-link-strengthening.md`
+- Canonical identity weak live linkage governance (v1.6.19 stream):
+  - `docs/governance/identity-weak-live-linkage-governance-v1.6.19.md`
+  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.19-weak-live-linkage.md`
+- Canonical identity broadcast/communication convergence governance (v1.6.20 stream):
+  - `docs/governance/identity-broadcast-communication-convergence-governance-v1.6.20.md`
+  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.20-broadcast-communication-convergence.md`
 
 ## Snapshots
 
@@ -141,4 +144,5 @@ Quick entrypoint for audit history and remediation closure records.
 - `docs/governance/identity-context-continuity-governance-v1.6.16.md` — v1.6.16 dedicated continuity stream for governed checkpoints, migration handoff checkpoints, startup-consumable re-entry briefing, and the authority boundary that keeps continuity artifacts subordinate to protocol truth.
 - `docs/governance/identity-routing-learning-strengthening-governance-v1.6.17.md` — v1.6.17 dedicated strengthening stream for lifting the kernel `Auto-routing contract` and `Rule learning contract` into symmetric runtime-consumable upper-layer bindings, without redefining the kernel source contracts or introducing backward-compatibility backstops.
 - `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md` — v1.6.18 dedicated routing stream for freezing the protocol-scoped artifact-family matrix across pack rulebook, pack task-history, dialogue-governance, experience-feedback, protocol-feedback, continuity/reentry, and memory-absorption quarantine surfaces so they cannot collapse back into generic "memory" wording.
-- `docs/governance/identity-tool-vendor-live-link-strengthening-governance-v1.6.19.md` — v1.6.19 additive strengthening stream, opened from the tool/vendor trio path and expanded by deep-sweep review into the protocol-owned weak-live-linkage governance method across trio, prompt, sample, and loop-consumer lanes, without reopening `v1.6.17` or `v1.6.18`.
+- `docs/governance/identity-weak-live-linkage-governance-v1.6.19.md` — v1.6.19 additive strengthening stream, opened from the tool/vendor trio path and canonicalized as the protocol-owned weak-live-linkage governance method across trio, prompt, sample, and loop-consumer lanes, without reopening `v1.6.17` or `v1.6.18`.
+- `docs/governance/identity-broadcast-communication-convergence-governance-v1.6.20.md` — v1.6.20 additive convergence stream for protocol-owned fleet adoption of dedicated broadcast delivery plus aggregate identity communication transport, using shared backfill/runner/closure-checker infrastructure rather than pack-local replay recipes or transport-to-memory collapse.
