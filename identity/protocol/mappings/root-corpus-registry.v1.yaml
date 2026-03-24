@@ -177,6 +177,19 @@ registered_top_level_entries:
       - workbook_issue_projection
       - closure_ledger_narration
       - business_domain_example
+  - rel_path: identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for operator answer-surface law'
+      - '## Operator answer-surface law'
+      - '## Four answer-surface strata'
+      - '## Compression boundary'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
   - rel_path: identity/protocol/mappings
     entry_kind: directory
     corpus_class: machine_registry_directory
@@ -204,6 +217,8 @@ registered_top_level_entries:
       - root-stream-design-admissibility.v1.yaml
       - root-truth-lifecycle.current.yaml
       - root-truth-lifecycle.v1.yaml
+      - root-operator-answer-surface.current.yaml
+      - root-operator-answer-surface.v1.yaml
       - contract-binding.current.yaml
       - stream-doc-registry.current.yaml
       - semantic-term-registry.current.yaml

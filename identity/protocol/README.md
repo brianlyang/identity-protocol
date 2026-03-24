@@ -39,6 +39,7 @@ When entering `identity/protocol/`, read in this order:
    - `PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md`
    - `STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md`
    - `TRUTH_LIFECYCLE_CONTRACT.md`
+   - `OPERATOR_ANSWER_SURFACE_CONTRACT.md`
    - these freeze concrete contract law for their specific domains.
 5. **machine-consumed registries and mappings**
    - `mappings/`
@@ -66,7 +67,7 @@ The following classes belong here:
    - `IDENTITY_PROTOCOL.md`
    - `IDENTITY_RUNTIME.md`
 3. **root contract law**
-   - prompt bootstrap, discovery, handoff, protocol-instance responsibility, stream-design admissibility, truth lifecycle, and other root-domain contracts
+   - prompt bootstrap, discovery, handoff, protocol-instance responsibility, stream-design admissibility, truth lifecycle, operator answer surface, and other root-domain contracts
 4. **machine-consumed registries and mappings**
    - canonical bindings, term registries, stream registries, scope matrices, and related SSOT rows
 5. **governed subdomain protocol extensions**
@@ -125,7 +126,7 @@ The authority order is layered, not flattened:
 2. **constitutional / contract authority**
    - `IDENTITY_PROTOCOL.md`
    - `IDENTITY_RUNTIME.md`
-   - root contract files such as prompt bootstrap, discovery, handoff, protocol-instance responsibility, stream-design admissibility, and truth-lifecycle contracts
+   - root contract files such as prompt bootstrap, discovery, handoff, protocol-instance responsibility, stream-design admissibility, truth-lifecycle, and operator answer-surface contracts
    - these define *what law is concretely frozen*.
 3. **machine-consumed enforcement authority**
    - governance/review docs
@@ -254,7 +255,7 @@ Different root entries answer different classes of machine-world questions.
 3. `IDENTITY_PROTOCOL.md` and `IDENTITY_RUNTIME.md` answer the **constitutional law question**:
    - what protocol-law and runtime-law are concretely frozen.
 4. Root contract files answer the **domain-law question**:
-   - what prompt, discovery, handoff, protocol-instance responsibility, stream-design admissibility, truth lifecycle, and related root-domain law are concretely frozen.
+   - what prompt, discovery, handoff, protocol-instance responsibility, stream-design admissibility, truth lifecycle, operator answer surface, and related root-domain law are concretely frozen.
 5. `mappings/` answers the **machine-registry question**:
    - which aliases, active files, bindings, and registry rows are machine-consumed truth.
 6. `broadcast/` and `plugins/` answer the **governed extension question**:

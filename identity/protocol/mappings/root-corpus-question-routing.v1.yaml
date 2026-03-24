@@ -38,6 +38,10 @@ question_routing_anchor_checks:
     required_markers:
       - '## Runtime adjudication boundary'
       - 'Current-turn truth lifecycle legality must still resolve from machine-consumed enforcement surfaces'
+  - rel_path: identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md
+    required_markers:
+      - '## Runtime adjudication boundary'
+      - 'Current-turn answer-surface legality must still resolve from machine-consumed enforcement surfaces'
 question_class_profiles:
   - question_class: generative_why
     answer_mode: interpretive_answer_only
@@ -104,6 +108,9 @@ entry_question_projection:
     question_classes:
       - frozen_domain_contract_law
   - rel_path: identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md
+    question_classes:
+      - frozen_domain_contract_law
+  - rel_path: identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md
     question_classes:
       - frozen_domain_contract_law
   - rel_path: identity/protocol/mappings

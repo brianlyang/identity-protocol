@@ -38,6 +38,10 @@ authority_anchor_checks:
     required_markers:
       - '## Runtime adjudication boundary'
       - 'Current-turn truth lifecycle legality must still resolve from machine-consumed enforcement surfaces'
+  - rel_path: identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md
+    required_markers:
+      - '## Runtime adjudication boundary'
+      - 'Current-turn answer-surface legality must still resolve from machine-consumed enforcement surfaces'
 authority_class_profiles:
   - corpus_class: bottom_theory
     authority_role: interpretive_bottom_theory
@@ -117,6 +121,10 @@ entry_authority_projection:
     authority_role: root_domain_contract_law
     authority_mode: frozen_law_only
   - rel_path: identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md
+    corpus_class: root_contract
+    authority_role: root_domain_contract_law
+    authority_mode: frozen_law_only
+  - rel_path: identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md
     corpus_class: root_contract
     authority_role: root_domain_contract_law
     authority_mode: frozen_law_only

@@ -54,6 +54,7 @@ Status transitions are controlled by governance/review, not by script commit alo
 6. The root-domain admissibility law for new protocol streams and shared strengthenings is frozen separately in `identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md`.
 7. The root-domain responsibility and escalation boundary between protocol law and instance adaptation is frozen separately in `identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md`.
 8. The root-domain truth lifecycle law for existence, discoverability, admissibility, run-binding, and next-hop consumption is frozen separately in `identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md`.
+9. The root-domain operator answer-surface and law-preserving compression boundary is frozen separately in `identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md`.
 
 ## Constitutional derivation discipline
 
