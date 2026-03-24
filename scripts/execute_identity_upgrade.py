@@ -2379,6 +2379,8 @@ def main() -> int:
     ]
     if args.layer_intent_text.strip():
         lane_routing_cmd.extend(["--layer-intent-text", args.layer_intent_text.strip()])
+    if args.actor_id.strip():
+        lane_routing_cmd.extend(["--actor-id", args.actor_id.strip()])
     if args.expected_work_layer.strip():
         lane_routing_cmd.extend(["--expected-work-layer", args.expected_work_layer.strip()])
     if args.expected_source_layer.strip():

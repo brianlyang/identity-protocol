@@ -182,6 +182,7 @@ def collect_broadcast_delivery_projection(
     write_receipt: bool = False,
 ) -> dict[str, Any]:
     delivery_contract = task_doc.get(BROADCAST_CONTRACT_KEY)
+    required_contract = contract_required(delivery_contract) if isinstance(delivery_contract, dict) else False
     task_contract, contract_key = resolve_host_gateway_contract(task_doc)
     runtime_contract, runtime_contract_path, runtime_contract_issues = resolve_runtime_gateway_contract(
         task_doc=task_doc,
@@ -199,6 +200,10 @@ def collect_broadcast_delivery_projection(
         "broadcast_delivery_sync_status": STATUS_FAIL_REQUIRED,
         "broadcast_projection_parity_status": STATUS_FAIL_REQUIRED,
         "identity_id": str(identity_id or "").strip(),
+        "required_contract": bool(required_contract),
+        "auto_required_signal": False,
+        "contract_key": BROADCAST_CONTRACT_KEY,
+        "contract_id": BROADCAST_CONTRACT_ID,
         "contract_key_used": contract_key,
         "runtime_gateway_contract_path": str(runtime_contract_path) if str(runtime_contract_path) else "",
         "broadcast_state_file": "",
@@ -214,9 +219,10 @@ def collect_broadcast_delivery_projection(
         "stale_reasons": [],
         "error_code": "IP-GATE-BCAST-DELIVERY-001",
         "sync_applied": False,
+        "evidence_ref": str((pack_path / "CURRENT_TASK.json").resolve()),
     }
 
-    if not isinstance(delivery_contract, dict) or contract_required(delivery_contract) is not True:
+    if not isinstance(delivery_contract, dict) or required_contract is not True:
         payload["stale_reasons"].append("identity_broadcast_delivery_contract_missing_or_not_required")
         return payload
     host_gateway_refs = {

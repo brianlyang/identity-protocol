@@ -107,6 +107,8 @@ Shared protocol-owned surfaces landed in this stream:
 3. `scripts/check_identity_broadcast_migration_closure.py` now scans active runtime identities and fail-closes lingering adoption drift at the workspace fleet level.
 4. `scripts/create_identity_pack.py` and `scripts/repair_contract_backfill.py` now materialize/restore the dedicated broadcast-delivery contract rather than relying on host-gateway structural presence alone.
 5. `scripts/ci/run_identity_broadcast_delivery_probes_ci.sh` proves the positive sync path, the missing-contract fail-close path, the shared backfill repair path, and the closure-checker green path.
+6. `scripts/identity_broadcast_delivery_common.py`, `scripts/validate_identity_broadcast_delivery.py`, and `scripts/run_identity_broadcast_delivery.py` now emit a bundle-compatible required-contract projection (`required_contract`, canonical contract identity, and shared evidence reference) so `scripts/required_gate_bundle_runner.py` can consume `ASB16-RQ-053` without special-casing or validator loosening.
+7. `scripts/execute_identity_upgrade.py` now forwards explicit actor context into `scripts/validate_work_layer_gate_set_routing.py` during live replay, preventing false `IP-LAYER-GATE-007` lane-gate failures when the owning identity is correctly bound to an active protocol lane lock.
 
 ### 4.2 ASB16-RQ-054 identity-communication-transport machine closure landed
 

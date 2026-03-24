@@ -130,7 +130,9 @@ Audit accepts `ASB16-RQ-053` as closed because:
 1. dedicated contract adoption is now machine-restorable;
 2. dedicated sync execution is now reusable;
 3. dedicated fleet closure checking is now wired;
-4. live workspace runtime replay is green.
+4. live workspace runtime replay is green;
+5. the validator/sync projection is now bundle-compatible, so strict required-gate bundle consumption does not need a transport-specific bypass;
+6. own-identity replay no longer false-fails at lane routing just because `execute_identity_upgrade.py` omitted actor-context forwarding into `validate_work_layer_gate_set_routing.py`.
 
 ### 4.2 ASB16-RQ-054 identity-communication-transport closure accepted
 

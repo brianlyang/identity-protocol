@@ -5,7 +5,11 @@ import argparse
 import json
 from pathlib import Path
 
-from identity_broadcast_delivery_common import collect_broadcast_delivery_projection
+from identity_broadcast_delivery_common import (
+    BROADCAST_CONTRACT_ID,
+    BROADCAST_CONTRACT_KEY,
+    collect_broadcast_delivery_projection,
+)
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 
 
@@ -28,9 +32,14 @@ def main() -> int:
     if not catalog_path.exists():
         payload = {
             "identity_broadcast_delivery_status": "FAIL_REQUIRED",
+            "required_contract": False,
+            "auto_required_signal": False,
+            "contract_key": BROADCAST_CONTRACT_KEY,
+            "contract_id": BROADCAST_CONTRACT_ID,
             "error_code": "IP-GATE-BCAST-DELIVERY-002",
             "stale_reasons": ["catalog_not_found"],
             "catalog_path": str(catalog_path),
+            "evidence_ref": "",
         }
         _emit(payload, json_only=args.json_only)
         return 2
@@ -41,10 +50,15 @@ def main() -> int:
     except Exception as exc:
         payload = {
             "identity_broadcast_delivery_status": "FAIL_REQUIRED",
+            "required_contract": False,
+            "auto_required_signal": False,
+            "contract_key": BROADCAST_CONTRACT_KEY,
+            "contract_id": BROADCAST_CONTRACT_ID,
             "error_code": "IP-GATE-BCAST-DELIVERY-002",
             "stale_reasons": [f"identity_resolution_failed:{type(exc).__name__}"],
             "catalog_path": str(catalog_path),
             "identity_id": args.identity_id,
+            "evidence_ref": "",
         }
         _emit(payload, json_only=args.json_only)
         return 2

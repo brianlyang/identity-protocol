@@ -95,6 +95,9 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["identity_broadcast_delivery_status"] == "PASS_REQUIRED", payload
+assert payload["required_contract"] is True, payload
+assert payload["contract_key"] == "identity_broadcast_delivery_contract_v1", payload
+assert payload["contract_id"] == "rq_053_identity_broadcast_delivery_contract_v1", payload
 assert payload["sync_applied"] is True, payload
 receipt_path = pathlib.Path(payload["broadcast_receipt_path"])
 assert receipt_path.exists(), payload
@@ -112,6 +115,9 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["identity_broadcast_delivery_status"] == "PASS_REQUIRED", payload
+assert payload["required_contract"] is True, payload
+assert payload["contract_key"] == "identity_broadcast_delivery_contract_v1", payload
+assert payload["contract_id"] == "rq_053_identity_broadcast_delivery_contract_v1", payload
 assert payload["broadcast_contract_status"] == "PASS_REQUIRED", payload
 assert payload["broadcast_runtime_contract_status"] == "PASS_REQUIRED", payload
 assert payload["broadcast_delivery_sync_status"] == "PASS_REQUIRED", payload
@@ -143,6 +149,9 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["identity_broadcast_delivery_status"] == "FAIL_REQUIRED", payload
+assert payload["required_contract"] is False, payload
+assert payload["contract_key"] == "identity_broadcast_delivery_contract_v1", payload
+assert payload["contract_id"] == "rq_053_identity_broadcast_delivery_contract_v1", payload
 assert "identity_broadcast_delivery_contract_missing_or_not_required" in payload.get("stale_reasons", []), payload
 PY
 
@@ -175,6 +184,9 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["identity_broadcast_delivery_status"] == "PASS_REQUIRED", payload
+assert payload["required_contract"] is True, payload
+assert payload["contract_key"] == "identity_broadcast_delivery_contract_v1", payload
+assert payload["contract_id"] == "rq_053_identity_broadcast_delivery_contract_v1", payload
 assert payload["broadcast_contract_status"] == "PASS_REQUIRED", payload
 PY
 
