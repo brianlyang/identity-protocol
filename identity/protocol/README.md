@@ -185,6 +185,27 @@ So:
 
 ---
 
+## Root promotion-demotion discipline
+
+Promotion, demotion, and re-entry across protocol surfaces must remain governed.
+
+1. outer governance, review, workbook, reference, evidence, runtime, receipt, and implementation surfaces may motivate strengthening, but they do not directly promote themselves into root law;
+2. demoted support material cannot directly climb back into law-bearing root status;
+3. root navigation may summarize root law, but it does not promote itself into constitutional or contract authorship;
+4. runtime or receipt evidence may expose a real gap, but the gap re-enters root law only through governed refreezing at an allowed root gateway;
+5. machine-registry and governed-extension surfaces may expose the need for upstream strengthening, but they do not reverse-author bottom theory or constitutions.
+
+The allowed re-entry gateways for non-origin surfaces are narrower than the full root corpus:
+
+- constitutional law;
+- runtime constitutional law;
+- root contract law;
+- machine-registry law.
+
+No outer or demoted surface may directly self-promote into root law without that governed re-entry path.
+
+---
+
 ## Root question-routing discipline
 
 Different root entries answer different classes of machine-world questions.

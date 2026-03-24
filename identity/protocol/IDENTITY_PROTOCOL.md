@@ -59,6 +59,18 @@ Status transitions are controlled by governance/review, not by script commit alo
 3. Governance evidence, review evidence, runtime evidence, or current-turn enforcement may expose incompleteness in constitutional law, but they do not become the semantic parent of that law merely by exposing the gap.
 4. Operational evidence may justify constitutional strengthening, but it becomes law only after governed refreezing at constitutional or contract layers.
 
+## Root-law promotion and re-entry boundary
+
+1. Outer governance/review/workbook/reference/evidence/runtime/receipt/implementation surfaces may motivate strengthening, but they do not directly promote themselves into protocol-root law.
+2. Root navigation and demoted support surfaces remain non-authoring surfaces; they may project or preserve context, but they do not silently regain constitutional or contract authority.
+3. Governed re-entry for non-origin surfaces must terminate at an allowed root gateway:
+   - constitutional law
+   - runtime constitutional law
+   - root contract law
+   - machine-registry law
+4. Machine-registry or governed-extension surfaces may reveal a need for upstream strengthening, but that revelation does not reverse-author bottom theory, constitution, or runtime constitution.
+5. Promotion into root law without governed refreezing is non-compliant, even if the motivating surface contains true evidence.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

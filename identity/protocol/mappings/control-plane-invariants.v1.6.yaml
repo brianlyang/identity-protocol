@@ -185,3 +185,18 @@ invariants:
       surfaces:
         - scripts
         - .github/workflows
+  root_corpus_transition_alias:
+    current_file: identity/protocol/mappings/root-corpus-transition.current.yaml
+    required_fields:
+      - transition_family
+      - transition_version
+      - root_dir
+      - registry_current_file
+      - derivation_current_file
+      - question_routing_current_file
+      - surface_class_profiles
+    forbid_versioned_reference:
+      regex: root-corpus-transition\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows

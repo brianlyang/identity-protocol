@@ -42,6 +42,13 @@ Runtime meaning:
 3. Runtime evidence can trigger strengthening; it becomes shared law only after governed refreezing through the proper root-law surfaces.
 4. Runtime may consume law-bearing root outputs and machine-consumed enforcement truth, but it must not recast its own transient execution state as generative source law.
 
+## Runtime-to-root promotion boundary
+
+1. Runtime state, runtime reports, runtime evidence, and runtime receipts may expose defects or strengthening opportunities, but they do not directly promote themselves into protocol-root law.
+2. Runtime-origin evidence must re-enter shared law only through governed refreezing at constitutional, runtime-constitutional, root-contract, or machine-registry gateways.
+3. A runtime artifact that has been demoted, quarantined, or classified as support material must not silently regain root authority through later reuse.
+4. Runtime does not acquire bottom-theory or constitutional authorship merely by being the latest execution surface.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

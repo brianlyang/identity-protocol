@@ -184,6 +184,23 @@ That means:
 - support material may explain or illustrate law, but it does not define the law-bearing parent of protocol meaning;
 - current-turn evidence may trigger strengthening, but it becomes shared law only after governed refreezing at the proper root-law layer.
 
+### Promotion, demotion, and re-entry must stay governed
+
+Root-law status must also remain governed through promotion, demotion, and re-entry discipline.
+
+1. no surface promotes itself into root law merely because it is recent, urgent, vivid, or locally persuasive;
+2. demotion removes law-bearing authority; it does not preserve a suspended sovereignty that can silently reclaim root status later;
+3. outer governance, review, workbook, reference, evidence, runtime, receipt, and implementation surfaces may motivate strengthening, but they do not directly author root law by themselves;
+4. re-entry from demoted or outer surfaces must occur only through governed refreezing at an allowed root gateway such as constitutional law, runtime constitutional law, root contract law, or machine-registry law;
+5. if a surface can only motivate strengthening, then it must not be mistaken for a direct law-bearing source simply because it exposed a real defect.
+
+So the protocol must reject the following confusions:
+
+- a workbook row being treated as if it directly promoted itself into constitutional law;
+- runtime evidence being treated as if it directly rewrote bottom theory;
+- a demoted support artifact being treated as if it silently regained law-bearing status without governed refreezing;
+- implementation detail being treated as if it authored protocol law merely by being the latest executable shape.
+
 ### Question class and answer surface must stay paired
 
 Different layers of the root corpus answer different classes of questions, and
