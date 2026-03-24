@@ -192,7 +192,7 @@ def collect_protocol_root_top_level_entries(repo_root: Path, root_dir_rel: str) 
 
 
 def _normalize_whitespace(text: str) -> str:
-    return re.sub(r"\s+", " ", str(text or "")).strip()
+    return re.sub(r"\s+", " ", str(text or "")).strip().casefold()
 
 
 def find_missing_markers(text: str, required_markers: tuple[str, ...]) -> list[str]:

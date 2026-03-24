@@ -1,6 +1,6 @@
 schema_version: 1
 profile_version: v1.6
-last_updated_utc: "2026-03-10T09:20:00Z"
+last_updated_utc: "2026-03-24T00:00:00Z"
 default_profile: strict_full
 
 # For strict write/update/release lanes we never allow targeted trimming.
@@ -78,6 +78,7 @@ profiles:
       - asb16-rq-039
       - asb16-rq-040
       - asb16-rq-041
+      - asb16-rq-055
 
   inspection_targeted:
     mode: targeted

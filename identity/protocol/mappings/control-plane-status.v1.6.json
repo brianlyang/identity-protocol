@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-24T10:36:35Z",
-  "git_head_short": "844c63e",
+  "generated_at_utc": "2026-03-24T11:14:05Z",
+  "git_head_short": "5bf36f6",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -44,9 +44,9 @@
           ".github/workflows/_identity-required-gates.yml"
         ],
         "observed": {
-          "validator_scripts": 210,
-          "error_codes": 593,
-          "error_code_families": 216,
+          "validator_scripts": 212,
+          "error_codes": 599,
+          "error_code_families": 218,
           "mapping_rows_missing_in_bundle": 0,
           "bundle_rows": 55,
           "missing_mapping_rows": [],
@@ -65,16 +65,16 @@
         },
         "budgets": {
           "validator_scripts": {
-            "warn": 210,
-            "fail": 213
+            "warn": 212,
+            "fail": 214
           },
           "error_codes": {
-            "warn": 593,
-            "fail": 599
+            "warn": 599,
+            "fail": 602
           },
           "error_code_families": {
-            "warn": 216,
-            "fail": 223
+            "warn": 218,
+            "fail": 224
           },
           "mapping_rows_missing_in_bundle": {
             "warn": 0,
@@ -243,6 +243,20 @@
         "root_corpus_registry_active_file": "identity/protocol/mappings/root-corpus-registry.v1.yaml",
         "root_corpus_registry_parse_ok": true,
         "root_corpus_registry_violation_count": 0,
+        "root_corpus_ordering_alias_enabled": true,
+        "root_corpus_ordering_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.current.yaml",
+        "root_corpus_ordering_current_configured_file": "identity/protocol/mappings/root-corpus-ordering.current.yaml",
+        "root_corpus_ordering_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.v1.yaml",
+        "root_corpus_ordering_active_file": "identity/protocol/mappings/root-corpus-ordering.v1.yaml",
+        "root_corpus_ordering_parse_ok": true,
+        "root_corpus_ordering_violation_count": 0,
+        "root_corpus_authority_alias_enabled": true,
+        "root_corpus_authority_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.current.yaml",
+        "root_corpus_authority_current_configured_file": "identity/protocol/mappings/root-corpus-authority.current.yaml",
+        "root_corpus_authority_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.v1.yaml",
+        "root_corpus_authority_active_file": "identity/protocol/mappings/root-corpus-authority.v1.yaml",
+        "root_corpus_authority_parse_ok": true,
+        "root_corpus_authority_violation_count": 0,
         "plugin_control_plane_alias_enabled": true,
         "plugin_control_plane_alias_parse_ok": true,
         "plugin_control_plane_alias_violation_count": 0,
@@ -855,10 +869,10 @@
         ],
         "pack_scan_globs": [],
         "active_pack_identity_ids": [],
-        "repo_scan_file_count": 388,
+        "repo_scan_file_count": 395,
         "active_pack_scan_file_count": 0,
         "extra_scan_file_count": 0,
-        "scan_file_count": 388,
+        "scan_file_count": 395,
         "scan_files": [
           ".github/workflows/_identity-required-gates.yml",
           ".github/workflows/identity-protocol-ci.yml",
@@ -901,7 +915,9 @@
           "scripts/ci/run_native_chat_bootstrap_entry_probes_ci.sh",
           "scripts/ci/run_privilege_escalation_write_probes_ci.sh",
           "scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh",
+          "scripts/ci/run_protocol_root_corpus_authority_probes_ci.sh",
           "scripts/ci/run_protocol_root_corpus_governance_probes_ci.sh",
+          "scripts/ci/run_protocol_root_corpus_ordering_probes_ci.sh",
           "scripts/ci/run_reference_visual_atlas_scaffold_probes_ci.sh",
           "scripts/ci/run_required_runtime_gates_ci.sh",
           "scripts/ci/run_semantic_clarity_probes_ci.sh",
@@ -1000,12 +1016,15 @@
           "scripts/repair_runtime_catalog_metadata_hygiene.py",
           "scripts/repo_root_resolution_common.py",
           "scripts/report_three_plane_status.py",
+          "scripts/required_gate_bundle_projection_common.py",
           "scripts/required_gate_bundle_runner.py",
           "scripts/resolve_identity_context.py",
           "scripts/resolve_release_plane_cloud_evidence.py",
           "scripts/resolve_runtime_authoritative_identity.py",
           "scripts/response_stamp_common.py",
+          "scripts/root_corpus_authority_common.py",
           "scripts/root_corpus_governance_common.py",
+          "scripts/root_corpus_ordering_common.py",
           "scripts/rotate_handoff_collab_freshness.py",
           "scripts/run_host_visible_live_closure.py",
           "scripts/run_identity_broadcast_delivery.py",
@@ -1192,7 +1211,9 @@
           "scripts/validate_protocol_inquiry_followup_chain.py",
           "scripts/validate_protocol_lane_headstamp_continuity.py",
           "scripts/validate_protocol_lane_isolated_historical_replay.py",
+          "scripts/validate_protocol_root_corpus_authority.py",
           "scripts/validate_protocol_root_corpus_governance.py",
+          "scripts/validate_protocol_root_corpus_ordering.py",
           "scripts/validate_protocol_ssot_source.py",
           "scripts/validate_protocol_unique_entry_gate.py",
           "scripts/validate_protocol_vendor_semantic_isolation.py",
@@ -1323,6 +1344,14 @@
         "law_bearing_entry_count": 10,
         "validated_file_count": 7,
         "validated_directory_count": 4,
+        "corpus_class_profile_ids": [
+          "bottom_theory",
+          "constitution",
+          "root_contract",
+          "root_index",
+          "runtime_constitution"
+        ],
+        "corpus_class_profile_count": 5,
         "forbidden_content_class_ids": [
           "business_domain_example",
           "closure_ledger_narration",
@@ -1331,6 +1360,324 @@
         "file_violations": [],
         "directory_violations": [],
         "forbidden_content_hits": [],
+        "stale_reasons": []
+      }
+    },
+    {
+      "name": "protocol_root_corpus_ordering",
+      "command": [
+        "python3",
+        "scripts/validate_protocol_root_corpus_ordering.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "payload": {
+        "protocol_root_corpus_ordering_status": "PASS_REQUIRED",
+        "error_code": "",
+        "ordering_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.current.yaml",
+        "ordering_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.v1.yaml",
+        "registry_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.current.yaml",
+        "registry_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.v1.yaml",
+        "root_dir": "identity/protocol",
+        "root_index_entry": "identity/protocol/README.md",
+        "registry_class_ids": [
+          "bottom_theory",
+          "constitution",
+          "demoted_support_directory",
+          "governed_subdomain_extension",
+          "machine_registry_directory",
+          "root_contract",
+          "root_index",
+          "runtime_constitution"
+        ],
+        "expected_source_classes": [
+          "bottom_theory",
+          "constitution",
+          "demoted_support_directory",
+          "governed_subdomain_extension",
+          "machine_registry_directory",
+          "root_contract",
+          "runtime_constitution"
+        ],
+        "source_order": [
+          {
+            "order": 1,
+            "corpus_class": "bottom_theory",
+            "source_role": "generative_bottom_theory",
+            "law_bearing_required": true
+          },
+          {
+            "order": 2,
+            "corpus_class": "constitution",
+            "source_role": "constitutional_protocol_law",
+            "law_bearing_required": true
+          },
+          {
+            "order": 3,
+            "corpus_class": "runtime_constitution",
+            "source_role": "constitutional_runtime_law",
+            "law_bearing_required": true
+          },
+          {
+            "order": 4,
+            "corpus_class": "root_contract",
+            "source_role": "root_domain_contract_law",
+            "law_bearing_required": true
+          },
+          {
+            "order": 5,
+            "corpus_class": "machine_registry_directory",
+            "source_role": "machine_consumed_registry_surface",
+            "law_bearing_required": true
+          },
+          {
+            "order": 6,
+            "corpus_class": "governed_subdomain_extension",
+            "source_role": "governed_subdomain_extension",
+            "law_bearing_required": true
+          },
+          {
+            "order": 7,
+            "corpus_class": "demoted_support_directory",
+            "source_role": "demoted_support_material",
+            "law_bearing_required": false
+          }
+        ],
+        "reading_order": [
+          {
+            "order": 1,
+            "rel_path": "identity/protocol/README.md",
+            "entry_role": "root_index_entry_surface",
+            "corpus_class": "root_index"
+          },
+          {
+            "order": 2,
+            "rel_path": "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
+            "entry_role": "bottom_theory_entry",
+            "corpus_class": "bottom_theory"
+          },
+          {
+            "order": 3,
+            "rel_path": "identity/protocol/IDENTITY_PROTOCOL.md",
+            "entry_role": "protocol_constitution_entry",
+            "corpus_class": "constitution"
+          },
+          {
+            "order": 4,
+            "rel_path": "identity/protocol/IDENTITY_RUNTIME.md",
+            "entry_role": "runtime_constitution_entry",
+            "corpus_class": "runtime_constitution"
+          },
+          {
+            "order": 5,
+            "rel_path": "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
+            "entry_role": "root_contract_entry",
+            "corpus_class": "root_contract"
+          },
+          {
+            "order": 6,
+            "rel_path": "identity/protocol/IDENTITY_DISCOVERY.md",
+            "entry_role": "root_contract_entry",
+            "corpus_class": "root_contract"
+          },
+          {
+            "order": 7,
+            "rel_path": "identity/protocol/AGENT_HANDOFF_CONTRACT.md",
+            "entry_role": "root_contract_entry",
+            "corpus_class": "root_contract"
+          },
+          {
+            "order": 8,
+            "rel_path": "identity/protocol/mappings",
+            "entry_role": "machine_registry_directory_entry",
+            "corpus_class": "machine_registry_directory"
+          },
+          {
+            "order": 9,
+            "rel_path": "identity/protocol/broadcast",
+            "entry_role": "governed_subdomain_extension_entry",
+            "corpus_class": "governed_subdomain_extension"
+          },
+          {
+            "order": 10,
+            "rel_path": "identity/protocol/plugins",
+            "entry_role": "governed_subdomain_extension_entry",
+            "corpus_class": "governed_subdomain_extension"
+          },
+          {
+            "order": 11,
+            "rel_path": "identity/protocol/fixtures",
+            "entry_role": "demoted_support_entry",
+            "corpus_class": "demoted_support_directory"
+          }
+        ],
+        "source_order_class_count": 7,
+        "reading_order_entry_count": 11,
+        "registered_entry_count": 11,
+        "structure_violations": [],
+        "coverage_violations": [],
+        "stale_reasons": []
+      }
+    },
+    {
+      "name": "protocol_root_corpus_authority",
+      "command": [
+        "python3",
+        "scripts/validate_protocol_root_corpus_authority.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "payload": {
+        "protocol_root_corpus_authority_status": "PASS_REQUIRED",
+        "error_code": "",
+        "authority_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.current.yaml",
+        "authority_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.v1.yaml",
+        "registry_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.current.yaml",
+        "registry_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.v1.yaml",
+        "ordering_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.current.yaml",
+        "ordering_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.v1.yaml",
+        "root_dir": "identity/protocol",
+        "root_index_entry": "identity/protocol/README.md",
+        "authority_anchor_check_count": 5,
+        "authority_class_profile_count": 8,
+        "entry_authority_projection_count": 11,
+        "authority_class_profiles": [
+          {
+            "corpus_class": "bottom_theory",
+            "authority_role": "interpretive_bottom_theory",
+            "authority_mode": "interpretive_only",
+            "philosophical_primacy": true,
+            "law_bearing_required": true
+          },
+          {
+            "corpus_class": "root_index",
+            "authority_role": "navigational_root_index",
+            "authority_mode": "navigational_only",
+            "philosophical_primacy": false,
+            "law_bearing_required": true
+          },
+          {
+            "corpus_class": "constitution",
+            "authority_role": "constitutional_protocol_law",
+            "authority_mode": "frozen_law_only",
+            "philosophical_primacy": false,
+            "law_bearing_required": true
+          },
+          {
+            "corpus_class": "runtime_constitution",
+            "authority_role": "constitutional_runtime_law",
+            "authority_mode": "frozen_law_only",
+            "philosophical_primacy": false,
+            "law_bearing_required": true
+          },
+          {
+            "corpus_class": "root_contract",
+            "authority_role": "root_domain_contract_law",
+            "authority_mode": "frozen_law_only",
+            "philosophical_primacy": false,
+            "law_bearing_required": true
+          },
+          {
+            "corpus_class": "machine_registry_directory",
+            "authority_role": "machine_consumed_registry_family",
+            "authority_mode": "machine_consumed_family",
+            "philosophical_primacy": false,
+            "law_bearing_required": true
+          },
+          {
+            "corpus_class": "governed_subdomain_extension",
+            "authority_role": "governed_subdomain_extension_family",
+            "authority_mode": "extension_family",
+            "philosophical_primacy": false,
+            "law_bearing_required": true
+          },
+          {
+            "corpus_class": "demoted_support_directory",
+            "authority_role": "demoted_support_material",
+            "authority_mode": "demoted_support_only",
+            "philosophical_primacy": false,
+            "law_bearing_required": false
+          }
+        ],
+        "entry_authority_projection": [
+          {
+            "rel_path": "identity/protocol/README.md",
+            "corpus_class": "root_index",
+            "authority_role": "navigational_root_index",
+            "authority_mode": "navigational_only"
+          },
+          {
+            "rel_path": "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
+            "corpus_class": "bottom_theory",
+            "authority_role": "interpretive_bottom_theory",
+            "authority_mode": "interpretive_only"
+          },
+          {
+            "rel_path": "identity/protocol/IDENTITY_PROTOCOL.md",
+            "corpus_class": "constitution",
+            "authority_role": "constitutional_protocol_law",
+            "authority_mode": "frozen_law_only"
+          },
+          {
+            "rel_path": "identity/protocol/IDENTITY_RUNTIME.md",
+            "corpus_class": "runtime_constitution",
+            "authority_role": "constitutional_runtime_law",
+            "authority_mode": "frozen_law_only"
+          },
+          {
+            "rel_path": "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
+            "corpus_class": "root_contract",
+            "authority_role": "root_domain_contract_law",
+            "authority_mode": "frozen_law_only"
+          },
+          {
+            "rel_path": "identity/protocol/IDENTITY_DISCOVERY.md",
+            "corpus_class": "root_contract",
+            "authority_role": "root_domain_contract_law",
+            "authority_mode": "frozen_law_only"
+          },
+          {
+            "rel_path": "identity/protocol/AGENT_HANDOFF_CONTRACT.md",
+            "corpus_class": "root_contract",
+            "authority_role": "root_domain_contract_law",
+            "authority_mode": "frozen_law_only"
+          },
+          {
+            "rel_path": "identity/protocol/mappings",
+            "corpus_class": "machine_registry_directory",
+            "authority_role": "machine_consumed_registry_family",
+            "authority_mode": "machine_consumed_family"
+          },
+          {
+            "rel_path": "identity/protocol/broadcast",
+            "corpus_class": "governed_subdomain_extension",
+            "authority_role": "governed_subdomain_extension_family",
+            "authority_mode": "extension_family"
+          },
+          {
+            "rel_path": "identity/protocol/plugins",
+            "corpus_class": "governed_subdomain_extension",
+            "authority_role": "governed_subdomain_extension_family",
+            "authority_mode": "extension_family"
+          },
+          {
+            "rel_path": "identity/protocol/fixtures",
+            "corpus_class": "demoted_support_directory",
+            "authority_role": "demoted_support_material",
+            "authority_mode": "demoted_support_only"
+          }
+        ],
+        "structure_violations": [],
+        "authority_violations": [],
+        "anchor_violations": [],
         "stale_reasons": []
       }
     },
@@ -1540,10 +1887,10 @@
     }
   ],
   "summary": {
-    "check_count": 13,
+    "check_count": 15,
     "fail_count": 0,
     "warn_count": 0,
-    "pass_count": 13
+    "pass_count": 15
   },
   "control_plane_status": "PASS_REQUIRED",
   "promotion_ready": true,

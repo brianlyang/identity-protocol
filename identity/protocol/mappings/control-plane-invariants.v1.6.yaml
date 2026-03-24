@@ -137,3 +137,18 @@ invariants:
       surfaces:
         - scripts
         - .github/workflows
+  root_corpus_authority_alias:
+    current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+    required_fields:
+      - authority_family
+      - authority_version
+      - root_dir
+      - registry_current_file
+      - ordering_current_file
+      - authority_class_profiles
+      - entry_authority_projection
+    forbid_versioned_reference:
+      regex: root-corpus-authority\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows

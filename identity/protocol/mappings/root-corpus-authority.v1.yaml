@@ -1,0 +1,114 @@
+schema_version: 1
+authority_family: protocol_root_corpus_authority
+authority_version: v1
+root_dir: identity/protocol
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_anchor_checks:
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Authority layering'
+      - 'machine-consumed enforcement authority'
+      - 'Philosophical primacy, however, is not the same as runtime-source primacy.'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - 'philosophical primacy does not mean runtime-source primacy'
+      - 'machine-consumed authority still lives in frozen contracts, mappings, validators, runtime state, and receipts'
+  - rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
+    required_markers:
+      - '## Runtime adjudication boundary'
+      - 'Current-turn prompt legality must still resolve from machine-consumed enforcement surfaces'
+  - rel_path: identity/protocol/IDENTITY_DISCOVERY.md
+    required_markers:
+      - '## Runtime adjudication boundary'
+      - 'Current-turn discovery legality must still resolve from machine-consumed enforcement surfaces'
+  - rel_path: identity/protocol/AGENT_HANDOFF_CONTRACT.md
+    required_markers:
+      - '## Runtime adjudication boundary'
+      - 'Current-turn handoff legality must still resolve from machine-consumed enforcement surfaces'
+authority_class_profiles:
+  - corpus_class: bottom_theory
+    authority_role: interpretive_bottom_theory
+    authority_mode: interpretive_only
+    philosophical_primacy: true
+    law_bearing_required: true
+  - corpus_class: root_index
+    authority_role: navigational_root_index
+    authority_mode: navigational_only
+    philosophical_primacy: false
+    law_bearing_required: true
+  - corpus_class: constitution
+    authority_role: constitutional_protocol_law
+    authority_mode: frozen_law_only
+    philosophical_primacy: false
+    law_bearing_required: true
+  - corpus_class: runtime_constitution
+    authority_role: constitutional_runtime_law
+    authority_mode: frozen_law_only
+    philosophical_primacy: false
+    law_bearing_required: true
+  - corpus_class: root_contract
+    authority_role: root_domain_contract_law
+    authority_mode: frozen_law_only
+    philosophical_primacy: false
+    law_bearing_required: true
+  - corpus_class: machine_registry_directory
+    authority_role: machine_consumed_registry_family
+    authority_mode: machine_consumed_family
+    philosophical_primacy: false
+    law_bearing_required: true
+  - corpus_class: governed_subdomain_extension
+    authority_role: governed_subdomain_extension_family
+    authority_mode: extension_family
+    philosophical_primacy: false
+    law_bearing_required: true
+  - corpus_class: demoted_support_directory
+    authority_role: demoted_support_material
+    authority_mode: demoted_support_only
+    philosophical_primacy: false
+    law_bearing_required: false
+entry_authority_projection:
+  - rel_path: identity/protocol/README.md
+    corpus_class: root_index
+    authority_role: navigational_root_index
+    authority_mode: navigational_only
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    corpus_class: bottom_theory
+    authority_role: interpretive_bottom_theory
+    authority_mode: interpretive_only
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    corpus_class: constitution
+    authority_role: constitutional_protocol_law
+    authority_mode: frozen_law_only
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    corpus_class: runtime_constitution
+    authority_role: constitutional_runtime_law
+    authority_mode: frozen_law_only
+  - rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
+    corpus_class: root_contract
+    authority_role: root_domain_contract_law
+    authority_mode: frozen_law_only
+  - rel_path: identity/protocol/IDENTITY_DISCOVERY.md
+    corpus_class: root_contract
+    authority_role: root_domain_contract_law
+    authority_mode: frozen_law_only
+  - rel_path: identity/protocol/AGENT_HANDOFF_CONTRACT.md
+    corpus_class: root_contract
+    authority_role: root_domain_contract_law
+    authority_mode: frozen_law_only
+  - rel_path: identity/protocol/mappings
+    corpus_class: machine_registry_directory
+    authority_role: machine_consumed_registry_family
+    authority_mode: machine_consumed_family
+  - rel_path: identity/protocol/broadcast
+    corpus_class: governed_subdomain_extension
+    authority_role: governed_subdomain_extension_family
+    authority_mode: extension_family
+  - rel_path: identity/protocol/plugins
+    corpus_class: governed_subdomain_extension
+    authority_role: governed_subdomain_extension_family
+    authority_mode: extension_family
+  - rel_path: identity/protocol/fixtures
+    corpus_class: demoted_support_directory
+    authority_role: demoted_support_material
+    authority_mode: demoted_support_only

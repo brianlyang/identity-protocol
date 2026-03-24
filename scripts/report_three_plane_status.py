@@ -19,6 +19,7 @@ from protocol_infra_contract import (
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
     HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
 )
+from required_gate_bundle_projection_common import build_required_gate_bundle_target_projection
 from resolve_release_plane_cloud_evidence import resolve_release_cloud_evidence
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from resolve_identity_context import resolve_identity
@@ -2340,6 +2341,14 @@ def _instance_plane_status(
         )
     )
     required_bundle_shadow_payload = _parse_json_payload(out_required_bundle_shadow) or {}
+    required_bundle_target_projection = build_required_gate_bundle_target_projection(
+        repo_root=PROTOCOL_ROOT,
+        bundle_payload=required_bundle_payload,
+    )
+    required_bundle_shadow_target_projection = build_required_gate_bundle_target_projection(
+        repo_root=PROTOCOL_ROOT,
+        bundle_payload=required_bundle_shadow_payload,
+    )
     validators["required_gate_bundle_runner_shadow"] = {
         "rc": rc_required_bundle_shadow,
         "ok": rc_required_bundle_shadow == 0,
@@ -3965,6 +3974,8 @@ def _instance_plane_status(
             "missing_targets": required_bundle_payload.get("missing_targets", []),
             "contract_mapping": required_bundle_payload.get("contract_mapping", ""),
             "result_rows": required_bundle_payload.get("results", []),
+            "target_projection_status": required_bundle_target_projection.get("projection_status", ""),
+            "failed_required_target_count": required_bundle_target_projection.get("failed_required_target_count", 0),
         },
         "required_gate_bundle_runner_shadow": {
             "required_gate_bundle_runner_shadow_status": required_bundle_shadow_payload.get("bundle_status"),
@@ -3989,6 +4000,8 @@ def _instance_plane_status(
             "missing_targets": required_bundle_shadow_payload.get("missing_targets", []),
             "contract_mapping": required_bundle_shadow_payload.get("contract_mapping", ""),
             "result_rows": required_bundle_shadow_payload.get("results", []),
+            "target_projection_status": required_bundle_shadow_target_projection.get("projection_status", ""),
+            "failed_required_target_count": required_bundle_shadow_target_projection.get("failed_required_target_count", 0),
         },
         "required_gate_recurrence_escalator": {
             "required_gate_recurrence_status": recurrence_payload.get("required_gate_recurrence_status"),
@@ -4864,6 +4877,8 @@ def _instance_plane_status(
             "tuple_checks": align_payload.get("tuple_checks", {}),
             "stale_reasons": align_payload.get("stale_reasons", []),
         },
+        "required_gate_bundle_target_projection": required_bundle_target_projection,
+        "required_gate_bundle_shadow_target_projection": required_bundle_shadow_target_projection,
         "validators": validators,
     }
 
@@ -5078,6 +5093,14 @@ def main() -> int:
             "stale_reasons": adapter_payload.get("stale_reasons", []),
             "checks_json_path": adapter_payload.get("checks_json_path", ""),
         },
+        "required_gate_bundle_target_projection": (
+            instance_detail.get("required_gate_bundle_target_projection", {}) if isinstance(instance_detail, dict) else {}
+        ),
+        "required_gate_bundle_shadow_target_projection": (
+            instance_detail.get("required_gate_bundle_shadow_target_projection", {})
+            if isinstance(instance_detail, dict)
+            else {}
+        ),
     }
     m2m_projection = _classify_m2m_projection(
         validators=instance_detail.get("validators", {}) if isinstance(instance_detail, dict) else {},

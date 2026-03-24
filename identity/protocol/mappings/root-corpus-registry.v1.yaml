@@ -145,6 +145,8 @@ registered_top_level_entries:
     required_children:
       - root-corpus-registry.current.yaml
       - root-corpus-registry.v1.yaml
+      - root-corpus-authority.current.yaml
+      - root-corpus-authority.v1.yaml
       - root-corpus-ordering.current.yaml
       - root-corpus-ordering.v1.yaml
       - contract-binding.current.yaml

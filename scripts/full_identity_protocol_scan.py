@@ -1759,6 +1759,16 @@ def main() -> int:
         "summary_fixture_or_demo": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
         "summary_non_active_or_non_runtime": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
         "summary_m2m": {"total_identities": 0, "pass": 0, "fail": 0},
+        "summary_required_gate_bundle_projection": {
+            "identities_with_projection": 0,
+            "projection_pass": 0,
+            "projection_fail": 0,
+            "identities_with_failed_required_targets": 0,
+            "total_targets": 0,
+            "failed_required_targets": 0,
+            "failed_target_counts": {},
+            "target_status_counts": {},
+        },
         "summary_tuple_context": {
             "total_identities": 0,
             "tuple_context_only_failures": 0,
@@ -1866,6 +1876,40 @@ def main() -> int:
             identity_id = str(item.get("identity_id", "")).strip()
             if identity_id and identity_id not in tuple_summary["identity_ids"]:
                 tuple_summary["identity_ids"].append(identity_id)
+
+    def _record_required_gate_projection(projection: dict[str, Any]) -> None:
+        if not isinstance(projection, dict) or not projection:
+            return
+        summary = payload["summary_required_gate_bundle_projection"]
+        summary["identities_with_projection"] += 1
+        projection_status = str(projection.get("projection_status", "")).strip().upper()
+        if projection_status == STATUS_PASS_REQUIRED:
+            summary["projection_pass"] += 1
+        else:
+            summary["projection_fail"] += 1
+
+        failed_required_target_count = int(projection.get("failed_required_target_count") or 0)
+        if failed_required_target_count > 0:
+            summary["identities_with_failed_required_targets"] += 1
+        summary["total_targets"] += int(projection.get("total_targets") or 0)
+        summary["failed_required_targets"] += failed_required_target_count
+
+        target_status_counts = summary.get("target_status_counts")
+        failed_target_counts = summary.get("failed_target_counts")
+        if not isinstance(target_status_counts, dict) or not isinstance(failed_target_counts, dict):
+            return
+
+        for target in projection.get("targets", []):
+            if not isinstance(target, dict):
+                continue
+            target_name = str(target.get("target_name", "")).strip()
+            target_status = str(target.get("status", "")).strip().upper() or "UNKNOWN"
+            if target_name:
+                per_target_status = target_status_counts.setdefault(target_name, {})
+                if isinstance(per_target_status, dict):
+                    per_target_status[target_status] = int(per_target_status.get(target_status, 0)) + 1
+                if bool(target.get("required_contract", False)) and target_status == STATUS_FAIL_REQUIRED:
+                    failed_target_counts[target_name] = int(failed_target_counts.get(target_name, 0)) + 1
 
     for layer, catalog in catalog_list:
         rows = _catalog_rows(catalog) if catalog.exists() else []
@@ -5748,6 +5792,27 @@ def main() -> int:
                 }
                 if isinstance(tp.get("m2m_projection"), dict):
                     item["three_plane_m2m_projection"] = tp.get("m2m_projection")
+                required_gate_projection = tp.get("required_gate_bundle_target_projection")
+                if isinstance(required_gate_projection, dict):
+                    item["three_plane_required_gate_bundle_target_projection"] = required_gate_projection
+                    item["three_plane"]["required_gate_bundle_projection_status"] = required_gate_projection.get(
+                        "projection_status", ""
+                    )
+                    item["three_plane"]["required_gate_bundle_failed_required_targets"] = required_gate_projection.get(
+                        "failed_required_target_count", 0
+                    )
+                    _record_required_gate_projection(required_gate_projection)
+                required_gate_shadow_projection = tp.get("required_gate_bundle_shadow_target_projection")
+                if isinstance(required_gate_shadow_projection, dict):
+                    item["three_plane_required_gate_bundle_target_projection_shadow"] = (
+                        required_gate_shadow_projection
+                    )
+                    item["three_plane"]["required_gate_bundle_shadow_projection_status"] = (
+                        required_gate_shadow_projection.get("projection_status", "")
+                    )
+                    item["three_plane"]["required_gate_bundle_shadow_failed_required_targets"] = (
+                        required_gate_shadow_projection.get("failed_required_target_count", 0)
+                    )
                 if current_chat_surface_projection:
                     item["current_chat_surface_projection"] = current_chat_surface_projection
                     item["current_chat_surface_explanatory_exclusion_status"] = current_chat_surface_projection.get(

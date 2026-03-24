@@ -264,7 +264,16 @@ The immediate positive-strengthening move is now clear and bounded:
 3. wire the row into contract binding, required-gate bundle routing, required-contract coverage, release/readiness, and CI;
 4. keep `ISSUE-037` open until the downstream consumer families themselves absorb the stronger live-binding semantics.
 
-### 5.4 What must not happen
+### 5.4 Additional observability strengthening landed (2026-03-24)
+
+The next additive strengthening after machine-law intake is now also clear and landed:
+
+1. three-plane exposes a compact mapping-driven target projection derived from required-gate bundle rows and `contract-binding.current.yaml`;
+2. full-scan now republishes that compact target projection instead of forcing machine consumers to inspect raw nested bundle payloads;
+3. the projection reuses `report_field_refs`, so future required-gate targets inherit the same observability lane without target-specific hardcoding;
+4. this improves fleet auditability and release observability, but it still does **not** close `ISSUE-037` by itself because the downstream validator families must still absorb stricter live-binding semantics.
+
+### 5.5 What must not happen
 
 1. no pack-local fixes,
 2. no validator loosening,

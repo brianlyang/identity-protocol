@@ -314,6 +314,21 @@ Its required role is narrower and stricter:
 3. project current runtime state as closure class instead of narrating every green as full closure;
 4. keep the stream additive and compatible with the frozen `v1.6.17` / `v1.6.18` ownership split.
 
+### 6.7 Machine observability projection strengthening (2026-03-24)
+
+`ASB16-RQ-055` is not fully useful if its closure-class payload stays buried inside raw required-gate bundle rows. Therefore the stream also freezes one additive observability rule:
+
+1. three-plane and full-scan surfaces must expose a mapping-driven compact target projection derived from `contract-binding.current.yaml`;
+2. the compact projection must reuse `report_field_refs` rather than hardcoding target-specific field names into scan surfaces;
+3. the compact projection must preserve the distinction between:
+   - machine-law intake landed (`identity_weak_live_linkage_status=PASS_REQUIRED`),
+   - current operational state (`overall_linkage_status` / `operational_closure_class`),
+   - and projection-surface health (`projection_status`);
+4. the projection is explanatory and observability-oriented only:
+   - it does not change bundle verdict semantics,
+   - it does not close `ISSUE-037`,
+   - it does not loosen any validator or required gate.
+
 ## 7) Stop condition
 
 `ISSUE-037` may close only when all of the following are simultaneously true:
@@ -328,6 +343,7 @@ Its required role is narrower and stricter:
    - `v1.6.17` semantic ownership,
    - `v1.6.18` artifact-family boundaries,
    - no-downgrade / no-backstop rules.
+8. three-plane / full-scan machine consumers can compare compact closure-class projections without parsing raw nested bundle payloads by hand.
 
 ## 8) Non-goals and forbidden shortcuts
 

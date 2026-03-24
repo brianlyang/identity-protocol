@@ -47,6 +47,8 @@ POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["bash", "scripts/ci/run_executable_surface_runtime_literal_lock_probes_ci.sh"],
     ["bash", "scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh"],
     ["bash", "scripts/ci/run_protocol_root_corpus_governance_probes_ci.sh"],
+    ["bash", "scripts/ci/run_protocol_root_corpus_ordering_probes_ci.sh"],
+    ["bash", "scripts/ci/run_protocol_root_corpus_authority_probes_ci.sh"],
     ["bash", "scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh"],
     ["bash", "scripts/ci/run_workbook_control_plane_probes_ci.sh"],
     ["bash", "scripts/ci/run_workbook_family_scaffold_probes_ci.sh"],
