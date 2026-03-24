@@ -10,6 +10,17 @@ Its role is:
 2. **the shared higher-order semantic basis for new stream design, instance self-driven adaptation, architectural judgment, closure ownership split, and audit review**;
 3. **the meta-principle anchor for the protocol main document and the runtime main document**.
 
+Its primary interpretive audience is not a human reader seeking narrative comfort. Its primary interpretive audience is the machine world surrounding the protocol:
+
+- identity instances;
+- launchers;
+- validators;
+- probes;
+- runtime gates;
+- state consumers;
+- receipt consumers;
+- protocol maintainers acting on behalf of machine truth.
+
 In other words, `IDENTITY_PROTOCOL.md` explains protocol objects and boundaries, `IDENTITY_RUNTIME.md` explains runtime and integration behavior, and this document answers the deeper questions:
 
 - what the identity protocol actually is;
@@ -18,11 +29,32 @@ In other words, `IDENTITY_PROTOCOL.md` explains protocol objects and boundaries,
 - how shared law and instance adaptation are split;
 - why the protocol must prioritize machine singularity, decidability, recoverability, and auditability over local compatibility and improvised comfort.
 
+### Non-goals of this document
+
+This document is not intended to be:
+
+1. an operator onboarding shortcut;
+2. a persuasive essay optimized for human readability;
+3. a substitute for machine-consumed contracts, mappings, validators, or runtime truth sources;
+4. a softening layer that justifies semantic downgrade for local convenience.
+
+Its job is narrower and harder: to give the machine world a stable bottom-layer philosophy for interpreting why protocol law is shaped the way it is.
+
 ---
 
 ## One-line motherline
 
 **The identity protocol is not a collection of documents written for temporary human reading; it is a machine-law system jointly consumed by agents, large models, launchers, validators, probes, runtime gates, state consumers, and receipt consumers. An identity instance is not an exception applicant to the protocol, but an embodied runtime unit inside that law system.**
+
+### Machine-world reading rule
+
+When this document is read by any machine-governed participant in the protocol ecosystem, its default reading rule should be:
+
+1. prefer semantic singularity over rhetorical flexibility;
+2. prefer canonical truth over historical familiarity;
+3. prefer lifecycle closure over declarative existence;
+4. prefer fail-close exposure over silent compatibility absorption;
+5. prefer law-preserving adaptation over law-weakening convenience.
 
 ---
 
