@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-24T07:00:41Z",
-  "git_head_short": "a0148c2",
+  "generated_at_utc": "2026-03-24T07:28:36Z",
+  "git_head_short": "7d3e75d",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -44,9 +44,9 @@
           ".github/workflows/_identity-required-gates.yml"
         ],
         "observed": {
-          "validator_scripts": 205,
-          "error_codes": 579,
-          "error_code_families": 211,
+          "validator_scripts": 206,
+          "error_codes": 582,
+          "error_code_families": 212,
           "mapping_rows_missing_in_bundle": 0,
           "bundle_rows": 52,
           "missing_mapping_rows": [],
@@ -65,16 +65,16 @@
         },
         "budgets": {
           "validator_scripts": {
-            "warn": 205,
-            "fail": 208
+            "warn": 206,
+            "fail": 209
           },
           "error_codes": {
-            "warn": 579,
-            "fail": 585
+            "warn": 582,
+            "fail": 588
           },
           "error_code_families": {
-            "warn": 211,
-            "fail": 218
+            "warn": 212,
+            "fail": 219
           },
           "mapping_rows_missing_in_bundle": {
             "warn": 0,

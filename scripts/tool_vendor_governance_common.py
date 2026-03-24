@@ -102,22 +102,75 @@ def resolve_report_path(
         return None
     p = Path(raw).expanduser()
     has_magic = any(ch in raw for ch in ["*", "?", "["])
-    hits: list[Path] = []
+
+    def _workspace_root_from_pack(root: Path) -> Path | None:
+        for marker in (".identity", ".agents"):
+            marker_path = _find_parent_marker(root, marker)
+            if marker_path is not None:
+                return marker_path.parent.resolve()
+        return None
+
+    def _dedupe_resolution_candidates(rows: list[tuple[Path, str]]) -> list[tuple[Path, str]]:
+        dedup: list[tuple[Path, str]] = []
+        seen: set[tuple[str, str]] = set()
+        for base_root, rel_pattern in rows:
+            key = (base_root.expanduser().resolve().as_posix(), str(rel_pattern or "").strip())
+            if not key[1] or key in seen:
+                continue
+            seen.add(key)
+            dedup.append((base_root.expanduser().resolve(), key[1]))
+        return dedup
+
+    def _relative_resolution_candidates(root: Path, raw_pattern: str) -> list[tuple[Path, str]]:
+        normalized = str(raw_pattern or "").strip().replace("\\", "/")
+        workspace_root = _workspace_root_from_pack(root)
+        candidates: list[tuple[Path, str]] = [(root.resolve(), normalized)]
+
+        if normalized.startswith("identity/runtime/"):
+            # `identity/runtime/**` is a pack-scoped namespace in CURRENT_TASK contracts.
+            # It must resolve to `<pack>/runtime/**`, not drift into repo fixture/demo paths.
+            candidates.append((root.resolve(), normalized[len("identity/") :]))
+            return _dedupe_resolution_candidates(candidates)
+
+        if normalized.startswith("runtime/"):
+            return _dedupe_resolution_candidates(candidates)
+
+        if normalized.startswith("resource/"):
+            if workspace_root is not None:
+                candidates.append((workspace_root, normalized))
+            return _dedupe_resolution_candidates(candidates)
+
+        if normalized.startswith("identity/"):
+            candidates.append((root.resolve(), normalized[len("identity/") :]))
+
+        if workspace_root is not None:
+            candidates.append((workspace_root, normalized))
+
+        candidates.append((Path.cwd().resolve(), normalized))
+        return _dedupe_resolution_candidates(candidates)
+
     if p.is_absolute():
         if has_magic:
             hits = [Path(x).expanduser().resolve() for x in glob.glob(str(p))]
-        elif p.exists():
-            hits = [p.resolve()]
-    else:
-        preferred = sorted(pack_root.glob(raw))
-        if preferred:
-            hits = [x.resolve() for x in preferred]
-        else:
-            hits = [x.resolve() for x in Path(".").glob(raw)]
-    if not hits:
+            if not hits:
+                return None
+            hits.sort(key=lambda x: x.stat().st_mtime)
+            return hits[-1]
+        if p.exists():
+            return p.resolve()
         return None
-    hits.sort(key=lambda x: x.stat().st_mtime)
-    return hits[-1]
+
+    for base_root, rel_pattern in _relative_resolution_candidates(pack_root, raw):
+        if has_magic:
+            hits = [x.resolve() for x in base_root.glob(rel_pattern)]
+            if not hits:
+                continue
+            hits.sort(key=lambda x: x.stat().st_mtime)
+            return hits[-1]
+        candidate = (base_root / rel_pattern).resolve()
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def _candidate_upgrade_report_roots(pack_root: Path) -> list[Path]:
