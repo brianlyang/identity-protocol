@@ -129,6 +129,8 @@ BUNDLE_REQUIREMENT_ORDER: tuple[str, ...] = (
     "asb16-rq-050",
     "asb16-rq-051",
     "asb16-rq-052",
+    "asb16-rq-053",
+    "asb16-rq-054",
 )
 
 TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
@@ -184,6 +186,8 @@ TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
     "asb16-rq-050": "feedback_to_judgement_loopback",
     "asb16-rq-051": "identity_dialogue_retention",
     "asb16-rq-052": "identity_artifact_family_routing",
+    "asb16-rq-053": "identity_broadcast_delivery",
+    "asb16-rq-054": "identity_communication_transport",
 }
 REQUIREMENT_BY_TARGET: dict[str, str] = {v: k for k, v in TARGET_NAME_BY_REQUIREMENT.items()}
 
@@ -240,6 +244,8 @@ STATUS_FIELD_BY_TARGET: dict[str, str] = {
     "feedback_to_judgement_loopback": "feedback_to_judgement_loopback_status",
     "identity_dialogue_retention": "protocol_dialogue_retention_status",
     "identity_artifact_family_routing": "artifact_family_routing_status",
+    "identity_broadcast_delivery": "identity_broadcast_delivery_status",
+    "identity_communication_transport": "identity_communication_transport_status",
 }
 
 ERROR_FIELD_CANDIDATES: tuple[str, ...] = (

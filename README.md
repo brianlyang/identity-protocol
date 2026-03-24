@@ -228,6 +228,14 @@ Hard routing rules:
 - `runtime/memory-absorption/**` cannot satisfy active continuity, dialogue, learning, or protocol-feedback obligations.
 - declaration keys and gates such as `reject_memory_gate`, `dialogue_retention_contract_v1`, `dialogue_governance_contract`, `experience_feedback_contract`, `context_continuity_contract_v1`, and `reentry_brief_consumption_contract_v1` are control-plane declarations, not artifact sinks.
 
+### Broadcast delivery + communication transport quick reference (v1.6.20)
+
+- broadcast delivery -> dedicated runtime adoption/projection lane for host-gateway broadcast truth
+- identity communication transport -> aggregate convergence surface across agent handoff, collaboration trigger, protocol-feedback reply/inbox, protocol-feedback atomic emit, and broadcast delivery
+- transport remains broader than strict identity-to-identity-only messaging
+- transport is not a new artifact family and not a memory sink
+- canonical convergence order -> broadcast-delivery sync -> protocol-feedback atomic bootstrap emit -> aggregate transport validator replay
+
 ### Protocol SSOT governance (canonical source + coupling)
 
 - Canonical protocol-strengthening source:

@@ -10,9 +10,13 @@ from pathlib import Path
 from typing import Any
 import yaml
 
-from blocker_taxonomy_common import normalize_task_blocker_surfaces
+from blocker_taxonomy_common import CANONICAL_BLOCKER_TYPES, normalize_task_blocker_surfaces
 from collaboration_trigger_sample_common import materialize_collaboration_trigger_samples
 from create_identity_pack import (
+    _agent_handoff_contract_skeleton,
+    _collaboration_trigger_contract_skeleton,
+    _identity_broadcast_delivery_contract_skeleton,
+    _identity_communication_transport_contract_skeleton,
     DOWNSINK_PATH_IMMUTABILITY_CONTRACT_ID,
     DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY,
     DOWNSINK_PATH_LITERAL_LOCK_VALIDATOR_ID,
@@ -27,6 +31,7 @@ from create_identity_pack import (
     HOST_GATEWAY_BROADCAST_RECEIPT_PATTERN,
     HOST_GATEWAY_BROADCAST_SCHEMA_FILE,
     HOST_GATEWAY_BROADCAST_STATE_FILE,
+    HOST_GATEWAY_CONTRACT_KEYS,
     HOST_GATEWAY_CONTRACT_ID,
     HOST_GATEWAY_CONTRACT_KEY,
     HOST_GATEWAY_INGRESS_DISPATCH_TOKEN,
@@ -105,6 +110,9 @@ from create_identity_pack import (
     _prompt_bootstrap_capability_contract_skeleton,
     _prompt_capability_matrix_contract_skeleton,
     _prompt_kernel_executable_coupling_contract_skeleton,
+    _protocol_feedback_atomic_emit_contract_skeleton,
+    _protocol_feedback_inbox_channel_contract_skeleton,
+    _protocol_feedback_reply_channel_contract_skeleton,
     _reentry_brief_consumption_contract_skeleton,
     _reasoning_loop_failclose_contract_skeleton,
     _skill_frontmatter_contract_skeleton,
@@ -219,6 +227,15 @@ REQUIRED_HOST_VISIBLE_SURFACE_KEYS = (
 REQUIRED_DOWNSINK_KEYS = (
     DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY,
 )
+REQUIRED_COMMUNICATION_KEYS = (
+    "agent_handoff_contract",
+    "collaboration_trigger_contract",
+    "protocol_feedback_atomic_emit_contract_v1",
+    "protocol_feedback_canonical_reply_channel_contract_v1",
+    "protocol_feedback_canonical_inbox_channel_contract_v1",
+    "identity_broadcast_delivery_contract_v1",
+    "identity_communication_transport_contract_v1",
+)
 
 PROMPT_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     "prompt_bootstrap_capability_contract_v1": _prompt_bootstrap_capability_contract_skeleton(),
@@ -247,6 +264,15 @@ HOST_VISIBLE_SURFACE_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
 }
 DOWNSINK_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY: _protocol_downsink_path_immutability_contract_skeleton(),
+}
+COMMUNICATION_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
+    "agent_handoff_contract": _agent_handoff_contract_skeleton(),
+    "collaboration_trigger_contract": _collaboration_trigger_contract_skeleton(),
+    "protocol_feedback_atomic_emit_contract_v1": _protocol_feedback_atomic_emit_contract_skeleton(),
+    "protocol_feedback_canonical_reply_channel_contract_v1": _protocol_feedback_reply_channel_contract_skeleton(),
+    "protocol_feedback_canonical_inbox_channel_contract_v1": _protocol_feedback_inbox_channel_contract_skeleton(),
+    "identity_broadcast_delivery_contract_v1": _identity_broadcast_delivery_contract_skeleton(),
+    "identity_communication_transport_contract_v1": _identity_communication_transport_contract_skeleton(),
 }
 CONTINUITY_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     CONTEXT_CONTINUITY_CONTRACT_KEY: _context_continuity_contract_skeleton(),
@@ -280,6 +306,8 @@ CAPABILITY_DRIVER_VALIDATOR_IDS: tuple[str, ...] = (
     REENTRY_BRIEF_VALIDATOR_ID,
     REENTRY_CONSUMPTION_VALIDATOR_ID,
     CONTINUITY_RECEIPT_VALIDATOR_ID,
+    "scripts/validate_identity_broadcast_delivery.py",
+    "scripts/validate_identity_communication_transport.py",
 )
 
 ERR_CONTINUITY_WIRE_MISSING = "IP-CONT-WIRE-001"
@@ -303,6 +331,8 @@ ERR_VISIBLE_SURFACE_WIRE_MISSING = "IP-HDSTAMP-001"
 ERR_VISIBLE_SURFACE_WIRE_INVALID = "IP-HDSTAMP-003"
 ERR_DOWNSINK_WIRE_MISSING = "IP-DSPATH-001"
 ERR_DOWNSINK_WIRE_INVALID = "IP-DSPATH-002"
+ERR_COMM_WIRE_MISSING = "IP-COMM-001"
+ERR_COMM_WIRE_INVALID = "IP-COMM-002"
 REASONING_LEVEL_RANK = {"L0": 0, "L1": 1, "L2": 2, "L3": 3}
 REASONING_MIN_LEVEL = "L3"
 FILE_GOVERNANCE_SKILL_ID = "ai-folder-governance"
@@ -492,6 +522,13 @@ def _ensure_instance_pack_topology_assets(
     optional_seed_dirs = [
         CONTEXT_CONTINUITY_REPORT_ROOT_REL.as_posix(),
         CONTEXT_CONTINUITY_STATE_ROOT_REL.as_posix(),
+        "runtime/logs/handoff",
+        "runtime/logs/collaboration",
+        "runtime/protocol-feedback/outbox-to-protocol",
+        "runtime/protocol-feedback/inbox-from-protocol",
+        "runtime/protocol-feedback/evidence-index",
+        "runtime/protocol-feedback/atomic",  # downsink-path-lock: allow-nonregistry-literal
+        "runtime/reports/broadcast",
     ]
     missing_dirs = [row for row in required_dirs if not (pack_path / row).exists()]
     missing_optional_seed_dirs = [row for row in optional_seed_dirs if not (pack_path / row).exists()]
@@ -727,6 +764,226 @@ def _normalize_skill_supply_chain_contracts(task_doc: dict[str, Any], identity_i
             restored.append(f"{key}.validator")
         task_doc[key] = merged
     return restored
+
+
+def _merge_defaults_object(default: Any, current: Any) -> Any:
+    if isinstance(default, dict):
+        merged = json.loads(json.dumps(current)) if isinstance(current, dict) else {}
+        for key, value in default.items():
+            merged[key] = _merge_defaults_object(value, merged.get(key))
+        return merged
+    if isinstance(default, list):
+        if not isinstance(current, list):
+            return json.loads(json.dumps(default))
+        merged_list = [json.loads(json.dumps(item)) for item in current]
+        seen = {json.dumps(item, ensure_ascii=False, sort_keys=True) for item in merged_list}
+        for item in default:
+            marker = json.dumps(item, ensure_ascii=False, sort_keys=True)
+            if marker in seen:
+                continue
+            merged_list.append(json.loads(json.dumps(item)))
+            seen.add(marker)
+        return merged_list
+    if current in (None, "", []):
+        return json.loads(json.dumps(default))
+    return current
+
+
+def _normalize_communication_contracts(task_doc: dict[str, Any]) -> tuple[list[str], list[str]]:
+    forced_required_keys: list[str] = []
+    restored_contract_keys: list[str] = []
+    for key in REQUIRED_COMMUNICATION_KEYS:
+        default = COMMUNICATION_CONTRACT_DEFAULTS.get(key, {})
+        node = task_doc.get(key)
+        before = json.loads(json.dumps(node)) if isinstance(node, dict) else None
+        merged = _merge_defaults_object(default, node)
+        if not isinstance(merged, dict):
+            merged = json.loads(json.dumps(default))
+        merged["required"] = True
+        if key == "protocol_feedback_canonical_reply_channel_contract_v1":
+            merged["outbox_dir"] = "runtime/protocol-feedback/outbox-to-protocol"
+            merged["primary_outbox_glob"] = "runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_*.md"
+            merged["required_index_path"] = "runtime/protocol-feedback/evidence-index/INDEX.md"
+            merged["enforcement_validator"] = "scripts/validate_protocol_feedback_reply_channel.py"
+        elif key == "protocol_feedback_canonical_inbox_channel_contract_v1":
+            merged["inbox_dir"] = "runtime/protocol-feedback/inbox-from-protocol"
+            merged["primary_inbox_glob"] = "runtime/protocol-feedback/inbox-from-protocol/PROTOCOL_INBOX_*.md"
+            merged["required_index_path"] = "runtime/protocol-feedback/evidence-index/INDEX.md"
+            merged["enforcement_validator"] = "scripts/validate_protocol_feedback_inbox_channel.py"
+        elif key == "protocol_feedback_atomic_emit_contract_v1":
+            merged["validator"] = "scripts/validate_protocol_feedback_atomic_emit.py"
+            if not str(merged.get("receipt_path_pattern", "")).strip():
+                merged["receipt_path_pattern"] = "runtime/protocol-feedback/atomic/*.receipt.json"
+        elif key == "agent_handoff_contract":
+            merged["validator"] = "scripts/validate_agent_handoff_contract.py"
+        elif key == "collaboration_trigger_contract":
+            merged["validator"] = "scripts/validate_identity_collab_trigger.py"
+            merged["trigger_conditions"] = list(
+                {
+                    str(item).strip()
+                    for item in list(merged.get("trigger_conditions") or []) + list(CANONICAL_BLOCKER_TYPES)
+                    if str(item).strip()
+                }
+            )
+        elif key == "identity_broadcast_delivery_contract_v1":
+            merged["contract_id"] = "rq_053_identity_broadcast_delivery_contract_v1"
+            merged["validator"] = "scripts/validate_identity_broadcast_delivery.py"
+            merged["sync_executor"] = "scripts/run_identity_broadcast_delivery.py"
+            merged["migration_closure_checker"] = "scripts/check_identity_broadcast_migration_closure.py"
+            merged["host_gateway_contract_keys"] = list(HOST_GATEWAY_CONTRACT_KEYS)
+        elif key == "identity_communication_transport_contract_v1":
+            merged["contract_id"] = "rq_054_identity_communication_transport_contract_v1"
+            merged["validator"] = "scripts/validate_identity_communication_transport.py"
+            merged["convergence_executor"] = "scripts/run_identity_communication_transport.py"
+            merged["migration_closure_checker"] = "scripts/check_identity_communication_transport_closure.py"
+            merged["required_component_contract_keys"] = list(
+                _identity_communication_transport_contract_skeleton().get("required_component_contract_keys", [])
+            )
+            merged["required_runtime_roots"] = list(
+                _identity_communication_transport_contract_skeleton().get("required_runtime_roots", [])
+            )
+            merged["required_live_bootstrap_steps"] = list(
+                _identity_communication_transport_contract_skeleton().get("required_live_bootstrap_steps", [])
+            )
+        task_doc[key] = merged
+        if before != merged:
+            restored_contract_keys.append(key)
+        if before is None or (isinstance(before, dict) and before.get("required") is not True):
+            forced_required_keys.append(key)
+    return forced_required_keys, restored_contract_keys
+
+
+def _communication_contract_invalid_keys(task_doc: dict[str, Any]) -> list[str]:
+    invalid: list[str] = []
+    handoff = task_doc.get("agent_handoff_contract")
+    if (
+        not isinstance(handoff, dict)
+        or handoff.get("required") is not True
+        or str(handoff.get("validator", "")).strip() != "scripts/validate_agent_handoff_contract.py"
+        or not str(handoff.get("handoff_log_path_pattern", "")).strip()
+        or not set(_agent_handoff_contract_skeleton().get("required_fields", [])).issubset(
+            {str(item).strip() for item in (handoff.get("required_fields") or []) if str(item).strip()}
+        )
+    ):
+        invalid.append("agent_handoff_contract")
+
+    collab = task_doc.get("collaboration_trigger_contract")
+    if (
+        not isinstance(collab, dict)
+        or collab.get("required") is not True
+        or str(collab.get("validator", "")).strip() != "scripts/validate_identity_collab_trigger.py"
+        or not str(collab.get("evidence_log_path_pattern", "")).strip()
+        or not set(CANONICAL_BLOCKER_TYPES).issubset(
+            {str(item).strip() for item in (collab.get("trigger_conditions") or []) if str(item).strip()}
+        )
+    ):
+        invalid.append("collaboration_trigger_contract")
+
+    atomic = task_doc.get("protocol_feedback_atomic_emit_contract_v1")
+    if (
+        not isinstance(atomic, dict)
+        or atomic.get("required") is not True
+        or str(atomic.get("validator", "")).strip() != "scripts/validate_protocol_feedback_atomic_emit.py"
+        or not str(atomic.get("receipt_path_pattern", "")).strip()
+    ):
+        invalid.append("protocol_feedback_atomic_emit_contract_v1")
+
+    reply = task_doc.get("protocol_feedback_canonical_reply_channel_contract_v1")
+    if (
+        not isinstance(reply, dict)
+        or reply.get("required") is not True
+        or str(reply.get("outbox_dir", "")).strip() != "runtime/protocol-feedback/outbox-to-protocol"
+        or str(reply.get("primary_outbox_glob", "")).strip()
+        != "runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_*.md"
+        or str(reply.get("required_index_path", "")).strip() != "runtime/protocol-feedback/evidence-index/INDEX.md"
+        or str(reply.get("enforcement_validator", "")).strip() != "scripts/validate_protocol_feedback_reply_channel.py"
+    ):
+        invalid.append("protocol_feedback_canonical_reply_channel_contract_v1")
+
+    inbox = task_doc.get("protocol_feedback_canonical_inbox_channel_contract_v1")
+    if (
+        not isinstance(inbox, dict)
+        or inbox.get("required") is not True
+        or str(inbox.get("inbox_dir", "")).strip() != "runtime/protocol-feedback/inbox-from-protocol"
+        or str(inbox.get("primary_inbox_glob", "")).strip()
+        != "runtime/protocol-feedback/inbox-from-protocol/PROTOCOL_INBOX_*.md"
+        or str(inbox.get("required_index_path", "")).strip() != "runtime/protocol-feedback/evidence-index/INDEX.md"
+        or str(inbox.get("enforcement_validator", "")).strip() != "scripts/validate_protocol_feedback_inbox_channel.py"
+    ):
+        invalid.append("protocol_feedback_canonical_inbox_channel_contract_v1")
+
+    broadcast = task_doc.get("identity_broadcast_delivery_contract_v1")
+    if (
+        not isinstance(broadcast, dict)
+        or broadcast.get("required") is not True
+        or str(broadcast.get("contract_id", "")).strip() != "rq_053_identity_broadcast_delivery_contract_v1"
+        or str(broadcast.get("validator", "")).strip() != "scripts/validate_identity_broadcast_delivery.py"
+        or str(broadcast.get("sync_executor", "")).strip() != "scripts/run_identity_broadcast_delivery.py"
+        or str(broadcast.get("migration_closure_checker", "")).strip()
+        != "scripts/check_identity_broadcast_migration_closure.py"
+        or not isinstance(broadcast.get("host_gateway_contract_keys"), list)
+        or not set(HOST_GATEWAY_CONTRACT_KEYS).issubset(
+            {
+                str(item).strip()
+                for item in (broadcast.get("host_gateway_contract_keys") or [])
+                if str(item).strip()
+            }
+        )
+    ):
+        invalid.append("identity_broadcast_delivery_contract_v1")
+
+    communication = task_doc.get("identity_communication_transport_contract_v1")
+    required_component_contract_keys = {
+        str(item).strip()
+        for item in (
+            _identity_communication_transport_contract_skeleton().get("required_component_contract_keys", []) or []
+        )
+        if str(item).strip()
+    }
+    required_runtime_roots = {
+        str(item).strip()
+        for item in (_identity_communication_transport_contract_skeleton().get("required_runtime_roots", []) or [])
+        if str(item).strip()
+    }
+    if (
+        not isinstance(communication, dict)
+        or communication.get("required") is not True
+        or str(communication.get("contract_id", "")).strip() != "rq_054_identity_communication_transport_contract_v1"
+        or str(communication.get("validator", "")).strip() != "scripts/validate_identity_communication_transport.py"
+        or str(communication.get("convergence_executor", "")).strip()
+        != "scripts/run_identity_communication_transport.py"
+        or str(communication.get("migration_closure_checker", "")).strip()
+        != "scripts/check_identity_communication_transport_closure.py"
+        or not isinstance(communication.get("required_component_contract_keys"), list)
+        or not required_component_contract_keys.issubset(
+            {
+                str(item).strip()
+                for item in (communication.get("required_component_contract_keys") or [])
+                if str(item).strip()
+            }
+        )
+        or not isinstance(communication.get("required_runtime_roots"), list)
+        or not required_runtime_roots.issubset(
+            {
+                str(item).strip()
+                for item in (communication.get("required_runtime_roots") or [])
+                if str(item).strip()
+            }
+        )
+        or not {
+            str(item).strip()
+            for item in (_identity_communication_transport_contract_skeleton().get("required_live_bootstrap_steps", []) or [])
+            if str(item).strip()
+        }.issubset(
+            {
+                str(item).strip()
+                for item in (communication.get("required_live_bootstrap_steps") or [])
+                if str(item).strip()
+            }
+        )
+    ):
+        invalid.append("identity_communication_transport_contract_v1")
+    return invalid
 
 
 def _normalize_capability_driver_validators(task_doc: dict[str, Any]) -> dict[str, list[str]]:
@@ -2243,6 +2500,7 @@ def main() -> int:
         k for k in REQUIRED_HOST_VISIBLE_SURFACE_KEYS if not isinstance(task_doc.get(k), dict)
     ]
     downsink_missing_before = [k for k in REQUIRED_DOWNSINK_KEYS if not isinstance(task_doc.get(k), dict)]
+    communication_missing_before = [k for k in REQUIRED_COMMUNICATION_KEYS if not isinstance(task_doc.get(k), dict)]
     skill_supply_chain_missing_before = [
         k for k in SKILL_SUPPLY_CHAIN_CONTRACT_DEFAULTS.keys() if not isinstance(task_doc.get(k), dict)
     ]
@@ -2254,6 +2512,10 @@ def main() -> int:
         sync_human_collab_blockers_if_present=True,
         include_default_legacy_aliases=True,
     )
+    (
+        forced_communication_required_keys,
+        restored_communication_contract_keys,
+    ) = _normalize_communication_contracts(updated)
     restored_topology_contract_keys = _normalize_instance_pack_topology_contract(updated, args.identity_id)
     restored_launcher_contract_keys = _normalize_identity_codex_launcher_contract(updated, args.identity_id)
     restored_continuity_contract_keys, restored_continuity_validator_keys = _normalize_continuity_contracts(updated)
@@ -2333,6 +2595,7 @@ def main() -> int:
         k for k in REQUIRED_HOST_VISIBLE_SURFACE_KEYS if not isinstance(updated.get(k), dict)
     ]
     downsink_missing_after = [k for k in REQUIRED_DOWNSINK_KEYS if not isinstance(updated.get(k), dict)]
+    communication_missing_after = [k for k in REQUIRED_COMMUNICATION_KEYS if not isinstance(updated.get(k), dict)]
     skill_supply_chain_missing_after = [
         k for k in SKILL_SUPPLY_CHAIN_CONTRACT_DEFAULTS.keys() if not isinstance(updated.get(k), dict)
     ]
@@ -2354,6 +2617,7 @@ def main() -> int:
     blocker_surface_missing_after = blocker_surface_backfill.get("missing_surfaces") or []
     blocker_surface_invalid_after = blocker_surface_backfill.get("invalid_blockers_by_surface") or {}
     blocker_surface_applicable = bool(blocker_surface_backfill.get("applicable", False))
+    communication_invalid_after = _communication_contract_invalid_keys(updated)
     prompt_invalid_after = [
         k
         for k in REQUIRED_PROMPT_KEYS
@@ -2885,6 +3149,14 @@ def main() -> int:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-BLOCKER-WIRE-001"
         stale_reasons = ["unsupported_blocker_types_after_backfill"]
+    elif communication_missing_after:
+        status = STATUS_FAIL_REQUIRED
+        error_code = ERR_COMM_WIRE_MISSING
+        stale_reasons = ["required_communication_contract_keys_missing_after_backfill"]
+    elif communication_invalid_after:
+        status = STATUS_FAIL_REQUIRED
+        error_code = ERR_COMM_WIRE_INVALID
+        stale_reasons = ["required_communication_contract_invalid_after_backfill"]
     elif prompt_missing_after:
         status = STATUS_FAIL_REQUIRED
         error_code = ERR_PROMPT_WIRE_MISSING
@@ -3051,6 +3323,12 @@ def main() -> int:
         "blocker_surface_backfill_applicable": blocker_surface_applicable,
         "blocker_surface_missing_after": blocker_surface_missing_after,
         "blocker_surface_invalid_after": blocker_surface_invalid_after,
+        "required_communication_contract_keys": list(REQUIRED_COMMUNICATION_KEYS),
+        "missing_communication_contract_keys_before": communication_missing_before,
+        "missing_communication_contract_keys_after": communication_missing_after,
+        "invalid_communication_contract_keys_after": communication_invalid_after,
+        "forced_communication_required_keys": forced_communication_required_keys,
+        "restored_communication_contract_keys": restored_communication_contract_keys,
         "missing_continuity_contract_keys_before": continuity_missing_before,
         "missing_dialogue_retention_contract_keys_before": dialogue_retention_missing_before,
         "missing_artifact_family_routing_contract_keys_before": artifact_family_routing_missing_before,
@@ -3182,6 +3460,14 @@ def main() -> int:
             )
             if blocker_surface_applicable
             else ""
+        ),
+        "communication_contract_auto_wire_status": (
+            STATUS_PASS_REQUIRED if not communication_missing_after and not communication_invalid_after else STATUS_FAIL_REQUIRED
+        ),
+        "communication_contract_auto_wire_error_code": (
+            ""
+            if not communication_missing_after and not communication_invalid_after
+            else (ERR_COMM_WIRE_MISSING if communication_missing_after else ERR_COMM_WIRE_INVALID)
         ),
         "unique_entry_contract_auto_wire_status": (
             STATUS_PASS_REQUIRED if not entry_missing_after and not entry_invalid_after else STATUS_FAIL_REQUIRED

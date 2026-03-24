@@ -39,6 +39,10 @@ POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["bash", "scripts/ci/run_identity_context_continuity_probes_ci.sh"],
     ["bash", "scripts/ci/run_identity_dialogue_retention_probes_ci.sh"],
     ["bash", "scripts/ci/run_identity_artifact_family_routing_probes_ci.sh"],
+    ["bash", "scripts/ci/run_identity_broadcast_delivery_probes_ci.sh"],
+    ["bash", "scripts/ci/run_identity_communication_transport_probes_ci.sh"],
+    ["python3", "scripts/check_identity_broadcast_migration_closure.py", "--workspace-runtime-only", "--json-only"],
+    ["python3", "scripts/check_identity_communication_transport_closure.py", "--workspace-runtime-only", "--json-only"],
     ["bash", "scripts/ci/run_executable_surface_runtime_literal_lock_probes_ci.sh"],
     ["bash", "scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh"],
     ["bash", "scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh"],
@@ -1834,6 +1838,26 @@ def main() -> int:
         ],
         [
             "python3",
+            "scripts/validate_identity_broadcast_delivery.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_identity_communication_transport.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+            "--json-only",
+        ],
+        [
+            "python3",
             "scripts/validate_identity_capability_activation.py",
             "--catalog",
             catalog,
@@ -2525,6 +2549,30 @@ def main() -> int:
             "identity/catalog/identities.yaml",
             "--operation",
             "readiness",
+            "--json-only",
+        ]
+    )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_identity_broadcast_delivery.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--json-only",
+        ]
+    )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_identity_communication_transport.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
             "--json-only",
         ]
     )

@@ -8,6 +8,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Callable
 
 import yaml
 
@@ -433,6 +434,10 @@ def _emit_two_phase_trace(
 
 
 def _extract_unique_entry_migration_violation_ids(payload: dict | None) -> list[str]:
+    return _extract_migration_violation_ids(payload)
+
+
+def _extract_migration_violation_ids(payload: dict | None) -> list[str]:
     data = payload if isinstance(payload, dict) else {}
     rows = data.get("violations")
     if not isinstance(rows, list):
@@ -451,21 +456,189 @@ def _extract_unique_entry_migration_violation_ids(payload: dict | None) -> list[
 
 
 def _extract_identity_codex_launcher_migration_violation_ids(payload: dict | None) -> list[str]:
-    data = payload if isinstance(payload, dict) else {}
-    rows = data.get("violations")
-    if not isinstance(rows, list):
-        rows = []
-    ordered_ids: list[str] = []
-    seen: set[str] = set()
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        identity_id = str(row.get("identity_id", "")).strip()
-        if not identity_id or identity_id in seen:
-            continue
-        seen.add(identity_id)
-        ordered_ids.append(identity_id)
-    return ordered_ids
+    return _extract_migration_violation_ids(payload)
+
+
+def _run_identity_broadcast_delivery_sync(
+    *,
+    identity_id: str,
+    catalog: str,
+) -> int:
+    run_token = f"broadcast-sync-{identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
+    rc = _run(
+        [
+            "python3",
+            "scripts/run_identity_broadcast_delivery.py",
+            "--catalog",
+            str(catalog),
+            "--identity-id",
+            identity_id,
+            "--run-id",
+            run_token,
+            "--sync",
+            "--write-receipt",
+            "--json-only",
+        ]
+    )
+    if rc != 0:
+        print(
+            "[FAIL] broadcast delivery sync executor failed during migration auto-repair; "
+            f"identity={identity_id}"
+        )
+    return rc
+
+
+def _run_broadcast_delivery_convergence_rollout(
+    *,
+    identity_id: str,
+    catalog: str,
+    work_layer: str = "instance",
+    source_layer: str = "",
+) -> int:
+    rc = _run_contract_backfill_with_instance_script_rollout(
+        identity_id=identity_id,
+        catalog=catalog,
+        work_layer=work_layer,
+        source_layer=source_layer,
+    )
+    if rc != 0:
+        return rc
+    rc = _run_identity_broadcast_delivery_sync(identity_id=identity_id, catalog=catalog)
+    if rc != 0:
+        return rc
+    rc = _run(
+        [
+            "python3",
+            "scripts/validate_identity_broadcast_delivery.py",
+            "--catalog",
+            str(catalog),
+            "--identity-id",
+            identity_id,
+            "--json-only",
+        ]
+    )
+    if rc != 0:
+        print(
+            "[FAIL] broadcast delivery validator failed after migration auto-repair; "
+            f"identity={identity_id}"
+        )
+    return rc
+
+
+def _run_identity_communication_transport_convergence(
+    *,
+    identity_id: str,
+    catalog: str,
+) -> int:
+    run_token = f"communication-transport-{identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
+    rc = _run(
+        [
+            "python3",
+            "scripts/run_identity_communication_transport.py",
+            "--catalog",
+            str(catalog),
+            "--repo-catalog",
+            str((PROTOCOL_ROOT / "identity/catalog/identities.yaml").resolve()),
+            "--identity-id",
+            identity_id,
+            "--run-id",
+            run_token,
+            "--session-id",
+            f"run:{run_token}",
+            "--json-only",
+        ]
+    )
+    if rc != 0:
+        print(
+            "[FAIL] identity communication transport convergence executor failed during migration auto-repair; "
+            f"identity={identity_id}"
+        )
+    return rc
+
+
+def _run_communication_transport_convergence_rollout(
+    *,
+    identity_id: str,
+    catalog: str,
+    work_layer: str = "instance",
+    source_layer: str = "",
+) -> int:
+    rc = _run_broadcast_delivery_convergence_rollout(
+        identity_id=identity_id,
+        catalog=catalog,
+        work_layer=work_layer,
+        source_layer=source_layer,
+    )
+    if rc != 0:
+        return rc
+    return _run_identity_communication_transport_convergence(
+        identity_id=identity_id,
+        catalog=catalog,
+    )
+
+
+def _enforce_workspace_migration_closure(
+    *,
+    catalog: str,
+    repo_catalog: str,
+    operation: str,
+    auto_repair: bool,
+    check_script: str,
+    status_field: str,
+    closure_label: str,
+    workspace_runtime_only: bool,
+    repair_executor: Callable[[str], int] | None,
+) -> int:
+    check_cmd = [
+        "python3",
+        check_script,
+        "--repo-catalog",
+        str(repo_catalog),
+        "--catalog",
+        str(catalog),
+        "--json-only",
+    ]
+    if workspace_runtime_only:
+        check_cmd.append("--workspace-runtime-only")
+    rc_check, out_check, _ = _run_capture(check_cmd)
+    payload = _parse_json_payload(out_check) or {}
+    status = str(payload.get(status_field, "")).strip().upper()
+    if rc_check == 0 and status == "PASS_REQUIRED":
+        return 0
+
+    violation_ids = _extract_migration_violation_ids(payload)
+    if auto_repair and violation_ids and repair_executor is not None:
+        print(
+            f"[WARN] active runtime {closure_label} migration closure not met; "
+            "running shared convergence repair for violating identities."
+        )
+        for violating_id in violation_ids:
+            rc_fix = repair_executor(violating_id)
+            if rc_fix != 0:
+                print(
+                    f"[FAIL] active runtime {closure_label} migration auto-repair failed "
+                    f"(identity={violating_id}); {operation} blocked"
+                )
+                return rc_fix
+        rc_recheck, out_recheck, _ = _run_capture(check_cmd)
+        payload_recheck = _parse_json_payload(out_recheck) or {}
+        status_recheck = str(payload_recheck.get(status_field, "")).strip().upper()
+        if rc_recheck == 0 and status_recheck == "PASS_REQUIRED":
+            return 0
+        remaining = _extract_migration_violation_ids(payload_recheck)
+        remaining_token = ",".join(remaining) if remaining else "unknown"
+        print(
+            f"[FAIL] active runtime {closure_label} migration closure still failed after auto-repair; "
+            f"{operation} blocked (remaining={remaining_token})"
+        )
+        return 1
+
+    violation_token = ",".join(violation_ids) if violation_ids else "unknown"
+    print(
+        f"[FAIL] active runtime {closure_label} migration closure failed; "
+        f"{operation} blocked (violations={violation_token})"
+    )
+    return 1
 
 
 def _enforce_identity_codex_launcher_migration_closure(
@@ -594,6 +767,56 @@ def _enforce_unique_entry_migration_closure(
         f"{operation} blocked (violations={violation_token})"
     )
     return 1
+
+
+def _enforce_identity_broadcast_migration_closure(
+    *,
+    catalog: str,
+    repo_catalog: str,
+    operation: str,
+    auto_repair: bool,
+) -> int:
+    return _enforce_workspace_migration_closure(
+        catalog=catalog,
+        repo_catalog=repo_catalog,
+        operation=operation,
+        auto_repair=auto_repair,
+        check_script="scripts/check_identity_broadcast_migration_closure.py",
+        status_field="identity_broadcast_migration_closure_status",
+        closure_label="broadcast delivery",
+        workspace_runtime_only=True,
+        repair_executor=lambda identity_id: _run_broadcast_delivery_convergence_rollout(
+            identity_id=identity_id,
+            catalog=str(catalog),
+            work_layer="instance",
+            source_layer=_infer_source_domain_from_catalog(str(catalog)),
+        ),
+    )
+
+
+def _enforce_identity_communication_transport_closure(
+    *,
+    catalog: str,
+    repo_catalog: str,
+    operation: str,
+    auto_repair: bool,
+) -> int:
+    return _enforce_workspace_migration_closure(
+        catalog=catalog,
+        repo_catalog=repo_catalog,
+        operation=operation,
+        auto_repair=auto_repair,
+        check_script="scripts/check_identity_communication_transport_closure.py",
+        status_field="identity_communication_transport_closure_status",
+        closure_label="identity communication transport",
+        workspace_runtime_only=True,
+        repair_executor=lambda identity_id: _run_communication_transport_convergence_rollout(
+            identity_id=identity_id,
+            catalog=str(catalog),
+            work_layer="instance",
+            source_layer=_infer_source_domain_from_catalog(str(catalog)),
+        ),
+    )
 
 
 def _runtime_mode_guard(
@@ -2372,6 +2595,22 @@ def main() -> int:
         )
         if rc_unique_entry_migration != 0:
             return rc_unique_entry_migration
+        rc_broadcast_migration = _enforce_identity_broadcast_migration_closure(
+            catalog=args.catalog,
+            repo_catalog=args.repo_catalog,
+            operation="validate",
+            auto_repair=False,
+        )
+        if rc_broadcast_migration != 0:
+            return rc_broadcast_migration
+        rc_communication_transport = _enforce_identity_communication_transport_closure(
+            catalog=args.catalog,
+            repo_catalog=args.repo_catalog,
+            operation="validate",
+            auto_repair=False,
+        )
+        if rc_communication_transport != 0:
+            return rc_communication_transport
         checks = [
             ["python3", "scripts/validate_identity_scope_resolution.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
             ["python3", "scripts/validate_identity_scope_isolation.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
@@ -3750,6 +3989,22 @@ def main() -> int:
         if rc != 0:
             return rc
         rc = _enforce_unique_entry_migration_closure(
+            catalog=args.catalog,
+            repo_catalog=args.repo_catalog,
+            operation="update",
+            auto_repair=True,
+        )
+        if rc != 0:
+            return rc
+        rc = _enforce_identity_broadcast_migration_closure(
+            catalog=args.catalog,
+            repo_catalog=args.repo_catalog,
+            operation="update",
+            auto_repair=True,
+        )
+        if rc != 0:
+            return rc
+        rc = _enforce_identity_communication_transport_closure(
             catalog=args.catalog,
             repo_catalog=args.repo_catalog,
             operation="update",

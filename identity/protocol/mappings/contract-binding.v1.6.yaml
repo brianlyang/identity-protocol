@@ -4,8 +4,8 @@ _meta:
   schema_version: 1
   source_layer: protocol
   lifecycle_state: phase6_full_requirement_projection
-  last_updated_utc: "2026-03-23T13:20:00Z"
-  row_count: 52
+  last_updated_utc: "2026-03-24T00:00:00Z"
+  row_count: 54
   notes:
     - "Phase-1 mapping seed for ASB16-RQ-017..022/030."
     - "Phase-2 extension adds prompt-kernel rows for ASB16-RQ-014/015/027/031."
@@ -24,6 +24,7 @@ _meta:
     - "2026-03-22 motherline freeze adds RQ-047 for no-downgrade / no-backstop / no backward-compatibility enforcement."
     - "2026-03-23 v1.6.18 dialogue-retention landing adds RQ-051 for raw dialogue truth mirroring, delivery-hook bridge, and governed runtime validation."
     - "2026-03-23 v1.6.18 whole-matrix routing closure adds RQ-052 for protocol-owned artifact-family routing enforcement across the frozen eight-family matrix."
+    - "2026-03-24 v1.6.20 broadcast/transport convergence adds RQ-053 dedicated broadcast-delivery adoption and RQ-054 aggregate identity-communication-transport closure."
     - "Rows intentionally use canonical five-link tuple fields required by governance 4.15."
     - "Validator scripts referenced here may be planned-only until implementation commits land."
 
@@ -1640,3 +1641,86 @@ asb16-rq-052:
     - IP-AFR-003
     - IP-AFR-004
   mapping_state: phase6_v1618_artifact_family_routing_whole_matrix_closure
+asb16-rq-053:
+  requirement_id: ASB16-RQ-053
+  kernel_contract_id: rq_053_identity_broadcast_delivery_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_053_identity_broadcast_delivery_contract_v1
+  validator_ids:
+    - scripts/validate_identity_broadcast_delivery.py
+    - scripts/run_identity_broadcast_delivery.py
+    - scripts/check_identity_broadcast_migration_closure.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - ci
+  governance_anchor: docs/governance/identity-broadcast-communication-convergence-governance-v1.6.20.md#41-asb16-rq-053-broadcast-delivery-machine-closure-landed
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.20-broadcast-communication-convergence.md#21-asb16-rq-053-broadcast-delivery-remediation-landed
+  report_field_refs:
+    - identity_broadcast_delivery_status
+    - broadcast_contract_status
+    - broadcast_runtime_contract_status
+    - broadcast_source_status
+    - broadcast_state_status
+    - broadcast_delivery_sync_status
+    - broadcast_projection_parity_status
+    - broadcast_visible_count
+    - broadcast_unread_count
+    - broadcast_pending_ack_count
+    - broadcast_critical_unacked_count
+    - visible_ids
+    - unread_ids
+    - pending_ack_ids
+    - critical_unacked_ids
+    - broadcast_state_file
+    - broadcast_receipt_path
+    - stale_reasons
+    - error_code
+  error_code_refs:
+    - IP-GATE-BCAST-DELIVERY-001
+    - IP-GATE-BCAST-DELIVERY-002
+    - IP-GATE-BCAST-DELIVERY-003
+  mapping_state: phase6_v1620_broadcast_delivery_machine_closure
+
+asb16-rq-054:
+  requirement_id: ASB16-RQ-054
+  kernel_contract_id: rq_054_identity_communication_transport_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_054_identity_communication_transport_contract_v1
+  validator_ids:
+    - scripts/validate_identity_communication_transport.py
+    - scripts/run_identity_communication_transport.py
+    - scripts/check_identity_communication_transport_closure.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - ci
+  governance_anchor: docs/governance/identity-broadcast-communication-convergence-governance-v1.6.20.md#42-asb16-rq-054-identity-communication-transport-machine-closure-landed
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.20-broadcast-communication-convergence.md#22-asb16-rq-054-identity-communication-transport-remediation-landed
+  report_field_refs:
+    - identity_communication_transport_status
+    - communication_contract_status
+    - communication_runtime_roots_status
+    - handoff_transport_status
+    - collaboration_transport_status
+    - protocol_feedback_reply_transport_status
+    - protocol_feedback_inbox_transport_status
+    - protocol_feedback_atomic_transport_status
+    - broadcast_transport_status
+    - transport_rows
+    - identity_communication_transport_run_status
+    - broadcast_sync_executor_status
+    - atomic_emit_bootstrap_status
+    - transport_projection_status
+    - stale_reasons
+    - error_code
+  error_code_refs:
+    - IP-COMM-001
+    - IP-COMM-002
+    - IP-COMM-003
+    - IP-COMM-004
+    - IP-COMM-005
+  mapping_state: phase6_v1620_communication_transport_machine_closure
+

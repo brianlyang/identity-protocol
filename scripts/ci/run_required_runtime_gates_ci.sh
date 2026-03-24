@@ -38,6 +38,8 @@ run_global_protocol_gates() {
   run_cmd bash scripts/ci/run_identity_context_continuity_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_dialogue_retention_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_artifact_family_routing_probes_ci.sh
+  run_cmd bash scripts/ci/run_identity_broadcast_delivery_probes_ci.sh
+  run_cmd bash scripts/ci/run_identity_communication_transport_probes_ci.sh
   run_cmd bash scripts/ci/run_executable_surface_runtime_literal_lock_probes_ci.sh
   run_cmd python3 scripts/validate_executable_surface_runtime_literal_lock.py --catalog "${CATALOG_PATH}" --include-active-pack-scripts --json-only
   run_cmd bash scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh
@@ -51,6 +53,8 @@ run_global_protocol_gates() {
   run_cmd bash scripts/ci/run_identity_codex_launcher_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh
   run_cmd python3 scripts/check_identity_codex_launcher_migration_closure.py --catalog "${CATALOG_PATH}" --workspace-runtime-only --json-only
+  run_cmd python3 scripts/check_identity_broadcast_migration_closure.py --catalog "${CATALOG_PATH}" --workspace-runtime-only --json-only
+  run_cmd python3 scripts/check_identity_communication_transport_closure.py --catalog "${CATALOG_PATH}" --workspace-runtime-only --json-only
   run_cmd python3 scripts/validate_runtime_catalog_metadata_hygiene.py --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --require-active --json-only
   run_cmd python3 scripts/validate_identity_instance_script_cross_pack_adoption.py --catalog "${CATALOG_PATH}" --json-only
   run_cmd python3 scripts/validate_gateway_wrapper_trust_boundary_cross_cwd.py --json-only
@@ -89,6 +93,8 @@ for ID in ${IDS}; do
   python3 scripts/validate_identity_context_continuity_receipts.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --json-only
   python3 scripts/validate_identity_dialogue_retention.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --json-only
   python3 scripts/validate_identity_artifact_family_routing.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --operation ci --json-only
+  python3 scripts/validate_identity_broadcast_delivery.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --json-only
+  python3 scripts/validate_identity_communication_transport.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --json-only
   python3 scripts/validate_identity_prompt_quality.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --scope AUTO
   python3 scripts/validate_identity_role_binding.py --identity-id "$ID" --catalog "${CATALOG_PATH}"
   python3 scripts/validate_identity_home_catalog_alignment.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --identity-home "$CATALOG_PARENT"

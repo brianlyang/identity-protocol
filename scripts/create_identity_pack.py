@@ -44,6 +44,7 @@ from protocol_infra_contract import (
     HOST_GATEWAY_BROADCAST_STATE_FILE as INFRA_HOST_GATEWAY_BROADCAST_STATE_FILE,
     HOST_GATEWAY_CONTRACT_ID as INFRA_HOST_GATEWAY_CONTRACT_ID,
     HOST_GATEWAY_CONTRACT_KEY as INFRA_HOST_GATEWAY_CONTRACT_KEY,
+    HOST_GATEWAY_CONTRACT_KEYS as INFRA_HOST_GATEWAY_CONTRACT_KEYS,
     HOST_GATEWAY_EGRESS_GRANT_MAX_AGE_SECONDS as INFRA_HOST_GATEWAY_EGRESS_GRANT_MAX_AGE_SECONDS,
     HOST_GATEWAY_INGRESS_DISPATCH_TOKEN as INFRA_HOST_GATEWAY_INGRESS_DISPATCH_TOKEN,
     HOST_GATEWAY_INGRESS_PROOF_MAX_AGE_SECONDS as INFRA_HOST_GATEWAY_INGRESS_PROOF_MAX_AGE_SECONDS,
@@ -226,6 +227,7 @@ UNIQUE_INGRESS_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
 UNIQUE_EGRESS_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
 HOST_GATEWAY_CONTRACT_KEY = INFRA_HOST_GATEWAY_CONTRACT_KEY
 HOST_GATEWAY_CONTRACT_ID = INFRA_HOST_GATEWAY_CONTRACT_ID
+HOST_GATEWAY_CONTRACT_KEYS = tuple(INFRA_HOST_GATEWAY_CONTRACT_KEYS)
 HOST_GATEWAY_REQUIRED_DISPATCH_MODE = INFRA_HOST_GATEWAY_REQUIRED_DISPATCH_MODE
 HOST_GATEWAY_REQUIRED_RELEASE_MODE = INFRA_HOST_GATEWAY_REQUIRED_RELEASE_MODE
 HOST_GATEWAY_INGRESS_DISPATCH_TOKEN = INFRA_HOST_GATEWAY_INGRESS_DISPATCH_TOKEN
@@ -949,7 +951,9 @@ def _instance_pack_topology_contract_skeleton(identity_id: str) -> dict:
             f"runtime/logs/upgrade/{identity_id}",
             "runtime/metrics",
             "runtime/protocol-feedback",  # downsink-path-lock: allow-nonregistry-literal
+            "runtime/protocol-feedback/atomic",  # downsink-path-lock: allow-nonregistry-literal
             "runtime/protocol-feedback/evidence-index",  # downsink-path-lock: allow-nonregistry-literal
+            "runtime/protocol-feedback/inbox-from-protocol",  # downsink-path-lock: allow-nonregistry-literal
             "runtime/protocol-feedback/outbox-to-protocol",  # downsink-path-lock: allow-nonregistry-literal
             "runtime/protocol-feedback/review-notes",  # review-note archives remain governed runtime evidence
             "runtime/protocol-feedback/review-notes/*",
@@ -1230,7 +1234,7 @@ def _instance_protocol_split_receipt_contract_skeleton() -> dict:
 
 def _protocol_feedback_reply_channel_contract_skeleton() -> dict:
     return {
-        "required": False,
+        "required": True,
         "outbox_dir": "runtime/protocol-feedback/outbox-to-protocol",  # downsink-path-lock: allow-nonregistry-literal
         "primary_outbox_glob": "runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_*.md",
         "required_index_path": "runtime/protocol-feedback/evidence-index/INDEX.md",
@@ -1240,7 +1244,7 @@ def _protocol_feedback_reply_channel_contract_skeleton() -> dict:
 
 def _protocol_feedback_inbox_channel_contract_skeleton() -> dict:
     return {
-        "required": False,
+        "required": True,
         "inbox_dir": "runtime/protocol-feedback/inbox-from-protocol",  # downsink-path-lock: allow-nonregistry-literal
         "primary_inbox_glob": "runtime/protocol-feedback/inbox-from-protocol/PROTOCOL_INBOX_*.md",
         "required_index_path": "runtime/protocol-feedback/evidence-index/INDEX.md",
@@ -1255,6 +1259,151 @@ def _protocol_feedback_sidecar_contract_skeleton() -> dict:
         "blocking_error_prefixes": ["IP-WRB-", "IP-SEM-", "IP-PFB-"],
         "escalation_policy": "p0_governance_boundary",
         "enforcement_validator": "scripts/validate_protocol_feedback_sidecar_contract.py",
+    }
+
+
+def _agent_handoff_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "required_fields": [
+            "handoff_id",
+            "task_id",
+            "from_agent",
+            "to_agent",
+            "input_scope",
+            "actions_taken",
+            "artifacts",
+            "result",
+            "next_action",
+            "rulebook_update",
+        ],
+        "forbidden_mutations": [
+            "gates",
+            "protocol_review_contract",
+            "identity_update_lifecycle_contract",
+            "trigger_regression_contract",
+        ],
+        "handoff_log_path_pattern": "identity/runtime/logs/handoff/*.json",
+        "minimum_logs_required": 1,
+        "require_generated_at": True,
+        "max_log_age_days": 7,
+        "enforce_task_id_match": True,
+        "require_identity_id_match": True,
+        "sample_log_path_pattern": "identity/runtime/examples/handoff",
+        "result_enum": ["PASS", "FAIL", "BLOCKED"],
+        "self_test_required": True,
+        "validator": "scripts/validate_agent_handoff_contract.py",
+    }
+
+
+def _collaboration_trigger_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "hard_rule": "If human collaboration blockers are detected, notify immediately and emit chat receipt",
+        "trigger_conditions": list(CANONICAL_BLOCKER_TYPES),
+        "notify_channel": "ops-notification-router",
+        "dedupe_window_hours": 24,
+        "state_change_bypass_dedupe": True,
+        "must_emit_receipt_in_chat": True,
+        "receipt_required_fields": [
+            "event_id",
+            "blocker_type",
+            "notified_at",
+            "channel",
+            "dedupe_key",
+            "status",
+        ],
+        "evidence_log_path_pattern": "identity/runtime/logs/collaboration/*.json",
+        "minimum_evidence_logs_required": 1,
+        "max_log_age_days": 7,
+        "validator": "scripts/validate_identity_collab_trigger.py",
+        "notify_policy": "must_notify_when_human_required",
+        "notify_timing": "immediate",
+        "decision_basis": "role_requirement",
+    }
+
+
+def _identity_broadcast_delivery_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "contract_id": "rq_053_identity_broadcast_delivery_contract_v1",
+        "validator": "scripts/validate_identity_broadcast_delivery.py",
+        "sync_executor": "scripts/run_identity_broadcast_delivery.py",
+        "migration_closure_checker": "scripts/check_identity_broadcast_migration_closure.py",
+        "host_gateway_contract_keys": list(HOST_GATEWAY_CONTRACT_KEYS),
+        "required_report_fields": [
+            "identity_broadcast_delivery_status",
+            "broadcast_contract_status",
+            "broadcast_runtime_contract_status",
+            "broadcast_source_status",
+            "broadcast_state_status",
+            "broadcast_delivery_sync_status",
+            "broadcast_projection_parity_status",
+            "broadcast_visible_count",
+            "broadcast_unread_count",
+            "broadcast_pending_ack_count",
+            "broadcast_critical_unacked_count",
+            "visible_ids",
+            "unread_ids",
+            "pending_ack_ids",
+            "critical_unacked_ids",
+            "stale_reasons",
+            "error_code",
+        ],
+        "write_delivery_receipt": True,
+        "sync_marks_visibility_as_read": True,
+        "sync_does_not_ack_pending": True,
+        "broadcast_family_boundary": "delivery_and_projection_only",
+    }
+
+
+def _identity_communication_transport_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "contract_id": "rq_054_identity_communication_transport_contract_v1",
+        "validator": "scripts/validate_identity_communication_transport.py",
+        "convergence_executor": "scripts/run_identity_communication_transport.py",
+        "migration_closure_checker": "scripts/check_identity_communication_transport_closure.py",
+        "required_component_contract_keys": [
+            "agent_handoff_contract",
+            "collaboration_trigger_contract",
+            "protocol_feedback_atomic_emit_contract_v1",
+            "protocol_feedback_canonical_reply_channel_contract_v1",
+            "protocol_feedback_canonical_inbox_channel_contract_v1",
+            "identity_broadcast_delivery_contract_v1",
+        ],
+        "required_runtime_roots": [
+            "runtime/logs/handoff",
+            "runtime/logs/collaboration",
+            "runtime/protocol-feedback/outbox-to-protocol",
+            "runtime/protocol-feedback/inbox-from-protocol",
+            "runtime/protocol-feedback/evidence-index",
+            "runtime/protocol-feedback/atomic",  # downsink-path-lock: allow-nonregistry-literal
+        ],
+        "required_live_bootstrap_steps": [
+            "broadcast_delivery_sync",
+            "protocol_feedback_atomic_emit",
+        ],
+        "required_report_fields": [
+            "identity_communication_transport_status",
+            "communication_contract_status",
+            "communication_runtime_roots_status",
+            "handoff_transport_status",
+            "collaboration_transport_status",
+            "protocol_feedback_reply_transport_status",
+            "protocol_feedback_inbox_transport_status",
+            "protocol_feedback_atomic_transport_status",
+            "broadcast_transport_status",
+            "transport_rows",
+            "stale_reasons",
+            "error_code",
+        ],
+        "transport_scope": "identity_communication_transport",
+        "forbidden_semantic_collapse": [
+            "strict_identity_to_identity_only",
+            "protocol_feedback_as_memory_sink",
+            "broadcast_as_feedback_reply_alias",
+        ],
     }
 
 
@@ -2597,6 +2746,10 @@ def _ensure_intake_p1_contracts(task: dict, identity_id: str) -> dict:
 
 def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> dict:
     defaults = {
+        "agent_handoff_contract": _agent_handoff_contract_skeleton(),
+        "collaboration_trigger_contract": _collaboration_trigger_contract_skeleton(),
+        "identity_broadcast_delivery_contract_v1": _identity_broadcast_delivery_contract_skeleton(),
+        "identity_communication_transport_contract_v1": _identity_communication_transport_contract_skeleton(),
         "release_unlock_formula_automation_contract_v1": _release_unlock_formula_contract_skeleton(),
         "release_plane_cloud_evidence_contract_v1": _release_plane_cloud_evidence_contract_skeleton(),
         "cross_cwd_absolute_input_contract_v1": _cross_cwd_absolute_input_contract_skeleton(),
@@ -6132,6 +6285,8 @@ def _default_required_checks() -> list[str]:
         INSTANCE_SCRIPT_ORCHESTRATION_VALIDATOR_ID,
         INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID,
         INSTANCE_SCRIPT_EXECUTION_LANE_VALIDATOR_ID,
+        "scripts/validate_identity_broadcast_delivery.py",
+        "scripts/validate_identity_communication_transport.py",
         CONTEXT_CONTINUITY_VALIDATOR_ID,
         REENTRY_BRIEF_VALIDATOR_ID,
         REENTRY_CONSUMPTION_VALIDATOR_ID,
@@ -6402,37 +6557,7 @@ def _neutral_full_contract_current_task(
         "rulebook_update_required": True,
         "rulebook_link_field": "evidence_run_id",
     }
-    task["agent_handoff_contract"] = {
-        "required": True,
-        "required_fields": [
-            "handoff_id",
-            "task_id",
-            "from_agent",
-            "to_agent",
-            "input_scope",
-            "actions_taken",
-            "artifacts",
-            "result",
-            "next_action",
-            "rulebook_update",
-        ],
-        "forbidden_mutations": [
-            "gates",
-            "protocol_review_contract",
-            "identity_update_lifecycle_contract",
-            "trigger_regression_contract",
-        ],
-        "handoff_log_path_pattern": "identity/runtime/logs/handoff/*.json",
-        "minimum_logs_required": 1,
-        "require_generated_at": True,
-        "max_log_age_days": 7,
-        "enforce_task_id_match": True,
-        "require_identity_id_match": True,
-        "sample_log_path_pattern": "identity/runtime/examples/handoff",
-        "result_enum": ["PASS", "FAIL", "BLOCKED"],
-        "self_test_required": True,
-        "validator": "scripts/validate_agent_handoff_contract.py",
-    }
+    task["agent_handoff_contract"] = _agent_handoff_contract_skeleton()
     task["blocker_taxonomy_contract"] = {
         "required": True,
         "required_blocker_types": list(CANONICAL_BLOCKER_TYPES),
@@ -6446,32 +6571,7 @@ def _neutral_full_contract_current_task(
         ],
         "fail_action": "block_merge_and_reenter_collaboration_update",
     }
-    task["collaboration_trigger_contract"] = {
-        "required": True,
-        "hard_rule": (
-            "If human collaboration blockers are detected, notify immediately and emit chat receipt"
-        ),
-        "trigger_conditions": list(CANONICAL_BLOCKER_TYPES),
-        "notify_channel": "ops-notification-router",
-        "dedupe_window_hours": 24,
-        "state_change_bypass_dedupe": True,
-        "must_emit_receipt_in_chat": True,
-        "receipt_required_fields": [
-            "event_id",
-            "blocker_type",
-            "notified_at",
-            "channel",
-            "dedupe_key",
-            "status",
-        ],
-        "evidence_log_path_pattern": "identity/runtime/logs/collaboration/*.json",
-        "minimum_evidence_logs_required": 1,
-        "max_log_age_days": 7,
-        "validator": "scripts/validate_identity_collab_trigger.py",
-        "notify_policy": "must_notify_when_human_required",
-        "notify_timing": "immediate",
-        "decision_basis": "role_requirement",
-    }
+    task["collaboration_trigger_contract"] = _collaboration_trigger_contract_skeleton()
     task["capability_orchestration_contract"] = {
         "required": True,
         "task_type_routes": {
