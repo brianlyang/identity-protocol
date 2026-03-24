@@ -1,10 +1,11 @@
-# Identity Prompt Bootstrap Contract (v1.6 draft)
+# Identity Prompt Bootstrap Contract
 
 ## Scope and non-goals
 
-1. This file is a protocol-kernel prompt contract source for v1.6.
+1. This file is the protocol-kernel prompt contract source for governed prompt bootstrap.
 2. It is not a runtime artifact and must not be consumed as `pack_path/IDENTITY_PROMPT.md`.
 3. Runtime `IDENTITY_PROMPT.md` remains a compiled pack-level artifact.
+4. Stream/release labels, when referenced for governance history, are freeze markers rather than philosophical sources of identity protocol existence.
 
 ## Foundational design philosophy anchor
 
@@ -32,12 +33,13 @@ Derived output target:
 
 ## Versioning and ownership
 
-1. Contract stream: `v1.6.x` (contract-first, replay-locked).
+1. Contract stream: current governed release line (contract-first, replay-locked).
 2. Owner lane: `work_layer=protocol` only.
 3. Update mode:
    - event-driven updates are mandatory when base protocol capability contracts change,
    - periodic hygiene refresh is mandatory at least once per release cycle.
 4. Runtime lane must not mutate this file directly.
+5. Any stream/release labeling records governance-era freezing only; it must not be interpreted as a root-law source superior to `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`.
 
 ## Contract anchors
 

@@ -1,4 +1,4 @@
-# Identity Discovery Contract (v1.1 draft)
+# Identity Discovery Contract
 
 ## Purpose
 

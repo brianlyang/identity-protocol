@@ -1,9 +1,9 @@
-# Identity Protocol v1.6.14 (draft)
+# Identity Protocol
 
-## Normative source map (v1.6 stream execution)
+## Normative source map (current governed execution)
 
 This file is kept as protocol overview/baseline context.  
-For active governance execution in v1.6 lanes, normative sources are:
+For active governed execution, normative sources are:
 
 1. Historical motherline baseline:
    - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`

@@ -1,4 +1,4 @@
-# Agent Handoff Contract v1.2.9 (draft)
+# Agent Handoff Contract
 
 ## Purpose
 
@@ -85,7 +85,7 @@ The following are contract violations:
 
 ---
 
-## Production + sample dual-track validation (new in v1.2.9)
+## Production + sample dual-track validation
 
 Handoff validation must run in two tracks:
 

@@ -2,7 +2,7 @@
 
 ## Document Positioning
 
-This document is not an implementation note for any single `v1.6.x` stream, and it is not a machine-consumed contract file whose fields are directly parsed by validators, probes, launchers, or runtime gates.
+This document is not an implementation note for any single stream or release line, and it is not a machine-consumed contract file whose fields are directly parsed by validators, probes, launchers, or runtime gates.
 
 Its role is:
 
@@ -63,6 +63,7 @@ Interpretive rule:
 3. it must not override canonical runtime truth sources;
 4. when executable prompt behavior is being decided, the relevant contract file remains authoritative over this philosophy text.
 5. philosophical primacy does not mean runtime-source primacy; this document is the generative reason for protocol law, while machine-consumed authority still lives in frozen contracts, mappings, validators, runtime state, and receipts.
+6. current validator/probe/runtime verdicts must not be reverse-projected back into philosophy as if the latest machine judgement were the source of bottom theory.
 
 ---
 

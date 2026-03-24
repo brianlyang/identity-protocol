@@ -104,6 +104,25 @@ If two layers seem to disagree, resolve them with the following discipline:
 
 ---
 
+## Root maintenance guardrails
+
+When root protocol files are authored or updated, the following guardrails must remain explicit:
+
+1. **stream/version is manifestation, not origin**
+   - stream or release labels mark governed freeze history;
+   - they do not become the philosophical source of protocol existence;
+   - no root contract should be written as if a stream label were prior to bottom theory.
+2. **machine verdict is adjudication, not philosophy source**
+   - validators, probes, mappings, runtime state, and receipts determine current machine verdict;
+   - they do not retroactively define the meaning of design philosophy;
+   - philosophy explains why law has the shape it has, while machine-consumed surfaces decide current-turn legality.
+3. **root contracts must preserve layer clarity**
+   - each root contract should state what bottom-theory commitments it inherits;
+   - each root contract should also state which concrete law it freezes;
+   - no root contract should blur philosophical grounding, contract freezing, and runtime-source authority into one layer.
+
+---
+
 ## Machine-world entry summary
 
 If a machine-governed participant enters `identity/protocol/` and needs the minimum correct path:
