@@ -265,9 +265,10 @@ The additive `v1.6.19` stream should remain open and should now be documented as
 
 ### 5.2 What remains open
 
-1. sample-family strict-lane verdict tightening,
-2. loop semantic-center vs live-bridge split,
-3. same-run binding where freshness-only gates are insufficient.
+1. real current-run sample-family producer coverage on applicable runtime identities,
+2. real current-run route/loop evidence producer coverage on applicable runtime identities,
+3. real current-run feedback/log join producer coverage on applicable runtime identities,
+4. and strict wording hygiene so hermetic closure proof is never misreported as real-runtime closure.
 
 ### 5.3 Machine-law landing target ASB16-RQ-055 (2026-03-24)
 
@@ -307,7 +308,39 @@ The next additive strengthening is now also landed:
 3. `scripts/validate_identity_weak_live_linkage.py` now sees the prompt family as `full_operational_closure` on real replayed identities where current-run prompt binding is actually present;
 4. `rq_055` therefore continues to stay open for the right reason: sample, loop, and latest-log closure are still incomplete, but prompt presence is no longer silently misclassified as current-run linkage.
 
-### 5.7 What must not happen
+### 5.7 Loop-family live-bridge absorption landed (2026-03-24)
+
+The next additive strengthening is now also landed:
+
+1. `scripts/capability_fit_roundtable_common.py` and `scripts/route_live_bridge_common.py` now freeze a shared route-side live-bridge interpretation rather than letting routing payloads echo field-name placeholders;
+2. `scripts/feedback_current_run_binding_common.py` now freezes one shared feedback/log join interpretation that both the loopback validator and latest-log lane can reuse;
+3. `scripts/validate_identity_routing_learning_strengthening.py` now emits `selected_candidate_receipt_ref`, `roundtable_receipt_ref`, and `route_live_binding_status`;
+4. `scripts/validate_feedback_to_judgement_loopback.py` now emits `operational_prompt_receipt_ref`, `feedback_run_id`, `preflight_reentry_receipt_ref`, and `loopback_live_binding_status`;
+5. `scripts/validate_identity_weak_live_linkage.py` now consumes those live projections directly instead of inferring loop liveness from semantic-center green plus placeholder fields.
+
+Review boundary:
+
+1. hermetic probe can now drive the loop family to `full_operational_closure` when the route/feedback live receipts are explicitly seeded;
+2. this must **not** be rewritten as “real runtime identities already reached `loop_meta_only` or full closure”;
+3. real runtime closure still depends on the per-identity payload emitted by that identity's actual run.
+
+### 5.8 Latest-log same-run binding hardening landed (2026-03-24)
+
+The next additive strengthening is now also landed:
+
+1. `scripts/validate_identity_experience_feedback_governance.py` now emits `required_run_id`, `latest_feedback_run_id_match_status`, and `operational_prompt_run_join_status` as machine-readable payload fields;
+2. freshness and same-run join are now machine-separate rather than narratively collapsed;
+3. the freshest identity-scoped feedback log is now selected through one shared helper-backed rule, preventing lexicographic filename drift between the governance validator and the shared current-run binding projection;
+4. `scripts/validate_identity_weak_live_linkage.py` now consumes that split directly for the `latest_log_no_run_binding` family;
+5. hermetic probe can now drive the latest-log family to `full_operational_closure` when current-run feedback receipts are explicitly seeded.
+
+Review boundary:
+
+1. freshness-only PASS remains valid and preserved;
+2. same-run join failure stays visible even when freshness is green;
+3. hermetic full closure is proof of shared infrastructure capability, not automatic proof of real-runtime adoption.
+
+### 5.9 What must not happen
 
 1. no pack-local fixes,
 2. no validator loosening,

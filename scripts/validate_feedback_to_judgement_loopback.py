@@ -57,6 +57,13 @@ def main() -> int:
             "conflict_demotion_status": STATUS_FAIL_REQUIRED,
             "negative_feedback_writeback_status": STATUS_FAIL_REQUIRED,
             "loopback_roundtrip_status": STATUS_FAIL_REQUIRED,
+            "operational_prompt_receipt_ref": "",
+            "feedback_run_id": "",
+            "preflight_reentry_receipt_ref": "",
+            "loopback_live_binding_status": STATUS_FAIL_REQUIRED,
+            "latest_feedback_run_id_match_status": STATUS_FAIL_REQUIRED,
+            "operational_prompt_run_join_status": STATUS_FAIL_REQUIRED,
+            "loopback_live_binding_reasons": [f"current_task_resolve_failed:{type(exc).__name__}"],
             "stale_reasons": [f"current_task_resolve_failed:{type(exc).__name__}"],
             "error_code": ERR_FEEDBACK_TO_JUDGEMENT_LOOPBACK_INVALID,
         }

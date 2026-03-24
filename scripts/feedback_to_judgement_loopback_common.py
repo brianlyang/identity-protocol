@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
+
+from feedback_current_run_binding_common import derive_feedback_current_run_binding_projection
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -313,4 +316,56 @@ def inspect_feedback_to_judgement_loopback(
         "stale_reasons": stale_reasons,
         "error_code": "" if overall_status != STATUS_FAIL_REQUIRED else ERR_FEEDBACK_TO_JUDGEMENT_LOOPBACK_INVALID,
     }
+    feedback_live_projection: dict[str, Any] = {}
+    task_token = _clean_str(task_path)
+    if task_token:
+        feedback_live_projection = derive_feedback_current_run_binding_projection(
+            pack_root=Path(task_token).expanduser().resolve().parent,
+            identity_id=_clean_str(identity_id),
+            contract_doc=feedback if isinstance(feedback, dict) else {},
+        )
+    else:
+        feedback_live_projection = {
+            "required_run_id": "",
+            "current_run_pointer": "",
+            "current_run_report_path": "",
+            "latest_feedback_log": "",
+            "latest_feedback_log_age_days": None,
+            "report_freshness_status": STATUS_FAIL_REQUIRED,
+            "latest_feedback_run_id": "",
+            "latest_feedback_run_id_match_status": STATUS_FAIL_REQUIRED,
+            "latest_feedback_same_run_binding_status": STATUS_FAIL_REQUIRED,
+            "operational_prompt_receipt_ref": "",
+            "operational_prompt_run_join_status": STATUS_FAIL_REQUIRED,
+            "feedback_run_id": "",
+            "preflight_reentry_receipt_ref": "",
+            "loopback_live_binding_status": STATUS_FAIL_REQUIRED,
+            "feedback_replay_status": "",
+            "evidence_origin": "missing",
+            "stale_reasons": ["task_path_missing_for_feedback_live_projection"],
+        }
+    payload.update(
+        {
+            "operational_prompt_receipt_ref": _clean_str(feedback_live_projection.get("operational_prompt_receipt_ref")),
+            "feedback_run_id": _clean_str(feedback_live_projection.get("feedback_run_id")),
+            "preflight_reentry_receipt_ref": _clean_str(feedback_live_projection.get("preflight_reentry_receipt_ref")),
+            "loopback_live_binding_status": _normalize_status(
+                feedback_live_projection.get("loopback_live_binding_status"),
+                default=STATUS_FAIL_REQUIRED,
+            ),
+            "latest_feedback_run_id_match_status": _normalize_status(
+                feedback_live_projection.get("latest_feedback_run_id_match_status"),
+                default=STATUS_FAIL_REQUIRED,
+            ),
+            "operational_prompt_run_join_status": _normalize_status(
+                feedback_live_projection.get("operational_prompt_run_join_status"),
+                default=STATUS_FAIL_REQUIRED,
+            ),
+            "loopback_live_binding_reasons": [
+                _clean_str(reason)
+                for reason in (feedback_live_projection.get("stale_reasons") or [])
+                if _clean_str(reason)
+            ],
+        }
+    )
     return payload

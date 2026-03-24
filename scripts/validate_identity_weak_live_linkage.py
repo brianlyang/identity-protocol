@@ -4,7 +4,6 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -82,12 +81,6 @@ LOOPBACK_FIELDS: tuple[str, ...] = (
     "preflight_reentry_receipt_ref",
     "loopback_live_binding_status",
 )
-LATEST_LOG_BINDING_FIELDS: tuple[str, ...] = (
-    "required_run_id",
-    "latest_feedback_run_id_match_status",
-    "operational_prompt_run_join_status",
-)
-
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
@@ -574,23 +567,38 @@ def _loop_family(
     selected_candidate_id = clean_string(routing_payload.get("selected_candidate_id"))
     selection_basis = clean_string(routing_payload.get("selection_basis"))
     placeholder_projection = selected_candidate_id == "selected_candidate_id" or selection_basis == "selection_basis"
-    semantic_center_status = STATUS_PASS_REQUIRED if routing.get("status") == STATUS_PASS_REQUIRED and loopback.get("status") == STATUS_PASS_REQUIRED else STATUS_FAIL_REQUIRED
-    roundtable_alignment_status = STATUS_PASS_REQUIRED if roundtable.get("status") in {STATUS_PASS_REQUIRED, STATUS_SKIPPED_NOT_REQUIRED} else STATUS_FAIL_REQUIRED
-    live_bridge_fields_present = False
-    if isinstance(route_enforcement, dict) and _all_fields_present([route_enforcement], LOOP_ROUTE_FIELDS):
-        live_bridge_fields_present = True
-    if isinstance(feedback_enforcement, dict) and _all_fields_present([feedback_enforcement], LOOPBACK_FIELDS):
-        live_bridge_fields_present = live_bridge_fields_present and True
-    else:
-        live_bridge_fields_present = False
-    live_bridge_status = STATUS_PASS_REQUIRED if not placeholder_projection and live_bridge_fields_present and roundtable.get("status") == STATUS_PASS_REQUIRED else STATUS_FAIL_REQUIRED
+    semantic_center_status = (
+        STATUS_PASS_REQUIRED
+        if routing.get("status") == STATUS_PASS_REQUIRED and loopback.get("status") == STATUS_PASS_REQUIRED
+        else STATUS_FAIL_REQUIRED
+    )
+    roundtable_alignment_status = (
+        clean_string(routing_payload.get("capability_fit_roundtable_status")).upper()
+        or clean_string(roundtable.get("status")).upper()
+        or STATUS_SKIPPED_NOT_REQUIRED
+    )
+    route_live_binding_status = clean_string(routing_payload.get("route_live_binding_status")).upper() or STATUS_FAIL_REQUIRED
+    loopback_live_binding_status = clean_string(loopback_payload.get("loopback_live_binding_status")).upper() or STATUS_FAIL_REQUIRED
+    live_bridge_status = (
+        STATUS_PASS_REQUIRED
+        if route_live_binding_status == STATUS_PASS_REQUIRED and loopback_live_binding_status == STATUS_PASS_REQUIRED
+        else STATUS_FAIL_REQUIRED
+    )
     reasons: list[str] = []
     if placeholder_projection:
         reasons.append("route_projection_reuses_field_name_placeholders")
-    if roundtable.get("status") != STATUS_PASS_REQUIRED:
+    if roundtable_alignment_status == STATUS_FAIL_REQUIRED:
         reasons.append("roundtable_live_evidence_not_consumed")
-    if not live_bridge_fields_present:
-        reasons.append("loop_live_bridge_fields_missing")
+    reasons.extend(
+        clean_string(reason)
+        for reason in (routing_payload.get("route_live_binding_reasons") or [])
+        if clean_string(reason)
+    )
+    reasons.extend(
+        clean_string(reason)
+        for reason in (loopback_payload.get("loopback_live_binding_reasons") or [])
+        if clean_string(reason)
+    )
     if semantic_center_status == STATUS_PASS_REQUIRED and live_bridge_status != STATUS_PASS_REQUIRED:
         reasons.append("semantic_center_green_without_live_bridge_consumption")
     return (
@@ -609,6 +617,13 @@ def _loop_family(
                 "roundtable_alignment_status": roundtable_alignment_status,
                 "selected_candidate_id": selected_candidate_id,
                 "selection_basis": selection_basis,
+                "selected_candidate_receipt_ref": clean_string(routing_payload.get("selected_candidate_receipt_ref")),
+                "roundtable_receipt_ref": clean_string(routing_payload.get("roundtable_receipt_ref")),
+                "route_live_binding_status": route_live_binding_status,
+                "operational_prompt_receipt_ref": clean_string(loopback_payload.get("operational_prompt_receipt_ref")),
+                "feedback_run_id": clean_string(loopback_payload.get("feedback_run_id")),
+                "preflight_reentry_receipt_ref": clean_string(loopback_payload.get("preflight_reentry_receipt_ref")),
+                "loopback_live_binding_status": loopback_live_binding_status,
             },
         ),
         routing,
@@ -617,58 +632,100 @@ def _loop_family(
     )
 
 
-def _latest_log_family(*, pack_root: Path, task_doc: dict[str, Any]) -> dict[str, Any]:
+def _latest_log_family(
+    *,
+    catalog_path: Path,
+    identity_id: str,
+    operation: str,
+    pack_root: Path,
+    task_doc: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
     feedback_contract = task_doc.get("experience_feedback_contract")
     if not isinstance(feedback_contract, dict):
-        return _family_result(
-            family="latest_log_no_run_binding",
-            applicable=False,
-            contract_status=STATUS_SKIPPED_NOT_REQUIRED,
-            artifact_status=STATUS_SKIPPED_NOT_REQUIRED,
-            run_binding_status=STATUS_SKIPPED_NOT_REQUIRED,
-            consumption_status=STATUS_SKIPPED_NOT_REQUIRED,
-            evidence_origin="not_applicable",
-            reasons=["experience_feedback_contract_missing"],
+        return (
+            _family_result(
+                family="latest_log_no_run_binding",
+                applicable=False,
+                contract_status=STATUS_SKIPPED_NOT_REQUIRED,
+                artifact_status=STATUS_SKIPPED_NOT_REQUIRED,
+                run_binding_status=STATUS_SKIPPED_NOT_REQUIRED,
+                consumption_status=STATUS_SKIPPED_NOT_REQUIRED,
+                evidence_origin="not_applicable",
+                reasons=["experience_feedback_contract_missing"],
+            ),
+            {},
         )
-    paths = _resolve_contract_paths(pack_root, feedback_contract)
-    feedback_logs = [path for path in paths if "/runtime/logs/feedback/" in path.as_posix()]
-    if not feedback_logs:
-        pattern = clean_string(feedback_contract.get("feedback_log_path_pattern"))
-        selected = resolve_report_path(report="", pattern=pattern, pack_root=pack_root) if pattern else None
-        if selected is not None and selected.exists():
-            feedback_logs = [selected]
-    artifact_status = STATUS_PASS_REQUIRED if feedback_logs else STATUS_FAIL_REQUIRED
-    latest_log = max(feedback_logs, key=lambda path: path.stat().st_mtime) if feedback_logs else None
-    max_age_days = int(feedback_contract.get("max_log_age_days") or 0)
-    freshness_pass = False
-    age_days = None
-    if latest_log is not None and max_age_days > 0:
-        age_seconds = max(0.0, datetime.now(timezone.utc).timestamp() - latest_log.stat().st_mtime)
-        age_days = round(age_seconds / 86400.0, 2)
-        freshness_pass = age_seconds <= (max_age_days * 86400)
-    run_binding_present = _all_fields_present([feedback_contract], LATEST_LOG_BINDING_FIELDS)
-    run_binding_status = STATUS_PASS_REQUIRED if freshness_pass and run_binding_present else STATUS_FAIL_REQUIRED
+
+    governance = _run_json_validator(
+        [
+            "python3",
+            "scripts/validate_identity_experience_feedback_governance.py",
+            "--catalog",
+            str(catalog_path),
+            "--identity-id",
+            identity_id,
+            "--report",
+            "",
+            "--json-only",
+        ],
+        "experience_feedback_governance_status",
+    )
+    governance_payload = governance.get("payload", {}) if isinstance(governance.get("payload"), dict) else {}
+    latest_feedback_log = clean_string(governance_payload.get("latest_feedback_log"))
+    artifact_status = STATUS_PASS_REQUIRED if latest_feedback_log else STATUS_FAIL_REQUIRED
+    freshness_status = clean_string(governance_payload.get("report_freshness_status")).upper() or STATUS_FAIL_REQUIRED
+    latest_feedback_run_id_match_status = (
+        clean_string(governance_payload.get("latest_feedback_run_id_match_status")).upper() or STATUS_FAIL_REQUIRED
+    )
+    operational_prompt_run_join_status = (
+        clean_string(governance_payload.get("operational_prompt_run_join_status")).upper() or STATUS_FAIL_REQUIRED
+    )
+    run_binding_status = (
+        STATUS_PASS_REQUIRED
+        if freshness_status == STATUS_PASS_REQUIRED
+        and latest_feedback_run_id_match_status == STATUS_PASS_REQUIRED
+        and operational_prompt_run_join_status == STATUS_PASS_REQUIRED
+        else STATUS_FAIL_REQUIRED
+    )
     reasons: list[str] = []
-    if latest_log is None:
+    if artifact_status != STATUS_PASS_REQUIRED:
         reasons.append("latest_feedback_log_missing")
-    elif not freshness_pass:
+    if freshness_status != STATUS_PASS_REQUIRED:
         reasons.append("latest_feedback_log_not_fresh_enough")
-    if not run_binding_present:
-        reasons.append("latest_feedback_same_run_binding_fields_missing")
-    return _family_result(
-        family="latest_log_no_run_binding",
-        applicable=True,
-        contract_status=STATUS_PASS_REQUIRED,
-        artifact_status=artifact_status,
-        run_binding_status=run_binding_status,
-        consumption_status=STATUS_FAIL_REQUIRED if run_binding_status != STATUS_PASS_REQUIRED else STATUS_PASS_REQUIRED,
-        evidence_origin="live_log" if latest_log else "missing",
-        reasons=reasons,
-        extra={
-            "latest_feedback_log": str(latest_log) if latest_log else "",
-            "latest_feedback_log_age_days": age_days,
-            "report_freshness_status": STATUS_PASS_REQUIRED if freshness_pass else STATUS_FAIL_REQUIRED,
-        },
+    if latest_feedback_run_id_match_status != STATUS_PASS_REQUIRED:
+        reasons.append("latest_feedback_run_id_not_matched_to_current_run")
+    if operational_prompt_run_join_status != STATUS_PASS_REQUIRED:
+        reasons.append("operational_prompt_not_joined_to_current_run")
+    reasons.extend(
+        clean_string(reason)
+        for reason in (governance_payload.get("stale_reasons") or [])
+        if clean_string(reason)
+    )
+    return (
+        _family_result(
+            family="latest_log_no_run_binding",
+            applicable=True,
+            contract_status=STATUS_PASS_REQUIRED,
+            artifact_status=artifact_status,
+            run_binding_status=run_binding_status,
+            consumption_status=STATUS_FAIL_REQUIRED if run_binding_status != STATUS_PASS_REQUIRED else STATUS_PASS_REQUIRED,
+            evidence_origin=clean_string(governance_payload.get("evidence_origin")) or ("live_log" if latest_feedback_log else "missing"),
+            reasons=sorted(set(reasons)),
+            extra={
+                "latest_feedback_log": latest_feedback_log,
+                "latest_feedback_log_age_days": governance_payload.get("latest_feedback_log_age_days"),
+                "report_freshness_status": freshness_status,
+                "required_run_id": clean_string(governance_payload.get("required_run_id")),
+                "latest_feedback_run_id_match_status": latest_feedback_run_id_match_status,
+                "operational_prompt_run_join_status": operational_prompt_run_join_status,
+                "operational_prompt_receipt_ref": clean_string(governance_payload.get("operational_prompt_receipt_ref")),
+                "feedback_run_id": clean_string(governance_payload.get("feedback_run_id")),
+                "preflight_reentry_receipt_ref": clean_string(governance_payload.get("preflight_reentry_receipt_ref")),
+                "loopback_live_binding_status": clean_string(governance_payload.get("loopback_live_binding_status")).upper()
+                or STATUS_FAIL_REQUIRED,
+            },
+        ),
+        governance,
     )
 
 
@@ -746,7 +803,13 @@ def main() -> int:
         operation=args.operation,
         task_doc=task_doc,
     )
-    latest_log_family = _latest_log_family(pack_root=pack_root, task_doc=task_doc)
+    latest_log_family, experience_feedback_governance = _latest_log_family(
+        catalog_path=catalog_path or Path(""),
+        identity_id=args.identity_id,
+        operation=args.operation,
+        pack_root=pack_root,
+        task_doc=task_doc,
+    )
 
     family_rows = [prompt_family, sample_family, loop_family, latest_log_family]
     applicable_rows = [row for row in family_rows if bool(row.get("applicable"))]
@@ -820,6 +883,20 @@ def main() -> int:
         "semantic_center_status": semantic_center_status,
         "live_bridge_status": live_bridge_status,
         "roundtable_alignment_status": roundtable_alignment_status,
+        "selected_candidate_receipt_ref": clean_string(loop_family.get("selected_candidate_receipt_ref")),
+        "roundtable_receipt_ref": clean_string(loop_family.get("roundtable_receipt_ref")),
+        "route_live_binding_status": clean_string(loop_family.get("route_live_binding_status")).upper(),
+        "operational_prompt_receipt_ref": clean_string(loop_family.get("operational_prompt_receipt_ref")),
+        "feedback_run_id": clean_string(loop_family.get("feedback_run_id")),
+        "preflight_reentry_receipt_ref": clean_string(loop_family.get("preflight_reentry_receipt_ref")),
+        "loopback_live_binding_status": clean_string(loop_family.get("loopback_live_binding_status")).upper(),
+        "required_run_id": clean_string(latest_log_family.get("required_run_id")),
+        "latest_feedback_run_id_match_status": clean_string(
+            latest_log_family.get("latest_feedback_run_id_match_status")
+        ).upper(),
+        "operational_prompt_run_join_status": clean_string(
+            latest_log_family.get("operational_prompt_run_join_status")
+        ).upper(),
         "philosophy_truth_lifecycle_status": philosophy_truth_lifecycle_status,
         "current_run_pointer": str(current_run_pointer) if current_run_pointer else "",
         "contract_issues": contract_issues,
@@ -832,6 +909,7 @@ def main() -> int:
             "routing_learning_strengthening": routing_validator,
             "feedback_to_judgement_loopback": loopback_validator,
             "capability_fit_roundtable_evidence": roundtable_validator,
+            "experience_feedback_governance": experience_feedback_governance,
         },
         "stale_reasons": contract_issues
         + [

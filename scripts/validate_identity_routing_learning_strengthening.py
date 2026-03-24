@@ -12,6 +12,7 @@ from feedback_to_judgement_loopback_common import (
     derive_live_roundtrip_projection,
     inspect_feedback_to_judgement_loopback,
 )
+from route_live_bridge_common import derive_route_live_bridge_projection
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -197,6 +198,12 @@ def main() -> int:
         identity_id=args.identity_id,
         task_path=str(task_path),
     )
+    route_live_projection = derive_route_live_bridge_projection(
+        pack_root=task_path.parent.resolve(),
+        task_doc=task,
+        identity_id=args.identity_id,
+        operation=args.operation,
+    )
 
     stale_reasons = [*route_reasons, *feedback_reasons]
     overall_status = STATUS_PASS_REQUIRED
@@ -225,8 +232,13 @@ def main() -> int:
         "task_path": str(task_path),
         "route_discovery_enforcement": route_projection,
         "feedback_operational_prompt_enforcement": feedback_projection,
-        "selected_candidate_id": str(route_projection.get("selected_candidate_field", "")).strip(),
-        "selection_basis": str(route_projection.get("selection_basis_field", "")).strip(),
+        "selected_candidate_id": str(route_live_projection.get("selected_candidate_id", "")).strip(),
+        "selection_basis": str(route_live_projection.get("selection_basis", "")).strip(),
+        "selected_candidate_receipt_ref": str(route_live_projection.get("selected_candidate_receipt_ref", "")).strip(),
+        "roundtable_receipt_ref": str(route_live_projection.get("roundtable_receipt_ref", "")).strip(),
+        "route_live_binding_status": str(route_live_projection.get("route_live_binding_status", "")).strip(),
+        "route_live_binding_reasons": list(route_live_projection.get("route_live_binding_reasons") or []),
+        "capability_fit_roundtable_status": str(route_live_projection.get("capability_fit_roundtable_status", "")).strip(),
         "convergence_status": (
             "strengthening_linked"
             if route_status == STATUS_PASS_REQUIRED

@@ -374,7 +374,7 @@ The next additive strengthening after projection observability is now also lande
    - default sample/self-test execution still passes as sample/self-test hygiene,
    - strict live proof only passes when the selected report is active-run-linked and run-id-bound,
    - sample-family validators now self-describe `semantic_contract_status` versus `strict_live_operational_status` rather than leaking a single ambiguous green,
-   - `ISSUE-037` remains open because real fleet identities still need more current-run sample-family producer coverage, plus loop live-bridge and latest-log same-run strengthening remain incomplete.
+   - `ISSUE-037` remains open because real fleet identities still need more current-run sample-family producer coverage.
 
 ### 6.9 Prompt-family live-driver absorption landed (2026-03-24)
 
@@ -395,6 +395,54 @@ This is positive strengthening rather than semantic downgrade:
 2. current-run binding becomes explicit and machine-checkable;
 3. no pack-local workaround, validator loosening, or hardcoded identity exception was introduced.
 
+### 6.10 Loop-family live-bridge absorption landed (2026-03-24)
+
+The next additive strengthening is now also landed:
+
+1. `scripts/capability_fit_roundtable_common.py` and `scripts/route_live_bridge_common.py` freeze one shared route-side live-bridge interpretation instead of letting loop consumers republish field-name placeholders;
+2. `scripts/validate_identity_routing_learning_strengthening.py` now emits:
+   - `selected_candidate_id`
+   - `selection_basis`
+   - `selected_candidate_receipt_ref`
+   - `roundtable_receipt_ref`
+   - `route_live_binding_status`
+3. `scripts/feedback_current_run_binding_common.py` now freezes one shared feedback/log join interpretation for both the `4 -> 1` bridge and latest-log same-run binding;
+4. `scripts/validate_feedback_to_judgement_loopback.py` now emits:
+   - `operational_prompt_receipt_ref`
+   - `feedback_run_id`
+   - `preflight_reentry_receipt_ref`
+   - `loopback_live_binding_status`
+5. `scripts/validate_identity_weak_live_linkage.py` now consumes those route/loopback live projections directly instead of inferring loop liveness from hook shape or placeholder field names.
+
+Frozen wording boundary:
+
+1. hermetic proof may now drive the loop family to `full_operational_closure` when current-run route and feedback receipts are explicitly seeded;
+2. that hermetic proof must **not** be restated as “real runtime identities already reached `loop_meta_only` or full closure”;
+3. real runtime status remains per-identity and must still be read from the actual machine payload of that identity.
+
+### 6.11 Latest-log same-run binding hardening landed (2026-03-24)
+
+The next additive strengthening is now also landed:
+
+1. `scripts/validate_identity_experience_feedback_governance.py` now emits machine-readable same-run join fields without collapsing freshness and same-run binding into one generic green:
+   - `required_run_id`
+   - `latest_feedback_run_id_match_status`
+   - `operational_prompt_run_join_status`
+2. the shared helper `scripts/feedback_current_run_binding_common.py` now keeps:
+   - freshness,
+   - latest-feedback run-id match,
+   - operational-prompt join,
+   - and loopback live binding
+   machine-separate;
+3. the canonical “latest identity-scoped feedback log” selector is now shared between the helper and the governance validator, so filename order cannot silently outrank actual freshness or create validator/helper drift;
+4. `scripts/validate_identity_weak_live_linkage.py` now consumes those same-run join fields directly for the `latest_log_no_run_binding` family and republishes the key statuses on the top-level weak-live-linkage payload.
+
+Frozen wording boundary:
+
+1. freshness-only PASS remains valuable and is preserved;
+2. same-run join failure remains machine-visible even when freshness stays green;
+3. hermetic full closure of the latest-log family must not be miswritten as fleet-wide runtime closure.
+
 ## 7) Stop condition
 
 `ISSUE-037` may close only when all of the following are simultaneously true:
@@ -402,8 +450,8 @@ This is positive strengthening rather than semantic downgrade:
 1. `weak_live_linkage` terminology, the four-layer differential-audit method, and `ASB16-RQ-055` machine-law intake are frozen on canonical protocol surfaces;
 2. prompt-side validators fail-close or downgrade interpretation when only prompt presence/configured drivers exist without current-run driver receipts;
 3. sample-report-only validators explicitly distinguish sample/self-test closure from strict live closure;
-4. loop-center validators expose separate `semantic_center_status` and `live_bridge_status` semantics instead of narrating center-green as full route/loop closure;
-5. same-run binding is enforced where freshness-only latest-log checks are insufficient for strict closure;
+4. loop-center validators expose separate `semantic_center_status` and `live_bridge_status` semantics, and applicable runtime producers emit the live route/feedback receipts needed for strict closure;
+5. same-run binding is enforced where freshness-only latest-log checks are insufficient for strict closure, and applicable runtime producers emit the join receipts needed for that binding;
 6. the fix remains shared infrastructure, not per-pack patching;
 7. the fix preserves:
    - `v1.6.17` semantic ownership,

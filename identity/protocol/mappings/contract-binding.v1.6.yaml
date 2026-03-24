@@ -1786,6 +1786,16 @@ asb16-rq-055:
     - semantic_center_status
     - live_bridge_status
     - roundtable_alignment_status
+    - selected_candidate_receipt_ref
+    - roundtable_receipt_ref
+    - route_live_binding_status
+    - operational_prompt_receipt_ref
+    - feedback_run_id
+    - preflight_reentry_receipt_ref
+    - loopback_live_binding_status
+    - required_run_id
+    - latest_feedback_run_id_match_status
+    - operational_prompt_run_join_status
     - philosophy_truth_lifecycle_status
     - stale_reasons
     - error_code

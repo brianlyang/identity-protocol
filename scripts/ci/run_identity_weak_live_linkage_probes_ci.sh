@@ -459,6 +459,267 @@ assert sample_family["consumption_status"] == "PASS_REQUIRED", sample_family
 assert sample_family["closure_class"] == "full_operational_closure", sample_family
 PY
 
+python3 - "${ROOT}" "${CATALOG_PATH}" "${IDENTITY_ID}" "${PACK_ROOT}" <<'PY'
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1]).resolve()
+catalog_path = Path(sys.argv[2]).resolve()
+identity_id = sys.argv[3]
+pack_root = Path(sys.argv[4]).resolve()
+sys.path.insert(0, str((root / "scripts").resolve()))
+
+from capability_fit_roundtable_common import (  # noqa: E402
+    DEFAULT_FIT_MATRIX_PATTERN,
+    DEFAULT_ROUNDTABLE_PATTERN,
+)
+
+task_path = pack_root / "CURRENT_TASK.json"
+runtime_protocol_feedback_optimization = pack_root / "runtime" / "protocol-feedback" / "optimization"
+runtime_protocol_feedback_roundtables = pack_root / "runtime" / "protocol-feedback" / "roundtables"
+runtime_feedback_logs = pack_root / "runtime" / "logs" / "feedback"
+active_run_report = pack_root / "runtime" / "reports" / f"{identity_id}-active-run.json"
+active_pointer = pack_root / "runtime" / "state" / "active_execution_report.json"
+
+
+def parse_payload(text: str) -> dict:
+    text = str(text or "").strip()
+    try:
+        return json.loads(text)
+    except Exception:
+        start = text.find("{")
+        end = text.rfind("}")
+        if start < 0 or end <= start:
+            raise
+        return json.loads(text[start : end + 1])
+
+
+task_doc = json.loads(task_path.read_text(encoding="utf-8"))
+task_doc["capability_fit_roundtable_evidence_contract_v1"] = {
+    "required": True,
+    "fit_matrix_path_pattern": DEFAULT_FIT_MATRIX_PATTERN,
+    "roundtable_evidence_path_pattern": DEFAULT_ROUNDTABLE_PATTERN,
+}
+task_path.write_text(json.dumps(task_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+runtime_protocol_feedback_optimization.mkdir(parents=True, exist_ok=True)
+runtime_protocol_feedback_roundtables.mkdir(parents=True, exist_ok=True)
+runtime_feedback_logs.mkdir(parents=True, exist_ok=True)
+
+pointer_doc = json.loads(active_pointer.read_text(encoding="utf-8"))
+live_run_id = str(pointer_doc["run_id"])
+
+matrix_path = runtime_protocol_feedback_optimization / f"capability-fit-matrix-{identity_id}-live.json"
+roundtable_path = runtime_protocol_feedback_roundtables / f"capability-fit-roundtable-{identity_id}-live.json"
+feedback_log_path = runtime_feedback_logs / f"{identity_id}-feedback-live-current-run.json"
+
+matrix_doc = {
+    "identity_id": identity_id,
+    "generated_at": "2026-03-24T00:00:00Z",
+    "matrix_id": f"{identity_id}-live-matrix",
+    "capability_fit_matrix": [
+        {
+            "candidate_id": "skill:live-route-bridge",
+            "candidate_type": "existing_composition",
+            "fit_score": 0.98,
+            "risk_score": 0.11,
+            "operational_cost_score": 0.17,
+            "provenance_ref": "inventory_snapshot",
+            "decision": "selected",
+            "decision_basis": "roundtable_fact_consensus",
+            "fact_refs": ["fact-route-live-001"],
+            "decision_impacts": ["tool_routing"],
+            "fallback_ref": "fallback:existing_composition",
+            "rollback_ref": "rollback:inventory_snapshot",
+            "review_interval_days": 14,
+            "next_review_at": "2026-04-07T00:00:00Z",
+        }
+    ],
+}
+roundtable_doc = {
+    "identity_id": identity_id,
+    "generated_at": "2026-03-24T00:00:00Z",
+    "facts": [
+        {
+            "fact_id": "fact-route-live-001",
+            "source": "official_protocol_spec",
+            "summary": "Live roundtable evidence mapped to selected route candidate.",
+        }
+    ],
+    "inferences": [
+        {
+            "inference_id": "route-inference-001",
+            "basis": ["fact-route-live-001"],
+            "conclusion": "skill:live-route-bridge is current-run selected candidate",
+        }
+    ],
+    "selected_plan_mapping": {
+        "candidate_id": "skill:live-route-bridge",
+        "fact_refs": ["fact-route-live-001"],
+        "selection_basis": "roundtable_fact_consensus",
+    },
+}
+matrix_path.write_text(json.dumps(matrix_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+roundtable_path.write_text(json.dumps(roundtable_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+active_run_doc = json.loads(active_run_report.read_text(encoding="utf-8"))
+artifacts = [str(item) for item in (active_run_doc.get("artifacts") or []) if str(item).strip()]
+for path in (matrix_path, roundtable_path):
+    token = str(path.resolve())
+    if token not in artifacts:
+        artifacts.append(token)
+active_run_doc["artifacts"] = artifacts
+active_run_report.write_text(json.dumps(active_run_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+feedback_log_doc = {
+    "feedback_id": f"{identity_id}-feedback-live-current-run",
+    "identity_id": identity_id,
+    "task_id": task_doc["task_id"],
+    "run_id": live_run_id,
+    "timestamp": "2026-03-24T00:00:00Z",
+    "context_signature": "weak_live_linkage_probe_current_run",
+    "outcome": "PASS",
+    "failure_type": "",
+    "decision_trace_ref": str(active_run_report.resolve()),
+    "artifacts": [
+        str(active_run_report.resolve()),
+        str(matrix_path.resolve()),
+        str(roundtable_path.resolve()),
+    ],
+    "rulebook_delta": {"positive": 1, "negative": 0},
+    "replay_status": "PASS",
+}
+feedback_log_path.write_text(json.dumps(feedback_log_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+roundtable_proc = subprocess.run(
+    [
+        "python3",
+        "scripts/validate_capability_fit_roundtable_evidence.py",
+        "--catalog",
+        str(catalog_path),
+        "--identity-id",
+        identity_id,
+        "--operation",
+        "ci",
+        "--json-only",
+    ],
+    cwd=str(root),
+    capture_output=True,
+    text=True,
+    check=False,
+)
+if roundtable_proc.returncode != 0:
+    raise SystemExit(f"roundtable validator unexpectedly failed:\n{roundtable_proc.stderr or roundtable_proc.stdout}")
+roundtable_payload = parse_payload(roundtable_proc.stdout)
+assert roundtable_payload["capability_fit_roundtable_status"] == "PASS_REQUIRED", roundtable_payload
+assert roundtable_payload["selected_candidate_id"] == "skill:live-route-bridge", roundtable_payload
+assert roundtable_payload["selection_basis"] == "roundtable_fact_consensus", roundtable_payload
+
+routing_proc = subprocess.run(
+    [
+        "python3",
+        "scripts/validate_identity_routing_learning_strengthening.py",
+        "--catalog",
+        str(catalog_path),
+        "--identity-id",
+        identity_id,
+        "--operation",
+        "ci",
+        "--json-only",
+    ],
+    cwd=str(root),
+    capture_output=True,
+    text=True,
+    check=False,
+)
+if routing_proc.returncode != 0:
+    raise SystemExit(f"routing validator unexpectedly failed:\n{routing_proc.stderr or routing_proc.stdout}")
+routing_payload = parse_payload(routing_proc.stdout)
+assert routing_payload["routing_learning_strengthening_status"] == "PASS_REQUIRED", routing_payload
+assert routing_payload["route_live_binding_status"] == "PASS_REQUIRED", routing_payload
+assert routing_payload["selected_candidate_id"] == "skill:live-route-bridge", routing_payload
+assert routing_payload["selection_basis"] == "roundtable_fact_consensus", routing_payload
+
+loopback_proc = subprocess.run(
+    [
+        "python3",
+        "scripts/validate_feedback_to_judgement_loopback.py",
+        "--catalog",
+        str(catalog_path),
+        "--identity-id",
+        identity_id,
+        "--operation",
+        "ci",
+        "--json-only",
+    ],
+    cwd=str(root),
+    capture_output=True,
+    text=True,
+    check=False,
+)
+if loopback_proc.returncode != 0:
+    raise SystemExit(f"loopback validator unexpectedly failed:\n{loopback_proc.stderr or loopback_proc.stdout}")
+loopback_payload = parse_payload(loopback_proc.stdout)
+assert loopback_payload["feedback_to_judgement_loopback_status"] == "PASS_REQUIRED", loopback_payload
+assert loopback_payload["loopback_live_binding_status"] == "PASS_REQUIRED", loopback_payload
+assert loopback_payload["feedback_run_id"] == live_run_id, loopback_payload
+assert loopback_payload["latest_feedback_run_id_match_status"] == "PASS_REQUIRED", loopback_payload
+assert loopback_payload["operational_prompt_run_join_status"] == "PASS_REQUIRED", loopback_payload
+
+gov_proc = subprocess.run(
+    [
+        "python3",
+        "scripts/validate_identity_experience_feedback_governance.py",
+        "--catalog",
+        str(catalog_path),
+        "--identity-id",
+        identity_id,
+        "--json-only",
+    ],
+    cwd=str(root),
+    capture_output=True,
+    text=True,
+    check=False,
+)
+if gov_proc.returncode != 0:
+    raise SystemExit(f"experience feedback governance validator unexpectedly failed:\n{gov_proc.stderr or gov_proc.stdout}")
+gov_payload = parse_payload(gov_proc.stdout)
+assert gov_payload["experience_feedback_governance_status"] == "PASS_REQUIRED", gov_payload
+assert gov_payload["latest_feedback_run_id_match_status"] == "PASS_REQUIRED", gov_payload
+assert gov_payload["operational_prompt_run_join_status"] == "PASS_REQUIRED", gov_payload
+assert gov_payload["latest_feedback_same_run_binding_status"] == "PASS_REQUIRED", gov_payload
+PY
+
+FULL_CLOSURE_JSON="${TMP_ROOT}/weak-live-linkage-full-closure.json"
+python3 "${ROOT}/scripts/validate_identity_weak_live_linkage.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --catalog "${CATALOG_PATH}" \
+  --operation ci \
+  --json-only >"${FULL_CLOSURE_JSON}"
+
+python3 - <<'PY' "${FULL_CLOSURE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["identity_weak_live_linkage_status"] == "PASS_REQUIRED", payload
+assert payload["overall_linkage_status"] == "PASS_REQUIRED", payload
+assert payload["operational_closure_class"] == "full_operational_closure", payload
+assert payload["false_green_family"] == "", payload
+assert payload["live_bridge_status"] == "PASS_REQUIRED", payload
+assert payload["route_live_binding_status"] == "PASS_REQUIRED", payload
+assert payload["loopback_live_binding_status"] == "PASS_REQUIRED", payload
+assert payload["latest_feedback_run_id_match_status"] == "PASS_REQUIRED", payload
+assert payload["operational_prompt_run_join_status"] == "PASS_REQUIRED", payload
+loop_family = next(row for row in payload["family_rows"] if row.get("family") == "loop_meta_only")
+latest_log_family = next(row for row in payload["family_rows"] if row.get("family") == "latest_log_no_run_binding")
+assert loop_family["closure_class"] == "full_operational_closure", loop_family
+assert latest_log_family["closure_class"] == "full_operational_closure", latest_log_family
+PY
+
 python3 - <<'PY' "${TASK_PATH}"
 import json
 import pathlib
