@@ -133,3 +133,10 @@ streams:
     allowed_requirement_ids: []
     forbidden_requirement_ids: []
     forbidden_path_tokens: []
+
+  - stream_version: v1.6.19
+    scope_topic: identity_tool_vendor_live_link_strengthening
+    allowed_requirement_ids: []
+    forbidden_requirement_ids: []
+    forbidden_path_tokens:
+      - "runtime/memory-absorption"
