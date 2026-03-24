@@ -1,0 +1,69 @@
+schema_version: 1
+ordering_family: protocol_root_corpus_ordering
+ordering_version: v1
+root_dir: identity/protocol
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+root_index_entry: identity/protocol/README.md
+source_order:
+  - order: 1
+    corpus_class: bottom_theory
+    source_role: generative_bottom_theory
+    law_bearing_required: true
+  - order: 2
+    corpus_class: constitution
+    source_role: constitutional_protocol_law
+    law_bearing_required: true
+  - order: 3
+    corpus_class: runtime_constitution
+    source_role: constitutional_runtime_law
+    law_bearing_required: true
+  - order: 4
+    corpus_class: root_contract
+    source_role: root_domain_contract_law
+    law_bearing_required: true
+  - order: 5
+    corpus_class: machine_registry_directory
+    source_role: machine_consumed_registry_surface
+    law_bearing_required: true
+  - order: 6
+    corpus_class: governed_subdomain_extension
+    source_role: governed_subdomain_extension
+    law_bearing_required: true
+  - order: 7
+    corpus_class: demoted_support_directory
+    source_role: demoted_support_material
+    law_bearing_required: false
+reading_order:
+  - order: 1
+    rel_path: identity/protocol/README.md
+    entry_role: root_index_entry_surface
+  - order: 2
+    rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    entry_role: bottom_theory_entry
+  - order: 3
+    rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    entry_role: protocol_constitution_entry
+  - order: 4
+    rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    entry_role: runtime_constitution_entry
+  - order: 5
+    rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
+    entry_role: root_contract_entry
+  - order: 6
+    rel_path: identity/protocol/IDENTITY_DISCOVERY.md
+    entry_role: root_contract_entry
+  - order: 7
+    rel_path: identity/protocol/AGENT_HANDOFF_CONTRACT.md
+    entry_role: root_contract_entry
+  - order: 8
+    rel_path: identity/protocol/mappings
+    entry_role: machine_registry_directory_entry
+  - order: 9
+    rel_path: identity/protocol/broadcast
+    entry_role: governed_subdomain_extension_entry
+  - order: 10
+    rel_path: identity/protocol/plugins
+    entry_role: governed_subdomain_extension_entry
+  - order: 11
+    rel_path: identity/protocol/fixtures
+    entry_role: demoted_support_entry

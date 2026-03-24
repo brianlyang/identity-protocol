@@ -122,3 +122,18 @@ invariants:
       surfaces:
         - scripts
         - .github/workflows
+  root_corpus_ordering_alias:
+    current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+    required_fields:
+      - ordering_family
+      - ordering_version
+      - root_dir
+      - registry_current_file
+      - root_index_entry
+      - source_order
+      - reading_order
+    forbid_versioned_reference:
+      regex: root-corpus-ordering\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
