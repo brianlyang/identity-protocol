@@ -141,6 +141,31 @@ So the reading rule is:
 
 ---
 
+## Source-order, reading-order, and adjudication-order
+
+These three orders must remain distinct for the machine world:
+
+1. **source-order / generative-order**
+   - `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`
+   - `IDENTITY_PROTOCOL.md` / `IDENTITY_RUNTIME.md`
+   - root contract files
+   - machine-consumed enforcement surfaces
+   - answers: where protocol law comes from.
+2. **root reading-order**
+   - the entry sequence defined at the top of this file
+   - answers: how to enter the root corpus without semantic confusion.
+3. **adjudication-order**
+   - governance/review docs, mappings, validators, probes, runtime state, and receipts
+   - answers: how current-turn legality and machine verdict are determined.
+
+Do not collapse these orders:
+
+- a stream, checker, validator, or runtime verdict is not the source of bottom theory;
+- this README's reading order is not itself the origin of protocol law;
+- philosophy explains why law exists in its current shape, but does not replace machine adjudication.
+
+---
+
 ## Conflict-handling rule
 
 If two layers seem to disagree, resolve them with the following discipline:

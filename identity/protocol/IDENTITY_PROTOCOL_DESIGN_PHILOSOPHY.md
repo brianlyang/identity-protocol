@@ -135,6 +135,32 @@ contract is incomplete or that a stream must be strengthened, but it does not
 become the semantic parent of the bottom theory that made law possible in the
 first place.
 
+### Three orders must never be collapsed
+
+For the machine world, at least three different orders must remain explicit:
+
+1. **source-order / generative-order**
+   - bottom theory → constitutions → root contracts → machine-consumed enforcement surfaces;
+   - this answers where protocol law comes from.
+2. **root reading-order**
+   - philosophy → constitution → runtime → root contracts → mappings/registries → specialized packs;
+   - this answers how a machine-governed participant should enter the root corpus without semantic confusion.
+3. **adjudication-order**
+   - current machine verdict must still resolve from machine-consumed enforcement surfaces such as frozen contracts, mappings, validators, probes, runtime state, and receipts;
+   - this answers how present-turn legality is actually decided.
+
+These three orders cooperate, but they do not replace each other:
+
+- source-order explains origin;
+- reading-order explains disciplined entry;
+- adjudication-order explains current-turn decision.
+
+Confusing them leads to characteristic protocol errors:
+
+- if adjudication-order is mistaken for source-order, current checker behavior is falsely promoted into bottom theory;
+- if reading-order is mistaken for source-order, a directory index is falsely treated as generative law;
+- if source-order is mistaken for adjudication-order, philosophy text is incorrectly used as if it were a direct runtime verdict surface.
+
 ---
 
 ## 1. The identity protocol is machine law first, not a compatibility layer
@@ -506,3 +532,10 @@ The same logic applies to the protocol root corpus itself:
 - with corpus discipline, the root remains a coherent machine-world law library
   whose later constitutions, contracts, mappings, validators, and runtimes can
   all be interpreted without losing semantic origin.
+
+The machine-world corollary is strict:
+
+- philosophy is the source of law,
+- constitutions and contracts are the freezing of law,
+- validators and runtime receipts are the adjudication of law,
+- and no later layer may pretend it generated the layer above it.

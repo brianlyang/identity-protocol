@@ -1,5 +1,20 @@
 # Agent Handoff Contract
 
+## Document positioning
+
+This file is a root-domain contract law file inside `identity/protocol/`.
+
+It exists to freeze the concrete machine-law rules for governed handoff between
+master and sub agents.
+
+It is not:
+
+1. an operator tutorial;
+2. a workspace-local execution memo;
+3. a stream-closure narrative;
+4. a substitute for machine-consumed adjudication surfaces such as validators,
+   runtime logs, or receipts.
+
 ## Purpose
 
 Define a strict, auditable handoff protocol between master and sub agents to prevent scope drift.
@@ -16,7 +31,21 @@ Interpretive boundary:
 
 1. the design philosophy explains why identity protocol treats handoff as machine-law coordination rather than informal collaboration;
 2. this file freezes the concrete handoff law: role boundaries, payload fields, evidence requirements, validation, and merge blocking;
-3. philosophical grounding does not replace the fail-close authority of this contract.
+3. this file is authoritative for root-domain handoff law, but current-turn legality is still adjudicated through machine-consumed validators, logs, and receipts;
+4. philosophical grounding does not replace the fail-close authority of this contract.
+
+## Machine-world audience
+
+This contract is written primarily for:
+
+- identity instances;
+- launchers and orchestrators;
+- validators and probes;
+- runtime gates;
+- protocol maintainers acting on behalf of machine truth.
+
+It is not optimized as a human-memory aid. Its job is to make handoff law
+stable enough for machine-world consumption.
 
 ---
 

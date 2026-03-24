@@ -1,5 +1,19 @@
 # Identity Prompt Bootstrap Contract
 
+## Document positioning
+
+This file is a root-domain prompt-kernel contract law file inside
+`identity/protocol/`.
+
+It freezes prompt-bootstrap law for how protocol capability drivers are
+compiled into governed prompt surfaces.
+
+It is not:
+
+1. a runtime prompt artifact;
+2. a stream-closure summary;
+3. a replacement for compiled prompt evidence, validators, mappings, or runtime truth surfaces.
+
 ## Scope and non-goals
 
 1. This file is the protocol-kernel prompt contract source for governed prompt bootstrap.
@@ -17,7 +31,8 @@ Interpretive boundary:
 
 1. the design philosophy explains why prompt bootstrap is treated as machine-law derivation rather than ad hoc role prose;
 2. this file freezes the concrete prompt-kernel law: source order, required capability drivers, canonical fields, executable coupling, hard-guard literals, drift triggers, and acceptance baselines;
-3. the design philosophy is philosophically prior, but this file remains the authoritative machine-consumed contract for prompt bootstrap behavior.
+3. the design philosophy is philosophically prior, but this file remains the authoritative root-domain contract for prompt bootstrap behavior;
+4. current-turn prompt legality and coverage still depend on machine-consumed mappings, validators, compiled prompt artifacts, and runtime evidence rather than philosophy text alone.
 
 ## Source model
 
@@ -217,16 +232,16 @@ commit_sha:
 ### Update ledger (append-only)
 
 ```text
-update_id: prompt-bootstrap-2026-03-06-phase2
-updated_at_utc: 2026-03-06T23:05:00Z
-owner: base-repo-audit-expert-v3
-changed_sections: scope/versioning + capability matrix + drift triggers + cadence + four-track binding
-capability_delta: added full-set base protocol capability absorption matrix and continuous iteration constraints
-validator_delta: mapped existing required validators; planned validators for RQ-014/015/027/031 kept explicit
-replay_obligations: requires positive/negative replay for bootstrap coverage, derivation conformance, executable coupling
-governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#813-prompt-bootstrap-kernel-source-continuity-guard-asb16-rq-014015027031-2026-03-06
-review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-024---protocol-kernel-prompt-import-executable-coupling-self-drive-intake-asb16-rq-031
-commit_sha: ee07aa1
+update_id: <update_id>
+updated_at_utc: <timestamp_utc>
+owner: <owner_identity_or_role>
+changed_sections: <sections_changed>
+capability_delta: <capability_delta_summary>
+validator_delta: <validator_delta_summary>
+replay_obligations: <replay_obligations>
+governance_anchor: <governance_anchor>
+review_anchor: <review_anchor>
+commit_sha: <commit_sha>
 ```
 
 ## Four-track evidence binding (T1/T2/T3/T4)

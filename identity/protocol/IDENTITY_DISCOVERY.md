@@ -1,5 +1,18 @@
 # Identity Discovery Contract
 
+## Document positioning
+
+This file is a root-domain contract law file inside `identity/protocol/`.
+
+It freezes deterministic discovery law for identity packs and identity
+selection surfaces.
+
+It is not:
+
+1. a product/domain catalog example sheet;
+2. a business-facing identity showcase;
+3. a substitute for current runtime resolver truth or machine adjudication.
+
 ## Purpose
 
 Define a deterministic discovery contract for identity packs, similar to skill discovery.
@@ -17,7 +30,8 @@ Interpretive boundary:
 
 1. the design philosophy explains why discovery must prefer canonical truth, semantic singularity, and fail-close determinism over convenience heuristics;
 2. this file freezes the concrete discovery law: request/response shapes, precedence, activation policy, error reporting, and minimal implementation requirements;
-3. philosophical grounding does not replace the contract authority of this discovery specification.
+3. this file is authoritative for root-domain discovery law, but current-turn discovery legality still depends on machine-consumed resolver, catalog, validator, and runtime truth surfaces;
+4. philosophical grounding does not replace the contract authority of this discovery specification.
 
 ## Method: `identity/list`
 
@@ -47,11 +61,11 @@ Interpretive boundary:
         "defaultIdentity": "store-manager",
         "identities": [
           {
-            "id": "store-manager",
-            "title": "WeChat Shop Store Manager",
-            "description": "Revenue-oriented autonomous operator",
+            "id": "identity-alpha",
+            "title": "Identity Alpha",
+            "description": "Autonomous governed runtime identity",
             "status": "active",
-            "packPath": "identity/store-manager",
+            "packPath": "identity/identity-alpha",
             "enabled": true,
             "policy": {
               "allowImplicitActivation": true,
@@ -64,8 +78,8 @@ Interpretive boundary:
               ]
             },
             "interface": {
-              "displayName": "Store Manager",
-              "shortDescription": "Autonomous WeChat Shop operator"
+              "displayName": "Identity Alpha",
+              "shortDescription": "Autonomous governed runtime identity"
             }
           }
         ],
@@ -107,3 +121,7 @@ A compliant local implementation must:
 2. Resolve `default_identity`
 3. Verify each `pack_path` exists
 4. Return normalized metadata + errors
+
+Discovery law remains root-domain law only; runtime authority for any concrete
+current-turn discovery result still belongs to the governed resolver and its
+machine-consumed outputs.
