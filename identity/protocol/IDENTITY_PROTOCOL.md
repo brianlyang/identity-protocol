@@ -16,6 +16,11 @@ For active governance execution in v1.6 lanes, normative sources are:
 5. Foundational protocol design philosophy (interpretive / bottom-layer source):
    - `identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`
 
+Philosophical-order rule:
+
+1. In philosophical order, identity protocol law exists because the bottom theory in `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md` exists first.
+2. This file is therefore a protocol-law constitution derived from that bottom theory, not an unrelated document set that later gained a philosophy appendix.
+
 Governance rule:
 
 1. Script updates under `scripts/` are implementation surfaces only.
@@ -41,11 +46,11 @@ Status transitions are controlled by governance/review, not by script commit alo
 
 ## Foundational design philosophy boundary
 
-1. `identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md` is the protocol root interpretive source for bottom-layer design philosophy.
+1. `identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md` is the protocol-root bottom theory and interpretive source for why identity protocol law exists at all.
 2. It explains why identity protocol is treated as a machine-law system, how protocol / instance / operator responsibilities split, and how new streams should be evaluated before implementation.
-3. It is a foundational semantic source for design, review, owner split, and instance self-drive judgement.
-4. It is **not** a direct machine-consumed contract row, validator schema, or runtime success-path artifact sink.
-5. Machine-consumed truth remains frozen in governance/review docs, mappings, validators, probes, runtime state, and receipts; the design philosophy document explains those laws, but does not replace them.
+3. This file operationalizes and freezes those bottom-theory commitments into protocol-law structure, governance execution, contract boundaries, and runtime-facing constitutions.
+4. The design philosophy document is therefore philosophically prior, but it is **not** a direct machine-consumed contract row, validator schema, or runtime success-path artifact sink.
+5. Machine-consumed truth remains frozen in governance/review docs, mappings, validators, probes, runtime state, and receipts; the design philosophy document explains why those laws exist and how they should be interpreted, but does not replace them.
 
 ## Goal
 

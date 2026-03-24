@@ -22,12 +22,18 @@ Runtime integration inherits the bottom-layer philosophy frozen in:
 
 - `identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`
 
+Foundational-order rule:
+
+1. Runtime integration does not create its own reason for being independently of protocol philosophy.
+2. In philosophical order, runtime law exists because the bottom theory in `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md` first defines what identity runtime must preserve, resolve, prove, and refuse to downgrade.
+
 Runtime meaning:
 
 1. runtime is not a compatibility shelter for lagging residue;
 2. current-turn truth must stay canonical and machine-resolved;
 3. instance adaptation debt should be absorbed at the instance/runtime layer unless the issue is a shared law gap;
 4. operator-facing simplicity must be achieved by protocol-owned answer surfaces and governed execution paths, not by bypassing machine-law boundaries.
+5. runtime is an operational embodiment of protocol bottom theory, not an independent semantic constitution.
 
 ## Startup sequence
 

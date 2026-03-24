@@ -6,6 +6,18 @@
 2. It is not a runtime artifact and must not be consumed as `pack_path/IDENTITY_PROMPT.md`.
 3. Runtime `IDENTITY_PROMPT.md` remains a compiled pack-level artifact.
 
+## Foundational design philosophy anchor
+
+This prompt-bootstrap contract inherits its bottom-theory assumptions from:
+
+- `identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`
+
+Interpretive boundary:
+
+1. the design philosophy explains why prompt bootstrap is treated as machine-law derivation rather than ad hoc role prose;
+2. this file freezes the concrete prompt-kernel law: source order, required capability drivers, canonical fields, executable coupling, hard-guard literals, drift triggers, and acceptance baselines;
+3. the design philosophy is philosophically prior, but this file remains the authoritative machine-consumed contract for prompt bootstrap behavior.
+
 ## Source model
 
 Prompt derivation source order:

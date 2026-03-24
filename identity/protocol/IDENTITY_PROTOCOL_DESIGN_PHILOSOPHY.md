@@ -10,6 +10,8 @@ Its role is:
 2. **the shared higher-order semantic basis for new stream design, instance self-driven adaptation, architectural judgment, closure ownership split, and audit review**;
 3. **the meta-principle anchor for the protocol main document and the runtime main document**.
 
+In philosophical order, the identity protocol exists because this bottom theory exists first. The protocol does not invent its own reason for being at the contract layer; it formalizes, freezes, and operationalizes the machine-world philosophy defined here.
+
 Its primary interpretive audience is not a human reader seeking narrative comfort. Its primary interpretive audience is the machine world surrounding the protocol:
 
 - identity instances;
@@ -60,6 +62,7 @@ Interpretive rule:
 2. it must not replace machine-consumed contract files;
 3. it must not override canonical runtime truth sources;
 4. when executable prompt behavior is being decided, the relevant contract file remains authoritative over this philosophy text.
+5. philosophical primacy does not mean runtime-source primacy; this document is the generative reason for protocol law, while machine-consumed authority still lives in frozen contracts, mappings, validators, runtime state, and receipts.
 
 ---
 

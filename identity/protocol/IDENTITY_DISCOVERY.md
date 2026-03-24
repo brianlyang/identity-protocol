@@ -7,6 +7,18 @@ Define a deterministic discovery contract for identity packs, similar to skill d
 - Input: working directories + optional extra roots.
 - Output: active/available identities with policy/dependency metadata and load errors.
 
+## Foundational design philosophy anchor
+
+This discovery contract inherits its bottom-theory assumptions from:
+
+- `identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`
+
+Interpretive boundary:
+
+1. the design philosophy explains why discovery must prefer canonical truth, semantic singularity, and fail-close determinism over convenience heuristics;
+2. this file freezes the concrete discovery law: request/response shapes, precedence, activation policy, error reporting, and minimal implementation requirements;
+3. philosophical grounding does not replace the contract authority of this discovery specification.
+
 ## Method: `identity/list`
 
 ### Request shape
@@ -95,4 +107,3 @@ A compliant local implementation must:
 2. Resolve `default_identity`
 3. Verify each `pack_path` exists
 4. Return normalized metadata + errors
-

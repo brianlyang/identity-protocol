@@ -6,6 +6,18 @@ Define a strict, auditable handoff protocol between master and sub agents to pre
 
 This contract is identity-level control-plane policy and is scenario-agnostic.
 
+## Foundational design philosophy anchor
+
+This handoff contract inherits its bottom-theory assumptions from:
+
+- `identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`
+
+Interpretive boundary:
+
+1. the design philosophy explains why identity protocol treats handoff as machine-law coordination rather than informal collaboration;
+2. this file freezes the concrete handoff law: role boundaries, payload fields, evidence requirements, validation, and merge blocking;
+3. philosophical grounding does not replace the fail-close authority of this contract.
+
 ---
 
 ## Core principles
