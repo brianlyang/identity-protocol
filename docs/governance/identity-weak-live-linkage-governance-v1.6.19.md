@@ -106,7 +106,7 @@ Current machine signature after additive strengthening:
 3. `requiredization_current_round_linked` now resolves from the active execution pointer + current-run report + `runtime/state/prompt_contract.json` + prompt path/hash join, not from prompt existence or configured driver literals alone;
 4. direct replay on `base-repo-audit-expert-v3` and `custom-creative-ecom-analyst` now returns `current_run_driver_binding_status=PASS_REQUIRED` and `evidence_origin=live`, which shifts the residual weak-live-linkage classification away from the prompt family and onto the remaining downstream families.
 
-This does **not** close `ISSUE-037` by itself because sample, loop, and latest-log strengthening still remain open.
+This does **not** close `ISSUE-037` by itself because sample-family real current-run producer coverage and route-side loop live-bridge producer coverage still remain open. Latest-log same-run binding is now a shared closure lane rather than an unresolved primary residual.
 
 ### 3.2 Sample-report-only family
 
@@ -156,12 +156,13 @@ The following loop consumers currently prove semantic-center readiness more stro
 Current deep-sweep signature:
 
 - route/feedback enforcement blocks, validators, and field-name hooks are present and aligned;
-- `selected_candidate_id` / `selection_basis` can still be republished as hook field names rather than live route truth;
-- semantic-center status can remain green while supporting live validators are `SKIPPED_NOT_REQUIRED` or red.
+- route-side live projections now emit dedicated receipt/binding fields instead of placeholder hook names;
+- direct runtime replay now shows the `4 -> 1` loopback side as current-run-bound while the route-side bridge can still remain red when optimization / roundtable producer evidence is absent;
+- semantic-center status can remain green while route-side live validators are `SKIPPED_NOT_REQUIRED` or red.
 
-### 3.4 Secondary risk: latest-log-no-run-binding
+### 3.4 Secondary classification: latest-log-no-run-binding
 
-`scripts/validate_identity_experience_feedback_governance.py` already enforces freshness and is therefore **not** a primary false-green source. However, it still represents a secondary strengthening target because latest-log freshness alone does not yet guarantee same-run binding.
+`scripts/validate_identity_experience_feedback_governance.py` already enforces freshness and is therefore **not** a primary false-green source. The class remains frozen in the audit method because freshness alone must never be mistaken for same-run truth. However, after the shared selector + current-run-joined feedback backfill strengthening, it is no longer the open residual on direct runtime replay for `base-repo-audit-expert-v3` or `custom-creative-ecom-analyst`; those identities now replay `latest_feedback_same_run_binding_status=PASS_REQUIRED`, `operational_prompt_run_join_status=PASS_REQUIRED`, and `loopback_live_binding_status=PASS_REQUIRED`, while the stream remains open for sample-family and route-side loop producer coverage.
 
 ### 3.5 Explicit exclusions from this stream
 
@@ -413,6 +414,9 @@ The next additive strengthening is now also landed:
    - `preflight_reentry_receipt_ref`
    - `loopback_live_binding_status`
 5. `scripts/validate_identity_weak_live_linkage.py` now consumes those route/loopback live projections directly instead of inferring loop liveness from hook shape or placeholder field names.
+6. direct runtime replay on `base-repo-audit-expert-v3` and `custom-creative-ecom-analyst` now proves a split outcome rather than one blurred loop state:
+   - loopback-side current-run join replays `loopback_live_binding_status=PASS_REQUIRED`;
+   - route-side live bridge still replays `route_live_binding_status=FAIL_REQUIRED` with explicit machine reasons such as `roundtable_contract_not_required`, `selected_candidate_id_missing`, `selected_candidate_receipt_ref_missing`, and `selection_basis_missing`.
 
 Frozen wording boundary:
 
@@ -436,6 +440,12 @@ The next additive strengthening is now also landed:
    machine-separate;
 3. the canonical “latest identity-scoped feedback log” selector is now shared between the helper and the governance validator, so filename order cannot silently outrank actual freshness or create validator/helper drift;
 4. `scripts/validate_identity_weak_live_linkage.py` now consumes those same-run join fields directly for the `latest_log_no_run_binding` family and republishes the key statuses on the top-level weak-live-linkage payload.
+5. `scripts/feedback_runtime_log_backfill_common.py` now gives `scripts/repair_contract_backfill.py` and `scripts/repair_identity_feedback_evidence.py` one shared active-run-aware builder for feedback runtime logs, so repair/backfill lanes emit `current_run_joined` payloads whenever live execution context is present instead of fabricating a permanently synthetic latest log.
+6. direct runtime replay on `base-repo-audit-expert-v3` and `custom-creative-ecom-analyst` now proves this family is actually closed on those identities:
+   - `latest_feedback_same_run_binding_status=PASS_REQUIRED`
+   - `operational_prompt_run_join_status=PASS_REQUIRED`
+   - `latest_log_no_run_binding` family = `full_operational_closure`
+   while `rq_055` still remains open overall because sample-family and route-side loop producer coverage are not yet present on those packs.
 
 Frozen wording boundary:
 

@@ -134,6 +134,7 @@ from identity_dialogue_retention_common import (
     dialogue_retention_contract_skeleton,
     materialize_identity_dialogue_retention_assets,
 )
+from feedback_runtime_log_backfill_common import build_feedback_runtime_log_payload
 from identity_artifact_family_routing_common import (
     ARTIFACT_FAMILY_ROUTING_CONTRACT_ID,
     ARTIFACT_FAMILY_ROUTING_CONTRACT_KEY,
@@ -1306,26 +1307,13 @@ def _ensure_feedback_runtime_log(
     log_path = (pack_path / "runtime" / "logs" / "feedback" / f"{identity_id}-feedback-contract-backfill-latest.json").resolve()
     before_doc = _safe_load_json(log_path)
     before_timestamp = str(before_doc.get("timestamp", "")).strip()
-    task_id = str(task_doc.get("task_id", "")).strip() or f"{identity_id}_bootstrap"
-    payload = {
-        "feedback_id": f"feedback-{identity_id}-contract-backfill",
-        "identity_id": identity_id,
-        "task_id": task_id,
-        "run_id": f"repair-contract-backfill-{identity_id}",
-        "timestamp": _utc_now_iso(),
-        "context_signature": "contract-backfill-refresh",
-        "outcome": "PASS",
-        "failure_type": "none",
-        "decision_trace_ref": "contract_backfill_runtime_feedback_refresh",
-        "artifacts": [
-            str(log_path),
-        ],
-        "rulebook_delta": {
-            "positive": 0,
-            "negative": 0,
-        },
-        "replay_status": "PASS",
-    }
+    payload = build_feedback_runtime_log_payload(
+        pack_root=pack_path,
+        identity_id=identity_id,
+        task_doc=task_doc,
+        log_path=log_path,
+        source_label="contract-backfill",
+    )
     wrote = False
     if apply:
         log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1336,6 +1324,8 @@ def _ensure_feedback_runtime_log(
         "log_path": str(log_path),
         "timestamp_before": before_timestamp,
         "timestamp_after": str(after_doc.get("timestamp", "")).strip(),
+        "run_id_after": str(after_doc.get("run_id", "")).strip(),
+        "current_run_binding_mode_after": str(after_doc.get("current_run_binding_mode", "")).strip(),
         "applied": wrote,
     }
 

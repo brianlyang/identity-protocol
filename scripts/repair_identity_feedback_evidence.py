@@ -9,6 +9,7 @@ from typing import Any
 
 import yaml
 
+from feedback_runtime_log_backfill_common import build_feedback_runtime_log_payload
 from resolve_identity_context import default_local_catalog_path
 
 
@@ -91,20 +92,13 @@ def main() -> int:
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     log_path = _materialize(log_pattern, args.identity_id, ts, pack_root)
-    log_payload = {
-        "feedback_id": f"feedback-{args.identity_id}-{ts}",
-        "identity_id": args.identity_id,
-        "task_id": str(task.get("task_id", "")),
-        "run_id": f"repair-feedback-{ts}",
-        "timestamp": now,
-        "context_signature": "auto-repair-context",
-        "outcome": "PASS",
-        "failure_type": "none",
-        "decision_trace_ref": "auto-repair-feedback-evidence",
-        "artifacts": [str(log_path)],
-        "rulebook_delta": {"positive": 0, "negative": 0},
-        "replay_status": "PASS",
-    }
+    log_payload = build_feedback_runtime_log_payload(
+        pack_root=pack_root or Path(".").resolve(),
+        identity_id=args.identity_id,
+        task_doc=task,
+        log_path=log_path,
+        source_label=f"repair-feedback-{ts}",
+    )
     _write(log_path, log_payload, args.apply)
 
     outputs = [log_path]

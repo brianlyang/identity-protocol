@@ -136,8 +136,14 @@ Direct replay:
 Confirmed facts:
 
 1. `routing_learning_strengthening_status=PASS_REQUIRED`
-2. `selected_candidate_id="selected_candidate_id"`
-3. `selection_basis="selection_basis"`
+2. `route_live_binding_status=FAIL_REQUIRED`
+3. `selected_candidate_id=""`
+4. `selection_basis=""`
+5. `route_live_binding_reasons` now enumerate explicit producer-side gaps instead of leaking placeholder field names:
+   - `roundtable_contract_not_required`
+   - `selected_candidate_id_missing`
+   - `selected_candidate_receipt_ref_missing`
+   - `selection_basis_missing`
 
 Direct replay:
 
@@ -146,8 +152,9 @@ Direct replay:
 Confirmed facts:
 
 1. `feedback_to_judgement_loopback_status=PASS_REQUIRED`
-2. the payload proves generic prompt/revalidation/rollback structure;
-3. trio-specific decision-absorption fields are not yet required on this lane.
+2. `loopback_live_binding_status=PASS_REQUIRED`
+3. the payload now carries `operational_prompt_receipt_ref`, `feedback_run_id`, and `preflight_reentry_receipt_ref` as machine-readable current-run receipts;
+4. trio-specific decision-absorption fields are still not the semantic owner of this lane.
 
 Interpretation:
 
@@ -161,13 +168,15 @@ Direct replays show that center-green does not imply full live closure:
 1. `python3 identity-protocol-local/scripts/validate_capability_fit_roundtable_evidence.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --json-only`
    - `capability_fit_roundtable_status=SKIPPED_NOT_REQUIRED`
 2. `python3 identity-protocol-local/scripts/validate_identity_experience_feedback_governance.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst`
-   - `FAIL`
-   - reason: `latest feedback log too old: 15d > max_log_age_days=7`
+   - `PASS_REQUIRED`
+   - `latest_feedback_same_run_binding_status=PASS_REQUIRED`
+   - `operational_prompt_run_join_status=PASS_REQUIRED`
 
 Interpretation:
 
 - the center validators are not globally broken;
-- they simply need an explicit `semantic_center` versus `live_bridge` interpretation split.
+- route-side live-bridge producer coverage is still missing even though latest-log / loopback join is now closed on direct runtime replay;
+- they therefore still need an explicit `semantic_center` versus `live_bridge` interpretation split.
 
 ### 2.7 Latest-log governance is already stronger than the primary false-green families
 
@@ -181,7 +190,8 @@ Interpretation:
 Interpretation:
 
 - this validator is a real freshness gate, not a primary false-green source;
-- the remaining improvement is same-run binding, not a total redesign.
+- the same-run-binding improvement is now landed as shared infrastructure and can replay green on direct runtime identities after shared backfill/repair;
+- the class remains in the audit taxonomy, but it is no longer the open residual keeping `ISSUE-037` alive.
 
 ## 3) Confirmed weak-live-linkage family map
 
@@ -306,7 +316,7 @@ The next additive strengthening is now also landed:
 1. `scripts/prompt_live_driver_binding_common.py` freezes one shared prompt-binding interpretation;
 2. the three prompt validators now consume that helper and emit one common machine-readable driver-binding payload;
 3. `scripts/validate_identity_weak_live_linkage.py` now sees the prompt family as `full_operational_closure` on real replayed identities where current-run prompt binding is actually present;
-4. `rq_055` therefore continues to stay open for the right reason: sample, loop, and latest-log closure are still incomplete, but prompt presence is no longer silently misclassified as current-run linkage.
+4. `rq_055` therefore continues to stay open for the right reason: sample-family producer coverage and route-side loop producer coverage are still incomplete, but prompt presence is no longer silently misclassified as current-run linkage.
 
 ### 5.7 Loop-family live-bridge absorption landed (2026-03-24)
 
@@ -317,6 +327,9 @@ The next additive strengthening is now also landed:
 3. `scripts/validate_identity_routing_learning_strengthening.py` now emits `selected_candidate_receipt_ref`, `roundtable_receipt_ref`, and `route_live_binding_status`;
 4. `scripts/validate_feedback_to_judgement_loopback.py` now emits `operational_prompt_receipt_ref`, `feedback_run_id`, `preflight_reentry_receipt_ref`, and `loopback_live_binding_status`;
 5. `scripts/validate_identity_weak_live_linkage.py` now consumes those live projections directly instead of inferring loop liveness from semantic-center green plus placeholder fields.
+6. direct runtime replay now proves the split outcome explicitly:
+   - loopback-side current-run join is green on both `base-repo-audit-expert-v3` and `custom-creative-ecom-analyst`;
+   - route-side live bridge is still red for producer-coverage reasons rather than placeholder-field drift.
 
 Review boundary:
 
@@ -333,6 +346,8 @@ The next additive strengthening is now also landed:
 3. the freshest identity-scoped feedback log is now selected through one shared helper-backed rule, preventing lexicographic filename drift between the governance validator and the shared current-run binding projection;
 4. `scripts/validate_identity_weak_live_linkage.py` now consumes that split directly for the `latest_log_no_run_binding` family;
 5. hermetic probe can now drive the latest-log family to `full_operational_closure` when current-run feedback receipts are explicitly seeded.
+6. `scripts/feedback_runtime_log_backfill_common.py` now gives `scripts/repair_contract_backfill.py` and `scripts/repair_identity_feedback_evidence.py` one shared active-run-aware log builder, so repair/backfill no longer emits synthetic latest logs when a real active execution context is available;
+7. direct runtime replay on `base-repo-audit-expert-v3` and `custom-creative-ecom-analyst` now proves the `latest_log_no_run_binding` family itself can reach `full_operational_closure` without overclaiming overall `rq_055` closure.
 
 Review boundary:
 
