@@ -1,0 +1,5 @@
+schema_version: 1
+pointer_version: v1
+control_plane_contract: protocol_root_corpus_governance
+active_family: v1
+active_file: identity/protocol/mappings/root-corpus-registry.v1.yaml

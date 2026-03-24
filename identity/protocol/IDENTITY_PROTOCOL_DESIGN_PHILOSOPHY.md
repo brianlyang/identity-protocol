@@ -96,7 +96,10 @@ Interpretive rule:
    through validator drift;
 3. a root corpus that accepts temporary or mixed-layer materials will
    eventually produce philosophical ambiguity, constitutional ambiguity, and
-   runtime ambiguity together.
+   runtime ambiguity together;
+4. root-corpus admission law must be projected into machine-consumed registry
+   and validation surfaces, otherwise the boundary remains rhetorical and
+   cannot reliably protect semantic singularity under repeated change.
 
 ---
 

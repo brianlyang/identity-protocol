@@ -1,0 +1,156 @@
+schema_version: 1
+registry_family: protocol_root_corpus
+registry_version: v1
+root_dir: identity/protocol
+validator_script: scripts/validate_protocol_root_corpus_governance.py
+probe_script: scripts/ci/run_protocol_root_corpus_governance_probes_ci.sh
+common_script: scripts/root_corpus_governance_common.py
+forbidden_content_classes:
+  - class_id: workbook_issue_projection
+    description: Workbook issue rows or issue-register projection markers must not enter protocol-root law-bearing files.
+    patterns:
+      - '^###\s+ISSUE-\d+\b'
+      - '^\|\s*ISSUE-\d+\b'
+      - '^-\s+`status`:\s+[A-Z_]+\s*$'
+  - class_id: closure_ledger_narration
+    description: Temporal closure chatter and residual-red ledger language must not enter protocol-root law-bearing files.
+    patterns:
+      - '\bresidual red\b'
+      - 'What remains intentionally open:'
+      - 'What no longer remains open on this sheet:'
+  - class_id: business_domain_example
+    description: Business/domain examples must not enter protocol-root law-bearing files.
+    patterns:
+      - '\bWeChat Shop\b'
+      - '\bTaobao\b'
+      - '\b1688\b'
+      - '\bSKU\b'
+      - '\bofferId\b'
+      - '\bstore manager\b'
+registered_top_level_entries:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    entry_kind: file
+    corpus_class: bottom_theory
+    law_bearing: true
+    required_markers:
+      - '## Document Positioning'
+      - '### Boundary relative to streams, releases, and the protocol-root corpus'
+      - '### Three orders must never be collapsed'
+      - 'In philosophical order, the identity protocol exists because this bottom theory exists first.'
+      - 'root-corpus admission law must be projected into machine-consumed registry and validation surfaces'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/README.md
+    entry_kind: file
+    corpus_class: root_index
+    law_bearing: true
+    required_markers:
+      - '## Root reading order'
+      - '## What belongs at protocol root'
+      - '## What must not be treated as protocol-root law'
+      - '## Source-order, reading-order, and adjudication-order'
+      - '## Root maintenance guardrails'
+      - 'root-corpus admission must be machine-governed'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    entry_kind: file
+    corpus_class: constitution
+    law_bearing: true
+    required_markers:
+      - '## Normative source map (current governed execution)'
+      - '## Governance execution stack (how work is controlled)'
+      - '## Foundational design philosophy boundary'
+      - 'This file is therefore a protocol-law constitution derived from that bottom theory'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    entry_kind: file
+    corpus_class: runtime_constitution
+    law_bearing: true
+    required_markers:
+      - '## Integration objective'
+      - '## Foundational design philosophy anchor'
+      - '## Startup sequence'
+      - 'runtime is an operational embodiment of protocol bottom theory'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - '## Document positioning'
+      - '## Scope and non-goals'
+      - '## Foundational design philosophy anchor'
+      - 'this file remains the authoritative root-domain contract for prompt bootstrap behavior'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/IDENTITY_DISCOVERY.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - '## Document positioning'
+      - '## Purpose'
+      - '## Foundational design philosophy anchor'
+      - 'this file freezes the concrete discovery law'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/AGENT_HANDOFF_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - '## Document positioning'
+      - '## Purpose'
+      - '## Foundational design philosophy anchor'
+      - 'This contract is written primarily for:'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
+  - rel_path: identity/protocol/mappings
+    entry_kind: directory
+    corpus_class: machine_registry_directory
+    law_bearing: true
+    required_children:
+      - root-corpus-registry.current.yaml
+      - root-corpus-registry.v1.yaml
+      - contract-binding.current.yaml
+      - stream-doc-registry.current.yaml
+      - semantic-term-registry.current.yaml
+      - layer-targeted-gate-profile.current.yaml
+      - version-baseline.current.yaml
+  - rel_path: identity/protocol/broadcast
+    entry_kind: directory
+    corpus_class: governed_subdomain_extension
+    law_bearing: true
+    required_children:
+      - index.json
+  - rel_path: identity/protocol/plugins
+    entry_kind: directory
+    corpus_class: governed_subdomain_extension
+    law_bearing: true
+    required_children:
+      - README.md
+      - PLUGIN_REGISTRY.current.yaml
+      - PLUGIN_DOC_CONTROL.current.yaml
+      - FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
+      - PROVIDER_PROFILES.current.yaml
+  - rel_path: identity/protocol/fixtures
+    entry_kind: directory
+    corpus_class: demoted_support_directory
+    law_bearing: false

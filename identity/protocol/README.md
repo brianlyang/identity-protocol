@@ -196,6 +196,9 @@ When root protocol files are authored or updated, the following guardrails must 
 4. **root corpus admission must stay law-bearing**
    - the root directory should accept only bottom theory, constitutions, root contracts, machine-consumed registries/mappings, governed subdomain protocol packs, and clearly demoted support material;
    - stream-local commentary, workbook material, business strategy, or workspace residue must not be promoted into protocol-root law-bearing position.
+5. **root-corpus admission must be machine-governed**
+   - law-bearing admission, classification, and exclusion at `identity/protocol/` should be mirrored in protocol-owned registry / validator / probe surfaces rather than left to reviewer taste or oral memory;
+   - if root purity depends only on human recollection, the root corpus has already started to drift away from machine law.
 
 ---
 
