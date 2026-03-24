@@ -1021,10 +1021,10 @@ Root cause:
   - direct live replay on `base-repo-audit-expert-v3` now returns `bundle_status=PASS_REQUIRED` for `python3 scripts/required_gate_bundle_runner.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --operation scan --target-name identity_context_continuity_receipts --json-only`;
   - `python3 scripts/render_control_plane_budget.py --write --json-only` and `python3 scripts/render_control_plane_status.py --write --json-only` now re-anchor the final `1.6.x` release-freeze baseline to `error_codes=575`, and both `scripts/validate_control_plane_budget.py --json-only` and `scripts/validate_control_plane_status_sync.py --json-only` return `PASS_REQUIRED`.
 
-### ISSUE-037 - Tool/vendor trio is protocol-owned structurally, but loop-3 / loop-4 / prompt consumers still lack strict current-run live-link closure
+### ISSUE-037 - Weak live linkage remains under-governed across trio/prompt/sample/loop consumer lanes
 
 - `status`: OPEN
-- `problem_statement`: the tool-installation / vendor-api-discovery / vendor-api-solution trio is already protocol-owned and already participates in discovery requiredization, prompt bootstrap, prompt capability matrix, `v1.6.17` strengthening, and `v1.6.18` routing boundaries. The remaining gap is narrower and more subtle: current consumers still accept structural presence and historical reports where strict current-run live evidence binding and live projection should be required.
+- `problem_statement`: the protocol already has strong owner lanes for trio structure, prompt coverage, sample/self-test validation, loop semantic centers, and freshness governance. The remaining gap is that several consumers can still pass on declaration/prompt/sample/meta/latest-log signals where current-run binding and next-hop consumption should be required. This is a weak-live-linkage problem, not a missing-structure problem.
 - `primary_owner_doc`: `docs/governance/identity-tool-vendor-live-link-strengthening-governance-v1.6.19.md`
 - `secondary_refs`:
   - `docs/review/protocol-remediation-audit-ledger-v1.6.19-tool-vendor-live-link-strengthening.md`
@@ -1032,22 +1032,29 @@ Root cause:
   - `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md`
   - `identity/protocol/IDENTITY_PROTOCOL.md`
   - `identity/protocol/IDENTITY_RUNTIME.md`
+  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`
 - `machine_gate`:
   - `scripts/validate_identity_tool_installation.py`
   - `scripts/validate_identity_vendor_api_discovery.py`
   - `scripts/validate_identity_vendor_api_solution.py`
   - `scripts/validate_discovery_requiredization.py`
+  - `scripts/validate_identity_capability_arbitration.py`
+  - `scripts/validate_identity_experience_feedback.py`
+  - `scripts/validate_identity_knowledge_acquisition.py`
+  - `scripts/validate_identity_trigger_regression.py`
   - `scripts/validate_identity_routing_learning_strengthening.py`
   - `scripts/validate_feedback_to_judgement_loopback.py`
   - `scripts/validate_prompt_bootstrap_capability.py`
   - `scripts/validate_prompt_capability_matrix.py`
   - `scripts/validate_prompt_derivation_conformance.py`
+  - `scripts/validate_identity_experience_feedback_governance.py`
 - `root_cause`: RC-01 and RC-06
 - `stop_condition`:
-  - trio validators distinguish strict current-run evidence from scan/history-only evidence through shared run-binding semantics rather than per-validator folklore;
-  - when the selected route belongs to the tool/vendor class, loop-3 consumes live trio selection projection instead of republishing field-name placeholders;
-  - when the selected route belongs to the tool/vendor class, loop-4 absorbs trio decision truth into the replay-governed operational-prompt path instead of validating only generic prompt/link/replay structure;
-  - prompt bootstrap / prompt matrix / prompt derivation no longer claim `requiredization_current_round_linked` from prompt presence or configured driver literals alone;
+  - the canonical governance/review/workbook surfaces freeze `weak_live_linkage` plus the four-layer differential-audit method;
+  - prompt-side validators no longer claim current-round linkage from prompt presence or configured driver literals alone;
+  - sample-report validators explicitly distinguish sample/self-test closure from strict live closure;
+  - loop-center validators expose separate `semantic_center_status` and `live_bridge_status` semantics instead of narrating hook alignment as full route/loop closure;
+  - same-run binding is enforced where freshness-only latest-log checks are insufficient for strict closure;
   - the fix remains additive shared infrastructure and does not reopen `v1.6.17`, `v1.6.18`, or the frozen no-downgrade boundary.
 - `current_evidence`:
   - direct local replay on `custom-creative-ecom-analyst` still passes the trio on historical reports:
@@ -1056,10 +1063,12 @@ Root cause:
     - `runtime/reports/vendor-api-solution-custom-creative-ecom-analyst-20260227T040733Z.json`
   - those historical reports still satisfy the current trio validators even though the shared strict live-binding fields are not yet frozen as a protocol-owned consumer contract;
   - `python3 identity-protocol-local/scripts/validate_discovery_requiredization.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --json-only` returns `requiredized_all_discovery_contracts=true`, confirming the trio is already structurally required rather than absent;
-  - `python3 identity-protocol-local/scripts/validate_identity_routing_learning_strengthening.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --json-only` returns `PASS_REQUIRED` while projecting `selected_candidate_id="selected_candidate_id"` and `selection_basis="selection_basis"`, which confirms the strengthening lane exists but is still structural on this path;
-  - `python3 identity-protocol-local/scripts/validate_feedback_to_judgement_loopback.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --json-only` returns `PASS_REQUIRED` on generic loopback semantics without yet requiring trio decision absorption fields for tool/vendor-selected routes;
-  - `python3 identity-protocol-local/scripts/validate_prompt_bootstrap_capability.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --json-only`, `validate_prompt_capability_matrix.py`, and `validate_prompt_derivation_conformance.py` all return `PASS_REQUIRED` with `requiredization_current_round_linked=true` derived from prompt presence / configured validators rather than live trio evidence;
+  - `python3 identity-protocol-local/scripts/validate_prompt_bootstrap_capability.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --json-only`, `validate_prompt_capability_matrix.py`, and `validate_prompt_derivation_conformance.py` all return `PASS_REQUIRED`; source recheck confirms the first and third derive `requiredization_current_round_linked` directly from `prompt_path.exists()`, while the second derives it from `prompt_path.exists()` or configured validator presence and can still return `PASS_REQUIRED` with `discovery_requiredized_all=false`;
+  - `python3 identity-protocol-local/scripts/validate_identity_capability_arbitration.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst`, `validate_identity_experience_feedback.py`, `validate_identity_knowledge_acquisition.py`, and `validate_identity_trigger_regression.py` all return pass on the strict lane, while source rechecks confirm they default to `runtime/examples/*` or `sample_report_path_pattern` sample families unless a report is explicitly injected;
+  - `python3 identity-protocol-local/scripts/validate_identity_routing_learning_strengthening.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --json-only` returns `PASS_REQUIRED` while projecting `selected_candidate_id="selected_candidate_id"` and `selection_basis="selection_basis"`, which confirms the strengthening lane exists but is still meta/structural on this path;
+  - `python3 identity-protocol-local/scripts/validate_feedback_to_judgement_loopback.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --json-only` returns `PASS_REQUIRED` on generic loopback semantics without yet requiring route-specific live bridge absorption fields;
   - `python3 identity-protocol-local/scripts/validate_capability_fit_roundtable_evidence.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --json-only` returns `SKIPPED_NOT_REQUIRED`, which helps bound the issue correctly: the defect is not “all routing failed”, but “upper consumers can remain green without live trio consumer proof”;
+  - `python3 identity-protocol-local/scripts/validate_identity_experience_feedback_governance.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst` currently fails on `latest feedback log too old: 15d > max_log_age_days=7`, which confirms freshness is already enforced on this lane and should be treated as a secondary same-run-binding strengthening target rather than the primary false-green family;
   - repo deep-sweep rechecks also verified that protocol-feedback current-round lanes using `scripts/protocol_feedback_lane_common.py` already derive correlated current-round linkage and therefore must not be misclassified into this stream.
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)

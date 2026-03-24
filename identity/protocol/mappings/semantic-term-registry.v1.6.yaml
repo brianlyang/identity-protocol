@@ -1,7 +1,7 @@
 schema_version: 1
 registry_version: v1
 stream_version: v1.6
-updated_at_utc: "2026-03-23T00:00:00Z"
+updated_at_utc: "2026-03-24T00:00:00Z"
 
 terms:
   - term_id: catalog_multi_active
@@ -320,6 +320,20 @@ terms:
       - review
       - protocol_feedback_triage
       - stream_v1_6_10
+
+  - term_id: weak_live_linkage
+    canonical_term: weak_live_linkage
+    aliases:
+      - "weak live linkage"
+      - "弱实链路"
+      - "contract-strong live-weak"
+      - "false-green live closure"
+    semantics: "Validator/contract/prompt/hook/sample surfaces may pass on declaration, prompt/sample/meta evidence, or latest-log presence while current-run binding and next-hop consumption remain unproven. Such a pass is not full operational closure and must be interpreted through the four-layer differential-audit model: contract layer, artifact layer, run-binding layer, and consumption layer."
+    allowed_scope:
+      - governance
+      - review
+      - runtime_contract
+      - stream_v1_6_19
 
 forbidden_phrases:
   - phrase: "multi-active state is a protocol violation"
