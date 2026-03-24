@@ -52,6 +52,13 @@ Status transitions are controlled by governance/review, not by script commit alo
 4. The design philosophy document is therefore philosophically prior, but it is **not** a direct machine-consumed contract row, validator schema, or runtime success-path artifact sink.
 5. Machine-consumed truth remains frozen in governance/review docs, mappings, validators, probes, runtime state, and receipts; the design philosophy document explains why those laws exist and how they should be interpreted, but does not replace them.
 
+## Constitutional derivation discipline
+
+1. This constitution may derive only from bottom theory, and from properly governed constitutional/contract strengthening that has been refrozen into protocol law.
+2. Current stream, checker, or verdict state must not be reverse-projected into constitutional source law.
+3. Governance evidence, review evidence, runtime evidence, or current-turn enforcement may expose incompleteness in constitutional law, but they do not become the semantic parent of that law merely by exposing the gap.
+4. Operational evidence may justify constitutional strengthening, but it becomes law only after governed refreezing at constitutional or contract layers.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

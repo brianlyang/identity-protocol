@@ -147,6 +147,8 @@ registered_top_level_entries:
       - root-corpus-registry.v1.yaml
       - root-corpus-authority.current.yaml
       - root-corpus-authority.v1.yaml
+      - root-corpus-derivation.current.yaml
+      - root-corpus-derivation.v1.yaml
       - root-corpus-question-routing.current.yaml
       - root-corpus-question-routing.v1.yaml
       - root-corpus-ordering.current.yaml

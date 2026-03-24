@@ -164,6 +164,26 @@ Confusing them leads to characteristic protocol errors:
 - if reading-order is mistaken for source-order, a directory index is falsely treated as generative law;
 - if source-order is mistaken for adjudication-order, philosophy text is incorrectly used as if it were a direct runtime verdict surface.
 
+### Derivation direction must stay one-way
+
+The root corpus must also preserve one-way derivation direction.
+
+1. bottom theory may ground constitutions, runtime law, contracts, registries, and governed extensions;
+2. constitutions may freeze bottom-theory commitments into protocol-law and runtime-law structure;
+3. root contracts may further freeze domain law under those constitutions;
+4. machine-consumed registries and governed extensions may operationalize that frozen law;
+5. later enforcement, runtime evidence, review evidence, and current-turn verdicts may expose incompleteness, but they must not become the semantic parent of the earlier layer they test.
+
+Later enforcement may reveal incompleteness; it never becomes the semantic author of the earlier law it tests.
+
+A motivating surface is not yet a law-bearing parent surface.
+
+That means:
+
+- root navigation may summarize law, but it does not reverse-author the law it indexes;
+- support material may explain or illustrate law, but it does not define the law-bearing parent of protocol meaning;
+- current-turn evidence may trigger strengthening, but it becomes shared law only after governed refreezing at the proper root-law layer.
+
 ### Question class and answer surface must stay paired
 
 Different layers of the root corpus answer different classes of questions, and

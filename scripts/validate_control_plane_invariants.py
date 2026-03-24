@@ -34,6 +34,7 @@ CONTROL_PLANE_STATUS_CURRENT_DEFAULT_REL = "identity/protocol/mappings/control-p
 ROOT_CORPUS_REGISTRY_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-registry.current.yaml"
 ROOT_CORPUS_ORDERING_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-ordering.current.yaml"
 ROOT_CORPUS_AUTHORITY_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-authority.current.yaml"
+ROOT_CORPUS_DERIVATION_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-derivation.current.yaml"
 ROOT_CORPUS_QUESTION_ROUTING_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-question-routing.current.yaml"
 STREAM_DOC_REGISTRY_LITERAL_SINGLE_SOURCE = "scripts/registry_alias_control_plane_common.py"
 STREAM_DOC_REGISTRY_LITERAL_CONSUMER_FILES: tuple[str, ...] = (
@@ -483,6 +484,10 @@ def main() -> int:
         default=ROOT_CORPUS_AUTHORITY_CURRENT_DEFAULT_REL,
     )
     parser.add_argument(
+        "--root-corpus-derivation-current-file",
+        default=ROOT_CORPUS_DERIVATION_CURRENT_DEFAULT_REL,
+    )
+    parser.add_argument(
         "--root-corpus-question-routing-current-file",
         default=ROOT_CORPUS_QUESTION_ROUTING_CURRENT_DEFAULT_REL,
     )
@@ -577,6 +582,13 @@ def main() -> int:
     root_corpus_authority_alias_enabled = False
     root_corpus_authority_parse_ok = False
     root_corpus_authority_violation_count = 0
+    root_corpus_derivation_current_configured_file = str(args.root_corpus_derivation_current_file)
+    root_corpus_derivation_current_path = (repo_root / root_corpus_derivation_current_configured_file).resolve()
+    root_corpus_derivation_current_resolved_path = root_corpus_derivation_current_path
+    root_corpus_derivation_active_file = ""
+    root_corpus_derivation_alias_enabled = False
+    root_corpus_derivation_parse_ok = False
+    root_corpus_derivation_violation_count = 0
     root_corpus_question_routing_current_configured_file = str(args.root_corpus_question_routing_current_file)
     root_corpus_question_routing_current_path = (repo_root / root_corpus_question_routing_current_configured_file).resolve()
     root_corpus_question_routing_current_resolved_path = root_corpus_question_routing_current_path
@@ -1172,6 +1184,36 @@ def main() -> int:
         root_corpus_authority_parse_ok = bool(root_authority_state.get("parse_ok", False))
         root_corpus_authority_violation_count = root_authority_violation_count
         for row in root_authority_violations:
+            violations.append(row)
+
+        root_corpus_derivation_alias_cfg = (
+            (invariants.get("root_corpus_derivation_alias") or {}) if isinstance(invariants, dict) else {}
+        )
+        (
+            root_derivation_state,
+            root_derivation_violations,
+            root_derivation_violation_count,
+        ) = _validate_mapping_alias_contract(
+            repo_root=repo_root,
+            alias_field="root_corpus_derivation_alias",
+            alias_cfg=root_corpus_derivation_alias_cfg if isinstance(root_corpus_derivation_alias_cfg, dict) else {},
+            configured_current_file=root_corpus_derivation_current_configured_file,
+            expected_active_prefix="identity/protocol/mappings/root-corpus-derivation.v",
+        )
+        root_corpus_derivation_alias_enabled = bool(root_derivation_state.get("alias_enabled", False))
+        root_corpus_derivation_current_configured_file = str(
+            root_derivation_state.get("current_configured_file", "")
+        )
+        root_corpus_derivation_current_path = Path(
+            root_derivation_state.get("current_path", root_corpus_derivation_current_path)
+        )
+        root_corpus_derivation_current_resolved_path = Path(
+            root_derivation_state.get("current_resolved_path", root_corpus_derivation_current_resolved_path)
+        )
+        root_corpus_derivation_active_file = str(root_derivation_state.get("active_file", ""))
+        root_corpus_derivation_parse_ok = bool(root_derivation_state.get("parse_ok", False))
+        root_corpus_derivation_violation_count = root_derivation_violation_count
+        for row in root_derivation_violations:
             violations.append(row)
 
         root_corpus_question_routing_alias_cfg = (
@@ -2461,6 +2503,13 @@ def main() -> int:
         "root_corpus_authority_active_file": root_corpus_authority_active_file,
         "root_corpus_authority_parse_ok": root_corpus_authority_parse_ok,
         "root_corpus_authority_violation_count": root_corpus_authority_violation_count,
+        "root_corpus_derivation_alias_enabled": root_corpus_derivation_alias_enabled,
+        "root_corpus_derivation_current_file": str(root_corpus_derivation_current_path),
+        "root_corpus_derivation_current_configured_file": root_corpus_derivation_current_configured_file,
+        "root_corpus_derivation_current_resolved_file": str(root_corpus_derivation_current_resolved_path),
+        "root_corpus_derivation_active_file": root_corpus_derivation_active_file,
+        "root_corpus_derivation_parse_ok": root_corpus_derivation_parse_ok,
+        "root_corpus_derivation_violation_count": root_corpus_derivation_violation_count,
         "root_corpus_question_routing_alias_enabled": root_corpus_question_routing_alias_enabled,
         "root_corpus_question_routing_current_file": str(root_corpus_question_routing_current_path),
         "root_corpus_question_routing_current_configured_file": root_corpus_question_routing_current_configured_file,

@@ -169,3 +169,19 @@ invariants:
       surfaces:
         - scripts
         - .github/workflows
+  root_corpus_derivation_alias:
+    current_file: identity/protocol/mappings/root-corpus-derivation.current.yaml
+    required_fields:
+      - derivation_family
+      - derivation_version
+      - root_dir
+      - registry_current_file
+      - ordering_current_file
+      - authority_current_file
+      - question_routing_current_file
+      - derivation_class_profiles
+    forbid_versioned_reference:
+      regex: root-corpus-derivation\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows

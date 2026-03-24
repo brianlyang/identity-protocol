@@ -1,0 +1,90 @@
+schema_version: 1
+derivation_family: protocol_root_corpus_derivation
+derivation_version: v1
+root_dir: identity/protocol
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+derivation_anchor_checks:
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## One-way derivation discipline'
+      - 'a later enforcement verdict may expose incompleteness, but it must not become the semantic parent of the earlier layer it tests.'
+      - 'Explanatory or evidence surfaces may motivate strengthening, but they must re-enter root law only through governed refreezing at the proper layer.'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Derivation direction must stay one-way'
+      - 'Later enforcement may reveal incompleteness; it never becomes the semantic author of the earlier law it tests.'
+      - 'A motivating surface is not yet a law-bearing parent surface.'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Constitutional derivation discipline'
+      - 'Current stream, checker, or verdict state must not be reverse-projected into constitutional source law.'
+      - 'Operational evidence may justify constitutional strengthening, but it becomes law only after governed refreezing at constitutional or contract layers.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime derivation boundary'
+      - 'Runtime execution may expose shared-law gaps, but it must not self-author protocol law by reverse projection from a current-turn verdict.'
+      - 'Runtime evidence can trigger strengthening; it becomes shared law only after governed refreezing through the proper root-law surfaces.'
+derivation_class_profiles:
+  - corpus_class: bottom_theory
+    derivation_mode: generative_origin
+    allowed_upstream_classes: []
+    law_bearing_required: true
+  - corpus_class: root_index
+    derivation_mode: navigational_projection
+    allowed_upstream_classes:
+      - bottom_theory
+      - constitution
+      - runtime_constitution
+      - root_contract
+      - machine_registry_directory
+      - governed_subdomain_extension
+      - demoted_support_directory
+    law_bearing_required: true
+  - corpus_class: constitution
+    derivation_mode: constitutional_freeze
+    allowed_upstream_classes:
+      - bottom_theory
+    law_bearing_required: true
+  - corpus_class: runtime_constitution
+    derivation_mode: runtime_constitutional_freeze
+    allowed_upstream_classes:
+      - bottom_theory
+      - constitution
+    law_bearing_required: true
+  - corpus_class: root_contract
+    derivation_mode: domain_contract_freeze
+    allowed_upstream_classes:
+      - bottom_theory
+      - constitution
+      - runtime_constitution
+    law_bearing_required: true
+  - corpus_class: machine_registry_directory
+    derivation_mode: machine_registry_projection
+    allowed_upstream_classes:
+      - bottom_theory
+      - constitution
+      - runtime_constitution
+      - root_contract
+    law_bearing_required: true
+  - corpus_class: governed_subdomain_extension
+    derivation_mode: governed_extension_freeze
+    allowed_upstream_classes:
+      - bottom_theory
+      - constitution
+      - runtime_constitution
+      - root_contract
+      - machine_registry_directory
+    law_bearing_required: true
+  - corpus_class: demoted_support_directory
+    derivation_mode: demoted_support_projection
+    allowed_upstream_classes:
+      - bottom_theory
+      - constitution
+      - runtime_constitution
+      - root_contract
+      - machine_registry_directory
+      - governed_subdomain_extension
+    law_bearing_required: false

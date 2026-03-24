@@ -166,6 +166,25 @@ Do not collapse these orders:
 
 ---
 
+## One-way derivation discipline
+
+The root corpus must also preserve one-way derivation.
+
+1. bottom theory may ground constitutions, root contracts, registries, and governed extensions;
+2. constitutions and root contracts may freeze that grounding into more concrete law;
+3. machine-consumed registries and runtime adjudication may operationalize and test that law;
+4. a later enforcement verdict may expose incompleteness, but it must not become the semantic parent of the earlier layer it tests.
+
+Explanatory or evidence surfaces may motivate strengthening, but they must re-enter root law only through governed refreezing at the proper layer.
+
+So:
+
+- root navigation may summarize root law, but it does not reverse-author it;
+- support material may assist understanding, but it does not become a law-bearing parent of protocol meaning;
+- current-turn evidence may justify strengthening, but it does not become generative source law by itself.
+
+---
+
 ## Root question-routing discipline
 
 Different root entries answer different classes of machine-world questions.

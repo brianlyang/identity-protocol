@@ -35,6 +35,13 @@ Runtime meaning:
 4. operator-facing simplicity must be achieved by protocol-owned answer surfaces and governed execution paths, not by bypassing machine-law boundaries.
 5. runtime is an operational embodiment of protocol bottom theory, not an independent semantic constitution.
 
+## Runtime derivation boundary
+
+1. Runtime law derives from bottom theory, protocol constitution, runtime constitution, root contracts, and machine-consumed enforcement surfaces in canonical order.
+2. Runtime execution may expose shared-law gaps, but it must not self-author protocol law by reverse projection from a current-turn verdict.
+3. Runtime evidence can trigger strengthening; it becomes shared law only after governed refreezing through the proper root-law surfaces.
+4. Runtime may consume law-bearing root outputs and machine-consumed enforcement truth, but it must not recast its own transient execution state as generative source law.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.
