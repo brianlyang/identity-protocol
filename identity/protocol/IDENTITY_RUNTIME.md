@@ -16,6 +16,19 @@ Project extension features:
 - identity pack validation
 - runtime state and compile steps
 
+## Foundational design philosophy anchor
+
+Runtime integration inherits the bottom-layer philosophy frozen in:
+
+- `identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`
+
+Runtime meaning:
+
+1. runtime is not a compatibility shelter for lagging residue;
+2. current-turn truth must stay canonical and machine-resolved;
+3. instance adaptation debt should be absorbed at the instance/runtime layer unless the issue is a shared law gap;
+4. operator-facing simplicity must be achieved by protocol-owned answer surfaces and governed execution paths, not by bypassing machine-law boundaries.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.
@@ -109,6 +122,60 @@ Hard semantics:
 14. Runtime interpretation of memory-like persisted artifacts is layered: reject generic `memory`, resolve one exact family, enforce its fixed path, preserve canonical producer/consumer roles, keep declarations/gates off the storage plane, and then prove runtime viability.
 15. Runtime viability is achieved only when the family remains aligned across semantic owner, canonical root, shared producer path, shared consumer/validator lane, and active replay on the identities where that family is expected to operate.
 16. Runtime upgrade safety uses a three-state discipline rather than a one-state “all green” fiction: required/adopted families must stay `PASS_REQUIRED`, optional/not-required families may stay `SKIPPED_NOT_REQUIRED` without poisoning the outer routing lane, and quarantine-only families must never be promoted onto active success paths.
+
+### rq_053_identity_broadcast_delivery_contract_v1
+
+Required receipt/report fields:
+
+- `identity_broadcast_delivery_status`
+- `broadcast_contract_status`
+- `broadcast_runtime_contract_status`
+- `broadcast_source_status`
+- `broadcast_state_status`
+- `broadcast_delivery_sync_status`
+- `broadcast_projection_parity_status`
+- `broadcast_visible_count`
+- `broadcast_unread_count`
+- `broadcast_pending_ack_count`
+- `broadcast_critical_unacked_count`
+- `visible_ids`
+- `unread_ids`
+- `pending_ack_ids`
+- `critical_unacked_ids`
+- `stale_reasons`
+- `error_code`
+
+Hard semantics:
+
+1. Broadcast delivery is the dedicated runtime adoption lane for host-gateway broadcast truth; it is not the upstream broadcast-source semantic owner.
+2. The lane materializes pack-local visibility/read/pending-ack projection and optional delivery receipts, but it must not silently acknowledge pending critical broadcasts on behalf of the operator.
+3. Broadcast delivery is not protocol-feedback reply/inbox traffic, not protocol-feedback atomic emit, and not a learning, continuity, or memory sink.
+4. `rq_053` closes only through the shared validator + sync executor + migration-closure checker family, never through manual pack edits or host-gateway structural presence alone.
+
+### rq_054_identity_communication_transport_contract_v1
+
+Required receipt/report fields:
+
+- `identity_communication_transport_status`
+- `communication_contract_status`
+- `communication_runtime_roots_status`
+- `handoff_transport_status`
+- `collaboration_transport_status`
+- `protocol_feedback_reply_transport_status`
+- `protocol_feedback_inbox_transport_status`
+- `protocol_feedback_atomic_transport_status`
+- `broadcast_transport_status`
+- `transport_rows`
+- `stale_reasons`
+- `error_code`
+
+Hard semantics:
+
+1. Identity communication transport is the aggregate convergence surface across agent handoff, collaboration trigger, protocol-feedback reply/inbox, protocol-feedback atomic emit, and broadcast delivery.
+2. The topic is intentionally broader than strict identity-to-identity-only messaging.
+3. `rq_054` does not replace the semantic owners of those component contracts and does not create a new artifact family.
+4. Aggregate green requires bounded live bootstrap in canonical order: broadcast-delivery sync, protocol-feedback atomic bootstrap emit, then aggregate validator replay.
+5. Closure must stay protocol-owned shared infrastructure through creator/backfill/runner/closure-checker wiring; pack-local scripts, validator loosening, and compatibility shortcuts are non-canonical.
 
 ## Batch-6 anchor placeholders (v1.6 intake, non-promotional)
 

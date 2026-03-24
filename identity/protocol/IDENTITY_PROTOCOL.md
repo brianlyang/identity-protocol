@@ -13,6 +13,8 @@ For active governance execution in v1.6 lanes, normative sources are:
    - `docs/review/protocol-remediation-audit-ledger-v1.6.md`
 4. Global protocol handoff baseline:
    - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
+5. Foundational protocol design philosophy (interpretive / bottom-layer source):
+   - `identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`
 
 Governance rule:
 
@@ -35,6 +37,15 @@ Governance rule:
 
 Status transitions are controlled by governance/review, not by script commit alone:
 `SPEC_READY -> IMPL_READY -> GATE_READY -> VERIFIED -> DONE`.
+
+
+## Foundational design philosophy boundary
+
+1. `identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md` is the protocol root interpretive source for bottom-layer design philosophy.
+2. It explains why identity protocol is treated as a machine-law system, how protocol / instance / operator responsibilities split, and how new streams should be evaluated before implementation.
+3. It is a foundational semantic source for design, review, owner split, and instance self-drive judgement.
+4. It is **not** a direct machine-consumed contract row, validator schema, or runtime success-path artifact sink.
+5. Machine-consumed truth remains frozen in governance/review docs, mappings, validators, probes, runtime state, and receipts; the design philosophy document explains those laws, but does not replace them.
 
 ## Goal
 
