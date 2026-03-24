@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **versioning discipline clarification for patch-numbered stream docs**:
+  - `VERSIONING.md` now explicitly freezes that `v1.x.y` governance/review docs
+    are bounded protocol-owner streams, not ad hoc documentation-supplement
+    buckets.
+  - `VERSIONING.md` now also distinguishes non-versioned
+    `identity/protocol/*.md` interpretive root docs from `v1.x.y`
+    stream-owner docs, preventing bottom-layer philosophy anchors from being
+    mislabeled as patch-numbered streams.
+  - `docs/governance/identity-workbook-governance-v1.6.md` now mirrors the same
+    naming discipline at the workbook control-plane layer so new patch stream
+    numbers cannot be minted for loose truth-sync or commentary-only bundles.
+
 - **acceptance closure hardening for update review-required flow**:
   - tightened `scripts/execute_identity_upgrade.py` post-check execution so
     strict validators receive repo/actor/session/run tuple context explicitly,

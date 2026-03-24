@@ -21,6 +21,13 @@ Scope: canonical workbook control plane for cross-stream issue governance inside
 5. Naming discipline is frozen:
    - `workbook = X.X`
    - `governance/review = X.X.X`
+6. `X.X.X` governance/review documents are stream-owner protocol surfaces, not
+   ad hoc documentation-supplement buckets. If a change stays inside an already
+   open stream, it must extend that stream's governance/review/workbook truth
+   instead of minting a new patch stream number.
+7. Bottom-layer protocol philosophy or root interpretive semantics belong under
+   `identity/protocol/*.md` and must be anchored by protocol-root docs rather
+   than mislabeled as a fresh `X.X.X` workbook/governance/review stream.
 
 ## 1) Why `docs/workbook/` exists
 
