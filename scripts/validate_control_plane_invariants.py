@@ -34,6 +34,7 @@ CONTROL_PLANE_STATUS_CURRENT_DEFAULT_REL = "identity/protocol/mappings/control-p
 ROOT_CORPUS_REGISTRY_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-registry.current.yaml"
 ROOT_CORPUS_ORDERING_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-ordering.current.yaml"
 ROOT_CORPUS_AUTHORITY_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-authority.current.yaml"
+ROOT_CORPUS_QUESTION_ROUTING_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-question-routing.current.yaml"
 STREAM_DOC_REGISTRY_LITERAL_SINGLE_SOURCE = "scripts/registry_alias_control_plane_common.py"
 STREAM_DOC_REGISTRY_LITERAL_CONSUMER_FILES: tuple[str, ...] = (
     "scripts/docs_command_contract_check.py",
@@ -481,6 +482,10 @@ def main() -> int:
         "--root-corpus-authority-current-file",
         default=ROOT_CORPUS_AUTHORITY_CURRENT_DEFAULT_REL,
     )
+    parser.add_argument(
+        "--root-corpus-question-routing-current-file",
+        default=ROOT_CORPUS_QUESTION_ROUTING_CURRENT_DEFAULT_REL,
+    )
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
@@ -572,6 +577,13 @@ def main() -> int:
     root_corpus_authority_alias_enabled = False
     root_corpus_authority_parse_ok = False
     root_corpus_authority_violation_count = 0
+    root_corpus_question_routing_current_configured_file = str(args.root_corpus_question_routing_current_file)
+    root_corpus_question_routing_current_path = (repo_root / root_corpus_question_routing_current_configured_file).resolve()
+    root_corpus_question_routing_current_resolved_path = root_corpus_question_routing_current_path
+    root_corpus_question_routing_active_file = ""
+    root_corpus_question_routing_alias_enabled = False
+    root_corpus_question_routing_parse_ok = False
+    root_corpus_question_routing_violation_count = 0
     plugin_control_plane_alias_enabled = False
     plugin_control_plane_alias_parse_ok = False
     plugin_control_plane_alias_violation_count = 0
@@ -1160,6 +1172,36 @@ def main() -> int:
         root_corpus_authority_parse_ok = bool(root_authority_state.get("parse_ok", False))
         root_corpus_authority_violation_count = root_authority_violation_count
         for row in root_authority_violations:
+            violations.append(row)
+
+        root_corpus_question_routing_alias_cfg = (
+            (invariants.get("root_corpus_question_routing_alias") or {}) if isinstance(invariants, dict) else {}
+        )
+        (
+            root_question_state,
+            root_question_violations,
+            root_question_violation_count,
+        ) = _validate_mapping_alias_contract(
+            repo_root=repo_root,
+            alias_field="root_corpus_question_routing_alias",
+            alias_cfg=root_corpus_question_routing_alias_cfg if isinstance(root_corpus_question_routing_alias_cfg, dict) else {},
+            configured_current_file=root_corpus_question_routing_current_configured_file,
+            expected_active_prefix="identity/protocol/mappings/root-corpus-question-routing.v",
+        )
+        root_corpus_question_routing_alias_enabled = bool(root_question_state.get("alias_enabled", False))
+        root_corpus_question_routing_current_configured_file = str(
+            root_question_state.get("current_configured_file", "")
+        )
+        root_corpus_question_routing_current_path = Path(
+            root_question_state.get("current_path", root_corpus_question_routing_current_path)
+        )
+        root_corpus_question_routing_current_resolved_path = Path(
+            root_question_state.get("current_resolved_path", root_corpus_question_routing_current_resolved_path)
+        )
+        root_corpus_question_routing_active_file = str(root_question_state.get("active_file", ""))
+        root_corpus_question_routing_parse_ok = bool(root_question_state.get("parse_ok", False))
+        root_corpus_question_routing_violation_count = root_question_violation_count
+        for row in root_question_violations:
             violations.append(row)
 
         plugin_alias_cfg = (invariants.get("plugin_control_plane_alias") or {}) if isinstance(invariants, dict) else {}
@@ -2419,6 +2461,13 @@ def main() -> int:
         "root_corpus_authority_active_file": root_corpus_authority_active_file,
         "root_corpus_authority_parse_ok": root_corpus_authority_parse_ok,
         "root_corpus_authority_violation_count": root_corpus_authority_violation_count,
+        "root_corpus_question_routing_alias_enabled": root_corpus_question_routing_alias_enabled,
+        "root_corpus_question_routing_current_file": str(root_corpus_question_routing_current_path),
+        "root_corpus_question_routing_current_configured_file": root_corpus_question_routing_current_configured_file,
+        "root_corpus_question_routing_current_resolved_file": str(root_corpus_question_routing_current_resolved_path),
+        "root_corpus_question_routing_active_file": root_corpus_question_routing_active_file,
+        "root_corpus_question_routing_parse_ok": root_corpus_question_routing_parse_ok,
+        "root_corpus_question_routing_violation_count": root_corpus_question_routing_violation_count,
         "plugin_control_plane_alias_enabled": plugin_control_plane_alias_enabled,
         "plugin_control_plane_alias_parse_ok": plugin_control_plane_alias_parse_ok,
         "plugin_control_plane_alias_violation_count": plugin_control_plane_alias_violation_count,

@@ -152,3 +152,20 @@ invariants:
       surfaces:
         - scripts
         - .github/workflows
+  root_corpus_question_routing_alias:
+    current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+    required_fields:
+      - routing_family
+      - routing_version
+      - root_dir
+      - registry_current_file
+      - ordering_current_file
+      - authority_current_file
+      - question_class_profiles
+      - entry_question_projection
+      - adjudication_redirect
+    forbid_versioned_reference:
+      regex: root-corpus-question-routing\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows

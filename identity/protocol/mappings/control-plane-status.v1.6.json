@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-24T11:14:05Z",
-  "git_head_short": "5bf36f6",
+  "generated_at_utc": "2026-03-24T11:42:02Z",
+  "git_head_short": "76ec3e9",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -44,9 +44,9 @@
           ".github/workflows/_identity-required-gates.yml"
         ],
         "observed": {
-          "validator_scripts": 212,
-          "error_codes": 599,
-          "error_code_families": 218,
+          "validator_scripts": 213,
+          "error_codes": 606,
+          "error_code_families": 221,
           "mapping_rows_missing_in_bundle": 0,
           "bundle_rows": 55,
           "missing_mapping_rows": [],
@@ -65,16 +65,16 @@
         },
         "budgets": {
           "validator_scripts": {
-            "warn": 212,
-            "fail": 214
+            "warn": 213,
+            "fail": 215
           },
           "error_codes": {
-            "warn": 599,
-            "fail": 602
+            "warn": 606,
+            "fail": 609
           },
           "error_code_families": {
-            "warn": 218,
-            "fail": 224
+            "warn": 221,
+            "fail": 227
           },
           "mapping_rows_missing_in_bundle": {
             "warn": 0,
@@ -257,6 +257,13 @@
         "root_corpus_authority_active_file": "identity/protocol/mappings/root-corpus-authority.v1.yaml",
         "root_corpus_authority_parse_ok": true,
         "root_corpus_authority_violation_count": 0,
+        "root_corpus_question_routing_alias_enabled": true,
+        "root_corpus_question_routing_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.current.yaml",
+        "root_corpus_question_routing_current_configured_file": "identity/protocol/mappings/root-corpus-question-routing.current.yaml",
+        "root_corpus_question_routing_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.v1.yaml",
+        "root_corpus_question_routing_active_file": "identity/protocol/mappings/root-corpus-question-routing.v1.yaml",
+        "root_corpus_question_routing_parse_ok": true,
+        "root_corpus_question_routing_violation_count": 0,
         "plugin_control_plane_alias_enabled": true,
         "plugin_control_plane_alias_parse_ok": true,
         "plugin_control_plane_alias_violation_count": 0,
@@ -869,10 +876,10 @@
         ],
         "pack_scan_globs": [],
         "active_pack_identity_ids": [],
-        "repo_scan_file_count": 395,
+        "repo_scan_file_count": 399,
         "active_pack_scan_file_count": 0,
         "extra_scan_file_count": 0,
-        "scan_file_count": 395,
+        "scan_file_count": 399,
         "scan_files": [
           ".github/workflows/_identity-required-gates.yml",
           ".github/workflows/identity-protocol-ci.yml",
@@ -918,6 +925,7 @@
           "scripts/ci/run_protocol_root_corpus_authority_probes_ci.sh",
           "scripts/ci/run_protocol_root_corpus_governance_probes_ci.sh",
           "scripts/ci/run_protocol_root_corpus_ordering_probes_ci.sh",
+          "scripts/ci/run_protocol_root_corpus_question_routing_probes_ci.sh",
           "scripts/ci/run_reference_visual_atlas_scaffold_probes_ci.sh",
           "scripts/ci/run_required_runtime_gates_ci.sh",
           "scripts/ci/run_semantic_clarity_probes_ci.sh",
@@ -1025,6 +1033,7 @@
           "scripts/root_corpus_authority_common.py",
           "scripts/root_corpus_governance_common.py",
           "scripts/root_corpus_ordering_common.py",
+          "scripts/root_corpus_question_routing_common.py",
           "scripts/rotate_handoff_collab_freshness.py",
           "scripts/run_host_visible_live_closure.py",
           "scripts/run_identity_broadcast_delivery.py",
@@ -1043,6 +1052,7 @@
           "scripts/scaffold_workbook_family.py",
           "scripts/scan_identity_path_residue.py",
           "scripts/shell_strict_entry_common.sh",
+          "scripts/strict_live_evidence_resolution_common.py",
           "scripts/sync_identity_meta_status.py",
           "scripts/sync_plugin_join_wiring.py",
           "scripts/sync_session_identity.py",
@@ -1214,6 +1224,7 @@
           "scripts/validate_protocol_root_corpus_authority.py",
           "scripts/validate_protocol_root_corpus_governance.py",
           "scripts/validate_protocol_root_corpus_ordering.py",
+          "scripts/validate_protocol_root_corpus_question_routing.py",
           "scripts/validate_protocol_ssot_source.py",
           "scripts/validate_protocol_unique_entry_gate.py",
           "scripts/validate_protocol_vendor_semantic_isolation.py",
@@ -1682,6 +1693,183 @@
       }
     },
     {
+      "name": "protocol_root_corpus_question_routing",
+      "command": [
+        "python3",
+        "scripts/validate_protocol_root_corpus_question_routing.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "payload": {
+        "protocol_root_corpus_question_routing_status": "PASS_REQUIRED",
+        "error_code": "",
+        "routing_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.current.yaml",
+        "routing_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.v1.yaml",
+        "registry_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.current.yaml",
+        "registry_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.v1.yaml",
+        "ordering_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.current.yaml",
+        "ordering_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.v1.yaml",
+        "authority_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.current.yaml",
+        "authority_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.v1.yaml",
+        "root_dir": "identity/protocol",
+        "root_index_entry": "identity/protocol/README.md",
+        "question_routing_anchor_check_count": 5,
+        "question_class_profile_count": 9,
+        "entry_question_projection_count": 11,
+        "question_class_profiles": [
+          {
+            "question_class": "generative_why",
+            "answer_mode": "interpretive_answer_only",
+            "current_turn_authority_allowed": false,
+            "root_entry_required": true
+          },
+          {
+            "question_class": "root_entry_navigation",
+            "answer_mode": "navigational_answer_only",
+            "current_turn_authority_allowed": false,
+            "root_entry_required": true
+          },
+          {
+            "question_class": "frozen_protocol_law",
+            "answer_mode": "frozen_law_answer",
+            "current_turn_authority_allowed": false,
+            "root_entry_required": true
+          },
+          {
+            "question_class": "frozen_runtime_law",
+            "answer_mode": "frozen_law_answer",
+            "current_turn_authority_allowed": false,
+            "root_entry_required": true
+          },
+          {
+            "question_class": "frozen_domain_contract_law",
+            "answer_mode": "frozen_law_answer",
+            "current_turn_authority_allowed": false,
+            "root_entry_required": true
+          },
+          {
+            "question_class": "registry_resolution",
+            "answer_mode": "machine_registry_answer",
+            "current_turn_authority_allowed": true,
+            "root_entry_required": true
+          },
+          {
+            "question_class": "governed_extension_law",
+            "answer_mode": "extension_answer",
+            "current_turn_authority_allowed": false,
+            "root_entry_required": true
+          },
+          {
+            "question_class": "support_material_lookup",
+            "answer_mode": "support_material_answer",
+            "current_turn_authority_allowed": false,
+            "root_entry_required": true
+          },
+          {
+            "question_class": "current_turn_legality",
+            "answer_mode": "redirect_to_machine_enforcement",
+            "current_turn_authority_allowed": true,
+            "root_entry_required": false
+          }
+        ],
+        "entry_question_projection": [
+          {
+            "rel_path": "identity/protocol/README.md",
+            "question_classes": [
+              "root_entry_navigation"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
+            "question_classes": [
+              "generative_why"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/IDENTITY_PROTOCOL.md",
+            "question_classes": [
+              "frozen_protocol_law"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/IDENTITY_RUNTIME.md",
+            "question_classes": [
+              "frozen_runtime_law"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
+            "question_classes": [
+              "frozen_domain_contract_law"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/IDENTITY_DISCOVERY.md",
+            "question_classes": [
+              "frozen_domain_contract_law"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/AGENT_HANDOFF_CONTRACT.md",
+            "question_classes": [
+              "frozen_domain_contract_law"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/mappings",
+            "question_classes": [
+              "registry_resolution"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/broadcast",
+            "question_classes": [
+              "governed_extension_law"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/plugins",
+            "question_classes": [
+              "governed_extension_law"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/fixtures",
+            "question_classes": [
+              "support_material_lookup"
+            ]
+          }
+        ],
+        "adjudication_redirect": {
+          "question_class": "current_turn_legality",
+          "terminal_machine_surfaces": [
+            "mappings",
+            "validators",
+            "probes",
+            "runtime_state",
+            "receipts"
+          ],
+          "forbidden_root_corpus_classes": [
+            "bottom_theory",
+            "root_index",
+            "constitution",
+            "runtime_constitution",
+            "root_contract",
+            "governed_subdomain_extension",
+            "demoted_support_directory"
+          ]
+        },
+        "structure_violations": [],
+        "routing_violations": [],
+        "anchor_violations": [],
+        "stale_reasons": []
+      }
+    },
+    {
       "name": "docs_command_contract",
       "command": [
         "python3",
@@ -1887,10 +2075,10 @@
     }
   ],
   "summary": {
-    "check_count": 15,
+    "check_count": 16,
     "fail_count": 0,
     "warn_count": 0,
-    "pass_count": 15
+    "pass_count": 16
   },
   "control_plane_status": "PASS_REQUIRED",
   "promotion_ready": true,

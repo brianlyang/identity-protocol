@@ -166,6 +166,37 @@ Do not collapse these orders:
 
 ---
 
+## Root question-routing discipline
+
+Different root entries answer different classes of machine-world questions.
+
+1. `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md` answers the **generative why-question**:
+   - why identity protocol law exists in this shape at all.
+2. `README.md` answers the **root-entry question**:
+   - how to enter the root corpus without semantic confusion.
+3. `IDENTITY_PROTOCOL.md` and `IDENTITY_RUNTIME.md` answer the **constitutional law question**:
+   - what protocol-law and runtime-law are concretely frozen.
+4. Root contract files answer the **domain-law question**:
+   - what prompt, discovery, handoff, and related root-domain law are concretely frozen.
+5. `mappings/` answers the **machine-registry question**:
+   - which aliases, active files, bindings, and registry rows are machine-consumed truth.
+6. `broadcast/` and `plugins/` answer the **governed extension question**:
+   - what narrower subdomain law is frozen under the root corpus.
+7. `fixtures/` answers the **support-material question** only:
+   - what demoted support material exists without becoming runtime truth.
+
+The most important prohibition is strict:
+
+- current-turn legality question must never terminate in philosophy text, README text, or frozen contract prose alone.
+
+Current-turn legality must instead resolve from machine-consumed enforcement surfaces such as:
+
+1. mappings and active-file aliases;
+2. validators and probes;
+3. runtime state and receipts.
+
+---
+
 ## Conflict-handling rule
 
 If two layers seem to disagree, resolve them with the following discipline:

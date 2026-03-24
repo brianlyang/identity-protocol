@@ -164,6 +164,33 @@ Confusing them leads to characteristic protocol errors:
 - if reading-order is mistaken for source-order, a directory index is falsely treated as generative law;
 - if source-order is mistaken for adjudication-order, philosophy text is incorrectly used as if it were a direct runtime verdict surface.
 
+### Question class and answer surface must stay paired
+
+Different layers of the root corpus answer different classes of questions, and
+those question classes must not be collapsed.
+
+1. the **generative why-question** belongs to bottom theory;
+2. the **root-entry question** belongs to the root index;
+3. the **constitutional law question** belongs to protocol and runtime constitutions;
+4. the **domain-law question** belongs to root contracts;
+5. the **machine-registry question** belongs to machine-consumed mappings and registries;
+6. the **governed-extension question** belongs to governed subdomain extensions;
+7. the **support-material question** belongs only to clearly demoted support material;
+8. the **current-turn legality question** belongs to machine-consumed enforcement surfaces such as mappings, validators, probes, runtime state, and receipts.
+
+No layer should answer a question that belongs to a different layer.
+
+So the protocol must reject the following confusions:
+
+- philosophy prose answering a current-turn legality question;
+- README navigation answering a constitutional question;
+- a root contract being mistaken for a direct runtime verdict surface;
+- support material being mistaken for machine-consumed registry truth.
+
+If a current-turn legality question is answered only by philosophy text, root
+index text, or frozen contract prose, then interpretive law and runtime
+adjudication have already been collapsed into each other.
+
 ---
 
 ## 1. The identity protocol is machine law first, not a compatibility layer
