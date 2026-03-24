@@ -171,6 +171,7 @@ GATEWAY_WRAPPER_TIMEOUT_PROFILE_SECONDS: tuple[tuple[str, int], ...] = (
     # long-running profile so wrapper-only release gates do not false-red at the
     # default passthrough timeout.
     ("scripts/validate_protocol_lane_isolated_historical_replay.py", 300),
+    ("scripts/ci/run_protocol_root_corpus_governance_probes_ci.sh", 300),
     ("scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh", 600),
     # Workbook control-plane probes materialize shadow repos, rerender governed
     # projection outputs, and replay multiple negative-path registry checks.

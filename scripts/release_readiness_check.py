@@ -45,6 +45,7 @@ POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["python3", "scripts/check_identity_communication_transport_closure.py", "--workspace-runtime-only", "--json-only"],
     ["bash", "scripts/ci/run_executable_surface_runtime_literal_lock_probes_ci.sh"],
     ["bash", "scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh"],
+    ["bash", "scripts/ci/run_protocol_root_corpus_governance_probes_ci.sh"],
     ["bash", "scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh"],
     ["bash", "scripts/ci/run_workbook_control_plane_probes_ci.sh"],
     ["bash", "scripts/ci/run_workbook_family_scaffold_probes_ci.sh"],
