@@ -137,6 +137,7 @@ Status transitions are controlled by governance/review, not by script commit alo
 6. Repo-relative descriptor surfaces disclosed by an admitted family must remain repo-root relative and repo-contained; absolute-path or parent-escape capture is non-compliant.
 7. Repo-relative descriptor surfaces disclosed by an admitted family must also stay role-typed; validator, probe, and shared-common path classes are not interchangeable.
 8. Role-typed repo-relative descriptor surfaces disclosed by an admitted family must also stay cross-role coherent; validator/probe/common may not silently bind to different root surface stems.
+9. Cross-role coherent descriptor surfaces disclosed by an admitted family must also stay family-congruent; borrowing another family's descriptor stem requires explicit registry-completeness declaration rather than silent impersonation.
 
 ## Root-law bundle boundary
 

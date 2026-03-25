@@ -447,6 +447,17 @@ different root families that merely happen to satisfy local path typing.
 Registry completeness must therefore fail-close rather than accepting
 descriptor surface sets whose role-typed paths are cross-family incoherent.
 
+Those cross-role coherent descriptor surfaces must also remain family-congruent.
+
+An admitted mapping family may not silently republish another admitted
+family's fully coherent validator/probe/common surface set and still claim
+canonical self-description for itself.
+
+Explicit registry-declared surface-stem binding when a family borrows another admitted family's enforcement surfaces.
+
+Registry completeness must therefore fail-close rather than accepting
+descriptor surface sets that impersonate a different admitted family without explicit registry declaration.
+
 ---
 
 ## 1. The identity protocol is machine law first, not a compatibility layer

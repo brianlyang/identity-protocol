@@ -31,6 +31,10 @@ assert payload["repo_rel_path_scope_policy"] == "repo_root_relative_only", paylo
 assert payload["repo_rel_path_escape_policy"] == "fail_closed", payload
 assert payload["repo_rel_path_role_typing_policy"] == "root_protocol_surface_patterns_required", payload
 assert payload["repo_rel_path_surface_stem_policy"] == "cross_role_stem_coherent", payload
+assert payload["family_surface_stem_binding_policy"] == "family_id_surface_stem_congruent_or_explicit_override", payload
+assert payload["family_surface_stem_overrides"] == {
+    "root-corpus-registry": "root_corpus_governance",
+}, payload
 assert payload["required_repo_rel_path_patterns"] == {
     "validator_script": r"^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\.py$",
     "probe_script": r"^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\.sh$",
@@ -47,6 +51,21 @@ assert all(
         for cell in row.get("descriptor_field_rows", [])
         if cell.get("mode") == "repo_rel_path"
     )
+    for row in payload["family_status_rows"]
+), payload
+assert all(row.get("expected_family_surface_stem_error", "") in ("", None) for row in payload["family_status_rows"]), payload
+assert all(
+    {
+        cell.get("surface_stem")
+        for cell in row.get("descriptor_field_rows", [])
+        if cell.get("mode") == "repo_rel_path"
+    } == {row.get("expected_family_surface_stem")}
+    for row in payload["family_status_rows"]
+), payload
+assert any(
+    row.get("family_id") == "root-corpus-registry"
+    and row.get("expected_family_surface_stem_source") == "explicit_override"
+    and row.get("expected_family_surface_stem") == "root_corpus_governance"
     for row in payload["family_status_rows"]
 ), payload
 PY
@@ -194,6 +213,48 @@ assert payload["error_code"] == "IP-RMRC-003", payload
 assert any(
     row["reason"] == "descriptor_surface_stem_mismatch"
     and row.get("family_id") == "root-corpus-authority"
+    for row in payload["completeness_violations"]
+), payload
+PY
+
+FAMILY_MISMATCH_REPO="${TMP_ROOT}/family-surface-mismatch-repo"
+mirror_repo "${FAMILY_MISMATCH_REPO}"
+python3 - <<'PY' "${FAMILY_MISMATCH_REPO}/identity/protocol/mappings/root-corpus-authority.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["validator_script"] = "scripts/validate_protocol_root_corpus_ordering.py"
+doc["probe_script"] = "scripts/ci/run_protocol_root_corpus_ordering_probes_ci.sh"
+doc["common_script"] = "scripts/root_corpus_ordering_common.py"
+doc["status_key"] = "protocol_root_corpus_ordering_status"
+doc["error_codes"] = ["IP-RCO-001", "IP-RCO-002", "IP-RCO-003"]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+FAMILY_MISMATCH_JSON="${TMP_ROOT}/family-surface-mismatch.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${FAMILY_MISMATCH_REPO}" \
+  --json-only >"${FAMILY_MISMATCH_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed family-incongruent descriptor set"
+  exit 1
+fi
+
+python3 - <<'PY' "${FAMILY_MISMATCH_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert any(
+    row["reason"] == "descriptor_surface_family_mismatch"
+    and row.get("family_id") == "root-corpus-authority"
+    and row.get("expected_family_surface_stem") == "root_corpus_authority"
+    and row.get("actual_family_surface_stem") == "root_corpus_ordering"
     for row in payload["completeness_violations"]
 ), payload
 PY

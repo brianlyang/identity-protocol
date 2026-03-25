@@ -91,6 +91,7 @@ Runtime meaning:
 6. Runtime must reject descriptor paths that are absolute or escape repo root; repo-relative descriptor surfaces must stay repo-root relative and repo-contained.
 7. Runtime must also reject role-swapped descriptor paths; validator, probe, and shared-common surfaces must stay role-typed rather than merely repo-local.
 8. Runtime must also reject cross-role incoherent descriptor sets; validator/probe/common surfaces for one admitted family must converge on one root surface stem.
+9. Runtime must also reject undeclared family-incongruent descriptor sets; even a coherent validator/probe/common set is non-canonical unless any cross-family stem binding is explicitly declared by registry completeness law.
 
 ## Runtime consumption of the root-law bundle
 

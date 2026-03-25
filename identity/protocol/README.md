@@ -366,6 +366,10 @@ Those role-typed surfaces must also remain cross-role coherent; validator,
 probe, and shared-common paths for one admitted family may not silently point
 at different root surface stems.
 
+Those cross-role coherent descriptor surfaces must also remain family-congruent;
+if an admitted family borrows another family's coherent descriptor stem, that
+binding must be explicitly declared in registry completeness law.
+
 ---
 
 ## Root-law bundle discipline

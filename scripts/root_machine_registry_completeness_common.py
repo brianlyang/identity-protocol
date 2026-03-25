@@ -98,6 +98,23 @@ def repo_rel_path_surface_stem_policy_from_doc(doc: Mapping[str, Any]) -> str:
     return _norm_str(doc.get("repo_rel_path_surface_stem_policy"))
 
 
+def family_surface_stem_binding_policy_from_doc(doc: Mapping[str, Any]) -> str:
+    return _norm_str(doc.get("family_surface_stem_binding_policy"))
+
+
+def family_surface_stem_overrides_from_doc(doc: Mapping[str, Any]) -> dict[str, str]:
+    rows = doc.get("family_surface_stem_overrides")
+    if not isinstance(rows, dict):
+        return {}
+    out: dict[str, str] = {}
+    for key, value in rows.items():
+        family_id = _norm_str(key)
+        surface_stem = _norm_str(value)
+        if family_id and surface_stem:
+            out[family_id] = surface_stem
+    return out
+
+
 def required_repo_rel_path_patterns_from_doc(doc: Mapping[str, Any]) -> dict[str, str]:
     rows = doc.get("required_repo_rel_path_patterns")
     if not isinstance(rows, dict):
@@ -158,6 +175,15 @@ def extract_repo_rel_path_surface_stem(rel_path: str, pattern: str) -> tuple[str
     if not stem:
         return "", "surface_stem_capture_missing"
     return stem, ""
+
+
+def default_surface_stem_from_family_id(family_id: str) -> tuple[str, str]:
+    norm_family_id = _norm_str(family_id)
+    if not norm_family_id:
+        return "", "family_id_missing"
+    if not re.fullmatch(r"root-[a-z0-9-]+", norm_family_id):
+        return "", "family_id_invalid"
+    return norm_family_id.replace("-", "_"), ""
 
 
 def extract_validator_status_key(repo_root: Path, validator_script: str) -> tuple[str, str]:

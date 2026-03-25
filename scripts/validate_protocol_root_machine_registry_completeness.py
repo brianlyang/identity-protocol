@@ -10,8 +10,11 @@ from registry_alias_control_plane_common import resolve_current_yaml_alias
 from repo_root_resolution_common import resolve_repo_root
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
 from root_machine_registry_completeness_common import (
+    default_surface_stem_from_family_id,
     extract_validator_error_codes,
     extract_repo_rel_path_surface_stem,
+    family_surface_stem_binding_policy_from_doc,
+    family_surface_stem_overrides_from_doc,
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     anchor_checks_from_doc,
@@ -86,6 +89,8 @@ def main() -> int:
     repo_rel_path_escape_policy = repo_rel_path_escape_policy_from_doc(completeness_doc) if completeness_doc else ""
     repo_rel_path_role_typing_policy = repo_rel_path_role_typing_policy_from_doc(completeness_doc) if completeness_doc else ""
     repo_rel_path_surface_stem_policy = repo_rel_path_surface_stem_policy_from_doc(completeness_doc) if completeness_doc else ""
+    family_surface_stem_binding_policy = family_surface_stem_binding_policy_from_doc(completeness_doc) if completeness_doc else ""
+    family_surface_stem_overrides = family_surface_stem_overrides_from_doc(completeness_doc) if completeness_doc else {}
     required_repo_rel_path_patterns = required_repo_rel_path_patterns_from_doc(completeness_doc) if completeness_doc else {}
 
     if not stale_reasons:
@@ -125,6 +130,12 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if repo_rel_path_surface_stem_policy != "cross_role_stem_coherent":
             stale_reasons.append("root_machine_registry_completeness_repo_rel_path_surface_stem_policy_invalid")
+            error_code = ERR_REGISTRY
+        if family_surface_stem_binding_policy != "family_id_surface_stem_congruent_or_explicit_override":
+            stale_reasons.append("root_machine_registry_completeness_family_surface_stem_binding_policy_invalid")
+            error_code = ERR_REGISTRY
+        if family_surface_stem_overrides != {"root-corpus-registry": "root_corpus_governance"}:
+            stale_reasons.append("root_machine_registry_completeness_family_surface_stem_overrides_invalid")
             error_code = ERR_REGISTRY
         if tuple(required_descriptor_fields) != ("validator_script", "probe_script", "common_script", "status_key", "error_codes"):
             stale_reasons.append("root_machine_registry_completeness_descriptor_fields_invalid")
@@ -233,6 +244,15 @@ def main() -> int:
                 alias_error = ""
                 descriptor_field_rows: list[dict[str, Any]] = []
                 descriptor_surface_stems: dict[str, str] = {}
+                default_family_surface_stem, expected_family_surface_stem_error = default_surface_stem_from_family_id(
+                    family_id
+                )
+                expected_family_surface_stem = family_surface_stem_overrides.get(
+                    family_id, default_family_surface_stem
+                )
+                expected_family_surface_stem_source = (
+                    "explicit_override" if family_id in family_surface_stem_overrides else "family_id_default"
+                )
 
                 if not current_file:
                     family_violations.append("current_file_missing")
@@ -552,6 +572,32 @@ def main() -> int:
                             "descriptor_surface_stems": dict(descriptor_surface_stems),
                         }
                     )
+                elif unique_surface_stems:
+                    actual_family_surface_stem = unique_surface_stems[0]
+                    if expected_family_surface_stem_error:
+                        family_violations.append("family_surface_stem_unresolved")
+                        completeness_violations.append(
+                            {
+                                "field": "root_mapping_family",
+                                "reason": "family_surface_stem_unresolved",
+                                "family_id": family_id,
+                                "active_file": active_file,
+                                "family_surface_stem_error": expected_family_surface_stem_error,
+                            }
+                        )
+                    elif actual_family_surface_stem != expected_family_surface_stem:
+                        family_violations.append("descriptor_surface_family_mismatch")
+                        completeness_violations.append(
+                            {
+                                "field": "root_mapping_family",
+                                "reason": "descriptor_surface_family_mismatch",
+                                "family_id": family_id,
+                                "active_file": active_file,
+                                "expected_family_surface_stem": expected_family_surface_stem,
+                                "actual_family_surface_stem": actual_family_surface_stem,
+                                "descriptor_surface_stems": dict(descriptor_surface_stems),
+                            }
+                        )
 
                 family_status_rows.append(
                     {
@@ -560,6 +606,9 @@ def main() -> int:
                         "version_files": version_files,
                         "active_file": active_file,
                         "alias_error": alias_error,
+                        "expected_family_surface_stem": expected_family_surface_stem,
+                        "expected_family_surface_stem_error": expected_family_surface_stem_error,
+                        "expected_family_surface_stem_source": expected_family_surface_stem_source,
                         "self_describing_required": self_describing_required,
                         "required_descriptor_fields": list(required_descriptor_fields),
                         "required_descriptor_field_modes": dict(required_descriptor_field_modes),
@@ -617,6 +666,8 @@ def main() -> int:
         "repo_rel_path_escape_policy": repo_rel_path_escape_policy,
         "repo_rel_path_role_typing_policy": repo_rel_path_role_typing_policy,
         "repo_rel_path_surface_stem_policy": repo_rel_path_surface_stem_policy,
+        "family_surface_stem_binding_policy": family_surface_stem_binding_policy,
+        "family_surface_stem_overrides": dict(family_surface_stem_overrides),
         "required_repo_rel_path_patterns": dict(required_repo_rel_path_patterns),
         "family_count": len(family_status_rows),
         "family_ids": [row["family_id"] for row in family_status_rows],
