@@ -18,6 +18,9 @@ descriptor_schema_fallback_policy: fail_closed
 descriptor_schema_local_reconstruction_policy: forbidden
 descriptor_family_surface_binding_inheritance_mode: inherit_machine_registry_completeness_current_only
 descriptor_family_surface_binding_local_override_policy: forbidden
+descriptor_repo_rel_path_pattern_inheritance_mode: inherit_machine_registry_completeness_current_only
+descriptor_repo_rel_path_pattern_local_redeclaration_policy: forbidden
+descriptor_repo_rel_path_pattern_fallback_policy: fail_closed
 component_descriptor_resolution_mode: current_alias_only
 component_descriptor_version_pinning_policy: forbidden
 require_component_descriptor_concordance: true
@@ -55,6 +58,11 @@ bundle_anchor_checks:
   - Bundle descriptor binding must also remain inherited from machine-registry
   - explicit cross-family descriptor-stem binding, the bundle must inherit that
   - declaration rather than reauthoring, omitting, or locally overriding it.
+  - Bundle descriptor surface-pattern law must also remain inherited from
+    machine-registry completeness.
+  - inherit those patterns rather than locally redeclaring or loosening them.
+  - fail-close rather than guessing or locally reconstructing descriptor-stem
+    capture law from bundle convention.
   - Bundle component descriptors must remain current-entry mediated as well.
   - version file for local convenience.
   - fail-close rather than bypassing current mediation and binding directly to a
@@ -83,6 +91,10 @@ bundle_anchor_checks:
   - The bundle must also inherit machine-registry completeness family-surface
   - explicitly declares a cross-family descriptor-stem binding, the bundle must
   - not locally override or suppress that binding.
+  - The bundle must also inherit machine-registry completeness repo-relative
+  - inherit those repo-relative path patterns rather than locally redeclaring,
+  - fail-close rather than locally reconstructing descriptor-stem capture
+    law.
   - Bundle component descriptors must also remain current-entry mediated.
   - version truth through those rows, not pin directly to version files.
   - fail-close rather than bypassing current mediation.
@@ -108,6 +120,10 @@ bundle_anchor_checks:
     binding law
   - explicit cross-family descriptor-stem bindings declared there may not be
     silently reauthored, suppressed, or replaced by local bundle convenience.
+  - The bundle must also inherit machine-registry completeness repo-relative
+  - descriptor path-pattern law; descriptor-stem capture patterns for validator,
+  - fail-close rather than locally reconstructing descriptor-surface pattern
+    law.
   - Bundle component descriptors must also stay current-entry mediated
   - not direct version-file
     pinning.
@@ -131,6 +147,9 @@ bundle_anchor_checks:
   - Runtime must also reject a root-law bundle that locally overrides or suppresses
   - explicit cross-family descriptor-stem bindings must be inherited from the
     admitted source component rather than guessed.
+  - Runtime must also reject a root-law bundle that redeclares or loosens
+  - descriptor-stem capture patterns for validator/probe/shared-common surfaces
+  - fail-close rather than locally reconstructing descriptor-surface pattern law.
   - Runtime must also treat bundle component descriptors as current-entry
     mediated
   - not direct version-file pinning.

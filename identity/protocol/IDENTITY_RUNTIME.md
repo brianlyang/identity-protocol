@@ -132,6 +132,14 @@ machine-registry completeness family-surface binding law; explicit
 cross-family descriptor-stem bindings must be inherited from the admitted
 source component rather than guessed.
 
+Runtime must also reject a root-law bundle that redeclares or loosens
+machine-registry completeness repo-relative descriptor path patterns;
+descriptor-stem capture patterns for validator/probe/shared-common surfaces
+must be inherited from the admitted source component rather than guessed.
+
+If the admitted source does not disclose those patterns, runtime must
+fail-close rather than locally reconstructing descriptor-surface pattern law.
+
 Runtime must also treat bundle component descriptors as current-entry
 mediated; runtime resolves component legality through admitted current rows,
 not direct version-file pinning.

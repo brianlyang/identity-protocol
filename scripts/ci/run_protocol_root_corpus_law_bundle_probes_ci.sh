@@ -34,8 +34,13 @@ assert payload["descriptor_schema_fallback_policy"] == "fail_closed", payload
 assert payload["descriptor_schema_local_reconstruction_policy"] == "forbidden", payload
 assert payload["descriptor_family_surface_binding_inheritance_mode"] == "inherit_machine_registry_completeness_current_only", payload
 assert payload["descriptor_family_surface_binding_local_override_policy"] == "forbidden", payload
+assert payload["descriptor_repo_rel_path_pattern_inheritance_mode"] == "inherit_machine_registry_completeness_current_only", payload
+assert payload["descriptor_repo_rel_path_pattern_local_redeclaration_policy"] == "forbidden", payload
+assert payload["descriptor_repo_rel_path_pattern_fallback_policy"] == "fail_closed", payload
 assert payload["component_descriptor_resolution_mode"] == "current_alias_only", payload
 assert payload["component_descriptor_version_pinning_policy"] == "forbidden", payload
+assert payload["bundle_redeclares_required_repo_rel_path_patterns"] is False, payload
+assert payload["bundle_local_required_repo_rel_path_patterns"] == {}, payload
 assert payload["required_component_descriptor_fields"] == [
     "validator_script",
     "probe_script",
@@ -77,6 +82,115 @@ assert any(
     and row["expected_component_surface_stem"] == "root_corpus_governance"
     and row["expected_component_surface_stem_source"] == "machine_registry_explicit_override"
     for row in payload["component_status_rows"]
+), payload
+PY
+
+REPO_REL_PATTERN_POLICY_REPO="${TMP_ROOT}/descriptor-repo-rel-path-pattern-policy-drift-repo"
+mirror_repo "${REPO_REL_PATTERN_POLICY_REPO}"
+python3 - <<'PY' "${REPO_REL_PATTERN_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["descriptor_repo_rel_path_pattern_local_redeclaration_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REPO_REL_PATTERN_POLICY_JSON="${TMP_ROOT}/descriptor-repo-rel-path-pattern-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REPO_REL_PATTERN_POLICY_REPO}" \
+  --json-only >"${REPO_REL_PATTERN_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor repo-rel path pattern policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REPO_REL_PATTERN_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_descriptor_repo_rel_path_pattern_local_redeclaration_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+REPO_REL_PATTERN_LOCAL_REDECLARATION_REPO="${TMP_ROOT}/descriptor-repo-rel-path-pattern-local-redeclaration-repo"
+mirror_repo "${REPO_REL_PATTERN_LOCAL_REDECLARATION_REPO}"
+python3 - <<'PY' "${REPO_REL_PATTERN_LOCAL_REDECLARATION_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_repo_rel_path_patterns"] = {
+    "validator_script": "^scripts/validate_protocol_(?P<surface_stem>shadow_[a-z0-9_]+)\\.py$",
+    "probe_script": "^scripts/ci/run_protocol_(?P<surface_stem>shadow_[a-z0-9_]+)_probes_ci\\.sh$",
+    "common_script": "^scripts/(?P<surface_stem>shadow_[a-z0-9_]+)_common\\.py$",
+}
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REPO_REL_PATTERN_LOCAL_REDECLARATION_JSON="${TMP_ROOT}/descriptor-repo-rel-path-pattern-local-redeclaration.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REPO_REL_PATTERN_LOCAL_REDECLARATION_REPO}" \
+  --json-only >"${REPO_REL_PATTERN_LOCAL_REDECLARATION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed local repo-rel path pattern redeclaration"
+  exit 1
+fi
+
+python3 - <<'PY' "${REPO_REL_PATTERN_LOCAL_REDECLARATION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_repo_rel_path_patterns_local_redeclaration_forbidden"
+    for row in payload["bundle_violations"]
+), payload
+assert payload["bundle_redeclares_required_repo_rel_path_patterns"] is True, payload
+PY
+
+SOURCE_REPO_REL_PATTERN_REPO="${TMP_ROOT}/descriptor-repo-rel-path-pattern-source-missing-repo"
+mirror_repo "${SOURCE_REPO_REL_PATTERN_REPO}"
+python3 - <<'PY' "${SOURCE_REPO_REL_PATTERN_REPO}/identity/protocol/mappings/root-machine-registry-completeness.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_repo_rel_path_patterns"] = {}
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SOURCE_REPO_REL_PATTERN_JSON="${TMP_ROOT}/descriptor-repo-rel-path-pattern-source-missing.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SOURCE_REPO_REL_PATTERN_REPO}" \
+  --json-only >"${SOURCE_REPO_REL_PATTERN_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed missing source repo-rel path patterns"
+  exit 1
+fi
+
+python3 - <<'PY' "${SOURCE_REPO_REL_PATTERN_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_repo_rel_path_patterns_missing_from_machine_registry_completeness"
+    for row in payload["bundle_violations"]
 ), payload
 PY
 

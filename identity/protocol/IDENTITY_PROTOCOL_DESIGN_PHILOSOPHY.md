@@ -396,6 +396,17 @@ completeness family-surface law.
 
 Where machine-registry completeness supplies an explicit cross-family descriptor-stem binding, the bundle must inherit that declaration rather than reauthoring, omitting, or locally overriding it.
 
+Bundle descriptor surface-pattern law must also remain inherited from
+machine-registry completeness.
+
+The admitted repo-relative validator/probe/shared-common path patterns that
+define descriptor-stem capture belong to that source law; the bundle must
+inherit those patterns rather than locally redeclaring or loosening them.
+
+If the admitted source does not disclose those patterns, the machine world
+must fail-close rather than guessing or locally reconstructing descriptor-stem
+capture law from bundle convention.
+
 Bundle component descriptors must remain current-entry mediated as well.
 
 The bundle names admitted component current rows and resolves active version

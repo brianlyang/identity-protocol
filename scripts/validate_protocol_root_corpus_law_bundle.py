@@ -19,6 +19,9 @@ from root_corpus_law_bundle_common import (
     component_descriptor_version_pinning_policy_from_doc,
     descriptor_family_surface_binding_inheritance_mode_from_doc,
     descriptor_family_surface_binding_local_override_policy_from_doc,
+    descriptor_repo_rel_path_pattern_fallback_policy_from_doc,
+    descriptor_repo_rel_path_pattern_inheritance_mode_from_doc,
+    descriptor_repo_rel_path_pattern_local_redeclaration_policy_from_doc,
     descriptor_schema_fallback_policy_from_doc,
     descriptor_schema_source_component_id_from_doc,
     descriptor_schema_source_binding_mode_from_doc,
@@ -244,6 +247,15 @@ def main() -> int:
     descriptor_family_surface_binding_local_override_policy = (
         descriptor_family_surface_binding_local_override_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    descriptor_repo_rel_path_pattern_inheritance_mode = (
+        descriptor_repo_rel_path_pattern_inheritance_mode_from_doc(bundle_doc) if bundle_doc else ""
+    )
+    descriptor_repo_rel_path_pattern_local_redeclaration_policy = (
+        descriptor_repo_rel_path_pattern_local_redeclaration_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
+    descriptor_repo_rel_path_pattern_fallback_policy = (
+        descriptor_repo_rel_path_pattern_fallback_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     component_descriptor_resolution_mode = component_descriptor_resolution_mode_from_doc(bundle_doc) if bundle_doc else ""
     component_descriptor_version_pinning_policy = (
         component_descriptor_version_pinning_policy_from_doc(bundle_doc) if bundle_doc else ""
@@ -272,6 +284,12 @@ def main() -> int:
         required_repo_rel_path_patterns_from_doc(machine_registry_completeness_doc)
         if machine_registry_completeness_doc
         else {}
+    )
+    bundle_local_required_repo_rel_path_patterns = (
+        required_repo_rel_path_patterns_from_doc(bundle_doc) if bundle_doc else {}
+    )
+    bundle_redeclares_required_repo_rel_path_patterns = bool(bundle_doc) and (
+        "required_repo_rel_path_patterns" in bundle_doc
     )
     component_map = {row.component_id: row for row in components}
     sorted_components = sorted(components, key=lambda row: row.order)
@@ -319,6 +337,17 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if descriptor_family_surface_binding_local_override_policy != "forbidden":
             stale_reasons.append("root_corpus_law_bundle_descriptor_family_surface_binding_local_override_policy_invalid")
+            error_code = ERR_REGISTRY
+        if descriptor_repo_rel_path_pattern_inheritance_mode != "inherit_machine_registry_completeness_current_only":
+            stale_reasons.append("root_corpus_law_bundle_descriptor_repo_rel_path_pattern_inheritance_mode_invalid")
+            error_code = ERR_REGISTRY
+        if descriptor_repo_rel_path_pattern_local_redeclaration_policy != "forbidden":
+            stale_reasons.append(
+                "root_corpus_law_bundle_descriptor_repo_rel_path_pattern_local_redeclaration_policy_invalid"
+            )
+            error_code = ERR_REGISTRY
+        if descriptor_repo_rel_path_pattern_fallback_policy != "fail_closed":
+            stale_reasons.append("root_corpus_law_bundle_descriptor_repo_rel_path_pattern_fallback_policy_invalid")
             error_code = ERR_REGISTRY
         if component_descriptor_resolution_mode != "current_alias_only":
             stale_reasons.append("root_corpus_law_bundle_component_descriptor_resolution_mode_invalid")
@@ -376,6 +405,35 @@ def main() -> int:
                     "reason": "descriptor_family_surface_stem_overrides_missing_from_machine_registry_completeness",
                 }
             )
+        if bundle_redeclares_required_repo_rel_path_patterns:
+            bundle_violations.append(
+                {
+                    "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                    "reason": "descriptor_repo_rel_path_patterns_local_redeclaration_forbidden",
+                    "bundle_required_repo_rel_path_patterns": dict(bundle_local_required_repo_rel_path_patterns),
+                }
+            )
+        if not source_required_repo_rel_path_patterns:
+            bundle_violations.append(
+                {
+                    "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                    "reason": "descriptor_repo_rel_path_patterns_missing_from_machine_registry_completeness",
+                }
+            )
+        else:
+            missing_pattern_fields = [
+                field
+                for field in ("validator_script", "probe_script", "common_script")
+                if not source_required_repo_rel_path_patterns.get(field, "")
+            ]
+            if missing_pattern_fields:
+                bundle_violations.append(
+                    {
+                        "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                        "reason": "descriptor_repo_rel_path_patterns_incomplete_from_machine_registry_completeness",
+                        "missing_pattern_fields": missing_pattern_fields,
+                    }
+                )
         if descriptor_concordance_required and not required_component_descriptor_fields:
             stale_reasons.append("root_corpus_law_bundle_required_component_descriptor_fields_missing")
             error_code = ERR_REGISTRY
@@ -722,6 +780,9 @@ def main() -> int:
         "descriptor_schema_local_reconstruction_policy": descriptor_schema_local_reconstruction_policy,
         "descriptor_family_surface_binding_inheritance_mode": descriptor_family_surface_binding_inheritance_mode,
         "descriptor_family_surface_binding_local_override_policy": descriptor_family_surface_binding_local_override_policy,
+        "descriptor_repo_rel_path_pattern_inheritance_mode": descriptor_repo_rel_path_pattern_inheritance_mode,
+        "descriptor_repo_rel_path_pattern_local_redeclaration_policy": descriptor_repo_rel_path_pattern_local_redeclaration_policy,
+        "descriptor_repo_rel_path_pattern_fallback_policy": descriptor_repo_rel_path_pattern_fallback_policy,
         "component_descriptor_resolution_mode": component_descriptor_resolution_mode,
         "component_descriptor_version_pinning_policy": component_descriptor_version_pinning_policy,
         "bundle_anchor_check_count": len(anchor_checks),
@@ -733,6 +794,8 @@ def main() -> int:
         "source_required_descriptor_field_modes": dict(source_required_descriptor_field_modes),
         "source_family_surface_stem_binding_policy": source_family_surface_stem_binding_policy,
         "source_family_surface_stem_overrides": dict(source_family_surface_stem_overrides),
+        "bundle_redeclares_required_repo_rel_path_patterns": bundle_redeclares_required_repo_rel_path_patterns,
+        "bundle_local_required_repo_rel_path_patterns": dict(bundle_local_required_repo_rel_path_patterns),
         "source_required_repo_rel_path_patterns": dict(source_required_repo_rel_path_patterns),
         "component_status_rows": component_status_rows,
         "structure_violations": structure_violations,

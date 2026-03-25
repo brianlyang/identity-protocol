@@ -423,6 +423,17 @@ If machine-registry completeness explicitly declares a cross-family
 descriptor-stem binding, the bundle must not locally override or suppress that
 binding.
 
+The bundle must also inherit machine-registry completeness repo-relative
+descriptor path-pattern law.
+
+It must inherit those repo-relative path patterns rather than locally
+redeclaring, loosening, or guessing descriptor-stem capture from naming
+convention.
+
+If the admitted source does not disclose those patterns, the machine world
+must fail-close rather than locally reconstructing descriptor-stem capture
+law.
+
 Bundle component descriptors must also remain current-entry mediated.
 
 The bundle must point to admitted component current rows and resolve active
