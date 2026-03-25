@@ -12,10 +12,12 @@ from root_corpus_gateway_admissibility_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     gateway_anchor_checks_from_doc,
+    gateway_order_rows_from_doc,
     gateway_profiles_from_doc,
     load_root_corpus_gateway_admissibility,
 )
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
+from root_corpus_ordering_common import load_root_corpus_ordering, source_order_rows_from_doc
 from root_corpus_question_routing_common import adjudication_redirect_from_doc, load_root_corpus_question_routing
 from root_corpus_transition_common import load_root_corpus_transition, transition_surface_profiles_from_doc
 
@@ -60,6 +62,10 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2))
 
 
+def _contiguous_orders(values: list[int]) -> bool:
+    return values == list(range(1, len(values) + 1))
+
+
 def _build_expected_gateway_inputs(transition_profiles: tuple[Any, ...]) -> tuple[dict[str, tuple[str, ...]], list[str]]:
     expected: dict[str, list[str]] = {gateway: [] for gateway in EXPECTED_GATEWAY_METADATA}
     unknown_gateways: list[str] = []
@@ -86,6 +92,7 @@ def main() -> int:
         load_root_corpus_gateway_admissibility(repo_root)
     )
     registry_doc, registry_entry_path, registry_active_path, registry_alias_error = load_root_corpus_registry(repo_root)
+    ordering_doc, ordering_entry_path, ordering_active_path, ordering_alias_error = load_root_corpus_ordering(repo_root)
     transition_doc, transition_entry_path, transition_active_path, transition_alias_error = load_root_corpus_transition(
         repo_root
     )
@@ -116,6 +123,13 @@ def main() -> int:
         stale_reasons.append("root_corpus_registry_empty_or_invalid")
         error_code = ERR_REGISTRY
 
+    if ordering_alias_error:
+        stale_reasons.append(f"root_corpus_ordering_alias_error:{ordering_alias_error}")
+        error_code = ERR_REGISTRY
+    elif not ordering_doc:
+        stale_reasons.append("root_corpus_ordering_empty_or_invalid")
+        error_code = ERR_REGISTRY
+
     if transition_alias_error:
         stale_reasons.append(f"root_corpus_transition_alias_error:{transition_alias_error}")
         error_code = ERR_REGISTRY
@@ -138,8 +152,10 @@ def main() -> int:
         error_code = ERR_REGISTRY
 
     anchor_checks = gateway_anchor_checks_from_doc(admissibility_doc) if admissibility_doc else ()
+    gateway_order_rows = gateway_order_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     gateway_profiles = gateway_profiles_from_doc(admissibility_doc) if admissibility_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
+    source_rows = source_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     transition_profiles = transition_surface_profiles_from_doc(transition_doc) if transition_doc else ()
     authority_profiles = authority_class_profiles_from_doc(authority_doc) if authority_doc else ()
     adjudication_redirect = adjudication_redirect_from_doc(question_routing_doc) if question_routing_doc else adjudication_redirect_from_doc({})
@@ -156,6 +172,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if str(admissibility_doc.get("registry_current_file") or "").strip() != "identity/protocol/mappings/root-corpus-registry.current.yaml":
             stale_reasons.append("root_corpus_gateway_admissibility_registry_current_file_invalid")
+            error_code = ERR_REGISTRY
+        if str(admissibility_doc.get("ordering_current_file") or "").strip() != "identity/protocol/mappings/root-corpus-ordering.current.yaml":
+            stale_reasons.append("root_corpus_gateway_admissibility_ordering_current_file_invalid")
             error_code = ERR_REGISTRY
         if str(admissibility_doc.get("transition_current_file") or "").strip() != "identity/protocol/mappings/root-corpus-transition.current.yaml":
             stale_reasons.append("root_corpus_gateway_admissibility_transition_current_file_invalid")
@@ -183,6 +202,9 @@ def main() -> int:
         if not anchor_checks:
             stale_reasons.append("root_corpus_gateway_admissibility_anchor_checks_missing")
             error_code = ERR_REGISTRY
+        if not gateway_order_rows:
+            stale_reasons.append("root_corpus_gateway_admissibility_gateway_order_missing")
+            error_code = ERR_REGISTRY
         if not gateway_profiles:
             stale_reasons.append("root_corpus_gateway_admissibility_profiles_missing")
             error_code = ERR_REGISTRY
@@ -194,10 +216,22 @@ def main() -> int:
     transition_current_turn_allowed = sorted(
         row.surface_class for row in transition_profiles if getattr(row, "direct_current_turn_legality_allowed", False)
     )
+    sorted_source_rows = sorted(source_rows, key=lambda item: item.order)
+    expected_gateway_order = tuple(
+        row.corpus_class for row in sorted_source_rows if row.corpus_class in EXPECTED_GATEWAY_METADATA
+    )
+    gateway_order_map = {row.gateway_class: row for row in gateway_order_rows}
+    gateway_order_values = [row.order for row in gateway_order_rows]
+    sorted_gateway_order_rows = sorted(gateway_order_rows, key=lambda item: item.order)
+    actual_gateway_order = tuple(row.gateway_class for row in sorted_gateway_order_rows)
 
     if not stale_reasons:
         if len(gateway_profile_map) != len(gateway_profiles):
             structure_violations.append({"field": "gateway_profiles", "reason": "duplicate_gateway_class"})
+        if len(gateway_order_map) != len(gateway_order_rows):
+            structure_violations.append({"field": "gateway_order", "reason": "duplicate_gateway_class"})
+        if len(set(gateway_order_values)) != len(gateway_order_values) or not _contiguous_orders(sorted(gateway_order_values)):
+            structure_violations.append({"field": "gateway_order", "reason": "gateway_order_non_contiguous"})
         anchor_rel_paths = [row.rel_path for row in anchor_checks]
         if len(set(anchor_rel_paths)) != len(anchor_rel_paths):
             structure_violations.append({"field": "gateway_anchor_checks", "reason": "duplicate_rel_path"})
@@ -216,6 +250,16 @@ def main() -> int:
         if extra_gateway_classes:
             structure_violations.append(
                 {"field": "gateway_profiles", "reason": "extra_gateway_classes", "gateway_classes": extra_gateway_classes}
+            )
+        missing_gateway_order_classes = sorted(set(expected_gateway_classes) - set(gateway_order_map))
+        extra_gateway_order_classes = sorted(set(gateway_order_map) - set(expected_gateway_classes))
+        if missing_gateway_order_classes:
+            structure_violations.append(
+                {"field": "gateway_order", "reason": "missing_gateway_classes", "gateway_classes": missing_gateway_order_classes}
+            )
+        if extra_gateway_order_classes:
+            structure_violations.append(
+                {"field": "gateway_order", "reason": "extra_gateway_classes", "gateway_classes": extra_gateway_order_classes}
             )
         if unknown_transition_gateways:
             structure_violations.append(
@@ -267,7 +311,15 @@ def main() -> int:
                         "reason": "current_turn_legality_terminal_mismatch",
                         "gateway_class": row.gateway_class,
                         "expected": bool(expected["current_turn_legality_terminal"]),
-                        "actual": bool(row.current_turn_legality_terminal),
+                    "actual": bool(row.current_turn_legality_terminal),
+                    }
+                )
+            if row.gateway_class not in actual_gateway_order:
+                admissibility_violations.append(
+                    {
+                        "field": "gateway_order",
+                        "reason": "gateway_profile_missing_from_gateway_order",
+                        "gateway_class": row.gateway_class,
                     }
                 )
             expected_inputs = expected_gateway_inputs.get(row.gateway_class, ())
@@ -315,9 +367,19 @@ def main() -> int:
                             "reason": "gateway_authority_mode_mismatch",
                             "gateway_class": row.gateway_class,
                             "expected": expected["expected_authority_mode"],
-                            "actual": authority_profile.authority_mode,
-                        }
-                    )
+                        "actual": authority_profile.authority_mode,
+                    }
+                )
+
+        if actual_gateway_order != expected_gateway_order:
+            admissibility_violations.append(
+                {
+                    "field": "gateway_order",
+                    "reason": "gateway_order_mismatch",
+                    "expected": list(expected_gateway_order),
+                    "actual": list(actual_gateway_order),
+                }
+            )
 
         if transition_current_turn_allowed != ["machine_registry_directory"]:
             admissibility_violations.append(
@@ -336,6 +398,27 @@ def main() -> int:
                     "reason": "adjudication_redirect_question_class_invalid",
                     "expected": "current_turn_legality",
                     "actual": adjudication_redirect.question_class,
+                }
+            )
+        if actual_gateway_order and actual_gateway_order[-1] != "machine_registry_directory":
+            admissibility_violations.append(
+                {
+                    "field": "gateway_order",
+                    "reason": "machine_registry_directory_must_terminate_gateway_order",
+                    "actual_terminal_gateway": actual_gateway_order[-1],
+                }
+            )
+        current_turn_terminal_gateway = next(
+            (row.gateway_class for row in gateway_profiles if row.current_turn_legality_terminal),
+            "",
+        )
+        if actual_gateway_order and current_turn_terminal_gateway and actual_gateway_order[-1] != current_turn_terminal_gateway:
+            admissibility_violations.append(
+                {
+                    "field": "gateway_order",
+                    "reason": "current_turn_terminal_gateway_mismatch",
+                    "expected_terminal_gateway": current_turn_terminal_gateway,
+                    "actual_terminal_gateway": actual_gateway_order[-1],
                 }
             )
         if "machine_registry_directory" in adjudication_redirect.forbidden_root_corpus_classes:
@@ -382,6 +465,8 @@ def main() -> int:
         "admissibility_active_path": str(admissibility_active_path),
         "registry_entry_path": str(registry_entry_path),
         "registry_active_path": str(registry_active_path),
+        "ordering_entry_path": str(ordering_entry_path),
+        "ordering_active_path": str(ordering_active_path),
         "transition_entry_path": str(transition_entry_path),
         "transition_active_path": str(transition_active_path),
         "authority_entry_path": str(authority_entry_path),
@@ -390,11 +475,20 @@ def main() -> int:
         "question_routing_active_path": str(question_routing_active_path),
         "root_dir": str(admissibility_doc.get("root_dir") or ""),
         "gateway_anchor_check_count": len(anchor_checks),
+        "gateway_order_count": len(gateway_order_rows),
         "gateway_profile_count": len(gateway_profiles),
         "current_turn_terminal_gateway": next(
             (row.gateway_class for row in gateway_profiles if row.current_turn_legality_terminal),
             "",
         ),
+        "gateway_order": [
+            {
+                "order": row.order,
+                "gateway_class": row.gateway_class,
+            }
+            for row in sorted_gateway_order_rows
+        ],
+        "expected_gateway_order": list(expected_gateway_order),
         "derived_gateway_inputs": {
             gateway: list(surface_classes) for gateway, surface_classes in expected_gateway_inputs.items()
         },

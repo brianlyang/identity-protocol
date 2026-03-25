@@ -216,6 +216,9 @@ The allowed re-entry gateways for non-origin surfaces are narrower than the full
 - root contract law;
 - machine-registry law.
 
+The governed re-entry chain stays explicit as: constitution -> runtime constitution
+-> root contract -> machine-registry.
+
 No outer or demoted surface may directly self-promote into root law without that governed re-entry path.
 
 ---

@@ -3,6 +3,7 @@ admissibility_family: protocol_root_corpus_gateway_admissibility
 admissibility_version: v1
 root_dir: identity/protocol
 registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
 transition_current_file: identity/protocol/mappings/root-corpus-transition.current.yaml
 authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
 question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
@@ -21,18 +22,21 @@ gateway_anchor_checks:
   - gateway admission decides which non-origin surfaces may legally motivate each
     root gateway;
   - gateway admission does not let an incoming surface inherit the gateway's authorship.
+  - 'The governed re-entry chain stays explicit as: constitution -> runtime constitution -> root contract -> machine-registry.'
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
   required_markers:
   - '### Gateway admission must preserve source order'
   - a gateway is a legal re-entry port, not an origin substitute;
   - entering a gateway does not let an incoming surface inherit bottom-theory or constitutional
     authorship;
+  - 'The governed re-entry chain must stay explicit as: constitution -> runtime constitution -> root contract -> machine-registry.'
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root gateway-admissibility boundary'
   - Gateway admission is narrower than general motivation to strengthen.
   - Machine-registry gateway may terminate current-turn legality, but that does not
     let incoming motivation surfaces author upstream law.
+  - '   - governed re-entry chain: constitution -> runtime constitution -> root contract -> machine-registry'
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime-origin gateway-admissibility boundary'
@@ -40,6 +44,16 @@ gateway_anchor_checks:
     explicitly allows it;
   - Runtime motivation entering a gateway still requires governed refreezing or governed
     projection before it becomes shared law.
+  - '4. Runtime-origin gateway progression still follows the explicit re-entry chain: constitution -> runtime constitution -> root contract -> machine-registry.'
+gateway_order:
+- order: 1
+  gateway_class: constitution
+- order: 2
+  gateway_class: runtime_constitution
+- order: 3
+  gateway_class: root_contract
+- order: 4
+  gateway_class: machine_registry_directory
 gateway_profiles:
 - gateway_class: constitution
   gateway_scope: root

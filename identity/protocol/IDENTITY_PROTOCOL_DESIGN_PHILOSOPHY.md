@@ -206,6 +206,9 @@ So the protocol must reject the following confusions:
 
 Allowed gateways are legal re-entry ports, not origin substitutes.
 
+The governed re-entry chain must stay explicit as: constitution -> runtime
+constitution -> root contract -> machine-registry.
+
 1. a gateway is a legal re-entry port, not an origin substitute;
 2. gateway admission decides which non-origin surfaces may legally motivate strengthening at a given root gateway;
 3. entering a gateway does not let an incoming surface inherit bottom-theory or constitutional authorship;

@@ -32,6 +32,12 @@ class GatewayProfile:
     admissible_nonorigin_surface_classes: tuple[str, ...] = field(default_factory=tuple)
 
 
+@dataclass(frozen=True)
+class GatewayOrderRow:
+    order: int
+    gateway_class: str
+
+
 def _norm_str(value: Any) -> str:
     return str(value or "").strip().replace("\\", "/")
 
@@ -108,4 +114,23 @@ def gateway_profiles_from_doc(admissibility_doc: Mapping[str, Any]) -> tuple[Gat
                 ),
             )
         )
+    return tuple(out)
+
+
+def gateway_order_rows_from_doc(admissibility_doc: Mapping[str, Any]) -> tuple[GatewayOrderRow, ...]:
+    rows = admissibility_doc.get("gateway_order")
+    if not isinstance(rows, list):
+        return ()
+    out: list[GatewayOrderRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        gateway_class = _norm_str(row.get("gateway_class"))
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not gateway_class:
+            continue
+        out.append(GatewayOrderRow(order=order, gateway_class=gateway_class))
     return tuple(out)

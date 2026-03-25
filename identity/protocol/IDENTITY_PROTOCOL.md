@@ -81,6 +81,7 @@ Status transitions are controlled by governance/review, not by script commit alo
    - runtime constitutional law
    - root contract law
    - machine-registry law
+   - governed re-entry chain: constitution -> runtime constitution -> root contract -> machine-registry
 4. Machine-registry or governed-extension surfaces may reveal a need for upstream strengthening, but that revelation does not reverse-author bottom theory, constitution, or runtime constitution.
 5. Promotion into root law without governed refreezing is non-compliant, even if the motivating surface contains true evidence.
 

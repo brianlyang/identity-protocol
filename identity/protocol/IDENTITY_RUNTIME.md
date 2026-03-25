@@ -54,7 +54,8 @@ Runtime meaning:
 1. Runtime-origin material may motivate only the gateways whose admissibility contract explicitly allows it;
 2. Runtime admission into a gateway does not let runtime state inherit bottom-theory, constitutional, or root-contract authorship.
 3. Runtime motivation entering a gateway still requires governed refreezing or governed projection before it becomes shared law.
-4. Current-turn runtime legality remains machine-consumed registry and enforcement truth, not raw runtime motivation records.
+4. Runtime-origin gateway progression still follows the explicit re-entry chain: constitution -> runtime constitution -> root contract -> machine-registry.
+5. Current-turn runtime legality remains machine-consumed registry and enforcement truth, not raw runtime motivation records.
 
 ## Runtime conflict-precedence boundary
 

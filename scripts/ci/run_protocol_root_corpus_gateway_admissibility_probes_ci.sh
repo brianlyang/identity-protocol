@@ -12,6 +12,7 @@ mirror_repo() {
   cp -R "${ROOT}/identity" "${dst}/"
   cp "${ROOT}/scripts/root_corpus_governance_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/root_corpus_authority_common.py" "${dst}/scripts/"
+  cp "${ROOT}/scripts/root_corpus_ordering_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/root_corpus_question_routing_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/root_corpus_transition_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/root_corpus_gateway_admissibility_common.py" "${dst}/scripts/"
@@ -34,6 +35,12 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_gateway_admissibility_status"] == "PASS_REQUIRED", payload
 assert payload["current_turn_terminal_gateway"] == "machine_registry_directory", payload
+assert [row["gateway_class"] for row in payload["gateway_order"]] == [
+    "constitution",
+    "runtime_constitution",
+    "root_contract",
+    "machine_registry_directory",
+], payload
 PY
 
 INPUT_DRIFT_REPO="${TMP_ROOT}/input-drift-repo"
@@ -108,6 +115,42 @@ assert payload["protocol_root_corpus_gateway_admissibility_status"] == "FAIL_REQ
 assert payload["error_code"] == "IP-RGA-003", payload
 assert any(
     row["reason"] == "current_turn_legality_terminal_mismatch" and row.get("gateway_class") == "constitution"
+    for row in payload["admissibility_violations"]
+), payload
+PY
+
+ORDER_DRIFT_REPO="${TMP_ROOT}/gateway-order-drift-repo"
+mirror_repo "${ORDER_DRIFT_REPO}"
+python3 - <<'PY' "${ORDER_DRIFT_REPO}/identity/protocol/mappings/root-corpus-gateway-admissibility.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["gateway_order"][0]["order"] = 2
+doc["gateway_order"][1]["order"] = 1
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+ORDER_DRIFT_JSON="${TMP_ROOT}/gateway-order-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_gateway_admissibility.py" \
+  --repo-root "${ORDER_DRIFT_REPO}" \
+  --json-only >"${ORDER_DRIFT_JSON}"; then
+  echo "[FAIL] gateway admissibility validator unexpectedly passed gateway-order drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ORDER_DRIFT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_gateway_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RGA-003", payload
+assert any(
+    row["reason"] == "gateway_order_mismatch"
     for row in payload["admissibility_violations"]
 ), payload
 PY
