@@ -10,6 +10,8 @@ error_codes:
 - IP-RCLB-001
 - IP-RCLB-002
 - IP-RCLB-003
+machine_registry_completeness_current_file: identity/protocol/mappings/root-machine-registry-completeness.current.yaml
+descriptor_schema_source_component_id: root_machine_registry_completeness
 require_component_descriptor_concordance: true
 required_component_descriptor_fields:
 - validator_script
@@ -36,6 +38,9 @@ bundle_anchor_checks:
   - Descriptor concordance must also preserve descriptor-field mode.
   - validator-emitted status key, or a validator-emitted error-code family, the machine world is again being asked to
   - trust shadow bundle semantics instead of the admitted family descriptor.
+  - Bundle descriptor law must also remain inherited from machine-registry
+  - machine-registry completeness field set or field-mode law for self-describing
+  - bundle schema instead of the admitted registry descriptor law.
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root-law bundle discipline'
@@ -51,6 +56,9 @@ bundle_anchor_checks:
   - 'Nor may the bundle silently drift descriptor-field mode:'
   - validator-emitted error-code families must remain validator-emitted
     error-code families.
+  - The bundle may not locally reauthor that descriptor schema either; the field
+  - admitted machine-registry completeness law for self-describing mapping
+    families.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root-law bundle boundary'
@@ -63,6 +71,9 @@ bundle_anchor_checks:
   - Root-law bundle rows must also preserve descriptor-field mode; a repo-relative
   - validator-emitted status-key/error-code fields may not be reinterpreted as
     ordinary path strings.
+  - The bundle must not locally reauthor the self-describing descriptor schema
+  - descriptor-field modes must remain aligned with root machine-registry
+    completeness law.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime consumption of the root-law bundle'
@@ -73,6 +84,8 @@ bundle_anchor_checks:
   - surfaces drift from the active component descriptor it claims to bind.
   - Runtime must also reject a root-law bundle row whose descriptor-field mode
   - error-code family.
+  - Runtime must also reject a root-law bundle whose descriptor schema diverges
+  - descriptor-field mode map.
 component_rows:
 - order: 1
   component_id: root_corpus_governance

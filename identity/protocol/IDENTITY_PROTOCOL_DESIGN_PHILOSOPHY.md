@@ -374,6 +374,14 @@ field is a repo-relative path, a validator-emitted status key, or a
 validator-emitted error-code family, the machine world is again being asked to
 trust shadow bundle semantics instead of the admitted family descriptor.
 
+Bundle descriptor law must also remain inherited from machine-registry
+completeness self-description law.
+
+If the root-law bundle locally invents or silently diverges from the admitted
+machine-registry completeness field set or field-mode law for self-describing
+mapping families, the machine world is again being asked to trust shadow
+bundle schema instead of the admitted registry descriptor law.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

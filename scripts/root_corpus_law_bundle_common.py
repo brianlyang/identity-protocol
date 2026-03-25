@@ -65,6 +65,14 @@ def load_root_corpus_law_bundle(repo_root: Path) -> tuple[dict[str, Any], Path, 
     return _load_yaml(active_path), entry_path, active_path, ""
 
 
+def machine_registry_completeness_current_file_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("machine_registry_completeness_current_file"))
+
+
+def descriptor_schema_source_component_id_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("descriptor_schema_source_component_id"))
+
+
 def require_component_descriptor_concordance(bundle_doc: Mapping[str, Any]) -> bool:
     return _as_bool(bundle_doc.get("require_component_descriptor_concordance"))
 

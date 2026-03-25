@@ -14,11 +14,18 @@ from root_corpus_law_bundle_common import (
     STATUS_PASS_REQUIRED,
     bundle_anchor_checks_from_doc,
     bundle_components_from_doc,
+    descriptor_schema_source_component_id_from_doc,
     load_mapping_descriptor,
     load_root_corpus_law_bundle,
+    machine_registry_completeness_current_file_from_doc,
     required_component_descriptor_field_modes_from_doc,
     required_component_descriptor_fields_from_doc,
     require_component_descriptor_concordance,
+)
+from root_machine_registry_completeness_common import (
+    load_root_machine_registry_completeness,
+    required_descriptor_field_modes_from_doc as registry_required_descriptor_field_modes_from_doc,
+    required_descriptor_fields_from_doc as registry_required_descriptor_fields_from_doc,
 )
 
 STATUS_KEY = "protocol_root_corpus_law_bundle_status"
@@ -174,6 +181,12 @@ def main() -> int:
 
     repo_root = resolve_repo_root(args.repo_root, start=__file__)
     bundle_doc, bundle_entry_path, bundle_active_path, bundle_alias_error = load_root_corpus_law_bundle(repo_root)
+    (
+        machine_registry_completeness_doc,
+        machine_registry_completeness_entry_path,
+        machine_registry_completeness_active_path,
+        machine_registry_completeness_alias_error,
+    ) = load_root_machine_registry_completeness(repo_root)
 
     stale_reasons: list[str] = []
     structure_violations: list[dict[str, Any]] = []
@@ -188,6 +201,14 @@ def main() -> int:
     elif not bundle_doc:
         stale_reasons.append("root_corpus_law_bundle_empty_or_invalid")
         error_code = ERR_REGISTRY
+    if machine_registry_completeness_alias_error:
+        stale_reasons.append(
+            f"root_machine_registry_completeness_alias_error:{machine_registry_completeness_alias_error}"
+        )
+        error_code = ERR_REGISTRY
+    elif not machine_registry_completeness_doc:
+        stale_reasons.append("root_machine_registry_completeness_empty_or_invalid")
+        error_code = ERR_REGISTRY
 
     anchor_checks = bundle_anchor_checks_from_doc(bundle_doc) if bundle_doc else ()
     components = bundle_components_from_doc(bundle_doc) if bundle_doc else ()
@@ -197,6 +218,20 @@ def main() -> int:
     )
     required_component_descriptor_field_modes = (
         required_component_descriptor_field_modes_from_doc(bundle_doc) if bundle_doc else {}
+    )
+    machine_registry_completeness_current_file = (
+        machine_registry_completeness_current_file_from_doc(bundle_doc) if bundle_doc else ""
+    )
+    descriptor_schema_source_component_id = descriptor_schema_source_component_id_from_doc(bundle_doc) if bundle_doc else ""
+    source_required_descriptor_fields = (
+        registry_required_descriptor_fields_from_doc(machine_registry_completeness_doc)
+        if machine_registry_completeness_doc
+        else ()
+    )
+    source_required_descriptor_field_modes = (
+        registry_required_descriptor_field_modes_from_doc(machine_registry_completeness_doc)
+        if machine_registry_completeness_doc
+        else {}
     )
     component_map = {row.component_id: row for row in components}
     sorted_components = sorted(components, key=lambda row: row.order)
@@ -221,6 +256,12 @@ def main() -> int:
         if str(bundle_doc.get("common_script") or "").strip() != "scripts/root_corpus_law_bundle_common.py":
             stale_reasons.append("root_corpus_law_bundle_common_script_invalid")
             error_code = ERR_REGISTRY
+        if machine_registry_completeness_current_file != "identity/protocol/mappings/root-machine-registry-completeness.current.yaml":
+            stale_reasons.append("root_corpus_law_bundle_machine_registry_completeness_current_file_invalid")
+            error_code = ERR_REGISTRY
+        if descriptor_schema_source_component_id != "root_machine_registry_completeness":
+            stale_reasons.append("root_corpus_law_bundle_descriptor_schema_source_component_id_invalid")
+            error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
             error_code = ERR_REGISTRY
@@ -236,6 +277,24 @@ def main() -> int:
         if required_component_descriptor_field_modes != EXPECTED_DESCRIPTOR_FIELD_MODES:
             stale_reasons.append("root_corpus_law_bundle_required_component_descriptor_field_modes_invalid")
             error_code = ERR_REGISTRY
+        if tuple(source_required_descriptor_fields) != tuple(required_component_descriptor_fields):
+            bundle_violations.append(
+                {
+                    "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                    "reason": "descriptor_fields_not_aligned_to_machine_registry_completeness",
+                    "bundle_fields": list(required_component_descriptor_fields),
+                    "source_fields": list(source_required_descriptor_fields),
+                }
+            )
+        if source_required_descriptor_field_modes != required_component_descriptor_field_modes:
+            bundle_violations.append(
+                {
+                    "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                    "reason": "descriptor_field_modes_not_aligned_to_machine_registry_completeness",
+                    "bundle_modes": dict(required_component_descriptor_field_modes),
+                    "source_modes": dict(source_required_descriptor_field_modes),
+                }
+            )
         if descriptor_concordance_required and not required_component_descriptor_fields:
             stale_reasons.append("root_corpus_law_bundle_required_component_descriptor_fields_missing")
             error_code = ERR_REGISTRY
@@ -457,12 +516,18 @@ def main() -> int:
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_BUNDLE),
         "bundle_entry_path": str(bundle_entry_path),
         "bundle_active_path": str(bundle_active_path),
+        "machine_registry_completeness_entry_path": str(machine_registry_completeness_entry_path),
+        "machine_registry_completeness_active_path": str(machine_registry_completeness_active_path),
         "root_dir": str(bundle_doc.get("root_dir") or ""),
+        "machine_registry_completeness_current_file": machine_registry_completeness_current_file,
+        "descriptor_schema_source_component_id": descriptor_schema_source_component_id,
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
         "component_ids": [row.component_id for row in sorted_components],
         "required_component_descriptor_fields": list(required_component_descriptor_fields),
         "required_component_descriptor_field_modes": dict(required_component_descriptor_field_modes),
+        "source_required_descriptor_fields": list(source_required_descriptor_fields),
+        "source_required_descriptor_field_modes": dict(source_required_descriptor_field_modes),
         "component_status_rows": component_status_rows,
         "structure_violations": structure_violations,
         "bundle_violations": bundle_violations,

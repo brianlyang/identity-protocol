@@ -388,6 +388,11 @@ Nor may the bundle silently drift descriptor-field mode:
 - validator-emitted error-code families must remain validator-emitted
   error-code families.
 
+The bundle may not locally reauthor that descriptor schema either; the field
+set and field-mode law used by the root-law bundle must stay aligned with the
+admitted machine-registry completeness law for self-describing mapping
+families.
+
 ---
 
 ## Conflict-handling rule

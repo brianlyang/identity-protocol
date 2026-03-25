@@ -168,6 +168,11 @@ path field may not be reinterpreted as validator-emitted metadata, and
 validator-emitted status-key/error-code fields may not be reinterpreted as
 ordinary path strings.
 
+The bundle must not locally reauthor the self-describing descriptor schema
+used by law-bearing root mapping families; its descriptor field set and
+descriptor-field modes must remain aligned with root machine-registry
+completeness law.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

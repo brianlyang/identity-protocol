@@ -111,6 +111,11 @@ drifts from the admitted component descriptor; runtime must not guess whether a
 field is a path surface, a validator-emitted status key, or a validator-emitted
 error-code family.
 
+Runtime must also reject a root-law bundle whose descriptor schema diverges
+from admitted machine-registry completeness law for self-describing mapping
+families; runtime must not guess a substitute field set or substitute
+descriptor-field mode map.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.
