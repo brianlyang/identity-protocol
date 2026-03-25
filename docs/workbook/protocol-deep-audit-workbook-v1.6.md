@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 102`, `command snippets checked: 1081`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 102`, `command snippets checked: 1082`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -162,12 +162,14 @@ Symptoms:
 - the original deep audit reproduced active entrypoints defaulting to `~/.codex/.identity/catalog.local.yaml` instead of shared runtime-path resolution or explicit runtime-catalog authority;
 - that defect used to create “false green on the wrong catalog” behavior across project-local identities and launch-context-sensitive replays;
 - current resolver / strict-entry / semantic-clarity lanes are now green, so the remaining RC-10 tail is metadata hygiene and regression prevention rather than live precedence ambiguity.
+- runtime-mode guard now also needs to keep one subtle admissibility split explicit: identities already adopted into the selected runtime catalog must pass strict project-runtime entry, while repo-metadata-only fallback identities must fail-close instead of being mistaken for runtime-admitted project identities.
 
 
 
 Root cause:
 
 - the original root cause was a `v1.4.x`-era family of direct global-home catalog defaults that outlived the newer runtime-path contract; resolver / launcher / strict-entry closure has now removed that live leak, so remaining RC-10 work is raw metadata backfill and regression prevention, not active fallback semantics.
+- the residual regression-prevention task is therefore not “loosen runtime-mode guard”; it is “freeze the runtime-admitted vs repo-metadata-fallback distinction as machine-readable guard output plus dedicated probes,” so operator confusion cannot reintroduce false admissibility.
 
 ### RC-11 No motherline no-downgrade rule freezes compatibility surfaces to migration-only
 

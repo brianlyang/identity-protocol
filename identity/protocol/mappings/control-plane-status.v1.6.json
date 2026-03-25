@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-25T16:22:34Z",
-  "git_head_short": "c7b4166",
+  "generated_at_utc": "2026-03-25T17:16:47Z",
+  "git_head_short": "965fdea",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -45,7 +45,7 @@
         ],
         "observed": {
           "validator_scripts": 246,
-          "error_codes": 700,
+          "error_codes": 701,
           "error_code_families": 260,
           "mapping_rows_missing_in_bundle": 0,
           "bundle_rows": 56,
@@ -69,8 +69,8 @@
             "fail": 248
           },
           "error_codes": {
-            "warn": 700,
-            "fail": 703
+            "warn": 701,
+            "fail": 704
           },
           "error_code_families": {
             "warn": 260,
@@ -153,13 +153,13 @@
         "budget_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_alias_error": "",
-        "current_last_updated_utc": "2026-03-25T16:21:58Z",
-        "live_last_updated_utc": "2026-03-25T16:21:59Z",
+        "current_last_updated_utc": "2026-03-25T17:16:08Z",
+        "live_last_updated_utc": "2026-03-25T17:16:09Z",
         "mismatch_count": 0,
         "mismatches": [],
         "observed": {
           "validator_scripts": 246,
-          "error_codes": 700,
+          "error_codes": 701,
           "error_code_families": 260,
           "mapping_rows_missing_in_bundle": 0,
           "strict_direct_validate_calls": {
@@ -952,10 +952,10 @@
         ],
         "pack_scan_globs": [],
         "active_pack_identity_ids": [],
-        "repo_scan_file_count": 522,
+        "repo_scan_file_count": 523,
         "active_pack_scan_file_count": 0,
         "extra_scan_file_count": 0,
-        "scan_file_count": 522,
+        "scan_file_count": 523,
         "scan_files": [
           ".github/workflows/_identity-required-gates.yml",
           ".github/workflows/identity-protocol-ci.yml",
@@ -999,6 +999,7 @@
           "scripts/ci/run_identity_dialogue_retention_probes_ci.sh",
           "scripts/ci/run_identity_instance_pack_topology_probes_ci.sh",
           "scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh",
+          "scripts/ci/run_identity_runtime_mode_guard_probes_ci.sh",
           "scripts/ci/run_identity_update_preflight_terminal_truth_split_probes_ci.sh",
           "scripts/ci/run_identity_weak_live_linkage_probes_ci.sh",
           "scripts/ci/run_installer_version_baseline_probes_ci.sh",

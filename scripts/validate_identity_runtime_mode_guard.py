@@ -10,6 +10,13 @@ from typing import Any
 
 from resolve_identity_context import resolve_identity
 
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+ERR_MISSING_CATALOG = "IP-ENV-001"
+ERR_RESOLVE_FAILED = "IP-ENV-002"
+ERR_ENV_CATALOG_DRIFT = "IP-ENV-003"
+ERR_RUNTIME_BINDING_MISMATCH = "IP-ENV-004"
+
 STRICT_OPERATIONS = {
     "activate",
     "update",
@@ -73,6 +80,46 @@ def _within(path: Path, root: Path) -> bool:
         return False
 
 
+def _emit_payload(payload: dict[str, Any], *, json_mode: bool, json_only: bool) -> None:
+    if not (json_mode or json_only):
+        return
+    print(json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2))
+
+
+def _binding_class_for_failure(
+    *,
+    repo_metadata_fallback_detected: bool,
+    env_catalog_mismatch_blocked: bool,
+) -> str:
+    if env_catalog_mismatch_blocked:
+        return "env_catalog_drift_blocked"
+    if repo_metadata_fallback_detected:
+        return "repo_metadata_fallback_unadmitted"
+    return "runtime_binding_mismatch"
+
+
+def _stale_reasons_from_checks(
+    checks: dict[str, bool],
+    *,
+    repo_metadata_fallback_detected: bool,
+) -> list[str]:
+    mapping = {
+        "catalog_exists": "requested_catalog_missing",
+        "resolved_source_layer_runtime": "resolved_source_layer_not_runtime",
+        "resolved_catalog_matches_requested": "resolved_catalog_does_not_match_requested_runtime_catalog",
+        "resolved_scope_known": "resolved_scope_unknown",
+        "pack_exists": "resolved_pack_missing",
+        "pack_within_mode_root": "resolved_pack_not_within_inferred_mode_root",
+        "source_layer_matches_mode": "resolved_source_layer_does_not_match_inferred_mode",
+        "mode_recognized": "inferred_mode_not_recognized",
+        "expected_mode_match": "expected_mode_mismatch",
+    }
+    reasons = [mapping[key] for key, ok in checks.items() if not ok and key in mapping]
+    if repo_metadata_fallback_detected:
+        reasons.append("repo_metadata_identity_not_adopted_into_runtime_catalog")
+    return sorted(set(reasons))
+
+
 def _detect_repo_root(start: Path | None = None) -> Path:
     base = (start or Path.cwd()).resolve()
     p = subprocess.run(
@@ -133,26 +180,121 @@ def main() -> int:
         help="optional JSON receipt path that explicitly authorizes env/catalog mismatch for strict operations",
     )
     ap.add_argument("--json", action="store_true", help="print full payload as JSON")
+    ap.add_argument("--json-only", action="store_true", help="print compact JSON payload only")
     args = ap.parse_args()
+    structured_output = bool(args.json or args.json_only)
 
     explicit_catalog = args.catalog.strip()
     env_catalog = os.environ.get("IDENTITY_CATALOG", "").strip()
     catalog_raw = explicit_catalog or env_catalog
     if not catalog_raw:
-        print("[FAIL] IP-ENV-001 missing catalog binding")
-        print("       pass --catalog <path> or export IDENTITY_CATALOG first")
-        print("       fix: source ./scripts/identity_runtime_select.sh project")
+        payload = {
+            "runtime_mode_guard_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_MISSING_CATALOG,
+            "identity_id": args.identity_id,
+            "operation": args.operation,
+            "strict_operation": args.operation in STRICT_OPERATIONS,
+            "catalog_path": "",
+            "repo_catalog_path": str(Path(args.repo_catalog).expanduser().resolve()),
+            "resolved_catalog_path": "",
+            "pack_path": "",
+            "source_layer": "unknown",
+            "resolved_scope": "UNKNOWN",
+            "inferred_mode": "invalid",
+            "expected_mode": args.expect_mode,
+            "repo_root": "",
+            "project_identity_home": "",
+            "global_identity_home": str(_resolve_global_identity_home()),
+            "resolved_profile": "",
+            "resolved_runtime_mode": "",
+            "checks": {},
+            "stale_reasons": ["catalog_binding_missing"],
+            "binding_class": "unresolved",
+            "repo_metadata_fallback_detected": False,
+            "env_catalog_path": str(Path(env_catalog).expanduser().resolve()) if env_catalog else "",
+            "env_catalog_mismatch": False,
+            "env_catalog_mismatch_override_receipt": "",
+            "env_catalog_mismatch_override_status": "not_checked",
+            "fix_hint": "source ./scripts/identity_runtime_select.sh project",
+        }
+        _emit_payload(payload, json_mode=args.json, json_only=args.json_only)
+        if not structured_output:
+            print(f"[FAIL] {ERR_MISSING_CATALOG} missing catalog binding")
+            print("       pass --catalog <path> or export IDENTITY_CATALOG first")
+            print("       fix: source ./scripts/identity_runtime_select.sh project")
         return 2
 
     catalog_path = Path(catalog_raw).expanduser().resolve()
     if not catalog_path.exists():
-        print(f"[FAIL] IP-ENV-001 catalog path not found: {catalog_path}")
-        print("       fix: source ./scripts/identity_runtime_select.sh project")
+        payload = {
+            "runtime_mode_guard_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_MISSING_CATALOG,
+            "identity_id": args.identity_id,
+            "operation": args.operation,
+            "strict_operation": args.operation in STRICT_OPERATIONS,
+            "catalog_path": str(catalog_path),
+            "repo_catalog_path": str(Path(args.repo_catalog).expanduser().resolve()),
+            "resolved_catalog_path": "",
+            "pack_path": "",
+            "source_layer": "unknown",
+            "resolved_scope": "UNKNOWN",
+            "inferred_mode": "invalid",
+            "expected_mode": args.expect_mode,
+            "repo_root": "",
+            "project_identity_home": "",
+            "global_identity_home": str(_resolve_global_identity_home()),
+            "resolved_profile": "",
+            "resolved_runtime_mode": "",
+            "checks": {"catalog_exists": False},
+            "stale_reasons": ["requested_catalog_missing"],
+            "binding_class": "unresolved",
+            "repo_metadata_fallback_detected": False,
+            "env_catalog_path": str(Path(env_catalog).expanduser().resolve()) if env_catalog else "",
+            "env_catalog_mismatch": False,
+            "env_catalog_mismatch_override_receipt": "",
+            "env_catalog_mismatch_override_status": "not_checked",
+            "fix_hint": "source ./scripts/identity_runtime_select.sh project",
+        }
+        _emit_payload(payload, json_mode=args.json, json_only=args.json_only)
+        if not structured_output:
+            print(f"[FAIL] {ERR_MISSING_CATALOG} catalog path not found: {catalog_path}")
+            print("       fix: source ./scripts/identity_runtime_select.sh project")
         return 2
 
     repo_catalog_path = Path(args.repo_catalog).expanduser().resolve()
     if not repo_catalog_path.exists():
-        print(f"[FAIL] repo catalog not found: {repo_catalog_path}")
+        payload = {
+            "runtime_mode_guard_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_MISSING_CATALOG,
+            "identity_id": args.identity_id,
+            "operation": args.operation,
+            "strict_operation": args.operation in STRICT_OPERATIONS,
+            "catalog_path": str(catalog_path),
+            "repo_catalog_path": str(repo_catalog_path),
+            "resolved_catalog_path": "",
+            "pack_path": "",
+            "source_layer": "unknown",
+            "resolved_scope": "UNKNOWN",
+            "inferred_mode": "invalid",
+            "expected_mode": args.expect_mode,
+            "repo_root": "",
+            "project_identity_home": "",
+            "global_identity_home": str(_resolve_global_identity_home()),
+            "resolved_profile": "",
+            "resolved_runtime_mode": "",
+            "checks": {"catalog_exists": True},
+            "stale_reasons": ["repo_catalog_missing"],
+            "binding_class": "unresolved",
+            "repo_metadata_fallback_detected": False,
+            "env_catalog_path": str(Path(env_catalog).expanduser().resolve()) if env_catalog else "",
+            "env_catalog_mismatch": False,
+            "env_catalog_mismatch_override_receipt": "",
+            "env_catalog_mismatch_override_status": "not_checked",
+            "fix_hint": "verify --repo-catalog binding before strict execution",
+        }
+        _emit_payload(payload, json_mode=args.json, json_only=args.json_only)
+        if not structured_output:
+            print(f"[FAIL] repo catalog not found: {repo_catalog_path}")
         return 2
 
     repo_root = _detect_repo_root(Path.cwd())
@@ -168,14 +310,48 @@ def main() -> int:
             preferred_scope=args.scope,
         )
     except Exception as exc:
-        print(f"[FAIL] IP-ENV-002 resolve failed: {exc}")
-        print("       fix: source ./scripts/identity_runtime_select.sh project")
+        payload = {
+            "runtime_mode_guard_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_RESOLVE_FAILED,
+            "identity_id": args.identity_id,
+            "operation": args.operation,
+            "strict_operation": args.operation in STRICT_OPERATIONS,
+            "catalog_path": str(catalog_path),
+            "repo_catalog_path": str(repo_catalog_path),
+            "resolved_catalog_path": "",
+            "pack_path": "",
+            "source_layer": "unknown",
+            "resolved_scope": "UNKNOWN",
+            "inferred_mode": inferred_mode,
+            "expected_mode": args.expect_mode,
+            "repo_root": str(repo_root),
+            "project_identity_home": str(project_identity_home),
+            "global_identity_home": str(global_identity_home),
+            "resolved_profile": "",
+            "resolved_runtime_mode": "",
+            "checks": {"catalog_exists": True},
+            "stale_reasons": [f"resolve_failed:{type(exc).__name__}"],
+            "binding_class": "unresolved",
+            "repo_metadata_fallback_detected": False,
+            "env_catalog_path": str(Path(env_catalog).expanduser().resolve()) if env_catalog else "",
+            "env_catalog_mismatch": False,
+            "env_catalog_mismatch_override_receipt": "",
+            "env_catalog_mismatch_override_status": "not_checked",
+            "fix_hint": "source ./scripts/identity_runtime_select.sh project",
+        }
+        _emit_payload(payload, json_mode=args.json, json_only=args.json_only)
+        if not structured_output:
+            print(f"[FAIL] {ERR_RESOLVE_FAILED} resolve failed: {exc}")
+            print("       fix: source ./scripts/identity_runtime_select.sh project")
         return 2
 
     resolved_catalog = Path(str(resolved.get("catalog_path", "")).strip()).expanduser().resolve()
     resolved_pack = Path(str(resolved.get("pack_path", "")).strip()).expanduser().resolve()
     source_layer = str(resolved.get("source_layer", "")).strip().lower()
     resolved_scope = str(resolved.get("resolved_scope", "")).strip().upper()
+    resolved_profile = str(resolved.get("profile", "")).strip().lower()
+    resolved_runtime_mode = str(resolved.get("runtime_mode", "")).strip().lower()
+    repo_metadata_fallback_detected = source_layer == "repo_metadata" and resolved_catalog != catalog_path
 
     checks: dict[str, bool] = {
         "catalog_exists": catalog_path.exists(),
@@ -207,7 +383,20 @@ def main() -> int:
         env_catalog_path = Path(env_catalog).expanduser().resolve()
         env_catalog_mismatch = env_catalog_path != catalog_path
 
+    stale_reasons = _stale_reasons_from_checks(
+        checks,
+        repo_metadata_fallback_detected=repo_metadata_fallback_detected,
+    )
+    fix_hint = "source ./scripts/identity_runtime_select.sh project"
+    if repo_metadata_fallback_detected:
+        fix_hint = (
+            "adopt the identity into the selected runtime catalog before strict execution, "
+            "or choose a runtime-admitted identity in that catalog"
+        )
+
     payload: dict[str, Any] = {
+        "runtime_mode_guard_status": STATUS_FAIL_REQUIRED,
+        "error_code": ERR_RUNTIME_BINDING_MISMATCH,
         "identity_id": args.identity_id,
         "operation": args.operation,
         "strict_operation": args.operation in STRICT_OPERATIONS,
@@ -222,7 +411,15 @@ def main() -> int:
         "repo_root": str(repo_root),
         "project_identity_home": str(project_identity_home),
         "global_identity_home": str(global_identity_home),
+        "resolved_profile": resolved_profile,
+        "resolved_runtime_mode": resolved_runtime_mode,
         "checks": checks,
+        "stale_reasons": stale_reasons,
+        "binding_class": "runtime_catalog_admitted" if all(bool(v) for v in checks.values()) else _binding_class_for_failure(
+            repo_metadata_fallback_detected=repo_metadata_fallback_detected,
+            env_catalog_mismatch_blocked=False,
+        ),
+        "repo_metadata_fallback_detected": repo_metadata_fallback_detected,
         "env_catalog_path": str(env_catalog_path) if env_catalog_path else "",
         "env_catalog_mismatch": env_catalog_mismatch,
         "env_catalog_mismatch_override_receipt": str(
@@ -231,30 +428,31 @@ def main() -> int:
         if str(args.env_catalog_mismatch_override_receipt or "").strip()
         else "",
         "env_catalog_mismatch_override_status": "not_checked",
-        "fix_hint": "source ./scripts/identity_runtime_select.sh project",
+        "fix_hint": fix_hint,
     }
 
     ok = all(bool(v) for v in checks.values())
-    if args.json:
-        print(json.dumps(payload, ensure_ascii=False, indent=2))
-
     if not ok:
-        print("[FAIL] runtime mode guard blocked execution")
-        print(
-            f"       identity={args.identity_id} mode={inferred_mode} "
-            f"catalog={catalog_path} pack={resolved_pack}"
-        )
-        for k, v in checks.items():
-            print(f"       {k}={v}")
-        if inferred_mode == "global":
-            print("       fix: source ./scripts/identity_runtime_select.sh global")
-        elif inferred_mode == "project":
-            print("       fix: source ./scripts/identity_runtime_select.sh project")
-        elif expected_mode in {"project", "global"}:
-            print(f"       fix: source ./scripts/identity_runtime_select.sh {expected_mode}")
-        else:
-            print("       fix: choose explicit mode first, then rerun command")
-            print("            source ./scripts/identity_runtime_select.sh project")
+        _emit_payload(payload, json_mode=args.json, json_only=args.json_only)
+        if not structured_output:
+            print(f"[FAIL] {ERR_RUNTIME_BINDING_MISMATCH} runtime mode guard blocked execution")
+            print(
+                f"       identity={args.identity_id} mode={inferred_mode} "
+                f"catalog={catalog_path} pack={resolved_pack}"
+            )
+            for k, v in checks.items():
+                print(f"       {k}={v}")
+            if repo_metadata_fallback_detected:
+                print("       fix: adopt the identity into the selected runtime catalog or choose a runtime-admitted identity")
+            elif inferred_mode == "global":
+                print("       fix: source ./scripts/identity_runtime_select.sh global")
+            elif inferred_mode == "project":
+                print("       fix: source ./scripts/identity_runtime_select.sh project")
+            elif expected_mode in {"project", "global"}:
+                print(f"       fix: source ./scripts/identity_runtime_select.sh {expected_mode}")
+            else:
+                print("       fix: choose explicit mode first, then rerun command")
+                print("            source ./scripts/identity_runtime_select.sh project")
         return 2
 
     strict_operation = args.operation in STRICT_OPERATIONS
@@ -269,33 +467,48 @@ def main() -> int:
     payload["env_catalog_mismatch_override_status"] = override_reason
 
     if env_catalog_mismatch and strict_operation and not override_ok:
-        print("[FAIL] IP-ENV-003 strict runtime mode guard blocked env/catalog drift")
-        print(
-            "       IDENTITY_CATALOG env differs from requested catalog without authorized override receipt "
-            f"(env={env_catalog_path}, catalog={catalog_path}, operation={args.operation})"
+        payload["runtime_mode_guard_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_ENV_CATALOG_DRIFT
+        payload["binding_class"] = _binding_class_for_failure(
+            repo_metadata_fallback_detected=repo_metadata_fallback_detected,
+            env_catalog_mismatch_blocked=True,
         )
-        print("       fix: source ./scripts/identity_runtime_select.sh project")
-        print(
-            "       or pass --env-catalog-mismatch-override-receipt <json> "
-            "with allow_env_catalog_mismatch=true for audited emergency bypass"
-        )
+        payload["stale_reasons"] = sorted(set(payload["stale_reasons"] + ["strict_env_catalog_mismatch_without_override"]))
+        payload["fix_hint"] = "source ./scripts/identity_runtime_select.sh project"
+        _emit_payload(payload, json_mode=args.json, json_only=args.json_only)
+        if not structured_output:
+            print(f"[FAIL] {ERR_ENV_CATALOG_DRIFT} strict runtime mode guard blocked env/catalog drift")
+            print(
+                "       IDENTITY_CATALOG env differs from requested catalog without authorized override receipt "
+                f"(env={env_catalog_path}, catalog={catalog_path}, operation={args.operation})"
+            )
+            print("       fix: source ./scripts/identity_runtime_select.sh project")
+            print(
+                "       or pass --env-catalog-mismatch-override-receipt <json> "
+                "with allow_env_catalog_mismatch=true for audited emergency bypass"
+            )
         return 2
 
-    print(
-        "[OK] runtime mode guard passed: "
-        f"identity={args.identity_id} mode={inferred_mode} "
-        f"catalog={catalog_path} pack={resolved_pack} scope={resolved_scope}"
-    )
-    if env_catalog_mismatch and override_ok:
+    payload["runtime_mode_guard_status"] = STATUS_PASS_REQUIRED
+    payload["error_code"] = ""
+    payload["binding_class"] = "runtime_catalog_admitted"
+    _emit_payload(payload, json_mode=args.json, json_only=args.json_only)
+    if not structured_output:
         print(
-            "[WARN] IDENTITY_CATALOG env/catalog drift allowed by audited override receipt "
-            f"(status={override_reason}, operation={args.operation})."
+            "[OK] runtime mode guard passed: "
+            f"identity={args.identity_id} mode={inferred_mode} "
+            f"catalog={catalog_path} pack={resolved_pack} scope={resolved_scope}"
         )
-    elif env_catalog_mismatch:
-        print(
-            "[WARN] IDENTITY_CATALOG env differs from requested catalog "
-            f"(env={env_catalog_path}); explicit --catalog takes precedence."
-        )
+        if env_catalog_mismatch and override_ok:
+            print(
+                "[WARN] IDENTITY_CATALOG env/catalog drift allowed by audited override receipt "
+                f"(status={override_reason}, operation={args.operation})."
+            )
+        elif env_catalog_mismatch:
+            print(
+                "[WARN] IDENTITY_CATALOG env differs from requested catalog "
+                f"(env={env_catalog_path}); explicit --catalog takes precedence."
+            )
     return 0
 
 

@@ -68,7 +68,7 @@ def _build_runtime_guard_cmd(args: argparse.Namespace) -> list[str]:
         args.expect_mode,
         "--operation",
         args.operation,
-        "--json",
+        "--json-only",
     ]
     if str(args.scope or "").strip():
         cmd.extend(["--scope", str(args.scope).strip()])

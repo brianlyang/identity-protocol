@@ -81,6 +81,7 @@ POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["bash", "scripts/ci/run_v16x_release_closure_summary_probes_ci.sh"],
     ["bash", "scripts/ci/run_release_closure_control_plane_status_probes_ci.sh"],
     ["python3", "scripts/validate_issue_register_consistency.py", "--json-only"],
+    ["bash", "scripts/ci/run_identity_runtime_mode_guard_probes_ci.sh"],
     ["bash", "scripts/ci/run_identity_context_continuity_probes_ci.sh"],
     ["bash", "scripts/ci/run_identity_dialogue_retention_probes_ci.sh"],
     ["bash", "scripts/ci/run_identity_artifact_family_routing_probes_ci.sh"],

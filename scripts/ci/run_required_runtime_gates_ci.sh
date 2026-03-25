@@ -41,6 +41,7 @@ run_global_protocol_gates() {
   run_cmd bash scripts/ci/run_v16x_release_closure_summary_probes_ci.sh
   run_cmd bash scripts/ci/run_release_closure_control_plane_status_probes_ci.sh
   run_cmd python3 scripts/validate_issue_register_consistency.py --json-only
+  run_cmd bash scripts/ci/run_identity_runtime_mode_guard_probes_ci.sh
   run_cmd python3 scripts/validate_identity_switch_closure_semantics.py --catalog "${CATALOG_PATH}" --json-only
   run_cmd bash scripts/ci/run_identity_context_continuity_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_dialogue_retention_probes_ci.sh
