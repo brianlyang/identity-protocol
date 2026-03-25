@@ -19,6 +19,8 @@ from root_error_terminality_common import (
     STATUS_PASS_REQUIRED,
     collapse_rows_from_doc,
     differentiation_rows_from_doc,
+    error_terminality_limit_rows_from_doc,
+    error_terminality_proof_rows_from_doc,
     error_class_rows_from_doc,
     load_root_error_terminality,
 )
@@ -95,6 +97,73 @@ EXPECTED_DIFFERENTIATION_ROWS = {
         "contract_phrase": "visible warning tone or local urgency is separated from lawful error terminality classification.",
     },
 }
+EXPECTED_ERROR_TERMINALITY_PROOF_ROWS = {
+    "frozen_definition_error_terminality_proof": {
+        "order": 1,
+        "contract_heading": "### 1. Frozen-definition error-terminality proof",
+        "proof_role": "frozen_definition_error_terminality_proof",
+    },
+    "fail_close_legality_error_terminality_proof": {
+        "order": 2,
+        "contract_heading": "### 2. Fail-close-legality error-terminality proof",
+        "proof_role": "fail_close_legality_error_terminality_proof",
+    },
+    "binding_integrity_error_terminality_proof": {
+        "order": 3,
+        "contract_heading": "### 3. Binding-integrity error-terminality proof",
+        "proof_role": "binding_integrity_error_terminality_proof",
+    },
+    "active_path_contamination_error_terminality_proof": {
+        "order": 4,
+        "contract_heading": "### 4. Active-path-contamination error-terminality proof",
+        "proof_role": "active_path_contamination_error_terminality_proof",
+    },
+    "recovery_redirect_error_terminality_proof": {
+        "order": 5,
+        "contract_heading": "### 5. Recovery-redirect error-terminality proof",
+        "proof_role": "recovery_redirect_error_terminality_proof",
+    },
+    "non_blocking_observation_error_terminality_proof": {
+        "order": 6,
+        "contract_heading": "### 6. Non-blocking-observation error-terminality proof",
+        "proof_role": "non_blocking_observation_error_terminality_proof",
+    },
+    "support_explanatory_demotion_error_terminality_proof": {
+        "order": 7,
+        "contract_heading": "### 7. Support/explanatory-demotion error-terminality proof",
+        "proof_role": "support_explanatory_demotion_error_terminality_proof",
+    },
+}
+EXPECTED_ERROR_TERMINALITY_LIMIT_ROWS = {
+    "frozen_definition_not_fail_close_legality": {
+        "order": 1,
+        "contract_phrase": "frozen-definition error-terminality proof is not proof of fail-close legality;",
+    },
+    "fail_close_legality_not_binding_integrity": {
+        "order": 2,
+        "contract_phrase": "fail-close-legality error-terminality proof is not proof of binding integrity failure;",
+    },
+    "binding_integrity_not_active_path_contamination": {
+        "order": 3,
+        "contract_phrase": "binding-integrity error-terminality proof is not proof of active-path contamination;",
+    },
+    "active_path_contamination_not_recovery_redirect": {
+        "order": 4,
+        "contract_phrase": "active-path-contamination error-terminality proof is not proof of governed recovery redirect;",
+    },
+    "recovery_redirect_not_non_blocking_observation": {
+        "order": 5,
+        "contract_phrase": "recovery-redirect error-terminality proof is not proof of non-blocking observation scope;",
+    },
+    "non_blocking_observation_not_support_explanatory_demotion": {
+        "order": 6,
+        "contract_phrase": "non-blocking-observation error-terminality proof is not proof of support or explanatory demotion;",
+    },
+    "support_explanatory_demotion_not_lawful_active_turn": {
+        "order": 7,
+        "contract_phrase": "support/explanatory-demotion error-terminality proof is not proof that the present turn remained lawfully active.",
+    },
+}
 EXPECTED_COLLAPSE_ROWS = {
     "defined_error_as_live_terminal_error": {
         "order": 1,
@@ -130,6 +199,8 @@ EXPECTED_REGISTRY_MARKERS = (
     "## Error terminality law",
     "## Seven error classes",
     "## Required error differentiations",
+    "## Error-terminality proof discipline",
+    "## Error-terminality proof limits",
 )
 EXPECTED_AUTHORITY_MARKERS = (
     "## Runtime adjudication boundary",
@@ -245,6 +316,8 @@ def main() -> int:
 
     error_class_rows = error_class_rows_from_doc(error_doc) if error_doc else ()
     differentiation_rows = differentiation_rows_from_doc(error_doc) if error_doc else ()
+    error_terminality_proof_rows = error_terminality_proof_rows_from_doc(error_doc) if error_doc else ()
+    error_terminality_limit_rows = error_terminality_limit_rows_from_doc(error_doc) if error_doc else ()
     collapse_rows = collapse_rows_from_doc(error_doc) if error_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -276,6 +349,8 @@ def main() -> int:
         for field, rows in (
             ("required_error_class_rows", error_class_rows),
             ("required_differentiation_rows", differentiation_rows),
+            ("required_error_terminality_proof_rows", error_terminality_proof_rows),
+            ("required_error_terminality_limit_rows", error_terminality_limit_rows),
             ("required_collapse_rows", collapse_rows),
         ):
             if not rows:
@@ -311,6 +386,24 @@ def main() -> int:
             compare_fields=("contract_phrase",),
         )
         _validate_rows(
+            actual_rows=error_terminality_proof_rows,
+            expected_rows=EXPECTED_ERROR_TERMINALITY_PROOF_ROWS,
+            structure_violations=structure_violations,
+            terminality_violations=terminality_violations,
+            field_name="required_error_terminality_proof_rows",
+            id_attr="proof_id",
+            compare_fields=("contract_heading", "proof_role"),
+        )
+        _validate_rows(
+            actual_rows=error_terminality_limit_rows,
+            expected_rows=EXPECTED_ERROR_TERMINALITY_LIMIT_ROWS,
+            structure_violations=structure_violations,
+            terminality_violations=terminality_violations,
+            field_name="required_error_terminality_limit_rows",
+            id_attr="row_id",
+            compare_fields=("contract_phrase",),
+        )
+        _validate_rows(
             actual_rows=collapse_rows,
             expected_rows=EXPECTED_COLLAPSE_ROWS,
             structure_violations=structure_violations,
@@ -334,7 +427,10 @@ def main() -> int:
             for row in error_class_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_heading,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "error_class_heading_missing", "marker": marker})
-            for row in differentiation_rows + collapse_rows:
+            for row in error_terminality_proof_rows:
+                for marker in find_missing_markers(contract_text, (row.contract_heading,)):
+                    contract_marker_violations.append({"field": "contract_file", "reason": "proof_heading_missing", "marker": marker})
+            for row in differentiation_rows + error_terminality_limit_rows + collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
 
@@ -506,9 +602,13 @@ def main() -> int:
         "contract_file": str(error_doc.get("contract_file") or ""),
         "error_class_count": len(error_class_rows),
         "differentiation_count": len(differentiation_rows),
+        "error_terminality_proof_count": len(error_terminality_proof_rows),
+        "error_terminality_limit_count": len(error_terminality_limit_rows),
         "collapse_count": len(collapse_rows),
         "error_class_ids": [row.error_class_id for row in sorted(error_class_rows, key=lambda item: item.order)],
         "differentiation_ids": [row.row_id for row in sorted(differentiation_rows, key=lambda item: item.order)],
+        "error_terminality_proof_ids": [row.proof_id for row in sorted(error_terminality_proof_rows, key=lambda item: item.order)],
+        "error_terminality_limit_ids": [row.row_id for row in sorted(error_terminality_limit_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
         "structure_violations": structure_violations,
         "terminality_violations": terminality_violations,

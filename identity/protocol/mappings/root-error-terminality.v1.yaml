@@ -14,6 +14,8 @@ contract_required_markers:
   - '## Error terminality law'
   - '## Seven error classes'
   - '## Required error differentiations'
+  - '## Error-terminality proof discipline'
+  - '## Error-terminality proof limits'
   - '## Non-compliant error collapses'
   - 'Only lawfully classified errors may fail-close, redirect, or remain non-blocking in current-turn execution.'
 required_error_class_rows:
@@ -67,6 +69,57 @@ required_differentiation_rows:
   - order: 7
     differentiation_id: warning_tone_vs_terminality_classification
     contract_phrase: 'visible warning tone or local urgency is separated from lawful error terminality classification.'
+required_error_terminality_proof_rows:
+  - order: 1
+    proof_id: frozen_definition_error_terminality_proof
+    contract_heading: '### 1. Frozen-definition error-terminality proof'
+    proof_role: frozen_definition_error_terminality_proof
+  - order: 2
+    proof_id: fail_close_legality_error_terminality_proof
+    contract_heading: '### 2. Fail-close-legality error-terminality proof'
+    proof_role: fail_close_legality_error_terminality_proof
+  - order: 3
+    proof_id: binding_integrity_error_terminality_proof
+    contract_heading: '### 3. Binding-integrity error-terminality proof'
+    proof_role: binding_integrity_error_terminality_proof
+  - order: 4
+    proof_id: active_path_contamination_error_terminality_proof
+    contract_heading: '### 4. Active-path-contamination error-terminality proof'
+    proof_role: active_path_contamination_error_terminality_proof
+  - order: 5
+    proof_id: recovery_redirect_error_terminality_proof
+    contract_heading: '### 5. Recovery-redirect error-terminality proof'
+    proof_role: recovery_redirect_error_terminality_proof
+  - order: 6
+    proof_id: non_blocking_observation_error_terminality_proof
+    contract_heading: '### 6. Non-blocking-observation error-terminality proof'
+    proof_role: non_blocking_observation_error_terminality_proof
+  - order: 7
+    proof_id: support_explanatory_demotion_error_terminality_proof
+    contract_heading: '### 7. Support/explanatory-demotion error-terminality proof'
+    proof_role: support_explanatory_demotion_error_terminality_proof
+required_error_terminality_limit_rows:
+  - order: 1
+    limit_id: frozen_definition_not_fail_close_legality
+    contract_phrase: 'frozen-definition error-terminality proof is not proof of fail-close legality;'
+  - order: 2
+    limit_id: fail_close_legality_not_binding_integrity
+    contract_phrase: 'fail-close-legality error-terminality proof is not proof of binding integrity failure;'
+  - order: 3
+    limit_id: binding_integrity_not_active_path_contamination
+    contract_phrase: 'binding-integrity error-terminality proof is not proof of active-path contamination;'
+  - order: 4
+    limit_id: active_path_contamination_not_recovery_redirect
+    contract_phrase: 'active-path-contamination error-terminality proof is not proof of governed recovery redirect;'
+  - order: 5
+    limit_id: recovery_redirect_not_non_blocking_observation
+    contract_phrase: 'recovery-redirect error-terminality proof is not proof of non-blocking observation scope;'
+  - order: 6
+    limit_id: non_blocking_observation_not_support_explanatory_demotion
+    contract_phrase: 'non-blocking-observation error-terminality proof is not proof of support or explanatory demotion;'
+  - order: 7
+    limit_id: support_explanatory_demotion_not_lawful_active_turn
+    contract_phrase: 'support/explanatory-demotion error-terminality proof is not proof that the present turn remained lawfully active.'
 required_collapse_rows:
   - order: 1
     collapse_id: defined_error_as_live_terminal_error

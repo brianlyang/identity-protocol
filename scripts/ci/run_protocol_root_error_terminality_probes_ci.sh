@@ -27,7 +27,48 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_error_terminality_status"] == "PASS_REQUIRED", payload
 assert payload["error_class_count"] == 7, payload
 assert payload["differentiation_count"] == 7, payload
+assert payload["error_terminality_proof_count"] == 7, payload
+assert payload["error_terminality_limit_count"] == 7, payload
 assert payload["collapse_count"] == 7, payload
+PY
+
+PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
+mirror_repo "${PROOF_REPO}"
+python3 - <<'PY' "${PROOF_REPO}/identity/protocol/mappings/root-error-terminality.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_error_terminality_proof_rows"] = [
+    row for row in doc["required_error_terminality_proof_rows"] if row.get("proof_id") != "support_explanatory_demotion_error_terminality_proof"
+]
+for idx, row in enumerate(doc["required_error_terminality_proof_rows"], start=1):
+    row["order"] = idx
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+PROOF_JSON="${TMP_ROOT}/proof-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_error_terminality.py" \
+  --repo-root "${PROOF_REPO}" \
+  --json-only >"${PROOF_JSON}"; then
+  echo "[FAIL] root error terminality validator unexpectedly passed missing proof row"
+  exit 1
+fi
+
+python3 - <<'PY' "${PROOF_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_error_terminality_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-ERT-002", payload
+assert any(
+    row["reason"] == "missing_expected_rows" and "support_explanatory_demotion_error_terminality_proof" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
 PY
 
 ERROR_REPO="${TMP_ROOT}/error-drift-repo"

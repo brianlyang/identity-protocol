@@ -201,6 +201,8 @@ registered_top_level_entries:
       - '## Error terminality law'
       - '## Seven error classes'
       - '## Required error differentiations'
+      - '## Error-terminality proof discipline'
+      - '## Error-terminality proof limits'
     forbidden_content_classes:
       - workbook_issue_projection
       - closure_ledger_narration

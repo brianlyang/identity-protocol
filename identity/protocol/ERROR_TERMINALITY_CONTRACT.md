@@ -145,6 +145,79 @@ The protocol must preserve the following differentiations:
 6. non-blocking observation error is separated from demoted support or explanatory error material;
 7. visible warning tone or local urgency is separated from lawful error terminality classification.
 
+When an error-terminality claim relies on governed proof, the proof stratum
+behind that claim must match the error classification being asserted.
+
+## Error-terminality proof discipline
+
+Error terminality claims may be supported only by proof whose stratum matches
+the error classification being asserted.
+
+### 1. Frozen-definition error-terminality proof
+
+Supports claims that an error class was defined by shared law or registry rather
+than improvised from local pressure or convenience.
+
+Proof role: `frozen_definition_error_terminality_proof`.
+
+### 2. Fail-close-legality error-terminality proof
+
+Supports claims that contradiction, missing canonical truth, admissibility
+blocker, or other legality-denying conditions lawfully terminate the present
+turn.
+
+Proof role: `fail_close_legality_error_terminality_proof`.
+
+### 3. Binding-integrity error-terminality proof
+
+Supports claims that run, thread, identity, path, or receipt integrity was
+broken and continuation must fail-close rather than proceed with corrupted
+binding.
+
+Proof role: `binding_integrity_error_terminality_proof`.
+
+### 4. Active-path-contamination error-terminality proof
+
+Supports claims that support, compatibility, recovery, replay, diagnostics,
+sample, or demoted material unlawfully entered the active path.
+
+Proof role: `active_path_contamination_error_terminality_proof`.
+
+### 5. Recovery-redirect error-terminality proof
+
+Supports claims that a condition lawfully redirected execution into governed
+recovery, replay, repair, or diagnostics without reclassifying the turn as
+active success-path continuation.
+
+Proof role: `recovery_redirect_error_terminality_proof`.
+
+### 6. Non-blocking-observation error-terminality proof
+
+Supports claims that an observation remained visible and machine-governed while
+lawfully confined to non-blocking scope.
+
+Proof role: `non_blocking_observation_error_terminality_proof`.
+
+### 7. Support/explanatory-demotion error-terminality proof
+
+Supports claims that commentary, summary, retrospective explanation, or other
+support material remained explanatory rather than becoming terminal machine
+error authority.
+
+Proof role: `support_explanatory_demotion_error_terminality_proof`.
+
+## Error-terminality proof limits
+
+The protocol must preserve these error-terminality proof limits:
+
+1. frozen-definition error-terminality proof is not proof of fail-close legality;
+2. fail-close-legality error-terminality proof is not proof of binding integrity failure;
+3. binding-integrity error-terminality proof is not proof of active-path contamination;
+4. active-path-contamination error-terminality proof is not proof of governed recovery redirect;
+5. recovery-redirect error-terminality proof is not proof of non-blocking observation scope;
+6. non-blocking-observation error-terminality proof is not proof of support or explanatory demotion;
+7. support/explanatory-demotion error-terminality proof is not proof that the present turn remained lawfully active.
+
 ## Non-compliant error collapses
 
 The following are non-compliant:
