@@ -1,0 +1,81 @@
+schema_version: 1
+artifact_family_admissibility_family: protocol_root_artifact_family_admissibility
+artifact_family_admissibility_version: v1
+contract_file: identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_artifact_family_admissibility.py
+probe_script: scripts/ci/run_protocol_root_artifact_family_admissibility_probes_ci.sh
+common_script: scripts/root_artifact_family_admissibility_common.py
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Artifact-family admissibility law'
+  - '## Six family-admission classes'
+  - '## Required family-admission differentiations'
+  - '## Non-compliant family-admission collapses'
+  - 'Only lawfully matched artifacts may be admitted into governed canonical family sinks.'
+required_family_admission_class_rows:
+  - order: 1
+    family_admission_class_id: frozen_artifact_family_definition
+    contract_heading: '### 1. Frozen artifact-family definition'
+    admission_role: frozen_artifact_family_definition
+  - order: 2
+    family_admission_class_id: canonical_family_sink
+    contract_heading: '### 2. Canonical family sink'
+    admission_role: canonical_family_sink
+  - order: 3
+    family_admission_class_id: family_compatible_artifact
+    contract_heading: '### 3. Family-compatible artifact'
+    admission_role: family_compatible_artifact
+  - order: 4
+    family_admission_class_id: bound_family_admitted_artifact
+    contract_heading: '### 4. Bound family-admitted artifact'
+    admission_role: bound_family_admitted_artifact
+  - order: 5
+    family_admission_class_id: governed_recovery_or_redirect_sink
+    contract_heading: '### 5. Governed recovery or redirect sink'
+    admission_role: governed_recovery_or_redirect_sink
+  - order: 6
+    family_admission_class_id: demoted_support_or_quarantine_sink
+    contract_heading: '### 6. Demoted support or quarantine sink'
+    admission_role: demoted_support_or_quarantine_sink
+required_differentiation_rows:
+  - order: 1
+    differentiation_id: frozen_definition_vs_canonical_sink
+    contract_phrase: 'frozen artifact-family definition is separated from canonical family sink;'
+  - order: 2
+    differentiation_id: canonical_sink_vs_compatible_artifact
+    contract_phrase: 'canonical family sink is separated from family-compatible artifact;'
+  - order: 3
+    differentiation_id: compatible_artifact_vs_bound_admission
+    contract_phrase: 'family-compatible artifact is separated from bound family-admitted artifact;'
+  - order: 4
+    differentiation_id: bound_admission_vs_redirect_sink
+    contract_phrase: 'bound family-admitted artifact is separated from governed recovery or redirect sink;'
+  - order: 5
+    differentiation_id: redirect_sink_vs_demoted_sink
+    contract_phrase: 'governed recovery or redirect sink is separated from demoted support or quarantine sink;'
+  - order: 6
+    differentiation_id: visible_presence_vs_family_admission
+    contract_phrase: 'visible path, filename similarity, or artifact presence is separated from lawful family admission.'
+required_collapse_rows:
+  - order: 1
+    collapse_id: defined_family_as_live_sink
+    contract_phrase: 'a law-defined artifact family is treated as if it were already a live canonical family sink.'
+  - order: 2
+    collapse_id: artifact_resemblance_as_family_compatibility
+    contract_phrase: 'filename resemblance, path similarity, or local habit is treated as if it proved family compatibility.'
+  - order: 3
+    collapse_id: compatible_artifact_as_admitted_artifact
+    contract_phrase: 'a merely compatible artifact is treated as if it were already canonically admitted.'
+  - order: 4
+    collapse_id: redirect_sink_as_canonical_admission
+    contract_phrase: 'a governed recovery, replay, repair, or redirect sink is treated as if it were canonical family admission.'
+  - order: 5
+    collapse_id: demoted_sink_as_canonical_family_sink
+    contract_phrase: 'sample, fixture, diagnostics, archive, compatibility, explanatory, or quarantine material is treated as if it were canonical family admission.'
+  - order: 6
+    collapse_id: path_presence_as_family_admissibility_proof
+    contract_phrase: 'visible path presence, filename visibility, or artifact existence is treated as if it proved lawful family admission.'

@@ -58,11 +58,12 @@ Status transitions are controlled by governance/review, not by script commit alo
 10. The root-domain success-path state admissibility law for which state classes may enter active execution, stay optional, or redirect into governed recovery is frozen separately in `identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md`.
 11. The root-domain entry-surface legitimacy law for which entry surfaces are lawful, which may drive active execution, and which must remain helper-only, recovery-only, or demoted is frozen separately in `identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md`.
 12. The root-domain error terminality law for which errors must fail-close, redirect into governed recovery, or remain explicitly non-blocking is frozen separately in `identity/protocol/ERROR_TERMINALITY_CONTRACT.md`.
-13. The root-domain admissibility law for new protocol streams and shared strengthenings is frozen separately in `identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md`.
-14. The root-domain responsibility and escalation boundary between protocol law and instance adaptation is frozen separately in `identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md`.
-15. The root-domain truth lifecycle law for existence, discoverability, admissibility, run-binding, and next-hop consumption is frozen separately in `identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md`.
-16. The root-domain operator answer-surface and law-preserving compression boundary is frozen separately in `identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md`.
-17. The root-domain instance self-judgement law for who I am, what I can do, how I do it, and when I must not decide alone is frozen separately in `identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md`.
+13. The root-domain artifact-family admissibility law for which governed families may accept which artifacts, which artifacts remain merely compatible, and which must redirect or stay demoted is frozen separately in `identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md`.
+14. The root-domain admissibility law for new protocol streams and shared strengthenings is frozen separately in `identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md`.
+15. The root-domain responsibility and escalation boundary between protocol law and instance adaptation is frozen separately in `identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md`.
+16. The root-domain truth lifecycle law for existence, discoverability, admissibility, run-binding, and next-hop consumption is frozen separately in `identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md`.
+17. The root-domain operator answer-surface and law-preserving compression boundary is frozen separately in `identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md`.
+18. The root-domain instance self-judgement law for who I am, what I can do, how I do it, and when I must not decide alone is frozen separately in `identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md`.
 
 ## Constitutional derivation discipline
 
