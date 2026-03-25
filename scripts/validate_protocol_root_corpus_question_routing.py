@@ -7,6 +7,7 @@ from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
 from root_corpus_authority_common import entry_authority_projections_from_doc, load_root_corpus_authority
+from root_corpus_gateway_admissibility_common import gateway_effect_targets_from_doc, load_root_corpus_gateway_admissibility
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, reading_order_rows_from_doc
 from root_corpus_question_routing_common import (
@@ -14,6 +15,7 @@ from root_corpus_question_routing_common import (
     STATUS_PASS_REQUIRED,
     adjudication_redirect_from_doc,
     entry_question_projections_from_doc,
+    gateway_question_projections_from_doc,
     load_root_corpus_question_routing,
     question_class_profiles_from_doc,
     question_routing_anchor_checks_from_doc,
@@ -131,6 +133,7 @@ def main() -> int:
     registry_doc, registry_entry_path, registry_active_path, registry_alias_error = load_root_corpus_registry(repo_root)
     ordering_doc, ordering_entry_path, ordering_active_path, ordering_alias_error = load_root_corpus_ordering(repo_root)
     authority_doc, authority_entry_path, authority_active_path, authority_alias_error = load_root_corpus_authority(repo_root)
+    gateway_doc, gateway_entry_path, gateway_active_path, gateway_alias_error = load_root_corpus_gateway_admissibility(repo_root)
 
     stale_reasons: list[str] = []
     structure_violations: list[dict[str, Any]] = []
@@ -165,14 +168,22 @@ def main() -> int:
     elif not authority_doc:
         stale_reasons.append("root_corpus_authority_empty_or_invalid")
         error_code = ERR_REGISTRY
+    if gateway_alias_error:
+        stale_reasons.append(f"root_corpus_gateway_admissibility_alias_error:{gateway_alias_error}")
+        error_code = ERR_REGISTRY
+    elif not gateway_doc:
+        stale_reasons.append("root_corpus_gateway_admissibility_empty_or_invalid")
+        error_code = ERR_REGISTRY
 
     anchor_checks = question_routing_anchor_checks_from_doc(routing_doc) if routing_doc else ()
     question_profiles = question_class_profiles_from_doc(routing_doc) if routing_doc else ()
     entry_projections = entry_question_projections_from_doc(routing_doc) if routing_doc else ()
+    gateway_question_projections = gateway_question_projections_from_doc(routing_doc) if routing_doc else ()
     adjudication_redirect = adjudication_redirect_from_doc(routing_doc) if routing_doc else adjudication_redirect_from_doc({})
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     authority_entry_projections = entry_authority_projections_from_doc(authority_doc) if authority_doc else ()
+    gateway_effect_targets = gateway_effect_targets_from_doc(gateway_doc) if gateway_doc else ()
 
     if not stale_reasons:
         if str(routing_doc.get("routing_family") or "").strip() != "protocol_root_corpus_question_routing":
@@ -192,6 +203,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if str(routing_doc.get("authority_current_file") or "").strip() != "identity/protocol/mappings/root-corpus-authority.current.yaml":
             stale_reasons.append("root_corpus_question_routing_authority_current_file_invalid")
+            error_code = ERR_REGISTRY
+        if str(routing_doc.get("gateway_admissibility_current_file") or "").strip() != "identity/protocol/mappings/root-corpus-gateway-admissibility.current.yaml":
+            stale_reasons.append("root_corpus_question_routing_gateway_admissibility_current_file_invalid")
             error_code = ERR_REGISTRY
         if str(routing_doc.get("validator_script") or "").strip() != "scripts/validate_protocol_root_corpus_question_routing.py":
             stale_reasons.append("root_corpus_question_routing_validator_script_invalid")
@@ -216,6 +230,9 @@ def main() -> int:
         if not entry_projections:
             stale_reasons.append("root_corpus_question_routing_entry_projection_missing")
             error_code = ERR_REGISTRY
+        if not gateway_question_projections:
+            stale_reasons.append("root_corpus_question_routing_gateway_question_projection_missing")
+            error_code = ERR_REGISTRY
         if not adjudication_redirect.question_class:
             stale_reasons.append("root_corpus_question_routing_adjudication_redirect_missing")
             error_code = ERR_REGISTRY
@@ -227,6 +244,8 @@ def main() -> int:
     registry_classes = sorted({entry.corpus_class for entry in registry_entries})
     question_profile_map = {row.question_class: row for row in question_profiles}
     entry_projection_map = {row.rel_path: row for row in entry_projections}
+    gateway_question_projection_map = {row.gateway_class: row for row in gateway_question_projections}
+    gateway_effect_target_map = {row.gateway_class: row for row in gateway_effect_targets}
     authority_entry_map = {row.rel_path: row for row in authority_entry_projections}
     anchor_rel_paths = [row.rel_path for row in anchor_checks]
     root_index_entry = str(ordering_doc.get("root_index_entry") or "").strip() if ordering_doc else ""
@@ -237,6 +256,8 @@ def main() -> int:
             structure_violations.append({"field": "question_class_profiles", "reason": "duplicate_question_class"})
         if len(entry_projection_map) != len(entry_projections):
             structure_violations.append({"field": "entry_question_projection", "reason": "duplicate_rel_path"})
+        if len(gateway_question_projection_map) != len(gateway_question_projections):
+            structure_violations.append({"field": "gateway_question_projection", "reason": "duplicate_gateway_class"})
         if len(set(anchor_rel_paths)) != len(anchor_rel_paths):
             structure_violations.append({"field": "question_routing_anchor_checks", "reason": "duplicate_rel_path"})
 
@@ -260,6 +281,24 @@ def main() -> int:
         if extra_entry_projections:
             structure_violations.append(
                 {"field": "entry_question_projection", "reason": "extra_unregistered_entries", "rel_paths": extra_entry_projections}
+            )
+        missing_gateway_question_projections = sorted(set(gateway_effect_target_map) - set(gateway_question_projection_map))
+        extra_gateway_question_projections = sorted(set(gateway_question_projection_map) - set(gateway_effect_target_map))
+        if missing_gateway_question_projections:
+            structure_violations.append(
+                {
+                    "field": "gateway_question_projection",
+                    "reason": "missing_gateway_classes",
+                    "gateway_classes": missing_gateway_question_projections,
+                }
+            )
+        if extra_gateway_question_projections:
+            structure_violations.append(
+                {
+                    "field": "gateway_question_projection",
+                    "reason": "extra_gateway_classes",
+                    "gateway_classes": extra_gateway_question_projections,
+                }
             )
 
         missing_anchor_entries = sorted(set(anchor_rel_paths) - set(registry_paths))
@@ -377,6 +416,104 @@ def main() -> int:
                         }
                     )
 
+        for gateway_class, row in gateway_question_projection_map.items():
+            gateway_effect_target = gateway_effect_target_map.get(gateway_class)
+            if gateway_effect_target is None:
+                routing_violations.append(
+                    {
+                        "field": "gateway_question_projection",
+                        "reason": "unbound_gateway_class",
+                        "gateway_class": gateway_class,
+                    }
+                )
+                continue
+            if row.effect_target_class != gateway_effect_target.effect_target_class:
+                routing_violations.append(
+                    {
+                        "field": "gateway_question_projection",
+                        "reason": "effect_target_class_mismatch",
+                        "gateway_class": gateway_class,
+                        "expected": gateway_effect_target.effect_target_class,
+                        "actual": row.effect_target_class,
+                    }
+                )
+            if row.question_class != gateway_effect_target.effect_target_question_class:
+                routing_violations.append(
+                    {
+                        "field": "gateway_question_projection",
+                        "reason": "question_class_mismatch",
+                        "gateway_class": gateway_class,
+                        "expected": gateway_effect_target.effect_target_question_class,
+                        "actual": row.question_class,
+                    }
+                )
+            if row.answer_mode != gateway_effect_target.effect_target_answer_mode:
+                routing_violations.append(
+                    {
+                        "field": "gateway_question_projection",
+                        "reason": "answer_mode_mismatch",
+                        "gateway_class": gateway_class,
+                        "expected": gateway_effect_target.effect_target_answer_mode,
+                        "actual": row.answer_mode,
+                    }
+                )
+            question_profile = question_profile_map.get(row.question_class)
+            if question_profile is None:
+                routing_violations.append(
+                    {
+                        "field": "gateway_question_projection",
+                        "reason": "question_profile_missing",
+                        "gateway_class": gateway_class,
+                        "question_class": row.question_class,
+                    }
+                )
+                continue
+            if row.answer_mode != question_profile.answer_mode:
+                routing_violations.append(
+                    {
+                        "field": "gateway_question_projection",
+                        "reason": "question_profile_answer_mode_mismatch",
+                        "gateway_class": gateway_class,
+                        "question_class": row.question_class,
+                        "expected": question_profile.answer_mode,
+                        "actual": row.answer_mode,
+                    }
+                )
+            if bool(row.current_turn_authority_allowed) != bool(question_profile.current_turn_authority_allowed):
+                routing_violations.append(
+                    {
+                        "field": "gateway_question_projection",
+                        "reason": "current_turn_authority_allowed_mismatch",
+                        "gateway_class": gateway_class,
+                        "question_class": row.question_class,
+                        "expected": bool(question_profile.current_turn_authority_allowed),
+                        "actual": bool(row.current_turn_authority_allowed),
+                    }
+                )
+            if bool(row.root_entry_required) != bool(question_profile.root_entry_required):
+                routing_violations.append(
+                    {
+                        "field": "gateway_question_projection",
+                        "reason": "root_entry_required_mismatch",
+                        "gateway_class": gateway_class,
+                        "question_class": row.question_class,
+                        "expected": bool(question_profile.root_entry_required),
+                        "actual": bool(row.root_entry_required),
+                    }
+                )
+            expected_rule = EXPECTED_QUESTION_RULES.get(row.question_class)
+            if expected_rule is not None and row.effect_target_class != str(expected_rule.get("corpus_class") or ""):
+                routing_violations.append(
+                    {
+                        "field": "gateway_question_projection",
+                        "reason": "effect_target_class_incompatible_with_question_class",
+                        "gateway_class": gateway_class,
+                        "question_class": row.question_class,
+                        "expected": str(expected_rule.get("corpus_class") or ""),
+                        "actual": row.effect_target_class,
+                    }
+                )
+
         if root_index_entry:
             root_index_projection = entry_projection_map.get(root_index_entry)
             if root_index_projection is None:
@@ -477,6 +614,7 @@ def main() -> int:
         "question_routing_anchor_check_count": len(anchor_checks),
         "question_class_profile_count": len(question_profiles),
         "entry_question_projection_count": len(entry_projections),
+        "gateway_question_projection_count": len(gateway_question_projections),
         "question_class_profiles": [
             {
                 "question_class": row.question_class,
@@ -492,6 +630,17 @@ def main() -> int:
                 "question_classes": list(row.question_classes),
             }
             for row in entry_projections
+        ],
+        "gateway_question_projection": [
+            {
+                "gateway_class": row.gateway_class,
+                "effect_target_class": row.effect_target_class,
+                "question_class": row.question_class,
+                "answer_mode": row.answer_mode,
+                "current_turn_authority_allowed": row.current_turn_authority_allowed,
+                "root_entry_required": row.root_entry_required,
+            }
+            for row in gateway_question_projections
         ],
         "adjudication_redirect": {
             "question_class": adjudication_redirect.question_class,

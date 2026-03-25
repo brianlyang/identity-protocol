@@ -35,6 +35,16 @@ class EntryQuestionProjection:
 
 
 @dataclass(frozen=True)
+class GatewayQuestionProjection:
+    gateway_class: str
+    effect_target_class: str
+    question_class: str
+    answer_mode: str
+    current_turn_authority_allowed: bool
+    root_entry_required: bool
+
+
+@dataclass(frozen=True)
 class AdjudicationRedirect:
     question_class: str
     terminal_machine_surfaces: tuple[str, ...] = field(default_factory=tuple)
@@ -127,6 +137,33 @@ def entry_question_projections_from_doc(routing_doc: Mapping[str, Any]) -> tuple
             EntryQuestionProjection(
                 rel_path=rel_path,
                 question_classes=_as_str_tuple(row.get("question_classes")),
+            )
+        )
+    return tuple(out)
+
+
+def gateway_question_projections_from_doc(routing_doc: Mapping[str, Any]) -> tuple[GatewayQuestionProjection, ...]:
+    rows = routing_doc.get("gateway_question_projection")
+    if not isinstance(rows, list):
+        return ()
+    out: list[GatewayQuestionProjection] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        gateway_class = _norm_str(row.get("gateway_class"))
+        effect_target_class = _norm_str(row.get("effect_target_class"))
+        question_class = _norm_str(row.get("question_class"))
+        answer_mode = _norm_str(row.get("answer_mode"))
+        if not gateway_class or not effect_target_class or not question_class or not answer_mode:
+            continue
+        out.append(
+            GatewayQuestionProjection(
+                gateway_class=gateway_class,
+                effect_target_class=effect_target_class,
+                question_class=question_class,
+                answer_mode=answer_mode,
+                current_turn_authority_allowed=bool(row.get("current_turn_authority_allowed", False)),
+                root_entry_required=bool(row.get("root_entry_required", False)),
             )
         )
     return tuple(out)

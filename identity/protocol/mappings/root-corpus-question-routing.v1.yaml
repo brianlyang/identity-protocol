@@ -5,6 +5,7 @@ root_dir: identity/protocol
 registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
 ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
 authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+gateway_admissibility_current_file: identity/protocol/mappings/root-corpus-gateway-admissibility.current.yaml
 validator_script: scripts/validate_protocol_root_corpus_question_routing.py
 probe_script: scripts/ci/run_protocol_root_corpus_question_routing_probes_ci.sh
 common_script: scripts/root_corpus_question_routing_common.py
@@ -19,10 +20,14 @@ question_routing_anchor_checks:
   - '## Root question-routing discipline'
   - current-turn legality question must never terminate in philosophy text, README
     text, or frozen contract prose alone.
+  - 'gateway-mediated refreezing or projection keeps the question class governed by the gateway target layer:'
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
   required_markers:
   - '### Question class and answer surface must stay paired'
   - No layer should answer a question that belongs to a different layer.
+  - Gateway-mediated refreezing or projection must preserve the question class
+    of its governed target layer rather than inheriting a new answer class from
+    incoming motivation.
 - rel_path: identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md
   required_markers:
   - '## Runtime adjudication boundary'
@@ -213,6 +218,31 @@ entry_question_projection:
 - rel_path: identity/protocol/fixtures
   question_classes:
   - support_material_lookup
+gateway_question_projection:
+- gateway_class: constitution
+  effect_target_class: constitution
+  question_class: frozen_protocol_law
+  answer_mode: frozen_law_answer
+  current_turn_authority_allowed: false
+  root_entry_required: true
+- gateway_class: runtime_constitution
+  effect_target_class: runtime_constitution
+  question_class: frozen_runtime_law
+  answer_mode: frozen_law_answer
+  current_turn_authority_allowed: false
+  root_entry_required: true
+- gateway_class: root_contract
+  effect_target_class: root_contract
+  question_class: frozen_domain_contract_law
+  answer_mode: frozen_law_answer
+  current_turn_authority_allowed: false
+  root_entry_required: true
+- gateway_class: machine_registry_directory
+  effect_target_class: machine_registry_directory
+  question_class: registry_resolution
+  answer_mode: machine_registry_answer
+  current_turn_authority_allowed: true
+  root_entry_required: true
 adjudication_redirect:
   question_class: current_turn_legality
   terminal_machine_surfaces:

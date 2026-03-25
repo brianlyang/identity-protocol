@@ -277,6 +277,8 @@ Different root entries answer different classes of machine-world questions.
    - what narrower subdomain law is frozen under the root corpus.
 7. `fixtures/` answers the **support-material question** only:
    - what demoted support material exists without becoming runtime truth.
+8. gateway-mediated refreezing or projection keeps the question class governed by the gateway target layer:
+   - it does not inherit a new answer class from incoming motivation or local convenience.
 
 The most important prohibition is strict:
 

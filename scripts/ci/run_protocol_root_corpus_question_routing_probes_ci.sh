@@ -13,6 +13,7 @@ mirror_repo() {
   cp "${ROOT}/scripts/root_corpus_governance_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/root_corpus_ordering_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/root_corpus_authority_common.py" "${dst}/scripts/"
+  cp "${ROOT}/scripts/root_corpus_gateway_admissibility_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/root_corpus_question_routing_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/validate_protocol_root_corpus_question_routing.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/registry_alias_control_plane_common.py" "${dst}/scripts/"
@@ -37,6 +38,12 @@ assert all(
     "current_turn_legality" not in row["question_classes"]
     for row in payload["entry_question_projection"]
 ), payload
+assert {row["gateway_class"]: row["question_class"] for row in payload["gateway_question_projection"]} == {
+    "constitution": "frozen_protocol_law",
+    "runtime_constitution": "frozen_runtime_law",
+    "root_contract": "frozen_domain_contract_law",
+    "machine_registry_directory": "registry_resolution",
+}, payload
 PY
 
 ROOT_ENTRY_REPO="${TMP_ROOT}/root-entry-drift-repo"
@@ -108,6 +115,44 @@ assert payload["protocol_root_corpus_question_routing_status"] == "FAIL_REQUIRED
 assert payload["error_code"] == "IP-RCQR-003", payload
 assert any(
     "routing_violation:adjudication_redirect:terminal_machine_surfaces_mismatch" == reason
+    for reason in payload["stale_reasons"]
+), payload
+PY
+
+GATEWAY_QUESTION_REPO="${TMP_ROOT}/gateway-question-drift-repo"
+mirror_repo "${GATEWAY_QUESTION_REPO}"
+python3 - <<'PY' "${GATEWAY_QUESTION_REPO}/identity/protocol/mappings/root-corpus-question-routing.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["gateway_question_projection"]:
+    if row["gateway_class"] == "root_contract":
+        row["question_class"] = "registry_resolution"
+        break
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+GATEWAY_QUESTION_JSON="${TMP_ROOT}/gateway-question-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_question_routing.py" \
+  --repo-root "${GATEWAY_QUESTION_REPO}" \
+  --json-only >"${GATEWAY_QUESTION_JSON}"; then
+  echo "[FAIL] root corpus question-routing validator unexpectedly passed gateway-question drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${GATEWAY_QUESTION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_question_routing_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCQR-003", payload
+assert any(
+    "routing_violation:gateway_question_projection:question_class_mismatch" == reason
     for reason in payload["stale_reasons"]
 ), payload
 PY

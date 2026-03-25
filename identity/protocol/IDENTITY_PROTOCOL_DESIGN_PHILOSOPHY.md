@@ -257,6 +257,8 @@ those question classes must not be collapsed.
 7. the **support-material question** belongs only to clearly demoted support material;
 8. the **current-turn legality question** belongs to machine-consumed enforcement surfaces such as mappings, validators, probes, runtime state, and receipts.
 
+Gateway-mediated refreezing or projection must preserve the question class of its governed target layer rather than inheriting a new answer class from incoming motivation.
+
 No layer should answer a question that belongs to a different layer.
 
 So the protocol must reject the following confusions:
