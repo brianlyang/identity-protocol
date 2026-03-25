@@ -1195,6 +1195,26 @@ def main() -> int:
     else:
         failures.append("[MISSING_SCRIPT] scripts/validate_audit_snapshot_index.py not found")
 
+    runtime_summary_surface_script = repo_root / "scripts/validate_runtime_summary_surface_governance.py"
+    if runtime_summary_surface_script.exists():
+        proc = subprocess.run(
+            [sys.executable, str(runtime_summary_surface_script), "--repo-root", str(repo_root), "--json-only"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+        )
+        if proc.returncode != 0:
+            failures.append(
+                "[RUNTIME_SUMMARY_SURFACE_GOVERNANCE_FAIL] "
+                + (
+                    proc.stdout.strip()
+                    or proc.stderr.strip()
+                    or "validate_runtime_summary_surface_governance failed"
+                )
+            )
+    else:
+        failures.append("[MISSING_SCRIPT] scripts/validate_runtime_summary_surface_governance.py not found")
+
     # Round-29.5: enforce doc evidence persistence policy
     evidence_policy_script = repo_root / "scripts/validate_doc_evidence_persistence.py"
     if evidence_policy_script.exists():

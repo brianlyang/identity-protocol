@@ -100,6 +100,13 @@ When a new topic appears, audit must classify it in this order:
 3. If no, does it require a new object, relation, or capability class beyond the current universe?
 4. If yes, it is a valid `1.7.x` candidate.
 
+## 4.1 Outer runtime verdict / summary surfaces remain bounded
+
+1. three-plane verdict remains a governed outer runtime-state surface.
+2. `scripts/report_three_plane_status.py` may emit the current cross-plane verdict, but it must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.
+3. `scripts/release_readiness_check.py --summary-out`, when emitted, remains a governed outer runtime-state summary surface and must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.
+4. Both surfaces must self-describe this boundary in machine-readable payload form rather than relying on operator memory.
+
 ## 5) Final audit sentence
 
 `1.6.x` should be closed as the line that makes the current identity-protocol universe root-closed, machine-closed, and runtime-closed. `1.7.x` should start only after that boundary is respected, and only for genuinely future-facing protocol expansion.

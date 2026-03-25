@@ -84,6 +84,9 @@ Required reading rule:
 - runtime closure is not clean terminal truth;
 - clean terminal truth is not canonical publishability;
 - runtime/fleet residual work must not be back-projected into already-closed shared owner semantics without a real shared-law defect.
+- three-plane verdict remains a governed outer runtime-state surface;
+- `scripts/report_three_plane_status.py` may emit the current cross-plane verdict, but it must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.
+- `scripts/release_readiness_check.py --summary-out`, when emitted, remains a governed outer runtime-state summary surface and must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.
 
 ## 6) What this summary authorizes
 

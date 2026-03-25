@@ -5102,6 +5102,9 @@ def main() -> int:
             else {}
         ),
     }
+    from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
+
+    payload["surface_governance"] = build_governed_runtime_summary_surface_payload("semantic_tuple_three_plane")
     m2m_projection = _classify_m2m_projection(
         validators=instance_detail.get("validators", {}) if isinstance(instance_detail, dict) else {},
         instance_status=instance_status,

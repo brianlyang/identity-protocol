@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$repo_root"
+
+echo "[INFO] positive: runtime summary surface governance validator"
+python3 scripts/validate_runtime_summary_surface_governance.py --json-only >/tmp/runtime-summary-surface-governance-positive.json
+
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
+
+mkdir -p "$tmpdir/scripts" "$tmpdir/docs/governance" "$tmpdir/docs/review" "$tmpdir/docs/release"
+cp scripts/release_readiness_check.py "$tmpdir/scripts/"
+cp scripts/report_three_plane_status.py "$tmpdir/scripts/"
+cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
+cp docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md "$tmpdir/docs/review/"
+cp docs/release/identity-v1.6x-release-closure-summary.md "$tmpdir/docs/release/"
+
+python3 - "$tmpdir" <<'PY'
+from pathlib import Path
+import sys
+
+tmpdir = Path(sys.argv[1])
+target = tmpdir / "scripts" / "report_three_plane_status.py"
+text = target.read_text(encoding="utf-8")
+needle = 'payload["surface_governance"] = build_governed_runtime_summary_surface_payload("semantic_tuple_three_plane")'
+if needle not in text:
+    raise SystemExit("probe setup failed: expected three-plane surface governance assignment missing")
+target.write_text(text.replace(needle, "", 1), encoding="utf-8")
+PY
+
+if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-script.json; then
+  echo "[FAIL] negative script drift probe unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] negative script drift probe fail-closed as expected"
+
+cp scripts/release_readiness_check.py "$tmpdir/scripts/"
+cp scripts/report_three_plane_status.py "$tmpdir/scripts/"
+
+python3 - "$tmpdir" <<'PY'
+from pathlib import Path
+import sys
+
+tmpdir = Path(sys.argv[1])
+target = tmpdir / "docs" / "governance" / "identity-v1.6x-release-closure-governance.md"
+needle = "Both surfaces must self-describe this boundary in machine-readable payload form rather than relying on operator memory."
+text = target.read_text(encoding="utf-8")
+if needle not in text:
+    raise SystemExit("probe setup failed: expected governance marker missing")
+target.write_text(text.replace(needle, "", 1), encoding="utf-8")
+PY
+
+if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-doc.json; then
+  echo "[FAIL] negative doc anchor probe unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] negative doc anchor probe fail-closed as expected"

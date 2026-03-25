@@ -119,6 +119,13 @@ Interpretive consequence:
    - first prove the current topic is not unresolved `1.6.x` closure debt;
    - only then treat it as a new object / relation / capability stream.
 
+### 5.1 Outer runtime verdict / summary surfaces must stay explicitly bounded
+
+1. three-plane verdict remains a governed outer runtime-state surface.
+2. `scripts/report_three_plane_status.py` may emit the current cross-plane verdict, but it must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.
+3. `scripts/release_readiness_check.py --summary-out`, when emitted, remains a governed outer runtime-state summary surface and must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.
+4. Both surfaces must self-describe this boundary in machine-readable payload form rather than relying on operator memory.
+
 ## 6) Frozen one-line version law
 
 1. `1.6.x` must close the current identity-protocol universe to root-closed, machine-closed, and runtime-closed terms.
