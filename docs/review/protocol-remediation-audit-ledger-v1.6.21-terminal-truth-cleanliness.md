@@ -67,19 +67,21 @@ Therefore the missing protocol law was never “execution closure semantics abse
 - `terminal_state_machine_status`
 - `terminal_state_class`
 - `terminal_state_conflict_status`
+- `terminal_clean_alias_surface_status`
 - `negative_feedback_terminal_veto_status`
 - `canonical_publishable_result_status`
 - `instance_adoption_terminal_truth_probe_status`
 
 ### 3.3 Shared probe landed
 
-`bash scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh` now proves five bounded cases:
+`bash scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh` now proves six bounded cases:
 
 1. positive clean case;
 2. negative review-required case that preserves execution closure while vetoing clean truth;
 3. negative degraded case that requires revalidation;
 4. negative placeholder case that requires repair-before-publish;
-5. negative adoption-mismatch case that fail-closes terminal-state projection drift.
+5. negative adoption-mismatch case that fail-closes terminal-state projection drift;
+6. negative clean-alias-drift case that fail-closes generic `completed` / `done` alias reuse while the higher-order lane remains non-clean.
 
 ### 3.4 Shared producer/adoption wiring landed
 
@@ -99,6 +101,7 @@ Direct runtime replay on the workspace-local `base-repo-audit-expert-v3` current
 - the report is non-clean and non-publishable;
 - the degraded loopback projection itself remains coherent (`negative_feedback_terminal_veto_status=PASS_REQUIRED`) even though execution closure is not yet reached;
 - the same payload can now separately expose `terminal_state_machine_status=PASS_REQUIRED` when the report is correctly classified as a non-clean pending state rather than an ambiguous pseudo-terminal result;
+- generic clean-completion alias surfaces are now also checked on the same adoption lane, so `status=completed` / `done=true` can no longer silently reoccupy clean-terminal semantics once the higher-order lane stays red;
 - this is now a machine-visible outcome rather than a narrative judgment.
 
 This is the expected proof that dirty runtime state can no longer silently occupy clean terminal truth semantics.
@@ -131,6 +134,7 @@ Current evidence set:
 3. canonical publishability now requires clean terminal truth,
 4. negative feedback now has explicit veto semantics,
 5. dirty terminal states now fail-close instead of ambiguously surviving as “done enough”;
-6. non-clean states are now machine-distinguished through explicit terminal-state equivalence classes rather than inferred only from narrative review.
+6. non-clean states are now machine-distinguished through explicit terminal-state equivalence classes rather than inferred only from narrative review;
+7. generic completed/done alias surfaces are now subordinated to the same higher-order machine law instead of remaining an ungoverned escape hatch.
 
 That is the correct 1.6.x outcome: the current universe now has one more root-closed / machine-closed boundary, and 1.7.x does not need to inherit this debt.

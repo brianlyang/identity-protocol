@@ -112,6 +112,10 @@ Required machine projections:
 - `terminal_failure`
 - `state_transition_required`
 - `state_machine_blockers`
+- `terminal_clean_alias_surface_status`
+- `terminal_clean_alias_claimed`
+- `terminal_clean_alias_claims`
+- `terminal_clean_alias_blockers`
 - `execution_closure_status`
 - `terminal_truth_cleanliness_status`
 - `terminal_truth_class`
@@ -173,7 +177,8 @@ Required machine projection:
 Hard semantics:
 
 1. instance/runtime report projections must not claim `is_terminal_clean=true`, `publishable=true`, or `canonical_result_eligible=true` while governed dirty signals remain active;
-2. the protocol must detect adoption drift as machine inconsistency rather than relying on narrative review.
+2. generic completion aliases such as top-level `overall_status` / `final_status` / `status` / `result` / `outcome` plus `done` / `completed` booleans must not claim clean completion while the higher-order lane remains non-clean;
+3. the protocol must detect adoption drift as machine inconsistency rather than relying on narrative review.
 
 ## 4) Dirty-signal law frozen by this stream
 
@@ -203,16 +208,18 @@ Interpretation rule:
    - shared contract skeleton,
    - shared dirty-signal classification,
    - shared negative-feedback veto projection,
-   - shared clean-terminal / publishability derivation;
+   - shared clean-terminal / publishability derivation,
+   - shared generic clean-completion alias-surface guard;
 2. `scripts/validate_terminal_truth_cleanliness.py`
    - canonical machine validator,
-   - including explicit terminal-state equivalence projection and fail-close state-coherence checks;
+   - including explicit terminal-state equivalence projection, clean-completion alias-surface fail-close, and state-coherence checks;
 3. `scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh`
    - positive clean fixture,
    - negative review-required fixture,
    - negative degraded fixture,
    - negative placeholder/repair fixture,
-   - negative adoption-mismatch fixture;
+   - negative adoption-mismatch fixture,
+   - negative clean-alias-drift fixture;
 4. `scripts/create_identity_pack.py`
    - auto-wires the contract for new packs;
 5. `scripts/repair_contract_backfill.py`
@@ -246,6 +253,7 @@ Current landed evidence:
    - degraded fixture -> `execution_closure_status=FAIL_REQUIRED`, `negative_feedback_terminal_veto_status=PASS_REQUIRED`, `terminal_veto_required=false`, `loopback_required=true`, `next_state_after_veto=revalidation_pending`, `terminal_state_class=revalidation_pending`
    - placeholder fixture -> `negative_feedback_class=placeholder_result`, `terminal_state_machine_status=PASS_REQUIRED`, `terminal_state_class=repair_pending`
    - adoption-mismatch fixture -> `terminal_state_machine_status=FAIL_REQUIRED` with explicit `state_machine_blockers` projection mismatch evidence
+   - clean-alias-drift fixture -> `terminal_clean_alias_surface_status=FAIL_REQUIRED` when generic `status` / `done` surfaces claim completed-clean semantics while the higher-order lane remains non-clean
 3. direct runtime replay on `base-repo-audit-expert-v3` against its latest workspace-local execution report now fail-closes as non-clean terminal truth because the active report remains pre-mutation-gate blocked (`all_ok=false`, `writeback_status=MISSING`, `next_action=satisfy_pre_mutation_gate_and_rerun_update`). The higher-order validator now keeps the degraded loopback projection coherent (`negative_feedback_terminal_veto_status=PASS_REQUIRED`) while still refusing to promote the report into clean terminal truth, while separately projecting `terminal_state_machine_status=PASS_REQUIRED` when the non-clean state itself is coherent.
 
 ## 7) Closure addendum (authoritative current-state judgment)
@@ -257,6 +265,7 @@ The authoritative judgment for `v1.6.21` is now:
 3. review-required execution closure is preserved as legal execution closure while remaining non-clean / non-publishable;
 4. dirty reports now fail-close on a shared validator lane instead of depending on pack-local interpretation;
 5. the lane now also projects explicit terminal-state equivalence semantics so non-clean states remain machine-distinct rather than narratively inferred;
-6. the stream is protocol-side closed because the missing shared law is landed.
+6. generic completed/done alias surfaces can no longer silently reoccupy clean-terminal semantics once the shared lane judges the runtime non-clean;
+7. the stream is protocol-side closed because the missing shared law is landed.
 
 This does **not** mean every runtime identity is currently clean. It means the protocol no longer permits dirty terminal states to masquerade as clean terminal truth.

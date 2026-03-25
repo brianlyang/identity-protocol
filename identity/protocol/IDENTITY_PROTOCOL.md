@@ -318,6 +318,7 @@ Compatibility note: legacy packs under `identity/<id>/` are migration-only locat
 6. Canonical publishability requires clean terminal truth. Execution closure alone is insufficient.
 7. Instance/runtime projections must not emit `is_terminal_clean=true`, `publishable=true`, or `canonical_result_eligible=true` while dirty signals remain active; the shared adoption probe must fail-close such drift.
 8. The same lane also emits an explicit terminal-state equivalence projection (`terminal_state_class`, `terminal_state_machine_status`, `requires_review`, `retry_required`, `revalidation_required`, `repair_required`, `quarantine_required`, `requires_human`, `terminal_failure`) so downstream consumers do not collapse every non-clean state into one ambiguous failure bucket. Review-pending, revalidation-pending, repair-pending, retry-pending, quarantine, and failed-terminal semantics must remain machine-distinct.
+9. Generic clean-completion alias surfaces such as top-level `overall_status` / `final_status` / `status` / `result` / `outcome` plus `done` / `completed` booleans must not claim clean completion while the higher-order lane remains non-clean; alias drift is part of the shared adoption fail-close boundary rather than a pack-local interpretation detail.
 
 ## Runtime source-of-truth boundary (v1.4.x hardening)
 

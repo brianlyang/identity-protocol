@@ -111,6 +111,20 @@ conflict_report = {
     "terminal_state_class": "completed_clean",
     "artifacts": ["/tmp/patch-plan.json"],
 }
+alias_conflict_report = {
+    "run_id": "terminal-truth-alias-conflict-run",
+    "identity_id": identity_id,
+    "all_ok": False,
+    "upgrade_required": False,
+    "writeback_mode": "STRICT_WRITEBACK",
+    "writeback_status": "MISSING",
+    "next_action": "satisfy_pre_mutation_gate_and_rerun_update",
+    "degrade_reason": "",
+    "next_recovery_action": "",
+    "status": "completed",
+    "done": True,
+    "artifacts": [],
+}
 (report_root := pack_root / 'runtime' / 'reports').mkdir(parents=True, exist_ok=True)
 for name, doc in {
     'identity-upgrade-exec-terminal-truth-clean-run.json': clean_report,
@@ -118,6 +132,7 @@ for name, doc in {
     'identity-upgrade-exec-terminal-truth-degraded-run.json': degraded_report,
     'identity-upgrade-exec-terminal-truth-placeholder-run.json': placeholder_report,
     'identity-upgrade-exec-terminal-truth-conflict-run.json': conflict_report,
+    'identity-upgrade-exec-terminal-truth-alias-conflict-run.json': alias_conflict_report,
 }.items():
     (report_root / name).write_text(json.dumps(doc, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 PY
@@ -127,6 +142,7 @@ REVIEW_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-review-run.js
 DEGRADED_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-degraded-run.json"
 PLACEHOLDER_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-placeholder-run.json"
 CONFLICT_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-conflict-run.json"
+ALIAS_CONFLICT_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-alias-conflict-run.json"
 
 printf '[RUN] clean fixture\n'
 python3 scripts/validate_terminal_truth_cleanliness.py \
@@ -180,7 +196,18 @@ if python3 scripts/validate_terminal_truth_cleanliness.py \
   exit 1
 fi
 
-python3 - <<'PY' "${TMP_ROOT}/clean.json" "${TMP_ROOT}/review.json" "${TMP_ROOT}/degraded.json" "${TMP_ROOT}/placeholder.json" "${TMP_ROOT}/conflict.json"
+printf '[RUN] alias-conflict fixture\n'
+if python3 scripts/validate_terminal_truth_cleanliness.py \
+  --catalog "${TMP_ROOT}/catalog.local.yaml" \
+  --identity-id "${IDENTITY_ID}" \
+  --report "${ALIAS_CONFLICT_REPORT}" \
+  --skip-support-validators \
+  --json-only > "${TMP_ROOT}/alias_conflict.json"; then
+  echo '[FAIL] alias-conflict fixture must fail clean terminal truth gate'
+  exit 1
+fi
+
+python3 - <<'PY' "${TMP_ROOT}/clean.json" "${TMP_ROOT}/review.json" "${TMP_ROOT}/degraded.json" "${TMP_ROOT}/placeholder.json" "${TMP_ROOT}/conflict.json" "${TMP_ROOT}/alias_conflict.json"
 import json
 import sys
 from pathlib import Path
@@ -190,6 +217,7 @@ review = json.loads(Path(sys.argv[2]).read_text(encoding='utf-8'))
 degraded = json.loads(Path(sys.argv[3]).read_text(encoding='utf-8'))
 placeholder = json.loads(Path(sys.argv[4]).read_text(encoding='utf-8'))
 conflict = json.loads(Path(sys.argv[5]).read_text(encoding='utf-8'))
+alias_conflict = json.loads(Path(sys.argv[6]).read_text(encoding='utf-8'))
 
 if clean.get('identity_terminal_truth_cleanliness_status') != 'PASS_REQUIRED':
     raise SystemExit('clean fixture top-level status must PASS_REQUIRED')
@@ -247,6 +275,15 @@ if conflict.get('terminal_state_conflict_status') != 'PASS_REQUIRED':
     raise SystemExit('conflict fixture should fail via adoption mismatch, not semantic-state incoherence')
 if 'report_terminal_state_class_projection_mismatch' not in set(conflict.get('state_machine_blockers') or []):
     raise SystemExit('conflict fixture must expose terminal_state_class projection mismatch blocker')
+
+if alias_conflict.get('terminal_clean_alias_surface_status') != 'FAIL_REQUIRED':
+    raise SystemExit('alias-conflict fixture must fail clean-alias surface status')
+if alias_conflict.get('terminal_clean_alias_claimed') is not True:
+    raise SystemExit('alias-conflict fixture must record a clean-terminal alias claim')
+if 'report_terminal_clean_alias_claimed_while_not_clean' not in set(alias_conflict.get('terminal_clean_alias_blockers') or []):
+    raise SystemExit('alias-conflict fixture must expose clean-terminal alias drift blocker')
+if alias_conflict.get('instance_adoption_terminal_truth_probe_status') != 'FAIL_REQUIRED':
+    raise SystemExit('alias-conflict fixture must fail instance adoption terminal-truth probe status')
 PY
 
 echo "[PASS] terminal truth cleanliness probes passed"

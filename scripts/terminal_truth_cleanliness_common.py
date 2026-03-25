@@ -45,6 +45,41 @@ TERMINAL_STATE_CLASSES: tuple[str, ...] = (
     "non_terminal_pending",
 )
 
+TERMINAL_CLEAN_ALIAS_VALUE_FIELDS: tuple[str, ...] = (
+    "overall_status",
+    "final_status",
+    "status",
+    "result",
+    "outcome",
+    "completion_status",
+    "terminal_status",
+    "workflow_status",
+    "state",
+    "completion_state",
+    "result_state",
+    "terminal_state",
+    "final_state",
+)
+
+TERMINAL_CLEAN_ALIAS_BOOLEAN_FIELDS: tuple[str, ...] = (
+    "done",
+    "completed",
+    "is_done",
+    "is_completed",
+)
+
+TERMINAL_CLEAN_ALIAS_DONE_TOKENS: tuple[str, ...] = (
+    "done",
+    "pass",
+    "passed",
+    "success",
+    "succeeded",
+    "completed",
+    "closed",
+    "clean",
+    "publishable",
+)
+
 NEGATIVE_FEEDBACK_CLASSES: tuple[str, ...] = (
     "none",
     "review_required",
@@ -95,6 +130,10 @@ REQUIRED_REPORT_FIELDS: tuple[str, ...] = (
     "terminal_failure",
     "state_transition_required",
     "state_machine_blockers",
+    "terminal_clean_alias_surface_status",
+    "terminal_clean_alias_claimed",
+    "terminal_clean_alias_claims",
+    "terminal_clean_alias_blockers",
     "execution_closure_status",
     "terminal_truth_cleanliness_status",
     "terminal_truth_class",
@@ -134,6 +173,9 @@ CANONICAL_STRICT_FIELDS: tuple[str, ...] = (
     "instance_adoption_probe_contract_id",
     "dirty_signal_fields",
     "placeholder_result_scan_fields",
+    "terminal_clean_alias_value_fields",
+    "terminal_clean_alias_boolean_fields",
+    "terminal_clean_alias_done_tokens",
     "terminal_veto_scope",
     "required_report_fields",
     "review_required_execution_closure_allowed",
@@ -198,6 +240,9 @@ def terminal_truth_cleanliness_contract_skeleton() -> dict[str, Any]:
         "instance_adoption_probe_contract_id": INSTANCE_ADOPTION_TERMINAL_TRUTH_PROBE_CONTRACT_ID,
         "dirty_signal_fields": list(DIRTY_SIGNAL_FIELDS),
         "placeholder_result_scan_fields": list(PLACEHOLDER_SCAN_FIELDS),
+        "terminal_clean_alias_value_fields": list(TERMINAL_CLEAN_ALIAS_VALUE_FIELDS),
+        "terminal_clean_alias_boolean_fields": list(TERMINAL_CLEAN_ALIAS_BOOLEAN_FIELDS),
+        "terminal_clean_alias_done_tokens": list(TERMINAL_CLEAN_ALIAS_DONE_TOKENS),
         "terminal_veto_scope": list(TERMINAL_VETO_SCOPE),
         "required_report_fields": list(REQUIRED_REPORT_FIELDS),
         "review_required_execution_closure_allowed": True,
@@ -274,6 +319,18 @@ def terminal_truth_cleanliness_contract_issues(contract_doc: dict[str, Any]) -> 
     placeholder_fields = [clean_string(item) for item in (contract_doc.get("placeholder_result_scan_fields") or []) if clean_string(item)]
     if placeholder_fields != list(PLACEHOLDER_SCAN_FIELDS):
         issues.append("placeholder_result_scan_fields_mismatch")
+
+    alias_value_fields = [clean_string(item) for item in (contract_doc.get("terminal_clean_alias_value_fields") or []) if clean_string(item)]
+    if alias_value_fields != list(TERMINAL_CLEAN_ALIAS_VALUE_FIELDS):
+        issues.append("terminal_clean_alias_value_fields_mismatch")
+
+    alias_boolean_fields = [clean_string(item) for item in (contract_doc.get("terminal_clean_alias_boolean_fields") or []) if clean_string(item)]
+    if alias_boolean_fields != list(TERMINAL_CLEAN_ALIAS_BOOLEAN_FIELDS):
+        issues.append("terminal_clean_alias_boolean_fields_mismatch")
+
+    alias_done_tokens = [clean_string(item) for item in (contract_doc.get("terminal_clean_alias_done_tokens") or []) if clean_string(item)]
+    if alias_done_tokens != list(TERMINAL_CLEAN_ALIAS_DONE_TOKENS):
+        issues.append("terminal_clean_alias_done_tokens_mismatch")
 
     veto_scope = [clean_string(item) for item in (contract_doc.get("terminal_veto_scope") or []) if clean_string(item)]
     if veto_scope != list(TERMINAL_VETO_SCOPE):
@@ -362,6 +419,52 @@ def _execution_closure_basis(report_doc: dict[str, Any]) -> tuple[str, bool]:
 def _contains_transition_token(*values: str, tokens: tuple[str, ...]) -> bool:
     haystack = " ".join(clean_string(value).lower() for value in values if clean_string(value))
     return any(token in haystack for token in tokens)
+
+
+def _normalize_terminal_alias_token(value: Any) -> str:
+    return clean_string(value).strip().lower().replace("-", "_").replace(" ", "_")
+
+
+def _collect_terminal_clean_alias_claims(report_doc: dict[str, Any]) -> list[str]:
+    claims: list[str] = []
+    done_tokens = {_normalize_terminal_alias_token(token) for token in TERMINAL_CLEAN_ALIAS_DONE_TOKENS}
+    for field in TERMINAL_CLEAN_ALIAS_VALUE_FIELDS:
+        raw = report_doc.get(field)
+        normalized = _normalize_terminal_alias_token(raw)
+        if normalized and normalized in done_tokens:
+            claims.append(f"{field}={clean_string(raw)}")
+    for field in TERMINAL_CLEAN_ALIAS_BOOLEAN_FIELDS:
+        if field in report_doc and _bool_or_false(report_doc.get(field)):
+            claims.append(f"{field}=true")
+    return claims
+
+
+def derive_terminal_clean_alias_surface_projection(
+    report_doc: dict[str, Any],
+    *,
+    terminal_truth_projection: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    report_doc = report_doc if isinstance(report_doc, dict) else {}
+    truth = terminal_truth_projection if isinstance(terminal_truth_projection, dict) else derive_terminal_truth_projection(report_doc)
+
+    alias_claims = _collect_terminal_clean_alias_claims(report_doc)
+    terminal_clean_alias_claimed = bool(alias_claims)
+    clean_surface_ok = (
+        bool(truth.get("is_terminal_clean", False))
+        and bool(truth.get("publishable", False))
+        and bool(truth.get("canonical_result_eligible", False))
+    )
+
+    blockers: list[str] = []
+    if terminal_clean_alias_claimed and not clean_surface_ok:
+        blockers.append("report_terminal_clean_alias_claimed_while_not_clean")
+
+    return {
+        "terminal_clean_alias_surface_status": STATUS_FAIL_REQUIRED if blockers else STATUS_PASS_REQUIRED,
+        "terminal_clean_alias_claimed": terminal_clean_alias_claimed,
+        "terminal_clean_alias_claims": alias_claims,
+        "terminal_clean_alias_blockers": blockers,
+    }
 
 
 def derive_terminal_state_projection(
@@ -707,6 +810,16 @@ def derive_terminal_truth_projection(
     if clean_string(report_doc.get("terminal_truth_class")) and clean_string(report_doc.get("terminal_truth_class")) != terminal_truth_class:
         adoption_probe_reasons.append("report_terminal_truth_class_mismatch")
 
+    alias_surface_projection = derive_terminal_clean_alias_surface_projection(
+        report_doc,
+        terminal_truth_projection={
+            "is_terminal_clean": is_terminal_clean,
+            "publishable": publishable,
+            "canonical_result_eligible": canonical_result_eligible,
+        },
+    )
+    adoption_probe_reasons.extend(alias_surface_projection.get("terminal_clean_alias_blockers") or [])
+
     instance_adoption_terminal_truth_probe_status = (
         STATUS_FAIL_REQUIRED if adoption_probe_reasons else STATUS_PASS_REQUIRED
     )
@@ -754,6 +867,7 @@ def derive_terminal_truth_projection(
         "canonical_result_basis": "clean_terminal_truth_required_for_publishability",
         "requires_repair_before_publish": not publishable,
         "instance_adoption_terminal_truth_probe_status": instance_adoption_terminal_truth_probe_status,
+        **alias_surface_projection,
         "stale_reasons": sorted(set(stale_reasons)),
         "placeholder_result_fields": placeholder_hits,
         "contradiction_fields": contradiction_hits,

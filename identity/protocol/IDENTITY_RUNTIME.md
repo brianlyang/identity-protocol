@@ -284,6 +284,10 @@ Required report fields:
 - `terminal_failure`
 - `state_transition_required`
 - `state_machine_blockers`
+- `terminal_clean_alias_surface_status`
+- `terminal_clean_alias_claimed`
+- `terminal_clean_alias_claims`
+- `terminal_clean_alias_blockers`
 - `execution_closure_status`
 - `terminal_truth_cleanliness_status`
 - `terminal_truth_class`
@@ -323,6 +327,7 @@ Hard semantics:
 6. Instance/runtime payloads must not project `is_terminal_clean=true`, `publishable=true`, or `canonical_result_eligible=true` while governed dirty signals remain active; such drift is a protocol-side fail-close condition.
 7. `rq_056` also emits a terminal-state equivalence projection (`terminal_state_machine_status`, `terminal_state_class`, `requires_review`, `retry_required`, `revalidation_required`, `repair_required`, `quarantine_required`, `requires_human`, `terminal_failure`) so runtime consumers can distinguish clean completion, review pending, revalidation pending, repair pending, retry pending, quarantine, failed terminal, and generic non-terminal pending states without collapsing them into one ambiguous dirty bucket.
 8. `terminal_state_machine_status=PASS_REQUIRED` means the report's terminal-state class and equivalence booleans are coherent; it does not by itself claim that the report is clean. Dirty reports may therefore keep `identity_terminal_truth_cleanliness_status=FAIL_REQUIRED` while still returning `terminal_state_machine_status=PASS_REQUIRED` when their non-clean state is correctly projected.
+9. Generic clean-completion alias surfaces (`overall_status`, `final_status`, `status`, `result`, `outcome`, `completion_status`, `terminal_status`, `workflow_status`, `state`, `completion_state`, `result_state`, `terminal_state`, `final_state`, plus `done` / `completed` booleans) are part of the same shared adoption boundary. A report may not claim clean completion through those alias surfaces while `rq_056` still judges the runtime non-clean.
 
 ## Batch-6 anchor placeholders (v1.6 intake, non-promotional)
 

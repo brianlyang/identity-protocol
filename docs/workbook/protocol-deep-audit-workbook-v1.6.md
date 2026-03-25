@@ -1142,6 +1142,7 @@ Root cause:
   - create/backfill/fresh-run producer lanes all emit one shared terminal-truth projection family;
   - clean fixture proof passes and dirty fixtures fail-close on the higher-order lane;
   - explicit terminal-state equivalence classes distinguish review/revalidation/repair/retry/quarantine/failure semantics rather than collapsing non-clean states into one bucket;
+  - generic completed/done alias surfaces remain subordinate to the same higher-order clean-terminal truth law rather than silently reoccupying clean-terminal semantics;
   - runtime dirty reports become machine-visible dirty terminal states instead of surviving as quasi-clean terminal truth.
 - `current_evidence`:
   - `bash scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh` now passes with:
@@ -1150,6 +1151,7 @@ Root cause:
     - degraded fixture -> `negative_feedback_class=degraded_execution`, `loopback_required=true`, `next_state_after_veto=revalidation_pending`, `terminal_state_class=revalidation_pending`
     - placeholder fixture -> `negative_feedback_class=placeholder_result`, `terminal_state_class=repair_pending`
     - adoption-mismatch fixture -> `terminal_state_machine_status=FAIL_REQUIRED` with explicit projection-drift blockers;
+    - clean-alias-drift fixture -> `terminal_clean_alias_surface_status=FAIL_REQUIRED` once generic `status` / `done` surfaces claim completion while the higher-order lane stays non-clean;
   - `scripts/create_identity_pack.py` now auto-wires `identity_terminal_truth_cleanliness_contract_v1` for new packs;
   - `scripts/repair_contract_backfill.py` now backfills the same contract for adopted packs and projects the higher-order terminal-truth fields onto the active execution report;
   - `scripts/execute_identity_upgrade.py` now emits the same projection family on fresh runs;
