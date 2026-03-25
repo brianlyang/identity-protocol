@@ -988,7 +988,9 @@ Root cause:
   - `scripts/identity_codex_launcher_common.py` now renders the shortcut shim with explicit `--catalog <resolved-catalog>` forwarding plus a governed catalog-binding marker comment, covering both `commands` and `exec`;
   - `scripts/install_identity_codex_launcher.py` and `scripts/render_identity_codex_launcher.py` now pass the selected governed catalog into shortcut rendering instead of leaving the shortcut catalog-agnostic;
   - `scripts/validate_identity_codex_launcher.py` now fail-closes stale installed shortcuts missing explicit catalog binding;
+  - `scripts/render_identity_codex_launcher.py` now preflights both command-bundle and exec surfaces through `scripts/validate_identity_runtime_mode_guard.py` in observational mode, so repo-metadata fallback identities fail-close with machine-readable admissibility payloads while launcher-owned env/catalog mismatch semantics remain available for canonical explicit-command rendering;
   - `scripts/ci/run_identity_codex_launcher_probes_ci.sh` now injects env/catalog mismatch and proves the installed shortcut still returns a valid mismatch-aware command bundle and a valid dry-run resume payload;
+  - the same launcher probe lane now also proves structured fail-close for runtime-unadmitted repo-metadata identities on both `commands --json-only` and `--dry-run --json-only`, replacing the old traceback-only crash mode with the shared admissibility split;
   - the fresh-shell ingress path is now hardened by the protocol-owned env loaders (`scripts/use_local_identity_env.sh` and related launcher probe coverage), which expose `${CODEX_HOME}/bin` on `PATH` idempotently instead of leaving short-launcher availability to manual shell edits;
   - `README.md` plus the `v1.6.14` governance/review pair now explicitly separate shortcut execution-time catalog pinning from the operator-visible preferred command surface under mismatch.
 

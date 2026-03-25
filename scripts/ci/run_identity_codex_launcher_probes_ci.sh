@@ -24,6 +24,37 @@ export CODEX_HOME
 export IDENTITY_HOME
 export IDENTITY_PROTOCOL_HOME="${REPO_ROOT}"
 export IDENTITY_CATALOG="${CATALOG_PATH}"
+REPO_CATALOG_PATH="${REPO_ROOT}/identity/catalog/identities.yaml"
+
+NEGATIVE_RUNTIME_ADMISSIBILITY_ID="$(python3 - <<'PY' "${CATALOG_PATH}" "${REPO_CATALOG_PATH}"
+from __future__ import annotations
+import sys
+from pathlib import Path
+import yaml
+
+project_catalog = Path(sys.argv[1]).resolve()
+repo_catalog = Path(sys.argv[2]).resolve()
+project_doc = yaml.safe_load(project_catalog.read_text(encoding="utf-8")) or {}
+repo_doc = yaml.safe_load(repo_catalog.read_text(encoding="utf-8")) or {}
+project_ids = {
+    str(row.get("id", "")).strip()
+    for row in (project_doc.get("identities") or [])
+    if isinstance(row, dict) and str(row.get("id", "")).strip()
+}
+for row in (repo_doc.get("identities") or []):
+    if not isinstance(row, dict):
+        continue
+    identity_id = str(row.get("id", "")).strip()
+    if not identity_id or identity_id in project_ids:
+        continue
+    profile = str(row.get("profile", "")).strip().lower()
+    runtime_mode = str(row.get("runtime_mode", "")).strip().lower()
+    if profile == "fixture" or runtime_mode == "demo_only":
+        print(identity_id)
+        raise SystemExit(0)
+raise SystemExit("missing_negative_runtime_admissibility_identity")
+PY
+)"
 
 SESSION_ID="$(python3 - <<PY
 import sys
@@ -335,11 +366,13 @@ HEALTHY_PATH_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-healthy-path.json"
 NO_SESSION_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-no-session.json"
 INVALID_SESSION_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-invalid-session.json"
 MISMATCH_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-catalog-mismatch.json"
+UNADMITTED_COMMANDS_JSON="${TMP_ROOT}/launcher-commands-runtime-unadmitted.json"
 SHORTCUT_COMMANDS_JSON="${TMP_ROOT}/shortcut-launcher-commands.json"
 SHORTCUT_MISMATCH_COMMANDS_JSON="${TMP_ROOT}/shortcut-launcher-commands-env-mismatch.json"
 NEGATIVE_DRY_RUN_JSON="${TMP_ROOT}/launcher-dry-run-no-session.json"
 INVALID_SESSION_DRY_RUN_JSON="${TMP_ROOT}/launcher-dry-run-invalid-session.json"
 SHORTCUT_MISMATCH_DRY_RUN_JSON="${TMP_ROOT}/shortcut-launcher-dry-run-env-mismatch.json"
+UNADMITTED_DRY_RUN_JSON="${TMP_ROOT}/launcher-dry-run-runtime-unadmitted.json"
 
 echo "[RUN] ${BIN_DIR}/identity-codex commands --identity-id ${IDENTITY_ID} --thread-id <thread-uuid> --session-id <session-id> --json-only"
 "${BIN_DIR}/identity-codex" \
@@ -518,6 +551,42 @@ assert payload["preferred_resume_command"] == "", payload
 assert payload["preferred_resume_command"] != payload["copyable_commands"]["resume"]["shortcut"], payload
 assert payload["recommended_user_command"] == payload["recommended_start_command"], payload
 print("launcher_command_bundle_catalog_mismatch_status=PASS_REQUIRED")
+PY
+
+echo "[RUN] ${BIN_DIR}/identity-codex commands --identity-id ${NEGATIVE_RUNTIME_ADMISSIBILITY_ID} --catalog ${CATALOG_PATH} --json-only (negative: runtime-unadmitted identity must fail-close machine-readably)"
+if "${BIN_DIR}/identity-codex" \
+  commands \
+  --identity-id "${NEGATIVE_RUNTIME_ADMISSIBILITY_ID}" \
+  --catalog "${CATALOG_PATH}" \
+  --json-only > "${UNADMITTED_COMMANDS_JSON}"; then
+  echo "[FAIL] launcher runtime-unadmitted command bundle unexpectedly passed"
+  exit 1
+fi
+
+python3 - "${UNADMITTED_COMMANDS_JSON}" "${NEGATIVE_RUNTIME_ADMISSIBILITY_ID}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+identity_id = sys.argv[2]
+assert payload["status"] == "FAIL_REQUIRED", payload
+assert payload["identity_id"] == identity_id, payload
+assert payload["surface_governance"]["surface_id"] == "identity_codex_launcher_command_bundle_surface", payload
+assert payload["runtime_mode_guard_status"] == "FAIL_REQUIRED", payload
+assert payload["runtime_mode_guard_error_code"] == "IP-ENV-004", payload
+assert payload["runtime_mode_guard_binding_class"] == "repo_metadata_fallback_unadmitted", payload
+assert payload["launcher_operator_surface_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["launcher_operator_surface_admissibility_reason"] == "repo_metadata_fallback_unadmitted", payload
+assert payload["recommended_user_command"] == "", payload
+assert payload["preferred_start_command"] == "", payload
+assert payload["preferred_resume_command"] == "", payload
+assert "repo_metadata_identity_not_adopted_into_runtime_catalog" in payload["stale_reasons"], payload
+guard_payload = payload["runtime_mode_guard_payload"]
+assert guard_payload["repo_metadata_fallback_detected"] is True, payload
+assert guard_payload["runtime_mode_guard_status"] == "FAIL_REQUIRED", payload
+assert guard_payload["binding_class"] == "repo_metadata_fallback_unadmitted", payload
+print("launcher_command_bundle_runtime_unadmitted_status=PASS_REQUIRED")
 PY
 
 echo "[RUN] ${BIN_DIR}/identity-codex commands --identity-id ${IDENTITY_ID} --thread-id <thread-uuid> --actor-id ${NEGATIVE_ACTOR_ID} --json-only (negative: unresolved session tuple)"
@@ -729,6 +798,33 @@ payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["status"] == "FAIL_REQUIRED", payload
 assert "current-turn session tuple unresolved" in payload["error"], payload
 print("launcher_dry_run_invalid_session_status=PASS_REQUIRED")
+PY
+
+echo "[RUN] ${BIN_DIR}/identity-codex --identity-id ${NEGATIVE_RUNTIME_ADMISSIBILITY_ID} --dry-run --json-only (negative: runtime-unadmitted identity must fail-close before launcher exec)"
+if "${BIN_DIR}/identity-codex" \
+  --identity-id "${NEGATIVE_RUNTIME_ADMISSIBILITY_ID}" \
+  --dry-run \
+  --json-only > "${UNADMITTED_DRY_RUN_JSON}"; then
+  echo "[FAIL] launcher runtime-unadmitted dry-run unexpectedly passed"
+  exit 1
+fi
+
+python3 - "${UNADMITTED_DRY_RUN_JSON}" "${NEGATIVE_RUNTIME_ADMISSIBILITY_ID}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+identity_id = sys.argv[2]
+assert payload["status"] == "FAIL_REQUIRED", payload
+assert payload["identity_id"] == identity_id, payload
+assert payload["launcher_exec_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["launcher_exec_admissibility_reason"] == "repo_metadata_fallback_unadmitted", payload
+assert payload["runtime_mode_guard_status"] == "FAIL_REQUIRED", payload
+assert payload["runtime_mode_guard_error_code"] == "IP-ENV-004", payload
+assert payload["runtime_mode_guard_binding_class"] == "repo_metadata_fallback_unadmitted", payload
+assert payload["runtime_mode_guard_payload"]["repo_metadata_fallback_detected"] is True, payload
+print("launcher_dry_run_runtime_unadmitted_status=PASS_REQUIRED")
 PY
 
 echo "[RUN] IDENTITY_CATALOG=${ALT_CATALOG_PATH} ${BIN_DIR}/id-${IDENTITY_ID} --dry-run --json-only -- resume <thread-uuid> (positive: shortcut dry-run survives env mismatch)"

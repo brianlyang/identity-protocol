@@ -175,14 +175,27 @@ def main() -> int:
         default="validate",
     )
     ap.add_argument(
+        "--admissibility-profile",
+        choices=["strict_runtime_surface", "launcher_outer_surface"],
+        default="strict_runtime_surface",
+        help="strict_runtime_surface enforces canonical runtime roots; launcher_outer_surface only enforces selected-catalog admissibility needed by launcher outer surfaces",
+    )
+    ap.add_argument(
         "--env-catalog-mismatch-override-receipt",
         default="",
         help="optional JSON receipt path that explicitly authorizes env/catalog mismatch for strict operations",
+    )
+    ap.add_argument(
+        "--env-catalog-mismatch-mode",
+        choices=["enforce", "observe"],
+        default="enforce",
+        help="enforce=fail-close strict env/catalog drift; observe=project drift fields without blocking the caller surface",
     )
     ap.add_argument("--json", action="store_true", help="print full payload as JSON")
     ap.add_argument("--json-only", action="store_true", help="print compact JSON payload only")
     args = ap.parse_args()
     structured_output = bool(args.json or args.json_only)
+    env_catalog_mismatch_enforced = args.env_catalog_mismatch_mode == "enforce"
 
     explicit_catalog = args.catalog.strip()
     env_catalog = os.environ.get("IDENTITY_CATALOG", "").strip()
@@ -194,6 +207,7 @@ def main() -> int:
             "identity_id": args.identity_id,
             "operation": args.operation,
             "strict_operation": args.operation in STRICT_OPERATIONS,
+            "admissibility_profile": args.admissibility_profile,
             "catalog_path": "",
             "repo_catalog_path": str(Path(args.repo_catalog).expanduser().resolve()),
             "resolved_catalog_path": "",
@@ -213,6 +227,7 @@ def main() -> int:
             "repo_metadata_fallback_detected": False,
             "env_catalog_path": str(Path(env_catalog).expanduser().resolve()) if env_catalog else "",
             "env_catalog_mismatch": False,
+            "env_catalog_mismatch_mode": args.env_catalog_mismatch_mode,
             "env_catalog_mismatch_override_receipt": "",
             "env_catalog_mismatch_override_status": "not_checked",
             "fix_hint": "source ./scripts/identity_runtime_select.sh project",
@@ -232,6 +247,7 @@ def main() -> int:
             "identity_id": args.identity_id,
             "operation": args.operation,
             "strict_operation": args.operation in STRICT_OPERATIONS,
+            "admissibility_profile": args.admissibility_profile,
             "catalog_path": str(catalog_path),
             "repo_catalog_path": str(Path(args.repo_catalog).expanduser().resolve()),
             "resolved_catalog_path": "",
@@ -251,6 +267,7 @@ def main() -> int:
             "repo_metadata_fallback_detected": False,
             "env_catalog_path": str(Path(env_catalog).expanduser().resolve()) if env_catalog else "",
             "env_catalog_mismatch": False,
+            "env_catalog_mismatch_mode": args.env_catalog_mismatch_mode,
             "env_catalog_mismatch_override_receipt": "",
             "env_catalog_mismatch_override_status": "not_checked",
             "fix_hint": "source ./scripts/identity_runtime_select.sh project",
@@ -269,6 +286,7 @@ def main() -> int:
             "identity_id": args.identity_id,
             "operation": args.operation,
             "strict_operation": args.operation in STRICT_OPERATIONS,
+            "admissibility_profile": args.admissibility_profile,
             "catalog_path": str(catalog_path),
             "repo_catalog_path": str(repo_catalog_path),
             "resolved_catalog_path": "",
@@ -288,6 +306,7 @@ def main() -> int:
             "repo_metadata_fallback_detected": False,
             "env_catalog_path": str(Path(env_catalog).expanduser().resolve()) if env_catalog else "",
             "env_catalog_mismatch": False,
+            "env_catalog_mismatch_mode": args.env_catalog_mismatch_mode,
             "env_catalog_mismatch_override_receipt": "",
             "env_catalog_mismatch_override_status": "not_checked",
             "fix_hint": "verify --repo-catalog binding before strict execution",
@@ -316,6 +335,7 @@ def main() -> int:
             "identity_id": args.identity_id,
             "operation": args.operation,
             "strict_operation": args.operation in STRICT_OPERATIONS,
+            "admissibility_profile": args.admissibility_profile,
             "catalog_path": str(catalog_path),
             "repo_catalog_path": str(repo_catalog_path),
             "resolved_catalog_path": "",
@@ -335,6 +355,7 @@ def main() -> int:
             "repo_metadata_fallback_detected": False,
             "env_catalog_path": str(Path(env_catalog).expanduser().resolve()) if env_catalog else "",
             "env_catalog_mismatch": False,
+            "env_catalog_mismatch_mode": args.env_catalog_mismatch_mode,
             "env_catalog_mismatch_override_receipt": "",
             "env_catalog_mismatch_override_status": "not_checked",
             "fix_hint": "source ./scripts/identity_runtime_select.sh project",
@@ -353,7 +374,7 @@ def main() -> int:
     resolved_runtime_mode = str(resolved.get("runtime_mode", "")).strip().lower()
     repo_metadata_fallback_detected = source_layer == "repo_metadata" and resolved_catalog != catalog_path
 
-    checks: dict[str, bool] = {
+    all_checks: dict[str, bool] = {
         "catalog_exists": catalog_path.exists(),
         "resolved_source_layer_runtime": source_layer in {"project", "global"},
         "resolved_catalog_matches_requested": resolved_catalog == catalog_path,
@@ -362,20 +383,32 @@ def main() -> int:
     }
 
     if inferred_mode == "project":
-        checks["pack_within_mode_root"] = _within(resolved_pack, project_identity_home)
+        all_checks["pack_within_mode_root"] = _within(resolved_pack, project_identity_home)
     elif inferred_mode == "global":
-        checks["pack_within_mode_root"] = _within(resolved_pack, global_identity_home)
+        all_checks["pack_within_mode_root"] = _within(resolved_pack, global_identity_home)
     else:
-        checks["pack_within_mode_root"] = False
-    checks["source_layer_matches_mode"] = source_layer == inferred_mode
+        all_checks["pack_within_mode_root"] = False
+    all_checks["source_layer_matches_mode"] = source_layer == inferred_mode
 
     expected_mode = args.expect_mode
     if expected_mode == "auto":
-        checks["mode_recognized"] = inferred_mode in {"project", "global"}
-        checks["expected_mode_match"] = checks["mode_recognized"]
+        all_checks["mode_recognized"] = inferred_mode in {"project", "global"}
+        all_checks["expected_mode_match"] = all_checks["mode_recognized"]
     else:
-        checks["mode_recognized"] = True
-        checks["expected_mode_match"] = inferred_mode == expected_mode
+        all_checks["mode_recognized"] = True
+        all_checks["expected_mode_match"] = inferred_mode == expected_mode
+
+    active_check_keys = (
+        [
+            "catalog_exists",
+            "resolved_catalog_matches_requested",
+            "resolved_scope_known",
+            "pack_exists",
+        ]
+        if args.admissibility_profile == "launcher_outer_surface"
+        else list(all_checks.keys())
+    )
+    checks = {key: all_checks[key] for key in active_check_keys}
 
     env_catalog_mismatch = False
     env_catalog_path = None
@@ -400,6 +433,7 @@ def main() -> int:
         "identity_id": args.identity_id,
         "operation": args.operation,
         "strict_operation": args.operation in STRICT_OPERATIONS,
+        "admissibility_profile": args.admissibility_profile,
         "catalog_path": str(catalog_path),
         "repo_catalog_path": str(repo_catalog_path),
         "resolved_catalog_path": str(resolved_catalog),
@@ -422,6 +456,7 @@ def main() -> int:
         "repo_metadata_fallback_detected": repo_metadata_fallback_detected,
         "env_catalog_path": str(env_catalog_path) if env_catalog_path else "",
         "env_catalog_mismatch": env_catalog_mismatch,
+        "env_catalog_mismatch_mode": args.env_catalog_mismatch_mode,
         "env_catalog_mismatch_override_receipt": str(
             Path(args.env_catalog_mismatch_override_receipt).expanduser().resolve()
         )
@@ -459,14 +494,18 @@ def main() -> int:
     override_ok = False
     override_reason = "not_required"
     if env_catalog_mismatch:
-        override_ok, override_reason = _load_env_catalog_override_receipt(
-            args.env_catalog_mismatch_override_receipt,
-            catalog_path=catalog_path,
-            env_catalog_path=env_catalog_path,
-        )
+        if env_catalog_mismatch_enforced:
+            override_ok, override_reason = _load_env_catalog_override_receipt(
+                args.env_catalog_mismatch_override_receipt,
+                catalog_path=catalog_path,
+                env_catalog_path=env_catalog_path,
+            )
+        else:
+            override_ok = True
+            override_reason = "observed_not_enforced_for_surface"
     payload["env_catalog_mismatch_override_status"] = override_reason
 
-    if env_catalog_mismatch and strict_operation and not override_ok:
+    if env_catalog_mismatch and strict_operation and env_catalog_mismatch_enforced and not override_ok:
         payload["runtime_mode_guard_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_ENV_CATALOG_DRIFT
         payload["binding_class"] = _binding_class_for_failure(
