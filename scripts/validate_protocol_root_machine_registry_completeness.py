@@ -18,8 +18,11 @@ from root_machine_registry_completeness_common import (
     load_mapping_descriptor,
     load_root_machine_registry_completeness,
     repo_rel_path_escape_policy_from_doc,
+    repo_rel_path_pattern_matches,
+    repo_rel_path_role_typing_policy_from_doc,
     repo_rel_path_scope_policy_from_doc,
     resolve_repo_relative_surface,
+    required_repo_rel_path_patterns_from_doc,
     required_descriptor_field_modes_from_doc,
     required_descriptor_fields_from_doc,
     require_self_describing_families,
@@ -79,6 +82,8 @@ def main() -> int:
     required_descriptor_field_modes = required_descriptor_field_modes_from_doc(completeness_doc) if completeness_doc else {}
     repo_rel_path_scope_policy = repo_rel_path_scope_policy_from_doc(completeness_doc) if completeness_doc else ""
     repo_rel_path_escape_policy = repo_rel_path_escape_policy_from_doc(completeness_doc) if completeness_doc else ""
+    repo_rel_path_role_typing_policy = repo_rel_path_role_typing_policy_from_doc(completeness_doc) if completeness_doc else ""
+    required_repo_rel_path_patterns = required_repo_rel_path_patterns_from_doc(completeness_doc) if completeness_doc else {}
 
     if not stale_reasons:
         expected_scalar_fields = {
@@ -112,6 +117,9 @@ def main() -> int:
         if repo_rel_path_escape_policy != "fail_closed":
             stale_reasons.append("root_machine_registry_completeness_repo_rel_path_escape_policy_invalid")
             error_code = ERR_REGISTRY
+        if repo_rel_path_role_typing_policy != "root_protocol_surface_patterns_required":
+            stale_reasons.append("root_machine_registry_completeness_repo_rel_path_role_typing_policy_invalid")
+            error_code = ERR_REGISTRY
         if tuple(required_descriptor_fields) != ("validator_script", "probe_script", "common_script", "status_key", "error_codes"):
             stale_reasons.append("root_machine_registry_completeness_descriptor_fields_invalid")
             error_code = ERR_REGISTRY
@@ -123,6 +131,13 @@ def main() -> int:
             "error_codes": "validator_error_code_list",
         }:
             stale_reasons.append("root_machine_registry_completeness_descriptor_field_modes_invalid")
+            error_code = ERR_REGISTRY
+        if required_repo_rel_path_patterns != {
+            "validator_script": r"^scripts/validate_protocol_root_[a-z0-9_]+\.py$",
+            "probe_script": r"^scripts/ci/run_protocol_root_[a-z0-9_]+_probes_ci\.sh$",
+            "common_script": r"^scripts/root_[a-z0-9_]+_common\.py$",
+        }:
+            stale_reasons.append("root_machine_registry_completeness_required_repo_rel_path_patterns_invalid")
             error_code = ERR_REGISTRY
 
         if not anchor_checks:
@@ -365,9 +380,17 @@ def main() -> int:
                                         _rel_path, repo_rel_error, resolved_path = resolve_repo_relative_surface(
                                             repo_root, descriptor_value
                                         )
+                                        expected_pattern = required_repo_rel_path_patterns.get(descriptor_field, "")
+                                        pattern_match = repo_rel_path_pattern_matches(descriptor_value, expected_pattern)
                                         row_payload["resolved_path"] = resolved_path
                                         row_payload["support_error"] = repo_rel_error
-                                        row_status = STATUS_PASS_REQUIRED if descriptor_value and not repo_rel_error else STATUS_FAIL_REQUIRED
+                                        row_payload["expected_pattern"] = expected_pattern
+                                        row_payload["pattern_match"] = pattern_match
+                                        row_status = (
+                                            STATUS_PASS_REQUIRED
+                                            if descriptor_value and not repo_rel_error and pattern_match
+                                            else STATUS_FAIL_REQUIRED
+                                        )
                                     elif descriptor_mode == "validator_status_key":
                                         expected_status_key, status_key_error = extract_validator_status_key(
                                             repo_root,
@@ -401,6 +424,21 @@ def main() -> int:
                                         _rel_path, repo_rel_error, resolved_path = resolve_repo_relative_surface(
                                             repo_root, descriptor_value
                                         )
+                                        expected_pattern = required_repo_rel_path_patterns.get(descriptor_field, "")
+                                        pattern_match = repo_rel_path_pattern_matches(descriptor_value, expected_pattern)
+                                        if not pattern_match:
+                                            family_violations.append("descriptor_path_role_pattern_mismatch")
+                                            completeness_violations.append(
+                                                {
+                                                    "field": "root_mapping_family",
+                                                    "reason": "descriptor_path_role_pattern_mismatch",
+                                                    "family_id": family_id,
+                                                    "active_file": active_file,
+                                                    "descriptor_field": descriptor_field,
+                                                    "rel_path": descriptor_value,
+                                                    "expected_pattern": expected_pattern,
+                                                }
+                                            )
                                         if repo_rel_error == "absolute_path_forbidden":
                                             family_violations.append("descriptor_path_not_repo_relative")
                                             completeness_violations.append(
@@ -414,7 +452,7 @@ def main() -> int:
                                                     "resolved_path": resolved_path,
                                                 }
                                             )
-                                        elif repo_rel_error == "repo_root_escape_forbidden":
+                                        if repo_rel_error == "repo_root_escape_forbidden":
                                             family_violations.append("descriptor_path_escapes_repo_root")
                                             completeness_violations.append(
                                                 {
@@ -427,7 +465,7 @@ def main() -> int:
                                                     "resolved_path": resolved_path,
                                                 }
                                             )
-                                        elif repo_rel_error == "path_missing":
+                                        if repo_rel_error == "path_missing":
                                             family_violations.append("descriptor_path_missing")
                                             completeness_violations.append(
                                                 {
@@ -533,6 +571,8 @@ def main() -> int:
         "required_descriptor_field_modes": dict(required_descriptor_field_modes),
         "repo_rel_path_scope_policy": repo_rel_path_scope_policy,
         "repo_rel_path_escape_policy": repo_rel_path_escape_policy,
+        "repo_rel_path_role_typing_policy": repo_rel_path_role_typing_policy,
+        "required_repo_rel_path_patterns": dict(required_repo_rel_path_patterns),
         "family_count": len(family_status_rows),
         "family_ids": [row["family_id"] for row in family_status_rows],
         "family_status_rows": family_status_rows,

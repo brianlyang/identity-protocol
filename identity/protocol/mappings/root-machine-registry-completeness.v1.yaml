@@ -18,6 +18,7 @@ require_current_version_pairs: true
 require_self_describing_families: true
 repo_rel_path_scope_policy: repo_root_relative_only
 repo_rel_path_escape_policy: fail_closed
+repo_rel_path_role_typing_policy: root_protocol_surface_patterns_required
 required_descriptor_fields:
 - validator_script
 - probe_script
@@ -30,6 +31,10 @@ required_descriptor_field_modes:
   common_script: repo_rel_path
   status_key: validator_status_key
   error_codes: validator_error_code_list
+required_repo_rel_path_patterns:
+  validator_script: ^scripts/validate_protocol_root_[a-z0-9_]+\.py$
+  probe_script: ^scripts/ci/run_protocol_root_[a-z0-9_]+_probes_ci\.sh$
+  common_script: ^scripts/root_[a-z0-9_]+_common\.py$
 anchor_checks:
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
   required_markers:
@@ -45,6 +50,8 @@ anchor_checks:
   - Absolute-path capture or parent-escape capture would let local filesystem
     accident impersonate governed protocol law.
   - descriptor paths that bypass repo-root-relative discipline.
+  - Repo-relative descriptor surfaces must also remain role-typed.
+  - role-swapped descriptor paths inside repo root.
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root machine-registry completeness discipline'
@@ -60,6 +67,8 @@ anchor_checks:
   - Hidden enforcement knowledge does not satisfy registry completeness.
   - Repo-relative descriptor surfaces must also stay repo-root relative and
   - if they exist locally.
+  - Repo-relative descriptor surfaces must also remain role-typed; validator,
+    probe, and shared-common paths are not interchangeable repo files.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root machine-registry completeness boundary'
@@ -74,6 +83,9 @@ anchor_checks:
   - 6. Repo-relative descriptor surfaces disclosed by an admitted family must remain
     repo-root relative and repo-contained; absolute-path or parent-escape capture
     is non-compliant.
+  - 7. Repo-relative descriptor surfaces disclosed by an admitted family must also
+    stay role-typed; validator, probe, and shared-common path classes are not
+    interchangeable.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime registry-completeness boundary'
@@ -87,3 +99,5 @@ anchor_checks:
     from admitted mapping-family descriptors rather than hidden local knowledge.
   - 6. Runtime must reject descriptor paths that are absolute or escape repo root;
     repo-relative descriptor surfaces must stay repo-root relative and repo-contained.
+  - 7. Runtime must also reject role-swapped descriptor paths; validator, probe,
+    and shared-common surfaces must stay role-typed rather than merely repo-local.

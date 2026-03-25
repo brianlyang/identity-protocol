@@ -359,6 +359,9 @@ Repo-relative descriptor surfaces must also stay repo-root relative and
 repo-contained; absolute paths and parent-escape paths are non-compliant even
 if they exist locally.
 
+Repo-relative descriptor surfaces must also remain role-typed; validator,
+probe, and shared-common paths are not interchangeable repo files.
+
 ---
 
 ## Root-law bundle discipline

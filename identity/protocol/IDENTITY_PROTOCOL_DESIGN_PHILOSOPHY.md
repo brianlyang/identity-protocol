@@ -429,6 +429,15 @@ accident impersonate governed protocol law.
 Registry completeness must therefore fail-close rather than accepting
 descriptor paths that bypass repo-root-relative discipline.
 
+Repo-relative descriptor surfaces must also remain role-typed.
+
+A validator surface may not impersonate a probe surface, a shared-common
+surface may not impersonate a validator surface, and a probe surface may not
+collapse into an arbitrary repo file just because it exists.
+
+Registry completeness must therefore fail-close rather than accepting
+role-swapped descriptor paths inside repo root.
+
 ---
 
 ## 1. The identity protocol is machine law first, not a compatibility layer

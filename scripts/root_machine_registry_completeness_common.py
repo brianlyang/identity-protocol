@@ -27,6 +27,10 @@ def _norm_str(value: Any) -> str:
     return str(value or "").strip().replace("\\", "/")
 
 
+def _clean_str(value: Any) -> str:
+    return str(value or "").strip()
+
+
 def _as_str_tuple(value: Any) -> tuple[str, ...]:
     if not isinstance(value, list):
         return ()
@@ -86,6 +90,23 @@ def repo_rel_path_escape_policy_from_doc(doc: Mapping[str, Any]) -> str:
     return _norm_str(doc.get("repo_rel_path_escape_policy"))
 
 
+def repo_rel_path_role_typing_policy_from_doc(doc: Mapping[str, Any]) -> str:
+    return _norm_str(doc.get("repo_rel_path_role_typing_policy"))
+
+
+def required_repo_rel_path_patterns_from_doc(doc: Mapping[str, Any]) -> dict[str, str]:
+    rows = doc.get("required_repo_rel_path_patterns")
+    if not isinstance(rows, dict):
+        return {}
+    out: dict[str, str] = {}
+    for key, value in rows.items():
+        field = _norm_str(key)
+        pattern = _clean_str(value)
+        if field and pattern:
+            out[field] = pattern
+    return out
+
+
 def load_mapping_descriptor(path: Path) -> dict[str, Any]:
     return _load_yaml(path)
 
@@ -105,6 +126,17 @@ def resolve_repo_relative_surface(repo_root: Path, raw_path: Any) -> tuple[str, 
     if not resolved.exists():
         return rel_path, "path_missing", str(resolved)
     return rel_path, "", str(resolved)
+
+
+def repo_rel_path_pattern_matches(rel_path: str, pattern: str) -> bool:
+    norm_path = _norm_str(rel_path)
+    norm_pattern = _clean_str(pattern)
+    if not norm_path or not norm_pattern:
+        return False
+    try:
+        return re.fullmatch(norm_pattern, norm_path) is not None
+    except re.error:
+        return False
 
 
 def extract_validator_status_key(repo_root: Path, validator_script: str) -> tuple[str, str]:

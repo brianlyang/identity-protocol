@@ -29,6 +29,12 @@ assert "root-corpus-law-bundle" in payload["family_ids"], payload
 assert "root-machine-registry-completeness" in payload["family_ids"], payload
 assert payload["repo_rel_path_scope_policy"] == "repo_root_relative_only", payload
 assert payload["repo_rel_path_escape_policy"] == "fail_closed", payload
+assert payload["repo_rel_path_role_typing_policy"] == "root_protocol_surface_patterns_required", payload
+assert payload["required_repo_rel_path_patterns"] == {
+    "validator_script": r"^scripts/validate_protocol_root_[a-z0-9_]+\.py$",
+    "probe_script": r"^scripts/ci/run_protocol_root_[a-z0-9_]+_probes_ci\.sh$",
+    "common_script": r"^scripts/root_[a-z0-9_]+_common\.py$",
+}, payload
 assert all(row["family_status"] == "PASS_REQUIRED" for row in payload["family_status_rows"]), payload
 assert all(
     all(cell["status"] == "PASS_REQUIRED" for cell in row.get("descriptor_field_rows", []))
@@ -104,6 +110,43 @@ assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_RE
 assert payload["error_code"] == "IP-RMRC-003", payload
 assert any(
     row["reason"] == "descriptor_path_escapes_repo_root"
+    and row.get("family_id") == "root-corpus-authority"
+    and row.get("descriptor_field") == "common_script"
+    for row in payload["completeness_violations"]
+), payload
+PY
+
+ROLE_TYPE_REPO="${TMP_ROOT}/role-type-drift-repo"
+mirror_repo "${ROLE_TYPE_REPO}"
+python3 - <<'PY' "${ROLE_TYPE_REPO}/identity/protocol/mappings/root-corpus-authority.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["common_script"] = "scripts/validate_protocol_root_corpus_authority.py"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+ROLE_TYPE_JSON="${TMP_ROOT}/role-type-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${ROLE_TYPE_REPO}" \
+  --json-only >"${ROLE_TYPE_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed role-swapped descriptor path drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ROLE_TYPE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert any(
+    row["reason"] == "descriptor_path_role_pattern_mismatch"
     and row.get("family_id") == "root-corpus-authority"
     and row.get("descriptor_field") == "common_script"
     for row in payload["completeness_violations"]
