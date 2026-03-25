@@ -37,6 +37,14 @@ class EpistemicProofRow:
     proof_role: str
 
 
+@dataclass(frozen=True)
+class CommitmentProofAlignmentRow:
+    order: int
+    commitment_id: str
+    proof_id: str
+    alignment_role: str
+
+
 def _norm_str(value: Any) -> str:
     return str(value or "").strip().replace("\\", "/")
 
@@ -134,6 +142,34 @@ def epistemic_proof_rows_from_doc(doc: Mapping[str, Any]) -> tuple[EpistemicProo
                 proof_id=proof_id,
                 contract_heading=contract_heading,
                 proof_role=proof_role,
+            )
+        )
+    return tuple(out)
+
+
+def commitment_proof_alignment_rows_from_doc(doc: Mapping[str, Any]) -> tuple[CommitmentProofAlignmentRow, ...]:
+    rows = doc.get("required_commitment_proof_alignment_rows")
+    if not isinstance(rows, list):
+        return ()
+    out: list[CommitmentProofAlignmentRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        commitment_id = _norm_str(row.get("commitment_id"))
+        proof_id = _norm_str(row.get("proof_id"))
+        alignment_role = _norm_str(row.get("alignment_role"))
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not commitment_id or not proof_id or not alignment_role:
+            continue
+        out.append(
+            CommitmentProofAlignmentRow(
+                order=order,
+                commitment_id=commitment_id,
+                proof_id=proof_id,
+                alignment_role=alignment_role,
             )
         )
     return tuple(out)

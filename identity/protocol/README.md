@@ -213,6 +213,11 @@ Operator-facing compression must preserve epistemic posture as well: realized-ef
 projection cannot borrow the current-truth posture of source grounding, governed
 resolution, fail-close admissibility, or live-bound status.
 
+Current-truth justification itself must preserve commitment-specific proof
+posture as well: source grounding, governed resolution, present-turn authority,
+derivational provenance, and fail-close justification do not share one generic
+epistemic proof layer.
+
 ---
 
 ## One-way derivation discipline

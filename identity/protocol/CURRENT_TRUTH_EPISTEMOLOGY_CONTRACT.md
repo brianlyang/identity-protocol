@@ -131,6 +131,21 @@ The protocol must preserve the following epistemic separations:
 When an epistemic claim relies on governed proof, the proof stratum behind that
 claim must match the epistemic commitment being asserted.
 
+## Epistemic commitment-proof alignment
+
+Current-truth commitments must preserve the proof stratum appropriate to the
+epistemic commitment being asserted.
+
+1. canonical-source-before-narration commitment requires canonical-source proof;
+2. governed-resolution-before-historical-familiarity commitment requires governed-resolution proof;
+3. present-turn-authority-before-visible-recency commitment requires present-turn-authority proof;
+4. provenance-preserving-derivation-before-compressed-summary commitment requires provenance-preserving-derivation proof;
+5. fail-close-justification-before-operational-assertion commitment requires fail-close-justification proof.
+
+Current-truth explanation may compress these commitments for readability, but it
+must not pretend that one proof stratum is enough for every epistemic
+commitment.
+
 ## Epistemic-proof discipline
 
 Current-truth justification may be supported only by proof whose stratum
@@ -191,6 +206,7 @@ The following are non-compliant:
 4. `implicit_habit_as_canonical_source`: local habit or convenience memory is treated as if it resolved the canonical source.
 5. `compatibility_residue_as_truth`: compatibility residue or leftover implementation drift is treated as if it justified present truth.
 6. `derived_projection_as_truth`: a projection, inference, or compressed summary is treated as if it were the source truth itself.
+7. `epistemic_commitment_proof_flattening`: canonical-source, governed-resolution, present-turn-authority, provenance-preserving-derivation, and fail-close commitments are treated as if one proof stratum were sufficient for all of them.
 
 ## Validation
 

@@ -28,8 +28,14 @@ assert payload["protocol_root_current_truth_epistemology_status"] == "PASS_REQUI
 assert payload["commitment_count"] == 5, payload
 assert payload["differentiation_count"] == 6, payload
 assert payload["epistemic_proof_count"] == 5, payload
+assert payload["commitment_proof_alignment_count"] == 5, payload
 assert payload["epistemic_limit_count"] == 5, payload
-assert payload["collapse_count"] == 6, payload
+assert payload["collapse_count"] == 7, payload
+assert any(
+    row["commitment_id"] == "fail_close_justification_before_operational_assertion"
+    and row["proof_id"] == "fail_close_justification_proof"
+    for row in payload["commitment_proof_alignment_rows"]
+), payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -107,6 +113,46 @@ assert payload["error_code"] == "IP-CTE-002", payload
 assert any(
     row["reason"] == "missing_expected_rows" and "present_turn_authority_before_visible_recency" in row.get("row_ids", [])
     for row in payload["structure_violations"]
+), payload
+PY
+
+ALIGNMENT_REPO="${TMP_ROOT}/alignment-drift-repo"
+mirror_repo "${ALIGNMENT_REPO}"
+python3 - <<'PY' "${ALIGNMENT_REPO}/identity/protocol/mappings/root-current-truth-epistemology.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["required_commitment_proof_alignment_rows"]:
+    if row.get("commitment_id") == "fail_close_justification_before_operational_assertion":
+        row["proof_id"] = "present_turn_authority_proof"
+        break
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+ALIGNMENT_JSON="${TMP_ROOT}/alignment-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_current_truth_epistemology.py" \
+  --repo-root "${ALIGNMENT_REPO}" \
+  --json-only >"${ALIGNMENT_JSON}"; then
+  echo "[FAIL] root current-truth epistemology validator unexpectedly passed commitment-proof alignment drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ALIGNMENT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_current_truth_epistemology_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-CTE-003", payload
+assert any(
+    row["field"] == "required_commitment_proof_alignment_rows"
+    and row["row_id"] == "fail_close_justification_before_operational_assertion"
+    and row["reason"] == "proof_id_mismatch"
+    for row in payload["epistemology_violations"]
 ), payload
 PY
 

@@ -200,6 +200,12 @@ source-grounded explanation, governed source resolution, fail-close
 admissibility, live-bound status, and realized-effect projection remain
 distinct truth postures even after operator-facing compression.
 
+The same applies before operator compression as well: current-truth
+commitments do not share one interchangeable proof posture. Source grounding,
+governed resolution, present-turn authority, derivational provenance, and
+fail-close justification remain distinct epistemic commitments with distinct
+proof burdens.
+
 ### Derivation direction must stay one-way
 
 The root corpus must also preserve one-way derivation direction.

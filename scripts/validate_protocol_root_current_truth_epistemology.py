@@ -18,6 +18,7 @@ from root_current_truth_epistemology_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     collapse_rows_from_doc,
+    commitment_proof_alignment_rows_from_doc,
     commitment_rows_from_doc,
     differentiation_rows_from_doc,
     epistemic_limit_rows_from_doc,
@@ -110,6 +111,33 @@ EXPECTED_EPISTEMIC_PROOF_ROWS = {
         "proof_role": "fail_close_justification_current_truth_proof",
     },
 }
+EXPECTED_COMMITMENT_PROOF_ALIGNMENT_ROWS = {
+    "canonical_source_before_narration": {
+        "order": 1,
+        "proof_id": "canonical_source_proof",
+        "alignment_role": "canonical_source_commitment_proof_alignment",
+    },
+    "governed_resolution_before_historical_familiarity": {
+        "order": 2,
+        "proof_id": "governed_resolution_proof",
+        "alignment_role": "governed_resolution_commitment_proof_alignment",
+    },
+    "present_turn_authority_before_visible_recency": {
+        "order": 3,
+        "proof_id": "present_turn_authority_proof",
+        "alignment_role": "present_turn_authority_commitment_proof_alignment",
+    },
+    "provenance_preserving_derivation_before_compressed_summary": {
+        "order": 4,
+        "proof_id": "provenance_preserving_derivation_proof",
+        "alignment_role": "provenance_preserving_derivation_commitment_proof_alignment",
+    },
+    "fail_close_justification_before_operational_assertion": {
+        "order": 5,
+        "proof_id": "fail_close_justification_proof",
+        "alignment_role": "fail_close_justification_commitment_proof_alignment",
+    },
+}
 EXPECTED_EPISTEMIC_LIMIT_ROWS = {
     "canonical_source_not_resolution": {
         "order": 1,
@@ -157,12 +185,17 @@ EXPECTED_COLLAPSE_ROWS = {
         "order": 6,
         "contract_phrase": "a projection, inference, or compressed summary is treated as if it were the source truth itself.",
     },
+    "epistemic_commitment_proof_flattening": {
+        "order": 7,
+        "contract_phrase": "canonical-source, governed-resolution, present-turn-authority, provenance-preserving-derivation, and fail-close commitments are treated as if one proof stratum were sufficient for all of them.",
+    },
 }
 EXPECTED_REGISTRY_MARKERS = (
     "this file remains the authoritative root-domain contract for current-truth epistemology law",
     "## Current-truth epistemology law",
     "## Five epistemic commitments",
     "## Required epistemic differentiations",
+    "## Epistemic commitment-proof alignment",
     "## Epistemic-proof discipline",
     "## Epistemic-proof limits",
 )
@@ -281,6 +314,7 @@ def main() -> int:
     commitment_rows = commitment_rows_from_doc(epistemology_doc) if epistemology_doc else ()
     differentiation_rows = differentiation_rows_from_doc(epistemology_doc) if epistemology_doc else ()
     epistemic_proof_rows = epistemic_proof_rows_from_doc(epistemology_doc) if epistemology_doc else ()
+    commitment_proof_alignment_rows = commitment_proof_alignment_rows_from_doc(epistemology_doc) if epistemology_doc else ()
     epistemic_limit_rows = epistemic_limit_rows_from_doc(epistemology_doc) if epistemology_doc else ()
     collapse_rows = collapse_rows_from_doc(epistemology_doc) if epistemology_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
@@ -314,6 +348,7 @@ def main() -> int:
             ("required_commitment_rows", commitment_rows),
             ("required_differentiation_rows", differentiation_rows),
             ("required_epistemic_proof_rows", epistemic_proof_rows),
+            ("required_commitment_proof_alignment_rows", commitment_proof_alignment_rows),
             ("required_epistemic_limit_rows", epistemic_limit_rows),
             ("required_collapse_rows", collapse_rows),
         ):
@@ -359,6 +394,15 @@ def main() -> int:
             compare_fields=("contract_heading", "proof_role"),
         )
         _validate_rows(
+            actual_rows=commitment_proof_alignment_rows,
+            expected_rows=EXPECTED_COMMITMENT_PROOF_ALIGNMENT_ROWS,
+            structure_violations=structure_violations,
+            epistemology_violations=epistemology_violations,
+            field_name="required_commitment_proof_alignment_rows",
+            id_attr="commitment_id",
+            compare_fields=("proof_id", "alignment_role"),
+        )
+        _validate_rows(
             actual_rows=epistemic_limit_rows,
             expected_rows=EXPECTED_EPISTEMIC_LIMIT_ROWS,
             structure_violations=structure_violations,
@@ -397,6 +441,78 @@ def main() -> int:
             for row in differentiation_rows + epistemic_limit_rows + collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
+
+        commitment_order_map = {row.commitment_id: row.order for row in commitment_rows}
+        proof_order_map = {row.proof_id: row.order for row in epistemic_proof_rows}
+        previous_commitment_order = 0
+        previous_proof_order = 0
+        for row in sorted(commitment_proof_alignment_rows, key=lambda item: item.order):
+            commitment_order = commitment_order_map.get(row.commitment_id)
+            if commitment_order is None:
+                integration_violations.append(
+                    {
+                        "field": "root_current_truth_epistemology",
+                        "reason": "commitment_proof_alignment_missing_commitment",
+                        "commitment_id": row.commitment_id,
+                    }
+                )
+            else:
+                if commitment_order != row.order:
+                    integration_violations.append(
+                        {
+                            "field": "root_current_truth_epistemology",
+                            "reason": "commitment_proof_alignment_commitment_order_mismatch",
+                            "commitment_id": row.commitment_id,
+                            "alignment_order": row.order,
+                            "commitment_order": commitment_order,
+                        }
+                    )
+                if commitment_order <= previous_commitment_order:
+                    integration_violations.append(
+                        {
+                            "field": "root_current_truth_epistemology",
+                            "reason": "commitment_proof_alignment_commitment_order_not_increasing",
+                            "commitment_id": row.commitment_id,
+                            "commitment_order": commitment_order,
+                            "previous_commitment_order": previous_commitment_order,
+                        }
+                    )
+                previous_commitment_order = commitment_order
+
+            proof_order = proof_order_map.get(row.proof_id)
+            if proof_order is None:
+                integration_violations.append(
+                    {
+                        "field": "root_current_truth_epistemology",
+                        "reason": "commitment_proof_alignment_missing_epistemic_proof",
+                        "commitment_id": row.commitment_id,
+                        "proof_id": row.proof_id,
+                    }
+                )
+            else:
+                if proof_order != row.order:
+                    integration_violations.append(
+                        {
+                            "field": "root_current_truth_epistemology",
+                            "reason": "commitment_proof_alignment_proof_order_mismatch",
+                            "commitment_id": row.commitment_id,
+                            "proof_id": row.proof_id,
+                            "alignment_order": row.order,
+                            "proof_order": proof_order,
+                        }
+                    )
+                if proof_order <= previous_proof_order:
+                    integration_violations.append(
+                        {
+                            "field": "root_current_truth_epistemology",
+                            "reason": "commitment_proof_alignment_proof_order_not_increasing",
+                            "commitment_id": row.commitment_id,
+                            "proof_id": row.proof_id,
+                            "proof_order": proof_order,
+                            "previous_proof_order": previous_proof_order,
+                        }
+                    )
+                previous_proof_order = proof_order
 
         readme_path = repo_root / "identity/protocol/README.md"
         if not readme_path.exists():
@@ -567,13 +683,26 @@ def main() -> int:
         "commitment_count": len(commitment_rows),
         "differentiation_count": len(differentiation_rows),
         "epistemic_proof_count": len(epistemic_proof_rows),
+        "commitment_proof_alignment_count": len(commitment_proof_alignment_rows),
         "epistemic_limit_count": len(epistemic_limit_rows),
         "collapse_count": len(collapse_rows),
         "commitment_ids": [row.commitment_id for row in sorted(commitment_rows, key=lambda item: item.order)],
         "differentiation_ids": [row.row_id for row in sorted(differentiation_rows, key=lambda item: item.order)],
         "epistemic_proof_ids": [row.proof_id for row in sorted(epistemic_proof_rows, key=lambda item: item.order)],
+        "commitment_proof_alignment_ids": [
+            row.commitment_id for row in sorted(commitment_proof_alignment_rows, key=lambda item: item.order)
+        ],
         "epistemic_limit_ids": [row.row_id for row in sorted(epistemic_limit_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
+        "commitment_proof_alignment_rows": [
+            {
+                "order": row.order,
+                "commitment_id": row.commitment_id,
+                "proof_id": row.proof_id,
+                "alignment_role": row.alignment_role,
+            }
+            for row in sorted(commitment_proof_alignment_rows, key=lambda item: item.order)
+        ],
         "structure_violations": structure_violations,
         "epistemology_violations": epistemology_violations,
         "integration_violations": integration_violations,

@@ -19,6 +19,10 @@ contract_required_markers:
   - '## Current-truth epistemology law'
   - '## Five epistemic commitments'
   - '## Required epistemic differentiations'
+  - '## Epistemic commitment-proof alignment'
+  - canonical-source-before-narration commitment requires canonical-source proof;
+  - fail-close-justification-before-operational-assertion commitment requires fail-close-justification
+    proof.
   - '## Epistemic-proof discipline'
   - '## Epistemic-proof limits'
   - '## Non-compliant epistemic collapses'
@@ -84,6 +88,27 @@ required_epistemic_proof_rows:
     proof_id: fail_close_justification_proof
     contract_heading: '### 5. Fail-close-justification proof'
     proof_role: fail_close_justification_current_truth_proof
+required_commitment_proof_alignment_rows:
+  - order: 1
+    commitment_id: canonical_source_before_narration
+    proof_id: canonical_source_proof
+    alignment_role: canonical_source_commitment_proof_alignment
+  - order: 2
+    commitment_id: governed_resolution_before_historical_familiarity
+    proof_id: governed_resolution_proof
+    alignment_role: governed_resolution_commitment_proof_alignment
+  - order: 3
+    commitment_id: present_turn_authority_before_visible_recency
+    proof_id: present_turn_authority_proof
+    alignment_role: present_turn_authority_commitment_proof_alignment
+  - order: 4
+    commitment_id: provenance_preserving_derivation_before_compressed_summary
+    proof_id: provenance_preserving_derivation_proof
+    alignment_role: provenance_preserving_derivation_commitment_proof_alignment
+  - order: 5
+    commitment_id: fail_close_justification_before_operational_assertion
+    proof_id: fail_close_justification_proof
+    alignment_role: fail_close_justification_commitment_proof_alignment
 required_epistemic_limit_rows:
   - order: 1
     limit_id: canonical_source_not_resolution
@@ -119,3 +144,6 @@ required_collapse_rows:
   - order: 6
     collapse_id: derived_projection_as_truth
     contract_phrase: 'a projection, inference, or compressed summary is treated as if it were the source truth itself.'
+  - order: 7
+    collapse_id: epistemic_commitment_proof_flattening
+    contract_phrase: 'canonical-source, governed-resolution, present-turn-authority, provenance-preserving-derivation, and fail-close commitments are treated as if one proof stratum were sufficient for all of them.'

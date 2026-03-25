@@ -77,6 +77,7 @@ Runtime meaning:
 7. Runtime must also keep bound live-binding evidence separate from adjudicated closure evidence rather than letting receipt visibility impersonate current-run binding.
 8. Runtime must not let operator-facing answer compression flatten law-grounded, discovery, admissibility, live-binding, and realized-effect claims into one interchangeable backing layer.
 9. Runtime must not let operator-facing answer compression flatten source-grounded explanation, governed source resolution, fail-close admissibility, live-bound status, and realized-effect projection into one interchangeable current-truth posture.
+10. Runtime must not let current-truth commitments flatten source grounding, governed resolution, present-turn authority, derivational provenance, and fail-close justification into one interchangeable epistemic proof posture.
 
 ## Runtime registry-completeness boundary
 
