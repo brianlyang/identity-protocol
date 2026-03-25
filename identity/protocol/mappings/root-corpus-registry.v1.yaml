@@ -253,6 +253,8 @@ registered_top_level_entries:
       - '## Two governed handoff roles'
       - '## Mandatory handoff payload fields'
       - '## Required handoff evidence and next-step anchors'
+      - '## Handoff-proof discipline'
+      - '## Handoff-proof limits'
     forbidden_content_classes:
       - workbook_issue_projection
       - closure_ledger_narration

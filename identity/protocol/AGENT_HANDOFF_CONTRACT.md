@@ -138,6 +138,59 @@ The protocol must preserve all of the following:
 4. production handoff evidence remains freshness-bounded and identity/task scoped when current-turn legality is claimed;
 5. production and sample validation tracks remain separated so sample proof never stands in for current-run runtime proof.
 
+When a handoff claim relies on governed proof, the proof stratum behind that
+claim must match the handoff claim being made.
+
+## Handoff-proof discipline
+
+Governed handoff may be supported only by proof whose stratum matches the
+handoff claim being asserted.
+
+### 1. Role-boundary proof
+
+Supports claims that master and delegated roles remained within their lawful
+ownership boundaries during handoff.
+
+Proof role: `role_boundary_governed_handoff_proof`.
+
+### 2. Payload-completeness proof
+
+Supports claims that the handoff record contains the full required governed
+payload rather than an informal narrative summary.
+
+Proof role: `payload_completeness_governed_handoff_proof`.
+
+### 3. Evidence-binding proof
+
+Supports claims that handoff artifacts, freshness, identity/task scope, and
+rulebook evidence binding remain lawful for the claimed result.
+
+Proof role: `evidence_binding_governed_handoff_proof`.
+
+### 4. Next-step-executability proof
+
+Supports claims that the handoff delivered an executable next action rather
+than a non-actionable summary.
+
+Proof role: `next_step_executability_governed_handoff_proof`.
+
+### 5. Validation-track-separation proof
+
+Supports claims that production runtime handoff proof and sample/self-test proof
+remain separated without track laundering.
+
+Proof role: `validation_track_separation_governed_handoff_proof`.
+
+## Handoff-proof limits
+
+The protocol must preserve these handoff-proof limits:
+
+1. role-boundary proof is not proof of payload completeness;
+2. payload-completeness proof is not proof of evidence binding;
+3. evidence-binding proof is not proof of next-step executability;
+4. next-step-executability proof is not proof of validation-track separation;
+5. validation-track-separation proof is not proof of current-turn production handoff legality by itself.
+
 ## Non-compliant handoff collapses
 
 The following are non-compliant:

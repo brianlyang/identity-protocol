@@ -11,6 +11,8 @@ from root_agent_handoff_common import (
     STATUS_PASS_REQUIRED,
     anchor_rows_from_doc,
     collapse_rows_from_doc,
+    handoff_limit_rows_from_doc,
+    handoff_proof_rows_from_doc,
     load_root_agent_handoff,
     payload_rows_from_doc,
     role_rows_from_doc,
@@ -75,6 +77,55 @@ EXPECTED_ANCHOR_ROWS = {
         "contract_phrase": "production and sample validation tracks remain separated so sample proof never stands in for current-run runtime proof.",
     },
 }
+EXPECTED_HANDOFF_PROOF_ROWS = {
+    "role_boundary_proof": {
+        "order": 1,
+        "contract_heading": "### 1. Role-boundary proof",
+        "proof_role": "role_boundary_governed_handoff_proof",
+    },
+    "payload_completeness_proof": {
+        "order": 2,
+        "contract_heading": "### 2. Payload-completeness proof",
+        "proof_role": "payload_completeness_governed_handoff_proof",
+    },
+    "evidence_binding_proof": {
+        "order": 3,
+        "contract_heading": "### 3. Evidence-binding proof",
+        "proof_role": "evidence_binding_governed_handoff_proof",
+    },
+    "next_step_executability_proof": {
+        "order": 4,
+        "contract_heading": "### 4. Next-step-executability proof",
+        "proof_role": "next_step_executability_governed_handoff_proof",
+    },
+    "validation_track_separation_proof": {
+        "order": 5,
+        "contract_heading": "### 5. Validation-track-separation proof",
+        "proof_role": "validation_track_separation_governed_handoff_proof",
+    },
+}
+EXPECTED_HANDOFF_LIMIT_ROWS = {
+    "role_boundary_not_payload_completeness": {
+        "order": 1,
+        "contract_phrase": "role-boundary proof is not proof of payload completeness;",
+    },
+    "payload_completeness_not_evidence_binding": {
+        "order": 2,
+        "contract_phrase": "payload-completeness proof is not proof of evidence binding;",
+    },
+    "evidence_binding_not_next_step_executability": {
+        "order": 3,
+        "contract_phrase": "evidence-binding proof is not proof of next-step executability;",
+    },
+    "next_step_executability_not_validation_track_separation": {
+        "order": 4,
+        "contract_phrase": "next-step-executability proof is not proof of validation-track separation;",
+    },
+    "validation_track_separation_not_current_turn_legality": {
+        "order": 5,
+        "contract_phrase": "validation-track-separation proof is not proof of current-turn production handoff legality by itself.",
+    },
+}
 EXPECTED_COLLAPSE_ROWS = {
     "delegated_scope_as_global_contract_authority": {
         "order": 1,
@@ -103,6 +154,8 @@ EXPECTED_REGISTRY_MARKERS = (
     "## Two governed handoff roles",
     "## Mandatory handoff payload fields",
     "## Required handoff evidence and next-step anchors",
+    "## Handoff-proof discipline",
+    "## Handoff-proof limits",
 )
 EXPECTED_AUTHORITY_MARKERS = (
     "## Runtime adjudication boundary",
@@ -219,6 +272,8 @@ def main() -> int:
     role_rows = role_rows_from_doc(handoff_doc) if handoff_doc else ()
     payload_rows = payload_rows_from_doc(handoff_doc) if handoff_doc else ()
     anchor_rows = anchor_rows_from_doc(handoff_doc) if handoff_doc else ()
+    handoff_proof_rows = handoff_proof_rows_from_doc(handoff_doc) if handoff_doc else ()
+    handoff_limit_rows = handoff_limit_rows_from_doc(handoff_doc) if handoff_doc else ()
     collapse_rows = collapse_rows_from_doc(handoff_doc) if handoff_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -251,6 +306,8 @@ def main() -> int:
             ("required_role_rows", role_rows),
             ("required_payload_rows", payload_rows),
             ("required_anchor_rows", anchor_rows),
+            ("required_handoff_proof_rows", handoff_proof_rows),
+            ("required_handoff_limit_rows", handoff_limit_rows),
             ("required_collapse_rows", collapse_rows),
         ):
             if not rows:
@@ -295,6 +352,24 @@ def main() -> int:
             compare_fields=("contract_phrase",),
         )
         _validate_rows(
+            actual_rows=handoff_proof_rows,
+            expected_rows=EXPECTED_HANDOFF_PROOF_ROWS,
+            structure_violations=structure_violations,
+            handoff_violations=handoff_violations,
+            field_name="required_handoff_proof_rows",
+            id_attr="proof_id",
+            compare_fields=("contract_heading", "proof_role"),
+        )
+        _validate_rows(
+            actual_rows=handoff_limit_rows,
+            expected_rows=EXPECTED_HANDOFF_LIMIT_ROWS,
+            structure_violations=structure_violations,
+            handoff_violations=handoff_violations,
+            field_name="required_handoff_limit_rows",
+            id_attr="row_id",
+            compare_fields=("contract_phrase",),
+        )
+        _validate_rows(
             actual_rows=collapse_rows,
             expected_rows=EXPECTED_COLLAPSE_ROWS,
             structure_violations=structure_violations,
@@ -318,7 +393,10 @@ def main() -> int:
             for row in role_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_heading,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "role_heading_missing", "marker": marker})
-            for row in payload_rows + anchor_rows + collapse_rows:
+            for row in handoff_proof_rows:
+                for marker in find_missing_markers(contract_text, (row.contract_heading,)):
+                    contract_marker_violations.append({"field": "contract_file", "reason": "proof_heading_missing", "marker": marker})
+            for row in payload_rows + anchor_rows + handoff_limit_rows + collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
 
@@ -511,7 +589,11 @@ def main() -> int:
         "role_count": len(role_rows),
         "payload_field_count": len(payload_rows),
         "anchor_count": len(anchor_rows),
+        "handoff_proof_count": len(handoff_proof_rows),
+        "handoff_limit_count": len(handoff_limit_rows),
         "collapse_count": len(collapse_rows),
+        "handoff_proof_ids": [row.proof_id for row in sorted(handoff_proof_rows, key=lambda item: item.order)],
+        "handoff_limit_ids": [row.row_id for row in sorted(handoff_limit_rows, key=lambda item: item.order)],
         "stale_reasons": stale_reasons,
         "structure_violations": structure_violations,
         "handoff_violations": handoff_violations,

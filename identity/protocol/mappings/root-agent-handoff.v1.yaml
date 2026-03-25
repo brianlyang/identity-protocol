@@ -15,6 +15,8 @@ contract_required_markers:
   - '## Two governed handoff roles'
   - '## Mandatory handoff payload fields'
   - '## Required handoff evidence and next-step anchors'
+  - '## Handoff-proof discipline'
+  - '## Handoff-proof limits'
   - '## Non-compliant handoff collapses'
   - 'This file remains the authoritative root-domain contract for governed agent-handoff law.'
 required_role_rows:
@@ -73,6 +75,43 @@ required_anchor_rows:
   - order: 5
     anchor_id: production_sample_track_separation
     contract_phrase: 'production and sample validation tracks remain separated so sample proof never stands in for current-run runtime proof.'
+required_handoff_proof_rows:
+  - order: 1
+    proof_id: role_boundary_proof
+    contract_heading: '### 1. Role-boundary proof'
+    proof_role: role_boundary_governed_handoff_proof
+  - order: 2
+    proof_id: payload_completeness_proof
+    contract_heading: '### 2. Payload-completeness proof'
+    proof_role: payload_completeness_governed_handoff_proof
+  - order: 3
+    proof_id: evidence_binding_proof
+    contract_heading: '### 3. Evidence-binding proof'
+    proof_role: evidence_binding_governed_handoff_proof
+  - order: 4
+    proof_id: next_step_executability_proof
+    contract_heading: '### 4. Next-step-executability proof'
+    proof_role: next_step_executability_governed_handoff_proof
+  - order: 5
+    proof_id: validation_track_separation_proof
+    contract_heading: '### 5. Validation-track-separation proof'
+    proof_role: validation_track_separation_governed_handoff_proof
+required_handoff_limit_rows:
+  - order: 1
+    limit_id: role_boundary_not_payload_completeness
+    contract_phrase: 'role-boundary proof is not proof of payload completeness;'
+  - order: 2
+    limit_id: payload_completeness_not_evidence_binding
+    contract_phrase: 'payload-completeness proof is not proof of evidence binding;'
+  - order: 3
+    limit_id: evidence_binding_not_next_step_executability
+    contract_phrase: 'evidence-binding proof is not proof of next-step executability;'
+  - order: 4
+    limit_id: next_step_executability_not_validation_track_separation
+    contract_phrase: 'next-step-executability proof is not proof of validation-track separation;'
+  - order: 5
+    limit_id: validation_track_separation_not_current_turn_legality
+    contract_phrase: 'validation-track-separation proof is not proof of current-turn production handoff legality by itself.'
 required_collapse_rows:
   - order: 1
     collapse_id: delegated_scope_as_global_contract_authority
