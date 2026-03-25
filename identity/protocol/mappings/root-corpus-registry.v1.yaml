@@ -158,6 +158,19 @@ registered_top_level_entries:
       - workbook_issue_projection
       - closure_ledger_narration
       - business_domain_example
+  - rel_path: identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for success-path state admissibility law'
+      - '## Success-path state admissibility law'
+      - '## Six state classes'
+      - '## Required state differentiations'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
   - rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
     entry_kind: file
     corpus_class: root_contract
@@ -284,6 +297,8 @@ registered_top_level_entries:
       - root-current-truth-epistemology.v1.yaml
       - root-decision-evidence-admissibility.current.yaml
       - root-decision-evidence-admissibility.v1.yaml
+      - root-success-path-state-admissibility.current.yaml
+      - root-success-path-state-admissibility.v1.yaml
       - root-identity-instance-self-judgement.current.yaml
       - root-identity-instance-self-judgement.v1.yaml
       - root-protocol-instance-responsibility.current.yaml

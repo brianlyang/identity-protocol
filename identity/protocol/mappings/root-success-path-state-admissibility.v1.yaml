@@ -1,0 +1,81 @@
+schema_version: 1
+state_family: protocol_root_success_path_state_admissibility
+state_version: v1
+contract_file: identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_success_path_state_admissibility.py
+probe_script: scripts/ci/run_protocol_root_success_path_state_admissibility_probes_ci.sh
+common_script: scripts/root_success_path_state_admissibility_common.py
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Success-path state admissibility law'
+  - '## Six state classes'
+  - '## Required state differentiations'
+  - '## Non-compliant state collapses'
+  - 'Only states admitted by law may enter the current-turn success path.'
+required_state_class_rows:
+  - order: 1
+    state_class_id: frozen_state_definition
+    contract_heading: '### 1. Frozen state definition'
+    state_role: frozen_state_definition
+  - order: 2
+    state_class_id: admissible_current_turn_state
+    contract_heading: '### 2. Admissible current-turn state'
+    state_role: admissible_current_turn_state
+  - order: 3
+    state_class_id: bound_active_success_path_state
+    contract_heading: '### 3. Bound active success-path state'
+    state_role: bound_active_success_path_state
+  - order: 4
+    state_class_id: optional_non_entry_state
+    contract_heading: '### 4. Optional non-entry state'
+    state_role: optional_non_entry_state
+  - order: 5
+    state_class_id: governed_recovery_only_state
+    contract_heading: '### 5. Governed recovery-only state'
+    state_role: governed_recovery_only_state
+  - order: 6
+    state_class_id: demoted_support_or_quarantine_state
+    contract_heading: '### 6. Demoted support or quarantine state'
+    state_role: demoted_support_or_quarantine_state
+required_differentiation_rows:
+  - order: 1
+    differentiation_id: frozen_vs_admissible_state
+    contract_phrase: 'frozen law-defined state is separated from admissible current-turn state;'
+  - order: 2
+    differentiation_id: admissible_vs_bound_success_state
+    contract_phrase: 'admissible current-turn state is separated from bound active success-path state;'
+  - order: 3
+    differentiation_id: optional_vs_recovery_state
+    contract_phrase: 'optional non-entry state is separated from governed recovery-only state;'
+  - order: 4
+    differentiation_id: recovery_vs_support_quarantine_state
+    contract_phrase: 'governed recovery-only state is separated from demoted support or quarantine state;'
+  - order: 5
+    differentiation_id: visible_projection_vs_state_admission_proof
+    contract_phrase: 'visible status projection is separated from success-path state admission proof;'
+  - order: 6
+    differentiation_id: progress_feeling_vs_lawful_state_admission
+    contract_phrase: 'local progress feeling or convenience is separated from lawful state admission.'
+required_collapse_rows:
+  - order: 1
+    collapse_id: defined_state_as_live_success_state
+    contract_phrase: 'a law-defined or declared state is treated as if it were already live success-path admission.'
+  - order: 2
+    collapse_id: admissible_unbound_state_as_active_path_state
+    contract_phrase: 'an admissible but unbound state is treated as if it were already on the active success path.'
+  - order: 3
+    collapse_id: optional_state_as_failure_or_failure_as_optional
+    contract_phrase: 'optional non-entry state and governed recovery-only state are treated as if they were interchangeable.'
+  - order: 4
+    collapse_id: recovery_state_as_success_state
+    contract_phrase: 'a governed recovery, blocked, or redirected state is treated as if it were active success-path state.'
+  - order: 5
+    collapse_id: support_quarantine_state_as_active_state
+    contract_phrase: 'demoted support, migration, replay, diagnostics, archive, or quarantine state is treated as if it were active success-path state.'
+  - order: 6
+    collapse_id: status_projection_as_state_admission_proof
+    contract_phrase: 'a visible status label, projection, or dashboard summary is treated as if it proved lawful state admission.'
