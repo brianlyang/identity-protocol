@@ -62,6 +62,16 @@ SCRIPT_BINDINGS: tuple[ScriptBindingSpec, ...] = (
             '"protocol_lane_audit_summary"',
         ),
     ),
+    ScriptBindingSpec(
+        name="full_identity_protocol_scan_summary",
+        script_rel="scripts/full_identity_protocol_scan.py",
+        surface_id="full_identity_protocol_scan_summary",
+        required_tokens=(
+            '"surface_governance"',
+            "build_governed_runtime_summary_surface_payload(",
+            '"full_identity_protocol_scan_summary"',
+        ),
+    ),
 )
 
 DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
@@ -71,7 +81,8 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             "three-plane verdict remains a governed outer runtime-state surface",
             "`scripts/report_three_plane_status.py` may emit the current cross-plane verdict, but it must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.",
             "`scripts/release_readiness_check.py --summary-out`, when emitted, remains a governed outer runtime-state summary surface and must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.",
-            "Both surfaces must self-describe this boundary in machine-readable payload form rather than relying on operator memory.",
+            "`scripts/full_identity_protocol_scan.py` remains a governed outer runtime-state scan summary surface and must not replace root-law owners, direct validator receipts, fleet-scope closure matrices, or historical replay authority.",
+            "All three surfaces must self-describe this boundary in machine-readable payload form rather than relying on operator memory.",
         ),
     ),
     DocAnchorSpec(
@@ -80,7 +91,8 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             "three-plane verdict remains a governed outer runtime-state surface",
             "`scripts/report_three_plane_status.py` may emit the current cross-plane verdict, but it must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.",
             "`scripts/release_readiness_check.py --summary-out`, when emitted, remains a governed outer runtime-state summary surface and must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.",
-            "Both surfaces must self-describe this boundary in machine-readable payload form rather than relying on operator memory.",
+            "`scripts/full_identity_protocol_scan.py` remains a governed outer runtime-state scan summary surface and must not replace root-law owners, direct validator receipts, fleet-scope closure matrices, or historical replay authority.",
+            "All three surfaces must self-describe this boundary in machine-readable payload form rather than relying on operator memory.",
         ),
     ),
     DocAnchorSpec(
@@ -89,6 +101,7 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             "three-plane verdict remains a governed outer runtime-state surface",
             "`scripts/report_three_plane_status.py` may emit the current cross-plane verdict, but it must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.",
             "`scripts/release_readiness_check.py --summary-out`, when emitted, remains a governed outer runtime-state summary surface and must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.",
+            "`scripts/full_identity_protocol_scan.py` remains a governed outer runtime-state scan summary surface and must not replace root-law owners, direct validator receipts, fleet-scope closure matrices, or historical replay authority.",
         ),
     ),
     DocAnchorSpec(
@@ -164,7 +177,7 @@ def _validate_doc_anchors(repo_root: Path) -> tuple[str, list[dict[str, Any]], l
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Validate governance markers for three-plane/readiness summary surfaces.")
+    ap = argparse.ArgumentParser(description="Validate governance markers for governed outer runtime summary surfaces.")
     ap.add_argument("--repo-root", default=str(DEFAULT_REPO_ROOT))
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()

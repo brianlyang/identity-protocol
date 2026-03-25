@@ -55,6 +55,10 @@ LANE_AUDIT_SUMMARY_FORBIDDEN_REPLACEMENTS: tuple[str, ...] = (
     "stream_owner_governance_surface",
     "historical_replay_authority",
 )
+FULL_SCAN_SUMMARY_FORBIDDEN_REPLACEMENTS: tuple[str, ...] = (
+    *FORBIDDEN_REPLACEMENTS,
+    "historical_replay_authority",
+)
 
 
 SURFACE_PROFILES: dict[str, GovernedRuntimeSummarySurfaceProfile] = {
@@ -101,6 +105,22 @@ SURFACE_PROFILES: dict[str, GovernedRuntimeSummarySurfaceProfile] = {
             "Treat the lane audit summary as a bounded machine-readable summary for one governed lane only; "
             "it may classify applicability and fail-close state for that lane, but it must not be promoted "
             "into universal replay authority or cross-lane root truth."
+        ),
+    ),
+    "full_identity_protocol_scan_summary": GovernedRuntimeSummarySurfaceProfile(
+        surface_id="full_identity_protocol_scan_summary",
+        surface_label="aggregate identity scan summary",
+        governed_verdict_kind="aggregate_runtime_diagnostic_summary",
+        forbidden_replacements=FULL_SCAN_SUMMARY_FORBIDDEN_REPLACEMENTS,
+        authority_rule=(
+            "The full identity protocol scan payload is an aggregate runtime diagnostic summary on an outer "
+            "runtime-state surface; it may compress per-identity severity, tuple, and gate state, but it must "
+            "not replace root-law owners, direct validator receipts, fleet-scope closure matrices, or historical replay authority."
+        ),
+        operator_interpretation_rule=(
+            "Treat the full identity protocol scan payload as a bounded machine-readable aggregate for replay "
+            "triage and fleet-state inspection; it remains derived from validator receipts and must not be "
+            "promoted into standalone current authority."
         ),
     ),
 }

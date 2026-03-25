@@ -110,6 +110,14 @@ Interpretive consequence:
 1. `1.6.x` is the line that must finish closing the current protocol universe;
 2. `1.7.x` inherits a cleaned ground, not an unfinished workbook tail.
 
+### 4.1 Outer runtime verdict / summary surfaces remain bounded
+
+1. three-plane verdict remains a governed outer runtime-state surface.
+2. `scripts/report_three_plane_status.py` may emit the current cross-plane verdict, but it must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.
+3. `scripts/release_readiness_check.py --summary-out`, when emitted, remains a governed outer runtime-state summary surface and must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.
+4. `scripts/full_identity_protocol_scan.py` remains a governed outer runtime-state scan summary surface and must not replace root-law owners, direct validator receipts, fleet-scope closure matrices, or historical replay authority.
+5. All three surfaces must self-describe this boundary in machine-readable payload form rather than relying on operator memory.
+
 ## 5) Release-closure and future-admission rule
 
 1. The authoritative current workbook rows for `ISSUE-001` through `ISSUE-039` remain the machine-readable release-closure ledger for the known `1.6.x` universe.

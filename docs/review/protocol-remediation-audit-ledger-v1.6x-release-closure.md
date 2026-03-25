@@ -105,7 +105,8 @@ When a new topic appears, audit must classify it in this order:
 1. three-plane verdict remains a governed outer runtime-state surface.
 2. `scripts/report_three_plane_status.py` may emit the current cross-plane verdict, but it must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.
 3. `scripts/release_readiness_check.py --summary-out`, when emitted, remains a governed outer runtime-state summary surface and must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.
-4. Both surfaces must self-describe this boundary in machine-readable payload form rather than relying on operator memory.
+4. `scripts/full_identity_protocol_scan.py` remains a governed outer runtime-state scan summary surface and must not replace root-law owners, direct validator receipts, fleet-scope closure matrices, or historical replay authority.
+5. All three surfaces must self-describe this boundary in machine-readable payload form rather than relying on operator memory.
 
 ## 5) Final audit sentence
 
