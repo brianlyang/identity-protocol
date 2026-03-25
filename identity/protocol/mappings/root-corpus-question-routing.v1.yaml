@@ -26,6 +26,10 @@ question_routing_anchor_checks:
     required_markers:
       - '## Runtime adjudication boundary'
       - 'Current-turn epistemic legality must still resolve from machine-consumed enforcement surfaces'
+  - rel_path: identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md
+    required_markers:
+      - '## Runtime adjudication boundary'
+      - 'Current-turn decision-evidence legality must still resolve from machine-consumed enforcement surfaces'
   - rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
     required_markers:
       - '## Runtime adjudication boundary'
@@ -115,6 +119,9 @@ entry_question_projection:
     question_classes:
       - frozen_domain_contract_law
   - rel_path: identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md
+    question_classes:
+      - frozen_domain_contract_law
+  - rel_path: identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md
     question_classes:
       - frozen_domain_contract_law
   - rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
