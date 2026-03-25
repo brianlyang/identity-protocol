@@ -21,6 +21,8 @@ from root_identity_instance_self_judgement_common import (
     collapse_rows_from_doc,
     load_root_identity_instance_self_judgement,
     question_rows_from_doc,
+    self_judgement_limit_rows_from_doc,
+    self_judgement_proof_rows_from_doc,
 )
 
 STATUS_KEY = "protocol_root_identity_instance_self_judgement_status"
@@ -68,6 +70,55 @@ EXPECTED_ANCHOR_ROWS = {
         "contract_phrase": "governed escalation criteria rather than instance preference.",
     },
 }
+EXPECTED_SELF_JUDGEMENT_PROOF_ROWS = {
+    "identity_resolution_self_judgement_proof": {
+        "order": 1,
+        "contract_heading": "### 1. Identity-resolution self-judgement proof",
+        "proof_role": "identity_resolution_self_judgement_proof",
+    },
+    "capability_boundary_self_judgement_proof": {
+        "order": 2,
+        "contract_heading": "### 2. Capability-boundary self-judgement proof",
+        "proof_role": "capability_boundary_self_judgement_proof",
+    },
+    "canonical_execution_self_judgement_proof": {
+        "order": 3,
+        "contract_heading": "### 3. Canonical-execution self-judgement proof",
+        "proof_role": "canonical_execution_self_judgement_proof",
+    },
+    "escalation_boundary_self_judgement_proof": {
+        "order": 4,
+        "contract_heading": "### 4. Escalation-boundary self-judgement proof",
+        "proof_role": "escalation_boundary_self_judgement_proof",
+    },
+    "non_self_authorization_self_judgement_proof": {
+        "order": 5,
+        "contract_heading": "### 5. Non-self-authorization proof",
+        "proof_role": "non_self_authorization_self_judgement_proof",
+    },
+}
+EXPECTED_SELF_JUDGEMENT_LIMIT_ROWS = {
+    "identity_resolution_not_capability_boundary": {
+        "order": 1,
+        "contract_phrase": "identity-resolution self-judgement proof is not proof of capability boundary;",
+    },
+    "capability_boundary_not_canonical_execution": {
+        "order": 2,
+        "contract_phrase": "capability-boundary self-judgement proof is not proof of canonical execution;",
+    },
+    "canonical_execution_not_escalation_boundary": {
+        "order": 3,
+        "contract_phrase": "canonical-execution self-judgement proof is not proof of escalation boundary awareness;",
+    },
+    "escalation_boundary_not_non_self_authorization": {
+        "order": 4,
+        "contract_phrase": "escalation-boundary self-judgement proof is not proof of non-self-authorization;",
+    },
+    "non_self_authorization_not_runtime_bypass": {
+        "order": 5,
+        "contract_phrase": "non-self-authorization proof is not proof that the instance may bypass current-turn machine adjudication.",
+    },
+}
 EXPECTED_COLLAPSE_ROWS = {
     "narrative_identity_substitution": {
         "order": 1,
@@ -94,6 +145,8 @@ EXPECTED_REGISTRY_MARKERS = (
     "this file remains the authoritative root-domain contract for identity-instance self-judgement law",
     "## Four self-judgement questions",
     "## Required self-judgement anchors",
+    "## Self-judgement proof discipline",
+    "## Self-judgement proof limits",
     "## Non-compliant self-judgement collapses",
 )
 EXPECTED_AUTHORITY_MARKERS = (
@@ -210,6 +263,8 @@ def main() -> int:
 
     question_rows = question_rows_from_doc(self_doc) if self_doc else ()
     anchor_rows = anchor_rows_from_doc(self_doc) if self_doc else ()
+    self_judgement_proof_rows = self_judgement_proof_rows_from_doc(self_doc) if self_doc else ()
+    self_judgement_limit_rows = self_judgement_limit_rows_from_doc(self_doc) if self_doc else ()
     collapse_rows = collapse_rows_from_doc(self_doc) if self_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -241,6 +296,8 @@ def main() -> int:
         for field, rows in (
             ("required_question_rows", question_rows),
             ("required_anchor_rows", anchor_rows),
+            ("required_self_judgement_proof_rows", self_judgement_proof_rows),
+            ("required_self_judgement_limit_rows", self_judgement_limit_rows),
             ("required_collapse_rows", collapse_rows),
         ):
             if not rows:
@@ -276,6 +333,24 @@ def main() -> int:
             compare_fields=("contract_phrase",),
         )
         _validate_rows(
+            actual_rows=self_judgement_proof_rows,
+            expected_rows=EXPECTED_SELF_JUDGEMENT_PROOF_ROWS,
+            structure_violations=structure_violations,
+            judgement_violations=judgement_violations,
+            field_name="required_self_judgement_proof_rows",
+            id_attr="proof_id",
+            compare_fields=("contract_heading", "proof_role"),
+        )
+        _validate_rows(
+            actual_rows=self_judgement_limit_rows,
+            expected_rows=EXPECTED_SELF_JUDGEMENT_LIMIT_ROWS,
+            structure_violations=structure_violations,
+            judgement_violations=judgement_violations,
+            field_name="required_self_judgement_limit_rows",
+            id_attr="row_id",
+            compare_fields=("contract_phrase",),
+        )
+        _validate_rows(
             actual_rows=collapse_rows,
             expected_rows=EXPECTED_COLLAPSE_ROWS,
             structure_violations=structure_violations,
@@ -299,7 +374,10 @@ def main() -> int:
             for row in question_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_heading,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "question_heading_missing", "marker": marker})
-            for row in anchor_rows + collapse_rows:
+            for row in self_judgement_proof_rows:
+                for marker in find_missing_markers(contract_text, (row.contract_heading, row.proof_role)):
+                    contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
+            for row in anchor_rows + self_judgement_limit_rows + collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
 
@@ -471,9 +549,13 @@ def main() -> int:
         "contract_file": str(self_doc.get("contract_file") or ""),
         "question_count": len(question_rows),
         "anchor_count": len(anchor_rows),
+        "self_judgement_proof_count": len(self_judgement_proof_rows),
+        "self_judgement_limit_count": len(self_judgement_limit_rows),
         "collapse_count": len(collapse_rows),
         "question_ids": [row.question_id for row in sorted(question_rows, key=lambda item: item.order)],
         "anchor_ids": [row.row_id for row in sorted(anchor_rows, key=lambda item: item.order)],
+        "self_judgement_proof_ids": [row.proof_id for row in sorted(self_judgement_proof_rows, key=lambda item: item.order)],
+        "self_judgement_limit_ids": [row.row_id for row in sorted(self_judgement_limit_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
         "structure_violations": structure_violations,
         "judgement_violations": judgement_violations,

@@ -13,6 +13,8 @@ question_routing_current_file: identity/protocol/mappings/root-corpus-question-r
 contract_required_markers:
   - '## Four self-judgement questions'
   - '## Required self-judgement anchors'
+  - '## Self-judgement proof discipline'
+  - '## Self-judgement proof limits'
   - '## Non-compliant self-judgement collapses'
   - 'An identity instance must not act as if it were a free narrative persona.'
 required_question_rows:
@@ -45,6 +47,43 @@ required_anchor_rows:
   - order: 4
     anchor_id: governed_escalation_criteria
     contract_phrase: 'governed escalation criteria rather than instance preference.'
+required_self_judgement_proof_rows:
+  - order: 1
+    proof_id: identity_resolution_self_judgement_proof
+    contract_heading: '### 1. Identity-resolution self-judgement proof'
+    proof_role: identity_resolution_self_judgement_proof
+  - order: 2
+    proof_id: capability_boundary_self_judgement_proof
+    contract_heading: '### 2. Capability-boundary self-judgement proof'
+    proof_role: capability_boundary_self_judgement_proof
+  - order: 3
+    proof_id: canonical_execution_self_judgement_proof
+    contract_heading: '### 3. Canonical-execution self-judgement proof'
+    proof_role: canonical_execution_self_judgement_proof
+  - order: 4
+    proof_id: escalation_boundary_self_judgement_proof
+    contract_heading: '### 4. Escalation-boundary self-judgement proof'
+    proof_role: escalation_boundary_self_judgement_proof
+  - order: 5
+    proof_id: non_self_authorization_self_judgement_proof
+    contract_heading: '### 5. Non-self-authorization proof'
+    proof_role: non_self_authorization_self_judgement_proof
+required_self_judgement_limit_rows:
+  - order: 1
+    limit_id: identity_resolution_not_capability_boundary
+    contract_phrase: 'identity-resolution self-judgement proof is not proof of capability boundary;'
+  - order: 2
+    limit_id: capability_boundary_not_canonical_execution
+    contract_phrase: 'capability-boundary self-judgement proof is not proof of canonical execution;'
+  - order: 3
+    limit_id: canonical_execution_not_escalation_boundary
+    contract_phrase: 'canonical-execution self-judgement proof is not proof of escalation boundary awareness;'
+  - order: 4
+    limit_id: escalation_boundary_not_non_self_authorization
+    contract_phrase: 'escalation-boundary self-judgement proof is not proof of non-self-authorization;'
+  - order: 5
+    limit_id: non_self_authorization_not_runtime_bypass
+    contract_phrase: 'non-self-authorization proof is not proof that the instance may bypass current-turn machine adjudication.'
 required_collapse_rows:
   - order: 1
     collapse_id: narrative_identity_substitution

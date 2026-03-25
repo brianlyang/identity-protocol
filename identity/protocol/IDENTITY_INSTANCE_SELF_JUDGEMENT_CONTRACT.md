@@ -138,6 +138,60 @@ At minimum, self-judgement must remain anchored to:
 3. canonical execution paths rather than local convenience paths;
 4. governed escalation criteria rather than instance preference.
 
+When an identity-instance self-judgement claim relies on governed proof, the
+proof stratum behind that claim must match the self-judgement commitment being
+asserted.
+
+## Self-judgement proof discipline
+
+Identity-instance self-judgement claims may be supported only by proof whose
+stratum matches the self-judgement claim being asserted.
+
+### 1. Identity-resolution self-judgement proof
+
+Supports claims that the instance knows who it is from resolved identity
+context rather than from narrative self-description.
+
+Proof role: `identity_resolution_self_judgement_proof`.
+
+### 2. Capability-boundary self-judgement proof
+
+Supports claims that the instance knows what it may lawfully do from governed
+capability boundaries rather than from abstract model power.
+
+Proof role: `capability_boundary_self_judgement_proof`.
+
+### 3. Canonical-execution self-judgement proof
+
+Supports claims that the instance knows how it must act through canonical
+execution paths rather than local convenience improvisation.
+
+Proof role: `canonical_execution_self_judgement_proof`.
+
+### 4. Escalation-boundary self-judgement proof
+
+Supports claims that the instance knows when the matter is not its place to
+decide and escalation is required.
+
+Proof role: `escalation_boundary_self_judgement_proof`.
+
+### 5. Non-self-authorization proof
+
+Supports claims that the instance did not promote confidence, vividness, or
+local pressure into self-authorized legality.
+
+Proof role: `non_self_authorization_self_judgement_proof`.
+
+## Self-judgement proof limits
+
+The protocol must preserve these self-judgement proof limits:
+
+1. identity-resolution self-judgement proof is not proof of capability boundary;
+2. capability-boundary self-judgement proof is not proof of canonical execution;
+3. canonical-execution self-judgement proof is not proof of escalation boundary awareness;
+4. escalation-boundary self-judgement proof is not proof of non-self-authorization;
+5. non-self-authorization proof is not proof that the instance may bypass current-turn machine adjudication.
+
 ## Non-compliant self-judgement collapses
 
 The following are non-compliant:

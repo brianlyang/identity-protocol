@@ -285,6 +285,8 @@ registered_top_level_entries:
       - 'this file remains the authoritative root-domain contract for identity-instance self-judgement law'
       - '## Four self-judgement questions'
       - '## Required self-judgement anchors'
+      - '## Self-judgement proof discipline'
+      - '## Self-judgement proof limits'
       - '## Non-compliant self-judgement collapses'
     forbidden_content_classes:
       - workbook_issue_projection
