@@ -108,6 +108,13 @@ Status transitions are controlled by governance/review, not by script commit alo
 4. Demotion-status conflict resolves by governed reclassification, not by later reuse, copying, or convenience.
 5. No layer may use local recency, vividness, or implementation familiarity to seize precedence that belongs to another layer.
 
+## Root machine-registry completeness boundary
+
+1. Law-bearing root mapping families under `identity/protocol/mappings/` become canonical only when admitted by the machine-registry directory child set.
+2. On-disk presence without registry admission does not authorize current-turn consumption, legal ingress, or bundle membership.
+3. A governed root mapping family must remain explicit as a current/version pair rather than hiding behind an unregistered file.
+4. Registry-completeness drift is a root-law failure, not a convenience-layer warning.
+
 ## Root-law bundle boundary
 
 The protocol constitution depends on a governed root-law bundle across:

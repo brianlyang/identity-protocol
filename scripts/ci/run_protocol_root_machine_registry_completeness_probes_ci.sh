@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/protocol-root-machine-registry-completeness-ci.XXXXXX")"
+trap 'rm -rf "${TMP_ROOT}"' EXIT
+
+mirror_repo() {
+  local dst="$1"
+  mkdir -p "${dst}"
+  cp -R "${ROOT}/identity" "${dst}/"
+  cp -R "${ROOT}/scripts" "${dst}/"
+}
+
+PASS_JSON="${TMP_ROOT}/pass.json"
+python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${ROOT}" \
+  --json-only >"${PASS_JSON}"
+
+python3 - <<'PY' "${PASS_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "PASS_REQUIRED", payload
+assert "root-corpus-law-bundle" in payload["family_ids"], payload
+assert "root-machine-registry-completeness" in payload["family_ids"], payload
+assert all(row["family_status"] == "PASS_REQUIRED" for row in payload["family_status_rows"]), payload
+PY
+
+REGISTRY_REPO="${TMP_ROOT}/registry-drift-repo"
+mirror_repo "${REGISTRY_REPO}"
+python3 - <<'PY' "${REGISTRY_REPO}/identity/protocol/mappings/root-corpus-registry.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["registered_top_level_entries"]:
+    if row.get("rel_path") == "identity/protocol/mappings":
+        row["required_children"] = [
+            child for child in row.get("required_children", [])
+            if child != "root-corpus-law-bundle.v1.yaml"
+        ]
+        break
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_JSON="${TMP_ROOT}/registry-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${REGISTRY_REPO}" \
+  --json-only >"${REGISTRY_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed missing registration drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert any(
+    row["reason"] == "version_file_not_registered" and row.get("family_id") == "root-corpus-law-bundle"
+    for row in payload["completeness_violations"]
+), payload
+PY
+
+STRAY_REPO="${TMP_ROOT}/stray-family-repo"
+mirror_repo "${STRAY_REPO}"
+cp "${STRAY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml" \
+  "${STRAY_REPO}/identity/protocol/mappings/root-shadow-lane.v1.yaml"
+cat > "${STRAY_REPO}/identity/protocol/mappings/root-shadow-lane.current.yaml" <<'EOF'
+active_file: identity/protocol/mappings/root-shadow-lane.v1.yaml
+EOF
+
+STRAY_JSON="${TMP_ROOT}/stray-family.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${STRAY_REPO}" \
+  --json-only >"${STRAY_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed stray unregistered family"
+  exit 1
+fi
+
+python3 - <<'PY' "${STRAY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert any(
+    row["reason"] == "current_file_not_registered" and row.get("family_id") == "root-shadow-lane"
+    for row in payload["completeness_violations"]
+), payload
+PY
+
+ANCHOR_REPO="${TMP_ROOT}/anchor-drift-repo"
+mirror_repo "${ANCHOR_REPO}"
+python3 - <<'PY' "${ANCHOR_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "## Root machine-registry completeness discipline"
+new = "## Root machine registry completeness discipline"
+assert old in text, text[:3200]
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+ANCHOR_JSON="${TMP_ROOT}/anchor-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${ANCHOR_REPO}" \
+  --json-only >"${ANCHOR_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed anchor drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ANCHOR_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert any(
+    row["rel_path"] == "identity/protocol/README.md" and row["reason"] == "required_marker_missing"
+    for row in payload["anchor_violations"]
+), payload
+PY
+
+ALIAS_REPO="${TMP_ROOT}/alias-drift-repo"
+mirror_repo "${ALIAS_REPO}"
+cat > "${ALIAS_REPO}/identity/protocol/mappings/root-corpus-law-bundle.current.yaml" <<'EOF'
+active_file: identity/protocol/mappings/root-corpus-law-bundle.v9.yaml
+EOF
+
+ALIAS_JSON="${TMP_ROOT}/alias-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${ALIAS_REPO}" \
+  --json-only >"${ALIAS_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed alias drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ALIAS_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert any(
+    row["reason"] == "current_alias_error" and row.get("family_id") == "root-corpus-law-bundle"
+    for row in payload["completeness_violations"]
+), payload
+PY
+
+echo "[PASS] protocol root machine-registry completeness probes passed"

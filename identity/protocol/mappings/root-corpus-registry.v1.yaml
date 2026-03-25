@@ -370,6 +370,8 @@ registered_top_level_entries:
       - root-corpus-derivation.v1.yaml
       - root-corpus-gateway-admissibility.current.yaml
       - root-corpus-gateway-admissibility.v1.yaml
+      - root-corpus-law-bundle.current.yaml
+      - root-corpus-law-bundle.v1.yaml
       - root-corpus-precedence.current.yaml
       - root-corpus-precedence.v1.yaml
       - root-corpus-transition.current.yaml
@@ -410,6 +412,8 @@ registered_top_level_entries:
       - root-stream-design-admissibility.v1.yaml
       - root-design-question-closure.current.yaml
       - root-design-question-closure.v1.yaml
+      - root-machine-registry-completeness.current.yaml
+      - root-machine-registry-completeness.v1.yaml
       - root-truth-lifecycle.current.yaml
       - root-truth-lifecycle.v1.yaml
       - root-operator-answer-surface.current.yaml

@@ -299,6 +299,18 @@ failure.
 A machine-law root remains stable only when these slices are frozen separately,
 cross-validated together, and strengthened without semantic collapse.
 
+### Machine-registry completeness must stay explicit
+
+Machine-registry law does not become canonical merely because a mapping file
+exists on disk.
+
+A governed root mapping family must be admitted into the registry directory
+child set as an explicit current/version pair.
+
+If a root mapping family exists on disk but is omitted from the admitted child
+set, the machine world has a registry-completeness failure rather than a
+harmless file-list mismatch.
+
 ---
 
 ## 1. The identity protocol is machine law first, not a compatibility layer

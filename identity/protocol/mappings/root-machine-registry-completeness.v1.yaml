@@ -1,0 +1,37 @@
+schema_version: 1
+completeness_family: protocol_root_machine_registry_completeness
+completeness_version: v1
+registry_directory_rel_path: identity/protocol/mappings
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+validator_script: scripts/validate_protocol_root_machine_registry_completeness.py
+probe_script: scripts/ci/run_protocol_root_machine_registry_completeness_probes_ci.sh
+common_script: scripts/root_machine_registry_completeness_common.py
+root_family_prefix: root-
+current_suffix: .current.yaml
+version_regex: '^root-[a-z0-9-]+\.v[0-9]+\.yaml$'
+require_current_version_pairs: true
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Machine-registry completeness must stay explicit'
+      - 'Machine-registry law does not become canonical merely because a mapping file'
+      - 'A governed root mapping family must be admitted into the registry directory'
+      - 'registry-completeness failure rather than a'
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root machine-registry completeness discipline'
+      - 'a law-bearing root mapping family does not gain canonical status from on-disk presence alone;'
+      - 'a governed root mapping family must appear in the admitted machine-registry child set, normally as a current file plus its active versioned file;'
+      - 'if a root mapping family exists on disk but is absent from that admitted child set, registry completeness has failed and current-turn consumption must fail-close.'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root machine-registry completeness boundary'
+      - 'Law-bearing root mapping families under `identity/protocol/mappings/` become canonical only when admitted by the machine-registry directory child set.'
+      - 'On-disk presence without registry admission does not authorize current-turn consumption, legal ingress, or bundle membership.'
+      - 'Registry-completeness drift is a root-law failure, not a convenience-layer warning.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime registry-completeness boundary'
+      - 'Runtime may consume only root mapping families admitted by governed machine-registry completeness law.'
+      - 'A root mapping file present on disk but absent from the admitted child set is non-canonical for runtime legality.'
+      - 'Runtime must fail-close on registry-completeness drift rather than loading the most convenient on-disk mapping.'

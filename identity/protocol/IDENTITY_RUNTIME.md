@@ -63,6 +63,13 @@ Runtime meaning:
 3. Runtime-origin motivation does not gain gateway authorship merely by being admitted into a governed gateway.
 4. Runtime reuse of demoted or support-only material does not restore law-bearing status without governed reclassification.
 
+## Runtime registry-completeness boundary
+
+1. Runtime may consume only root mapping families admitted by governed machine-registry completeness law.
+2. A root mapping file present on disk but absent from the admitted child set is non-canonical for runtime legality.
+3. Runtime must fail-close on registry-completeness drift rather than loading the most convenient on-disk mapping.
+4. Runtime discovery of an unregistered root mapping family may motivate governed strengthening, but it does not self-promote that family into canonical status.
+
 ## Runtime consumption of the root-law bundle
 
 Runtime does not consume root law as isolated slogans.

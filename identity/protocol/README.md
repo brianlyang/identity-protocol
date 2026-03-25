@@ -284,6 +284,19 @@ Current-turn legality must instead resolve from machine-consumed enforcement sur
 
 ---
 
+## Root machine-registry completeness discipline
+
+`identity/protocol/mappings/` is not a loose storage folder.
+
+1. a law-bearing root mapping family does not gain canonical status from on-disk presence alone;
+2. a governed root mapping family must appear in the admitted machine-registry child set, normally as a current file plus its active versioned file;
+3. if a root mapping family exists on disk but is absent from that admitted child set, registry completeness has failed and current-turn consumption must fail-close.
+
+Runtime or validator code may consume only admitted root mapping families, not
+the most convenient file discovered on disk.
+
+---
+
 ## Root-law bundle discipline
 
 The root corpus is not governed by one monolithic text or one isolated
