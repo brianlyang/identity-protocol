@@ -64,6 +64,11 @@ CONTROL_PLANE_STATUS_FORBIDDEN_REPLACEMENTS: tuple[str, ...] = (
     "current_pointer_ssot",
     "historical_replay_authority",
 )
+CONTROL_PLANE_BUDGET_FORBIDDEN_REPLACEMENTS: tuple[str, ...] = (
+    *FORBIDDEN_REPLACEMENTS,
+    "current_pointer_ssot",
+    "historical_replay_authority",
+)
 
 
 SURFACE_PROFILES: dict[str, GovernedRuntimeSummarySurfaceProfile] = {
@@ -144,6 +149,24 @@ SURFACE_PROFILES: dict[str, GovernedRuntimeSummarySurfaceProfile] = {
             "Treat the control-plane status artifact as a bounded machine-generated control-plane snapshot derived "
             "from underlying validators and current mappings; it is suitable for visibility and sync checks, but "
             "must not be promoted into standalone semantic authority."
+        ),
+    ),
+    "control_plane_budget_artifact": GovernedRuntimeSummarySurfaceProfile(
+        surface_id="control_plane_budget_artifact",
+        surface_label="machine control-plane budget artifact",
+        governed_verdict_kind="machine_control_plane_budget_summary",
+        surface_class="outer_control_plane_budget_surface",
+        surface_scope="control_plane_outer",
+        forbidden_replacements=CONTROL_PLANE_BUDGET_FORBIDDEN_REPLACEMENTS,
+        authority_rule=(
+            "The machine control-plane budget artifact is a derived aggregate control-plane budget surface; it may "
+            "compress observed ceilings and threshold snapshots for operator visibility, but it must not replace "
+            "root-law owners, direct validator receipts, current-pointer SSOT, or historical replay authority."
+        ),
+        operator_interpretation_rule=(
+            "Treat the control-plane budget artifact as a bounded machine-generated budget snapshot derived from "
+            "current validators and current mappings; it is suitable for sync and budget maintenance, but must "
+            "not be promoted into standalone semantic authority."
         ),
     ),
 }

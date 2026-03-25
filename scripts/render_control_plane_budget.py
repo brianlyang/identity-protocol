@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
 
 import validate_control_plane_budget as budget_mod
 
@@ -178,6 +179,7 @@ def main() -> int:
         "budgets": next_doc.get("budgets", {}),
         "convergence_guard": next_doc.get("convergence_guard", {}),
     }
+    payload["surface_governance"] = build_governed_runtime_summary_surface_payload("control_plane_budget_artifact")
 
     if args.write:
         budget_path.write_text(yaml.safe_dump(next_doc, sort_keys=False, allow_unicode=True), encoding="utf-8")
