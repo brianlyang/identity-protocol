@@ -69,7 +69,7 @@ Audit interpretation:
 
 ### 2.3 Workbook closure must remain version-truthful
 
-The active workbook now records `ISSUE-001` through `ISSUE-038` as the current known `1.6.x` universe.
+The active workbook now records `ISSUE-001` through `ISSUE-039` as the current known `1.6.x` universe.
 
 Audit interpretation:
 
@@ -107,6 +107,30 @@ When a new topic appears, audit must classify it in this order:
 3. `scripts/release_readiness_check.py --summary-out`, when emitted, remains a governed outer runtime-state summary surface and must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.
 4. `scripts/full_identity_protocol_scan.py` remains a governed outer runtime-state scan summary surface and must not replace root-law owners, direct validator receipts, fleet-scope closure matrices, or historical replay authority.
 5. All three surfaces must self-describe this boundary in machine-readable payload form rather than relying on operator memory.
+6. Audit requires `scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh` to keep these emitted surfaces honest by checking:
+   - `scripts/report_three_plane_status.py` emits `terminal_truth_boundary_projection` and preserves the same split under `instance_plane_detail.terminal_truth_boundary_projection`;
+   - `scripts/release_readiness_check.py --summary-out` emits `terminal_truth_boundary_projection` and compresses it into one-look fields such as `one_look.terminal_truth_boundary_projection_status`;
+   - `scripts/full_identity_protocol_scan.py` emits per-row `three_plane_terminal_truth_boundary_projection` and aggregate `summary_terminal_truth_boundary`.
+7. Audit additionally requires `ASB16-RQ-006` release-plane cloud evidence surfaces to declare their acquisition boundary explicitly:
+   - materialized GH/check payloads are the canonical local replay input;
+   - protocol-owned consumers remain the semantic aggregation authority;
+   - shell/API live fetch paths are transport helpers and must not be mistaken for stronger semantic authority than the materialized evidence they yield.
+8. Audit also requires the control-plane refresh lane itself to stay machine-owned: `scripts/materialize_control_plane_surfaces.py` is the canonical sequenced budget/status materializer, and any release-readiness projection of that lane must remain derived rather than replacing direct validator receipts.
+
+## 4.2 Post-execution repair / observation / admission split remains auditable
+
+Audit also freezes the late-`1.6.x` terminal-truth boundary as three non-collapsible lanes:
+
+1. the **repair lane** may pass when shared repair executors restore mandatory writeback/report projection fields;
+2. the **terminal-truth observation lane** remains the direct machine owner of clean terminal truth and canonical publishability verdicts;
+3. the **creator/update admission lane** may still block when contract backfill observes dirty current-run terminal truth after repair;
+4. `repair success != clean terminal truth`.
+
+Audit consequence:
+
+1. review-required or otherwise dirty execution closure may still be repair-green;
+2. the same run must remain terminal-truth red if negative feedback veto / non-clean publishability conditions still hold;
+3. update preflight must fail for the terminal-truth reason itself, not be misreported as “repair executor broken”.
 
 ## 5) Final audit sentence
 

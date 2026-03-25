@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-24T12:06:57Z",
-  "git_head_short": "a23d979",
+  "generated_at_utc": "2026-03-25T16:22:34Z",
+  "git_head_short": "c7b4166",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -31,8 +31,8 @@
       "payload": {
         "control_plane_budget_status": "PASS_REQUIRED",
         "error_code": "",
-        "budget_file_entry": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/control-plane-budget.current.yaml",
-        "budget_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
+        "budget_file_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.current.yaml",
+        "budget_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_alias_error": "",
         "strict_surfaces": [
@@ -44,15 +44,15 @@
           ".github/workflows/_identity-required-gates.yml"
         ],
         "observed": {
-          "validator_scripts": 214,
-          "error_codes": 605,
-          "error_code_families": 220,
+          "validator_scripts": 246,
+          "error_codes": 700,
+          "error_code_families": 260,
           "mapping_rows_missing_in_bundle": 0,
-          "bundle_rows": 55,
+          "bundle_rows": 56,
           "missing_mapping_rows": [],
           "strict_direct_validate_calls": {
             "scripts/identity_creator.py": 90,
-            "scripts/release_readiness_check.py": 133,
+            "scripts/release_readiness_check.py": 134,
             "scripts/report_three_plane_status.py": 80,
             "scripts/full_identity_protocol_scan.py": 87,
             "scripts/e2e_smoke_test.sh": 116,
@@ -60,21 +60,21 @@
           },
           "required_gate_workflow_python_invocations": 17,
           "required_gate_workflow_unique_python_scripts": 17,
-          "required_gate_delegate_inclusive_python_invocations": 263,
-          "required_gate_delegate_inclusive_unique_python_scripts": 180
+          "required_gate_delegate_inclusive_python_invocations": 267,
+          "required_gate_delegate_inclusive_unique_python_scripts": 184
         },
         "budgets": {
           "validator_scripts": {
-            "warn": 214,
-            "fail": 216
+            "warn": 246,
+            "fail": 248
           },
           "error_codes": {
-            "warn": 605,
-            "fail": 608
+            "warn": 700,
+            "fail": 703
           },
           "error_code_families": {
-            "warn": 220,
-            "fail": 226
+            "warn": 260,
+            "fail": 266
           },
           "mapping_rows_missing_in_bundle": {
             "warn": 0,
@@ -86,8 +86,8 @@
               "fail": 95
             },
             "scripts/release_readiness_check.py": {
-              "warn": 133,
-              "fail": 138
+              "warn": 134,
+              "fail": 139
             },
             "scripts/report_three_plane_status.py": {
               "warn": 80,
@@ -109,7 +109,7 @@
         },
         "offload_budget": {
           "source_file": "identity/protocol/mappings/github-control-plane-offload.current.yaml",
-          "resolved_plan_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/github-control-plane-offload.v1.6.5.yaml",
+          "resolved_plan_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/github-control-plane-offload.v1.6.5.yaml",
           "plan_resolution_error": "",
           "phase_1_required_gate_workflow_python_invocations_max": 95
         },
@@ -134,6 +134,47 @@
       }
     },
     {
+      "name": "control_plane_budget_sync",
+      "command": [
+        "python3",
+        "scripts/validate_control_plane_budget_sync.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "payload": {
+        "control_plane_budget_sync_status": "PASS_REQUIRED",
+        "error_code": "",
+        "repo_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+        "budget_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.current.yaml",
+        "budget_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
+        "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
+        "budget_file_alias_error": "",
+        "current_last_updated_utc": "2026-03-25T16:21:58Z",
+        "live_last_updated_utc": "2026-03-25T16:21:59Z",
+        "mismatch_count": 0,
+        "mismatches": [],
+        "observed": {
+          "validator_scripts": 246,
+          "error_codes": 700,
+          "error_code_families": 260,
+          "mapping_rows_missing_in_bundle": 0,
+          "strict_direct_validate_calls": {
+            "scripts/identity_creator.py": 90,
+            "scripts/release_readiness_check.py": 134,
+            "scripts/report_three_plane_status.py": 80,
+            "scripts/full_identity_protocol_scan.py": 87,
+            "scripts/e2e_smoke_test.sh": 116,
+            ".github/workflows/_identity-required-gates.yml": 14
+          }
+        },
+        "stale_reasons": []
+      }
+    },
+    {
       "name": "control_plane_invariants",
       "command": [
         "python3",
@@ -148,52 +189,52 @@
       "payload": {
         "control_plane_invariants_status": "PASS_REQUIRED",
         "error_code": "",
-        "invariants_entry_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/control-plane-invariants.current.yaml",
+        "invariants_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-invariants.current.yaml",
         "invariants_configured_file": "identity/protocol/mappings/control-plane-invariants.current.yaml",
-        "invariants_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/control-plane-invariants.v1.6.yaml",
+        "invariants_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-invariants.v1.6.yaml",
         "invariants_active_file": "identity/protocol/mappings/control-plane-invariants.v1.6.yaml",
         "invariants_alias_error": "",
-        "contract_mapping_entry": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/contract-binding.current.yaml",
-        "contract_mapping": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
+        "contract_mapping_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.current.yaml",
+        "contract_mapping": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
         "contract_mapping_active_file": "identity/protocol/mappings/contract-binding.v1.6.yaml",
         "contract_mapping_alias_error": "",
         "contract_binding_alias_enabled": true,
-        "contract_binding_current_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/contract-binding.current.yaml",
+        "contract_binding_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.current.yaml",
         "contract_binding_current_configured_file": "identity/protocol/mappings/contract-binding.current.yaml",
-        "contract_binding_current_resolved_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
+        "contract_binding_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
         "contract_binding_parse_ok": true,
         "contract_binding_violation_count": 0,
-        "contract_binding_meta_row_count": 55,
-        "contract_binding_actual_row_count": 55,
+        "contract_binding_meta_row_count": 56,
+        "contract_binding_actual_row_count": 56,
         "contract_binding_row_count_match": true,
         "plugin_governance_configured_file": "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
-        "plugin_governance_entry_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
-        "plugin_governance_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml",
+        "plugin_governance_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
+        "plugin_governance_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml",
         "plugin_governance_active_file": "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml",
         "plugin_governance_alias_enabled": true,
         "plugin_governance_alias_error": "",
         "plugin_governance_violation_count": 0,
-        "plugin_doc_control_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml",
-        "plugin_doc_control_resolved_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/plugins/PLUGIN_DOC_CONTROL.v1.6.2.yaml",
+        "plugin_doc_control_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml",
+        "plugin_doc_control_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/PLUGIN_DOC_CONTROL.v1.6.2.yaml",
         "plugin_doc_control_active_file": "identity/protocol/plugins/PLUGIN_DOC_CONTROL.v1.6.2.yaml",
         "github_offload_alias_enabled": true,
-        "github_offload_current_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/github-control-plane-offload.current.yaml",
+        "github_offload_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/github-control-plane-offload.current.yaml",
         "github_offload_current_configured_file": "identity/protocol/mappings/github-control-plane-offload.current.yaml",
-        "github_offload_current_resolved_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/github-control-plane-offload.v1.6.5.yaml",
+        "github_offload_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/github-control-plane-offload.v1.6.5.yaml",
         "github_offload_active_file": "identity/protocol/mappings/github-control-plane-offload.v1.6.5.yaml",
         "github_offload_parse_ok": true,
         "github_offload_violation_count": 0,
         "layer_gate_profile_alias_enabled": true,
-        "layer_gate_profile_current_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/layer-targeted-gate-profile.current.yaml",
+        "layer_gate_profile_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/layer-targeted-gate-profile.current.yaml",
         "layer_gate_profile_current_configured_file": "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml",
-        "layer_gate_profile_current_resolved_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml",
+        "layer_gate_profile_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml",
         "layer_gate_profile_active_file": "identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml",
         "layer_gate_profile_parse_ok": true,
         "layer_gate_profile_violation_count": 0,
         "stream_doc_registry_alias_enabled": true,
-        "stream_doc_registry_current_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.current.yaml",
+        "stream_doc_registry_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.current.yaml",
         "stream_doc_registry_current_configured_file": "identity/protocol/mappings/stream-doc-registry.current.yaml",
-        "stream_doc_registry_current_resolved_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+        "stream_doc_registry_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
         "stream_doc_registry_active_file": "identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
         "stream_doc_registry_parse_ok": true,
         "stream_doc_registry_violation_count": 0,
@@ -216,61 +257,89 @@
         ],
         "stream_doc_registry_current_literal_violation_count": 0,
         "doc_evidence_allowlist_alias_enabled": true,
-        "doc_evidence_allowlist_current_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/doc-evidence-allowlist.current.yaml",
+        "doc_evidence_allowlist_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/doc-evidence-allowlist.current.yaml",
         "doc_evidence_allowlist_current_configured_file": "identity/protocol/mappings/doc-evidence-allowlist.current.yaml",
-        "doc_evidence_allowlist_current_resolved_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml",
+        "doc_evidence_allowlist_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml",
         "doc_evidence_allowlist_active_file": "identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml",
         "doc_evidence_allowlist_parse_ok": true,
         "doc_evidence_allowlist_violation_count": 0,
         "control_plane_budget_alias_enabled": true,
-        "control_plane_budget_current_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/control-plane-budget.current.yaml",
+        "control_plane_budget_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.current.yaml",
         "control_plane_budget_current_configured_file": "identity/protocol/mappings/control-plane-budget.current.yaml",
-        "control_plane_budget_current_resolved_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
+        "control_plane_budget_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "control_plane_budget_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "control_plane_budget_parse_ok": true,
         "control_plane_budget_violation_count": 0,
         "control_plane_status_alias_enabled": true,
-        "control_plane_status_current_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/control-plane-status.current.yaml",
+        "control_plane_status_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.current.yaml",
         "control_plane_status_current_configured_file": "identity/protocol/mappings/control-plane-status.current.yaml",
-        "control_plane_status_current_resolved_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/control-plane-status.v1.6.json",
+        "control_plane_status_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.v1.6.json",
         "control_plane_status_active_file": "identity/protocol/mappings/control-plane-status.v1.6.json",
         "control_plane_status_parse_ok": true,
         "control_plane_status_violation_count": 0,
         "root_corpus_registry_alias_enabled": true,
-        "root_corpus_registry_current_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.current.yaml",
+        "root_corpus_registry_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.current.yaml",
         "root_corpus_registry_current_configured_file": "identity/protocol/mappings/root-corpus-registry.current.yaml",
-        "root_corpus_registry_current_resolved_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.v1.yaml",
+        "root_corpus_registry_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.v1.yaml",
         "root_corpus_registry_active_file": "identity/protocol/mappings/root-corpus-registry.v1.yaml",
         "root_corpus_registry_parse_ok": true,
         "root_corpus_registry_violation_count": 0,
         "root_corpus_ordering_alias_enabled": true,
-        "root_corpus_ordering_current_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.current.yaml",
+        "root_corpus_ordering_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.current.yaml",
         "root_corpus_ordering_current_configured_file": "identity/protocol/mappings/root-corpus-ordering.current.yaml",
-        "root_corpus_ordering_current_resolved_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.v1.yaml",
+        "root_corpus_ordering_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.v1.yaml",
         "root_corpus_ordering_active_file": "identity/protocol/mappings/root-corpus-ordering.v1.yaml",
         "root_corpus_ordering_parse_ok": true,
         "root_corpus_ordering_violation_count": 0,
         "root_corpus_authority_alias_enabled": true,
-        "root_corpus_authority_current_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.current.yaml",
+        "root_corpus_authority_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.current.yaml",
         "root_corpus_authority_current_configured_file": "identity/protocol/mappings/root-corpus-authority.current.yaml",
-        "root_corpus_authority_current_resolved_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.v1.yaml",
+        "root_corpus_authority_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.v1.yaml",
         "root_corpus_authority_active_file": "identity/protocol/mappings/root-corpus-authority.v1.yaml",
         "root_corpus_authority_parse_ok": true,
         "root_corpus_authority_violation_count": 0,
         "root_corpus_derivation_alias_enabled": true,
-        "root_corpus_derivation_current_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-derivation.current.yaml",
+        "root_corpus_derivation_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-derivation.current.yaml",
         "root_corpus_derivation_current_configured_file": "identity/protocol/mappings/root-corpus-derivation.current.yaml",
-        "root_corpus_derivation_current_resolved_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-derivation.v1.yaml",
+        "root_corpus_derivation_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-derivation.v1.yaml",
         "root_corpus_derivation_active_file": "identity/protocol/mappings/root-corpus-derivation.v1.yaml",
         "root_corpus_derivation_parse_ok": true,
         "root_corpus_derivation_violation_count": 0,
+        "root_corpus_transition_alias_enabled": true,
+        "root_corpus_transition_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-transition.current.yaml",
+        "root_corpus_transition_current_configured_file": "identity/protocol/mappings/root-corpus-transition.current.yaml",
+        "root_corpus_transition_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-transition.v1.yaml",
+        "root_corpus_transition_active_file": "identity/protocol/mappings/root-corpus-transition.v1.yaml",
+        "root_corpus_transition_parse_ok": true,
+        "root_corpus_transition_violation_count": 0,
+        "root_corpus_gateway_admissibility_alias_enabled": true,
+        "root_corpus_gateway_admissibility_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-gateway-admissibility.current.yaml",
+        "root_corpus_gateway_admissibility_current_configured_file": "identity/protocol/mappings/root-corpus-gateway-admissibility.current.yaml",
+        "root_corpus_gateway_admissibility_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-gateway-admissibility.v1.yaml",
+        "root_corpus_gateway_admissibility_active_file": "identity/protocol/mappings/root-corpus-gateway-admissibility.v1.yaml",
+        "root_corpus_gateway_admissibility_parse_ok": true,
+        "root_corpus_gateway_admissibility_violation_count": 0,
+        "root_corpus_precedence_alias_enabled": true,
+        "root_corpus_precedence_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-precedence.current.yaml",
+        "root_corpus_precedence_current_configured_file": "identity/protocol/mappings/root-corpus-precedence.current.yaml",
+        "root_corpus_precedence_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-precedence.v1.yaml",
+        "root_corpus_precedence_active_file": "identity/protocol/mappings/root-corpus-precedence.v1.yaml",
+        "root_corpus_precedence_parse_ok": true,
+        "root_corpus_precedence_violation_count": 0,
         "root_corpus_question_routing_alias_enabled": true,
-        "root_corpus_question_routing_current_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.current.yaml",
+        "root_corpus_question_routing_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.current.yaml",
         "root_corpus_question_routing_current_configured_file": "identity/protocol/mappings/root-corpus-question-routing.current.yaml",
-        "root_corpus_question_routing_current_resolved_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.v1.yaml",
+        "root_corpus_question_routing_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.v1.yaml",
         "root_corpus_question_routing_active_file": "identity/protocol/mappings/root-corpus-question-routing.v1.yaml",
         "root_corpus_question_routing_parse_ok": true,
         "root_corpus_question_routing_violation_count": 0,
+        "governed_subdomain_doc_control_registry_alias_enabled": true,
+        "governed_subdomain_doc_control_registry_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/governed-subdomain-doc-control.current.yaml",
+        "governed_subdomain_doc_control_registry_current_configured_file": "identity/protocol/mappings/governed-subdomain-doc-control.current.yaml",
+        "governed_subdomain_doc_control_registry_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/governed-subdomain-doc-control.v1.yaml",
+        "governed_subdomain_doc_control_registry_active_file": "identity/protocol/mappings/governed-subdomain-doc-control.v1.yaml",
+        "governed_subdomain_doc_control_registry_parse_ok": true,
+        "governed_subdomain_doc_control_registry_violation_count": 0,
         "plugin_control_plane_alias_enabled": true,
         "plugin_control_plane_alias_parse_ok": true,
         "plugin_control_plane_alias_violation_count": 0,
@@ -318,7 +387,7 @@
         "plugin_readability_violation_count": 0,
         "plugin_governance_parse_ok": true,
         "plugin_doc_control_parse_ok": true,
-        "bundle_target_map_size": 55,
+        "bundle_target_map_size": 56,
         "violation_count": 0,
         "violations": [],
         "stale_reasons": []
@@ -339,17 +408,17 @@
       "payload": {
         "contract_binding_reference_integrity_status": "PASS_REQUIRED",
         "error_code": "",
-        "contract_mapping_entry": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/contract-binding.current.yaml",
-        "contract_mapping": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
+        "contract_mapping_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.current.yaml",
+        "contract_mapping": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
         "contract_mapping_active_file": "identity/protocol/mappings/contract-binding.v1.6.yaml",
         "contract_mapping_alias_error": "",
-        "stream_doc_registry_entry": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.current.yaml",
-        "stream_doc_registry": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+        "stream_doc_registry_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.current.yaml",
+        "stream_doc_registry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
         "stream_doc_registry_active_file": "identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
         "stream_doc_registry_alias_error": "",
         "stream_doc_registry_parse_ok": true,
-        "stream_allowed_doc_count": 72,
-        "requirement_row_count": 55,
+        "stream_allowed_doc_count": 77,
+        "requirement_row_count": 56,
         "reference_fields": [
           "governance_anchor",
           "review_anchor",
@@ -387,10 +456,10 @@
       "payload": {
         "layer_targeted_gate_profile_status": "PASS_REQUIRED",
         "error_code": "",
-        "profile_entry_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/layer-targeted-gate-profile.current.yaml",
-        "profile_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml",
+        "profile_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/layer-targeted-gate-profile.current.yaml",
+        "profile_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml",
         "profile_active_file": "identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml",
-        "contract_mapping": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
+        "contract_mapping": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
         "profile_count": 3,
         "default_profile": "strict_full",
         "strict_no_trim_operations": [
@@ -403,7 +472,7 @@
           "validate",
           "three-plane"
         ],
-        "requirement_row_count": 55,
+        "requirement_row_count": 56,
         "parse_errors": [],
         "violation_count": 0,
         "violations": [],
@@ -433,8 +502,8 @@
           "scripts/validate_required_gate_recurrence_escalator.py",
           "scripts/validate_required_gate_tuple_parity.py"
         ],
-        "contract_mapping_entry": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/contract-binding.current.yaml",
-        "contract_mapping": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
+        "contract_mapping_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.current.yaml",
+        "contract_mapping": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
         "mapping_errors": [],
         "strict_surfaces": [
           "scripts/identity_creator.py",
@@ -873,7 +942,7 @@
       "payload": {
         "executable_surface_runtime_literal_lock_status": "PASS_REQUIRED",
         "error_code": "",
-        "repo_root": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local",
+        "repo_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
         "catalog_path": "",
         "include_active_pack_scripts": false,
         "repo_scan_globs": [
@@ -883,10 +952,10 @@
         ],
         "pack_scan_globs": [],
         "active_pack_identity_ids": [],
-        "repo_scan_file_count": 401,
+        "repo_scan_file_count": 522,
         "active_pack_scan_file_count": 0,
         "extra_scan_file_count": 0,
-        "scan_file_count": 401,
+        "scan_file_count": 522,
         "scan_files": [
           ".github/workflows/_identity-required-gates.yml",
           ".github/workflows/identity-protocol-ci.yml",
@@ -899,6 +968,9 @@
           "scripts/build_agent_relay_final_answer.py",
           "scripts/build_capability_fit_matrix.py",
           "scripts/build_vibe_coding_feeding_pack.py",
+          "scripts/capability_activation_policy_common.py",
+          "scripts/capability_activation_projection_common.py",
+          "scripts/capability_fit_roundtable_common.py",
           "scripts/check_identity_broadcast_migration_closure.py",
           "scripts/check_identity_codex_launcher_migration_closure.py",
           "scripts/check_identity_communication_transport_closure.py",
@@ -906,6 +978,10 @@
           "scripts/check_version_baseline_migration_closure.py",
           "scripts/ci/run_agent_relay_final_answer_builder_probes_ci.sh",
           "scripts/ci/run_agent_relay_final_answer_probes_ci.sh",
+          "scripts/ci/run_audit_snapshot_index_governance_probes_ci.sh",
+          "scripts/ci/run_contract_bootstrap_emitter_probes_ci.sh",
+          "scripts/ci/run_control_plane_budget_sync_probes_ci.sh",
+          "scripts/ci/run_control_plane_surface_materialization_probes_ci.sh",
           "scripts/ci/run_downsink_path_immutability_probes_ci.sh",
           "scripts/ci/run_executable_surface_runtime_literal_lock_probes_ci.sh",
           "scripts/ci/run_feedback_to_judgement_loopback_probes_ci.sh",
@@ -923,22 +999,59 @@
           "scripts/ci/run_identity_dialogue_retention_probes_ci.sh",
           "scripts/ci/run_identity_instance_pack_topology_probes_ci.sh",
           "scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh",
+          "scripts/ci/run_identity_update_preflight_terminal_truth_split_probes_ci.sh",
           "scripts/ci/run_identity_weak_live_linkage_probes_ci.sh",
           "scripts/ci/run_installer_version_baseline_probes_ci.sh",
           "scripts/ci/run_monotonic_floor_probes_ci.sh",
           "scripts/ci/run_native_chat_bootstrap_entry_probes_ci.sh",
+          "scripts/ci/run_post_execution_report_repair_probes_ci.sh",
           "scripts/ci/run_privilege_escalation_write_probes_ci.sh",
+          "scripts/ci/run_protocol_broadcast_doc_control_probes_ci.sh",
+          "scripts/ci/run_protocol_governed_subdomain_doc_control_registry_probes_ci.sh",
           "scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh",
+          "scripts/ci/run_protocol_root_agent_handoff_probes_ci.sh",
+          "scripts/ci/run_protocol_root_artifact_family_admissibility_probes_ci.sh",
+          "scripts/ci/run_protocol_root_constitutional_spine_probes_ci.sh",
           "scripts/ci/run_protocol_root_corpus_authority_probes_ci.sh",
           "scripts/ci/run_protocol_root_corpus_derivation_probes_ci.sh",
+          "scripts/ci/run_protocol_root_corpus_gateway_admissibility_probes_ci.sh",
           "scripts/ci/run_protocol_root_corpus_governance_probes_ci.sh",
+          "scripts/ci/run_protocol_root_corpus_law_bundle_probes_ci.sh",
           "scripts/ci/run_protocol_root_corpus_ordering_probes_ci.sh",
+          "scripts/ci/run_protocol_root_corpus_precedence_probes_ci.sh",
           "scripts/ci/run_protocol_root_corpus_question_routing_probes_ci.sh",
+          "scripts/ci/run_protocol_root_corpus_transition_probes_ci.sh",
+          "scripts/ci/run_protocol_root_current_truth_epistemology_probes_ci.sh",
+          "scripts/ci/run_protocol_root_decision_evidence_admissibility_probes_ci.sh",
+          "scripts/ci/run_protocol_root_design_question_closure_probes_ci.sh",
+          "scripts/ci/run_protocol_root_entry_surface_legitimacy_probes_ci.sh",
+          "scripts/ci/run_protocol_root_error_terminality_probes_ci.sh",
+          "scripts/ci/run_protocol_root_identity_discovery_probes_ci.sh",
+          "scripts/ci/run_protocol_root_identity_instance_self_judgement_probes_ci.sh",
+          "scripts/ci/run_protocol_root_machine_law_primacy_probes_ci.sh",
+          "scripts/ci/run_protocol_root_machine_registry_completeness_probes_ci.sh",
+          "scripts/ci/run_protocol_root_machine_world_ontology_probes_ci.sh",
+          "scripts/ci/run_protocol_root_operator_answer_surface_probes_ci.sh",
+          "scripts/ci/run_protocol_root_prompt_bootstrap_probes_ci.sh",
+          "scripts/ci/run_protocol_root_protocol_instance_responsibility_probes_ci.sh",
+          "scripts/ci/run_protocol_root_stream_design_admissibility_probes_ci.sh",
+          "scripts/ci/run_protocol_root_success_path_state_admissibility_probes_ci.sh",
+          "scripts/ci/run_protocol_root_truth_lifecycle_probes_ci.sh",
           "scripts/ci/run_reference_visual_atlas_scaffold_probes_ci.sh",
+          "scripts/ci/run_release_closure_control_plane_status_probes_ci.sh",
+          "scripts/ci/run_release_doc_surface_governance_probes_ci.sh",
+          "scripts/ci/run_release_plane_context_resolution_probes_ci.sh",
+          "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh",
           "scripts/ci/run_required_runtime_gates_ci.sh",
+          "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh",
           "scripts/ci/run_semantic_clarity_probes_ci.sh",
           "scripts/ci/run_skill_supply_chain_probes_ci.sh",
+          "scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh",
+          "scripts/ci/run_terminal_truth_boundary_projection_probes_ci.sh",
+          "scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh",
           "scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh",
+          "scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh",
+          "scripts/ci/run_v16x_release_closure_summary_probes_ci.sh",
           "scripts/ci/run_workbook_control_plane_probes_ci.sh",
           "scripts/ci/run_workbook_family_scaffold_probes_ci.sh",
           "scripts/collaboration_trigger_sample_common.py",
@@ -949,8 +1062,10 @@
           "scripts/configure_identity_runtime_paths.py",
           "scripts/contract_binding_doc_defaults_common.py",
           "scripts/contract_binding_mapping_common.py",
+          "scripts/contract_bootstrap_emitter_common.py",
           "scripts/create_handoff_log_template.py",
           "scripts/create_identity_pack.py",
+          "scripts/cross_verification_bundle_common.py",
           "scripts/dialogue_governance_common.py",
           "scripts/docs_command_contract_check.py",
           "scripts/e2e_smoke_test.sh",
@@ -959,16 +1074,23 @@
           "scripts/emit_protocol_feedback_batch.py",
           "scripts/emit_route_version_pin_receipt.py",
           "scripts/execute_identity_upgrade.py",
+          "scripts/execution_report_selection_common.py",
           "scripts/export_route_quality_metrics.py",
+          "scripts/feedback_current_run_binding_common.py",
+          "scripts/feedback_runtime_log_backfill_common.py",
           "scripts/feedback_to_judgement_loopback_common.py",
           "scripts/final_emit_contract_common.py",
           "scripts/final_emit_governed.py",
           "scripts/full_identity_protocol_scan.py",
+          "scripts/gate_status_projection_common.py",
           "scripts/gateway_wrapper_enforcement.py",
           "scripts/generate_reference_visual_atlas_scaffold.py",
           "scripts/governed_reply_observability_common.py",
           "scripts/governed_reply_transport_lifecycle_common.py",
+          "scripts/governed_runtime_summary_surface_common.py",
+          "scripts/governed_subdomain_doc_control_common.py",
           "scripts/headstamp_error_family_common.py",
+          "scripts/headstamp_surface_semantics_common.py",
           "scripts/host_visible_final_channel_relay_common.py",
           "scripts/host_visible_surface_runtime_common.py",
           "scripts/identity_artifact_family_routing_common.py",
@@ -990,13 +1112,18 @@
           "scripts/install_identity_codex_launcher.py",
           "scripts/instance_script_orchestration_common.py",
           "scripts/list_identities.py",
+          "scripts/materialize_contract_bootstrap_emitters.py",
+          "scripts/materialize_control_plane_surfaces.py",
+          "scripts/materialize_temp_repo_workspace.py",
           "scripts/migrate_repo_instances_to_local.py",
           "scripts/native_chat_headstamp_common.py",
           "scripts/normalize_cross_workflow_evidence.py",
           "scripts/normalize_v16_cross_workflow_evidence.py",
+          "scripts/post_execution_report_repair_common.py",
           "scripts/preflight_identity_runtime_sync.sh",
           "scripts/preflight_protocol_audit_env.sh",
           "scripts/probe_gateway_timeout_guard.py",
+          "scripts/prompt_live_driver_binding_common.py",
           "scripts/protocol_feedback_contract_common.py",
           "scripts/protocol_feedback_lane_common.py",
           "scripts/protocol_infra_contract.py",
@@ -1005,6 +1132,7 @@
           "scripts/refresh_identity_codex_launcher_evidence_truth_sync.py",
           "scripts/refresh_identity_session_status.py",
           "scripts/registry_alias_control_plane_common.py",
+          "scripts/release_cloud_evidence_projection_common.py",
           "scripts/release_readiness_check.py",
           "scripts/render_active_workbook_projections.py",
           "scripts/render_control_plane_budget.py",
@@ -1032,18 +1160,43 @@
           "scripts/repair_runtime_catalog_metadata_hygiene.py",
           "scripts/repo_root_resolution_common.py",
           "scripts/report_three_plane_status.py",
+          "scripts/required_contract_coverage_projection_common.py",
           "scripts/required_gate_bundle_projection_common.py",
           "scripts/required_gate_bundle_runner.py",
           "scripts/resolve_identity_context.py",
           "scripts/resolve_release_plane_cloud_evidence.py",
           "scripts/resolve_runtime_authoritative_identity.py",
           "scripts/response_stamp_common.py",
+          "scripts/root_agent_handoff_common.py",
+          "scripts/root_artifact_family_admissibility_common.py",
+          "scripts/root_constitutional_spine_common.py",
           "scripts/root_corpus_authority_common.py",
           "scripts/root_corpus_derivation_common.py",
+          "scripts/root_corpus_gateway_admissibility_common.py",
           "scripts/root_corpus_governance_common.py",
+          "scripts/root_corpus_law_bundle_common.py",
           "scripts/root_corpus_ordering_common.py",
+          "scripts/root_corpus_precedence_common.py",
           "scripts/root_corpus_question_routing_common.py",
+          "scripts/root_corpus_transition_common.py",
+          "scripts/root_current_truth_epistemology_common.py",
+          "scripts/root_decision_evidence_admissibility_common.py",
+          "scripts/root_design_question_closure_common.py",
+          "scripts/root_entry_surface_legitimacy_common.py",
+          "scripts/root_error_terminality_common.py",
+          "scripts/root_identity_discovery_common.py",
+          "scripts/root_identity_instance_self_judgement_common.py",
+          "scripts/root_machine_law_primacy_common.py",
+          "scripts/root_machine_registry_completeness_common.py",
+          "scripts/root_machine_world_ontology_common.py",
+          "scripts/root_operator_answer_surface_common.py",
+          "scripts/root_prompt_bootstrap_common.py",
+          "scripts/root_protocol_instance_responsibility_common.py",
+          "scripts/root_stream_design_admissibility_common.py",
+          "scripts/root_success_path_state_admissibility_common.py",
+          "scripts/root_truth_lifecycle_common.py",
           "scripts/rotate_handoff_collab_freshness.py",
+          "scripts/route_live_bridge_common.py",
           "scripts/run_host_visible_live_closure.py",
           "scripts/run_identity_broadcast_delivery.py",
           "scripts/run_identity_codex_launcher_workspace_convergence.py",
@@ -1061,10 +1214,14 @@
           "scripts/scaffold_workbook_family.py",
           "scripts/scan_identity_path_residue.py",
           "scripts/shell_strict_entry_common.sh",
+          "scripts/strict_live_evidence_resolution_common.py",
           "scripts/sync_identity_meta_status.py",
           "scripts/sync_plugin_join_wiring.py",
           "scripts/sync_session_identity.py",
+          "scripts/temp_repo_materialization_common.py",
           "scripts/templates/reference_visual_atlas/validator.template.py",
+          "scripts/terminal_truth_boundary_projection_common.py",
+          "scripts/terminal_truth_cleanliness_common.py",
           "scripts/test_identity_discovery_contract.py",
           "scripts/tool_vendor_governance_common.py",
           "scripts/trigger_capability_fit_review.py",
@@ -1092,6 +1249,7 @@
           "scripts/validate_contract_binding_reference_integrity.py",
           "scripts/validate_contract_mapping_coverage.py",
           "scripts/validate_control_plane_budget.py",
+          "scripts/validate_control_plane_budget_sync.py",
           "scripts/validate_control_plane_invariants.py",
           "scripts/validate_control_plane_status_sync.py",
           "scripts/validate_cross_actor_isolation.py",
@@ -1115,6 +1273,7 @@
           "scripts/validate_fixture_runtime_boundary.py",
           "scripts/validate_full_scan_target_regression.py",
           "scripts/validate_gated_switch_guard.py",
+          "scripts/validate_gateway_timeout_profile_coverage.py",
           "scripts/validate_gateway_wrapper_trust_boundary_cross_cwd.py",
           "scripts/validate_handoff_collab_freshness_rotation.py",
           "scripts/validate_headstamp_recurrence_closure.py",
@@ -1214,6 +1373,7 @@
           "scripts/validate_prompt_capability_matrix.py",
           "scripts/validate_prompt_derivation_conformance.py",
           "scripts/validate_prompt_kernel_executable_coupling.py",
+          "scripts/validate_protocol_broadcast_doc_control.py",
           "scripts/validate_protocol_data_sanitization_boundary.py",
           "scripts/validate_protocol_downsink_path_immutability.py",
           "scripts/validate_protocol_downsink_path_literal_lock.py",
@@ -1225,21 +1385,46 @@
           "scripts/validate_protocol_feedback_reply_channel.py",
           "scripts/validate_protocol_feedback_sidecar_contract.py",
           "scripts/validate_protocol_feedback_ssot_archival.py",
+          "scripts/validate_protocol_governed_subdomain_doc_control_registry.py",
           "scripts/validate_protocol_handoff_coupling.py",
           "scripts/validate_protocol_inquiry_followup_chain.py",
           "scripts/validate_protocol_lane_headstamp_continuity.py",
           "scripts/validate_protocol_lane_isolated_historical_replay.py",
+          "scripts/validate_protocol_root_agent_handoff.py",
+          "scripts/validate_protocol_root_artifact_family_admissibility.py",
+          "scripts/validate_protocol_root_constitutional_spine.py",
           "scripts/validate_protocol_root_corpus_authority.py",
           "scripts/validate_protocol_root_corpus_derivation.py",
+          "scripts/validate_protocol_root_corpus_gateway_admissibility.py",
           "scripts/validate_protocol_root_corpus_governance.py",
+          "scripts/validate_protocol_root_corpus_law_bundle.py",
           "scripts/validate_protocol_root_corpus_ordering.py",
+          "scripts/validate_protocol_root_corpus_precedence.py",
           "scripts/validate_protocol_root_corpus_question_routing.py",
+          "scripts/validate_protocol_root_corpus_transition.py",
+          "scripts/validate_protocol_root_current_truth_epistemology.py",
+          "scripts/validate_protocol_root_decision_evidence_admissibility.py",
+          "scripts/validate_protocol_root_design_question_closure.py",
+          "scripts/validate_protocol_root_entry_surface_legitimacy.py",
+          "scripts/validate_protocol_root_error_terminality.py",
+          "scripts/validate_protocol_root_identity_discovery.py",
+          "scripts/validate_protocol_root_identity_instance_self_judgement.py",
+          "scripts/validate_protocol_root_machine_law_primacy.py",
+          "scripts/validate_protocol_root_machine_registry_completeness.py",
+          "scripts/validate_protocol_root_machine_world_ontology.py",
+          "scripts/validate_protocol_root_operator_answer_surface.py",
+          "scripts/validate_protocol_root_prompt_bootstrap.py",
+          "scripts/validate_protocol_root_protocol_instance_responsibility.py",
+          "scripts/validate_protocol_root_stream_design_admissibility.py",
+          "scripts/validate_protocol_root_success_path_state_admissibility.py",
+          "scripts/validate_protocol_root_truth_lifecycle.py",
           "scripts/validate_protocol_ssot_source.py",
           "scripts/validate_protocol_unique_entry_gate.py",
           "scripts/validate_protocol_vendor_semantic_isolation.py",
           "scripts/validate_reasoning_loop_failclose.py",
           "scripts/validate_reference_visual_atlas_inventory.py",
           "scripts/validate_refresh_strict_business_interference.py",
+          "scripts/validate_release_doc_surface_governance.py",
           "scripts/validate_release_freeze_boundary.py",
           "scripts/validate_release_metadata_sync.py",
           "scripts/validate_release_plane_cloud_closure.py",
@@ -1260,6 +1445,7 @@
           "scripts/validate_run_id_report_selection.py",
           "scripts/validate_runtime_catalog_metadata_hygiene.py",
           "scripts/validate_runtime_file_boundary_governance.py",
+          "scripts/validate_runtime_summary_surface_governance.py",
           "scripts/validate_runtime_temp_path_contract.py",
           "scripts/validate_semantic_convergence.py",
           "scripts/validate_semantic_routing_guard.py",
@@ -1273,6 +1459,7 @@
           "scripts/validate_stream_scope_semantic_integrity.py",
           "scripts/validate_stream_version_pr_boundary.py",
           "scripts/validate_strict_actor_entry_semantics.py",
+          "scripts/validate_terminal_truth_cleanliness.py",
           "scripts/validate_tmp_collision_safety.py",
           "scripts/validate_unlock_formula.py",
           "scripts/validate_v16_cross_verification_tracks.py",
@@ -1281,11 +1468,14 @@
           "scripts/validate_v16_intake_evidence_core.py",
           "scripts/validate_v16_intake_evidence_quorum.py",
           "scripts/validate_v16_skill_path_integrity.py",
+          "scripts/validate_v16x_release_closure_boundary.py",
+          "scripts/validate_v16x_release_closure_summary.py",
           "scripts/validate_vendor_namespace_separation.py",
           "scripts/validate_work_layer_gate_set_routing.py",
           "scripts/validate_workbook_family_contract.py",
           "scripts/validate_writeback_continuity.py",
           "scripts/version_baseline_common.py",
+          "scripts/weak_live_current_run_projection_common.py",
           "scripts/workbook_control_plane_common.py",
           "scripts/write_session_lane_lock_exit.py",
           "scripts/writeback_continuity_common.py"
@@ -1330,17 +1520,30 @@
       "payload": {
         "protocol_root_corpus_governance_status": "PASS_REQUIRED",
         "error_code": "",
-        "registry_entry_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.current.yaml",
-        "registry_active_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.v1.yaml",
+        "registry_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.current.yaml",
+        "registry_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.v1.yaml",
         "root_dir": "identity/protocol",
         "registered_top_level_entries": [
           "identity/protocol/AGENT_HANDOFF_CONTRACT.md",
+          "identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md",
+          "identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md",
+          "identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md",
+          "identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md",
+          "identity/protocol/ERROR_TERMINALITY_CONTRACT.md",
           "identity/protocol/IDENTITY_DISCOVERY.md",
+          "identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md",
           "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
           "identity/protocol/IDENTITY_PROTOCOL.md",
           "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
           "identity/protocol/IDENTITY_RUNTIME.md",
+          "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md",
+          "identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md",
+          "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md",
+          "identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md",
           "identity/protocol/README.md",
+          "identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md",
+          "identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md",
+          "identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md",
           "identity/protocol/broadcast",
           "identity/protocol/fixtures",
           "identity/protocol/mappings",
@@ -1348,21 +1551,34 @@
         ],
         "actual_top_level_entries": [
           "identity/protocol/AGENT_HANDOFF_CONTRACT.md",
+          "identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md",
+          "identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md",
+          "identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md",
+          "identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md",
+          "identity/protocol/ERROR_TERMINALITY_CONTRACT.md",
           "identity/protocol/IDENTITY_DISCOVERY.md",
+          "identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md",
           "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
           "identity/protocol/IDENTITY_PROTOCOL.md",
           "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
           "identity/protocol/IDENTITY_RUNTIME.md",
+          "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md",
+          "identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md",
+          "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md",
+          "identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md",
           "identity/protocol/README.md",
+          "identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md",
+          "identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md",
+          "identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md",
           "identity/protocol/broadcast",
           "identity/protocol/fixtures",
           "identity/protocol/mappings",
           "identity/protocol/plugins"
         ],
-        "registered_top_level_count": 11,
-        "actual_top_level_count": 11,
-        "law_bearing_entry_count": 10,
-        "validated_file_count": 7,
+        "registered_top_level_count": 24,
+        "actual_top_level_count": 24,
+        "law_bearing_entry_count": 23,
+        "validated_file_count": 20,
         "validated_directory_count": 4,
         "corpus_class_profile_ids": [
           "bottom_theory",
@@ -1398,10 +1614,14 @@
       "payload": {
         "protocol_root_corpus_ordering_status": "PASS_REQUIRED",
         "error_code": "",
-        "ordering_entry_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.current.yaml",
-        "ordering_active_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.v1.yaml",
-        "registry_entry_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.current.yaml",
-        "registry_active_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.v1.yaml",
+        "ordering_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.current.yaml",
+        "ordering_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.v1.yaml",
+        "registry_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.current.yaml",
+        "registry_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.v1.yaml",
+        "question_routing_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.current.yaml",
+        "question_routing_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.v1.yaml",
+        "precedence_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-precedence.current.yaml",
+        "precedence_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-precedence.v1.yaml",
         "root_dir": "identity/protocol",
         "root_index_entry": "identity/protocol/README.md",
         "registry_class_ids": [
@@ -1494,52 +1714,201 @@
           },
           {
             "order": 5,
-            "rel_path": "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
+            "rel_path": "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md",
             "entry_role": "root_contract_entry",
             "corpus_class": "root_contract"
           },
           {
             "order": 6,
-            "rel_path": "identity/protocol/IDENTITY_DISCOVERY.md",
+            "rel_path": "identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md",
             "entry_role": "root_contract_entry",
             "corpus_class": "root_contract"
           },
           {
             "order": 7,
-            "rel_path": "identity/protocol/AGENT_HANDOFF_CONTRACT.md",
+            "rel_path": "identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md",
             "entry_role": "root_contract_entry",
             "corpus_class": "root_contract"
           },
           {
             "order": 8,
+            "rel_path": "identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md",
+            "entry_role": "root_contract_entry",
+            "corpus_class": "root_contract"
+          },
+          {
+            "order": 9,
+            "rel_path": "identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md",
+            "entry_role": "root_contract_entry",
+            "corpus_class": "root_contract"
+          },
+          {
+            "order": 10,
+            "rel_path": "identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md",
+            "entry_role": "root_contract_entry",
+            "corpus_class": "root_contract"
+          },
+          {
+            "order": 11,
+            "rel_path": "identity/protocol/ERROR_TERMINALITY_CONTRACT.md",
+            "entry_role": "root_contract_entry",
+            "corpus_class": "root_contract"
+          },
+          {
+            "order": 12,
+            "rel_path": "identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md",
+            "entry_role": "root_contract_entry",
+            "corpus_class": "root_contract"
+          },
+          {
+            "order": 13,
+            "rel_path": "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
+            "entry_role": "root_contract_entry",
+            "corpus_class": "root_contract"
+          },
+          {
+            "order": 14,
+            "rel_path": "identity/protocol/IDENTITY_DISCOVERY.md",
+            "entry_role": "root_contract_entry",
+            "corpus_class": "root_contract"
+          },
+          {
+            "order": 15,
+            "rel_path": "identity/protocol/AGENT_HANDOFF_CONTRACT.md",
+            "entry_role": "root_contract_entry",
+            "corpus_class": "root_contract"
+          },
+          {
+            "order": 16,
+            "rel_path": "identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md",
+            "entry_role": "root_contract_entry",
+            "corpus_class": "root_contract"
+          },
+          {
+            "order": 17,
+            "rel_path": "identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md",
+            "entry_role": "root_contract_entry",
+            "corpus_class": "root_contract"
+          },
+          {
+            "order": 18,
+            "rel_path": "identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md",
+            "entry_role": "root_contract_entry",
+            "corpus_class": "root_contract"
+          },
+          {
+            "order": 19,
+            "rel_path": "identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md",
+            "entry_role": "root_contract_entry",
+            "corpus_class": "root_contract"
+          },
+          {
+            "order": 20,
+            "rel_path": "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md",
+            "entry_role": "root_contract_entry",
+            "corpus_class": "root_contract"
+          },
+          {
+            "order": 21,
             "rel_path": "identity/protocol/mappings",
             "entry_role": "machine_registry_directory_entry",
             "corpus_class": "machine_registry_directory"
           },
           {
-            "order": 9,
+            "order": 22,
             "rel_path": "identity/protocol/broadcast",
             "entry_role": "governed_subdomain_extension_entry",
             "corpus_class": "governed_subdomain_extension"
           },
           {
-            "order": 10,
+            "order": 23,
             "rel_path": "identity/protocol/plugins",
             "entry_role": "governed_subdomain_extension_entry",
             "corpus_class": "governed_subdomain_extension"
           },
           {
-            "order": 11,
+            "order": 24,
             "rel_path": "identity/protocol/fixtures",
             "entry_role": "demoted_support_entry",
             "corpus_class": "demoted_support_directory"
           }
         ],
+        "adjudication_order": [
+          {
+            "order": 1,
+            "machine_surface": "mappings"
+          },
+          {
+            "order": 2,
+            "machine_surface": "validators"
+          },
+          {
+            "order": 3,
+            "machine_surface": "probes"
+          },
+          {
+            "order": 4,
+            "machine_surface": "runtime_state"
+          },
+          {
+            "order": 5,
+            "machine_surface": "receipts"
+          }
+        ],
+        "adjudication_surface_profiles": [
+          {
+            "machine_surface": "mappings",
+            "phase_order": 1,
+            "surface_role": "admissible_law_resolution",
+            "closure_terminal": false
+          },
+          {
+            "machine_surface": "validators",
+            "phase_order": 2,
+            "surface_role": "governed_legality_evaluation",
+            "closure_terminal": false
+          },
+          {
+            "machine_surface": "probes",
+            "phase_order": 3,
+            "surface_role": "fail_close_drift_negation",
+            "closure_terminal": false
+          },
+          {
+            "machine_surface": "runtime_state",
+            "phase_order": 4,
+            "surface_role": "live_state_truth_binding",
+            "closure_terminal": false
+          },
+          {
+            "machine_surface": "receipts",
+            "phase_order": 5,
+            "surface_role": "adjudicated_verdict_closure",
+            "closure_terminal": true
+          }
+        ],
+        "expected_adjudication_order": [
+          "mappings",
+          "validators",
+          "probes",
+          "runtime_state",
+          "receipts"
+        ],
+        "precedence_adjudication_order": [
+          "mappings",
+          "validators",
+          "probes",
+          "runtime_state",
+          "receipts"
+        ],
         "source_order_class_count": 7,
-        "reading_order_entry_count": 11,
-        "registered_entry_count": 11,
+        "reading_order_entry_count": 24,
+        "adjudication_order_surface_count": 5,
+        "adjudication_surface_profile_count": 5,
+        "registered_entry_count": 24,
         "structure_violations": [],
         "coverage_violations": [],
+        "anchor_violations": [],
         "stale_reasons": []
       }
     },
@@ -1558,17 +1927,17 @@
       "payload": {
         "protocol_root_corpus_authority_status": "PASS_REQUIRED",
         "error_code": "",
-        "authority_entry_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.current.yaml",
-        "authority_active_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.v1.yaml",
-        "registry_entry_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.current.yaml",
-        "registry_active_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.v1.yaml",
-        "ordering_entry_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.current.yaml",
-        "ordering_active_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.v1.yaml",
+        "authority_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.current.yaml",
+        "authority_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.v1.yaml",
+        "registry_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.current.yaml",
+        "registry_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.v1.yaml",
+        "ordering_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.current.yaml",
+        "ordering_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.v1.yaml",
         "root_dir": "identity/protocol",
         "root_index_entry": "identity/protocol/README.md",
-        "authority_anchor_check_count": 5,
+        "authority_anchor_check_count": 18,
         "authority_class_profile_count": 8,
-        "entry_authority_projection_count": 11,
+        "entry_authority_projection_count": 24,
         "authority_class_profiles": [
           {
             "corpus_class": "bottom_theory",
@@ -1653,6 +2022,54 @@
             "authority_mode": "frozen_law_only"
           },
           {
+            "rel_path": "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md",
+            "corpus_class": "root_contract",
+            "authority_role": "root_domain_contract_law",
+            "authority_mode": "frozen_law_only"
+          },
+          {
+            "rel_path": "identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md",
+            "corpus_class": "root_contract",
+            "authority_role": "root_domain_contract_law",
+            "authority_mode": "frozen_law_only"
+          },
+          {
+            "rel_path": "identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md",
+            "corpus_class": "root_contract",
+            "authority_role": "root_domain_contract_law",
+            "authority_mode": "frozen_law_only"
+          },
+          {
+            "rel_path": "identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md",
+            "corpus_class": "root_contract",
+            "authority_role": "root_domain_contract_law",
+            "authority_mode": "frozen_law_only"
+          },
+          {
+            "rel_path": "identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md",
+            "corpus_class": "root_contract",
+            "authority_role": "root_domain_contract_law",
+            "authority_mode": "frozen_law_only"
+          },
+          {
+            "rel_path": "identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md",
+            "corpus_class": "root_contract",
+            "authority_role": "root_domain_contract_law",
+            "authority_mode": "frozen_law_only"
+          },
+          {
+            "rel_path": "identity/protocol/ERROR_TERMINALITY_CONTRACT.md",
+            "corpus_class": "root_contract",
+            "authority_role": "root_domain_contract_law",
+            "authority_mode": "frozen_law_only"
+          },
+          {
+            "rel_path": "identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md",
+            "corpus_class": "root_contract",
+            "authority_role": "root_domain_contract_law",
+            "authority_mode": "frozen_law_only"
+          },
+          {
             "rel_path": "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
             "corpus_class": "root_contract",
             "authority_role": "root_domain_contract_law",
@@ -1665,7 +2082,37 @@
             "authority_mode": "frozen_law_only"
           },
           {
+            "rel_path": "identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md",
+            "corpus_class": "root_contract",
+            "authority_role": "root_domain_contract_law",
+            "authority_mode": "frozen_law_only"
+          },
+          {
             "rel_path": "identity/protocol/AGENT_HANDOFF_CONTRACT.md",
+            "corpus_class": "root_contract",
+            "authority_role": "root_domain_contract_law",
+            "authority_mode": "frozen_law_only"
+          },
+          {
+            "rel_path": "identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md",
+            "corpus_class": "root_contract",
+            "authority_role": "root_domain_contract_law",
+            "authority_mode": "frozen_law_only"
+          },
+          {
+            "rel_path": "identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md",
+            "corpus_class": "root_contract",
+            "authority_role": "root_domain_contract_law",
+            "authority_mode": "frozen_law_only"
+          },
+          {
+            "rel_path": "identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md",
+            "corpus_class": "root_contract",
+            "authority_role": "root_domain_contract_law",
+            "authority_mode": "frozen_law_only"
+          },
+          {
+            "rel_path": "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md",
             "corpus_class": "root_contract",
             "authority_role": "root_domain_contract_law",
             "authority_mode": "frozen_law_only"
@@ -1716,16 +2163,16 @@
       "payload": {
         "protocol_root_corpus_derivation_status": "PASS_REQUIRED",
         "error_code": "",
-        "derivation_entry_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-derivation.current.yaml",
-        "derivation_active_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-derivation.v1.yaml",
-        "registry_entry_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.current.yaml",
-        "registry_active_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.v1.yaml",
-        "ordering_entry_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.current.yaml",
-        "ordering_active_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.v1.yaml",
-        "authority_entry_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.current.yaml",
-        "authority_active_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.v1.yaml",
-        "question_routing_entry_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.current.yaml",
-        "question_routing_active_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.v1.yaml",
+        "derivation_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-derivation.current.yaml",
+        "derivation_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-derivation.v1.yaml",
+        "registry_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.current.yaml",
+        "registry_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.v1.yaml",
+        "ordering_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.current.yaml",
+        "ordering_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.v1.yaml",
+        "authority_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.current.yaml",
+        "authority_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.v1.yaml",
+        "question_routing_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.current.yaml",
+        "question_routing_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.v1.yaml",
         "root_dir": "identity/protocol",
         "derivation_anchor_check_count": 4,
         "derivation_class_profile_count": 8,
@@ -1831,6 +2278,678 @@
       }
     },
     {
+      "name": "protocol_root_corpus_transition",
+      "command": [
+        "python3",
+        "scripts/validate_protocol_root_corpus_transition.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "payload": {
+        "protocol_root_corpus_transition_status": "PASS_REQUIRED",
+        "error_code": "",
+        "transition_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-transition.current.yaml",
+        "transition_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-transition.v1.yaml",
+        "registry_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.current.yaml",
+        "registry_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.v1.yaml",
+        "derivation_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-derivation.current.yaml",
+        "derivation_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-derivation.v1.yaml",
+        "question_routing_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.current.yaml",
+        "question_routing_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.v1.yaml",
+        "root_dir": "identity/protocol",
+        "transition_anchor_check_count": 4,
+        "surface_class_profile_count": 16,
+        "current_turn_allowed_root_surface": "machine_registry_directory",
+        "surface_class_profiles": [
+          {
+            "surface_class": "bottom_theory",
+            "surface_scope": "root",
+            "law_bearing": true,
+            "transition_mode": "generative_origin",
+            "direct_root_targets": [
+              "constitution",
+              "runtime_constitution",
+              "root_contract",
+              "machine_registry_directory",
+              "governed_subdomain_extension"
+            ],
+            "direct_current_turn_legality_allowed": false,
+            "strengthening_gateways": []
+          },
+          {
+            "surface_class": "constitution",
+            "surface_scope": "root",
+            "law_bearing": true,
+            "transition_mode": "constitutional_freeze",
+            "direct_root_targets": [
+              "runtime_constitution",
+              "root_contract",
+              "machine_registry_directory",
+              "governed_subdomain_extension"
+            ],
+            "direct_current_turn_legality_allowed": false,
+            "strengthening_gateways": []
+          },
+          {
+            "surface_class": "demoted_support_directory",
+            "surface_scope": "root",
+            "law_bearing": false,
+            "transition_mode": "demoted_support_only",
+            "direct_root_targets": [],
+            "direct_current_turn_legality_allowed": false,
+            "strengthening_gateways": [
+              "constitution",
+              "runtime_constitution",
+              "root_contract",
+              "machine_registry_directory"
+            ]
+          },
+          {
+            "surface_class": "governed_subdomain_extension",
+            "surface_scope": "root",
+            "law_bearing": true,
+            "transition_mode": "governed_extension_projection",
+            "direct_root_targets": [],
+            "direct_current_turn_legality_allowed": false,
+            "strengthening_gateways": [
+              "constitution",
+              "runtime_constitution",
+              "root_contract",
+              "machine_registry_directory"
+            ]
+          },
+          {
+            "surface_class": "machine_registry_directory",
+            "surface_scope": "root",
+            "law_bearing": true,
+            "transition_mode": "machine_registry_projection",
+            "direct_root_targets": [],
+            "direct_current_turn_legality_allowed": true,
+            "strengthening_gateways": [
+              "constitution",
+              "runtime_constitution",
+              "root_contract"
+            ]
+          },
+          {
+            "surface_class": "outer_evidence_surface",
+            "surface_scope": "outer",
+            "law_bearing": false,
+            "transition_mode": "governed_motivation_only",
+            "direct_root_targets": [],
+            "direct_current_turn_legality_allowed": false,
+            "strengthening_gateways": [
+              "constitution",
+              "runtime_constitution",
+              "root_contract",
+              "machine_registry_directory"
+            ]
+          },
+          {
+            "surface_class": "outer_governance_surface",
+            "surface_scope": "outer",
+            "law_bearing": false,
+            "transition_mode": "governed_motivation_only",
+            "direct_root_targets": [],
+            "direct_current_turn_legality_allowed": false,
+            "strengthening_gateways": [
+              "constitution",
+              "runtime_constitution",
+              "root_contract",
+              "machine_registry_directory"
+            ]
+          },
+          {
+            "surface_class": "outer_implementation_surface",
+            "surface_scope": "outer",
+            "law_bearing": false,
+            "transition_mode": "governed_motivation_only",
+            "direct_root_targets": [],
+            "direct_current_turn_legality_allowed": false,
+            "strengthening_gateways": [
+              "root_contract",
+              "machine_registry_directory"
+            ]
+          },
+          {
+            "surface_class": "outer_receipt_surface",
+            "surface_scope": "outer",
+            "law_bearing": false,
+            "transition_mode": "governed_motivation_only",
+            "direct_root_targets": [],
+            "direct_current_turn_legality_allowed": false,
+            "strengthening_gateways": [
+              "root_contract",
+              "machine_registry_directory"
+            ]
+          },
+          {
+            "surface_class": "outer_reference_surface",
+            "surface_scope": "outer",
+            "law_bearing": false,
+            "transition_mode": "governed_motivation_only",
+            "direct_root_targets": [],
+            "direct_current_turn_legality_allowed": false,
+            "strengthening_gateways": [
+              "root_contract",
+              "machine_registry_directory"
+            ]
+          },
+          {
+            "surface_class": "outer_review_surface",
+            "surface_scope": "outer",
+            "law_bearing": false,
+            "transition_mode": "governed_motivation_only",
+            "direct_root_targets": [],
+            "direct_current_turn_legality_allowed": false,
+            "strengthening_gateways": [
+              "constitution",
+              "runtime_constitution",
+              "root_contract",
+              "machine_registry_directory"
+            ]
+          },
+          {
+            "surface_class": "outer_runtime_state_surface",
+            "surface_scope": "outer",
+            "law_bearing": false,
+            "transition_mode": "governed_motivation_only",
+            "direct_root_targets": [],
+            "direct_current_turn_legality_allowed": false,
+            "strengthening_gateways": [
+              "runtime_constitution",
+              "root_contract",
+              "machine_registry_directory"
+            ]
+          },
+          {
+            "surface_class": "outer_workbook_surface",
+            "surface_scope": "outer",
+            "law_bearing": false,
+            "transition_mode": "governed_motivation_only",
+            "direct_root_targets": [],
+            "direct_current_turn_legality_allowed": false,
+            "strengthening_gateways": [
+              "constitution",
+              "runtime_constitution",
+              "root_contract",
+              "machine_registry_directory"
+            ]
+          },
+          {
+            "surface_class": "root_contract",
+            "surface_scope": "root",
+            "law_bearing": true,
+            "transition_mode": "domain_contract_freeze",
+            "direct_root_targets": [
+              "machine_registry_directory",
+              "governed_subdomain_extension"
+            ],
+            "direct_current_turn_legality_allowed": false,
+            "strengthening_gateways": []
+          },
+          {
+            "surface_class": "root_index",
+            "surface_scope": "root",
+            "law_bearing": true,
+            "transition_mode": "navigational_projection_only",
+            "direct_root_targets": [],
+            "direct_current_turn_legality_allowed": false,
+            "strengthening_gateways": [
+              "constitution",
+              "runtime_constitution",
+              "root_contract",
+              "machine_registry_directory"
+            ]
+          },
+          {
+            "surface_class": "runtime_constitution",
+            "surface_scope": "root",
+            "law_bearing": true,
+            "transition_mode": "runtime_constitutional_freeze",
+            "direct_root_targets": [
+              "root_contract",
+              "machine_registry_directory",
+              "governed_subdomain_extension"
+            ],
+            "direct_current_turn_legality_allowed": false,
+            "strengthening_gateways": []
+          }
+        ],
+        "structure_violations": [],
+        "transition_violations": [],
+        "anchor_violations": [],
+        "stale_reasons": []
+      }
+    },
+    {
+      "name": "protocol_root_corpus_gateway_admissibility",
+      "command": [
+        "python3",
+        "scripts/validate_protocol_root_corpus_gateway_admissibility.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "payload": {
+        "protocol_root_corpus_gateway_admissibility_status": "PASS_REQUIRED",
+        "error_code": "",
+        "admissibility_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-gateway-admissibility.current.yaml",
+        "admissibility_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-gateway-admissibility.v1.yaml",
+        "registry_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.current.yaml",
+        "registry_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.v1.yaml",
+        "ordering_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.current.yaml",
+        "ordering_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.v1.yaml",
+        "transition_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-transition.current.yaml",
+        "transition_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-transition.v1.yaml",
+        "authority_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.current.yaml",
+        "authority_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.v1.yaml",
+        "question_routing_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.current.yaml",
+        "question_routing_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.v1.yaml",
+        "root_dir": "identity/protocol",
+        "gateway_anchor_check_count": 4,
+        "gateway_order_count": 4,
+        "gateway_effect_target_count": 4,
+        "gateway_profile_count": 4,
+        "current_turn_terminal_gateway": "machine_registry_directory",
+        "gateway_order": [
+          {
+            "order": 1,
+            "gateway_class": "constitution"
+          },
+          {
+            "order": 2,
+            "gateway_class": "runtime_constitution"
+          },
+          {
+            "order": 3,
+            "gateway_class": "root_contract"
+          },
+          {
+            "order": 4,
+            "gateway_class": "machine_registry_directory"
+          }
+        ],
+        "gateway_effect_targets": [
+          {
+            "gateway_class": "constitution",
+            "effect_target_class": "constitution",
+            "effect_target_transition_mode": "constitutional_freeze",
+            "effect_target_authority_mode": "frozen_law_only",
+            "effect_target_question_class": "frozen_protocol_law",
+            "effect_target_answer_mode": "frozen_law_answer"
+          },
+          {
+            "gateway_class": "machine_registry_directory",
+            "effect_target_class": "machine_registry_directory",
+            "effect_target_transition_mode": "machine_registry_projection",
+            "effect_target_authority_mode": "machine_consumed_family",
+            "effect_target_question_class": "registry_resolution",
+            "effect_target_answer_mode": "machine_registry_answer"
+          },
+          {
+            "gateway_class": "root_contract",
+            "effect_target_class": "root_contract",
+            "effect_target_transition_mode": "domain_contract_freeze",
+            "effect_target_authority_mode": "frozen_law_only",
+            "effect_target_question_class": "frozen_domain_contract_law",
+            "effect_target_answer_mode": "frozen_law_answer"
+          },
+          {
+            "gateway_class": "runtime_constitution",
+            "effect_target_class": "runtime_constitution",
+            "effect_target_transition_mode": "runtime_constitutional_freeze",
+            "effect_target_authority_mode": "frozen_law_only",
+            "effect_target_question_class": "frozen_runtime_law",
+            "effect_target_answer_mode": "frozen_law_answer"
+          }
+        ],
+        "expected_gateway_order": [
+          "constitution",
+          "runtime_constitution",
+          "root_contract",
+          "machine_registry_directory"
+        ],
+        "derived_gateway_inputs": {
+          "constitution": [
+            "demoted_support_directory",
+            "governed_subdomain_extension",
+            "machine_registry_directory",
+            "outer_evidence_surface",
+            "outer_governance_surface",
+            "outer_review_surface",
+            "outer_workbook_surface",
+            "root_index"
+          ],
+          "runtime_constitution": [
+            "demoted_support_directory",
+            "governed_subdomain_extension",
+            "machine_registry_directory",
+            "outer_evidence_surface",
+            "outer_governance_surface",
+            "outer_review_surface",
+            "outer_runtime_state_surface",
+            "outer_workbook_surface",
+            "root_index"
+          ],
+          "root_contract": [
+            "demoted_support_directory",
+            "governed_subdomain_extension",
+            "machine_registry_directory",
+            "outer_evidence_surface",
+            "outer_governance_surface",
+            "outer_implementation_surface",
+            "outer_receipt_surface",
+            "outer_reference_surface",
+            "outer_review_surface",
+            "outer_runtime_state_surface",
+            "outer_workbook_surface",
+            "root_index"
+          ],
+          "machine_registry_directory": [
+            "demoted_support_directory",
+            "governed_subdomain_extension",
+            "outer_evidence_surface",
+            "outer_governance_surface",
+            "outer_implementation_surface",
+            "outer_receipt_surface",
+            "outer_reference_surface",
+            "outer_review_surface",
+            "outer_runtime_state_surface",
+            "outer_workbook_surface",
+            "root_index"
+          ]
+        },
+        "gateway_profiles": [
+          {
+            "gateway_class": "constitution",
+            "gateway_scope": "root",
+            "admissibility_mode": "governed_refreeze_gateway",
+            "gateway_effect_scope": "constitutional_law_refreeze",
+            "current_turn_legality_terminal": false,
+            "admissible_nonorigin_surface_classes": [
+              "root_index",
+              "machine_registry_directory",
+              "governed_subdomain_extension",
+              "demoted_support_directory",
+              "outer_governance_surface",
+              "outer_review_surface",
+              "outer_workbook_surface",
+              "outer_evidence_surface"
+            ]
+          },
+          {
+            "gateway_class": "machine_registry_directory",
+            "gateway_scope": "root",
+            "admissibility_mode": "governed_projection_gateway",
+            "gateway_effect_scope": "machine_registry_projection",
+            "current_turn_legality_terminal": true,
+            "admissible_nonorigin_surface_classes": [
+              "root_index",
+              "governed_subdomain_extension",
+              "demoted_support_directory",
+              "outer_governance_surface",
+              "outer_review_surface",
+              "outer_workbook_surface",
+              "outer_reference_surface",
+              "outer_evidence_surface",
+              "outer_runtime_state_surface",
+              "outer_receipt_surface",
+              "outer_implementation_surface"
+            ]
+          },
+          {
+            "gateway_class": "root_contract",
+            "gateway_scope": "root",
+            "admissibility_mode": "governed_refreeze_gateway",
+            "gateway_effect_scope": "root_contract_law_refreeze",
+            "current_turn_legality_terminal": false,
+            "admissible_nonorigin_surface_classes": [
+              "root_index",
+              "machine_registry_directory",
+              "governed_subdomain_extension",
+              "demoted_support_directory",
+              "outer_governance_surface",
+              "outer_review_surface",
+              "outer_workbook_surface",
+              "outer_reference_surface",
+              "outer_evidence_surface",
+              "outer_runtime_state_surface",
+              "outer_receipt_surface",
+              "outer_implementation_surface"
+            ]
+          },
+          {
+            "gateway_class": "runtime_constitution",
+            "gateway_scope": "root",
+            "admissibility_mode": "governed_refreeze_gateway",
+            "gateway_effect_scope": "runtime_constitutional_law_refreeze",
+            "current_turn_legality_terminal": false,
+            "admissible_nonorigin_surface_classes": [
+              "root_index",
+              "machine_registry_directory",
+              "governed_subdomain_extension",
+              "demoted_support_directory",
+              "outer_governance_surface",
+              "outer_review_surface",
+              "outer_workbook_surface",
+              "outer_evidence_surface",
+              "outer_runtime_state_surface"
+            ]
+          }
+        ],
+        "structure_violations": [],
+        "admissibility_violations": [],
+        "anchor_violations": [],
+        "stale_reasons": []
+      }
+    },
+    {
+      "name": "protocol_root_corpus_precedence",
+      "command": [
+        "python3",
+        "scripts/validate_protocol_root_corpus_precedence.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "payload": {
+        "protocol_root_corpus_precedence_status": "PASS_REQUIRED",
+        "error_code": "",
+        "precedence_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-precedence.current.yaml",
+        "precedence_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-precedence.v1.yaml",
+        "registry_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.current.yaml",
+        "registry_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.v1.yaml",
+        "ordering_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.current.yaml",
+        "ordering_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.v1.yaml",
+        "authority_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.current.yaml",
+        "authority_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.v1.yaml",
+        "question_routing_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.current.yaml",
+        "question_routing_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.v1.yaml",
+        "transition_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-transition.current.yaml",
+        "transition_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-transition.v1.yaml",
+        "gateway_admissibility_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-gateway-admissibility.current.yaml",
+        "gateway_admissibility_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-gateway-admissibility.v1.yaml",
+        "root_dir": "identity/protocol",
+        "precedence_anchor_check_count": 4,
+        "gateway_authorship_projection_count": 4,
+        "precedence_profile_count": 4,
+        "gateway_authorship_projection": [
+          {
+            "gateway_class": "constitution",
+            "preserved_effect_target_class": "constitution",
+            "preserved_question_class": "frozen_protocol_law",
+            "preserved_answer_mode": "frozen_law_answer"
+          },
+          {
+            "gateway_class": "machine_registry_directory",
+            "preserved_effect_target_class": "machine_registry_directory",
+            "preserved_question_class": "registry_resolution",
+            "preserved_answer_mode": "machine_registry_answer"
+          },
+          {
+            "gateway_class": "root_contract",
+            "preserved_effect_target_class": "root_contract",
+            "preserved_question_class": "frozen_domain_contract_law",
+            "preserved_answer_mode": "frozen_law_answer"
+          },
+          {
+            "gateway_class": "runtime_constitution",
+            "preserved_effect_target_class": "runtime_constitution",
+            "preserved_question_class": "frozen_runtime_law",
+            "preserved_answer_mode": "frozen_law_answer"
+          }
+        ],
+        "precedence_profiles": [
+          {
+            "conflict_class": "current_turn_legality_conflict",
+            "conflict_scope": "current_turn_legality",
+            "resolution_mode": "machine_enforcement_terminal",
+            "semantic_precedence_chain": [
+              "machine_registry_directory"
+            ],
+            "terminal_machine_surfaces": [
+              "mappings",
+              "validators",
+              "probes",
+              "runtime_state",
+              "receipts"
+            ],
+            "motivating_only_surface_classes": [
+              "bottom_theory",
+              "root_index",
+              "constitution",
+              "runtime_constitution",
+              "root_contract",
+              "governed_subdomain_extension",
+              "demoted_support_directory"
+            ],
+            "forbidden_override_surface_classes": [
+              "bottom_theory",
+              "root_index",
+              "constitution",
+              "runtime_constitution",
+              "root_contract",
+              "governed_subdomain_extension",
+              "demoted_support_directory"
+            ]
+          },
+          {
+            "conflict_class": "demotion_status_conflict",
+            "conflict_scope": "law_bearing_status",
+            "resolution_mode": "governed_reclassification_required",
+            "semantic_precedence_chain": [
+              "constitution",
+              "runtime_constitution",
+              "root_contract",
+              "machine_registry_directory"
+            ],
+            "terminal_machine_surfaces": [],
+            "motivating_only_surface_classes": [
+              "demoted_support_directory"
+            ],
+            "forbidden_override_surface_classes": [
+              "demoted_support_directory"
+            ]
+          },
+          {
+            "conflict_class": "gateway_authorship_conflict",
+            "conflict_scope": "gateway_authorship",
+            "resolution_mode": "gateway_effect_scope_preserved",
+            "semantic_precedence_chain": [
+              "constitution",
+              "runtime_constitution",
+              "root_contract",
+              "machine_registry_directory"
+            ],
+            "terminal_machine_surfaces": [],
+            "motivating_only_surface_classes": [
+              "root_index",
+              "machine_registry_directory",
+              "governed_subdomain_extension",
+              "demoted_support_directory",
+              "outer_governance_surface",
+              "outer_review_surface",
+              "outer_workbook_surface",
+              "outer_reference_surface",
+              "outer_evidence_surface",
+              "outer_runtime_state_surface",
+              "outer_receipt_surface",
+              "outer_implementation_surface"
+            ],
+            "forbidden_override_surface_classes": [
+              "root_index",
+              "machine_registry_directory",
+              "governed_subdomain_extension",
+              "demoted_support_directory",
+              "outer_governance_surface",
+              "outer_review_surface",
+              "outer_workbook_surface",
+              "outer_reference_surface",
+              "outer_evidence_surface",
+              "outer_runtime_state_surface",
+              "outer_receipt_surface",
+              "outer_implementation_surface"
+            ]
+          },
+          {
+            "conflict_class": "semantic_meaning_conflict",
+            "conflict_scope": "source_order_meaning",
+            "resolution_mode": "source_order_root_law",
+            "semantic_precedence_chain": [
+              "bottom_theory",
+              "constitution",
+              "runtime_constitution",
+              "root_contract"
+            ],
+            "terminal_machine_surfaces": [],
+            "motivating_only_surface_classes": [
+              "root_index",
+              "machine_registry_directory",
+              "governed_subdomain_extension",
+              "demoted_support_directory",
+              "outer_governance_surface",
+              "outer_review_surface",
+              "outer_workbook_surface",
+              "outer_reference_surface",
+              "outer_evidence_surface",
+              "outer_runtime_state_surface",
+              "outer_receipt_surface",
+              "outer_implementation_surface"
+            ],
+            "forbidden_override_surface_classes": [
+              "root_index",
+              "machine_registry_directory",
+              "governed_subdomain_extension",
+              "demoted_support_directory",
+              "outer_governance_surface",
+              "outer_review_surface",
+              "outer_workbook_surface",
+              "outer_reference_surface",
+              "outer_evidence_surface",
+              "outer_runtime_state_surface",
+              "outer_receipt_surface",
+              "outer_implementation_surface"
+            ]
+          }
+        ],
+        "structure_violations": [],
+        "precedence_violations": [],
+        "anchor_violations": [],
+        "stale_reasons": []
+      }
+    },
+    {
       "name": "protocol_root_corpus_question_routing",
       "command": [
         "python3",
@@ -1845,19 +2964,20 @@
       "payload": {
         "protocol_root_corpus_question_routing_status": "PASS_REQUIRED",
         "error_code": "",
-        "routing_entry_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.current.yaml",
-        "routing_active_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.v1.yaml",
-        "registry_entry_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.current.yaml",
-        "registry_active_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.v1.yaml",
-        "ordering_entry_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.current.yaml",
-        "ordering_active_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.v1.yaml",
-        "authority_entry_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.current.yaml",
-        "authority_active_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.v1.yaml",
+        "routing_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.current.yaml",
+        "routing_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.v1.yaml",
+        "registry_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.current.yaml",
+        "registry_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-registry.v1.yaml",
+        "ordering_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.current.yaml",
+        "ordering_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-ordering.v1.yaml",
+        "authority_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.current.yaml",
+        "authority_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-authority.v1.yaml",
         "root_dir": "identity/protocol",
         "root_index_entry": "identity/protocol/README.md",
-        "question_routing_anchor_check_count": 5,
+        "question_routing_anchor_check_count": 18,
         "question_class_profile_count": 9,
-        "entry_question_projection_count": 11,
+        "entry_question_projection_count": 24,
+        "gateway_question_projection_count": 4,
         "question_class_profiles": [
           {
             "question_class": "generative_why",
@@ -1940,6 +3060,54 @@
             ]
           },
           {
+            "rel_path": "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md",
+            "question_classes": [
+              "frozen_domain_contract_law"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md",
+            "question_classes": [
+              "frozen_domain_contract_law"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md",
+            "question_classes": [
+              "frozen_domain_contract_law"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md",
+            "question_classes": [
+              "frozen_domain_contract_law"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md",
+            "question_classes": [
+              "frozen_domain_contract_law"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md",
+            "question_classes": [
+              "frozen_domain_contract_law"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/ERROR_TERMINALITY_CONTRACT.md",
+            "question_classes": [
+              "frozen_domain_contract_law"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md",
+            "question_classes": [
+              "frozen_domain_contract_law"
+            ]
+          },
+          {
             "rel_path": "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
             "question_classes": [
               "frozen_domain_contract_law"
@@ -1952,7 +3120,37 @@
             ]
           },
           {
+            "rel_path": "identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md",
+            "question_classes": [
+              "frozen_domain_contract_law"
+            ]
+          },
+          {
             "rel_path": "identity/protocol/AGENT_HANDOFF_CONTRACT.md",
+            "question_classes": [
+              "frozen_domain_contract_law"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md",
+            "question_classes": [
+              "frozen_domain_contract_law"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md",
+            "question_classes": [
+              "frozen_domain_contract_law"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md",
+            "question_classes": [
+              "frozen_domain_contract_law"
+            ]
+          },
+          {
+            "rel_path": "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md",
             "question_classes": [
               "frozen_domain_contract_law"
             ]
@@ -1982,6 +3180,40 @@
             ]
           }
         ],
+        "gateway_question_projection": [
+          {
+            "gateway_class": "constitution",
+            "effect_target_class": "constitution",
+            "question_class": "frozen_protocol_law",
+            "answer_mode": "frozen_law_answer",
+            "current_turn_authority_allowed": false,
+            "root_entry_required": true
+          },
+          {
+            "gateway_class": "runtime_constitution",
+            "effect_target_class": "runtime_constitution",
+            "question_class": "frozen_runtime_law",
+            "answer_mode": "frozen_law_answer",
+            "current_turn_authority_allowed": false,
+            "root_entry_required": true
+          },
+          {
+            "gateway_class": "root_contract",
+            "effect_target_class": "root_contract",
+            "question_class": "frozen_domain_contract_law",
+            "answer_mode": "frozen_law_answer",
+            "current_turn_authority_allowed": false,
+            "root_entry_required": true
+          },
+          {
+            "gateway_class": "machine_registry_directory",
+            "effect_target_class": "machine_registry_directory",
+            "question_class": "registry_resolution",
+            "answer_mode": "machine_registry_answer",
+            "current_turn_authority_allowed": true,
+            "root_entry_required": true
+          }
+        ],
         "adjudication_redirect": {
           "question_class": "current_turn_legality",
           "terminal_machine_surfaces": [
@@ -2008,13 +3240,168 @@
       }
     },
     {
+      "name": "protocol_broadcast_doc_control",
+      "command": [
+        "python3",
+        "scripts/validate_protocol_broadcast_doc_control.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "IP-BDOC-001",
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "payload": {
+        "protocol_broadcast_doc_control_status": "PASS_REQUIRED",
+        "governed_subdomain_registry_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/governed-subdomain-doc-control.current.yaml",
+        "governed_subdomain_registry_active": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/governed-subdomain-doc-control.v1.yaml",
+        "governed_subdomain_registry_alias_error": "",
+        "doc_control_rel": "identity/protocol/broadcast/BROADCAST_DOC_CONTROL.current.yaml",
+        "doc_control_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/broadcast/BROADCAST_DOC_CONTROL.v1.6.20.yaml",
+        "doc_control_active_file": "identity/protocol/broadcast/BROADCAST_DOC_CONTROL.v1.6.20.yaml",
+        "expected_subdomain_id": "broadcast",
+        "doc_control_family": "governed_subdomain_doc_control",
+        "subdomain_id": "broadcast",
+        "root_readme": "identity/protocol/broadcast/README.md",
+        "required_token_count": 21,
+        "required_file_count": 11,
+        "missing_tokens": [],
+        "missing_files": [],
+        "stale_reasons": [],
+        "error_code": "IP-BDOC-001"
+      }
+    },
+    {
+      "name": "protocol_governed_subdomain_doc_control_registry",
+      "command": [
+        "python3",
+        "scripts/validate_protocol_governed_subdomain_doc_control_registry.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "payload": {
+        "protocol_governed_subdomain_doc_control_registry_status": "PASS_REQUIRED",
+        "error_code": "",
+        "registry_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/governed-subdomain-doc-control.current.yaml",
+        "registry_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/governed-subdomain-doc-control.v1.yaml",
+        "registry_family": "governed_subdomain_doc_control",
+        "registry_version": "v1",
+        "subdomain_count": 1,
+        "subdomain_bindings": [
+          {
+            "subdomain_id": "broadcast",
+            "current_file": "identity/protocol/broadcast/BROADCAST_DOC_CONTROL.current.yaml",
+            "root_readme": "identity/protocol/broadcast/README.md",
+            "validator_script": "scripts/validate_protocol_broadcast_doc_control.py",
+            "probe_script": "scripts/ci/run_protocol_broadcast_doc_control_probes_ci.sh",
+            "active_doc_control_file": "identity/protocol/broadcast/BROADCAST_DOC_CONTROL.v1.6.20.yaml"
+          }
+        ],
+        "structure_violations": [],
+        "binding_violations": [],
+        "stale_reasons": []
+      }
+    },
+    {
+      "name": "release_doc_surface_governance",
+      "command": [
+        "python3",
+        "scripts/validate_release_doc_surface_governance.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "payload": {
+        "release_doc_surface_governance_status": "PASS_REQUIRED",
+        "error_code": "",
+        "repo_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+        "registry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+        "registry_active_file": "identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+        "canonical_release_summary_doc": "docs/release/identity-v1.6x-release-closure-summary.md",
+        "release_archival_docs": [
+          "docs/release/v1-roadmap.md",
+          "docs/release/v1.0.0-release-notes.md"
+        ],
+        "authoritative_release_docs": [
+          "docs/release/identity-v1.6x-release-closure-summary.md"
+        ],
+        "unclassified_release_docs": [],
+        "stale_reasons": []
+      }
+    },
+    {
+      "name": "v16x_release_closure_boundary",
+      "command": [
+        "python3",
+        "scripts/validate_v16x_release_closure_boundary.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "payload": {
+        "v16x_release_closure_boundary_status": "PASS_REQUIRED",
+        "error_code": "",
+        "repo_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+        "philosophy_doc": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
+        "protocol_doc": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/IDENTITY_PROTOCOL.md",
+        "runtime_doc": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/IDENTITY_RUNTIME.md",
+        "issue_register_doc": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/docs/workbook/protocol-issue-register-v1.6.md",
+        "governance_doc": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/docs/governance/identity-v1.6x-release-closure-governance.md",
+        "review_doc": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md",
+        "current_issue_horizon": "ISSUE-039",
+        "highest_closed_v16_stream_version": "v1.6.21",
+        "stale_reasons": []
+      }
+    },
+    {
+      "name": "v16x_release_closure_summary",
+      "command": [
+        "python3",
+        "scripts/validate_v16x_release_closure_summary.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "payload": {
+        "v16x_release_closure_summary_status": "PASS_REQUIRED",
+        "error_code": "",
+        "repo_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+        "summary_doc": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/docs/release/identity-v1.6x-release-closure-summary.md",
+        "current_issue_horizon": "ISSUE-039",
+        "highest_closed_v16_stream_version": "v1.6.21",
+        "boundary_stream_versions": [
+          "v1.6.14",
+          "v1.6.16",
+          "v1.6.17",
+          "v1.6.18",
+          "v1.6.19",
+          "v1.6.20",
+          "v1.6.21"
+        ],
+        "stale_reasons": []
+      }
+    },
+    {
       "name": "docs_command_contract",
       "command": [
         "python3",
         "scripts/docs_command_contract_check.py"
       ],
-      "rc": 1,
-      "status": "FAIL_REQUIRED",
+      "rc": 0,
+      "status": "PASS_REQUIRED",
       "error_code": "",
       "stdout_tail": [],
       "stderr_tail": [],
@@ -2049,15 +3436,15 @@
         "breakthrough_sequence_visual_atlas_governance_status": "PASS_REQUIRED",
         "error_code": "",
         "anti_scatter_scope_mode": "protocol_repo_internal_only",
-        "repo_root": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local",
-        "scan_root": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local",
+        "repo_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+        "scan_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
         "workspace_external_surfaces_in_scope": false,
         "workspace_external_scope_examples": [
           "activity/evidence/",
           "sibling-workspace staging copies"
         ],
-        "stream_doc_registry_entry": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.current.yaml",
-        "stream_doc_registry_active": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+        "stream_doc_registry_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.current.yaml",
+        "stream_doc_registry_active": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
         "stream_doc_registry_alias_error": "",
         "canonical_atlas_doc": "docs/references/identity-protocol-breakthrough-sequence-visual-atlas-v1.6.md",
         "canonical_asset_root": "docs/references/assets/identity-protocol-breakthrough-sequence-visual-atlas",
@@ -2090,15 +3477,15 @@
         "loop_visual_atlas_governance_status": "PASS_REQUIRED",
         "error_code": "",
         "anti_scatter_scope_mode": "protocol_repo_internal_only",
-        "repo_root": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local",
-        "scan_root": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local",
+        "repo_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+        "scan_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
         "workspace_external_surfaces_in_scope": false,
         "workspace_external_scope_examples": [
           "activity/evidence/",
           "sibling-workspace staging copies"
         ],
-        "stream_doc_registry_entry": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.current.yaml",
-        "stream_doc_registry_active": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+        "stream_doc_registry_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.current.yaml",
+        "stream_doc_registry_active": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
         "stream_doc_registry_alias_error": "",
         "canonical_atlas_doc": "docs/references/identity-protocol-loop-visual-atlas-v1.6.md",
         "canonical_asset_root": "docs/references/assets/identity-protocol-loop-visual-atlas",
@@ -2137,15 +3524,15 @@
         "artifact_family_visual_atlas_governance_status": "PASS_REQUIRED",
         "error_code": "",
         "anti_scatter_scope_mode": "protocol_repo_internal_only",
-        "repo_root": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local",
-        "scan_root": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local",
+        "repo_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+        "scan_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
         "workspace_external_surfaces_in_scope": false,
         "workspace_external_scope_examples": [
           "activity/evidence/",
           "sibling-workspace staging copies"
         ],
-        "stream_doc_registry_entry": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.current.yaml",
-        "stream_doc_registry_active": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+        "stream_doc_registry_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.current.yaml",
+        "stream_doc_registry_active": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
         "stream_doc_registry_alias_error": "",
         "canonical_atlas_doc": "docs/references/identity-protocol-artifact-family-routing-visual-atlas-v1.6.md",
         "canonical_asset_root": "docs/references/assets/identity-protocol-artifact-family-routing-visual-atlas",
@@ -2181,9 +3568,9 @@
       "payload": {
         "reference_visual_atlas_inventory_status": "PASS_REQUIRED",
         "error_code": "",
-        "repo_root": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local",
-        "atlas_registry_entry": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/reference-visual-atlas-registry.current.yaml",
-        "atlas_registry_active": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/reference-visual-atlas-registry.v1.6.yaml",
+        "repo_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+        "atlas_registry_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/reference-visual-atlas-registry.current.yaml",
+        "atlas_registry_active": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/reference-visual-atlas-registry.v1.6.yaml",
         "atlas_registry_active_file": "identity/protocol/mappings/reference-visual-atlas-registry.v1.6.yaml",
         "atlas_registry_alias_error": "",
         "inventory_doc": "docs/references/INDEX.md",
@@ -2213,18 +3600,50 @@
     }
   ],
   "summary": {
-    "check_count": 17,
-    "fail_count": 1,
+    "check_count": 26,
+    "fail_count": 0,
     "warn_count": 0,
-    "pass_count": 16
+    "pass_count": 26
   },
-  "control_plane_status": "FAIL_REQUIRED",
-  "promotion_ready": false,
-  "promotion_block_reasons": [
-    "docs_command_contract:FAIL_REQUIRED"
-  ],
-  "status_file_entry": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/control-plane-status.current.yaml",
-  "status_file": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/root-derivation-ws.pmKCt6/identity-protocol-local/identity/protocol/mappings/control-plane-status.v1.6.json",
-  "status_file_active_file": "identity/protocol/mappings/control-plane-status.v1.6.json",
-  "status_file_alias_error": ""
+  "surface_governance": {
+    "runtime_summary_surface_governance_status": "PASS_REQUIRED",
+    "surface_id": "control_plane_status_artifact",
+    "surface_label": "machine control-plane status artifact",
+    "surface_class": "outer_control_plane_status_surface",
+    "surface_scope": "control_plane_outer",
+    "law_bearing": false,
+    "transition_mode": "governed_motivation_only",
+    "direct_current_turn_legality_allowed": false,
+    "governed_verdict_kind": "machine_control_plane_status_summary",
+    "strengthening_gateways": [
+      "runtime_constitution",
+      "root_contract",
+      "machine_registry_directory"
+    ],
+    "current_authority_redirect_refs": [
+      "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
+      "identity/protocol/IDENTITY_PROTOCOL.md",
+      "identity/protocol/IDENTITY_RUNTIME.md",
+      "identity/protocol/mappings/contract-binding.current.yaml",
+      "identity/protocol/mappings/control-plane-status.current.yaml",
+      "identity/protocol/mappings/control-plane-budget.current.yaml",
+      "identity/protocol/mappings/workbook-registry.current.yaml"
+    ],
+    "forbidden_replacements": [
+      "root_law_owner",
+      "direct_validator_receipt",
+      "fleet_scope_closure_matrix",
+      "release_tag_authority",
+      "current_pointer_ssot",
+      "historical_replay_authority"
+    ],
+    "derived_summary_as_truth_forbidden": true,
+    "historical_accident_as_resolution_forbidden": true,
+    "authority_rule": "The machine control-plane status artifact is a derived aggregate control-plane status surface; it may compress machine gate state for operator visibility, but it must not replace root-law owners, direct validator receipts, current-pointer SSOT, or historical replay authority.",
+    "operator_interpretation_rule": "Treat the control-plane status artifact as a bounded machine-generated control-plane snapshot derived from underlying validators and current mappings; it is suitable for visibility and sync checks, but must not be promoted into standalone semantic authority."
+  },
+  "control_plane_status": "PASS_REQUIRED",
+  "promotion_ready": true,
+  "promotion_block_reasons": [],
+  "selected_check_names": []
 }

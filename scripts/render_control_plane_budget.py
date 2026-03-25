@@ -9,6 +9,7 @@ from typing import Any
 
 import yaml
 from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
+from repo_root_resolution_common import resolve_repo_root
 
 import validate_control_plane_budget as budget_mod
 
@@ -119,8 +120,65 @@ def _build_next_budget(*, current_doc: dict[str, Any], observed: dict[str, Any])
     return next_doc
 
 
+def build_budget_snapshot(
+    repo_root: Path,
+    *,
+    budget_file: str = DEFAULT_BUDGET_ENTRY,
+) -> dict[str, Any]:
+    budget_entry_path = (repo_root / budget_file).resolve()
+    budget_path, active_file, alias_error = budget_mod._resolve_current_yaml_alias(repo_root, budget_file)
+    snapshot: dict[str, Any] = {
+        "repo_root": str(repo_root),
+        "budget_entry_file": str(budget_entry_path),
+        "budget_file": str(budget_path),
+        "budget_file_active_file": active_file,
+        "budget_file_alias_error": alias_error,
+        "surface_governance": build_governed_runtime_summary_surface_payload("control_plane_budget_artifact"),
+        "current_doc": {},
+        "observed": {},
+        "next_doc": {},
+        "stale_reasons": [],
+    }
+    if alias_error:
+        snapshot["stale_reasons"].append(f"budget_alias_error:{alias_error}")
+        return snapshot
+    if not budget_path.exists() or not budget_path.is_file():
+        snapshot["stale_reasons"].append("budget_file_missing")
+        return snapshot
+
+    current_doc = yaml.safe_load(budget_path.read_text(encoding="utf-8")) or {}
+    if not isinstance(current_doc, dict):
+        current_doc = {}
+
+    observed = _collect_observed(repo_root)
+    next_doc = _build_next_budget(current_doc=current_doc, observed=observed)
+    snapshot["current_doc"] = current_doc
+    snapshot["observed"] = observed
+    snapshot["next_doc"] = next_doc
+    return snapshot
+
+
+def resolve_budget_target(
+    repo_root: Path,
+    *,
+    budget_file: str = DEFAULT_BUDGET_ENTRY,
+) -> tuple[Path, str, str]:
+    return budget_mod._resolve_current_yaml_alias(repo_root, str(budget_file))
+
+
+def persist_budget_snapshot(snapshot: dict[str, Any]) -> Path:
+    budget_path = Path(str(snapshot.get("budget_file") or "")).expanduser().resolve()
+    next_doc = snapshot.get("next_doc") or {}
+    if not isinstance(next_doc, dict):
+        raise ValueError("budget_snapshot_missing_next_doc")
+    budget_path.parent.mkdir(parents=True, exist_ok=True)
+    budget_path.write_text(yaml.safe_dump(next_doc, sort_keys=False, allow_unicode=True), encoding="utf-8")
+    return budget_path
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Render/sync control-plane budget from live observed metrics.")
+    ap.add_argument("--repo-root", default="", help="Optional repo root override for shadow/probe execution")
     ap.add_argument(
         "--budget-file",
         default=DEFAULT_BUDGET_ENTRY,
@@ -130,45 +188,42 @@ def main() -> int:
     ap.add_argument("--json-only", action="store_true", help="Emit single-line JSON payload")
     args = ap.parse_args()
 
-    repo_root = Path(__file__).resolve().parents[1]
-    budget_path, active_file, alias_error = budget_mod._resolve_current_yaml_alias(repo_root, args.budget_file)
+    repo_root = resolve_repo_root(args.repo_root, start=__file__)
+    snapshot = build_budget_snapshot(repo_root, budget_file=args.budget_file)
+    budget_path = Path(snapshot["budget_file"])
+    active_file = str(snapshot.get("budget_file_active_file", ""))
+    alias_error = str(snapshot.get("budget_file_alias_error", ""))
 
     payload: dict[str, Any] = {
         "render_control_plane_budget_status": "PASS_REQUIRED",
         "error_code": "",
-        "budget_entry_file": str((repo_root / args.budget_file).resolve()),
-        "budget_file": str(budget_path),
+        "budget_entry_file": str(snapshot["budget_entry_file"]),
+        "budget_file": str(snapshot["budget_file"]),
         "budget_file_active_file": active_file,
         "budget_file_alias_error": alias_error,
         "write_applied": False,
-        "observed": {},
+        "repo_root": str(repo_root),
+        "observed": dict(snapshot.get("observed") or {}),
         "before": {},
         "after": {},
-        "stale_reasons": [],
+        "stale_reasons": list(snapshot.get("stale_reasons") or []),
+        "surface_governance": snapshot["surface_governance"],
     }
 
     if alias_error:
         payload["render_control_plane_budget_status"] = "FAIL_REQUIRED"
         payload["error_code"] = "IP-CP-BUDGET-001"
-        payload["stale_reasons"].append(f"budget_alias_error:{alias_error}")
         print(json.dumps(payload, ensure_ascii=False) if args.json_only else json.dumps(payload, ensure_ascii=False, indent=2))
         return 1
 
     if not budget_path.exists() or not budget_path.is_file():
         payload["render_control_plane_budget_status"] = "FAIL_REQUIRED"
         payload["error_code"] = "IP-CP-BUDGET-001"
-        payload["stale_reasons"].append("budget_file_missing")
         print(json.dumps(payload, ensure_ascii=False) if args.json_only else json.dumps(payload, ensure_ascii=False, indent=2))
         return 1
 
-    current_doc = yaml.safe_load(budget_path.read_text(encoding="utf-8")) or {}
-    if not isinstance(current_doc, dict):
-        current_doc = {}
-
-    observed = _collect_observed(repo_root)
-    next_doc = _build_next_budget(current_doc=current_doc, observed=observed)
-
-    payload["observed"] = observed
+    current_doc = dict(snapshot.get("current_doc") or {})
+    next_doc = dict(snapshot.get("next_doc") or {})
     payload["before"] = {
         "last_updated_utc": current_doc.get("last_updated_utc", ""),
         "budgets": current_doc.get("budgets", {}),
@@ -179,10 +234,9 @@ def main() -> int:
         "budgets": next_doc.get("budgets", {}),
         "convergence_guard": next_doc.get("convergence_guard", {}),
     }
-    payload["surface_governance"] = build_governed_runtime_summary_surface_payload("control_plane_budget_artifact")
 
     if args.write:
-        budget_path.write_text(yaml.safe_dump(next_doc, sort_keys=False, allow_unicode=True), encoding="utf-8")
+        persist_budget_snapshot(snapshot)
         payload["write_applied"] = True
 
     if args.json_only:

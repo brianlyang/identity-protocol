@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 102`, `command snippets checked: 1068`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 102`, `command snippets checked: 1081`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -1021,7 +1021,7 @@ Root cause:
   - `scripts/validate_identity_context_continuity_receipts.py` now emits `required_contract`, `auto_required_signal`, `contract_key`, `contract_id`, and `contract_derivation_mode`, and it now fail-closes non-canonical receipt-family binding drift with `IP-ICREC-005`;
   - `scripts/ci/run_identity_context_continuity_probes_ci.sh` now proves both the positive bundle-compatible projection and a negative contract-drift fixture while keeping the existing multi-hop join proof intact;
   - direct live replay on `base-repo-audit-expert-v3` now returns `bundle_status=PASS_REQUIRED` for `python3 scripts/required_gate_bundle_runner.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --operation scan --target-name identity_context_continuity_receipts --json-only`;
-  - `python3 scripts/render_control_plane_budget.py --write --json-only` and `python3 scripts/render_control_plane_status.py --write --json-only` now re-anchor the final `1.6.x` release-freeze baseline to `error_codes=575`, and both `scripts/validate_control_plane_budget.py --json-only` and `scripts/validate_control_plane_status_sync.py --json-only` return `PASS_REQUIRED`;
+  - `python3 scripts/materialize_control_plane_surfaces.py --write --json-only` now re-anchors the final `1.6.x` release-freeze baseline through the canonical sequenced control-plane materializer, delegating budget refresh before status refresh so `scripts/validate_control_plane_budget.py --json-only` and `scripts/validate_control_plane_status_sync.py --json-only` both return `PASS_REQUIRED` without write-order races or hand-edited shortcuts;
   - `docs/governance/identity-v1.6x-release-closure-governance.md` plus `docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md` now freeze the version-boundary law that `1.6.x` must close current-universe debt on root / machine / runtime terms before `1.7.x` is allowed to begin as a future-facing line.
 
 ### ISSUE-037 - Weak live linkage closure is now machine-landed across trio/prompt/sample/loop consumer lanes

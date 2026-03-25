@@ -83,11 +83,26 @@ Required reading rule:
 - hermetic proof is not runtime closure;
 - runtime closure is not clean terminal truth;
 - clean terminal truth is not canonical publishability;
+- the **repair lane** is not the **terminal-truth observation lane**;
+- the **creator/update admission lane** may still block on dirty current-run terminal truth after repair;
+- `repair success != clean terminal truth`;
 - runtime/fleet residual work must not be back-projected into already-closed shared owner semantics without a real shared-law defect.
 - three-plane verdict remains a governed outer runtime-state surface;
 - `scripts/report_three_plane_status.py` may emit the current cross-plane verdict, but it must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.
 - `scripts/release_readiness_check.py --summary-out`, when emitted, remains a governed outer runtime-state summary surface and must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.
 - `scripts/full_identity_protocol_scan.py` remains a governed outer runtime-state scan summary surface and must not replace root-law owners, direct validator receipts, fleet-scope closure matrices, or historical replay authority.
+- `scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh` is the dedicated additive machine-law freeze that verifies these outer surfaces emit the terminal-truth split as machine-readable payload, not as operator memory.
+- the three-plane surface must expose `terminal_truth_boundary_projection`, and the instance payload must preserve the same split under `instance_plane_detail.terminal_truth_boundary_projection`.
+- the release-readiness summary must expose `terminal_truth_boundary_projection` and compress the same boundary into one-look fields including `one_look.terminal_truth_boundary_projection_status`.
+- the full-scan surface must expose per-row `three_plane_terminal_truth_boundary_projection` and aggregate `summary_terminal_truth_boundary`.
+- `ASB16-RQ-006` release-plane cloud evidence must expose whether it came from materialized input or live fetch; for local replay, materialized GH/check payloads are canonical, while shell/API fetchers remain transport helpers rather than semantic owners.
+- the canonical sequenced control-plane refresh lane is `scripts/materialize_control_plane_surfaces.py`; release-readiness may project that lane for one-look health, but the projection remains derived and must not replace direct control-plane validator receipts or the live canonical artifacts.
+
+This freeze includes the late-`1.6.x` post-execution boundary:
+
+1. shared repair executors may restore mandatory writeback/report projection fields and still remain non-owners of clean terminal truth;
+2. the **terminal-truth observation lane** keeps direct fail-close authority for non-clean current-run reports;
+3. the **creator/update admission lane** must continue to block when contract backfill observes dirty terminal truth, even after repair projection succeeded.
 
 ## 6) What this summary authorizes
 

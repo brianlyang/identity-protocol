@@ -33,6 +33,13 @@ run_global_protocol_gates() {
   run_cmd python3 scripts/validate_required_gate_surface_drift.py --json-only
   run_cmd python3 scripts/sync_plugin_join_wiring.py --check --json-only
   run_cmd python3 scripts/docs_command_contract_check.py
+  run_cmd python3 scripts/validate_control_plane_budget_sync.py --json-only
+  run_cmd bash scripts/ci/run_control_plane_budget_sync_probes_ci.sh
+  run_cmd bash scripts/ci/run_control_plane_surface_materialization_probes_ci.sh
+  run_cmd bash scripts/ci/run_release_doc_surface_governance_probes_ci.sh
+  run_cmd bash scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh
+  run_cmd bash scripts/ci/run_v16x_release_closure_summary_probes_ci.sh
+  run_cmd bash scripts/ci/run_release_closure_control_plane_status_probes_ci.sh
   run_cmd python3 scripts/validate_issue_register_consistency.py --json-only
   run_cmd python3 scripts/validate_identity_switch_closure_semantics.py --catalog "${CATALOG_PATH}" --json-only
   run_cmd bash scripts/ci/run_identity_context_continuity_probes_ci.sh
@@ -40,6 +47,10 @@ run_global_protocol_gates() {
   run_cmd bash scripts/ci/run_identity_artifact_family_routing_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_weak_live_linkage_probes_ci.sh
   run_cmd bash scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh
+  run_cmd bash scripts/ci/run_post_execution_report_repair_probes_ci.sh
+  run_cmd bash scripts/ci/run_identity_update_preflight_terminal_truth_split_probes_ci.sh
+  run_cmd bash scripts/ci/run_terminal_truth_boundary_projection_probes_ci.sh
+  run_cmd bash scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_broadcast_delivery_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_communication_transport_probes_ci.sh
   run_cmd bash scripts/ci/run_executable_surface_runtime_literal_lock_probes_ci.sh
@@ -181,6 +192,7 @@ for ID in ${IDS}; do
   python3 scripts/validate_run_id_report_selection.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --run-id "${GITHUB_RUN_ID:-ci-local}" --operation ci --json-only
   python3 scripts/validate_phase_bootstrap_before_strict.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
   python3 scripts/validate_tmp_collision_safety.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --run-id "${GITHUB_RUN_ID:-ci-local}" --operation ci --json-only
+  python3 scripts/materialize_contract_bootstrap_emitters.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --apply --json-only
   python3 scripts/validate_handoff_collab_freshness_rotation.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
   python3 scripts/validate_protocol_feedback_atomic_emit.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
   python3 scripts/validate_capability_boundary_classification.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --operation ci --json-only
@@ -289,6 +301,40 @@ if release_conditions.get("required_checks_all_success") is not False:
 
 print("[OK] release-plane baseline normalization assertion passed: baseline_known_missing_cloud_evidence=>BLOCKED")
 
+baseline_unlinked_probe = subprocess.run(
+    [
+        sys.executable,
+        "scripts/validate_release_plane_cloud_evidence.py",
+        "--identity-id",
+        identity_id,
+        "--catalog",
+        catalog_path,
+        "--operation",
+        "update",
+        "--force-required",
+        "--json-only",
+    ],
+    capture_output=True,
+    text=True,
+    check=False,
+)
+try:
+    baseline_unlinked_payload = json.loads(baseline_unlinked_probe.stdout)
+except Exception as exc:
+    raise SystemExit(f"[FAIL] unable to parse release cloud evidence baseline-unlinked probe output: {exc}")
+
+if baseline_unlinked_probe.returncode != 0:
+    raise SystemExit("[FAIL] expected release cloud evidence baseline-unlinked probe to skip rather than fail")
+if str(baseline_unlinked_payload.get("release_plane_cloud_evidence_status", "")).strip().upper() != "SKIPPED_NOT_REQUIRED":
+    raise SystemExit("[FAIL] expected release_plane_cloud_evidence_status=SKIPPED_NOT_REQUIRED when release baseline is absent")
+if (
+    "required_contract_not_applicable_missing_release_evidence"
+    not in {str(x).strip() for x in (baseline_unlinked_payload.get("stale_reasons") or []) if str(x).strip()}
+):
+    raise SystemExit("[FAIL] expected canonical missing-release-evidence skip reason when release baseline is absent")
+
+print("[OK] release cloud evidence baseline-unlinked assertion passed: missing_release_evidence=>SKIPPED_NOT_REQUIRED")
+
 probe = subprocess.run(
     [
         sys.executable,
@@ -342,6 +388,7 @@ with tempfile.TemporaryDirectory(prefix="release-cloud-evidence-ci-") as tmpdir:
     empty_checks_path = os.path.join(tmpdir, "checks-empty.json")
     failed_checks_path = os.path.join(tmpdir, "checks-failed.json")
     jobs_pass_path = os.path.join(tmpdir, "jobs-pass.json")
+    gh_runs_pass_path = os.path.join(tmpdir, "gh-runs-pass.json")
 
     with open(empty_checks_path, "w", encoding="utf-8") as fh:
         json.dump({"required_checks_set": []}, fh)
@@ -355,6 +402,42 @@ with tempfile.TemporaryDirectory(prefix="release-cloud-evidence-ci-") as tmpdir:
                     {"id": 2, "name": "lint", "status": "completed", "conclusion": "success"},
                 ]
             },
+            fh,
+        )
+    with open(gh_runs_pass_path, "w", encoding="utf-8") as fh:
+        json.dump(
+            [
+                {
+                    "databaseId": 300,
+                    "headBranch": github_ref_name,
+                    "headSha": head_sha,
+                    "url": "https://github.com/example/repo/actions/runs/300",
+                    "workflowName": "protocol-ci",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "createdAt": "2026-03-25T00:02:00Z",
+                },
+                {
+                    "databaseId": 250,
+                    "headBranch": github_ref_name,
+                    "headSha": head_sha,
+                    "url": "https://github.com/example/repo/actions/runs/250",
+                    "workflowName": "protocol-ci",
+                    "status": "completed",
+                    "conclusion": "failure",
+                    "createdAt": "2026-03-25T00:01:00Z",
+                },
+                {
+                    "databaseId": 200,
+                    "headBranch": github_ref_name,
+                    "headSha": head_sha,
+                    "url": "https://github.com/example/repo/actions/runs/200",
+                    "workflowName": "identity-protocol-ci",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "createdAt": "2026-03-25T00:00:00Z",
+                },
+            ],
             fh,
         )
 
@@ -459,8 +542,136 @@ with tempfile.TemporaryDirectory(prefix="release-cloud-evidence-ci-") as tmpdir:
         raise SystemExit("[FAIL] expected release_plane_cloud_evidence_status=PASS_REQUIRED for jobs-json probe")
     if str(jobs_payload.get("release_cloud_evidence_adapter_status", "")).strip().upper() != "PASS_REQUIRED":
         raise SystemExit("[FAIL] expected release_cloud_evidence_adapter_status=PASS_REQUIRED for jobs-json probe")
+    if str(jobs_payload.get("release_cloud_evidence_adapter_acquisition_mode", "")).strip() != "materialized_input":
+        raise SystemExit("[FAIL] expected jobs-json probe to expose materialized_input acquisition mode")
+    if not bool(jobs_payload.get("release_cloud_evidence_adapter_local_dev_canonical", False)):
+        raise SystemExit("[FAIL] expected jobs-json probe to expose local-dev canonical materialized evidence")
     if str((jobs_payload.get("conditions") or {}).get("required_checks_status", "")).strip().upper() != "PASS":
         raise SystemExit("[FAIL] expected required_checks_status=PASS for jobs-json probe")
+
+    sys.path.insert(0, str(Path(os.getcwd()) / "scripts"))
+    import resolve_release_plane_cloud_evidence as release_adapter_mod
+
+    original_fetch_gh_run_list = release_adapter_mod._fetch_gh_run_list
+    try:
+        release_adapter_mod._fetch_gh_run_list = lambda **kwargs: (
+            [
+                {
+                    "databaseId": 300,
+                    "headBranch": github_ref_name,
+                    "headSha": head_sha,
+                    "url": "https://github.com/example/repo/actions/runs/300",
+                    "workflowName": "protocol-ci",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "createdAt": "2026-03-25T00:02:00Z",
+                },
+                {
+                    "databaseId": 250,
+                    "headBranch": github_ref_name,
+                    "headSha": head_sha,
+                    "url": "https://github.com/example/repo/actions/runs/250",
+                    "workflowName": "protocol-ci",
+                    "status": "completed",
+                    "conclusion": "failure",
+                    "createdAt": "2026-03-25T00:01:00Z",
+                },
+                {
+                    "databaseId": 200,
+                    "headBranch": github_ref_name,
+                    "headSha": head_sha,
+                    "url": "https://github.com/example/repo/actions/runs/200",
+                    "workflowName": "identity-protocol-ci",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "createdAt": "2026-03-25T00:00:00Z",
+                },
+                {
+                    "databaseId": 150,
+                    "headBranch": "other-branch",
+                    "headSha": head_sha,
+                    "url": "https://github.com/example/repo/actions/runs/150",
+                    "workflowName": "foreign-workflow",
+                    "status": "completed",
+                    "conclusion": "failure",
+                    "createdAt": "2026-03-24T23:59:00Z",
+                },
+            ],
+            "",
+        )
+        gh_aggregate_payload = release_adapter_mod.resolve_release_cloud_evidence(
+            identity_id=identity_id,
+            operation="ci",
+            target_branch=github_ref_name,
+            release_head_sha=head_sha,
+            required_gates_run_id="",
+            run_url="",
+            checks_json="",
+            jobs_json="",
+            github_repository="example/repo",
+            github_server_url="https://github.com",
+            github_token_env="MISSING_GITHUB_TOKEN_FOR_PROBE",
+        )
+    finally:
+        release_adapter_mod._fetch_gh_run_list = original_fetch_gh_run_list
+
+    if str(gh_aggregate_payload.get("release_cloud_evidence_adapter_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("[FAIL] expected gh-run-list aggregate adapter probe to pass")
+    if str(gh_aggregate_payload.get("adapter_source_kind", "")).strip() != "gh_run_list_commit_aggregate":
+        raise SystemExit("[FAIL] expected gh-run-list aggregate adapter source kind")
+    if str(gh_aggregate_payload.get("required_gates_run_id", "")).strip() != "300":
+        raise SystemExit("[FAIL] expected newest matching gh workflow run to become carrier run")
+    if int(gh_aggregate_payload.get("required_checks_count", 0) or 0) != 2:
+        raise SystemExit("[FAIL] expected gh-run-list aggregate probe to de-duplicate workflow names")
+
+    gh_runs_probe = subprocess.run(
+        [
+            sys.executable,
+            "scripts/validate_release_plane_cloud_evidence.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog_path,
+            "--target-branch",
+            github_ref_name,
+            "--release-head-sha",
+            head_sha,
+            "--workflow-file-sha",
+            head_sha,
+            "--run-head-sha",
+            head_sha,
+            "--run-workflow-file-sha",
+            head_sha,
+            "--gh-runs-json",
+            gh_runs_pass_path,
+            "--operation",
+            "ci",
+            "--force-required",
+            "--json-only",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    try:
+        gh_runs_payload = json.loads(gh_runs_probe.stdout)
+    except Exception as exc:
+        raise SystemExit(f"[FAIL] unable to parse release gh-runs probe output: {exc}")
+
+    if gh_runs_probe.returncode != 0:
+        raise SystemExit("[FAIL] expected gh-runs-json release evidence probe to pass")
+    if str(gh_runs_payload.get("release_plane_cloud_evidence_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("[FAIL] expected release_plane_cloud_evidence_status=PASS_REQUIRED for gh-runs-json probe")
+    if str(gh_runs_payload.get("release_cloud_evidence_adapter_source_kind", "")).strip() != "gh_run_list_json":
+        raise SystemExit("[FAIL] expected gh-runs-json adapter source kind")
+    if str(gh_runs_payload.get("release_cloud_evidence_adapter_acquisition_mode", "")).strip() != "materialized_input":
+        raise SystemExit("[FAIL] expected gh-runs-json probe to expose materialized_input acquisition mode")
+    if not bool(gh_runs_payload.get("release_cloud_evidence_adapter_local_dev_canonical", False)):
+        raise SystemExit("[FAIL] expected gh-runs-json probe to expose local-dev canonical materialized evidence")
+    if str(gh_runs_payload.get("required_gates_run_id", "")).strip() != "300":
+        raise SystemExit("[FAIL] expected gh-runs-json probe to select newest matching carrier run")
+    if str((gh_runs_payload.get("conditions") or {}).get("required_checks_status", "")).strip().upper() != "PASS":
+        raise SystemExit("[FAIL] expected required_checks_status=PASS for gh-runs-json probe")
 
     jobs_three_plane_path = os.path.join(tmpdir, "three-plane-jobs-pass.json")
     jobs_three_plane = subprocess.run(
@@ -509,6 +720,56 @@ with tempfile.TemporaryDirectory(prefix="release-cloud-evidence-ci-") as tmpdir:
     adapter_payload = jobs_three_plane_payload.get("release_cloud_evidence_adapter") or {}
     if str(adapter_payload.get("release_cloud_evidence_adapter_status", "")).strip().upper() != "PASS_REQUIRED":
         raise SystemExit("[FAIL] expected three-plane adapter status PASS_REQUIRED for jobs-json probe")
+    if str(adapter_payload.get("adapter_acquisition_mode", "")).strip() != "materialized_input":
+        raise SystemExit("[FAIL] expected three-plane jobs-json adapter acquisition mode materialized_input")
+    if not bool(adapter_payload.get("adapter_local_dev_canonical", False)):
+        raise SystemExit("[FAIL] expected three-plane jobs-json adapter to expose local-dev canonical materialized evidence")
+
+    gh_runs_three_plane_path = os.path.join(tmpdir, "three-plane-gh-runs-pass.json")
+    gh_runs_three_plane = subprocess.run(
+        [
+            sys.executable,
+            "scripts/report_three_plane_status.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog_path,
+            "--repo-catalog",
+            repo_catalog_path,
+            "--actor-id",
+            headstamp_actor_id,
+            "--session-id",
+            headstamp_session_id,
+            "--target-branch",
+            github_ref_name,
+            "--release-head-sha",
+            head_sha,
+            "--workflow-file-sha",
+            head_sha,
+            "--run-head-sha",
+            head_sha,
+            "--run-workflow-file-sha",
+            head_sha,
+            "--gh-runs-json",
+            gh_runs_pass_path,
+            "--out",
+            gh_runs_three_plane_path,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if gh_runs_three_plane.returncode != 0:
+        raise SystemExit("[FAIL] expected gh-runs-json three-plane probe to complete successfully")
+    with open(gh_runs_three_plane_path, encoding="utf-8") as fh:
+        gh_runs_three_plane_payload = json.load(fh)
+    if str(gh_runs_three_plane_payload.get("release_plane_status", "")).strip().upper() != "CLOSED":
+        raise SystemExit("[FAIL] expected release_plane_status=CLOSED for gh-runs-json three-plane probe")
+    gh_three_plane_adapter = gh_runs_three_plane_payload.get("release_cloud_evidence_adapter") or {}
+    if str(gh_three_plane_adapter.get("adapter_acquisition_mode", "")).strip() != "materialized_input":
+        raise SystemExit("[FAIL] expected gh-runs-json three-plane adapter acquisition mode materialized_input")
+    if not bool(gh_three_plane_adapter.get("adapter_local_dev_canonical", False)):
+        raise SystemExit("[FAIL] expected gh-runs-json three-plane adapter to expose local-dev canonical materialized evidence")
 
     repo_root = os.getcwd()
     full_scan_script = Path(repo_root) / "scripts" / "full_identity_protocol_scan.py"

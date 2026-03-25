@@ -10,7 +10,13 @@ from typing import Any
 
 import yaml
 
-from render_control_plane_status import build_status
+from render_control_plane_status import (
+    STATUS_FAIL_REQUIRED as CONTROL_PLANE_STATUS_FAIL_REQUIRED,
+    STATUS_PASS_REQUIRED as CONTROL_PLANE_STATUS_PASS_REQUIRED,
+    STATUS_PASS_WITH_BLOCKERS as CONTROL_PLANE_STATUS_PASS_WITH_BLOCKERS,
+    STATUS_WARN_NON_BLOCKING as CONTROL_PLANE_STATUS_WARN_NON_BLOCKING,
+    build_status,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -27,6 +33,8 @@ VOLATILE_PAYLOAD_KEY_SUFFIXES = (
 VOLATILE_PAYLOAD_KEY_TOKENS = (
     "timestamp",
     "generated_at",
+    "current_last_updated_utc",
+    "live_last_updated_utc",
     "stdout_tail",
     "stderr_tail",
     "catalog_path",
@@ -70,6 +78,43 @@ def _index_checks(doc: dict[str, Any]) -> dict[str, dict[str, Any]]:
             continue
         out[name] = node
     return out
+
+
+def _derive_filtered_overall_status(checks: list[dict[str, Any]]) -> tuple[str, bool, list[str]]:
+    statuses = [str(item.get("status", "")).strip() for item in checks]
+    reasons: list[str] = []
+    if any(status == CONTROL_PLANE_STATUS_FAIL_REQUIRED for status in statuses):
+        for item in checks:
+            if item.get("status") == CONTROL_PLANE_STATUS_FAIL_REQUIRED:
+                reasons.append(f"{item.get('name')}:FAIL_REQUIRED")
+        return CONTROL_PLANE_STATUS_FAIL_REQUIRED, False, reasons
+    if any(status == CONTROL_PLANE_STATUS_WARN_NON_BLOCKING for status in statuses):
+        for item in checks:
+            if item.get("status") == CONTROL_PLANE_STATUS_WARN_NON_BLOCKING:
+                reasons.append(f"{item.get('name')}:WARN_NON_BLOCKING")
+        return CONTROL_PLANE_STATUS_PASS_WITH_BLOCKERS, False, reasons
+    return CONTROL_PLANE_STATUS_PASS_REQUIRED, True, reasons
+
+
+def _filter_doc_to_check_subset(doc: dict[str, Any], check_names: tuple[str, ...]) -> dict[str, Any]:
+    if not check_names:
+        return doc
+    include_set = set(check_names)
+    filtered = dict(doc)
+    checks = [row for row in (doc.get("checks") or []) if isinstance(row, dict) and str(row.get("name", "")).strip() in include_set]
+    overall_status, promotion_ready, reasons = _derive_filtered_overall_status(checks)
+    filtered["checks"] = checks
+    filtered["summary"] = {
+        "check_count": len(checks),
+        "fail_count": sum(1 for row in checks if row.get("status") == CONTROL_PLANE_STATUS_FAIL_REQUIRED),
+        "warn_count": sum(1 for row in checks if row.get("status") == CONTROL_PLANE_STATUS_WARN_NON_BLOCKING),
+        "pass_count": sum(1 for row in checks if row.get("status") == CONTROL_PLANE_STATUS_PASS_REQUIRED),
+    }
+    filtered["control_plane_status"] = overall_status
+    filtered["promotion_ready"] = promotion_ready
+    filtered["promotion_block_reasons"] = reasons
+    filtered["selected_check_names"] = list(check_names)
+    return filtered
 
 
 def _is_volatile_payload_key(key: str) -> bool:
@@ -137,8 +182,13 @@ def main() -> int:
         "--status-file",
         default="identity/protocol/mappings/control-plane-status.current.yaml",
     )
+    parser.add_argument("--check-name", action="append", default=[])
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
+
+    selected_check_names = tuple(
+        str(name).strip() for name in (args.check_name or []) if str(name).strip()
+    )
 
     repo_root = resolve_repo_root(args.repo_root, start=__file__)
     status_entry_path = (repo_root / str(args.status_file)).resolve()
@@ -160,7 +210,8 @@ def main() -> int:
     else:
         current_doc = _load_json(status_path)
 
-    live_doc = build_status(repo_root)
+    live_doc = build_status(repo_root, include_check_names=selected_check_names)
+    current_doc = _filter_doc_to_check_subset(current_doc, selected_check_names)
     current_norm = _canonicalize(current_doc)
     live_norm = _canonicalize(live_doc)
 
@@ -237,6 +288,7 @@ def main() -> int:
         "stale_reasons": stale_reasons,
         "live_control_plane_status": live_norm.get("control_plane_status"),
         "file_control_plane_status": current_norm.get("control_plane_status"),
+        "selected_check_names": list(selected_check_names),
     }
 
     if args.json_only:

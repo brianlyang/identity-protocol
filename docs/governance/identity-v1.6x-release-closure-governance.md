@@ -117,6 +117,32 @@ Interpretive consequence:
 3. `scripts/release_readiness_check.py --summary-out`, when emitted, remains a governed outer runtime-state summary surface and must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.
 4. `scripts/full_identity_protocol_scan.py` remains a governed outer runtime-state scan summary surface and must not replace root-law owners, direct validator receipts, fleet-scope closure matrices, or historical replay authority.
 5. All three surfaces must self-describe this boundary in machine-readable payload form rather than relying on operator memory.
+6. `scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh` is the dedicated additive freeze for this requirement and must keep verifying:
+   - `scripts/report_three_plane_status.py` emits `terminal_truth_boundary_projection` and preserves the same split in `instance_plane_detail.terminal_truth_boundary_projection`;
+   - `scripts/release_readiness_check.py --summary-out` emits `terminal_truth_boundary_projection` and compresses it into one-look fields such as `one_look.terminal_truth_boundary_projection_status`;
+   - `scripts/full_identity_protocol_scan.py` emits per-row `three_plane_terminal_truth_boundary_projection` and aggregate `summary_terminal_truth_boundary`.
+7. `ASB16-RQ-006` release-plane cloud evidence must also self-describe its acquisition boundary:
+   - materialized external evidence (`checks_json`, `jobs_json`, `gh-runs-json`) is the canonical local replay surface;
+   - protocol consumers remain the semantic aggregation authority;
+   - shell/API live fetch paths are acquisition mechanisms only and must not be overclaimed as stronger semantic truth than the materialized evidence they produce.
+8. The canonical sequenced refresh lane for release-boundary control-plane artifacts is `python3 scripts/materialize_control_plane_surfaces.py --write --json-only`; release-readiness may dry-run the same machine action for health projection, but that projection must not replace the direct control-plane validators or the current canonical files themselves.
+
+### 4.2 Repair / observation / admission split remains frozen
+
+`v1.6.21` also freezes one release-boundary reading rule that must stay explicit across `1.6.x` closure:
+
+1. the **repair lane** may pass when shared post-execution repair successfully restores mandatory writeback/runtime projection fields;
+2. the **terminal-truth observation lane** remains the direct owner of clean terminal truth and canonical publishability verdicts;
+3. the **creator/update admission lane** may still block when contract backfill observes a non-clean current run, even if the repair lane is green;
+4. `repair success != clean terminal truth`;
+5. dirty current-run terminal truth must not be upgraded into admissible update closure merely because a repair executor projected mandatory fields successfully.
+
+Frozen consequence:
+
+1. `scripts/repair_identity_post_execution_mandatory.py` is a shared repair executor, not the clean-terminal-truth owner;
+2. `scripts/validate_terminal_truth_cleanliness.py` keeps fail-close authority over non-clean terminal truth;
+3. `scripts/repair_contract_backfill.py` may therefore fail update preflight on terminal-truth projection even when repair projection succeeded;
+4. shared probes must preserve this split rather than collapsing it back into “repair executor failed”.
 
 ## 5) Release-closure and future-admission rule
 
@@ -132,7 +158,11 @@ Interpretive consequence:
 1. three-plane verdict remains a governed outer runtime-state surface.
 2. `scripts/report_three_plane_status.py` may emit the current cross-plane verdict, but it must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.
 3. `scripts/release_readiness_check.py --summary-out`, when emitted, remains a governed outer runtime-state summary surface and must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.
-4. Both surfaces must self-describe this boundary in machine-readable payload form rather than relying on operator memory.
+4. `scripts/full_identity_protocol_scan.py` remains a governed outer runtime-state scan summary surface and must not replace root-law owners, direct validator receipts, fleet-scope closure matrices, or historical replay authority.
+5. `scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh` must keep the three surfaces above honest by verifying `terminal_truth_boundary_projection`, `three_plane_terminal_truth_boundary_projection`, and `summary_terminal_truth_boundary` on real emitted payloads.
+6. All three surfaces must self-describe this boundary in machine-readable payload form rather than relying on operator memory.
+7. Release-plane cloud evidence summaries must expose whether their evidence came from materialized input or live fetch, so local replay never depends on operator memory about `gh`/API transport behavior.
+8. The canonical control-plane refresh sequence remains owned by `scripts/materialize_control_plane_surfaces.py`; summary surfaces may project its health, but they must not silently collapse direct validator receipts into derived prose.
 
 ## 6) Frozen one-line version law
 

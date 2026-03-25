@@ -26,6 +26,7 @@ STATUS_ARTIFACT_PAYLOAD_DROP_TOKENS = (
     "forbidden_default_literals",
     "forbidden_default_hits",
 )
+DEFAULT_STATUS_ENTRY = "identity/protocol/mappings/control-plane-status.current.yaml"
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,11 @@ BASE_CHECKS: tuple[CheckSpec, ...] = (
         name="control_plane_budget",
         command=("python3", "scripts/validate_control_plane_budget.py", "--json-only"),
         status_key="control_plane_budget_status",
+    ),
+    CheckSpec(
+        name="control_plane_budget_sync",
+        command=("python3", "scripts/validate_control_plane_budget_sync.py", "--json-only"),
+        status_key="control_plane_budget_sync_status",
     ),
     CheckSpec(
         name="control_plane_invariants",
@@ -112,6 +118,26 @@ BASE_CHECKS: tuple[CheckSpec, ...] = (
         status_key="protocol_broadcast_doc_control_status",
     ),
     CheckSpec(
+        name="protocol_governed_subdomain_doc_control_registry",
+        command=("python3", "scripts/validate_protocol_governed_subdomain_doc_control_registry.py", "--json-only"),
+        status_key="protocol_governed_subdomain_doc_control_registry_status",
+    ),
+    CheckSpec(
+        name="release_doc_surface_governance",
+        command=("python3", "scripts/validate_release_doc_surface_governance.py", "--json-only"),
+        status_key="release_doc_surface_governance_status",
+    ),
+    CheckSpec(
+        name="v16x_release_closure_boundary",
+        command=("python3", "scripts/validate_v16x_release_closure_boundary.py", "--json-only"),
+        status_key="v16x_release_closure_boundary_status",
+    ),
+    CheckSpec(
+        name="v16x_release_closure_summary",
+        command=("python3", "scripts/validate_v16x_release_closure_summary.py", "--json-only"),
+        status_key="v16x_release_closure_summary_status",
+    ),
+    CheckSpec(
         name="docs_command_contract",
         command=("python3", "scripts/docs_command_contract_check.py"),
         status_key=None,
@@ -148,6 +174,26 @@ def _atlas_check_specs(repo_root: Path) -> tuple[CheckSpec, ...]:
             )
         )
     return tuple(checks)
+
+
+def _ordered_specs(repo_root: Path) -> tuple[CheckSpec, ...]:
+    return (*BASE_CHECKS[:-1], *_atlas_check_specs(repo_root), BASE_CHECKS[-1])
+
+
+def _select_specs(
+    repo_root: Path,
+    *,
+    include_check_names: tuple[str, ...] = (),
+) -> tuple[CheckSpec, ...]:
+    ordered_specs = _ordered_specs(repo_root)
+    if not include_check_names:
+        return ordered_specs
+    available_names = {spec.name for spec in ordered_specs}
+    missing = [name for name in include_check_names if name not in available_names]
+    if missing:
+        raise ValueError(f"unknown_control_plane_check_names:{','.join(sorted(set(missing)))}")
+    include_set = set(include_check_names)
+    return tuple(spec for spec in ordered_specs if spec.name in include_set)
 
 
 def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
@@ -269,8 +315,12 @@ def _derive_overall_status(checks: list[dict[str, Any]]) -> tuple[str, bool, lis
     return STATUS_PASS_REQUIRED, True, reasons
 
 
-def build_status(repo_root: Path) -> dict[str, Any]:
-    ordered_specs = (*BASE_CHECKS[:-1], *_atlas_check_specs(repo_root), BASE_CHECKS[-1])
+def build_status(
+    repo_root: Path,
+    *,
+    include_check_names: tuple[str, ...] = (),
+) -> dict[str, Any]:
+    ordered_specs = _select_specs(repo_root, include_check_names=include_check_names)
     checks = [_run_check(spec, repo_root) for spec in ordered_specs]
     overall_status, promotion_ready, reasons = _derive_overall_status(checks)
     status = {
@@ -294,8 +344,24 @@ def build_status(repo_root: Path) -> dict[str, Any]:
         "control_plane_status": overall_status,
         "promotion_ready": promotion_ready,
         "promotion_block_reasons": reasons,
+        "selected_check_names": list(include_check_names),
     }
     return status
+
+
+def resolve_status_target(
+    repo_root: Path,
+    *,
+    status_file: str = DEFAULT_STATUS_ENTRY,
+) -> tuple[Path, str, str]:
+    return _resolve_current_yaml_alias(repo_root, str(status_file))
+
+
+def persist_status_payload(status_file: Path, payload: dict[str, Any]) -> Path:
+    target = Path(status_file).expanduser().resolve()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return target
 
 
 def main() -> int:
@@ -303,8 +369,9 @@ def main() -> int:
     parser.add_argument("--repo-root", default="")
     parser.add_argument(
         "--status-file",
-        default="identity/protocol/mappings/control-plane-status.current.yaml",
+        default=DEFAULT_STATUS_ENTRY,
     )
+    parser.add_argument("--check-name", action="append", default=[])
     parser.add_argument("--write", action="store_true")
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
@@ -320,15 +387,21 @@ def main() -> int:
     if status_alias_error:
         print(f"[FAIL] control-plane status alias resolution failed: {status_alias_error} ({status_active_file})")
         return 1
-    payload = build_status(repo_root)
+    try:
+        payload = build_status(
+            repo_root,
+            include_check_names=tuple(str(name).strip() for name in (args.check_name or []) if str(name).strip()),
+        )
+    except ValueError as exc:
+        print(f"[FAIL] {exc}")
+        return 1
     payload["status_file_entry"] = str(status_entry_file)
     payload["status_file"] = str(status_file)
     payload["status_file_active_file"] = status_active_file
     payload["status_file_alias_error"] = status_alias_error
 
     if args.write:
-        status_file.parent.mkdir(parents=True, exist_ok=True)
-        status_file.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        persist_status_payload(status_file, payload)
 
     if args.json_only:
         print(json.dumps(payload, ensure_ascii=False))
