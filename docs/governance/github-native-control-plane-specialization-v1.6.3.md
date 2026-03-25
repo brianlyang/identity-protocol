@@ -549,6 +549,12 @@ Evidence mirrors:
    - `validate_control_plane_status_sync` -> `PASS_REQUIRED`
    - rendered status: `control_plane_status=PASS_REQUIRED`.
 
+### 10.3A Control-plane status surface boundary
+
+1. `scripts/render_control_plane_status.py` remains a machine control-plane status summary surface on an outer control-plane layer.
+2. It must not replace root-law owners, direct validator receipts, current-pointer SSOT, or historical replay authority.
+3. The renderer must self-describe this bounded authority in machine-readable payload form.
+
 ### 10.4 Evidence (persistent-only, tuple complete)
 
 1. Canonical root:

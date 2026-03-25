@@ -368,6 +368,12 @@ Observed:
    - `validate_contract_binding_reference_integrity` = `PASS_REQUIRED`
    - control-plane status sync remains `PASS_REQUIRED`
 
+### 11.6A Control-plane status surface boundary
+
+1. `scripts/render_control_plane_status.py` remains a machine control-plane status summary surface on an outer control-plane layer.
+2. It must not replace root-law owners, direct validator receipts, current-pointer SSOT, or historical replay authority.
+3. The renderer must self-describe this bounded authority in machine-readable payload form.
+
 ### 11.7 Round-33.3 plugin current-alias hardening closure (2026-03-10)
 
 1. Added stable plugin alias entry files:

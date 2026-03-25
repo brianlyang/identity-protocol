@@ -59,6 +59,11 @@ FULL_SCAN_SUMMARY_FORBIDDEN_REPLACEMENTS: tuple[str, ...] = (
     *FORBIDDEN_REPLACEMENTS,
     "historical_replay_authority",
 )
+CONTROL_PLANE_STATUS_FORBIDDEN_REPLACEMENTS: tuple[str, ...] = (
+    *FORBIDDEN_REPLACEMENTS,
+    "current_pointer_ssot",
+    "historical_replay_authority",
+)
 
 
 SURFACE_PROFILES: dict[str, GovernedRuntimeSummarySurfaceProfile] = {
@@ -121,6 +126,24 @@ SURFACE_PROFILES: dict[str, GovernedRuntimeSummarySurfaceProfile] = {
             "Treat the full identity protocol scan payload as a bounded machine-readable aggregate for replay "
             "triage and fleet-state inspection; it remains derived from validator receipts and must not be "
             "promoted into standalone current authority."
+        ),
+    ),
+    "control_plane_status_artifact": GovernedRuntimeSummarySurfaceProfile(
+        surface_id="control_plane_status_artifact",
+        surface_label="machine control-plane status artifact",
+        governed_verdict_kind="machine_control_plane_status_summary",
+        surface_class="outer_control_plane_status_surface",
+        surface_scope="control_plane_outer",
+        forbidden_replacements=CONTROL_PLANE_STATUS_FORBIDDEN_REPLACEMENTS,
+        authority_rule=(
+            "The machine control-plane status artifact is a derived aggregate control-plane status surface; it may "
+            "compress machine gate state for operator visibility, but it must not replace root-law owners, direct "
+            "validator receipts, current-pointer SSOT, or historical replay authority."
+        ),
+        operator_interpretation_rule=(
+            "Treat the control-plane status artifact as a bounded machine-generated control-plane snapshot derived "
+            "from underlying validators and current mappings; it is suitable for visibility and sync checks, but "
+            "must not be promoted into standalone semantic authority."
         ),
     ),
 }

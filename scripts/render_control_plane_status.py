@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
 from reference_visual_atlas_governance_common import (
     load_reference_visual_atlas_registry,
     reference_visual_atlas_control_plane_checks,
@@ -289,6 +290,7 @@ def build_status(repo_root: Path) -> dict[str, Any]:
             "warn_count": sum(1 for c in checks if c.get("status") == STATUS_WARN_NON_BLOCKING),
             "pass_count": sum(1 for c in checks if c.get("status") == STATUS_PASS_REQUIRED),
         },
+        "surface_governance": build_governed_runtime_summary_surface_payload("control_plane_status_artifact"),
         "control_plane_status": overall_status,
         "promotion_ready": promotion_ready,
         "promotion_block_reasons": reasons,

@@ -15,11 +15,14 @@ cp scripts/release_readiness_check.py "$tmpdir/scripts/"
 cp scripts/report_three_plane_status.py "$tmpdir/scripts/"
 cp scripts/render_protocol_lane_audit_summary.py "$tmpdir/scripts/"
 cp scripts/full_identity_protocol_scan.py "$tmpdir/scripts/"
+cp scripts/render_control_plane_status.py "$tmpdir/scripts/"
 cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
 cp docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md "$tmpdir/docs/review/"
 cp docs/release/identity-v1.6x-release-closure-summary.md "$tmpdir/docs/release/"
 cp docs/governance/identity-codex-launcher-governance-v1.6.14.md "$tmpdir/docs/governance/"
 cp docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md "$tmpdir/docs/review/"
+cp docs/governance/github-native-control-plane-specialization-v1.6.3.md "$tmpdir/docs/governance/"
+cp docs/review/protocol-remediation-audit-ledger-v1.6.3.md "$tmpdir/docs/review/"
 
 python3 - "$tmpdir" <<'PY'
 from pathlib import Path
@@ -149,3 +152,47 @@ if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$
   exit 1
 fi
 echo "[PASS] negative full-scan doc anchor probe fail-closed as expected"
+
+cp scripts/render_control_plane_status.py "$tmpdir/scripts/"
+cp docs/governance/github-native-control-plane-specialization-v1.6.3.md "$tmpdir/docs/governance/"
+
+python3 - "$tmpdir" <<'PY'
+from pathlib import Path
+import sys
+
+tmpdir = Path(sys.argv[1])
+target = tmpdir / "scripts" / "render_control_plane_status.py"
+needle = '        "surface_governance": build_governed_runtime_summary_surface_payload("control_plane_status_artifact"),'
+text = target.read_text(encoding="utf-8")
+if needle not in text:
+    raise SystemExit("probe setup failed: expected control-plane status governance assignment missing")
+target.write_text(text.replace(needle, "", 1), encoding="utf-8")
+PY
+
+if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-control-plane-script.json; then
+  echo "[FAIL] negative control-plane status script drift probe unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] negative control-plane status script drift probe fail-closed as expected"
+
+cp scripts/render_control_plane_status.py "$tmpdir/scripts/"
+cp docs/governance/github-native-control-plane-specialization-v1.6.3.md "$tmpdir/docs/governance/"
+
+python3 - "$tmpdir" <<'PY'
+from pathlib import Path
+import sys
+
+tmpdir = Path(sys.argv[1])
+target = tmpdir / "docs" / "governance" / "github-native-control-plane-specialization-v1.6.3.md"
+needle = "The renderer must self-describe this bounded authority in machine-readable payload form."
+text = target.read_text(encoding="utf-8")
+if needle not in text:
+    raise SystemExit("probe setup failed: expected control-plane governance marker missing")
+target.write_text(text.replace(needle, "", 1), encoding="utf-8")
+PY
+
+if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-control-plane-doc.json; then
+  echo "[FAIL] negative control-plane status doc anchor probe unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] negative control-plane status doc anchor probe fail-closed as expected"

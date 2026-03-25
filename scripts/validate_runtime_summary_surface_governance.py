@@ -72,6 +72,16 @@ SCRIPT_BINDINGS: tuple[ScriptBindingSpec, ...] = (
             '"full_identity_protocol_scan_summary"',
         ),
     ),
+    ScriptBindingSpec(
+        name="control_plane_status_artifact",
+        script_rel="scripts/render_control_plane_status.py",
+        surface_id="control_plane_status_artifact",
+        required_tokens=(
+            '"surface_governance"',
+            "build_governed_runtime_summary_surface_payload(",
+            '"control_plane_status_artifact"',
+        ),
+    ),
 )
 
 DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
@@ -117,6 +127,22 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
         required_markers=(
             "`scripts/render_protocol_lane_audit_summary.py` remains a single-lane formal control-plane summary surface on an outer runtime-state layer.",
             "It must not replace root-law owners, stream-owner governance/review surfaces, direct validator receipts, or historical replay authority.",
+            "The renderer must self-describe this bounded authority in machine-readable payload form.",
+        ),
+    ),
+    DocAnchorSpec(
+        rel_path="docs/governance/github-native-control-plane-specialization-v1.6.3.md",
+        required_markers=(
+            "`scripts/render_control_plane_status.py` remains a machine control-plane status summary surface on an outer control-plane layer.",
+            "It must not replace root-law owners, direct validator receipts, current-pointer SSOT, or historical replay authority.",
+            "The renderer must self-describe this bounded authority in machine-readable payload form.",
+        ),
+    ),
+    DocAnchorSpec(
+        rel_path="docs/review/protocol-remediation-audit-ledger-v1.6.3.md",
+        required_markers=(
+            "`scripts/render_control_plane_status.py` remains a machine control-plane status summary surface on an outer control-plane layer.",
+            "It must not replace root-law owners, direct validator receipts, current-pointer SSOT, or historical replay authority.",
             "The renderer must self-describe this bounded authority in machine-readable payload form.",
         ),
     ),
