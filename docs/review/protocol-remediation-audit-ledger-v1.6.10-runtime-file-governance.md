@@ -205,6 +205,8 @@ Interpretation contract:
    - shell strict-entry wrappers now route through `scripts/shell_strict_entry_common.sh`; the validator covers the
      registered shell entry set and records explicit probe-only exemptions for fixture scripts such as semantic clarity
      and gateway / privilege probe lanes.
+   - runtime-summary governance drift probes are now explicitly registered under the same fixture-only exemption lane
+     instead of remaining implicitly omitted from shell strict-entry coverage.
 
 ### 10.3 Replay evidence
 

@@ -73,6 +73,7 @@ STRICT_SHELL_ENTRY_EXEMPTIONS: dict[str, tuple[str, ...]] = {
     "scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh": ("probe_fixture_catalog_allowed",),
     "scripts/ci/run_host_visible_surface_live_probes_ci.sh": ("probe_fixture_literals_allowed",),
     "scripts/ci/run_privilege_escalation_write_probes_ci.sh": ("probe_fixture_catalog_allowed",),
+    "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh": ("probe_fixture_literals_allowed",),
     "scripts/ci/run_semantic_clarity_probes_ci.sh": ("probe_fixture_literals_allowed",),
     "scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh": ("probe_fixture_catalog_allowed",),
 }

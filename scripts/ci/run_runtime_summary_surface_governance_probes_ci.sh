@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# strict-actor-entry-exemption: probe_fixture_literals_allowed
+# This probe mutates copied fixture files to verify fail-close governance drift,
+# so script-path literals here are fixture inputs rather than live strict-entry launches.
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"

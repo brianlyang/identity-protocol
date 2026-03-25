@@ -247,7 +247,10 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
    - `scripts/validate_strict_actor_entry_semantics.py` must scan both Python orchestrators and the registered shell
      entry set (`scripts/ci/run_full_scan_target_regression_ci.sh`, `scripts/ci/run_required_runtime_gates_ci.sh`,
      `scripts/e2e_smoke_test.sh`);
-   - probe / fixture shell surfaces may stay exempt only through an explicit exemption registry, never by omission.
+   - probe / fixture shell surfaces may stay exempt only through an explicit exemption registry, never by omission;
+   - fixture-only governance drift probes such as `scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh`
+     remain exemption-eligible only because they mutate copied script/doc fixtures and do not launch live strict-entry
+     runtime surfaces.
 10. compatibility projection is diagnostic-only, never authority and never a strict green-path allowance:
     - tuple-bound session renders continue to resolve from `(actor_id,session_id)->identity_id`;
     - strict pointer / health lanes must run on session-primary truth and fail-close when shared pointers remain stale
