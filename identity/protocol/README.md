@@ -378,7 +378,8 @@ Bundle membership must also remain descriptor-concordant with the admitted
 component families it binds.
 
 A bundle row may not silently drift from a component family's own disclosed
-validator, probe, shared-common, or emitted status-key surfaces.
+validator, probe, shared-common, emitted status-key, or emitted error-code
+surfaces.
 
 ---
 

@@ -16,6 +16,7 @@ required_component_descriptor_fields:
 - probe_script
 - common_script
 - status_key
+- error_codes
 bundle_anchor_checks:
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
   required_markers:
@@ -24,8 +25,8 @@ bundle_anchor_checks:
   - machine-registry completeness, and conflict precedence are not optional
   - Weakening one slice while keeping the others green is a root-law coherence
   - That joint governance also requires descriptor concordance across the bundle.
-  - status-key surfaces, the machine world is being asked to trust shadow bundle
-  - knowledge instead of the admitted family descriptor.
+  - emitted status-key, or emitted error-code surfaces, the machine world is being asked
+  - to trust shadow bundle knowledge instead of the admitted family descriptor.
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root-law bundle discipline'
@@ -36,7 +37,8 @@ bundle_anchor_checks:
   - Bundle membership must also remain descriptor-concordant with the admitted
     component families it binds.
   - A bundle row may not silently drift from a component family's own disclosed
-    validator, probe, shared-common, or emitted status-key surfaces.
+    validator, probe, shared-common, emitted status-key, or emitted error-code
+    surfaces.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root-law bundle boundary'
@@ -44,14 +46,15 @@ bundle_anchor_checks:
   - 9. machine-registry completeness;
   - Strengthening one slice must not silently weaken or bypass another; any
   - Root-law bundle rows must also remain descriptor-concordant with the active
-  - component family's own disclosed validator/probe/common/status-key surfaces.
+  - component family's own disclosed validator/probe/common/status-key/error-code
+    surfaces.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime consumption of the root-law bundle'
   - constitutional spine, admission/governance, ordering, authority, question-routing,
   - machine-registry completeness,
   - Runtime must not select the most convenient slice in isolation.
-  - Runtime must also reject a root-law bundle row whose validator/probe/common/status-key
+  - Runtime must also reject a root-law bundle row whose validator/probe/common/status-key/error-code
   - surfaces drift from the active component descriptor it claims to bind.
 component_rows:
 - order: 1
@@ -62,6 +65,10 @@ component_rows:
   probe_script: scripts/ci/run_protocol_root_corpus_governance_probes_ci.sh
   common_script: scripts/root_corpus_governance_common.py
   status_key: protocol_root_corpus_governance_status
+  error_codes:
+  - IP-RCG-001
+  - IP-RCG-002
+  - IP-RCG-003
 - order: 2
   component_id: root_corpus_ordering
   component_role: source_order_reading_order_and_adjudication_surface_roles
@@ -70,6 +77,10 @@ component_rows:
   probe_script: scripts/ci/run_protocol_root_corpus_ordering_probes_ci.sh
   common_script: scripts/root_corpus_ordering_common.py
   status_key: protocol_root_corpus_ordering_status
+  error_codes:
+  - IP-RCO-001
+  - IP-RCO-002
+  - IP-RCO-003
 - order: 3
   component_id: root_corpus_authority
   component_role: authority_layering_and_terminality_split
@@ -78,6 +89,10 @@ component_rows:
   probe_script: scripts/ci/run_protocol_root_corpus_authority_probes_ci.sh
   common_script: scripts/root_corpus_authority_common.py
   status_key: protocol_root_corpus_authority_status
+  error_codes:
+  - IP-RCA-001
+  - IP-RCA-002
+  - IP-RCA-003
 - order: 4
   component_id: root_corpus_question_routing
   component_role: question_class_and_answer_surface_pairing
@@ -86,6 +101,10 @@ component_rows:
   probe_script: scripts/ci/run_protocol_root_corpus_question_routing_probes_ci.sh
   common_script: scripts/root_corpus_question_routing_common.py
   status_key: protocol_root_corpus_question_routing_status
+  error_codes:
+  - IP-RCQR-001
+  - IP-RCQR-002
+  - IP-RCQR-003
 - order: 5
   component_id: root_constitutional_spine
   component_role: constitutional_entry_order_and_bridge_coherence
@@ -94,6 +113,10 @@ component_rows:
   probe_script: scripts/ci/run_protocol_root_constitutional_spine_probes_ci.sh
   common_script: scripts/root_constitutional_spine_common.py
   status_key: protocol_root_constitutional_spine_status
+  error_codes:
+  - IP-RCS-001
+  - IP-RCS-002
+  - IP-RCS-003
 - order: 6
   component_id: root_corpus_derivation
   component_role: one_way_derivation_and_non_reverse_authorship
@@ -102,6 +125,10 @@ component_rows:
   probe_script: scripts/ci/run_protocol_root_corpus_derivation_probes_ci.sh
   common_script: scripts/root_corpus_derivation_common.py
   status_key: protocol_root_corpus_derivation_status
+  error_codes:
+  - IP-RCD-001
+  - IP-RCD-002
+  - IP-RCD-003
 - order: 7
   component_id: root_corpus_transition
   component_role: promotion_demotion_and_reentry_governance
@@ -110,6 +137,10 @@ component_rows:
   probe_script: scripts/ci/run_protocol_root_corpus_transition_probes_ci.sh
   common_script: scripts/root_corpus_transition_common.py
   status_key: protocol_root_corpus_transition_status
+  error_codes:
+  - IP-RCT-001
+  - IP-RCT-002
+  - IP-RCT-003
 - order: 8
   component_id: root_corpus_gateway_admissibility
   component_role: gateway_input_and_effect_target_scope
@@ -118,6 +149,10 @@ component_rows:
   probe_script: scripts/ci/run_protocol_root_corpus_gateway_admissibility_probes_ci.sh
   common_script: scripts/root_corpus_gateway_admissibility_common.py
   status_key: protocol_root_corpus_gateway_admissibility_status
+  error_codes:
+  - IP-RGA-001
+  - IP-RGA-002
+  - IP-RGA-003
 - order: 9
   component_id: root_machine_registry_completeness
   component_role: registry_admission_of_root_mapping_families
@@ -126,6 +161,10 @@ component_rows:
   probe_script: scripts/ci/run_protocol_root_machine_registry_completeness_probes_ci.sh
   common_script: scripts/root_machine_registry_completeness_common.py
   status_key: protocol_root_machine_registry_completeness_status
+  error_codes:
+  - IP-RMRC-001
+  - IP-RMRC-002
+  - IP-RMRC-003
 - order: 10
   component_id: root_corpus_precedence
   component_role: conflict_precedence_and_terminal_machine_enforcement
@@ -134,3 +173,7 @@ component_rows:
   probe_script: scripts/ci/run_protocol_root_corpus_precedence_probes_ci.sh
   common_script: scripts/root_corpus_precedence_common.py
   status_key: protocol_root_corpus_precedence_status
+  error_codes:
+  - IP-RCP-001
+  - IP-RCP-002
+  - IP-RCP-003

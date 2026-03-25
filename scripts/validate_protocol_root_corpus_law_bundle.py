@@ -33,6 +33,7 @@ EXPECTED_COMPONENTS = {
         "probe_script": "scripts/ci/run_protocol_root_corpus_governance_probes_ci.sh",
         "common_script": "scripts/root_corpus_governance_common.py",
         "status_key": "protocol_root_corpus_governance_status",
+        "error_codes": ("IP-RCG-001", "IP-RCG-002", "IP-RCG-003"),
     },
     "root_corpus_ordering": {
         "component_role": "source_order_reading_order_and_adjudication_surface_roles",
@@ -41,6 +42,7 @@ EXPECTED_COMPONENTS = {
         "probe_script": "scripts/ci/run_protocol_root_corpus_ordering_probes_ci.sh",
         "common_script": "scripts/root_corpus_ordering_common.py",
         "status_key": "protocol_root_corpus_ordering_status",
+        "error_codes": ("IP-RCO-001", "IP-RCO-002", "IP-RCO-003"),
     },
     "root_corpus_authority": {
         "component_role": "authority_layering_and_terminality_split",
@@ -49,6 +51,7 @@ EXPECTED_COMPONENTS = {
         "probe_script": "scripts/ci/run_protocol_root_corpus_authority_probes_ci.sh",
         "common_script": "scripts/root_corpus_authority_common.py",
         "status_key": "protocol_root_corpus_authority_status",
+        "error_codes": ("IP-RCA-001", "IP-RCA-002", "IP-RCA-003"),
     },
     "root_corpus_question_routing": {
         "component_role": "question_class_and_answer_surface_pairing",
@@ -57,6 +60,7 @@ EXPECTED_COMPONENTS = {
         "probe_script": "scripts/ci/run_protocol_root_corpus_question_routing_probes_ci.sh",
         "common_script": "scripts/root_corpus_question_routing_common.py",
         "status_key": "protocol_root_corpus_question_routing_status",
+        "error_codes": ("IP-RCQR-001", "IP-RCQR-002", "IP-RCQR-003"),
     },
     "root_constitutional_spine": {
         "component_role": "constitutional_entry_order_and_bridge_coherence",
@@ -65,6 +69,7 @@ EXPECTED_COMPONENTS = {
         "probe_script": "scripts/ci/run_protocol_root_constitutional_spine_probes_ci.sh",
         "common_script": "scripts/root_constitutional_spine_common.py",
         "status_key": "protocol_root_constitutional_spine_status",
+        "error_codes": ("IP-RCS-001", "IP-RCS-002", "IP-RCS-003"),
     },
     "root_corpus_derivation": {
         "component_role": "one_way_derivation_and_non_reverse_authorship",
@@ -73,6 +78,7 @@ EXPECTED_COMPONENTS = {
         "probe_script": "scripts/ci/run_protocol_root_corpus_derivation_probes_ci.sh",
         "common_script": "scripts/root_corpus_derivation_common.py",
         "status_key": "protocol_root_corpus_derivation_status",
+        "error_codes": ("IP-RCD-001", "IP-RCD-002", "IP-RCD-003"),
     },
     "root_corpus_transition": {
         "component_role": "promotion_demotion_and_reentry_governance",
@@ -81,6 +87,7 @@ EXPECTED_COMPONENTS = {
         "probe_script": "scripts/ci/run_protocol_root_corpus_transition_probes_ci.sh",
         "common_script": "scripts/root_corpus_transition_common.py",
         "status_key": "protocol_root_corpus_transition_status",
+        "error_codes": ("IP-RCT-001", "IP-RCT-002", "IP-RCT-003"),
     },
     "root_corpus_gateway_admissibility": {
         "component_role": "gateway_input_and_effect_target_scope",
@@ -89,6 +96,7 @@ EXPECTED_COMPONENTS = {
         "probe_script": "scripts/ci/run_protocol_root_corpus_gateway_admissibility_probes_ci.sh",
         "common_script": "scripts/root_corpus_gateway_admissibility_common.py",
         "status_key": "protocol_root_corpus_gateway_admissibility_status",
+        "error_codes": ("IP-RGA-001", "IP-RGA-002", "IP-RGA-003"),
     },
     "root_machine_registry_completeness": {
         "component_role": "registry_admission_of_root_mapping_families",
@@ -97,6 +105,7 @@ EXPECTED_COMPONENTS = {
         "probe_script": "scripts/ci/run_protocol_root_machine_registry_completeness_probes_ci.sh",
         "common_script": "scripts/root_machine_registry_completeness_common.py",
         "status_key": "protocol_root_machine_registry_completeness_status",
+        "error_codes": ("IP-RMRC-001", "IP-RMRC-002", "IP-RMRC-003"),
     },
     "root_corpus_precedence": {
         "component_role": "conflict_precedence_and_terminal_machine_enforcement",
@@ -105,6 +114,7 @@ EXPECTED_COMPONENTS = {
         "probe_script": "scripts/ci/run_protocol_root_corpus_precedence_probes_ci.sh",
         "common_script": "scripts/root_corpus_precedence_common.py",
         "status_key": "protocol_root_corpus_precedence_status",
+        "error_codes": ("IP-RCP-001", "IP-RCP-002", "IP-RCP-003"),
     },
 }
 
@@ -115,6 +125,20 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
 
 def _contiguous_orders(values: list[int]) -> bool:
     return values == list(range(1, len(values) + 1))
+
+
+def _descriptor_value(value: Any) -> Any:
+    if isinstance(value, tuple):
+        return tuple(str(item or "").strip() for item in value if str(item or "").strip())
+    if isinstance(value, list):
+        return tuple(str(item or "").strip() for item in value if str(item or "").strip())
+    return str(value or "").strip()
+
+
+def _descriptor_is_present(value: Any) -> bool:
+    if isinstance(value, tuple):
+        return bool(value)
+    return bool(str(value or "").strip())
 
 
 def _run_component_validator(repo_root, validator_script: str, status_key: str) -> tuple[int, dict[str, Any], str]:
@@ -187,7 +211,13 @@ def main() -> int:
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
             error_code = ERR_REGISTRY
-        if tuple(required_component_descriptor_fields) != ("validator_script", "probe_script", "common_script", "status_key"):
+        if tuple(required_component_descriptor_fields) != (
+            "validator_script",
+            "probe_script",
+            "common_script",
+            "status_key",
+            "error_codes",
+        ):
             stale_reasons.append("root_corpus_law_bundle_required_component_descriptor_fields_invalid")
             error_code = ERR_REGISTRY
         if descriptor_concordance_required and not required_component_descriptor_fields:
@@ -226,14 +256,23 @@ def main() -> int:
             expected = EXPECTED_COMPONENTS.get(row.component_id)
             if expected is None:
                 continue
-            for field in ("component_role", "current_file", "validator_script", "probe_script", "common_script", "status_key"):
-                if getattr(row, field) != expected[field]:
+            for field in (
+                "component_role",
+                "current_file",
+                "validator_script",
+                "probe_script",
+                "common_script",
+                "status_key",
+                "error_codes",
+            ):
+                actual = getattr(row, field)
+                if actual != expected[field]:
                     bundle_violations.append(
                         {
                             "component_id": row.component_id,
                             "reason": f"{field}_mismatch",
                             "expected": expected[field],
-                            "actual": getattr(row, field),
+                            "actual": actual,
                         }
                     )
 
@@ -285,6 +324,7 @@ def main() -> int:
                     "common_script": row.common_script,
                     "validator_rc": rc,
                     "component_status": component_status,
+                    "error_codes": list(row.error_codes),
                     "validator_error": run_error,
                     "descriptor_concordance_required": descriptor_concordance_required,
                     "required_component_descriptor_fields": list(required_component_descriptor_fields),
@@ -331,21 +371,23 @@ def main() -> int:
                         )
                     else:
                         for descriptor_field in required_component_descriptor_fields:
-                            bundle_rel_path = str(getattr(row, descriptor_field) or "")
-                            active_rel_path = str(active_doc.get(descriptor_field) or "").strip()
+                            bundle_value = _descriptor_value(getattr(row, descriptor_field))
+                            active_value = _descriptor_value(active_doc.get(descriptor_field))
                             descriptor_field_rows.append(
                                 {
                                     "field": descriptor_field,
-                                    "bundle_rel_path": bundle_rel_path,
-                                    "active_rel_path": active_rel_path,
+                                    "bundle_rel_path": list(bundle_value) if isinstance(bundle_value, tuple) else bundle_value,
+                                    "active_rel_path": list(active_value) if isinstance(active_value, tuple) else active_value,
+                                    "bundle_value": list(bundle_value) if isinstance(bundle_value, tuple) else bundle_value,
+                                    "active_value": list(active_value) if isinstance(active_value, tuple) else active_value,
                                     "status": (
                                         STATUS_PASS_REQUIRED
-                                        if active_rel_path == bundle_rel_path and active_rel_path
+                                        if active_value == bundle_value and _descriptor_is_present(active_value)
                                         else STATUS_FAIL_REQUIRED
                                     ),
                                 }
                             )
-                            if not active_rel_path:
+                            if not _descriptor_is_present(active_value):
                                 bundle_violations.append(
                                     {
                                         "component_id": row.component_id,
@@ -353,14 +395,16 @@ def main() -> int:
                                         "descriptor_field": descriptor_field,
                                     }
                                 )
-                            elif active_rel_path != bundle_rel_path:
+                            elif active_value != bundle_value:
                                 bundle_violations.append(
                                     {
                                         "component_id": row.component_id,
                                         "reason": "component_descriptor_concordance_failure",
                                         "descriptor_field": descriptor_field,
-                                        "bundle_rel_path": bundle_rel_path,
-                                        "active_rel_path": active_rel_path,
+                                        "bundle_rel_path": list(bundle_value) if isinstance(bundle_value, tuple) else bundle_value,
+                                        "active_rel_path": list(active_value) if isinstance(active_value, tuple) else active_value,
+                                        "bundle_value": list(bundle_value) if isinstance(bundle_value, tuple) else bundle_value,
+                                        "active_value": list(active_value) if isinstance(active_value, tuple) else active_value,
                                     }
                                 )
 
@@ -398,6 +442,7 @@ def main() -> int:
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
         "component_ids": [row.component_id for row in sorted_components],
+        "required_component_descriptor_fields": list(required_component_descriptor_fields),
         "component_status_rows": component_status_rows,
         "structure_violations": structure_violations,
         "bundle_violations": bundle_violations,

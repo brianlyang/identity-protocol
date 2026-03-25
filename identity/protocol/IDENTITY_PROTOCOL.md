@@ -160,7 +160,8 @@ matching mapping, validator, and negative-probe surfaces.
 
 Root-law bundle rows must also remain descriptor-concordant with the active
 component families they bind; bundle metadata may not override or hide a
-component family's own disclosed validator/probe/common/status-key surfaces.
+component family's own disclosed validator/probe/common/status-key/error-code
+surfaces.
 
 ## Goal
 

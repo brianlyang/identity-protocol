@@ -30,6 +30,7 @@ class RootLawBundleComponent:
     probe_script: str
     common_script: str
     status_key: str
+    error_codes: tuple[str, ...] = field(default_factory=tuple)
 
 
 def _norm_str(value: Any) -> str:
@@ -106,6 +107,7 @@ def bundle_components_from_doc(bundle_doc: Mapping[str, Any]) -> tuple[RootLawBu
         probe_script = _norm_str(row.get("probe_script"))
         common_script = _norm_str(row.get("common_script"))
         status_key = _norm_str(row.get("status_key"))
+        error_codes = _as_str_tuple(row.get("error_codes"))
         try:
             order = int(row.get("order"))
         except Exception:
@@ -118,6 +120,7 @@ def bundle_components_from_doc(bundle_doc: Mapping[str, Any]) -> tuple[RootLawBu
             or not probe_script
             or not common_script
             or not status_key
+            or not error_codes
         ):
             continue
         out.append(
@@ -130,6 +133,7 @@ def bundle_components_from_doc(bundle_doc: Mapping[str, Any]) -> tuple[RootLawBu
                 probe_script=probe_script,
                 common_script=common_script,
                 status_key=status_key,
+                error_codes=error_codes,
             )
         )
     return tuple(out)

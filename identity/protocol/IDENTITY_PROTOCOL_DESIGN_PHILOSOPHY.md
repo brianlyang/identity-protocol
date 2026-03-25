@@ -363,9 +363,9 @@ cross-validated together, and strengthened without semantic collapse.
 That joint governance also requires descriptor concordance across the bundle.
 
 If a root-law bundle row names a component family but drifts from that
-component family's own disclosed validator, probe, shared-common, or emitted
-status-key surfaces, the machine world is being asked to trust shadow bundle
-knowledge instead of the admitted family descriptor.
+component family's own disclosed validator, probe, shared-common, emitted
+status-key, or emitted error-code surfaces, the machine world is being asked
+to trust shadow bundle knowledge instead of the admitted family descriptor.
 
 ### Machine-registry completeness must stay explicit
 

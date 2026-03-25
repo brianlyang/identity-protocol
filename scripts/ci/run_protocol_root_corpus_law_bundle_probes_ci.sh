@@ -26,10 +26,22 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "PASS_REQUIRED", payload
 assert payload["component_count"] == 10, payload
+assert payload["required_component_descriptor_fields"] == [
+    "validator_script",
+    "probe_script",
+    "common_script",
+    "status_key",
+    "error_codes",
+], payload
 assert all(row["component_status"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
 assert all(
     all(cell["status"] == "PASS_REQUIRED" for cell in row.get("descriptor_field_rows", []))
     for row in payload["component_status_rows"]
+), payload
+assert any(
+    cell["field"] == "error_codes" and cell["status"] == "PASS_REQUIRED"
+    for row in payload["component_status_rows"]
+    for cell in row.get("descriptor_field_rows", [])
 ), payload
 PY
 
@@ -196,9 +208,9 @@ assert any(
 ), payload
 PY
 
-STATUS_KEY_REPO="${TMP_ROOT}/status-key-drift-repo"
-mirror_repo "${STATUS_KEY_REPO}"
-python3 - <<'PY' "${STATUS_KEY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+ERROR_CODE_REPO="${TMP_ROOT}/error-code-drift-repo"
+mirror_repo "${ERROR_CODE_REPO}"
+python3 - <<'PY' "${ERROR_CODE_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
 import pathlib
 import sys
 import yaml
@@ -207,20 +219,20 @@ path = pathlib.Path(sys.argv[1])
 doc = yaml.safe_load(path.read_text(encoding="utf-8"))
 for row in doc["component_rows"]:
     if row.get("component_id") == "root_corpus_ordering":
-        row["status_key"] = "protocol_root_corpus_ordering_state"
+        row["error_codes"] = ["IP-RCO-001", "IP-RCO-002", "IP-RCO-099"]
         break
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
 
-STATUS_KEY_JSON="${TMP_ROOT}/status-key-drift.json"
+ERROR_CODE_JSON="${TMP_ROOT}/error-code-drift.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
-  --repo-root "${STATUS_KEY_REPO}" \
-  --json-only >"${STATUS_KEY_JSON}"; then
-  echo "[FAIL] root-corpus law bundle validator unexpectedly passed status-key drift"
+  --repo-root "${ERROR_CODE_REPO}" \
+  --json-only >"${ERROR_CODE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed error-code drift"
   exit 1
 fi
 
-python3 - <<'PY' "${STATUS_KEY_JSON}"
+python3 - <<'PY' "${ERROR_CODE_JSON}"
 import json
 import pathlib
 import sys
@@ -229,7 +241,13 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCLB-003", payload
 assert any(
-    row["component_id"] == "root_corpus_ordering" and row["reason"] == "status_key_mismatch"
+    row["component_id"] == "root_corpus_ordering" and row["reason"] == "error_codes_mismatch"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["component_id"] == "root_corpus_ordering"
+    and row["reason"] == "component_descriptor_concordance_failure"
+    and row.get("descriptor_field") == "error_codes"
     for row in payload["bundle_violations"]
 ), payload
 PY
