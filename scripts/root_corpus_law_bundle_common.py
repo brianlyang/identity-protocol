@@ -109,6 +109,18 @@ def descriptor_repo_rel_path_pattern_fallback_policy_from_doc(bundle_doc: Mappin
     return _norm_str(bundle_doc.get("descriptor_repo_rel_path_pattern_fallback_policy"))
 
 
+def descriptor_repo_rel_path_discipline_inheritance_mode_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("descriptor_repo_rel_path_discipline_inheritance_mode"))
+
+
+def descriptor_repo_rel_path_discipline_local_override_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("descriptor_repo_rel_path_discipline_local_override_policy"))
+
+
+def descriptor_repo_rel_path_discipline_fallback_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("descriptor_repo_rel_path_discipline_fallback_policy"))
+
+
 def component_descriptor_resolution_mode_from_doc(bundle_doc: Mapping[str, Any]) -> str:
     return _norm_str(bundle_doc.get("component_descriptor_resolution_mode"))
 

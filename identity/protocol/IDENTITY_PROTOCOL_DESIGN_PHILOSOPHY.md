@@ -407,6 +407,17 @@ If the admitted source does not disclose those patterns, the machine world
 must fail-close rather than guessing or locally reconstructing descriptor-stem
 capture law from bundle convention.
 
+Bundle descriptor repo-relative discipline must also remain inherited from
+machine-registry completeness.
+
+Repo-root-relative scope, parent-escape rejection, role-typed path law, and
+cross-role surface-stem coherence belong to that admitted source law rather
+than to local bundle restatement.
+
+If the admitted source does not disclose that repo-relative discipline, the
+machine world must fail-close rather than locally reconstructing descriptor
+path legality from bundle convenience.
+
 Bundle component descriptors must remain current-entry mediated as well.
 
 The bundle names admitted component current rows and resolves active version

@@ -37,10 +37,15 @@ assert payload["descriptor_family_surface_binding_local_override_policy"] == "fo
 assert payload["descriptor_repo_rel_path_pattern_inheritance_mode"] == "inherit_machine_registry_completeness_current_only", payload
 assert payload["descriptor_repo_rel_path_pattern_local_redeclaration_policy"] == "forbidden", payload
 assert payload["descriptor_repo_rel_path_pattern_fallback_policy"] == "fail_closed", payload
+assert payload["descriptor_repo_rel_path_discipline_inheritance_mode"] == "inherit_machine_registry_completeness_current_only", payload
+assert payload["descriptor_repo_rel_path_discipline_local_override_policy"] == "forbidden", payload
+assert payload["descriptor_repo_rel_path_discipline_fallback_policy"] == "fail_closed", payload
 assert payload["component_descriptor_resolution_mode"] == "current_alias_only", payload
 assert payload["component_descriptor_version_pinning_policy"] == "forbidden", payload
 assert payload["bundle_redeclares_required_repo_rel_path_patterns"] is False, payload
 assert payload["bundle_local_required_repo_rel_path_patterns"] == {}, payload
+assert payload["bundle_redeclares_repo_rel_path_governance"] is False, payload
+assert payload["bundle_local_repo_rel_path_governance"] == {}, payload
 assert payload["required_component_descriptor_fields"] == [
     "validator_script",
     "probe_script",
@@ -61,6 +66,10 @@ assert payload["source_family_surface_stem_binding_policy"] == "family_id_surfac
 assert payload["source_family_surface_stem_overrides"] == {
     "root-corpus-registry": "root_corpus_governance",
 }, payload
+assert payload["source_repo_rel_path_scope_policy"] == "repo_root_relative_only", payload
+assert payload["source_repo_rel_path_escape_policy"] == "fail_closed", payload
+assert payload["source_repo_rel_path_role_typing_policy"] == "root_protocol_surface_patterns_required", payload
+assert payload["source_repo_rel_path_surface_stem_policy"] == "cross_role_stem_coherent", payload
 assert all(row["component_status"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
 assert all(
     all(cell["status"] == "PASS_REQUIRED" for cell in row.get("descriptor_field_rows", []))
@@ -190,6 +199,113 @@ assert payload["error_code"] == "IP-RCLB-003", payload
 assert any(
     row["component_id"] == "root_machine_registry_completeness"
     and row["reason"] == "descriptor_repo_rel_path_patterns_missing_from_machine_registry_completeness"
+    for row in payload["bundle_violations"]
+), payload
+PY
+
+REPO_REL_DISCIPLINE_POLICY_REPO="${TMP_ROOT}/descriptor-repo-rel-discipline-policy-drift-repo"
+mirror_repo "${REPO_REL_DISCIPLINE_POLICY_REPO}"
+python3 - <<'PY' "${REPO_REL_DISCIPLINE_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["descriptor_repo_rel_path_discipline_local_override_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REPO_REL_DISCIPLINE_POLICY_JSON="${TMP_ROOT}/descriptor-repo-rel-discipline-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REPO_REL_DISCIPLINE_POLICY_REPO}" \
+  --json-only >"${REPO_REL_DISCIPLINE_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor repo-rel discipline policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REPO_REL_DISCIPLINE_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_descriptor_repo_rel_path_discipline_local_override_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_REPO="${TMP_ROOT}/descriptor-repo-rel-discipline-local-redeclaration-repo"
+mirror_repo "${REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_REPO}"
+python3 - <<'PY' "${REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["repo_rel_path_scope_policy"] = "workspace_relative_allowed"
+doc["repo_rel_path_escape_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_JSON="${TMP_ROOT}/descriptor-repo-rel-discipline-local-redeclaration.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_REPO}" \
+  --json-only >"${REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed local repo-rel discipline redeclaration"
+  exit 1
+fi
+
+python3 - <<'PY' "${REPO_REL_DISCIPLINE_LOCAL_REDECLARATION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_repo_rel_path_governance_local_redeclaration_forbidden"
+    for row in payload["bundle_violations"]
+), payload
+assert payload["bundle_redeclares_repo_rel_path_governance"] is True, payload
+PY
+
+SOURCE_REPO_REL_DISCIPLINE_REPO="${TMP_ROOT}/descriptor-repo-rel-discipline-source-missing-repo"
+mirror_repo "${SOURCE_REPO_REL_DISCIPLINE_REPO}"
+python3 - <<'PY' "${SOURCE_REPO_REL_DISCIPLINE_REPO}/identity/protocol/mappings/root-machine-registry-completeness.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["repo_rel_path_scope_policy"] = ""
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SOURCE_REPO_REL_DISCIPLINE_JSON="${TMP_ROOT}/descriptor-repo-rel-discipline-source-missing.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SOURCE_REPO_REL_DISCIPLINE_REPO}" \
+  --json-only >"${SOURCE_REPO_REL_DISCIPLINE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed missing source repo-rel discipline"
+  exit 1
+fi
+
+python3 - <<'PY' "${SOURCE_REPO_REL_DISCIPLINE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_repo_rel_path_governance_missing_from_machine_registry_completeness"
+    and "repo_rel_path_scope_policy" in row["missing_policy_fields"]
     for row in payload["bundle_violations"]
 ), payload
 PY

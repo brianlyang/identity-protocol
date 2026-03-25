@@ -196,6 +196,15 @@ If the admitted source does not disclose those patterns, protocol legality
 must fail-close rather than locally reconstructing descriptor-surface pattern
 law.
 
+The bundle must also inherit machine-registry completeness repo-relative
+descriptor discipline law; repo-root-relative scope, parent-escape rejection,
+role-typed path classes, and cross-role surface-stem coherence may not be
+silently redeclared, weakened, or guessed inside the bundle.
+
+If the admitted source does not disclose that repo-relative discipline,
+protocol legality must fail-close rather than locally reconstructing
+descriptor-path legality law.
+
 Bundle component descriptors must also stay current-entry mediated; bundle
 rows bind through admitted component current mappings, not direct version-file
 pinning.
