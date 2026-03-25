@@ -18,6 +18,8 @@ from root_protocol_instance_responsibility_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     boundary_collapse_rows_from_doc,
+    escalation_limit_rows_from_doc,
+    escalation_proof_rows_from_doc,
     escalation_rows_from_doc,
     layer_rows_from_doc,
     load_root_protocol_instance_responsibility,
@@ -86,6 +88,50 @@ EXPECTED_ESCALATION_ROWS = {
         "contract_phrase": "machine truth itself is incomplete, so no amount of instance self-repair can achieve alignment.",
     },
 }
+EXPECTED_ESCALATION_PROOF_ROWS = {
+    "semantic_ambiguity_proof": {
+        "order": 1,
+        "contract_heading": "### 1. Semantic-ambiguity proof",
+        "proof_role": "shared_law_semantic_ambiguity_proof",
+    },
+    "shared_law_contradiction_proof": {
+        "order": 2,
+        "contract_heading": "### 2. Shared-law contradiction proof",
+        "proof_role": "shared_law_implementation_contradiction_proof",
+    },
+    "multi_instance_structural_gap_proof": {
+        "order": 3,
+        "contract_heading": "### 3. Multi-instance structural-gap proof",
+        "proof_role": "cross_instance_structural_gap_proof",
+    },
+    "machine_truth_incompleteness_proof": {
+        "order": 4,
+        "contract_heading": "### 4. Machine-truth incompleteness proof",
+        "proof_role": "machine_truth_incompleteness_proof",
+    },
+}
+EXPECTED_ESCALATION_LIMIT_ROWS = {
+    "semantic_ambiguity_not_shared_contradiction": {
+        "order": 1,
+        "contract_phrase": "semantic-ambiguity proof is not proof of shared implementation contradiction;",
+    },
+    "shared_contradiction_not_multi_instance_gap": {
+        "order": 2,
+        "contract_phrase": "shared-law contradiction proof is not proof of multi-instance structural gap;",
+    },
+    "multi_instance_gap_not_machine_truth_incomplete": {
+        "order": 3,
+        "contract_phrase": "multi-instance structural-gap proof is not proof of machine-truth incompleteness;",
+    },
+    "machine_truth_incomplete_not_instance_amnesty": {
+        "order": 4,
+        "contract_phrase": "machine-truth incompleteness proof is not proof that instance convergence duty disappears;",
+    },
+    "escalation_proof_not_protocol_debt_laundering": {
+        "order": 5,
+        "contract_phrase": "no escalation proof may launder unproved local residue into protocol debt.",
+    },
+}
 EXPECTED_BOUNDARY_COLLAPSES = {
     "instance_residue_laundering": {
         "order": 1,
@@ -113,6 +159,8 @@ EXPECTED_REGISTRY_MARKERS = (
     "## Four-layer relation",
     "## Responsibility law",
     "## Escalation admission law",
+    "## Escalation-proof discipline",
+    "## Escalation-proof limits",
 )
 EXPECTED_AUTHORITY_MARKERS = (
     "## Runtime adjudication boundary",
@@ -229,6 +277,8 @@ def main() -> int:
     layer_rows = layer_rows_from_doc(responsibility_doc) if responsibility_doc else ()
     owner_rows = responsibility_rows_from_doc(responsibility_doc) if responsibility_doc else ()
     escalation_rows = escalation_rows_from_doc(responsibility_doc) if responsibility_doc else ()
+    escalation_proof_rows = escalation_proof_rows_from_doc(responsibility_doc) if responsibility_doc else ()
+    escalation_limit_rows = escalation_limit_rows_from_doc(responsibility_doc) if responsibility_doc else ()
     boundary_collapse_rows = boundary_collapse_rows_from_doc(responsibility_doc) if responsibility_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -261,6 +311,8 @@ def main() -> int:
             ("required_layer_rows", layer_rows),
             ("required_responsibility_rows", owner_rows),
             ("required_escalation_rows", escalation_rows),
+            ("required_escalation_proof_rows", escalation_proof_rows),
+            ("required_escalation_limit_rows", escalation_limit_rows),
             ("required_boundary_collapse_rows", boundary_collapse_rows),
         ):
             if not rows:
@@ -305,6 +357,24 @@ def main() -> int:
             compare_fields=("contract_phrase",),
         )
         _validate_exact_rows(
+            actual_rows=escalation_proof_rows,
+            expected_rows=EXPECTED_ESCALATION_PROOF_ROWS,
+            structure_violations=structure_violations,
+            responsibility_violations=responsibility_violations,
+            field_name="required_escalation_proof_rows",
+            id_attr="proof_id",
+            compare_fields=("contract_heading", "proof_role"),
+        )
+        _validate_exact_rows(
+            actual_rows=escalation_limit_rows,
+            expected_rows=EXPECTED_ESCALATION_LIMIT_ROWS,
+            structure_violations=structure_violations,
+            responsibility_violations=responsibility_violations,
+            field_name="required_escalation_limit_rows",
+            id_attr="row_id",
+            compare_fields=("contract_phrase",),
+        )
+        _validate_exact_rows(
             actual_rows=boundary_collapse_rows,
             expected_rows=EXPECTED_BOUNDARY_COLLAPSES,
             structure_violations=structure_violations,
@@ -331,7 +401,10 @@ def main() -> int:
             for row in owner_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_heading,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "responsibility_heading_missing", "marker": marker})
-            for row in escalation_rows + boundary_collapse_rows:
+            for row in escalation_proof_rows:
+                for marker in find_missing_markers(contract_text, (row.contract_heading,)):
+                    contract_marker_violations.append({"field": "contract_file", "reason": "escalation_proof_heading_missing", "marker": marker})
+            for row in escalation_rows + escalation_limit_rows + boundary_collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
 
@@ -504,10 +577,14 @@ def main() -> int:
         "layer_count": len(layer_rows),
         "responsibility_count": len(owner_rows),
         "escalation_trigger_count": len(escalation_rows),
+        "escalation_proof_count": len(escalation_proof_rows),
+        "escalation_limit_count": len(escalation_limit_rows),
         "boundary_collapse_count": len(boundary_collapse_rows),
         "layer_ids": [row.layer_id for row in sorted(layer_rows, key=lambda item: item.order)],
         "owner_ids": [row.owner_id for row in sorted(owner_rows, key=lambda item: item.order)],
         "escalation_trigger_ids": [row.row_id for row in sorted(escalation_rows, key=lambda item: item.order)],
+        "escalation_proof_ids": [row.proof_id for row in sorted(escalation_proof_rows, key=lambda item: item.order)],
+        "escalation_limit_ids": [row.row_id for row in sorted(escalation_limit_rows, key=lambda item: item.order)],
         "boundary_collapse_ids": [row.row_id for row in sorted(boundary_collapse_rows, key=lambda item: item.order)],
         "structure_violations": structure_violations,
         "responsibility_violations": responsibility_violations,

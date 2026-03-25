@@ -174,6 +174,52 @@ A problem may rise from instance adaptation into protocol strengthening only if 
 
 If none of those triggers apply, the residue remains an instance-owned adaptation task.
 
+When a residue is proposed for protocol escalation, the escalation-proof stratum
+behind that proposal must match the trigger being claimed.
+
+## Escalation-proof discipline
+
+Escalation into shared protocol strengthening may be supported only by proof
+whose stratum matches the trigger being asserted.
+
+### 1. Semantic-ambiguity proof
+
+Supports claims that protocol law lacks enough semantic singularity to decide
+the case without upstream clarification.
+
+Proof role: `shared_law_semantic_ambiguity_proof`.
+
+### 2. Shared-law contradiction proof
+
+Supports claims that shared implementation and shared law contradict each other
+at the shared layer.
+
+Proof role: `shared_law_implementation_contradiction_proof`.
+
+### 3. Multi-instance structural-gap proof
+
+Supports claims that the same structural gap recurs across instances and
+therefore exceeds one instance's local adaptation boundary.
+
+Proof role: `cross_instance_structural_gap_proof`.
+
+### 4. Machine-truth incompleteness proof
+
+Supports claims that the machine truth required for lawful convergence is
+itself incomplete and cannot be completed by one instance acting alone.
+
+Proof role: `machine_truth_incompleteness_proof`.
+
+## Escalation-proof limits
+
+The protocol must preserve these escalation-proof limits:
+
+1. semantic-ambiguity proof is not proof of shared implementation contradiction;
+2. shared-law contradiction proof is not proof of multi-instance structural gap;
+3. multi-instance structural-gap proof is not proof of machine-truth incompleteness;
+4. machine-truth incompleteness proof is not proof that instance convergence duty disappears;
+5. no escalation proof may launder unproved local residue into protocol debt.
+
 ## Non-compliant boundary collapses
 
 The following are non-compliant:

@@ -277,6 +277,8 @@ registered_top_level_entries:
       - '## Four-layer relation'
       - '## Responsibility law'
       - '## Escalation admission law'
+      - '## Escalation-proof discipline'
+      - '## Escalation-proof limits'
     forbidden_content_classes:
       - workbook_issue_projection
       - closure_ledger_narration

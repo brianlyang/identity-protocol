@@ -31,6 +31,14 @@ class ResponsibilityRow:
 
 
 @dataclass(frozen=True)
+class EscalationProofRow:
+    order: int
+    proof_id: str
+    contract_heading: str
+    proof_role: str
+
+
+@dataclass(frozen=True)
 class PhraseRow:
     order: int
     row_id: str
@@ -114,6 +122,34 @@ def responsibility_rows_from_doc(doc: Mapping[str, Any]) -> tuple[Responsibility
     return tuple(out)
 
 
+def escalation_proof_rows_from_doc(doc: Mapping[str, Any]) -> tuple[EscalationProofRow, ...]:
+    rows = doc.get("required_escalation_proof_rows")
+    if not isinstance(rows, list):
+        return ()
+    out: list[EscalationProofRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        proof_id = _norm_str(row.get("proof_id"))
+        contract_heading = str(row.get("contract_heading") or "").strip()
+        proof_role = _norm_str(row.get("proof_role"))
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not proof_id or not contract_heading or not proof_role:
+            continue
+        out.append(
+            EscalationProofRow(
+                order=order,
+                proof_id=proof_id,
+                contract_heading=contract_heading,
+                proof_role=proof_role,
+            )
+        )
+    return tuple(out)
+
+
 def _phrase_rows_from_field(doc: Mapping[str, Any], field: str, *, row_key: str) -> tuple[PhraseRow, ...]:
     rows = doc.get(field)
     if not isinstance(rows, list):
@@ -136,6 +172,10 @@ def _phrase_rows_from_field(doc: Mapping[str, Any], field: str, *, row_key: str)
 
 def escalation_rows_from_doc(doc: Mapping[str, Any]) -> tuple[PhraseRow, ...]:
     return _phrase_rows_from_field(doc, "required_escalation_rows", row_key="trigger_id")
+
+
+def escalation_limit_rows_from_doc(doc: Mapping[str, Any]) -> tuple[PhraseRow, ...]:
+    return _phrase_rows_from_field(doc, "required_escalation_limit_rows", row_key="limit_id")
 
 
 def boundary_collapse_rows_from_doc(doc: Mapping[str, Any]) -> tuple[PhraseRow, ...]:

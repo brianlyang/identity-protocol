@@ -14,6 +14,8 @@ contract_required_markers:
   - '## Four-layer relation'
   - '## Responsibility law'
   - '## Escalation admission law'
+  - '## Escalation-proof discipline'
+  - '## Escalation-proof limits'
   - '## Non-compliant boundary collapses'
   - 'The protocol defines the law of the world; the instance converges its runtime back to that law.'
 required_layer_rows:
@@ -59,6 +61,39 @@ required_escalation_rows:
   - order: 4
     trigger_id: machine_truth_incomplete
     contract_phrase: 'machine truth itself is incomplete, so no amount of instance self-repair can achieve alignment.'
+required_escalation_proof_rows:
+  - order: 1
+    proof_id: semantic_ambiguity_proof
+    contract_heading: '### 1. Semantic-ambiguity proof'
+    proof_role: shared_law_semantic_ambiguity_proof
+  - order: 2
+    proof_id: shared_law_contradiction_proof
+    contract_heading: '### 2. Shared-law contradiction proof'
+    proof_role: shared_law_implementation_contradiction_proof
+  - order: 3
+    proof_id: multi_instance_structural_gap_proof
+    contract_heading: '### 3. Multi-instance structural-gap proof'
+    proof_role: cross_instance_structural_gap_proof
+  - order: 4
+    proof_id: machine_truth_incompleteness_proof
+    contract_heading: '### 4. Machine-truth incompleteness proof'
+    proof_role: machine_truth_incompleteness_proof
+required_escalation_limit_rows:
+  - order: 1
+    limit_id: semantic_ambiguity_not_shared_contradiction
+    contract_phrase: 'semantic-ambiguity proof is not proof of shared implementation contradiction;'
+  - order: 2
+    limit_id: shared_contradiction_not_multi_instance_gap
+    contract_phrase: 'shared-law contradiction proof is not proof of multi-instance structural gap;'
+  - order: 3
+    limit_id: multi_instance_gap_not_machine_truth_incomplete
+    contract_phrase: 'multi-instance structural-gap proof is not proof of machine-truth incompleteness;'
+  - order: 4
+    limit_id: machine_truth_incomplete_not_instance_amnesty
+    contract_phrase: 'machine-truth incompleteness proof is not proof that instance convergence duty disappears;'
+  - order: 5
+    limit_id: escalation_proof_not_protocol_debt_laundering
+    contract_phrase: 'no escalation proof may launder unproved local residue into protocol debt.'
 required_boundary_collapse_rows:
   - order: 1
     collapse_id: instance_residue_laundering
