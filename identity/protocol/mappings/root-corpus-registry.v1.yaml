@@ -229,8 +229,14 @@ registered_top_level_entries:
     corpus_class: root_contract
     law_bearing: true
     required_markers:
-      - '## Purpose'
-      - 'this file freezes the concrete discovery law'
+      - 'This file remains the authoritative root-domain contract for deterministic identity discovery law.'
+      - '## Deterministic identity discovery law'
+      - '## Method: `identity/list`'
+      - '## Discovery precedence'
+      - '## Activation policy contract'
+      - '## Required error reporting'
+      - '## Minimal local implementation requirements'
+      - '## Non-compliant discovery collapses'
     forbidden_content_classes:
       - workbook_issue_projection
       - closure_ledger_narration
@@ -355,6 +361,8 @@ registered_top_level_entries:
       - root-agent-handoff.v1.yaml
       - root-prompt-bootstrap.current.yaml
       - root-prompt-bootstrap.v1.yaml
+      - root-identity-discovery.current.yaml
+      - root-identity-discovery.v1.yaml
       - root-identity-instance-self-judgement.current.yaml
       - root-identity-instance-self-judgement.v1.yaml
       - root-protocol-instance-responsibility.current.yaml

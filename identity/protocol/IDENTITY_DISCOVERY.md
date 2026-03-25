@@ -22,10 +22,9 @@ It is not:
 
 ## Purpose
 
-Define a deterministic discovery contract for identity packs, similar to skill discovery.
+Define deterministic identity discovery law for governed identity-pack selection, including request/response shapes, precedence, activation policy, required error reporting, minimal implementation requirements, and fail-close discovery collapses.
 
-- Input: working directories + optional extra roots.
-- Output: active/available identities with policy/dependency metadata and load errors.
+This file remains the authoritative root-domain contract for deterministic identity discovery law.
 
 ## Foundational design philosophy anchor
 
@@ -36,7 +35,7 @@ This discovery contract inherits its bottom-theory assumptions from:
 Interpretive boundary:
 
 1. the design philosophy explains why discovery must prefer canonical truth, semantic singularity, and fail-close determinism over convenience heuristics;
-2. this file freezes the concrete discovery law: request/response shapes, precedence, activation policy, error reporting, and minimal implementation requirements;
+2. this file freezes the concrete discovery law: request/response shapes, precedence, activation policy, error reporting, minimal implementation requirements, and fail-close collapses;
 3. this file is authoritative for root-domain discovery law, but current-turn discovery legality still depends on machine-consumed resolver, catalog, validator, and runtime truth surfaces;
 4. philosophical grounding does not replace the contract authority of this discovery specification.
 
@@ -76,6 +75,21 @@ Current-turn discovery legality must still resolve from machine-consumed enforce
 
 So this file freezes discovery law, while runtime adjudication determines whether discovery has actually been executed lawfully in the present turn.
 
+## Deterministic identity discovery law
+
+Governed identity discovery is not convenience browsing. It is a lawful process
+for discovering candidate identity packs and governed selection surfaces from
+canonical roots under explicit precedence and error-reporting discipline.
+
+Discovery is lawful only when request shape, response shape, precedence,
+activation ordering, error reporting, and minimal implementation requirements
+remain explicit rather than inferred from local habit, cache residue, or path
+similarity.
+
+Cached snapshots, loose path guesses, and operator convenience notes may assist
+human understanding, but they must not silently replace governed discovery
+truth for the present turn.
+
 ## Method: `identity/list`
 
 ### Request shape
@@ -91,6 +105,14 @@ So this file freezes discovery law, while runtime adjudication determines whethe
   }
 }
 ```
+
+Required request fields:
+
+1. `method`
+2. `id`
+3. `cwds`
+4. `extraRoots`
+5. `forceReload`
 
 ### Response shape
 
@@ -133,6 +155,16 @@ So this file freezes discovery law, while runtime adjudication determines whethe
 }
 ```
 
+Required response fields:
+
+1. `defaultIdentity`
+2. `identities`
+3. `errors`
+4. `packPath`
+5. `allowImplicitActivation`
+6. `activationPriority`
+7. `conflictResolution`
+
 ## Discovery precedence
 
 1. Explicit project root (`cwd`)
@@ -140,11 +172,13 @@ So this file freezes discovery law, while runtime adjudication determines whethe
 3. `extraRoots`
 
 Conflict policy:
+
 - same `id` across roots: prefer nearest `cwd` root unless explicit pin overrides.
 
 ## Activation policy contract
 
 Activation priority order:
+
 1. explicit identity selection
 2. runtime pin (`identity/PROTOCOL_PIN.yaml` and project defaults)
 3. implicit policy match (`allow_implicit_activation=true` + objective similarity)
@@ -152,6 +186,7 @@ Activation priority order:
 ## Required error reporting
 
 Each `errors[]` item must include:
+
 - `code`: machine-readable error code
 - `path`: file path if applicable
 - `message`: concise human-readable description
@@ -160,10 +195,35 @@ Each `errors[]` item must include:
 ## Minimal local implementation requirements
 
 A compliant local implementation must:
+
 1. Resolve `identity/catalog/identities.yaml`
 2. Resolve `default_identity`
 3. Verify each `pack_path` exists
 4. Return normalized metadata + errors
+
+## Non-compliant discovery collapses
+
+The following are non-compliant:
+
+1. `cached_catalogue_as_current_turn_truth`: a cached catalogue snapshot is treated as current-turn governed discovery truth.
+2. `path_presence_as_discovery_legality`: visible path presence or a nearby folder is treated as sufficient discovery legality.
+3. `local_convenience_as_conflict_resolution`: same-id conflicts are resolved by local convenience rather than governed precedence and explicit pinning.
+4. `missing_error_fields_as_valid_discovery`: discovery output is treated as valid even though required `errors[]` fields are missing.
+5. `operator_note_as_resolver_truth`: an operator-facing note or summary is treated as if it were the governed resolver output.
+
+## Validation
+
+Use:
+
+- `python3 scripts/validate_protocol_root_identity_discovery.py --json-only`
+- `bash scripts/ci/run_protocol_root_identity_discovery_probes_ci.sh`
+- `python3 scripts/validate_discovery_requiredization.py`
+
+These checks validate:
+
+1. the root-domain discovery law, machine-consumed discovery mapping, and root-corpus integration;
+2. deterministic discovery structure, precedence, and required reporting fields;
+3. runtime discovery requiredization checks where present-turn discovery claims are made.
 
 Discovery law remains root-domain law only; runtime authority for any concrete
 current-turn discovery result still belongs to the governed resolver and its
