@@ -378,6 +378,8 @@ registered_top_level_entries:
       - root-corpus-question-routing.v1.yaml
       - root-corpus-ordering.current.yaml
       - root-corpus-ordering.v1.yaml
+      - root-constitutional-spine.current.yaml
+      - root-constitutional-spine.v1.yaml
       - root-machine-law-primacy.current.yaml
       - root-machine-law-primacy.v1.yaml
       - root-machine-world-ontology.current.yaml

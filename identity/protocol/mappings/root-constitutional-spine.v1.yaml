@@ -1,0 +1,114 @@
+schema_version: 1
+spine_family: protocol_root_constitutional_spine
+spine_version: v1
+root_dir: identity/protocol
+validator_script: scripts/validate_protocol_root_constitutional_spine.py
+probe_script: scripts/ci/run_protocol_root_constitutional_spine_probes_ci.sh
+common_script: scripts/root_constitutional_spine_common.py
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+required_constitutional_entry_rows:
+  - order: 1
+    rel_path: identity/protocol/README.md
+    corpus_class: root_index
+    reading_order: 1
+    entry_role: root_index_entry_surface
+    authority_role: navigational_root_index
+    authority_mode: navigational_only
+    question_classes:
+      - root_entry_navigation
+    required_markers:
+      - '## Purpose'
+      - '## Root reading order'
+      - '## Authority layering'
+      - '## Source-order, reading-order, and adjudication-order'
+  - order: 2
+    rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    corpus_class: bottom_theory
+    reading_order: 2
+    entry_role: bottom_theory_entry
+    authority_role: interpretive_bottom_theory
+    authority_mode: interpretive_only
+    question_classes:
+      - generative_why
+    required_markers:
+      - '## Document Positioning'
+      - '## One-line motherline'
+      - '### Machine-world reading rule'
+      - '### Constitutional derivation order'
+      - '### Three orders must never be collapsed'
+      - '### Question class and answer surface must stay paired'
+  - order: 3
+    rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    corpus_class: constitution
+    reading_order: 3
+    entry_role: protocol_constitution_entry
+    authority_role: constitutional_protocol_law
+    authority_mode: frozen_law_only
+    question_classes:
+      - frozen_protocol_law
+    required_markers:
+      - '## Normative source map (current governed execution)'
+      - '## Foundational design philosophy boundary'
+      - '## Constitutional derivation discipline'
+      - '## Root-law promotion and re-entry boundary'
+      - '## Root-law bundle boundary'
+  - order: 4
+    rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    corpus_class: runtime_constitution
+    reading_order: 4
+    entry_role: runtime_constitution_entry
+    authority_role: constitutional_runtime_law
+    authority_mode: frozen_law_only
+    question_classes:
+      - frozen_runtime_law
+    required_markers:
+      - '## Integration objective'
+      - '## Foundational design philosophy anchor'
+      - '## Runtime derivation boundary'
+      - '## Runtime-to-root promotion boundary'
+      - '## Runtime consumption of the root-law bundle'
+required_spine_bridge_rows:
+  - order: 1
+    bridge_id: philosophy_to_protocol_constitution
+    source_rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    source_markers:
+      - 'In other words, `IDENTITY_PROTOCOL.md` explains protocol objects and boundaries'
+    target_rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    target_markers:
+      - 'This file is therefore a protocol-law constitution derived from that bottom theory'
+  - order: 2
+    bridge_id: philosophy_to_runtime_constitution
+    source_rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    source_markers:
+      - '`IDENTITY_RUNTIME.md` explains runtime and integration behavior'
+    target_rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    target_markers:
+      - 'runtime is an operational embodiment of protocol bottom theory'
+  - order: 3
+    bridge_id: philosophy_to_protocol_machine_authority_split
+    source_rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    source_markers:
+      - 'philosophical primacy does not mean runtime-source primacy'
+    target_rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    target_markers:
+      - 'Machine-consumed truth remains frozen in governance/review docs, mappings, validators, probes, runtime state, and receipts'
+  - order: 4
+    bridge_id: philosophy_to_runtime_machine_authority_split
+    source_rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    source_markers:
+      - 'machine-consumed authority still lives in frozen contracts, mappings, validators, runtime state, and receipts'
+    target_rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    target_markers:
+      - 'Current-turn runtime legality remains machine-consumed registry and enforcement truth, not raw runtime motivation records.'
+  - order: 5
+    bridge_id: protocol_to_runtime_root_bundle_consumption
+    source_rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    source_markers:
+      - 'The protocol constitution depends on a governed root-law bundle across:'
+    target_rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    target_markers:
+      - 'Runtime does not consume root law as isolated slogans.'
+      - 'Runtime must consume the governed root-law bundle together:'
