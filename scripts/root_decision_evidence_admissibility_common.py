@@ -37,6 +37,15 @@ class DecisionEvidenceProofRow:
     proof_role: str
 
 
+@dataclass(frozen=True)
+class AdjudicationPhaseAlignmentRow:
+    order: int
+    machine_surface: str
+    evidence_class_id: str
+    proof_id: str
+    surface_role: str
+
+
 def _norm_str(value: Any) -> str:
     return str(value or "").strip().replace("\\", "/")
 
@@ -134,6 +143,36 @@ def decision_evidence_proof_rows_from_doc(doc: Mapping[str, Any]) -> tuple[Decis
                 proof_id=proof_id,
                 contract_heading=contract_heading,
                 proof_role=proof_role,
+            )
+        )
+    return tuple(out)
+
+
+def adjudication_phase_alignment_rows_from_doc(doc: Mapping[str, Any]) -> tuple[AdjudicationPhaseAlignmentRow, ...]:
+    rows = doc.get("required_adjudication_phase_alignment_rows")
+    if not isinstance(rows, list):
+        return ()
+    out: list[AdjudicationPhaseAlignmentRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        machine_surface = _norm_str(row.get("machine_surface"))
+        evidence_class_id = _norm_str(row.get("evidence_class_id"))
+        proof_id = _norm_str(row.get("proof_id"))
+        surface_role = _norm_str(row.get("surface_role"))
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not machine_surface or not evidence_class_id or not proof_id or not surface_role:
+            continue
+        out.append(
+            AdjudicationPhaseAlignmentRow(
+                order=order,
+                machine_surface=machine_surface,
+                evidence_class_id=evidence_class_id,
+                proof_id=proof_id,
+                surface_role=surface_role,
             )
         )
     return tuple(out)

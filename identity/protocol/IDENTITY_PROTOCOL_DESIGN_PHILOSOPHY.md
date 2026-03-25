@@ -175,6 +175,11 @@ The machine-world adjudication chain is not only ordered; it is role-distinct.
 4. runtime state binds live present-turn truth only after the earlier legality phases remain lawful;
 5. receipts close the adjudicated verdict rather than back-authoring the earlier legality phases they summarize.
 
+Live-truth binding and verdict closure are therefore different evidence strata:
+
+- runtime state proves lawful present-turn binding;
+- receipts prove lawful closure of that already-bound adjudication chain.
+
 This means the adjudication chain must remain explicit in both order and role:
 
 - mappings = admissible-law resolution;

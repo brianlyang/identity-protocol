@@ -17,8 +17,11 @@ authority_current_file: identity/protocol/mappings/root-corpus-authority.current
 question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
 contract_required_markers:
   - '## Decision-evidence admissibility law'
-  - '## Five decision-evidence classes'
+  - '## Six decision-evidence classes'
   - '## Required decision-evidence differentiations'
+  - '## Adjudication-phase evidence alignment'
+  - 'runtime-state live binding requires bound runtime evidence and bound-runtime decision-evidence proof;'
+  - 'receipt-driven closure requires adjudicated verdict closure evidence and adjudicated-verdict-closure decision-evidence proof;'
   - '## Decision-evidence proof discipline'
   - '## Decision-evidence proof limits'
   - '## Non-compliant decision-evidence collapses'
@@ -41,8 +44,12 @@ required_evidence_class_rows:
     contract_heading: '### 4. Bound runtime evidence'
     evidence_role: bound_runtime_evidence
   - order: 5
+    evidence_class_id: adjudicated_verdict_closure_evidence
+    contract_heading: '### 5. Adjudicated verdict closure evidence'
+    evidence_role: adjudicated_verdict_closure_evidence
+  - order: 6
     evidence_class_id: demoted_support_evidence
-    contract_heading: '### 5. Demoted support evidence'
+    contract_heading: '### 6. Demoted support evidence'
     evidence_role: demoted_support_evidence
 required_differentiation_rows:
   - order: 1
@@ -61,8 +68,22 @@ required_differentiation_rows:
     differentiation_id: support_material_vs_active_success_path_evidence
     contract_phrase: 'sample, fixture, diagnostics, migration, and replay evidence are separated from active success-path evidence;'
   - order: 6
+    differentiation_id: bound_runtime_vs_adjudicated_verdict_closure_evidence
+    contract_phrase: 'bound runtime evidence is separated from adjudicated verdict closure evidence;'
+  - order: 7
     differentiation_id: prose_payload_vs_machine_decision_evidence
     contract_phrase: 'handoff payload or operator-facing prose is separated from machine decision evidence.'
+required_adjudication_phase_alignment_rows:
+  - order: 1
+    machine_surface: runtime_state
+    evidence_class_id: bound_runtime_evidence
+    proof_id: bound_runtime_decision_evidence_proof
+    surface_role: live_state_truth_binding
+  - order: 2
+    machine_surface: receipts
+    evidence_class_id: adjudicated_verdict_closure_evidence
+    proof_id: adjudicated_verdict_closure_decision_evidence_proof
+    surface_role: adjudicated_verdict_closure
 required_decision_evidence_proof_rows:
   - order: 1
     proof_id: frozen_law_decision_evidence_proof
@@ -81,8 +102,12 @@ required_decision_evidence_proof_rows:
     contract_heading: '### 4. Bound-runtime decision-evidence proof'
     proof_role: bound_runtime_decision_evidence_proof
   - order: 5
+    proof_id: adjudicated_verdict_closure_decision_evidence_proof
+    contract_heading: '### 5. Adjudicated-verdict-closure decision-evidence proof'
+    proof_role: adjudicated_verdict_closure_decision_evidence_proof
+  - order: 6
     proof_id: demotion_confinement_decision_evidence_proof
-    contract_heading: '### 5. Demotion-confinement decision-evidence proof'
+    contract_heading: '### 6. Demotion-confinement decision-evidence proof'
     proof_role: demotion_confinement_decision_evidence_proof
 required_decision_evidence_limit_rows:
   - order: 1
@@ -95,9 +120,15 @@ required_decision_evidence_limit_rows:
     limit_id: validator_verdict_not_bound_runtime
     contract_phrase: 'validator-verdict decision-evidence proof is not proof of bound runtime evidence;'
   - order: 4
-    limit_id: bound_runtime_not_support_terminality
-    contract_phrase: 'bound-runtime decision-evidence proof is not proof that demoted support evidence may terminate the decision;'
+    limit_id: bound_runtime_not_verdict_closure
+    contract_phrase: 'bound-runtime decision-evidence proof is not proof of adjudicated verdict closure;'
   - order: 5
+    limit_id: adjudicated_verdict_closure_not_upstream_legality_authorship
+    contract_phrase: 'adjudicated-verdict-closure decision-evidence proof is not proof of upstream legality authorship or earlier-phase substitution;'
+  - order: 6
+    limit_id: adjudicated_verdict_closure_not_support_terminality
+    contract_phrase: 'adjudicated-verdict-closure decision-evidence proof is not proof that demoted support evidence may terminate the decision;'
+  - order: 7
     limit_id: demotion_confinement_not_active_terminal_scope
     contract_phrase: 'demotion-confinement decision-evidence proof is not proof that support material may enter active success-path terminal scope.'
 required_collapse_rows:
@@ -117,5 +148,8 @@ required_collapse_rows:
     collapse_id: sample_fixture_diagnostic_as_live_decision_evidence
     contract_phrase: 'sample, fixture, diagnostics, migration, or replay material is treated as if it were active success-path evidence.'
   - order: 6
+    collapse_id: receipt_closure_as_upstream_legality_evidence
+    contract_phrase: 'receipt closure is treated as if it authored or replaced earlier legality phases.'
+  - order: 7
     collapse_id: prose_payload_as_machine_decision_evidence
     contract_phrase: 'handoff prose or operator-facing narration is treated as if it were machine decision evidence.'

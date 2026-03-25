@@ -108,6 +108,7 @@ Status transitions are controlled by governance/review, not by script commit alo
 5. runtime state binds live truth only after prior legality phases remain satisfied;
 6. receipts close the adjudicated verdict and do not replace the earlier legality phases they report.
 7. A later adjudication surface may summarize or close earlier legality work, but it may not back-author the law-bearing role of an earlier phase.
+8. Bound runtime evidence and adjudicated verdict closure evidence are therefore different admissibility strata and must not be collapsed.
 
 ## Root conflict-precedence boundary
 

@@ -190,6 +190,11 @@ Current-turn legality must not flatten the machine surfaces that participate in 
 4. runtime state binds live current-turn truth only after prior legality phases have remained lawful;
 5. receipts close the adjudicated verdict and must not back-author earlier legality phases.
 
+That also means runtime-state binding evidence is not the same as receipt-closure evidence:
+
+- runtime state proves live lawful binding;
+- receipts prove lawful closure of an already-valid chain.
+
 So the terminal chain is ordered and phase-governed at the same time:
 
 - mappings are admissible-law resolution;

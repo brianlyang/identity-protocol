@@ -74,6 +74,7 @@ Runtime meaning:
 4. Runtime consumes runtime state as live-truth binding only after prior legality phases remain satisfied.
 5. Runtime consumes receipts as adjudicated verdict closure rather than as upstream law-authoring surfaces.
 6. Runtime must not let operator visibility, local familiarity, or execution recency collapse those distinct roles into one convenience layer.
+7. Runtime must also keep bound live-binding evidence separate from adjudicated closure evidence rather than letting receipt visibility impersonate current-run binding.
 
 ## Runtime registry-completeness boundary
 

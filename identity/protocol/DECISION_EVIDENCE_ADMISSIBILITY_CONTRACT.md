@@ -85,7 +85,7 @@ A machine decision may be motivated, supported, or terminally justified only by 
 
 No support material, historical residue, or compatibility lane may silently promote itself into terminal decision evidence for the active success path.
 
-## Five decision-evidence classes
+## Six decision-evidence classes
 
 ### 1. Frozen-law evidence
 
@@ -111,7 +111,15 @@ Runtime state, canonical receipts, and current-run evidence may justify present-
 
 Evidence role: `bound_runtime_evidence`.
 
-### 5. Demoted support evidence
+### 5. Adjudicated verdict closure evidence
+
+Canonical receipts and governed closure artifacts may justify that an already lawful adjudication chain actually closed, but only when they summarize a path that was already lawfully admitted, evaluated, drift-negated, and live-bound.
+
+They do not back-author frozen law, registry resolution, validator verdicts, or runtime-state live binding.
+
+Evidence role: `adjudicated_verdict_closure_evidence`.
+
+### 6. Demoted support evidence
 
 Samples, fixtures, diagnostics, replay material, migration aids, handoff payloads, and operator-facing prose may motivate review or convergence work, but they must not terminate current-turn legality or silently enter the active success path as terminal decision evidence.
 
@@ -126,11 +134,22 @@ The protocol must preserve the following differentiations:
 3. runtime evidence is separated from shared-law evidence;
 4. summary, projection, or commentary is separated from source evidence;
 5. sample, fixture, diagnostics, migration, and replay evidence are separated from active success-path evidence;
-6. handoff payload or operator-facing prose is separated from machine decision evidence.
+6. bound runtime evidence is separated from adjudicated verdict closure evidence;
+7. handoff payload or operator-facing prose is separated from machine decision evidence.
 
 When a decision-evidence claim relies on governed proof, the proof stratum
 behind that claim must match the evidence-admissibility commitment being
 asserted.
+
+## Adjudication-phase evidence alignment
+
+Current-turn legality may not use one adjudication phase's evidence stratum as if it automatically satisfied a later phase.
+
+The minimum root alignment is:
+
+1. runtime-state live binding requires bound runtime evidence and bound-runtime decision-evidence proof;
+2. receipt-driven closure requires adjudicated verdict closure evidence and adjudicated-verdict-closure decision-evidence proof;
+3. receipt closure may summarize a lawful adjudication chain, but it does not replace frozen law, registry resolution, validator verdict passage, or runtime-state live binding.
 
 ## Decision-evidence proof discipline
 
@@ -168,7 +187,15 @@ present-turn terminal decision scope.
 
 Proof role: `bound_runtime_decision_evidence_proof`.
 
-### 5. Demotion-confinement decision-evidence proof
+### 5. Adjudicated-verdict-closure decision-evidence proof
+
+Supports claims that canonical receipts or governed closure artifacts closed an
+already lawful adjudication chain without rewriting the earlier legality phases
+they summarize.
+
+Proof role: `adjudicated_verdict_closure_decision_evidence_proof`.
+
+### 6. Demotion-confinement decision-evidence proof
 
 Supports claims that support-only, replay, migration, diagnostics, fixture, or
 operator-facing material remained demoted and did not silently promote itself
@@ -183,8 +210,10 @@ The protocol must preserve these decision-evidence proof limits:
 1. frozen-law decision-evidence proof is not proof of registry resolution;
 2. registry-resolution decision-evidence proof is not proof of validator-and-probe verdict passage;
 3. validator-verdict decision-evidence proof is not proof of bound runtime evidence;
-4. bound-runtime decision-evidence proof is not proof that demoted support evidence may terminate the decision;
-5. demotion-confinement decision-evidence proof is not proof that support material may enter active success-path terminal scope.
+4. bound-runtime decision-evidence proof is not proof of adjudicated verdict closure;
+5. adjudicated-verdict-closure decision-evidence proof is not proof of upstream legality authorship or earlier-phase substitution;
+6. adjudicated-verdict-closure decision-evidence proof is not proof that demoted support evidence may terminate the decision;
+7. demotion-confinement decision-evidence proof is not proof that support material may enter active success-path terminal scope.
 
 ## Non-compliant decision-evidence collapses
 
@@ -195,7 +224,8 @@ The following are non-compliant:
 3. `runtime_residue_as_shared_law_evidence`: runtime residue is treated as if it rewrote shared law or constitutional authority.
 4. `summary_projection_as_source_evidence`: summary, projection, or commentary is treated as if it were source evidence.
 5. `sample_fixture_diagnostic_as_live_decision_evidence`: sample, fixture, diagnostics, migration, or replay material is treated as if it were active success-path evidence.
-6. `prose_payload_as_machine_decision_evidence`: handoff prose or operator-facing narration is treated as if it were machine decision evidence.
+6. `receipt_closure_as_upstream_legality_evidence`: receipt closure is treated as if it authored or replaced earlier legality phases.
+7. `prose_payload_as_machine_decision_evidence`: handoff prose or operator-facing narration is treated as if it were machine decision evidence.
 
 ## Validation
 

@@ -8,7 +8,11 @@ from typing import Any
 from repo_root_resolution_common import resolve_repo_root
 from root_corpus_authority_common import authority_anchor_checks_from_doc, entry_authority_projections_from_doc, load_root_corpus_authority
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
-from root_corpus_ordering_common import load_root_corpus_ordering, reading_order_rows_from_doc
+from root_corpus_ordering_common import (
+    adjudication_surface_profiles_from_doc,
+    load_root_corpus_ordering,
+    reading_order_rows_from_doc,
+)
 from root_corpus_question_routing_common import (
     entry_question_projections_from_doc,
     load_root_corpus_question_routing,
@@ -17,6 +21,7 @@ from root_corpus_question_routing_common import (
 from root_decision_evidence_admissibility_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
+    adjudication_phase_alignment_rows_from_doc,
     collapse_rows_from_doc,
     decision_evidence_limit_rows_from_doc,
     decision_evidence_proof_rows_from_doc,
@@ -51,9 +56,14 @@ EXPECTED_EVIDENCE_CLASS_ROWS = {
         "contract_heading": "### 4. Bound runtime evidence",
         "evidence_role": "bound_runtime_evidence",
     },
-    "demoted_support_evidence": {
+    "adjudicated_verdict_closure_evidence": {
         "order": 5,
-        "contract_heading": "### 5. Demoted support evidence",
+        "contract_heading": "### 5. Adjudicated verdict closure evidence",
+        "evidence_role": "adjudicated_verdict_closure_evidence",
+    },
+    "demoted_support_evidence": {
+        "order": 6,
+        "contract_heading": "### 6. Demoted support evidence",
         "evidence_role": "demoted_support_evidence",
     },
 }
@@ -78,9 +88,27 @@ EXPECTED_DIFFERENTIATION_ROWS = {
         "order": 5,
         "contract_phrase": "sample, fixture, diagnostics, migration, and replay evidence are separated from active success-path evidence;",
     },
-    "prose_payload_vs_machine_decision_evidence": {
+    "bound_runtime_vs_adjudicated_verdict_closure_evidence": {
         "order": 6,
+        "contract_phrase": "bound runtime evidence is separated from adjudicated verdict closure evidence;",
+    },
+    "prose_payload_vs_machine_decision_evidence": {
+        "order": 7,
         "contract_phrase": "handoff payload or operator-facing prose is separated from machine decision evidence.",
+    },
+}
+EXPECTED_ADJUDICATION_PHASE_ALIGNMENT_ROWS = {
+    "runtime_state": {
+        "order": 1,
+        "evidence_class_id": "bound_runtime_evidence",
+        "proof_id": "bound_runtime_decision_evidence_proof",
+        "surface_role": "live_state_truth_binding",
+    },
+    "receipts": {
+        "order": 2,
+        "evidence_class_id": "adjudicated_verdict_closure_evidence",
+        "proof_id": "adjudicated_verdict_closure_decision_evidence_proof",
+        "surface_role": "adjudicated_verdict_closure",
     },
 }
 EXPECTED_DECISION_EVIDENCE_PROOF_ROWS = {
@@ -104,9 +132,14 @@ EXPECTED_DECISION_EVIDENCE_PROOF_ROWS = {
         "contract_heading": "### 4. Bound-runtime decision-evidence proof",
         "proof_role": "bound_runtime_decision_evidence_proof",
     },
-    "demotion_confinement_decision_evidence_proof": {
+    "adjudicated_verdict_closure_decision_evidence_proof": {
         "order": 5,
-        "contract_heading": "### 5. Demotion-confinement decision-evidence proof",
+        "contract_heading": "### 5. Adjudicated-verdict-closure decision-evidence proof",
+        "proof_role": "adjudicated_verdict_closure_decision_evidence_proof",
+    },
+    "demotion_confinement_decision_evidence_proof": {
+        "order": 6,
+        "contract_heading": "### 6. Demotion-confinement decision-evidence proof",
         "proof_role": "demotion_confinement_decision_evidence_proof",
     },
 }
@@ -123,12 +156,20 @@ EXPECTED_DECISION_EVIDENCE_LIMIT_ROWS = {
         "order": 3,
         "contract_phrase": "validator-verdict decision-evidence proof is not proof of bound runtime evidence;",
     },
-    "bound_runtime_not_support_terminality": {
+    "bound_runtime_not_verdict_closure": {
         "order": 4,
-        "contract_phrase": "bound-runtime decision-evidence proof is not proof that demoted support evidence may terminate the decision;",
+        "contract_phrase": "bound-runtime decision-evidence proof is not proof of adjudicated verdict closure;",
+    },
+    "adjudicated_verdict_closure_not_upstream_legality_authorship": {
+        "order": 5,
+        "contract_phrase": "adjudicated-verdict-closure decision-evidence proof is not proof of upstream legality authorship or earlier-phase substitution;",
+    },
+    "adjudicated_verdict_closure_not_support_terminality": {
+        "order": 6,
+        "contract_phrase": "adjudicated-verdict-closure decision-evidence proof is not proof that demoted support evidence may terminate the decision;",
     },
     "demotion_confinement_not_active_terminal_scope": {
-        "order": 5,
+        "order": 7,
         "contract_phrase": "demotion-confinement decision-evidence proof is not proof that support material may enter active success-path terminal scope.",
     },
 }
@@ -153,16 +194,21 @@ EXPECTED_COLLAPSE_ROWS = {
         "order": 5,
         "contract_phrase": "sample, fixture, diagnostics, migration, or replay material is treated as if it were active success-path evidence.",
     },
-    "prose_payload_as_machine_decision_evidence": {
+    "receipt_closure_as_upstream_legality_evidence": {
         "order": 6,
+        "contract_phrase": "receipt closure is treated as if it authored or replaced earlier legality phases.",
+    },
+    "prose_payload_as_machine_decision_evidence": {
+        "order": 7,
         "contract_phrase": "handoff prose or operator-facing narration is treated as if it were machine decision evidence.",
     },
 }
 EXPECTED_REGISTRY_MARKERS = (
     "this file remains the authoritative root-domain contract for decision-evidence admissibility law",
     "## Decision-evidence admissibility law",
-    "## Five decision-evidence classes",
+    "## Six decision-evidence classes",
     "## Required decision-evidence differentiations",
+    "## Adjudication-phase evidence alignment",
     "## Decision-evidence proof discipline",
     "## Decision-evidence proof limits",
 )
@@ -280,11 +326,13 @@ def main() -> int:
 
     evidence_class_rows = evidence_class_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     differentiation_rows = differentiation_rows_from_doc(admissibility_doc) if admissibility_doc else ()
+    adjudication_phase_alignment_rows = adjudication_phase_alignment_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     decision_evidence_proof_rows = decision_evidence_proof_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     decision_evidence_limit_rows = decision_evidence_limit_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     collapse_rows = collapse_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
+    adjudication_surface_profiles = adjudication_surface_profiles_from_doc(ordering_doc) if ordering_doc else ()
     authority_anchors = authority_anchor_checks_from_doc(authority_doc) if authority_doc else ()
     authority_projections = entry_authority_projections_from_doc(authority_doc) if authority_doc else ()
     routing_anchors = question_routing_anchor_checks_from_doc(routing_doc) if routing_doc else ()
@@ -313,6 +361,7 @@ def main() -> int:
         for field, rows in (
             ("required_evidence_class_rows", evidence_class_rows),
             ("required_differentiation_rows", differentiation_rows),
+            ("required_adjudication_phase_alignment_rows", adjudication_phase_alignment_rows),
             ("required_decision_evidence_proof_rows", decision_evidence_proof_rows),
             ("required_decision_evidence_limit_rows", decision_evidence_limit_rows),
             ("required_collapse_rows", collapse_rows),
@@ -348,6 +397,15 @@ def main() -> int:
             field_name="required_differentiation_rows",
             id_attr="row_id",
             compare_fields=("contract_phrase",),
+        )
+        _validate_rows(
+            actual_rows=adjudication_phase_alignment_rows,
+            expected_rows=EXPECTED_ADJUDICATION_PHASE_ALIGNMENT_ROWS,
+            structure_violations=structure_violations,
+            admissibility_violations=admissibility_violations,
+            field_name="required_adjudication_phase_alignment_rows",
+            id_attr="machine_surface",
+            compare_fields=("evidence_class_id", "proof_id", "surface_role"),
         )
         _validate_rows(
             actual_rows=decision_evidence_proof_rows,
@@ -470,6 +528,40 @@ def main() -> int:
                     "actual": ordering_row.entry_role,
                 }
             )
+        adjudication_surface_profile_map = {row.machine_surface: row for row in adjudication_surface_profiles}
+        previous_phase_order = 0
+        for row in adjudication_phase_alignment_rows:
+            profile = adjudication_surface_profile_map.get(row.machine_surface)
+            if profile is None:
+                integration_violations.append(
+                    {
+                        "field": "root_corpus_ordering",
+                        "reason": "ordering_adjudication_surface_missing",
+                        "machine_surface": row.machine_surface,
+                    }
+                )
+                continue
+            if profile.surface_role != row.surface_role:
+                integration_violations.append(
+                    {
+                        "field": "root_corpus_ordering",
+                        "reason": "ordering_adjudication_surface_role_mismatch",
+                        "machine_surface": row.machine_surface,
+                        "expected": row.surface_role,
+                        "actual": profile.surface_role,
+                    }
+                )
+            if profile.phase_order <= previous_phase_order:
+                integration_violations.append(
+                    {
+                        "field": "root_corpus_ordering",
+                        "reason": "ordering_adjudication_phase_not_increasing",
+                        "machine_surface": row.machine_surface,
+                        "phase_order": profile.phase_order,
+                        "previous_phase_order": previous_phase_order,
+                    }
+                )
+            previous_phase_order = profile.phase_order
 
         authority_anchor_map = {row.rel_path: row.required_markers for row in authority_anchors}
         missing_authority_markers = _entry_marker_missing(authority_anchor_map.get(contract_file, ()), EXPECTED_AUTHORITY_MARKERS)
@@ -566,14 +658,26 @@ def main() -> int:
         "contract_file": str(admissibility_doc.get("contract_file") or ""),
         "evidence_class_count": len(evidence_class_rows),
         "differentiation_count": len(differentiation_rows),
+        "adjudication_phase_alignment_count": len(adjudication_phase_alignment_rows),
         "decision_evidence_proof_count": len(decision_evidence_proof_rows),
         "decision_evidence_limit_count": len(decision_evidence_limit_rows),
         "collapse_count": len(collapse_rows),
         "evidence_class_ids": [row.evidence_class_id for row in sorted(evidence_class_rows, key=lambda item: item.order)],
         "differentiation_ids": [row.row_id for row in sorted(differentiation_rows, key=lambda item: item.order)],
+        "adjudication_phase_alignment_surfaces": [row.machine_surface for row in sorted(adjudication_phase_alignment_rows, key=lambda item: item.order)],
         "decision_evidence_proof_ids": [row.proof_id for row in sorted(decision_evidence_proof_rows, key=lambda item: item.order)],
         "decision_evidence_limit_ids": [row.row_id for row in sorted(decision_evidence_limit_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
+        "adjudication_phase_alignment_rows": [
+            {
+                "order": row.order,
+                "machine_surface": row.machine_surface,
+                "evidence_class_id": row.evidence_class_id,
+                "proof_id": row.proof_id,
+                "surface_role": row.surface_role,
+            }
+            for row in sorted(adjudication_phase_alignment_rows, key=lambda item: item.order)
+        ],
         "structure_violations": structure_violations,
         "admissibility_violations": admissibility_violations,
         "integration_violations": integration_violations,

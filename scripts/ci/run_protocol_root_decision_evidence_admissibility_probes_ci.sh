@@ -25,11 +25,13 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_decision_evidence_admissibility_status"] == "PASS_REQUIRED", payload
-assert payload["evidence_class_count"] == 5, payload
-assert payload["differentiation_count"] == 6, payload
-assert payload["decision_evidence_proof_count"] == 5, payload
-assert payload["decision_evidence_limit_count"] == 5, payload
-assert payload["collapse_count"] == 6, payload
+assert payload["evidence_class_count"] == 6, payload
+assert payload["differentiation_count"] == 7, payload
+assert payload["adjudication_phase_alignment_count"] == 2, payload
+assert payload["decision_evidence_proof_count"] == 6, payload
+assert payload["decision_evidence_limit_count"] == 7, payload
+assert payload["collapse_count"] == 7, payload
+assert payload["adjudication_phase_alignment_surfaces"] == ["runtime_state", "receipts"], payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -218,6 +220,44 @@ assert payload["protocol_root_decision_evidence_admissibility_status"] == "FAIL_
 assert payload["error_code"] == "IP-DEA-003", payload
 assert any(
     row["field"] == "root_corpus_question_routing" and row["reason"] == "routing_projection_question_classes_mismatch"
+    for row in payload["integration_violations"]
+), payload
+PY
+
+ORDERING_ROLE_REPO="${TMP_ROOT}/ordering-role-drift-repo"
+mirror_repo "${ORDERING_ROLE_REPO}"
+python3 - <<'PY' "${ORDERING_ROLE_REPO}/identity/protocol/mappings/root-corpus-ordering.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["adjudication_surface_profiles"]:
+    if row.get("machine_surface") == "receipts":
+        row["surface_role"] = "live_state_truth_binding"
+        break
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+ORDERING_ROLE_JSON="${TMP_ROOT}/ordering-role-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_decision_evidence_admissibility.py" \
+  --repo-root "${ORDERING_ROLE_REPO}" \
+  --json-only >"${ORDERING_ROLE_JSON}"; then
+  echo "[FAIL] root decision-evidence admissibility validator unexpectedly passed ordering adjudication role drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ORDERING_ROLE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_decision_evidence_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-DEA-003", payload
+assert any(
+    row["field"] == "root_corpus_ordering" and row["reason"] == "ordering_adjudication_surface_role_mismatch"
     for row in payload["integration_violations"]
 ), payload
 PY

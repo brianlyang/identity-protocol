@@ -163,8 +163,9 @@ registered_top_level_entries:
     required_markers:
       - 'this file remains the authoritative root-domain contract for decision-evidence admissibility law'
       - '## Decision-evidence admissibility law'
-      - '## Five decision-evidence classes'
+      - '## Six decision-evidence classes'
       - '## Required decision-evidence differentiations'
+      - '## Adjudication-phase evidence alignment'
       - '## Decision-evidence proof discipline'
       - '## Decision-evidence proof limits'
     forbidden_content_classes:
