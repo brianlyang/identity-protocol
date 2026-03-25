@@ -33,6 +33,7 @@ When entering `identity/protocol/`, read in this order:
    - the runtime constitution;
    - how protocol law is embodied in runtime integration, startup, execution checks, and active-runtime boundaries.
 4. **root contract files**
+   - `MACHINE_LAW_PRIMACY_CONTRACT.md`
    - `IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`
    - `IDENTITY_DISCOVERY.md`
    - `AGENT_HANDOFF_CONTRACT.md`
@@ -68,7 +69,7 @@ The following classes belong here:
    - `IDENTITY_PROTOCOL.md`
    - `IDENTITY_RUNTIME.md`
 3. **root contract law**
-   - prompt bootstrap, discovery, handoff, instance self-judgement, protocol-instance responsibility, stream-design admissibility, truth lifecycle, operator answer surface, and other root-domain contracts
+   - machine-law primacy, prompt bootstrap, discovery, handoff, instance self-judgement, protocol-instance responsibility, stream-design admissibility, truth lifecycle, operator answer surface, and other root-domain contracts
 4. **machine-consumed registries and mappings**
    - canonical bindings, term registries, stream registries, scope matrices, and related SSOT rows
 5. **governed subdomain protocol extensions**
@@ -127,7 +128,7 @@ The authority order is layered, not flattened:
 2. **constitutional / contract authority**
    - `IDENTITY_PROTOCOL.md`
    - `IDENTITY_RUNTIME.md`
-   - root contract files such as prompt bootstrap, discovery, handoff, instance self-judgement, protocol-instance responsibility, stream-design admissibility, truth-lifecycle, and operator answer-surface contracts
+   - root contract files such as machine-law primacy, prompt bootstrap, discovery, handoff, instance self-judgement, protocol-instance responsibility, stream-design admissibility, truth-lifecycle, and operator answer-surface contracts
    - these define *what law is concretely frozen*.
 3. **machine-consumed enforcement authority**
    - governance/review docs
@@ -256,7 +257,7 @@ Different root entries answer different classes of machine-world questions.
 3. `IDENTITY_PROTOCOL.md` and `IDENTITY_RUNTIME.md` answer the **constitutional law question**:
    - what protocol-law and runtime-law are concretely frozen.
 4. Root contract files answer the **domain-law question**:
-   - what prompt, discovery, handoff, instance self-judgement, protocol-instance responsibility, stream-design admissibility, truth lifecycle, operator answer surface, and related root-domain law are concretely frozen.
+   - what machine-law primacy, prompt, discovery, handoff, instance self-judgement, protocol-instance responsibility, stream-design admissibility, truth lifecycle, operator answer surface, and related root-domain law are concretely frozen.
 5. `mappings/` answers the **machine-registry question**:
    - which aliases, active files, bindings, and registry rows are machine-consumed truth.
 6. `broadcast/` and `plugins/` answer the **governed extension question**:

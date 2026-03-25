@@ -14,6 +14,10 @@ authority_anchor_checks:
     required_markers:
       - 'philosophical primacy does not mean runtime-source primacy'
       - 'machine-consumed authority still lives in frozen contracts, mappings, validators, runtime state, and receipts'
+  - rel_path: identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md
+    required_markers:
+      - '## Runtime adjudication boundary'
+      - 'Current-turn machine-law primacy legality must still resolve from machine-consumed enforcement surfaces'
   - rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
     required_markers:
       - '## Runtime adjudication boundary'
@@ -103,6 +107,10 @@ entry_authority_projection:
   - rel_path: identity/protocol/IDENTITY_RUNTIME.md
     corpus_class: runtime_constitution
     authority_role: constitutional_runtime_law
+    authority_mode: frozen_law_only
+  - rel_path: identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md
+    corpus_class: root_contract
+    authority_role: root_domain_contract_law
     authority_mode: frozen_law_only
   - rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
     corpus_class: root_contract

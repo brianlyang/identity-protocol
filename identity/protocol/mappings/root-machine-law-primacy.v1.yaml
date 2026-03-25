@@ -1,0 +1,64 @@
+schema_version: 1
+machine_law_family: protocol_root_machine_law_primacy
+machine_law_version: v1
+contract_file: identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_machine_law_primacy.py
+probe_script: scripts/ci/run_protocol_root_machine_law_primacy_probes_ci.sh
+common_script: scripts/root_machine_law_primacy_common.py
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Machine-law primacy law'
+  - '## Four primacy commitments'
+  - '## Required primacy anchors'
+  - '## Non-compliant compatibility collapses'
+  - 'The identity protocol must remain machine law first rather than a compatibility shelter or historical backstop.'
+required_commitment_rows:
+  - order: 1
+    commitment_id: law_before_compatibility_shelter
+    contract_heading: '### 1. Law before compatibility shelter'
+    commitment_role: machine_law_first
+  - order: 2
+    commitment_id: governed_success_path_before_convenience
+    contract_heading: '### 2. Governed success path before convenience permissiveness'
+    commitment_role: success_path_admissibility_first
+  - order: 3
+    commitment_id: fail_close_before_silent_swallowing
+    contract_heading: '### 3. Fail-close exposure before silent swallowing'
+    commitment_role: fail_close_before_shelter
+  - order: 4
+    commitment_id: governed_convergence_before_downgrade
+    contract_heading: '### 4. Governed convergence before downgrade laundering'
+    commitment_role: governed_convergence_over_downgrade
+required_anchor_rows:
+  - order: 1
+    anchor_id: machine_law_first
+    contract_phrase: 'machine law first rather than a compatibility shelter or historical backstop;'
+  - order: 2
+    anchor_id: governed_success_path
+    contract_phrase: 'governed current-turn success path rather than convenience-path permissiveness;'
+  - order: 3
+    anchor_id: fail_close_over_projection
+    contract_phrase: 'fail-close exposure of missing or ambiguous truth rather than silent swallowing through compatibility projection;'
+  - order: 4
+    anchor_id: governed_convergence_over_downgrade
+    contract_phrase: 'governed convergence and refreezing rather than residue laundering or protocol downgrade.'
+required_collapse_rows:
+  - order: 1
+    collapse_id: compatibility_shelter_substitution
+    contract_phrase: 'the active protocol is treated as a shelter for lagging residue instead of as the upgrade target.'
+  - order: 2
+    collapse_id: silent_truth_reconstruction
+    contract_phrase: 'missing or ambiguous current-turn truth is rebuilt through compatibility projection, alias bridges, or local familiarity.'
+  - order: 3
+    collapse_id: demoted_surface_reentry
+    contract_phrase: 'migration, import, fixture, diagnostic, or fallback surfaces re-enter active defaults as if demotion did not exist.'
+  - order: 4
+    collapse_id: protocol_downgrade_for_residue
+    contract_phrase: 'shared law is weakened or reopened merely to keep local residue alive.'
+  - order: 5
+    collapse_id: convenience_claims_legality
+    contract_phrase: 'convenience, vividness, or historical familiarity is treated as if it proved active-path legality.'

@@ -14,6 +14,10 @@ question_routing_anchor_checks:
     required_markers:
       - '### Question class and answer surface must stay paired'
       - 'No layer should answer a question that belongs to a different layer.'
+  - rel_path: identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md
+    required_markers:
+      - '## Runtime adjudication boundary'
+      - 'Current-turn machine-law primacy legality must still resolve from machine-consumed enforcement surfaces'
   - rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
     required_markers:
       - '## Runtime adjudication boundary'
@@ -96,6 +100,9 @@ entry_question_projection:
   - rel_path: identity/protocol/IDENTITY_RUNTIME.md
     question_classes:
       - frozen_runtime_law
+  - rel_path: identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md
+    question_classes:
+      - frozen_domain_contract_law
   - rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
     question_classes:
       - frozen_domain_contract_law
