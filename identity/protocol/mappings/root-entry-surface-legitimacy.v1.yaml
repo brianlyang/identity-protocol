@@ -1,0 +1,81 @@
+schema_version: 1
+entry_family: protocol_root_entry_surface_legitimacy
+entry_version: v1
+contract_file: identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_entry_surface_legitimacy.py
+probe_script: scripts/ci/run_protocol_root_entry_surface_legitimacy_probes_ci.sh
+common_script: scripts/root_entry_surface_legitimacy_common.py
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Entry-surface legitimacy law'
+  - '## Six entry classes'
+  - '## Required entry differentiations'
+  - '## Non-compliant entry collapses'
+  - 'Only governed entry surfaces admitted by law may drive active execution.'
+required_entry_class_rows:
+  - order: 1
+    entry_class_id: frozen_entry_definition
+    contract_heading: '### 1. Frozen entry definition'
+    entry_role: frozen_entry_definition
+  - order: 2
+    entry_class_id: natural_language_collaboration_entry_surface
+    contract_heading: '### 2. Natural-language collaboration entry surface'
+    entry_role: natural_language_collaboration_entry_surface
+  - order: 3
+    entry_class_id: governed_execution_entry_surface
+    contract_heading: '### 3. Governed execution entry surface'
+    entry_role: governed_execution_entry_surface
+  - order: 4
+    entry_class_id: governed_recovery_only_entry_surface
+    contract_heading: '### 4. Governed recovery-only entry surface'
+    entry_role: governed_recovery_only_entry_surface
+  - order: 5
+    entry_class_id: discoverability_helper_surface
+    contract_heading: '### 5. Discoverability-helper surface'
+    entry_role: discoverability_helper_surface
+  - order: 6
+    entry_class_id: demoted_support_or_non_entry_surface
+    contract_heading: '### 6. Demoted support or non-entry surface'
+    entry_role: demoted_support_or_non_entry_surface
+required_differentiation_rows:
+  - order: 1
+    differentiation_id: frozen_vs_live_execution_entry
+    contract_phrase: 'frozen law-defined entry is separated from live governed execution entry;'
+  - order: 2
+    differentiation_id: operator_vs_machine_execution_entry
+    contract_phrase: 'natural-language collaboration entry is separated from machine execution entry;'
+  - order: 3
+    differentiation_id: execution_vs_recovery_entry
+    contract_phrase: 'governed execution entry is separated from governed recovery-only entry;'
+  - order: 4
+    differentiation_id: helper_vs_canonical_execution_entry
+    contract_phrase: 'discoverability-helper surface is separated from canonical execution entry;'
+  - order: 5
+    differentiation_id: support_vs_active_entry_surface
+    contract_phrase: 'demoted support or non-entry surface is separated from any active entry surface;'
+  - order: 6
+    differentiation_id: visibility_vs_entry_admission
+    contract_phrase: 'visible installation or discoverability is separated from lawful entry admission.'
+required_collapse_rows:
+  - order: 1
+    collapse_id: declared_entry_as_live_execution_entry
+    contract_phrase: 'a law-defined or declared entry surface is treated as if it were already live governed execution entry.'
+  - order: 2
+    collapse_id: operator_surface_as_machine_execution_entry
+    contract_phrase: 'the operator collaboration surface is treated as if it were sufficient machine execution entry.'
+  - order: 3
+    collapse_id: recovery_entry_as_primary_execution_entry
+    contract_phrase: 'a recovery, replay, diagnostics, or repair entry surface is treated as if it were the canonical primary execution entry.'
+  - order: 4
+    collapse_id: helper_surface_as_canonical_entry
+    contract_phrase: 'a helper path, discoverability aid, or installation alias is treated as if it were canonical execution entry.'
+  - order: 5
+    collapse_id: support_surface_as_active_entry
+    contract_phrase: 'a demoted support or non-entry surface is treated as if it were active execution entry.'
+  - order: 6
+    collapse_id: installation_visibility_as_entry_legality
+    contract_phrase: 'visibility, installation presence, or easy discovery is treated as if it proved lawful entry admission.'

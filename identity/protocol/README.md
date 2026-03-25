@@ -38,6 +38,7 @@ When entering `identity/protocol/`, read in this order:
    - `CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md`
    - `DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md`
    - `SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md`
+   - `ENTRY_SURFACE_LEGITIMACY_CONTRACT.md`
    - `IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`
    - `IDENTITY_DISCOVERY.md`
    - `AGENT_HANDOFF_CONTRACT.md`
@@ -73,7 +74,7 @@ The following classes belong here:
    - `IDENTITY_PROTOCOL.md`
    - `IDENTITY_RUNTIME.md`
 3. **root contract law**
-   - machine-law primacy, machine-world ontology, current-truth epistemology, decision-evidence admissibility, success-path state admissibility, prompt bootstrap, discovery, handoff, instance self-judgement, protocol-instance responsibility, stream-design admissibility, truth lifecycle, operator answer surface, and other root-domain contracts
+   - machine-law primacy, machine-world ontology, current-truth epistemology, decision-evidence admissibility, success-path state admissibility, entry-surface legitimacy, prompt bootstrap, discovery, handoff, instance self-judgement, protocol-instance responsibility, stream-design admissibility, truth lifecycle, operator answer surface, and other root-domain contracts
 4. **machine-consumed registries and mappings**
    - canonical bindings, term registries, stream registries, scope matrices, and related SSOT rows
 5. **governed subdomain protocol extensions**
@@ -132,7 +133,7 @@ The authority order is layered, not flattened:
 2. **constitutional / contract authority**
    - `IDENTITY_PROTOCOL.md`
    - `IDENTITY_RUNTIME.md`
-   - root contract files such as machine-law primacy, machine-world ontology, current-truth epistemology, decision-evidence admissibility, success-path state admissibility, prompt bootstrap, discovery, handoff, instance self-judgement, protocol-instance responsibility, stream-design admissibility, truth-lifecycle, and operator answer-surface contracts
+   - root contract files such as machine-law primacy, machine-world ontology, current-truth epistemology, decision-evidence admissibility, success-path state admissibility, entry-surface legitimacy, prompt bootstrap, discovery, handoff, instance self-judgement, protocol-instance responsibility, stream-design admissibility, truth-lifecycle, and operator answer-surface contracts
    - these define *what law is concretely frozen*.
 3. **machine-consumed enforcement authority**
    - governance/review docs
@@ -261,7 +262,7 @@ Different root entries answer different classes of machine-world questions.
 3. `IDENTITY_PROTOCOL.md` and `IDENTITY_RUNTIME.md` answer the **constitutional law question**:
    - what protocol-law and runtime-law are concretely frozen.
 4. Root contract files answer the **domain-law question**:
-   - what machine-law primacy, machine-world ontology, current-truth epistemology, decision-evidence admissibility, success-path state admissibility, prompt, discovery, handoff, instance self-judgement, protocol-instance responsibility, stream-design admissibility, truth lifecycle, operator answer surface, and related root-domain law are concretely frozen.
+   - what machine-law primacy, machine-world ontology, current-truth epistemology, decision-evidence admissibility, success-path state admissibility, entry-surface legitimacy, prompt, discovery, handoff, instance self-judgement, protocol-instance responsibility, stream-design admissibility, truth lifecycle, operator answer surface, and related root-domain law are concretely frozen.
 5. `mappings/` answers the **machine-registry question**:
    - which aliases, active files, bindings, and registry rows are machine-consumed truth.
 6. `broadcast/` and `plugins/` answer the **governed extension question**:

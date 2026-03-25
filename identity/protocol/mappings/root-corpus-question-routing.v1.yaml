@@ -34,6 +34,10 @@ question_routing_anchor_checks:
     required_markers:
       - '## Runtime adjudication boundary'
       - 'Current-turn success-path state legality must still resolve from machine-consumed enforcement surfaces'
+  - rel_path: identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md
+    required_markers:
+      - '## Runtime adjudication boundary'
+      - 'Current-turn entry-surface legality must still resolve from machine-consumed enforcement surfaces'
   - rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
     required_markers:
       - '## Runtime adjudication boundary'
@@ -129,6 +133,9 @@ entry_question_projection:
     question_classes:
       - frozen_domain_contract_law
   - rel_path: identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md
+    question_classes:
+      - frozen_domain_contract_law
+  - rel_path: identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md
     question_classes:
       - frozen_domain_contract_law
   - rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
