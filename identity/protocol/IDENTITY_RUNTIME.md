@@ -123,6 +123,13 @@ fallback source.
 If that source is unavailable or invalid, runtime must fail-close rather than
 locally reconstructing descriptor schema.
 
+Runtime must also treat bundle component descriptors as current-entry
+mediated; runtime resolves component legality through admitted current rows,
+not direct version-file pinning.
+
+If a component current row is absent or invalid, runtime must fail-close
+rather than bypassing current mediation.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

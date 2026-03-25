@@ -179,6 +179,13 @@ component/current mapping pair, no substitute source, and no fallback source.
 If that admitted source is unavailable or invalid, protocol legality must
 fail-close rather than locally reconstructing descriptor schema.
 
+Bundle component descriptors must also stay current-entry mediated; bundle
+rows bind through admitted component current mappings, not direct version-file
+pinning.
+
+If a component current row is absent or invalid, protocol legality must
+fail-close rather than bypassing current mediation.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

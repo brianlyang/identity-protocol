@@ -89,6 +89,14 @@ def descriptor_schema_local_reconstruction_policy_from_doc(bundle_doc: Mapping[s
     return _norm_str(bundle_doc.get("descriptor_schema_local_reconstruction_policy"))
 
 
+def component_descriptor_resolution_mode_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("component_descriptor_resolution_mode"))
+
+
+def component_descriptor_version_pinning_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("component_descriptor_version_pinning_policy"))
+
+
 def require_component_descriptor_concordance(bundle_doc: Mapping[str, Any]) -> bool:
     return _as_bool(bundle_doc.get("require_component_descriptor_concordance"))
 

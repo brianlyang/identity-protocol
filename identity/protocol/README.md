@@ -401,6 +401,14 @@ fallback source for convenience.
 If that admitted source is unavailable or invalid, the machine world must
 fail-close rather than locally reconstructing descriptor schema.
 
+Bundle component descriptors must also remain current-entry mediated.
+
+The bundle must point to admitted component current rows and resolve active
+version truth through those rows, not pin directly to version files.
+
+If a component current row is absent or invalid, the machine world must
+fail-close rather than bypassing current mediation.
+
 ---
 
 ## Conflict-handling rule

@@ -391,6 +391,16 @@ If that admitted source is unavailable or invalid, the machine world must
 fail-close rather than locally reconstructing descriptor schema from shadow
 bundle knowledge.
 
+Bundle component descriptors must remain current-entry mediated as well.
+
+The bundle names admitted component current rows and resolves active version
+truth through those rows; it does not pin component legality directly to a
+version file for local convenience.
+
+If a component current entry is absent or invalid, the machine world must
+fail-close rather than bypassing current mediation and binding directly to a
+version file.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

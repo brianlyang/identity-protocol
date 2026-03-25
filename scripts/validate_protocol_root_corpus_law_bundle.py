@@ -14,6 +14,8 @@ from root_corpus_law_bundle_common import (
     STATUS_PASS_REQUIRED,
     bundle_anchor_checks_from_doc,
     bundle_components_from_doc,
+    component_descriptor_resolution_mode_from_doc,
+    component_descriptor_version_pinning_policy_from_doc,
     descriptor_schema_fallback_policy_from_doc,
     descriptor_schema_source_component_id_from_doc,
     descriptor_schema_source_binding_mode_from_doc,
@@ -228,6 +230,10 @@ def main() -> int:
     descriptor_schema_local_reconstruction_policy = (
         descriptor_schema_local_reconstruction_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_descriptor_resolution_mode = component_descriptor_resolution_mode_from_doc(bundle_doc) if bundle_doc else ""
+    component_descriptor_version_pinning_policy = (
+        component_descriptor_version_pinning_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     source_required_descriptor_fields = (
         registry_required_descriptor_fields_from_doc(machine_registry_completeness_doc)
         if machine_registry_completeness_doc
@@ -278,6 +284,12 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if descriptor_schema_local_reconstruction_policy != "forbidden":
             stale_reasons.append("root_corpus_law_bundle_descriptor_schema_local_reconstruction_policy_invalid")
+            error_code = ERR_REGISTRY
+        if component_descriptor_resolution_mode != "current_alias_only":
+            stale_reasons.append("root_corpus_law_bundle_component_descriptor_resolution_mode_invalid")
+            error_code = ERR_REGISTRY
+        if component_descriptor_version_pinning_policy != "forbidden":
+            stale_reasons.append("root_corpus_law_bundle_component_descriptor_version_pinning_policy_invalid")
             error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
@@ -368,6 +380,14 @@ def main() -> int:
             expected = EXPECTED_COMPONENTS.get(row.component_id)
             if expected is None:
                 continue
+            if not row.current_file.endswith(".current.yaml"):
+                bundle_violations.append(
+                    {
+                        "component_id": row.component_id,
+                        "reason": "component_descriptor_not_current_entry",
+                        "current_file": row.current_file,
+                    }
+                )
             for field in (
                 "component_role",
                 "current_file",
@@ -562,6 +582,8 @@ def main() -> int:
         "descriptor_schema_source_substitution_policy": descriptor_schema_source_substitution_policy,
         "descriptor_schema_fallback_policy": descriptor_schema_fallback_policy,
         "descriptor_schema_local_reconstruction_policy": descriptor_schema_local_reconstruction_policy,
+        "component_descriptor_resolution_mode": component_descriptor_resolution_mode,
+        "component_descriptor_version_pinning_policy": component_descriptor_version_pinning_policy,
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
         "component_ids": [row.component_id for row in sorted_components],

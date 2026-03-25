@@ -16,6 +16,8 @@ descriptor_schema_source_binding_mode: canonical_source_component_current_only
 descriptor_schema_source_substitution_policy: forbidden
 descriptor_schema_fallback_policy: fail_closed
 descriptor_schema_local_reconstruction_policy: forbidden
+component_descriptor_resolution_mode: current_alias_only
+component_descriptor_version_pinning_policy: forbidden
 require_component_descriptor_concordance: true
 required_component_descriptor_fields:
 - validator_script
@@ -48,6 +50,10 @@ bundle_anchor_checks:
   - The bundle descriptor schema must also stay source-singular.
   - not a substitute source chosen for local convenience.
   - fail-close rather than locally reconstructing descriptor schema from shadow bundle knowledge.
+  - Bundle component descriptors must remain current-entry mediated as well.
+  - version file for local convenience.
+  - fail-close rather than bypassing current mediation and binding directly to a
+    version file.
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root-law bundle discipline'
@@ -69,6 +75,9 @@ bundle_anchor_checks:
   - The bundle's descriptor schema must remain source-singular as well.
   - fallback source for convenience.
   - fail-close rather than locally reconstructing descriptor schema.
+  - Bundle component descriptors must also remain current-entry mediated.
+  - version truth through those rows, not pin directly to version files.
+  - fail-close rather than bypassing current mediation.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root-law bundle boundary'
@@ -87,6 +96,10 @@ bundle_anchor_checks:
   - The bundle's descriptor schema must stay source-singular
   - no substitute source, and no fallback source.
   - fail-close rather than locally reconstructing descriptor schema.
+  - Bundle component descriptors must also stay current-entry mediated
+  - not direct version-file
+    pinning.
+  - fail-close rather than bypassing current mediation.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime consumption of the root-law bundle'
@@ -103,6 +116,11 @@ bundle_anchor_checks:
   - no substitute source, and no
     fallback source.
   - locally reconstructing descriptor schema.
+  - Runtime must also treat bundle component descriptors as current-entry
+    mediated
+  - not direct version-file pinning.
+  - fail-close
+    rather than bypassing current mediation.
 component_rows:
 - order: 1
   component_id: root_corpus_governance
