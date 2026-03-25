@@ -14,6 +14,8 @@ contract_required_markers:
   - '## Entry-surface legitimacy law'
   - '## Six entry classes'
   - '## Required entry differentiations'
+  - '## Entry-admission proof discipline'
+  - '## Entry-admission proof limits'
   - '## Non-compliant entry collapses'
   - 'Only governed entry surfaces admitted by law may drive active execution.'
 required_entry_class_rows:
@@ -60,6 +62,43 @@ required_differentiation_rows:
   - order: 6
     differentiation_id: visibility_vs_entry_admission
     contract_phrase: 'visible installation or discoverability is separated from lawful entry admission.'
+required_entry_admission_proof_rows:
+  - order: 1
+    proof_id: frozen_definition_entry_admission_proof
+    contract_heading: '### 1. Frozen-definition entry-admission proof'
+    proof_role: frozen_definition_entry_admission_proof
+  - order: 2
+    proof_id: collaboration_boundary_entry_admission_proof
+    contract_heading: '### 2. Collaboration-boundary entry-admission proof'
+    proof_role: collaboration_boundary_entry_admission_proof
+  - order: 3
+    proof_id: governed_execution_entry_admission_proof
+    contract_heading: '### 3. Governed-execution entry-admission proof'
+    proof_role: governed_execution_entry_admission_proof
+  - order: 4
+    proof_id: recovery_confinement_entry_admission_proof
+    contract_heading: '### 4. Recovery-confinement entry-admission proof'
+    proof_role: recovery_confinement_entry_admission_proof
+  - order: 5
+    proof_id: helper_support_demotion_entry_admission_proof
+    contract_heading: '### 5. Helper/support-demotion entry-admission proof'
+    proof_role: helper_support_demotion_entry_admission_proof
+required_entry_admission_limit_rows:
+  - order: 1
+    limit_id: frozen_definition_not_collaboration_boundary
+    contract_phrase: 'frozen-definition entry-admission proof is not proof of collaboration-boundary preservation;'
+  - order: 2
+    limit_id: collaboration_boundary_not_governed_execution
+    contract_phrase: 'collaboration-boundary entry-admission proof is not proof of governed execution entry;'
+  - order: 3
+    limit_id: governed_execution_not_recovery_confinement
+    contract_phrase: 'governed-execution entry-admission proof is not proof of recovery confinement;'
+  - order: 4
+    limit_id: recovery_confinement_not_helper_support_demotion
+    contract_phrase: 'recovery-confinement entry-admission proof is not proof of helper or support demotion;'
+  - order: 5
+    limit_id: helper_support_demotion_not_lawful_active_execution_entry
+    contract_phrase: 'helper/support-demotion entry-admission proof is not proof of lawful active execution entry.'
 required_collapse_rows:
   - order: 1
     collapse_id: declared_entry_as_live_execution_entry

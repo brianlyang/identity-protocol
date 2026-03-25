@@ -52,6 +52,16 @@ SCRIPT_BINDINGS: tuple[ScriptBindingSpec, ...] = (
             '"semantic_tuple_three_plane"',
         ),
     ),
+    ScriptBindingSpec(
+        name="protocol_lane_audit_summary",
+        script_rel="scripts/render_protocol_lane_audit_summary.py",
+        surface_id="protocol_lane_audit_summary",
+        required_tokens=(
+            '"surface_governance"',
+            "build_governed_runtime_summary_surface_payload(",
+            '"protocol_lane_audit_summary"',
+        ),
+    ),
 )
 
 DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
@@ -79,6 +89,22 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             "three-plane verdict remains a governed outer runtime-state surface",
             "`scripts/report_three_plane_status.py` may emit the current cross-plane verdict, but it must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.",
             "`scripts/release_readiness_check.py --summary-out`, when emitted, remains a governed outer runtime-state summary surface and must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.",
+        ),
+    ),
+    DocAnchorSpec(
+        rel_path="docs/governance/identity-codex-launcher-governance-v1.6.14.md",
+        required_markers=(
+            "`scripts/render_protocol_lane_audit_summary.py` remains a single-lane formal control-plane summary surface on an outer runtime-state layer.",
+            "It must not replace root-law owners, stream-owner governance/review surfaces, direct validator receipts, or historical replay authority.",
+            "The renderer must self-describe this bounded authority in machine-readable payload form.",
+        ),
+    ),
+    DocAnchorSpec(
+        rel_path="docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md",
+        required_markers=(
+            "`scripts/render_protocol_lane_audit_summary.py` remains a single-lane formal control-plane summary surface on an outer runtime-state layer.",
+            "It must not replace root-law owners, stream-owner governance/review surfaces, direct validator receipts, or historical replay authority.",
+            "The renderer must self-describe this bounded authority in machine-readable payload form.",
         ),
     ),
 )

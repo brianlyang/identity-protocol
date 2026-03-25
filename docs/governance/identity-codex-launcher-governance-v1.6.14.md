@@ -358,7 +358,10 @@ These names and directories are frozen by this stream. The renderer / installer 
    - `--base` / `--head` / `--commit` pin diff scope and stream-touch evidence,
    - but docs checker / workbook consistency / launcher probe execution still runs against the provided workspace tree,
    - therefore current summary pinning does not by itself claim arbitrary historical full-tree replay unless the caller supplies an isolated historical workspace.
-8. The accepted maturity statement for this stream is scoped precisely as follows:
+8. `scripts/render_protocol_lane_audit_summary.py` remains a single-lane formal control-plane summary surface on an outer runtime-state layer.
+9. It must not replace root-law owners, stream-owner governance/review surfaces, direct validator receipts, or historical replay authority.
+10. The renderer must self-describe this bounded authority in machine-readable payload form.
+11. The accepted maturity statement for this stream is scoped precisely as follows:
    - **for the `v1.6.14` identity-Codex-launcher lane**, the stream has advanced from topic governance into a protocol-owned formal control-plane subsystem,
    - current-state note (2026-03-22): `python3 scripts/validate_protocol_lane_isolated_historical_replay.py --repo-root identity-protocol-local --workspace-root . --commit HEAD --json-only` returned `PASS_REQUIRED` with `projection_parity_match=true`,
    - launcher convergence evidence truth-sync is now machine-landed through governed receipts plus `EVIDENCE_MANIFEST` archival bundles, so remaining work is limited primarily to legacy rollout and broader evidence breadth beyond the already-synced launcher convergence bundle family,

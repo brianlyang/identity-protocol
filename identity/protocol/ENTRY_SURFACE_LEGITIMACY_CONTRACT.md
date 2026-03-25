@@ -139,6 +139,61 @@ The protocol must preserve the following differentiations:
 5. demoted support or non-entry surface is separated from any active entry surface;
 6. visible installation or discoverability is separated from lawful entry admission.
 
+When an entry-surface claim relies on governed proof, the proof stratum behind
+that claim must match the entry-admission claim being asserted.
+
+## Entry-admission proof discipline
+
+Entry-surface legitimacy claims may be supported only by proof whose stratum
+matches the entry-admission claim being asserted.
+
+### 1. Frozen-definition entry-admission proof
+
+Supports claims that an entry surface was defined by shared law or registry
+rather than improvised from local convenience.
+
+Proof role: `frozen_definition_entry_admission_proof`.
+
+### 2. Collaboration-boundary entry-admission proof
+
+Supports claims that natural-language collaboration entry remained distinct from
+machine execution entry rather than collapsing operator presence into launcher
+legality.
+
+Proof role: `collaboration_boundary_entry_admission_proof`.
+
+### 3. Governed-execution entry-admission proof
+
+Supports claims that an entry surface was the governed canonical execution entry
+for the present turn rather than merely visible, installed, or easy to invoke.
+
+Proof role: `governed_execution_entry_admission_proof`.
+
+### 4. Recovery-confinement entry-admission proof
+
+Supports claims that migration, replay, diagnostics, or repair entry surfaces
+remained confined to governed recovery rather than promoting themselves into
+primary execution entry.
+
+Proof role: `recovery_confinement_entry_admission_proof`.
+
+### 5. Helper/support-demotion entry-admission proof
+
+Supports claims that discoverability helpers, aliases, imports, fixtures, and
+other support or non-entry surfaces remained demoted outside canonical entry.
+
+Proof role: `helper_support_demotion_entry_admission_proof`.
+
+## Entry-admission proof limits
+
+The protocol must preserve these entry-admission proof limits:
+
+1. frozen-definition entry-admission proof is not proof of collaboration-boundary preservation;
+2. collaboration-boundary entry-admission proof is not proof of governed execution entry;
+3. governed-execution entry-admission proof is not proof of recovery confinement;
+4. recovery-confinement entry-admission proof is not proof of helper or support demotion;
+5. helper/support-demotion entry-admission proof is not proof of lawful active execution entry.
+
 ## Non-compliant entry collapses
 
 The following are non-compliant:

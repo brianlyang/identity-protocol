@@ -186,6 +186,8 @@ registered_top_level_entries:
       - '## Entry-surface legitimacy law'
       - '## Six entry classes'
       - '## Required entry differentiations'
+      - '## Entry-admission proof discipline'
+      - '## Entry-admission proof limits'
     forbidden_content_classes:
       - workbook_issue_projection
       - closure_ledger_narration

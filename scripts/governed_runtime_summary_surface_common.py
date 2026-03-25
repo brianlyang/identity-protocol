@@ -45,6 +45,18 @@ class GovernedRuntimeSummarySurfaceProfile:
     strengthening_gateways: tuple[str, ...] = DEFAULT_STRENGTHENING_GATEWAYS
 
 
+LANE_AUDIT_SUMMARY_REDIRECT_REFS: tuple[str, ...] = (
+    *CURRENT_AUTHORITY_REDIRECT_REFS,
+    "docs/governance/identity-codex-launcher-governance-v1.6.14.md",
+    "docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md",
+)
+LANE_AUDIT_SUMMARY_FORBIDDEN_REPLACEMENTS: tuple[str, ...] = (
+    *FORBIDDEN_REPLACEMENTS,
+    "stream_owner_governance_surface",
+    "historical_replay_authority",
+)
+
+
 SURFACE_PROFILES: dict[str, GovernedRuntimeSummarySurfaceProfile] = {
     "semantic_tuple_three_plane": GovernedRuntimeSummarySurfaceProfile(
         surface_id="semantic_tuple_three_plane",
@@ -72,6 +84,23 @@ SURFACE_PROFILES: dict[str, GovernedRuntimeSummarySurfaceProfile] = {
         operator_interpretation_rule=(
             "Treat the release-readiness summary as a compact machine-readable projection for operator handoff "
             "and gating context, never as standalone current authority or release-tag authority."
+        ),
+    ),
+    "protocol_lane_audit_summary": GovernedRuntimeSummarySurfaceProfile(
+        surface_id="protocol_lane_audit_summary",
+        surface_label="single-lane audit summary control plane",
+        governed_verdict_kind="single_lane_formal_control_plane_summary",
+        current_authority_redirect_refs=LANE_AUDIT_SUMMARY_REDIRECT_REFS,
+        forbidden_replacements=LANE_AUDIT_SUMMARY_FORBIDDEN_REPLACEMENTS,
+        authority_rule=(
+            "The protocol lane audit summary is a single-lane formal control-plane summary on an outer "
+            "runtime-state surface; it may compress lane-local gate state, but it must not replace root-law "
+            "owners, stream-owner governance/review surfaces, direct validator receipts, or historical replay authority."
+        ),
+        operator_interpretation_rule=(
+            "Treat the lane audit summary as a bounded machine-readable summary for one governed lane only; "
+            "it may classify applicability and fail-close state for that lane, but it must not be promoted "
+            "into universal replay authority or cross-lane root truth."
         ),
     ),
 }

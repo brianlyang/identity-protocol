@@ -19,6 +19,8 @@ from root_entry_surface_legitimacy_common import (
     STATUS_PASS_REQUIRED,
     collapse_rows_from_doc,
     differentiation_rows_from_doc,
+    entry_admission_limit_rows_from_doc,
+    entry_admission_proof_rows_from_doc,
     entry_class_rows_from_doc,
     load_root_entry_surface_legitimacy,
 )
@@ -86,6 +88,55 @@ EXPECTED_DIFFERENTIATION_ROWS = {
         "contract_phrase": "visible installation or discoverability is separated from lawful entry admission.",
     },
 }
+EXPECTED_ENTRY_ADMISSION_PROOF_ROWS = {
+    "frozen_definition_entry_admission_proof": {
+        "order": 1,
+        "contract_heading": "### 1. Frozen-definition entry-admission proof",
+        "proof_role": "frozen_definition_entry_admission_proof",
+    },
+    "collaboration_boundary_entry_admission_proof": {
+        "order": 2,
+        "contract_heading": "### 2. Collaboration-boundary entry-admission proof",
+        "proof_role": "collaboration_boundary_entry_admission_proof",
+    },
+    "governed_execution_entry_admission_proof": {
+        "order": 3,
+        "contract_heading": "### 3. Governed-execution entry-admission proof",
+        "proof_role": "governed_execution_entry_admission_proof",
+    },
+    "recovery_confinement_entry_admission_proof": {
+        "order": 4,
+        "contract_heading": "### 4. Recovery-confinement entry-admission proof",
+        "proof_role": "recovery_confinement_entry_admission_proof",
+    },
+    "helper_support_demotion_entry_admission_proof": {
+        "order": 5,
+        "contract_heading": "### 5. Helper/support-demotion entry-admission proof",
+        "proof_role": "helper_support_demotion_entry_admission_proof",
+    },
+}
+EXPECTED_ENTRY_ADMISSION_LIMIT_ROWS = {
+    "frozen_definition_not_collaboration_boundary": {
+        "order": 1,
+        "contract_phrase": "frozen-definition entry-admission proof is not proof of collaboration-boundary preservation;",
+    },
+    "collaboration_boundary_not_governed_execution": {
+        "order": 2,
+        "contract_phrase": "collaboration-boundary entry-admission proof is not proof of governed execution entry;",
+    },
+    "governed_execution_not_recovery_confinement": {
+        "order": 3,
+        "contract_phrase": "governed-execution entry-admission proof is not proof of recovery confinement;",
+    },
+    "recovery_confinement_not_helper_support_demotion": {
+        "order": 4,
+        "contract_phrase": "recovery-confinement entry-admission proof is not proof of helper or support demotion;",
+    },
+    "helper_support_demotion_not_lawful_active_execution_entry": {
+        "order": 5,
+        "contract_phrase": "helper/support-demotion entry-admission proof is not proof of lawful active execution entry.",
+    },
+}
 EXPECTED_COLLAPSE_ROWS = {
     "declared_entry_as_live_execution_entry": {
         "order": 1,
@@ -117,6 +168,8 @@ EXPECTED_REGISTRY_MARKERS = (
     "## Entry-surface legitimacy law",
     "## Six entry classes",
     "## Required entry differentiations",
+    "## Entry-admission proof discipline",
+    "## Entry-admission proof limits",
 )
 EXPECTED_AUTHORITY_MARKERS = (
     "## Runtime adjudication boundary",
@@ -232,6 +285,8 @@ def main() -> int:
 
     entry_class_rows = entry_class_rows_from_doc(entry_doc) if entry_doc else ()
     differentiation_rows = differentiation_rows_from_doc(entry_doc) if entry_doc else ()
+    entry_admission_proof_rows = entry_admission_proof_rows_from_doc(entry_doc) if entry_doc else ()
+    entry_admission_limit_rows = entry_admission_limit_rows_from_doc(entry_doc) if entry_doc else ()
     collapse_rows = collapse_rows_from_doc(entry_doc) if entry_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -263,6 +318,8 @@ def main() -> int:
         for field, rows in (
             ("required_entry_class_rows", entry_class_rows),
             ("required_differentiation_rows", differentiation_rows),
+            ("required_entry_admission_proof_rows", entry_admission_proof_rows),
+            ("required_entry_admission_limit_rows", entry_admission_limit_rows),
             ("required_collapse_rows", collapse_rows),
         ):
             if not rows:
@@ -298,6 +355,24 @@ def main() -> int:
             compare_fields=("contract_phrase",),
         )
         _validate_rows(
+            actual_rows=entry_admission_proof_rows,
+            expected_rows=EXPECTED_ENTRY_ADMISSION_PROOF_ROWS,
+            structure_violations=structure_violations,
+            legitimacy_violations=legitimacy_violations,
+            field_name="required_entry_admission_proof_rows",
+            id_attr="proof_id",
+            compare_fields=("contract_heading", "proof_role"),
+        )
+        _validate_rows(
+            actual_rows=entry_admission_limit_rows,
+            expected_rows=EXPECTED_ENTRY_ADMISSION_LIMIT_ROWS,
+            structure_violations=structure_violations,
+            legitimacy_violations=legitimacy_violations,
+            field_name="required_entry_admission_limit_rows",
+            id_attr="row_id",
+            compare_fields=("contract_phrase",),
+        )
+        _validate_rows(
             actual_rows=collapse_rows,
             expected_rows=EXPECTED_COLLAPSE_ROWS,
             structure_violations=structure_violations,
@@ -321,7 +396,10 @@ def main() -> int:
             for row in entry_class_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_heading,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "entry_class_heading_missing", "marker": marker})
-            for row in differentiation_rows + collapse_rows:
+            for row in entry_admission_proof_rows:
+                for marker in find_missing_markers(contract_text, (row.contract_heading,)):
+                    contract_marker_violations.append({"field": "contract_file", "reason": "proof_heading_missing", "marker": marker})
+            for row in differentiation_rows + entry_admission_limit_rows + collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
 
@@ -493,9 +571,13 @@ def main() -> int:
         "contract_file": str(entry_doc.get("contract_file") or ""),
         "entry_class_count": len(entry_class_rows),
         "differentiation_count": len(differentiation_rows),
+        "entry_admission_proof_count": len(entry_admission_proof_rows),
+        "entry_admission_limit_count": len(entry_admission_limit_rows),
         "collapse_count": len(collapse_rows),
         "entry_class_ids": [row.entry_class_id for row in sorted(entry_class_rows, key=lambda item: item.order)],
         "differentiation_ids": [row.row_id for row in sorted(differentiation_rows, key=lambda item: item.order)],
+        "entry_admission_proof_ids": [row.proof_id for row in sorted(entry_admission_proof_rows, key=lambda item: item.order)],
+        "entry_admission_limit_ids": [row.row_id for row in sorted(entry_admission_limit_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
         "structure_violations": structure_violations,
         "legitimacy_violations": legitimacy_violations,

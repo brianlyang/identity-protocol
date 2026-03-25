@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
 from repo_root_resolution_common import resolve_protocol_repo_root, resolve_workspace_root
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -278,6 +279,7 @@ def main() -> int:
         "stream_scope": stream_scope,
         "launcher_probe": launcher_probe,
         "lane_summary": lane_summary,
+        "surface_governance": build_governed_runtime_summary_surface_payload("protocol_lane_audit_summary"),
         "summary_lines": [
             f"launcher lane status={lane_summary['launcher_lane_status']}",
             f"canonical workbook freshness status={lane_summary['workbook_canonical_freshness_status']}",

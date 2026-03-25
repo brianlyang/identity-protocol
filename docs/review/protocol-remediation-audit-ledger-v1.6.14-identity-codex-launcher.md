@@ -275,11 +275,14 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - negative flip: canonical workbook docs-checker drift forces summary fail-close with non-zero canonical violation count,
    - applicability flip: stream-touch evidence changes from `NOT_APPLICABLE_NO_STREAM_DOCS_TOUCHED` to `APPLICABLE_*` when the pinned diff truly touches launcher stream docs.
 5. Reviewers must not misstate the third class as fail-close-negative proof; it is applicability-scope proof, not a red-state proof.
-6. Current caveat is frozen explicitly:
+6. `scripts/render_protocol_lane_audit_summary.py` remains a single-lane formal control-plane summary surface on an outer runtime-state layer.
+7. It must not replace root-law owners, stream-owner governance/review surfaces, direct validator receipts, or historical replay authority.
+8. The renderer must self-describe this bounded authority in machine-readable payload form.
+9. Current caveat is frozen explicitly:
    - the renderer already pins diff/range metadata and stream-touch evidence,
    - but docs checker / workbook consistency / launcher probes still evaluate against the provided `workspace_root` tree,
    - therefore the current asset is **not yet** a universal isolated historical replay engine for arbitrary commits unless it is run against an isolated clone/worktree representing that historical tree.
-7. This caveat does **not** downgrade the asset back to “explanatory only”; it only limits how far reviewers may promote the history-replay claim.
+10. This caveat does **not** downgrade the asset back to “explanatory only”; it only limits how far reviewers may promote the history-replay claim.
 
 ## 9) Accepted external closure statement
 
