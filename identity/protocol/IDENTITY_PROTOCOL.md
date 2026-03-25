@@ -173,6 +173,12 @@ used by law-bearing root mapping families; its descriptor field set and
 descriptor-field modes must remain aligned with root machine-registry
 completeness law.
 
+The bundle's descriptor schema must stay source-singular: one admitted source
+component/current mapping pair, no substitute source, and no fallback source.
+
+If that admitted source is unavailable or invalid, protocol legality must
+fail-close rather than locally reconstructing descriptor schema.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

@@ -12,6 +12,10 @@ error_codes:
 - IP-RCLB-003
 machine_registry_completeness_current_file: identity/protocol/mappings/root-machine-registry-completeness.current.yaml
 descriptor_schema_source_component_id: root_machine_registry_completeness
+descriptor_schema_source_binding_mode: canonical_source_component_current_only
+descriptor_schema_source_substitution_policy: forbidden
+descriptor_schema_fallback_policy: fail_closed
+descriptor_schema_local_reconstruction_policy: forbidden
 require_component_descriptor_concordance: true
 required_component_descriptor_fields:
 - validator_script
@@ -41,6 +45,9 @@ bundle_anchor_checks:
   - Bundle descriptor law must also remain inherited from machine-registry
   - machine-registry completeness field set or field-mode law for self-describing
   - bundle schema instead of the admitted registry descriptor law.
+  - The bundle descriptor schema must also stay source-singular.
+  - not a substitute source chosen for local convenience.
+  - fail-close rather than locally reconstructing descriptor schema from shadow bundle knowledge.
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root-law bundle discipline'
@@ -59,6 +66,9 @@ bundle_anchor_checks:
   - The bundle may not locally reauthor that descriptor schema either; the field
   - admitted machine-registry completeness law for self-describing mapping
     families.
+  - The bundle's descriptor schema must remain source-singular as well.
+  - fallback source for convenience.
+  - fail-close rather than locally reconstructing descriptor schema.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root-law bundle boundary'
@@ -74,6 +84,9 @@ bundle_anchor_checks:
   - The bundle must not locally reauthor the self-describing descriptor schema
   - descriptor-field modes must remain aligned with root machine-registry
     completeness law.
+  - The bundle's descriptor schema must stay source-singular
+  - no substitute source, and no fallback source.
+  - fail-close rather than locally reconstructing descriptor schema.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime consumption of the root-law bundle'
@@ -86,6 +99,10 @@ bundle_anchor_checks:
   - error-code family.
   - Runtime must also reject a root-law bundle whose descriptor schema diverges
   - descriptor-field mode map.
+  - Runtime must also treat bundle descriptor schema as source-singular
+  - no substitute source, and no
+    fallback source.
+  - locally reconstructing descriptor schema.
 component_rows:
 - order: 1
   component_id: root_corpus_governance

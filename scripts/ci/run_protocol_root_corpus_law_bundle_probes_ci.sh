@@ -28,6 +28,10 @@ assert payload["protocol_root_corpus_law_bundle_status"] == "PASS_REQUIRED", pay
 assert payload["component_count"] == 10, payload
 assert payload["machine_registry_completeness_current_file"] == "identity/protocol/mappings/root-machine-registry-completeness.current.yaml", payload
 assert payload["descriptor_schema_source_component_id"] == "root_machine_registry_completeness", payload
+assert payload["descriptor_schema_source_binding_mode"] == "canonical_source_component_current_only", payload
+assert payload["descriptor_schema_source_substitution_policy"] == "forbidden", payload
+assert payload["descriptor_schema_fallback_policy"] == "fail_closed", payload
+assert payload["descriptor_schema_local_reconstruction_policy"] == "forbidden", payload
 assert payload["required_component_descriptor_fields"] == [
     "validator_script",
     "probe_script",
@@ -59,6 +63,79 @@ assert any(
     for row in payload["component_status_rows"]
     for cell in row.get("descriptor_field_rows", [])
 ), payload
+PY
+
+SOURCE_FIELDS_REPO="${TMP_ROOT}/descriptor-schema-source-fields-missing-repo"
+mirror_repo "${SOURCE_FIELDS_REPO}"
+python3 - <<'PY' "${SOURCE_FIELDS_REPO}/identity/protocol/mappings/root-machine-registry-completeness.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_descriptor_fields"] = []
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SOURCE_FIELDS_JSON="${TMP_ROOT}/descriptor-schema-source-fields-missing.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SOURCE_FIELDS_REPO}" \
+  --json-only >"${SOURCE_FIELDS_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed missing descriptor-source fields"
+  exit 1
+fi
+
+python3 - <<'PY' "${SOURCE_FIELDS_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_schema_source_required_descriptor_fields_missing"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_fields_not_aligned_to_machine_registry_completeness"
+    for row in payload["bundle_violations"]
+), payload
+PY
+
+SUBSTITUTION_POLICY_REPO="${TMP_ROOT}/descriptor-schema-substitution-policy-drift-repo"
+mirror_repo "${SUBSTITUTION_POLICY_REPO}"
+python3 - <<'PY' "${SUBSTITUTION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["descriptor_schema_source_substitution_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SUBSTITUTION_POLICY_JSON="${TMP_ROOT}/descriptor-schema-substitution-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SUBSTITUTION_POLICY_REPO}" \
+  --json-only >"${SUBSTITUTION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor-source substitution drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SUBSTITUTION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_descriptor_schema_source_substitution_policy_invalid" in payload["stale_reasons"], payload
 PY
 
 SCHEMA_SOURCE_REPO="${TMP_ROOT}/descriptor-schema-source-drift-repo"
@@ -125,8 +202,12 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RCLB-001", payload
-assert "root_corpus_law_bundle_required_component_descriptor_field_modes_invalid" in payload["stale_reasons"], payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_field_modes_not_aligned_to_machine_registry_completeness"
+    for row in payload["bundle_violations"]
+), payload
 PY
 
 DESCRIPTOR_REPO="${TMP_ROOT}/descriptor-drift-repo"

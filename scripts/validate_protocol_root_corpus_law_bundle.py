@@ -14,7 +14,11 @@ from root_corpus_law_bundle_common import (
     STATUS_PASS_REQUIRED,
     bundle_anchor_checks_from_doc,
     bundle_components_from_doc,
+    descriptor_schema_fallback_policy_from_doc,
     descriptor_schema_source_component_id_from_doc,
+    descriptor_schema_source_binding_mode_from_doc,
+    descriptor_schema_source_substitution_policy_from_doc,
+    descriptor_schema_local_reconstruction_policy_from_doc,
     load_mapping_descriptor,
     load_root_corpus_law_bundle,
     machine_registry_completeness_current_file_from_doc,
@@ -149,15 +153,6 @@ def _descriptor_is_present(value: Any) -> bool:
     return bool(str(value or "").strip())
 
 
-EXPECTED_DESCRIPTOR_FIELD_MODES = {
-    "validator_script": "repo_rel_path",
-    "probe_script": "repo_rel_path",
-    "common_script": "repo_rel_path",
-    "status_key": "validator_status_key",
-    "error_codes": "validator_error_code_list",
-}
-
-
 def _run_component_validator(repo_root, validator_script: str, status_key: str) -> tuple[int, dict[str, Any], str]:
     cmd = ["python3", validator_script, "--repo-root", str(repo_root), "--json-only"]
     proc = subprocess.run(cmd, cwd=repo_root, capture_output=True, text=True)
@@ -223,6 +218,16 @@ def main() -> int:
         machine_registry_completeness_current_file_from_doc(bundle_doc) if bundle_doc else ""
     )
     descriptor_schema_source_component_id = descriptor_schema_source_component_id_from_doc(bundle_doc) if bundle_doc else ""
+    descriptor_schema_source_binding_mode = (
+        descriptor_schema_source_binding_mode_from_doc(bundle_doc) if bundle_doc else ""
+    )
+    descriptor_schema_source_substitution_policy = (
+        descriptor_schema_source_substitution_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
+    descriptor_schema_fallback_policy = descriptor_schema_fallback_policy_from_doc(bundle_doc) if bundle_doc else ""
+    descriptor_schema_local_reconstruction_policy = (
+        descriptor_schema_local_reconstruction_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     source_required_descriptor_fields = (
         registry_required_descriptor_fields_from_doc(machine_registry_completeness_doc)
         if machine_registry_completeness_doc
@@ -262,21 +267,35 @@ def main() -> int:
         if descriptor_schema_source_component_id != "root_machine_registry_completeness":
             stale_reasons.append("root_corpus_law_bundle_descriptor_schema_source_component_id_invalid")
             error_code = ERR_REGISTRY
+        if descriptor_schema_source_binding_mode != "canonical_source_component_current_only":
+            stale_reasons.append("root_corpus_law_bundle_descriptor_schema_source_binding_mode_invalid")
+            error_code = ERR_REGISTRY
+        if descriptor_schema_source_substitution_policy != "forbidden":
+            stale_reasons.append("root_corpus_law_bundle_descriptor_schema_source_substitution_policy_invalid")
+            error_code = ERR_REGISTRY
+        if descriptor_schema_fallback_policy != "fail_closed":
+            stale_reasons.append("root_corpus_law_bundle_descriptor_schema_fallback_policy_invalid")
+            error_code = ERR_REGISTRY
+        if descriptor_schema_local_reconstruction_policy != "forbidden":
+            stale_reasons.append("root_corpus_law_bundle_descriptor_schema_local_reconstruction_policy_invalid")
+            error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
             error_code = ERR_REGISTRY
-        if tuple(required_component_descriptor_fields) != (
-            "validator_script",
-            "probe_script",
-            "common_script",
-            "status_key",
-            "error_codes",
-        ):
-            stale_reasons.append("root_corpus_law_bundle_required_component_descriptor_fields_invalid")
-            error_code = ERR_REGISTRY
-        if required_component_descriptor_field_modes != EXPECTED_DESCRIPTOR_FIELD_MODES:
-            stale_reasons.append("root_corpus_law_bundle_required_component_descriptor_field_modes_invalid")
-            error_code = ERR_REGISTRY
+        if not source_required_descriptor_fields:
+            bundle_violations.append(
+                {
+                    "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                    "reason": "descriptor_schema_source_required_descriptor_fields_missing",
+                }
+            )
+        if not source_required_descriptor_field_modes:
+            bundle_violations.append(
+                {
+                    "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                    "reason": "descriptor_schema_source_required_descriptor_field_modes_missing",
+                }
+            )
         if tuple(source_required_descriptor_fields) != tuple(required_component_descriptor_fields):
             bundle_violations.append(
                 {
@@ -315,6 +334,24 @@ def main() -> int:
             structure_violations.append({"field": "component_rows", "reason": "duplicate_component_id"})
         if len(set(component_orders)) != len(component_orders) or not _contiguous_orders(sorted(component_orders)):
             structure_violations.append({"field": "component_rows", "reason": "component_order_non_contiguous"})
+
+        source_component = component_map.get(descriptor_schema_source_component_id)
+        if source_component is None:
+            bundle_violations.append(
+                {
+                    "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                    "reason": "descriptor_schema_source_component_missing_from_bundle",
+                }
+            )
+        elif source_component.current_file != machine_registry_completeness_current_file:
+            bundle_violations.append(
+                {
+                    "component_id": descriptor_schema_source_component_id,
+                    "reason": "descriptor_schema_source_component_current_file_mismatch",
+                    "bundle_source_current_file": machine_registry_completeness_current_file,
+                    "component_current_file": source_component.current_file,
+                }
+            )
 
         missing_components = sorted(set(EXPECTED_COMPONENTS) - set(component_map))
         extra_components = sorted(set(component_map) - set(EXPECTED_COMPONENTS))
@@ -521,6 +558,10 @@ def main() -> int:
         "root_dir": str(bundle_doc.get("root_dir") or ""),
         "machine_registry_completeness_current_file": machine_registry_completeness_current_file,
         "descriptor_schema_source_component_id": descriptor_schema_source_component_id,
+        "descriptor_schema_source_binding_mode": descriptor_schema_source_binding_mode,
+        "descriptor_schema_source_substitution_policy": descriptor_schema_source_substitution_policy,
+        "descriptor_schema_fallback_policy": descriptor_schema_fallback_policy,
+        "descriptor_schema_local_reconstruction_policy": descriptor_schema_local_reconstruction_policy,
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
         "component_ids": [row.component_id for row in sorted_components],

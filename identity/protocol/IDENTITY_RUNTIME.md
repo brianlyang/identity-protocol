@@ -116,6 +116,13 @@ from admitted machine-registry completeness law for self-describing mapping
 families; runtime must not guess a substitute field set or substitute
 descriptor-field mode map.
 
+Runtime must also treat bundle descriptor schema as source-singular: one
+admitted source component/current mapping pair, no substitute source, and no
+fallback source.
+
+If that source is unavailable or invalid, runtime must fail-close rather than
+locally reconstructing descriptor schema.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

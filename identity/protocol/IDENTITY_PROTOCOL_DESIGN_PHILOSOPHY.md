@@ -382,6 +382,15 @@ machine-registry completeness field set or field-mode law for self-describing
 mapping families, the machine world is again being asked to trust shadow
 bundle schema instead of the admitted registry descriptor law.
 
+The bundle descriptor schema must also stay source-singular.
+
+It may bind to one admitted source component/current mapping pair, not a
+substitute source chosen for local convenience.
+
+If that admitted source is unavailable or invalid, the machine world must
+fail-close rather than locally reconstructing descriptor schema from shadow
+bundle knowledge.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

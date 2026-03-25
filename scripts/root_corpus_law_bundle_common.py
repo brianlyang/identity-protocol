@@ -73,6 +73,22 @@ def descriptor_schema_source_component_id_from_doc(bundle_doc: Mapping[str, Any]
     return _norm_str(bundle_doc.get("descriptor_schema_source_component_id"))
 
 
+def descriptor_schema_source_binding_mode_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("descriptor_schema_source_binding_mode"))
+
+
+def descriptor_schema_source_substitution_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("descriptor_schema_source_substitution_policy"))
+
+
+def descriptor_schema_fallback_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("descriptor_schema_fallback_policy"))
+
+
+def descriptor_schema_local_reconstruction_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("descriptor_schema_local_reconstruction_policy"))
+
+
 def require_component_descriptor_concordance(bundle_doc: Mapping[str, Any]) -> bool:
     return _as_bool(bundle_doc.get("require_component_descriptor_concordance"))
 

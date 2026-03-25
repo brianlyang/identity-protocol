@@ -393,6 +393,14 @@ set and field-mode law used by the root-law bundle must stay aligned with the
 admitted machine-registry completeness law for self-describing mapping
 families.
 
+The bundle's descriptor schema must remain source-singular as well.
+
+It may not substitute a different source component/current mapping pair or
+fallback source for convenience.
+
+If that admitted source is unavailable or invalid, the machine world must
+fail-close rather than locally reconstructing descriptor schema.
+
 ---
 
 ## Conflict-handling rule
