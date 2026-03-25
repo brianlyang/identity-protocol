@@ -195,6 +195,11 @@ answers: realized-effect claims, live-bound status claims, admissibility
 claims, and law-grounded explanations do not share one interchangeable backing
 stratum.
 
+Nor may those answer claims share one interchangeable epistemic posture:
+source-grounded explanation, governed source resolution, fail-close
+admissibility, live-bound status, and realized-effect projection remain
+distinct truth postures even after operator-facing compression.
+
 ### Derivation direction must stay one-way
 
 The root corpus must also preserve one-way derivation direction.

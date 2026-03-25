@@ -209,6 +209,10 @@ Operator-facing compression must preserve that discipline as well: a realized-ef
 answer claim cannot borrow the backing stratum of a live-bound status claim, and
 neither may borrow the backing stratum of frozen law or discovery.
 
+Operator-facing compression must preserve epistemic posture as well: realized-effect
+projection cannot borrow the current-truth posture of source grounding, governed
+resolution, fail-close admissibility, or live-bound status.
+
 ---
 
 ## One-way derivation discipline

@@ -110,6 +110,7 @@ Status transitions are controlled by governance/review, not by script commit alo
 7. A later adjudication surface may summarize or close earlier legality work, but it may not back-author the law-bearing role of an earlier phase.
 8. Bound runtime evidence and adjudicated verdict closure evidence are therefore different admissibility strata and must not be collapsed.
 9. Operator answer compression must preserve those distinct backing strata rather than flattening all answer claims into one generic proof source.
+10. Operator answer compression must also preserve distinct epistemic postures rather than flattening law-grounded, source-resolution, admissibility, live-bound, and realized-effect claims into one generic current-truth posture.
 
 ## Root conflict-precedence boundary
 

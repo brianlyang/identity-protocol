@@ -29,14 +29,20 @@ assert payload["surface_count"] == 4, payload
 assert payload["support_memory_count"] == 5, payload
 assert payload["support_limit_count"] == 5, payload
 assert payload["answer_claim_alignment_count"] == 5, payload
+assert payload["answer_claim_epistemic_alignment_count"] == 5, payload
 assert payload["answer_surface_proof_count"] == 5, payload
 assert payload["answer_surface_limit_count"] == 6, payload
 assert payload["boundary_count"] == 4, payload
-assert payload["collapse_count"] == 6, payload
+assert payload["collapse_count"] == 7, payload
 assert any(
     row["claim_id"] == "realized_effect_answer_claim"
     and row["decision_evidence_proof_id"] == "adjudicated_verdict_closure_decision_evidence_proof"
     for row in payload["answer_claim_alignment_rows"]
+), payload
+assert any(
+    row["claim_id"] == "realized_effect_answer_claim"
+    and row["current_truth_proof_id"] == "provenance_preserving_derivation_proof"
+    for row in payload["answer_claim_epistemic_alignment_rows"]
 ), payload
 PY
 
@@ -227,6 +233,45 @@ assert payload["protocol_root_operator_answer_surface_status"] == "FAIL_REQUIRED
 assert payload["error_code"] == "IP-ROAS-003", payload
 assert any(
     row["reason"] == "realized_effect_claim_not_closure_backed"
+    and row["claim_id"] == "realized_effect_answer_claim"
+    for row in payload["integration_violations"]
+), payload
+PY
+
+EPISTEMIC_REPO="${TMP_ROOT}/epistemic-drift-repo"
+mirror_repo "${EPISTEMIC_REPO}"
+python3 - <<'PY' "${EPISTEMIC_REPO}/identity/protocol/mappings/root-operator-answer-surface.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["required_answer_claim_epistemic_alignment_rows"]:
+    if row.get("claim_id") == "realized_effect_answer_claim":
+        row["current_truth_proof_id"] = "present_turn_authority_proof"
+        break
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+EPISTEMIC_JSON="${TMP_ROOT}/epistemic-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_operator_answer_surface.py" \
+  --repo-root "${EPISTEMIC_REPO}" \
+  --json-only >"${EPISTEMIC_JSON}"; then
+  echo "[FAIL] root operator answer-surface validator unexpectedly passed realized-effect epistemic drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${EPISTEMIC_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_operator_answer_surface_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-ROAS-003", payload
+assert any(
+    row["reason"] == "realized_effect_claim_not_provenance_grounded"
     and row["claim_id"] == "realized_effect_answer_claim"
     for row in payload["integration_violations"]
 ), payload

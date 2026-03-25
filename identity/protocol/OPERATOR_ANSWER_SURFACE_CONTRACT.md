@@ -187,6 +187,21 @@ Realized-effect compression may summarize lawful closure, but it must not
 pretend that closure-grade backing is the same thing as live-binding backing or
 that either one rewrites earlier legality phases.
 
+## Answer-claim epistemic alignment
+
+Operator answer claims must preserve the epistemic proof posture appropriate to
+the claim being made.
+
+1. law-grounded answer claim requires canonical-source current-truth proof;
+2. canonical-source answer claim requires governed-resolution current-truth proof;
+3. admissibility answer claim requires fail-close-justification current-truth proof;
+4. live-bound status answer claim requires present-turn-authority current-truth proof;
+5. realized-effect answer claim requires provenance-preserving-derivation current-truth proof.
+
+Realized-effect compression may summarize an adjudicated effect claim, but it
+must still preserve derivational provenance rather than narrating realized
+effect as if that narration were itself source truth.
+
 ## Answer-surface proof discipline
 
 Operator answer-surface claims may be supported only by proof whose stratum
@@ -259,6 +274,7 @@ The following are non-compliant:
 4. `answer_surface_seized_by_terminality`: a machine terminal or receipt blob is treated as if it were the operator collaboration surface.
 5. `prose_without_machine_truth`: fluent answer prose is treated as sufficient despite missing machine-truth backing when such backing is required.
 6. `realized_effect_claim_backed_by_earlier_strata`: a realized-effect answer claim is treated as sufficiently backed by law-memory, discovery-memory, admissibility-memory, or run-binding-memory support alone.
+7. `answer_claim_epistemic_flattening`: law-grounded, canonical-source, admissibility, live-bound, and realized-effect answer claims are treated as if one current-truth proof stratum were sufficient for all of them.
 
 ## Validation
 

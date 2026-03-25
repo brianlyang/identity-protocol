@@ -54,6 +54,14 @@ class AnswerClaimAlignmentRow:
     answer_claim_role: str
 
 
+@dataclass(frozen=True)
+class AnswerClaimEpistemicAlignmentRow:
+    order: int
+    claim_id: str
+    current_truth_proof_id: str
+    claim_epistemic_role: str
+
+
 def _norm_str(value: Any) -> str:
     return str(value or "").strip().replace("\\", "/")
 
@@ -181,6 +189,36 @@ def answer_claim_alignment_rows_from_doc(doc: Mapping[str, Any]) -> tuple[Answer
                 support_id=support_id,
                 decision_evidence_proof_id=decision_evidence_proof_id,
                 answer_claim_role=answer_claim_role,
+            )
+        )
+    return tuple(out)
+
+
+def answer_claim_epistemic_alignment_rows_from_doc(
+    doc: Mapping[str, Any],
+) -> tuple[AnswerClaimEpistemicAlignmentRow, ...]:
+    rows = doc.get("required_answer_claim_epistemic_alignment_rows")
+    if not isinstance(rows, list):
+        return ()
+    out: list[AnswerClaimEpistemicAlignmentRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        claim_id = _norm_str(row.get("claim_id"))
+        current_truth_proof_id = _norm_str(row.get("current_truth_proof_id"))
+        claim_epistemic_role = _norm_str(row.get("claim_epistemic_role"))
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not claim_id or not current_truth_proof_id or not claim_epistemic_role:
+            continue
+        out.append(
+            AnswerClaimEpistemicAlignmentRow(
+                order=order,
+                claim_id=claim_id,
+                current_truth_proof_id=current_truth_proof_id,
+                claim_epistemic_role=claim_epistemic_role,
             )
         )
     return tuple(out)

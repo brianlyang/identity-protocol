@@ -16,6 +16,7 @@ ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.y
 authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
 question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
 decision_evidence_current_file: identity/protocol/mappings/root-decision-evidence-admissibility.current.yaml
+current_truth_current_file: identity/protocol/mappings/root-current-truth-epistemology.current.yaml
 contract_required_markers:
 - This file remains the authoritative root-domain contract for operator answer-surface
   law.
@@ -32,6 +33,10 @@ contract_required_markers:
   proof;
 - realized-effect answer claim requires consumption-memory support plus adjudicated-verdict-closure
   decision-evidence proof.
+- '## Answer-claim epistemic alignment'
+- law-grounded answer claim requires canonical-source current-truth proof;
+- realized-effect answer claim requires provenance-preserving-derivation current-truth
+  proof.
 - '## Answer-surface proof discipline'
 - '## Answer-surface proof limits'
 required_surface_rows:
@@ -115,6 +120,27 @@ required_answer_claim_alignment_rows:
   support_id: consumption_memory_support
   decision_evidence_proof_id: adjudicated_verdict_closure_decision_evidence_proof
   answer_claim_role: realized_effect_operator_answer_claim
+required_answer_claim_epistemic_alignment_rows:
+- order: 1
+  claim_id: law_grounded_answer_claim
+  current_truth_proof_id: canonical_source_proof
+  claim_epistemic_role: law_grounded_answer_claim_epistemic_alignment
+- order: 2
+  claim_id: canonical_source_answer_claim
+  current_truth_proof_id: governed_resolution_proof
+  claim_epistemic_role: canonical_source_answer_claim_epistemic_alignment
+- order: 3
+  claim_id: admissibility_answer_claim
+  current_truth_proof_id: fail_close_justification_proof
+  claim_epistemic_role: admissibility_answer_claim_epistemic_alignment
+- order: 4
+  claim_id: live_bound_status_answer_claim
+  current_truth_proof_id: present_turn_authority_proof
+  claim_epistemic_role: live_bound_status_answer_claim_epistemic_alignment
+- order: 5
+  claim_id: realized_effect_answer_claim
+  current_truth_proof_id: provenance_preserving_derivation_proof
+  claim_epistemic_role: realized_effect_answer_claim_epistemic_alignment
 required_answer_surface_proof_rows:
 - order: 1
   proof_id: operator_entry_boundary_proof
@@ -197,3 +223,8 @@ required_collapse_rows:
   contract_phrase: a realized-effect answer claim is treated as sufficiently backed
     by law-memory, discovery-memory, admissibility-memory, or run-binding-memory
     support alone.
+- order: 7
+  collapse_id: answer_claim_epistemic_flattening
+  contract_phrase: law-grounded, canonical-source, admissibility, live-bound,
+    and realized-effect answer claims are treated as if one current-truth proof
+    stratum were sufficient for all of them.

@@ -14,6 +14,10 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
+from root_current_truth_epistemology_common import (
+    epistemic_proof_rows_from_doc,
+    load_root_current_truth_epistemology,
+)
 from root_decision_evidence_admissibility_common import (
     decision_evidence_proof_rows_from_doc,
     load_root_decision_evidence_admissibility,
@@ -21,6 +25,7 @@ from root_decision_evidence_admissibility_common import (
 from root_operator_answer_surface_common import (
     answer_surface_limit_rows_from_doc,
     answer_claim_alignment_rows_from_doc,
+    answer_claim_epistemic_alignment_rows_from_doc,
     answer_surface_proof_rows_from_doc,
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -140,6 +145,33 @@ EXPECTED_ANSWER_CLAIM_ALIGNMENT_ROWS = {
         "answer_claim_role": "realized_effect_operator_answer_claim",
     },
 }
+EXPECTED_ANSWER_CLAIM_EPISTEMIC_ALIGNMENT_ROWS = {
+    "law_grounded_answer_claim": {
+        "order": 1,
+        "current_truth_proof_id": "canonical_source_proof",
+        "claim_epistemic_role": "law_grounded_answer_claim_epistemic_alignment",
+    },
+    "canonical_source_answer_claim": {
+        "order": 2,
+        "current_truth_proof_id": "governed_resolution_proof",
+        "claim_epistemic_role": "canonical_source_answer_claim_epistemic_alignment",
+    },
+    "admissibility_answer_claim": {
+        "order": 3,
+        "current_truth_proof_id": "fail_close_justification_proof",
+        "claim_epistemic_role": "admissibility_answer_claim_epistemic_alignment",
+    },
+    "live_bound_status_answer_claim": {
+        "order": 4,
+        "current_truth_proof_id": "present_turn_authority_proof",
+        "claim_epistemic_role": "live_bound_status_answer_claim_epistemic_alignment",
+    },
+    "realized_effect_answer_claim": {
+        "order": 5,
+        "current_truth_proof_id": "provenance_preserving_derivation_proof",
+        "claim_epistemic_role": "realized_effect_answer_claim_epistemic_alignment",
+    },
+}
 EXPECTED_ANSWER_SURFACE_PROOF_ROWS = {
     "operator_entry_boundary_proof": {
         "order": 1,
@@ -236,6 +268,10 @@ EXPECTED_COLLAPSE_ROWS = {
         "order": 6,
         "contract_phrase": "a realized-effect answer claim is treated as sufficiently backed by law-memory, discovery-memory, admissibility-memory, or run-binding-memory support alone.",
     },
+    "answer_claim_epistemic_flattening": {
+        "order": 7,
+        "contract_phrase": "law-grounded, canonical-source, admissibility, live-bound, and realized-effect answer claims are treated as if one current-truth proof stratum were sufficient for all of them.",
+    },
 }
 EXPECTED_REGISTRY_MARKERS = (
     "this file remains the authoritative root-domain contract for operator answer-surface law",
@@ -244,6 +280,7 @@ EXPECTED_REGISTRY_MARKERS = (
     "## Lifecycle-aware support-memory discipline",
     "## Support-memory limits",
     "## Answer-claim backing alignment",
+    "## Answer-claim epistemic alignment",
     "## Answer-surface proof discipline",
     "## Answer-surface proof limits",
     "## Compression boundary",
@@ -333,6 +370,9 @@ def main() -> int:
     ordering_doc, ordering_entry_path, ordering_active_path, ordering_alias_error = load_root_corpus_ordering(repo_root)
     authority_doc, authority_entry_path, authority_active_path, authority_alias_error = load_root_corpus_authority(repo_root)
     routing_doc, routing_entry_path, routing_active_path, routing_alias_error = load_root_corpus_question_routing(repo_root)
+    current_truth_doc, current_truth_entry_path, current_truth_active_path, current_truth_alias_error = (
+        load_root_current_truth_epistemology(repo_root)
+    )
     decision_evidence_doc, decision_evidence_entry_path, decision_evidence_active_path, decision_evidence_alias_error = (
         load_root_decision_evidence_admissibility(repo_root)
     )
@@ -356,6 +396,7 @@ def main() -> int:
         ("root_corpus_ordering", ordering_doc, ordering_alias_error),
         ("root_corpus_authority", authority_doc, authority_alias_error),
         ("root_corpus_question_routing", routing_doc, routing_alias_error),
+        ("root_current_truth_epistemology", current_truth_doc, current_truth_alias_error),
         ("root_decision_evidence_admissibility", decision_evidence_doc, decision_evidence_alias_error),
     ):
         if alias_error:
@@ -369,10 +410,12 @@ def main() -> int:
     support_memory_rows = support_memory_rows_from_doc(answer_doc) if answer_doc else ()
     support_limit_rows = support_limit_rows_from_doc(answer_doc) if answer_doc else ()
     answer_claim_alignment_rows = answer_claim_alignment_rows_from_doc(answer_doc) if answer_doc else ()
+    answer_claim_epistemic_alignment_rows = answer_claim_epistemic_alignment_rows_from_doc(answer_doc) if answer_doc else ()
     answer_surface_proof_rows = answer_surface_proof_rows_from_doc(answer_doc) if answer_doc else ()
     answer_surface_limit_rows = answer_surface_limit_rows_from_doc(answer_doc) if answer_doc else ()
     boundary_rows = boundary_rows_from_doc(answer_doc) if answer_doc else ()
     collapse_rows = collapse_rows_from_doc(answer_doc) if answer_doc else ()
+    current_truth_epistemic_proof_rows = epistemic_proof_rows_from_doc(current_truth_doc) if current_truth_doc else ()
     decision_evidence_proof_rows = decision_evidence_proof_rows_from_doc(decision_evidence_doc) if decision_evidence_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -394,6 +437,7 @@ def main() -> int:
             "ordering_current_file": "identity/protocol/mappings/root-corpus-ordering.current.yaml",
             "authority_current_file": "identity/protocol/mappings/root-corpus-authority.current.yaml",
             "question_routing_current_file": "identity/protocol/mappings/root-corpus-question-routing.current.yaml",
+            "current_truth_current_file": "identity/protocol/mappings/root-current-truth-epistemology.current.yaml",
             "decision_evidence_current_file": "identity/protocol/mappings/root-decision-evidence-admissibility.current.yaml",
         }
         for field, expected in expected_scalar_fields.items():
@@ -407,6 +451,7 @@ def main() -> int:
             ("required_support_memory_rows", support_memory_rows),
             ("required_support_limit_rows", support_limit_rows),
             ("required_answer_claim_alignment_rows", answer_claim_alignment_rows),
+            ("required_answer_claim_epistemic_alignment_rows", answer_claim_epistemic_alignment_rows),
             ("required_answer_surface_proof_rows", answer_surface_proof_rows),
             ("required_answer_surface_limit_rows", answer_surface_limit_rows),
             ("required_boundary_rows", boundary_rows),
@@ -415,6 +460,9 @@ def main() -> int:
             if not rows:
                 stale_reasons.append(f"root_operator_answer_surface_{field}_missing")
                 error_code = ERR_REGISTRY
+        if not current_truth_epistemic_proof_rows:
+            stale_reasons.append("root_operator_answer_surface_dependency_current_truth_epistemic_proof_rows_missing")
+            error_code = ERR_REGISTRY
         if not decision_evidence_proof_rows:
             stale_reasons.append("root_operator_answer_surface_dependency_decision_evidence_proof_rows_missing")
             error_code = ERR_REGISTRY
@@ -464,6 +512,15 @@ def main() -> int:
             field_name="required_answer_claim_alignment_rows",
             id_attr="claim_id",
             compare_fields=("support_id", "decision_evidence_proof_id", "answer_claim_role"),
+        )
+        _validate_rows(
+            actual_rows=answer_claim_epistemic_alignment_rows,
+            expected_rows=EXPECTED_ANSWER_CLAIM_EPISTEMIC_ALIGNMENT_ROWS,
+            structure_violations=structure_violations,
+            answer_violations=answer_violations,
+            field_name="required_answer_claim_epistemic_alignment_rows",
+            id_attr="claim_id",
+            compare_fields=("current_truth_proof_id", "claim_epistemic_role"),
         )
         _validate_rows(
             actual_rows=answer_surface_proof_rows,
@@ -541,6 +598,8 @@ def main() -> int:
                 )
 
         support_memory_order_map = {row.support_id: row.order for row in support_memory_rows}
+        answer_claim_alignment_map = {row.claim_id: row for row in answer_claim_alignment_rows}
+        current_truth_epistemic_proof_order_map = {row.proof_id: row.order for row in current_truth_epistemic_proof_rows}
         decision_evidence_proof_order_map = {row.proof_id: row.order for row in decision_evidence_proof_rows}
         previous_support_order = 0
         previous_decision_evidence_proof_order = 0
@@ -625,6 +684,48 @@ def main() -> int:
                         "reason": "realized_effect_claim_not_closure_backed",
                         "claim_id": row.claim_id,
                         "decision_evidence_proof_id": row.decision_evidence_proof_id,
+                    }
+                )
+
+        for row in sorted(answer_claim_epistemic_alignment_rows, key=lambda item: item.order):
+            backing_row = answer_claim_alignment_map.get(row.claim_id)
+            if backing_row is None:
+                integration_violations.append(
+                    {
+                        "field": "root_operator_answer_surface",
+                        "reason": "answer_claim_epistemic_alignment_missing_backing_alignment",
+                        "claim_id": row.claim_id,
+                    }
+                )
+            elif backing_row.order != row.order:
+                integration_violations.append(
+                    {
+                        "field": "root_operator_answer_surface",
+                        "reason": "answer_claim_epistemic_alignment_order_mismatch",
+                        "claim_id": row.claim_id,
+                        "backing_order": backing_row.order,
+                        "epistemic_order": row.order,
+                    }
+                )
+
+            current_truth_proof_order = current_truth_epistemic_proof_order_map.get(row.current_truth_proof_id)
+            if current_truth_proof_order is None:
+                integration_violations.append(
+                    {
+                        "field": "root_current_truth_epistemology",
+                        "reason": "answer_claim_epistemic_alignment_missing_current_truth_proof",
+                        "claim_id": row.claim_id,
+                        "current_truth_proof_id": row.current_truth_proof_id,
+                    }
+                )
+
+            if row.claim_id == "realized_effect_answer_claim" and row.current_truth_proof_id != "provenance_preserving_derivation_proof":
+                integration_violations.append(
+                    {
+                        "field": "root_operator_answer_surface",
+                        "reason": "realized_effect_claim_not_provenance_grounded",
+                        "claim_id": row.claim_id,
+                        "current_truth_proof_id": row.current_truth_proof_id,
                     }
                 )
 
@@ -775,6 +876,8 @@ def main() -> int:
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_ANSWER),
         "answer_entry_path": str(answer_entry_path),
         "answer_active_path": str(answer_active_path),
+        "current_truth_entry_path": str(current_truth_entry_path),
+        "current_truth_active_path": str(current_truth_active_path),
         "decision_evidence_entry_path": str(decision_evidence_entry_path),
         "decision_evidence_active_path": str(decision_evidence_active_path),
         "registry_entry_path": str(registry_entry_path),
@@ -786,6 +889,7 @@ def main() -> int:
         "support_memory_count": len(support_memory_rows),
         "support_limit_count": len(support_limit_rows),
         "answer_claim_alignment_count": len(answer_claim_alignment_rows),
+        "answer_claim_epistemic_alignment_count": len(answer_claim_epistemic_alignment_rows),
         "answer_surface_proof_count": len(answer_surface_proof_rows),
         "answer_surface_limit_count": len(answer_surface_limit_rows),
         "boundary_count": len(boundary_rows),
@@ -794,6 +898,9 @@ def main() -> int:
         "support_memory_ids": [row.support_id for row in sorted(support_memory_rows, key=lambda item: item.order)],
         "support_limit_ids": [row.row_id for row in sorted(support_limit_rows, key=lambda item: item.order)],
         "answer_claim_alignment_ids": [row.claim_id for row in sorted(answer_claim_alignment_rows, key=lambda item: item.order)],
+        "answer_claim_epistemic_alignment_ids": [
+            row.claim_id for row in sorted(answer_claim_epistemic_alignment_rows, key=lambda item: item.order)
+        ],
         "answer_surface_proof_ids": [row.proof_id for row in sorted(answer_surface_proof_rows, key=lambda item: item.order)],
         "answer_surface_limit_ids": [row.row_id for row in sorted(answer_surface_limit_rows, key=lambda item: item.order)],
         "boundary_ids": [row.row_id for row in sorted(boundary_rows, key=lambda item: item.order)],
@@ -807,6 +914,15 @@ def main() -> int:
                 "answer_claim_role": row.answer_claim_role,
             }
             for row in sorted(answer_claim_alignment_rows, key=lambda item: item.order)
+        ],
+        "answer_claim_epistemic_alignment_rows": [
+            {
+                "order": row.order,
+                "claim_id": row.claim_id,
+                "current_truth_proof_id": row.current_truth_proof_id,
+                "claim_epistemic_role": row.claim_epistemic_role,
+            }
+            for row in sorted(answer_claim_epistemic_alignment_rows, key=lambda item: item.order)
         ],
         "structure_violations": structure_violations,
         "answer_violations": answer_violations,

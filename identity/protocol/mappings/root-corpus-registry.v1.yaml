@@ -356,6 +356,7 @@ registered_top_level_entries:
       - '## Lifecycle-aware support-memory discipline'
       - '## Support-memory limits'
       - '## Answer-claim backing alignment'
+      - '## Answer-claim epistemic alignment'
       - '## Answer-surface proof discipline'
       - '## Answer-surface proof limits'
       - '## Compression boundary'
