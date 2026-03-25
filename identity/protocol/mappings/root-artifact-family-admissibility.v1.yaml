@@ -14,6 +14,8 @@ contract_required_markers:
   - '## Artifact-family admissibility law'
   - '## Six family-admission classes'
   - '## Required family-admission differentiations'
+  - '## Family-admission proof discipline'
+  - '## Family-admission proof limits'
   - '## Non-compliant family-admission collapses'
   - 'Only lawfully matched artifacts may be admitted into governed canonical family sinks.'
 required_family_admission_class_rows:
@@ -60,6 +62,50 @@ required_differentiation_rows:
   - order: 6
     differentiation_id: visible_presence_vs_family_admission
     contract_phrase: 'visible path, filename similarity, or artifact presence is separated from lawful family admission.'
+required_family_admission_proof_rows:
+  - order: 1
+    proof_id: frozen_definition_family_admission_proof
+    contract_heading: '### 1. Frozen-definition family-admission proof'
+    proof_role: frozen_definition_family_admission_proof
+  - order: 2
+    proof_id: canonical_sink_family_admission_proof
+    contract_heading: '### 2. Canonical-sink family-admission proof'
+    proof_role: canonical_sink_family_admission_proof
+  - order: 3
+    proof_id: compatibility_family_admission_proof
+    contract_heading: '### 3. Compatibility family-admission proof'
+    proof_role: compatibility_family_admission_proof
+  - order: 4
+    proof_id: bound_admission_family_admission_proof
+    contract_heading: '### 4. Bound-admission family-admission proof'
+    proof_role: bound_admission_family_admission_proof
+  - order: 5
+    proof_id: redirect_recovery_family_admission_proof
+    contract_heading: '### 5. Redirect-recovery family-admission proof'
+    proof_role: redirect_recovery_family_admission_proof
+  - order: 6
+    proof_id: demotion_quarantine_family_admission_proof
+    contract_heading: '### 6. Demotion-quarantine family-admission proof'
+    proof_role: demotion_quarantine_family_admission_proof
+required_family_admission_limit_rows:
+  - order: 1
+    limit_id: frozen_definition_not_canonical_sink
+    contract_phrase: 'frozen-definition family-admission proof is not proof of canonical sink resolution;'
+  - order: 2
+    limit_id: canonical_sink_not_compatibility
+    contract_phrase: 'canonical-sink family-admission proof is not proof of artifact compatibility;'
+  - order: 3
+    limit_id: compatibility_not_bound_admission
+    contract_phrase: 'compatibility family-admission proof is not proof of bound family admission;'
+  - order: 4
+    limit_id: bound_admission_not_redirect_recovery
+    contract_phrase: 'bound-admission family-admission proof is not proof of governed redirect or recovery classification;'
+  - order: 5
+    limit_id: redirect_recovery_not_demotion_quarantine
+    contract_phrase: 'redirect-recovery family-admission proof is not proof of demotion or quarantine confinement;'
+  - order: 6
+    limit_id: demotion_quarantine_not_canonical_admission
+    contract_phrase: 'demotion-quarantine family-admission proof is not proof of lawful canonical family admission.'
 required_collapse_rows:
   - order: 1
     collapse_id: defined_family_as_live_sink

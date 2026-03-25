@@ -145,6 +145,70 @@ The protocol must preserve the following differentiations:
 5. governed recovery or redirect sink is separated from demoted support or quarantine sink;
 6. visible path, filename similarity, or artifact presence is separated from lawful family admission.
 
+When an artifact-family admission claim relies on governed proof, the proof
+stratum behind that claim must match the family-admission claim being asserted.
+
+## Family-admission proof discipline
+
+Artifact-family admission claims may be supported only by proof whose stratum
+matches the family-admission claim being asserted.
+
+### 1. Frozen-definition family-admission proof
+
+Supports claims that an artifact family was defined by shared law or registry
+rather than improvised from local path resemblance or convenience.
+
+Proof role: `frozen_definition_family_admission_proof`.
+
+### 2. Canonical-sink family-admission proof
+
+Supports claims that the lawful canonical sink for a family was resolved under
+governed family law rather than inferred from nearby files or familiar folders.
+
+Proof role: `canonical_sink_family_admission_proof`.
+
+### 3. Compatibility family-admission proof
+
+Supports claims that an artifact is lawfully family-compatible without
+collapsing compatibility into live canonical admission.
+
+Proof role: `compatibility_family_admission_proof`.
+
+### 4. Bound-admission family-admission proof
+
+Supports claims that an artifact was not merely compatible in abstraction but
+bound to the lawful family sink for the current run, current thread, and
+current identity context.
+
+Proof role: `bound_admission_family_admission_proof`.
+
+### 5. Redirect-recovery family-admission proof
+
+Supports claims that a mismatched, unresolved, repair, replay, or redirect
+artifact lawfully entered a governed recovery or redirect sink rather than
+canonical family admission.
+
+Proof role: `redirect_recovery_family_admission_proof`.
+
+### 6. Demotion-quarantine family-admission proof
+
+Supports claims that sample, fixture, diagnostics, archive, compatibility,
+explanatory, or quarantine material remained demoted outside canonical family
+admission.
+
+Proof role: `demotion_quarantine_family_admission_proof`.
+
+## Family-admission proof limits
+
+The protocol must preserve these family-admission proof limits:
+
+1. frozen-definition family-admission proof is not proof of canonical sink resolution;
+2. canonical-sink family-admission proof is not proof of artifact compatibility;
+3. compatibility family-admission proof is not proof of bound family admission;
+4. bound-admission family-admission proof is not proof of governed redirect or recovery classification;
+5. redirect-recovery family-admission proof is not proof of demotion or quarantine confinement;
+6. demotion-quarantine family-admission proof is not proof of lawful canonical family admission.
+
 ## Non-compliant family-admission collapses
 
 The following are non-compliant:

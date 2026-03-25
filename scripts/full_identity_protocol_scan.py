@@ -5899,6 +5899,9 @@ def main() -> int:
     payload["chat_egress_uniqueness_status"] = str(
         host_visible_post_check_metrics.get("chat_egress_uniqueness_status", "")
     ).strip() or STATUS_SKIPPED_NOT_REQUIRED
+    from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
+
+    payload["surface_governance"] = build_governed_runtime_summary_surface_payload("full_identity_protocol_scan_summary")
 
     if args.out:
         out = Path(args.out).expanduser().resolve()

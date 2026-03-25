@@ -216,6 +216,8 @@ registered_top_level_entries:
       - '## Artifact-family admissibility law'
       - '## Six family-admission classes'
       - '## Required family-admission differentiations'
+      - '## Family-admission proof discipline'
+      - '## Family-admission proof limits'
     forbidden_content_classes:
       - workbook_issue_projection
       - closure_ledger_narration

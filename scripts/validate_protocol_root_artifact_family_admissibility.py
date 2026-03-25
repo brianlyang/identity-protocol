@@ -10,6 +10,8 @@ from root_artifact_family_admissibility_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     collapse_rows_from_doc,
+    family_admission_limit_rows_from_doc,
+    family_admission_proof_rows_from_doc,
     differentiation_rows_from_doc,
     family_admission_class_rows_from_doc,
     load_root_artifact_family_admissibility,
@@ -86,6 +88,64 @@ EXPECTED_DIFFERENTIATION_ROWS = {
         "contract_phrase": "visible path, filename similarity, or artifact presence is separated from lawful family admission.",
     },
 }
+EXPECTED_FAMILY_ADMISSION_PROOF_ROWS = {
+    "frozen_definition_family_admission_proof": {
+        "order": 1,
+        "contract_heading": "### 1. Frozen-definition family-admission proof",
+        "proof_role": "frozen_definition_family_admission_proof",
+    },
+    "canonical_sink_family_admission_proof": {
+        "order": 2,
+        "contract_heading": "### 2. Canonical-sink family-admission proof",
+        "proof_role": "canonical_sink_family_admission_proof",
+    },
+    "compatibility_family_admission_proof": {
+        "order": 3,
+        "contract_heading": "### 3. Compatibility family-admission proof",
+        "proof_role": "compatibility_family_admission_proof",
+    },
+    "bound_admission_family_admission_proof": {
+        "order": 4,
+        "contract_heading": "### 4. Bound-admission family-admission proof",
+        "proof_role": "bound_admission_family_admission_proof",
+    },
+    "redirect_recovery_family_admission_proof": {
+        "order": 5,
+        "contract_heading": "### 5. Redirect-recovery family-admission proof",
+        "proof_role": "redirect_recovery_family_admission_proof",
+    },
+    "demotion_quarantine_family_admission_proof": {
+        "order": 6,
+        "contract_heading": "### 6. Demotion-quarantine family-admission proof",
+        "proof_role": "demotion_quarantine_family_admission_proof",
+    },
+}
+EXPECTED_FAMILY_ADMISSION_LIMIT_ROWS = {
+    "frozen_definition_not_canonical_sink": {
+        "order": 1,
+        "contract_phrase": "frozen-definition family-admission proof is not proof of canonical sink resolution;",
+    },
+    "canonical_sink_not_compatibility": {
+        "order": 2,
+        "contract_phrase": "canonical-sink family-admission proof is not proof of artifact compatibility;",
+    },
+    "compatibility_not_bound_admission": {
+        "order": 3,
+        "contract_phrase": "compatibility family-admission proof is not proof of bound family admission;",
+    },
+    "bound_admission_not_redirect_recovery": {
+        "order": 4,
+        "contract_phrase": "bound-admission family-admission proof is not proof of governed redirect or recovery classification;",
+    },
+    "redirect_recovery_not_demotion_quarantine": {
+        "order": 5,
+        "contract_phrase": "redirect-recovery family-admission proof is not proof of demotion or quarantine confinement;",
+    },
+    "demotion_quarantine_not_canonical_admission": {
+        "order": 6,
+        "contract_phrase": "demotion-quarantine family-admission proof is not proof of lawful canonical family admission.",
+    },
+}
 EXPECTED_COLLAPSE_ROWS = {
     "defined_family_as_live_sink": {
         "order": 1,
@@ -117,6 +177,8 @@ EXPECTED_REGISTRY_MARKERS = (
     "## Artifact-family admissibility law",
     "## Six family-admission classes",
     "## Required family-admission differentiations",
+    "## Family-admission proof discipline",
+    "## Family-admission proof limits",
 )
 EXPECTED_AUTHORITY_MARKERS = (
     "## Runtime adjudication boundary",
@@ -232,6 +294,8 @@ def main() -> int:
 
     family_admission_class_rows = family_admission_class_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     differentiation_rows = differentiation_rows_from_doc(admissibility_doc) if admissibility_doc else ()
+    family_admission_proof_rows = family_admission_proof_rows_from_doc(admissibility_doc) if admissibility_doc else ()
+    family_admission_limit_rows = family_admission_limit_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     collapse_rows = collapse_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -263,6 +327,8 @@ def main() -> int:
         for field, rows in (
             ("required_family_admission_class_rows", family_admission_class_rows),
             ("required_differentiation_rows", differentiation_rows),
+            ("required_family_admission_proof_rows", family_admission_proof_rows),
+            ("required_family_admission_limit_rows", family_admission_limit_rows),
             ("required_collapse_rows", collapse_rows),
         ):
             if not rows:
@@ -298,6 +364,24 @@ def main() -> int:
             compare_fields=("contract_phrase",),
         )
         _validate_rows(
+            actual_rows=family_admission_proof_rows,
+            expected_rows=EXPECTED_FAMILY_ADMISSION_PROOF_ROWS,
+            structure_violations=structure_violations,
+            admissibility_violations=admissibility_violations,
+            field_name="required_family_admission_proof_rows",
+            id_attr="proof_id",
+            compare_fields=("contract_heading", "proof_role"),
+        )
+        _validate_rows(
+            actual_rows=family_admission_limit_rows,
+            expected_rows=EXPECTED_FAMILY_ADMISSION_LIMIT_ROWS,
+            structure_violations=structure_violations,
+            admissibility_violations=admissibility_violations,
+            field_name="required_family_admission_limit_rows",
+            id_attr="row_id",
+            compare_fields=("contract_phrase",),
+        )
+        _validate_rows(
             actual_rows=collapse_rows,
             expected_rows=EXPECTED_COLLAPSE_ROWS,
             structure_violations=structure_violations,
@@ -321,7 +405,10 @@ def main() -> int:
             for row in family_admission_class_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_heading,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "family_admission_class_heading_missing", "marker": marker})
-            for row in differentiation_rows + collapse_rows:
+            for row in family_admission_proof_rows:
+                for marker in find_missing_markers(contract_text, (row.contract_heading,)):
+                    contract_marker_violations.append({"field": "contract_file", "reason": "proof_heading_missing", "marker": marker})
+            for row in differentiation_rows + family_admission_limit_rows + collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
 
@@ -493,9 +580,13 @@ def main() -> int:
         "contract_file": str(admissibility_doc.get("contract_file") or ""),
         "family_admission_class_count": len(family_admission_class_rows),
         "differentiation_count": len(differentiation_rows),
+        "family_admission_proof_count": len(family_admission_proof_rows),
+        "family_admission_limit_count": len(family_admission_limit_rows),
         "collapse_count": len(collapse_rows),
         "family_admission_class_ids": [row.family_admission_class_id for row in sorted(family_admission_class_rows, key=lambda item: item.order)],
         "differentiation_ids": [row.row_id for row in sorted(differentiation_rows, key=lambda item: item.order)],
+        "family_admission_proof_ids": [row.proof_id for row in sorted(family_admission_proof_rows, key=lambda item: item.order)],
+        "family_admission_limit_ids": [row.row_id for row in sorted(family_admission_limit_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
         "structure_violations": structure_violations,
         "admissibility_violations": admissibility_violations,
