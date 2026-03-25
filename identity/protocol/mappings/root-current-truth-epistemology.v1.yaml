@@ -7,6 +7,10 @@ validator_script: scripts/validate_protocol_root_current_truth_epistemology.py
 probe_script: scripts/ci/run_protocol_root_current_truth_epistemology_probes_ci.sh
 common_script: scripts/root_current_truth_epistemology_common.py
 status_key: protocol_root_current_truth_epistemology_status
+error_codes:
+- IP-CTE-001
+- IP-CTE-002
+- IP-CTE-003
 registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
 ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
 authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml

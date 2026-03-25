@@ -93,6 +93,21 @@ def extract_validator_status_key(repo_root: Path, validator_script: str) -> tupl
     return _norm_str(match.group(1)), ""
 
 
+def extract_validator_error_codes(repo_root: Path, validator_script: str) -> tuple[tuple[str, ...], str]:
+    validator_path = (repo_root / _norm_str(validator_script)).resolve()
+    if not validator_path.exists() or not validator_path.is_file():
+        return (), "validator_script_missing"
+    text = validator_path.read_text(encoding="utf-8", errors="ignore")
+    codes = tuple(
+        _norm_str(match.group(1))
+        for match in re.finditer(r'^ERR_[A-Z0-9_]+\s*=\s*"([^"]+)"', text, re.M)
+        if _norm_str(match.group(1))
+    )
+    if not codes:
+        return (), "validator_error_codes_missing"
+    return codes, ""
+
+
 def anchor_checks_from_doc(doc: Mapping[str, Any]) -> tuple[AnchorCheck, ...]:
     rows = doc.get("anchor_checks")
     if not isinstance(rows, list):

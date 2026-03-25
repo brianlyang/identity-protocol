@@ -9,6 +9,10 @@ validator_script: scripts/validate_protocol_root_corpus_transition.py
 probe_script: scripts/ci/run_protocol_root_corpus_transition_probes_ci.sh
 common_script: scripts/root_corpus_transition_common.py
 status_key: protocol_root_corpus_transition_status
+error_codes:
+- IP-RCT-001
+- IP-RCT-002
+- IP-RCT-003
 transition_anchor_checks:
 - rel_path: identity/protocol/README.md
   required_markers:

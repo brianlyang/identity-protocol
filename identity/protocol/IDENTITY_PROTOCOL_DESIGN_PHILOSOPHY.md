@@ -325,7 +325,8 @@ Admission without discoverable enforcement still leaves the machine partially
 blind.
 
 A lawful root mapping family must therefore disclose the validator, probe,
-shared-common, and emitted status-key surfaces that govern it.
+shared-common, emitted status-key, and emitted error-code surfaces that govern
+it.
 
 ---
 

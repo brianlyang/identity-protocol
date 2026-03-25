@@ -7,6 +7,10 @@ validator_script: scripts/validate_protocol_root_stream_design_admissibility.py
 probe_script: scripts/ci/run_protocol_root_stream_design_admissibility_probes_ci.sh
 common_script: scripts/root_stream_design_admissibility_common.py
 status_key: protocol_root_stream_design_admissibility_status
+error_codes:
+- IP-RSDA-001
+- IP-RSDA-002
+- IP-RSDA-003
 registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
 ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
 authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml

@@ -10,6 +10,7 @@ from registry_alias_control_plane_common import resolve_current_yaml_alias
 from repo_root_resolution_common import resolve_repo_root
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
 from root_machine_registry_completeness_common import (
+    extract_validator_error_codes,
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     anchor_checks_from_doc,
@@ -100,7 +101,7 @@ def main() -> int:
         if self_describing_required and not required_descriptor_fields:
             stale_reasons.append("root_machine_registry_completeness_descriptor_fields_missing")
             error_code = ERR_REGISTRY
-        if tuple(required_descriptor_fields) != ("validator_script", "probe_script", "common_script", "status_key"):
+        if tuple(required_descriptor_fields) != ("validator_script", "probe_script", "common_script", "status_key", "error_codes"):
             stale_reasons.append("root_machine_registry_completeness_descriptor_fields_invalid")
             error_code = ERR_REGISTRY
         if required_descriptor_field_modes != {
@@ -108,6 +109,7 @@ def main() -> int:
             "probe_script": "repo_rel_path",
             "common_script": "repo_rel_path",
             "status_key": "validator_status_key",
+            "error_codes": "validator_error_code_list",
         }:
             stale_reasons.append("root_machine_registry_completeness_descriptor_field_modes_invalid")
             error_code = ERR_REGISTRY
@@ -197,7 +199,7 @@ def main() -> int:
                 family_violations: list[str] = []
                 active_file = ""
                 alias_error = ""
-                descriptor_field_rows: list[dict[str, str]] = []
+                descriptor_field_rows: list[dict[str, Any]] = []
 
                 if not current_file:
                     family_violations.append("current_file_missing")
@@ -282,14 +284,72 @@ def main() -> int:
                                 )
                             else:
                                 for descriptor_field in required_descriptor_fields:
-                                    descriptor_value = str(active_doc.get(descriptor_field) or "").strip()
                                     descriptor_mode = required_descriptor_field_modes.get(descriptor_field, "")
                                     row_status = STATUS_FAIL_REQUIRED
-                                    row_payload: dict[str, str] = {
+                                    row_payload: dict[str, Any] = {
                                         "field": descriptor_field,
                                         "mode": descriptor_mode,
-                                        "value": descriptor_value,
                                     }
+                                    if descriptor_mode == "validator_error_code_list":
+                                        raw_codes = active_doc.get(descriptor_field)
+                                        descriptor_codes = tuple(
+                                            str(item or "").strip()
+                                            for item in raw_codes
+                                            if str(item or "").strip()
+                                        ) if isinstance(raw_codes, list) else ()
+                                        expected_codes, error_codes_error = extract_validator_error_codes(
+                                            repo_root,
+                                            str(active_doc.get("validator_script") or "").strip(),
+                                        )
+                                        row_payload["values"] = list(descriptor_codes)
+                                        row_payload["expected_values"] = list(expected_codes)
+                                        row_payload["support_error"] = error_codes_error
+                                        row_status = (
+                                            STATUS_PASS_REQUIRED
+                                            if descriptor_codes and not error_codes_error and descriptor_codes == expected_codes
+                                            else STATUS_FAIL_REQUIRED
+                                        )
+                                        descriptor_field_rows.append({**row_payload, "status": row_status})
+                                        if not descriptor_codes:
+                                            family_violations.append("descriptor_field_missing")
+                                            completeness_violations.append(
+                                                {
+                                                    "field": "root_mapping_family",
+                                                    "reason": "descriptor_field_missing",
+                                                    "family_id": family_id,
+                                                    "active_file": active_file,
+                                                    "descriptor_field": descriptor_field,
+                                                }
+                                            )
+                                        elif error_codes_error:
+                                            family_violations.append("descriptor_supporting_surface_invalid")
+                                            completeness_violations.append(
+                                                {
+                                                    "field": "root_mapping_family",
+                                                    "reason": "descriptor_supporting_surface_invalid",
+                                                    "family_id": family_id,
+                                                    "active_file": active_file,
+                                                    "descriptor_field": descriptor_field,
+                                                    "support_error": error_codes_error,
+                                                }
+                                            )
+                                        elif descriptor_codes != expected_codes:
+                                            family_violations.append("descriptor_value_mismatch")
+                                            completeness_violations.append(
+                                                {
+                                                    "field": "root_mapping_family",
+                                                    "reason": "descriptor_value_mismatch",
+                                                    "family_id": family_id,
+                                                    "active_file": active_file,
+                                                    "descriptor_field": descriptor_field,
+                                                    "actual_values": list(descriptor_codes),
+                                                    "expected_values": list(expected_codes),
+                                                }
+                                            )
+                                        continue
+
+                                    descriptor_value = str(active_doc.get(descriptor_field) or "").strip()
+                                    row_payload["value"] = descriptor_value
                                     if descriptor_mode == "repo_rel_path":
                                         row_status = (
                                             STATUS_PASS_REQUIRED

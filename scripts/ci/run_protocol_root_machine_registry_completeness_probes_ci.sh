@@ -145,6 +145,43 @@ assert any(
 ), payload
 PY
 
+ERROR_CODE_REPO="${TMP_ROOT}/error-code-drift-repo"
+mirror_repo "${ERROR_CODE_REPO}"
+python3 - <<'PY' "${ERROR_CODE_REPO}/identity/protocol/mappings/root-corpus-authority.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["error_codes"] = ["IP-RCA-999", *list(doc.get("error_codes", [])[1:])]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+ERROR_CODE_JSON="${TMP_ROOT}/error-code-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${ERROR_CODE_REPO}" \
+  --json-only >"${ERROR_CODE_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed error-code descriptor drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ERROR_CODE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert any(
+    row["reason"] == "descriptor_value_mismatch"
+    and row.get("family_id") == "root-corpus-authority"
+    and row.get("descriptor_field") == "error_codes"
+    for row in payload["completeness_violations"]
+), payload
+PY
+
 REGISTRY_REPO="${TMP_ROOT}/registry-drift-repo"
 mirror_repo "${REGISTRY_REPO}"
 python3 - <<'PY' "${REGISTRY_REPO}/identity/protocol/mappings/root-corpus-registry.v1.yaml"

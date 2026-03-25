@@ -114,7 +114,7 @@ Status transitions are controlled by governance/review, not by script commit alo
 2. On-disk presence without registry admission does not authorize current-turn consumption, legal ingress, or bundle membership.
 3. A governed root mapping family must remain explicit as a current/version pair rather than hiding behind an unregistered file.
 4. Registry-completeness drift is a root-law failure, not a convenience-layer warning.
-5. Registry admission without discoverable validator/probe/common/status-key surfaces is still incomplete.
+5. Registry admission without discoverable validator/probe/common/status-key/error-code surfaces is still incomplete.
 
 ## Root-law bundle boundary
 

@@ -7,6 +7,10 @@ validator_script: scripts/validate_protocol_root_machine_registry_completeness.p
 probe_script: scripts/ci/run_protocol_root_machine_registry_completeness_probes_ci.sh
 common_script: scripts/root_machine_registry_completeness_common.py
 status_key: protocol_root_machine_registry_completeness_status
+error_codes:
+- IP-RMRC-001
+- IP-RMRC-002
+- IP-RMRC-003
 root_family_prefix: root-
 current_suffix: .current.yaml
 version_regex: ^root-[a-z0-9-]+\.v[0-9]+\.yaml$
@@ -17,11 +21,13 @@ required_descriptor_fields:
 - probe_script
 - common_script
 - status_key
+- error_codes
 required_descriptor_field_modes:
   validator_script: repo_rel_path
   probe_script: repo_rel_path
   common_script: repo_rel_path
   status_key: validator_status_key
+  error_codes: validator_error_code_list
 anchor_checks:
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
   required_markers:
@@ -31,7 +37,8 @@ anchor_checks:
   - registry-completeness failure rather than a
   - Admission without discoverable enforcement still leaves the machine
   - A lawful root mapping family must therefore disclose the validator, probe,
-  - shared-common, and emitted status-key surfaces that govern it.
+  - shared-common, emitted status-key, and emitted error-code surfaces that govern
+    it.
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root machine-registry completeness discipline'
@@ -42,7 +49,8 @@ anchor_checks:
   - if a root mapping family exists on disk but is absent from that admitted child
     set, registry completeness has failed and current-turn consumption must fail-close.
   - 4. an admitted root mapping family must disclose its validator, probe, shared-common,
-    and emitted status-key enforcement surfaces to the machine world;
+    emitted status-key, and emitted error-code enforcement surfaces to the machine
+    world;
   - Hidden enforcement knowledge does not satisfy registry completeness.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
@@ -52,7 +60,7 @@ anchor_checks:
   - On-disk presence without registry admission does not authorize current-turn consumption,
     legal ingress, or bundle membership.
   - Registry-completeness drift is a root-law failure, not a convenience-layer warning.
-  - 5. Registry admission without discoverable validator/probe/common/status-key
+  - 5. Registry admission without discoverable validator/probe/common/status-key/error-code
     surfaces is
     still incomplete.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
@@ -64,5 +72,5 @@ anchor_checks:
     non-canonical for runtime legality.
   - Runtime must fail-close on registry-completeness drift rather than loading the
     most convenient on-disk mapping.
-  - 5. Runtime must discover validator/probe/common/status-key surfaces from admitted
-    mapping-family descriptors rather than hidden local knowledge.
+  - 5. Runtime must discover validator/probe/common/status-key/error-code surfaces
+    from admitted mapping-family descriptors rather than hidden local knowledge.
