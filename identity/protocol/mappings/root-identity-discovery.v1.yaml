@@ -18,6 +18,8 @@ contract_required_markers:
   - '## Activation policy contract'
   - '## Required error reporting'
   - '## Minimal local implementation requirements'
+  - '## Discovery-proof discipline'
+  - '## Discovery-proof limits'
   - '## Non-compliant discovery collapses'
 required_section_rows:
   - order: 1
@@ -122,6 +124,50 @@ required_implementation_rows:
   - order: 4
     implementation_id: return_normalized_metadata_and_errors
     contract_phrase: 'Return normalized metadata + errors'
+required_discovery_proof_rows:
+  - order: 1
+    proof_id: request_shape_proof
+    contract_heading: '### 1. Request-shape proof'
+    proof_role: request_shape_governed_discovery_proof
+  - order: 2
+    proof_id: response_shape_proof
+    contract_heading: '### 2. Response-shape proof'
+    proof_role: response_shape_governed_discovery_proof
+  - order: 3
+    proof_id: precedence_resolution_proof
+    contract_heading: '### 3. Precedence-resolution proof'
+    proof_role: precedence_resolution_governed_discovery_proof
+  - order: 4
+    proof_id: activation_resolution_proof
+    contract_heading: '### 4. Activation-resolution proof'
+    proof_role: activation_resolution_governed_discovery_proof
+  - order: 5
+    proof_id: error_reporting_proof
+    contract_heading: '### 5. Error-reporting proof'
+    proof_role: error_reporting_governed_discovery_proof
+  - order: 6
+    proof_id: implementation_compliance_proof
+    contract_heading: '### 6. Implementation-compliance proof'
+    proof_role: implementation_compliance_governed_discovery_proof
+required_discovery_limit_rows:
+  - order: 1
+    limit_id: request_not_response_shape
+    contract_phrase: 'request-shape proof is not proof of response-shape compliance;'
+  - order: 2
+    limit_id: response_shape_not_precedence
+    contract_phrase: 'response-shape proof is not proof of governed precedence resolution;'
+  - order: 3
+    limit_id: precedence_not_activation
+    contract_phrase: 'precedence-resolution proof is not proof of governed activation resolution;'
+  - order: 4
+    limit_id: activation_not_error_reporting
+    contract_phrase: 'activation-resolution proof is not proof of required error reporting;'
+  - order: 5
+    limit_id: error_reporting_not_implementation
+    contract_phrase: 'error-reporting proof is not proof of implementation compliance;'
+  - order: 6
+    limit_id: implementation_not_current_turn_legality
+    contract_phrase: 'implementation-compliance proof is not proof of current-turn resolver legality.'
 required_collapse_rows:
   - order: 1
     collapse_id: cached_catalogue_as_current_turn_truth

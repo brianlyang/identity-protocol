@@ -236,6 +236,8 @@ registered_top_level_entries:
       - '## Activation policy contract'
       - '## Required error reporting'
       - '## Minimal local implementation requirements'
+      - '## Discovery-proof discipline'
+      - '## Discovery-proof limits'
       - '## Non-compliant discovery collapses'
     forbidden_content_classes:
       - workbook_issue_projection

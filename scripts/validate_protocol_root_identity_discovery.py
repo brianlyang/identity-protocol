@@ -19,6 +19,8 @@ from root_identity_discovery_common import (
     STATUS_PASS_REQUIRED,
     activation_rows_from_doc,
     collapse_rows_from_doc,
+    discovery_limit_rows_from_doc,
+    discovery_proof_rows_from_doc,
     error_field_rows_from_doc,
     implementation_rows_from_doc,
     load_root_identity_discovery,
@@ -100,6 +102,64 @@ EXPECTED_IMPLEMENTATION_ROWS = {
         "contract_phrase": "Return normalized metadata + errors",
     },
 }
+EXPECTED_DISCOVERY_PROOF_ROWS = {
+    "request_shape_proof": {
+        "order": 1,
+        "contract_heading": "### 1. Request-shape proof",
+        "proof_role": "request_shape_governed_discovery_proof",
+    },
+    "response_shape_proof": {
+        "order": 2,
+        "contract_heading": "### 2. Response-shape proof",
+        "proof_role": "response_shape_governed_discovery_proof",
+    },
+    "precedence_resolution_proof": {
+        "order": 3,
+        "contract_heading": "### 3. Precedence-resolution proof",
+        "proof_role": "precedence_resolution_governed_discovery_proof",
+    },
+    "activation_resolution_proof": {
+        "order": 4,
+        "contract_heading": "### 4. Activation-resolution proof",
+        "proof_role": "activation_resolution_governed_discovery_proof",
+    },
+    "error_reporting_proof": {
+        "order": 5,
+        "contract_heading": "### 5. Error-reporting proof",
+        "proof_role": "error_reporting_governed_discovery_proof",
+    },
+    "implementation_compliance_proof": {
+        "order": 6,
+        "contract_heading": "### 6. Implementation-compliance proof",
+        "proof_role": "implementation_compliance_governed_discovery_proof",
+    },
+}
+EXPECTED_DISCOVERY_LIMIT_ROWS = {
+    "request_not_response_shape": {
+        "order": 1,
+        "contract_phrase": "request-shape proof is not proof of response-shape compliance;",
+    },
+    "response_shape_not_precedence": {
+        "order": 2,
+        "contract_phrase": "response-shape proof is not proof of governed precedence resolution;",
+    },
+    "precedence_not_activation": {
+        "order": 3,
+        "contract_phrase": "precedence-resolution proof is not proof of governed activation resolution;",
+    },
+    "activation_not_error_reporting": {
+        "order": 4,
+        "contract_phrase": "activation-resolution proof is not proof of required error reporting;",
+    },
+    "error_reporting_not_implementation": {
+        "order": 5,
+        "contract_phrase": "error-reporting proof is not proof of implementation compliance;",
+    },
+    "implementation_not_current_turn_legality": {
+        "order": 6,
+        "contract_phrase": "implementation-compliance proof is not proof of current-turn resolver legality.",
+    },
+}
 EXPECTED_COLLAPSE_ROWS = {
     "cached_catalogue_as_current_turn_truth": {
         "order": 1,
@@ -130,6 +190,8 @@ EXPECTED_REGISTRY_MARKERS = (
     "## Activation policy contract",
     "## Required error reporting",
     "## Minimal local implementation requirements",
+    "## Discovery-proof discipline",
+    "## Discovery-proof limits",
     "## Non-compliant discovery collapses",
 )
 EXPECTED_AUTHORITY_MARKERS = (
@@ -251,6 +313,8 @@ def main() -> int:
     activation_rows = activation_rows_from_doc(discovery_doc) if discovery_doc else ()
     error_field_rows = error_field_rows_from_doc(discovery_doc) if discovery_doc else ()
     implementation_rows = implementation_rows_from_doc(discovery_doc) if discovery_doc else ()
+    discovery_proof_rows = discovery_proof_rows_from_doc(discovery_doc) if discovery_doc else ()
+    discovery_limit_rows = discovery_limit_rows_from_doc(discovery_doc) if discovery_doc else ()
     collapse_rows = collapse_rows_from_doc(discovery_doc) if discovery_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -287,6 +351,8 @@ def main() -> int:
             ("required_activation_rows", activation_rows),
             ("required_error_field_rows", error_field_rows),
             ("required_implementation_rows", implementation_rows),
+            ("required_discovery_proof_rows", discovery_proof_rows),
+            ("required_discovery_limit_rows", discovery_limit_rows),
             ("required_collapse_rows", collapse_rows),
         ):
             if not rows:
@@ -367,6 +433,24 @@ def main() -> int:
             compare_fields=("contract_phrase",),
         )
         _validate_rows(
+            actual_rows=discovery_proof_rows,
+            expected_rows=EXPECTED_DISCOVERY_PROOF_ROWS,
+            structure_violations=structure_violations,
+            discovery_violations=discovery_violations,
+            field_name="required_discovery_proof_rows",
+            id_attr="proof_id",
+            compare_fields=("contract_heading", "proof_role"),
+        )
+        _validate_rows(
+            actual_rows=discovery_limit_rows,
+            expected_rows=EXPECTED_DISCOVERY_LIMIT_ROWS,
+            structure_violations=structure_violations,
+            discovery_violations=discovery_violations,
+            field_name="required_discovery_limit_rows",
+            id_attr="row_id",
+            compare_fields=("contract_phrase",),
+        )
+        _validate_rows(
             actual_rows=collapse_rows,
             expected_rows=EXPECTED_COLLAPSE_ROWS,
             structure_violations=structure_violations,
@@ -390,6 +474,9 @@ def main() -> int:
             for row in section_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_heading,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "section_heading_missing", "marker": marker})
+            for row in discovery_proof_rows:
+                for marker in find_missing_markers(contract_text, (row.contract_heading,)):
+                    contract_marker_violations.append({"field": "contract_file", "reason": "proof_heading_missing", "marker": marker})
             for row in (
                 request_field_rows
                 + response_field_rows
@@ -397,6 +484,7 @@ def main() -> int:
                 + activation_rows
                 + error_field_rows
                 + implementation_rows
+                + discovery_limit_rows
                 + collapse_rows
             ):
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
@@ -599,7 +687,11 @@ def main() -> int:
         "activation_count": len(activation_rows),
         "error_field_count": len(error_field_rows),
         "implementation_count": len(implementation_rows),
+        "discovery_proof_count": len(discovery_proof_rows),
+        "discovery_limit_count": len(discovery_limit_rows),
         "collapse_count": len(collapse_rows),
+        "discovery_proof_ids": [row.proof_id for row in sorted(discovery_proof_rows, key=lambda item: item.order)],
+        "discovery_limit_ids": [row.row_id for row in sorted(discovery_limit_rows, key=lambda item: item.order)],
         "stale_reasons": stale_reasons,
         "structure_violations": structure_violations,
         "discovery_violations": discovery_violations,

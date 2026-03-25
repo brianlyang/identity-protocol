@@ -201,6 +201,67 @@ A compliant local implementation must:
 3. Verify each `pack_path` exists
 4. Return normalized metadata + errors
 
+When a discovery claim relies on governed proof, the proof stratum behind that
+claim must match the discovery claim being made.
+
+## Discovery-proof discipline
+
+Deterministic discovery may be supported only by proof whose stratum matches
+the discovery claim being asserted.
+
+### 1. Request-shape proof
+
+Supports claims that discovery input shape is lawful before resolver execution
+begins.
+
+Proof role: `request_shape_governed_discovery_proof`.
+
+### 2. Response-shape proof
+
+Supports claims that governed discovery output shape remains complete and
+machine-consumable after resolver execution.
+
+Proof role: `response_shape_governed_discovery_proof`.
+
+### 3. Precedence-resolution proof
+
+Supports claims that candidate identity roots were resolved under governed
+precedence rather than local path convenience.
+
+Proof role: `precedence_resolution_governed_discovery_proof`.
+
+### 4. Activation-resolution proof
+
+Supports claims that activation ordering was resolved under explicit selection,
+pinning, and governed implicit policy order.
+
+Proof role: `activation_resolution_governed_discovery_proof`.
+
+### 5. Error-reporting proof
+
+Supports claims that discovery errors remain explicit, structured, and
+fail-close rather than silently absorbed.
+
+Proof role: `error_reporting_governed_discovery_proof`.
+
+### 6. Implementation-compliance proof
+
+Supports claims that the local discovery implementation still resolves the
+canonical catalog, default identity, pack paths, and normalized metadata shape.
+
+Proof role: `implementation_compliance_governed_discovery_proof`.
+
+## Discovery-proof limits
+
+The protocol must preserve these discovery-proof limits:
+
+1. request-shape proof is not proof of response-shape compliance;
+2. response-shape proof is not proof of governed precedence resolution;
+3. precedence-resolution proof is not proof of governed activation resolution;
+4. activation-resolution proof is not proof of required error reporting;
+5. error-reporting proof is not proof of implementation compliance;
+6. implementation-compliance proof is not proof of current-turn resolver legality.
+
 ## Non-compliant discovery collapses
 
 The following are non-compliant:
