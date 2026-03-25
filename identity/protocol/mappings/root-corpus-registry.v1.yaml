@@ -156,6 +156,8 @@ registered_top_level_entries:
       - '## Decision-evidence admissibility law'
       - '## Five decision-evidence classes'
       - '## Required decision-evidence differentiations'
+      - '## Decision-evidence proof discipline'
+      - '## Decision-evidence proof limits'
     forbidden_content_classes:
       - workbook_issue_projection
       - closure_ledger_narration

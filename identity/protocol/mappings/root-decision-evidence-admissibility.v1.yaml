@@ -14,6 +14,8 @@ contract_required_markers:
   - '## Decision-evidence admissibility law'
   - '## Five decision-evidence classes'
   - '## Required decision-evidence differentiations'
+  - '## Decision-evidence proof discipline'
+  - '## Decision-evidence proof limits'
   - '## Non-compliant decision-evidence collapses'
   - 'A machine decision may be motivated, supported, or terminally justified only by evidence classes whose provenance, admissibility, binding, and terminal scope are appropriate for that decision.'
 required_evidence_class_rows:
@@ -56,6 +58,43 @@ required_differentiation_rows:
   - order: 6
     differentiation_id: prose_payload_vs_machine_decision_evidence
     contract_phrase: 'handoff payload or operator-facing prose is separated from machine decision evidence.'
+required_decision_evidence_proof_rows:
+  - order: 1
+    proof_id: frozen_law_decision_evidence_proof
+    contract_heading: '### 1. Frozen-law decision-evidence proof'
+    proof_role: frozen_law_decision_evidence_proof
+  - order: 2
+    proof_id: registry_resolution_decision_evidence_proof
+    contract_heading: '### 2. Registry-resolution decision-evidence proof'
+    proof_role: registry_resolution_decision_evidence_proof
+  - order: 3
+    proof_id: validator_verdict_decision_evidence_proof
+    contract_heading: '### 3. Validator-verdict decision-evidence proof'
+    proof_role: validator_verdict_decision_evidence_proof
+  - order: 4
+    proof_id: bound_runtime_decision_evidence_proof
+    contract_heading: '### 4. Bound-runtime decision-evidence proof'
+    proof_role: bound_runtime_decision_evidence_proof
+  - order: 5
+    proof_id: demotion_confinement_decision_evidence_proof
+    contract_heading: '### 5. Demotion-confinement decision-evidence proof'
+    proof_role: demotion_confinement_decision_evidence_proof
+required_decision_evidence_limit_rows:
+  - order: 1
+    limit_id: frozen_law_not_registry_resolution
+    contract_phrase: 'frozen-law decision-evidence proof is not proof of registry resolution;'
+  - order: 2
+    limit_id: registry_resolution_not_validator_verdict
+    contract_phrase: 'registry-resolution decision-evidence proof is not proof of validator-and-probe verdict passage;'
+  - order: 3
+    limit_id: validator_verdict_not_bound_runtime
+    contract_phrase: 'validator-verdict decision-evidence proof is not proof of bound runtime evidence;'
+  - order: 4
+    limit_id: bound_runtime_not_support_terminality
+    contract_phrase: 'bound-runtime decision-evidence proof is not proof that demoted support evidence may terminate the decision;'
+  - order: 5
+    limit_id: demotion_confinement_not_active_terminal_scope
+    contract_phrase: 'demotion-confinement decision-evidence proof is not proof that support material may enter active success-path terminal scope.'
 required_collapse_rows:
   - order: 1
     collapse_id: motivation_surface_as_terminal_evidence

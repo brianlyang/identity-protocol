@@ -128,6 +128,64 @@ The protocol must preserve the following differentiations:
 5. sample, fixture, diagnostics, migration, and replay evidence are separated from active success-path evidence;
 6. handoff payload or operator-facing prose is separated from machine decision evidence.
 
+When a decision-evidence claim relies on governed proof, the proof stratum
+behind that claim must match the evidence-admissibility commitment being
+asserted.
+
+## Decision-evidence proof discipline
+
+Decision evidence may support a machine decision only when the proof stratum
+behind that support matches the admissibility class being asserted.
+
+### 1. Frozen-law decision-evidence proof
+
+Supports claims that a decision boundary was grounded in frozen protocol law
+rather than in local convenience or historical residue.
+
+Proof role: `frozen_law_decision_evidence_proof`.
+
+### 2. Registry-resolution decision-evidence proof
+
+Supports claims that canonical aliases, active files, ordering, authority
+projection, or routing projection were resolved from machine registries when the
+question is registry-resolvable.
+
+Proof role: `registry_resolution_decision_evidence_proof`.
+
+### 3. Validator-verdict decision-evidence proof
+
+Supports claims that governed validators or probes passed, failed, or confined
+decision evidence within the scope defined by their status keys and fail-close
+boundaries.
+
+Proof role: `validator_verdict_decision_evidence_proof`.
+
+### 4. Bound-runtime decision-evidence proof
+
+Supports claims that runtime evidence was canonically sourced, admissible, and
+bound to the current run / current thread / current identity context for
+present-turn terminal decision scope.
+
+Proof role: `bound_runtime_decision_evidence_proof`.
+
+### 5. Demotion-confinement decision-evidence proof
+
+Supports claims that support-only, replay, migration, diagnostics, fixture, or
+operator-facing material remained demoted and did not silently promote itself
+into terminal decision evidence.
+
+Proof role: `demotion_confinement_decision_evidence_proof`.
+
+## Decision-evidence proof limits
+
+The protocol must preserve these decision-evidence proof limits:
+
+1. frozen-law decision-evidence proof is not proof of registry resolution;
+2. registry-resolution decision-evidence proof is not proof of validator-and-probe verdict passage;
+3. validator-verdict decision-evidence proof is not proof of bound runtime evidence;
+4. bound-runtime decision-evidence proof is not proof that demoted support evidence may terminate the decision;
+5. demotion-confinement decision-evidence proof is not proof that support material may enter active success-path terminal scope.
+
 ## Non-compliant decision-evidence collapses
 
 The following are non-compliant:

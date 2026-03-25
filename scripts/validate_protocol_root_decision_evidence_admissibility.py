@@ -18,6 +18,8 @@ from root_decision_evidence_admissibility_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     collapse_rows_from_doc,
+    decision_evidence_limit_rows_from_doc,
+    decision_evidence_proof_rows_from_doc,
     differentiation_rows_from_doc,
     evidence_class_rows_from_doc,
     load_root_decision_evidence_admissibility,
@@ -81,6 +83,55 @@ EXPECTED_DIFFERENTIATION_ROWS = {
         "contract_phrase": "handoff payload or operator-facing prose is separated from machine decision evidence.",
     },
 }
+EXPECTED_DECISION_EVIDENCE_PROOF_ROWS = {
+    "frozen_law_decision_evidence_proof": {
+        "order": 1,
+        "contract_heading": "### 1. Frozen-law decision-evidence proof",
+        "proof_role": "frozen_law_decision_evidence_proof",
+    },
+    "registry_resolution_decision_evidence_proof": {
+        "order": 2,
+        "contract_heading": "### 2. Registry-resolution decision-evidence proof",
+        "proof_role": "registry_resolution_decision_evidence_proof",
+    },
+    "validator_verdict_decision_evidence_proof": {
+        "order": 3,
+        "contract_heading": "### 3. Validator-verdict decision-evidence proof",
+        "proof_role": "validator_verdict_decision_evidence_proof",
+    },
+    "bound_runtime_decision_evidence_proof": {
+        "order": 4,
+        "contract_heading": "### 4. Bound-runtime decision-evidence proof",
+        "proof_role": "bound_runtime_decision_evidence_proof",
+    },
+    "demotion_confinement_decision_evidence_proof": {
+        "order": 5,
+        "contract_heading": "### 5. Demotion-confinement decision-evidence proof",
+        "proof_role": "demotion_confinement_decision_evidence_proof",
+    },
+}
+EXPECTED_DECISION_EVIDENCE_LIMIT_ROWS = {
+    "frozen_law_not_registry_resolution": {
+        "order": 1,
+        "contract_phrase": "frozen-law decision-evidence proof is not proof of registry resolution;",
+    },
+    "registry_resolution_not_validator_verdict": {
+        "order": 2,
+        "contract_phrase": "registry-resolution decision-evidence proof is not proof of validator-and-probe verdict passage;",
+    },
+    "validator_verdict_not_bound_runtime": {
+        "order": 3,
+        "contract_phrase": "validator-verdict decision-evidence proof is not proof of bound runtime evidence;",
+    },
+    "bound_runtime_not_support_terminality": {
+        "order": 4,
+        "contract_phrase": "bound-runtime decision-evidence proof is not proof that demoted support evidence may terminate the decision;",
+    },
+    "demotion_confinement_not_active_terminal_scope": {
+        "order": 5,
+        "contract_phrase": "demotion-confinement decision-evidence proof is not proof that support material may enter active success-path terminal scope.",
+    },
+}
 EXPECTED_COLLAPSE_ROWS = {
     "motivation_surface_as_terminal_evidence": {
         "order": 1,
@@ -112,6 +163,8 @@ EXPECTED_REGISTRY_MARKERS = (
     "## Decision-evidence admissibility law",
     "## Five decision-evidence classes",
     "## Required decision-evidence differentiations",
+    "## Decision-evidence proof discipline",
+    "## Decision-evidence proof limits",
 )
 EXPECTED_AUTHORITY_MARKERS = (
     "## Runtime adjudication boundary",
@@ -227,6 +280,8 @@ def main() -> int:
 
     evidence_class_rows = evidence_class_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     differentiation_rows = differentiation_rows_from_doc(admissibility_doc) if admissibility_doc else ()
+    decision_evidence_proof_rows = decision_evidence_proof_rows_from_doc(admissibility_doc) if admissibility_doc else ()
+    decision_evidence_limit_rows = decision_evidence_limit_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     collapse_rows = collapse_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -258,6 +313,8 @@ def main() -> int:
         for field, rows in (
             ("required_evidence_class_rows", evidence_class_rows),
             ("required_differentiation_rows", differentiation_rows),
+            ("required_decision_evidence_proof_rows", decision_evidence_proof_rows),
+            ("required_decision_evidence_limit_rows", decision_evidence_limit_rows),
             ("required_collapse_rows", collapse_rows),
         ):
             if not rows:
@@ -293,6 +350,24 @@ def main() -> int:
             compare_fields=("contract_phrase",),
         )
         _validate_rows(
+            actual_rows=decision_evidence_proof_rows,
+            expected_rows=EXPECTED_DECISION_EVIDENCE_PROOF_ROWS,
+            structure_violations=structure_violations,
+            admissibility_violations=admissibility_violations,
+            field_name="required_decision_evidence_proof_rows",
+            id_attr="proof_id",
+            compare_fields=("contract_heading", "proof_role"),
+        )
+        _validate_rows(
+            actual_rows=decision_evidence_limit_rows,
+            expected_rows=EXPECTED_DECISION_EVIDENCE_LIMIT_ROWS,
+            structure_violations=structure_violations,
+            admissibility_violations=admissibility_violations,
+            field_name="required_decision_evidence_limit_rows",
+            id_attr="row_id",
+            compare_fields=("contract_phrase",),
+        )
+        _validate_rows(
             actual_rows=collapse_rows,
             expected_rows=EXPECTED_COLLAPSE_ROWS,
             structure_violations=structure_violations,
@@ -316,7 +391,10 @@ def main() -> int:
             for row in evidence_class_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_heading,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "evidence_class_heading_missing", "marker": marker})
-            for row in differentiation_rows + collapse_rows:
+            for row in decision_evidence_proof_rows:
+                for marker in find_missing_markers(contract_text, (row.contract_heading,)):
+                    contract_marker_violations.append({"field": "contract_file", "reason": "proof_heading_missing", "marker": marker})
+            for row in differentiation_rows + decision_evidence_limit_rows + collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
 
@@ -488,9 +566,13 @@ def main() -> int:
         "contract_file": str(admissibility_doc.get("contract_file") or ""),
         "evidence_class_count": len(evidence_class_rows),
         "differentiation_count": len(differentiation_rows),
+        "decision_evidence_proof_count": len(decision_evidence_proof_rows),
+        "decision_evidence_limit_count": len(decision_evidence_limit_rows),
         "collapse_count": len(collapse_rows),
         "evidence_class_ids": [row.evidence_class_id for row in sorted(evidence_class_rows, key=lambda item: item.order)],
         "differentiation_ids": [row.row_id for row in sorted(differentiation_rows, key=lambda item: item.order)],
+        "decision_evidence_proof_ids": [row.proof_id for row in sorted(decision_evidence_proof_rows, key=lambda item: item.order)],
+        "decision_evidence_limit_ids": [row.row_id for row in sorted(decision_evidence_limit_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
         "structure_violations": structure_violations,
         "admissibility_violations": admissibility_violations,
