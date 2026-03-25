@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- **nested gateway wrapper timeout budget propagation**:
+  - hardened `scripts/gateway_wrapper_enforcement.py` so pack-local nested
+    ingress/session wrapper subprocesses inherit the stronger timeout profile of
+    the canonical entry command instead of silently falling back to the generic
+    30-second default.
+  - this removes false `CTX_TOOL_TIMEOUT` failures in long-running strict
+    update lanes where the outer gateway already classified the command
+    correctly but the nested wrapper budget previously drifted lower.
+  - verified against:
+    - direct `required_gate_bundle_runner.py` execution through
+      `run_gateway_wrapped_command(...)`
+    - fresh `identity_creator.py update` rerun for
+      `base-repo-closure-orchestrator`, which now materializes
+      `identity-upgrade-exec-base-repo-closure-orchestrator-1774403117.json`
+      with `all_ok=true`
+
 - **root-law release closure truth-sync + changelog validator hardening**:
   - recorded the latest root-law closure batch so release/governance checks no
     longer depend on implicit operator context:

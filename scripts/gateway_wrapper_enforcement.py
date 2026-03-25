@@ -227,6 +227,28 @@ def _resolve_command_timeout_seconds(cmd: list[str], *, env: dict[str, str] | No
     return _safe_positive_int(env_token, default_timeout)
 
 
+def _prepare_nested_wrapper_timeout(
+    *,
+    entry_cmd: list[str],
+    wrapper_cmd: list[str],
+    child_env: dict[str, str],
+) -> int:
+    """
+    Nested pack-local wrappers must inherit the timeout profile of the canonical
+    command they are routing for. Otherwise the outer gateway can classify the
+    wrapped call correctly, but the actual wrapper subprocess still falls back
+    to the generic 30s budget and false-times-out under long-running update
+    lanes.
+    """
+    entry_timeout = _resolve_command_timeout_seconds(entry_cmd, env=child_env)
+    wrapper_timeout = _resolve_command_timeout_seconds(wrapper_cmd, env=child_env)
+    effective_timeout = max(entry_timeout, wrapper_timeout)
+    current_env_timeout = _safe_positive_int(child_env.get(DEFAULT_TIMEOUT_ENV), default=0)
+    if current_env_timeout < effective_timeout:
+        child_env[DEFAULT_TIMEOUT_ENV] = str(effective_timeout)
+    return effective_timeout
+
+
 def _timeout_reason(*, cmd: list[str], timeout_seconds: int, scope: str) -> str:
     script = _script_hint_from_cmd(cmd) or "unknown_command"
     return (
@@ -444,7 +466,11 @@ def run_final_emit_via_instance_wrappers(*, cmd: list[str], protocol_root: Path)
         session_chain_cmd.extend(["--layer-intent-text", layer_intent_text])
 
     print("$", " ".join(session_chain_cmd))
-    timeout_seconds = _resolve_command_timeout_seconds(session_chain_cmd, env=child_env)
+    timeout_seconds = _prepare_nested_wrapper_timeout(
+        entry_cmd=cmd,
+        wrapper_cmd=session_chain_cmd,
+        child_env=child_env,
+    )
     try:
         p_chain = subprocess.run(
             session_chain_cmd,
@@ -724,7 +750,11 @@ def run_required_gate_bundle_via_ingress_wrapper(*, cmd: list[str], protocol_roo
         ingress_cmd.extend(["--envelope-json", json.dumps(envelope, ensure_ascii=False)])
 
     print("$", " ".join(ingress_cmd))
-    timeout_seconds = _resolve_command_timeout_seconds(ingress_cmd, env=child_env)
+    timeout_seconds = _prepare_nested_wrapper_timeout(
+        entry_cmd=cmd,
+        wrapper_cmd=ingress_cmd,
+        child_env=child_env,
+    )
     try:
         p_ingress = subprocess.run(
             ingress_cmd,
