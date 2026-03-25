@@ -165,6 +165,26 @@ Confusing them leads to characteristic protocol errors:
 - if reading-order is mistaken for source-order, a directory index is falsely treated as generative law;
 - if source-order is mistaken for adjudication-order, philosophy text is incorrectly used as if it were a direct runtime verdict surface.
 
+### Adjudication surfaces are phase-governed, not interchangeable
+
+The machine-world adjudication chain is not only ordered; it is role-distinct.
+
+1. mappings admit applicable law into the current-turn legality path;
+2. validators evaluate legality against admitted law rather than inventing new origin law;
+3. probes negate hidden drift by fail-closing weakened legality assumptions;
+4. runtime state binds live present-turn truth only after the earlier legality phases remain lawful;
+5. receipts close the adjudicated verdict rather than back-authoring the earlier legality phases they summarize.
+
+This means the adjudication chain must remain explicit in both order and role:
+
+- mappings = admissible-law resolution;
+- validators = governed legality evaluation;
+- probes = fail-close drift negation;
+- runtime state = live-truth binding;
+- receipts = adjudicated verdict closure.
+
+If these roles collapse, the machine world will start treating later visibility as if it were earlier legality, or treating closure artifacts as if they were upstream law authors.
+
 ### Derivation direction must stay one-way
 
 The root corpus must also preserve one-way derivation direction.

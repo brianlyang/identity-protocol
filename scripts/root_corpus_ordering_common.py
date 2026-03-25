@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -35,8 +35,28 @@ class AdjudicationOrderRow:
     machine_surface: str
 
 
+@dataclass(frozen=True)
+class OrderingAnchorCheck:
+    rel_path: str
+    required_markers: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class AdjudicationSurfaceProfile:
+    machine_surface: str
+    phase_order: int
+    surface_role: str
+    closure_terminal: bool
+
+
 def _norm_str(value: Any) -> str:
     return str(value or "").strip().replace("\\", "/")
+
+
+def _as_str_tuple(value: Any) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        return ()
+    return tuple(token for token in (str(item or "").strip() for item in value) if token)
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -55,6 +75,26 @@ def load_root_corpus_ordering(repo_root: Path) -> tuple[dict[str, Any], Path, Pa
     if not active_path.exists():
         return {}, entry_path, active_path, "active_ordering_missing"
     return _load_yaml(active_path), entry_path, active_path, ""
+
+
+def ordering_anchor_checks_from_doc(ordering_doc: Mapping[str, Any]) -> tuple[OrderingAnchorCheck, ...]:
+    rows = ordering_doc.get("ordering_anchor_checks")
+    if not isinstance(rows, list):
+        return ()
+    out: list[OrderingAnchorCheck] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        rel_path = _norm_str(row.get("rel_path"))
+        if not rel_path:
+            continue
+        out.append(
+            OrderingAnchorCheck(
+                rel_path=rel_path,
+                required_markers=_as_str_tuple(row.get("required_markers")),
+            )
+        )
+    return tuple(out)
 
 
 def source_order_rows_from_doc(ordering_doc: Mapping[str, Any]) -> tuple[SourceOrderRow, ...]:
@@ -126,4 +166,31 @@ def adjudication_order_rows_from_doc(ordering_doc: Mapping[str, Any]) -> tuple[A
         if order <= 0 or not machine_surface:
             continue
         out.append(AdjudicationOrderRow(order=order, machine_surface=machine_surface))
+    return tuple(out)
+
+
+def adjudication_surface_profiles_from_doc(ordering_doc: Mapping[str, Any]) -> tuple[AdjudicationSurfaceProfile, ...]:
+    rows = ordering_doc.get("adjudication_surface_profiles")
+    if not isinstance(rows, list):
+        return ()
+    out: list[AdjudicationSurfaceProfile] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        machine_surface = _norm_str(row.get("machine_surface"))
+        surface_role = _norm_str(row.get("surface_role"))
+        try:
+            phase_order = int(row.get("phase_order"))
+        except Exception:
+            continue
+        if phase_order <= 0 or not machine_surface or not surface_role:
+            continue
+        out.append(
+            AdjudicationSurfaceProfile(
+                machine_surface=machine_surface,
+                phase_order=phase_order,
+                surface_role=surface_role,
+                closure_terminal=bool(row.get("closure_terminal", False)),
+            )
+        )
     return tuple(out)

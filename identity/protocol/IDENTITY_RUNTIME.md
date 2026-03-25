@@ -66,6 +66,15 @@ Runtime meaning:
 3. Runtime-origin motivation does not gain gateway authorship, target question class, or answer-mode override merely by being admitted into a governed gateway.
 4. Runtime reuse of demoted or support-only material does not restore law-bearing status without governed reclassification.
 
+## Runtime adjudication-surface consumption boundary
+
+1. Runtime consumes mappings as admissible law-resolution surfaces rather than as optional lookup hints.
+2. Runtime consumes validators as legality-evaluation surfaces rather than as replaceable commentary.
+3. Runtime consumes probes as fail-close drift-negation surfaces rather than soft diagnostics.
+4. Runtime consumes runtime state as live-truth binding only after prior legality phases remain satisfied.
+5. Runtime consumes receipts as adjudicated verdict closure rather than as upstream law-authoring surfaces.
+6. Runtime must not let operator visibility, local familiarity, or execution recency collapse those distinct roles into one convenience layer.
+
 ## Runtime registry-completeness boundary
 
 1. Runtime may consume only root mapping families admitted by governed machine-registry completeness law.

@@ -180,6 +180,28 @@ Do not collapse these orders:
 
 ---
 
+## Root adjudication-surface discipline
+
+Current-turn legality must not flatten the machine surfaces that participate in adjudication.
+
+1. mappings admit applicable machine law and registry truth for current-turn legality;
+2. validators test legality against that admitted law rather than inventing new origin law;
+3. probes negate drift by fail-closing weakened or hidden legality assumptions;
+4. runtime state binds live current-turn truth only after prior legality phases have remained lawful;
+5. receipts close the adjudicated verdict and must not back-author earlier legality phases.
+
+So the terminal chain is ordered and phase-governed at the same time:
+
+- mappings are admissible-law resolution;
+- validators are governed legality evaluation;
+- probes are fail-close drift negation;
+- runtime state is live-truth binding;
+- receipts are adjudicated verdict closure.
+
+No machine surface in that chain may silently inherit another surface's role merely because it is later, more vivid, or closer to operator visibility.
+
+---
+
 ## One-way derivation discipline
 
 The root corpus must also preserve one-way derivation.

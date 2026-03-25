@@ -99,6 +99,16 @@ Status transitions are controlled by governance/review, not by script commit alo
 6. Gateway admission does not transfer authorship from an incoming surface to the gateway output.
 7. Machine-registry gateway may terminate current-turn legality, but that does not let incoming motivation surfaces author upstream law.
 
+## Root adjudication-surface boundary
+
+1. Current-turn legality uses a phase-governed machine chain rather than a flat set of interchangeable enforcement surfaces.
+2. mappings admit machine-consumed law and registry truth into current-turn legality;
+3. validators evaluate legality against that admitted law rather than authoring new source law;
+4. probes fail-close hidden drift instead of softening legality expectations;
+5. runtime state binds live truth only after prior legality phases remain satisfied;
+6. receipts close the adjudicated verdict and do not replace the earlier legality phases they report.
+7. A later adjudication surface may summarize or close earlier legality work, but it may not back-author the law-bearing role of an earlier phase.
+
 ## Root conflict-precedence boundary
 
 1. Semantic-meaning conflict resolves by source-order law:

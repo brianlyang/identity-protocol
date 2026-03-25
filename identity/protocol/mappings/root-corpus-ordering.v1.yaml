@@ -14,6 +14,52 @@ error_codes:
 - IP-RCO-001
 - IP-RCO-002
 - IP-RCO-003
+ordering_anchor_checks:
+- rel_path: identity/protocol/README.md
+  required_markers:
+  - '## Root adjudication-surface discipline'
+  - mappings admit applicable machine law and registry truth for current-turn legality;
+  - validators test legality against that admitted law rather than inventing new
+    origin law;
+  - probes negate drift by fail-closing weakened or hidden legality assumptions;
+  - runtime state binds live current-turn truth only after prior legality phases
+    have remained lawful;
+  - receipts close the adjudicated verdict and must not back-author earlier legality
+    phases.
+- rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+  required_markers:
+  - '### Adjudication surfaces are phase-governed, not interchangeable'
+  - mappings admit applicable law into the current-turn legality path;
+  - validators evaluate legality against admitted law rather than inventing new
+    origin law;
+  - probes negate hidden drift by fail-closing weakened legality assumptions;
+  - runtime state binds live present-turn truth only after the earlier legality
+    phases remain lawful;
+  - receipts close the adjudicated verdict rather than back-authoring the earlier
+    legality phases they summarize.
+- rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+  required_markers:
+  - '## Root adjudication-surface boundary'
+  - mappings admit machine-consumed law and registry truth into current-turn legality;
+  - validators evaluate legality against that admitted law rather than authoring
+    new source law;
+  - probes fail-close hidden drift instead of softening legality expectations;
+  - runtime state binds live truth only after prior legality phases remain satisfied;
+  - receipts close the adjudicated verdict and do not replace the earlier legality
+    phases they report.
+- rel_path: identity/protocol/IDENTITY_RUNTIME.md
+  required_markers:
+  - '## Runtime adjudication-surface consumption boundary'
+  - Runtime consumes mappings as admissible law-resolution surfaces rather than
+    as optional lookup hints.
+  - Runtime consumes validators as legality-evaluation surfaces rather than as
+    replaceable commentary.
+  - Runtime consumes probes as fail-close drift-negation surfaces rather than
+    soft diagnostics.
+  - Runtime consumes runtime state as live-truth binding only after prior legality
+    phases remain satisfied.
+  - Runtime consumes receipts as adjudicated verdict closure rather than as upstream
+    law-authoring surfaces.
 source_order:
 - order: 1
   corpus_class: bottom_theory
@@ -127,3 +173,24 @@ adjudication_order:
   machine_surface: runtime_state
 - order: 5
   machine_surface: receipts
+adjudication_surface_profiles:
+- machine_surface: mappings
+  phase_order: 1
+  surface_role: admissible_law_resolution
+  closure_terminal: false
+- machine_surface: validators
+  phase_order: 2
+  surface_role: governed_legality_evaluation
+  closure_terminal: false
+- machine_surface: probes
+  phase_order: 3
+  surface_role: fail_close_drift_negation
+  closure_terminal: false
+- machine_surface: runtime_state
+  phase_order: 4
+  surface_role: live_state_truth_binding
+  closure_terminal: false
+- machine_surface: receipts
+  phase_order: 5
+  surface_role: adjudicated_verdict_closure
+  closure_terminal: true

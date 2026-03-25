@@ -35,7 +35,7 @@ EXPECTED_COMPONENTS = {
         "status_key": "protocol_root_corpus_governance_status",
     },
     "root_corpus_ordering": {
-        "component_role": "source_order_and_reading_order",
+        "component_role": "source_order_reading_order_and_adjudication_surface_roles",
         "current_file": "identity/protocol/mappings/root-corpus-ordering.current.yaml",
         "validator_script": "scripts/validate_protocol_root_corpus_ordering.py",
         "probe_script": "scripts/ci/run_protocol_root_corpus_ordering_probes_ci.sh",

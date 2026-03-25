@@ -6,12 +6,18 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
-from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
+from root_corpus_governance_common import (
+    find_missing_markers,
+    load_root_corpus_registry,
+    root_corpus_entries_from_registry,
+)
 from root_corpus_ordering_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     adjudication_order_rows_from_doc,
+    adjudication_surface_profiles_from_doc,
     load_root_corpus_ordering,
+    ordering_anchor_checks_from_doc,
     reading_order_rows_from_doc,
     source_order_rows_from_doc,
 )
@@ -24,6 +30,33 @@ ERR_STRUCTURE = "IP-RCO-002"
 ERR_COVERAGE = "IP-RCO-003"
 ROOT_INDEX_ENTRY_ROLE = "root_index_entry_surface"
 CURRENT_TURN_LEGALITY_CONFLICT = "current_turn_legality_conflict"
+EXPECTED_ADJUDICATION_SURFACE_PROFILES = {
+    "mappings": {
+        "phase_order": 1,
+        "surface_role": "admissible_law_resolution",
+        "closure_terminal": False,
+    },
+    "validators": {
+        "phase_order": 2,
+        "surface_role": "governed_legality_evaluation",
+        "closure_terminal": False,
+    },
+    "probes": {
+        "phase_order": 3,
+        "surface_role": "fail_close_drift_negation",
+        "closure_terminal": False,
+    },
+    "runtime_state": {
+        "phase_order": 4,
+        "surface_role": "live_state_truth_binding",
+        "closure_terminal": False,
+    },
+    "receipts": {
+        "phase_order": 5,
+        "surface_role": "adjudicated_verdict_closure",
+        "closure_terminal": True,
+    },
+}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -53,6 +86,7 @@ def main() -> int:
     stale_reasons: list[str] = []
     structure_violations: list[dict[str, Any]] = []
     coverage_violations: list[dict[str, Any]] = []
+    anchor_violations: list[dict[str, Any]] = []
     error_code = ""
 
     if ordering_alias_error:
@@ -84,6 +118,8 @@ def main() -> int:
     source_rows = source_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     adjudication_rows = adjudication_order_rows_from_doc(ordering_doc) if ordering_doc else ()
+    adjudication_surface_profiles = adjudication_surface_profiles_from_doc(ordering_doc) if ordering_doc else ()
+    ordering_anchor_checks = ordering_anchor_checks_from_doc(ordering_doc) if ordering_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     adjudication_redirect = adjudication_redirect_from_doc(question_routing_doc) if question_routing_doc else adjudication_redirect_from_doc({})
     precedence_profiles = precedence_profiles_from_doc(precedence_doc) if precedence_doc else ()
@@ -133,6 +169,12 @@ def main() -> int:
         if not adjudication_rows:
             stale_reasons.append("root_corpus_ordering_adjudication_order_missing")
             error_code = ERR_REGISTRY
+        if not adjudication_surface_profiles:
+            stale_reasons.append("root_corpus_ordering_adjudication_surface_profiles_missing")
+            error_code = ERR_REGISTRY
+        if not ordering_anchor_checks:
+            stale_reasons.append("root_corpus_ordering_anchor_checks_missing")
+            error_code = ERR_REGISTRY
 
     registry_paths = [entry.rel_path for entry in registry_entries]
     registry_entry_class_map = {entry.rel_path: entry.corpus_class for entry in registry_entries}
@@ -148,9 +190,12 @@ def main() -> int:
     reading_paths = [row.rel_path for row in reading_rows]
     adjudication_orders = [row.order for row in adjudication_rows]
     adjudication_surfaces = [row.machine_surface for row in adjudication_rows]
+    adjudication_surface_profile_map = {row.machine_surface: row for row in adjudication_surface_profiles}
+    adjudication_phase_orders = [row.phase_order for row in adjudication_surface_profiles]
     sorted_source_rows = sorted(source_rows, key=lambda item: item.order)
     sorted_reading_rows = sorted(reading_rows, key=lambda item: item.order)
     sorted_adjudication_rows = sorted(adjudication_rows, key=lambda item: item.order)
+    sorted_adjudication_surface_profiles = sorted(adjudication_surface_profiles, key=lambda item: item.phase_order)
     root_index_entry = str(ordering_doc.get("root_index_entry") or "").strip()
     precedence_profile_map = {row.conflict_class: row for row in precedence_profiles}
     precedence_legality_profile = precedence_profile_map.get(CURRENT_TURN_LEGALITY_CONFLICT)
@@ -170,6 +215,10 @@ def main() -> int:
             structure_violations.append({"field": "adjudication_order", "reason": "adjudication_order_non_contiguous"})
         if len(set(adjudication_surfaces)) != len(adjudication_surfaces):
             structure_violations.append({"field": "adjudication_order", "reason": "adjudication_order_duplicate_machine_surface"})
+        if len(adjudication_surface_profile_map) != len(adjudication_surface_profiles):
+            structure_violations.append({"field": "adjudication_surface_profiles", "reason": "duplicate_machine_surface"})
+        if len(set(adjudication_phase_orders)) != len(adjudication_phase_orders) or not _contiguous_orders(sorted(adjudication_phase_orders)):
+            structure_violations.append({"field": "adjudication_surface_profiles", "reason": "phase_order_non_contiguous"})
         if (
             not sorted_reading_rows
             or sorted_reading_rows[0].rel_path != root_index_entry
@@ -265,6 +314,97 @@ def main() -> int:
                     "actual": list(ordering_adjudication_surfaces),
                 }
             )
+        expected_adjudication_surfaces = tuple(EXPECTED_ADJUDICATION_SURFACE_PROFILES)
+        if ordering_adjudication_surfaces != expected_adjudication_surfaces:
+            coverage_violations.append(
+                {
+                    "field": "adjudication_surface_profiles",
+                    "reason": "adjudication_surface_set_mismatch",
+                    "expected": list(expected_adjudication_surfaces),
+                    "actual": list(ordering_adjudication_surfaces),
+                }
+            )
+        missing_surface_profiles = sorted(set(expected_adjudication_surfaces) - set(adjudication_surface_profile_map))
+        extra_surface_profiles = sorted(set(adjudication_surface_profile_map) - set(expected_adjudication_surfaces))
+        if missing_surface_profiles:
+            coverage_violations.append(
+                {
+                    "field": "adjudication_surface_profiles",
+                    "reason": "missing_machine_surfaces",
+                    "machine_surfaces": missing_surface_profiles,
+                }
+            )
+        if extra_surface_profiles:
+            coverage_violations.append(
+                {
+                    "field": "adjudication_surface_profiles",
+                    "reason": "extra_machine_surfaces",
+                    "machine_surfaces": extra_surface_profiles,
+                }
+            )
+        for row in sorted_adjudication_surface_profiles:
+            expected = EXPECTED_ADJUDICATION_SURFACE_PROFILES.get(row.machine_surface)
+            if expected is None:
+                continue
+            if row.phase_order != expected["phase_order"]:
+                coverage_violations.append(
+                    {
+                        "field": "adjudication_surface_profiles",
+                        "reason": "phase_order_mismatch",
+                        "machine_surface": row.machine_surface,
+                        "expected": expected["phase_order"],
+                        "actual": row.phase_order,
+                    }
+                )
+            if row.surface_role != expected["surface_role"]:
+                coverage_violations.append(
+                    {
+                        "field": "adjudication_surface_profiles",
+                        "reason": "surface_role_mismatch",
+                        "machine_surface": row.machine_surface,
+                        "expected": expected["surface_role"],
+                        "actual": row.surface_role,
+                    }
+                )
+            if bool(row.closure_terminal) != bool(expected["closure_terminal"]):
+                coverage_violations.append(
+                    {
+                        "field": "adjudication_surface_profiles",
+                        "reason": "closure_terminal_mismatch",
+                        "machine_surface": row.machine_surface,
+                        "expected": bool(expected["closure_terminal"]),
+                        "actual": bool(row.closure_terminal),
+                    }
+                )
+            order_row = next((item for item in sorted_adjudication_rows if item.machine_surface == row.machine_surface), None)
+            if order_row is None:
+                coverage_violations.append(
+                    {
+                        "field": "adjudication_surface_profiles",
+                        "reason": "machine_surface_missing_from_adjudication_order",
+                        "machine_surface": row.machine_surface,
+                    }
+                )
+            elif order_row.order != row.phase_order:
+                coverage_violations.append(
+                    {
+                        "field": "adjudication_surface_profiles",
+                        "reason": "phase_order_vs_adjudication_order_mismatch",
+                        "machine_surface": row.machine_surface,
+                        "expected": row.phase_order,
+                        "actual": order_row.order,
+                    }
+                )
+        closure_terminal_surfaces = [row.machine_surface for row in sorted_adjudication_surface_profiles if row.closure_terminal]
+        if closure_terminal_surfaces != ["receipts"]:
+            coverage_violations.append(
+                {
+                    "field": "adjudication_surface_profiles",
+                    "reason": "closure_terminal_surface_set_mismatch",
+                    "expected": ["receipts"],
+                    "actual": closure_terminal_surfaces,
+                }
+            )
 
         source_rank_by_class = {row.corpus_class: row.order for row in sorted_source_rows}
         previous_rank = 0
@@ -296,13 +436,36 @@ def main() -> int:
                 )
             previous_rank = current_rank
 
+        for anchor in ordering_anchor_checks:
+            anchor_path = repo_root / anchor.rel_path
+            if not anchor_path.exists():
+                anchor_violations.append(
+                    {
+                        "field": "ordering_anchor_checks",
+                        "reason": "anchor_missing",
+                        "rel_path": anchor.rel_path,
+                    }
+                )
+                continue
+            missing_markers = find_missing_markers(anchor_path.read_text(encoding="utf-8"), anchor.required_markers)
+            if missing_markers:
+                anchor_violations.append(
+                    {
+                        "field": "ordering_anchor_checks",
+                        "reason": "missing_required_markers",
+                        "rel_path": anchor.rel_path,
+                        "missing_markers": missing_markers,
+                    }
+                )
+
     if not error_code and structure_violations:
         error_code = ERR_STRUCTURE
-    if not error_code and coverage_violations:
+    if not error_code and (coverage_violations or anchor_violations):
         error_code = ERR_COVERAGE
 
     stale_reasons.extend(f"structure_violation:{row['field']}:{row['reason']}" for row in structure_violations)
     stale_reasons.extend(f"coverage_violation:{row['field']}:{row['reason']}" for row in coverage_violations)
+    stale_reasons.extend(f"coverage_violation:{row['field']}:{row['reason']}" for row in anchor_violations)
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
     payload: dict[str, Any] = {
@@ -345,14 +508,25 @@ def main() -> int:
             }
             for row in sorted_adjudication_rows
         ],
+        "adjudication_surface_profiles": [
+            {
+                "machine_surface": row.machine_surface,
+                "phase_order": row.phase_order,
+                "surface_role": row.surface_role,
+                "closure_terminal": row.closure_terminal,
+            }
+            for row in sorted_adjudication_surface_profiles
+        ],
         "expected_adjudication_order": list(adjudication_redirect.terminal_machine_surfaces),
         "precedence_adjudication_order": list(precedence_legality_profile.terminal_machine_surfaces) if precedence_legality_profile else [],
         "source_order_class_count": len(source_rows),
         "reading_order_entry_count": len(reading_rows),
         "adjudication_order_surface_count": len(adjudication_rows),
+        "adjudication_surface_profile_count": len(adjudication_surface_profiles),
         "registered_entry_count": len(registry_entries),
         "structure_violations": structure_violations,
         "coverage_violations": coverage_violations,
+        "anchor_violations": anchor_violations,
         "stale_reasons": stale_reasons,
     }
     _emit(payload, json_only=args.json_only)

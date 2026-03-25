@@ -36,6 +36,9 @@ assert payload["reading_order"][0]["rel_path"] == "identity/protocol/README.md",
 assert payload["source_order"][0]["corpus_class"] == "bottom_theory", payload
 assert payload["adjudication_order"][0]["machine_surface"] == "mappings", payload
 assert payload["adjudication_order"][-1]["machine_surface"] == "receipts", payload
+assert payload["adjudication_surface_profile_count"] == 5, payload
+assert payload["adjudication_surface_profiles"][0]["surface_role"] == "admissible_law_resolution", payload
+assert payload["adjudication_surface_profiles"][-1]["closure_terminal"] is True, payload
 PY
 
 DUP_REPO="${TMP_ROOT}/duplicate-source-order-repo"
@@ -166,6 +169,41 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_ordering_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCO-003", payload
 assert any("coverage_violation:adjudication_order:terminal_machine_surfaces_mismatch" == reason for reason in payload["stale_reasons"]), payload
+PY
+
+SURFACE_ROLE_REPO="${TMP_ROOT}/surface-role-drift-repo"
+mirror_repo "${SURFACE_ROLE_REPO}"
+python3 - <<'PY' "${SURFACE_ROLE_REPO}/identity/protocol/mappings/root-corpus-ordering.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["adjudication_surface_profiles"]:
+    if row.get("machine_surface") == "runtime_state":
+        row["surface_role"] = "machine_registry_answer"
+        break
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SURFACE_ROLE_JSON="${TMP_ROOT}/surface-role-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_ordering.py" \
+  --repo-root "${SURFACE_ROLE_REPO}" \
+  --json-only >"${SURFACE_ROLE_JSON}"; then
+  echo "[FAIL] root corpus ordering validator unexpectedly passed adjudication surface-role drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SURFACE_ROLE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_ordering_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCO-003", payload
+assert any("coverage_violation:adjudication_surface_profiles:surface_role_mismatch" == reason for reason in payload["stale_reasons"]), payload
 PY
 
 echo "[PASS] protocol root-corpus ordering probes passed"
