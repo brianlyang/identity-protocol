@@ -112,6 +112,16 @@ SCRIPT_BINDINGS: tuple[ScriptBindingSpec, ...] = (
             '"identity_context_reentry_answer_surface"',
         ),
     ),
+    ScriptBindingSpec(
+        name="identity_codex_launcher_command_bundle_surface",
+        script_rel="scripts/render_identity_codex_launcher.py",
+        surface_id="identity_codex_launcher_command_bundle_surface",
+        required_tokens=(
+            '"surface_governance"',
+            "build_governed_runtime_summary_surface_payload(",
+            '"identity_codex_launcher_command_bundle_surface"',
+        ),
+    ),
 )
 
 DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
@@ -212,6 +222,24 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             "It may present copyable governed reentry task blocks, but it must not replace root-law owners, direct validator receipts, canonical continuity artifacts, or launcher entry authority.",
             "Neither surface may become a new terminal command family, thread-UUID lookup authority, or raw-transcript authority.",
             "Both renderers must self-describe this bounded authority in machine-readable payload form.",
+        ),
+    ),
+    DocAnchorSpec(
+        rel_path="docs/governance/identity-codex-launcher-governance-v1.6.14.md",
+        required_markers=(
+            "`scripts/render_identity_codex_launcher.py` command-bundle output remains a governed launcher command bundle surface on an outer runtime-state layer.",
+            "It may project canonical start/resume commands and operator guidance, but it must not replace root-law owners, direct validator receipts, actor-session tuple truth, or host-thread recovery target authority.",
+            "It must not promote convenience/reference fields, shell-wrapper helper strings, or manual command assembly into canonical operator authority.",
+            "The command-bundle payload must self-describe this bounded authority in machine-readable form.",
+        ),
+    ),
+    DocAnchorSpec(
+        rel_path="docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md",
+        required_markers=(
+            "`scripts/render_identity_codex_launcher.py` command-bundle output remains a governed launcher command bundle surface on an outer runtime-state layer.",
+            "It may project canonical start/resume commands and operator guidance, but it must not replace root-law owners, direct validator receipts, actor-session tuple truth, or host-thread recovery target authority.",
+            "It must not promote convenience/reference fields, shell-wrapper helper strings, or manual command assembly into canonical operator authority.",
+            "The command-bundle payload must self-describe this bounded authority in machine-readable form.",
         ),
     ),
 )

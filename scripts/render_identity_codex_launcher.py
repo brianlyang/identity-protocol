@@ -8,6 +8,7 @@ import shlex
 from pathlib import Path
 from typing import Any
 
+from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
 from identity_codex_launcher_common import (
     GENERIC_LAUNCHER_NAME,
     IDENTITY_LAUNCHER_COMMAND_DISCOVERY_CONTRACT_ID,
@@ -313,6 +314,9 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         "status": STATUS_PASS_REQUIRED,
         "command_bundle_contract_id": IDENTITY_LAUNCHER_COMMAND_DISCOVERY_CONTRACT_ID,
         "question_family": IDENTITY_LAUNCHER_COMMAND_DISCOVERY_QUESTION_FAMILY,
+        "surface_governance": build_governed_runtime_summary_surface_payload(
+            "identity_codex_launcher_command_bundle_surface"
+        ),
         "identity_id": args.identity_id,
         "catalog_path": str(catalog_path),
         "pack_path": str(pack_root),

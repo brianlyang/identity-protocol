@@ -277,6 +277,10 @@ These names and directories are frozen by this stream. The renderer / installer 
    - under `ambient_catalog_mismatch_requires_explicit_catalog`, the bundle must also align `preferred_start_command` / `preferred_resume_command` with that same canonical fresh-shell primary surface; any short launcher form may survive only as a reference/convenience field, not as the preferred operator surface.
    - host-thread UUID presence alone must not promote resume readiness; the machine-visible decomposition must distinguish `host_thread_id_status`, `identity_session_tuple_status`, and `resume_command_fresh_shell_executable_status`.
    - `identity-codex commands --identity-id <id> --json-only` must emit a structured command bundle (`recommended_user_command`, `copyable_commands`, `instance_answer_guidance`) so identity instances can answer concretely without inventing their own launcher logic.
+   - `scripts/render_identity_codex_launcher.py` command-bundle output remains a governed launcher command bundle surface on an outer runtime-state layer.
+   - It may project canonical start/resume commands and operator guidance, but it must not replace root-law owners, direct validator receipts, actor-session tuple truth, or host-thread recovery target authority.
+   - It must not promote convenience/reference fields, shell-wrapper helper strings, or manual command assembly into canonical operator authority.
+   - The command-bundle payload must self-describe this bounded authority in machine-readable form.
 13. Startup continuity bridge note (2026-03-23): launcher ownership now also covers the first governed `v1.6.16` startup-consumer bridge through the same protocol-owned launcher path:
    - `scripts/identity_codex_launcher_common.py` must consume the internal continuity bundle rather than re-deriving continuity semantics ad hoc;
    - when the bundle reports `recommended_launcher_bind_mode=consume_governed_reentry_brief`, launcher exec/startup must invoke the canonical pack-local `run_identity_context_continuity_guard.sh post-recover --json-only` path before handing off to Codex;

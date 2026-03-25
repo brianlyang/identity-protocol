@@ -237,6 +237,10 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - host-thread UUID presence alone must not be audited as resume readiness; the machine-visible decomposition must distinguish `host_thread_id_status`, `identity_session_tuple_status`, and `resume_command_fresh_shell_executable_status`.
    - explicit `--session-id run:<...>` is not sufficient by shape alone: command discovery and dry-run must fail-close unless that tuple is authoritative for the requested identity, and `resume <host-thread-uuid>` must remain the Codex recovery target rather than being semantically replaced by the launcher tuple.
    - `identity-codex commands --identity-id <id> --json-only` returns a structured bundle with `recommended_user_command`, `copyable_commands`, and `instance_answer_guidance`, preserving the boundary “protocol guides, instance answers”.
+   - `scripts/render_identity_codex_launcher.py` command-bundle output remains a governed launcher command bundle surface on an outer runtime-state layer.
+   - It may project canonical start/resume commands and operator guidance, but it must not replace root-law owners, direct validator receipts, actor-session tuple truth, or host-thread recovery target authority.
+   - It must not promote convenience/reference fields, shell-wrapper helper strings, or manual command assembly into canonical operator authority.
+   - The command-bundle payload must self-describe this bounded authority in machine-readable form.
 5. Audit follow-on closure note (2026-03-23): the raw runtime-catalog metadata follow-on is now closed on its own `v1.6.10` lane:
    - `scripts/validate_runtime_catalog_metadata_hygiene.py` / `scripts/repair_runtime_catalog_metadata_hygiene.py` now own raw row self-description;
    - launcher closure now projects `runtime_catalog_metadata_hygiene_status`;

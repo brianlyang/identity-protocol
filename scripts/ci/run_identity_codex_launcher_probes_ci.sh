@@ -360,6 +360,8 @@ session_id = sys.argv[3]
 assert payload["status"] == "PASS_REQUIRED", payload
 assert payload["command_bundle_contract_id"] == "identity_codex_launcher_command_discovery_contract_v1", payload
 assert payload["question_family"] == "identity_launcher_start_resume", payload
+assert payload["surface_governance"]["runtime_summary_surface_governance_status"] == "PASS_REQUIRED", payload
+assert payload["surface_governance"]["surface_id"] == "identity_codex_launcher_command_bundle_surface", payload
 assert payload["catalog_context_status"] == "PASS_REQUIRED", payload
 assert payload["catalog_context_reason"] == "ambient_catalog_matches_resolved_catalog", payload
 assert payload["catalog_explicit_flag_required"] is False, payload
@@ -456,6 +458,7 @@ from pathlib import Path
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 host_thread_uuid = sys.argv[2]
 assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["surface_governance"]["surface_id"] == "identity_codex_launcher_command_bundle_surface", payload
 assert payload["shortcut_command_on_path"] is True, payload
 assert payload["generic_command_on_path"] is True, payload
 assert payload["shortcut_shell_discoverability_status"] == "PASS_REQUIRED", payload
@@ -491,6 +494,7 @@ host_thread_uuid = sys.argv[2]
 _session_id = sys.argv[3]
 alt_catalog_path = str(Path(sys.argv[4]).resolve())
 assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["surface_governance"]["surface_id"] == "identity_codex_launcher_command_bundle_surface", payload
 assert payload["catalog_path"] == alt_catalog_path, payload
 assert payload["catalog_context_status"] == "FAIL_REQUIRED", payload
 assert payload["catalog_context_reason"] == "ambient_catalog_mismatch_requires_explicit_catalog", payload
@@ -532,6 +536,7 @@ from pathlib import Path
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 host_thread_uuid = sys.argv[2]
 assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["surface_governance"]["surface_id"] == "identity_codex_launcher_command_bundle_surface", payload
 assert payload["host_thread_id_status"] == "PASS_REQUIRED", payload
 assert payload["host_thread_id_present"] is True, payload
 assert payload["current_host_thread_id"] == host_thread_uuid, payload
@@ -565,6 +570,7 @@ from pathlib import Path
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["surface_governance"]["surface_id"] == "identity_codex_launcher_command_bundle_surface", payload
 assert payload["identity_session_tuple_status"] == "FAIL_REQUIRED", payload
 assert "current-turn session tuple unresolved" in payload["identity_session_tuple_reason"], payload
 assert payload["resume_command_fresh_shell_executable_status"] == "FAIL_REQUIRED", payload
@@ -595,6 +601,7 @@ payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 session_id = sys.argv[2]
 assert payload["status"] == "PASS_REQUIRED", payload
 assert payload["identity_id"], payload
+assert payload["surface_governance"]["surface_id"] == "identity_codex_launcher_command_bundle_surface", payload
 assert payload["command_discovery"]["instance_answer_mode"] == "instance_returns_concrete_commands", payload
 assert payload["continuity_support"]["bundle_contract_id"] == "identity_context_continuity_bundle_v1", payload
 assert payload["shortcut_command_on_path"] is False, payload
@@ -632,6 +639,7 @@ session_id = sys.argv[2]
 catalog_path = str(Path(sys.argv[3]).resolve())
 ambient_catalog_path = str(Path(sys.argv[4]).resolve())
 assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["surface_governance"]["surface_id"] == "identity_codex_launcher_command_bundle_surface", payload
 assert payload["catalog_path"] == catalog_path, payload
 assert payload["ambient_catalog_path"] == ambient_catalog_path, payload
 assert payload["catalog_context_status"] == "FAIL_REQUIRED", payload

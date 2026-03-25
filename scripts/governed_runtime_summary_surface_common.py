@@ -91,6 +91,12 @@ CONTINUITY_SUPPORT_GATEWAYS: tuple[str, ...] = (
     "launcher_entry_owner_bridge",
     "runtime_receipt_join",
 )
+LAUNCHER_COMMAND_GATEWAYS: tuple[str, ...] = (
+    "runtime_constitution",
+    "launcher_entry_owner_stream",
+    "actor_session_tuple_truth",
+    "catalog_authority",
+)
 
 
 SURFACE_PROFILES: dict[str, GovernedRuntimeSummarySurfaceProfile] = {
@@ -230,6 +236,37 @@ SURFACE_PROFILES: dict[str, GovernedRuntimeSummarySurfaceProfile] = {
             "continuity-support bundle and continuity validators; it may help an identity answer migration/reload "
             "questions, but it must not become thread-UUID lookup authority, raw-transcript authority, or a new "
             "terminal command family."
+        ),
+    ),
+    "identity_codex_launcher_command_bundle_surface": GovernedRuntimeSummarySurfaceProfile(
+        surface_id="identity_codex_launcher_command_bundle_surface",
+        surface_label="governed launcher command bundle surface",
+        governed_verdict_kind="governed_launcher_command_bundle",
+        surface_class="outer_operator_command_surface",
+        surface_scope="launcher_operator_visible",
+        current_authority_redirect_refs=(
+            *CURRENT_AUTHORITY_REDIRECT_REFS,
+            "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md",
+            "docs/governance/identity-codex-launcher-governance-v1.6.14.md",
+            "docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md",
+        ),
+        forbidden_replacements=(
+            *FORBIDDEN_REPLACEMENTS,
+            "actor_session_tuple_authority",
+            "host_thread_recovery_target",
+            "shell_wrapper_helper_family",
+            "manual_command_assembly",
+        ),
+        strengthening_gateways=LAUNCHER_COMMAND_GATEWAYS,
+        authority_rule=(
+            "The launcher command bundle is a governed outer operator-command surface; it may project canonical "
+            "start/resume commands and operator guidance, but it must not replace root-law owners, direct validator "
+            "receipts, actor-session tuple truth, or host-thread recovery target authority."
+        ),
+        operator_interpretation_rule=(
+            "Treat the launcher command bundle as a bounded machine-readable operator surface derived from launcher "
+            "validators, catalog authority, and tuple truth; it may guide command lookup, but it must not become a "
+            "shell-wrapper helper family, manual-command-assembly bypass, or standalone semantic authority."
         ),
     ),
 }
