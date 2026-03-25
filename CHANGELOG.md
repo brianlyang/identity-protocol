@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- **root-law release closure truth-sync + changelog validator hardening**:
+  - recorded the latest root-law closure batch so release/governance checks no
+    longer depend on implicit operator context:
+    - `identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md`
+    - `identity/protocol/mappings/root-decision-evidence-admissibility.current.yaml`
+    - `identity/protocol/mappings/root-decision-evidence-admissibility.v1.yaml`
+    - `scripts/root_decision_evidence_admissibility_common.py`
+    - `scripts/validate_protocol_root_decision_evidence_admissibility.py`
+    - `scripts/ci/run_protocol_root_decision_evidence_admissibility_probes_ci.sh`
+  - hardened `scripts/validate_changelog_updated.py` so it now:
+    - resolves the protocol repo root explicitly instead of inheriting caller cwd
+    - normalizes `--base/--head` commit-ish inputs to concrete SHAs before
+      evaluating historical-backfill eligibility
+    - resolves the changelog path relative to the protocol repo root, removing
+      cross-cwd false failures and symbolic-ref false greens
+  - explicit historical backfill anchors for recent root-law commits:
+    - `f18e834`
+    - `4ba46a5`
+    - `0096593`
+
 - **versioning discipline clarification for patch-numbered stream docs**:
   - `VERSIONING.md` now explicitly freezes that `v1.x.y` governance/review docs
     are bounded protocol-owner streams, not ad hoc documentation-supplement
