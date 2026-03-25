@@ -355,6 +355,7 @@ registered_top_level_entries:
       - '## Four answer-surface strata'
       - '## Lifecycle-aware support-memory discipline'
       - '## Support-memory limits'
+      - '## Answer-claim backing alignment'
       - '## Answer-surface proof discipline'
       - '## Answer-surface proof limits'
       - '## Compression boundary'

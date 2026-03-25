@@ -14,8 +14,13 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
+from root_decision_evidence_admissibility_common import (
+    decision_evidence_proof_rows_from_doc,
+    load_root_decision_evidence_admissibility,
+)
 from root_operator_answer_surface_common import (
     answer_surface_limit_rows_from_doc,
+    answer_claim_alignment_rows_from_doc,
     answer_surface_proof_rows_from_doc,
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -103,6 +108,38 @@ EXPECTED_SUPPORT_LIMIT_ROWS = {
         "contract_phrase": "only consumption-memory support may back claims of realized operational effect.",
     },
 }
+EXPECTED_ANSWER_CLAIM_ALIGNMENT_ROWS = {
+    "law_grounded_answer_claim": {
+        "order": 1,
+        "support_id": "law_memory_support",
+        "decision_evidence_proof_id": "frozen_law_decision_evidence_proof",
+        "answer_claim_role": "law_grounded_operator_answer_claim",
+    },
+    "canonical_source_answer_claim": {
+        "order": 2,
+        "support_id": "discovery_memory_support",
+        "decision_evidence_proof_id": "registry_resolution_decision_evidence_proof",
+        "answer_claim_role": "canonical_source_operator_answer_claim",
+    },
+    "admissibility_answer_claim": {
+        "order": 3,
+        "support_id": "admissibility_memory_support",
+        "decision_evidence_proof_id": "validator_verdict_decision_evidence_proof",
+        "answer_claim_role": "admissibility_operator_answer_claim",
+    },
+    "live_bound_status_answer_claim": {
+        "order": 4,
+        "support_id": "run_binding_memory_support",
+        "decision_evidence_proof_id": "bound_runtime_decision_evidence_proof",
+        "answer_claim_role": "live_bound_status_operator_answer_claim",
+    },
+    "realized_effect_answer_claim": {
+        "order": 5,
+        "support_id": "consumption_memory_support",
+        "decision_evidence_proof_id": "adjudicated_verdict_closure_decision_evidence_proof",
+        "answer_claim_role": "realized_effect_operator_answer_claim",
+    },
+}
 EXPECTED_ANSWER_SURFACE_PROOF_ROWS = {
     "operator_entry_boundary_proof": {
         "order": 1,
@@ -151,6 +188,10 @@ EXPECTED_ANSWER_SURFACE_LIMIT_ROWS = {
         "order": 5,
         "contract_phrase": "realized-effect answer-backing proof is not proof that answer prose may bypass current-turn machine adjudication.",
     },
+    "realized_effect_backing_not_live_bound_status_backing": {
+        "order": 6,
+        "contract_phrase": "realized-effect answer-backing proof is not proof of live-bound status backing.",
+    },
 }
 EXPECTED_BOUNDARY_ROWS = {
     "operator_memory_burden": {
@@ -191,6 +232,10 @@ EXPECTED_COLLAPSE_ROWS = {
         "order": 5,
         "contract_phrase": "fluent answer prose is treated as sufficient despite missing machine-truth backing when such backing is required.",
     },
+    "realized_effect_claim_backed_by_earlier_strata": {
+        "order": 6,
+        "contract_phrase": "a realized-effect answer claim is treated as sufficiently backed by law-memory, discovery-memory, admissibility-memory, or run-binding-memory support alone.",
+    },
 }
 EXPECTED_REGISTRY_MARKERS = (
     "this file remains the authoritative root-domain contract for operator answer-surface law",
@@ -198,6 +243,7 @@ EXPECTED_REGISTRY_MARKERS = (
     "## Four answer-surface strata",
     "## Lifecycle-aware support-memory discipline",
     "## Support-memory limits",
+    "## Answer-claim backing alignment",
     "## Answer-surface proof discipline",
     "## Answer-surface proof limits",
     "## Compression boundary",
@@ -287,6 +333,9 @@ def main() -> int:
     ordering_doc, ordering_entry_path, ordering_active_path, ordering_alias_error = load_root_corpus_ordering(repo_root)
     authority_doc, authority_entry_path, authority_active_path, authority_alias_error = load_root_corpus_authority(repo_root)
     routing_doc, routing_entry_path, routing_active_path, routing_alias_error = load_root_corpus_question_routing(repo_root)
+    decision_evidence_doc, decision_evidence_entry_path, decision_evidence_active_path, decision_evidence_alias_error = (
+        load_root_decision_evidence_admissibility(repo_root)
+    )
 
     stale_reasons: list[str] = []
     structure_violations: list[dict[str, Any]] = []
@@ -307,6 +356,7 @@ def main() -> int:
         ("root_corpus_ordering", ordering_doc, ordering_alias_error),
         ("root_corpus_authority", authority_doc, authority_alias_error),
         ("root_corpus_question_routing", routing_doc, routing_alias_error),
+        ("root_decision_evidence_admissibility", decision_evidence_doc, decision_evidence_alias_error),
     ):
         if alias_error:
             stale_reasons.append(f"{label}_alias_error:{alias_error}")
@@ -318,10 +368,12 @@ def main() -> int:
     surface_rows = surface_rows_from_doc(answer_doc) if answer_doc else ()
     support_memory_rows = support_memory_rows_from_doc(answer_doc) if answer_doc else ()
     support_limit_rows = support_limit_rows_from_doc(answer_doc) if answer_doc else ()
+    answer_claim_alignment_rows = answer_claim_alignment_rows_from_doc(answer_doc) if answer_doc else ()
     answer_surface_proof_rows = answer_surface_proof_rows_from_doc(answer_doc) if answer_doc else ()
     answer_surface_limit_rows = answer_surface_limit_rows_from_doc(answer_doc) if answer_doc else ()
     boundary_rows = boundary_rows_from_doc(answer_doc) if answer_doc else ()
     collapse_rows = collapse_rows_from_doc(answer_doc) if answer_doc else ()
+    decision_evidence_proof_rows = decision_evidence_proof_rows_from_doc(decision_evidence_doc) if decision_evidence_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     authority_anchors = authority_anchor_checks_from_doc(authority_doc) if authority_doc else ()
@@ -342,6 +394,7 @@ def main() -> int:
             "ordering_current_file": "identity/protocol/mappings/root-corpus-ordering.current.yaml",
             "authority_current_file": "identity/protocol/mappings/root-corpus-authority.current.yaml",
             "question_routing_current_file": "identity/protocol/mappings/root-corpus-question-routing.current.yaml",
+            "decision_evidence_current_file": "identity/protocol/mappings/root-decision-evidence-admissibility.current.yaml",
         }
         for field, expected in expected_scalar_fields.items():
             actual = str(answer_doc.get(field) or "").strip()
@@ -353,6 +406,7 @@ def main() -> int:
             ("required_surface_rows", surface_rows),
             ("required_support_memory_rows", support_memory_rows),
             ("required_support_limit_rows", support_limit_rows),
+            ("required_answer_claim_alignment_rows", answer_claim_alignment_rows),
             ("required_answer_surface_proof_rows", answer_surface_proof_rows),
             ("required_answer_surface_limit_rows", answer_surface_limit_rows),
             ("required_boundary_rows", boundary_rows),
@@ -361,6 +415,9 @@ def main() -> int:
             if not rows:
                 stale_reasons.append(f"root_operator_answer_surface_{field}_missing")
                 error_code = ERR_REGISTRY
+        if not decision_evidence_proof_rows:
+            stale_reasons.append("root_operator_answer_surface_dependency_decision_evidence_proof_rows_missing")
+            error_code = ERR_REGISTRY
         if not answer_doc.get("contract_required_markers"):
             stale_reasons.append("root_operator_answer_surface_contract_required_markers_missing")
             error_code = ERR_REGISTRY
@@ -398,6 +455,15 @@ def main() -> int:
             field_name="required_support_limit_rows",
             id_attr="row_id",
             compare_fields=("contract_phrase",),
+        )
+        _validate_rows(
+            actual_rows=answer_claim_alignment_rows,
+            expected_rows=EXPECTED_ANSWER_CLAIM_ALIGNMENT_ROWS,
+            structure_violations=structure_violations,
+            answer_violations=answer_violations,
+            field_name="required_answer_claim_alignment_rows",
+            id_attr="claim_id",
+            compare_fields=("support_id", "decision_evidence_proof_id", "answer_claim_role"),
         )
         _validate_rows(
             actual_rows=answer_surface_proof_rows,
@@ -471,6 +537,94 @@ def main() -> int:
                         "field": "README",
                         "reason": "root_readme_missing_contract_reference",
                         "marker": EXPECTED_README_MARKER,
+                    }
+                )
+
+        support_memory_order_map = {row.support_id: row.order for row in support_memory_rows}
+        decision_evidence_proof_order_map = {row.proof_id: row.order for row in decision_evidence_proof_rows}
+        previous_support_order = 0
+        previous_decision_evidence_proof_order = 0
+        for row in sorted(answer_claim_alignment_rows, key=lambda item: item.order):
+            support_order = support_memory_order_map.get(row.support_id)
+            if support_order is None:
+                integration_violations.append(
+                    {
+                        "field": "root_operator_answer_surface",
+                        "reason": "answer_claim_alignment_missing_support_memory",
+                        "claim_id": row.claim_id,
+                        "support_id": row.support_id,
+                    }
+                )
+            else:
+                if support_order != row.order:
+                    integration_violations.append(
+                        {
+                            "field": "root_operator_answer_surface",
+                            "reason": "answer_claim_alignment_support_order_mismatch",
+                            "claim_id": row.claim_id,
+                            "support_id": row.support_id,
+                            "claim_order": row.order,
+                            "support_order": support_order,
+                        }
+                    )
+                if support_order <= previous_support_order:
+                    integration_violations.append(
+                        {
+                            "field": "root_operator_answer_surface",
+                            "reason": "answer_claim_alignment_support_order_not_increasing",
+                            "claim_id": row.claim_id,
+                            "support_id": row.support_id,
+                            "support_order": support_order,
+                            "previous_support_order": previous_support_order,
+                        }
+                    )
+                previous_support_order = support_order
+
+            decision_evidence_proof_order = decision_evidence_proof_order_map.get(row.decision_evidence_proof_id)
+            if decision_evidence_proof_order is None:
+                integration_violations.append(
+                    {
+                        "field": "root_decision_evidence_admissibility",
+                        "reason": "answer_claim_alignment_missing_decision_evidence_proof",
+                        "claim_id": row.claim_id,
+                        "decision_evidence_proof_id": row.decision_evidence_proof_id,
+                    }
+                )
+            else:
+                if decision_evidence_proof_order != row.order:
+                    integration_violations.append(
+                        {
+                            "field": "root_decision_evidence_admissibility",
+                            "reason": "answer_claim_alignment_decision_evidence_proof_order_mismatch",
+                            "claim_id": row.claim_id,
+                            "decision_evidence_proof_id": row.decision_evidence_proof_id,
+                            "claim_order": row.order,
+                            "decision_evidence_proof_order": decision_evidence_proof_order,
+                        }
+                    )
+                if decision_evidence_proof_order <= previous_decision_evidence_proof_order:
+                    integration_violations.append(
+                        {
+                            "field": "root_decision_evidence_admissibility",
+                            "reason": "answer_claim_alignment_decision_evidence_proof_order_not_increasing",
+                            "claim_id": row.claim_id,
+                            "decision_evidence_proof_id": row.decision_evidence_proof_id,
+                            "decision_evidence_proof_order": decision_evidence_proof_order,
+                            "previous_decision_evidence_proof_order": previous_decision_evidence_proof_order,
+                        }
+                    )
+                previous_decision_evidence_proof_order = decision_evidence_proof_order
+
+            if (
+                row.claim_id == "realized_effect_answer_claim"
+                and row.decision_evidence_proof_id != "adjudicated_verdict_closure_decision_evidence_proof"
+            ):
+                integration_violations.append(
+                    {
+                        "field": "root_operator_answer_surface",
+                        "reason": "realized_effect_claim_not_closure_backed",
+                        "claim_id": row.claim_id,
+                        "decision_evidence_proof_id": row.decision_evidence_proof_id,
                     }
                 )
 
@@ -621,6 +775,8 @@ def main() -> int:
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_ANSWER),
         "answer_entry_path": str(answer_entry_path),
         "answer_active_path": str(answer_active_path),
+        "decision_evidence_entry_path": str(decision_evidence_entry_path),
+        "decision_evidence_active_path": str(decision_evidence_active_path),
         "registry_entry_path": str(registry_entry_path),
         "ordering_entry_path": str(ordering_entry_path),
         "authority_entry_path": str(authority_entry_path),
@@ -629,6 +785,7 @@ def main() -> int:
         "surface_count": len(surface_rows),
         "support_memory_count": len(support_memory_rows),
         "support_limit_count": len(support_limit_rows),
+        "answer_claim_alignment_count": len(answer_claim_alignment_rows),
         "answer_surface_proof_count": len(answer_surface_proof_rows),
         "answer_surface_limit_count": len(answer_surface_limit_rows),
         "boundary_count": len(boundary_rows),
@@ -636,10 +793,21 @@ def main() -> int:
         "surface_ids": [row.surface_id for row in sorted(surface_rows, key=lambda item: item.order)],
         "support_memory_ids": [row.support_id for row in sorted(support_memory_rows, key=lambda item: item.order)],
         "support_limit_ids": [row.row_id for row in sorted(support_limit_rows, key=lambda item: item.order)],
+        "answer_claim_alignment_ids": [row.claim_id for row in sorted(answer_claim_alignment_rows, key=lambda item: item.order)],
         "answer_surface_proof_ids": [row.proof_id for row in sorted(answer_surface_proof_rows, key=lambda item: item.order)],
         "answer_surface_limit_ids": [row.row_id for row in sorted(answer_surface_limit_rows, key=lambda item: item.order)],
         "boundary_ids": [row.row_id for row in sorted(boundary_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
+        "answer_claim_alignment_rows": [
+            {
+                "order": row.order,
+                "claim_id": row.claim_id,
+                "support_id": row.support_id,
+                "decision_evidence_proof_id": row.decision_evidence_proof_id,
+                "answer_claim_role": row.answer_claim_role,
+            }
+            for row in sorted(answer_claim_alignment_rows, key=lambda item: item.order)
+        ],
         "structure_violations": structure_violations,
         "answer_violations": answer_violations,
         "integration_violations": integration_violations,

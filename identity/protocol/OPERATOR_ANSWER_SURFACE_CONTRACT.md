@@ -93,6 +93,11 @@ artifacts with the answer surface actually delivered to the operator.
 When an answer relies on supporting machine truth, the support memory stratum
 behind that answer must match the kind of claim being made.
 
+Law-preserving compression therefore includes claim-stratum discipline: a
+law-grounded answer claim, a discovery claim, an admissibility claim, a
+live-bound status claim, and a realized-effect claim do not share one generic
+backing layer.
+
 ## Four answer-surface strata
 
 ### 1. Operator entry surface
@@ -167,6 +172,21 @@ When an operator answer-surface claim relies on governed proof, the proof
 stratum behind that claim must match the answer-surface commitment being
 asserted.
 
+## Answer-claim backing alignment
+
+Operator answer claims must preserve the backing stratum appropriate to the
+claim being made.
+
+1. law-grounded answer claim requires law-memory support plus frozen-law decision-evidence proof;
+2. canonical-source answer claim requires discovery-memory support plus registry-resolution decision-evidence proof;
+3. admissibility answer claim requires admissibility-memory support plus validator-verdict decision-evidence proof;
+4. live-bound status answer claim requires run-binding-memory support plus bound-runtime decision-evidence proof;
+5. realized-effect answer claim requires consumption-memory support plus adjudicated-verdict-closure decision-evidence proof.
+
+Realized-effect compression may summarize lawful closure, but it must not
+pretend that closure-grade backing is the same thing as live-binding backing or
+that either one rewrites earlier legality phases.
+
 ## Answer-surface proof discipline
 
 Operator answer-surface claims may be supported only by proof whose stratum
@@ -218,6 +238,7 @@ The protocol must preserve these answer-surface proof limits:
 3. support-surface confinement proof is not proof of legality-terminal preservation;
 4. legality-terminal preservation proof is not proof of realized-effect answer backing;
 5. realized-effect answer-backing proof is not proof that answer prose may bypass current-turn machine adjudication.
+6. realized-effect answer-backing proof is not proof of live-bound status backing.
 
 ## Compression boundary
 
@@ -237,6 +258,7 @@ The following are non-compliant:
 3. `convenience_overrides_law_compression`: operator comfort or local convenience is used to bypass law-preserving compression and enforcement boundaries.
 4. `answer_surface_seized_by_terminality`: a machine terminal or receipt blob is treated as if it were the operator collaboration surface.
 5. `prose_without_machine_truth`: fluent answer prose is treated as sufficient despite missing machine-truth backing when such backing is required.
+6. `realized_effect_claim_backed_by_earlier_strata`: a realized-effect answer claim is treated as sufficiently backed by law-memory, discovery-memory, admissibility-memory, or run-binding-memory support alone.
 
 ## Validation
 

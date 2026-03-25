@@ -45,6 +45,15 @@ class AnswerSurfaceProofRow:
     proof_role: str
 
 
+@dataclass(frozen=True)
+class AnswerClaimAlignmentRow:
+    order: int
+    claim_id: str
+    support_id: str
+    decision_evidence_proof_id: str
+    answer_claim_role: str
+
+
 def _norm_str(value: Any) -> str:
     return str(value or "").strip().replace("\\", "/")
 
@@ -145,6 +154,36 @@ def _phrase_rows_from_field(doc: Mapping[str, Any], field: str, *, row_key: str)
 
 def support_limit_rows_from_doc(doc: Mapping[str, Any]) -> tuple[PhraseRow, ...]:
     return _phrase_rows_from_field(doc, "required_support_limit_rows", row_key="limit_id")
+
+
+def answer_claim_alignment_rows_from_doc(doc: Mapping[str, Any]) -> tuple[AnswerClaimAlignmentRow, ...]:
+    rows = doc.get("required_answer_claim_alignment_rows")
+    if not isinstance(rows, list):
+        return ()
+    out: list[AnswerClaimAlignmentRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        claim_id = _norm_str(row.get("claim_id"))
+        support_id = _norm_str(row.get("support_id"))
+        decision_evidence_proof_id = _norm_str(row.get("decision_evidence_proof_id"))
+        answer_claim_role = _norm_str(row.get("answer_claim_role"))
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not claim_id or not support_id or not decision_evidence_proof_id or not answer_claim_role:
+            continue
+        out.append(
+            AnswerClaimAlignmentRow(
+                order=order,
+                claim_id=claim_id,
+                support_id=support_id,
+                decision_evidence_proof_id=decision_evidence_proof_id,
+                answer_claim_role=answer_claim_role,
+            )
+        )
+    return tuple(out)
 
 
 def answer_surface_proof_rows_from_doc(doc: Mapping[str, Any]) -> tuple[AnswerSurfaceProofRow, ...]:

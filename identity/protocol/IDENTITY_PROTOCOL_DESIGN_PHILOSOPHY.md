@@ -190,6 +190,11 @@ This means the adjudication chain must remain explicit in both order and role:
 
 If these roles collapse, the machine world will start treating later visibility as if it were earlier legality, or treating closure artifacts as if they were upstream law authors.
 
+The same non-collapse rule applies when law is compressed into operator-facing
+answers: realized-effect claims, live-bound status claims, admissibility
+claims, and law-grounded explanations do not share one interchangeable backing
+stratum.
+
 ### Derivation direction must stay one-way
 
 The root corpus must also preserve one-way derivation direction.

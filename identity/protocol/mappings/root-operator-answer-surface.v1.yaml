@@ -15,6 +15,7 @@ registry_current_file: identity/protocol/mappings/root-corpus-registry.current.y
 ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
 authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
 question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+decision_evidence_current_file: identity/protocol/mappings/root-decision-evidence-admissibility.current.yaml
 contract_required_markers:
 - This file remains the authoritative root-domain contract for operator answer-surface
   law.
@@ -26,6 +27,11 @@ contract_required_markers:
   with the answer surface actually delivered to the operator.
 - '## Lifecycle-aware support-memory discipline'
 - '## Support-memory limits'
+- '## Answer-claim backing alignment'
+- law-grounded answer claim requires law-memory support plus frozen-law decision-evidence
+  proof;
+- realized-effect answer claim requires consumption-memory support plus adjudicated-verdict-closure
+  decision-evidence proof.
 - '## Answer-surface proof discipline'
 - '## Answer-surface proof limits'
 required_surface_rows:
@@ -83,6 +89,32 @@ required_support_limit_rows:
   limit_id: consumption_memory_realized_effect_only
   contract_phrase: only consumption-memory support may back claims of realized operational
     effect.
+required_answer_claim_alignment_rows:
+- order: 1
+  claim_id: law_grounded_answer_claim
+  support_id: law_memory_support
+  decision_evidence_proof_id: frozen_law_decision_evidence_proof
+  answer_claim_role: law_grounded_operator_answer_claim
+- order: 2
+  claim_id: canonical_source_answer_claim
+  support_id: discovery_memory_support
+  decision_evidence_proof_id: registry_resolution_decision_evidence_proof
+  answer_claim_role: canonical_source_operator_answer_claim
+- order: 3
+  claim_id: admissibility_answer_claim
+  support_id: admissibility_memory_support
+  decision_evidence_proof_id: validator_verdict_decision_evidence_proof
+  answer_claim_role: admissibility_operator_answer_claim
+- order: 4
+  claim_id: live_bound_status_answer_claim
+  support_id: run_binding_memory_support
+  decision_evidence_proof_id: bound_runtime_decision_evidence_proof
+  answer_claim_role: live_bound_status_operator_answer_claim
+- order: 5
+  claim_id: realized_effect_answer_claim
+  support_id: consumption_memory_support
+  decision_evidence_proof_id: adjudicated_verdict_closure_decision_evidence_proof
+  answer_claim_role: realized_effect_operator_answer_claim
 required_answer_surface_proof_rows:
 - order: 1
   proof_id: operator_entry_boundary_proof
@@ -120,6 +152,9 @@ required_answer_surface_limit_rows:
 - order: 5
   limit_id: realized_effect_backing_not_runtime_bypass
   contract_phrase: realized-effect answer-backing proof is not proof that answer prose may bypass current-turn machine adjudication.
+- order: 6
+  limit_id: realized_effect_backing_not_live_bound_status_backing
+  contract_phrase: realized-effect answer-backing proof is not proof of live-bound status backing.
 required_boundary_rows:
 - order: 1
   boundary_id: operator_memory_burden
@@ -157,3 +192,8 @@ required_collapse_rows:
   collapse_id: prose_without_machine_truth
   contract_phrase: fluent answer prose is treated as sufficient despite missing machine-truth
     backing when such backing is required.
+- order: 6
+  collapse_id: realized_effect_claim_backed_by_earlier_strata
+  contract_phrase: a realized-effect answer claim is treated as sufficiently backed
+    by law-memory, discovery-memory, admissibility-memory, or run-binding-memory
+    support alone.

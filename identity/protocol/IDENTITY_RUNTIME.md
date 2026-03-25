@@ -75,6 +75,7 @@ Runtime meaning:
 5. Runtime consumes receipts as adjudicated verdict closure rather than as upstream law-authoring surfaces.
 6. Runtime must not let operator visibility, local familiarity, or execution recency collapse those distinct roles into one convenience layer.
 7. Runtime must also keep bound live-binding evidence separate from adjudicated closure evidence rather than letting receipt visibility impersonate current-run binding.
+8. Runtime must not let operator-facing answer compression flatten law-grounded, discovery, admissibility, live-binding, and realized-effect claims into one interchangeable backing layer.
 
 ## Runtime registry-completeness boundary
 

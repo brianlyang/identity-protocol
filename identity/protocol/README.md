@@ -205,6 +205,10 @@ So the terminal chain is ordered and phase-governed at the same time:
 
 No machine surface in that chain may silently inherit another surface's role merely because it is later, more vivid, or closer to operator visibility.
 
+Operator-facing compression must preserve that discipline as well: a realized-effect
+answer claim cannot borrow the backing stratum of a live-bound status claim, and
+neither may borrow the backing stratum of frozen law or discovery.
+
 ---
 
 ## One-way derivation discipline
