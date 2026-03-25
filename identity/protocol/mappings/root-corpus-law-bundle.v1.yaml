@@ -16,6 +16,8 @@ descriptor_schema_source_binding_mode: canonical_source_component_current_only
 descriptor_schema_source_substitution_policy: forbidden
 descriptor_schema_fallback_policy: fail_closed
 descriptor_schema_local_reconstruction_policy: forbidden
+descriptor_family_surface_binding_inheritance_mode: inherit_machine_registry_completeness_current_only
+descriptor_family_surface_binding_local_override_policy: forbidden
 component_descriptor_resolution_mode: current_alias_only
 component_descriptor_version_pinning_policy: forbidden
 require_component_descriptor_concordance: true
@@ -50,6 +52,9 @@ bundle_anchor_checks:
   - The bundle descriptor schema must also stay source-singular.
   - not a substitute source chosen for local convenience.
   - fail-close rather than locally reconstructing descriptor schema from shadow bundle knowledge.
+  - Bundle descriptor binding must also remain inherited from machine-registry
+  - explicit cross-family descriptor-stem binding, the bundle must inherit that
+  - declaration rather than reauthoring, omitting, or locally overriding it.
   - Bundle component descriptors must remain current-entry mediated as well.
   - version file for local convenience.
   - fail-close rather than bypassing current mediation and binding directly to a
@@ -75,6 +80,9 @@ bundle_anchor_checks:
   - The bundle's descriptor schema must remain source-singular as well.
   - fallback source for convenience.
   - fail-close rather than locally reconstructing descriptor schema.
+  - The bundle must also inherit machine-registry completeness family-surface
+  - explicitly declares a cross-family descriptor-stem binding, the bundle must
+  - not locally override or suppress that binding.
   - Bundle component descriptors must also remain current-entry mediated.
   - version truth through those rows, not pin directly to version files.
   - fail-close rather than bypassing current mediation.
@@ -96,6 +104,10 @@ bundle_anchor_checks:
   - The bundle's descriptor schema must stay source-singular
   - no substitute source, and no fallback source.
   - fail-close rather than locally reconstructing descriptor schema.
+  - The bundle must also inherit machine-registry completeness family-surface
+    binding law
+  - explicit cross-family descriptor-stem bindings declared there may not be
+    silently reauthored, suppressed, or replaced by local bundle convenience.
   - Bundle component descriptors must also stay current-entry mediated
   - not direct version-file
     pinning.
@@ -116,6 +128,9 @@ bundle_anchor_checks:
   - no substitute source, and no
     fallback source.
   - locally reconstructing descriptor schema.
+  - Runtime must also reject a root-law bundle that locally overrides or suppresses
+  - explicit cross-family descriptor-stem bindings must be inherited from the
+    admitted source component rather than guessed.
   - Runtime must also treat bundle component descriptors as current-entry
     mediated
   - not direct version-file pinning.

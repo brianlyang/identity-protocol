@@ -89,6 +89,14 @@ def descriptor_schema_local_reconstruction_policy_from_doc(bundle_doc: Mapping[s
     return _norm_str(bundle_doc.get("descriptor_schema_local_reconstruction_policy"))
 
 
+def descriptor_family_surface_binding_inheritance_mode_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("descriptor_family_surface_binding_inheritance_mode"))
+
+
+def descriptor_family_surface_binding_local_override_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("descriptor_family_surface_binding_local_override_policy"))
+
+
 def component_descriptor_resolution_mode_from_doc(bundle_doc: Mapping[str, Any]) -> str:
     return _norm_str(bundle_doc.get("component_descriptor_resolution_mode"))
 
@@ -120,6 +128,19 @@ def required_component_descriptor_field_modes_from_doc(bundle_doc: Mapping[str, 
 
 def load_mapping_descriptor(path: Path) -> dict[str, Any]:
     return _load_yaml(path)
+
+
+def component_mapping_family_id_from_current_file(current_file: str) -> tuple[str, str]:
+    norm_current_file = _norm_str(current_file)
+    if not norm_current_file:
+        return "", "component_current_file_missing"
+    name = Path(norm_current_file).name
+    if not name.endswith(".current.yaml"):
+        return "", "component_current_file_not_current_entry"
+    family_id = name[: -len(".current.yaml")]
+    if not family_id:
+        return "", "component_current_family_id_missing"
+    return family_id, ""
 
 
 def bundle_anchor_checks_from_doc(bundle_doc: Mapping[str, Any]) -> tuple[BundleAnchorCheck, ...]:

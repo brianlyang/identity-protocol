@@ -416,6 +416,13 @@ fallback source for convenience.
 If that admitted source is unavailable or invalid, the machine world must
 fail-close rather than locally reconstructing descriptor schema.
 
+The bundle must also inherit machine-registry completeness family-surface
+binding law.
+
+If machine-registry completeness explicitly declares a cross-family
+descriptor-stem binding, the bundle must not locally override or suppress that
+binding.
+
 Bundle component descriptors must also remain current-entry mediated.
 
 The bundle must point to admitted component current rows and resolve active

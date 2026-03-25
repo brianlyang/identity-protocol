@@ -14,8 +14,11 @@ from root_corpus_law_bundle_common import (
     STATUS_PASS_REQUIRED,
     bundle_anchor_checks_from_doc,
     bundle_components_from_doc,
+    component_mapping_family_id_from_current_file,
     component_descriptor_resolution_mode_from_doc,
     component_descriptor_version_pinning_policy_from_doc,
+    descriptor_family_surface_binding_inheritance_mode_from_doc,
+    descriptor_family_surface_binding_local_override_policy_from_doc,
     descriptor_schema_fallback_policy_from_doc,
     descriptor_schema_source_component_id_from_doc,
     descriptor_schema_source_binding_mode_from_doc,
@@ -29,7 +32,12 @@ from root_corpus_law_bundle_common import (
     require_component_descriptor_concordance,
 )
 from root_machine_registry_completeness_common import (
+    default_surface_stem_from_family_id,
+    extract_repo_rel_path_surface_stem,
+    family_surface_stem_binding_policy_from_doc,
+    family_surface_stem_overrides_from_doc,
     load_root_machine_registry_completeness,
+    required_repo_rel_path_patterns_from_doc,
     required_descriptor_field_modes_from_doc as registry_required_descriptor_field_modes_from_doc,
     required_descriptor_fields_from_doc as registry_required_descriptor_fields_from_doc,
 )
@@ -230,6 +238,12 @@ def main() -> int:
     descriptor_schema_local_reconstruction_policy = (
         descriptor_schema_local_reconstruction_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    descriptor_family_surface_binding_inheritance_mode = (
+        descriptor_family_surface_binding_inheritance_mode_from_doc(bundle_doc) if bundle_doc else ""
+    )
+    descriptor_family_surface_binding_local_override_policy = (
+        descriptor_family_surface_binding_local_override_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     component_descriptor_resolution_mode = component_descriptor_resolution_mode_from_doc(bundle_doc) if bundle_doc else ""
     component_descriptor_version_pinning_policy = (
         component_descriptor_version_pinning_policy_from_doc(bundle_doc) if bundle_doc else ""
@@ -241,6 +255,21 @@ def main() -> int:
     )
     source_required_descriptor_field_modes = (
         registry_required_descriptor_field_modes_from_doc(machine_registry_completeness_doc)
+        if machine_registry_completeness_doc
+        else {}
+    )
+    source_family_surface_stem_binding_policy = (
+        family_surface_stem_binding_policy_from_doc(machine_registry_completeness_doc)
+        if machine_registry_completeness_doc
+        else ""
+    )
+    source_family_surface_stem_overrides = (
+        family_surface_stem_overrides_from_doc(machine_registry_completeness_doc)
+        if machine_registry_completeness_doc
+        else {}
+    )
+    source_required_repo_rel_path_patterns = (
+        required_repo_rel_path_patterns_from_doc(machine_registry_completeness_doc)
         if machine_registry_completeness_doc
         else {}
     )
@@ -285,6 +314,12 @@ def main() -> int:
         if descriptor_schema_local_reconstruction_policy != "forbidden":
             stale_reasons.append("root_corpus_law_bundle_descriptor_schema_local_reconstruction_policy_invalid")
             error_code = ERR_REGISTRY
+        if descriptor_family_surface_binding_inheritance_mode != "inherit_machine_registry_completeness_current_only":
+            stale_reasons.append("root_corpus_law_bundle_descriptor_family_surface_binding_inheritance_mode_invalid")
+            error_code = ERR_REGISTRY
+        if descriptor_family_surface_binding_local_override_policy != "forbidden":
+            stale_reasons.append("root_corpus_law_bundle_descriptor_family_surface_binding_local_override_policy_invalid")
+            error_code = ERR_REGISTRY
         if component_descriptor_resolution_mode != "current_alias_only":
             stale_reasons.append("root_corpus_law_bundle_component_descriptor_resolution_mode_invalid")
             error_code = ERR_REGISTRY
@@ -324,6 +359,21 @@ def main() -> int:
                     "reason": "descriptor_field_modes_not_aligned_to_machine_registry_completeness",
                     "bundle_modes": dict(required_component_descriptor_field_modes),
                     "source_modes": dict(source_required_descriptor_field_modes),
+                }
+            )
+        if source_family_surface_stem_binding_policy != "family_id_surface_stem_congruent_or_explicit_override":
+            bundle_violations.append(
+                {
+                    "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                    "reason": "descriptor_family_surface_binding_policy_not_aligned_to_machine_registry_completeness",
+                    "source_family_surface_stem_binding_policy": source_family_surface_stem_binding_policy,
+                }
+            )
+        if not source_family_surface_stem_overrides:
+            bundle_violations.append(
+                {
+                    "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                    "reason": "descriptor_family_surface_stem_overrides_missing_from_machine_registry_completeness",
                 }
             )
         if descriptor_concordance_required and not required_component_descriptor_fields:
@@ -443,6 +493,37 @@ def main() -> int:
             if not common_path.exists():
                 bundle_violations.append({"component_id": row.component_id, "reason": "component_common_missing"})
 
+            component_mapping_family_id, component_mapping_family_id_error = component_mapping_family_id_from_current_file(
+                row.current_file
+            )
+            default_expected_component_surface_stem = ""
+            default_expected_component_surface_stem_error = ""
+            if component_mapping_family_id:
+                (
+                    default_expected_component_surface_stem,
+                    default_expected_component_surface_stem_error,
+                ) = default_surface_stem_from_family_id(component_mapping_family_id)
+            expected_component_surface_stem = source_family_surface_stem_overrides.get(
+                component_mapping_family_id, default_expected_component_surface_stem
+            )
+            expected_component_surface_stem_source = (
+                "machine_registry_explicit_override"
+                if component_mapping_family_id in source_family_surface_stem_overrides
+                else "mapping_family_default"
+            )
+            component_descriptor_surface_stems: dict[str, str] = {}
+            component_descriptor_surface_stem_errors: dict[str, str] = {}
+            for descriptor_field in ("validator_script", "probe_script", "common_script"):
+                expected_pattern = source_required_repo_rel_path_patterns.get(descriptor_field, "")
+                surface_stem, surface_stem_error = extract_repo_rel_path_surface_stem(
+                    str(getattr(row, descriptor_field) or ""),
+                    expected_pattern,
+                )
+                if surface_stem:
+                    component_descriptor_surface_stems[descriptor_field] = surface_stem
+                if surface_stem_error:
+                    component_descriptor_surface_stem_errors[descriptor_field] = surface_stem_error
+
             rc, payload, run_error = _run_component_validator(repo_root, row.validator_script, row.status_key)
             component_status = str(payload.get(row.status_key) or "")
             descriptor_field_rows: list[dict[str, str]] = []
@@ -459,6 +540,13 @@ def main() -> int:
                     "error_codes": list(row.error_codes),
                     "validator_error": run_error,
                     "descriptor_concordance_required": descriptor_concordance_required,
+                    "component_mapping_family_id": component_mapping_family_id,
+                    "component_mapping_family_id_error": component_mapping_family_id_error,
+                    "expected_component_surface_stem": expected_component_surface_stem,
+                    "expected_component_surface_stem_source": expected_component_surface_stem_source,
+                    "expected_component_surface_stem_error": default_expected_component_surface_stem_error,
+                    "component_descriptor_surface_stems": dict(component_descriptor_surface_stems),
+                    "component_descriptor_surface_stem_errors": dict(component_descriptor_surface_stem_errors),
                     "required_component_descriptor_fields": list(required_component_descriptor_fields),
                     "required_component_descriptor_field_modes": dict(required_component_descriptor_field_modes),
                     "descriptor_field_rows": descriptor_field_rows,
@@ -489,6 +577,56 @@ def main() -> int:
                         "component_status": component_status,
                     }
                 )
+
+            if component_mapping_family_id_error:
+                bundle_violations.append(
+                    {
+                        "component_id": row.component_id,
+                        "reason": "component_mapping_family_id_unresolved",
+                        "component_mapping_family_id_error": component_mapping_family_id_error,
+                        "current_file": row.current_file,
+                    }
+                )
+            if default_expected_component_surface_stem_error:
+                bundle_violations.append(
+                    {
+                        "component_id": row.component_id,
+                        "reason": "component_expected_surface_stem_unresolved",
+                        "component_mapping_family_id": component_mapping_family_id,
+                        "expected_component_surface_stem_error": default_expected_component_surface_stem_error,
+                    }
+                )
+            if component_descriptor_surface_stem_errors:
+                bundle_violations.append(
+                    {
+                        "component_id": row.component_id,
+                        "reason": "component_descriptor_surface_stem_unresolved",
+                        "component_descriptor_surface_stem_errors": dict(component_descriptor_surface_stem_errors),
+                    }
+                )
+            unique_component_surface_stems = sorted(set(component_descriptor_surface_stems.values()))
+            if len(unique_component_surface_stems) > 1:
+                bundle_violations.append(
+                    {
+                        "component_id": row.component_id,
+                        "reason": "component_descriptor_surface_stem_mismatch",
+                        "component_descriptor_surface_stems": dict(component_descriptor_surface_stems),
+                    }
+                )
+            elif unique_component_surface_stems and expected_component_surface_stem:
+                actual_component_surface_stem = unique_component_surface_stems[0]
+                if actual_component_surface_stem != expected_component_surface_stem:
+                    bundle_violations.append(
+                        {
+                            "component_id": row.component_id,
+                            "reason": "component_family_surface_binding_not_inherited",
+                            "component_mapping_family_id": component_mapping_family_id,
+                            "expected_component_surface_stem": expected_component_surface_stem,
+                            "expected_component_surface_stem_source": expected_component_surface_stem_source,
+                            "actual_component_surface_stem": actual_component_surface_stem,
+                            "component_descriptor_surface_stems": dict(component_descriptor_surface_stems),
+                        }
+                    )
 
             if descriptor_concordance_required and current_path.exists():
                 active_path, _active_file, alias_error = resolve_current_yaml_alias(repo_root, row.current_file)
@@ -582,6 +720,8 @@ def main() -> int:
         "descriptor_schema_source_substitution_policy": descriptor_schema_source_substitution_policy,
         "descriptor_schema_fallback_policy": descriptor_schema_fallback_policy,
         "descriptor_schema_local_reconstruction_policy": descriptor_schema_local_reconstruction_policy,
+        "descriptor_family_surface_binding_inheritance_mode": descriptor_family_surface_binding_inheritance_mode,
+        "descriptor_family_surface_binding_local_override_policy": descriptor_family_surface_binding_local_override_policy,
         "component_descriptor_resolution_mode": component_descriptor_resolution_mode,
         "component_descriptor_version_pinning_policy": component_descriptor_version_pinning_policy,
         "bundle_anchor_check_count": len(anchor_checks),
@@ -591,6 +731,9 @@ def main() -> int:
         "required_component_descriptor_field_modes": dict(required_component_descriptor_field_modes),
         "source_required_descriptor_fields": list(source_required_descriptor_fields),
         "source_required_descriptor_field_modes": dict(source_required_descriptor_field_modes),
+        "source_family_surface_stem_binding_policy": source_family_surface_stem_binding_policy,
+        "source_family_surface_stem_overrides": dict(source_family_surface_stem_overrides),
+        "source_required_repo_rel_path_patterns": dict(source_required_repo_rel_path_patterns),
         "component_status_rows": component_status_rows,
         "structure_violations": structure_violations,
         "bundle_violations": bundle_violations,

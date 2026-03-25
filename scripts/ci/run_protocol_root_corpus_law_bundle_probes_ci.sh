@@ -32,6 +32,8 @@ assert payload["descriptor_schema_source_binding_mode"] == "canonical_source_com
 assert payload["descriptor_schema_source_substitution_policy"] == "forbidden", payload
 assert payload["descriptor_schema_fallback_policy"] == "fail_closed", payload
 assert payload["descriptor_schema_local_reconstruction_policy"] == "forbidden", payload
+assert payload["descriptor_family_surface_binding_inheritance_mode"] == "inherit_machine_registry_completeness_current_only", payload
+assert payload["descriptor_family_surface_binding_local_override_policy"] == "forbidden", payload
 assert payload["component_descriptor_resolution_mode"] == "current_alias_only", payload
 assert payload["component_descriptor_version_pinning_policy"] == "forbidden", payload
 assert payload["required_component_descriptor_fields"] == [
@@ -50,6 +52,10 @@ assert payload["required_component_descriptor_field_modes"] == {
 }, payload
 assert payload["source_required_descriptor_fields"] == payload["required_component_descriptor_fields"], payload
 assert payload["source_required_descriptor_field_modes"] == payload["required_component_descriptor_field_modes"], payload
+assert payload["source_family_surface_stem_binding_policy"] == "family_id_surface_stem_congruent_or_explicit_override", payload
+assert payload["source_family_surface_stem_overrides"] == {
+    "root-corpus-registry": "root_corpus_governance",
+}, payload
 assert all(row["component_status"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
 assert all(
     all(cell["status"] == "PASS_REQUIRED" for cell in row.get("descriptor_field_rows", []))
@@ -64,6 +70,13 @@ assert any(
     cell["field"] == "error_codes" and cell["status"] == "PASS_REQUIRED"
     for row in payload["component_status_rows"]
     for cell in row.get("descriptor_field_rows", [])
+), payload
+assert any(
+    row["component_id"] == "root_corpus_governance"
+    and row["component_mapping_family_id"] == "root-corpus-registry"
+    and row["expected_component_surface_stem"] == "root_corpus_governance"
+    and row["expected_component_surface_stem_source"] == "machine_registry_explicit_override"
+    for row in payload["component_status_rows"]
 ), payload
 PY
 
@@ -138,6 +151,38 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCLB-001", payload
 assert "root_corpus_law_bundle_descriptor_schema_source_substitution_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+FAMILY_BINDING_POLICY_REPO="${TMP_ROOT}/descriptor-family-binding-policy-drift-repo"
+mirror_repo "${FAMILY_BINDING_POLICY_REPO}"
+python3 - <<'PY' "${FAMILY_BINDING_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["descriptor_family_surface_binding_local_override_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+FAMILY_BINDING_POLICY_JSON="${TMP_ROOT}/descriptor-family-binding-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${FAMILY_BINDING_POLICY_REPO}" \
+  --json-only >"${FAMILY_BINDING_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor-family binding local-override drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${FAMILY_BINDING_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_descriptor_family_surface_binding_local_override_policy_invalid" in payload["stale_reasons"], payload
 PY
 
 COMPONENT_RESOLUTION_POLICY_REPO="${TMP_ROOT}/component-descriptor-resolution-policy-drift-repo"
@@ -243,6 +288,47 @@ assert payload["error_code"] == "IP-RCLB-003", payload
 assert any(
     row["component_id"] == "root_machine_registry_completeness"
     and row["reason"] == "descriptor_field_modes_not_aligned_to_machine_registry_completeness"
+    for row in payload["bundle_violations"]
+), payload
+PY
+
+SOURCE_FAMILY_OVERRIDE_REPO="${TMP_ROOT}/source-family-override-drift-repo"
+mirror_repo "${SOURCE_FAMILY_OVERRIDE_REPO}"
+python3 - <<'PY' "${SOURCE_FAMILY_OVERRIDE_REPO}/identity/protocol/mappings/root-machine-registry-completeness.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["family_surface_stem_overrides"] = {}
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SOURCE_FAMILY_OVERRIDE_JSON="${TMP_ROOT}/source-family-override-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SOURCE_FAMILY_OVERRIDE_REPO}" \
+  --json-only >"${SOURCE_FAMILY_OVERRIDE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed missing source family-surface override drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SOURCE_FAMILY_OVERRIDE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_family_surface_stem_overrides_missing_from_machine_registry_completeness"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["component_id"] == "root_corpus_governance"
+    and row["reason"] == "component_family_surface_binding_not_inherited"
     for row in payload["bundle_violations"]
 ), payload
 PY

@@ -183,6 +183,10 @@ component/current mapping pair, no substitute source, and no fallback source.
 If that admitted source is unavailable or invalid, protocol legality must
 fail-close rather than locally reconstructing descriptor schema.
 
+The bundle must also inherit machine-registry completeness family-surface
+binding law; explicit cross-family descriptor-stem bindings declared there may
+not be silently reauthored, suppressed, or replaced by local bundle convenience.
+
 Bundle component descriptors must also stay current-entry mediated; bundle
 rows bind through admitted component current mappings, not direct version-file
 pinning.

@@ -391,6 +391,11 @@ If that admitted source is unavailable or invalid, the machine world must
 fail-close rather than locally reconstructing descriptor schema from shadow
 bundle knowledge.
 
+Bundle descriptor binding must also remain inherited from machine-registry
+completeness family-surface law.
+
+Where machine-registry completeness supplies an explicit cross-family descriptor-stem binding, the bundle must inherit that declaration rather than reauthoring, omitting, or locally overriding it.
+
 Bundle component descriptors must remain current-entry mediated as well.
 
 The bundle names admitted component current rows and resolves active version
