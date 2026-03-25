@@ -10,16 +10,20 @@ from root_corpus_governance_common import load_root_corpus_registry, root_corpus
 from root_corpus_ordering_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
+    adjudication_order_rows_from_doc,
     load_root_corpus_ordering,
     reading_order_rows_from_doc,
     source_order_rows_from_doc,
 )
+from root_corpus_precedence_common import load_root_corpus_precedence, precedence_profiles_from_doc
+from root_corpus_question_routing_common import adjudication_redirect_from_doc, load_root_corpus_question_routing
 
 STATUS_KEY = "protocol_root_corpus_ordering_status"
 ERR_REGISTRY = "IP-RCO-001"
 ERR_STRUCTURE = "IP-RCO-002"
 ERR_COVERAGE = "IP-RCO-003"
 ROOT_INDEX_ENTRY_ROLE = "root_index_entry_surface"
+CURRENT_TURN_LEGALITY_CONFLICT = "current_turn_legality_conflict"
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -39,6 +43,12 @@ def main() -> int:
     repo_root = resolve_repo_root(args.repo_root, start=__file__)
     ordering_doc, ordering_entry_path, ordering_active_path, ordering_alias_error = load_root_corpus_ordering(repo_root)
     registry_doc, registry_entry_path, registry_active_path, registry_alias_error = load_root_corpus_registry(repo_root)
+    question_routing_doc, question_routing_entry_path, question_routing_active_path, question_routing_alias_error = (
+        load_root_corpus_question_routing(repo_root)
+    )
+    precedence_doc, precedence_entry_path, precedence_active_path, precedence_alias_error = load_root_corpus_precedence(
+        repo_root
+    )
 
     stale_reasons: list[str] = []
     structure_violations: list[dict[str, Any]] = []
@@ -58,10 +68,25 @@ def main() -> int:
     elif not registry_doc:
         stale_reasons.append("root_corpus_registry_empty_or_invalid")
         error_code = ERR_REGISTRY
+    if question_routing_alias_error:
+        stale_reasons.append(f"root_corpus_question_routing_alias_error:{question_routing_alias_error}")
+        error_code = ERR_REGISTRY
+    elif not question_routing_doc:
+        stale_reasons.append("root_corpus_question_routing_empty_or_invalid")
+        error_code = ERR_REGISTRY
+    if precedence_alias_error:
+        stale_reasons.append(f"root_corpus_precedence_alias_error:{precedence_alias_error}")
+        error_code = ERR_REGISTRY
+    elif not precedence_doc:
+        stale_reasons.append("root_corpus_precedence_empty_or_invalid")
+        error_code = ERR_REGISTRY
 
     source_rows = source_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
+    adjudication_rows = adjudication_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
+    adjudication_redirect = adjudication_redirect_from_doc(question_routing_doc) if question_routing_doc else adjudication_redirect_from_doc({})
+    precedence_profiles = precedence_profiles_from_doc(precedence_doc) if precedence_doc else ()
 
     if not stale_reasons:
         if str(ordering_doc.get("ordering_family") or "").strip() != "protocol_root_corpus_ordering":
@@ -75,6 +100,12 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if str(ordering_doc.get("registry_current_file") or "").strip() != "identity/protocol/mappings/root-corpus-registry.current.yaml":
             stale_reasons.append("root_corpus_ordering_registry_current_file_invalid")
+            error_code = ERR_REGISTRY
+        if str(ordering_doc.get("question_routing_current_file") or "").strip() != "identity/protocol/mappings/root-corpus-question-routing.current.yaml":
+            stale_reasons.append("root_corpus_ordering_question_routing_current_file_invalid")
+            error_code = ERR_REGISTRY
+        if str(ordering_doc.get("precedence_current_file") or "").strip() != "identity/protocol/mappings/root-corpus-precedence.current.yaml":
+            stale_reasons.append("root_corpus_ordering_precedence_current_file_invalid")
             error_code = ERR_REGISTRY
         if str(ordering_doc.get("validator_script") or "").strip() != "scripts/validate_protocol_root_corpus_ordering.py":
             stale_reasons.append("root_corpus_ordering_validator_script_invalid")
@@ -99,6 +130,9 @@ def main() -> int:
         if not reading_rows:
             stale_reasons.append("root_corpus_ordering_reading_order_missing")
             error_code = ERR_REGISTRY
+        if not adjudication_rows:
+            stale_reasons.append("root_corpus_ordering_adjudication_order_missing")
+            error_code = ERR_REGISTRY
 
     registry_paths = [entry.rel_path for entry in registry_entries]
     registry_entry_class_map = {entry.rel_path: entry.corpus_class for entry in registry_entries}
@@ -112,9 +146,14 @@ def main() -> int:
     source_classes = [row.corpus_class for row in source_rows]
     reading_orders = [row.order for row in reading_rows]
     reading_paths = [row.rel_path for row in reading_rows]
+    adjudication_orders = [row.order for row in adjudication_rows]
+    adjudication_surfaces = [row.machine_surface for row in adjudication_rows]
     sorted_source_rows = sorted(source_rows, key=lambda item: item.order)
     sorted_reading_rows = sorted(reading_rows, key=lambda item: item.order)
+    sorted_adjudication_rows = sorted(adjudication_rows, key=lambda item: item.order)
     root_index_entry = str(ordering_doc.get("root_index_entry") or "").strip()
+    precedence_profile_map = {row.conflict_class: row for row in precedence_profiles}
+    precedence_legality_profile = precedence_profile_map.get(CURRENT_TURN_LEGALITY_CONFLICT)
 
     if not stale_reasons:
         if len(set(source_orders)) != len(source_orders) or not _contiguous_orders(sorted(source_orders)):
@@ -127,6 +166,10 @@ def main() -> int:
             structure_violations.append({"field": "reading_order", "reason": "reading_order_non_contiguous"})
         if len(set(reading_paths)) != len(reading_paths):
             structure_violations.append({"field": "reading_order", "reason": "reading_order_duplicate_rel_path"})
+        if len(set(adjudication_orders)) != len(adjudication_orders) or not _contiguous_orders(sorted(adjudication_orders)):
+            structure_violations.append({"field": "adjudication_order", "reason": "adjudication_order_non_contiguous"})
+        if len(set(adjudication_surfaces)) != len(adjudication_surfaces):
+            structure_violations.append({"field": "adjudication_order", "reason": "adjudication_order_duplicate_machine_surface"})
         if (
             not sorted_reading_rows
             or sorted_reading_rows[0].rel_path != root_index_entry
@@ -193,6 +236,36 @@ def main() -> int:
                 }
             )
 
+        redirect_surfaces = tuple(adjudication_redirect.terminal_machine_surfaces)
+        ordering_adjudication_surfaces = tuple(row.machine_surface for row in sorted_adjudication_rows)
+        if ordering_adjudication_surfaces != redirect_surfaces:
+            coverage_violations.append(
+                {
+                    "field": "adjudication_order",
+                    "reason": "terminal_machine_surfaces_mismatch",
+                    "expected": list(redirect_surfaces),
+                    "actual": list(ordering_adjudication_surfaces),
+                }
+            )
+        precedence_terminal_surfaces = tuple(precedence_legality_profile.terminal_machine_surfaces) if precedence_legality_profile else ()
+        if not precedence_legality_profile:
+            coverage_violations.append(
+                {
+                    "field": "adjudication_order",
+                    "reason": "current_turn_legality_profile_missing",
+                    "conflict_class": CURRENT_TURN_LEGALITY_CONFLICT,
+                }
+            )
+        elif ordering_adjudication_surfaces != precedence_terminal_surfaces:
+            coverage_violations.append(
+                {
+                    "field": "adjudication_order",
+                    "reason": "precedence_terminal_machine_surfaces_mismatch",
+                    "expected": list(precedence_terminal_surfaces),
+                    "actual": list(ordering_adjudication_surfaces),
+                }
+            )
+
         source_rank_by_class = {row.corpus_class: row.order for row in sorted_source_rows}
         previous_rank = 0
         for row in sorted_reading_rows[1:]:
@@ -239,6 +312,10 @@ def main() -> int:
         "ordering_active_path": str(ordering_active_path),
         "registry_entry_path": str(registry_entry_path),
         "registry_active_path": str(registry_active_path),
+        "question_routing_entry_path": str(question_routing_entry_path),
+        "question_routing_active_path": str(question_routing_active_path),
+        "precedence_entry_path": str(precedence_entry_path),
+        "precedence_active_path": str(precedence_active_path),
         "root_dir": str(ordering_doc.get("root_dir") or ""),
         "root_index_entry": root_index_entry,
         "registry_class_ids": registry_classes,
@@ -261,8 +338,18 @@ def main() -> int:
             }
             for row in sorted_reading_rows
         ],
+        "adjudication_order": [
+            {
+                "order": row.order,
+                "machine_surface": row.machine_surface,
+            }
+            for row in sorted_adjudication_rows
+        ],
+        "expected_adjudication_order": list(adjudication_redirect.terminal_machine_surfaces),
+        "precedence_adjudication_order": list(precedence_legality_profile.terminal_machine_surfaces) if precedence_legality_profile else [],
         "source_order_class_count": len(source_rows),
         "reading_order_entry_count": len(reading_rows),
+        "adjudication_order_surface_count": len(adjudication_rows),
         "registered_entry_count": len(registry_entries),
         "structure_violations": structure_violations,
         "coverage_violations": coverage_violations,

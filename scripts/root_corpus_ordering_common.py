@@ -29,6 +29,12 @@ class ReadingOrderRow:
     entry_role: str
 
 
+@dataclass(frozen=True)
+class AdjudicationOrderRow:
+    order: int
+    machine_surface: str
+
+
 def _norm_str(value: Any) -> str:
     return str(value or "").strip().replace("\\", "/")
 
@@ -101,4 +107,23 @@ def reading_order_rows_from_doc(ordering_doc: Mapping[str, Any]) -> tuple[Readin
                 entry_role=entry_role,
             )
         )
+    return tuple(out)
+
+
+def adjudication_order_rows_from_doc(ordering_doc: Mapping[str, Any]) -> tuple[AdjudicationOrderRow, ...]:
+    rows = ordering_doc.get("adjudication_order")
+    if not isinstance(rows, list):
+        return ()
+    out: list[AdjudicationOrderRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        machine_surface = _norm_str(row.get("machine_surface"))
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not machine_surface:
+            continue
+        out.append(AdjudicationOrderRow(order=order, machine_surface=machine_surface))
     return tuple(out)

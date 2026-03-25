@@ -12,6 +12,8 @@ mirror_repo() {
   cp -R "${ROOT}/identity" "${dst}/"
   cp "${ROOT}/scripts/root_corpus_governance_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/root_corpus_ordering_common.py" "${dst}/scripts/"
+  cp "${ROOT}/scripts/root_corpus_precedence_common.py" "${dst}/scripts/"
+  cp "${ROOT}/scripts/root_corpus_question_routing_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/validate_protocol_root_corpus_ordering.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/registry_alias_control_plane_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/repo_root_resolution_common.py" "${dst}/scripts/"
@@ -32,6 +34,8 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_ordering_status"] == "PASS_REQUIRED", payload
 assert payload["reading_order"][0]["rel_path"] == "identity/protocol/README.md", payload
 assert payload["source_order"][0]["corpus_class"] == "bottom_theory", payload
+assert payload["adjudication_order"][0]["machine_surface"] == "mappings", payload
+assert payload["adjudication_order"][-1]["machine_surface"] == "receipts", payload
 PY
 
 DUP_REPO="${TMP_ROOT}/duplicate-source-order-repo"
@@ -130,6 +134,38 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_ordering_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCO-003", payload
 assert any("coverage_violation:source_order:missing_source_classes" == reason for reason in payload["stale_reasons"]), payload
+PY
+
+ADJUDICATION_REPO="${TMP_ROOT}/adjudication-order-drift-repo"
+mirror_repo "${ADJUDICATION_REPO}"
+python3 - <<'PY' "${ADJUDICATION_REPO}/identity/protocol/mappings/root-corpus-ordering.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["adjudication_order"][0]["machine_surface"] = "governance_docs"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+ADJUDICATION_JSON="${TMP_ROOT}/adjudication-order-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_ordering.py" \
+  --repo-root "${ADJUDICATION_REPO}" \
+  --json-only >"${ADJUDICATION_JSON}"; then
+  echo "[FAIL] root corpus ordering validator unexpectedly passed adjudication-order drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ADJUDICATION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_ordering_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCO-003", payload
+assert any("coverage_violation:adjudication_order:terminal_machine_surfaces_mismatch" == reason for reason in payload["stale_reasons"]), payload
 PY
 
 echo "[PASS] protocol root-corpus ordering probes passed"

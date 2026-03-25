@@ -150,6 +150,7 @@ For the machine world, at least three different orders must remain explicit:
    - this answers how a machine-governed participant should enter the root corpus without semantic confusion.
 3. **adjudication-order**
    - current machine verdict must still resolve from machine-consumed enforcement surfaces such as frozen contracts, mappings, validators, probes, runtime state, and receipts;
+   - the terminal machine chain must stay explicit as mappings → validators → probes → runtime state → receipts rather than being reconstructed from local habit;
    - this answers how present-turn legality is actually decided.
 
 These three orders cooperate, but they do not replace each other:

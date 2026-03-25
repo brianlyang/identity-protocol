@@ -169,6 +169,7 @@ These three orders must remain distinct for the machine world:
    - answers: how to enter the root corpus without semantic confusion.
 3. **adjudication-order**
    - governance/review docs, mappings, validators, probes, runtime state, and receipts
+   - the terminal machine chain stays explicit as mappings → validators → probes → runtime state → receipts
    - answers: how current-turn legality and machine verdict are determined.
 
 Do not collapse these orders:
