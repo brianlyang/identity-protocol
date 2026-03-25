@@ -28,6 +28,10 @@ assert payload["protocol_root_machine_registry_completeness_status"] == "PASS_RE
 assert "root-corpus-law-bundle" in payload["family_ids"], payload
 assert "root-machine-registry-completeness" in payload["family_ids"], payload
 assert all(row["family_status"] == "PASS_REQUIRED" for row in payload["family_status_rows"]), payload
+assert all(
+    all(cell["status"] == "PASS_REQUIRED" for cell in row.get("descriptor_field_rows", []))
+    for row in payload["family_status_rows"]
+), payload
 PY
 
 DESCRIPTOR_REPO="${TMP_ROOT}/descriptor-drift-repo"
@@ -100,6 +104,43 @@ assert any(
     row["reason"] == "descriptor_path_missing"
     and row.get("family_id") == "root-corpus-authority"
     and row.get("descriptor_field") == "common_script"
+    for row in payload["completeness_violations"]
+), payload
+PY
+
+STATUS_KEY_REPO="${TMP_ROOT}/status-key-drift-repo"
+mirror_repo "${STATUS_KEY_REPO}"
+python3 - <<'PY' "${STATUS_KEY_REPO}/identity/protocol/mappings/root-corpus-authority.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["status_key"] = "protocol_root_corpus_ordering_status"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+STATUS_KEY_JSON="${TMP_ROOT}/status-key-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${STATUS_KEY_REPO}" \
+  --json-only >"${STATUS_KEY_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed status-key descriptor drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${STATUS_KEY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert any(
+    row["reason"] == "descriptor_value_mismatch"
+    and row.get("family_id") == "root-corpus-authority"
+    and row.get("descriptor_field") == "status_key"
     for row in payload["completeness_violations"]
 ), payload
 PY

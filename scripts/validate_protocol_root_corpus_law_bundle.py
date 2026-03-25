@@ -187,7 +187,7 @@ def main() -> int:
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
             error_code = ERR_REGISTRY
-        if tuple(required_component_descriptor_fields) != ("validator_script", "probe_script", "common_script"):
+        if tuple(required_component_descriptor_fields) != ("validator_script", "probe_script", "common_script", "status_key"):
             stale_reasons.append("root_corpus_law_bundle_required_component_descriptor_fields_invalid")
             error_code = ERR_REGISTRY
         if descriptor_concordance_required and not required_component_descriptor_fields:

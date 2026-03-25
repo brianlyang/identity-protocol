@@ -305,9 +305,9 @@ cross-validated together, and strengthened without semantic collapse.
 That joint governance also requires descriptor concordance across the bundle.
 
 If a root-law bundle row names a component family but drifts from that
-component family's own disclosed validator, probe, or shared-common surfaces,
-the machine world is being asked to trust shadow bundle knowledge instead of
-the admitted family descriptor.
+component family's own disclosed validator, probe, shared-common, or emitted
+status-key surfaces, the machine world is being asked to trust shadow bundle
+knowledge instead of the admitted family descriptor.
 
 ### Machine-registry completeness must stay explicit
 
@@ -324,8 +324,8 @@ harmless file-list mismatch.
 Admission without discoverable enforcement still leaves the machine partially
 blind.
 
-A lawful root mapping family must therefore disclose the validator, probe, and
-shared-common surfaces that govern it.
+A lawful root mapping family must therefore disclose the validator, probe,
+shared-common, and emitted status-key surfaces that govern it.
 
 ---
 

@@ -78,6 +78,51 @@ assert any(
 ), payload
 PY
 
+STATUS_KEY_REPO="${TMP_ROOT}/status-key-drift-repo"
+mirror_repo "${STATUS_KEY_REPO}"
+python3 - <<'PY' "${STATUS_KEY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["component_rows"]:
+    if row.get("component_id") == "root_corpus_ordering":
+        row["status_key"] = "protocol_root_corpus_governance_status"
+        break
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+STATUS_KEY_JSON="${TMP_ROOT}/status-key-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${STATUS_KEY_REPO}" \
+  --json-only >"${STATUS_KEY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed status-key concordance drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${STATUS_KEY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_corpus_ordering"
+    and row["reason"] == "status_key_mismatch"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["component_id"] == "root_corpus_ordering"
+    and row["reason"] == "component_descriptor_concordance_failure"
+    and row.get("descriptor_field") == "status_key"
+    for row in payload["bundle_violations"]
+), payload
+PY
+
 COMPONENT_REPO="${TMP_ROOT}/component-drift-repo"
 mirror_repo "${COMPONENT_REPO}"
 python3 - <<'PY' "${COMPONENT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"

@@ -13,8 +13,10 @@ from root_machine_registry_completeness_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     anchor_checks_from_doc,
+    extract_validator_status_key,
     load_mapping_descriptor,
     load_root_machine_registry_completeness,
+    required_descriptor_field_modes_from_doc,
     required_descriptor_fields_from_doc,
     require_self_describing_families,
 )
@@ -70,6 +72,7 @@ def main() -> int:
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     self_describing_required = require_self_describing_families(completeness_doc) if completeness_doc else False
     required_descriptor_fields = required_descriptor_fields_from_doc(completeness_doc) if completeness_doc else ()
+    required_descriptor_field_modes = required_descriptor_field_modes_from_doc(completeness_doc) if completeness_doc else {}
 
     if not stale_reasons:
         expected_scalar_fields = {
@@ -80,6 +83,7 @@ def main() -> int:
             "validator_script": "scripts/validate_protocol_root_machine_registry_completeness.py",
             "probe_script": "scripts/ci/run_protocol_root_machine_registry_completeness_probes_ci.sh",
             "common_script": "scripts/root_machine_registry_completeness_common.py",
+            "status_key": STATUS_KEY,
             "root_family_prefix": "root-",
             "current_suffix": ".current.yaml",
             "version_regex": r"^root-[a-z0-9-]+\.v[0-9]+\.yaml$",
@@ -95,6 +99,17 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if self_describing_required and not required_descriptor_fields:
             stale_reasons.append("root_machine_registry_completeness_descriptor_fields_missing")
+            error_code = ERR_REGISTRY
+        if tuple(required_descriptor_fields) != ("validator_script", "probe_script", "common_script", "status_key"):
+            stale_reasons.append("root_machine_registry_completeness_descriptor_fields_invalid")
+            error_code = ERR_REGISTRY
+        if required_descriptor_field_modes != {
+            "validator_script": "repo_rel_path",
+            "probe_script": "repo_rel_path",
+            "common_script": "repo_rel_path",
+            "status_key": "validator_status_key",
+        }:
+            stale_reasons.append("root_machine_registry_completeness_descriptor_field_modes_invalid")
             error_code = ERR_REGISTRY
 
         if not anchor_checks:
@@ -267,19 +282,39 @@ def main() -> int:
                                 )
                             else:
                                 for descriptor_field in required_descriptor_fields:
-                                    descriptor_rel_path = str(active_doc.get(descriptor_field) or "").strip()
+                                    descriptor_value = str(active_doc.get(descriptor_field) or "").strip()
+                                    descriptor_mode = required_descriptor_field_modes.get(descriptor_field, "")
+                                    row_status = STATUS_FAIL_REQUIRED
+                                    row_payload: dict[str, str] = {
+                                        "field": descriptor_field,
+                                        "mode": descriptor_mode,
+                                        "value": descriptor_value,
+                                    }
+                                    if descriptor_mode == "repo_rel_path":
+                                        row_status = (
+                                            STATUS_PASS_REQUIRED
+                                            if descriptor_value and (repo_root / descriptor_value).exists()
+                                            else STATUS_FAIL_REQUIRED
+                                        )
+                                    elif descriptor_mode == "validator_status_key":
+                                        expected_status_key, status_key_error = extract_validator_status_key(
+                                            repo_root,
+                                            str(active_doc.get("validator_script") or "").strip(),
+                                        )
+                                        row_payload["expected_value"] = expected_status_key
+                                        row_payload["support_error"] = status_key_error
+                                        row_status = (
+                                            STATUS_PASS_REQUIRED
+                                            if descriptor_value and not status_key_error and descriptor_value == expected_status_key
+                                            else STATUS_FAIL_REQUIRED
+                                        )
                                     descriptor_field_rows.append(
                                         {
-                                            "field": descriptor_field,
-                                            "rel_path": descriptor_rel_path,
-                                            "status": (
-                                                STATUS_PASS_REQUIRED
-                                                if descriptor_rel_path and (repo_root / descriptor_rel_path).exists()
-                                                else STATUS_FAIL_REQUIRED
-                                            ),
+                                            **row_payload,
+                                            "status": row_status,
                                         }
                                     )
-                                    if not descriptor_rel_path:
+                                    if not descriptor_value:
                                         family_violations.append("descriptor_field_missing")
                                         completeness_violations.append(
                                             {
@@ -290,7 +325,7 @@ def main() -> int:
                                                 "descriptor_field": descriptor_field,
                                             }
                                         )
-                                    elif not (repo_root / descriptor_rel_path).exists():
+                                    elif descriptor_mode == "repo_rel_path" and not (repo_root / descriptor_value).exists():
                                         family_violations.append("descriptor_path_missing")
                                         completeness_violations.append(
                                             {
@@ -299,9 +334,39 @@ def main() -> int:
                                                 "family_id": family_id,
                                                 "active_file": active_file,
                                                 "descriptor_field": descriptor_field,
-                                                "rel_path": descriptor_rel_path,
+                                                "rel_path": descriptor_value,
                                             }
                                         )
+                                    elif descriptor_mode == "validator_status_key":
+                                        expected_status_key, status_key_error = extract_validator_status_key(
+                                            repo_root,
+                                            str(active_doc.get("validator_script") or "").strip(),
+                                        )
+                                        if status_key_error:
+                                            family_violations.append("descriptor_supporting_surface_invalid")
+                                            completeness_violations.append(
+                                                {
+                                                    "field": "root_mapping_family",
+                                                    "reason": "descriptor_supporting_surface_invalid",
+                                                    "family_id": family_id,
+                                                    "active_file": active_file,
+                                                    "descriptor_field": descriptor_field,
+                                                    "support_error": status_key_error,
+                                                }
+                                            )
+                                        elif descriptor_value != expected_status_key:
+                                            family_violations.append("descriptor_value_mismatch")
+                                            completeness_violations.append(
+                                                {
+                                                    "field": "root_mapping_family",
+                                                    "reason": "descriptor_value_mismatch",
+                                                    "family_id": family_id,
+                                                    "active_file": active_file,
+                                                    "descriptor_field": descriptor_field,
+                                                    "actual_value": descriptor_value,
+                                                    "expected_value": expected_status_key,
+                                                }
+                                            )
 
                 family_status_rows.append(
                     {
@@ -312,6 +377,7 @@ def main() -> int:
                         "alias_error": alias_error,
                         "self_describing_required": self_describing_required,
                         "required_descriptor_fields": list(required_descriptor_fields),
+                        "required_descriptor_field_modes": dict(required_descriptor_field_modes),
                         "descriptor_field_rows": descriptor_field_rows,
                         "family_status": STATUS_PASS_REQUIRED if not family_violations else STATUS_FAIL_REQUIRED,
                         "family_violations": family_violations,
@@ -360,6 +426,8 @@ def main() -> int:
         "mapping_active_file": str(completeness_active_path.relative_to(repo_root)),
         "registry_entry_file": str(registry_entry_path.relative_to(repo_root)),
         "registry_active_file": str(registry_active_path.relative_to(repo_root)),
+        "required_descriptor_fields": list(required_descriptor_fields),
+        "required_descriptor_field_modes": dict(required_descriptor_field_modes),
         "family_count": len(family_status_rows),
         "family_ids": [row["family_id"] for row in family_status_rows],
         "family_status_rows": family_status_rows,

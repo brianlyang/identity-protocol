@@ -6,6 +6,7 @@ philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
 validator_script: scripts/validate_protocol_root_identity_instance_self_judgement.py
 probe_script: scripts/ci/run_protocol_root_identity_instance_self_judgement_probes_ci.sh
 common_script: scripts/root_identity_instance_self_judgement_common.py
+status_key: protocol_root_identity_instance_self_judgement_status
 registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
 ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
 authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml

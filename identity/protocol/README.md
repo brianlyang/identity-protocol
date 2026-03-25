@@ -291,7 +291,7 @@ Current-turn legality must instead resolve from machine-consumed enforcement sur
 1. a law-bearing root mapping family does not gain canonical status from on-disk presence alone;
 2. a governed root mapping family must appear in the admitted machine-registry child set, normally as a current file plus its active versioned file;
 3. if a root mapping family exists on disk but is absent from that admitted child set, registry completeness has failed and current-turn consumption must fail-close.
-4. an admitted root mapping family must disclose its validator, probe, and shared-common enforcement surfaces to the machine world;
+4. an admitted root mapping family must disclose its validator, probe, shared-common, and emitted status-key enforcement surfaces to the machine world;
 
 Runtime or validator code may consume only admitted root mapping families, not
 the most convenient file discovered on disk.
@@ -321,7 +321,7 @@ Bundle membership must also remain descriptor-concordant with the admitted
 component families it binds.
 
 A bundle row may not silently drift from a component family's own disclosed
-validator, probe, or shared-common surfaces.
+validator, probe, shared-common, or emitted status-key surfaces.
 
 ---
 

@@ -8,6 +8,7 @@ authority_current_file: identity/protocol/mappings/root-corpus-authority.current
 validator_script: scripts/validate_protocol_root_corpus_question_routing.py
 probe_script: scripts/ci/run_protocol_root_corpus_question_routing_probes_ci.sh
 common_script: scripts/root_corpus_question_routing_common.py
+status_key: protocol_root_corpus_question_routing_status
 question_routing_anchor_checks:
 - rel_path: identity/protocol/README.md
   required_markers:

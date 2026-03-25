@@ -8,6 +8,7 @@ registry_current_file: identity/protocol/mappings/root-corpus-registry.current.y
 validator_script: scripts/validate_protocol_root_design_question_closure.py
 probe_script: scripts/ci/run_protocol_root_design_question_closure_probes_ci.sh
 common_script: scripts/root_design_question_closure_common.py
+status_key: protocol_root_design_question_closure_status
 required_question_closure_rows:
   - order: 1
     question_id: ontology
