@@ -1179,6 +1179,22 @@ def main() -> int:
     else:
         failures.append("[MISSING_SCRIPT] scripts/validate_release_doc_surface_governance.py not found")
 
+    audit_snapshot_index_script = repo_root / "scripts/validate_audit_snapshot_index.py"
+    if audit_snapshot_index_script.exists():
+        proc = subprocess.run(
+            [sys.executable, str(audit_snapshot_index_script), "--repo-root", str(repo_root)],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+        )
+        if proc.returncode != 0:
+            failures.append(
+                "[AUDIT_SNAPSHOT_INDEX_FAIL] "
+                + (proc.stdout.strip() or proc.stderr.strip() or "validate_audit_snapshot_index failed")
+            )
+    else:
+        failures.append("[MISSING_SCRIPT] scripts/validate_audit_snapshot_index.py not found")
+
     # Round-29.5: enforce doc evidence persistence policy
     evidence_policy_script = repo_root / "scripts/validate_doc_evidence_persistence.py"
     if evidence_policy_script.exists():

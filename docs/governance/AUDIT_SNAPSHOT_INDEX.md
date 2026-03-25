@@ -24,6 +24,11 @@ Quick entrypoint for audit history and remediation closure records.
   - **Current-state authoritative set** = `stream_docs + mandatory_static_docs` resolved from `identity/protocol/mappings/stream-doc-registry.current.yaml`.
   - Any other entries in this index are archival/context references unless explicitly promoted into that registry set.
   - If archival wording conflicts with current-pointer mappings or active stream docs, archival wording is stale by definition.
+- Canonical current release-boundary surfaces:
+  - `docs/release/identity-v1.6x-release-closure-summary.md`
+  - `docs/governance/identity-v1.6x-release-closure-governance.md`
+  - `docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md`
+  - Historical `docs/release/v1-roadmap.md` and `docs/release/v1.0.0-release-notes.md` remain archival only and must not be used as current release-boundary authority.
 - Canonical layer-targeted required-gate profile mapping (scan/inspection-only trims; strict operations stay full):
   - `identity/protocol/mappings/layer-targeted-gate-profile.current.yaml`
 - Canonical loop visual atlas (current visual reference surface with fixed in-repo asset root):
@@ -105,8 +110,13 @@ Quick entrypoint for audit history and remediation closure records.
 - Canonical identity broadcast/communication convergence governance (v1.6.20 stream):
   - `docs/governance/identity-broadcast-communication-convergence-governance-v1.6.20.md`
   - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.20-broadcast-communication-convergence.md`
+- Canonical identity terminal-truth cleanliness governance (v1.6.21 stream):
+  - `docs/governance/identity-terminal-truth-cleanliness-governance-v1.6.21.md`
+  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.21-terminal-truth-cleanliness.md`
 
 ## Snapshots
+
+All audit-snapshot entries listed in this section are archival snapshots only. They preserve audit history, but they do not replace the current-state authoritative set resolved through `identity/protocol/mappings/stream-doc-registry.current.yaml` and the current release-boundary surfaces listed above.
 
 - `docs/governance/audit-snapshot-2026-02-21.md` — consolidated closure for PR #8/#9/#10/#11/#12 and residual-risk follow-up
 - `docs/governance/audit-snapshot-2026-02-21-control-loop-v1.4.0.md` — control-loop contract integration evidence (orchestration/knowledge/experience/ci-enforcement)
@@ -146,3 +156,4 @@ Quick entrypoint for audit history and remediation closure records.
 - `docs/governance/identity-artifact-family-routing-governance-v1.6.18.md` — v1.6.18 dedicated routing stream for freezing the protocol-scoped artifact-family matrix across pack rulebook, pack task-history, dialogue-governance, experience-feedback, protocol-feedback, continuity/reentry, and memory-absorption quarantine surfaces so they cannot collapse back into generic "memory" wording.
 - `docs/governance/identity-weak-live-linkage-governance-v1.6.19.md` — v1.6.19 additive strengthening stream, opened from the tool/vendor trio path and canonicalized as the protocol-owned weak-live-linkage governance method across trio, prompt, sample, and loop-consumer lanes, without reopening `v1.6.17` or `v1.6.18`.
 - `docs/governance/identity-broadcast-communication-convergence-governance-v1.6.20.md` — v1.6.20 additive convergence stream for protocol-owned fleet adoption of dedicated broadcast delivery plus aggregate identity communication transport, using shared backfill/runner/closure-checker infrastructure rather than pack-local replay recipes or transport-to-memory collapse.
+- `docs/governance/identity-terminal-truth-cleanliness-governance-v1.6.21.md` — v1.6.21 additive terminal-truth stream for machine-owned separation of execution closure, clean terminal truth, and canonical publishability, with explicit negative-feedback veto semantics and shared create/backfill/fresh-run projection closure.
