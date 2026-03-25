@@ -163,6 +163,13 @@ from identity_weak_live_linkage_common import (
     canonicalize_weak_live_linkage_contract_doc as _canonicalize_weak_live_linkage_contract_doc,
     weak_live_linkage_contract_skeleton as _weak_live_linkage_contract_skeleton,
 )
+from terminal_truth_cleanliness_common import (
+    TERMINAL_TRUTH_CLEANLINESS_CONTRACT_ID as COMMON_TERMINAL_TRUTH_CLEANLINESS_CONTRACT_ID,
+    TERMINAL_TRUTH_CLEANLINESS_CONTRACT_KEY as COMMON_TERMINAL_TRUTH_CLEANLINESS_CONTRACT_KEY,
+    TERMINAL_TRUTH_CLEANLINESS_VALIDATOR_ID as COMMON_TERMINAL_TRUTH_CLEANLINESS_VALIDATOR_ID,
+    canonicalize_terminal_truth_cleanliness_contract_doc as _canonicalize_terminal_truth_cleanliness_contract_doc,
+    terminal_truth_cleanliness_contract_skeleton as _terminal_truth_cleanliness_contract_skeleton,
+)
 from prompt_live_driver_binding_common import (
     merge_prompt_live_driver_binding_contract_defaults as _merge_prompt_live_driver_binding_contract_defaults,
 )
@@ -833,6 +840,7 @@ def _minimal_current_task(
     task = _ensure_dialogue_retention_contract(task)
     task = _ensure_artifact_family_routing_contract(task)
     task = _ensure_weak_live_linkage_contract(task)
+    task = _ensure_terminal_truth_cleanliness_contract(task)
     task = _ensure_tool_vendor_governance_contracts(task, identity_id)
     task = _ensure_instance_pack_topology_contract(task, identity_id)
     return _ensure_identity_codex_launcher_contract(task, identity_id)
@@ -870,6 +878,18 @@ def _ensure_weak_live_linkage_contract(task: dict) -> dict:
             _deep_merge_defaults(base, cur)
         )
     ensure_weak_live_route_contracts(task)
+    return task
+
+
+def _ensure_terminal_truth_cleanliness_contract(task: dict) -> dict:
+    base = _terminal_truth_cleanliness_contract_skeleton()
+    cur = task.get(COMMON_TERMINAL_TRUTH_CLEANLINESS_CONTRACT_KEY)
+    if not isinstance(cur, dict):
+        task[COMMON_TERMINAL_TRUTH_CLEANLINESS_CONTRACT_KEY] = base
+        return task
+    task[COMMON_TERMINAL_TRUTH_CLEANLINESS_CONTRACT_KEY] = _canonicalize_terminal_truth_cleanliness_contract_doc(
+        _deep_merge_defaults(base, cur)
+    )
     return task
 
 

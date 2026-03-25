@@ -148,6 +148,14 @@ from identity_weak_live_linkage_common import (
     canonicalize_weak_live_linkage_contract_doc,
     weak_live_linkage_contract_skeleton,
 )
+from terminal_truth_cleanliness_common import (
+    TERMINAL_TRUTH_CLEANLINESS_CONTRACT_ID,
+    TERMINAL_TRUTH_CLEANLINESS_CONTRACT_KEY,
+    TERMINAL_TRUTH_CLEANLINESS_VALIDATOR_ID,
+    canonicalize_terminal_truth_cleanliness_contract_doc,
+    project_terminal_truth_fields,
+    terminal_truth_cleanliness_contract_skeleton,
+)
 from strict_live_evidence_resolution_common import merge_strict_live_contract_defaults
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 from identity_codex_launcher_common import (
@@ -249,6 +257,10 @@ REQUIRED_WEAK_LIVE_LINKAGE_KEYS = (
     WEAK_LIVE_LINKAGE_CONTRACT_KEY,
 )
 
+REQUIRED_TERMINAL_TRUTH_CLEANLINESS_KEYS = (
+    TERMINAL_TRUTH_CLEANLINESS_CONTRACT_KEY,
+)
+
 PROMPT_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     "prompt_bootstrap_capability_contract_v1": _prompt_bootstrap_capability_contract_skeleton(),
     "prompt_capability_matrix_fail_closed_contract_v1": _prompt_capability_matrix_contract_skeleton(),
@@ -298,6 +310,9 @@ ARTIFACT_FAMILY_ROUTING_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
 }
 WEAK_LIVE_LINKAGE_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     WEAK_LIVE_LINKAGE_CONTRACT_KEY: weak_live_linkage_contract_skeleton(),
+}
+TERMINAL_TRUTH_CLEANLINESS_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
+    TERMINAL_TRUTH_CLEANLINESS_CONTRACT_KEY: terminal_truth_cleanliness_contract_skeleton(),
 }
 SKILL_SUPPLY_CHAIN_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     "tool_installation_contract": _tool_installation_contract_skeleton("default"),
@@ -1073,6 +1088,11 @@ def _safe_dump_yaml(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(yaml.safe_dump(payload, sort_keys=False, allow_unicode=True), encoding="utf-8")
 
 
+def _write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def _jsonl_has_required_fields(path: Path, required_fields: list[str]) -> bool:
     if not path.exists():
         return False
@@ -1652,6 +1672,37 @@ def _normalize_weak_live_linkage_contracts(task: dict[str, Any]) -> tuple[list[s
         task[key] = merged
         if str(merged.get("validator", "")).strip() != WEAK_LIVE_LINKAGE_VALIDATOR_ID:
             merged["validator"] = WEAK_LIVE_LINKAGE_VALIDATOR_ID
+            restored_validator_keys.append(key)
+    return restored_contract_keys, restored_validator_keys
+
+
+def _terminal_truth_cleanliness_contract_invalid_keys(task: dict[str, Any]) -> list[str]:
+    invalid: list[str] = []
+    contract = task.get(TERMINAL_TRUTH_CLEANLINESS_CONTRACT_KEY)
+    if isinstance(contract, dict):
+        if str(contract.get("contract_id", "")).strip() != TERMINAL_TRUTH_CLEANLINESS_CONTRACT_ID:
+            invalid.append(TERMINAL_TRUTH_CLEANLINESS_CONTRACT_KEY)
+        if str(contract.get("validator", "")).strip() != TERMINAL_TRUTH_CLEANLINESS_VALIDATOR_ID:
+            invalid.append(TERMINAL_TRUTH_CLEANLINESS_CONTRACT_KEY)
+    return sorted(set(invalid))
+
+
+def _normalize_terminal_truth_cleanliness_contracts(task: dict[str, Any]) -> tuple[list[str], list[str]]:
+    restored_contract_keys: list[str] = []
+    restored_validator_keys: list[str] = []
+    for key, default in TERMINAL_TRUTH_CLEANLINESS_CONTRACT_DEFAULTS.items():
+        node = task.get(key)
+        if not isinstance(node, dict):
+            task[key] = json.loads(json.dumps(default))
+            restored_contract_keys.append(key)
+            restored_validator_keys.append(key)
+            continue
+        merged = canonicalize_terminal_truth_cleanliness_contract_doc(_deep_merge(node, default))
+        if merged != node:
+            restored_contract_keys.append(key)
+        task[key] = merged
+        if str(merged.get("validator", "")).strip() != TERMINAL_TRUTH_CLEANLINESS_VALIDATOR_ID:
+            merged["validator"] = TERMINAL_TRUTH_CLEANLINESS_VALIDATOR_ID
             restored_validator_keys.append(key)
     return restored_contract_keys, restored_validator_keys
 
@@ -2549,6 +2600,9 @@ def main() -> int:
     dialogue_retention_missing_before = [k for k in REQUIRED_DIALOGUE_RETENTION_KEYS if not isinstance(task_doc.get(k), dict)]
     artifact_family_routing_missing_before = [k for k in REQUIRED_ARTIFACT_FAMILY_ROUTING_KEYS if not isinstance(task_doc.get(k), dict)]
     weak_live_linkage_missing_before = [k for k in REQUIRED_WEAK_LIVE_LINKAGE_KEYS if not isinstance(task_doc.get(k), dict)]
+    terminal_truth_cleanliness_missing_before = [
+        k for k in REQUIRED_TERMINAL_TRUTH_CLEANLINESS_KEYS if not isinstance(task_doc.get(k), dict)
+    ]
     prompt_missing_before = [k for k in REQUIRED_PROMPT_KEYS if not isinstance(task_doc.get(k), dict)]
     multimodal_missing_before = [k for k in REQUIRED_MULTIMODAL_KEYS if not isinstance(task_doc.get(k), dict)]
     reasoning_missing_before = [k for k in REQUIRED_REASONING_KEYS if not isinstance(task_doc.get(k), dict)]
@@ -2581,6 +2635,10 @@ def main() -> int:
     restored_dialogue_retention_contract_keys, restored_dialogue_retention_validator_keys = _normalize_dialogue_retention_contracts(updated)
     restored_artifact_family_routing_contract_keys, restored_artifact_family_routing_validator_keys = _normalize_artifact_family_routing_contracts(updated)
     restored_weak_live_linkage_contract_keys, restored_weak_live_linkage_validator_keys = _normalize_weak_live_linkage_contracts(updated)
+    (
+        restored_terminal_truth_cleanliness_contract_keys,
+        restored_terminal_truth_cleanliness_validator_keys,
+    ) = _normalize_terminal_truth_cleanliness_contracts(updated)
     restored_strict_live_evidence_contract_keys = _normalize_strict_live_evidence_contracts(updated)
     updated["response_stamp_profile"] = normalize_response_stamp_profile(updated.get("response_stamp_profile"))
     restored_skill_supply_chain_contract_keys = _normalize_skill_supply_chain_contracts(updated, args.identity_id)
@@ -2641,6 +2699,9 @@ def main() -> int:
     dialogue_retention_missing_after = [k for k in REQUIRED_DIALOGUE_RETENTION_KEYS if not isinstance(updated.get(k), dict)]
     artifact_family_routing_missing_after = [k for k in REQUIRED_ARTIFACT_FAMILY_ROUTING_KEYS if not isinstance(updated.get(k), dict)]
     weak_live_linkage_missing_after = [k for k in REQUIRED_WEAK_LIVE_LINKAGE_KEYS if not isinstance(updated.get(k), dict)]
+    terminal_truth_cleanliness_missing_after = [
+        k for k in REQUIRED_TERMINAL_TRUTH_CLEANLINESS_KEYS if not isinstance(updated.get(k), dict)
+    ]
     response_stamp_profile_present_after = isinstance(updated.get("response_stamp_profile"), dict)
     response_stamp_profile_after = normalize_response_stamp_profile(updated.get("response_stamp_profile"))
     response_stamp_profile_changed = (
@@ -2677,6 +2738,7 @@ def main() -> int:
     dialogue_retention_invalid_after = _dialogue_retention_contract_invalid_keys(updated)
     artifact_family_routing_invalid_after = _artifact_family_routing_contract_invalid_keys(updated)
     weak_live_linkage_invalid_after = _weak_live_linkage_contract_invalid_keys(updated)
+    terminal_truth_cleanliness_invalid_after = _terminal_truth_cleanliness_contract_invalid_keys(updated)
     blocker_surface_missing_after = blocker_surface_backfill.get("missing_surfaces") or []
     blocker_surface_invalid_after = blocker_surface_backfill.get("invalid_blockers_by_surface") or {}
     blocker_surface_applicable = bool(blocker_surface_backfill.get("applicable", False))
@@ -3138,6 +3200,7 @@ def main() -> int:
     active_execution_context = resolve_active_execution_context(pack_path)
     active_report_path_token = str(active_execution_context.get("report_path", "")).strip()
     current_run_live_projection_result: dict[str, Any]
+    current_run_terminal_truth_projection_result: dict[str, Any]
     if active_report_path_token:
         try:
             active_report_path = Path(active_report_path_token).expanduser().resolve()
@@ -3154,6 +3217,26 @@ def main() -> int:
                 active_report_doc=active_report_doc,
                 apply=args.apply,
             )
+            projected_report_doc = project_terminal_truth_fields(
+                load_json(active_report_path) if active_report_path.exists() else active_report_doc
+            )
+            terminal_truth_report_changed = projected_report_doc != (
+                load_json(active_report_path) if active_report_path.exists() else active_report_doc
+            )
+            if args.apply and terminal_truth_report_changed and active_report_path.exists():
+                _write_json(active_report_path, projected_report_doc)
+            current_run_terminal_truth_projection_result = {
+                "current_run_terminal_truth_projection_status": STATUS_PASS_REQUIRED,
+                "active_run_present": True,
+                "active_run_id": str(active_execution_context.get("run_id", "")).strip(),
+                "report_changed": bool(terminal_truth_report_changed),
+                "report_selected_path": str(active_report_path),
+                "terminal_truth_status": str(
+                    projected_report_doc.get("identity_terminal_truth_cleanliness_status", "")
+                ).strip(),
+                "terminal_truth_class": str(projected_report_doc.get("terminal_truth_class", "")).strip(),
+                "stale_reasons": [],
+            }
         except Exception as exc:
             current_run_live_projection_result = {
                 "current_run_live_projection_status": STATUS_FAIL_REQUIRED,
@@ -3169,6 +3252,17 @@ def main() -> int:
                 "stale_reasons": [f"projection_exception:{type(exc).__name__}"],
                 "exception_message": str(exc),
             }
+            current_run_terminal_truth_projection_result = {
+                "current_run_terminal_truth_projection_status": STATUS_FAIL_REQUIRED,
+                "active_run_present": True,
+                "active_run_id": str(active_execution_context.get("run_id", "")).strip(),
+                "report_changed": False,
+                "report_selected_path": active_report_path_token,
+                "terminal_truth_status": "",
+                "terminal_truth_class": "",
+                "stale_reasons": [f"projection_exception:{type(exc).__name__}"],
+                "exception_message": str(exc),
+            }
     else:
         current_run_live_projection_result = {
             "current_run_live_projection_status": STATUS_SKIPPED_NOT_REQUIRED,
@@ -3181,6 +3275,16 @@ def main() -> int:
             "sample_live_report_paths": {},
             "feedback_log_path": "",
             "route_projection_paths": {},
+            "stale_reasons": ["active_execution_report_missing"],
+        }
+        current_run_terminal_truth_projection_result = {
+            "current_run_terminal_truth_projection_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "active_run_present": False,
+            "active_run_id": "",
+            "report_changed": False,
+            "report_selected_path": "",
+            "terminal_truth_status": "",
+            "terminal_truth_class": "",
             "stale_reasons": ["active_execution_report_missing"],
         }
 
@@ -3202,6 +3306,7 @@ def main() -> int:
         or bool(handoff_selftest_assets_result.get("backfilled_files"))
         or bool(current_run_live_projection_result.get("task_changed"))
         or bool(current_run_live_projection_result.get("report_changed"))
+        or bool(current_run_terminal_truth_projection_result.get("report_changed"))
         or bool(current_run_live_projection_result.get("artifacts_written"))
     )
     applied = False
@@ -3356,6 +3461,19 @@ def main() -> int:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-WLL-PRJ-001"
         stale_reasons = ["current_run_weak_live_projection_failed"]
+    elif (
+        bool(current_run_terminal_truth_projection_result.get("active_run_present"))
+        and str(
+            current_run_terminal_truth_projection_result.get(
+                "current_run_terminal_truth_projection_status",
+                "",
+            )
+        ).strip().upper()
+        == STATUS_FAIL_REQUIRED
+    ):
+        status = STATUS_FAIL_REQUIRED
+        error_code = "IP-TTC-001"
+        stale_reasons = ["current_run_terminal_truth_projection_failed"]
     elif legacy_drift_after:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-CBKF-002"
@@ -3425,6 +3543,7 @@ def main() -> int:
         "handoff_runtime_log_backfill": handoff_runtime_log_result,
         "feedback_runtime_log_backfill": feedback_runtime_log_result,
         "current_run_live_projection_backfill": current_run_live_projection_result,
+        "current_run_terminal_truth_projection_backfill": current_run_terminal_truth_projection_result,
         "applied": applied,
         "response_stamp_profile_present_before": response_stamp_profile_present_before,
         "response_stamp_profile_present_after": response_stamp_profile_present_after,
@@ -3452,6 +3571,7 @@ def main() -> int:
         "required_dialogue_retention_contract_keys": list(REQUIRED_DIALOGUE_RETENTION_KEYS),
         "required_artifact_family_routing_contract_keys": list(REQUIRED_ARTIFACT_FAMILY_ROUTING_KEYS),
         "required_weak_live_linkage_contract_keys": list(REQUIRED_WEAK_LIVE_LINKAGE_KEYS),
+        "required_terminal_truth_cleanliness_contract_keys": list(REQUIRED_TERMINAL_TRUTH_CLEANLINESS_KEYS),
         "blocker_surface_backfill": blocker_surface_backfill,
         "blocker_surface_backfill_applicable": blocker_surface_applicable,
         "blocker_surface_missing_after": blocker_surface_missing_after,
@@ -3466,14 +3586,17 @@ def main() -> int:
         "missing_dialogue_retention_contract_keys_before": dialogue_retention_missing_before,
         "missing_artifact_family_routing_contract_keys_before": artifact_family_routing_missing_before,
         "missing_weak_live_linkage_contract_keys_before": weak_live_linkage_missing_before,
+        "missing_terminal_truth_cleanliness_contract_keys_before": terminal_truth_cleanliness_missing_before,
         "missing_continuity_contract_keys_after": continuity_missing_after,
         "missing_dialogue_retention_contract_keys_after": dialogue_retention_missing_after,
         "missing_artifact_family_routing_contract_keys_after": artifact_family_routing_missing_after,
         "missing_weak_live_linkage_contract_keys_after": weak_live_linkage_missing_after,
+        "missing_terminal_truth_cleanliness_contract_keys_after": terminal_truth_cleanliness_missing_after,
         "invalid_continuity_contract_keys_after": continuity_invalid_after,
         "invalid_dialogue_retention_contract_keys_after": dialogue_retention_invalid_after,
         "invalid_artifact_family_routing_contract_keys_after": artifact_family_routing_invalid_after,
         "invalid_weak_live_linkage_contract_keys_after": weak_live_linkage_invalid_after,
+        "invalid_terminal_truth_cleanliness_contract_keys_after": terminal_truth_cleanliness_invalid_after,
         "restored_continuity_contract_keys": restored_continuity_contract_keys,
         "restored_continuity_validator_keys": restored_continuity_validator_keys,
         "restored_dialogue_retention_contract_keys": restored_dialogue_retention_contract_keys,
@@ -3482,6 +3605,8 @@ def main() -> int:
         "restored_artifact_family_routing_validator_keys": restored_artifact_family_routing_validator_keys,
         "restored_weak_live_linkage_contract_keys": restored_weak_live_linkage_contract_keys,
         "restored_weak_live_linkage_validator_keys": restored_weak_live_linkage_validator_keys,
+        "restored_terminal_truth_cleanliness_contract_keys": restored_terminal_truth_cleanliness_contract_keys,
+        "restored_terminal_truth_cleanliness_validator_keys": restored_terminal_truth_cleanliness_validator_keys,
         "restored_strict_live_evidence_contract_keys": restored_strict_live_evidence_contract_keys,
         "required_prompt_contract_keys": list(REQUIRED_PROMPT_KEYS),
         "missing_prompt_contract_keys_before": prompt_missing_before,
@@ -3591,6 +3716,16 @@ def main() -> int:
             ""
             if not weak_live_linkage_missing_after and not weak_live_linkage_invalid_after
             else "IP-WLL-001"
+        ),
+        "terminal_truth_cleanliness_contract_auto_wire_status": (
+            STATUS_PASS_REQUIRED
+            if not terminal_truth_cleanliness_missing_after and not terminal_truth_cleanliness_invalid_after
+            else STATUS_FAIL_REQUIRED
+        ),
+        "terminal_truth_cleanliness_contract_auto_wire_error_code": (
+            ""
+            if not terminal_truth_cleanliness_missing_after and not terminal_truth_cleanliness_invalid_after
+            else "IP-TTC-001"
         ),
         "blocker_surface_auto_wire_status": (
             (

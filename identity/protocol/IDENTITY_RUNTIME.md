@@ -265,6 +265,50 @@ Hard semantics:
 6. The shared `roundtable_four_track_cross_validation_contract_v1` primitive may be reused for route/loop cross-validation intake, but it does not become a fifth loop, a new artifact family, or the semantic owner of runtime truth.
 7. History/sample/meta artifacts may remain valid for sample/self-test, replay, or semantic-center proof, but they must be projected as closure-class evidence rather than silently promoted to strict current-run success.
 
+### rq_056_identity_terminal_truth_cleanliness_contract_v1
+
+Required report fields:
+
+- `identity_terminal_truth_cleanliness_status`
+- `terminal_truth_contract_status`
+- `execution_closure_status`
+- `terminal_truth_cleanliness_status`
+- `terminal_truth_class`
+- `is_terminal_clean`
+- `is_terminal_dirty`
+- `terminal_truth_basis`
+- `terminal_truth_blockers`
+- `negative_feedback_terminal_veto_status`
+- `negative_feedback_class`
+- `feedback_severity`
+- `terminal_veto_required`
+- `terminal_veto_scope`
+- `loopback_required`
+- `loopback_target_stage`
+- `loopback_reason`
+- `pre_terminal_veto_applied`
+- `next_state_after_veto`
+- `canonical_publishable_result_status`
+- `publishable`
+- `publish_blockers`
+- `canonical_result_eligible`
+- `canonical_result_basis`
+- `requires_repair_before_publish`
+- `instance_adoption_terminal_truth_probe_status`
+- `stale_reasons`
+- `error_code`
+
+Hard semantics:
+
+1. `rq_056` is the machine-consumed intake row for `v1.6.21` terminal-truth cleanliness. It preserves lower-layer execution-closure legality while freezing a higher-order machine law for clean terminal truth and canonical publishability.
+2. Execution closure truth and clean terminal truth must stay distinct:
+   - a report may be execution-closed,
+   - yet still non-clean and non-publishable.
+3. Review-required execution closure may remain legal when inherited writeback/post-execution contracts say so; however, review-required negative feedback vetoes clean terminal truth and canonical publishability.
+4. Dirty-signal families such as degraded writeback, deferred writeback status, `all_ok=false`, `next_recovery_action`, placeholder outputs, unresolved contradictions, and confidence-below-floor must veto clean terminal truth without retroactively rewriting lower-layer execution-closure truth.
+5. Canonical publishability requires clean terminal truth. Dirty terminal states must remain non-publishable even when execution closure is legal.
+6. Instance/runtime payloads must not project `is_terminal_clean=true`, `publishable=true`, or `canonical_result_eligible=true` while governed dirty signals remain active; such drift is a protocol-side fail-close condition.
+
 ## Batch-6 anchor placeholders (v1.6 intake, non-promotional)
 
 The following sections provide stable kernel anchors for v1.6 Batch-6 mapping rows.

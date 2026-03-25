@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 99`, `command snippets checked: 1032`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 101`, `command snippets checked: 1060`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -1112,6 +1112,45 @@ Root cause:
   - `python3 scripts/check_identity_communication_transport_closure.py --catalog ../.identity/catalog.local.yaml --workspace-runtime-only --json-only` returns `PASS_REQUIRED`;
   - direct runtime replay on `base-repo-audit-expert-v3` through `python3 scripts/repair_contract_backfill.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --apply --json-only` followed by `python3 scripts/run_identity_communication_transport.py --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-id base-repo-audit-expert-v3 --json-only` now returns `PASS_REQUIRED` with green `broadcast_sync_executor_status`, `atomic_emit_bootstrap_status`, and `transport_projection_status`;
   - the same shared backfill + shared convergence lane also replays green on `custom-creative-ecom-analyst`, `base-repo-architect`, and `base-repo-closure-orchestrator`, proving this stream closes as shared infrastructure rather than a one-pack workaround.
+
+### ISSUE-039 - Terminal clean truth / canonical publishability / negative-feedback veto are now protocol-owned machine law
+
+- `status`: CLOSED
+- `problem_statement`: lower-layer execution closure already had legitimate strict non-upgrade and review-required closure branches, but the protocol still lacked one higher-order machine contract to decide whether a closed execution may occupy clean terminal truth or canonical publishable-result semantics. That left dirty terminal states vulnerable to “done enough” misreadings even when execution closure itself was legal.
+- `primary_owner_doc`: `docs/governance/identity-terminal-truth-cleanliness-governance-v1.6.21.md`
+- `secondary_refs`:
+  - `docs/review/protocol-remediation-audit-ledger-v1.6.21-terminal-truth-cleanliness.md`
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
+  - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+  - `identity/protocol/IDENTITY_PROTOCOL.md`
+  - `identity/protocol/IDENTITY_RUNTIME.md`
+  - `identity/protocol/mappings/semantic-term-registry.v1.6.yaml`
+- `machine_gate`:
+  - `scripts/terminal_truth_cleanliness_common.py`
+  - `scripts/validate_terminal_truth_cleanliness.py`
+  - `scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh`
+  - `scripts/create_identity_pack.py`
+  - `scripts/repair_contract_backfill.py`
+  - `scripts/execute_identity_upgrade.py`
+  - `scripts/required_gate_bundle_runner.py`
+  - `scripts/validate_required_contract_coverage.py`
+  - `scripts/ci/run_required_runtime_gates_ci.sh`
+- `root_cause`: RC-01 and RC-06
+- `stop_condition`:
+  - execution closure truth remains preserved and distinct from clean terminal truth;
+  - negative feedback vetoes clean terminal truth / canonical publishability without falsely rewriting every review-required execution closure into “execution invalid”;
+  - create/backfill/fresh-run producer lanes all emit one shared terminal-truth projection family;
+  - clean fixture proof passes and dirty fixtures fail-close on the higher-order lane;
+  - runtime dirty reports become machine-visible dirty terminal states instead of surviving as quasi-clean terminal truth.
+- `current_evidence`:
+  - `bash scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh` now passes with:
+    - clean fixture -> `identity_terminal_truth_cleanliness_status=PASS_REQUIRED`
+    - review-required fixture -> `execution_closure_status=PASS_REQUIRED`, `terminal_truth_class=review_required_execution_closure`, `publishable=false`
+    - degraded fixture -> `negative_feedback_class=degraded_execution`, `loopback_required=true`, `next_state_after_veto=revalidation_pending`;
+  - `scripts/create_identity_pack.py` now auto-wires `identity_terminal_truth_cleanliness_contract_v1` for new packs;
+  - `scripts/repair_contract_backfill.py` now backfills the same contract for adopted packs and projects the higher-order terminal-truth fields onto the active execution report;
+  - `scripts/execute_identity_upgrade.py` now emits the same projection family on fresh runs;
+  - direct runtime replay on the current workspace-local `base-repo-audit-expert-v3` execution report now fail-closes as non-clean terminal truth because the active report is still pre-mutation-gate blocked (`all_ok=false`, `writeback_status=MISSING`, `next_action=satisfy_pre_mutation_gate_and_rerun_update`), which is the intended new machine judgment.
 
 ## 5) Architecture reinforcement intake (non-reopen, workbook-routed)
 

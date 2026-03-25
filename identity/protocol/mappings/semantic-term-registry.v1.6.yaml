@@ -359,6 +359,20 @@ terms:
       - runtime_contract
       - stream_v1_6_20
 
+  - term_id: identity_terminal_truth_cleanliness
+    canonical_term: identity_terminal_truth_cleanliness
+    aliases:
+      - "terminal truth cleanliness"
+      - "clean terminal truth"
+      - "canonical publishability veto"
+      - "终态真值清洁度"
+    semantics: "Higher-order protocol lane that distinguishes execution closure truth from clean terminal truth and canonical publishability. Dirty signals may veto clean terminal truth and publishability without retroactively invalidating the lower execution-closure truth."
+    allowed_scope:
+      - governance
+      - review
+      - runtime_contract
+      - stream_v1_6_21
+
 forbidden_phrases:
   - phrase: "multi-active state is a protocol violation"
     replacement: "catalog_multi_active is allowed; enforce session_primary_binding in strict lanes"
@@ -443,6 +457,10 @@ forbidden_phrases:
   - phrase: "runtime/memory-absorption may satisfy active protocol obligations"
     replacement: "runtime_memory_absorption_family is quarantine/re-materialization only"
     rationale: "Prevents absorbed legacy material from re-entering active success-path semantics."
+
+  - phrase: "review required means execution closure is invalid"
+    replacement: "review-required execution closure may remain legal while clean_terminal_truth and canonical_publishability are vetoed"
+    rationale: "Prevents higher-order terminal-truth veto semantics from collapsing the lower execution-closure truth."
 
   - phrase: "reject_memory_gate is the memory storage path"
     replacement: "declaration_gate_not_artifact_family: reject_memory_gate is a control gate, not a sink"

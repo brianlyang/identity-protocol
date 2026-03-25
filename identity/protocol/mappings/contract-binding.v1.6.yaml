@@ -4,8 +4,8 @@ _meta:
   schema_version: 1
   source_layer: protocol
   lifecycle_state: phase6_full_requirement_projection
-  last_updated_utc: "2026-03-24T10:35:00Z"
-  row_count: 55
+  last_updated_utc: "2026-03-25T02:20:00Z"
+  row_count: 56
   notes:
     - "Phase-1 mapping seed for ASB16-RQ-017..022/030."
     - "Phase-2 extension adds prompt-kernel rows for ASB16-RQ-014/015/027/031."
@@ -26,6 +26,7 @@ _meta:
     - "2026-03-23 v1.6.18 whole-matrix routing closure adds RQ-052 for protocol-owned artifact-family routing enforcement across the frozen eight-family matrix."
     - "2026-03-24 v1.6.20 broadcast/transport convergence adds RQ-053 dedicated broadcast-delivery adoption and RQ-054 aggregate identity-communication-transport closure."
     - "2026-03-24 v1.6.19 weak-live-linkage landing adds RQ-055 for differential audit of contract/artifact/run-binding/consumption closure against false-green families."
+    - "2026-03-25 v1.6.21 terminal-truth-cleanliness landing adds RQ-056 for machine-owned separation of execution closure, clean terminal truth, and canonical publishability veto semantics."
     - "Rows intentionally use canonical five-link tuple fields required by governance 4.15."
     - "Validator scripts referenced here may be planned-only until implementation commits land."
 
@@ -1803,3 +1804,62 @@ asb16-rq-055:
     - IP-WLL-001
     - IP-WLL-002
   mapping_state: phase6_v1619_differential_audit_machine_landing
+
+asb16-rq-056:
+  requirement_id: ASB16-RQ-056
+  kernel_contract_id: rq_056_identity_terminal_truth_cleanliness_contract_v1
+  kernel_source_path: docs/governance/identity-terminal-truth-cleanliness-governance-v1.6.21.md#6-machine-law-landing-target-asb16-rq-056-2026-03-25
+  shared_primitive_refs:
+    - negative_feedback_terminal_veto_contract_v1
+    - canonical_publishable_result_gate_contract_v1
+    - instance_adoption_terminal_truth_probe_contract_v1
+  validator_ids:
+    - scripts/validate_terminal_truth_cleanliness.py
+    - scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh
+    - scripts/validate_post_execution_mandatory.py
+    - scripts/validate_writeback_continuity.py
+  gate_surfaces:
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-terminal-truth-cleanliness-governance-v1.6.21.md#6-machine-law-landing-target-asb16-rq-056-2026-03-25
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.21-terminal-truth-cleanliness.md#5-machine-law-landing-target-asb16-rq-056-2026-03-25
+  report_field_refs:
+    - identity_terminal_truth_cleanliness_status
+    - terminal_truth_contract_status
+    - execution_closure_status
+    - terminal_truth_cleanliness_status
+    - terminal_truth_class
+    - is_terminal_clean
+    - is_terminal_dirty
+    - terminal_truth_basis
+    - terminal_truth_blockers
+    - negative_feedback_terminal_veto_status
+    - negative_feedback_class
+    - feedback_severity
+    - terminal_veto_required
+    - terminal_veto_scope
+    - loopback_required
+    - loopback_target_stage
+    - loopback_reason
+    - pre_terminal_veto_applied
+    - next_state_after_veto
+    - canonical_publishable_result_status
+    - publishable
+    - publish_blockers
+    - canonical_result_eligible
+    - canonical_result_basis
+    - requires_repair_before_publish
+    - instance_adoption_terminal_truth_probe_status
+    - post_execution_mandatory_status
+    - writeback_continuity_status
+    - report_selected_path
+    - support_validator_mode
+    - stale_reasons
+    - error_code
+  error_code_refs:
+    - IP-TTC-001
+    - IP-TTC-002
+  mapping_state: phase6_v1621_terminal_truth_cleanliness_machine_closure

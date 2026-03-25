@@ -343,3 +343,15 @@ strict_docs:
     allowed_activity_patterns:
       - '^activity/evidence/v1620-identity-broadcast-communication-convergence/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
       - '^activity/evidence/v1620-identity-broadcast-communication-convergence/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
+
+  docs/governance/identity-terminal-truth-cleanliness-governance-v1.6.21.md:
+    max_activity_refs: 20
+    allowed_activity_patterns:
+      - '^activity/evidence/v1621-terminal-truth-cleanliness/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v1621-terminal-truth-cleanliness/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
+
+  docs/review/protocol-remediation-audit-ledger-v1.6.21-terminal-truth-cleanliness.md:
+    max_activity_refs: 20
+    allowed_activity_patterns:
+      - '^activity/evidence/v1621-terminal-truth-cleanliness/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v1621-terminal-truth-cleanliness/\d{4}-\d{2}-\d{2}/.+_summary\.json$'

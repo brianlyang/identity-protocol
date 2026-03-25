@@ -704,6 +704,7 @@ def _ensure_multimodal_runtime_fields(report: dict[str, Any], *, pack_path: Path
 
 def _write_report_with_pointer(*, report_path: Path, data: dict[str, Any], pack_path: Path, run_id: str) -> None:
     from weak_live_current_run_projection_common import materialize_current_run_weak_live_projection
+    from terminal_truth_cleanliness_common import project_terminal_truth_fields
 
     enriched = _ensure_multimodal_runtime_fields(dict(data), pack_path=pack_path, run_id=run_id)
     _write_json(report_path, enriched)
@@ -731,6 +732,11 @@ def _write_report_with_pointer(*, report_path: Path, data: dict[str, Any], pack_
         failure_doc["weak_live_current_run_projection_status"] = STATUS_FAIL_REQUIRED
         failure_doc["weak_live_current_run_projection_error"] = f"{type(exc).__name__}:{exc}"
         _write_json(report_path, failure_doc)
+    try:
+        final_doc = _load_json(report_path) if report_path.exists() else dict(enriched)
+        _write_json(report_path, project_terminal_truth_fields(final_doc))
+    except Exception:
+        pass
 
 
 def _resolve_pack(catalog_path: Path, identity_id: str) -> Path:

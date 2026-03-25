@@ -150,3 +150,11 @@ streams:
     forbidden_requirement_ids: []
     forbidden_path_tokens:
       - "runtime/memory-absorption"
+
+  - stream_version: v1.6.21
+    scope_topic: identity_terminal_truth_cleanliness
+    allowed_requirement_ids:
+      - ASB16-RQ-056
+    forbidden_requirement_ids: []
+    forbidden_path_tokens:
+      - "runtime/memory-absorption"

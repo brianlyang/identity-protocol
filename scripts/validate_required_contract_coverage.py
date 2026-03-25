@@ -30,6 +30,10 @@ from identity_weak_live_linkage_common import (
     WEAK_LIVE_LINKAGE_CONTRACT_ID,
     WEAK_LIVE_LINKAGE_CONTRACT_KEY,
 )
+from terminal_truth_cleanliness_common import (
+    TERMINAL_TRUTH_CLEANLINESS_CONTRACT_ID,
+    TERMINAL_TRUTH_CLEANLINESS_CONTRACT_KEY,
+)
 from response_stamp_common import resolve_layer_intent
 from tool_vendor_governance_common import (
     contract_required,
@@ -113,6 +117,7 @@ STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_identity_dialogue_retention.py": "protocol_dialogue_retention_status",
     "scripts/validate_identity_artifact_family_routing.py": "artifact_family_routing_status",
     "scripts/validate_identity_weak_live_linkage.py": "identity_weak_live_linkage_status",
+    "scripts/validate_terminal_truth_cleanliness.py": "identity_terminal_truth_cleanliness_status",
 }
 PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "release_plane_cloud_evidence",
@@ -151,6 +156,7 @@ PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "identity_dialogue_retention",
     "identity_artifact_family_routing",
     "identity_weak_live_linkage",
+    "identity_terminal_truth_cleanliness",
     "dedup_monotonicity",
     "cross_workflow_schema",
     "skill_path_integrity",
@@ -176,6 +182,7 @@ INSTANCE_STRICT_REQUIRED_FLOOR_TARGET_NAMES = {
     "prompt_derivation_conformance",
     "prompt_kernel_executable_coupling",
     "identity_weak_live_linkage",
+    "identity_terminal_truth_cleanliness",
     "tool_installation",
     "vendor_api_discovery",
     "vendor_api_solution",
@@ -222,6 +229,7 @@ FORCE_REQUIRED_CAPABLE_VALIDATOR_SCRIPTS = {
     "scripts/validate_skill_sync_drift_guard.py",
     "scripts/validate_identity_artifact_family_routing.py",
     "scripts/validate_identity_weak_live_linkage.py",
+    "scripts/validate_terminal_truth_cleanliness.py",
 }
 
 
@@ -670,6 +678,16 @@ TARGETS = (
             WEAK_LIVE_LINKAGE_CONTRACT_ID,
         ),
         validator_script="scripts/validate_identity_weak_live_linkage.py",
+        validator_args=("--json-only",),
+        instance_adopted_protocol_target=True,
+    ),
+    ContractTarget(
+        name="identity_terminal_truth_cleanliness",
+        contract_keys=(
+            TERMINAL_TRUTH_CLEANLINESS_CONTRACT_KEY,
+            TERMINAL_TRUTH_CLEANLINESS_CONTRACT_ID,
+        ),
+        validator_script="scripts/validate_terminal_truth_cleanliness.py",
         validator_args=("--json-only",),
         instance_adopted_protocol_target=True,
     ),
