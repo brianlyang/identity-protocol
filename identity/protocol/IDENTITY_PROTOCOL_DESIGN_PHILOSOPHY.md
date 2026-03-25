@@ -302,6 +302,13 @@ failure.
 A machine-law root remains stable only when these slices are frozen separately,
 cross-validated together, and strengthened without semantic collapse.
 
+That joint governance also requires descriptor concordance across the bundle.
+
+If a root-law bundle row names a component family but drifts from that
+component family's own disclosed validator, probe, or shared-common surfaces,
+the machine world is being asked to trust shadow bundle knowledge instead of
+the admitted family descriptor.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

@@ -85,6 +85,9 @@ enforcement surfaces shaped by that bundle.
 
 Runtime must not select the most convenient slice in isolation.
 
+Runtime must also reject a root-law bundle row whose validator/probe/common
+surfaces drift from the active component descriptor it claims to bind.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

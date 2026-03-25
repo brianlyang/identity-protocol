@@ -317,6 +317,12 @@ If one slice drifts while the others stay green, the root corpus is not
 partially healthy; it has a coherence failure that must fail-close and be
 repaired at the matching root-law layer.
 
+Bundle membership must also remain descriptor-concordant with the admitted
+component families it binds.
+
+A bundle row may not silently drift from a component family's own disclosed
+validator, probe, or shared-common surfaces.
+
 ---
 
 ## Conflict-handling rule

@@ -139,6 +139,10 @@ Strengthening one slice must not silently weaken or bypass another; any
 protocol-root change that alters the bundle requires governed updates in the
 matching mapping, validator, and negative-probe surfaces.
 
+Root-law bundle rows must also remain descriptor-concordant with the active
+component families they bind; bundle metadata may not override or hide a
+component family's own disclosed validator/probe/common surfaces.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

@@ -27,6 +27,55 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "PASS_REQUIRED", payload
 assert payload["component_count"] == 10, payload
 assert all(row["component_status"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
+assert all(
+    all(cell["status"] == "PASS_REQUIRED" for cell in row.get("descriptor_field_rows", []))
+    for row in payload["component_status_rows"]
+), payload
+PY
+
+DESCRIPTOR_REPO="${TMP_ROOT}/descriptor-drift-repo"
+mirror_repo "${DESCRIPTOR_REPO}"
+python3 - <<'PY' "${DESCRIPTOR_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["component_rows"]:
+    if row.get("component_id") == "root_corpus_ordering":
+        row["common_script"] = "scripts/root_corpus_governance_common.py"
+        break
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+DESCRIPTOR_JSON="${TMP_ROOT}/descriptor-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${DESCRIPTOR_REPO}" \
+  --json-only >"${DESCRIPTOR_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor concordance drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${DESCRIPTOR_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_corpus_ordering"
+    and row["reason"] == "common_script_mismatch"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["component_id"] == "root_corpus_ordering"
+    and row["reason"] == "component_descriptor_concordance_failure"
+    and row.get("descriptor_field") == "common_script"
+    for row in payload["bundle_violations"]
+), payload
 PY
 
 COMPONENT_REPO="${TMP_ROOT}/component-drift-repo"

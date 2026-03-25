@@ -28,6 +28,7 @@ class RootLawBundleComponent:
     current_file: str
     validator_script: str
     probe_script: str
+    common_script: str
     status_key: str
 
 
@@ -39,6 +40,10 @@ def _as_str_tuple(value: Any) -> tuple[str, ...]:
     if not isinstance(value, list):
         return ()
     return tuple(token for token in (str(item or "").strip() for item in value) if token)
+
+
+def _as_bool(value: Any) -> bool:
+    return value is True
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -57,6 +62,18 @@ def load_root_corpus_law_bundle(repo_root: Path) -> tuple[dict[str, Any], Path, 
     if not active_path.exists():
         return {}, entry_path, active_path, "active_bundle_missing"
     return _load_yaml(active_path), entry_path, active_path, ""
+
+
+def require_component_descriptor_concordance(bundle_doc: Mapping[str, Any]) -> bool:
+    return _as_bool(bundle_doc.get("require_component_descriptor_concordance"))
+
+
+def required_component_descriptor_fields_from_doc(bundle_doc: Mapping[str, Any]) -> tuple[str, ...]:
+    return _as_str_tuple(bundle_doc.get("required_component_descriptor_fields"))
+
+
+def load_mapping_descriptor(path: Path) -> dict[str, Any]:
+    return _load_yaml(path)
 
 
 def bundle_anchor_checks_from_doc(bundle_doc: Mapping[str, Any]) -> tuple[BundleAnchorCheck, ...]:
@@ -87,12 +104,21 @@ def bundle_components_from_doc(bundle_doc: Mapping[str, Any]) -> tuple[RootLawBu
         current_file = _norm_str(row.get("current_file"))
         validator_script = _norm_str(row.get("validator_script"))
         probe_script = _norm_str(row.get("probe_script"))
+        common_script = _norm_str(row.get("common_script"))
         status_key = _norm_str(row.get("status_key"))
         try:
             order = int(row.get("order"))
         except Exception:
             continue
-        if order <= 0 or not component_id or not current_file or not validator_script or not status_key:
+        if (
+            order <= 0
+            or not component_id
+            or not current_file
+            or not validator_script
+            or not probe_script
+            or not common_script
+            or not status_key
+        ):
             continue
         out.append(
             RootLawBundleComponent(
@@ -102,6 +128,7 @@ def bundle_components_from_doc(bundle_doc: Mapping[str, Any]) -> tuple[RootLawBu
                 current_file=current_file,
                 validator_script=validator_script,
                 probe_script=probe_script,
+                common_script=common_script,
                 status_key=status_key,
             )
         )
