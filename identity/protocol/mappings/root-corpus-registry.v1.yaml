@@ -291,6 +291,8 @@ registered_top_level_entries:
       - 'this file remains the authoritative root-domain contract for stream-design admissibility'
       - '## Admissibility law'
       - '## Five required design questions'
+      - '## Admissibility-proof discipline'
+      - '## Admissibility-proof limits'
       - '## Mandatory projection surfaces'
     forbidden_content_classes:
       - workbook_issue_projection

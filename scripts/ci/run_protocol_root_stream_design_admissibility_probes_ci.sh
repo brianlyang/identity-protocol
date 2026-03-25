@@ -26,8 +26,49 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_stream_design_admissibility_status"] == "PASS_REQUIRED", payload
 assert payload["question_count"] == 5, payload
+assert payload["proof_count"] == 5, payload
+assert payload["limit_count"] == 5, payload
 assert payload["outcome_count"] == 5, payload
 assert payload["projection_surface_count"] == 5, payload
+PY
+
+PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
+mirror_repo "${PROOF_REPO}"
+python3 - <<'PY' "${PROOF_REPO}/identity/protocol/mappings/root-stream-design-admissibility.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_admissibility_proof_rows"] = [
+    row for row in doc["required_admissibility_proof_rows"] if row.get("proof_id") != "answer_surface_closure_proof"
+]
+for idx, row in enumerate(doc["required_admissibility_proof_rows"], start=1):
+    row["order"] = idx
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+PROOF_JSON="${TMP_ROOT}/proof-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_stream_design_admissibility.py" \
+  --repo-root "${PROOF_REPO}" \
+  --json-only >"${PROOF_JSON}"; then
+  echo "[FAIL] root stream-design admissibility validator unexpectedly passed missing proof row"
+  exit 1
+fi
+
+python3 - <<'PY' "${PROOF_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_stream_design_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RSDA-002", payload
+assert any(
+    row["reason"] == "missing_expected_rows" and "answer_surface_closure_proof" in row.get("proof_ids", [])
+    for row in payload["structure_violations"]
+), payload
 PY
 
 QUESTION_REPO="${TMP_ROOT}/question-drift-repo"

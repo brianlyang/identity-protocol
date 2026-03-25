@@ -28,6 +28,21 @@ class OutcomeClassRow:
     outcome_class: str
 
 
+@dataclass(frozen=True)
+class AdmissibilityProofRow:
+    order: int
+    proof_id: str
+    contract_heading: str
+    proof_role: str
+
+
+@dataclass(frozen=True)
+class PhraseRow:
+    order: int
+    row_id: str
+    contract_phrase: str
+
+
 def _norm_str(value: Any) -> str:
     return str(value or "").strip().replace("\\", "/")
 
@@ -100,6 +115,54 @@ def outcome_class_rows_from_doc(admissibility_doc: Mapping[str, Any]) -> tuple[O
         if order <= 0 or not outcome_class:
             continue
         out.append(OutcomeClassRow(order=order, outcome_class=outcome_class))
+    return tuple(out)
+
+
+def admissibility_proof_rows_from_doc(admissibility_doc: Mapping[str, Any]) -> tuple[AdmissibilityProofRow, ...]:
+    rows = admissibility_doc.get("required_admissibility_proof_rows")
+    if not isinstance(rows, list):
+        return ()
+    out: list[AdmissibilityProofRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        proof_id = _norm_str(row.get("proof_id"))
+        contract_heading = str(row.get("contract_heading") or "").strip()
+        proof_role = _norm_str(row.get("proof_role"))
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not proof_id or not contract_heading or not proof_role:
+            continue
+        out.append(
+            AdmissibilityProofRow(
+                order=order,
+                proof_id=proof_id,
+                contract_heading=contract_heading,
+                proof_role=proof_role,
+            )
+        )
+    return tuple(out)
+
+
+def admissibility_limit_rows_from_doc(admissibility_doc: Mapping[str, Any]) -> tuple[PhraseRow, ...]:
+    rows = admissibility_doc.get("required_admissibility_limit_rows")
+    if not isinstance(rows, list):
+        return ()
+    out: list[PhraseRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        row_id = _norm_str(row.get("limit_id"))
+        contract_phrase = str(row.get("contract_phrase") or "").strip()
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not row_id or not contract_phrase:
+            continue
+        out.append(PhraseRow(order=order, row_id=row_id, contract_phrase=contract_phrase))
     return tuple(out)
 
 

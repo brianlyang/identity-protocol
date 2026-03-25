@@ -13,6 +13,8 @@ question_routing_current_file: identity/protocol/mappings/root-corpus-question-r
 contract_required_markers:
   - '## Admissibility law'
   - '## Five required design questions'
+  - '## Admissibility-proof discipline'
+  - '## Admissibility-proof limits'
   - '## Mandatory projection surfaces'
   - '## Admissibility outcome classes'
   - 'No protocol stream, shared strengthening, owner split, or runtime extension may enter governed implementation unless'
@@ -37,6 +39,43 @@ required_question_rows:
     question_id: answer_surface
     contract_heading: '### 5. Answer-surface question'
     normative_focus: stable_operator_delivery_surface
+required_admissibility_proof_rows:
+  - order: 1
+    proof_id: ontology_closure_proof
+    contract_heading: '### 1. Ontology-closure proof'
+    proof_role: object_identity_non_collapse_proof
+  - order: 2
+    proof_id: truth_lifecycle_closure_proof
+    contract_heading: '### 2. Truth-lifecycle-closure proof'
+    proof_role: truth_lifecycle_closure_proof
+  - order: 3
+    proof_id: normative_closure_proof
+    contract_heading: '### 3. Normative-closure proof'
+    proof_role: normative_boundary_closure_proof
+  - order: 4
+    proof_id: responsibility_split_closure_proof
+    contract_heading: '### 4. Responsibility-split-closure proof'
+    proof_role: responsibility_split_closure_proof
+  - order: 5
+    proof_id: answer_surface_closure_proof
+    contract_heading: '### 5. Answer-surface-closure proof'
+    proof_role: operator_answer_surface_closure_proof
+required_admissibility_limit_rows:
+  - order: 1
+    limit_id: ontology_not_truth_lifecycle
+    contract_phrase: 'ontology-closure proof is not proof of truth-lifecycle closure;'
+  - order: 2
+    limit_id: truth_lifecycle_not_normative
+    contract_phrase: 'truth-lifecycle-closure proof is not proof of normative closure;'
+  - order: 3
+    limit_id: normative_not_responsibility_split
+    contract_phrase: 'normative-closure proof is not proof of responsibility-split closure;'
+  - order: 4
+    limit_id: responsibility_split_not_answer_surface
+    contract_phrase: 'responsibility-split-closure proof is not proof of answer-surface closure;'
+  - order: 5
+    limit_id: proof_not_projection_substitute
+    contract_phrase: 'no admissibility proof may substitute for mandatory projection into governed surfaces.'
 admissibility_outcome_rows:
   - order: 1
     outcome_class: local_technique_only

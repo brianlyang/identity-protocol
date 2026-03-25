@@ -150,6 +150,57 @@ The proposal must define:
 
 If answer delivery is unstable, the proposal is not admissible.
 
+## Admissibility-proof discipline
+
+Claims that a proposal has answered the five required design questions at
+protocol-law grade may be supported only by proof whose stratum matches the
+question being claimed.
+
+### 1. Ontology-closure proof
+
+Supports claims that the proposal's object identity, non-collapse boundary, and
+non-goals are explicitly closed.
+
+Proof role: `object_identity_non_collapse_proof`.
+
+### 2. Truth-lifecycle-closure proof
+
+Supports claims that canonical truth, discovery, admissibility, run binding,
+and next-hop consumption have been defined as one governed lifecycle.
+
+Proof role: `truth_lifecycle_closure_proof`.
+
+### 3. Normative-closure proof
+
+Supports claims that permitted actions, fail-close boundaries, success-path
+conditions, and forbidden shortcuts have been explicitly frozen.
+
+Proof role: `normative_boundary_closure_proof`.
+
+### 4. Responsibility-split-closure proof
+
+Supports claims that protocol, instance, operator, and residue boundaries have
+been explicitly split without laundering one layer into another.
+
+Proof role: `responsibility_split_closure_proof`.
+
+### 5. Answer-surface-closure proof
+
+Supports claims that the operator-facing answer surface, supporting machine
+surfaces, and non-answer artifacts have been explicitly distinguished.
+
+Proof role: `operator_answer_surface_closure_proof`.
+
+## Admissibility-proof limits
+
+The protocol must preserve these admissibility-proof limits:
+
+1. ontology-closure proof is not proof of truth-lifecycle closure;
+2. truth-lifecycle-closure proof is not proof of normative closure;
+3. normative-closure proof is not proof of responsibility-split closure;
+4. responsibility-split-closure proof is not proof of answer-surface closure;
+5. no admissibility proof may substitute for mandatory projection into governed surfaces.
+
 ## Mandatory projection surfaces
 
 Admissible answers to the five design questions must be projected into governed surfaces appropriate to the proposal, including:

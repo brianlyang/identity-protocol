@@ -17,6 +17,8 @@ from root_corpus_question_routing_common import (
 from root_stream_design_admissibility_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
+    admissibility_limit_rows_from_doc,
+    admissibility_proof_rows_from_doc,
     load_root_stream_design_admissibility,
     outcome_class_rows_from_doc,
     required_projection_surfaces_from_doc,
@@ -62,6 +64,55 @@ EXPECTED_OUTCOME_CLASSES = (
     "root_contract_strengthening",
     "constitutional_strengthening",
 )
+EXPECTED_ADMISSIBILITY_PROOF_ROWS = {
+    "ontology_closure_proof": {
+        "order": 1,
+        "contract_heading": "### 1. Ontology-closure proof",
+        "proof_role": "object_identity_non_collapse_proof",
+    },
+    "truth_lifecycle_closure_proof": {
+        "order": 2,
+        "contract_heading": "### 2. Truth-lifecycle-closure proof",
+        "proof_role": "truth_lifecycle_closure_proof",
+    },
+    "normative_closure_proof": {
+        "order": 3,
+        "contract_heading": "### 3. Normative-closure proof",
+        "proof_role": "normative_boundary_closure_proof",
+    },
+    "responsibility_split_closure_proof": {
+        "order": 4,
+        "contract_heading": "### 4. Responsibility-split-closure proof",
+        "proof_role": "responsibility_split_closure_proof",
+    },
+    "answer_surface_closure_proof": {
+        "order": 5,
+        "contract_heading": "### 5. Answer-surface-closure proof",
+        "proof_role": "operator_answer_surface_closure_proof",
+    },
+}
+EXPECTED_ADMISSIBILITY_LIMIT_ROWS = {
+    "ontology_not_truth_lifecycle": {
+        "order": 1,
+        "contract_phrase": "ontology-closure proof is not proof of truth-lifecycle closure;",
+    },
+    "truth_lifecycle_not_normative": {
+        "order": 2,
+        "contract_phrase": "truth-lifecycle-closure proof is not proof of normative closure;",
+    },
+    "normative_not_responsibility_split": {
+        "order": 3,
+        "contract_phrase": "normative-closure proof is not proof of responsibility-split closure;",
+    },
+    "responsibility_split_not_answer_surface": {
+        "order": 4,
+        "contract_phrase": "responsibility-split-closure proof is not proof of answer-surface closure;",
+    },
+    "proof_not_projection_substitute": {
+        "order": 5,
+        "contract_phrase": "no admissibility proof may substitute for mandatory projection into governed surfaces.",
+    },
+}
 EXPECTED_PROJECTION_SURFACES = (
     "governed_governance_surface",
     "governed_review_surface",
@@ -73,6 +124,8 @@ EXPECTED_REGISTRY_MARKERS = (
     "this file remains the authoritative root-domain contract for stream-design admissibility",
     "## Admissibility law",
     "## Five required design questions",
+    "## Admissibility-proof discipline",
+    "## Admissibility-proof limits",
     "## Mandatory projection surfaces",
 )
 EXPECTED_AUTHORITY_MARKERS = (
@@ -137,6 +190,8 @@ def main() -> int:
             error_code = ERR_REGISTRY
 
     question_rows = required_question_rows_from_doc(admissibility_doc) if admissibility_doc else ()
+    proof_rows = admissibility_proof_rows_from_doc(admissibility_doc) if admissibility_doc else ()
+    limit_rows = admissibility_limit_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     outcome_rows = outcome_class_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     projection_surfaces = required_projection_surfaces_from_doc(admissibility_doc) if admissibility_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
@@ -169,6 +224,12 @@ def main() -> int:
         if not question_rows:
             stale_reasons.append("root_stream_design_admissibility_question_rows_missing")
             error_code = ERR_REGISTRY
+        if not proof_rows:
+            stale_reasons.append("root_stream_design_admissibility_proof_rows_missing")
+            error_code = ERR_REGISTRY
+        if not limit_rows:
+            stale_reasons.append("root_stream_design_admissibility_limit_rows_missing")
+            error_code = ERR_REGISTRY
         if not outcome_rows:
             stale_reasons.append("root_stream_design_admissibility_outcome_rows_missing")
             error_code = ERR_REGISTRY
@@ -187,14 +248,30 @@ def main() -> int:
 
     if not stale_reasons:
         question_orders = [row.order for row in question_rows]
+        proof_orders = [row.order for row in proof_rows]
+        limit_orders = [row.order for row in limit_rows]
         outcome_orders = [row.order for row in outcome_rows]
         question_map = {row.question_id: row for row in question_rows}
+        proof_map = {row.proof_id: row for row in proof_rows}
+        limit_map = {row.row_id: row for row in limit_rows}
         if len(question_map) != len(question_rows):
             structure_violations.append({"field": "required_question_rows", "reason": "duplicate_question_id"})
+        if len(proof_map) != len(proof_rows):
+            structure_violations.append({"field": "required_admissibility_proof_rows", "reason": "duplicate_proof_id"})
+        if len(limit_map) != len(limit_rows):
+            structure_violations.append({"field": "required_admissibility_limit_rows", "reason": "duplicate_limit_id"})
         if len(set(question_orders)) != len(question_orders) or not _contiguous_orders(sorted(question_orders)):
             structure_violations.append({"field": "required_question_rows", "reason": "question_order_non_contiguous"})
+        if len(set(proof_orders)) != len(proof_orders) or not _contiguous_orders(sorted(proof_orders)):
+            structure_violations.append({"field": "required_admissibility_proof_rows", "reason": "proof_order_non_contiguous"})
+        if len(set(limit_orders)) != len(limit_orders) or not _contiguous_orders(sorted(limit_orders)):
+            structure_violations.append({"field": "required_admissibility_limit_rows", "reason": "limit_order_non_contiguous"})
         missing_questions = sorted(set(EXPECTED_QUESTION_ROWS) - set(question_map))
         extra_questions = sorted(set(question_map) - set(EXPECTED_QUESTION_ROWS))
+        missing_proofs = sorted(set(EXPECTED_ADMISSIBILITY_PROOF_ROWS) - set(proof_map))
+        extra_proofs = sorted(set(proof_map) - set(EXPECTED_ADMISSIBILITY_PROOF_ROWS))
+        missing_limits = sorted(set(EXPECTED_ADMISSIBILITY_LIMIT_ROWS) - set(limit_map))
+        extra_limits = sorted(set(limit_map) - set(EXPECTED_ADMISSIBILITY_LIMIT_ROWS))
         if missing_questions:
             structure_violations.append(
                 {"field": "required_question_rows", "reason": "missing_expected_questions", "question_ids": missing_questions}
@@ -202,6 +279,22 @@ def main() -> int:
         if extra_questions:
             structure_violations.append(
                 {"field": "required_question_rows", "reason": "extra_questions", "question_ids": extra_questions}
+            )
+        if missing_proofs:
+            structure_violations.append(
+                {"field": "required_admissibility_proof_rows", "reason": "missing_expected_rows", "proof_ids": missing_proofs}
+            )
+        if extra_proofs:
+            structure_violations.append(
+                {"field": "required_admissibility_proof_rows", "reason": "extra_rows", "proof_ids": extra_proofs}
+            )
+        if missing_limits:
+            structure_violations.append(
+                {"field": "required_admissibility_limit_rows", "reason": "missing_expected_rows", "limit_ids": missing_limits}
+            )
+        if extra_limits:
+            structure_violations.append(
+                {"field": "required_admissibility_limit_rows", "reason": "extra_rows", "limit_ids": extra_limits}
             )
         for row in question_rows:
             expected = EXPECTED_QUESTION_ROWS.get(row.question_id)
@@ -235,6 +328,66 @@ def main() -> int:
                         "reason": "normative_focus_mismatch",
                         "expected": expected["normative_focus"],
                         "actual": row.normative_focus,
+                    }
+                )
+
+        for row in proof_rows:
+            expected = EXPECTED_ADMISSIBILITY_PROOF_ROWS.get(row.proof_id)
+            if expected is None:
+                continue
+            if row.order != expected["order"]:
+                admissibility_violations.append(
+                    {
+                        "field": "required_admissibility_proof_rows",
+                        "proof_id": row.proof_id,
+                        "reason": "proof_order_mismatch",
+                        "expected": expected["order"],
+                        "actual": row.order,
+                    }
+                )
+            if row.contract_heading != expected["contract_heading"]:
+                admissibility_violations.append(
+                    {
+                        "field": "required_admissibility_proof_rows",
+                        "proof_id": row.proof_id,
+                        "reason": "contract_heading_mismatch",
+                        "expected": expected["contract_heading"],
+                        "actual": row.contract_heading,
+                    }
+                )
+            if row.proof_role != expected["proof_role"]:
+                admissibility_violations.append(
+                    {
+                        "field": "required_admissibility_proof_rows",
+                        "proof_id": row.proof_id,
+                        "reason": "proof_role_mismatch",
+                        "expected": expected["proof_role"],
+                        "actual": row.proof_role,
+                    }
+                )
+
+        for row in limit_rows:
+            expected = EXPECTED_ADMISSIBILITY_LIMIT_ROWS.get(row.row_id)
+            if expected is None:
+                continue
+            if row.order != expected["order"]:
+                admissibility_violations.append(
+                    {
+                        "field": "required_admissibility_limit_rows",
+                        "limit_id": row.row_id,
+                        "reason": "limit_order_mismatch",
+                        "expected": expected["order"],
+                        "actual": row.order,
+                    }
+                )
+            if row.contract_phrase != expected["contract_phrase"]:
+                admissibility_violations.append(
+                    {
+                        "field": "required_admissibility_limit_rows",
+                        "limit_id": row.row_id,
+                        "reason": "contract_phrase_mismatch",
+                        "expected": expected["contract_phrase"],
+                        "actual": row.contract_phrase,
                     }
                 )
 
@@ -275,6 +428,12 @@ def main() -> int:
             for row in question_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_heading,)):
                     contract_marker_violations.append({"rel_path": contract_file, "reason": "question_heading_missing", "marker": marker})
+            for row in proof_rows:
+                for marker in find_missing_markers(contract_text, (row.contract_heading,)):
+                    contract_marker_violations.append({"rel_path": contract_file, "reason": "proof_heading_missing", "marker": marker})
+            for row in limit_rows:
+                for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
+                    contract_marker_violations.append({"rel_path": contract_file, "reason": "limit_phrase_missing", "marker": marker})
 
         readme_path = repo_root / "identity/protocol/README.md"
         if not readme_path.exists():
@@ -451,9 +610,13 @@ def main() -> int:
         "routing_entry_path": str(routing_entry_path),
         "contract_file": str(admissibility_doc.get("contract_file") or ""),
         "question_count": len(question_rows),
+        "proof_count": len(proof_rows),
+        "limit_count": len(limit_rows),
         "outcome_count": len(outcome_rows),
         "projection_surface_count": len(projection_surfaces),
         "question_ids": [row.question_id for row in sorted(question_rows, key=lambda item: item.order)],
+        "proof_ids": [row.proof_id for row in sorted(proof_rows, key=lambda item: item.order)],
+        "limit_ids": [row.row_id for row in sorted(limit_rows, key=lambda item: item.order)],
         "outcome_classes": [row.outcome_class for row in sorted(outcome_rows, key=lambda item: item.order)],
         "projection_surfaces": list(projection_surfaces),
         "structure_violations": structure_violations,
