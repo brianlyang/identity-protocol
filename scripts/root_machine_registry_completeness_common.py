@@ -78,8 +78,33 @@ def required_descriptor_field_modes_from_doc(doc: Mapping[str, Any]) -> dict[str
     return out
 
 
+def repo_rel_path_scope_policy_from_doc(doc: Mapping[str, Any]) -> str:
+    return _norm_str(doc.get("repo_rel_path_scope_policy"))
+
+
+def repo_rel_path_escape_policy_from_doc(doc: Mapping[str, Any]) -> str:
+    return _norm_str(doc.get("repo_rel_path_escape_policy"))
+
+
 def load_mapping_descriptor(path: Path) -> dict[str, Any]:
     return _load_yaml(path)
+
+
+def resolve_repo_relative_surface(repo_root: Path, raw_path: Any) -> tuple[str, str, str]:
+    rel_path = _norm_str(raw_path)
+    if not rel_path:
+        return "", "path_missing", ""
+    candidate_path = Path(rel_path)
+    if candidate_path.is_absolute():
+        return rel_path, "absolute_path_forbidden", rel_path
+    resolved = (repo_root / rel_path).resolve()
+    try:
+        resolved.relative_to(repo_root.resolve())
+    except ValueError:
+        return rel_path, "repo_root_escape_forbidden", str(resolved)
+    if not resolved.exists():
+        return rel_path, "path_missing", str(resolved)
+    return rel_path, "", str(resolved)
 
 
 def extract_validator_status_key(repo_root: Path, validator_script: str) -> tuple[str, str]:

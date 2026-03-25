@@ -355,6 +355,10 @@ the most convenient file discovered on disk.
 
 Hidden enforcement knowledge does not satisfy registry completeness.
 
+Repo-relative descriptor surfaces must also stay repo-root relative and
+repo-contained; absolute paths and parent-escape paths are non-compliant even
+if they exist locally.
+
 ---
 
 ## Root-law bundle discipline

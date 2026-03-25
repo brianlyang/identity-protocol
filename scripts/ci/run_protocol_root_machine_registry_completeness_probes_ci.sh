@@ -27,10 +27,86 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_machine_registry_completeness_status"] == "PASS_REQUIRED", payload
 assert "root-corpus-law-bundle" in payload["family_ids"], payload
 assert "root-machine-registry-completeness" in payload["family_ids"], payload
+assert payload["repo_rel_path_scope_policy"] == "repo_root_relative_only", payload
+assert payload["repo_rel_path_escape_policy"] == "fail_closed", payload
 assert all(row["family_status"] == "PASS_REQUIRED" for row in payload["family_status_rows"]), payload
 assert all(
     all(cell["status"] == "PASS_REQUIRED" for cell in row.get("descriptor_field_rows", []))
     for row in payload["family_status_rows"]
+), payload
+PY
+
+ABSOLUTE_PATH_REPO="${TMP_ROOT}/absolute-path-drift-repo"
+mirror_repo "${ABSOLUTE_PATH_REPO}"
+python3 - <<'PY' "${ABSOLUTE_PATH_REPO}/identity/protocol/mappings/root-corpus-authority.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["common_script"] = "/bin/sh"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+ABSOLUTE_PATH_JSON="${TMP_ROOT}/absolute-path-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${ABSOLUTE_PATH_REPO}" \
+  --json-only >"${ABSOLUTE_PATH_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed absolute descriptor path drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ABSOLUTE_PATH_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert any(
+    row["reason"] == "descriptor_path_not_repo_relative"
+    and row.get("family_id") == "root-corpus-authority"
+    and row.get("descriptor_field") == "common_script"
+    for row in payload["completeness_violations"]
+), payload
+PY
+
+ESCAPE_PATH_REPO="${TMP_ROOT}/escape-path-drift-repo"
+mirror_repo "${ESCAPE_PATH_REPO}"
+python3 - <<'PY' "${ESCAPE_PATH_REPO}/identity/protocol/mappings/root-corpus-authority.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["common_script"] = "../scripts/root_corpus_authority_common.py"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+ESCAPE_PATH_JSON="${TMP_ROOT}/escape-path-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${ESCAPE_PATH_REPO}" \
+  --json-only >"${ESCAPE_PATH_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed repo-escape descriptor path drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ESCAPE_PATH_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert any(
+    row["reason"] == "descriptor_path_escapes_repo_root"
+    and row.get("family_id") == "root-corpus-authority"
+    and row.get("descriptor_field") == "common_script"
+    for row in payload["completeness_violations"]
 ), payload
 PY
 

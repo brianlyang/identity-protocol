@@ -420,6 +420,15 @@ A lawful root mapping family must therefore disclose the validator, probe,
 shared-common, emitted status-key, and emitted error-code surfaces that govern
 it.
 
+Those repo-relative path surfaces must remain repo-root relative and
+repo-contained.
+
+Absolute-path capture or parent-escape capture would let local filesystem
+accident impersonate governed protocol law.
+
+Registry completeness must therefore fail-close rather than accepting
+descriptor paths that bypass repo-root-relative discipline.
+
 ---
 
 ## 1. The identity protocol is machine law first, not a compatibility layer

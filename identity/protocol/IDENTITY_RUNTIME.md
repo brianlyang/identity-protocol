@@ -88,6 +88,7 @@ Runtime meaning:
 3. Runtime must fail-close on registry-completeness drift rather than loading the most convenient on-disk mapping.
 4. Runtime discovery of an unregistered root mapping family may motivate governed strengthening, but it does not self-promote that family into canonical status.
 5. Runtime must discover validator/probe/common/status-key/error-code surfaces from admitted mapping-family descriptors rather than hidden local knowledge.
+6. Runtime must reject descriptor paths that are absolute or escape repo root; repo-relative descriptor surfaces must stay repo-root relative and repo-contained.
 
 ## Runtime consumption of the root-law bundle
 

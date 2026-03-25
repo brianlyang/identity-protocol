@@ -16,6 +16,8 @@ current_suffix: .current.yaml
 version_regex: ^root-[a-z0-9-]+\.v[0-9]+\.yaml$
 require_current_version_pairs: true
 require_self_describing_families: true
+repo_rel_path_scope_policy: repo_root_relative_only
+repo_rel_path_escape_policy: fail_closed
 required_descriptor_fields:
 - validator_script
 - probe_script
@@ -39,6 +41,10 @@ anchor_checks:
   - A lawful root mapping family must therefore disclose the validator, probe,
   - shared-common, emitted status-key, and emitted error-code surfaces that govern
     it.
+  - Those repo-relative path surfaces must remain repo-root relative and
+  - Absolute-path capture or parent-escape capture would let local filesystem
+    accident impersonate governed protocol law.
+  - descriptor paths that bypass repo-root-relative discipline.
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root machine-registry completeness discipline'
@@ -52,6 +58,8 @@ anchor_checks:
     emitted status-key, and emitted error-code enforcement surfaces to the machine
     world;
   - Hidden enforcement knowledge does not satisfy registry completeness.
+  - Repo-relative descriptor surfaces must also stay repo-root relative and
+  - if they exist locally.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root machine-registry completeness boundary'
@@ -63,6 +71,9 @@ anchor_checks:
   - 5. Registry admission without discoverable validator/probe/common/status-key/error-code
     surfaces is
     still incomplete.
+  - 6. Repo-relative descriptor surfaces disclosed by an admitted family must remain
+    repo-root relative and repo-contained; absolute-path or parent-escape capture
+    is non-compliant.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime registry-completeness boundary'
@@ -74,3 +85,5 @@ anchor_checks:
     most convenient on-disk mapping.
   - 5. Runtime must discover validator/probe/common/status-key/error-code surfaces
     from admitted mapping-family descriptors rather than hidden local knowledge.
+  - 6. Runtime must reject descriptor paths that are absolute or escape repo root;
+    repo-relative descriptor surfaces must stay repo-root relative and repo-contained.
