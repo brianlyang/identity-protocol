@@ -1,0 +1,106 @@
+schema_version: 1
+ontology_family: protocol_root_machine_world_ontology
+ontology_version: v1
+contract_file: identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_machine_world_ontology.py
+probe_script: scripts/ci/run_protocol_root_machine_world_ontology_probes_ci.sh
+common_script: scripts/root_machine_world_ontology_common.py
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Machine-world ontology law'
+  - '## Four ontology strata'
+  - '## Required ontology objects'
+  - '## Non-compliant ontology collapses'
+  - 'The protocol must first define what objects are allowed to exist in the machine world, what each object is, and what it is not.'
+required_strata_rows:
+  - order: 1
+    stratum_id: identity_resolution_objects
+    contract_heading: '### 1. Identity-resolution objects'
+    stratum_role: identity_resolution_object_stratum
+  - order: 2
+    stratum_id: authority_execution_objects
+    contract_heading: '### 2. Authority and execution-boundary objects'
+    stratum_role: authority_execution_object_stratum
+  - order: 3
+    stratum_id: continuity_retention_objects
+    contract_heading: '### 3. Continuity and retention objects'
+    stratum_role: continuity_retention_object_stratum
+  - order: 4
+    stratum_id: feedback_gate_verdict_objects
+    contract_heading: '### 4. Feedback, gate, and verdict objects'
+    stratum_role: feedback_gate_verdict_object_stratum
+required_object_rows:
+  - order: 1
+    object_id: identity_id
+    contract_phrase: '`identity_id` is the stable identity-resolution key rather than a prompt nickname or narrative persona label.'
+  - order: 2
+    object_id: scope
+    contract_phrase: '`scope` is the resolved operating scope rather than a free-form situational impression.'
+  - order: 3
+    object_id: work_layer
+    contract_phrase: '`work_layer` is the active execution layer rather than a vague locality intuition.'
+  - order: 4
+    object_id: source_layer
+    contract_phrase: '`source_layer` is the authority-bearing source layer rather than a convenience alias.'
+  - order: 5
+    object_id: catalog_path
+    contract_phrase: '`catalog_path` is the canonical identity catalog source rather than a guessed filesystem memory.'
+  - order: 6
+    object_id: pack_path
+    contract_phrase: '`pack_path` is the canonical resolved pack location rather than a repo fixture substitute.'
+  - order: 7
+    object_id: actor_session_tuple
+    contract_phrase: 'actor / session tuple is the machine-attested speaking/runtime tuple rather than a narrative self-claim.'
+  - order: 8
+    object_id: launcher_surface
+    contract_phrase: 'launcher surface is the governed execution-entry surface rather than filename discovery by habit.'
+  - order: 9
+    object_id: current_turn_authoritative_truth
+    contract_phrase: 'current-turn authoritative truth is the present-turn admissible authority rather than the latest visible artifact.'
+  - order: 10
+    object_id: canonical_state
+    contract_phrase: 'canonical state is the governed state object rather than an arbitrary local snapshot.'
+  - order: 11
+    object_id: canonical_receipt
+    contract_phrase: 'canonical receipt is the governed execution/admission receipt rather than any artifact that merely looks recent.'
+  - order: 12
+    object_id: canonical_artifact_family
+    contract_phrase: 'canonical artifact family is the governed output family rather than an undifferentiated memory bucket.'
+  - order: 13
+    object_id: continuity_brief
+    contract_phrase: 'continuity brief is the governed re-entry object rather than raw transcript persistence.'
+  - order: 14
+    object_id: dialogue_retention_current_thread
+    contract_phrase: 'dialogue-retention current-thread is the thread-scoped continuity object rather than global memory.'
+  - order: 15
+    object_id: protocol_feedback_lane
+    contract_phrase: 'protocol-feedback lane is the governed feedback object rather than free-form commentary.'
+  - order: 16
+    object_id: required_gate_bundle
+    contract_phrase: 'required gate bundle is the machine admission bundle rather than an informal checklist.'
+  - order: 17
+    object_id: three_plane_verdict
+    contract_phrase: 'three-plane verdict is the governed cross-plane verdict object rather than a prose summary.'
+required_collapse_rows:
+  - order: 1
+    collapse_id: term_meaning_borrowing
+    contract_phrase: 'terms borrow meaning from each other as if object boundaries were optional.'
+  - order: 2
+    collapse_id: arbitrary_path_drift
+    contract_phrase: 'paths drift arbitrarily and are treated as if path-bearing objects did not need canonical meaning.'
+  - order: 3
+    collapse_id: latest_as_current
+    contract_phrase: 'the latest visible artifact is treated as if it were automatically current-turn authority.'
+  - order: 4
+    collapse_id: summary_as_truth
+    contract_phrase: 'summary or projection is treated as if it were truth itself.'
+  - order: 5
+    collapse_id: history_as_authority
+    contract_phrase: 'history is treated as if it were present authority.'
+  - order: 6
+    collapse_id: memory_as_vague_bucket
+    contract_phrase: '`memory` becomes a vague bucket that swallows multiple distinct object families and boundaries.'

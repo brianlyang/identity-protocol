@@ -119,6 +119,19 @@ registered_top_level_entries:
       - workbook_issue_projection
       - closure_ledger_narration
       - business_domain_example
+  - rel_path: identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for machine-world ontology law'
+      - '## Machine-world ontology law'
+      - '## Four ontology strata'
+      - '## Required ontology objects'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
   - rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
     entry_kind: file
     corpus_class: root_contract
@@ -239,6 +252,8 @@ registered_top_level_entries:
       - root-corpus-ordering.v1.yaml
       - root-machine-law-primacy.current.yaml
       - root-machine-law-primacy.v1.yaml
+      - root-machine-world-ontology.current.yaml
+      - root-machine-world-ontology.v1.yaml
       - root-identity-instance-self-judgement.current.yaml
       - root-identity-instance-self-judgement.v1.yaml
       - root-protocol-instance-responsibility.current.yaml
