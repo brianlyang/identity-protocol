@@ -24,6 +24,7 @@ This document does not declare a release tag by itself. It freezes the audit int
 
 The authoritative current workbook horizon for this release boundary is `ISSUE-001` through `ISSUE-039`; if that horizon moves, this review surface must truth-sync instead of preserving a stale issue universe.
 The canonical derived summary surface for this boundary is `docs/release/identity-v1.6x-release-closure-summary.md`; it may compress this audit judgment for handoff, but it must not replace this review surface, current runtime verdict surfaces, or fleet-scope closure matrices.
+Historical `docs/release/*.md` surfaces must remain explicitly archival and must not silently reclaim current release-boundary authority.
 
 ## 1) Audit conclusion
 

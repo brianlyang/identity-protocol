@@ -251,6 +251,11 @@ def _is_legacy_v16_or_earlier_doc(rel: str) -> bool:
     return major < 1 or (major == 1 and minor <= 6)
 
 
+def _is_release_doc(rel: str) -> bool:
+    normalized = _norm_path(rel)
+    return normalized.startswith("docs/release/") and normalized.endswith(".md")
+
+
 def _load_yaml(path: Path) -> dict:
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -385,12 +390,14 @@ def _dedup(seq: List[str]) -> List[str]:
 
 def _load_stream_doc_registry(
     repo_root: Path,
-) -> tuple[List[str], List[str], dict[str, List[str]], List[str], List[str]]:
+) -> tuple[List[str], List[str], dict[str, List[str]], List[str], dict[str, object], List[str]]:
     """
     Returns:
       stream_docs (governance/review docs per active stream),
       mandatory_static_docs (non-stream docs that must be present),
       doc_alias_requirements (doc -> required alias refs),
+      legacy_archival_docs (historical governance/review docs that are intentionally non-authoritative),
+      release_doc_surface (canonical/archival release-doc classification),
       validation_errors (fail-close reasons)
     """
     registry_entry_path = (repo_root / STREAM_DOC_REGISTRY_PATH).resolve()
@@ -398,9 +405,9 @@ def _load_stream_doc_registry(
         repo_root, STREAM_DOC_REGISTRY_PATH
     )
     if alias_error:
-        return [], [], {}, [], [f"[INVALID_STREAM_DOC_REGISTRY] alias resolution failed: {STREAM_DOC_REGISTRY_PATH}:{alias_error}"]
+        return [], [], {}, [], {}, [f"[INVALID_STREAM_DOC_REGISTRY] alias resolution failed: {STREAM_DOC_REGISTRY_PATH}:{alias_error}"]
     if not registry_path.exists():
-        return [], [], {}, [], [f"[MISSING_STREAM_DOC_REGISTRY] required file not found: {registry_entry_path}"]
+        return [], [], {}, [], {}, [f"[MISSING_STREAM_DOC_REGISTRY] required file not found: {registry_entry_path}"]
 
     data = _load_yaml(registry_path)
     errors: List[str] = []
@@ -409,9 +416,27 @@ def _load_stream_doc_registry(
         errors.append(
             f"[INVALID_STREAM_DOC_REGISTRY] stream_docs must be a non-empty list: {STREAM_DOC_REGISTRY_PATH}"
         )
-        return [], [], {}, [], errors
+        return [], [], {}, [], {}, errors
 
     stream_docs: List[str] = []
+    mandatory_static_docs = _as_str_list(data.get("mandatory_static_docs"))
+    if not mandatory_static_docs:
+        errors.append(f"[INVALID_STREAM_DOC_REGISTRY] mandatory_static_docs must be non-empty list")
+    canonical_release_summary_doc = _norm_path(data.get("canonical_release_summary_doc", ""))
+    if not canonical_release_summary_doc:
+        errors.append("[INVALID_STREAM_DOC_REGISTRY] canonical_release_summary_doc must be non-empty")
+    elif not _is_release_doc(canonical_release_summary_doc):
+        errors.append(
+            f"[INVALID_STREAM_DOC_REGISTRY] canonical_release_summary_doc must be docs/release/*.md: {canonical_release_summary_doc}"
+        )
+    elif canonical_release_summary_doc not in mandatory_static_docs:
+        errors.append(
+            f"[INVALID_STREAM_DOC_REGISTRY] canonical_release_summary_doc must be listed in mandatory_static_docs: {canonical_release_summary_doc}"
+        )
+
+    release_archival_docs = _as_str_list(data.get("release_archival_docs"))
+    if not isinstance(data.get("release_archival_docs"), list) or not release_archival_docs:
+        errors.append("[INVALID_STREAM_DOC_REGISTRY] release_archival_docs must be a non-empty list")
     stream_versions_seen: set[str] = set()
     for idx, row in enumerate(rows, start=1):
         if not isinstance(row, dict):
@@ -433,10 +458,6 @@ def _load_stream_doc_registry(
             errors.append(f"[INVALID_STREAM_DOC_REGISTRY] {stream_version} missing review_doc")
         else:
             stream_docs.append(review_doc)
-
-    mandatory_static_docs = _as_str_list(data.get("mandatory_static_docs"))
-    if not mandatory_static_docs:
-        errors.append(f"[INVALID_STREAM_DOC_REGISTRY] mandatory_static_docs must be non-empty list")
 
     doc_alias_requirements: dict[str, List[str]] = {}
     alias_rows = data.get("stream_doc_required_alias_refs")
@@ -575,6 +596,44 @@ def _load_stream_doc_registry(
             f"[INVALID_STREAM_DOC_REGISTRY] mandatory static doc missing static_doc_required_alias_refs row: {doc}"
         )
 
+    if canonical_release_summary_doc and canonical_release_summary_doc not in doc_alias_requirements:
+        errors.append(
+            f"[INVALID_STREAM_DOC_REGISTRY] canonical_release_summary_doc missing static_doc_required_alias_refs row: {canonical_release_summary_doc}"
+        )
+
+    release_seen: set[str] = set()
+    for doc in release_archival_docs:
+        if doc in release_seen:
+            errors.append(
+                f"[INVALID_STREAM_DOC_REGISTRY] duplicate release_archival_docs entry: {doc}"
+            )
+            continue
+        release_seen.add(doc)
+        if not _is_release_doc(doc):
+            errors.append(
+                f"[INVALID_STREAM_DOC_REGISTRY] release_archival_docs entry must be docs/release/*.md: {doc}"
+            )
+            continue
+        if not (repo_root / doc).exists():
+            errors.append(
+                f"[INVALID_STREAM_DOC_REGISTRY] release_archival_docs entry not found: {doc}"
+            )
+            continue
+        if doc == canonical_release_summary_doc:
+            errors.append(
+                f"[INVALID_STREAM_DOC_REGISTRY] release_archival_docs entry conflicts with canonical_release_summary_doc: {doc}"
+            )
+            continue
+        if doc in stream_docs:
+            errors.append(
+                f"[INVALID_STREAM_DOC_REGISTRY] release_archival_docs entry conflicts with stream_docs authoritative row: {doc}"
+            )
+            continue
+        if doc in mandatory_static_docs:
+            errors.append(
+                f"[INVALID_STREAM_DOC_REGISTRY] release_archival_docs entry conflicts with mandatory_static_docs authoritative row: {doc}"
+            )
+
     legacy_archival_docs = _as_str_list(data.get("legacy_archival_docs"))
     legacy_seen: set[str] = set()
     for doc in legacy_archival_docs:
@@ -604,11 +663,17 @@ def _load_stream_doc_registry(
                 f"[INVALID_STREAM_DOC_REGISTRY] legacy_archival_docs entry conflicts with mandatory_static_docs authoritative row: {doc}"
             )
 
+    release_doc_surface = {
+        "canonical_release_summary_doc": canonical_release_summary_doc,
+        "release_archival_docs": _dedup(release_archival_docs),
+    }
+
     return (
         _dedup(stream_docs),
         _dedup(mandatory_static_docs),
         doc_alias_requirements,
         _dedup(legacy_archival_docs),
+        release_doc_surface,
         errors,
     )
 
@@ -830,6 +895,7 @@ def main() -> int:
     bootstrap_failures: List[str] = []
     stream_doc_alias_requirements: dict[str, List[str]] = {}
     legacy_archival_docs: List[str] = []
+    release_doc_surface: dict[str, object] = {}
     required_current_docs: List[str] = []
     playbook_path: Path | None = None
     playbook_required_tokens: List[str] = []
@@ -838,6 +904,7 @@ def main() -> int:
         mandatory_static_docs,
         stream_doc_alias_requirements,
         legacy_archival_docs,
+        release_doc_surface,
         registry_errors,
     ) = _load_stream_doc_registry(repo_root)
     bootstrap_failures.extend(registry_errors)
@@ -889,6 +956,13 @@ def main() -> int:
                 legacy_docs.append(rel)
     legacy_docs = _dedup(legacy_docs)
 
+    release_docs: List[str] = []
+    release_root = repo_root / "docs/release"
+    if release_root.exists():
+        for p in sorted(release_root.glob("*.md")):
+            release_docs.append(p.relative_to(repo_root).as_posix())
+    release_docs = _dedup(release_docs)
+
     authoritative_semantic_docs: set[str] = set(stream_docs)
     authoritative_semantic_docs.update(
         d
@@ -897,6 +971,17 @@ def main() -> int:
     )
     authoritative_semantic_docs.update(required_current_docs)
     legacy_archival_docs_set = set(legacy_archival_docs)
+    canonical_release_summary_doc = _norm_path(
+        str(release_doc_surface.get("canonical_release_summary_doc", ""))
+    )
+    release_archival_docs_set = set(
+        _as_str_list(release_doc_surface.get("release_archival_docs"))
+    )
+    authoritative_release_docs = {
+        d for d in mandatory_static_docs if _is_release_doc(d)
+    }
+    if canonical_release_summary_doc:
+        authoritative_release_docs.add(canonical_release_summary_doc)
 
     for doc in legacy_docs:
         if doc in authoritative_semantic_docs:
@@ -910,6 +995,25 @@ def main() -> int:
         if doc in authoritative_semantic_docs:
             bootstrap_failures.append(
                 f"[AMBIGUOUS_LEGACY_DOC_SEMANTIC_CLASS] doc listed as both authoritative and archival: {doc}"
+            )
+    if canonical_release_summary_doc:
+        for doc in sorted(authoritative_release_docs):
+            if doc != canonical_release_summary_doc:
+                bootstrap_failures.append(
+                    f"[AMBIGUOUS_RELEASE_DOC_SURFACE] unexpected authoritative release doc outside canonical_release_summary_doc: {doc}"
+                )
+    for doc in release_docs:
+        if doc in authoritative_release_docs:
+            continue
+        if doc in release_archival_docs_set:
+            continue
+        bootstrap_failures.append(
+            f"[MISSING_RELEASE_DOC_SEMANTIC_CLASS] missing release_archival_docs classification: {doc}"
+        )
+    for doc in sorted(release_archival_docs_set):
+        if doc in authoritative_release_docs:
+            bootstrap_failures.append(
+                f"[AMBIGUOUS_RELEASE_DOC_SEMANTIC_CLASS] doc listed as both canonical and archival: {doc}"
             )
     if bootstrap_failures:
         print(f"[INFO] docs checked: {len(docs)}")
@@ -1058,6 +1162,22 @@ def main() -> int:
             )
     else:
         failures.append("[MISSING_SCRIPT] scripts/validate_v16x_release_closure_summary.py not found")
+
+    release_doc_surface_script = repo_root / "scripts/validate_release_doc_surface_governance.py"
+    if release_doc_surface_script.exists():
+        proc = subprocess.run(
+            [sys.executable, str(release_doc_surface_script), "--json-only"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+        )
+        if proc.returncode != 0:
+            failures.append(
+                "[RELEASE_DOC_SURFACE_GOVERNANCE_FAIL] "
+                + (proc.stdout.strip() or proc.stderr.strip() or "validate_release_doc_surface_governance failed")
+            )
+    else:
+        failures.append("[MISSING_SCRIPT] scripts/validate_release_doc_surface_governance.py not found")
 
     # Round-29.5: enforce doc evidence persistence policy
     evidence_policy_script = repo_root / "scripts/validate_doc_evidence_persistence.py"
