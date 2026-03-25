@@ -76,6 +76,20 @@ def main() -> int:
         if str(ordering_doc.get("registry_current_file") or "").strip() != "identity/protocol/mappings/root-corpus-registry.current.yaml":
             stale_reasons.append("root_corpus_ordering_registry_current_file_invalid")
             error_code = ERR_REGISTRY
+        if str(ordering_doc.get("validator_script") or "").strip() != "scripts/validate_protocol_root_corpus_ordering.py":
+            stale_reasons.append("root_corpus_ordering_validator_script_invalid")
+            error_code = ERR_REGISTRY
+        if str(ordering_doc.get("probe_script") or "").strip() != "scripts/ci/run_protocol_root_corpus_ordering_probes_ci.sh":
+            stale_reasons.append("root_corpus_ordering_probe_script_invalid")
+            error_code = ERR_REGISTRY
+        if str(ordering_doc.get("common_script") or "").strip() != "scripts/root_corpus_ordering_common.py":
+            stale_reasons.append("root_corpus_ordering_common_script_invalid")
+            error_code = ERR_REGISTRY
+        for field in ("validator_script", "probe_script", "common_script"):
+            rel_path = str(ordering_doc.get(field) or "").strip()
+            if rel_path and not (repo_root / rel_path).exists():
+                stale_reasons.append(f"root_corpus_ordering_surface_missing:{field}:{rel_path}")
+                error_code = ERR_REGISTRY
         if not str(ordering_doc.get("root_index_entry") or "").strip():
             stale_reasons.append("root_corpus_ordering_root_index_entry_missing")
             error_code = ERR_REGISTRY

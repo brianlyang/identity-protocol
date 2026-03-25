@@ -69,6 +69,7 @@ Runtime meaning:
 2. A root mapping file present on disk but absent from the admitted child set is non-canonical for runtime legality.
 3. Runtime must fail-close on registry-completeness drift rather than loading the most convenient on-disk mapping.
 4. Runtime discovery of an unregistered root mapping family may motivate governed strengthening, but it does not self-promote that family into canonical status.
+5. Runtime must discover validator/probe/common surfaces from admitted mapping-family descriptors rather than hidden local knowledge.
 
 ## Runtime consumption of the root-law bundle
 

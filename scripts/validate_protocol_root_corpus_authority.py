@@ -146,6 +146,20 @@ def main() -> int:
         if str(authority_doc.get("ordering_current_file") or "").strip() != "identity/protocol/mappings/root-corpus-ordering.current.yaml":
             stale_reasons.append("root_corpus_authority_ordering_current_file_invalid")
             error_code = ERR_REGISTRY
+        if str(authority_doc.get("validator_script") or "").strip() != "scripts/validate_protocol_root_corpus_authority.py":
+            stale_reasons.append("root_corpus_authority_validator_script_invalid")
+            error_code = ERR_REGISTRY
+        if str(authority_doc.get("probe_script") or "").strip() != "scripts/ci/run_protocol_root_corpus_authority_probes_ci.sh":
+            stale_reasons.append("root_corpus_authority_probe_script_invalid")
+            error_code = ERR_REGISTRY
+        if str(authority_doc.get("common_script") or "").strip() != "scripts/root_corpus_authority_common.py":
+            stale_reasons.append("root_corpus_authority_common_script_invalid")
+            error_code = ERR_REGISTRY
+        for field in ("validator_script", "probe_script", "common_script"):
+            rel_path = str(authority_doc.get(field) or "").strip()
+            if rel_path and not (repo_root / rel_path).exists():
+                stale_reasons.append(f"root_corpus_authority_surface_missing:{field}:{rel_path}")
+                error_code = ERR_REGISTRY
         if not anchor_checks:
             stale_reasons.append("root_corpus_authority_anchor_checks_missing")
             error_code = ERR_REGISTRY

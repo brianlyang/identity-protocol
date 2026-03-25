@@ -30,6 +30,80 @@ assert "root-machine-registry-completeness" in payload["family_ids"], payload
 assert all(row["family_status"] == "PASS_REQUIRED" for row in payload["family_status_rows"]), payload
 PY
 
+DESCRIPTOR_REPO="${TMP_ROOT}/descriptor-drift-repo"
+mirror_repo "${DESCRIPTOR_REPO}"
+python3 - <<'PY' "${DESCRIPTOR_REPO}/identity/protocol/mappings/root-corpus-authority.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc.pop("common_script", None)
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+DESCRIPTOR_JSON="${TMP_ROOT}/descriptor-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${DESCRIPTOR_REPO}" \
+  --json-only >"${DESCRIPTOR_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed missing descriptor field drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${DESCRIPTOR_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert any(
+    row["reason"] == "descriptor_field_missing"
+    and row.get("family_id") == "root-corpus-authority"
+    and row.get("descriptor_field") == "common_script"
+    for row in payload["completeness_violations"]
+), payload
+PY
+
+DESCRIPTOR_PATH_REPO="${TMP_ROOT}/descriptor-path-drift-repo"
+mirror_repo "${DESCRIPTOR_PATH_REPO}"
+python3 - <<'PY' "${DESCRIPTOR_PATH_REPO}/identity/protocol/mappings/root-corpus-authority.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["common_script"] = "scripts/nonexistent_root_corpus_common.py"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+DESCRIPTOR_PATH_JSON="${TMP_ROOT}/descriptor-path-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${DESCRIPTOR_PATH_REPO}" \
+  --json-only >"${DESCRIPTOR_PATH_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed broken descriptor path drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${DESCRIPTOR_PATH_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert any(
+    row["reason"] == "descriptor_path_missing"
+    and row.get("family_id") == "root-corpus-authority"
+    and row.get("descriptor_field") == "common_script"
+    for row in payload["completeness_violations"]
+), payload
+PY
+
 REGISTRY_REPO="${TMP_ROOT}/registry-drift-repo"
 mirror_repo "${REGISTRY_REPO}"
 python3 - <<'PY' "${REGISTRY_REPO}/identity/protocol/mappings/root-corpus-registry.v1.yaml"

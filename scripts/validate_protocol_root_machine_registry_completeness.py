@@ -13,7 +13,10 @@ from root_machine_registry_completeness_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     anchor_checks_from_doc,
+    load_mapping_descriptor,
     load_root_machine_registry_completeness,
+    required_descriptor_fields_from_doc,
+    require_self_describing_families,
 )
 
 STATUS_KEY = "protocol_root_machine_registry_completeness_status"
@@ -65,6 +68,8 @@ def main() -> int:
 
     anchor_checks = anchor_checks_from_doc(completeness_doc) if completeness_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
+    self_describing_required = require_self_describing_families(completeness_doc) if completeness_doc else False
+    required_descriptor_fields = required_descriptor_fields_from_doc(completeness_doc) if completeness_doc else ()
 
     if not stale_reasons:
         expected_scalar_fields = {
@@ -87,6 +92,9 @@ def main() -> int:
 
         if completeness_doc.get("require_current_version_pairs") is not True:
             stale_reasons.append("root_machine_registry_completeness_pairing_rule_invalid")
+            error_code = ERR_REGISTRY
+        if self_describing_required and not required_descriptor_fields:
+            stale_reasons.append("root_machine_registry_completeness_descriptor_fields_missing")
             error_code = ERR_REGISTRY
 
         if not anchor_checks:
@@ -174,6 +182,7 @@ def main() -> int:
                 family_violations: list[str] = []
                 active_file = ""
                 alias_error = ""
+                descriptor_field_rows: list[dict[str, str]] = []
 
                 if not current_file:
                     family_violations.append("current_file_missing")
@@ -244,6 +253,55 @@ def main() -> int:
                                     "child": active_file,
                                 }
                             )
+                        elif self_describing_required:
+                            active_doc = load_mapping_descriptor(active_path)
+                            if not active_doc:
+                                family_violations.append("active_mapping_doc_invalid")
+                                completeness_violations.append(
+                                    {
+                                        "field": "root_mapping_family",
+                                        "reason": "active_mapping_doc_invalid",
+                                        "family_id": family_id,
+                                        "active_file": active_file,
+                                    }
+                                )
+                            else:
+                                for descriptor_field in required_descriptor_fields:
+                                    descriptor_rel_path = str(active_doc.get(descriptor_field) or "").strip()
+                                    descriptor_field_rows.append(
+                                        {
+                                            "field": descriptor_field,
+                                            "rel_path": descriptor_rel_path,
+                                            "status": (
+                                                STATUS_PASS_REQUIRED
+                                                if descriptor_rel_path and (repo_root / descriptor_rel_path).exists()
+                                                else STATUS_FAIL_REQUIRED
+                                            ),
+                                        }
+                                    )
+                                    if not descriptor_rel_path:
+                                        family_violations.append("descriptor_field_missing")
+                                        completeness_violations.append(
+                                            {
+                                                "field": "root_mapping_family",
+                                                "reason": "descriptor_field_missing",
+                                                "family_id": family_id,
+                                                "active_file": active_file,
+                                                "descriptor_field": descriptor_field,
+                                            }
+                                        )
+                                    elif not (repo_root / descriptor_rel_path).exists():
+                                        family_violations.append("descriptor_path_missing")
+                                        completeness_violations.append(
+                                            {
+                                                "field": "root_mapping_family",
+                                                "reason": "descriptor_path_missing",
+                                                "family_id": family_id,
+                                                "active_file": active_file,
+                                                "descriptor_field": descriptor_field,
+                                                "rel_path": descriptor_rel_path,
+                                            }
+                                        )
 
                 family_status_rows.append(
                     {
@@ -252,6 +310,9 @@ def main() -> int:
                         "version_files": version_files,
                         "active_file": active_file,
                         "alias_error": alias_error,
+                        "self_describing_required": self_describing_required,
+                        "required_descriptor_fields": list(required_descriptor_fields),
+                        "descriptor_field_rows": descriptor_field_rows,
                         "family_status": STATUS_PASS_REQUIRED if not family_violations else STATUS_FAIL_REQUIRED,
                         "family_violations": family_violations,
                     }

@@ -7,134 +7,141 @@ authority_current_file: identity/protocol/mappings/root-corpus-authority.current
 question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
 transition_current_file: identity/protocol/mappings/root-corpus-transition.current.yaml
 gateway_admissibility_current_file: identity/protocol/mappings/root-corpus-gateway-admissibility.current.yaml
+validator_script: scripts/validate_protocol_root_corpus_precedence.py
+probe_script: scripts/ci/run_protocol_root_corpus_precedence_probes_ci.sh
+common_script: scripts/root_corpus_precedence_common.py
 precedence_anchor_checks:
-  - rel_path: identity/protocol/README.md
-    required_markers:
-      - '## Root conflict-precedence discipline'
-      - 'semantic-meaning conflict resolves by source order, not by convenience, recency, or current checker vividness;'
-      - 'current-turn legality conflict resolves at machine-consumed enforcement terminals, not at philosophy prose, README text, or frozen contract prose alone;'
-  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
-    required_markers:
-      - '### Conflict precedence must preserve both origin and terminality'
-      - 'semantic-origin conflict resolves by source order;'
-      - 'current-turn legality conflict resolves by machine-consumed terminal enforcement;'
-  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
-    required_markers:
-      - '## Root conflict-precedence boundary'
-      - 'Semantic-meaning conflict resolves by source-order law:'
-      - 'Current-turn legality conflict resolves by machine-consumed enforcement terminals, with machine-registry law as the only terminal root gateway.'
-  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
-    required_markers:
-      - '## Runtime conflict-precedence boundary'
-      - 'Runtime current-turn legality still resolves at machine-consumed enforcement terminals rather than philosophy prose or frozen contract prose alone.'
+- rel_path: identity/protocol/README.md
+  required_markers:
+  - '## Root conflict-precedence discipline'
+  - semantic-meaning conflict resolves by source order, not by convenience, recency,
+    or current checker vividness;
+  - current-turn legality conflict resolves at machine-consumed enforcement terminals,
+    not at philosophy prose, README text, or frozen contract prose alone;
+- rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+  required_markers:
+  - '### Conflict precedence must preserve both origin and terminality'
+  - semantic-origin conflict resolves by source order;
+  - current-turn legality conflict resolves by machine-consumed terminal enforcement;
+- rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+  required_markers:
+  - '## Root conflict-precedence boundary'
+  - 'Semantic-meaning conflict resolves by source-order law:'
+  - Current-turn legality conflict resolves by machine-consumed enforcement terminals,
+    with machine-registry law as the only terminal root gateway.
+- rel_path: identity/protocol/IDENTITY_RUNTIME.md
+  required_markers:
+  - '## Runtime conflict-precedence boundary'
+  - Runtime current-turn legality still resolves at machine-consumed enforcement terminals
+    rather than philosophy prose or frozen contract prose alone.
 precedence_profiles:
-  - conflict_class: semantic_meaning_conflict
-    conflict_scope: source_order_meaning
-    resolution_mode: source_order_root_law
-    semantic_precedence_chain:
-      - bottom_theory
-      - constitution
-      - runtime_constitution
-      - root_contract
-    terminal_machine_surfaces: []
-    motivating_only_surface_classes:
-      - root_index
-      - machine_registry_directory
-      - governed_subdomain_extension
-      - demoted_support_directory
-      - outer_governance_surface
-      - outer_review_surface
-      - outer_workbook_surface
-      - outer_reference_surface
-      - outer_evidence_surface
-      - outer_runtime_state_surface
-      - outer_receipt_surface
-      - outer_implementation_surface
-    forbidden_override_surface_classes:
-      - root_index
-      - machine_registry_directory
-      - governed_subdomain_extension
-      - demoted_support_directory
-      - outer_governance_surface
-      - outer_review_surface
-      - outer_workbook_surface
-      - outer_reference_surface
-      - outer_evidence_surface
-      - outer_runtime_state_surface
-      - outer_receipt_surface
-      - outer_implementation_surface
-  - conflict_class: current_turn_legality_conflict
-    conflict_scope: current_turn_legality
-    resolution_mode: machine_enforcement_terminal
-    semantic_precedence_chain:
-      - machine_registry_directory
-    terminal_machine_surfaces:
-      - mappings
-      - validators
-      - probes
-      - runtime_state
-      - receipts
-    motivating_only_surface_classes:
-      - bottom_theory
-      - root_index
-      - constitution
-      - runtime_constitution
-      - root_contract
-      - governed_subdomain_extension
-      - demoted_support_directory
-    forbidden_override_surface_classes:
-      - bottom_theory
-      - root_index
-      - constitution
-      - runtime_constitution
-      - root_contract
-      - governed_subdomain_extension
-      - demoted_support_directory
-  - conflict_class: gateway_authorship_conflict
-    conflict_scope: gateway_authorship
-    resolution_mode: gateway_effect_scope_preserved
-    semantic_precedence_chain:
-      - constitution
-      - runtime_constitution
-      - root_contract
-      - machine_registry_directory
-    terminal_machine_surfaces: []
-    motivating_only_surface_classes:
-      - root_index
-      - machine_registry_directory
-      - governed_subdomain_extension
-      - demoted_support_directory
-      - outer_governance_surface
-      - outer_review_surface
-      - outer_workbook_surface
-      - outer_reference_surface
-      - outer_evidence_surface
-      - outer_runtime_state_surface
-      - outer_receipt_surface
-      - outer_implementation_surface
-    forbidden_override_surface_classes:
-      - root_index
-      - machine_registry_directory
-      - governed_subdomain_extension
-      - demoted_support_directory
-      - outer_governance_surface
-      - outer_review_surface
-      - outer_workbook_surface
-      - outer_reference_surface
-      - outer_evidence_surface
-      - outer_runtime_state_surface
-      - outer_receipt_surface
-      - outer_implementation_surface
-  - conflict_class: demotion_status_conflict
-    conflict_scope: law_bearing_status
-    resolution_mode: governed_reclassification_required
-    semantic_precedence_chain:
-      - constitution
-      - runtime_constitution
-      - root_contract
-      - machine_registry_directory
-    terminal_machine_surfaces: []
-    motivating_only_surface_classes:
-      - demoted_support_directory
-    forbidden_override_surface_classes:
-      - demoted_support_directory
+- conflict_class: semantic_meaning_conflict
+  conflict_scope: source_order_meaning
+  resolution_mode: source_order_root_law
+  semantic_precedence_chain:
+  - bottom_theory
+  - constitution
+  - runtime_constitution
+  - root_contract
+  terminal_machine_surfaces: []
+  motivating_only_surface_classes:
+  - root_index
+  - machine_registry_directory
+  - governed_subdomain_extension
+  - demoted_support_directory
+  - outer_governance_surface
+  - outer_review_surface
+  - outer_workbook_surface
+  - outer_reference_surface
+  - outer_evidence_surface
+  - outer_runtime_state_surface
+  - outer_receipt_surface
+  - outer_implementation_surface
+  forbidden_override_surface_classes:
+  - root_index
+  - machine_registry_directory
+  - governed_subdomain_extension
+  - demoted_support_directory
+  - outer_governance_surface
+  - outer_review_surface
+  - outer_workbook_surface
+  - outer_reference_surface
+  - outer_evidence_surface
+  - outer_runtime_state_surface
+  - outer_receipt_surface
+  - outer_implementation_surface
+- conflict_class: current_turn_legality_conflict
+  conflict_scope: current_turn_legality
+  resolution_mode: machine_enforcement_terminal
+  semantic_precedence_chain:
+  - machine_registry_directory
+  terminal_machine_surfaces:
+  - mappings
+  - validators
+  - probes
+  - runtime_state
+  - receipts
+  motivating_only_surface_classes:
+  - bottom_theory
+  - root_index
+  - constitution
+  - runtime_constitution
+  - root_contract
+  - governed_subdomain_extension
+  - demoted_support_directory
+  forbidden_override_surface_classes:
+  - bottom_theory
+  - root_index
+  - constitution
+  - runtime_constitution
+  - root_contract
+  - governed_subdomain_extension
+  - demoted_support_directory
+- conflict_class: gateway_authorship_conflict
+  conflict_scope: gateway_authorship
+  resolution_mode: gateway_effect_scope_preserved
+  semantic_precedence_chain:
+  - constitution
+  - runtime_constitution
+  - root_contract
+  - machine_registry_directory
+  terminal_machine_surfaces: []
+  motivating_only_surface_classes:
+  - root_index
+  - machine_registry_directory
+  - governed_subdomain_extension
+  - demoted_support_directory
+  - outer_governance_surface
+  - outer_review_surface
+  - outer_workbook_surface
+  - outer_reference_surface
+  - outer_evidence_surface
+  - outer_runtime_state_surface
+  - outer_receipt_surface
+  - outer_implementation_surface
+  forbidden_override_surface_classes:
+  - root_index
+  - machine_registry_directory
+  - governed_subdomain_extension
+  - demoted_support_directory
+  - outer_governance_surface
+  - outer_review_surface
+  - outer_workbook_surface
+  - outer_reference_surface
+  - outer_evidence_surface
+  - outer_runtime_state_surface
+  - outer_receipt_surface
+  - outer_implementation_surface
+- conflict_class: demotion_status_conflict
+  conflict_scope: law_bearing_status
+  resolution_mode: governed_reclassification_required
+  semantic_precedence_chain:
+  - constitution
+  - runtime_constitution
+  - root_contract
+  - machine_registry_directory
+  terminal_machine_surfaces: []
+  motivating_only_surface_classes:
+  - demoted_support_directory
+  forbidden_override_surface_classes:
+  - demoted_support_directory

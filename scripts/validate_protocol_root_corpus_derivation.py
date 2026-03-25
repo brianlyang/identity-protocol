@@ -186,6 +186,20 @@ def main() -> int:
         if str(derivation_doc.get("question_routing_current_file") or "").strip() != "identity/protocol/mappings/root-corpus-question-routing.current.yaml":
             stale_reasons.append("root_corpus_derivation_question_routing_current_file_invalid")
             error_code = ERR_REGISTRY
+        if str(derivation_doc.get("validator_script") or "").strip() != "scripts/validate_protocol_root_corpus_derivation.py":
+            stale_reasons.append("root_corpus_derivation_validator_script_invalid")
+            error_code = ERR_REGISTRY
+        if str(derivation_doc.get("probe_script") or "").strip() != "scripts/ci/run_protocol_root_corpus_derivation_probes_ci.sh":
+            stale_reasons.append("root_corpus_derivation_probe_script_invalid")
+            error_code = ERR_REGISTRY
+        if str(derivation_doc.get("common_script") or "").strip() != "scripts/root_corpus_derivation_common.py":
+            stale_reasons.append("root_corpus_derivation_common_script_invalid")
+            error_code = ERR_REGISTRY
+        for field in ("validator_script", "probe_script", "common_script"):
+            rel_path = str(derivation_doc.get(field) or "").strip()
+            if rel_path and not (repo_root / rel_path).exists():
+                stale_reasons.append(f"root_corpus_derivation_surface_missing:{field}:{rel_path}")
+                error_code = ERR_REGISTRY
         if not anchor_checks:
             stale_reasons.append("root_corpus_derivation_anchor_checks_missing")
             error_code = ERR_REGISTRY

@@ -32,6 +32,10 @@ def _as_str_tuple(value: Any) -> tuple[str, ...]:
     return tuple(token for token in (str(item or "").strip() for item in value) if token)
 
 
+def _as_bool(value: Any) -> bool:
+    return value is True
+
+
 def _load_yaml(path: Path) -> dict[str, Any]:
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -50,6 +54,18 @@ def load_root_machine_registry_completeness(repo_root: Path) -> tuple[dict[str, 
     if not active_path.exists():
         return {}, entry_path, active_path, "active_completeness_mapping_missing"
     return _load_yaml(active_path), entry_path, active_path, ""
+
+
+def require_self_describing_families(doc: Mapping[str, Any]) -> bool:
+    return _as_bool(doc.get("require_self_describing_families"))
+
+
+def required_descriptor_fields_from_doc(doc: Mapping[str, Any]) -> tuple[str, ...]:
+    return _as_str_tuple(doc.get("required_descriptor_fields"))
+
+
+def load_mapping_descriptor(path: Path) -> dict[str, Any]:
+    return _load_yaml(path)
 
 
 def anchor_checks_from_doc(doc: Mapping[str, Any]) -> tuple[AnchorCheck, ...]:

@@ -314,6 +314,12 @@ If a root mapping family exists on disk but is omitted from the admitted child
 set, the machine world has a registry-completeness failure rather than a
 harmless file-list mismatch.
 
+Admission without discoverable enforcement still leaves the machine partially
+blind.
+
+A lawful root mapping family must therefore disclose the validator, probe, and
+shared-common surfaces that govern it.
+
 ---
 
 ## 1. The identity protocol is machine law first, not a compatibility layer

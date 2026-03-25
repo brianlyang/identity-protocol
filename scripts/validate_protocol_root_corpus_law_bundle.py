@@ -158,6 +158,20 @@ def main() -> int:
         if str(bundle_doc.get("root_dir") or "").strip() != "identity/protocol":
             stale_reasons.append("root_corpus_law_bundle_root_dir_invalid")
             error_code = ERR_REGISTRY
+        if str(bundle_doc.get("validator_script") or "").strip() != "scripts/validate_protocol_root_corpus_law_bundle.py":
+            stale_reasons.append("root_corpus_law_bundle_validator_script_invalid")
+            error_code = ERR_REGISTRY
+        if str(bundle_doc.get("probe_script") or "").strip() != "scripts/ci/run_protocol_root_corpus_law_bundle_probes_ci.sh":
+            stale_reasons.append("root_corpus_law_bundle_probe_script_invalid")
+            error_code = ERR_REGISTRY
+        if str(bundle_doc.get("common_script") or "").strip() != "scripts/root_corpus_law_bundle_common.py":
+            stale_reasons.append("root_corpus_law_bundle_common_script_invalid")
+            error_code = ERR_REGISTRY
+        for field in ("validator_script", "probe_script", "common_script"):
+            rel_path = str(bundle_doc.get(field) or "").strip()
+            if rel_path and not (repo_root / rel_path).exists():
+                stale_reasons.append(f"root_corpus_law_bundle_surface_missing:{field}:{rel_path}")
+                error_code = ERR_REGISTRY
         if not anchor_checks:
             stale_reasons.append("root_corpus_law_bundle_anchor_checks_missing")
             error_code = ERR_REGISTRY
