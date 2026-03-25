@@ -34,6 +34,17 @@ TERMINAL_TRUTH_CLASSES: tuple[str, ...] = (
     "non_terminal_or_failed_execution",
 )
 
+TERMINAL_STATE_CLASSES: tuple[str, ...] = (
+    "completed_clean",
+    "review_pending",
+    "revalidation_pending",
+    "repair_pending",
+    "retry_pending",
+    "quarantined",
+    "failed_terminal",
+    "non_terminal_pending",
+)
+
 NEGATIVE_FEEDBACK_CLASSES: tuple[str, ...] = (
     "none",
     "review_required",
@@ -71,6 +82,19 @@ PLACEHOLDER_SCAN_FIELDS: tuple[str, ...] = (
 REQUIRED_REPORT_FIELDS: tuple[str, ...] = (
     "identity_terminal_truth_cleanliness_status",
     "terminal_truth_contract_status",
+    "terminal_state_machine_status",
+    "terminal_state_class",
+    "terminal_state_basis",
+    "terminal_state_conflict_status",
+    "requires_review",
+    "retry_required",
+    "revalidation_required",
+    "repair_required",
+    "quarantine_required",
+    "requires_human",
+    "terminal_failure",
+    "state_transition_required",
+    "state_machine_blockers",
     "execution_closure_status",
     "terminal_truth_cleanliness_status",
     "terminal_truth_class",
@@ -335,6 +359,178 @@ def _execution_closure_basis(report_doc: dict[str, Any]) -> tuple[str, bool]:
     return "execution_closure_not_reached", False
 
 
+def _contains_transition_token(*values: str, tokens: tuple[str, ...]) -> bool:
+    haystack = " ".join(clean_string(value).lower() for value in values if clean_string(value))
+    return any(token in haystack for token in tokens)
+
+
+def derive_terminal_state_projection(
+    report_doc: dict[str, Any],
+    *,
+    terminal_truth_projection: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    report_doc = report_doc if isinstance(report_doc, dict) else {}
+    truth = terminal_truth_projection if isinstance(terminal_truth_projection, dict) else derive_terminal_truth_projection(report_doc)
+
+    next_action = clean_string(report_doc.get("next_action"))
+    next_recovery_action = clean_string(report_doc.get("next_recovery_action"))
+    failure_reason = clean_string(report_doc.get("failure_reason"))
+
+    is_terminal_clean = bool(truth.get("is_terminal_clean", False))
+    publishable = bool(truth.get("publishable", False))
+    negative_feedback_class = clean_string(truth.get("negative_feedback_class"))
+    next_state_after_veto = clean_string(truth.get("next_state_after_veto"))
+    loopback_required = bool(truth.get("loopback_required", False))
+
+    explicit_quarantine = as_bool(report_doc.get("quarantine_required"))
+    explicit_retry = as_bool(report_doc.get("retry_required"))
+    explicit_requires_human = as_bool(report_doc.get("requires_human"))
+    explicit_terminal_failure = as_bool(report_doc.get("terminal_failure")) or as_bool(report_doc.get("failed_terminal"))
+
+    requires_review = negative_feedback_class == "review_required" or next_state_after_veto == "review_pending"
+    revalidation_required = next_state_after_veto == "revalidation_pending"
+    repair_required = next_state_after_veto == "repair_pending"
+    quarantine_required = explicit_quarantine or _contains_transition_token(
+        next_action, next_recovery_action, failure_reason, tokens=("quarantine", "quarantined")
+    )
+    retry_required = explicit_retry or revalidation_required or repair_required or _contains_transition_token(
+        next_action, next_recovery_action, failure_reason, tokens=("retry", "rerun", "replay")
+    )
+    requires_human = explicit_requires_human or requires_review or _contains_transition_token(
+        next_action, next_recovery_action, failure_reason, tokens=("human", "manual_review", "approval")
+    )
+    terminal_failure = explicit_terminal_failure or _contains_transition_token(
+        next_action, next_recovery_action, failure_reason, tokens=("failed_terminal", "terminal_failure", "abort_terminal", "fatal")
+    )
+
+    terminal_state_basis = clean_string(truth.get("terminal_truth_class")) or clean_string(truth.get("terminal_truth_basis"))
+
+    if is_terminal_clean and publishable:
+        terminal_state_class = "completed_clean"
+    elif terminal_failure:
+        terminal_state_class = "failed_terminal"
+    elif quarantine_required:
+        terminal_state_class = "quarantined"
+    elif requires_review:
+        terminal_state_class = "review_pending"
+    elif repair_required:
+        terminal_state_class = "repair_pending"
+    elif revalidation_required:
+        terminal_state_class = "revalidation_pending"
+    elif retry_required:
+        terminal_state_class = "retry_pending"
+    else:
+        terminal_state_class = "non_terminal_pending"
+
+    state_transition_required = terminal_state_class not in {"completed_clean", "failed_terminal"}
+
+    primary_specific_flags = {
+        "requires_review": requires_review,
+        "revalidation_required": revalidation_required,
+        "repair_required": repair_required,
+        "quarantine_required": quarantine_required,
+        "terminal_failure": terminal_failure,
+    }
+    specific_true = [name for name, enabled in primary_specific_flags.items() if enabled]
+
+    conflict_reasons: list[str] = []
+    if len(specific_true) > 1:
+        conflict_reasons.append("multiple_primary_terminal_state_markers")
+
+    if terminal_state_class == "completed_clean":
+        if not (is_terminal_clean and publishable):
+            conflict_reasons.append("completed_clean_without_clean_publishable_truth")
+        if specific_true:
+            conflict_reasons.append("completed_clean_with_pending_or_failure_markers")
+        if state_transition_required:
+            conflict_reasons.append("completed_clean_state_transition_required_true")
+    elif terminal_state_class == "review_pending":
+        if not requires_review:
+            conflict_reasons.append("review_pending_without_requires_review")
+        if not requires_human:
+            conflict_reasons.append("review_pending_without_requires_human")
+        if is_terminal_clean or publishable:
+            conflict_reasons.append("review_pending_marked_clean_or_publishable")
+    elif terminal_state_class == "revalidation_pending":
+        if not revalidation_required:
+            conflict_reasons.append("revalidation_pending_without_revalidation_required")
+        if not loopback_required:
+            conflict_reasons.append("revalidation_pending_without_loopback_required")
+        if is_terminal_clean or publishable:
+            conflict_reasons.append("revalidation_pending_marked_clean_or_publishable")
+    elif terminal_state_class == "repair_pending":
+        if not repair_required:
+            conflict_reasons.append("repair_pending_without_repair_required")
+        if is_terminal_clean or publishable:
+            conflict_reasons.append("repair_pending_marked_clean_or_publishable")
+    elif terminal_state_class == "retry_pending":
+        if not retry_required:
+            conflict_reasons.append("retry_pending_without_retry_required")
+        if is_terminal_clean or publishable:
+            conflict_reasons.append("retry_pending_marked_clean_or_publishable")
+    elif terminal_state_class == "quarantined":
+        if not quarantine_required:
+            conflict_reasons.append("quarantined_without_quarantine_required")
+        if is_terminal_clean or publishable:
+            conflict_reasons.append("quarantined_marked_clean_or_publishable")
+    elif terminal_state_class == "failed_terminal":
+        if not terminal_failure:
+            conflict_reasons.append("failed_terminal_without_terminal_failure")
+        if is_terminal_clean or publishable:
+            conflict_reasons.append("failed_terminal_marked_clean_or_publishable")
+        if state_transition_required:
+            conflict_reasons.append("failed_terminal_state_transition_required_true")
+    elif terminal_state_class == "non_terminal_pending":
+        if is_terminal_clean or publishable:
+            conflict_reasons.append("non_terminal_pending_marked_clean_or_publishable")
+        if specific_true:
+            conflict_reasons.append("non_terminal_pending_with_primary_specific_markers")
+
+    adoption_probe_reasons: list[str] = []
+    adoption_fields = {
+        "terminal_state_class": terminal_state_class,
+        "requires_review": requires_review,
+        "retry_required": retry_required,
+        "revalidation_required": revalidation_required,
+        "repair_required": repair_required,
+        "quarantine_required": quarantine_required,
+        "requires_human": requires_human,
+        "terminal_failure": terminal_failure,
+        "state_transition_required": state_transition_required,
+    }
+    for field, expected in adoption_fields.items():
+        if field not in report_doc:
+            continue
+        current = report_doc.get(field)
+        if isinstance(expected, bool):
+            if _bool_or_false(current) != expected:
+                adoption_probe_reasons.append(f"report_{field}_projection_mismatch")
+        elif clean_string(current) != clean_string(expected):
+            adoption_probe_reasons.append(f"report_{field}_projection_mismatch")
+
+    terminal_state_conflict_status = STATUS_FAIL_REQUIRED if conflict_reasons else STATUS_PASS_REQUIRED
+    terminal_state_machine_status = (
+        STATUS_FAIL_REQUIRED if conflict_reasons or adoption_probe_reasons else STATUS_PASS_REQUIRED
+    )
+    state_machine_blockers = sorted(set(conflict_reasons + adoption_probe_reasons))
+
+    return {
+        "terminal_state_machine_status": terminal_state_machine_status,
+        "terminal_state_class": terminal_state_class,
+        "terminal_state_basis": terminal_state_basis or terminal_state_class,
+        "terminal_state_conflict_status": terminal_state_conflict_status,
+        "requires_review": requires_review,
+        "retry_required": retry_required,
+        "revalidation_required": revalidation_required,
+        "repair_required": repair_required,
+        "quarantine_required": quarantine_required,
+        "requires_human": requires_human,
+        "terminal_failure": terminal_failure,
+        "state_transition_required": state_transition_required,
+        "state_machine_blockers": state_machine_blockers,
+    }
+
+
 def derive_terminal_truth_projection(
     report_doc: dict[str, Any],
     *,
@@ -579,4 +775,5 @@ def project_terminal_truth_fields(
     )
     merged = dict(report_doc or {})
     merged.update(projected)
+    merged.update(derive_terminal_state_projection(merged, terminal_truth_projection=projected))
     return merged

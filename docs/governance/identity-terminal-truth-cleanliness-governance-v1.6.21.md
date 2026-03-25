@@ -99,6 +99,19 @@ Required machine projections:
 
 - `identity_terminal_truth_cleanliness_status`
 - `terminal_truth_contract_status`
+- `terminal_state_machine_status`
+- `terminal_state_class`
+- `terminal_state_basis`
+- `terminal_state_conflict_status`
+- `requires_review`
+- `retry_required`
+- `revalidation_required`
+- `repair_required`
+- `quarantine_required`
+- `requires_human`
+- `terminal_failure`
+- `state_transition_required`
+- `state_machine_blockers`
 - `execution_closure_status`
 - `terminal_truth_cleanliness_status`
 - `terminal_truth_class`
@@ -112,6 +125,7 @@ Hard semantics:
 1. execution closure truth and terminal-truth cleanliness must stay distinct in payloads;
 2. clean terminal truth requires a clean execution closure **plus** veto-free publishability;
 3. dirty execution may still be execution-closed, but it must not be represented as clean terminal truth.
+4. the same shared lane must also emit an explicit terminal-state equivalence projection so later consumers can distinguish `completed_clean`, `review_pending`, `revalidation_pending`, `repair_pending`, `retry_pending`, `quarantined`, `failed_terminal`, and `non_terminal_pending` rather than collapsing all non-clean states into one ambiguous bucket.
 
 ### 3.2 `negative_feedback_terminal_veto_contract_v1`
 
@@ -191,11 +205,14 @@ Interpretation rule:
    - shared negative-feedback veto projection,
    - shared clean-terminal / publishability derivation;
 2. `scripts/validate_terminal_truth_cleanliness.py`
-   - canonical machine validator;
+   - canonical machine validator,
+   - including explicit terminal-state equivalence projection and fail-close state-coherence checks;
 3. `scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh`
    - positive clean fixture,
    - negative review-required fixture,
-   - negative degraded fixture;
+   - negative degraded fixture,
+   - negative placeholder/repair fixture,
+   - negative adoption-mismatch fixture;
 4. `scripts/create_identity_pack.py`
    - auto-wires the contract for new packs;
 5. `scripts/repair_contract_backfill.py`
@@ -224,10 +241,12 @@ Current landed evidence:
 
 1. `bash scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh` now passes;
 2. `scripts/validate_terminal_truth_cleanliness.py` now preserves:
-   - clean fixture -> `identity_terminal_truth_cleanliness_status=PASS_REQUIRED`
-   - review-required fixture -> `execution_closure_status=PASS_REQUIRED`, `terminal_truth_class=review_required_execution_closure`, `publishable=false`
-   - degraded fixture -> `execution_closure_status=FAIL_REQUIRED`, `negative_feedback_terminal_veto_status=PASS_REQUIRED`, `terminal_veto_required=false`, `loopback_required=true`, `next_state_after_veto=revalidation_pending`
-3. direct runtime replay on `base-repo-audit-expert-v3` against its latest workspace-local execution report now fail-closes as non-clean terminal truth because the active report remains pre-mutation-gate blocked (`all_ok=false`, `writeback_status=MISSING`, `next_action=satisfy_pre_mutation_gate_and_rerun_update`). The higher-order validator now keeps the degraded loopback projection coherent (`negative_feedback_terminal_veto_status=PASS_REQUIRED`) while still refusing to promote the report into clean terminal truth.
+   - clean fixture -> `identity_terminal_truth_cleanliness_status=PASS_REQUIRED`, `terminal_state_machine_status=PASS_REQUIRED`, `terminal_state_class=completed_clean`
+   - review-required fixture -> `execution_closure_status=PASS_REQUIRED`, `terminal_truth_class=review_required_execution_closure`, `publishable=false`, `terminal_state_class=review_pending`
+   - degraded fixture -> `execution_closure_status=FAIL_REQUIRED`, `negative_feedback_terminal_veto_status=PASS_REQUIRED`, `terminal_veto_required=false`, `loopback_required=true`, `next_state_after_veto=revalidation_pending`, `terminal_state_class=revalidation_pending`
+   - placeholder fixture -> `negative_feedback_class=placeholder_result`, `terminal_state_machine_status=PASS_REQUIRED`, `terminal_state_class=repair_pending`
+   - adoption-mismatch fixture -> `terminal_state_machine_status=FAIL_REQUIRED` with explicit `state_machine_blockers` projection mismatch evidence
+3. direct runtime replay on `base-repo-audit-expert-v3` against its latest workspace-local execution report now fail-closes as non-clean terminal truth because the active report remains pre-mutation-gate blocked (`all_ok=false`, `writeback_status=MISSING`, `next_action=satisfy_pre_mutation_gate_and_rerun_update`). The higher-order validator now keeps the degraded loopback projection coherent (`negative_feedback_terminal_veto_status=PASS_REQUIRED`) while still refusing to promote the report into clean terminal truth, while separately projecting `terminal_state_machine_status=PASS_REQUIRED` when the non-clean state itself is coherent.
 
 ## 7) Closure addendum (authoritative current-state judgment)
 
@@ -237,6 +256,7 @@ The authoritative judgment for `v1.6.21` is now:
 2. negative feedback now has explicit veto semantics over clean terminal truth and canonical publishability;
 3. review-required execution closure is preserved as legal execution closure while remaining non-clean / non-publishable;
 4. dirty reports now fail-close on a shared validator lane instead of depending on pack-local interpretation;
-5. the stream is protocol-side closed because the missing shared law is landed.
+5. the lane now also projects explicit terminal-state equivalence semantics so non-clean states remain machine-distinct rather than narratively inferred;
+6. the stream is protocol-side closed because the missing shared law is landed.
 
 This does **not** mean every runtime identity is currently clean. It means the protocol no longer permits dirty terminal states to masquerade as clean terminal truth.

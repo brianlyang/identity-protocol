@@ -4,7 +4,7 @@ _meta:
   schema_version: 1
   source_layer: protocol
   lifecycle_state: phase6_full_requirement_projection
-  last_updated_utc: "2026-03-25T02:20:00Z"
+  last_updated_utc: "2026-03-25T03:24:28Z"
   row_count: 56
   notes:
     - "Phase-1 mapping seed for ASB16-RQ-017..022/030."
@@ -1829,6 +1829,19 @@ asb16-rq-056:
   report_field_refs:
     - identity_terminal_truth_cleanliness_status
     - terminal_truth_contract_status
+    - terminal_state_machine_status
+    - terminal_state_class
+    - terminal_state_basis
+    - terminal_state_conflict_status
+    - requires_review
+    - retry_required
+    - revalidation_required
+    - repair_required
+    - quarantine_required
+    - requires_human
+    - terminal_failure
+    - state_transition_required
+    - state_machine_blockers
     - execution_closure_status
     - terminal_truth_cleanliness_status
     - terminal_truth_class

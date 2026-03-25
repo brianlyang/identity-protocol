@@ -317,6 +317,7 @@ Compatibility note: legacy packs under `identity/<id>/` are migration-only locat
 5. Dirty signals such as degraded writeback, deferred writeback status, `all_ok=false`, `next_recovery_action`, placeholder outputs, unresolved contradictions, and confidence-below-floor must fail-close on the clean-terminal / publishable lane.
 6. Canonical publishability requires clean terminal truth. Execution closure alone is insufficient.
 7. Instance/runtime projections must not emit `is_terminal_clean=true`, `publishable=true`, or `canonical_result_eligible=true` while dirty signals remain active; the shared adoption probe must fail-close such drift.
+8. The same lane also emits an explicit terminal-state equivalence projection (`terminal_state_class`, `terminal_state_machine_status`, `requires_review`, `retry_required`, `revalidation_required`, `repair_required`, `quarantine_required`, `requires_human`, `terminal_failure`) so downstream consumers do not collapse every non-clean state into one ambiguous failure bucket. Review-pending, revalidation-pending, repair-pending, retry-pending, quarantine, and failed-terminal semantics must remain machine-distinct.
 
 ## Runtime source-of-truth boundary (v1.4.x hardening)
 

@@ -15,6 +15,7 @@ from terminal_truth_cleanliness_common import (
     TERMINAL_TRUTH_CLEANLINESS_CONTRACT_ID,
     TERMINAL_TRUTH_CLEANLINESS_VALIDATOR_ID,
     clean_string,
+    derive_terminal_state_projection,
     derive_terminal_truth_projection,
     resolve_pack_task,
     resolve_terminal_truth_cleanliness_contract,
@@ -109,6 +110,11 @@ def main() -> int:
         "required_contract": False,
         "contract_key": TERMINAL_TRUTH_CLEANLINESS_CONTRACT_KEY,
         "terminal_truth_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "terminal_state_machine_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "terminal_state_class": "",
+        "terminal_state_basis": "",
+        "terminal_state_conflict_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "state_machine_blockers": [],
         "identity_terminal_truth_cleanliness_status": STATUS_SKIPPED_NOT_REQUIRED,
         "error_code": "",
         "report_selected_path": "",
@@ -250,7 +256,12 @@ def main() -> int:
         post_execution_status=support_post_status,
         writeback_continuity_status=support_writeback_status,
     )
+    state_projection = derive_terminal_state_projection(
+        report_doc,
+        terminal_truth_projection=projection,
+    )
     payload.update(projection)
+    payload.update(state_projection)
     payload["terminal_truth_contract_id"] = TERMINAL_TRUTH_CLEANLINESS_CONTRACT_ID
     payload["validator_id"] = TERMINAL_TRUTH_CLEANLINESS_VALIDATOR_ID
     if support_results:

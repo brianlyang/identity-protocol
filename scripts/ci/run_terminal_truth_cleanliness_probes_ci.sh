@@ -82,11 +82,42 @@ degraded_report = {
     "next_recovery_action": "rerun_with_deterministic_lane_instance_or_protocol",
     "artifacts": [],
 }
+placeholder_report = {
+    "run_id": "terminal-truth-placeholder-run",
+    "identity_id": identity_id,
+    "all_ok": True,
+    "upgrade_required": False,
+    "writeback_mode": "STRICT_WRITEBACK",
+    "writeback_status": "NOT_REQUIRED",
+    "next_action": "publish_placeholder_result_blocked",
+    "degrade_reason": "",
+    "next_recovery_action": "",
+    "final_report": "placeholder final report",
+    "artifacts": [],
+}
+conflict_report = {
+    "run_id": "terminal-truth-conflict-run",
+    "identity_id": identity_id,
+    "all_ok": True,
+    "upgrade_required": True,
+    "writeback_mode": "STRICT_WRITEBACK",
+    "writeback_status": "WRITTEN",
+    "next_action": "review_required_create_pr_from_patch_plan",
+    "degrade_reason": "",
+    "next_recovery_action": "",
+    "is_terminal_clean": True,
+    "publishable": True,
+    "canonical_result_eligible": True,
+    "terminal_state_class": "completed_clean",
+    "artifacts": ["/tmp/patch-plan.json"],
+}
 (report_root := pack_root / 'runtime' / 'reports').mkdir(parents=True, exist_ok=True)
 for name, doc in {
     'identity-upgrade-exec-terminal-truth-clean-run.json': clean_report,
     'identity-upgrade-exec-terminal-truth-review-run.json': review_required_report,
     'identity-upgrade-exec-terminal-truth-degraded-run.json': degraded_report,
+    'identity-upgrade-exec-terminal-truth-placeholder-run.json': placeholder_report,
+    'identity-upgrade-exec-terminal-truth-conflict-run.json': conflict_report,
 }.items():
     (report_root / name).write_text(json.dumps(doc, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 PY
@@ -94,6 +125,8 @@ PY
 CLEAN_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-clean-run.json"
 REVIEW_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-review-run.json"
 DEGRADED_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-degraded-run.json"
+PLACEHOLDER_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-placeholder-run.json"
+CONFLICT_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-conflict-run.json"
 
 printf '[RUN] clean fixture\n'
 python3 scripts/validate_terminal_truth_cleanliness.py \
@@ -125,7 +158,29 @@ if python3 scripts/validate_terminal_truth_cleanliness.py \
   exit 1
 fi
 
-python3 - <<'PY' "${TMP_ROOT}/clean.json" "${TMP_ROOT}/review.json" "${TMP_ROOT}/degraded.json"
+printf '[RUN] placeholder fixture\n'
+if python3 scripts/validate_terminal_truth_cleanliness.py \
+  --catalog "${TMP_ROOT}/catalog.local.yaml" \
+  --identity-id "${IDENTITY_ID}" \
+  --report "${PLACEHOLDER_REPORT}" \
+  --skip-support-validators \
+  --json-only > "${TMP_ROOT}/placeholder.json"; then
+  echo '[FAIL] placeholder fixture must fail clean terminal truth gate'
+  exit 1
+fi
+
+printf '[RUN] conflict fixture\n'
+if python3 scripts/validate_terminal_truth_cleanliness.py \
+  --catalog "${TMP_ROOT}/catalog.local.yaml" \
+  --identity-id "${IDENTITY_ID}" \
+  --report "${CONFLICT_REPORT}" \
+  --skip-support-validators \
+  --json-only > "${TMP_ROOT}/conflict.json"; then
+  echo '[FAIL] conflict fixture must fail clean terminal truth gate'
+  exit 1
+fi
+
+python3 - <<'PY' "${TMP_ROOT}/clean.json" "${TMP_ROOT}/review.json" "${TMP_ROOT}/degraded.json" "${TMP_ROOT}/placeholder.json" "${TMP_ROOT}/conflict.json"
 import json
 import sys
 from pathlib import Path
@@ -133,6 +188,8 @@ from pathlib import Path
 clean = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
 review = json.loads(Path(sys.argv[2]).read_text(encoding='utf-8'))
 degraded = json.loads(Path(sys.argv[3]).read_text(encoding='utf-8'))
+placeholder = json.loads(Path(sys.argv[4]).read_text(encoding='utf-8'))
+conflict = json.loads(Path(sys.argv[5]).read_text(encoding='utf-8'))
 
 if clean.get('identity_terminal_truth_cleanliness_status') != 'PASS_REQUIRED':
     raise SystemExit('clean fixture top-level status must PASS_REQUIRED')
@@ -142,6 +199,8 @@ if clean.get('publishable') is not True or clean.get('canonical_result_eligible'
     raise SystemExit('clean fixture must be publishable and canonical-result eligible')
 if clean.get('negative_feedback_terminal_veto_status') != 'PASS_REQUIRED':
     raise SystemExit('clean fixture veto status must PASS_REQUIRED')
+if clean.get('terminal_state_machine_status') != 'PASS_REQUIRED' or clean.get('terminal_state_class') != 'completed_clean':
+    raise SystemExit('clean fixture terminal state machine must classify as completed_clean')
 
 if review.get('execution_closure_status') != 'PASS_REQUIRED':
     raise SystemExit('review-required fixture must preserve execution closure status')
@@ -153,6 +212,10 @@ if review.get('negative_feedback_terminal_veto_status') != 'PASS_REQUIRED':
     raise SystemExit('review-required fixture veto semantics must PASS_REQUIRED')
 if review.get('publishable') is not False:
     raise SystemExit('review-required fixture must not be publishable')
+if review.get('terminal_state_machine_status') != 'PASS_REQUIRED' or review.get('terminal_state_class') != 'review_pending':
+    raise SystemExit('review-required fixture terminal state machine must classify as review_pending')
+if review.get('requires_review') is not True or review.get('requires_human') is not True:
+    raise SystemExit('review-required fixture must require review and human participation')
 
 if degraded.get('execution_closure_status') != 'FAIL_REQUIRED':
     raise SystemExit('degraded fixture must fail execution closure status')
@@ -166,6 +229,24 @@ if degraded.get('loopback_required') is not True:
     raise SystemExit('degraded fixture must require loopback')
 if degraded.get('next_state_after_veto') != 'revalidation_pending':
     raise SystemExit('degraded fixture next_state_after_veto must be revalidation_pending')
+if degraded.get('terminal_state_machine_status') != 'PASS_REQUIRED' or degraded.get('terminal_state_class') != 'revalidation_pending':
+    raise SystemExit('degraded fixture terminal state machine must classify as revalidation_pending')
+if degraded.get('revalidation_required') is not True:
+    raise SystemExit('degraded fixture must require revalidation')
+
+if placeholder.get('negative_feedback_class') != 'placeholder_result':
+    raise SystemExit('placeholder fixture negative_feedback_class must be placeholder_result')
+if placeholder.get('terminal_state_machine_status') != 'PASS_REQUIRED' or placeholder.get('terminal_state_class') != 'repair_pending':
+    raise SystemExit('placeholder fixture terminal state machine must classify as repair_pending')
+if placeholder.get('repair_required') is not True:
+    raise SystemExit('placeholder fixture must require repair')
+
+if conflict.get('terminal_state_machine_status') != 'FAIL_REQUIRED':
+    raise SystemExit('conflict fixture terminal state machine must fail-close')
+if conflict.get('terminal_state_conflict_status') != 'PASS_REQUIRED':
+    raise SystemExit('conflict fixture should fail via adoption mismatch, not semantic-state incoherence')
+if 'report_terminal_state_class_projection_mismatch' not in set(conflict.get('state_machine_blockers') or []):
+    raise SystemExit('conflict fixture must expose terminal_state_class projection mismatch blocker')
 PY
 
 echo "[PASS] terminal truth cleanliness probes passed"

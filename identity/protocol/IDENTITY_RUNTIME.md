@@ -271,6 +271,19 @@ Required report fields:
 
 - `identity_terminal_truth_cleanliness_status`
 - `terminal_truth_contract_status`
+- `terminal_state_machine_status`
+- `terminal_state_class`
+- `terminal_state_basis`
+- `terminal_state_conflict_status`
+- `requires_review`
+- `retry_required`
+- `revalidation_required`
+- `repair_required`
+- `quarantine_required`
+- `requires_human`
+- `terminal_failure`
+- `state_transition_required`
+- `state_machine_blockers`
 - `execution_closure_status`
 - `terminal_truth_cleanliness_status`
 - `terminal_truth_class`
@@ -308,6 +321,8 @@ Hard semantics:
 4. Dirty-signal families such as degraded writeback, deferred writeback status, `all_ok=false`, `next_recovery_action`, placeholder outputs, unresolved contradictions, and confidence-below-floor must veto clean terminal truth without retroactively rewriting lower-layer execution-closure truth.
 5. Canonical publishability requires clean terminal truth. Dirty terminal states must remain non-publishable even when execution closure is legal.
 6. Instance/runtime payloads must not project `is_terminal_clean=true`, `publishable=true`, or `canonical_result_eligible=true` while governed dirty signals remain active; such drift is a protocol-side fail-close condition.
+7. `rq_056` also emits a terminal-state equivalence projection (`terminal_state_machine_status`, `terminal_state_class`, `requires_review`, `retry_required`, `revalidation_required`, `repair_required`, `quarantine_required`, `requires_human`, `terminal_failure`) so runtime consumers can distinguish clean completion, review pending, revalidation pending, repair pending, retry pending, quarantine, failed terminal, and generic non-terminal pending states without collapsing them into one ambiguous dirty bucket.
+8. `terminal_state_machine_status=PASS_REQUIRED` means the report's terminal-state class and equivalence booleans are coherent; it does not by itself claim that the report is clean. Dirty reports may therefore keep `identity_terminal_truth_cleanliness_status=FAIL_REQUIRED` while still returning `terminal_state_machine_status=PASS_REQUIRED` when their non-clean state is correctly projected.
 
 ## Batch-6 anchor placeholders (v1.6 intake, non-promotional)
 

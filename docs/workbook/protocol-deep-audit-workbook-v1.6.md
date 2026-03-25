@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 101`, `command snippets checked: 1060`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 101`, `command snippets checked: 1068`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -1141,12 +1141,15 @@ Root cause:
   - negative feedback vetoes clean terminal truth / canonical publishability without falsely rewriting every review-required execution closure into “execution invalid”;
   - create/backfill/fresh-run producer lanes all emit one shared terminal-truth projection family;
   - clean fixture proof passes and dirty fixtures fail-close on the higher-order lane;
+  - explicit terminal-state equivalence classes distinguish review/revalidation/repair/retry/quarantine/failure semantics rather than collapsing non-clean states into one bucket;
   - runtime dirty reports become machine-visible dirty terminal states instead of surviving as quasi-clean terminal truth.
 - `current_evidence`:
   - `bash scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh` now passes with:
-    - clean fixture -> `identity_terminal_truth_cleanliness_status=PASS_REQUIRED`
-    - review-required fixture -> `execution_closure_status=PASS_REQUIRED`, `terminal_truth_class=review_required_execution_closure`, `publishable=false`
-    - degraded fixture -> `negative_feedback_class=degraded_execution`, `loopback_required=true`, `next_state_after_veto=revalidation_pending`;
+    - clean fixture -> `identity_terminal_truth_cleanliness_status=PASS_REQUIRED`, `terminal_state_machine_status=PASS_REQUIRED`, `terminal_state_class=completed_clean`
+    - review-required fixture -> `execution_closure_status=PASS_REQUIRED`, `terminal_truth_class=review_required_execution_closure`, `publishable=false`, `terminal_state_class=review_pending`
+    - degraded fixture -> `negative_feedback_class=degraded_execution`, `loopback_required=true`, `next_state_after_veto=revalidation_pending`, `terminal_state_class=revalidation_pending`
+    - placeholder fixture -> `negative_feedback_class=placeholder_result`, `terminal_state_class=repair_pending`
+    - adoption-mismatch fixture -> `terminal_state_machine_status=FAIL_REQUIRED` with explicit projection-drift blockers;
   - `scripts/create_identity_pack.py` now auto-wires `identity_terminal_truth_cleanliness_contract_v1` for new packs;
   - `scripts/repair_contract_backfill.py` now backfills the same contract for adopted packs and projects the higher-order terminal-truth fields onto the active execution report;
   - `scripts/execute_identity_upgrade.py` now emits the same projection family on fresh runs;
