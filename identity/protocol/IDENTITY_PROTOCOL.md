@@ -57,11 +57,12 @@ Status transitions are controlled by governance/review, not by script commit alo
 9. The root-domain decision-evidence admissibility law for what may motivate, support, or terminally justify a machine decision is frozen separately in `identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md`.
 10. The root-domain success-path state admissibility law for which state classes may enter active execution, stay optional, or redirect into governed recovery is frozen separately in `identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md`.
 11. The root-domain entry-surface legitimacy law for which entry surfaces are lawful, which may drive active execution, and which must remain helper-only, recovery-only, or demoted is frozen separately in `identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md`.
-12. The root-domain admissibility law for new protocol streams and shared strengthenings is frozen separately in `identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md`.
-13. The root-domain responsibility and escalation boundary between protocol law and instance adaptation is frozen separately in `identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md`.
-14. The root-domain truth lifecycle law for existence, discoverability, admissibility, run-binding, and next-hop consumption is frozen separately in `identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md`.
-15. The root-domain operator answer-surface and law-preserving compression boundary is frozen separately in `identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md`.
-16. The root-domain instance self-judgement law for who I am, what I can do, how I do it, and when I must not decide alone is frozen separately in `identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md`.
+12. The root-domain error terminality law for which errors must fail-close, redirect into governed recovery, or remain explicitly non-blocking is frozen separately in `identity/protocol/ERROR_TERMINALITY_CONTRACT.md`.
+13. The root-domain admissibility law for new protocol streams and shared strengthenings is frozen separately in `identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md`.
+14. The root-domain responsibility and escalation boundary between protocol law and instance adaptation is frozen separately in `identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md`.
+15. The root-domain truth lifecycle law for existence, discoverability, admissibility, run-binding, and next-hop consumption is frozen separately in `identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md`.
+16. The root-domain operator answer-surface and law-preserving compression boundary is frozen separately in `identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md`.
+17. The root-domain instance self-judgement law for who I am, what I can do, how I do it, and when I must not decide alone is frozen separately in `identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md`.
 
 ## Constitutional derivation discipline
 
@@ -298,6 +299,23 @@ Compatibility note: legacy packs under `identity/<id>/` are migration-only locat
    - `full_operational_closure`
 7. The shared `roundtable_four_track_cross_validation_contract_v1` primitive may be reused as cross-validation intake for route/loop evidence discrimination, but it does not become a new loop, a new artifact family, or the semantic owner of weak-live-linkage law.
 8. History/sample/meta artifacts may remain valid for sample/self-test, review, or semantic-center proof; they must not silently satisfy strict current-run success once the stream requires live-binding and next-hop-consumption interpretation.
+
+### Canonical terminal-truth cleanliness boundary (v1.6.21 additive)
+
+1. `v1.6.21` freezes one higher-order protocol boundary above inherited execution-closure law:
+   - execution closure truth,
+   - clean terminal truth,
+   - canonical publishability
+   must remain distinct machine interpretations.
+2. The stream does **not** reopen the inherited legality of review-required execution closure. Instead, it freezes that review-required closure may remain execution-closed while still being vetoed from clean terminal truth and canonical publishability.
+3. The machine-consumed intake row for this stream is `rq_056_identity_terminal_truth_cleanliness_contract_v1`.
+4. Governed negative feedback may veto:
+   - `clean_terminal_truth`
+   - `canonical_publishability`
+   without automatically invalidating the lower execution-closure truth.
+5. Dirty signals such as degraded writeback, deferred writeback status, `all_ok=false`, `next_recovery_action`, placeholder outputs, unresolved contradictions, and confidence-below-floor must fail-close on the clean-terminal / publishable lane.
+6. Canonical publishability requires clean terminal truth. Execution closure alone is insufficient.
+7. Instance/runtime projections must not emit `is_terminal_clean=true`, `publishable=true`, or `canonical_result_eligible=true` while dirty signals remain active; the shared adoption probe must fail-close such drift.
 
 ## Runtime source-of-truth boundary (v1.4.x hardening)
 

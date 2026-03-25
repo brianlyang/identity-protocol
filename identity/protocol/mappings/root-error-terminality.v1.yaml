@@ -1,0 +1,91 @@
+schema_version: 1
+error_family: protocol_root_error_terminality
+error_version: v1
+contract_file: identity/protocol/ERROR_TERMINALITY_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_error_terminality.py
+probe_script: scripts/ci/run_protocol_root_error_terminality_probes_ci.sh
+common_script: scripts/root_error_terminality_common.py
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Error terminality law'
+  - '## Seven error classes'
+  - '## Required error differentiations'
+  - '## Non-compliant error collapses'
+  - 'Only lawfully classified errors may fail-close, redirect, or remain non-blocking in current-turn execution.'
+required_error_class_rows:
+  - order: 1
+    error_class_id: frozen_error_definition
+    contract_heading: '### 1. Frozen error definition'
+    error_role: frozen_error_definition
+  - order: 2
+    error_class_id: fail_close_legality_error
+    contract_heading: '### 2. Fail-close legality error'
+    error_role: fail_close_legality_error
+  - order: 3
+    error_class_id: binding_integrity_error
+    contract_heading: '### 3. Binding-integrity error'
+    error_role: binding_integrity_error
+  - order: 4
+    error_class_id: active_path_contamination_error
+    contract_heading: '### 4. Active-path contamination error'
+    error_role: active_path_contamination_error
+  - order: 5
+    error_class_id: governed_recovery_redirect_error
+    contract_heading: '### 5. Governed recovery-redirect error'
+    error_role: governed_recovery_redirect_error
+  - order: 6
+    error_class_id: non_blocking_observation_error
+    contract_heading: '### 6. Non-blocking observation error'
+    error_role: non_blocking_observation_error
+  - order: 7
+    error_class_id: demoted_support_or_explanatory_error_material
+    contract_heading: '### 7. Demoted support or explanatory error material'
+    error_role: demoted_support_or_explanatory_error_material
+required_differentiation_rows:
+  - order: 1
+    differentiation_id: frozen_vs_live_legality_error
+    contract_phrase: 'frozen law-defined error is separated from live fail-close legality error;'
+  - order: 2
+    differentiation_id: legality_vs_binding_error
+    contract_phrase: 'fail-close legality error is separated from binding-integrity error;'
+  - order: 3
+    differentiation_id: binding_vs_contamination_error
+    contract_phrase: 'binding-integrity error is separated from active-path contamination error;'
+  - order: 4
+    differentiation_id: contamination_vs_recovery_redirect_error
+    contract_phrase: 'active-path contamination error is separated from governed recovery-redirect error;'
+  - order: 5
+    differentiation_id: recovery_redirect_vs_non_blocking_observation
+    contract_phrase: 'governed recovery-redirect error is separated from non-blocking observation error;'
+  - order: 6
+    differentiation_id: observation_vs_explanatory_material
+    contract_phrase: 'non-blocking observation error is separated from demoted support or explanatory error material;'
+  - order: 7
+    differentiation_id: warning_tone_vs_terminality_classification
+    contract_phrase: 'visible warning tone or local urgency is separated from lawful error terminality classification.'
+required_collapse_rows:
+  - order: 1
+    collapse_id: defined_error_as_live_terminal_error
+    contract_phrase: 'a law-defined or declared error class is treated as if it were already a live current-turn terminal error.'
+  - order: 2
+    collapse_id: legality_blocker_as_warning
+    contract_phrase: 'a contradiction, missing canonical truth, or admissibility blocker is treated as if it were only a warning or soft suggestion.'
+  - order: 3
+    collapse_id: binding_mismatch_as_active_progress
+    contract_phrase: 'a run, thread, identity, path, or receipt mismatch is treated as if active execution may continue unchanged.'
+  - order: 4
+    collapse_id: contamination_blocker_as_normal_execution
+    contract_phrase: 'contamination of the active path by support, compatibility, recovery, replay, diagnostics, sample, or demoted material is treated as normal active execution.'
+  - order: 5
+    collapse_id: recovery_redirect_as_success_continuation
+    contract_phrase: 'a governed recovery or redirect condition is treated as if the active success path may continue or complete.'
+  - order: 6
+    collapse_id: observation_or_explanatory_material_as_terminal_authority
+    contract_phrase: 'a non-blocking observation or explanatory artifact is treated as if it were terminal machine error authority.'
+  - order: 7
+    collapse_id: local_convenience_as_error_demotion
+    contract_phrase: 'convenience, impatience, or local familiarity is treated as if it could lawfully demote a fail-close error.'

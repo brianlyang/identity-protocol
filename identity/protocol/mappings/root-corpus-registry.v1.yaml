@@ -184,6 +184,19 @@ registered_top_level_entries:
       - workbook_issue_projection
       - closure_ledger_narration
       - business_domain_example
+  - rel_path: identity/protocol/ERROR_TERMINALITY_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for error terminality law'
+      - '## Error terminality law'
+      - '## Seven error classes'
+      - '## Required error differentiations'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
   - rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
     entry_kind: file
     corpus_class: root_contract
@@ -314,6 +327,8 @@ registered_top_level_entries:
       - root-success-path-state-admissibility.v1.yaml
       - root-entry-surface-legitimacy.current.yaml
       - root-entry-surface-legitimacy.v1.yaml
+      - root-error-terminality.current.yaml
+      - root-error-terminality.v1.yaml
       - root-identity-instance-self-judgement.current.yaml
       - root-identity-instance-self-judgement.v1.yaml
       - root-protocol-instance-responsibility.current.yaml
