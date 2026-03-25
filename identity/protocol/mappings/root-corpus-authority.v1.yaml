@@ -22,6 +22,10 @@ authority_anchor_checks:
     required_markers:
       - '## Runtime adjudication boundary'
       - 'Current-turn machine-world ontology legality must still resolve from machine-consumed enforcement surfaces'
+  - rel_path: identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md
+    required_markers:
+      - '## Runtime adjudication boundary'
+      - 'Current-turn epistemic legality must still resolve from machine-consumed enforcement surfaces'
   - rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
     required_markers:
       - '## Runtime adjudication boundary'
@@ -117,6 +121,10 @@ entry_authority_projection:
     authority_role: root_domain_contract_law
     authority_mode: frozen_law_only
   - rel_path: identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md
+    corpus_class: root_contract
+    authority_role: root_domain_contract_law
+    authority_mode: frozen_law_only
+  - rel_path: identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md
     corpus_class: root_contract
     authority_role: root_domain_contract_law
     authority_mode: frozen_law_only

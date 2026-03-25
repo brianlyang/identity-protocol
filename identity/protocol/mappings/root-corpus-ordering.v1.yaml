@@ -53,38 +53,41 @@ reading_order:
     rel_path: identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md
     entry_role: root_contract_entry
   - order: 7
-    rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
+    rel_path: identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md
     entry_role: root_contract_entry
   - order: 8
-    rel_path: identity/protocol/IDENTITY_DISCOVERY.md
+    rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
     entry_role: root_contract_entry
   - order: 9
-    rel_path: identity/protocol/AGENT_HANDOFF_CONTRACT.md
+    rel_path: identity/protocol/IDENTITY_DISCOVERY.md
     entry_role: root_contract_entry
   - order: 10
-    rel_path: identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md
+    rel_path: identity/protocol/AGENT_HANDOFF_CONTRACT.md
     entry_role: root_contract_entry
   - order: 11
-    rel_path: identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md
+    rel_path: identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md
     entry_role: root_contract_entry
   - order: 12
-    rel_path: identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md
+    rel_path: identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md
     entry_role: root_contract_entry
   - order: 13
-    rel_path: identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md
+    rel_path: identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md
     entry_role: root_contract_entry
   - order: 14
-    rel_path: identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md
+    rel_path: identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md
     entry_role: root_contract_entry
   - order: 15
+    rel_path: identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md
+    entry_role: root_contract_entry
+  - order: 16
     rel_path: identity/protocol/mappings
     entry_role: machine_registry_directory_entry
-  - order: 16
+  - order: 17
     rel_path: identity/protocol/broadcast
     entry_role: governed_subdomain_extension_entry
-  - order: 17
+  - order: 18
     rel_path: identity/protocol/plugins
     entry_role: governed_subdomain_extension_entry
-  - order: 18
+  - order: 19
     rel_path: identity/protocol/fixtures
     entry_role: demoted_support_entry

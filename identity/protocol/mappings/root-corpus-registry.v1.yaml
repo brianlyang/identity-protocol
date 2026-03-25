@@ -132,6 +132,19 @@ registered_top_level_entries:
       - workbook_issue_projection
       - closure_ledger_narration
       - business_domain_example
+  - rel_path: identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md
+    entry_kind: file
+    corpus_class: root_contract
+    law_bearing: true
+    required_markers:
+      - 'this file remains the authoritative root-domain contract for current-truth epistemology law'
+      - '## Current-truth epistemology law'
+      - '## Five epistemic commitments'
+      - '## Required epistemic differentiations'
+    forbidden_content_classes:
+      - workbook_issue_projection
+      - closure_ledger_narration
+      - business_domain_example
   - rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
     entry_kind: file
     corpus_class: root_contract
@@ -254,6 +267,8 @@ registered_top_level_entries:
       - root-machine-law-primacy.v1.yaml
       - root-machine-world-ontology.current.yaml
       - root-machine-world-ontology.v1.yaml
+      - root-current-truth-epistemology.current.yaml
+      - root-current-truth-epistemology.v1.yaml
       - root-identity-instance-self-judgement.current.yaml
       - root-identity-instance-self-judgement.v1.yaml
       - root-protocol-instance-responsibility.current.yaml
