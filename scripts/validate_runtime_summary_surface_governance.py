@@ -92,6 +92,26 @@ SCRIPT_BINDINGS: tuple[ScriptBindingSpec, ...] = (
             '"control_plane_budget_artifact"',
         ),
     ),
+    ScriptBindingSpec(
+        name="identity_context_continuity_bundle_surface",
+        script_rel="scripts/render_identity_context_continuity_bundle.py",
+        surface_id="identity_context_continuity_bundle_surface",
+        required_tokens=(
+            '"surface_governance"',
+            "build_governed_runtime_summary_surface_payload(",
+            '"identity_context_continuity_bundle_surface"',
+        ),
+    ),
+    ScriptBindingSpec(
+        name="identity_context_reentry_answer_surface",
+        script_rel="scripts/render_identity_context_reentry_answers.py",
+        surface_id="identity_context_reentry_answer_surface",
+        required_tokens=(
+            '"surface_governance"',
+            "build_governed_runtime_summary_surface_payload(",
+            '"identity_context_reentry_answer_surface"',
+        ),
+    ),
 )
 
 DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
@@ -172,6 +192,28 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             "The renderer must self-describe this bounded authority in machine-readable payload form.",
         ),
     ),
+    DocAnchorSpec(
+        rel_path="docs/governance/identity-context-continuity-governance-v1.6.16.md",
+        required_markers=(
+            "`scripts/render_identity_context_continuity_bundle.py` remains a governed continuity-support bundle surface on an outer runtime-state layer.",
+            "It may compress continuity readiness/proof state for launcher/internal consumers, but it must not replace root-law owners, direct validator receipts, canonical continuity artifacts, or launcher entry authority.",
+            "`scripts/render_identity_context_reentry_answers.py` remains a governed identity-visible reentry answer surface on an outer runtime-state layer.",
+            "It may present copyable governed reentry task blocks, but it must not replace root-law owners, direct validator receipts, canonical continuity artifacts, or launcher entry authority.",
+            "Neither surface may become a new terminal command family, thread-UUID lookup authority, or raw-transcript authority.",
+            "Both renderers must self-describe this bounded authority in machine-readable payload form.",
+        ),
+    ),
+    DocAnchorSpec(
+        rel_path="docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md",
+        required_markers=(
+            "`scripts/render_identity_context_continuity_bundle.py` remains a governed continuity-support bundle surface on an outer runtime-state layer.",
+            "It may compress continuity readiness/proof state for launcher/internal consumers, but it must not replace root-law owners, direct validator receipts, canonical continuity artifacts, or launcher entry authority.",
+            "`scripts/render_identity_context_reentry_answers.py` remains a governed identity-visible reentry answer surface on an outer runtime-state layer.",
+            "It may present copyable governed reentry task blocks, but it must not replace root-law owners, direct validator receipts, canonical continuity artifacts, or launcher entry authority.",
+            "Neither surface may become a new terminal command family, thread-UUID lookup authority, or raw-transcript authority.",
+            "Both renderers must self-describe this bounded authority in machine-readable payload form.",
+        ),
+    ),
 )
 
 
@@ -229,7 +271,7 @@ def _validate_doc_anchors(repo_root: Path) -> tuple[str, list[dict[str, Any]], l
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Validate governance markers for governed outer runtime summary surfaces.")
+    ap = argparse.ArgumentParser(description="Validate governance markers for governed outer runtime summary/support surfaces.")
     ap.add_argument("--repo-root", default=str(DEFAULT_REPO_ROOT))
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()

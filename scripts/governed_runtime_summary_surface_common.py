@@ -15,6 +15,12 @@ CURRENT_AUTHORITY_REDIRECT_REFS: tuple[str, ...] = (
     "identity/protocol/mappings/control-plane-budget.current.yaml",
     "identity/protocol/mappings/workbook-registry.current.yaml",
 )
+CONTINUITY_SUPPORT_REDIRECT_REFS: tuple[str, ...] = (
+    *CURRENT_AUTHORITY_REDIRECT_REFS,
+    "docs/governance/identity-context-continuity-governance-v1.6.16.md",
+    "docs/review/protocol-remediation-audit-ledger-v1.6.16-identity-context-continuity.md",
+    "docs/governance/identity-codex-launcher-governance-v1.6.14.md",
+)
 FORBIDDEN_REPLACEMENTS: tuple[str, ...] = (
     "root_law_owner",
     "direct_validator_receipt",
@@ -68,6 +74,22 @@ CONTROL_PLANE_BUDGET_FORBIDDEN_REPLACEMENTS: tuple[str, ...] = (
     *FORBIDDEN_REPLACEMENTS,
     "current_pointer_ssot",
     "historical_replay_authority",
+)
+CONTINUITY_BUNDLE_FORBIDDEN_REPLACEMENTS: tuple[str, ...] = (
+    *FORBIDDEN_REPLACEMENTS,
+    "canonical_continuity_artifact",
+    "launcher_entry_authority",
+)
+REENTRY_ANSWER_FORBIDDEN_REPLACEMENTS: tuple[str, ...] = (
+    *CONTINUITY_BUNDLE_FORBIDDEN_REPLACEMENTS,
+    "thread_uuid_lookup_authority",
+    "raw_transcript_authority",
+)
+CONTINUITY_SUPPORT_GATEWAYS: tuple[str, ...] = (
+    "runtime_constitution",
+    "context_continuity_contract",
+    "launcher_entry_owner_bridge",
+    "runtime_receipt_join",
 )
 
 
@@ -167,6 +189,47 @@ SURFACE_PROFILES: dict[str, GovernedRuntimeSummarySurfaceProfile] = {
             "Treat the control-plane budget artifact as a bounded machine-generated budget snapshot derived from "
             "current validators and current mappings; it is suitable for sync and budget maintenance, but must "
             "not be promoted into standalone semantic authority."
+        ),
+    ),
+    "identity_context_continuity_bundle_surface": GovernedRuntimeSummarySurfaceProfile(
+        surface_id="identity_context_continuity_bundle_surface",
+        surface_label="governed continuity-support bundle surface",
+        governed_verdict_kind="governed_continuity_support_bundle",
+        surface_class="outer_runtime_support_surface",
+        surface_scope="continuity_outer",
+        current_authority_redirect_refs=CONTINUITY_SUPPORT_REDIRECT_REFS,
+        forbidden_replacements=CONTINUITY_BUNDLE_FORBIDDEN_REPLACEMENTS,
+        strengthening_gateways=CONTINUITY_SUPPORT_GATEWAYS,
+        authority_rule=(
+            "The continuity-support bundle is a governed outer runtime-state support surface; it may compress "
+            "continuity readiness and live-consumption proof for launcher/internal consumers, but it must not "
+            "replace root-law owners, direct validator receipts, canonical continuity artifacts, or launcher entry authority."
+        ),
+        operator_interpretation_rule=(
+            "Treat the continuity-support bundle as a bounded machine-readable readiness/proof bundle derived from "
+            "continuity validators and runtime artifacts; it may guide launcher/internal consumption, but it must "
+            "not be promoted into standalone continuity truth or terminal command authority."
+        ),
+    ),
+    "identity_context_reentry_answer_surface": GovernedRuntimeSummarySurfaceProfile(
+        surface_id="identity_context_reentry_answer_surface",
+        surface_label="governed identity-visible reentry answer surface",
+        governed_verdict_kind="governed_reentry_answer_bundle",
+        surface_class="outer_instance_answer_surface",
+        surface_scope="continuity_instance_visible",
+        current_authority_redirect_refs=CONTINUITY_SUPPORT_REDIRECT_REFS,
+        forbidden_replacements=REENTRY_ANSWER_FORBIDDEN_REPLACEMENTS,
+        strengthening_gateways=CONTINUITY_SUPPORT_GATEWAYS,
+        authority_rule=(
+            "The reentry answer surface is a governed outer runtime-state answer surface; it may present intent-"
+            "separated governed reentry task blocks, but it must not replace root-law owners, direct validator "
+            "receipts, canonical continuity artifacts, or launcher entry authority."
+        ),
+        operator_interpretation_rule=(
+            "Treat the reentry answer surface as a bounded machine-readable answer bundle derived from the "
+            "continuity-support bundle and continuity validators; it may help an identity answer migration/reload "
+            "questions, but it must not become thread-UUID lookup authority, raw-transcript authority, or a new "
+            "terminal command family."
         ),
     ),
 }

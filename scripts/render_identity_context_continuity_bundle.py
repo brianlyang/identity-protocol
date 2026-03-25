@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
 from identity_context_continuity_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -243,6 +244,9 @@ def render_continuity_bundle_payload(
         "canonical_state_root": str(continuity_state_root(pack_root)),
         "canonical_reentry_brief_path": str(reentry_brief_path(pack_root)),
         "launcher_entry_owner_stream": LAUNCHER_OWNER_STREAM,
+        "surface_governance": build_governed_runtime_summary_surface_payload(
+            "identity_context_continuity_bundle_surface"
+        ),
         "operator_surface_contract": {
             "new_user_facing_continuity_command_family_forbidden": True,
             "continuity_discovery_is_internal_support_only": True,

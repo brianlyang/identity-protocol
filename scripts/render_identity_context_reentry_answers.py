@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
 from identity_context_continuity_common import (
     REENTRY_ANSWER_BUNDLE_CONTRACT_ID,
     REENTRY_ANSWER_INTENTS,
@@ -269,6 +270,9 @@ def render_reentry_answers_payload(
         "continuity_support_ref": "scripts/render_identity_context_continuity_bundle.py",
         "launcher_entry_owner_stream": "v1.6.14",
         "continuity_owner_stream": "v1.6.16",
+        "surface_governance": build_governed_runtime_summary_surface_payload(
+            "identity_context_reentry_answer_surface"
+        ),
         "operator_surface_contract": {
             "identity_instance_visible_answer_surface": True,
             "new_terminal_command_family_created": False,

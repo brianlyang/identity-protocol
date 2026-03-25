@@ -1038,8 +1038,12 @@ assert dormant_reentry_brief["identity_reentry_brief_status"] == "SKIPPED_NOT_RE
 assert dormant_reentry_consumption["identity_reentry_consumption_status"] == "SKIPPED_NOT_REQUIRED", dormant_reentry_consumption
 assert dormant_receipts["identity_context_continuity_receipt_family_status"] == "SKIPPED_NOT_REQUIRED", dormant_receipts
 assert dormant_bundle["identity_context_continuity_bundle_status"] == "SKIPPED_NOT_REQUIRED", dormant_bundle
+assert dormant_bundle["surface_governance"]["runtime_summary_surface_governance_status"] == "PASS_REQUIRED", dormant_bundle
+assert dormant_bundle["surface_governance"]["surface_id"] == "identity_context_continuity_bundle_surface", dormant_bundle
 assert dormant_bundle["operator_surface_contract"]["new_user_facing_continuity_command_family_forbidden"] is True, dormant_bundle
 assert dormant_reentry_answer["identity_context_reentry_answer_bundle_status"] == "PASS_REQUIRED", dormant_reentry_answer
+assert dormant_reentry_answer["surface_governance"]["runtime_summary_surface_governance_status"] == "PASS_REQUIRED", dormant_reentry_answer
+assert dormant_reentry_answer["surface_governance"]["surface_id"] == "identity_context_reentry_answer_surface", dormant_reentry_answer
 assert dormant_reentry_answer["overall_reentry_readiness_status"] == "SKIPPED_NOT_REQUIRED", dormant_reentry_answer
 assert dormant_reentry_answer["recommended_reentry_answer_mode"] == "fresh_start_only_no_governed_reentry_contract", dormant_reentry_answer
 assert dormant_reentry_answer["intent_answers"]["reload_after_clear"]["status"] == "SKIPPED_NOT_REQUIRED", dormant_reentry_answer
@@ -1056,10 +1060,12 @@ assert "supersedes_ref_self_cycle" in artifact_self_cycle.get("stale_reasons", [
 assert reentry_brief_pass["identity_reentry_brief_status"] == "PASS_REQUIRED", reentry_brief_pass
 assert reentry_consumption_pass["identity_reentry_consumption_status"] == "PASS_REQUIRED", reentry_consumption_pass
 assert reentry_bundle_pass["identity_context_continuity_bundle_status"] == "PASS_REQUIRED", reentry_bundle_pass
+assert reentry_bundle_pass["surface_governance"]["surface_id"] == "identity_context_continuity_bundle_surface", reentry_bundle_pass
 assert reentry_bundle_pass["startup_reentry_readiness_status"] == "PASS_REQUIRED", reentry_bundle_pass
 assert reentry_bundle_pass["live_reentry_consumption_proof_status"] == "PASS_REQUIRED", reentry_bundle_pass
 assert reentry_bundle_pass["recommended_launcher_bind_mode"] == "consume_governed_reentry_brief", reentry_bundle_pass
 assert reentry_answer_pass["identity_context_reentry_answer_bundle_status"] == "PASS_REQUIRED", reentry_answer_pass
+assert reentry_answer_pass["surface_governance"]["surface_id"] == "identity_context_reentry_answer_surface", reentry_answer_pass
 assert reentry_answer_pass["overall_reentry_readiness_status"] == "PASS_REQUIRED", reentry_answer_pass
 assert reentry_answer_pass["live_reentry_consumption_proof_status"] == "PASS_REQUIRED", reentry_answer_pass
 assert reentry_answer_pass["recommended_reentry_answer_mode"] == "governed_reentry_ready_with_live_proof", reentry_answer_pass
@@ -1174,7 +1180,9 @@ print(
             "required_coverage_instance_adopted_status": "PASS_REQUIRED",
             "required_coverage_instance_adopted_targets": sorted(coverage_rows),
             "continuity_bundle_surface_status": reentry_bundle_pass["identity_context_continuity_bundle_status"],
+            "continuity_bundle_governance_surface_id": reentry_bundle_pass["surface_governance"]["surface_id"],
             "reentry_answer_surface_status": reentry_answer_pass["identity_context_reentry_answer_bundle_status"],
+            "reentry_answer_governance_surface_id": reentry_answer_pass["surface_governance"]["surface_id"],
             "tmp_root": tmp_root,
         },
         ensure_ascii=False,

@@ -315,6 +315,15 @@ Minimum additional requirements:
 18. Once live proof is `PASS_REQUIRED`, the answer bundle may report governed recovery as live-proven, but it still must not assemble launcher commands itself.
 19. The continuity answer surface must never inject or hardcode thread UUIDs; launcher-command lookup stays delegated to `v1.6.14`, while `v1.6.16` governs only the reentry task and evidence side.
 
+### 2.11A Governed outer support surface boundary (frozen)
+
+1. `scripts/render_identity_context_continuity_bundle.py` remains a governed continuity-support bundle surface on an outer runtime-state layer.
+2. It may compress continuity readiness/proof state for launcher/internal consumers, but it must not replace root-law owners, direct validator receipts, canonical continuity artifacts, or launcher entry authority.
+3. `scripts/render_identity_context_reentry_answers.py` remains a governed identity-visible reentry answer surface on an outer runtime-state layer.
+4. It may present copyable governed reentry task blocks, but it must not replace root-law owners, direct validator receipts, canonical continuity artifacts, or launcher entry authority.
+5. Neither surface may become a new terminal command family, thread-UUID lookup authority, or raw-transcript authority.
+6. Both renderers must self-describe this bounded authority in machine-readable payload form.
+
 ### 2.12 Implementation landing order (frozen)
 
 1. Shared implementation for this stream has now landed through:

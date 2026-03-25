@@ -273,6 +273,13 @@ This stream now contains both the machine-facing contract freeze and the first s
     - `python3 scripts/render_identity_context_continuity_bundle.py --identity-id base-repo-audit-expert-v3 --catalog ../.identity/catalog.local.yaml --json-only` then showed `startup_reentry_readiness_status=PASS_REQUIRED` while `receipt_family_observation_status=FAIL_REQUIRED`, proving the bridge was still incomplete immediately after `pre-migrate`;
     - `/Users/yangxi/.codex/bin/identity-codex --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --session-id run:switch-back-base-repo-audit-expert-v3-20260319T000000Z -- --version` exercised the inherited launcher entry surface;
     - the post-launcher continuity bundle then returned `live_reentry_consumption_proof_status=PASS_REQUIRED` and `receipt_family_observation_status=PASS_REQUIRED`, proving that the earlier “reentry-ready but not live-consumption-proof complete” ceiling is now stale for the shared launcher bridge.
+31. Audit now also freezes both upper-layer continuity renderers as bounded outer runtime-state surfaces rather than leaving that interpretation implicit:
+    - `scripts/render_identity_context_continuity_bundle.py` remains a governed continuity-support bundle surface on an outer runtime-state layer.
+    - It may compress continuity readiness/proof state for launcher/internal consumers, but it must not replace root-law owners, direct validator receipts, canonical continuity artifacts, or launcher entry authority.
+    - `scripts/render_identity_context_reentry_answers.py` remains a governed identity-visible reentry answer surface on an outer runtime-state layer.
+    - It may present copyable governed reentry task blocks, but it must not replace root-law owners, direct validator receipts, canonical continuity artifacts, or launcher entry authority.
+    - Neither surface may become a new terminal command family, thread-UUID lookup authority, or raw-transcript authority.
+    - Both renderers must self-describe this bounded authority in machine-readable payload form.
 
 ## 6) Audit hardening absorbed after coding-readiness freeze
 
