@@ -15,6 +15,8 @@ from root_corpus_question_routing_common import (
     question_routing_anchor_checks_from_doc,
 )
 from root_operator_answer_surface_common import (
+    answer_surface_limit_rows_from_doc,
+    answer_surface_proof_rows_from_doc,
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     boundary_rows_from_doc,
@@ -101,6 +103,55 @@ EXPECTED_SUPPORT_LIMIT_ROWS = {
         "contract_phrase": "only consumption-memory support may back claims of realized operational effect.",
     },
 }
+EXPECTED_ANSWER_SURFACE_PROOF_ROWS = {
+    "operator_entry_boundary_proof": {
+        "order": 1,
+        "contract_heading": "### 1. Operator-entry boundary proof",
+        "proof_role": "operator_entry_boundary_answer_surface_proof",
+    },
+    "law_preserving_compression_proof": {
+        "order": 2,
+        "contract_heading": "### 2. Law-preserving compression proof",
+        "proof_role": "law_preserving_compression_answer_surface_proof",
+    },
+    "support_surface_confinement_proof": {
+        "order": 3,
+        "contract_heading": "### 3. Support-surface confinement proof",
+        "proof_role": "support_surface_confinement_answer_surface_proof",
+    },
+    "legality_terminal_preservation_proof": {
+        "order": 4,
+        "contract_heading": "### 4. Legality-terminal preservation proof",
+        "proof_role": "legality_terminal_preservation_answer_surface_proof",
+    },
+    "realized_effect_answer_backing_proof": {
+        "order": 5,
+        "contract_heading": "### 5. Realized-effect answer-backing proof",
+        "proof_role": "realized_effect_answer_backing_proof",
+    },
+}
+EXPECTED_ANSWER_SURFACE_LIMIT_ROWS = {
+    "entry_boundary_not_law_preserving_compression": {
+        "order": 1,
+        "contract_phrase": "operator-entry boundary proof is not proof of law-preserving compression;",
+    },
+    "law_preserving_compression_not_support_confinement": {
+        "order": 2,
+        "contract_phrase": "law-preserving compression proof is not proof of support-surface confinement;",
+    },
+    "support_confinement_not_legality_terminal_preservation": {
+        "order": 3,
+        "contract_phrase": "support-surface confinement proof is not proof of legality-terminal preservation;",
+    },
+    "legality_terminal_not_realized_effect_backing": {
+        "order": 4,
+        "contract_phrase": "legality-terminal preservation proof is not proof of realized-effect answer backing;",
+    },
+    "realized_effect_backing_not_runtime_bypass": {
+        "order": 5,
+        "contract_phrase": "realized-effect answer-backing proof is not proof that answer prose may bypass current-turn machine adjudication.",
+    },
+}
 EXPECTED_BOUNDARY_ROWS = {
     "operator_memory_burden": {
         "order": 1,
@@ -147,6 +198,8 @@ EXPECTED_REGISTRY_MARKERS = (
     "## Four answer-surface strata",
     "## Lifecycle-aware support-memory discipline",
     "## Support-memory limits",
+    "## Answer-surface proof discipline",
+    "## Answer-surface proof limits",
     "## Compression boundary",
     "## Non-compliant answer-surface collapses",
 )
@@ -265,6 +318,8 @@ def main() -> int:
     surface_rows = surface_rows_from_doc(answer_doc) if answer_doc else ()
     support_memory_rows = support_memory_rows_from_doc(answer_doc) if answer_doc else ()
     support_limit_rows = support_limit_rows_from_doc(answer_doc) if answer_doc else ()
+    answer_surface_proof_rows = answer_surface_proof_rows_from_doc(answer_doc) if answer_doc else ()
+    answer_surface_limit_rows = answer_surface_limit_rows_from_doc(answer_doc) if answer_doc else ()
     boundary_rows = boundary_rows_from_doc(answer_doc) if answer_doc else ()
     collapse_rows = collapse_rows_from_doc(answer_doc) if answer_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
@@ -298,6 +353,8 @@ def main() -> int:
             ("required_surface_rows", surface_rows),
             ("required_support_memory_rows", support_memory_rows),
             ("required_support_limit_rows", support_limit_rows),
+            ("required_answer_surface_proof_rows", answer_surface_proof_rows),
+            ("required_answer_surface_limit_rows", answer_surface_limit_rows),
             ("required_boundary_rows", boundary_rows),
             ("required_collapse_rows", collapse_rows),
         ):
@@ -343,6 +400,24 @@ def main() -> int:
             compare_fields=("contract_phrase",),
         )
         _validate_rows(
+            actual_rows=answer_surface_proof_rows,
+            expected_rows=EXPECTED_ANSWER_SURFACE_PROOF_ROWS,
+            structure_violations=structure_violations,
+            answer_violations=answer_violations,
+            field_name="required_answer_surface_proof_rows",
+            id_attr="proof_id",
+            compare_fields=("contract_heading", "proof_role"),
+        )
+        _validate_rows(
+            actual_rows=answer_surface_limit_rows,
+            expected_rows=EXPECTED_ANSWER_SURFACE_LIMIT_ROWS,
+            structure_violations=structure_violations,
+            answer_violations=answer_violations,
+            field_name="required_answer_surface_limit_rows",
+            id_attr="row_id",
+            compare_fields=("contract_phrase",),
+        )
+        _validate_rows(
             actual_rows=boundary_rows,
             expected_rows=EXPECTED_BOUNDARY_ROWS,
             structure_violations=structure_violations,
@@ -378,7 +453,10 @@ def main() -> int:
             for row in support_memory_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_heading,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "support_heading_missing", "marker": marker})
-            for row in support_limit_rows + boundary_rows + collapse_rows:
+            for row in answer_surface_proof_rows:
+                for marker in find_missing_markers(contract_text, (row.contract_heading, row.proof_role)):
+                    contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
+            for row in support_limit_rows + answer_surface_limit_rows + boundary_rows + collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
 
@@ -551,11 +629,15 @@ def main() -> int:
         "surface_count": len(surface_rows),
         "support_memory_count": len(support_memory_rows),
         "support_limit_count": len(support_limit_rows),
+        "answer_surface_proof_count": len(answer_surface_proof_rows),
+        "answer_surface_limit_count": len(answer_surface_limit_rows),
         "boundary_count": len(boundary_rows),
         "collapse_count": len(collapse_rows),
         "surface_ids": [row.surface_id for row in sorted(surface_rows, key=lambda item: item.order)],
         "support_memory_ids": [row.support_id for row in sorted(support_memory_rows, key=lambda item: item.order)],
         "support_limit_ids": [row.row_id for row in sorted(support_limit_rows, key=lambda item: item.order)],
+        "answer_surface_proof_ids": [row.proof_id for row in sorted(answer_surface_proof_rows, key=lambda item: item.order)],
+        "answer_surface_limit_ids": [row.row_id for row in sorted(answer_surface_limit_rows, key=lambda item: item.order)],
         "boundary_ids": [row.row_id for row in sorted(boundary_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
         "structure_violations": structure_violations,

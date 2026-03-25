@@ -21,6 +21,8 @@ contract_required_markers:
   with the answer surface actually delivered to the operator.
 - '## Lifecycle-aware support-memory discipline'
 - '## Support-memory limits'
+- '## Answer-surface proof discipline'
+- '## Answer-surface proof limits'
 required_surface_rows:
 - order: 1
   surface_id: operator_entry
@@ -76,6 +78,43 @@ required_support_limit_rows:
   limit_id: consumption_memory_realized_effect_only
   contract_phrase: only consumption-memory support may back claims of realized operational
     effect.
+required_answer_surface_proof_rows:
+- order: 1
+  proof_id: operator_entry_boundary_proof
+  contract_heading: '### 1. Operator-entry boundary proof'
+  proof_role: operator_entry_boundary_answer_surface_proof
+- order: 2
+  proof_id: law_preserving_compression_proof
+  contract_heading: '### 2. Law-preserving compression proof'
+  proof_role: law_preserving_compression_answer_surface_proof
+- order: 3
+  proof_id: support_surface_confinement_proof
+  contract_heading: '### 3. Support-surface confinement proof'
+  proof_role: support_surface_confinement_answer_surface_proof
+- order: 4
+  proof_id: legality_terminal_preservation_proof
+  contract_heading: '### 4. Legality-terminal preservation proof'
+  proof_role: legality_terminal_preservation_answer_surface_proof
+- order: 5
+  proof_id: realized_effect_answer_backing_proof
+  contract_heading: '### 5. Realized-effect answer-backing proof'
+  proof_role: realized_effect_answer_backing_proof
+required_answer_surface_limit_rows:
+- order: 1
+  limit_id: entry_boundary_not_law_preserving_compression
+  contract_phrase: operator-entry boundary proof is not proof of law-preserving compression;
+- order: 2
+  limit_id: law_preserving_compression_not_support_confinement
+  contract_phrase: law-preserving compression proof is not proof of support-surface confinement;
+- order: 3
+  limit_id: support_confinement_not_legality_terminal_preservation
+  contract_phrase: support-surface confinement proof is not proof of legality-terminal preservation;
+- order: 4
+  limit_id: legality_terminal_not_realized_effect_backing
+  contract_phrase: legality-terminal preservation proof is not proof of realized-effect answer backing;
+- order: 5
+  limit_id: realized_effect_backing_not_runtime_bypass
+  contract_phrase: realized-effect answer-backing proof is not proof that answer prose may bypass current-turn machine adjudication.
 required_boundary_rows:
 - order: 1
   boundary_id: operator_memory_burden

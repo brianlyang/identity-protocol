@@ -163,6 +163,62 @@ The protocol must preserve these support-memory limits:
 4. run-binding-memory support is not proof of next-hop consumption;
 5. only consumption-memory support may back claims of realized operational effect.
 
+When an operator answer-surface claim relies on governed proof, the proof
+stratum behind that claim must match the answer-surface commitment being
+asserted.
+
+## Answer-surface proof discipline
+
+Operator answer-surface claims may be supported only by proof whose stratum
+matches the answer-surface claim being asserted.
+
+### 1. Operator-entry boundary proof
+
+Supports claims that operator entry remained a natural-language collaboration
+surface rather than a direct burdening of the operator with protocol-law
+internals.
+
+Proof role: `operator_entry_boundary_answer_surface_proof`.
+
+### 2. Law-preserving compression proof
+
+Supports claims that the delivered answer surface compressed law without
+betraying the law or collapsing into narrative convenience.
+
+Proof role: `law_preserving_compression_answer_surface_proof`.
+
+### 3. Support-surface confinement proof
+
+Supports claims that supporting machine-truth surfaces remained support
+surfaces and did not replace the answer delivered to the operator.
+
+Proof role: `support_surface_confinement_answer_surface_proof`.
+
+### 4. Legality-terminal preservation proof
+
+Supports claims that current-turn legality still terminated in machine-consumed
+enforcement surfaces rather than in fluent answer prose alone.
+
+Proof role: `legality_terminal_preservation_answer_surface_proof`.
+
+### 5. Realized-effect answer-backing proof
+
+Supports claims that an answer about realized operational effect was backed by
+the correct consumption-grade support rather than by earlier-stage support
+memory or narrative assertion.
+
+Proof role: `realized_effect_answer_backing_proof`.
+
+## Answer-surface proof limits
+
+The protocol must preserve these answer-surface proof limits:
+
+1. operator-entry boundary proof is not proof of law-preserving compression;
+2. law-preserving compression proof is not proof of support-surface confinement;
+3. support-surface confinement proof is not proof of legality-terminal preservation;
+4. legality-terminal preservation proof is not proof of realized-effect answer backing;
+5. realized-effect answer-backing proof is not proof that answer prose may bypass current-turn machine adjudication.
+
 ## Compression boundary
 
 The protocol must preserve these answer-surface rules:

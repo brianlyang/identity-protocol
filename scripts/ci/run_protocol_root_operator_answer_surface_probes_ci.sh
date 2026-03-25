@@ -28,8 +28,49 @@ assert payload["protocol_root_operator_answer_surface_status"] == "PASS_REQUIRED
 assert payload["surface_count"] == 4, payload
 assert payload["support_memory_count"] == 5, payload
 assert payload["support_limit_count"] == 5, payload
+assert payload["answer_surface_proof_count"] == 5, payload
+assert payload["answer_surface_limit_count"] == 5, payload
 assert payload["boundary_count"] == 4, payload
 assert payload["collapse_count"] == 5, payload
+PY
+
+PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
+mirror_repo "${PROOF_REPO}"
+python3 - <<'PY' "${PROOF_REPO}/identity/protocol/mappings/root-operator-answer-surface.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_answer_surface_proof_rows"] = [
+    row for row in doc["required_answer_surface_proof_rows"] if row.get("proof_id") != "realized_effect_answer_backing_proof"
+]
+for idx, row in enumerate(doc["required_answer_surface_proof_rows"], start=1):
+    row["order"] = idx
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+PROOF_JSON="${TMP_ROOT}/proof-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_operator_answer_surface.py" \
+  --repo-root "${PROOF_REPO}" \
+  --json-only >"${PROOF_JSON}"; then
+  echo "[FAIL] root operator answer-surface validator unexpectedly passed missing answer-surface proof row"
+  exit 1
+fi
+
+python3 - <<'PY' "${PROOF_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_operator_answer_surface_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-ROAS-002", payload
+assert any(
+    row["reason"] == "missing_expected_rows" and "realized_effect_answer_backing_proof" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
 PY
 
 SUPPORT_REPO="${TMP_ROOT}/support-drift-repo"
