@@ -63,7 +63,7 @@ Runtime meaning:
 
 1. Runtime must not use local convenience, recency, or familiarity to override source-order meaning.
 2. Runtime current-turn legality still resolves at machine-consumed enforcement terminals rather than philosophy prose or frozen contract prose alone.
-3. Runtime-origin motivation does not gain gateway authorship merely by being admitted into a governed gateway.
+3. Runtime-origin motivation does not gain gateway authorship, target question class, or answer-mode override merely by being admitted into a governed gateway.
 4. Runtime reuse of demoted or support-only material does not restore law-bearing status without governed reclassification.
 
 ## Runtime registry-completeness boundary

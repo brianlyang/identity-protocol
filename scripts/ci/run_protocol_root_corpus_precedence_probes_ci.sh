@@ -40,6 +40,12 @@ assert any(
     and row["resolution_mode"] == "machine_enforcement_terminal"
     for row in payload["precedence_profiles"]
 ), payload
+assert {row["gateway_class"]: row["preserved_question_class"] for row in payload["gateway_authorship_projection"]} == {
+    "constitution": "frozen_protocol_law",
+    "runtime_constitution": "frozen_runtime_law",
+    "root_contract": "frozen_domain_contract_law",
+    "machine_registry_directory": "registry_resolution",
+}, payload
 PY
 
 LEGality_DRIFT_REPO="${TMP_ROOT}/legality-drift-repo"
@@ -116,6 +122,44 @@ assert payload["error_code"] == "IP-RCP-003", payload
 assert any(
     row["reason"] == "forbidden_override_surface_classes_mismatch"
     and row.get("conflict_class") == "gateway_authorship_conflict"
+    for row in payload["precedence_violations"]
+), payload
+PY
+
+GATEWAY_PROJECTION_DRIFT_REPO="${TMP_ROOT}/gateway-projection-drift-repo"
+mirror_repo "${GATEWAY_PROJECTION_DRIFT_REPO}"
+python3 - <<'PY' "${GATEWAY_PROJECTION_DRIFT_REPO}/identity/protocol/mappings/root-corpus-precedence.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["gateway_authorship_projection"]:
+    if row["gateway_class"] == "root_contract":
+        row["preserved_question_class"] = "registry_resolution"
+        break
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+GATEWAY_PROJECTION_DRIFT_JSON="${TMP_ROOT}/gateway-projection-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_precedence.py" \
+  --repo-root "${GATEWAY_PROJECTION_DRIFT_REPO}" \
+  --json-only >"${GATEWAY_PROJECTION_DRIFT_JSON}"; then
+  echo "[FAIL] precedence validator unexpectedly passed gateway projection drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${GATEWAY_PROJECTION_DRIFT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_precedence_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCP-003", payload
+assert any(
+    row["reason"] == "preserved_question_class_mismatch" and row.get("gateway_class") == "root_contract"
     for row in payload["precedence_violations"]
 ), payload
 PY

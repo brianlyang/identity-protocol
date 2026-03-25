@@ -7,17 +7,26 @@ from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
 from root_corpus_authority_common import load_root_corpus_authority
-from root_corpus_gateway_admissibility_common import gateway_profiles_from_doc, load_root_corpus_gateway_admissibility
+from root_corpus_gateway_admissibility_common import (
+    gateway_effect_targets_from_doc,
+    gateway_profiles_from_doc,
+    load_root_corpus_gateway_admissibility,
+)
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, source_order_rows_from_doc
 from root_corpus_precedence_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
+    gateway_authorship_projections_from_doc,
     load_root_corpus_precedence,
     precedence_anchor_checks_from_doc,
     precedence_profiles_from_doc,
 )
-from root_corpus_question_routing_common import adjudication_redirect_from_doc, load_root_corpus_question_routing
+from root_corpus_question_routing_common import (
+    adjudication_redirect_from_doc,
+    gateway_question_projections_from_doc,
+    load_root_corpus_question_routing,
+)
 from root_corpus_transition_common import load_root_corpus_transition, transition_surface_profiles_from_doc
 
 STATUS_KEY = "protocol_root_corpus_precedence_status"
@@ -96,12 +105,15 @@ def main() -> int:
             error_code = ERR_REGISTRY
 
     anchor_checks = precedence_anchor_checks_from_doc(precedence_doc) if precedence_doc else ()
+    gateway_authorship_projections = gateway_authorship_projections_from_doc(precedence_doc) if precedence_doc else ()
     precedence_profiles = precedence_profiles_from_doc(precedence_doc) if precedence_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     source_order_rows = source_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     adjudication_redirect = adjudication_redirect_from_doc(question_routing_doc) if question_routing_doc else adjudication_redirect_from_doc({})
+    gateway_question_projections = gateway_question_projections_from_doc(question_routing_doc) if question_routing_doc else ()
     transition_profiles = transition_surface_profiles_from_doc(transition_doc) if transition_doc else ()
     gateway_profiles = gateway_profiles_from_doc(gateway_doc) if gateway_doc else ()
+    gateway_effect_targets = gateway_effect_targets_from_doc(gateway_doc) if gateway_doc else ()
 
     if not stale_reasons:
         expected_files = {
@@ -141,12 +153,18 @@ def main() -> int:
         if not anchor_checks:
             stale_reasons.append("root_corpus_precedence_anchor_checks_missing")
             error_code = ERR_REGISTRY
+        if not gateway_authorship_projections:
+            stale_reasons.append("root_corpus_precedence_gateway_authorship_projection_missing")
+            error_code = ERR_REGISTRY
         if not precedence_profiles:
             stale_reasons.append("root_corpus_precedence_profiles_missing")
             error_code = ERR_REGISTRY
 
     registry_paths = {entry.rel_path for entry in registry_entries}
     profile_map = {row.conflict_class: row for row in precedence_profiles}
+    gateway_authorship_projection_map = {row.gateway_class: row for row in gateway_authorship_projections}
+    gateway_effect_target_map = {row.gateway_class: row for row in gateway_effect_targets}
+    gateway_question_projection_map = {row.gateway_class: row for row in gateway_question_projections}
 
     all_nonorigin_surface_classes = tuple(
         sorted(
@@ -197,6 +215,8 @@ def main() -> int:
     if not stale_reasons:
         if len(profile_map) != len(precedence_profiles):
             structure_violations.append({"field": "precedence_profiles", "reason": "duplicate_conflict_class"})
+        if len(gateway_authorship_projection_map) != len(gateway_authorship_projections):
+            structure_violations.append({"field": "gateway_authorship_projection", "reason": "duplicate_gateway_class"})
         anchor_rel_paths = [row.rel_path for row in anchor_checks]
         if len(set(anchor_rel_paths)) != len(anchor_rel_paths):
             structure_violations.append({"field": "precedence_anchor_checks", "reason": "duplicate_rel_path"})
@@ -214,6 +234,24 @@ def main() -> int:
         if extra_profiles:
             structure_violations.append(
                 {"field": "precedence_profiles", "reason": "extra_conflict_classes", "conflict_classes": extra_profiles}
+            )
+        missing_gateway_projection_classes = sorted(set(gateway_effect_target_map) - set(gateway_authorship_projection_map))
+        extra_gateway_projection_classes = sorted(set(gateway_authorship_projection_map) - set(gateway_effect_target_map))
+        if missing_gateway_projection_classes:
+            structure_violations.append(
+                {
+                    "field": "gateway_authorship_projection",
+                    "reason": "missing_gateway_classes",
+                    "gateway_classes": missing_gateway_projection_classes,
+                }
+            )
+        if extra_gateway_projection_classes:
+            structure_violations.append(
+                {
+                    "field": "gateway_authorship_projection",
+                    "reason": "extra_gateway_classes",
+                    "gateway_classes": extra_gateway_projection_classes,
+                }
             )
 
         for row in precedence_profiles:
@@ -314,6 +352,58 @@ def main() -> int:
                     }
                 )
 
+        for gateway_class, row in gateway_authorship_projection_map.items():
+            effect_target = gateway_effect_target_map.get(gateway_class)
+            question_projection = gateway_question_projection_map.get(gateway_class)
+            if effect_target is None:
+                precedence_violations.append(
+                    {
+                        "field": "gateway_authorship_projection",
+                        "reason": "missing_gateway_effect_target",
+                        "gateway_class": gateway_class,
+                    }
+                )
+                continue
+            if question_projection is None:
+                precedence_violations.append(
+                    {
+                        "field": "gateway_authorship_projection",
+                        "reason": "missing_gateway_question_projection",
+                        "gateway_class": gateway_class,
+                    }
+                )
+                continue
+            if row.preserved_effect_target_class != effect_target.effect_target_class:
+                precedence_violations.append(
+                    {
+                        "field": "gateway_authorship_projection",
+                        "reason": "preserved_effect_target_class_mismatch",
+                        "gateway_class": gateway_class,
+                        "expected": effect_target.effect_target_class,
+                        "actual": row.preserved_effect_target_class,
+                    }
+                )
+            if row.preserved_question_class != question_projection.question_class:
+                precedence_violations.append(
+                    {
+                        "field": "gateway_authorship_projection",
+                        "reason": "preserved_question_class_mismatch",
+                        "gateway_class": gateway_class,
+                        "expected": question_projection.question_class,
+                        "actual": row.preserved_question_class,
+                    }
+                )
+            if row.preserved_answer_mode != question_projection.answer_mode:
+                precedence_violations.append(
+                    {
+                        "field": "gateway_authorship_projection",
+                        "reason": "preserved_answer_mode_mismatch",
+                        "gateway_class": gateway_class,
+                        "expected": question_projection.answer_mode,
+                        "actual": row.preserved_answer_mode,
+                    }
+                )
+
         for anchor in anchor_checks:
             anchor_path = (repo_root / anchor.rel_path).resolve()
             if not anchor_path.exists():
@@ -349,7 +439,17 @@ def main() -> int:
         "gateway_admissibility_active_path": str(gateway_active_path),
         "root_dir": str(precedence_doc.get("root_dir") or ""),
         "precedence_anchor_check_count": len(anchor_checks),
+        "gateway_authorship_projection_count": len(gateway_authorship_projections),
         "precedence_profile_count": len(precedence_profiles),
+        "gateway_authorship_projection": [
+            {
+                "gateway_class": row.gateway_class,
+                "preserved_effect_target_class": row.preserved_effect_target_class,
+                "preserved_question_class": row.preserved_question_class,
+                "preserved_answer_mode": row.preserved_answer_mode,
+            }
+            for row in sorted(gateway_authorship_projections, key=lambda item: item.gateway_class)
+        ],
         "precedence_profiles": [
             {
                 "conflict_class": row.conflict_class,

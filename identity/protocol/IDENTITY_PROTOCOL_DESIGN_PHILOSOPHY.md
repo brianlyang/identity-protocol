@@ -233,7 +233,7 @@ Different kinds of conflict terminate at different layers, and that distinction 
 
 1. semantic-origin conflict resolves by source order;
 2. current-turn legality conflict resolves by machine-consumed terminal enforcement;
-3. gateway-authorship conflict resolves by gateway effect scope plus source order;
+3. gateway-authorship conflict resolves by gateway effect scope, preserved target question class, preserved answer mode, and source order;
 4. demotion-status conflict resolves by governed reclassification rather than later reuse;
 5. no local vividness, recency, or convenience may change which layer rightfully terminates a given kind of conflict.
 

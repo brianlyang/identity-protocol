@@ -107,7 +107,7 @@ Status transitions are controlled by governance/review, not by script commit alo
    - runtime constitution
    - root contract law
 2. Current-turn legality conflict resolves by machine-consumed enforcement terminals, with machine-registry law as the only terminal root gateway.
-3. Gateway-authorship conflict resolves by gateway effect scope and preserved source order, not by incoming motivating surface identity.
+3. Gateway-authorship conflict resolves by gateway effect scope, preserved target question class, preserved answer mode, and preserved source order, not by incoming motivating surface identity.
 4. Demotion-status conflict resolves by governed reclassification, not by later reuse, copying, or convenience.
 5. No layer may use local recency, vividness, or implementation familiarity to seize precedence that belongs to another layer.
 

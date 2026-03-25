@@ -31,6 +31,14 @@ class PrecedenceProfile:
     forbidden_override_surface_classes: tuple[str, ...] = field(default_factory=tuple)
 
 
+@dataclass(frozen=True)
+class GatewayAuthorshipProjection:
+    gateway_class: str
+    preserved_effect_target_class: str
+    preserved_question_class: str
+    preserved_answer_mode: str
+
+
 def _norm_str(value: Any) -> str:
     return str(value or "").strip().replace("\\", "/")
 
@@ -101,6 +109,31 @@ def precedence_profiles_from_doc(precedence_doc: Mapping[str, Any]) -> tuple[Pre
                 terminal_machine_surfaces=_as_str_tuple(row.get("terminal_machine_surfaces")),
                 motivating_only_surface_classes=_as_str_tuple(row.get("motivating_only_surface_classes")),
                 forbidden_override_surface_classes=_as_str_tuple(row.get("forbidden_override_surface_classes")),
+            )
+        )
+    return tuple(out)
+
+
+def gateway_authorship_projections_from_doc(precedence_doc: Mapping[str, Any]) -> tuple[GatewayAuthorshipProjection, ...]:
+    rows = precedence_doc.get("gateway_authorship_projection")
+    if not isinstance(rows, list):
+        return ()
+    out: list[GatewayAuthorshipProjection] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        gateway_class = _norm_str(row.get("gateway_class"))
+        preserved_effect_target_class = _norm_str(row.get("preserved_effect_target_class"))
+        preserved_question_class = _norm_str(row.get("preserved_question_class"))
+        preserved_answer_mode = _norm_str(row.get("preserved_answer_mode"))
+        if not gateway_class or not preserved_effect_target_class or not preserved_question_class or not preserved_answer_mode:
+            continue
+        out.append(
+            GatewayAuthorshipProjection(
+                gateway_class=gateway_class,
+                preserved_effect_target_class=preserved_effect_target_class,
+                preserved_question_class=preserved_question_class,
+                preserved_answer_mode=preserved_answer_mode,
             )
         )
     return tuple(out)

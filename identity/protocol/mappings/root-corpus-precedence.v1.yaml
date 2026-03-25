@@ -23,22 +23,49 @@ precedence_anchor_checks:
     or current checker vividness;
   - current-turn legality conflict resolves at machine-consumed enforcement terminals,
     not at philosophy prose, README text, or frozen contract prose alone;
+  - gateway-authorship conflict resolves by gateway effect scope, preserved target
+    question class, preserved answer mode, and source order, not by the identity
+    of the incoming motivating surface;
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
   required_markers:
   - '### Conflict precedence must preserve both origin and terminality'
   - semantic-origin conflict resolves by source order;
   - current-turn legality conflict resolves by machine-consumed terminal enforcement;
+  - gateway-authorship conflict resolves by gateway effect scope, preserved target
+    question class, preserved answer mode, and source order;
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root conflict-precedence boundary'
   - 'Semantic-meaning conflict resolves by source-order law:'
   - Current-turn legality conflict resolves by machine-consumed enforcement terminals,
     with machine-registry law as the only terminal root gateway.
+  - Gateway-authorship conflict resolves by gateway effect scope, preserved target
+    question class, preserved answer mode, and preserved source order, not by incoming
+    motivating surface identity.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime conflict-precedence boundary'
   - Runtime current-turn legality still resolves at machine-consumed enforcement terminals
     rather than philosophy prose or frozen contract prose alone.
+  - Runtime-origin motivation does not gain gateway authorship, target question
+    class, or answer-mode override merely by being admitted into a governed gateway.
+gateway_authorship_projection:
+- gateway_class: constitution
+  preserved_effect_target_class: constitution
+  preserved_question_class: frozen_protocol_law
+  preserved_answer_mode: frozen_law_answer
+- gateway_class: runtime_constitution
+  preserved_effect_target_class: runtime_constitution
+  preserved_question_class: frozen_runtime_law
+  preserved_answer_mode: frozen_law_answer
+- gateway_class: root_contract
+  preserved_effect_target_class: root_contract
+  preserved_question_class: frozen_domain_contract_law
+  preserved_answer_mode: frozen_law_answer
+- gateway_class: machine_registry_directory
+  preserved_effect_target_class: machine_registry_directory
+  preserved_question_class: registry_resolution
+  preserved_answer_mode: machine_registry_answer
 precedence_profiles:
 - conflict_class: semantic_meaning_conflict
   conflict_scope: source_order_meaning

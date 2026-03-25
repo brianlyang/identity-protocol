@@ -248,7 +248,7 @@ Conflict precedence must stay scoped to the kind of conflict being resolved.
 
 1. semantic-meaning conflict resolves by source order, not by convenience, recency, or current checker vividness;
 2. current-turn legality conflict resolves at machine-consumed enforcement terminals, not at philosophy prose, README text, or frozen contract prose alone;
-3. gateway-authorship conflict resolves by gateway effect scope plus source order, not by the identity of the incoming motivating surface;
+3. gateway-authorship conflict resolves by gateway effect scope, preserved target question class, preserved answer mode, and source order, not by the identity of the incoming motivating surface;
 4. demotion-status conflict resolves by governed reclassification, not by later reuse, copying, or local familiarity.
 
 So the protocol must reject these precedence collapses:
