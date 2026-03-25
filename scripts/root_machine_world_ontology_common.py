@@ -29,6 +29,14 @@ class PhraseRow:
     contract_phrase: str
 
 
+@dataclass(frozen=True)
+class OntologyProofRow:
+    order: int
+    proof_id: str
+    contract_heading: str
+    proof_role: str
+
+
 def _norm_str(value: Any) -> str:
     return str(value or "").strip().replace("\\", "/")
 
@@ -101,6 +109,38 @@ def _phrase_rows_from_field(doc: Mapping[str, Any], field: str, *, row_key: str)
 
 def object_rows_from_doc(doc: Mapping[str, Any]) -> tuple[PhraseRow, ...]:
     return _phrase_rows_from_field(doc, "required_object_rows", row_key="object_id")
+
+
+def ontology_proof_rows_from_doc(doc: Mapping[str, Any]) -> tuple[OntologyProofRow, ...]:
+    rows = doc.get("required_ontology_proof_rows")
+    if not isinstance(rows, list):
+        return ()
+    out: list[OntologyProofRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        proof_id = _norm_str(row.get("proof_id"))
+        contract_heading = str(row.get("contract_heading") or "").strip()
+        proof_role = _norm_str(row.get("proof_role"))
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not proof_id or not contract_heading or not proof_role:
+            continue
+        out.append(
+            OntologyProofRow(
+                order=order,
+                proof_id=proof_id,
+                contract_heading=contract_heading,
+                proof_role=proof_role,
+            )
+        )
+    return tuple(out)
+
+
+def ontology_limit_rows_from_doc(doc: Mapping[str, Any]) -> tuple[PhraseRow, ...]:
+    return _phrase_rows_from_field(doc, "required_ontology_limit_rows", row_key="limit_id")
 
 
 def collapse_rows_from_doc(doc: Mapping[str, Any]) -> tuple[PhraseRow, ...]:

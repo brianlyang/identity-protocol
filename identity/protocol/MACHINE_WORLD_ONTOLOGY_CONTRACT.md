@@ -155,6 +155,60 @@ The protocol must keep the following objects singular and machine-recognizable:
 16. required gate bundle is the machine admission bundle rather than an informal checklist.
 17. three-plane verdict is the governed cross-plane verdict object rather than a prose summary.
 
+When a machine-world ontology claim relies on governed proof, the proof stratum
+behind that claim must match the ontology boundary being asserted.
+
+## Machine-world ontology proof discipline
+
+Machine-world ontology claims may be supported only by proof whose stratum
+matches the ontology claim being asserted.
+
+### 1. Canonical-object-definition proof
+
+Supports claims that an object class is defined by shared law rather than by
+local wording, vague habit, or narrative compression.
+
+Proof role: `canonical_object_definition_ontology_proof`.
+
+### 2. Stratum-boundary preservation proof
+
+Supports claims that ontology strata remain distinct rather than silently
+borrowing each other's meaning.
+
+Proof role: `stratum_boundary_preservation_ontology_proof`.
+
+### 3. Authority-location proof
+
+Supports claims that authority-bearing objects remain located in their governed
+class rather than drifting into latest-looking artifacts, guessed paths, or
+convenience aliases.
+
+Proof role: `authority_location_ontology_proof`.
+
+### 4. Lifecycle-position proof
+
+Supports claims that ontology objects retain their correct lifecycle position
+rather than impersonating later-stage authority, binding, or consumption.
+
+Proof role: `lifecycle_position_ontology_proof`.
+
+### 5. Memory-family non-collapse proof
+
+Supports claims that memory-bearing objects remain differentiated families
+rather than collapsing into one vague retention bucket.
+
+Proof role: `memory_family_non_collapse_ontology_proof`.
+
+## Machine-world ontology proof limits
+
+The protocol must preserve these machine-world ontology proof limits:
+
+1. canonical-object-definition proof is not proof of stratum-boundary preservation;
+2. stratum-boundary preservation proof is not proof of authority location;
+3. authority-location proof is not proof of lifecycle position;
+4. lifecycle-position proof is not proof of memory-family non-collapse;
+5. memory-family non-collapse proof is not proof that an object may bypass current-turn runtime adjudication.
+
 ## Non-compliant ontology collapses
 
 The following are non-compliant:

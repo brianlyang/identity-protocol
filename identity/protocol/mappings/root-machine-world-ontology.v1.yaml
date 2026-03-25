@@ -14,6 +14,8 @@ contract_required_markers:
   - '## Machine-world ontology law'
   - '## Four ontology strata'
   - '## Required ontology objects'
+  - '## Machine-world ontology proof discipline'
+  - '## Machine-world ontology proof limits'
   - '## Non-compliant ontology collapses'
   - 'The protocol must first define what objects are allowed to exist in the machine world, what each object is, and what it is not.'
 required_strata_rows:
@@ -85,6 +87,43 @@ required_object_rows:
   - order: 17
     object_id: three_plane_verdict
     contract_phrase: 'three-plane verdict is the governed cross-plane verdict object rather than a prose summary.'
+required_ontology_proof_rows:
+  - order: 1
+    proof_id: canonical_object_definition_proof
+    contract_heading: '### 1. Canonical-object-definition proof'
+    proof_role: canonical_object_definition_ontology_proof
+  - order: 2
+    proof_id: stratum_boundary_preservation_proof
+    contract_heading: '### 2. Stratum-boundary preservation proof'
+    proof_role: stratum_boundary_preservation_ontology_proof
+  - order: 3
+    proof_id: authority_location_proof
+    contract_heading: '### 3. Authority-location proof'
+    proof_role: authority_location_ontology_proof
+  - order: 4
+    proof_id: lifecycle_position_proof
+    contract_heading: '### 4. Lifecycle-position proof'
+    proof_role: lifecycle_position_ontology_proof
+  - order: 5
+    proof_id: memory_family_non_collapse_proof
+    contract_heading: '### 5. Memory-family non-collapse proof'
+    proof_role: memory_family_non_collapse_ontology_proof
+required_ontology_limit_rows:
+  - order: 1
+    limit_id: canonical_definition_not_stratum_boundary
+    contract_phrase: 'canonical-object-definition proof is not proof of stratum-boundary preservation;'
+  - order: 2
+    limit_id: stratum_boundary_not_authority_location
+    contract_phrase: 'stratum-boundary preservation proof is not proof of authority location;'
+  - order: 3
+    limit_id: authority_location_not_lifecycle_position
+    contract_phrase: 'authority-location proof is not proof of lifecycle position;'
+  - order: 4
+    limit_id: lifecycle_position_not_memory_family_non_collapse
+    contract_phrase: 'lifecycle-position proof is not proof of memory-family non-collapse;'
+  - order: 5
+    limit_id: memory_family_non_collapse_not_runtime_bypass
+    contract_phrase: 'memory-family non-collapse proof is not proof that an object may bypass current-turn runtime adjudication.'
 required_collapse_rows:
   - order: 1
     collapse_id: term_meaning_borrowing

@@ -176,6 +176,60 @@ At minimum, it must preserve these distinctions:
 4. it is bound to the current run / current thread ≠ the next operational step has actually consumed it;
 5. some artifact or declaration exists ≠ full operational closure has been achieved.
 
+When a truth-lifecycle claim relies on governed proof, the proof stratum behind
+that claim must match the lifecycle stage being asserted.
+
+## Truth-lifecycle proof discipline
+
+Truth-lifecycle claims may be supported only by proof whose stratum matches the
+lifecycle claim being asserted.
+
+### 1. Law-existence proof
+
+Supports claims that truth exists in shared law rather than only in discussion,
+projection, or historical residue.
+
+Proof role: `law_existence_truth_lifecycle_proof`.
+
+### 2. Canonical-discovery proof
+
+Supports claims that truth was discovered from the governed canonical source
+rather than inferred from side effects, summaries, or incidental files.
+
+Proof role: `canonical_discovery_truth_lifecycle_proof`.
+
+### 3. Current-turn-admissibility proof
+
+Supports claims that truth passed present-turn gates and authority constraints
+rather than merely existing or being discoverable.
+
+Proof role: `current_turn_admissibility_truth_lifecycle_proof`.
+
+### 4. Run-thread-binding proof
+
+Supports claims that truth is actually bound to the current run, current
+thread, and current instance context rather than merely admissible in the
+abstract.
+
+Proof role: `run_thread_binding_truth_lifecycle_proof`.
+
+### 5. Next-hop-consumption proof
+
+Supports claims that the next operational step actually consumed the truth and
+carried it into execution or answer delivery.
+
+Proof role: `next_hop_consumption_truth_lifecycle_proof`.
+
+## Truth-lifecycle proof limits
+
+The protocol must preserve these truth-lifecycle proof limits:
+
+1. law-existence proof is not proof of canonical discovery;
+2. canonical-discovery proof is not proof of current-turn admissibility;
+3. current-turn-admissibility proof is not proof of run/thread binding;
+4. run-thread-binding proof is not proof of next-hop consumption;
+5. next-hop-consumption proof is not proof that lifecycle closure may be claimed when earlier stages were missing or bypassed.
+
 ## Non-compliant lifecycle collapses
 
 The following are non-compliant:

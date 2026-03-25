@@ -19,6 +19,8 @@ from root_machine_world_ontology_common import (
     STATUS_PASS_REQUIRED,
     collapse_rows_from_doc,
     load_root_machine_world_ontology,
+    ontology_limit_rows_from_doc,
+    ontology_proof_rows_from_doc,
     object_rows_from_doc,
     stratum_rows_from_doc,
 )
@@ -120,6 +122,55 @@ EXPECTED_OBJECT_ROWS = {
         "contract_phrase": "three-plane verdict is the governed cross-plane verdict object rather than a prose summary.",
     },
 }
+EXPECTED_ONTOLOGY_PROOF_ROWS = {
+    "canonical_object_definition_proof": {
+        "order": 1,
+        "contract_heading": "### 1. Canonical-object-definition proof",
+        "proof_role": "canonical_object_definition_ontology_proof",
+    },
+    "stratum_boundary_preservation_proof": {
+        "order": 2,
+        "contract_heading": "### 2. Stratum-boundary preservation proof",
+        "proof_role": "stratum_boundary_preservation_ontology_proof",
+    },
+    "authority_location_proof": {
+        "order": 3,
+        "contract_heading": "### 3. Authority-location proof",
+        "proof_role": "authority_location_ontology_proof",
+    },
+    "lifecycle_position_proof": {
+        "order": 4,
+        "contract_heading": "### 4. Lifecycle-position proof",
+        "proof_role": "lifecycle_position_ontology_proof",
+    },
+    "memory_family_non_collapse_proof": {
+        "order": 5,
+        "contract_heading": "### 5. Memory-family non-collapse proof",
+        "proof_role": "memory_family_non_collapse_ontology_proof",
+    },
+}
+EXPECTED_ONTOLOGY_LIMIT_ROWS = {
+    "canonical_definition_not_stratum_boundary": {
+        "order": 1,
+        "contract_phrase": "canonical-object-definition proof is not proof of stratum-boundary preservation;",
+    },
+    "stratum_boundary_not_authority_location": {
+        "order": 2,
+        "contract_phrase": "stratum-boundary preservation proof is not proof of authority location;",
+    },
+    "authority_location_not_lifecycle_position": {
+        "order": 3,
+        "contract_phrase": "authority-location proof is not proof of lifecycle position;",
+    },
+    "lifecycle_position_not_memory_family_non_collapse": {
+        "order": 4,
+        "contract_phrase": "lifecycle-position proof is not proof of memory-family non-collapse;",
+    },
+    "memory_family_non_collapse_not_runtime_bypass": {
+        "order": 5,
+        "contract_phrase": "memory-family non-collapse proof is not proof that an object may bypass current-turn runtime adjudication.",
+    },
+}
 EXPECTED_COLLAPSE_ROWS = {
     "term_meaning_borrowing": {
         "order": 1,
@@ -151,6 +202,8 @@ EXPECTED_REGISTRY_MARKERS = (
     "## Machine-world ontology law",
     "## Four ontology strata",
     "## Required ontology objects",
+    "## Machine-world ontology proof discipline",
+    "## Machine-world ontology proof limits",
 )
 EXPECTED_AUTHORITY_MARKERS = (
     "## Runtime adjudication boundary",
@@ -266,6 +319,8 @@ def main() -> int:
 
     stratum_rows = stratum_rows_from_doc(ontology_doc) if ontology_doc else ()
     object_rows = object_rows_from_doc(ontology_doc) if ontology_doc else ()
+    ontology_proof_rows = ontology_proof_rows_from_doc(ontology_doc) if ontology_doc else ()
+    ontology_limit_rows = ontology_limit_rows_from_doc(ontology_doc) if ontology_doc else ()
     collapse_rows = collapse_rows_from_doc(ontology_doc) if ontology_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -297,6 +352,8 @@ def main() -> int:
         for field, rows in (
             ("required_strata_rows", stratum_rows),
             ("required_object_rows", object_rows),
+            ("required_ontology_proof_rows", ontology_proof_rows),
+            ("required_ontology_limit_rows", ontology_limit_rows),
             ("required_collapse_rows", collapse_rows),
         ):
             if not rows:
@@ -332,6 +389,24 @@ def main() -> int:
             compare_fields=("contract_phrase",),
         )
         _validate_rows(
+            actual_rows=ontology_proof_rows,
+            expected_rows=EXPECTED_ONTOLOGY_PROOF_ROWS,
+            structure_violations=structure_violations,
+            ontology_violations=ontology_violations,
+            field_name="required_ontology_proof_rows",
+            id_attr="proof_id",
+            compare_fields=("contract_heading", "proof_role"),
+        )
+        _validate_rows(
+            actual_rows=ontology_limit_rows,
+            expected_rows=EXPECTED_ONTOLOGY_LIMIT_ROWS,
+            structure_violations=structure_violations,
+            ontology_violations=ontology_violations,
+            field_name="required_ontology_limit_rows",
+            id_attr="row_id",
+            compare_fields=("contract_phrase",),
+        )
+        _validate_rows(
             actual_rows=collapse_rows,
             expected_rows=EXPECTED_COLLAPSE_ROWS,
             structure_violations=structure_violations,
@@ -355,7 +430,10 @@ def main() -> int:
             for row in stratum_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_heading,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "stratum_heading_missing", "marker": marker})
-            for row in object_rows + collapse_rows:
+            for row in ontology_proof_rows:
+                for marker in find_missing_markers(contract_text, (row.contract_heading, row.proof_role)):
+                    contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
+            for row in object_rows + ontology_limit_rows + collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
 
@@ -527,9 +605,13 @@ def main() -> int:
         "contract_file": str(ontology_doc.get("contract_file") or ""),
         "stratum_count": len(stratum_rows),
         "object_count": len(object_rows),
+        "ontology_proof_count": len(ontology_proof_rows),
+        "ontology_limit_count": len(ontology_limit_rows),
         "collapse_count": len(collapse_rows),
         "stratum_ids": [row.stratum_id for row in sorted(stratum_rows, key=lambda item: item.order)],
         "object_ids": [row.row_id for row in sorted(object_rows, key=lambda item: item.order)],
+        "ontology_proof_ids": [row.proof_id for row in sorted(ontology_proof_rows, key=lambda item: item.order)],
+        "ontology_limit_ids": [row.row_id for row in sorted(ontology_limit_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
         "structure_violations": structure_violations,
         "ontology_violations": ontology_violations,

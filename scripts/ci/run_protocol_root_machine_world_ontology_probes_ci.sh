@@ -27,7 +27,48 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_machine_world_ontology_status"] == "PASS_REQUIRED", payload
 assert payload["stratum_count"] == 4, payload
 assert payload["object_count"] == 17, payload
+assert payload["ontology_proof_count"] == 5, payload
+assert payload["ontology_limit_count"] == 5, payload
 assert payload["collapse_count"] == 6, payload
+PY
+
+PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
+mirror_repo "${PROOF_REPO}"
+python3 - <<'PY' "${PROOF_REPO}/identity/protocol/mappings/root-machine-world-ontology.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_ontology_proof_rows"] = [
+    row for row in doc["required_ontology_proof_rows"] if row.get("proof_id") != "memory_family_non_collapse_proof"
+]
+for idx, row in enumerate(doc["required_ontology_proof_rows"], start=1):
+    row["order"] = idx
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+PROOF_JSON="${TMP_ROOT}/proof-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_world_ontology.py" \
+  --repo-root "${PROOF_REPO}" \
+  --json-only >"${PROOF_JSON}"; then
+  echo "[FAIL] root machine-world ontology validator unexpectedly passed missing proof row"
+  exit 1
+fi
+
+python3 - <<'PY' "${PROOF_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_world_ontology_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMWO-002", payload
+assert any(
+    row["reason"] == "missing_expected_rows" and "memory_family_non_collapse_proof" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
 PY
 
 STRATUM_REPO="${TMP_ROOT}/stratum-drift-repo"

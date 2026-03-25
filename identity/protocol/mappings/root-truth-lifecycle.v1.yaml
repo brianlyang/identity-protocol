@@ -16,6 +16,8 @@ contract_required_markers:
 - '## Five lifecycle stages'
 - '## Memory-bearing lifecycle strata'
 - '## Required lifecycle differentiations'
+- '## Truth-lifecycle proof discipline'
+- '## Truth-lifecycle proof limits'
 - '## Non-compliant lifecycle collapses'
 - No truth claim may be treated as full operational closure unless all required lifecycle
   stages have been carried through.
@@ -82,6 +84,43 @@ required_differentiation_rows:
   differentiation_id: artifact_vs_operational_closure
   contract_phrase: "some artifact or declaration exists \u2260 full operational closure\
     \ has been achieved."
+required_truth_lifecycle_proof_rows:
+- order: 1
+  proof_id: law_existence_proof
+  contract_heading: '### 1. Law-existence proof'
+  proof_role: law_existence_truth_lifecycle_proof
+- order: 2
+  proof_id: canonical_discovery_proof
+  contract_heading: '### 2. Canonical-discovery proof'
+  proof_role: canonical_discovery_truth_lifecycle_proof
+- order: 3
+  proof_id: current_turn_admissibility_proof
+  contract_heading: '### 3. Current-turn-admissibility proof'
+  proof_role: current_turn_admissibility_truth_lifecycle_proof
+- order: 4
+  proof_id: run_thread_binding_proof
+  contract_heading: '### 4. Run-thread-binding proof'
+  proof_role: run_thread_binding_truth_lifecycle_proof
+- order: 5
+  proof_id: next_hop_consumption_proof
+  contract_heading: '### 5. Next-hop-consumption proof'
+  proof_role: next_hop_consumption_truth_lifecycle_proof
+required_truth_lifecycle_limit_rows:
+- order: 1
+  limit_id: law_existence_not_canonical_discovery
+  contract_phrase: law-existence proof is not proof of canonical discovery;
+- order: 2
+  limit_id: canonical_discovery_not_current_turn_admissibility
+  contract_phrase: canonical-discovery proof is not proof of current-turn admissibility;
+- order: 3
+  limit_id: current_turn_admissibility_not_run_thread_binding
+  contract_phrase: current-turn-admissibility proof is not proof of run/thread binding;
+- order: 4
+  limit_id: run_thread_binding_not_next_hop_consumption
+  contract_phrase: run-thread-binding proof is not proof of next-hop consumption;
+- order: 5
+  limit_id: next_hop_consumption_not_lifecycle_bypass
+  contract_phrase: next-hop-consumption proof is not proof that lifecycle closure may be claimed when earlier stages were missing or bypassed.
 required_collapse_rows:
 - order: 1
   collapse_id: existence_equals_discovery

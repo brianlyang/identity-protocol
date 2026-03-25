@@ -22,6 +22,8 @@ from root_truth_lifecycle_common import (
     lifecycle_rows_from_doc,
     load_root_truth_lifecycle,
     memory_strata_rows_from_doc,
+    truth_lifecycle_limit_rows_from_doc,
+    truth_lifecycle_proof_rows_from_doc,
 )
 
 STATUS_KEY = "protocol_root_truth_lifecycle_status"
@@ -105,6 +107,55 @@ EXPECTED_DIFFERENTIATION_ROWS = {
         "contract_phrase": "some artifact or declaration exists ≠ full operational closure has been achieved.",
     },
 }
+EXPECTED_TRUTH_LIFECYCLE_PROOF_ROWS = {
+    "law_existence_proof": {
+        "order": 1,
+        "contract_heading": "### 1. Law-existence proof",
+        "proof_role": "law_existence_truth_lifecycle_proof",
+    },
+    "canonical_discovery_proof": {
+        "order": 2,
+        "contract_heading": "### 2. Canonical-discovery proof",
+        "proof_role": "canonical_discovery_truth_lifecycle_proof",
+    },
+    "current_turn_admissibility_proof": {
+        "order": 3,
+        "contract_heading": "### 3. Current-turn-admissibility proof",
+        "proof_role": "current_turn_admissibility_truth_lifecycle_proof",
+    },
+    "run_thread_binding_proof": {
+        "order": 4,
+        "contract_heading": "### 4. Run-thread-binding proof",
+        "proof_role": "run_thread_binding_truth_lifecycle_proof",
+    },
+    "next_hop_consumption_proof": {
+        "order": 5,
+        "contract_heading": "### 5. Next-hop-consumption proof",
+        "proof_role": "next_hop_consumption_truth_lifecycle_proof",
+    },
+}
+EXPECTED_TRUTH_LIFECYCLE_LIMIT_ROWS = {
+    "law_existence_not_canonical_discovery": {
+        "order": 1,
+        "contract_phrase": "law-existence proof is not proof of canonical discovery;",
+    },
+    "canonical_discovery_not_current_turn_admissibility": {
+        "order": 2,
+        "contract_phrase": "canonical-discovery proof is not proof of current-turn admissibility;",
+    },
+    "current_turn_admissibility_not_run_thread_binding": {
+        "order": 3,
+        "contract_phrase": "current-turn-admissibility proof is not proof of run/thread binding;",
+    },
+    "run_thread_binding_not_next_hop_consumption": {
+        "order": 4,
+        "contract_phrase": "run-thread-binding proof is not proof of next-hop consumption;",
+    },
+    "next_hop_consumption_not_lifecycle_bypass": {
+        "order": 5,
+        "contract_phrase": "next-hop-consumption proof is not proof that lifecycle closure may be claimed when earlier stages were missing or bypassed.",
+    },
+}
 EXPECTED_COLLAPSE_ROWS = {
     "existence_equals_discovery": {
         "order": 1,
@@ -133,6 +184,8 @@ EXPECTED_REGISTRY_MARKERS = (
     "## Five lifecycle stages",
     "## Memory-bearing lifecycle strata",
     "## Required lifecycle differentiations",
+    "## Truth-lifecycle proof discipline",
+    "## Truth-lifecycle proof limits",
     "## Non-compliant lifecycle collapses",
 )
 EXPECTED_AUTHORITY_MARKERS = (
@@ -250,6 +303,8 @@ def main() -> int:
     lifecycle_rows = lifecycle_rows_from_doc(truth_doc) if truth_doc else ()
     memory_strata_rows = memory_strata_rows_from_doc(truth_doc) if truth_doc else ()
     differentiation_rows = differentiation_rows_from_doc(truth_doc) if truth_doc else ()
+    truth_lifecycle_proof_rows = truth_lifecycle_proof_rows_from_doc(truth_doc) if truth_doc else ()
+    truth_lifecycle_limit_rows = truth_lifecycle_limit_rows_from_doc(truth_doc) if truth_doc else ()
     collapse_rows = collapse_rows_from_doc(truth_doc) if truth_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -282,6 +337,8 @@ def main() -> int:
             ("required_lifecycle_rows", lifecycle_rows),
             ("required_memory_strata_rows", memory_strata_rows),
             ("required_differentiation_rows", differentiation_rows),
+            ("required_truth_lifecycle_proof_rows", truth_lifecycle_proof_rows),
+            ("required_truth_lifecycle_limit_rows", truth_lifecycle_limit_rows),
             ("required_collapse_rows", collapse_rows),
         ):
             if not rows:
@@ -326,6 +383,24 @@ def main() -> int:
             compare_fields=("contract_phrase",),
         )
         _validate_rows(
+            actual_rows=truth_lifecycle_proof_rows,
+            expected_rows=EXPECTED_TRUTH_LIFECYCLE_PROOF_ROWS,
+            structure_violations=structure_violations,
+            truth_violations=truth_violations,
+            field_name="required_truth_lifecycle_proof_rows",
+            id_attr="proof_id",
+            compare_fields=("contract_heading", "proof_role"),
+        )
+        _validate_rows(
+            actual_rows=truth_lifecycle_limit_rows,
+            expected_rows=EXPECTED_TRUTH_LIFECYCLE_LIMIT_ROWS,
+            structure_violations=structure_violations,
+            truth_violations=truth_violations,
+            field_name="required_truth_lifecycle_limit_rows",
+            id_attr="row_id",
+            compare_fields=("contract_phrase",),
+        )
+        _validate_rows(
             actual_rows=collapse_rows,
             expected_rows=EXPECTED_COLLAPSE_ROWS,
             structure_violations=structure_violations,
@@ -352,7 +427,10 @@ def main() -> int:
             for row in memory_strata_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_heading,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "memory_heading_missing", "marker": marker})
-            for row in differentiation_rows + collapse_rows:
+            for row in truth_lifecycle_proof_rows:
+                for marker in find_missing_markers(contract_text, (row.contract_heading, row.proof_role)):
+                    contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
+            for row in differentiation_rows + truth_lifecycle_limit_rows + collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
 
@@ -525,10 +603,14 @@ def main() -> int:
         "lifecycle_count": len(lifecycle_rows),
         "memory_strata_count": len(memory_strata_rows),
         "differentiation_count": len(differentiation_rows),
+        "truth_lifecycle_proof_count": len(truth_lifecycle_proof_rows),
+        "truth_lifecycle_limit_count": len(truth_lifecycle_limit_rows),
         "collapse_count": len(collapse_rows),
         "lifecycle_ids": [row.lifecycle_id for row in sorted(lifecycle_rows, key=lambda item: item.order)],
         "memory_strata_ids": [row.memory_id for row in sorted(memory_strata_rows, key=lambda item: item.order)],
         "differentiation_ids": [row.row_id for row in sorted(differentiation_rows, key=lambda item: item.order)],
+        "truth_lifecycle_proof_ids": [row.proof_id for row in sorted(truth_lifecycle_proof_rows, key=lambda item: item.order)],
+        "truth_lifecycle_limit_ids": [row.row_id for row in sorted(truth_lifecycle_limit_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
         "structure_violations": structure_violations,
         "truth_violations": truth_violations,

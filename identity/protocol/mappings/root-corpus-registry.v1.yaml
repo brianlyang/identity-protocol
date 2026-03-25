@@ -130,6 +130,8 @@ registered_top_level_entries:
       - '## Machine-world ontology law'
       - '## Four ontology strata'
       - '## Required ontology objects'
+      - '## Machine-world ontology proof discipline'
+      - '## Machine-world ontology proof limits'
     forbidden_content_classes:
       - workbook_issue_projection
       - closure_ledger_narration
@@ -328,6 +330,8 @@ registered_top_level_entries:
       - '## Five lifecycle stages'
       - '## Memory-bearing lifecycle strata'
       - '## Required lifecycle differentiations'
+      - '## Truth-lifecycle proof discipline'
+      - '## Truth-lifecycle proof limits'
       - '## Non-compliant lifecycle collapses'
     forbidden_content_classes:
       - workbook_issue_projection
