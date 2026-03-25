@@ -362,6 +362,10 @@ if they exist locally.
 Repo-relative descriptor surfaces must also remain role-typed; validator,
 probe, and shared-common paths are not interchangeable repo files.
 
+Those role-typed surfaces must also remain cross-role coherent; validator,
+probe, and shared-common paths for one admitted family may not silently point
+at different root surface stems.
+
 ---
 
 ## Root-law bundle discipline

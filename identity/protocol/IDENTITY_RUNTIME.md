@@ -90,6 +90,7 @@ Runtime meaning:
 5. Runtime must discover validator/probe/common/status-key/error-code surfaces from admitted mapping-family descriptors rather than hidden local knowledge.
 6. Runtime must reject descriptor paths that are absolute or escape repo root; repo-relative descriptor surfaces must stay repo-root relative and repo-contained.
 7. Runtime must also reject role-swapped descriptor paths; validator, probe, and shared-common surfaces must stay role-typed rather than merely repo-local.
+8. Runtime must also reject cross-role incoherent descriptor sets; validator/probe/common surfaces for one admitted family must converge on one root surface stem.
 
 ## Runtime consumption of the root-law bundle
 

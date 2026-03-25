@@ -94,6 +94,10 @@ def repo_rel_path_role_typing_policy_from_doc(doc: Mapping[str, Any]) -> str:
     return _norm_str(doc.get("repo_rel_path_role_typing_policy"))
 
 
+def repo_rel_path_surface_stem_policy_from_doc(doc: Mapping[str, Any]) -> str:
+    return _norm_str(doc.get("repo_rel_path_surface_stem_policy"))
+
+
 def required_repo_rel_path_patterns_from_doc(doc: Mapping[str, Any]) -> dict[str, str]:
     rows = doc.get("required_repo_rel_path_patterns")
     if not isinstance(rows, dict):
@@ -137,6 +141,23 @@ def repo_rel_path_pattern_matches(rel_path: str, pattern: str) -> bool:
         return re.fullmatch(norm_pattern, norm_path) is not None
     except re.error:
         return False
+
+
+def extract_repo_rel_path_surface_stem(rel_path: str, pattern: str) -> tuple[str, str]:
+    norm_path = _norm_str(rel_path)
+    norm_pattern = _clean_str(pattern)
+    if not norm_path or not norm_pattern:
+        return "", "surface_stem_pattern_missing"
+    try:
+        match = re.fullmatch(norm_pattern, norm_path)
+    except re.error:
+        return "", "surface_stem_pattern_invalid"
+    if not match:
+        return "", "surface_stem_pattern_mismatch"
+    stem = _norm_str(match.groupdict().get("surface_stem"))
+    if not stem:
+        return "", "surface_stem_capture_missing"
+    return stem, ""
 
 
 def extract_validator_status_key(repo_root: Path, validator_script: str) -> tuple[str, str]:

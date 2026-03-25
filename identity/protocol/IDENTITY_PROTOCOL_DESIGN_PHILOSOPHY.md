@@ -438,6 +438,15 @@ collapse into an arbitrary repo file just because it exists.
 Registry completeness must therefore fail-close rather than accepting
 role-swapped descriptor paths inside repo root.
 
+Those role-typed surfaces must also remain cross-role coherent.
+
+Validator, probe, and shared-common surfaces for one admitted mapping family
+must continue to point at one shared root surface stem rather than three
+different root families that merely happen to satisfy local path typing.
+
+Registry completeness must therefore fail-close rather than accepting
+descriptor surface sets whose role-typed paths are cross-family incoherent.
+
 ---
 
 ## 1. The identity protocol is machine law first, not a compatibility layer

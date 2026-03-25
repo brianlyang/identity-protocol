@@ -11,6 +11,7 @@ from repo_root_resolution_common import resolve_repo_root
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
 from root_machine_registry_completeness_common import (
     extract_validator_error_codes,
+    extract_repo_rel_path_surface_stem,
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     anchor_checks_from_doc,
@@ -20,6 +21,7 @@ from root_machine_registry_completeness_common import (
     repo_rel_path_escape_policy_from_doc,
     repo_rel_path_pattern_matches,
     repo_rel_path_role_typing_policy_from_doc,
+    repo_rel_path_surface_stem_policy_from_doc,
     repo_rel_path_scope_policy_from_doc,
     resolve_repo_relative_surface,
     required_repo_rel_path_patterns_from_doc,
@@ -83,6 +85,7 @@ def main() -> int:
     repo_rel_path_scope_policy = repo_rel_path_scope_policy_from_doc(completeness_doc) if completeness_doc else ""
     repo_rel_path_escape_policy = repo_rel_path_escape_policy_from_doc(completeness_doc) if completeness_doc else ""
     repo_rel_path_role_typing_policy = repo_rel_path_role_typing_policy_from_doc(completeness_doc) if completeness_doc else ""
+    repo_rel_path_surface_stem_policy = repo_rel_path_surface_stem_policy_from_doc(completeness_doc) if completeness_doc else ""
     required_repo_rel_path_patterns = required_repo_rel_path_patterns_from_doc(completeness_doc) if completeness_doc else {}
 
     if not stale_reasons:
@@ -120,6 +123,9 @@ def main() -> int:
         if repo_rel_path_role_typing_policy != "root_protocol_surface_patterns_required":
             stale_reasons.append("root_machine_registry_completeness_repo_rel_path_role_typing_policy_invalid")
             error_code = ERR_REGISTRY
+        if repo_rel_path_surface_stem_policy != "cross_role_stem_coherent":
+            stale_reasons.append("root_machine_registry_completeness_repo_rel_path_surface_stem_policy_invalid")
+            error_code = ERR_REGISTRY
         if tuple(required_descriptor_fields) != ("validator_script", "probe_script", "common_script", "status_key", "error_codes"):
             stale_reasons.append("root_machine_registry_completeness_descriptor_fields_invalid")
             error_code = ERR_REGISTRY
@@ -133,9 +139,9 @@ def main() -> int:
             stale_reasons.append("root_machine_registry_completeness_descriptor_field_modes_invalid")
             error_code = ERR_REGISTRY
         if required_repo_rel_path_patterns != {
-            "validator_script": r"^scripts/validate_protocol_root_[a-z0-9_]+\.py$",
-            "probe_script": r"^scripts/ci/run_protocol_root_[a-z0-9_]+_probes_ci\.sh$",
-            "common_script": r"^scripts/root_[a-z0-9_]+_common\.py$",
+            "validator_script": r"^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\.py$",
+            "probe_script": r"^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\.sh$",
+            "common_script": r"^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\.py$",
         }:
             stale_reasons.append("root_machine_registry_completeness_required_repo_rel_path_patterns_invalid")
             error_code = ERR_REGISTRY
@@ -226,6 +232,7 @@ def main() -> int:
                 active_file = ""
                 alias_error = ""
                 descriptor_field_rows: list[dict[str, Any]] = []
+                descriptor_surface_stems: dict[str, str] = {}
 
                 if not current_file:
                     family_violations.append("current_file_missing")
@@ -382,13 +389,18 @@ def main() -> int:
                                         )
                                         expected_pattern = required_repo_rel_path_patterns.get(descriptor_field, "")
                                         pattern_match = repo_rel_path_pattern_matches(descriptor_value, expected_pattern)
+                                        surface_stem, surface_stem_error = extract_repo_rel_path_surface_stem(
+                                            descriptor_value, expected_pattern
+                                        )
                                         row_payload["resolved_path"] = resolved_path
                                         row_payload["support_error"] = repo_rel_error
                                         row_payload["expected_pattern"] = expected_pattern
                                         row_payload["pattern_match"] = pattern_match
+                                        row_payload["surface_stem"] = surface_stem
+                                        row_payload["surface_stem_error"] = surface_stem_error
                                         row_status = (
                                             STATUS_PASS_REQUIRED
-                                            if descriptor_value and not repo_rel_error and pattern_match
+                                            if descriptor_value and not repo_rel_error and pattern_match and not surface_stem_error
                                             else STATUS_FAIL_REQUIRED
                                         )
                                     elif descriptor_mode == "validator_status_key":
@@ -426,6 +438,9 @@ def main() -> int:
                                         )
                                         expected_pattern = required_repo_rel_path_patterns.get(descriptor_field, "")
                                         pattern_match = repo_rel_path_pattern_matches(descriptor_value, expected_pattern)
+                                        surface_stem, surface_stem_error = extract_repo_rel_path_surface_stem(
+                                            descriptor_value, expected_pattern
+                                        )
                                         if not pattern_match:
                                             family_violations.append("descriptor_path_role_pattern_mismatch")
                                             completeness_violations.append(
@@ -439,6 +454,22 @@ def main() -> int:
                                                     "expected_pattern": expected_pattern,
                                                 }
                                             )
+                                        elif surface_stem_error:
+                                            family_violations.append("descriptor_surface_stem_unresolved")
+                                            completeness_violations.append(
+                                                {
+                                                    "field": "root_mapping_family",
+                                                    "reason": "descriptor_surface_stem_unresolved",
+                                                    "family_id": family_id,
+                                                    "active_file": active_file,
+                                                    "descriptor_field": descriptor_field,
+                                                    "rel_path": descriptor_value,
+                                                    "expected_pattern": expected_pattern,
+                                                    "surface_stem_error": surface_stem_error,
+                                                }
+                                            )
+                                        else:
+                                            descriptor_surface_stems[descriptor_field] = surface_stem
                                         if repo_rel_error == "absolute_path_forbidden":
                                             family_violations.append("descriptor_path_not_repo_relative")
                                             completeness_violations.append(
@@ -509,6 +540,19 @@ def main() -> int:
                                                 }
                                             )
 
+                unique_surface_stems = sorted(set(descriptor_surface_stems.values()))
+                if len(unique_surface_stems) > 1:
+                    family_violations.append("descriptor_surface_stem_mismatch")
+                    completeness_violations.append(
+                        {
+                            "field": "root_mapping_family",
+                            "reason": "descriptor_surface_stem_mismatch",
+                            "family_id": family_id,
+                            "active_file": active_file,
+                            "descriptor_surface_stems": dict(descriptor_surface_stems),
+                        }
+                    )
+
                 family_status_rows.append(
                     {
                         "family_id": family_id,
@@ -572,6 +616,7 @@ def main() -> int:
         "repo_rel_path_scope_policy": repo_rel_path_scope_policy,
         "repo_rel_path_escape_policy": repo_rel_path_escape_policy,
         "repo_rel_path_role_typing_policy": repo_rel_path_role_typing_policy,
+        "repo_rel_path_surface_stem_policy": repo_rel_path_surface_stem_policy,
         "required_repo_rel_path_patterns": dict(required_repo_rel_path_patterns),
         "family_count": len(family_status_rows),
         "family_ids": [row["family_id"] for row in family_status_rows],

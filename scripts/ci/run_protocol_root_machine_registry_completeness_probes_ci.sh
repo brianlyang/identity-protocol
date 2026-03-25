@@ -30,14 +30,23 @@ assert "root-machine-registry-completeness" in payload["family_ids"], payload
 assert payload["repo_rel_path_scope_policy"] == "repo_root_relative_only", payload
 assert payload["repo_rel_path_escape_policy"] == "fail_closed", payload
 assert payload["repo_rel_path_role_typing_policy"] == "root_protocol_surface_patterns_required", payload
+assert payload["repo_rel_path_surface_stem_policy"] == "cross_role_stem_coherent", payload
 assert payload["required_repo_rel_path_patterns"] == {
-    "validator_script": r"^scripts/validate_protocol_root_[a-z0-9_]+\.py$",
-    "probe_script": r"^scripts/ci/run_protocol_root_[a-z0-9_]+_probes_ci\.sh$",
-    "common_script": r"^scripts/root_[a-z0-9_]+_common\.py$",
+    "validator_script": r"^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\.py$",
+    "probe_script": r"^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\.sh$",
+    "common_script": r"^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\.py$",
 }, payload
 assert all(row["family_status"] == "PASS_REQUIRED" for row in payload["family_status_rows"]), payload
 assert all(
     all(cell["status"] == "PASS_REQUIRED" for cell in row.get("descriptor_field_rows", []))
+    for row in payload["family_status_rows"]
+), payload
+assert all(
+    all(
+        cell.get("surface_stem_error", "") in ("", None)
+        for cell in row.get("descriptor_field_rows", [])
+        if cell.get("mode") == "repo_rel_path"
+    )
     for row in payload["family_status_rows"]
 ), payload
 PY
@@ -149,6 +158,42 @@ assert any(
     row["reason"] == "descriptor_path_role_pattern_mismatch"
     and row.get("family_id") == "root-corpus-authority"
     and row.get("descriptor_field") == "common_script"
+    for row in payload["completeness_violations"]
+), payload
+PY
+
+STEM_MISMATCH_REPO="${TMP_ROOT}/surface-stem-mismatch-repo"
+mirror_repo "${STEM_MISMATCH_REPO}"
+python3 - <<'PY' "${STEM_MISMATCH_REPO}/identity/protocol/mappings/root-corpus-authority.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["common_script"] = "scripts/root_corpus_ordering_common.py"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+STEM_MISMATCH_JSON="${TMP_ROOT}/surface-stem-mismatch.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${STEM_MISMATCH_REPO}" \
+  --json-only >"${STEM_MISMATCH_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed cross-role surface-stem mismatch"
+  exit 1
+fi
+
+python3 - <<'PY' "${STEM_MISMATCH_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert any(
+    row["reason"] == "descriptor_surface_stem_mismatch"
+    and row.get("family_id") == "root-corpus-authority"
     for row in payload["completeness_violations"]
 ), payload
 PY

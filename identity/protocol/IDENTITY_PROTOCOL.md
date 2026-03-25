@@ -136,6 +136,7 @@ Status transitions are controlled by governance/review, not by script commit alo
 5. Registry admission without discoverable validator/probe/common/status-key/error-code surfaces is still incomplete.
 6. Repo-relative descriptor surfaces disclosed by an admitted family must remain repo-root relative and repo-contained; absolute-path or parent-escape capture is non-compliant.
 7. Repo-relative descriptor surfaces disclosed by an admitted family must also stay role-typed; validator, probe, and shared-common path classes are not interchangeable.
+8. Role-typed repo-relative descriptor surfaces disclosed by an admitted family must also stay cross-role coherent; validator/probe/common may not silently bind to different root surface stems.
 
 ## Root-law bundle boundary
 
