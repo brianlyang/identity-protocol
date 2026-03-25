@@ -79,6 +79,13 @@ EXPECTED_COMPONENTS = {
         "probe_script": "scripts/ci/run_protocol_root_corpus_gateway_admissibility_probes_ci.sh",
         "status_key": "protocol_root_corpus_gateway_admissibility_status",
     },
+    "root_machine_registry_completeness": {
+        "component_role": "registry_admission_of_root_mapping_families",
+        "current_file": "identity/protocol/mappings/root-machine-registry-completeness.current.yaml",
+        "validator_script": "scripts/validate_protocol_root_machine_registry_completeness.py",
+        "probe_script": "scripts/ci/run_protocol_root_machine_registry_completeness_probes_ci.sh",
+        "status_key": "protocol_root_machine_registry_completeness_status",
+    },
     "root_corpus_precedence": {
         "component_role": "conflict_precedence_and_terminal_machine_enforcement",
         "current_file": "identity/protocol/mappings/root-corpus-precedence.current.yaml",

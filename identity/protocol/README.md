@@ -304,8 +304,8 @@ validator.
 
 Constitutional spine, root admission/governance, source-order, authority
 layering, question-routing, derivation, promotion/demotion transition,
-gateway-admissibility, and conflict precedence must stay explicit and
-machine-governed together.
+gateway-admissibility, machine-registry completeness, and conflict precedence
+must stay explicit and machine-governed together.
 
 No single slice is sufficient by itself; the machine world must preserve them
 as one governed root-law bundle.

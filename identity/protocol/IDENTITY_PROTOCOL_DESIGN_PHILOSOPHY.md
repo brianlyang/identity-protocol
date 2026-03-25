@@ -270,10 +270,11 @@ The root corpus must not rely on one strong sentence, one mapping row, or one
 green validator in isolation.
 
 Constitutional spine, root admission/governance, source-order, authority,
-question-routing, derivation, transition, gateway-admissibility, and conflict
-precedence are not optional commentary slices; they are mutually constraining
-law surfaces that keep the machine world from collapsing origin, entry,
-authorship, re-entry, and terminal legality into one blurred layer.
+question-routing, derivation, transition, gateway-admissibility,
+machine-registry completeness, and conflict precedence are not optional
+commentary slices; they are mutually constraining law surfaces that keep the
+machine world from collapsing origin, entry, authorship, re-entry, registry
+admission, and terminal legality into one blurred layer.
 
 The machine world therefore needs all of the following to remain explicit at
 the same time:
@@ -290,7 +291,9 @@ the same time:
    authoring the law above them;
 7. which gateways admit re-entry and what those gateways are legally allowed to
    do;
-8. which conflict class terminates by source order and which terminates by
+8. how machine-registry families become canonical rather than remaining merely
+   present on disk;
+9. which conflict class terminates by source order and which terminates by
    machine-consumed enforcement.
 
 Weakening one slice while keeping the others green is a root-law coherence

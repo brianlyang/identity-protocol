@@ -127,7 +127,8 @@ The protocol constitution depends on a governed root-law bundle across:
 6. derivation;
 7. transition;
 8. gateway-admissibility;
-9. conflict precedence.
+9. machine-registry completeness;
+10. conflict precedence.
 
 These are separate machine-law slices so that origin, navigation, authorship,
 promotion, admissibility, and terminal legality do not collapse into one
