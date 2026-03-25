@@ -1026,6 +1026,22 @@ def main() -> int:
     _run_reference_visual_atlas_scaffold_probe(repo_root, failures)
     _run_reference_visual_atlas_inventory_check(repo_root, failures)
 
+    release_closure_boundary_script = repo_root / "scripts/validate_v16x_release_closure_boundary.py"
+    if release_closure_boundary_script.exists():
+        proc = subprocess.run(
+            [sys.executable, str(release_closure_boundary_script), "--json-only"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+        )
+        if proc.returncode != 0:
+            failures.append(
+                "[RELEASE_CLOSURE_BOUNDARY_FAIL] "
+                + (proc.stdout.strip() or proc.stderr.strip() or "validate_v16x_release_closure_boundary failed")
+            )
+    else:
+        failures.append("[MISSING_SCRIPT] scripts/validate_v16x_release_closure_boundary.py not found")
+
     # Round-29.5: enforce doc evidence persistence policy
     evidence_policy_script = repo_root / "scripts/validate_doc_evidence_persistence.py"
     if evidence_policy_script.exists():

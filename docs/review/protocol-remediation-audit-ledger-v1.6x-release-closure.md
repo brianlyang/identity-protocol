@@ -22,6 +22,8 @@ Current-state judgment for this audit boundary must anchor to:
 
 This document does not declare a release tag by itself. It freezes the audit interpretation of what `1.6.x` must close before `1.7.x` is allowed to carry the future-facing line.
 
+The authoritative current workbook horizon for this release boundary is `ISSUE-001` through `ISSUE-039`; if that horizon moves, this review surface must truth-sync instead of preserving a stale issue universe.
+
 ## 1) Audit conclusion
 
 The correct version-boundary judgment is:
@@ -56,6 +58,7 @@ Audit review of late streams shows that `1.6.x` is already functioning as the li
 4. `v1.6.18` re-anchors persisted artifact ontology to fixed family law;
 5. `v1.6.19` re-anchors live-linkage closure to shared current-run projection plus runtime replay;
 6. `v1.6.20` re-anchors broadcast/communication convergence to shared adoption and fleet/runtime closure.
+7. `v1.6.21` re-anchors higher-order clean terminal truth / canonical publishability / explicit pending-state equivalence / generic completed-done alias drift to one shared machine-law lane.
 
 Audit interpretation:
 
