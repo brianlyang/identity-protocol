@@ -73,6 +73,19 @@ def required_component_descriptor_fields_from_doc(bundle_doc: Mapping[str, Any])
     return _as_str_tuple(bundle_doc.get("required_component_descriptor_fields"))
 
 
+def required_component_descriptor_field_modes_from_doc(bundle_doc: Mapping[str, Any]) -> dict[str, str]:
+    rows = bundle_doc.get("required_component_descriptor_field_modes")
+    if not isinstance(rows, dict):
+        return {}
+    out: dict[str, str] = {}
+    for key, value in rows.items():
+        norm_key = _norm_str(key)
+        norm_value = _norm_str(value)
+        if norm_key and norm_value:
+            out[norm_key] = norm_value
+    return out
+
+
 def load_mapping_descriptor(path: Path) -> dict[str, Any]:
     return _load_yaml(path)
 

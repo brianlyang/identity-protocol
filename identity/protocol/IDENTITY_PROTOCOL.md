@@ -163,6 +163,11 @@ component families they bind; bundle metadata may not override or hide a
 component family's own disclosed validator/probe/common/status-key/error-code
 surfaces.
 
+Root-law bundle rows must also preserve descriptor-field mode; a repo-relative
+path field may not be reinterpreted as validator-emitted metadata, and
+validator-emitted status-key/error-code fields may not be reinterpreted as
+ordinary path strings.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

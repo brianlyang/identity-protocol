@@ -16,6 +16,7 @@ from root_corpus_law_bundle_common import (
     bundle_components_from_doc,
     load_mapping_descriptor,
     load_root_corpus_law_bundle,
+    required_component_descriptor_field_modes_from_doc,
     required_component_descriptor_fields_from_doc,
     require_component_descriptor_concordance,
 )
@@ -141,6 +142,15 @@ def _descriptor_is_present(value: Any) -> bool:
     return bool(str(value or "").strip())
 
 
+EXPECTED_DESCRIPTOR_FIELD_MODES = {
+    "validator_script": "repo_rel_path",
+    "probe_script": "repo_rel_path",
+    "common_script": "repo_rel_path",
+    "status_key": "validator_status_key",
+    "error_codes": "validator_error_code_list",
+}
+
+
 def _run_component_validator(repo_root, validator_script: str, status_key: str) -> tuple[int, dict[str, Any], str]:
     cmd = ["python3", validator_script, "--repo-root", str(repo_root), "--json-only"]
     proc = subprocess.run(cmd, cwd=repo_root, capture_output=True, text=True)
@@ -185,6 +195,9 @@ def main() -> int:
     required_component_descriptor_fields = (
         required_component_descriptor_fields_from_doc(bundle_doc) if bundle_doc else ()
     )
+    required_component_descriptor_field_modes = (
+        required_component_descriptor_field_modes_from_doc(bundle_doc) if bundle_doc else {}
+    )
     component_map = {row.component_id: row for row in components}
     sorted_components = sorted(components, key=lambda row: row.order)
     component_orders = [row.order for row in components]
@@ -219,6 +232,9 @@ def main() -> int:
             "error_codes",
         ):
             stale_reasons.append("root_corpus_law_bundle_required_component_descriptor_fields_invalid")
+            error_code = ERR_REGISTRY
+        if required_component_descriptor_field_modes != EXPECTED_DESCRIPTOR_FIELD_MODES:
+            stale_reasons.append("root_corpus_law_bundle_required_component_descriptor_field_modes_invalid")
             error_code = ERR_REGISTRY
         if descriptor_concordance_required and not required_component_descriptor_fields:
             stale_reasons.append("root_corpus_law_bundle_required_component_descriptor_fields_missing")
@@ -328,6 +344,7 @@ def main() -> int:
                     "validator_error": run_error,
                     "descriptor_concordance_required": descriptor_concordance_required,
                     "required_component_descriptor_fields": list(required_component_descriptor_fields),
+                    "required_component_descriptor_field_modes": dict(required_component_descriptor_field_modes),
                     "descriptor_field_rows": descriptor_field_rows,
                 }
             )
@@ -373,9 +390,11 @@ def main() -> int:
                         for descriptor_field in required_component_descriptor_fields:
                             bundle_value = _descriptor_value(getattr(row, descriptor_field))
                             active_value = _descriptor_value(active_doc.get(descriptor_field))
+                            descriptor_mode = required_component_descriptor_field_modes.get(descriptor_field, "")
                             descriptor_field_rows.append(
                                 {
                                     "field": descriptor_field,
+                                    "descriptor_mode": descriptor_mode,
                                     "bundle_rel_path": list(bundle_value) if isinstance(bundle_value, tuple) else bundle_value,
                                     "active_rel_path": list(active_value) if isinstance(active_value, tuple) else active_value,
                                     "bundle_value": list(bundle_value) if isinstance(bundle_value, tuple) else bundle_value,
@@ -443,6 +462,7 @@ def main() -> int:
         "component_count": len(components),
         "component_ids": [row.component_id for row in sorted_components],
         "required_component_descriptor_fields": list(required_component_descriptor_fields),
+        "required_component_descriptor_field_modes": dict(required_component_descriptor_field_modes),
         "component_status_rows": component_status_rows,
         "structure_violations": structure_violations,
         "bundle_violations": bundle_violations,

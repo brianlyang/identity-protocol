@@ -17,6 +17,12 @@ required_component_descriptor_fields:
 - common_script
 - status_key
 - error_codes
+required_component_descriptor_field_modes:
+  validator_script: repo_rel_path
+  probe_script: repo_rel_path
+  common_script: repo_rel_path
+  status_key: validator_status_key
+  error_codes: validator_error_code_list
 bundle_anchor_checks:
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
   required_markers:
@@ -27,6 +33,9 @@ bundle_anchor_checks:
   - That joint governance also requires descriptor concordance across the bundle.
   - emitted status-key, or emitted error-code surfaces, the machine world is being asked
   - to trust shadow bundle knowledge instead of the admitted family descriptor.
+  - Descriptor concordance must also preserve descriptor-field mode.
+  - validator-emitted status key, or a validator-emitted error-code family, the machine world is again being asked to
+  - trust shadow bundle semantics instead of the admitted family descriptor.
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root-law bundle discipline'
@@ -39,6 +48,9 @@ bundle_anchor_checks:
   - A bundle row may not silently drift from a component family's own disclosed
     validator, probe, shared-common, emitted status-key, or emitted error-code
     surfaces.
+  - 'Nor may the bundle silently drift descriptor-field mode:'
+  - validator-emitted error-code families must remain validator-emitted
+    error-code families.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root-law bundle boundary'
@@ -48,6 +60,9 @@ bundle_anchor_checks:
   - Root-law bundle rows must also remain descriptor-concordant with the active
   - component family's own disclosed validator/probe/common/status-key/error-code
     surfaces.
+  - Root-law bundle rows must also preserve descriptor-field mode; a repo-relative
+  - validator-emitted status-key/error-code fields may not be reinterpreted as
+    ordinary path strings.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime consumption of the root-law bundle'
@@ -56,6 +71,8 @@ bundle_anchor_checks:
   - Runtime must not select the most convenient slice in isolation.
   - Runtime must also reject a root-law bundle row whose validator/probe/common/status-key/error-code
   - surfaces drift from the active component descriptor it claims to bind.
+  - Runtime must also reject a root-law bundle row whose descriptor-field mode
+  - error-code family.
 component_rows:
 - order: 1
   component_id: root_corpus_governance

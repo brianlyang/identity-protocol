@@ -381,6 +381,13 @@ A bundle row may not silently drift from a component family's own disclosed
 validator, probe, shared-common, emitted status-key, or emitted error-code
 surfaces.
 
+Nor may the bundle silently drift descriptor-field mode:
+
+- repo-relative paths must remain repo-relative paths;
+- validator-emitted status keys must remain validator-emitted status keys;
+- validator-emitted error-code families must remain validator-emitted
+  error-code families.
+
 ---
 
 ## Conflict-handling rule

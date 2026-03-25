@@ -367,6 +367,13 @@ component family's own disclosed validator, probe, shared-common, emitted
 status-key, or emitted error-code surfaces, the machine world is being asked
 to trust shadow bundle knowledge instead of the admitted family descriptor.
 
+Descriptor concordance must also preserve descriptor-field mode.
+
+If a bundle row keeps the same descriptor name but silently changes whether a
+field is a repo-relative path, a validator-emitted status key, or a
+validator-emitted error-code family, the machine world is again being asked to
+trust shadow bundle semantics instead of the admitted family descriptor.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

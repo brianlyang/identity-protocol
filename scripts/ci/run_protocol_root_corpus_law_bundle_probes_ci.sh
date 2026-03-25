@@ -33,16 +33,60 @@ assert payload["required_component_descriptor_fields"] == [
     "status_key",
     "error_codes",
 ], payload
+assert payload["required_component_descriptor_field_modes"] == {
+    "validator_script": "repo_rel_path",
+    "probe_script": "repo_rel_path",
+    "common_script": "repo_rel_path",
+    "status_key": "validator_status_key",
+    "error_codes": "validator_error_code_list",
+}, payload
 assert all(row["component_status"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
 assert all(
     all(cell["status"] == "PASS_REQUIRED" for cell in row.get("descriptor_field_rows", []))
     for row in payload["component_status_rows"]
 ), payload
 assert any(
+    cell["field"] == "error_codes" and cell["descriptor_mode"] == "validator_error_code_list"
+    for row in payload["component_status_rows"]
+    for cell in row.get("descriptor_field_rows", [])
+), payload
+assert any(
     cell["field"] == "error_codes" and cell["status"] == "PASS_REQUIRED"
     for row in payload["component_status_rows"]
     for cell in row.get("descriptor_field_rows", [])
 ), payload
+PY
+
+MODE_REPO="${TMP_ROOT}/descriptor-mode-drift-repo"
+mirror_repo "${MODE_REPO}"
+python3 - <<'PY' "${MODE_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_component_descriptor_field_modes"]["error_codes"] = "repo_rel_path"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+MODE_JSON="${TMP_ROOT}/descriptor-mode-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${MODE_REPO}" \
+  --json-only >"${MODE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor-field mode drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${MODE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_required_component_descriptor_field_modes_invalid" in payload["stale_reasons"], payload
 PY
 
 DESCRIPTOR_REPO="${TMP_ROOT}/descriptor-drift-repo"
