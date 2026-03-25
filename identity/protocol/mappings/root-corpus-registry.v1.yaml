@@ -171,6 +171,8 @@ registered_top_level_entries:
       - '## Success-path state admissibility law'
       - '## Six state classes'
       - '## Required state differentiations'
+      - '## State-admission proof discipline'
+      - '## State-admission proof limits'
     forbidden_content_classes:
       - workbook_issue_projection
       - closure_ledger_narration

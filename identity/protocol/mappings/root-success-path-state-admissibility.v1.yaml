@@ -14,6 +14,8 @@ contract_required_markers:
   - '## Success-path state admissibility law'
   - '## Six state classes'
   - '## Required state differentiations'
+  - '## State-admission proof discipline'
+  - '## State-admission proof limits'
   - '## Non-compliant state collapses'
   - 'Only states admitted by law may enter the current-turn success path.'
 required_state_class_rows:
@@ -60,6 +62,43 @@ required_differentiation_rows:
   - order: 6
     differentiation_id: progress_feeling_vs_lawful_state_admission
     contract_phrase: 'local progress feeling or convenience is separated from lawful state admission.'
+required_state_admission_proof_rows:
+  - order: 1
+    proof_id: frozen_definition_state_admission_proof
+    contract_heading: '### 1. Frozen-definition state-admission proof'
+    proof_role: frozen_definition_state_admission_proof
+  - order: 2
+    proof_id: current_turn_admissibility_state_admission_proof
+    contract_heading: '### 2. Current-turn-admissibility state-admission proof'
+    proof_role: current_turn_admissibility_state_admission_proof
+  - order: 3
+    proof_id: active_binding_state_admission_proof
+    contract_heading: '### 3. Active-binding state-admission proof'
+    proof_role: active_binding_state_admission_proof
+  - order: 4
+    proof_id: non_entry_recovery_classification_state_admission_proof
+    contract_heading: '### 4. Non-entry/recovery-classification proof'
+    proof_role: non_entry_recovery_classification_state_admission_proof
+  - order: 5
+    proof_id: support_quarantine_confinement_state_admission_proof
+    contract_heading: '### 5. Support/quarantine-confinement proof'
+    proof_role: support_quarantine_confinement_state_admission_proof
+required_state_admission_limit_rows:
+  - order: 1
+    limit_id: frozen_definition_not_current_turn_admissibility
+    contract_phrase: 'frozen-definition state-admission proof is not proof of current-turn admissibility;'
+  - order: 2
+    limit_id: current_turn_admissibility_not_active_binding
+    contract_phrase: 'current-turn-admissibility state-admission proof is not proof of active binding;'
+  - order: 3
+    limit_id: active_binding_not_non_entry_recovery_classification
+    contract_phrase: 'active-binding state-admission proof is not proof of lawful non-entry or recovery classification;'
+  - order: 4
+    limit_id: non_entry_recovery_not_support_quarantine_confinement
+    contract_phrase: 'non-entry/recovery-classification proof is not proof of support or quarantine confinement;'
+  - order: 5
+    limit_id: support_quarantine_not_active_success_path_admission
+    contract_phrase: 'support/quarantine-confinement proof is not proof of active success-path admission.'
 required_collapse_rows:
   - order: 1
     collapse_id: defined_state_as_live_success_state

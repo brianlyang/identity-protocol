@@ -139,6 +139,61 @@ The protocol must preserve the following differentiations:
 5. visible status projection is separated from success-path state admission proof;
 6. local progress feeling or convenience is separated from lawful state admission.
 
+When a success-path state claim relies on governed proof, the proof stratum
+behind that claim must match the state-admission claim being asserted.
+
+## State-admission proof discipline
+
+Success-path state claims may be supported only by proof whose stratum matches
+the state-admission claim being asserted.
+
+### 1. Frozen-definition state-admission proof
+
+Supports claims that a state class was defined by shared law or registry rather
+than improvised from local vividness or convenience.
+
+Proof role: `frozen_definition_state_admission_proof`.
+
+### 2. Current-turn-admissibility state-admission proof
+
+Supports claims that a state passed the relevant identity, path, gate, and
+state-class checks for the present turn.
+
+Proof role: `current_turn_admissibility_state_admission_proof`.
+
+### 3. Active-binding state-admission proof
+
+Supports claims that a state was not only admissible in abstraction but bound
+to the current run / current thread / current identity context for active
+success-path execution.
+
+Proof role: `active_binding_state_admission_proof`.
+
+### 4. Non-entry/recovery-classification proof
+
+Supports claims that optional non-entry and governed recovery-only states were
+classified lawfully rather than silently promoted into active execution.
+
+Proof role: `non_entry_recovery_classification_state_admission_proof`.
+
+### 5. Support/quarantine-confinement proof
+
+Supports claims that migration, replay, diagnostics, archive, fixture,
+support-only, or quarantine states remained demoted outside active success-path
+admission.
+
+Proof role: `support_quarantine_confinement_state_admission_proof`.
+
+## State-admission proof limits
+
+The protocol must preserve these state-admission proof limits:
+
+1. frozen-definition state-admission proof is not proof of current-turn admissibility;
+2. current-turn-admissibility state-admission proof is not proof of active binding;
+3. active-binding state-admission proof is not proof of lawful non-entry or recovery classification;
+4. non-entry/recovery-classification proof is not proof of support or quarantine confinement;
+5. support/quarantine-confinement proof is not proof of active success-path admission.
+
 ## Non-compliant state collapses
 
 The following are non-compliant:

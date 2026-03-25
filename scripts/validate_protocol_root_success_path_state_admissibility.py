@@ -20,6 +20,8 @@ from root_success_path_state_admissibility_common import (
     collapse_rows_from_doc,
     differentiation_rows_from_doc,
     load_root_success_path_state_admissibility,
+    state_admission_limit_rows_from_doc,
+    state_admission_proof_rows_from_doc,
     state_class_rows_from_doc,
 )
 
@@ -86,6 +88,55 @@ EXPECTED_DIFFERENTIATION_ROWS = {
         "contract_phrase": "local progress feeling or convenience is separated from lawful state admission.",
     },
 }
+EXPECTED_STATE_ADMISSION_PROOF_ROWS = {
+    "frozen_definition_state_admission_proof": {
+        "order": 1,
+        "contract_heading": "### 1. Frozen-definition state-admission proof",
+        "proof_role": "frozen_definition_state_admission_proof",
+    },
+    "current_turn_admissibility_state_admission_proof": {
+        "order": 2,
+        "contract_heading": "### 2. Current-turn-admissibility state-admission proof",
+        "proof_role": "current_turn_admissibility_state_admission_proof",
+    },
+    "active_binding_state_admission_proof": {
+        "order": 3,
+        "contract_heading": "### 3. Active-binding state-admission proof",
+        "proof_role": "active_binding_state_admission_proof",
+    },
+    "non_entry_recovery_classification_state_admission_proof": {
+        "order": 4,
+        "contract_heading": "### 4. Non-entry/recovery-classification proof",
+        "proof_role": "non_entry_recovery_classification_state_admission_proof",
+    },
+    "support_quarantine_confinement_state_admission_proof": {
+        "order": 5,
+        "contract_heading": "### 5. Support/quarantine-confinement proof",
+        "proof_role": "support_quarantine_confinement_state_admission_proof",
+    },
+}
+EXPECTED_STATE_ADMISSION_LIMIT_ROWS = {
+    "frozen_definition_not_current_turn_admissibility": {
+        "order": 1,
+        "contract_phrase": "frozen-definition state-admission proof is not proof of current-turn admissibility;",
+    },
+    "current_turn_admissibility_not_active_binding": {
+        "order": 2,
+        "contract_phrase": "current-turn-admissibility state-admission proof is not proof of active binding;",
+    },
+    "active_binding_not_non_entry_recovery_classification": {
+        "order": 3,
+        "contract_phrase": "active-binding state-admission proof is not proof of lawful non-entry or recovery classification;",
+    },
+    "non_entry_recovery_not_support_quarantine_confinement": {
+        "order": 4,
+        "contract_phrase": "non-entry/recovery-classification proof is not proof of support or quarantine confinement;",
+    },
+    "support_quarantine_not_active_success_path_admission": {
+        "order": 5,
+        "contract_phrase": "support/quarantine-confinement proof is not proof of active success-path admission.",
+    },
+}
 EXPECTED_COLLAPSE_ROWS = {
     "defined_state_as_live_success_state": {
         "order": 1,
@@ -117,6 +168,8 @@ EXPECTED_REGISTRY_MARKERS = (
     "## Success-path state admissibility law",
     "## Six state classes",
     "## Required state differentiations",
+    "## State-admission proof discipline",
+    "## State-admission proof limits",
 )
 EXPECTED_AUTHORITY_MARKERS = (
     "## Runtime adjudication boundary",
@@ -232,6 +285,8 @@ def main() -> int:
 
     state_class_rows = state_class_rows_from_doc(state_doc) if state_doc else ()
     differentiation_rows = differentiation_rows_from_doc(state_doc) if state_doc else ()
+    state_admission_proof_rows = state_admission_proof_rows_from_doc(state_doc) if state_doc else ()
+    state_admission_limit_rows = state_admission_limit_rows_from_doc(state_doc) if state_doc else ()
     collapse_rows = collapse_rows_from_doc(state_doc) if state_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -263,6 +318,8 @@ def main() -> int:
         for field, rows in (
             ("required_state_class_rows", state_class_rows),
             ("required_differentiation_rows", differentiation_rows),
+            ("required_state_admission_proof_rows", state_admission_proof_rows),
+            ("required_state_admission_limit_rows", state_admission_limit_rows),
             ("required_collapse_rows", collapse_rows),
         ):
             if not rows:
@@ -298,6 +355,24 @@ def main() -> int:
             compare_fields=("contract_phrase",),
         )
         _validate_rows(
+            actual_rows=state_admission_proof_rows,
+            expected_rows=EXPECTED_STATE_ADMISSION_PROOF_ROWS,
+            structure_violations=structure_violations,
+            admissibility_violations=admissibility_violations,
+            field_name="required_state_admission_proof_rows",
+            id_attr="proof_id",
+            compare_fields=("contract_heading", "proof_role"),
+        )
+        _validate_rows(
+            actual_rows=state_admission_limit_rows,
+            expected_rows=EXPECTED_STATE_ADMISSION_LIMIT_ROWS,
+            structure_violations=structure_violations,
+            admissibility_violations=admissibility_violations,
+            field_name="required_state_admission_limit_rows",
+            id_attr="row_id",
+            compare_fields=("contract_phrase",),
+        )
+        _validate_rows(
             actual_rows=collapse_rows,
             expected_rows=EXPECTED_COLLAPSE_ROWS,
             structure_violations=structure_violations,
@@ -321,7 +396,10 @@ def main() -> int:
             for row in state_class_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_heading,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "state_class_heading_missing", "marker": marker})
-            for row in differentiation_rows + collapse_rows:
+            for row in state_admission_proof_rows:
+                for marker in find_missing_markers(contract_text, (row.contract_heading,)):
+                    contract_marker_violations.append({"field": "contract_file", "reason": "proof_heading_missing", "marker": marker})
+            for row in differentiation_rows + state_admission_limit_rows + collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
 
@@ -493,9 +571,13 @@ def main() -> int:
         "contract_file": str(state_doc.get("contract_file") or ""),
         "state_class_count": len(state_class_rows),
         "differentiation_count": len(differentiation_rows),
+        "state_admission_proof_count": len(state_admission_proof_rows),
+        "state_admission_limit_count": len(state_admission_limit_rows),
         "collapse_count": len(collapse_rows),
         "state_class_ids": [row.state_class_id for row in sorted(state_class_rows, key=lambda item: item.order)],
         "differentiation_ids": [row.row_id for row in sorted(differentiation_rows, key=lambda item: item.order)],
+        "state_admission_proof_ids": [row.proof_id for row in sorted(state_admission_proof_rows, key=lambda item: item.order)],
+        "state_admission_limit_ids": [row.row_id for row in sorted(state_admission_limit_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
         "structure_violations": structure_violations,
         "admissibility_violations": admissibility_violations,
