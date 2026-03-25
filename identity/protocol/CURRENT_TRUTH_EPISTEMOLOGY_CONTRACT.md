@@ -128,6 +128,59 @@ The protocol must preserve the following epistemic separations:
 5. dialogue-retention, dialogue-governance, protocol-feedback, continuity, and memory-absorption are separated;
 6. declaration / gate surfaces and artifact sinks are separated.
 
+When an epistemic claim relies on governed proof, the proof stratum behind that
+claim must match the epistemic commitment being asserted.
+
+## Epistemic-proof discipline
+
+Current-truth justification may be supported only by proof whose stratum
+matches the epistemic commitment being asserted.
+
+### 1. Canonical-source proof
+
+Supports claims that present truth was grounded in canonical source law rather
+than in narration or remembered wording.
+
+Proof role: `canonical_source_current_truth_proof`.
+
+### 2. Governed-resolution proof
+
+Supports claims that identity, path, and context were resolved under governed
+resolution rather than historical familiarity.
+
+Proof role: `governed_resolution_current_truth_proof`.
+
+### 3. Present-turn-authority proof
+
+Supports claims that the truth was admissible and bound for the present turn
+rather than merely latest-looking or recently visible.
+
+Proof role: `present_turn_authority_current_truth_proof`.
+
+### 4. Provenance-preserving-derivation proof
+
+Supports claims that summaries, projections, or derivations preserved source
+provenance rather than replacing the source truth they depend on.
+
+Proof role: `provenance_preserving_derivation_current_truth_proof`.
+
+### 5. Fail-close-justification proof
+
+Supports claims that the justification chain was complete enough to avoid
+guesswork and lawful failure exposure remained intact.
+
+Proof role: `fail_close_justification_current_truth_proof`.
+
+## Epistemic-proof limits
+
+The protocol must preserve these epistemic-proof limits:
+
+1. canonical-source proof is not proof of governed resolution;
+2. governed-resolution proof is not proof of present-turn authority;
+3. present-turn-authority proof is not proof of provenance-preserving derivation;
+4. provenance-preserving-derivation proof is not proof of fail-close justification;
+5. fail-close-justification proof is not proof that the resulting claim may bypass current-turn machine adjudication.
+
 ## Non-compliant epistemic collapses
 
 The following are non-compliant:

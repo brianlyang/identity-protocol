@@ -141,6 +141,8 @@ registered_top_level_entries:
       - '## Current-truth epistemology law'
       - '## Five epistemic commitments'
       - '## Required epistemic differentiations'
+      - '## Epistemic-proof discipline'
+      - '## Epistemic-proof limits'
     forbidden_content_classes:
       - workbook_issue_projection
       - closure_ledger_narration

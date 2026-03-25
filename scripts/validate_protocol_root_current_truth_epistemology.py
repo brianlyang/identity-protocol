@@ -20,6 +20,8 @@ from root_current_truth_epistemology_common import (
     collapse_rows_from_doc,
     commitment_rows_from_doc,
     differentiation_rows_from_doc,
+    epistemic_limit_rows_from_doc,
+    epistemic_proof_rows_from_doc,
     load_root_current_truth_epistemology,
 )
 
@@ -81,6 +83,55 @@ EXPECTED_DIFFERENTIATION_ROWS = {
         "contract_phrase": "declaration / gate surfaces and artifact sinks are separated.",
     },
 }
+EXPECTED_EPISTEMIC_PROOF_ROWS = {
+    "canonical_source_proof": {
+        "order": 1,
+        "contract_heading": "### 1. Canonical-source proof",
+        "proof_role": "canonical_source_current_truth_proof",
+    },
+    "governed_resolution_proof": {
+        "order": 2,
+        "contract_heading": "### 2. Governed-resolution proof",
+        "proof_role": "governed_resolution_current_truth_proof",
+    },
+    "present_turn_authority_proof": {
+        "order": 3,
+        "contract_heading": "### 3. Present-turn-authority proof",
+        "proof_role": "present_turn_authority_current_truth_proof",
+    },
+    "provenance_preserving_derivation_proof": {
+        "order": 4,
+        "contract_heading": "### 4. Provenance-preserving-derivation proof",
+        "proof_role": "provenance_preserving_derivation_current_truth_proof",
+    },
+    "fail_close_justification_proof": {
+        "order": 5,
+        "contract_heading": "### 5. Fail-close-justification proof",
+        "proof_role": "fail_close_justification_current_truth_proof",
+    },
+}
+EXPECTED_EPISTEMIC_LIMIT_ROWS = {
+    "canonical_source_not_resolution": {
+        "order": 1,
+        "contract_phrase": "canonical-source proof is not proof of governed resolution;",
+    },
+    "resolution_not_present_turn_authority": {
+        "order": 2,
+        "contract_phrase": "governed-resolution proof is not proof of present-turn authority;",
+    },
+    "authority_not_provenance_preserving_derivation": {
+        "order": 3,
+        "contract_phrase": "present-turn-authority proof is not proof of provenance-preserving derivation;",
+    },
+    "provenance_not_fail_close_justification": {
+        "order": 4,
+        "contract_phrase": "provenance-preserving-derivation proof is not proof of fail-close justification;",
+    },
+    "fail_close_not_runtime_bypass": {
+        "order": 5,
+        "contract_phrase": "fail-close-justification proof is not proof that the resulting claim may bypass current-turn machine adjudication.",
+    },
+}
 EXPECTED_COLLAPSE_ROWS = {
     "narration_as_current_truth": {
         "order": 1,
@@ -112,6 +163,8 @@ EXPECTED_REGISTRY_MARKERS = (
     "## Current-truth epistemology law",
     "## Five epistemic commitments",
     "## Required epistemic differentiations",
+    "## Epistemic-proof discipline",
+    "## Epistemic-proof limits",
 )
 EXPECTED_AUTHORITY_MARKERS = (
     "## Runtime adjudication boundary",
@@ -227,6 +280,8 @@ def main() -> int:
 
     commitment_rows = commitment_rows_from_doc(epistemology_doc) if epistemology_doc else ()
     differentiation_rows = differentiation_rows_from_doc(epistemology_doc) if epistemology_doc else ()
+    epistemic_proof_rows = epistemic_proof_rows_from_doc(epistemology_doc) if epistemology_doc else ()
+    epistemic_limit_rows = epistemic_limit_rows_from_doc(epistemology_doc) if epistemology_doc else ()
     collapse_rows = collapse_rows_from_doc(epistemology_doc) if epistemology_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -258,6 +313,8 @@ def main() -> int:
         for field, rows in (
             ("required_commitment_rows", commitment_rows),
             ("required_differentiation_rows", differentiation_rows),
+            ("required_epistemic_proof_rows", epistemic_proof_rows),
+            ("required_epistemic_limit_rows", epistemic_limit_rows),
             ("required_collapse_rows", collapse_rows),
         ):
             if not rows:
@@ -293,6 +350,24 @@ def main() -> int:
             compare_fields=("contract_phrase",),
         )
         _validate_rows(
+            actual_rows=epistemic_proof_rows,
+            expected_rows=EXPECTED_EPISTEMIC_PROOF_ROWS,
+            structure_violations=structure_violations,
+            epistemology_violations=epistemology_violations,
+            field_name="required_epistemic_proof_rows",
+            id_attr="proof_id",
+            compare_fields=("contract_heading", "proof_role"),
+        )
+        _validate_rows(
+            actual_rows=epistemic_limit_rows,
+            expected_rows=EXPECTED_EPISTEMIC_LIMIT_ROWS,
+            structure_violations=structure_violations,
+            epistemology_violations=epistemology_violations,
+            field_name="required_epistemic_limit_rows",
+            id_attr="row_id",
+            compare_fields=("contract_phrase",),
+        )
+        _validate_rows(
             actual_rows=collapse_rows,
             expected_rows=EXPECTED_COLLAPSE_ROWS,
             structure_violations=structure_violations,
@@ -316,7 +391,10 @@ def main() -> int:
             for row in commitment_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_heading,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "commitment_heading_missing", "marker": marker})
-            for row in differentiation_rows + collapse_rows:
+            for row in epistemic_proof_rows:
+                for marker in find_missing_markers(contract_text, (row.contract_heading,)):
+                    contract_marker_violations.append({"field": "contract_file", "reason": "proof_heading_missing", "marker": marker})
+            for row in differentiation_rows + epistemic_limit_rows + collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
 
@@ -488,9 +566,13 @@ def main() -> int:
         "contract_file": str(epistemology_doc.get("contract_file") or ""),
         "commitment_count": len(commitment_rows),
         "differentiation_count": len(differentiation_rows),
+        "epistemic_proof_count": len(epistemic_proof_rows),
+        "epistemic_limit_count": len(epistemic_limit_rows),
         "collapse_count": len(collapse_rows),
         "commitment_ids": [row.commitment_id for row in sorted(commitment_rows, key=lambda item: item.order)],
         "differentiation_ids": [row.row_id for row in sorted(differentiation_rows, key=lambda item: item.order)],
+        "epistemic_proof_ids": [row.proof_id for row in sorted(epistemic_proof_rows, key=lambda item: item.order)],
+        "epistemic_limit_ids": [row.row_id for row in sorted(epistemic_limit_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
         "structure_violations": structure_violations,
         "epistemology_violations": epistemology_violations,

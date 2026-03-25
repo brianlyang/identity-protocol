@@ -14,6 +14,8 @@ contract_required_markers:
   - '## Current-truth epistemology law'
   - '## Five epistemic commitments'
   - '## Required epistemic differentiations'
+  - '## Epistemic-proof discipline'
+  - '## Epistemic-proof limits'
   - '## Non-compliant epistemic collapses'
   - 'The identity protocol must justify present-fact claims from canonical sources and governed evidence paths rather than from narration, guesswork, historical accident, implicit habit, compatibility residue, or derived summary.'
 required_commitment_rows:
@@ -56,6 +58,43 @@ required_differentiation_rows:
   - order: 6
     differentiation_id: declaration_gate_vs_artifact_sink
     contract_phrase: 'declaration / gate surfaces and artifact sinks are separated.'
+required_epistemic_proof_rows:
+  - order: 1
+    proof_id: canonical_source_proof
+    contract_heading: '### 1. Canonical-source proof'
+    proof_role: canonical_source_current_truth_proof
+  - order: 2
+    proof_id: governed_resolution_proof
+    contract_heading: '### 2. Governed-resolution proof'
+    proof_role: governed_resolution_current_truth_proof
+  - order: 3
+    proof_id: present_turn_authority_proof
+    contract_heading: '### 3. Present-turn-authority proof'
+    proof_role: present_turn_authority_current_truth_proof
+  - order: 4
+    proof_id: provenance_preserving_derivation_proof
+    contract_heading: '### 4. Provenance-preserving-derivation proof'
+    proof_role: provenance_preserving_derivation_current_truth_proof
+  - order: 5
+    proof_id: fail_close_justification_proof
+    contract_heading: '### 5. Fail-close-justification proof'
+    proof_role: fail_close_justification_current_truth_proof
+required_epistemic_limit_rows:
+  - order: 1
+    limit_id: canonical_source_not_resolution
+    contract_phrase: 'canonical-source proof is not proof of governed resolution;'
+  - order: 2
+    limit_id: resolution_not_present_turn_authority
+    contract_phrase: 'governed-resolution proof is not proof of present-turn authority;'
+  - order: 3
+    limit_id: authority_not_provenance_preserving_derivation
+    contract_phrase: 'present-turn-authority proof is not proof of provenance-preserving derivation;'
+  - order: 4
+    limit_id: provenance_not_fail_close_justification
+    contract_phrase: 'provenance-preserving-derivation proof is not proof of fail-close justification;'
+  - order: 5
+    limit_id: fail_close_not_runtime_bypass
+    contract_phrase: 'fail-close-justification proof is not proof that the resulting claim may bypass current-turn machine adjudication.'
 required_collapse_rows:
   - order: 1
     collapse_id: narration_as_current_truth
