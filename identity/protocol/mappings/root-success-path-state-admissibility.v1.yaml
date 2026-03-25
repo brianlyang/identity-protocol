@@ -19,6 +19,10 @@ contract_required_markers:
   - '## Success-path state admissibility law'
   - '## Six state classes'
   - '## Required state differentiations'
+  - '## State-class proof alignment'
+  - frozen-state-definition class requires frozen-definition state-admission proof;
+  - demoted-support-or-quarantine-state class requires support/quarantine-confinement
+    proof.
   - '## State-admission proof discipline'
   - '## State-admission proof limits'
   - '## Non-compliant state collapses'
@@ -88,6 +92,31 @@ required_state_admission_proof_rows:
     proof_id: support_quarantine_confinement_state_admission_proof
     contract_heading: '### 5. Support/quarantine-confinement proof'
     proof_role: support_quarantine_confinement_state_admission_proof
+required_state_class_proof_alignment_rows:
+  - order: 1
+    state_class_id: frozen_state_definition
+    proof_id: frozen_definition_state_admission_proof
+    alignment_role: frozen_state_definition_class_proof_alignment
+  - order: 2
+    state_class_id: admissible_current_turn_state
+    proof_id: current_turn_admissibility_state_admission_proof
+    alignment_role: admissible_current_turn_state_class_proof_alignment
+  - order: 3
+    state_class_id: bound_active_success_path_state
+    proof_id: active_binding_state_admission_proof
+    alignment_role: bound_active_success_path_state_class_proof_alignment
+  - order: 4
+    state_class_id: optional_non_entry_state
+    proof_id: non_entry_recovery_classification_state_admission_proof
+    alignment_role: optional_non_entry_state_class_proof_alignment
+  - order: 5
+    state_class_id: governed_recovery_only_state
+    proof_id: non_entry_recovery_classification_state_admission_proof
+    alignment_role: governed_recovery_only_state_class_proof_alignment
+  - order: 6
+    state_class_id: demoted_support_or_quarantine_state
+    proof_id: support_quarantine_confinement_state_admission_proof
+    alignment_role: demoted_support_or_quarantine_state_class_proof_alignment
 required_state_admission_limit_rows:
   - order: 1
     limit_id: frozen_definition_not_current_turn_admissibility
@@ -123,3 +152,6 @@ required_collapse_rows:
   - order: 6
     collapse_id: status_projection_as_state_admission_proof
     contract_phrase: 'a visible status label, projection, or dashboard summary is treated as if it proved lawful state admission.'
+  - order: 7
+    collapse_id: state_class_proof_flattening
+    contract_phrase: 'frozen-definition, admissible-current-turn, bound-active, optional-non-entry, governed-recovery, and demoted-support state classes are treated as if one state-admission proof stratum were sufficient for all of them.'

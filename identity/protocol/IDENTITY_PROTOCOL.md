@@ -112,6 +112,7 @@ Status transitions are controlled by governance/review, not by script commit alo
 9. Operator answer compression must preserve those distinct backing strata rather than flattening all answer claims into one generic proof source.
 10. Operator answer compression must also preserve distinct epistemic postures rather than flattening law-grounded, source-resolution, admissibility, live-bound, and realized-effect claims into one generic current-truth posture.
 11. Current-truth commitments must preserve their own proof strata rather than flattening source grounding, governed resolution, present-turn authority, derivational provenance, and fail-close justification into one generic epistemic proof layer.
+12. Success-path state classes must preserve their own admission-proof strata rather than flattening defined, admissible, bound, optional, recovery, and demoted-support state classes into one generic state proof layer.
 
 ## Root conflict-precedence boundary
 

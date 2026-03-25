@@ -23,6 +23,7 @@ from root_success_path_state_admissibility_common import (
     state_admission_limit_rows_from_doc,
     state_admission_proof_rows_from_doc,
     state_class_rows_from_doc,
+    state_class_proof_alignment_rows_from_doc,
 )
 
 STATUS_KEY = "protocol_root_success_path_state_admissibility_status"
@@ -115,6 +116,38 @@ EXPECTED_STATE_ADMISSION_PROOF_ROWS = {
         "proof_role": "support_quarantine_confinement_state_admission_proof",
     },
 }
+EXPECTED_STATE_CLASS_PROOF_ALIGNMENT_ROWS = {
+    "frozen_state_definition": {
+        "order": 1,
+        "proof_id": "frozen_definition_state_admission_proof",
+        "alignment_role": "frozen_state_definition_class_proof_alignment",
+    },
+    "admissible_current_turn_state": {
+        "order": 2,
+        "proof_id": "current_turn_admissibility_state_admission_proof",
+        "alignment_role": "admissible_current_turn_state_class_proof_alignment",
+    },
+    "bound_active_success_path_state": {
+        "order": 3,
+        "proof_id": "active_binding_state_admission_proof",
+        "alignment_role": "bound_active_success_path_state_class_proof_alignment",
+    },
+    "optional_non_entry_state": {
+        "order": 4,
+        "proof_id": "non_entry_recovery_classification_state_admission_proof",
+        "alignment_role": "optional_non_entry_state_class_proof_alignment",
+    },
+    "governed_recovery_only_state": {
+        "order": 5,
+        "proof_id": "non_entry_recovery_classification_state_admission_proof",
+        "alignment_role": "governed_recovery_only_state_class_proof_alignment",
+    },
+    "demoted_support_or_quarantine_state": {
+        "order": 6,
+        "proof_id": "support_quarantine_confinement_state_admission_proof",
+        "alignment_role": "demoted_support_or_quarantine_state_class_proof_alignment",
+    },
+}
 EXPECTED_STATE_ADMISSION_LIMIT_ROWS = {
     "frozen_definition_not_current_turn_admissibility": {
         "order": 1,
@@ -162,12 +195,17 @@ EXPECTED_COLLAPSE_ROWS = {
         "order": 6,
         "contract_phrase": "a visible status label, projection, or dashboard summary is treated as if it proved lawful state admission.",
     },
+    "state_class_proof_flattening": {
+        "order": 7,
+        "contract_phrase": "frozen-definition, admissible-current-turn, bound-active, optional-non-entry, governed-recovery, and demoted-support state classes are treated as if one state-admission proof stratum were sufficient for all of them.",
+    },
 }
 EXPECTED_REGISTRY_MARKERS = (
     "this file remains the authoritative root-domain contract for success-path state admissibility law",
     "## Success-path state admissibility law",
     "## Six state classes",
     "## Required state differentiations",
+    "## State-class proof alignment",
     "## State-admission proof discipline",
     "## State-admission proof limits",
 )
@@ -286,6 +324,7 @@ def main() -> int:
     state_class_rows = state_class_rows_from_doc(state_doc) if state_doc else ()
     differentiation_rows = differentiation_rows_from_doc(state_doc) if state_doc else ()
     state_admission_proof_rows = state_admission_proof_rows_from_doc(state_doc) if state_doc else ()
+    state_class_proof_alignment_rows = state_class_proof_alignment_rows_from_doc(state_doc) if state_doc else ()
     state_admission_limit_rows = state_admission_limit_rows_from_doc(state_doc) if state_doc else ()
     collapse_rows = collapse_rows_from_doc(state_doc) if state_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
@@ -319,6 +358,7 @@ def main() -> int:
             ("required_state_class_rows", state_class_rows),
             ("required_differentiation_rows", differentiation_rows),
             ("required_state_admission_proof_rows", state_admission_proof_rows),
+            ("required_state_class_proof_alignment_rows", state_class_proof_alignment_rows),
             ("required_state_admission_limit_rows", state_admission_limit_rows),
             ("required_collapse_rows", collapse_rows),
         ):
@@ -364,6 +404,15 @@ def main() -> int:
             compare_fields=("contract_heading", "proof_role"),
         )
         _validate_rows(
+            actual_rows=state_class_proof_alignment_rows,
+            expected_rows=EXPECTED_STATE_CLASS_PROOF_ALIGNMENT_ROWS,
+            structure_violations=structure_violations,
+            admissibility_violations=admissibility_violations,
+            field_name="required_state_class_proof_alignment_rows",
+            id_attr="state_class_id",
+            compare_fields=("proof_id", "alignment_role"),
+        )
+        _validate_rows(
             actual_rows=state_admission_limit_rows,
             expected_rows=EXPECTED_STATE_ADMISSION_LIMIT_ROWS,
             structure_violations=structure_violations,
@@ -402,6 +451,67 @@ def main() -> int:
             for row in differentiation_rows + state_admission_limit_rows + collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
+
+        state_class_order_map = {row.state_class_id: row.order for row in state_class_rows}
+        proof_order_map = {row.proof_id: row.order for row in state_admission_proof_rows}
+        previous_state_class_order = 0
+        previous_proof_order = 0
+        for row in sorted(state_class_proof_alignment_rows, key=lambda item: item.order):
+            state_class_order = state_class_order_map.get(row.state_class_id)
+            if state_class_order is None:
+                integration_violations.append(
+                    {
+                        "field": "root_success_path_state_admissibility",
+                        "reason": "state_class_proof_alignment_missing_state_class",
+                        "state_class_id": row.state_class_id,
+                    }
+                )
+            else:
+                if state_class_order != row.order:
+                    integration_violations.append(
+                        {
+                            "field": "root_success_path_state_admissibility",
+                            "reason": "state_class_proof_alignment_state_order_mismatch",
+                            "state_class_id": row.state_class_id,
+                            "alignment_order": row.order,
+                            "state_class_order": state_class_order,
+                        }
+                    )
+                if state_class_order <= previous_state_class_order:
+                    integration_violations.append(
+                        {
+                            "field": "root_success_path_state_admissibility",
+                            "reason": "state_class_proof_alignment_state_order_not_increasing",
+                            "state_class_id": row.state_class_id,
+                            "state_class_order": state_class_order,
+                            "previous_state_class_order": previous_state_class_order,
+                        }
+                    )
+                previous_state_class_order = state_class_order
+
+            proof_order = proof_order_map.get(row.proof_id)
+            if proof_order is None:
+                integration_violations.append(
+                    {
+                        "field": "root_success_path_state_admissibility",
+                        "reason": "state_class_proof_alignment_missing_proof",
+                        "state_class_id": row.state_class_id,
+                        "proof_id": row.proof_id,
+                    }
+                )
+            else:
+                if proof_order < previous_proof_order:
+                    integration_violations.append(
+                        {
+                            "field": "root_success_path_state_admissibility",
+                            "reason": "state_class_proof_alignment_proof_order_regressed",
+                            "state_class_id": row.state_class_id,
+                            "proof_id": row.proof_id,
+                            "proof_order": proof_order,
+                            "previous_proof_order": previous_proof_order,
+                        }
+                    )
+                previous_proof_order = proof_order
 
         readme_path = repo_root / "identity/protocol/README.md"
         if not readme_path.exists():
@@ -572,13 +682,26 @@ def main() -> int:
         "state_class_count": len(state_class_rows),
         "differentiation_count": len(differentiation_rows),
         "state_admission_proof_count": len(state_admission_proof_rows),
+        "state_class_proof_alignment_count": len(state_class_proof_alignment_rows),
         "state_admission_limit_count": len(state_admission_limit_rows),
         "collapse_count": len(collapse_rows),
         "state_class_ids": [row.state_class_id for row in sorted(state_class_rows, key=lambda item: item.order)],
         "differentiation_ids": [row.row_id for row in sorted(differentiation_rows, key=lambda item: item.order)],
         "state_admission_proof_ids": [row.proof_id for row in sorted(state_admission_proof_rows, key=lambda item: item.order)],
+        "state_class_proof_alignment_ids": [
+            row.state_class_id for row in sorted(state_class_proof_alignment_rows, key=lambda item: item.order)
+        ],
         "state_admission_limit_ids": [row.row_id for row in sorted(state_admission_limit_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
+        "state_class_proof_alignment_rows": [
+            {
+                "order": row.order,
+                "state_class_id": row.state_class_id,
+                "proof_id": row.proof_id,
+                "alignment_role": row.alignment_role,
+            }
+            for row in sorted(state_class_proof_alignment_rows, key=lambda item: item.order)
+        ],
         "structure_violations": structure_violations,
         "admissibility_violations": admissibility_violations,
         "integration_violations": integration_violations,

@@ -206,6 +206,11 @@ governed resolution, present-turn authority, derivational provenance, and
 fail-close justification remain distinct epistemic commitments with distinct
 proof burdens.
 
+The same non-collapse rule applies to success-path state law: law-defined
+state, admissible current-turn state, bound active state, optional non-entry,
+governed recovery, and demoted support or quarantine do not share one
+interchangeable admission-proof posture.
+
 ### Derivation direction must stay one-way
 
 The root corpus must also preserve one-way derivation direction.

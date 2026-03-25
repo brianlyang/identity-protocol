@@ -142,6 +142,22 @@ The protocol must preserve the following differentiations:
 When a success-path state claim relies on governed proof, the proof stratum
 behind that claim must match the state-admission claim being asserted.
 
+## State-class proof alignment
+
+Success-path state classes must preserve the proof stratum appropriate to the
+state-admission class being asserted.
+
+1. frozen-state-definition class requires frozen-definition state-admission proof;
+2. admissible-current-turn-state class requires current-turn-admissibility state-admission proof;
+3. bound-active-success-path-state class requires active-binding state-admission proof;
+4. optional-non-entry-state class requires non-entry/recovery-classification proof;
+5. governed-recovery-only-state class requires non-entry/recovery-classification proof;
+6. demoted-support-or-quarantine-state class requires support/quarantine-confinement proof.
+
+State summaries may compress these classes for readability, but they must not
+pretend that one state-admission proof stratum is sufficient for all state
+classes.
+
 ## State-admission proof discipline
 
 Success-path state claims may be supported only by proof whose stratum matches
@@ -204,6 +220,7 @@ The following are non-compliant:
 4. `recovery_state_as_success_state`: a governed recovery, blocked, or redirected state is treated as if it were active success-path state.
 5. `support_quarantine_state_as_active_state`: demoted support, migration, replay, diagnostics, archive, or quarantine state is treated as if it were active success-path state.
 6. `status_projection_as_state_admission_proof`: a visible status label, projection, or dashboard summary is treated as if it proved lawful state admission.
+7. `state_class_proof_flattening`: frozen-definition, admissible-current-turn, bound-active, optional-non-entry, governed-recovery, and demoted-support state classes are treated as if one state-admission proof stratum were sufficient for all of them.
 
 ## Validation
 

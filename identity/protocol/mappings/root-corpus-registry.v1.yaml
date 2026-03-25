@@ -182,6 +182,7 @@ registered_top_level_entries:
       - '## Success-path state admissibility law'
       - '## Six state classes'
       - '## Required state differentiations'
+      - '## State-class proof alignment'
       - '## State-admission proof discipline'
       - '## State-admission proof limits'
     forbidden_content_classes:

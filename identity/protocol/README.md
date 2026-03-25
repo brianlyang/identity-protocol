@@ -218,6 +218,10 @@ posture as well: source grounding, governed resolution, present-turn authority,
 derivational provenance, and fail-close justification do not share one generic
 epistemic proof layer.
 
+Success-path state handling must preserve state-class proof posture as well:
+defined, admissible, bound-active, optional, recovery, and demoted-support
+state classes do not share one generic state-admission proof layer.
+
 ---
 
 ## One-way derivation discipline

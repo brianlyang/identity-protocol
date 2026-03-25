@@ -28,8 +28,14 @@ assert payload["protocol_root_success_path_state_admissibility_status"] == "PASS
 assert payload["state_class_count"] == 6, payload
 assert payload["differentiation_count"] == 6, payload
 assert payload["state_admission_proof_count"] == 5, payload
+assert payload["state_class_proof_alignment_count"] == 6, payload
 assert payload["state_admission_limit_count"] == 5, payload
-assert payload["collapse_count"] == 6, payload
+assert payload["collapse_count"] == 7, payload
+assert any(
+    row["state_class_id"] == "governed_recovery_only_state"
+    and row["proof_id"] == "non_entry_recovery_classification_state_admission_proof"
+    for row in payload["state_class_proof_alignment_rows"]
+), payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -107,6 +113,46 @@ assert payload["error_code"] == "IP-SPSA-002", payload
 assert any(
     row["reason"] == "missing_expected_rows" and "bound_active_success_path_state" in row.get("row_ids", [])
     for row in payload["structure_violations"]
+), payload
+PY
+
+ALIGNMENT_REPO="${TMP_ROOT}/alignment-drift-repo"
+mirror_repo "${ALIGNMENT_REPO}"
+python3 - <<'PY' "${ALIGNMENT_REPO}/identity/protocol/mappings/root-success-path-state-admissibility.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["required_state_class_proof_alignment_rows"]:
+    if row.get("state_class_id") == "demoted_support_or_quarantine_state":
+        row["proof_id"] = "active_binding_state_admission_proof"
+        break
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+ALIGNMENT_JSON="${TMP_ROOT}/alignment-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_success_path_state_admissibility.py" \
+  --repo-root "${ALIGNMENT_REPO}" \
+  --json-only >"${ALIGNMENT_JSON}"; then
+  echo "[FAIL] root success-path state admissibility validator unexpectedly passed state-class proof alignment drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ALIGNMENT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_success_path_state_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-SPSA-003", payload
+assert any(
+    row["field"] == "required_state_class_proof_alignment_rows"
+    and row["row_id"] == "demoted_support_or_quarantine_state"
+    and row["reason"] == "proof_id_mismatch"
+    for row in payload["admissibility_violations"]
 ), payload
 PY
 
