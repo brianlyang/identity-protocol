@@ -26,8 +26,48 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_truth_lifecycle_status"] == "PASS_REQUIRED", payload
 assert payload["lifecycle_count"] == 5, payload
+assert payload["memory_strata_count"] == 5, payload
 assert payload["differentiation_count"] == 5, payload
 assert payload["collapse_count"] == 5, payload
+PY
+
+MEMORY_REPO="${TMP_ROOT}/memory-drift-repo"
+mirror_repo "${MEMORY_REPO}"
+python3 - <<'PY' "${MEMORY_REPO}/identity/protocol/mappings/root-truth-lifecycle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_memory_strata_rows"] = [
+    row for row in doc["required_memory_strata_rows"] if row.get("memory_id") != "consumption_memory"
+]
+for idx, row in enumerate(doc["required_memory_strata_rows"], start=1):
+    row["order"] = idx
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+MEMORY_JSON="${TMP_ROOT}/memory-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_truth_lifecycle.py" \
+  --repo-root "${MEMORY_REPO}" \
+  --json-only >"${MEMORY_JSON}"; then
+  echo "[FAIL] root truth-lifecycle validator unexpectedly passed missing memory stratum row"
+  exit 1
+fi
+
+python3 - <<'PY' "${MEMORY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_truth_lifecycle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RTLC-002", payload
+assert any(
+    row["reason"] == "missing_expected_rows" and "consumption_memory" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
 PY
 
 LIFECYCLE_REPO="${TMP_ROOT}/lifecycle-drift-repo"

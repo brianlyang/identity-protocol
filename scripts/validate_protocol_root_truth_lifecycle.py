@@ -21,6 +21,7 @@ from root_truth_lifecycle_common import (
     differentiation_rows_from_doc,
     lifecycle_rows_from_doc,
     load_root_truth_lifecycle,
+    memory_strata_rows_from_doc,
 )
 
 STATUS_KEY = "protocol_root_truth_lifecycle_status"
@@ -53,6 +54,33 @@ EXPECTED_LIFECYCLE_ROWS = {
         "order": 5,
         "contract_heading": "### 5. Truth is consumed by the next operational step",
         "lifecycle_role": "truth_consumed",
+    },
+}
+EXPECTED_MEMORY_STRATA_ROWS = {
+    "law_memory": {
+        "order": 1,
+        "contract_heading": "### 1. Law memory",
+        "memory_role": "law_memory",
+    },
+    "discovery_memory": {
+        "order": 2,
+        "contract_heading": "### 2. Discovery memory",
+        "memory_role": "discovery_memory",
+    },
+    "admissibility_memory": {
+        "order": 3,
+        "contract_heading": "### 3. Admissibility memory",
+        "memory_role": "admissibility_memory",
+    },
+    "run_binding_memory": {
+        "order": 4,
+        "contract_heading": "### 4. Run-binding memory",
+        "memory_role": "run_binding_memory",
+    },
+    "consumption_memory": {
+        "order": 5,
+        "contract_heading": "### 5. Consumption memory",
+        "memory_role": "consumption_memory",
     },
 }
 EXPECTED_DIFFERENTIATION_ROWS = {
@@ -103,7 +131,9 @@ EXPECTED_REGISTRY_MARKERS = (
     "this file remains the authoritative root-domain contract for truth-lifecycle law",
     "## Truth-lifecycle law",
     "## Five lifecycle stages",
+    "## Memory-bearing lifecycle strata",
     "## Required lifecycle differentiations",
+    "## Non-compliant lifecycle collapses",
 )
 EXPECTED_AUTHORITY_MARKERS = (
     "## Runtime adjudication boundary",
@@ -218,6 +248,7 @@ def main() -> int:
             error_code = ERR_REGISTRY
 
     lifecycle_rows = lifecycle_rows_from_doc(truth_doc) if truth_doc else ()
+    memory_strata_rows = memory_strata_rows_from_doc(truth_doc) if truth_doc else ()
     differentiation_rows = differentiation_rows_from_doc(truth_doc) if truth_doc else ()
     collapse_rows = collapse_rows_from_doc(truth_doc) if truth_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
@@ -249,6 +280,7 @@ def main() -> int:
 
         for field, rows in (
             ("required_lifecycle_rows", lifecycle_rows),
+            ("required_memory_strata_rows", memory_strata_rows),
             ("required_differentiation_rows", differentiation_rows),
             ("required_collapse_rows", collapse_rows),
         ):
@@ -274,6 +306,15 @@ def main() -> int:
             field_name="required_lifecycle_rows",
             id_attr="lifecycle_id",
             compare_fields=("contract_heading", "lifecycle_role"),
+        )
+        _validate_rows(
+            actual_rows=memory_strata_rows,
+            expected_rows=EXPECTED_MEMORY_STRATA_ROWS,
+            structure_violations=structure_violations,
+            truth_violations=truth_violations,
+            field_name="required_memory_strata_rows",
+            id_attr="memory_id",
+            compare_fields=("contract_heading", "memory_role"),
         )
         _validate_rows(
             actual_rows=differentiation_rows,
@@ -308,6 +349,9 @@ def main() -> int:
             for row in lifecycle_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_heading,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "lifecycle_heading_missing", "marker": marker})
+            for row in memory_strata_rows:
+                for marker in find_missing_markers(contract_text, (row.contract_heading,)):
+                    contract_marker_violations.append({"field": "contract_file", "reason": "memory_heading_missing", "marker": marker})
             for row in differentiation_rows + collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
@@ -479,9 +523,11 @@ def main() -> int:
         "routing_entry_path": str(routing_entry_path),
         "contract_file": str(truth_doc.get("contract_file") or ""),
         "lifecycle_count": len(lifecycle_rows),
+        "memory_strata_count": len(memory_strata_rows),
         "differentiation_count": len(differentiation_rows),
         "collapse_count": len(collapse_rows),
         "lifecycle_ids": [row.lifecycle_id for row in sorted(lifecycle_rows, key=lambda item: item.order)],
+        "memory_strata_ids": [row.memory_id for row in sorted(memory_strata_rows, key=lambda item: item.order)],
         "differentiation_ids": [row.row_id for row in sorted(differentiation_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
         "structure_violations": structure_violations,

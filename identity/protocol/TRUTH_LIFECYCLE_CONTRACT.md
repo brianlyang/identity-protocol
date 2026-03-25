@@ -24,7 +24,7 @@ It is not:
 
 ## Purpose
 
-Define the canonical lifecycle by which machine truth moves from frozen law into
+Define the canonical lifecycle and governed memory strata by which machine truth moves from frozen law into
 current-turn operational closure.
 
 This file remains the authoritative root-domain contract for truth-lifecycle
@@ -39,7 +39,7 @@ This truth-lifecycle contract inherits its bottom-theory assumptions from:
 Interpretive boundary:
 
 1. the design philosophy explains why truth existence, discoverability, admissibility, binding, and consumption are not the same thing;
-2. this file freezes the concrete lifecycle law: lifecycle stages, required differentiations, lifecycle-collapse prohibitions, and fail-close boundaries for truth claims;
+2. this file freezes the concrete lifecycle law: lifecycle stages, memory-bearing strata, required differentiations, lifecycle-collapse prohibitions, and fail-close boundaries for truth claims;
 3. this file is authoritative for root-domain truth-lifecycle law, but current-turn legality still depends on machine-consumed governance, mappings, validators, probes, runtime state, and receipts;
 4. philosophical grounding does not replace the contract authority of this truth-lifecycle specification.
 
@@ -84,6 +84,8 @@ So this file freezes truth-lifecycle law, while runtime adjudication determines 
 
 The identity protocol must distinguish lifecycle stages rather than flatten them into one vague notion of “having truth.”
 
+Memory in the machine world is therefore a lifecycle-bearing classification rather than one undifferentiated retention bucket.
+
 No truth claim may be treated as full operational closure unless all required lifecycle stages have been carried through.
 
 ## Five lifecycle stages
@@ -117,6 +119,50 @@ Lifecycle role: `truth_bound`.
 The truth has actually been consumed by the next hop and has driven a launcher path, runtime hook, route, receipt, gate, or operator-facing answer surface.
 
 Lifecycle role: `truth_consumed`.
+
+## Memory-bearing lifecycle strata
+
+Machine memory in the protocol is not one undifferentiated store. A memory-bearing surface is lawful only when its lifecycle role is explicit and it does not silently claim a later-stage authority that has not yet been earned.
+
+### 1. Law memory
+
+Stores frozen protocol law, registered contracts, canonical definitions, and governed classifications.
+
+Memory role: `law_memory`.
+
+Law memory is not proof that an instance has discovered the truth.
+
+### 2. Discovery memory
+
+Stores governed evidence that an instance located the truth from a canonical source.
+
+Memory role: `discovery_memory`.
+
+Discovery memory is not proof of current-turn admissibility.
+
+### 3. Admissibility memory
+
+Stores governed evidence that a truth claim passed current-turn law, gate, validator, and surface checks.
+
+Memory role: `admissibility_memory`.
+
+Admissibility memory is not proof of run/thread binding.
+
+### 4. Run-binding memory
+
+Stores governed evidence that the truth is bound to the current run, current thread, and current instance context.
+
+Memory role: `run_binding_memory`.
+
+Run-binding memory is not proof that the next hop consumed the truth.
+
+### 5. Consumption memory
+
+Stores governed evidence that the next operational step actually consumed the truth and carried it into execution or answer delivery.
+
+Memory role: `consumption_memory`.
+
+Only consumption memory may support a claim that lifecycle closure has advanced into real operational effect.
 
 ## Required lifecycle differentiations
 

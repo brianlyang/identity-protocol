@@ -23,6 +23,14 @@ class LifecycleRow:
 
 
 @dataclass(frozen=True)
+class MemoryStratumRow:
+    order: int
+    memory_id: str
+    contract_heading: str
+    memory_role: str
+
+
+@dataclass(frozen=True)
 class PhraseRow:
     order: int
     row_id: str
@@ -74,6 +82,34 @@ def lifecycle_rows_from_doc(doc: Mapping[str, Any]) -> tuple[LifecycleRow, ...]:
                 lifecycle_id=lifecycle_id,
                 contract_heading=contract_heading,
                 lifecycle_role=lifecycle_role,
+            )
+        )
+    return tuple(out)
+
+
+def memory_strata_rows_from_doc(doc: Mapping[str, Any]) -> tuple[MemoryStratumRow, ...]:
+    rows = doc.get("required_memory_strata_rows")
+    if not isinstance(rows, list):
+        return ()
+    out: list[MemoryStratumRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        memory_id = _norm_str(row.get("memory_id"))
+        contract_heading = str(row.get("contract_heading") or "").strip()
+        memory_role = _norm_str(row.get("memory_role"))
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not memory_id or not contract_heading or not memory_role:
+            continue
+        out.append(
+            MemoryStratumRow(
+                order=order,
+                memory_id=memory_id,
+                contract_heading=contract_heading,
+                memory_role=memory_role,
             )
         )
     return tuple(out)
