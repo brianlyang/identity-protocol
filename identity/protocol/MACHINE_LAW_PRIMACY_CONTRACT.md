@@ -124,6 +124,60 @@ At minimum, machine-law primacy must remain anchored to:
 3. fail-close exposure of missing or ambiguous truth rather than silent swallowing through compatibility projection;
 4. governed convergence and refreezing rather than residue laundering or protocol downgrade.
 
+When a machine-law primacy claim relies on governed proof, the proof stratum
+behind that claim must match the primacy commitment being asserted.
+
+## Machine-law primacy proof discipline
+
+Machine-law primacy claims may be supported only by proof whose stratum matches
+the primacy claim being asserted.
+
+### 1. Frozen-law primacy proof
+
+Supports claims that active protocol behavior remained grounded in frozen law
+rather than in compatibility residue, migration habit, or local vividness.
+
+Proof role: `frozen_law_primacy_proof`.
+
+### 2. Success-path demotion-boundary proof
+
+Supports claims that migration, import, fixture, fallback, helper, and
+diagnostic surfaces remained demoted outside active success-path legality.
+
+Proof role: `success_path_demotion_boundary_primacy_proof`.
+
+### 3. Fail-close exposure proof
+
+Supports claims that missing or ambiguous truth was exposed through lawful
+failure or governed recovery rather than reconstructed through compatibility
+projection.
+
+Proof role: `fail_close_exposure_primacy_proof`.
+
+### 4. Governed-convergence proof
+
+Supports claims that workspaces and instances were required to converge upward
+to law rather than forcing protocol downgrade for residue survival.
+
+Proof role: `governed_convergence_primacy_proof`.
+
+### 5. Runtime-adjudication non-bypass proof
+
+Supports claims that machine-law primacy preserved current-turn machine
+adjudication and did not become a freeform waiver or narrative override.
+
+Proof role: `runtime_adjudication_non_bypass_primacy_proof`.
+
+## Machine-law primacy proof limits
+
+The protocol must preserve these machine-law primacy proof limits:
+
+1. frozen-law primacy proof is not proof of success-path demotion boundary;
+2. success-path demotion-boundary proof is not proof of fail-close exposure;
+3. fail-close exposure proof is not proof of governed convergence;
+4. governed-convergence proof is not proof of runtime-adjudication non-bypass;
+5. runtime-adjudication non-bypass proof is not proof that compatibility or recovery surfaces may re-enter active success-path legality.
+
 ## Non-compliant compatibility collapses
 
 The following are non-compliant:

@@ -21,6 +21,8 @@ from root_machine_law_primacy_common import (
     collapse_rows_from_doc,
     commitment_rows_from_doc,
     load_root_machine_law_primacy,
+    primacy_limit_rows_from_doc,
+    primacy_proof_rows_from_doc,
 )
 
 STATUS_KEY = "protocol_root_machine_law_primacy_status"
@@ -68,6 +70,55 @@ EXPECTED_ANCHOR_ROWS = {
         "contract_phrase": "governed convergence and refreezing rather than residue laundering or protocol downgrade.",
     },
 }
+EXPECTED_PRIMACY_PROOF_ROWS = {
+    "frozen_law_primacy_proof": {
+        "order": 1,
+        "contract_heading": "### 1. Frozen-law primacy proof",
+        "proof_role": "frozen_law_primacy_proof",
+    },
+    "success_path_demotion_boundary_primacy_proof": {
+        "order": 2,
+        "contract_heading": "### 2. Success-path demotion-boundary proof",
+        "proof_role": "success_path_demotion_boundary_primacy_proof",
+    },
+    "fail_close_exposure_primacy_proof": {
+        "order": 3,
+        "contract_heading": "### 3. Fail-close exposure proof",
+        "proof_role": "fail_close_exposure_primacy_proof",
+    },
+    "governed_convergence_primacy_proof": {
+        "order": 4,
+        "contract_heading": "### 4. Governed-convergence proof",
+        "proof_role": "governed_convergence_primacy_proof",
+    },
+    "runtime_adjudication_non_bypass_primacy_proof": {
+        "order": 5,
+        "contract_heading": "### 5. Runtime-adjudication non-bypass proof",
+        "proof_role": "runtime_adjudication_non_bypass_primacy_proof",
+    },
+}
+EXPECTED_PRIMACY_LIMIT_ROWS = {
+    "frozen_law_not_success_path_demotion_boundary": {
+        "order": 1,
+        "contract_phrase": "frozen-law primacy proof is not proof of success-path demotion boundary;",
+    },
+    "success_path_demotion_not_fail_close_exposure": {
+        "order": 2,
+        "contract_phrase": "success-path demotion-boundary proof is not proof of fail-close exposure;",
+    },
+    "fail_close_not_governed_convergence": {
+        "order": 3,
+        "contract_phrase": "fail-close exposure proof is not proof of governed convergence;",
+    },
+    "governed_convergence_not_runtime_non_bypass": {
+        "order": 4,
+        "contract_phrase": "governed-convergence proof is not proof of runtime-adjudication non-bypass;",
+    },
+    "runtime_non_bypass_not_success_path_reentry": {
+        "order": 5,
+        "contract_phrase": "runtime-adjudication non-bypass proof is not proof that compatibility or recovery surfaces may re-enter active success-path legality.",
+    },
+}
 EXPECTED_COLLAPSE_ROWS = {
     "compatibility_shelter_substitution": {
         "order": 1,
@@ -95,6 +146,8 @@ EXPECTED_REGISTRY_MARKERS = (
     "## Machine-law primacy law",
     "## Four primacy commitments",
     "## Required primacy anchors",
+    "## Machine-law primacy proof discipline",
+    "## Machine-law primacy proof limits",
 )
 EXPECTED_AUTHORITY_MARKERS = (
     "## Runtime adjudication boundary",
@@ -210,6 +263,8 @@ def main() -> int:
 
     commitment_rows = commitment_rows_from_doc(primacy_doc) if primacy_doc else ()
     anchor_rows = anchor_rows_from_doc(primacy_doc) if primacy_doc else ()
+    primacy_proof_rows = primacy_proof_rows_from_doc(primacy_doc) if primacy_doc else ()
+    primacy_limit_rows = primacy_limit_rows_from_doc(primacy_doc) if primacy_doc else ()
     collapse_rows = collapse_rows_from_doc(primacy_doc) if primacy_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -241,6 +296,8 @@ def main() -> int:
         for field, rows in (
             ("required_commitment_rows", commitment_rows),
             ("required_anchor_rows", anchor_rows),
+            ("required_primacy_proof_rows", primacy_proof_rows),
+            ("required_primacy_limit_rows", primacy_limit_rows),
             ("required_collapse_rows", collapse_rows),
         ):
             if not rows:
@@ -276,6 +333,24 @@ def main() -> int:
             compare_fields=("contract_phrase",),
         )
         _validate_rows(
+            actual_rows=primacy_proof_rows,
+            expected_rows=EXPECTED_PRIMACY_PROOF_ROWS,
+            structure_violations=structure_violations,
+            primacy_violations=primacy_violations,
+            field_name="required_primacy_proof_rows",
+            id_attr="proof_id",
+            compare_fields=("contract_heading", "proof_role"),
+        )
+        _validate_rows(
+            actual_rows=primacy_limit_rows,
+            expected_rows=EXPECTED_PRIMACY_LIMIT_ROWS,
+            structure_violations=structure_violations,
+            primacy_violations=primacy_violations,
+            field_name="required_primacy_limit_rows",
+            id_attr="row_id",
+            compare_fields=("contract_phrase",),
+        )
+        _validate_rows(
             actual_rows=collapse_rows,
             expected_rows=EXPECTED_COLLAPSE_ROWS,
             structure_violations=structure_violations,
@@ -299,7 +374,10 @@ def main() -> int:
             for row in commitment_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_heading,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "commitment_heading_missing", "marker": marker})
-            for row in anchor_rows + collapse_rows:
+            for row in primacy_proof_rows:
+                for marker in find_missing_markers(contract_text, (row.contract_heading, row.proof_role)):
+                    contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
+            for row in anchor_rows + primacy_limit_rows + collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
 
@@ -471,9 +549,13 @@ def main() -> int:
         "contract_file": str(primacy_doc.get("contract_file") or ""),
         "commitment_count": len(commitment_rows),
         "anchor_count": len(anchor_rows),
+        "primacy_proof_count": len(primacy_proof_rows),
+        "primacy_limit_count": len(primacy_limit_rows),
         "collapse_count": len(collapse_rows),
         "commitment_ids": [row.commitment_id for row in sorted(commitment_rows, key=lambda item: item.order)],
         "anchor_ids": [row.row_id for row in sorted(anchor_rows, key=lambda item: item.order)],
+        "primacy_proof_ids": [row.proof_id for row in sorted(primacy_proof_rows, key=lambda item: item.order)],
+        "primacy_limit_ids": [row.row_id for row in sorted(primacy_limit_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
         "structure_violations": structure_violations,
         "primacy_violations": primacy_violations,

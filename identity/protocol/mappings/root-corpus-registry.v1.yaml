@@ -115,6 +115,8 @@ registered_top_level_entries:
       - '## Machine-law primacy law'
       - '## Four primacy commitments'
       - '## Required primacy anchors'
+      - '## Machine-law primacy proof discipline'
+      - '## Machine-law primacy proof limits'
     forbidden_content_classes:
       - workbook_issue_projection
       - closure_ledger_narration

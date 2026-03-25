@@ -14,6 +14,8 @@ contract_required_markers:
   - '## Machine-law primacy law'
   - '## Four primacy commitments'
   - '## Required primacy anchors'
+  - '## Machine-law primacy proof discipline'
+  - '## Machine-law primacy proof limits'
   - '## Non-compliant compatibility collapses'
   - 'The identity protocol must remain machine law first rather than a compatibility shelter or historical backstop.'
 required_commitment_rows:
@@ -46,6 +48,43 @@ required_anchor_rows:
   - order: 4
     anchor_id: governed_convergence_over_downgrade
     contract_phrase: 'governed convergence and refreezing rather than residue laundering or protocol downgrade.'
+required_primacy_proof_rows:
+  - order: 1
+    proof_id: frozen_law_primacy_proof
+    contract_heading: '### 1. Frozen-law primacy proof'
+    proof_role: frozen_law_primacy_proof
+  - order: 2
+    proof_id: success_path_demotion_boundary_primacy_proof
+    contract_heading: '### 2. Success-path demotion-boundary proof'
+    proof_role: success_path_demotion_boundary_primacy_proof
+  - order: 3
+    proof_id: fail_close_exposure_primacy_proof
+    contract_heading: '### 3. Fail-close exposure proof'
+    proof_role: fail_close_exposure_primacy_proof
+  - order: 4
+    proof_id: governed_convergence_primacy_proof
+    contract_heading: '### 4. Governed-convergence proof'
+    proof_role: governed_convergence_primacy_proof
+  - order: 5
+    proof_id: runtime_adjudication_non_bypass_primacy_proof
+    contract_heading: '### 5. Runtime-adjudication non-bypass proof'
+    proof_role: runtime_adjudication_non_bypass_primacy_proof
+required_primacy_limit_rows:
+  - order: 1
+    limit_id: frozen_law_not_success_path_demotion_boundary
+    contract_phrase: 'frozen-law primacy proof is not proof of success-path demotion boundary;'
+  - order: 2
+    limit_id: success_path_demotion_not_fail_close_exposure
+    contract_phrase: 'success-path demotion-boundary proof is not proof of fail-close exposure;'
+  - order: 3
+    limit_id: fail_close_not_governed_convergence
+    contract_phrase: 'fail-close exposure proof is not proof of governed convergence;'
+  - order: 4
+    limit_id: governed_convergence_not_runtime_non_bypass
+    contract_phrase: 'governed-convergence proof is not proof of runtime-adjudication non-bypass;'
+  - order: 5
+    limit_id: runtime_non_bypass_not_success_path_reentry
+    contract_phrase: 'runtime-adjudication non-bypass proof is not proof that compatibility or recovery surfaces may re-enter active success-path legality.'
 required_collapse_rows:
   - order: 1
     collapse_id: compatibility_shelter_substitution
