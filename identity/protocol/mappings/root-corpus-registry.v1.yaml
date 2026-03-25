@@ -230,6 +230,8 @@ registered_top_level_entries:
       - 'this file remains the authoritative root-domain contract for prompt bootstrap behavior'
       - '## Contract anchors'
       - '## Base protocol capability absorption matrix (full set)'
+      - '## Prompt-bootstrap proof discipline'
+      - '## Prompt-bootstrap proof limits'
       - '## Continuous iteration protocol (mandatory)'
       - '## Four-track evidence binding (T1/T2/T3/T4)'
     forbidden_content_classes:

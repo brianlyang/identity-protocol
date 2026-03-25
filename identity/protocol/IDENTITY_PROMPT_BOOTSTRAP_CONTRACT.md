@@ -218,6 +218,9 @@ Coverage rule:
 2. Any source-anchor update in base protocol must be reflected here in the same change window.
 3. Matrix drift blocks promotion-grade claims.
 
+When a prompt-bootstrap claim relies on governed proof, the proof stratum
+behind that claim must match the prompt-kernel commitment being asserted.
+
 | Capability domain | Canon source anchor | Prompt-bootstrap absorption requirement | Mandatory validators / gates | Evidence tuple |
 | --- | --- | --- | --- | --- |
 | runtime source-of-truth boundary | `IDENTITY_PROTOCOL.md#runtime-source-of-truth-boundary-v14x-hardening` | prompt content must preserve fixture/runtime split language and forbid runtime-state ambiguity | `validate_identity_runtime_contract.py`, creator/readiness | `runtime_mode`, `source_of_truth`, `evidence_scope` |
@@ -234,6 +237,57 @@ Coverage rule:
 | control-loop extension | `IDENTITY_PROTOCOL.md#control-loop-extension-contracts-v140` | prompt must reflect closed-loop stages and evidence closure expectation | `validate_identity_orchestration_contract.py`, `validate_identity_knowledge_contract.py`, `validate_identity_experience_feedback.py` | `orchestration_status`, `knowledge_status`, `feedback_status` |
 | capability arbitration | `IDENTITY_PROTOCOL.md#capability-arbitration-contract-v142` | prompt must include arbitration priority and conflict-order semantics | `validate_identity_capability_arbitration.py` | `priority_order`, `conflict_rule`, `arbitration_status` |
 | dual-track governance + release declaration | `IDENTITY_PROTOCOL.md#dual-track-governance-model` | prompt must preserve hard guardrails > adaptive growth ordering and release-plane declaration constraints | release/readiness + required gates | `protocol_mode`, `overall_release_decision`, `hard_guardrail_hits` |
+
+## Prompt-bootstrap proof discipline
+
+Prompt-bootstrap justification may be supported only by proof whose stratum
+matches the prompt-law commitment being asserted.
+
+### 1. Constitutional-inheritance proof
+
+Supports claims that prompt bootstrap remained derived from protocol-law source
+order rather than from overlay-local reinterpretation or stream residue.
+
+Proof role: `constitutional_inheritance_prompt_bootstrap_proof`.
+
+### 2. Capability-absorption proof
+
+Supports claims that required protocol capability drivers were actually
+absorbed into prompt law rather than merely cited nearby.
+
+Proof role: `capability_absorption_prompt_bootstrap_proof`.
+
+### 3. Current-run-driver-binding proof
+
+Supports claims that the prompt linkage belongs to the active run rather than
+to prompt presence, static literals, stale metadata, or historical examples.
+
+Proof role: `current_run_driver_binding_prompt_bootstrap_proof`.
+
+### 4. Executable-coupling proof
+
+Supports claims that prompt law stayed coupled to executable validators,
+contract bindings, and evidence surfaces rather than drifting into text-only
+instruction prose.
+
+Proof role: `executable_coupling_prompt_bootstrap_proof`.
+
+### 5. Hard-guard-literal preservation proof
+
+Supports claims that mandatory native-chat and governed-surface hard-guard
+literals were preserved from governed sources rather than rewritten ad hoc.
+
+Proof role: `hard_guard_literal_preservation_prompt_bootstrap_proof`.
+
+## Prompt-bootstrap proof limits
+
+The protocol must preserve these prompt-bootstrap proof limits:
+
+1. constitutional-inheritance proof is not proof of capability absorption;
+2. capability-absorption proof is not proof of current-run-driver binding;
+3. current-run-driver-binding proof is not proof of executable coupling;
+4. executable-coupling proof is not proof of hard-guard-literal preservation;
+5. hard-guard-literal preservation proof is not proof that current-turn prompt legality may bypass runtime adjudication.
 
 ## Continuous iteration protocol (mandatory)
 

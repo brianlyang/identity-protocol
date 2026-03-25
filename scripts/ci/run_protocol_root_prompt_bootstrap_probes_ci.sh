@@ -28,7 +28,48 @@ assert payload["protocol_root_prompt_bootstrap_status"] == "PASS_REQUIRED", payl
 assert payload["anchor_count"] == 6, payload
 assert payload["output_field_count"] == 6, payload
 assert payload["binding_field_count"] == 5, payload
+assert payload["prompt_bootstrap_proof_count"] == 5, payload
+assert payload["prompt_bootstrap_limit_count"] == 5, payload
 assert payload["native_literal_count"] == 9, payload
+PY
+
+PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
+mirror_repo "${PROOF_REPO}"
+python3 - <<'PY' "${PROOF_REPO}/identity/protocol/mappings/root-prompt-bootstrap.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_prompt_bootstrap_proof_rows"] = [
+    row for row in doc["required_prompt_bootstrap_proof_rows"] if row.get("proof_id") != "hard_guard_literal_preservation_proof"
+]
+for idx, row in enumerate(doc["required_prompt_bootstrap_proof_rows"], start=1):
+    row["order"] = idx
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+PROOF_JSON="${TMP_ROOT}/proof-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_prompt_bootstrap.py" \
+  --repo-root "${PROOF_REPO}" \
+  --json-only >"${PROOF_JSON}"; then
+  echo "[FAIL] root prompt-bootstrap validator unexpectedly passed missing proof row"
+  exit 1
+fi
+
+python3 - <<'PY' "${PROOF_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_prompt_bootstrap_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RPB-002", payload
+assert any(
+    row["reason"] == "missing_expected_rows" and "hard_guard_literal_preservation_proof" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
 PY
 
 ANCHOR_REPO="${TMP_ROOT}/anchor-drift-repo"

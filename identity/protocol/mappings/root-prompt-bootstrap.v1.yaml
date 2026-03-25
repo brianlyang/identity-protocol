@@ -14,6 +14,8 @@ contract_required_markers:
   - 'this file remains the authoritative root-domain contract for prompt bootstrap behavior'
   - '## Contract anchors'
   - '## Base protocol capability absorption matrix (full set)'
+  - '## Prompt-bootstrap proof discipline'
+  - '## Prompt-bootstrap proof limits'
   - '## Continuous iteration protocol (mandatory)'
   - '## Four-track evidence binding (T1/T2/T3/T4)'
   - '## Acceptance command baseline'
@@ -71,6 +73,43 @@ required_binding_field_rows:
   - order: 5
     binding_field_id: requiredization_current_round_linked
     contract_phrase: '`requiredization_current_round_linked`'
+required_prompt_bootstrap_proof_rows:
+  - order: 1
+    proof_id: constitutional_inheritance_proof
+    contract_heading: '### 1. Constitutional-inheritance proof'
+    proof_role: constitutional_inheritance_prompt_bootstrap_proof
+  - order: 2
+    proof_id: capability_absorption_proof
+    contract_heading: '### 2. Capability-absorption proof'
+    proof_role: capability_absorption_prompt_bootstrap_proof
+  - order: 3
+    proof_id: current_run_driver_binding_proof
+    contract_heading: '### 3. Current-run-driver-binding proof'
+    proof_role: current_run_driver_binding_prompt_bootstrap_proof
+  - order: 4
+    proof_id: executable_coupling_proof
+    contract_heading: '### 4. Executable-coupling proof'
+    proof_role: executable_coupling_prompt_bootstrap_proof
+  - order: 5
+    proof_id: hard_guard_literal_preservation_proof
+    contract_heading: '### 5. Hard-guard-literal preservation proof'
+    proof_role: hard_guard_literal_preservation_prompt_bootstrap_proof
+required_prompt_bootstrap_limit_rows:
+  - order: 1
+    limit_id: constitutional_inheritance_not_capability_absorption
+    contract_phrase: 'constitutional-inheritance proof is not proof of capability absorption;'
+  - order: 2
+    limit_id: capability_absorption_not_current_run_binding
+    contract_phrase: 'capability-absorption proof is not proof of current-run-driver binding;'
+  - order: 3
+    limit_id: current_run_binding_not_executable_coupling
+    contract_phrase: 'current-run-driver-binding proof is not proof of executable coupling;'
+  - order: 4
+    limit_id: executable_coupling_not_hard_guard_preservation
+    contract_phrase: 'executable-coupling proof is not proof of hard-guard-literal preservation;'
+  - order: 5
+    limit_id: hard_guard_preservation_not_runtime_bypass
+    contract_phrase: 'hard-guard-literal preservation proof is not proof that current-turn prompt legality may bypass runtime adjudication.'
 required_native_literal_rows:
   - order: 1
     native_literal_id: native_chat_headstamp_hard_guard

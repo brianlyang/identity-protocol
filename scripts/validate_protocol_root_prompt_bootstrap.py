@@ -22,6 +22,8 @@ from root_prompt_bootstrap_common import (
     load_root_prompt_bootstrap,
     native_literal_rows_from_doc,
     output_field_rows_from_doc,
+    prompt_bootstrap_limit_rows_from_doc,
+    prompt_bootstrap_proof_rows_from_doc,
 )
 
 STATUS_KEY = "protocol_root_prompt_bootstrap_status"
@@ -81,10 +83,61 @@ EXPECTED_NATIVE_LITERAL_ROWS = {
     "failure_line_requested_identity_only": {"order": 8, "contract_phrase": "failure line 1 may claim only `requested_identity_id`"},
     "compatibility_pointer_diagnostic_only": {"order": 9, "contract_phrase": "compatibility pointer diagnostics stay on `Machine-Verification` and remain diagnostic-only"},
 }
+EXPECTED_PROMPT_BOOTSTRAP_PROOF_ROWS = {
+    "constitutional_inheritance_proof": {
+        "order": 1,
+        "contract_heading": "### 1. Constitutional-inheritance proof",
+        "proof_role": "constitutional_inheritance_prompt_bootstrap_proof",
+    },
+    "capability_absorption_proof": {
+        "order": 2,
+        "contract_heading": "### 2. Capability-absorption proof",
+        "proof_role": "capability_absorption_prompt_bootstrap_proof",
+    },
+    "current_run_driver_binding_proof": {
+        "order": 3,
+        "contract_heading": "### 3. Current-run-driver-binding proof",
+        "proof_role": "current_run_driver_binding_prompt_bootstrap_proof",
+    },
+    "executable_coupling_proof": {
+        "order": 4,
+        "contract_heading": "### 4. Executable-coupling proof",
+        "proof_role": "executable_coupling_prompt_bootstrap_proof",
+    },
+    "hard_guard_literal_preservation_proof": {
+        "order": 5,
+        "contract_heading": "### 5. Hard-guard-literal preservation proof",
+        "proof_role": "hard_guard_literal_preservation_prompt_bootstrap_proof",
+    },
+}
+EXPECTED_PROMPT_BOOTSTRAP_LIMIT_ROWS = {
+    "constitutional_inheritance_not_capability_absorption": {
+        "order": 1,
+        "contract_phrase": "constitutional-inheritance proof is not proof of capability absorption;",
+    },
+    "capability_absorption_not_current_run_binding": {
+        "order": 2,
+        "contract_phrase": "capability-absorption proof is not proof of current-run-driver binding;",
+    },
+    "current_run_binding_not_executable_coupling": {
+        "order": 3,
+        "contract_phrase": "current-run-driver-binding proof is not proof of executable coupling;",
+    },
+    "executable_coupling_not_hard_guard_preservation": {
+        "order": 4,
+        "contract_phrase": "executable-coupling proof is not proof of hard-guard-literal preservation;",
+    },
+    "hard_guard_preservation_not_runtime_bypass": {
+        "order": 5,
+        "contract_phrase": "hard-guard-literal preservation proof is not proof that current-turn prompt legality may bypass runtime adjudication.",
+    },
+}
 EXPECTED_REGISTRY_MARKERS = (
     "this file remains the authoritative root-domain contract for prompt bootstrap behavior",
     "## Contract anchors",
     "## Base protocol capability absorption matrix (full set)",
+    "## Prompt-bootstrap proof discipline",
+    "## Prompt-bootstrap proof limits",
     "## Continuous iteration protocol (mandatory)",
     "## Four-track evidence binding (T1/T2/T3/T4)",
 )
@@ -187,6 +240,8 @@ def main() -> int:
     anchor_rows = anchor_rows_from_doc(prompt_doc) if prompt_doc else ()
     output_field_rows = output_field_rows_from_doc(prompt_doc) if prompt_doc else ()
     binding_field_rows = binding_field_rows_from_doc(prompt_doc) if prompt_doc else ()
+    prompt_bootstrap_proof_rows = prompt_bootstrap_proof_rows_from_doc(prompt_doc) if prompt_doc else ()
+    prompt_bootstrap_limit_rows = prompt_bootstrap_limit_rows_from_doc(prompt_doc) if prompt_doc else ()
     native_literal_rows = native_literal_rows_from_doc(prompt_doc) if prompt_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -219,6 +274,8 @@ def main() -> int:
             ("required_anchor_rows", anchor_rows),
             ("required_output_field_rows", output_field_rows),
             ("required_binding_field_rows", binding_field_rows),
+            ("required_prompt_bootstrap_proof_rows", prompt_bootstrap_proof_rows),
+            ("required_prompt_bootstrap_limit_rows", prompt_bootstrap_limit_rows),
             ("required_native_literal_rows", native_literal_rows),
         ):
             if not rows:
@@ -238,6 +295,24 @@ def main() -> int:
         _validate_rows(actual_rows=anchor_rows, expected_rows=EXPECTED_ANCHOR_ROWS, structure_violations=structure_violations, prompt_violations=prompt_violations, field_name="required_anchor_rows", id_attr="anchor_id", compare_fields=("contract_heading",))
         _validate_rows(actual_rows=output_field_rows, expected_rows=EXPECTED_OUTPUT_FIELD_ROWS, structure_violations=structure_violations, prompt_violations=prompt_violations, field_name="required_output_field_rows", id_attr="row_id", compare_fields=("contract_phrase",))
         _validate_rows(actual_rows=binding_field_rows, expected_rows=EXPECTED_BINDING_FIELD_ROWS, structure_violations=structure_violations, prompt_violations=prompt_violations, field_name="required_binding_field_rows", id_attr="row_id", compare_fields=("contract_phrase",))
+        _validate_rows(
+            actual_rows=prompt_bootstrap_proof_rows,
+            expected_rows=EXPECTED_PROMPT_BOOTSTRAP_PROOF_ROWS,
+            structure_violations=structure_violations,
+            prompt_violations=prompt_violations,
+            field_name="required_prompt_bootstrap_proof_rows",
+            id_attr="proof_id",
+            compare_fields=("contract_heading", "proof_role"),
+        )
+        _validate_rows(
+            actual_rows=prompt_bootstrap_limit_rows,
+            expected_rows=EXPECTED_PROMPT_BOOTSTRAP_LIMIT_ROWS,
+            structure_violations=structure_violations,
+            prompt_violations=prompt_violations,
+            field_name="required_prompt_bootstrap_limit_rows",
+            id_attr="row_id",
+            compare_fields=("contract_phrase",),
+        )
         _validate_rows(actual_rows=native_literal_rows, expected_rows=EXPECTED_NATIVE_LITERAL_ROWS, structure_violations=structure_violations, prompt_violations=prompt_violations, field_name="required_native_literal_rows", id_attr="row_id", compare_fields=("contract_phrase",))
 
         contract_file = str(prompt_doc.get("contract_file") or "").strip()
@@ -252,7 +327,10 @@ def main() -> int:
             for row in anchor_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_heading,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "anchor_heading_missing", "marker": marker})
-            for row in output_field_rows + binding_field_rows + native_literal_rows:
+            for row in prompt_bootstrap_proof_rows:
+                for marker in find_missing_markers(contract_text, (row.contract_heading, row.proof_role)):
+                    contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
+            for row in output_field_rows + binding_field_rows + prompt_bootstrap_limit_rows + native_literal_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
 
@@ -361,7 +439,11 @@ def main() -> int:
         "anchor_count": len(anchor_rows),
         "output_field_count": len(output_field_rows),
         "binding_field_count": len(binding_field_rows),
+        "prompt_bootstrap_proof_count": len(prompt_bootstrap_proof_rows),
+        "prompt_bootstrap_limit_count": len(prompt_bootstrap_limit_rows),
         "native_literal_count": len(native_literal_rows),
+        "prompt_bootstrap_proof_ids": [row.proof_id for row in prompt_bootstrap_proof_rows],
+        "prompt_bootstrap_limit_ids": [row.row_id for row in prompt_bootstrap_limit_rows],
         "stale_reasons": stale_reasons,
         "structure_violations": structure_violations,
         "prompt_violations": prompt_violations,
