@@ -1,0 +1,101 @@
+schema_version: 1
+prompt_bootstrap_family: protocol_root_prompt_bootstrap
+prompt_bootstrap_version: v1
+contract_file: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_prompt_bootstrap.py
+probe_script: scripts/ci/run_protocol_root_prompt_bootstrap_probes_ci.sh
+common_script: scripts/root_prompt_bootstrap_common.py
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - 'this file remains the authoritative root-domain contract for prompt bootstrap behavior'
+  - '## Contract anchors'
+  - '## Base protocol capability absorption matrix (full set)'
+  - '## Continuous iteration protocol (mandatory)'
+  - '## Four-track evidence binding (T1/T2/T3/T4)'
+  - '## Acceptance command baseline'
+required_anchor_rows:
+  - order: 1
+    anchor_id: rq_014_prompt_bootstrap_capability_contract_v1
+    contract_heading: '### rq_014_prompt_bootstrap_capability_contract_v1'
+  - order: 2
+    anchor_id: rq_015_prompt_capability_matrix_fail_closed_contract_v1
+    contract_heading: '### rq_015_prompt_capability_matrix_fail_closed_contract_v1'
+  - order: 3
+    anchor_id: rq_027_derived_prompt_conformance_contract_v1
+    contract_heading: '### rq_027_derived_prompt_conformance_contract_v1'
+  - order: 4
+    anchor_id: shared_prompt_current_run_driver_binding_projection_v1619
+    contract_heading: '### Shared prompt current-run driver binding projection (v1.6.19 additive)'
+  - order: 5
+    anchor_id: rq_031_prompt_import_executable_coupling_contract_v1
+    contract_heading: '### rq_031_prompt_import_executable_coupling_contract_v1'
+  - order: 6
+    anchor_id: rq_033_native_chat_headstamp_prompt_contract_v1
+    contract_heading: '### rq_033_native_chat_headstamp_prompt_contract_v1'
+required_output_field_rows:
+  - order: 1
+    output_field_id: capability_driver_required_total
+    contract_phrase: '`capability_driver_required_total`'
+  - order: 2
+    output_field_id: capability_driver_present_total
+    contract_phrase: '`capability_driver_present_total`'
+  - order: 3
+    output_field_id: capability_driver_coverage_rate
+    contract_phrase: '`capability_driver_coverage_rate`'
+  - order: 4
+    output_field_id: missing_capability_drivers
+    contract_phrase: '`missing_capability_drivers`'
+  - order: 5
+    output_field_id: prompt_bootstrap_contract_status
+    contract_phrase: '`prompt_bootstrap_contract_status`'
+  - order: 6
+    output_field_id: error_code
+    contract_phrase: '`error_code`'
+required_binding_field_rows:
+  - order: 1
+    binding_field_id: driver_receipt_refs
+    contract_phrase: '`driver_receipt_refs`'
+  - order: 2
+    binding_field_id: driver_run_id
+    contract_phrase: '`driver_run_id`'
+  - order: 3
+    binding_field_id: driver_projection_digest
+    contract_phrase: '`driver_projection_digest`'
+  - order: 4
+    binding_field_id: current_run_driver_binding_status
+    contract_phrase: '`current_run_driver_binding_status`'
+  - order: 5
+    binding_field_id: requiredization_current_round_linked
+    contract_phrase: '`requiredization_current_round_linked`'
+required_native_literal_rows:
+  - order: 1
+    native_literal_id: native_chat_headstamp_hard_guard
+    contract_phrase: '`Native Chat Headstamp Hard Guard`'
+  - order: 2
+    native_literal_id: two_line_headstamp_before_body
+    contract_phrase: 'every assistant-authored native-chat reply begins with a two-line headstamp before body text'
+  - order: 3
+    native_literal_id: headerless_reply_forbidden
+    contract_phrase: 'headerless native-chat reply path is forbidden'
+  - order: 4
+    native_literal_id: failure_path_withheld_conflict
+    contract_phrase: 'failure path still emits withheld/conflict `Identity-Context` + `Machine-Verification: verification_status=FAIL_REQUIRED ...`'
+  - order: 5
+    native_literal_id: native_chat_visible_order
+    contract_phrase: 'native chat keeps `Identity-Context -> Machine-Verification -> body`'
+  - order: 6
+    native_literal_id: governed_visible_order
+    contract_phrase: 'governed surfaces keep `Display-Headstamp -> Machine-Verification -> body`'
+  - order: 7
+    native_literal_id: default_native_chat_mini_profile
+    contract_phrase: 'default native-chat `Machine-Verification` profile is `mini`'
+  - order: 8
+    native_literal_id: failure_line_requested_identity_only
+    contract_phrase: 'failure line 1 may claim only `requested_identity_id`'
+  - order: 9
+    native_literal_id: compatibility_pointer_diagnostic_only
+    contract_phrase: 'compatibility pointer diagnostics stay on `Machine-Verification` and remain diagnostic-only'

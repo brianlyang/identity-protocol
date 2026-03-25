@@ -216,6 +216,10 @@ registered_top_level_entries:
     law_bearing: true
     required_markers:
       - 'this file remains the authoritative root-domain contract for prompt bootstrap behavior'
+      - '## Contract anchors'
+      - '## Base protocol capability absorption matrix (full set)'
+      - '## Continuous iteration protocol (mandatory)'
+      - '## Four-track evidence binding (T1/T2/T3/T4)'
     forbidden_content_classes:
       - workbook_issue_projection
       - closure_ledger_narration
@@ -349,6 +353,8 @@ registered_top_level_entries:
       - root-artifact-family-admissibility.v1.yaml
       - root-agent-handoff.current.yaml
       - root-agent-handoff.v1.yaml
+      - root-prompt-bootstrap.current.yaml
+      - root-prompt-bootstrap.v1.yaml
       - root-identity-instance-self-judgement.current.yaml
       - root-identity-instance-self-judgement.v1.yaml
       - root-protocol-instance-responsibility.current.yaml
