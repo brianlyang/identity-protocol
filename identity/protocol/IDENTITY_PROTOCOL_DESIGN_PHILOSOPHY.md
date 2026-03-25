@@ -218,7 +218,8 @@ constitution -> root contract -> machine-registry.
    - root-contract gateway refreezes contract law;
    - machine-registry gateway projects machine-consumable registry truth;
 5. gateway effect target stays fixed by gateway kind; entering one gateway does not let incoming motivation choose a different downstream root class;
-6. machine-registry gateway may terminate current-turn legality, but that does not let incoming motivation surfaces reverse-author upstream law.
+6. gateway output must also retain the question class governed for that target layer, rather than inheriting a new answer class from incoming motivation;
+7. machine-registry gateway may terminate current-turn legality, but that does not let incoming motivation surfaces reverse-author upstream law.
 
 So the protocol must reject the following confusions:
 

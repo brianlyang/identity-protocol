@@ -55,8 +55,9 @@ Runtime meaning:
 2. Runtime admission into a gateway does not let runtime state inherit bottom-theory, constitutional, or root-contract authorship.
 3. Runtime motivation entering a gateway still requires governed refreezing or governed projection before it becomes shared law.
 4. Runtime-origin admission cannot choose a different gateway effect target than the class governed for that gateway.
-5. Runtime-origin gateway progression still follows the explicit re-entry chain: constitution -> runtime constitution -> root contract -> machine-registry.
-6. Current-turn runtime legality remains machine-consumed registry and enforcement truth, not raw runtime motivation records.
+5. Runtime-origin admission also cannot retag gateway output into a different question class than the one governed for that target layer.
+6. Runtime-origin gateway progression still follows the explicit re-entry chain: constitution -> runtime constitution -> root contract -> machine-registry.
+7. Current-turn runtime legality remains machine-consumed registry and enforcement truth, not raw runtime motivation records.
 
 ## Runtime conflict-precedence boundary
 

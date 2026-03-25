@@ -95,8 +95,9 @@ Status transitions are controlled by governance/review, not by script commit alo
    - root contract gateway refreezes root-contract law;
    - machine-registry gateway projects machine-consumed registry truth.
 4. Gateway effect target is fixed by gateway class itself; gateway admission cannot directly emit a different root target class than the one governed for that gateway.
-5. Gateway admission does not transfer authorship from an incoming surface to the gateway output.
-6. Machine-registry gateway may terminate current-turn legality, but that does not let incoming motivation surfaces author upstream law.
+5. Gateway effect target also retains the question class governed for that target layer rather than inheriting a new answer class from incoming motivation.
+6. Gateway admission does not transfer authorship from an incoming surface to the gateway output.
+7. Machine-registry gateway may terminate current-turn legality, but that does not let incoming motivation surfaces author upstream law.
 
 ## Root conflict-precedence boundary
 

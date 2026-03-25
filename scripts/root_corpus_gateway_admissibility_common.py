@@ -44,6 +44,8 @@ class GatewayEffectTarget:
     effect_target_class: str
     effect_target_transition_mode: str
     effect_target_authority_mode: str
+    effect_target_question_class: str
+    effect_target_answer_mode: str
 
 
 def _norm_str(value: Any) -> str:
@@ -156,7 +158,16 @@ def gateway_effect_targets_from_doc(admissibility_doc: Mapping[str, Any]) -> tup
         effect_target_class = _norm_str(row.get("effect_target_class"))
         effect_target_transition_mode = _norm_str(row.get("effect_target_transition_mode"))
         effect_target_authority_mode = _norm_str(row.get("effect_target_authority_mode"))
-        if not gateway_class or not effect_target_class or not effect_target_transition_mode or not effect_target_authority_mode:
+        effect_target_question_class = _norm_str(row.get("effect_target_question_class"))
+        effect_target_answer_mode = _norm_str(row.get("effect_target_answer_mode"))
+        if (
+            not gateway_class
+            or not effect_target_class
+            or not effect_target_transition_mode
+            or not effect_target_authority_mode
+            or not effect_target_question_class
+            or not effect_target_answer_mode
+        ):
             continue
         out.append(
             GatewayEffectTarget(
@@ -164,6 +175,8 @@ def gateway_effect_targets_from_doc(admissibility_doc: Mapping[str, Any]) -> tup
                 effect_target_class=effect_target_class,
                 effect_target_transition_mode=effect_target_transition_mode,
                 effect_target_authority_mode=effect_target_authority_mode,
+                effect_target_question_class=effect_target_question_class,
+                effect_target_answer_mode=effect_target_answer_mode,
             )
         )
     return tuple(out)

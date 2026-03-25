@@ -20,6 +20,7 @@ from root_corpus_gateway_admissibility_common import (
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, source_order_rows_from_doc
 from root_corpus_question_routing_common import adjudication_redirect_from_doc, load_root_corpus_question_routing
+from root_corpus_question_routing_common import question_class_profiles_from_doc
 from root_corpus_transition_common import load_root_corpus_transition, transition_surface_profiles_from_doc
 
 STATUS_KEY = "protocol_root_corpus_gateway_admissibility_status"
@@ -36,6 +37,8 @@ EXPECTED_GATEWAY_METADATA = {
         "expected_effect_target_class": "constitution",
         "expected_effect_target_transition_mode": "constitutional_freeze",
         "expected_authority_mode": "frozen_law_only",
+        "expected_effect_target_question_class": "frozen_protocol_law",
+        "expected_effect_target_answer_mode": "frozen_law_answer",
     },
     "runtime_constitution": {
         "gateway_scope": "root",
@@ -45,6 +48,8 @@ EXPECTED_GATEWAY_METADATA = {
         "expected_effect_target_class": "runtime_constitution",
         "expected_effect_target_transition_mode": "runtime_constitutional_freeze",
         "expected_authority_mode": "frozen_law_only",
+        "expected_effect_target_question_class": "frozen_runtime_law",
+        "expected_effect_target_answer_mode": "frozen_law_answer",
     },
     "root_contract": {
         "gateway_scope": "root",
@@ -54,6 +59,8 @@ EXPECTED_GATEWAY_METADATA = {
         "expected_effect_target_class": "root_contract",
         "expected_effect_target_transition_mode": "domain_contract_freeze",
         "expected_authority_mode": "frozen_law_only",
+        "expected_effect_target_question_class": "frozen_domain_contract_law",
+        "expected_effect_target_answer_mode": "frozen_law_answer",
     },
     "machine_registry_directory": {
         "gateway_scope": "root",
@@ -63,6 +70,8 @@ EXPECTED_GATEWAY_METADATA = {
         "expected_effect_target_class": "machine_registry_directory",
         "expected_effect_target_transition_mode": "machine_registry_projection",
         "expected_authority_mode": "machine_consumed_family",
+        "expected_effect_target_question_class": "registry_resolution",
+        "expected_effect_target_answer_mode": "machine_registry_answer",
     },
 }
 
@@ -168,6 +177,7 @@ def main() -> int:
     source_rows = source_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     transition_profiles = transition_surface_profiles_from_doc(transition_doc) if transition_doc else ()
     authority_profiles = authority_class_profiles_from_doc(authority_doc) if authority_doc else ()
+    question_profiles = question_class_profiles_from_doc(question_routing_doc) if question_routing_doc else ()
     adjudication_redirect = adjudication_redirect_from_doc(question_routing_doc) if question_routing_doc else adjudication_redirect_from_doc({})
 
     if not stale_reasons:
@@ -224,6 +234,7 @@ def main() -> int:
 
     registry_paths = {entry.rel_path for entry in registry_entries}
     authority_profile_map = {row.corpus_class: row for row in authority_profiles}
+    question_profile_map = {row.question_class: row for row in question_profiles}
     gateway_profile_map = {row.gateway_class: row for row in gateway_profiles}
     gateway_effect_target_map = {row.gateway_class: row for row in gateway_effect_targets}
     expected_gateway_inputs, unknown_transition_gateways = _build_expected_gateway_inputs(transition_profiles)
@@ -445,6 +456,26 @@ def main() -> int:
                             "actual": effect_target.effect_target_authority_mode,
                         }
                     )
+                if effect_target.effect_target_question_class != expected["expected_effect_target_question_class"]:
+                    admissibility_violations.append(
+                        {
+                            "field": "gateway_effect_targets",
+                            "reason": "effect_target_question_class_mismatch",
+                            "gateway_class": row.gateway_class,
+                            "expected": expected["expected_effect_target_question_class"],
+                            "actual": effect_target.effect_target_question_class,
+                        }
+                    )
+                if effect_target.effect_target_answer_mode != expected["expected_effect_target_answer_mode"]:
+                    admissibility_violations.append(
+                        {
+                            "field": "gateway_effect_targets",
+                            "reason": "effect_target_answer_mode_mismatch",
+                            "gateway_class": row.gateway_class,
+                            "expected": expected["expected_effect_target_answer_mode"],
+                            "actual": effect_target.effect_target_answer_mode,
+                        }
+                    )
                 transition_profile = transition_profile_map.get(effect_target.effect_target_class)
                 if transition_profile is None:
                     admissibility_violations.append(
@@ -499,6 +530,48 @@ def main() -> int:
                             "actual": effect_authority_profile.authority_mode,
                         }
                     )
+                question_profile = question_profile_map.get(effect_target.effect_target_question_class)
+                if question_profile is None:
+                    admissibility_violations.append(
+                        {
+                            "field": "question_class_profiles",
+                            "reason": "missing_effect_target_question_profile",
+                            "gateway_class": row.gateway_class,
+                            "effect_target_question_class": effect_target.effect_target_question_class,
+                        }
+                    )
+                else:
+                    if question_profile.answer_mode != effect_target.effect_target_answer_mode:
+                        admissibility_violations.append(
+                            {
+                                "field": "question_class_profiles",
+                                "reason": "effect_target_answer_profile_mismatch",
+                                "gateway_class": row.gateway_class,
+                                "effect_target_question_class": effect_target.effect_target_question_class,
+                                "expected": effect_target.effect_target_answer_mode,
+                                "actual": question_profile.answer_mode,
+                            }
+                        )
+                    if bool(question_profile.current_turn_authority_allowed) != bool(row.current_turn_legality_terminal):
+                        admissibility_violations.append(
+                            {
+                                "field": "question_class_profiles",
+                                "reason": "effect_target_current_turn_authority_alignment_mismatch",
+                                "gateway_class": row.gateway_class,
+                                "effect_target_question_class": effect_target.effect_target_question_class,
+                                "expected": bool(row.current_turn_legality_terminal),
+                                "actual": bool(question_profile.current_turn_authority_allowed),
+                            }
+                        )
+                    if question_profile.root_entry_required is not True:
+                        admissibility_violations.append(
+                            {
+                                "field": "question_class_profiles",
+                                "reason": "effect_target_question_must_remain_root_entry_required",
+                                "gateway_class": row.gateway_class,
+                                "effect_target_question_class": effect_target.effect_target_question_class,
+                            }
+                        )
 
         if actual_gateway_order != expected_gateway_order:
             admissibility_violations.append(
@@ -624,6 +697,8 @@ def main() -> int:
                 "effect_target_class": row.effect_target_class,
                 "effect_target_transition_mode": row.effect_target_transition_mode,
                 "effect_target_authority_mode": row.effect_target_authority_mode,
+                "effect_target_question_class": row.effect_target_question_class,
+                "effect_target_answer_mode": row.effect_target_answer_mode,
             }
             for row in sorted(gateway_effect_targets, key=lambda item: item.gateway_class)
         ],
