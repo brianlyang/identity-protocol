@@ -859,14 +859,17 @@ def _ensure_artifact_family_routing_contract(task: dict) -> dict:
 
 
 def _ensure_weak_live_linkage_contract(task: dict) -> dict:
+    from weak_live_current_run_projection_common import ensure_weak_live_route_contracts
+
     base = _weak_live_linkage_contract_skeleton()
     cur = task.get(COMMON_WEAK_LIVE_LINKAGE_CONTRACT_KEY)
     if not isinstance(cur, dict):
         task[COMMON_WEAK_LIVE_LINKAGE_CONTRACT_KEY] = base
-        return task
-    task[COMMON_WEAK_LIVE_LINKAGE_CONTRACT_KEY] = _canonicalize_weak_live_linkage_contract_doc(
-        _deep_merge_defaults(base, cur)
-    )
+    else:
+        task[COMMON_WEAK_LIVE_LINKAGE_CONTRACT_KEY] = _canonicalize_weak_live_linkage_contract_doc(
+            _deep_merge_defaults(base, cur)
+        )
+    ensure_weak_live_route_contracts(task)
     return task
 
 

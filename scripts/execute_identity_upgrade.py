@@ -703,6 +703,8 @@ def _ensure_multimodal_runtime_fields(report: dict[str, Any], *, pack_path: Path
 
 
 def _write_report_with_pointer(*, report_path: Path, data: dict[str, Any], pack_path: Path, run_id: str) -> None:
+    from weak_live_current_run_projection_common import materialize_current_run_weak_live_projection
+
     enriched = _ensure_multimodal_runtime_fields(dict(data), pack_path=pack_path, run_id=run_id)
     _write_json(report_path, enriched)
     try:
@@ -710,6 +712,25 @@ def _write_report_with_pointer(*, report_path: Path, data: dict[str, Any], pack_
     except Exception:
         # Report write must remain authoritative; pointer is best-effort metadata.
         pass
+    try:
+        task_path = (pack_path.resolve() / "CURRENT_TASK.json").resolve()
+        if task_path.exists():
+            task_doc = _load_json(task_path)
+            projection = materialize_current_run_weak_live_projection(
+                pack_root=pack_path.resolve(),
+                identity_id=str(enriched.get("identity_id") or pack_path.name).strip(),
+                task_doc=task_doc,
+                active_report_path=report_path.resolve(),
+                active_report_doc=enriched,
+                apply=True,
+            )
+            if projection.get("task_changed"):
+                _write_json(task_path, task_doc)
+    except Exception as exc:
+        failure_doc = _load_json(report_path) if report_path.exists() else dict(enriched)
+        failure_doc["weak_live_current_run_projection_status"] = STATUS_FAIL_REQUIRED
+        failure_doc["weak_live_current_run_projection_error"] = f"{type(exc).__name__}:{exc}"
+        _write_json(report_path, failure_doc)
 
 
 def _resolve_pack(catalog_path: Path, identity_id: str) -> Path:

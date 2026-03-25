@@ -1,6 +1,6 @@
 # Identity Weak Live Linkage Governance (v1.6.19)
 
-Status: Active (`ISSUE-037` opened on 2026-03-24; the stream opened from the tool/vendor trio path, and deep-sweep review now confirms a broader weak-live-linkage consumer-gap family that still lacks strict current-run closure)
+Status: Active (`ISSUE-037` closure conditions were satisfied and the stream was protocol-side closed on 2026-03-25; shared current-run projection infrastructure plus direct runtime replay now return full operational closure on both `base-repo-audit-expert-v3` and `custom-creative-ecom-analyst`, while hermetic probe closure remains separately bounded proof)
 Layer: protocol
 Scope: additive strengthening for current-run live evidence binding across trio, prompt, sample, and loop-consumer surfaces so protocol-owned validators stop equating declaration/presence/sample/meta success with full operational closure
 Execution mode: topic-level canonical SSOT for v1.6.19 weak-live-linkage governance.
@@ -39,6 +39,31 @@ Execution mode: topic-level canonical SSOT for v1.6.19 weak-live-linkage governa
     - `runtime/memory-absorption/**` does not become a live success path,
     - sample/self-test artifacts do not disappear,
     - semantic-center validators do not become omnipotent business executors.
+
+## 0A) 2026-03-25 closure addendum (authoritative current-state judgment)
+
+The authoritative current-state judgment for `v1.6.19` is now:
+
+1. `scripts/weak_live_current_run_projection_common.py` lands one shared current-run projection lane for:
+   - governed live sample-family reports,
+   - route optimization / roundtable receipts,
+   - current-run feedback log joins;
+2. `scripts/create_identity_pack.py` now auto-wires the route optimization + roundtable contract family at pack-creation time, so new identities no longer depend on downstream ad hoc adoption for the route-side live bridge;
+3. `scripts/repair_contract_backfill.py` now backfills the same projection lane for already-adopted identities with an active execution report, rather than leaving runtime packs stranded on sample/history-only closure;
+4. `scripts/execute_identity_upgrade.py` now emits the same shared projection family on new runs, so producer closure is no longer “repair-only”:
+   - direct self-run on `base-repo-audit-expert-v3` produced `runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1774398915.json`,
+   - that report now carries `weak_live_current_run_projection_status=PASS_REQUIRED` and current-run projection refs under `artifacts`;
+5. direct runtime replay on both `base-repo-audit-expert-v3` and `custom-creative-ecom-analyst` now returns:
+   - `overall_linkage_status=PASS_REQUIRED`
+   - `operational_closure_class=full_operational_closure`
+   - `live_bridge_status=PASS_REQUIRED`
+   - `route_live_binding_status=PASS_REQUIRED`;
+6. `bash scripts/ci/run_identity_weak_live_linkage_probes_ci.sh` remains green, but hermetic proof is still bounded hermetic proof only and must not be used as a substitute for real-runtime payload truth.
+
+Interpretive rule:
+
+1. open-residual wording below remains preserved as historical motivation for why `v1.6.19` opened;
+2. when current-state legality is judged, this addendum overrides older “still open” or “residual sample_report_only / loop_meta_only” wording in the historical sections below.
 
 ## 1) Why v1.6.19 is required
 
@@ -85,7 +110,7 @@ The deep review for this stream does **not** classify the current base-repo achi
 
 These achievements are protocol assets and must remain green on their own terms. The `v1.6.19` task is to stop misreading them as full operational closure when only a lower layer has been proven.
 
-## 3) Confirmed current-state gap families
+## 3) Gap families that motivated this stream (historical opening state; the closure addendum above is authoritative for current-state judgment)
 
 ### 3.1 Prompt presence-only family
 

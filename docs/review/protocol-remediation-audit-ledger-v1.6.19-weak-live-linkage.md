@@ -1,6 +1,6 @@
 # Protocol Remediation Audit Ledger (v1.6.19 Weak Live Linkage)
 
-Status: Active (`ISSUE-037` opened on 2026-03-24; the stream opened from trio live-link review and now captures the broader weak-live-linkage consumer-gap family confirmed by deep-sweep rechecks)
+Status: Active (`ISSUE-037` was protocol-side closed on 2026-03-25 after shared current-run projection/backfill/producer lanes landed and direct runtime replay returned full operational closure on both `base-repo-audit-expert-v3` and `custom-creative-ecom-analyst`)
 Layer: protocol
 Scope: audit evidence for the additive stream that strengthens current-run binding and next-hop consumption across trio, prompt, sample, and loop-consumer surfaces without reopening `v1.6.17` or `v1.6.18`
 Execution mode: canonical review ledger for the v1.6.19 weak-live-linkage stream.
@@ -27,6 +27,31 @@ The deep-sweep conclusion is no longer only “the tool/vendor trio is history-t
    - creating a new artifact family,
    - deleting sample/self-test families,
    - or writing pack-local workarounds.
+
+### 1.1 Closure addendum (authoritative current-state audit verdict, 2026-03-25)
+
+The stream is no longer only “worth absorbing”; it is now absorbed and protocol-side closed.
+
+Authoritative current-state audit facts:
+
+1. `scripts/weak_live_current_run_projection_common.py` now owns one shared projection family for:
+   - current-run sample-family live reports,
+   - route optimization / roundtable receipts,
+   - current-run feedback-log joins;
+2. `scripts/create_identity_pack.py`, `scripts/repair_contract_backfill.py`, and `scripts/execute_identity_upgrade.py` now all consume that same shared lane, which means:
+   - new packs are born with the route optimization + roundtable contract family,
+   - existing packs can backfill the active run without pack-local repair logic,
+   - fresh upgrade runs emit the same governed live artifacts automatically;
+3. direct runtime replay now returns `overall_linkage_status=PASS_REQUIRED` and `operational_closure_class=full_operational_closure` on both:
+   - `base-repo-audit-expert-v3`
+   - `custom-creative-ecom-analyst`;
+4. direct self-run on `base-repo-audit-expert-v3` produced `identity-upgrade-exec-base-repo-audit-expert-v3-1774398915.json`, and that report now carries `weak_live_current_run_projection_status=PASS_REQUIRED` plus the projection refs in `artifacts`, proving that producer closure is live-run-owned rather than repair-only;
+5. hermetic probe closure remains green under `bash scripts/ci/run_identity_weak_live_linkage_probes_ci.sh`, but that hermetic proof is still audit-bounded and must not be substituted for real-runtime closure.
+
+Interpretive rule:
+
+1. older “still open” wording below is retained as provenance for why the stream opened;
+2. this addendum is the authoritative current-state verdict for release, audit, and workbook closure.
 
 ## 2) Current repo achievements rechecked one by one
 

@@ -3132,6 +3132,57 @@ def main() -> int:
         task_doc=updated,
         apply=args.apply,
     )
+    from strict_live_evidence_resolution_common import resolve_active_execution_context
+    from weak_live_current_run_projection_common import materialize_current_run_weak_live_projection
+
+    active_execution_context = resolve_active_execution_context(pack_path)
+    active_report_path_token = str(active_execution_context.get("report_path", "")).strip()
+    current_run_live_projection_result: dict[str, Any]
+    if active_report_path_token:
+        try:
+            active_report_path = Path(active_report_path_token).expanduser().resolve()
+            active_report_doc = (
+                active_execution_context.get("report_doc")
+                if isinstance(active_execution_context.get("report_doc"), dict)
+                else {}
+            )
+            current_run_live_projection_result = materialize_current_run_weak_live_projection(
+                pack_root=pack_path,
+                identity_id=str(args.identity_id or "").strip(),
+                task_doc=updated,
+                active_report_path=active_report_path,
+                active_report_doc=active_report_doc,
+                apply=args.apply,
+            )
+        except Exception as exc:
+            current_run_live_projection_result = {
+                "current_run_live_projection_status": STATUS_FAIL_REQUIRED,
+                "active_run_present": True,
+                "active_run_id": str(active_execution_context.get("run_id", "")).strip(),
+                "task_changed": False,
+                "report_changed": False,
+                "route_contract_keys_restored": [],
+                "artifacts_written": [],
+                "sample_live_report_paths": {},
+                "feedback_log_path": "",
+                "route_projection_paths": {},
+                "stale_reasons": [f"projection_exception:{type(exc).__name__}"],
+                "exception_message": str(exc),
+            }
+    else:
+        current_run_live_projection_result = {
+            "current_run_live_projection_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "active_run_present": False,
+            "active_run_id": "",
+            "task_changed": False,
+            "report_changed": False,
+            "route_contract_keys_restored": [],
+            "artifacts_written": [],
+            "sample_live_report_paths": {},
+            "feedback_log_path": "",
+            "route_projection_paths": {},
+            "stale_reasons": ["active_execution_report_missing"],
+        }
 
     task_changed = before != updated
     catalog_changed = catalog_row_version_changed
@@ -3149,6 +3200,9 @@ def main() -> int:
         or bool(feedback_selftest_assets_result.get("positive_rulebook_backfilled"))
         or bool(feedback_selftest_assets_result.get("negative_rulebook_backfilled"))
         or bool(handoff_selftest_assets_result.get("backfilled_files"))
+        or bool(current_run_live_projection_result.get("task_changed"))
+        or bool(current_run_live_projection_result.get("report_changed"))
+        or bool(current_run_live_projection_result.get("artifacts_written"))
     )
     applied = False
     if args.apply:
@@ -3178,6 +3232,12 @@ def main() -> int:
         if feedback_selftest_assets_result.get("negative_rulebook_backfilled"):
             applied = True
         if handoff_selftest_assets_result.get("backfilled_files"):
+            applied = True
+        if current_run_live_projection_result.get("task_changed"):
+            applied = True
+        if current_run_live_projection_result.get("report_changed"):
+            applied = True
+        if current_run_live_projection_result.get("artifacts_written"):
             applied = True
 
     if missing_after:
@@ -3288,6 +3348,14 @@ def main() -> int:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-SSUP-001"
         stale_reasons = ["required_skill_supply_chain_contract_keys_missing_after_backfill"]
+    elif (
+        bool(current_run_live_projection_result.get("active_run_present"))
+        and str(current_run_live_projection_result.get("current_run_live_projection_status", "")).strip().upper()
+        == STATUS_FAIL_REQUIRED
+    ):
+        status = STATUS_FAIL_REQUIRED
+        error_code = "IP-WLL-PRJ-001"
+        stale_reasons = ["current_run_weak_live_projection_failed"]
     elif legacy_drift_after:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-CBKF-002"
@@ -3356,6 +3424,7 @@ def main() -> int:
         "update_replay_runtime_evidence_backfill": update_replay_runtime_evidence_result,
         "handoff_runtime_log_backfill": handoff_runtime_log_result,
         "feedback_runtime_log_backfill": feedback_runtime_log_result,
+        "current_run_live_projection_backfill": current_run_live_projection_result,
         "applied": applied,
         "response_stamp_profile_present_before": response_stamp_profile_present_before,
         "response_stamp_profile_present_after": response_stamp_profile_present_after,

@@ -22,7 +22,7 @@ Authority boundary: this workbook is canonical only as the protocol-side intake/
 ## 2) Current machine recheck lock
 
 - `scripts/validate_issue_register_consistency.py --json-only` -> `PASS_REQUIRED`
-- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 97`, `command snippets checked: 1039`)
+- `scripts/docs_command_contract_check.py` -> `PASS` (`docs checked: 97`, `command snippets checked: 1032`)
 - `scripts/validate_native_chat_bootstrap_entry_stream.py --json-only` -> `PASS_REQUIRED` with `promotion_status=PROMOTION_REVIEW_ELIGIBLE`
 
 ## 3) Root-cause clusters (compressed)
@@ -1021,10 +1021,10 @@ Root cause:
   - direct live replay on `base-repo-audit-expert-v3` now returns `bundle_status=PASS_REQUIRED` for `python3 scripts/required_gate_bundle_runner.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --operation scan --target-name identity_context_continuity_receipts --json-only`;
   - `python3 scripts/render_control_plane_budget.py --write --json-only` and `python3 scripts/render_control_plane_status.py --write --json-only` now re-anchor the final `1.6.x` release-freeze baseline to `error_codes=575`, and both `scripts/validate_control_plane_budget.py --json-only` and `scripts/validate_control_plane_status_sync.py --json-only` return `PASS_REQUIRED`.
 
-### ISSUE-037 - Weak live linkage remains under-governed across trio/prompt/sample/loop consumer lanes
+### ISSUE-037 - Weak live linkage closure is now machine-landed across trio/prompt/sample/loop consumer lanes
 
-- `status`: OPEN
-- `problem_statement`: the protocol already has strong owner lanes for trio structure, prompt coverage, sample/self-test validation, loop semantic centers, and freshness governance. The remaining gap is that several consumers can still pass on declaration/prompt/sample/meta/latest-log signals where current-run binding and next-hop consumption should be required. This is a weak-live-linkage problem, not a missing-structure problem.
+- `status`: CLOSED
+- `problem_statement`: the stream opened because several protocol-owned consumers could pass on declaration, prompt/sample/meta, or freshness-only signals even when current-run binding and next-hop consumption were not yet proven. The fix had to remain additive shared infrastructure rather than a semantic reopen of `v1.6.17` / `v1.6.18`.
 - `primary_owner_doc`: `docs/governance/identity-weak-live-linkage-governance-v1.6.19.md`
 - `secondary_refs`:
   - `docs/review/protocol-remediation-audit-ledger-v1.6.19-weak-live-linkage.md`
@@ -1049,43 +1049,31 @@ Root cause:
   - `scripts/validate_prompt_derivation_conformance.py`
   - `scripts/validate_identity_experience_feedback_governance.py`
   - `scripts/validate_identity_weak_live_linkage.py`
+  - `scripts/repair_contract_backfill.py`
+  - `scripts/execute_identity_upgrade.py`
+  - `scripts/ci/run_identity_weak_live_linkage_probes_ci.sh`
 - `root_cause`: RC-01 and RC-06
 - `stop_condition`:
-  - the canonical governance/review/workbook surfaces freeze `weak_live_linkage` plus the four-layer differential-audit method, and `ASB16-RQ-055` keeps the machine-law intake row landed;
-  - prompt-side validators no longer claim current-round linkage from prompt presence or configured driver literals alone;
-  - sample-report validators explicitly distinguish sample/self-test closure from strict live closure;
-  - loop-center validators expose separate `semantic_center_status` and `live_bridge_status` semantics instead of narrating hook alignment as full route/loop closure;
-  - same-run binding is enforced where freshness-only latest-log checks are insufficient for strict closure;
-  - the fix remains additive shared infrastructure and does not reopen `v1.6.17`, `v1.6.18`, or the frozen no-downgrade boundary.
+  - `ASB16-RQ-055` remains the machine-law intake for the four-layer differential-audit method;
+  - prompt-side validators prove current-run driver binding rather than prompt presence alone;
+  - sample-family validators retain sample/self-test semantics while strict operations auto-select governed current-run live reports when present;
+  - loop-center semantic truth and live-bridge truth stay machine-separated, and both replay green on real runtime identities once shared current-run route/roundtable receipts exist;
+  - freshness-only latest-log checks stay distinct from same-run binding, and the same-run join replays green on real runtime identities;
+  - the closure remains shared infrastructure only: no pack-local workaround, no validator loosening, no hardcoded identity exception, and no reopening of `v1.6.17` / `v1.6.18`.
 - `current_evidence`:
-  - direct local replay on `custom-creative-ecom-analyst` still passes the trio on historical reports:
-    - `runtime/reports/tool-installation-custom-creative-ecom-analyst-20260227T040733Z.json`
-    - `runtime/reports/vendor-api-discovery-custom-creative-ecom-analyst-20260227T040733Z.json`
-    - `runtime/reports/vendor-api-solution-custom-creative-ecom-analyst-20260227T040733Z.json`
-  - those historical reports still satisfy the current trio validators even though the shared strict live-binding fields are not yet frozen as a protocol-owned consumer contract;
-  - `python3 identity-protocol-local/scripts/validate_discovery_requiredization.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --json-only` returns `requiredized_all_discovery_contracts=true`, confirming the trio is already structurally required rather than absent;
-  - the prompt-family gap is now also partially absorbed as shared infrastructure rather than narrative only:
-    - `scripts/prompt_live_driver_binding_common.py` now freezes the prompt-side current-run binding interpretation;
-    - `python3 identity-protocol-local/scripts/validate_prompt_bootstrap_capability.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --json-only`, `validate_prompt_capability_matrix.py`, and `validate_prompt_derivation_conformance.py` now all emit `driver_receipt_refs`, `driver_run_id`, `driver_projection_digest`, and `current_run_driver_binding_status`;
-    - after `python3 identity-protocol-local/scripts/repair_identity_prompt_runtime_state.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --apply --json-only`, direct replay on both `custom-creative-ecom-analyst` and `base-repo-audit-expert-v3` returns `current_run_driver_binding_status=PASS_REQUIRED` with `evidence_origin=live`;
-    - `bash scripts/ci/run_identity_weak_live_linkage_probes_ci.sh` now proves both the negative prompt-presence-only case and the positive active-run prompt-binding case, shifting the residual `rq_055` classification to `sample_report_only`;
-  - `python3 identity-protocol-local/scripts/validate_identity_capability_arbitration.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst`, `validate_identity_experience_feedback.py`, `validate_identity_knowledge_acquisition.py`, and `validate_identity_trigger_regression.py` all return pass on the strict lane, while source rechecks confirm they default to `runtime/examples/*` or `sample_report_path_pattern` sample families unless a report is explicitly injected;
-  - the sample-family gap is now partially absorbed as shared infrastructure rather than narrative only:
-    - `scripts/strict_live_evidence_resolution_common.py` now freezes the downstream live-vs-sample machine interpretation;
-    - the four sample validators now emit `report_selection_mode`, `live_candidate_paths`, `live_candidate_selected_path`, `evidence_origin`, `report_freshness_status`, `run_id_binding_status`, `strict_live_proof_status`, `semantic_contract_status`, `strict_live_operational_status`, `operational_closure_class`, `live_binding_strength`, and `next_hop_consumption_status`;
-    - `bash scripts/ci/run_identity_weak_live_linkage_probes_ci.sh` now proves both the default sample path and the auto-selected current-run live report path for those validators, and the hermetic residual advances to `loop_meta_only` once prompt + sample families are both live-bound;
-  - the loop/latest-log gap is now also absorbed as shared infrastructure rather than narrative only:
-    - `scripts/capability_fit_roundtable_common.py` plus `scripts/route_live_bridge_common.py` now freeze the route-side live-bridge interpretation;
-    - `scripts/feedback_current_run_binding_common.py` now freezes one shared feedback/log join interpretation reused by both the `4 -> 1` bridge and latest-log same-run binding;
-    - the freshest identity-scoped feedback log is now selected through that shared helper-backed rule instead of validator-local filename ordering, preventing false stale/latest drift between governance and projection surfaces;
-    - `python3 identity-protocol-local/scripts/validate_identity_routing_learning_strengthening.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --json-only` now returns `PASS_REQUIRED` while separately emitting `route_live_binding_status=FAIL_REQUIRED`, `selected_candidate_receipt_ref=""`, and `capability_fit_roundtable_status=SKIPPED_NOT_REQUIRED`, which confirms semantic-center green and live-bridge green are now machine-separated;
-    - `python3 identity-protocol-local/scripts/validate_feedback_to_judgement_loopback.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --json-only` now returns `PASS_REQUIRED` while separately emitting `operational_prompt_receipt_ref`, `feedback_run_id`, `preflight_reentry_receipt_ref`, and `loopback_live_binding_status=PASS_REQUIRED`;
-    - `python3 identity-protocol-local/scripts/validate_identity_experience_feedback_governance.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --json-only` now keeps freshness and same-run join machine-separate by emitting `required_run_id`, `latest_feedback_run_id_match_status`, and `operational_prompt_run_join_status`, and direct runtime replay now returns all three as `PASS_REQUIRED`;
-    - `scripts/feedback_runtime_log_backfill_common.py` now gives `scripts/repair_contract_backfill.py` and `scripts/repair_identity_feedback_evidence.py` one shared active-run-aware feedback log builder, so runtime backfill no longer fabricates permanently synthetic latest logs when active execution context is available;
-    - `bash scripts/ci/run_identity_weak_live_linkage_probes_ci.sh` now proves a second hermetic fact after route/live-loop plus latest-log receipts are seeded: the same isolated probe pack can reach `full_operational_closure`; this proof must not be misreported as real-runtime closure.
-  - `ASB16-RQ-055` now anchors the machine-law differential-audit intake for this stream through `identity/protocol/IDENTITY_RUNTIME.md#rq_055_identity_weak_live_linkage_differential_audit_contract_v1`, `identity/protocol/mappings/contract-binding.v1.6.yaml`, `scripts/validate_identity_weak_live_linkage.py`, and `scripts/ci/run_identity_weak_live_linkage_probes_ci.sh`; this positive strengthening keeps `ISSUE-037` open while moving the stream beyond docs-only governance;
-  - direct runtime replay on `base-repo-audit-expert-v3` and `custom-creative-ecom-analyst` still remains `sample_report_only`; the open item is now real current-run sample-family producer coverage plus route-side loop live-bridge producer coverage on applicable runtime identities, not missing shared machine-law semantics.
-  - repo deep-sweep rechecks also verified that protocol-feedback current-round lanes using `scripts/protocol_feedback_lane_common.py` already derive correlated current-round linkage and therefore must not be misclassified into this stream.
+  - `scripts/weak_live_current_run_projection_common.py` now lands one shared producer/backfill lane for:
+    - current-run sample-family live reports,
+    - route optimization / roundtable receipts,
+    - current-run feedback-log joins;
+  - `scripts/create_identity_pack.py` now auto-wires the route optimization + roundtable contract family for new packs;
+  - `scripts/repair_contract_backfill.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --apply --json-only` and the same replay on `custom-creative-ecom-analyst` now both return `current_run_live_projection_status=PASS_REQUIRED` with route contracts restored and governed live artifacts written under `runtime/reports/`, `runtime/protocol-feedback/`, and `runtime/logs/feedback/`;
+  - direct runtime replay on both `base-repo-audit-expert-v3` and `custom-creative-ecom-analyst` now returns:
+    - `overall_linkage_status=PASS_REQUIRED`
+    - `operational_closure_class=full_operational_closure`
+    - `live_bridge_status=PASS_REQUIRED`
+    - `route_live_binding_status=PASS_REQUIRED`;
+  - direct self-run on `base-repo-audit-expert-v3` via `python3 scripts/execute_identity_upgrade.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3` produced `runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1774398915.json`, and that report now carries `weak_live_current_run_projection_status=PASS_REQUIRED` plus seven projection refs in `artifacts`;
+  - `bash scripts/ci/run_identity_weak_live_linkage_probes_ci.sh` remains green, and its hermetic closure proof is explicitly kept separate from real-runtime closure.
 
 ### ISSUE-038 - Broadcast-delivery and identity communication transport convergence are now protocol-owned and fleet-closed
 
