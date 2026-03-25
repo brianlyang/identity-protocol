@@ -19,6 +19,9 @@ contract_required_markers:
   - '## Decision-evidence admissibility law'
   - '## Six decision-evidence classes'
   - '## Required decision-evidence differentiations'
+  - '## Evidence-class proof alignment'
+  - frozen-law evidence requires frozen-law decision-evidence proof;
+  - demoted-support evidence requires demotion-confinement decision-evidence proof.
   - '## Adjudication-phase evidence alignment'
   - 'runtime-state live binding requires bound runtime evidence and bound-runtime decision-evidence proof;'
   - 'receipt-driven closure requires adjudicated verdict closure evidence and adjudicated-verdict-closure decision-evidence proof;'
@@ -109,6 +112,31 @@ required_decision_evidence_proof_rows:
     proof_id: demotion_confinement_decision_evidence_proof
     contract_heading: '### 6. Demotion-confinement decision-evidence proof'
     proof_role: demotion_confinement_decision_evidence_proof
+required_evidence_class_proof_alignment_rows:
+  - order: 1
+    evidence_class_id: frozen_law_evidence
+    proof_id: frozen_law_decision_evidence_proof
+    alignment_role: frozen_law_evidence_class_proof_alignment
+  - order: 2
+    evidence_class_id: machine_registry_evidence
+    proof_id: registry_resolution_decision_evidence_proof
+    alignment_role: machine_registry_evidence_class_proof_alignment
+  - order: 3
+    evidence_class_id: validator_probe_verdict_evidence
+    proof_id: validator_verdict_decision_evidence_proof
+    alignment_role: validator_probe_verdict_evidence_class_proof_alignment
+  - order: 4
+    evidence_class_id: bound_runtime_evidence
+    proof_id: bound_runtime_decision_evidence_proof
+    alignment_role: bound_runtime_evidence_class_proof_alignment
+  - order: 5
+    evidence_class_id: adjudicated_verdict_closure_evidence
+    proof_id: adjudicated_verdict_closure_decision_evidence_proof
+    alignment_role: adjudicated_verdict_closure_evidence_class_proof_alignment
+  - order: 6
+    evidence_class_id: demoted_support_evidence
+    proof_id: demotion_confinement_decision_evidence_proof
+    alignment_role: demoted_support_evidence_class_proof_alignment
 required_decision_evidence_limit_rows:
   - order: 1
     limit_id: frozen_law_not_registry_resolution
@@ -153,3 +181,6 @@ required_collapse_rows:
   - order: 7
     collapse_id: prose_payload_as_machine_decision_evidence
     contract_phrase: 'handoff prose or operator-facing narration is treated as if it were machine decision evidence.'
+  - order: 8
+    collapse_id: decision_evidence_class_proof_flattening
+    contract_phrase: 'frozen-law, registry, validator-verdict, bound-runtime, adjudicated-closure, and demoted-support evidence classes are treated as if one decision-evidence proof stratum were sufficient for all of them.'

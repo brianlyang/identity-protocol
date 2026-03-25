@@ -141,6 +141,22 @@ When a decision-evidence claim relies on governed proof, the proof stratum
 behind that claim must match the evidence-admissibility commitment being
 asserted.
 
+## Evidence-class proof alignment
+
+Decision-evidence classes must preserve the proof stratum appropriate to the
+evidence class being asserted.
+
+1. frozen-law evidence requires frozen-law decision-evidence proof;
+2. machine-registry evidence requires registry-resolution decision-evidence proof;
+3. validator-and-probe verdict evidence requires validator-verdict decision-evidence proof;
+4. bound-runtime evidence requires bound-runtime decision-evidence proof;
+5. adjudicated-verdict-closure evidence requires adjudicated-verdict-closure decision-evidence proof;
+6. demoted-support evidence requires demotion-confinement decision-evidence proof.
+
+Decision-evidence narration may summarize these classes for readability, but it
+must not pretend that one decision-evidence proof stratum is sufficient for all
+evidence classes.
+
 ## Adjudication-phase evidence alignment
 
 Current-turn legality may not use one adjudication phase's evidence stratum as if it automatically satisfied a later phase.
@@ -226,6 +242,7 @@ The following are non-compliant:
 5. `sample_fixture_diagnostic_as_live_decision_evidence`: sample, fixture, diagnostics, migration, or replay material is treated as if it were active success-path evidence.
 6. `receipt_closure_as_upstream_legality_evidence`: receipt closure is treated as if it authored or replaced earlier legality phases.
 7. `prose_payload_as_machine_decision_evidence`: handoff prose or operator-facing narration is treated as if it were machine decision evidence.
+8. `decision_evidence_class_proof_flattening`: frozen-law, registry, validator-verdict, bound-runtime, adjudicated-closure, and demoted-support evidence classes are treated as if one decision-evidence proof stratum were sufficient for all of them.
 
 ## Validation
 

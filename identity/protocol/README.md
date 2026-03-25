@@ -222,6 +222,11 @@ Success-path state handling must preserve state-class proof posture as well:
 defined, admissible, bound-active, optional, recovery, and demoted-support
 state classes do not share one generic state-admission proof layer.
 
+Decision-evidence handling must preserve evidence-class proof posture as well:
+frozen-law, registry, validator-verdict, bound-runtime, closure, and
+demoted-support evidence classes do not share one generic decision-evidence
+proof layer.
+
 ---
 
 ## One-way derivation discipline

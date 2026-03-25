@@ -211,6 +211,10 @@ state, admissible current-turn state, bound active state, optional non-entry,
 governed recovery, and demoted support or quarantine do not share one
 interchangeable admission-proof posture.
 
+The same applies to decision evidence: frozen law, registry resolution,
+validator verdict, bound runtime, adjudicated closure, and demoted support do
+not share one interchangeable decision-evidence proof posture.
+
 ### Derivation direction must stay one-way
 
 The root corpus must also preserve one-way derivation direction.

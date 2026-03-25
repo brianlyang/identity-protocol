@@ -26,6 +26,7 @@ from root_decision_evidence_admissibility_common import (
     decision_evidence_limit_rows_from_doc,
     decision_evidence_proof_rows_from_doc,
     differentiation_rows_from_doc,
+    evidence_class_proof_alignment_rows_from_doc,
     evidence_class_rows_from_doc,
     load_root_decision_evidence_admissibility,
 )
@@ -143,6 +144,38 @@ EXPECTED_DECISION_EVIDENCE_PROOF_ROWS = {
         "proof_role": "demotion_confinement_decision_evidence_proof",
     },
 }
+EXPECTED_EVIDENCE_CLASS_PROOF_ALIGNMENT_ROWS = {
+    "frozen_law_evidence": {
+        "order": 1,
+        "proof_id": "frozen_law_decision_evidence_proof",
+        "alignment_role": "frozen_law_evidence_class_proof_alignment",
+    },
+    "machine_registry_evidence": {
+        "order": 2,
+        "proof_id": "registry_resolution_decision_evidence_proof",
+        "alignment_role": "machine_registry_evidence_class_proof_alignment",
+    },
+    "validator_probe_verdict_evidence": {
+        "order": 3,
+        "proof_id": "validator_verdict_decision_evidence_proof",
+        "alignment_role": "validator_probe_verdict_evidence_class_proof_alignment",
+    },
+    "bound_runtime_evidence": {
+        "order": 4,
+        "proof_id": "bound_runtime_decision_evidence_proof",
+        "alignment_role": "bound_runtime_evidence_class_proof_alignment",
+    },
+    "adjudicated_verdict_closure_evidence": {
+        "order": 5,
+        "proof_id": "adjudicated_verdict_closure_decision_evidence_proof",
+        "alignment_role": "adjudicated_verdict_closure_evidence_class_proof_alignment",
+    },
+    "demoted_support_evidence": {
+        "order": 6,
+        "proof_id": "demotion_confinement_decision_evidence_proof",
+        "alignment_role": "demoted_support_evidence_class_proof_alignment",
+    },
+}
 EXPECTED_DECISION_EVIDENCE_LIMIT_ROWS = {
     "frozen_law_not_registry_resolution": {
         "order": 1,
@@ -202,12 +235,17 @@ EXPECTED_COLLAPSE_ROWS = {
         "order": 7,
         "contract_phrase": "handoff prose or operator-facing narration is treated as if it were machine decision evidence.",
     },
+    "decision_evidence_class_proof_flattening": {
+        "order": 8,
+        "contract_phrase": "frozen-law, registry, validator-verdict, bound-runtime, adjudicated-closure, and demoted-support evidence classes are treated as if one decision-evidence proof stratum were sufficient for all of them.",
+    },
 }
 EXPECTED_REGISTRY_MARKERS = (
     "this file remains the authoritative root-domain contract for decision-evidence admissibility law",
     "## Decision-evidence admissibility law",
     "## Six decision-evidence classes",
     "## Required decision-evidence differentiations",
+    "## Evidence-class proof alignment",
     "## Adjudication-phase evidence alignment",
     "## Decision-evidence proof discipline",
     "## Decision-evidence proof limits",
@@ -328,6 +366,7 @@ def main() -> int:
     differentiation_rows = differentiation_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     adjudication_phase_alignment_rows = adjudication_phase_alignment_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     decision_evidence_proof_rows = decision_evidence_proof_rows_from_doc(admissibility_doc) if admissibility_doc else ()
+    evidence_class_proof_alignment_rows = evidence_class_proof_alignment_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     decision_evidence_limit_rows = decision_evidence_limit_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     collapse_rows = collapse_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
@@ -363,6 +402,7 @@ def main() -> int:
             ("required_differentiation_rows", differentiation_rows),
             ("required_adjudication_phase_alignment_rows", adjudication_phase_alignment_rows),
             ("required_decision_evidence_proof_rows", decision_evidence_proof_rows),
+            ("required_evidence_class_proof_alignment_rows", evidence_class_proof_alignment_rows),
             ("required_decision_evidence_limit_rows", decision_evidence_limit_rows),
             ("required_collapse_rows", collapse_rows),
         ):
@@ -417,6 +457,15 @@ def main() -> int:
             compare_fields=("contract_heading", "proof_role"),
         )
         _validate_rows(
+            actual_rows=evidence_class_proof_alignment_rows,
+            expected_rows=EXPECTED_EVIDENCE_CLASS_PROOF_ALIGNMENT_ROWS,
+            structure_violations=structure_violations,
+            admissibility_violations=admissibility_violations,
+            field_name="required_evidence_class_proof_alignment_rows",
+            id_attr="evidence_class_id",
+            compare_fields=("proof_id", "alignment_role"),
+        )
+        _validate_rows(
             actual_rows=decision_evidence_limit_rows,
             expected_rows=EXPECTED_DECISION_EVIDENCE_LIMIT_ROWS,
             structure_violations=structure_violations,
@@ -455,6 +504,68 @@ def main() -> int:
             for row in differentiation_rows + decision_evidence_limit_rows + collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
+
+        evidence_class_order_map = {row.evidence_class_id: row.order for row in evidence_class_rows}
+        proof_order_map = {row.proof_id: row.order for row in decision_evidence_proof_rows}
+        alignment_map = {row.evidence_class_id: row for row in evidence_class_proof_alignment_rows}
+        previous_evidence_class_order = 0
+        previous_proof_order = 0
+        for row in sorted(evidence_class_proof_alignment_rows, key=lambda item: item.order):
+            evidence_class_order = evidence_class_order_map.get(row.evidence_class_id)
+            if evidence_class_order is None:
+                integration_violations.append(
+                    {
+                        "field": "root_decision_evidence_admissibility",
+                        "reason": "evidence_class_proof_alignment_missing_evidence_class",
+                        "evidence_class_id": row.evidence_class_id,
+                    }
+                )
+            else:
+                if evidence_class_order != row.order:
+                    integration_violations.append(
+                        {
+                            "field": "root_decision_evidence_admissibility",
+                            "reason": "evidence_class_proof_alignment_evidence_order_mismatch",
+                            "evidence_class_id": row.evidence_class_id,
+                            "alignment_order": row.order,
+                            "evidence_class_order": evidence_class_order,
+                        }
+                    )
+                if evidence_class_order <= previous_evidence_class_order:
+                    integration_violations.append(
+                        {
+                            "field": "root_decision_evidence_admissibility",
+                            "reason": "evidence_class_proof_alignment_evidence_order_not_increasing",
+                            "evidence_class_id": row.evidence_class_id,
+                            "evidence_class_order": evidence_class_order,
+                            "previous_evidence_class_order": previous_evidence_class_order,
+                        }
+                    )
+                previous_evidence_class_order = evidence_class_order
+
+            proof_order = proof_order_map.get(row.proof_id)
+            if proof_order is None:
+                integration_violations.append(
+                    {
+                        "field": "root_decision_evidence_admissibility",
+                        "reason": "evidence_class_proof_alignment_missing_proof",
+                        "evidence_class_id": row.evidence_class_id,
+                        "proof_id": row.proof_id,
+                    }
+                )
+            else:
+                if proof_order <= previous_proof_order:
+                    integration_violations.append(
+                        {
+                            "field": "root_decision_evidence_admissibility",
+                            "reason": "evidence_class_proof_alignment_proof_order_not_increasing",
+                            "evidence_class_id": row.evidence_class_id,
+                            "proof_id": row.proof_id,
+                            "proof_order": proof_order,
+                            "previous_proof_order": previous_proof_order,
+                        }
+                    )
+                previous_proof_order = proof_order
 
         readme_path = repo_root / "identity/protocol/README.md"
         if not readme_path.exists():
@@ -531,6 +642,27 @@ def main() -> int:
         adjudication_surface_profile_map = {row.machine_surface: row for row in adjudication_surface_profiles}
         previous_phase_order = 0
         for row in adjudication_phase_alignment_rows:
+            alignment_row = alignment_map.get(row.evidence_class_id)
+            if alignment_row is None:
+                integration_violations.append(
+                    {
+                        "field": "root_decision_evidence_admissibility",
+                        "reason": "adjudication_phase_alignment_missing_evidence_class_alignment",
+                        "machine_surface": row.machine_surface,
+                        "evidence_class_id": row.evidence_class_id,
+                    }
+                )
+            elif alignment_row.proof_id != row.proof_id:
+                integration_violations.append(
+                    {
+                        "field": "root_decision_evidence_admissibility",
+                        "reason": "adjudication_phase_alignment_proof_mismatch",
+                        "machine_surface": row.machine_surface,
+                        "evidence_class_id": row.evidence_class_id,
+                        "expected": alignment_row.proof_id,
+                        "actual": row.proof_id,
+                    }
+                )
             profile = adjudication_surface_profile_map.get(row.machine_surface)
             if profile is None:
                 integration_violations.append(
@@ -660,12 +792,16 @@ def main() -> int:
         "differentiation_count": len(differentiation_rows),
         "adjudication_phase_alignment_count": len(adjudication_phase_alignment_rows),
         "decision_evidence_proof_count": len(decision_evidence_proof_rows),
+        "evidence_class_proof_alignment_count": len(evidence_class_proof_alignment_rows),
         "decision_evidence_limit_count": len(decision_evidence_limit_rows),
         "collapse_count": len(collapse_rows),
         "evidence_class_ids": [row.evidence_class_id for row in sorted(evidence_class_rows, key=lambda item: item.order)],
         "differentiation_ids": [row.row_id for row in sorted(differentiation_rows, key=lambda item: item.order)],
         "adjudication_phase_alignment_surfaces": [row.machine_surface for row in sorted(adjudication_phase_alignment_rows, key=lambda item: item.order)],
         "decision_evidence_proof_ids": [row.proof_id for row in sorted(decision_evidence_proof_rows, key=lambda item: item.order)],
+        "evidence_class_proof_alignment_ids": [
+            row.evidence_class_id for row in sorted(evidence_class_proof_alignment_rows, key=lambda item: item.order)
+        ],
         "decision_evidence_limit_ids": [row.row_id for row in sorted(decision_evidence_limit_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
         "adjudication_phase_alignment_rows": [
@@ -677,6 +813,15 @@ def main() -> int:
                 "surface_role": row.surface_role,
             }
             for row in sorted(adjudication_phase_alignment_rows, key=lambda item: item.order)
+        ],
+        "evidence_class_proof_alignment_rows": [
+            {
+                "order": row.order,
+                "evidence_class_id": row.evidence_class_id,
+                "proof_id": row.proof_id,
+                "alignment_role": row.alignment_role,
+            }
+            for row in sorted(evidence_class_proof_alignment_rows, key=lambda item: item.order)
         ],
         "structure_violations": structure_violations,
         "admissibility_violations": admissibility_violations,
