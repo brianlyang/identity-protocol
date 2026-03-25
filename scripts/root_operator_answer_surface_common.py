@@ -23,6 +23,14 @@ class SurfaceRow:
 
 
 @dataclass(frozen=True)
+class SupportMemoryRow:
+    order: int
+    support_id: str
+    contract_heading: str
+    support_role: str
+
+
+@dataclass(frozen=True)
 class PhraseRow:
     order: int
     row_id: str
@@ -79,6 +87,34 @@ def surface_rows_from_doc(doc: Mapping[str, Any]) -> tuple[SurfaceRow, ...]:
     return tuple(out)
 
 
+def support_memory_rows_from_doc(doc: Mapping[str, Any]) -> tuple[SupportMemoryRow, ...]:
+    rows = doc.get("required_support_memory_rows")
+    if not isinstance(rows, list):
+        return ()
+    out: list[SupportMemoryRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        support_id = _norm_str(row.get("support_id"))
+        contract_heading = str(row.get("contract_heading") or "").strip()
+        support_role = _norm_str(row.get("support_role"))
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not support_id or not contract_heading or not support_role:
+            continue
+        out.append(
+            SupportMemoryRow(
+                order=order,
+                support_id=support_id,
+                contract_heading=contract_heading,
+                support_role=support_role,
+            )
+        )
+    return tuple(out)
+
+
 def _phrase_rows_from_field(doc: Mapping[str, Any], field: str, *, row_key: str) -> tuple[PhraseRow, ...]:
     rows = doc.get(field)
     if not isinstance(rows, list):
@@ -97,6 +133,10 @@ def _phrase_rows_from_field(doc: Mapping[str, Any], field: str, *, row_key: str)
             continue
         out.append(PhraseRow(order=order, row_id=row_id, contract_phrase=contract_phrase))
     return tuple(out)
+
+
+def support_limit_rows_from_doc(doc: Mapping[str, Any]) -> tuple[PhraseRow, ...]:
+    return _phrase_rows_from_field(doc, "required_support_limit_rows", row_key="limit_id")
 
 
 def boundary_rows_from_doc(doc: Mapping[str, Any]) -> tuple[PhraseRow, ...]:

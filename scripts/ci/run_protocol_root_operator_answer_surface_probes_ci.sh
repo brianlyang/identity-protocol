@@ -26,8 +26,49 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_operator_answer_surface_status"] == "PASS_REQUIRED", payload
 assert payload["surface_count"] == 4, payload
+assert payload["support_memory_count"] == 5, payload
+assert payload["support_limit_count"] == 5, payload
 assert payload["boundary_count"] == 4, payload
 assert payload["collapse_count"] == 5, payload
+PY
+
+SUPPORT_REPO="${TMP_ROOT}/support-drift-repo"
+mirror_repo "${SUPPORT_REPO}"
+python3 - <<'PY' "${SUPPORT_REPO}/identity/protocol/mappings/root-operator-answer-surface.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_support_memory_rows"] = [
+    row for row in doc["required_support_memory_rows"] if row.get("support_id") != "consumption_memory_support"
+]
+for idx, row in enumerate(doc["required_support_memory_rows"], start=1):
+    row["order"] = idx
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SUPPORT_JSON="${TMP_ROOT}/support-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_operator_answer_surface.py" \
+  --repo-root "${SUPPORT_REPO}" \
+  --json-only >"${SUPPORT_JSON}"; then
+  echo "[FAIL] root operator answer-surface validator unexpectedly passed missing support-memory row"
+  exit 1
+fi
+
+python3 - <<'PY' "${SUPPORT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_operator_answer_surface_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-ROAS-002", payload
+assert any(
+    row["reason"] == "missing_expected_rows" and "consumption_memory_support" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
 PY
 
 SURFACE_REPO="${TMP_ROOT}/surface-drift-repo"

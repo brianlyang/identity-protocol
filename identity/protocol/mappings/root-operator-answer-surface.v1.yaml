@@ -11,54 +11,105 @@ ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.y
 authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
 question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
 contract_required_markers:
-  - '## Operator answer-surface law'
-  - '## Four answer-surface strata'
-  - '## Compression boundary'
-  - '## Non-compliant answer-surface collapses'
-  - 'The protocol must not confuse support material, machine terminals, or internal artifacts with the answer surface actually delivered to the operator.'
+- This file remains the authoritative root-domain contract for operator answer-surface
+  law.
+- '## Operator answer-surface law'
+- '## Four answer-surface strata'
+- '## Compression boundary'
+- '## Non-compliant answer-surface collapses'
+- The protocol must not confuse support material, machine terminals, or internal artifacts
+  with the answer surface actually delivered to the operator.
+- '## Lifecycle-aware support-memory discipline'
+- '## Support-memory limits'
 required_surface_rows:
-  - order: 1
-    surface_id: operator_entry
-    contract_heading: '### 1. Operator entry surface'
-    surface_role: natural_language_collaboration_entry
-  - order: 2
-    surface_id: stable_instance_answer
-    contract_heading: '### 2. Stable instance answer surface'
-    surface_role: law_compressed_operator_answer
-  - order: 3
-    surface_id: supporting_machine_truth
-    contract_heading: '### 3. Supporting machine-truth surface'
-    surface_role: supporting_machine_truth_surface
-  - order: 4
-    surface_id: terminal_machine_enforcement
-    contract_heading: '### 4. Terminal machine-enforcement surface'
-    surface_role: current_turn_legality_terminal
+- order: 1
+  surface_id: operator_entry
+  contract_heading: '### 1. Operator entry surface'
+  surface_role: natural_language_collaboration_entry
+- order: 2
+  surface_id: stable_instance_answer
+  contract_heading: '### 2. Stable instance answer surface'
+  surface_role: law_compressed_operator_answer
+- order: 3
+  surface_id: supporting_machine_truth
+  contract_heading: '### 3. Supporting machine-truth surface'
+  surface_role: supporting_machine_truth_surface
+- order: 4
+  surface_id: terminal_machine_enforcement
+  contract_heading: '### 4. Terminal machine-enforcement surface'
+  surface_role: current_turn_legality_terminal
+required_support_memory_rows:
+- order: 1
+  support_id: law_memory_support
+  contract_heading: '### 1. Law-memory support'
+  support_role: law_grounding_support
+- order: 2
+  support_id: discovery_memory_support
+  contract_heading: '### 2. Discovery-memory support'
+  support_role: discovery_grounding_support
+- order: 3
+  support_id: admissibility_memory_support
+  contract_heading: '### 3. Admissibility-memory support'
+  support_role: admissibility_grounding_support
+- order: 4
+  support_id: run_binding_memory_support
+  contract_heading: '### 4. Run-binding-memory support'
+  support_role: run_binding_grounding_support
+- order: 5
+  support_id: consumption_memory_support
+  contract_heading: '### 5. Consumption-memory support'
+  support_role: consumption_grounding_support
+required_support_limit_rows:
+- order: 1
+  limit_id: law_memory_not_legality
+  contract_phrase: law-memory support is not proof of current-turn legality;
+- order: 2
+  limit_id: discovery_memory_not_admissibility
+  contract_phrase: discovery-memory support is not proof of admissibility;
+- order: 3
+  limit_id: admissibility_memory_not_run_binding
+  contract_phrase: admissibility-memory support is not proof of run binding;
+- order: 4
+  limit_id: run_binding_memory_not_consumption
+  contract_phrase: run-binding-memory support is not proof of next-hop consumption;
+- order: 5
+  limit_id: consumption_memory_realized_effect_only
+  contract_phrase: only consumption-memory support may back claims of realized operational
+    effect.
 required_boundary_rows:
-  - order: 1
-    boundary_id: operator_memory_burden
-    contract_phrase: 'the operator should not bear the memory burden of low-level protocol law;'
-  - order: 2
-    boundary_id: support_not_answer
-    contract_phrase: 'lower-layer proof may support the answer without replacing the answer surface itself;'
-  - order: 3
-    boundary_id: compression_without_bypass
-    contract_phrase: 'operator simplicity must be achieved by law-preserving compression rather than by bypassing machine-law boundaries;'
-  - order: 4
-    boundary_id: terminality_not_answer_prose
-    contract_phrase: 'current-turn legality must still terminate in machine-consumed enforcement surfaces rather than in answer prose alone.'
+- order: 1
+  boundary_id: operator_memory_burden
+  contract_phrase: the operator should not bear the memory burden of low-level protocol
+    law;
+- order: 2
+  boundary_id: support_not_answer
+  contract_phrase: lower-layer proof may support the answer without replacing the
+    answer surface itself;
+- order: 3
+  boundary_id: compression_without_bypass
+  contract_phrase: operator simplicity must be achieved by law-preserving compression
+    rather than by bypassing machine-law boundaries;
+- order: 4
+  boundary_id: terminality_not_answer_prose
+  contract_phrase: current-turn legality must still terminate in machine-consumed
+    enforcement surfaces rather than in answer prose alone.
 required_collapse_rows:
-  - order: 1
-    collapse_id: support_proof_equals_answer
-    contract_phrase: 'supporting proof is treated as the operator answer itself.'
-  - order: 2
-    collapse_id: raw_internal_artifact_dumping
-    contract_phrase: 'internal artifacts or raw protocol burden are dumped directly onto the operator as if dumping were an answer surface.'
-  - order: 3
-    collapse_id: convenience_overrides_law_compression
-    contract_phrase: 'operator comfort or local convenience is used to bypass law-preserving compression and enforcement boundaries.'
-  - order: 4
-    collapse_id: answer_surface_seized_by_terminality
-    contract_phrase: 'a machine terminal or receipt blob is treated as if it were the operator collaboration surface.'
-  - order: 5
-    collapse_id: prose_without_machine_truth
-    contract_phrase: 'fluent answer prose is treated as sufficient despite missing machine-truth backing when such backing is required.'
+- order: 1
+  collapse_id: support_proof_equals_answer
+  contract_phrase: supporting proof is treated as the operator answer itself.
+- order: 2
+  collapse_id: raw_internal_artifact_dumping
+  contract_phrase: internal artifacts or raw protocol burden are dumped directly onto
+    the operator as if dumping were an answer surface.
+- order: 3
+  collapse_id: convenience_overrides_law_compression
+  contract_phrase: operator comfort or local convenience is used to bypass law-preserving
+    compression and enforcement boundaries.
+- order: 4
+  collapse_id: answer_surface_seized_by_terminality
+  contract_phrase: a machine terminal or receipt blob is treated as if it were the
+    operator collaboration surface.
+- order: 5
+  collapse_id: prose_without_machine_truth
+  contract_phrase: fluent answer prose is treated as sufficient despite missing machine-truth
+    backing when such backing is required.

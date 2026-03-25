@@ -20,6 +20,8 @@ from root_operator_answer_surface_common import (
     boundary_rows_from_doc,
     collapse_rows_from_doc,
     load_root_operator_answer_surface,
+    support_limit_rows_from_doc,
+    support_memory_rows_from_doc,
     surface_rows_from_doc,
 )
 
@@ -48,6 +50,55 @@ EXPECTED_SURFACE_ROWS = {
         "order": 4,
         "contract_heading": "### 4. Terminal machine-enforcement surface",
         "surface_role": "current_turn_legality_terminal",
+    },
+}
+EXPECTED_SUPPORT_MEMORY_ROWS = {
+    "law_memory_support": {
+        "order": 1,
+        "contract_heading": "### 1. Law-memory support",
+        "support_role": "law_grounding_support",
+    },
+    "discovery_memory_support": {
+        "order": 2,
+        "contract_heading": "### 2. Discovery-memory support",
+        "support_role": "discovery_grounding_support",
+    },
+    "admissibility_memory_support": {
+        "order": 3,
+        "contract_heading": "### 3. Admissibility-memory support",
+        "support_role": "admissibility_grounding_support",
+    },
+    "run_binding_memory_support": {
+        "order": 4,
+        "contract_heading": "### 4. Run-binding-memory support",
+        "support_role": "run_binding_grounding_support",
+    },
+    "consumption_memory_support": {
+        "order": 5,
+        "contract_heading": "### 5. Consumption-memory support",
+        "support_role": "consumption_grounding_support",
+    },
+}
+EXPECTED_SUPPORT_LIMIT_ROWS = {
+    "law_memory_not_legality": {
+        "order": 1,
+        "contract_phrase": "law-memory support is not proof of current-turn legality;",
+    },
+    "discovery_memory_not_admissibility": {
+        "order": 2,
+        "contract_phrase": "discovery-memory support is not proof of admissibility;",
+    },
+    "admissibility_memory_not_run_binding": {
+        "order": 3,
+        "contract_phrase": "admissibility-memory support is not proof of run binding;",
+    },
+    "run_binding_memory_not_consumption": {
+        "order": 4,
+        "contract_phrase": "run-binding-memory support is not proof of next-hop consumption;",
+    },
+    "consumption_memory_realized_effect_only": {
+        "order": 5,
+        "contract_phrase": "only consumption-memory support may back claims of realized operational effect.",
     },
 }
 EXPECTED_BOUNDARY_ROWS = {
@@ -94,7 +145,10 @@ EXPECTED_REGISTRY_MARKERS = (
     "this file remains the authoritative root-domain contract for operator answer-surface law",
     "## Operator answer-surface law",
     "## Four answer-surface strata",
+    "## Lifecycle-aware support-memory discipline",
+    "## Support-memory limits",
     "## Compression boundary",
+    "## Non-compliant answer-surface collapses",
 )
 EXPECTED_AUTHORITY_MARKERS = (
     "## Runtime adjudication boundary",
@@ -209,6 +263,8 @@ def main() -> int:
             error_code = ERR_REGISTRY
 
     surface_rows = surface_rows_from_doc(answer_doc) if answer_doc else ()
+    support_memory_rows = support_memory_rows_from_doc(answer_doc) if answer_doc else ()
+    support_limit_rows = support_limit_rows_from_doc(answer_doc) if answer_doc else ()
     boundary_rows = boundary_rows_from_doc(answer_doc) if answer_doc else ()
     collapse_rows = collapse_rows_from_doc(answer_doc) if answer_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
@@ -240,6 +296,8 @@ def main() -> int:
 
         for field, rows in (
             ("required_surface_rows", surface_rows),
+            ("required_support_memory_rows", support_memory_rows),
+            ("required_support_limit_rows", support_limit_rows),
             ("required_boundary_rows", boundary_rows),
             ("required_collapse_rows", collapse_rows),
         ):
@@ -265,6 +323,24 @@ def main() -> int:
             field_name="required_surface_rows",
             id_attr="surface_id",
             compare_fields=("contract_heading", "surface_role"),
+        )
+        _validate_rows(
+            actual_rows=support_memory_rows,
+            expected_rows=EXPECTED_SUPPORT_MEMORY_ROWS,
+            structure_violations=structure_violations,
+            answer_violations=answer_violations,
+            field_name="required_support_memory_rows",
+            id_attr="support_id",
+            compare_fields=("contract_heading", "support_role"),
+        )
+        _validate_rows(
+            actual_rows=support_limit_rows,
+            expected_rows=EXPECTED_SUPPORT_LIMIT_ROWS,
+            structure_violations=structure_violations,
+            answer_violations=answer_violations,
+            field_name="required_support_limit_rows",
+            id_attr="row_id",
+            compare_fields=("contract_phrase",),
         )
         _validate_rows(
             actual_rows=boundary_rows,
@@ -299,7 +375,10 @@ def main() -> int:
             for row in surface_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_heading,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "surface_heading_missing", "marker": marker})
-            for row in boundary_rows + collapse_rows:
+            for row in support_memory_rows:
+                for marker in find_missing_markers(contract_text, (row.contract_heading,)):
+                    contract_marker_violations.append({"field": "contract_file", "reason": "support_heading_missing", "marker": marker})
+            for row in support_limit_rows + boundary_rows + collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
 
@@ -470,9 +549,13 @@ def main() -> int:
         "routing_entry_path": str(routing_entry_path),
         "contract_file": str(answer_doc.get("contract_file") or ""),
         "surface_count": len(surface_rows),
+        "support_memory_count": len(support_memory_rows),
+        "support_limit_count": len(support_limit_rows),
         "boundary_count": len(boundary_rows),
         "collapse_count": len(collapse_rows),
         "surface_ids": [row.surface_id for row in sorted(surface_rows, key=lambda item: item.order)],
+        "support_memory_ids": [row.support_id for row in sorted(support_memory_rows, key=lambda item: item.order)],
+        "support_limit_ids": [row.row_id for row in sorted(support_limit_rows, key=lambda item: item.order)],
         "boundary_ids": [row.row_id for row in sorted(boundary_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
         "structure_violations": structure_violations,

@@ -25,8 +25,9 @@ It is not:
 ## Purpose
 
 Define the stable operator answer surface, the supporting lower-layer proof
-surfaces around it, and the boundary that lets an instance compress law into a
-natural collaboration surface without betraying the law.
+surfaces around it, the lifecycle-aware support-memory discipline behind those
+surfaces, and the boundary that lets an instance compress law into a natural
+collaboration surface without betraying the law.
 
 This file remains the authoritative root-domain contract for operator
 answer-surface law.
@@ -40,7 +41,7 @@ This answer-surface contract inherits its bottom-theory assumptions from:
 Interpretive boundary:
 
 1. the design philosophy explains why question class and answer surface must stay paired, why the operator should not bear low-level protocol memory burden, and why a mature instance compresses law into a stable answer surface without betraying the law;
-2. this file freezes the concrete answer-surface law: surface strata, support-vs-answer boundaries, law-preserving compression rules, and non-compliant collapses;
+2. this file freezes the concrete answer-surface law: surface strata, lifecycle-aware support-memory discipline, support-vs-answer boundaries, law-preserving compression rules, and non-compliant collapses;
 3. this file is authoritative for root-domain operator answer-surface law, but current-turn legality still depends on machine-consumed governance, mappings, validators, probes, runtime state, and receipts;
 4. philosophical grounding does not replace the contract authority of this answer-surface specification.
 
@@ -89,6 +90,9 @@ layered.
 The protocol must not confuse support material, machine terminals, or internal
 artifacts with the answer surface actually delivered to the operator.
 
+When an answer relies on supporting machine truth, the support memory stratum
+behind that answer must match the kind of claim being made.
+
 ## Four answer-surface strata
 
 ### 1. Operator entry surface
@@ -114,6 +118,50 @@ Surface role: `supporting_machine_truth_surface`.
 Current-turn legality still terminates in machine-consumed enforcement surfaces; those terminals constrain the answer surface but do not become the operator collaboration surface themselves.
 
 Surface role: `current_turn_legality_terminal`.
+
+## Lifecycle-aware support-memory discipline
+
+Supporting machine-truth surfaces may stand behind the operator answer surface only when their memory stratum matches the kind of claim the answer is making.
+
+### 1. Law-memory support
+
+Supports stable explanation of frozen protocol law, definitions, and canonical root distinctions.
+
+Support role: `law_grounding_support`.
+
+### 2. Discovery-memory support
+
+Supports claims that the relevant truth was located from a canonical source.
+
+Support role: `discovery_grounding_support`.
+
+### 3. Admissibility-memory support
+
+Supports claims that a truth has passed current-turn authority qualification.
+
+Support role: `admissibility_grounding_support`.
+
+### 4. Run-binding-memory support
+
+Supports claims that the truth is bound to the current run, current thread, and current instance context.
+
+Support role: `run_binding_grounding_support`.
+
+### 5. Consumption-memory support
+
+Supports claims that the next operational step actually consumed the truth and produced real execution or delivery effect.
+
+Support role: `consumption_grounding_support`.
+
+## Support-memory limits
+
+The protocol must preserve these support-memory limits:
+
+1. law-memory support is not proof of current-turn legality;
+2. discovery-memory support is not proof of admissibility;
+3. admissibility-memory support is not proof of run binding;
+4. run-binding-memory support is not proof of next-hop consumption;
+5. only consumption-memory support may back claims of realized operational effect.
 
 ## Compression boundary
 
