@@ -269,25 +269,28 @@ adjudication have already been collapsed into each other.
 The root corpus must not rely on one strong sentence, one mapping row, or one
 green validator in isolation.
 
-Root admission/governance, source-order, authority, question-routing,
-derivation, transition, gateway-admissibility, and conflict precedence are not
-optional commentary slices; they are mutually constraining law surfaces that
-keep the machine world from collapsing origin, entry, authorship, re-entry,
-and terminal legality into one blurred layer.
+Constitutional spine, root admission/governance, source-order, authority,
+question-routing, derivation, transition, gateway-admissibility, and conflict
+precedence are not optional commentary slices; they are mutually constraining
+law surfaces that keep the machine world from collapsing origin, entry,
+authorship, re-entry, and terminal legality into one blurred layer.
 
 The machine world therefore needs all of the following to remain explicit at
 the same time:
 
-1. what may enter the root corpus as law-bearing material;
-2. in what generative order the root corpus derives;
-3. which layer has interpretive primacy and which layer has current-turn
+1. how root entry, bottom theory, protocol constitution, and runtime
+   constitution stay bound as one constitutional spine rather than drifting
+   into four separate local narratives;
+2. what may enter the root corpus as law-bearing material;
+3. in what generative order the root corpus derives;
+4. which layer has interpretive primacy and which layer has current-turn
    terminality;
-4. which question class belongs to which answer surface;
-5. how later or outer surfaces may motivate strengthening without reverse-
+5. which question class belongs to which answer surface;
+6. how later or outer surfaces may motivate strengthening without reverse-
    authoring the law above them;
-6. which gateways admit re-entry and what those gateways are legally allowed to
+7. which gateways admit re-entry and what those gateways are legally allowed to
    do;
-7. which conflict class terminates by source order and which terminates by
+8. which conflict class terminates by source order and which terminates by
    machine-consumed enforcement.
 
 Weakening one slice while keeping the others green is a root-law coherence

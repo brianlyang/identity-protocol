@@ -67,9 +67,9 @@ Runtime meaning:
 
 Runtime does not consume root law as isolated slogans.
 
-Runtime must consume the governed root-law bundle together: admission/governance,
-ordering, authority, question-routing, derivation, transition,
-gateway-admissibility, and conflict precedence.
+Runtime must consume the governed root-law bundle together: constitutional
+spine, admission/governance, ordering, authority, question-routing,
+derivation, transition, gateway-admissibility, and conflict precedence.
 
 Runtime may terminate current-turn legality only through machine-consumed
 enforcement surfaces shaped by that bundle.

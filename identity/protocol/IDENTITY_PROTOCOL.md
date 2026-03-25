@@ -112,14 +112,15 @@ Status transitions are controlled by governance/review, not by script commit alo
 
 The protocol constitution depends on a governed root-law bundle across:
 
-1. root admission/governance;
-2. ordering;
-3. authority;
-4. question-routing;
-5. derivation;
-6. transition;
-7. gateway-admissibility;
-8. conflict precedence.
+1. constitutional spine;
+2. root admission/governance;
+3. ordering;
+4. authority;
+5. question-routing;
+6. derivation;
+7. transition;
+8. gateway-admissibility;
+9. conflict precedence.
 
 These are separate machine-law slices so that origin, navigation, authorship,
 promotion, admissibility, and terminal legality do not collapse into one

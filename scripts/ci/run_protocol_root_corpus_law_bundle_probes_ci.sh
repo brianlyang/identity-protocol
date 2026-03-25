@@ -25,7 +25,7 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "PASS_REQUIRED", payload
-assert payload["component_count"] == 8, payload
+assert payload["component_count"] == 9, payload
 assert all(row["component_status"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
 PY
 
@@ -38,7 +38,7 @@ import yaml
 
 path = pathlib.Path(sys.argv[1])
 doc = yaml.safe_load(path.read_text(encoding="utf-8"))
-doc["component_rows"] = [row for row in doc["component_rows"] if row.get("component_id") != "root_corpus_precedence"]
+doc["component_rows"] = [row for row in doc["component_rows"] if row.get("component_id") != "root_constitutional_spine"]
 for idx, row in enumerate(doc["component_rows"], start=1):
     row["order"] = idx
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
@@ -61,7 +61,7 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCLB-002", payload
 assert any(
-    row["reason"] == "missing_expected_components" and "root_corpus_precedence" in row.get("component_ids", [])
+    row["reason"] == "missing_expected_components" and "root_constitutional_spine" in row.get("component_ids", [])
     for row in payload["structure_violations"]
 ), payload
 PY

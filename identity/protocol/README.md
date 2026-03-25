@@ -289,9 +289,10 @@ Current-turn legality must instead resolve from machine-consumed enforcement sur
 The root corpus is not governed by one monolithic text or one isolated
 validator.
 
-Root admission/governance, source-order, authority layering, question-routing,
-derivation, promotion/demotion transition, gateway-admissibility, and conflict
-precedence must stay explicit and machine-governed together.
+Constitutional spine, root admission/governance, source-order, authority
+layering, question-routing, derivation, promotion/demotion transition,
+gateway-admissibility, and conflict precedence must stay explicit and
+machine-governed together.
 
 No single slice is sufficient by itself; the machine world must preserve them
 as one governed root-law bundle.
