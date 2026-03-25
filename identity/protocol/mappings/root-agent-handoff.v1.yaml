@@ -1,0 +1,91 @@
+schema_version: 1
+agent_handoff_family: protocol_root_agent_handoff
+agent_handoff_version: v1
+contract_file: identity/protocol/AGENT_HANDOFF_CONTRACT.md
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+validator_script: scripts/validate_protocol_root_agent_handoff.py
+probe_script: scripts/ci/run_protocol_root_agent_handoff_probes_ci.sh
+common_script: scripts/root_agent_handoff_common.py
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+ordering_current_file: identity/protocol/mappings/root-corpus-ordering.current.yaml
+authority_current_file: identity/protocol/mappings/root-corpus-authority.current.yaml
+question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
+contract_required_markers:
+  - '## Governed handoff law'
+  - '## Two governed handoff roles'
+  - '## Mandatory handoff payload fields'
+  - '## Required handoff evidence and next-step anchors'
+  - '## Non-compliant handoff collapses'
+  - 'This file remains the authoritative root-domain contract for governed agent-handoff law.'
+required_role_rows:
+  - order: 1
+    role_id: master_orchestrator
+    contract_heading: '### 1. Master orchestration role'
+    handoff_role: master_orchestrator
+  - order: 2
+    role_id: delegated_sub_agent_execution
+    contract_heading: '### 2. Delegated sub-agent execution role'
+    handoff_role: delegated_sub_agent_execution
+required_payload_rows:
+  - order: 1
+    payload_field_id: handoff_id
+    contract_phrase: '`handoff_id`'
+  - order: 2
+    payload_field_id: task_id
+    contract_phrase: '`task_id`'
+  - order: 3
+    payload_field_id: from_agent
+    contract_phrase: '`from_agent`'
+  - order: 4
+    payload_field_id: to_agent
+    contract_phrase: '`to_agent`'
+  - order: 5
+    payload_field_id: input_scope
+    contract_phrase: '`input_scope`'
+  - order: 6
+    payload_field_id: actions_taken
+    contract_phrase: '`actions_taken`'
+  - order: 7
+    payload_field_id: artifacts
+    contract_phrase: '`artifacts`'
+  - order: 8
+    payload_field_id: result
+    contract_phrase: '`result`'
+  - order: 9
+    payload_field_id: next_action
+    contract_phrase: '`next_action`'
+  - order: 10
+    payload_field_id: rulebook_update
+    contract_phrase: '`rulebook_update`'
+required_anchor_rows:
+  - order: 1
+    anchor_id: artifact_path_kind
+    contract_phrase: 'each artifact item includes `path` and `kind`;'
+  - order: 2
+    anchor_id: rulebook_update_run_binding
+    contract_phrase: '`rulebook_update.evidence_run_id` is required when `rulebook_update.applied=true`;'
+  - order: 3
+    anchor_id: next_action_triplet
+    contract_phrase: '`next_action` includes `owner`, `action`, and `input`;'
+  - order: 4
+    anchor_id: production_identity_task_freshness
+    contract_phrase: 'production handoff evidence remains freshness-bounded and identity/task scoped when current-turn legality is claimed;'
+  - order: 5
+    anchor_id: production_sample_track_separation
+    contract_phrase: 'production and sample validation tracks remain separated so sample proof never stands in for current-run runtime proof.'
+required_collapse_rows:
+  - order: 1
+    collapse_id: delegated_scope_as_global_contract_authority
+    contract_phrase: 'a delegated sub-agent mutates top-level identity or protocol contract surfaces as if delegated execution granted global law authorship.'
+  - order: 2
+    collapse_id: completion_without_evidence_artifacts
+    contract_phrase: 'a handoff claims completion without evidence artifacts that support the claimed result.'
+  - order: 3
+    collapse_id: missing_executable_next_action_as_valid_delivery
+    contract_phrase: 'a handoff omits an executable next action but is treated as a valid delivery.'
+  - order: 4
+    collapse_id: contradictory_evidence_as_successful_handoff
+    contract_phrase: 'a handoff result is treated as valid even when it contradicts the provided evidence.'
+  - order: 5
+    collapse_id: sample_track_as_production_runtime_proof
+    contract_phrase: 'sample or self-test validation is treated as if it proved present-turn production handoff legality.'

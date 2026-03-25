@@ -236,8 +236,11 @@ registered_top_level_entries:
     corpus_class: root_contract
     law_bearing: true
     required_markers:
-      - '## Purpose'
-      - 'This contract is written primarily for:'
+      - 'This file remains the authoritative root-domain contract for governed agent-handoff law.'
+      - '## Governed handoff law'
+      - '## Two governed handoff roles'
+      - '## Mandatory handoff payload fields'
+      - '## Required handoff evidence and next-step anchors'
     forbidden_content_classes:
       - workbook_issue_projection
       - closure_ledger_narration
@@ -344,6 +347,8 @@ registered_top_level_entries:
       - root-error-terminality.v1.yaml
       - root-artifact-family-admissibility.current.yaml
       - root-artifact-family-admissibility.v1.yaml
+      - root-agent-handoff.current.yaml
+      - root-agent-handoff.v1.yaml
       - root-identity-instance-self-judgement.current.yaml
       - root-identity-instance-self-judgement.v1.yaml
       - root-protocol-instance-responsibility.current.yaml
