@@ -23,6 +23,7 @@ Current-state judgment for this audit boundary must anchor to:
 This document does not declare a release tag by itself. It freezes the audit interpretation of what `1.6.x` must close before `1.7.x` is allowed to carry the future-facing line.
 
 The authoritative current workbook horizon for this release boundary is `ISSUE-001` through `ISSUE-039`; if that horizon moves, this review surface must truth-sync instead of preserving a stale issue universe.
+The canonical derived summary surface for this boundary is `docs/release/identity-v1.6x-release-closure-summary.md`; it may compress this audit judgment for handoff, but it must not replace this review surface, current runtime verdict surfaces, or fleet-scope closure matrices.
 
 ## 1) Audit conclusion
 

@@ -215,6 +215,7 @@ def _requires_static_alias_ref_row(doc: str) -> bool:
         return False
     return (
         normalized.startswith("docs/governance/")
+        or normalized.startswith("docs/release/")
         or normalized.startswith("docs/workbook/")
         or normalized.startswith("docs/review/")
         or normalized.startswith("docs/references/")
@@ -1041,6 +1042,22 @@ def main() -> int:
             )
     else:
         failures.append("[MISSING_SCRIPT] scripts/validate_v16x_release_closure_boundary.py not found")
+
+    release_closure_summary_script = repo_root / "scripts/validate_v16x_release_closure_summary.py"
+    if release_closure_summary_script.exists():
+        proc = subprocess.run(
+            [sys.executable, str(release_closure_summary_script), "--json-only"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+        )
+        if proc.returncode != 0:
+            failures.append(
+                "[RELEASE_CLOSURE_SUMMARY_FAIL] "
+                + (proc.stdout.strip() or proc.stderr.strip() or "validate_v16x_release_closure_summary failed")
+            )
+    else:
+        failures.append("[MISSING_SCRIPT] scripts/validate_v16x_release_closure_summary.py not found")
 
     # Round-29.5: enforce doc evidence persistence policy
     evidence_policy_script = repo_root / "scripts/validate_doc_evidence_persistence.py"

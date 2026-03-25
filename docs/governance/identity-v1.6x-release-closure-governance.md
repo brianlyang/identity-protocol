@@ -23,6 +23,7 @@ Execution mode: canonical static SSOT for `1.6.x` release-closure interpretation
 4. `1.6.x` closure means current-protocol-universe debt is closed on the `1.6.x` side rather than narratively deferred into `1.7.x`.
 5. `1.7.x` admission is future-facing only after `1.6.x` is treated as root-closed, machine-closed, and runtime-closed on the problems that already belong to the current protocol universe.
 6. The authoritative current workbook horizon for this release boundary is `ISSUE-001` through `ISSUE-039`; if that horizon moves, this boundary doc must truth-sync instead of freezing a stale issue universe.
+7. The canonical derived summary surface for this boundary is `docs/release/identity-v1.6x-release-closure-summary.md`; it may compress this law for handoff, but it must not replace this governance surface, current runtime verdict surfaces, or fleet-scope closure matrices.
 
 ## 1) Why this boundary must be frozen
 
