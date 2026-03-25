@@ -41,6 +41,12 @@ assert [row["gateway_class"] for row in payload["gateway_order"]] == [
     "root_contract",
     "machine_registry_directory",
 ], payload
+assert {row["gateway_class"]: row["effect_target_class"] for row in payload["gateway_effect_targets"]} == {
+    "constitution": "constitution",
+    "runtime_constitution": "runtime_constitution",
+    "root_contract": "root_contract",
+    "machine_registry_directory": "machine_registry_directory",
+}, payload
 PY
 
 INPUT_DRIFT_REPO="${TMP_ROOT}/input-drift-repo"
@@ -151,6 +157,44 @@ assert payload["protocol_root_corpus_gateway_admissibility_status"] == "FAIL_REQ
 assert payload["error_code"] == "IP-RGA-003", payload
 assert any(
     row["reason"] == "gateway_order_mismatch"
+    for row in payload["admissibility_violations"]
+), payload
+PY
+
+EFFECT_TARGET_DRIFT_REPO="${TMP_ROOT}/gateway-effect-target-drift-repo"
+mirror_repo "${EFFECT_TARGET_DRIFT_REPO}"
+python3 - <<'PY' "${EFFECT_TARGET_DRIFT_REPO}/identity/protocol/mappings/root-corpus-gateway-admissibility.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["gateway_effect_targets"]:
+    if row["gateway_class"] == "root_contract":
+        row["effect_target_class"] = "machine_registry_directory"
+        break
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+EFFECT_TARGET_DRIFT_JSON="${TMP_ROOT}/gateway-effect-target-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_gateway_admissibility.py" \
+  --repo-root "${EFFECT_TARGET_DRIFT_REPO}" \
+  --json-only >"${EFFECT_TARGET_DRIFT_JSON}"; then
+  echo "[FAIL] gateway admissibility validator unexpectedly passed gateway-effect-target drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${EFFECT_TARGET_DRIFT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_gateway_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RGA-003", payload
+assert any(
+    row["reason"] == "effect_target_class_mismatch" and row.get("gateway_class") == "root_contract"
     for row in payload["admissibility_violations"]
 ), payload
 PY

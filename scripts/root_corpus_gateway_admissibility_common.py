@@ -38,6 +38,14 @@ class GatewayOrderRow:
     gateway_class: str
 
 
+@dataclass(frozen=True)
+class GatewayEffectTarget:
+    gateway_class: str
+    effect_target_class: str
+    effect_target_transition_mode: str
+    effect_target_authority_mode: str
+
+
 def _norm_str(value: Any) -> str:
     return str(value or "").strip().replace("\\", "/")
 
@@ -133,4 +141,29 @@ def gateway_order_rows_from_doc(admissibility_doc: Mapping[str, Any]) -> tuple[G
         if order <= 0 or not gateway_class:
             continue
         out.append(GatewayOrderRow(order=order, gateway_class=gateway_class))
+    return tuple(out)
+
+
+def gateway_effect_targets_from_doc(admissibility_doc: Mapping[str, Any]) -> tuple[GatewayEffectTarget, ...]:
+    rows = admissibility_doc.get("gateway_effect_targets")
+    if not isinstance(rows, list):
+        return ()
+    out: list[GatewayEffectTarget] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        gateway_class = _norm_str(row.get("gateway_class"))
+        effect_target_class = _norm_str(row.get("effect_target_class"))
+        effect_target_transition_mode = _norm_str(row.get("effect_target_transition_mode"))
+        effect_target_authority_mode = _norm_str(row.get("effect_target_authority_mode"))
+        if not gateway_class or not effect_target_class or not effect_target_transition_mode or not effect_target_authority_mode:
+            continue
+        out.append(
+            GatewayEffectTarget(
+                gateway_class=gateway_class,
+                effect_target_class=effect_target_class,
+                effect_target_transition_mode=effect_target_transition_mode,
+                effect_target_authority_mode=effect_target_authority_mode,
+            )
+        )
     return tuple(out)

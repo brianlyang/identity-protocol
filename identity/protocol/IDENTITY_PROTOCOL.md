@@ -94,8 +94,9 @@ Status transitions are controlled by governance/review, not by script commit alo
    - runtime constitution gateway refreezes runtime law;
    - root contract gateway refreezes root-contract law;
    - machine-registry gateway projects machine-consumed registry truth.
-4. Gateway admission does not transfer authorship from an incoming surface to the gateway output.
-5. Machine-registry gateway may terminate current-turn legality, but that does not let incoming motivation surfaces author upstream law.
+4. Gateway effect target is fixed by gateway class itself; gateway admission cannot directly emit a different root target class than the one governed for that gateway.
+5. Gateway admission does not transfer authorship from an incoming surface to the gateway output.
+6. Machine-registry gateway may terminate current-turn legality, but that does not let incoming motivation surfaces author upstream law.
 
 ## Root conflict-precedence boundary
 

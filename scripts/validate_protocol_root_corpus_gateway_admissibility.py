@@ -12,6 +12,7 @@ from root_corpus_gateway_admissibility_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     gateway_anchor_checks_from_doc,
+    gateway_effect_targets_from_doc,
     gateway_order_rows_from_doc,
     gateway_profiles_from_doc,
     load_root_corpus_gateway_admissibility,
@@ -32,6 +33,8 @@ EXPECTED_GATEWAY_METADATA = {
         "admissibility_mode": "governed_refreeze_gateway",
         "gateway_effect_scope": "constitutional_law_refreeze",
         "current_turn_legality_terminal": False,
+        "expected_effect_target_class": "constitution",
+        "expected_effect_target_transition_mode": "constitutional_freeze",
         "expected_authority_mode": "frozen_law_only",
     },
     "runtime_constitution": {
@@ -39,6 +42,8 @@ EXPECTED_GATEWAY_METADATA = {
         "admissibility_mode": "governed_refreeze_gateway",
         "gateway_effect_scope": "runtime_constitutional_law_refreeze",
         "current_turn_legality_terminal": False,
+        "expected_effect_target_class": "runtime_constitution",
+        "expected_effect_target_transition_mode": "runtime_constitutional_freeze",
         "expected_authority_mode": "frozen_law_only",
     },
     "root_contract": {
@@ -46,6 +51,8 @@ EXPECTED_GATEWAY_METADATA = {
         "admissibility_mode": "governed_refreeze_gateway",
         "gateway_effect_scope": "root_contract_law_refreeze",
         "current_turn_legality_terminal": False,
+        "expected_effect_target_class": "root_contract",
+        "expected_effect_target_transition_mode": "domain_contract_freeze",
         "expected_authority_mode": "frozen_law_only",
     },
     "machine_registry_directory": {
@@ -53,6 +60,8 @@ EXPECTED_GATEWAY_METADATA = {
         "admissibility_mode": "governed_projection_gateway",
         "gateway_effect_scope": "machine_registry_projection",
         "current_turn_legality_terminal": True,
+        "expected_effect_target_class": "machine_registry_directory",
+        "expected_effect_target_transition_mode": "machine_registry_projection",
         "expected_authority_mode": "machine_consumed_family",
     },
 }
@@ -153,6 +162,7 @@ def main() -> int:
 
     anchor_checks = gateway_anchor_checks_from_doc(admissibility_doc) if admissibility_doc else ()
     gateway_order_rows = gateway_order_rows_from_doc(admissibility_doc) if admissibility_doc else ()
+    gateway_effect_targets = gateway_effect_targets_from_doc(admissibility_doc) if admissibility_doc else ()
     gateway_profiles = gateway_profiles_from_doc(admissibility_doc) if admissibility_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     source_rows = source_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -205,6 +215,9 @@ def main() -> int:
         if not gateway_order_rows:
             stale_reasons.append("root_corpus_gateway_admissibility_gateway_order_missing")
             error_code = ERR_REGISTRY
+        if not gateway_effect_targets:
+            stale_reasons.append("root_corpus_gateway_admissibility_gateway_effect_targets_missing")
+            error_code = ERR_REGISTRY
         if not gateway_profiles:
             stale_reasons.append("root_corpus_gateway_admissibility_profiles_missing")
             error_code = ERR_REGISTRY
@@ -212,7 +225,9 @@ def main() -> int:
     registry_paths = {entry.rel_path for entry in registry_entries}
     authority_profile_map = {row.corpus_class: row for row in authority_profiles}
     gateway_profile_map = {row.gateway_class: row for row in gateway_profiles}
+    gateway_effect_target_map = {row.gateway_class: row for row in gateway_effect_targets}
     expected_gateway_inputs, unknown_transition_gateways = _build_expected_gateway_inputs(transition_profiles)
+    transition_profile_map = {row.surface_class: row for row in transition_profiles}
     transition_current_turn_allowed = sorted(
         row.surface_class for row in transition_profiles if getattr(row, "direct_current_turn_legality_allowed", False)
     )
@@ -230,6 +245,8 @@ def main() -> int:
             structure_violations.append({"field": "gateway_profiles", "reason": "duplicate_gateway_class"})
         if len(gateway_order_map) != len(gateway_order_rows):
             structure_violations.append({"field": "gateway_order", "reason": "duplicate_gateway_class"})
+        if len(gateway_effect_target_map) != len(gateway_effect_targets):
+            structure_violations.append({"field": "gateway_effect_targets", "reason": "duplicate_gateway_class"})
         if len(set(gateway_order_values)) != len(gateway_order_values) or not _contiguous_orders(sorted(gateway_order_values)):
             structure_violations.append({"field": "gateway_order", "reason": "gateway_order_non_contiguous"})
         anchor_rel_paths = [row.rel_path for row in anchor_checks]
@@ -253,6 +270,8 @@ def main() -> int:
             )
         missing_gateway_order_classes = sorted(set(expected_gateway_classes) - set(gateway_order_map))
         extra_gateway_order_classes = sorted(set(gateway_order_map) - set(expected_gateway_classes))
+        missing_gateway_effect_target_classes = sorted(set(expected_gateway_classes) - set(gateway_effect_target_map))
+        extra_gateway_effect_target_classes = sorted(set(gateway_effect_target_map) - set(expected_gateway_classes))
         if missing_gateway_order_classes:
             structure_violations.append(
                 {"field": "gateway_order", "reason": "missing_gateway_classes", "gateway_classes": missing_gateway_order_classes}
@@ -260,6 +279,22 @@ def main() -> int:
         if extra_gateway_order_classes:
             structure_violations.append(
                 {"field": "gateway_order", "reason": "extra_gateway_classes", "gateway_classes": extra_gateway_order_classes}
+            )
+        if missing_gateway_effect_target_classes:
+            structure_violations.append(
+                {
+                    "field": "gateway_effect_targets",
+                    "reason": "missing_gateway_classes",
+                    "gateway_classes": missing_gateway_effect_target_classes,
+                }
+            )
+        if extra_gateway_effect_target_classes:
+            structure_violations.append(
+                {
+                    "field": "gateway_effect_targets",
+                    "reason": "extra_gateway_classes",
+                    "gateway_classes": extra_gateway_effect_target_classes,
+                }
             )
         if unknown_transition_gateways:
             structure_violations.append(
@@ -274,6 +309,7 @@ def main() -> int:
             expected = EXPECTED_GATEWAY_METADATA.get(row.gateway_class)
             if expected is None:
                 continue
+            effect_target = gateway_effect_target_map.get(row.gateway_class)
             if row.gateway_scope != expected["gateway_scope"]:
                 admissibility_violations.append(
                     {
@@ -370,6 +406,99 @@ def main() -> int:
                         "actual": authority_profile.authority_mode,
                     }
                 )
+            if effect_target is None:
+                admissibility_violations.append(
+                    {
+                        "field": "gateway_effect_targets",
+                        "reason": "missing_gateway_effect_target",
+                        "gateway_class": row.gateway_class,
+                    }
+                )
+            else:
+                if effect_target.effect_target_class != expected["expected_effect_target_class"]:
+                    admissibility_violations.append(
+                        {
+                            "field": "gateway_effect_targets",
+                            "reason": "effect_target_class_mismatch",
+                            "gateway_class": row.gateway_class,
+                            "expected": expected["expected_effect_target_class"],
+                            "actual": effect_target.effect_target_class,
+                        }
+                    )
+                if effect_target.effect_target_transition_mode != expected["expected_effect_target_transition_mode"]:
+                    admissibility_violations.append(
+                        {
+                            "field": "gateway_effect_targets",
+                            "reason": "effect_target_transition_mode_mismatch",
+                            "gateway_class": row.gateway_class,
+                            "expected": expected["expected_effect_target_transition_mode"],
+                            "actual": effect_target.effect_target_transition_mode,
+                        }
+                    )
+                if effect_target.effect_target_authority_mode != expected["expected_authority_mode"]:
+                    admissibility_violations.append(
+                        {
+                            "field": "gateway_effect_targets",
+                            "reason": "effect_target_authority_mode_mismatch",
+                            "gateway_class": row.gateway_class,
+                            "expected": expected["expected_authority_mode"],
+                            "actual": effect_target.effect_target_authority_mode,
+                        }
+                    )
+                transition_profile = transition_profile_map.get(effect_target.effect_target_class)
+                if transition_profile is None:
+                    admissibility_violations.append(
+                        {
+                            "field": "transition_surface_profiles",
+                            "reason": "missing_effect_target_transition_profile",
+                            "gateway_class": row.gateway_class,
+                            "effect_target_class": effect_target.effect_target_class,
+                        }
+                    )
+                else:
+                    if transition_profile.transition_mode != effect_target.effect_target_transition_mode:
+                        admissibility_violations.append(
+                            {
+                                "field": "transition_surface_profiles",
+                                "reason": "effect_target_transition_profile_mismatch",
+                                "gateway_class": row.gateway_class,
+                                "effect_target_class": effect_target.effect_target_class,
+                                "expected": effect_target.effect_target_transition_mode,
+                                "actual": transition_profile.transition_mode,
+                            }
+                        )
+                    if bool(transition_profile.direct_current_turn_legality_allowed) != bool(row.current_turn_legality_terminal):
+                        admissibility_violations.append(
+                            {
+                                "field": "transition_surface_profiles",
+                                "reason": "effect_target_current_turn_legality_alignment_mismatch",
+                                "gateway_class": row.gateway_class,
+                                "effect_target_class": effect_target.effect_target_class,
+                                "expected": bool(row.current_turn_legality_terminal),
+                                "actual": bool(transition_profile.direct_current_turn_legality_allowed),
+                            }
+                        )
+                effect_authority_profile = authority_profile_map.get(effect_target.effect_target_class)
+                if effect_authority_profile is None:
+                    admissibility_violations.append(
+                        {
+                            "field": "authority_class_profiles",
+                            "reason": "missing_effect_target_authority_profile",
+                            "gateway_class": row.gateway_class,
+                            "effect_target_class": effect_target.effect_target_class,
+                        }
+                    )
+                elif effect_authority_profile.authority_mode != effect_target.effect_target_authority_mode:
+                    admissibility_violations.append(
+                        {
+                            "field": "authority_class_profiles",
+                            "reason": "effect_target_authority_profile_mismatch",
+                            "gateway_class": row.gateway_class,
+                            "effect_target_class": effect_target.effect_target_class,
+                            "expected": effect_target.effect_target_authority_mode,
+                            "actual": effect_authority_profile.authority_mode,
+                        }
+                    )
 
         if actual_gateway_order != expected_gateway_order:
             admissibility_violations.append(
@@ -476,6 +605,7 @@ def main() -> int:
         "root_dir": str(admissibility_doc.get("root_dir") or ""),
         "gateway_anchor_check_count": len(anchor_checks),
         "gateway_order_count": len(gateway_order_rows),
+        "gateway_effect_target_count": len(gateway_effect_targets),
         "gateway_profile_count": len(gateway_profiles),
         "current_turn_terminal_gateway": next(
             (row.gateway_class for row in gateway_profiles if row.current_turn_legality_terminal),
@@ -487,6 +617,15 @@ def main() -> int:
                 "gateway_class": row.gateway_class,
             }
             for row in sorted_gateway_order_rows
+        ],
+        "gateway_effect_targets": [
+            {
+                "gateway_class": row.gateway_class,
+                "effect_target_class": row.effect_target_class,
+                "effect_target_transition_mode": row.effect_target_transition_mode,
+                "effect_target_authority_mode": row.effect_target_authority_mode,
+            }
+            for row in sorted(gateway_effect_targets, key=lambda item: item.gateway_class)
         ],
         "expected_gateway_order": list(expected_gateway_order),
         "derived_gateway_inputs": {

@@ -21,6 +21,10 @@ gateway_anchor_checks:
   - '## Root gateway-admissibility discipline'
   - gateway admission decides which non-origin surfaces may legally motivate each
     root gateway;
+  - admission only permits governed re-entry at that gateway's own effect scope and
+    effect target class;
+  - gateway effect target stays fixed by gateway class itself; incoming motivation
+    may not choose a different root output class;
   - gateway admission does not let an incoming surface inherit the gateway's authorship.
   - 'The governed re-entry chain stays explicit as: constitution -> runtime constitution -> root contract -> machine-registry.'
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
@@ -29,11 +33,15 @@ gateway_anchor_checks:
   - a gateway is a legal re-entry port, not an origin substitute;
   - entering a gateway does not let an incoming surface inherit bottom-theory or constitutional
     authorship;
+  - gateway effect target stays fixed by gateway kind; entering one gateway does not
+    let incoming motivation choose a different downstream root class;
   - 'The governed re-entry chain must stay explicit as: constitution -> runtime constitution -> root contract -> machine-registry.'
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root gateway-admissibility boundary'
   - Gateway admission is narrower than general motivation to strengthen.
+  - Gateway effect target is fixed by gateway class itself; gateway admission cannot
+    directly emit a different root target class than the one governed for that gateway.
   - Machine-registry gateway may terminate current-turn legality, but that does not
     let incoming motivation surfaces author upstream law.
   - '   - governed re-entry chain: constitution -> runtime constitution -> root contract -> machine-registry'
@@ -42,9 +50,11 @@ gateway_anchor_checks:
   - '## Runtime-origin gateway-admissibility boundary'
   - Runtime-origin material may motivate only the gateways whose admissibility contract
     explicitly allows it;
+  - Runtime-origin admission cannot choose a different gateway effect target than
+    the class governed for that gateway.
   - Runtime motivation entering a gateway still requires governed refreezing or governed
     projection before it becomes shared law.
-  - '4. Runtime-origin gateway progression still follows the explicit re-entry chain: constitution -> runtime constitution -> root contract -> machine-registry.'
+  - '5. Runtime-origin gateway progression still follows the explicit re-entry chain: constitution -> runtime constitution -> root contract -> machine-registry.'
 gateway_order:
 - order: 1
   gateway_class: constitution
@@ -54,6 +64,23 @@ gateway_order:
   gateway_class: root_contract
 - order: 4
   gateway_class: machine_registry_directory
+gateway_effect_targets:
+- gateway_class: constitution
+  effect_target_class: constitution
+  effect_target_transition_mode: constitutional_freeze
+  effect_target_authority_mode: frozen_law_only
+- gateway_class: runtime_constitution
+  effect_target_class: runtime_constitution
+  effect_target_transition_mode: runtime_constitutional_freeze
+  effect_target_authority_mode: frozen_law_only
+- gateway_class: root_contract
+  effect_target_class: root_contract
+  effect_target_transition_mode: domain_contract_freeze
+  effect_target_authority_mode: frozen_law_only
+- gateway_class: machine_registry_directory
+  effect_target_class: machine_registry_directory
+  effect_target_transition_mode: machine_registry_projection
+  effect_target_authority_mode: machine_consumed_family
 gateway_profiles:
 - gateway_class: constitution
   gateway_scope: root
