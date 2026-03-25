@@ -40,12 +40,17 @@ assert payload["descriptor_repo_rel_path_pattern_fallback_policy"] == "fail_clos
 assert payload["descriptor_repo_rel_path_discipline_inheritance_mode"] == "inherit_machine_registry_completeness_current_only", payload
 assert payload["descriptor_repo_rel_path_discipline_local_override_policy"] == "forbidden", payload
 assert payload["descriptor_repo_rel_path_discipline_fallback_policy"] == "fail_closed", payload
+assert payload["component_current_version_naming_inheritance_mode"] == "inherit_machine_registry_completeness_current_only", payload
+assert payload["component_current_version_naming_local_override_policy"] == "forbidden", payload
+assert payload["component_current_version_naming_fallback_policy"] == "fail_closed", payload
 assert payload["component_descriptor_resolution_mode"] == "current_alias_only", payload
 assert payload["component_descriptor_version_pinning_policy"] == "forbidden", payload
 assert payload["bundle_redeclares_required_repo_rel_path_patterns"] is False, payload
 assert payload["bundle_local_required_repo_rel_path_patterns"] == {}, payload
 assert payload["bundle_redeclares_repo_rel_path_governance"] is False, payload
 assert payload["bundle_local_repo_rel_path_governance"] == {}, payload
+assert payload["bundle_redeclares_component_naming_governance"] is False, payload
+assert payload["bundle_local_component_naming_governance"] == {}, payload
 assert payload["required_component_descriptor_fields"] == [
     "validator_script",
     "probe_script",
@@ -70,6 +75,11 @@ assert payload["source_repo_rel_path_scope_policy"] == "repo_root_relative_only"
 assert payload["source_repo_rel_path_escape_policy"] == "fail_closed", payload
 assert payload["source_repo_rel_path_role_typing_policy"] == "root_protocol_surface_patterns_required", payload
 assert payload["source_repo_rel_path_surface_stem_policy"] == "cross_role_stem_coherent", payload
+assert payload["source_root_family_prefix"] == "root-", payload
+assert payload["source_current_suffix"] == ".current.yaml", payload
+assert payload["source_version_regex"] == "^root-[a-z0-9-]+\\.v[0-9]+\\.yaml$", payload
+assert payload["source_require_current_version_pairs"] is True, payload
+assert payload["source_require_self_describing_families"] is True, payload
 assert all(row["component_status"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
 assert all(
     all(cell["status"] == "PASS_REQUIRED" for cell in row.get("descriptor_field_rows", []))
@@ -306,6 +316,113 @@ assert any(
     row["component_id"] == "root_machine_registry_completeness"
     and row["reason"] == "descriptor_repo_rel_path_governance_missing_from_machine_registry_completeness"
     and "repo_rel_path_scope_policy" in row["missing_policy_fields"]
+    for row in payload["bundle_violations"]
+), payload
+PY
+
+COMPONENT_NAMING_POLICY_REPO="${TMP_ROOT}/component-current-version-naming-policy-drift-repo"
+mirror_repo "${COMPONENT_NAMING_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_NAMING_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_current_version_naming_local_override_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_NAMING_POLICY_JSON="${TMP_ROOT}/component-current-version-naming-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_NAMING_POLICY_REPO}" \
+  --json-only >"${COMPONENT_NAMING_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component current/version naming policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_NAMING_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_current_version_naming_local_override_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_NAMING_LOCAL_REDECLARATION_REPO="${TMP_ROOT}/component-current-version-naming-local-redeclaration-repo"
+mirror_repo "${COMPONENT_NAMING_LOCAL_REDECLARATION_REPO}"
+python3 - <<'PY' "${COMPONENT_NAMING_LOCAL_REDECLARATION_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["current_suffix"] = ".shadow.yaml"
+doc["version_regex"] = "^shadow-[a-z0-9-]+\\.v[0-9]+\\.yaml$"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_NAMING_LOCAL_REDECLARATION_JSON="${TMP_ROOT}/component-current-version-naming-local-redeclaration.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_NAMING_LOCAL_REDECLARATION_REPO}" \
+  --json-only >"${COMPONENT_NAMING_LOCAL_REDECLARATION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed local component current/version naming redeclaration"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_NAMING_LOCAL_REDECLARATION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "component_current_version_naming_governance_local_redeclaration_forbidden"
+    for row in payload["bundle_violations"]
+), payload
+assert payload["bundle_redeclares_component_naming_governance"] is True, payload
+PY
+
+SOURCE_COMPONENT_NAMING_REPO="${TMP_ROOT}/component-current-version-naming-source-missing-repo"
+mirror_repo "${SOURCE_COMPONENT_NAMING_REPO}"
+python3 - <<'PY' "${SOURCE_COMPONENT_NAMING_REPO}/identity/protocol/mappings/root-machine-registry-completeness.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["current_suffix"] = ""
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SOURCE_COMPONENT_NAMING_JSON="${TMP_ROOT}/component-current-version-naming-source-missing.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SOURCE_COMPONENT_NAMING_REPO}" \
+  --json-only >"${SOURCE_COMPONENT_NAMING_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed missing source current/version naming law"
+  exit 1
+fi
+
+python3 - <<'PY' "${SOURCE_COMPONENT_NAMING_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "component_current_version_naming_governance_missing_from_machine_registry_completeness"
+    and "current_suffix" in row["missing_policy_fields"]
     for row in payload["bundle_violations"]
 ), payload
 PY

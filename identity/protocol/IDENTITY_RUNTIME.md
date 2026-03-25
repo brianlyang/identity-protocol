@@ -149,6 +149,14 @@ If the admitted source does not disclose that repo-relative discipline,
 runtime must fail-close rather than locally reconstructing descriptor-path
 legality law.
 
+Runtime must also reject a root-law bundle that redeclares or weakens
+machine-registry completeness current/version naming law; root family prefix,
+current-entry suffix, active-version regex, and current/version pair
+requirement must be inherited from the admitted source component.
+
+If the admitted source does not disclose that naming law, runtime must
+fail-close rather than locally reconstructing current/version mediation law.
+
 Runtime must also treat bundle component descriptors as current-entry
 mediated; runtime resolves component legality through admitted current rows,
 not direct version-file pinning.

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 from typing import Any
 
@@ -14,6 +15,9 @@ from root_corpus_law_bundle_common import (
     STATUS_PASS_REQUIRED,
     bundle_anchor_checks_from_doc,
     bundle_components_from_doc,
+    component_current_version_naming_fallback_policy_from_doc,
+    component_current_version_naming_inheritance_mode_from_doc,
+    component_current_version_naming_local_override_policy_from_doc,
     component_mapping_family_id_from_current_file,
     component_descriptor_resolution_mode_from_doc,
     component_descriptor_version_pinning_policy_from_doc,
@@ -43,6 +47,7 @@ from root_machine_registry_completeness_common import (
     family_surface_stem_binding_policy_from_doc,
     family_surface_stem_overrides_from_doc,
     load_root_machine_registry_completeness,
+    require_self_describing_families,
     repo_rel_path_escape_policy_from_doc,
     repo_rel_path_role_typing_policy_from_doc,
     repo_rel_path_scope_policy_from_doc,
@@ -272,6 +277,15 @@ def main() -> int:
     descriptor_repo_rel_path_discipline_fallback_policy = (
         descriptor_repo_rel_path_discipline_fallback_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_current_version_naming_inheritance_mode = (
+        component_current_version_naming_inheritance_mode_from_doc(bundle_doc) if bundle_doc else ""
+    )
+    component_current_version_naming_local_override_policy = (
+        component_current_version_naming_local_override_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
+    component_current_version_naming_fallback_policy = (
+        component_current_version_naming_fallback_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     component_descriptor_resolution_mode = component_descriptor_resolution_mode_from_doc(bundle_doc) if bundle_doc else ""
     component_descriptor_version_pinning_policy = (
         component_descriptor_version_pinning_policy_from_doc(bundle_doc) if bundle_doc else ""
@@ -317,6 +331,15 @@ def main() -> int:
         if machine_registry_completeness_doc
         else ""
     )
+    source_root_family_prefix = str(machine_registry_completeness_doc.get("root_family_prefix") or "").strip()
+    source_current_suffix = str(machine_registry_completeness_doc.get("current_suffix") or "").strip()
+    source_version_regex = str(machine_registry_completeness_doc.get("version_regex") or "").strip()
+    source_require_current_version_pairs = bool(
+        machine_registry_completeness_doc.get("require_current_version_pairs") is True
+    )
+    source_require_self_describing_families = (
+        require_self_describing_families(machine_registry_completeness_doc) if machine_registry_completeness_doc else False
+    )
     bundle_local_required_repo_rel_path_patterns = (
         required_repo_rel_path_patterns_from_doc(bundle_doc) if bundle_doc else {}
     )
@@ -334,6 +357,12 @@ def main() -> int:
         if bool(bundle_doc) and key in bundle_doc
     }
     bundle_redeclares_repo_rel_path_governance = bool(bundle_local_repo_rel_path_governance)
+    bundle_local_component_naming_governance = {
+        key: (bundle_doc.get(key) if key == "require_current_version_pairs" else str(bundle_doc.get(key) or "").strip())
+        for key in ("root_family_prefix", "current_suffix", "version_regex", "require_current_version_pairs")
+        if bool(bundle_doc) and key in bundle_doc
+    }
+    bundle_redeclares_component_naming_governance = bool(bundle_local_component_naming_governance)
     component_map = {row.component_id: row for row in components}
     sorted_components = sorted(components, key=lambda row: row.order)
     component_orders = [row.order for row in components]
@@ -400,6 +429,15 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if descriptor_repo_rel_path_discipline_fallback_policy != "fail_closed":
             stale_reasons.append("root_corpus_law_bundle_descriptor_repo_rel_path_discipline_fallback_policy_invalid")
+            error_code = ERR_REGISTRY
+        if component_current_version_naming_inheritance_mode != "inherit_machine_registry_completeness_current_only":
+            stale_reasons.append("root_corpus_law_bundle_component_current_version_naming_inheritance_mode_invalid")
+            error_code = ERR_REGISTRY
+        if component_current_version_naming_local_override_policy != "forbidden":
+            stale_reasons.append("root_corpus_law_bundle_component_current_version_naming_local_override_policy_invalid")
+            error_code = ERR_REGISTRY
+        if component_current_version_naming_fallback_policy != "fail_closed":
+            stale_reasons.append("root_corpus_law_bundle_component_current_version_naming_fallback_policy_invalid")
             error_code = ERR_REGISTRY
         if component_descriptor_resolution_mode != "current_alias_only":
             stale_reasons.append("root_corpus_law_bundle_component_descriptor_resolution_mode_invalid")
@@ -512,6 +550,40 @@ def main() -> int:
                     "missing_policy_fields": missing_repo_rel_path_governance_fields,
                 }
             )
+        if bundle_redeclares_component_naming_governance:
+            bundle_violations.append(
+                {
+                    "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                    "reason": "component_current_version_naming_governance_local_redeclaration_forbidden",
+                    "bundle_local_component_naming_governance": dict(bundle_local_component_naming_governance),
+                }
+            )
+        missing_component_naming_fields = [
+            field_name
+            for field_name, field_value in (
+                ("root_family_prefix", source_root_family_prefix),
+                ("current_suffix", source_current_suffix),
+                ("version_regex", source_version_regex),
+            )
+            if not field_value
+        ]
+        if not source_require_current_version_pairs:
+            missing_component_naming_fields.append("require_current_version_pairs")
+        if missing_component_naming_fields:
+            bundle_violations.append(
+                {
+                    "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                    "reason": "component_current_version_naming_governance_missing_from_machine_registry_completeness",
+                    "missing_policy_fields": missing_component_naming_fields,
+                }
+            )
+        if not source_require_self_describing_families:
+            bundle_violations.append(
+                {
+                    "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                    "reason": "descriptor_self_describing_family_requirement_not_inherited_from_machine_registry_completeness",
+                }
+            )
         if descriptor_concordance_required and not required_component_descriptor_fields:
             stale_reasons.append("root_corpus_law_bundle_required_component_descriptor_fields_missing")
             error_code = ERR_REGISTRY
@@ -566,12 +638,13 @@ def main() -> int:
             expected = EXPECTED_COMPONENTS.get(row.component_id)
             if expected is None:
                 continue
-            if not row.current_file.endswith(".current.yaml"):
+            if source_current_suffix and not row.current_file.endswith(source_current_suffix):
                 bundle_violations.append(
                     {
                         "component_id": row.component_id,
                         "reason": "component_descriptor_not_current_entry",
                         "current_file": row.current_file,
+                        "expected_current_suffix": source_current_suffix,
                     }
                 )
             for field in (
@@ -615,6 +688,15 @@ def main() -> int:
                             "active_path": str(active_path),
                         }
                     )
+                elif source_version_regex and re.fullmatch(source_version_regex, active_path.name) is None:
+                    bundle_violations.append(
+                        {
+                            "component_id": row.component_id,
+                            "reason": "component_active_file_not_inherited_version_pattern",
+                            "active_file": active_path.name,
+                            "source_version_regex": source_version_regex,
+                        }
+                    )
 
             validator_path = (repo_root / row.validator_script).resolve()
             if not validator_path.exists():
@@ -632,6 +714,17 @@ def main() -> int:
             component_mapping_family_id, component_mapping_family_id_error = component_mapping_family_id_from_current_file(
                 row.current_file
             )
+            if component_mapping_family_id and source_root_family_prefix and not component_mapping_family_id.startswith(
+                source_root_family_prefix
+            ):
+                bundle_violations.append(
+                    {
+                        "component_id": row.component_id,
+                        "reason": "component_family_id_outside_inherited_root_family_prefix",
+                        "component_mapping_family_id": component_mapping_family_id,
+                        "source_root_family_prefix": source_root_family_prefix,
+                    }
+                )
             default_expected_component_surface_stem = ""
             default_expected_component_surface_stem_error = ""
             if component_mapping_family_id:
@@ -864,6 +957,9 @@ def main() -> int:
         "descriptor_repo_rel_path_discipline_inheritance_mode": descriptor_repo_rel_path_discipline_inheritance_mode,
         "descriptor_repo_rel_path_discipline_local_override_policy": descriptor_repo_rel_path_discipline_local_override_policy,
         "descriptor_repo_rel_path_discipline_fallback_policy": descriptor_repo_rel_path_discipline_fallback_policy,
+        "component_current_version_naming_inheritance_mode": component_current_version_naming_inheritance_mode,
+        "component_current_version_naming_local_override_policy": component_current_version_naming_local_override_policy,
+        "component_current_version_naming_fallback_policy": component_current_version_naming_fallback_policy,
         "component_descriptor_resolution_mode": component_descriptor_resolution_mode,
         "component_descriptor_version_pinning_policy": component_descriptor_version_pinning_policy,
         "bundle_anchor_check_count": len(anchor_checks),
@@ -879,10 +975,17 @@ def main() -> int:
         "source_repo_rel_path_escape_policy": source_repo_rel_path_escape_policy,
         "source_repo_rel_path_role_typing_policy": source_repo_rel_path_role_typing_policy,
         "source_repo_rel_path_surface_stem_policy": source_repo_rel_path_surface_stem_policy,
+        "source_root_family_prefix": source_root_family_prefix,
+        "source_current_suffix": source_current_suffix,
+        "source_version_regex": source_version_regex,
+        "source_require_current_version_pairs": source_require_current_version_pairs,
+        "source_require_self_describing_families": source_require_self_describing_families,
         "bundle_redeclares_required_repo_rel_path_patterns": bundle_redeclares_required_repo_rel_path_patterns,
         "bundle_local_required_repo_rel_path_patterns": dict(bundle_local_required_repo_rel_path_patterns),
         "bundle_redeclares_repo_rel_path_governance": bundle_redeclares_repo_rel_path_governance,
         "bundle_local_repo_rel_path_governance": dict(bundle_local_repo_rel_path_governance),
+        "bundle_redeclares_component_naming_governance": bundle_redeclares_component_naming_governance,
+        "bundle_local_component_naming_governance": dict(bundle_local_component_naming_governance),
         "source_required_repo_rel_path_patterns": dict(source_required_repo_rel_path_patterns),
         "component_status_rows": component_status_rows,
         "structure_violations": structure_violations,

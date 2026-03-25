@@ -418,6 +418,17 @@ If the admitted source does not disclose that repo-relative discipline, the
 machine world must fail-close rather than locally reconstructing descriptor
 path legality from bundle convenience.
 
+Bundle current/version naming law must also remain inherited from
+machine-registry completeness.
+
+Root family prefix, current-entry suffix, active-version regex, and the
+requirement that admitted mapping families remain current/version paired
+belong to that source law rather than to local bundle restatement.
+
+If the admitted source does not disclose that naming law, the machine world
+must fail-close rather than locally reconstructing current/version mediation
+from bundle convention.
+
 Bundle component descriptors must remain current-entry mediated as well.
 
 The bundle names admitted component current rows and resolves active version

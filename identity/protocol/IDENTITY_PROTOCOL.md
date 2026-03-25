@@ -205,6 +205,15 @@ If the admitted source does not disclose that repo-relative discipline,
 protocol legality must fail-close rather than locally reconstructing
 descriptor-path legality law.
 
+The bundle must also inherit machine-registry completeness current/version
+naming law; root family prefix, current-entry suffix, active-version regex,
+and current/version pair requirement may not be silently redeclared,
+weakened, or guessed inside the bundle.
+
+If the admitted source does not disclose that naming law, protocol legality
+must fail-close rather than locally reconstructing current/version mediation
+law.
+
 Bundle component descriptors must also stay current-entry mediated; bundle
 rows bind through admitted component current mappings, not direct version-file
 pinning.
