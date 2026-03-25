@@ -408,6 +408,8 @@ registered_top_level_entries:
       - root-protocol-instance-responsibility.v1.yaml
       - root-stream-design-admissibility.current.yaml
       - root-stream-design-admissibility.v1.yaml
+      - root-design-question-closure.current.yaml
+      - root-design-question-closure.v1.yaml
       - root-truth-lifecycle.current.yaml
       - root-truth-lifecycle.v1.yaml
       - root-operator-answer-surface.current.yaml

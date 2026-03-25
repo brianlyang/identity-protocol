@@ -625,6 +625,12 @@ Before any new protocol stream, shared strengthening, owner split, or runtime ex
 4. **Responsibility-split question**: Is this a shared-law problem or an instance-adaptation problem?
 5. **Answer-surface question**: What is the stable answer surface ultimately delivered to the operator?
 
+These five design questions are not self-certifying.
+
+Admissibility may ask them once, but lawful ingress requires the corresponding
+downstream root-law closures to remain machine-governed rather than being left
+implicit.
+
 If a new stream cannot answer these five questions, it probably has not yet been elevated from a local technique to a real protocol extension.
 
 ---

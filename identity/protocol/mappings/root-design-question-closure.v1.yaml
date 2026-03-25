@@ -1,0 +1,76 @@
+schema_version: 1
+closure_family: protocol_root_design_question_closure
+closure_version: v1
+root_dir: identity/protocol
+philosophy_anchor_file: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+admissibility_current_file: identity/protocol/mappings/root-stream-design-admissibility.current.yaml
+registry_current_file: identity/protocol/mappings/root-corpus-registry.current.yaml
+validator_script: scripts/validate_protocol_root_design_question_closure.py
+probe_script: scripts/ci/run_protocol_root_design_question_closure_probes_ci.sh
+common_script: scripts/root_design_question_closure_common.py
+required_question_closure_rows:
+  - order: 1
+    question_id: ontology
+    philosophy_marker: '1. **Ontology question**: What exactly is the new object, and is its ontology unambiguous?'
+    admissibility_question_id: ontology
+    admissibility_normative_focus: object_identity_and_non_collapse
+    target_component_id: root_machine_world_ontology
+    target_current_file: identity/protocol/mappings/root-machine-world-ontology.current.yaml
+    target_validator_script: scripts/validate_protocol_root_machine_world_ontology.py
+    target_status_key: protocol_root_machine_world_ontology_status
+    target_contract_file: identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md
+    target_required_markers:
+      - '## Machine-world ontology law'
+      - '## Required ontology objects'
+  - order: 2
+    question_id: truth_lifecycle
+    philosophy_marker: '2. **Truth-lifecycle question**: Where is the canonical truth; how is it discovered by instances, admitted, bound to the current run / current thread, and consumed by the next hop; and do state, receipt, validator, and bundle all close around that lifecycle?'
+    admissibility_question_id: truth_lifecycle
+    admissibility_normative_focus: canonical_truth_discoverability_admissibility_binding_consumption
+    target_component_id: root_truth_lifecycle
+    target_current_file: identity/protocol/mappings/root-truth-lifecycle.current.yaml
+    target_validator_script: scripts/validate_protocol_root_truth_lifecycle.py
+    target_status_key: protocol_root_truth_lifecycle_status
+    target_contract_file: identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md
+    target_required_markers:
+      - '## Truth-lifecycle law'
+      - '## Five lifecycle stages'
+  - order: 3
+    question_id: normative
+    philosophy_marker: '3. **Normative question**: Which actions are permitted, which boundaries must fail-close, and which success-path conditions are required?'
+    admissibility_question_id: normative
+    admissibility_normative_focus: allowed_actions_fail_close_success_path_and_forbidden_shortcuts
+    target_component_id: root_stream_design_admissibility
+    target_current_file: identity/protocol/mappings/root-stream-design-admissibility.current.yaml
+    target_validator_script: scripts/validate_protocol_root_stream_design_admissibility.py
+    target_status_key: protocol_root_stream_design_admissibility_status
+    target_contract_file: identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md
+    target_required_markers:
+      - '### 3. Normative question'
+      - '### 3. Normative-closure proof'
+  - order: 4
+    question_id: responsibility_split
+    philosophy_marker: '4. **Responsibility-split question**: Is this a shared-law problem or an instance-adaptation problem?'
+    admissibility_question_id: responsibility_split
+    admissibility_normative_focus: protocol_instance_operator_boundary
+    target_component_id: root_protocol_instance_responsibility
+    target_current_file: identity/protocol/mappings/root-protocol-instance-responsibility.current.yaml
+    target_validator_script: scripts/validate_protocol_root_protocol_instance_responsibility.py
+    target_status_key: protocol_root_protocol_instance_responsibility_status
+    target_contract_file: identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md
+    target_required_markers:
+      - '## Responsibility law'
+      - 'The protocol defines the law of the world; the instance converges its runtime back to that law.'
+  - order: 5
+    question_id: answer_surface
+    philosophy_marker: '5. **Answer-surface question**: What is the stable answer surface ultimately delivered to the operator?'
+    admissibility_question_id: answer_surface
+    admissibility_normative_focus: stable_operator_delivery_surface
+    target_component_id: root_operator_answer_surface
+    target_current_file: identity/protocol/mappings/root-operator-answer-surface.current.yaml
+    target_validator_script: scripts/validate_protocol_root_operator_answer_surface.py
+    target_status_key: protocol_root_operator_answer_surface_status
+    target_contract_file: identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md
+    target_required_markers:
+      - '## Operator answer-surface law'
+      - '## Compression boundary'

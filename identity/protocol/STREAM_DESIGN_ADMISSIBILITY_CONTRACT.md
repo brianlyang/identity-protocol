@@ -212,6 +212,11 @@ Admissible answers to the five design questions must be projected into governed 
 
 Presence in one surface alone is insufficient.
 
+A required design question is not closed merely because this contract names
+it. When the question points to a dedicated downstream root-domain contract,
+lawful ingress also requires that downstream closure to remain
+machine-governed.
+
 ## Admissibility outcome classes
 
 A proposal must be classified into one of these outcome classes before implementation is treated as shared-law work:
