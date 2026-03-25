@@ -429,6 +429,17 @@ If the admitted source does not disclose that naming law, the machine world
 must fail-close rather than locally reconstructing current/version mediation
 from bundle convention.
 
+Bundle registry-child admission law must also remain inherited from
+machine-registry completeness.
+
+The canonical registry directory, the admitted registry-current entry, and the
+registered child set that legalizes component current/version files belong to
+that source law rather than to local bundle restatement.
+
+If the admitted source does not disclose that registry-child admission law,
+the machine world must fail-close rather than locally reconstructing component
+admission from bundle convenience.
+
 Bundle component descriptors must remain current-entry mediated as well.
 
 The bundle names admitted component current rows and resolves active version

@@ -3,18 +3,22 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 import re
 import subprocess
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
 from registry_alias_control_plane_common import resolve_current_yaml_alias
-from root_corpus_governance_common import find_missing_markers
+from root_corpus_governance_common import find_missing_markers, root_corpus_entries_from_registry
 from root_corpus_law_bundle_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     bundle_anchor_checks_from_doc,
     bundle_components_from_doc,
+    component_registry_child_membership_fallback_policy_from_doc,
+    component_registry_child_membership_inheritance_mode_from_doc,
+    component_registry_child_membership_local_override_policy_from_doc,
     component_current_version_naming_fallback_policy_from_doc,
     component_current_version_naming_inheritance_mode_from_doc,
     component_current_version_naming_local_override_policy_from_doc,
@@ -286,6 +290,15 @@ def main() -> int:
     component_current_version_naming_fallback_policy = (
         component_current_version_naming_fallback_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_registry_child_membership_inheritance_mode = (
+        component_registry_child_membership_inheritance_mode_from_doc(bundle_doc) if bundle_doc else ""
+    )
+    component_registry_child_membership_local_override_policy = (
+        component_registry_child_membership_local_override_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
+    component_registry_child_membership_fallback_policy = (
+        component_registry_child_membership_fallback_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     component_descriptor_resolution_mode = component_descriptor_resolution_mode_from_doc(bundle_doc) if bundle_doc else ""
     component_descriptor_version_pinning_policy = (
         component_descriptor_version_pinning_policy_from_doc(bundle_doc) if bundle_doc else ""
@@ -340,6 +353,8 @@ def main() -> int:
     source_require_self_describing_families = (
         require_self_describing_families(machine_registry_completeness_doc) if machine_registry_completeness_doc else False
     )
+    source_registry_directory_rel_path = str(machine_registry_completeness_doc.get("registry_directory_rel_path") or "").strip()
+    source_registry_current_file = str(machine_registry_completeness_doc.get("registry_current_file") or "").strip()
     bundle_local_required_repo_rel_path_patterns = (
         required_repo_rel_path_patterns_from_doc(bundle_doc) if bundle_doc else {}
     )
@@ -363,6 +378,13 @@ def main() -> int:
         if bool(bundle_doc) and key in bundle_doc
     }
     bundle_redeclares_component_naming_governance = bool(bundle_local_component_naming_governance)
+    bundle_local_registry_child_membership_governance = {
+        key: str(bundle_doc.get(key) or "").strip()
+        for key in ("registry_directory_rel_path", "registry_current_file")
+        if bool(bundle_doc) and key in bundle_doc
+    }
+    bundle_redeclares_registry_child_membership_governance = bool(bundle_local_registry_child_membership_governance)
+    source_registered_mapping_children: set[str] = set()
     component_map = {row.component_id: row for row in components}
     sorted_components = sorted(components, key=lambda row: row.order)
     component_orders = [row.order for row in components]
@@ -438,6 +460,19 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_current_version_naming_fallback_policy != "fail_closed":
             stale_reasons.append("root_corpus_law_bundle_component_current_version_naming_fallback_policy_invalid")
+            error_code = ERR_REGISTRY
+        if component_registry_child_membership_inheritance_mode != "inherit_machine_registry_completeness_current_only":
+            stale_reasons.append(
+                "root_corpus_law_bundle_component_registry_child_membership_inheritance_mode_invalid"
+            )
+            error_code = ERR_REGISTRY
+        if component_registry_child_membership_local_override_policy != "forbidden":
+            stale_reasons.append(
+                "root_corpus_law_bundle_component_registry_child_membership_local_override_policy_invalid"
+            )
+            error_code = ERR_REGISTRY
+        if component_registry_child_membership_fallback_policy != "fail_closed":
+            stale_reasons.append("root_corpus_law_bundle_component_registry_child_membership_fallback_policy_invalid")
             error_code = ERR_REGISTRY
         if component_descriptor_resolution_mode != "current_alias_only":
             stale_reasons.append("root_corpus_law_bundle_component_descriptor_resolution_mode_invalid")
@@ -584,6 +619,32 @@ def main() -> int:
                     "reason": "descriptor_self_describing_family_requirement_not_inherited_from_machine_registry_completeness",
                 }
             )
+        if bundle_redeclares_registry_child_membership_governance:
+            bundle_violations.append(
+                {
+                    "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                    "reason": "component_registry_child_membership_governance_local_redeclaration_forbidden",
+                    "bundle_local_registry_child_membership_governance": dict(
+                        bundle_local_registry_child_membership_governance
+                    ),
+                }
+            )
+        missing_registry_child_membership_fields = [
+            field_name
+            for field_name, field_value in (
+                ("registry_directory_rel_path", source_registry_directory_rel_path),
+                ("registry_current_file", source_registry_current_file),
+            )
+            if not field_value
+        ]
+        if missing_registry_child_membership_fields:
+            bundle_violations.append(
+                {
+                    "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                    "reason": "component_registry_child_membership_governance_missing_from_machine_registry_completeness",
+                    "missing_policy_fields": missing_registry_child_membership_fields,
+                }
+            )
         if descriptor_concordance_required and not required_component_descriptor_fields:
             stale_reasons.append("root_corpus_law_bundle_required_component_descriptor_fields_missing")
             error_code = ERR_REGISTRY
@@ -623,6 +684,64 @@ def main() -> int:
                 }
             )
 
+        registry_entry_path = None
+        registry_active_path = None
+        registry_alias_error = ""
+        registry_doc: dict[str, Any] = {}
+        if source_registry_current_file:
+            registry_entry_path = (repo_root / source_registry_current_file).resolve()
+            registry_active_path, _registry_active_file, registry_alias_error = resolve_current_yaml_alias(
+                repo_root, source_registry_current_file
+            )
+            if registry_alias_error:
+                bundle_violations.append(
+                    {
+                        "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                        "reason": "source_registry_current_alias_error",
+                        "source_registry_current_file": source_registry_current_file,
+                        "alias_error": registry_alias_error,
+                    }
+                )
+            elif not registry_active_path.exists():
+                bundle_violations.append(
+                    {
+                        "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                        "reason": "source_registry_active_file_missing",
+                        "source_registry_current_file": source_registry_current_file,
+                        "active_path": str(registry_active_path),
+                    }
+                )
+            else:
+                registry_doc = load_mapping_descriptor(registry_active_path)
+                if not registry_doc:
+                    bundle_violations.append(
+                        {
+                            "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                            "reason": "source_registry_active_doc_invalid",
+                            "source_registry_current_file": source_registry_current_file,
+                            "active_path": str(registry_active_path),
+                        }
+                    )
+                else:
+                    registry_entry_map = {
+                        entry.rel_path: entry for entry in root_corpus_entries_from_registry(registry_doc)
+                    }
+                    mappings_entry = registry_entry_map.get(source_registry_directory_rel_path)
+                    if mappings_entry is None:
+                        bundle_violations.append(
+                            {
+                                "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                                "reason": "source_registry_directory_not_admitted_in_registry_child_set",
+                                "source_registry_directory_rel_path": source_registry_directory_rel_path,
+                                "source_registry_current_file": source_registry_current_file,
+                            }
+                        )
+                    else:
+                        source_registered_mapping_children = {
+                            str((Path(source_registry_directory_rel_path) / child).as_posix())
+                            for child in mappings_entry.required_children
+                        }
+
         missing_components = sorted(set(EXPECTED_COMPONENTS) - set(component_map))
         extra_components = sorted(set(component_map) - set(EXPECTED_COMPONENTS))
         if missing_components:
@@ -645,6 +764,26 @@ def main() -> int:
                         "reason": "component_descriptor_not_current_entry",
                         "current_file": row.current_file,
                         "expected_current_suffix": source_current_suffix,
+                    }
+                )
+            if source_registry_directory_rel_path and not row.current_file.startswith(
+                f"{source_registry_directory_rel_path}/"
+            ):
+                bundle_violations.append(
+                    {
+                        "component_id": row.component_id,
+                        "reason": "component_current_file_outside_inherited_registry_directory",
+                        "current_file": row.current_file,
+                        "source_registry_directory_rel_path": source_registry_directory_rel_path,
+                    }
+                )
+            if source_registered_mapping_children and row.current_file not in source_registered_mapping_children:
+                bundle_violations.append(
+                    {
+                        "component_id": row.component_id,
+                        "reason": "component_current_file_not_admitted_by_inherited_registry_child_set",
+                        "current_file": row.current_file,
+                        "source_registry_directory_rel_path": source_registry_directory_rel_path,
                     }
                 )
             for field in (
@@ -697,6 +836,17 @@ def main() -> int:
                             "source_version_regex": source_version_regex,
                         }
                     )
+                else:
+                    active_rel_path = str(active_path.relative_to(repo_root.resolve()).as_posix())
+                    if source_registered_mapping_children and active_rel_path not in source_registered_mapping_children:
+                        bundle_violations.append(
+                            {
+                                "component_id": row.component_id,
+                                "reason": "component_active_file_not_admitted_by_inherited_registry_child_set",
+                                "active_rel_path": active_rel_path,
+                                "source_registry_directory_rel_path": source_registry_directory_rel_path,
+                            }
+                        )
 
             validator_path = (repo_root / row.validator_script).resolve()
             if not validator_path.exists():
@@ -960,6 +1110,9 @@ def main() -> int:
         "component_current_version_naming_inheritance_mode": component_current_version_naming_inheritance_mode,
         "component_current_version_naming_local_override_policy": component_current_version_naming_local_override_policy,
         "component_current_version_naming_fallback_policy": component_current_version_naming_fallback_policy,
+        "component_registry_child_membership_inheritance_mode": component_registry_child_membership_inheritance_mode,
+        "component_registry_child_membership_local_override_policy": component_registry_child_membership_local_override_policy,
+        "component_registry_child_membership_fallback_policy": component_registry_child_membership_fallback_policy,
         "component_descriptor_resolution_mode": component_descriptor_resolution_mode,
         "component_descriptor_version_pinning_policy": component_descriptor_version_pinning_policy,
         "bundle_anchor_check_count": len(anchor_checks),
@@ -980,12 +1133,17 @@ def main() -> int:
         "source_version_regex": source_version_regex,
         "source_require_current_version_pairs": source_require_current_version_pairs,
         "source_require_self_describing_families": source_require_self_describing_families,
+        "source_registry_directory_rel_path": source_registry_directory_rel_path,
+        "source_registry_current_file": source_registry_current_file,
+        "source_registered_mapping_children_count": len(source_registered_mapping_children),
         "bundle_redeclares_required_repo_rel_path_patterns": bundle_redeclares_required_repo_rel_path_patterns,
         "bundle_local_required_repo_rel_path_patterns": dict(bundle_local_required_repo_rel_path_patterns),
         "bundle_redeclares_repo_rel_path_governance": bundle_redeclares_repo_rel_path_governance,
         "bundle_local_repo_rel_path_governance": dict(bundle_local_repo_rel_path_governance),
         "bundle_redeclares_component_naming_governance": bundle_redeclares_component_naming_governance,
         "bundle_local_component_naming_governance": dict(bundle_local_component_naming_governance),
+        "bundle_redeclares_registry_child_membership_governance": bundle_redeclares_registry_child_membership_governance,
+        "bundle_local_registry_child_membership_governance": dict(bundle_local_registry_child_membership_governance),
         "source_required_repo_rel_path_patterns": dict(source_required_repo_rel_path_patterns),
         "component_status_rows": component_status_rows,
         "structure_violations": structure_violations,

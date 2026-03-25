@@ -157,6 +157,16 @@ requirement must be inherited from the admitted source component.
 If the admitted source does not disclose that naming law, runtime must
 fail-close rather than locally reconstructing current/version mediation law.
 
+Runtime must also reject a root-law bundle that redeclares or weakens
+machine-registry completeness registry-child admission law; canonical registry
+directory, admitted registry-current entry, and registered child-set
+membership for component current/version files must be inherited from the
+admitted source component.
+
+If the admitted source does not disclose that registry-child admission law,
+runtime must fail-close rather than locally reconstructing component-admission
+law.
+
 Runtime must also treat bundle component descriptors as current-entry
 mediated; runtime resolves component legality through admitted current rows,
 not direct version-file pinning.

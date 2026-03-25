@@ -214,6 +214,15 @@ If the admitted source does not disclose that naming law, protocol legality
 must fail-close rather than locally reconstructing current/version mediation
 law.
 
+The bundle must also inherit machine-registry completeness registry-child
+admission law; canonical registry directory, admitted registry-current entry,
+and registered child-set membership for component current/version files may
+not be silently redeclared, weakened, or guessed inside the bundle.
+
+If the admitted source does not disclose that registry-child admission law,
+protocol legality must fail-close rather than locally reconstructing
+component-admission law.
+
 Bundle component descriptors must also stay current-entry mediated; bundle
 rows bind through admitted component current mappings, not direct version-file
 pinning.

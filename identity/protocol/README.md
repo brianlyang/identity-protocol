@@ -455,6 +455,17 @@ not be silently redeclared or weakened inside the bundle.
 If the admitted source does not disclose that naming law, the machine world
 must fail-close rather than locally reconstructing current/version mediation.
 
+The bundle must also inherit machine-registry completeness registry-child
+admission law.
+
+The canonical registry directory, the admitted registry-current entry, and
+the registered child set that legalizes component current/version files may
+not be silently redeclared or weakened inside the bundle.
+
+If the admitted source does not disclose that registry-child admission law,
+the machine world must fail-close rather than locally reconstructing
+component admission.
+
 Bundle component descriptors must also remain current-entry mediated.
 
 The bundle must point to admitted component current rows and resolve active

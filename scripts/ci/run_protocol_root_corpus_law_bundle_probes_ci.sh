@@ -43,6 +43,9 @@ assert payload["descriptor_repo_rel_path_discipline_fallback_policy"] == "fail_c
 assert payload["component_current_version_naming_inheritance_mode"] == "inherit_machine_registry_completeness_current_only", payload
 assert payload["component_current_version_naming_local_override_policy"] == "forbidden", payload
 assert payload["component_current_version_naming_fallback_policy"] == "fail_closed", payload
+assert payload["component_registry_child_membership_inheritance_mode"] == "inherit_machine_registry_completeness_current_only", payload
+assert payload["component_registry_child_membership_local_override_policy"] == "forbidden", payload
+assert payload["component_registry_child_membership_fallback_policy"] == "fail_closed", payload
 assert payload["component_descriptor_resolution_mode"] == "current_alias_only", payload
 assert payload["component_descriptor_version_pinning_policy"] == "forbidden", payload
 assert payload["bundle_redeclares_required_repo_rel_path_patterns"] is False, payload
@@ -51,6 +54,8 @@ assert payload["bundle_redeclares_repo_rel_path_governance"] is False, payload
 assert payload["bundle_local_repo_rel_path_governance"] == {}, payload
 assert payload["bundle_redeclares_component_naming_governance"] is False, payload
 assert payload["bundle_local_component_naming_governance"] == {}, payload
+assert payload["bundle_redeclares_registry_child_membership_governance"] is False, payload
+assert payload["bundle_local_registry_child_membership_governance"] == {}, payload
 assert payload["required_component_descriptor_fields"] == [
     "validator_script",
     "probe_script",
@@ -80,6 +85,9 @@ assert payload["source_current_suffix"] == ".current.yaml", payload
 assert payload["source_version_regex"] == "^root-[a-z0-9-]+\\.v[0-9]+\\.yaml$", payload
 assert payload["source_require_current_version_pairs"] is True, payload
 assert payload["source_require_self_describing_families"] is True, payload
+assert payload["source_registry_directory_rel_path"] == "identity/protocol/mappings", payload
+assert payload["source_registry_current_file"] == "identity/protocol/mappings/root-corpus-registry.current.yaml", payload
+assert payload["source_registered_mapping_children_count"] > 0, payload
 assert all(row["component_status"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
 assert all(
     all(cell["status"] == "PASS_REQUIRED" for cell in row.get("descriptor_field_rows", []))
@@ -101,6 +109,117 @@ assert any(
     and row["expected_component_surface_stem"] == "root_corpus_governance"
     and row["expected_component_surface_stem_source"] == "machine_registry_explicit_override"
     for row in payload["component_status_rows"]
+), payload
+PY
+
+REGISTRY_CHILD_POLICY_REPO="${TMP_ROOT}/component-registry-child-membership-policy-drift-repo"
+mirror_repo "${REGISTRY_CHILD_POLICY_REPO}"
+python3 - <<'PY' "${REGISTRY_CHILD_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_registry_child_membership_local_override_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_CHILD_POLICY_JSON="${TMP_ROOT}/component-registry-child-membership-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_CHILD_POLICY_REPO}" \
+  --json-only >"${REGISTRY_CHILD_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component registry-child membership policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_CHILD_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_registry_child_membership_local_override_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+REGISTRY_CHILD_LOCAL_REDECLARATION_REPO="${TMP_ROOT}/component-registry-child-membership-local-redeclaration-repo"
+mirror_repo "${REGISTRY_CHILD_LOCAL_REDECLARATION_REPO}"
+python3 - <<'PY' "${REGISTRY_CHILD_LOCAL_REDECLARATION_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["registry_directory_rel_path"] = "identity/protocol/shadow-mappings"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_CHILD_LOCAL_REDECLARATION_JSON="${TMP_ROOT}/component-registry-child-membership-local-redeclaration.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_CHILD_LOCAL_REDECLARATION_REPO}" \
+  --json-only >"${REGISTRY_CHILD_LOCAL_REDECLARATION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed local registry-child admission redeclaration"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_CHILD_LOCAL_REDECLARATION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "component_registry_child_membership_governance_local_redeclaration_forbidden"
+    for row in payload["bundle_violations"]
+), payload
+assert payload["bundle_redeclares_registry_child_membership_governance"] is True, payload
+PY
+
+SOURCE_REGISTRY_CHILD_REPO="${TMP_ROOT}/component-registry-child-membership-source-drift-repo"
+mirror_repo "${SOURCE_REGISTRY_CHILD_REPO}"
+python3 - <<'PY' "${SOURCE_REGISTRY_CHILD_REPO}/identity/protocol/mappings/root-corpus-registry.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["registered_top_level_entries"]:
+    if row.get("rel_path") == "identity/protocol/mappings":
+        row["required_children"] = [
+            child for child in row.get("required_children", [])
+            if child != "root-corpus-ordering.current.yaml"
+        ]
+        break
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SOURCE_REGISTRY_CHILD_JSON="${TMP_ROOT}/component-registry-child-membership-source-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SOURCE_REGISTRY_CHILD_REPO}" \
+  --json-only >"${SOURCE_REGISTRY_CHILD_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed inherited registry-child admission drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SOURCE_REGISTRY_CHILD_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_corpus_ordering"
+    and row["reason"] == "component_current_file_not_admitted_by_inherited_registry_child_set"
+    for row in payload["bundle_violations"]
 ), payload
 PY
 

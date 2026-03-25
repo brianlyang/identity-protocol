@@ -27,6 +27,9 @@ descriptor_repo_rel_path_discipline_fallback_policy: fail_closed
 component_current_version_naming_inheritance_mode: inherit_machine_registry_completeness_current_only
 component_current_version_naming_local_override_policy: forbidden
 component_current_version_naming_fallback_policy: fail_closed
+component_registry_child_membership_inheritance_mode: inherit_machine_registry_completeness_current_only
+component_registry_child_membership_local_override_policy: forbidden
+component_registry_child_membership_fallback_policy: fail_closed
 component_descriptor_resolution_mode: current_alias_only
 component_descriptor_version_pinning_policy: forbidden
 require_component_descriptor_concordance: true
@@ -79,6 +82,11 @@ bundle_anchor_checks:
   - Root family prefix, current-entry suffix, active-version regex, and the
   - fail-close rather than locally reconstructing current/version mediation
     from bundle convention.
+  - Bundle registry-child admission law must also remain inherited from
+    machine-registry completeness.
+  - canonical registry directory, the admitted registry-current entry, and the
+  - fail-close rather than locally reconstructing component
+    admission from bundle convenience.
   - Bundle component descriptors must remain current-entry mediated as well.
   - version file for local convenience.
   - fail-close rather than bypassing current mediation and binding directly to a
@@ -118,6 +126,10 @@ bundle_anchor_checks:
   - The bundle must also inherit machine-registry completeness current/version
   - Root family prefix, current-entry suffix, active-version regex, and the
   - fail-close rather than locally reconstructing current/version mediation.
+  - The bundle must also inherit machine-registry completeness registry-child
+  - canonical registry directory, the admitted registry-current entry, and
+  - fail-close rather than locally reconstructing
+    component admission.
   - Bundle component descriptors must also remain current-entry mediated.
   - version truth through those rows, not pin directly to version files.
   - fail-close rather than bypassing current mediation.
@@ -155,6 +167,10 @@ bundle_anchor_checks:
   - naming law; root family prefix, current-entry suffix, active-version regex,
   - protocol legality must fail-close rather than locally reconstructing current/version mediation
     law.
+  - The bundle must also inherit machine-registry completeness registry-child
+  - admission law; canonical registry directory, admitted registry-current entry,
+  - protocol legality must fail-close rather than locally reconstructing
+    component-admission law.
   - Bundle component descriptors must also stay current-entry mediated
   - not direct version-file
     pinning.
@@ -188,6 +204,10 @@ bundle_anchor_checks:
   - Runtime must also reject a root-law bundle that redeclares or weakens
   - current-entry suffix, active-version regex, and current/version pair
   - fail-close rather than locally reconstructing current/version mediation law.
+  - Runtime must also reject a root-law bundle that redeclares or weakens
+  - canonical registry directory, admitted registry-current entry, and registered child-set
+  - runtime must fail-close rather than locally reconstructing component-admission
+    law.
   - Runtime must also treat bundle component descriptors as current-entry
     mediated
   - not direct version-file pinning.
