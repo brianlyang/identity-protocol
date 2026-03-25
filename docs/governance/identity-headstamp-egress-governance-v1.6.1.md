@@ -640,3 +640,20 @@ Interpretation lock:
 
 1. `manual_headstamp` = render_origin tag only; never verdict axis.
 2. `EXCLUDED_NON_BLOCKING` only removes blocker aggregation; it never upgrades next-hop admission.
+
+### 15.11 Visible/artifact surface pair self-description freeze (2026-03-25)
+
+1. `scripts/render_identity_response_stamp.py` MUST emit a machine-readable `headstamp_surface_semantics` payload rather than relying on the prose matrix alone.
+2. That payload MUST bind two frozen rows from `identity/protocol/plugins/templates/headstamp-surface-semantics.matrix_v1.json`:
+   - one **visible projection** row for the current reply surface,
+   - one **controlled-runtime artifact** row for the structured stamp payload.
+3. Visible-row resolution is frozen as:
+   - `--surface operator` + governed runtime envelope -> `governed_wrapper_visible`
+   - `--surface operator` + explanatory/non-claimed host-native envelope -> `explanatory_host_native_envelope`
+   - `--surface native-chat` -> `native_chat_assistant_visible`
+4. The structured stamp payload MUST always bind `controlled_runtime_artifact` as its artifact row because the JSON artifact remains the authoritative proof surface for replay/admission analysis.
+5. The visible row remains projection-only:
+   - it may explain literal order and surface mode,
+   - it MUST NOT become truth/admission authority by itself,
+   - it MUST NOT override the artifact proof owner.
+6. `scripts/validate_response_stamp_operator_envelope.py` MUST fail-close when an envelope-present payload omits this surface-pair self-description or binds rows inconsistent with the frozen matrix.

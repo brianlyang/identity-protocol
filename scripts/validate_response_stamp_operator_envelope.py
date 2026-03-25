@@ -7,6 +7,10 @@ from pathlib import Path
 from repo_root_resolution_common import resolve_repo_root
 from typing import Any
 
+from headstamp_surface_semantics_common import (
+    build_headstamp_surface_semantics_payload,
+    normalize_headstamp_surface_row,
+)
 from response_stamp_common import (
     DEFAULT_RESPONSE_STAMP_TEMPLATE_REF,
     normalize_response_stamp_profile,
@@ -179,12 +183,18 @@ def main() -> int:
         expected_machine_payload = {}
     envelope_present = bool(operator_lines or external_stamp or expected_machine_payload)
     should_validate_operator_envelope = bool(requirement["headstamp_required"] or envelope_present)
+    should_validate_headstamp_surface_semantics = bool(envelope_present)
     response_stamp_profile_status = STATUS_SKIPPED_NOT_REQUIRED
     operator_template_status = STATUS_SKIPPED_NOT_REQUIRED
+    headstamp_surface_semantics_status = STATUS_SKIPPED_NOT_REQUIRED
+    headstamp_surface_semantics = payload.get("headstamp_surface_semantics")
+    if not isinstance(headstamp_surface_semantics, dict):
+        headstamp_surface_semantics = {}
 
     machine_fields = _parse_machine_line(machine_line)
     template_required_fields = []
     missing_machine_fields: list[str] = []
+    expected_headstamp_surface_semantics: dict[str, Any] = {}
     if should_validate_operator_envelope:
         if not template_path.exists():
             stale_reasons.append("operator_template_missing")
@@ -234,6 +244,53 @@ def main() -> int:
             and str(machine_fields.get("headstamp_consistency_status", "")).strip() != STATUS_PASS_REQUIRED
         ):
             stale_reasons.append("machine_verification_consistency_projection_invalid")
+
+    if should_validate_headstamp_surface_semantics:
+        expected_headstamp_surface_semantics = build_headstamp_surface_semantics_payload(
+            render_surface=str(payload.get("render_surface", "")).strip() or "operator",
+            machine_payload=expected_machine_payload or machine_fields,
+            repo_root=repo_root,
+        )
+        if not headstamp_surface_semantics:
+            stale_reasons.append("headstamp_surface_semantics_missing")
+            headstamp_surface_semantics_status = STATUS_FAIL_REQUIRED
+        else:
+            semantics_errors: list[str] = []
+            if (
+                str(headstamp_surface_semantics.get("headstamp_surface_semantics_status", "")).strip()
+                != STATUS_PASS_REQUIRED
+            ):
+                semantics_errors.append("status_not_pass_required")
+            if str(headstamp_surface_semantics.get("visible_surface_id", "")).strip() != str(
+                expected_headstamp_surface_semantics.get("visible_surface_id", "")
+            ).strip():
+                semantics_errors.append("visible_surface_id_mismatch")
+            if str(headstamp_surface_semantics.get("artifact_surface_id", "")).strip() != str(
+                expected_headstamp_surface_semantics.get("artifact_surface_id", "")
+            ).strip():
+                semantics_errors.append("artifact_surface_id_mismatch")
+
+            actual_visible_surface = normalize_headstamp_surface_row(headstamp_surface_semantics.get("visible_surface"))
+            expected_visible_surface = normalize_headstamp_surface_row(
+                expected_headstamp_surface_semantics.get("visible_surface")
+            )
+            if actual_visible_surface != expected_visible_surface:
+                semantics_errors.append("visible_surface_row_mismatch")
+
+            actual_artifact_surface = normalize_headstamp_surface_row(
+                headstamp_surface_semantics.get("artifact_surface")
+            )
+            expected_artifact_surface = normalize_headstamp_surface_row(
+                expected_headstamp_surface_semantics.get("artifact_surface")
+            )
+            if actual_artifact_surface != expected_artifact_surface:
+                semantics_errors.append("artifact_surface_row_mismatch")
+
+            if semantics_errors:
+                stale_reasons.extend(f"headstamp_surface_semantics_invalid:{reason}" for reason in semantics_errors)
+                headstamp_surface_semantics_status = STATUS_FAIL_REQUIRED
+            else:
+                headstamp_surface_semantics_status = STATUS_PASS_REQUIRED
 
     if requirement["headstamp_required"] and not operator_lines:
         stale_reasons.append("assistant_process_message_headstamp_missing")
@@ -287,6 +344,9 @@ def main() -> int:
         "display_headstamp_line": display_line,
         "machine_verification_line": machine_line,
         "parsed_machine_verification": machine_fields,
+        "headstamp_surface_semantics_status": headstamp_surface_semantics_status,
+        "headstamp_surface_semantics": headstamp_surface_semantics,
+        "expected_headstamp_surface_semantics": expected_headstamp_surface_semantics,
         "explanatory_surface_exclusion_status": explanatory_surface_exclusion_status,
         "missing_machine_fields": missing_machine_fields,
         "stale_reasons": stale_reasons,

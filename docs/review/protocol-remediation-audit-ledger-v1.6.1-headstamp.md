@@ -402,3 +402,50 @@ Observed after fix:
 2. Governed visible projection is now an additive, machine-classified admission surface rather than an ad-hoc parser exception.
 3. v1.6.1 now owns one shared first-line parser contract across first-line validation and send-time admission.
 4. This closes the protocol-internal semantic split without introducing any business-scene logic or weakening fail-close behavior for truly missing/conflicting headstamps.
+
+## 15) HS16-107 visible/artifact surface-pair self-description audit (2026-03-25)
+
+### 15.1 Problem restatement
+
+1. The headstamp stream already froze the surface semantics matrix in governance/template form.
+2. But `scripts/render_identity_response_stamp.py` still did not self-describe which visible-surface row was active for a given payload.
+3. Audit consequence:
+   - operators could read the matrix in docs,
+   - validators could read template files,
+   - yet the emitted stamp artifact itself did not declare whether it was projecting a governed wrapper, an explanatory host-native envelope, or a native-chat visible surface.
+
+### 15.2 Landed shared closure
+
+1. `scripts/headstamp_surface_semantics_common.py`
+   - now owns the shared template loader plus visible-surface/artifact-surface pair resolution.
+2. `scripts/render_identity_response_stamp.py`
+   - now emits `render_surface` and `headstamp_surface_semantics`.
+3. `scripts/validate_response_stamp_operator_envelope.py`
+   - now fails closed when an envelope-present payload omits or mismatches the frozen visible/artifact surface pair.
+4. `scripts/ci/run_semantic_clarity_probes_ci.sh`
+   - now injects the shared semantics payload into synthetic operator-envelope probes and asserts the correct visible surface id.
+
+### 15.3 Audit interpretation
+
+1. This is infrastructure-first strengthening:
+   - one shared surface-pair resolver,
+   - one shared renderer payload contract,
+   - one shared validator consumer.
+2. No business-scene logic was introduced.
+3. Visible headstamp lines remain projection-only; the structured stamp artifact remains the truth/admission proof owner.
+
+### 15.4 Required replay evidence
+
+1. `python3 scripts/render_identity_response_stamp.py --identity-id <id> --catalog <catalog> --actor-id assistant:codex --session-id run:<...> --render-operator-envelope --json-only`
+   - must emit `headstamp_surface_semantics.visible_surface_id` plus `artifact_surface_id=controlled_runtime_artifact`.
+2. `python3 scripts/validate_response_stamp_operator_envelope.py --stamp-json <...> --repo-root <repo> --json-only`
+   - must report `headstamp_surface_semantics_status=PASS_REQUIRED`.
+3. `bash scripts/ci/run_semantic_clarity_probes_ci.sh`
+   - must pass both:
+     - governed operator-envelope surface id = `governed_wrapper_visible`
+     - explanatory host-native surface id = `explanatory_host_native_envelope`
+
+### 15.5 Review verdict
+
+1. The headstamp matrix is no longer just discoverable in docs/templates; it is now self-described by the emitted stamp artifact.
+2. This closes a remaining machine-readability gap without promoting the visible projection into semantic ownership.

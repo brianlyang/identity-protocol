@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from actor_session_common import actor_session_path, load_actor_binding
+from headstamp_surface_semantics_common import build_headstamp_surface_semantics_payload
 from identity_runtime_authority_common import (
     STATUS_PASS_REQUIRED,
     validate_runtime_egress_identity_authority,
@@ -402,6 +403,7 @@ def main() -> int:
         "identity_id": ctx.identity_id,
         "catalog_path": str(ctx.catalog_path),
         "pack_path": str(ctx.pack_path),
+        "render_surface": str(args.surface or "").strip().lower() or "operator",
         "view": args.view,
         "disclosure_level": disclosure_level,
         "response_stamp_profile": response_stamp_profile,
@@ -497,6 +499,10 @@ def main() -> int:
     payload["display_headstamp_line"] = operator_envelope_lines[0] if operator_envelope_lines else ""
     payload["operator_envelope_lines"] = operator_envelope_lines
     payload["operator_envelope"] = "\n".join(operator_envelope_lines)
+    payload["headstamp_surface_semantics"] = build_headstamp_surface_semantics_payload(
+        render_surface=str(payload.get("render_surface", "")).strip(),
+        machine_payload=machine_payload,
+    )
     if args.surface == "native-chat":
         payload.update(
             _build_native_chat_payload(

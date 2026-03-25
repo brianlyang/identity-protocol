@@ -28,6 +28,7 @@ from governed_reply_observability_common import (
     parse_probe_identity_contexts,
 )
 from headstamp_error_family_common import ERR_HDSTAMP_ACTOR_LAYER_MISMATCH, inject_legacy_error_fields
+from headstamp_surface_semantics_common import build_headstamp_surface_semantics_payload
 from identity_runtime_authority_common import (
     STATUS_PASS_REQUIRED as AUTHORITY_PASS_REQUIRED,
     validate_runtime_egress_identity_authority,
@@ -779,6 +780,7 @@ def main() -> int:
         "repo_catalog_path": str(repo_catalog_path),
         "work_layer": work_layer,
         "source_layer": source_layer,
+        "render_surface": "operator",
         "protocol_triggered": bool(intent.get("protocol_triggered", False)),
         "protocol_trigger_reasons": list(intent.get("protocol_trigger_reasons") or []),
         "intent_source": str(intent.get("intent_source", "")),
@@ -962,6 +964,10 @@ def main() -> int:
     payload["display_headstamp_line"] = operator_envelope_lines[0] if operator_envelope_lines else ""
     payload["operator_envelope_lines"] = operator_envelope_lines
     payload["operator_envelope"] = "\n".join(operator_envelope_lines)
+    payload["headstamp_surface_semantics"] = build_headstamp_surface_semantics_payload(
+        render_surface=str(payload.get("render_surface", "")).strip(),
+        machine_payload=machine_verification_payload,
+    )
     payload["visible_reply"] = visible_reply
     payload["visible_reply_preview"] = visible_reply.splitlines()[:3]
 

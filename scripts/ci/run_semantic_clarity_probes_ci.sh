@@ -12,6 +12,37 @@ cleanup() {
 }
 trap cleanup EXIT
 
+inject_headstamp_surface_semantics() {
+  local json_path="$1"
+  local render_surface="${2:-operator}"
+  python3 - "$REPO_ROOT" "$json_path" "$render_surface" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+repo_root = Path(sys.argv[1]).resolve()
+json_path = Path(sys.argv[2]).resolve()
+render_surface = str(sys.argv[3]).strip() or "operator"
+
+sys.path.insert(0, str(repo_root / "scripts"))
+from headstamp_surface_semantics_common import build_headstamp_surface_semantics_payload
+
+doc = json.loads(json_path.read_text(encoding="utf-8"))
+if not isinstance(doc, dict):
+    raise SystemExit("headstamp_surface_semantics_probe_requires_object")
+machine_payload = doc.get("machine_verification")
+if not isinstance(machine_payload, dict):
+    machine_payload = {}
+doc["render_surface"] = render_surface
+doc["headstamp_surface_semantics"] = build_headstamp_surface_semantics_payload(
+    render_surface=render_surface,
+    machine_payload=machine_payload,
+    repo_root=repo_root,
+)
+json_path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+}
+
 echo "[info] semantic clarity probes: positive lane"
 python3 scripts/validate_semantic_term_registry.py --json-only > "$TMP_ROOT/semantic_term_positive.json"
 python3 scripts/validate_cli_catalog_default_semantics.py --json-only > "$TMP_ROOT/cli_catalog_positive.json"
@@ -1481,6 +1512,7 @@ cat > "$TMP_ROOT/operator_envelope_exclusion_probe.json" <<'JSON'
   ]
 }
 JSON
+inject_headstamp_surface_semantics "$TMP_ROOT/operator_envelope_exclusion_probe.json" operator
 python3 scripts/validate_response_stamp_operator_envelope.py \
   --stamp-json "$TMP_ROOT/operator_envelope_exclusion_probe.json" \
   --repo-root "$REPO_ROOT" \
@@ -1489,9 +1521,11 @@ python3 - "$TMP_ROOT/operator_envelope_exclusion_probe_result.json" <<'PY'
 import json,sys
 obj=json.load(open(sys.argv[1]))
 assert obj.get("operator_headstamp_envelope_status") == "PASS_REQUIRED", obj
+assert obj.get("headstamp_surface_semantics_status") == "PASS_REQUIRED", obj
 assert obj.get("explanatory_surface_exclusion_status") == "PASS_REQUIRED", obj
 assert obj.get("parsed_machine_verification", {}).get("closure_blocker_scope") == "EXCLUDED_NON_BLOCKING", obj
 assert obj.get("parsed_machine_verification", {}).get("current_chat_surface_native_machine_attested") == "false", obj
+assert obj.get("headstamp_surface_semantics", {}).get("visible_surface_id") == "explanatory_host_native_envelope", obj
 print("[PASS] host-native explanatory envelope exclusion probe")
 PY
 
@@ -1520,6 +1554,7 @@ cat > "$TMP_ROOT/process_message_positive.json" <<'JSON'
   ]
 }
 JSON
+inject_headstamp_surface_semantics "$TMP_ROOT/process_message_positive.json" operator
 python3 scripts/validate_response_stamp_operator_envelope.py \
   --stamp-json "$TMP_ROOT/process_message_positive.json" \
   --repo-root "$REPO_ROOT" \
@@ -1528,11 +1563,13 @@ python3 - "$TMP_ROOT/process_message_positive_result.json" <<'PY'
 import json,sys
 obj=json.load(open(sys.argv[1]))
 assert obj.get("operator_headstamp_envelope_status") == "PASS_REQUIRED", obj
+assert obj.get("headstamp_surface_semantics_status") == "PASS_REQUIRED", obj
 assert obj.get("message_headstamp_requirement_scope") == "REQUIRED_ASSISTANT_PROCESS_MESSAGE", obj
 assert obj.get("message_headstamp_requirement_reason") == "assistant_process_message:checkpoint", obj
 assert obj.get("headstamp_required_for_message") is True, obj
 assert obj.get("message_headstamp_requirement_status") == "PASS_REQUIRED", obj
 assert obj.get("operator_envelope_validation_applied") is True, obj
+assert obj.get("headstamp_surface_semantics", {}).get("visible_surface_id") == "explanatory_host_native_envelope", obj
 print("[PASS] assistant process message requires and accepts shared headstamp")
 PY
 
