@@ -525,6 +525,15 @@ stderr may carry incidental diagnostics, but it does not become an alternate
 status-bearing verdict channel and may not be scraped to replace missing
 stdout truth.
 
+Bundle component validator stdout-framing contract must stay explicit too.
+
+The admitted stdout framing contract is a single JSON object occupying whole
+stdout.
+
+The machine world must not line-scrape, trailer-strip, or extract a JSON
+fragment from mixed stdout preamble, trailer, or incidental shell text and
+then treat that fragment as governed validator truth.
+
 Bundle component validator working-directory contract must stay explicit too.
 
 The admitted validator execution working directory is repo_root.

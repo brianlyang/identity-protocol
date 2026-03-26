@@ -33,6 +33,7 @@ from root_corpus_law_bundle_common import (
     component_validator_output_contract_from_doc,
     component_validator_invocation_contract_from_doc,
     component_validator_output_channel_contract_from_doc,
+    component_validator_stdout_framing_contract_from_doc,
     component_validator_working_directory_contract_from_doc,
     component_validator_execution_transport_contract_from_doc,
     component_self_describing_family_requirement_fallback_policy_from_doc,
@@ -85,8 +86,10 @@ ERR_STRUCTURE = "IP-RCLB-002"
 ERR_BUNDLE = "IP-RCLB-003"
 COMPONENT_VALIDATOR_INVOCATION_CONTRACT = "python3_repo_root_json_only"
 COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT = "stdout_only"
+COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT = "whole_stdout_single_json_object"
 COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT = "repo_root"
 COMPONENT_VALIDATOR_EXECUTION_TRANSPORT_CONTRACT = "local_direct_subprocess_vector"
+COMPONENT_VALIDATOR_OUTPUT_CONTRACT = "json_object_with_disclosed_status_key"
 
 EXPECTED_COMPONENTS = {
     "root_corpus_governance": {
@@ -230,11 +233,33 @@ def _component_validator_run_kwargs(
     return kwargs
 
 
+def _parse_component_validator_stdout(
+    stdout: str,
+    output_contract: str,
+    stdout_framing_contract: str,
+) -> tuple[dict[str, Any], str]:
+    if not stdout:
+        return {}, "validator_output_missing"
+    try:
+        payload = json.loads(stdout)
+    except Exception:
+        return {}, "validator_output_invalid_json"
+    if stdout_framing_contract == COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT and not isinstance(payload, dict):
+        return {}, "validator_output_not_json_object"
+    if output_contract == COMPONENT_VALIDATOR_OUTPUT_CONTRACT and not isinstance(payload, dict):
+        return {}, "validator_output_not_json_object"
+    if not isinstance(payload, dict):
+        return {}, "validator_output_not_json_object"
+    return payload, ""
+
+
 def _run_component_validator(
     repo_root,
     validator_script: str,
     status_key: str,
+    output_contract: str,
     invocation_contract: str,
+    stdout_framing_contract: str,
     working_directory_contract: str,
     execution_transport_contract: str,
 ) -> tuple[int, dict[str, Any], str]:
@@ -247,12 +272,13 @@ def _run_component_validator(
         ),
     )
     stdout = (proc.stdout or "").strip()
-    if not stdout:
-        return proc.returncode, {}, "validator_output_missing"
-    try:
-        payload = json.loads(stdout)
-    except Exception:
-        return proc.returncode, {}, "validator_output_invalid_json"
+    payload, parse_error = _parse_component_validator_stdout(
+        stdout,
+        output_contract,
+        stdout_framing_contract,
+    )
+    if parse_error:
+        return proc.returncode, {}, parse_error
     if status_key not in payload:
         return proc.returncode, payload, "validator_status_key_missing"
     return proc.returncode, payload, ""
@@ -414,6 +440,9 @@ def main() -> int:
     component_validator_output_channel_contract = (
         component_validator_output_channel_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_stdout_framing_contract = (
+        component_validator_stdout_framing_contract_from_doc(bundle_doc) if bundle_doc else ""
+    )
     component_validator_working_directory_contract = (
         component_validator_working_directory_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
@@ -434,6 +463,16 @@ def main() -> int:
         component_validator_output_channel_contract
         if component_validator_output_channel_contract == COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT
         else COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT
+    )
+    effective_component_validator_output_contract = (
+        component_validator_output_contract
+        if component_validator_output_contract == COMPONENT_VALIDATOR_OUTPUT_CONTRACT
+        else COMPONENT_VALIDATOR_OUTPUT_CONTRACT
+    )
+    effective_component_validator_stdout_framing_contract = (
+        component_validator_stdout_framing_contract
+        if component_validator_stdout_framing_contract == COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT
+        else COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT
     )
     effective_component_validator_working_directory_contract = (
         component_validator_working_directory_contract
@@ -691,7 +730,7 @@ def main() -> int:
         if component_validator_execution_failure_policy != "fail_closed":
             stale_reasons.append("root_corpus_law_bundle_component_validator_execution_failure_policy_invalid")
             error_code = ERR_REGISTRY
-        if component_validator_output_contract != "json_object_with_disclosed_status_key":
+        if component_validator_output_contract != COMPONENT_VALIDATOR_OUTPUT_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_output_contract_invalid")
             error_code = ERR_REGISTRY
         if component_validator_invocation_contract != COMPONENT_VALIDATOR_INVOCATION_CONTRACT:
@@ -699,6 +738,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_validator_output_channel_contract != COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_output_channel_contract_invalid")
+            error_code = ERR_REGISTRY
+        if component_validator_stdout_framing_contract != COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT:
+            stale_reasons.append("root_corpus_law_bundle_component_validator_stdout_framing_contract_invalid")
             error_code = ERR_REGISTRY
         if component_validator_working_directory_contract != COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_working_directory_contract_invalid")
@@ -1151,7 +1193,9 @@ def main() -> int:
                 repo_root,
                 row.validator_script,
                 row.status_key,
+                effective_component_validator_output_contract,
                 effective_component_validator_invocation_contract,
+                effective_component_validator_stdout_framing_contract,
                 effective_component_validator_working_directory_contract,
                 effective_component_validator_execution_transport_contract,
             )
@@ -1165,6 +1209,12 @@ def main() -> int:
                     "validator_script": row.validator_script,
                     "probe_script": row.probe_script,
                     "common_script": row.common_script,
+                    "validator_output_contract": effective_component_validator_output_contract,
+                    "validator_invocation_contract": effective_component_validator_invocation_contract,
+                    "validator_output_channel_contract": effective_component_validator_output_channel_contract,
+                    "validator_stdout_framing_contract": effective_component_validator_stdout_framing_contract,
+                    "validator_working_directory_contract": effective_component_validator_working_directory_contract,
+                    "validator_execution_transport_contract": effective_component_validator_execution_transport_contract,
                     "validator_rc": rc,
                     "component_status": component_status,
                     "error_codes": list(row.error_codes),
@@ -1383,6 +1433,7 @@ def main() -> int:
         "component_validator_output_contract": component_validator_output_contract,
         "component_validator_invocation_contract": component_validator_invocation_contract,
         "component_validator_output_channel_contract": component_validator_output_channel_contract,
+        "component_validator_stdout_framing_contract": component_validator_stdout_framing_contract,
         "component_validator_working_directory_contract": component_validator_working_directory_contract,
         "component_validator_execution_transport_contract": component_validator_execution_transport_contract,
         "bundle_anchor_check_count": len(anchor_checks),

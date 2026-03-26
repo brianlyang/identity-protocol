@@ -237,6 +237,13 @@ only.
 Runtime must not elevate stderr diagnostics into an alternate status-bearing
 channel or use them to replace missing stdout truth.
 
+Runtime must also keep bound component validator stdout-framing contract
+explicit; runtime parses whole stdout as a single JSON object carrying the
+disclosed status key.
+
+Runtime must not line-scrape, trailer-strip, or extract a JSON fragment from
+mixed stdout preamble, trailer, or incidental shell text.
+
 Runtime must also keep bound component validator working-directory contract
 explicit; runtime executes bound component validators with repo_root as the
 governed working directory.

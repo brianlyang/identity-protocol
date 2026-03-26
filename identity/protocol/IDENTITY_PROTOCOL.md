@@ -293,6 +293,13 @@ only.
 stderr diagnostics must not be promoted into an alternate status-bearing
 verdict channel inside the bundle.
 
+Root-law bundle rows must also keep component validator stdout-framing
+contract explicit; bound component validator verdict is consumed only when
+whole stdout is a single JSON object carrying the disclosed status key.
+
+Local extraction of a JSON fragment from mixed stdout preamble, trailer, or
+incidental shell text is forbidden inside the bundle.
+
 Root-law bundle rows must also keep component validator working-directory
 contract explicit; bound component validators execute with repo_root as the
 governed working directory.

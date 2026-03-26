@@ -219,6 +219,10 @@ def component_validator_output_channel_contract_from_doc(bundle_doc: Mapping[str
     return _norm_str(bundle_doc.get("component_validator_output_channel_contract"))
 
 
+def component_validator_stdout_framing_contract_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("component_validator_stdout_framing_contract"))
+
+
 def component_validator_working_directory_contract_from_doc(bundle_doc: Mapping[str, Any]) -> str:
     return _norm_str(bundle_doc.get("component_validator_working_directory_contract"))
 

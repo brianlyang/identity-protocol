@@ -544,6 +544,14 @@ The verdict-bearing machine-output channel is stdout only.
 stderr diagnostics do not become an alternate status-bearing channel and may
 not replace missing stdout truth.
 
+Bundle component validators must also keep stdout-framing contract explicit.
+
+The verdict-bearing machine output occupies whole stdout as a single JSON
+object.
+
+Runtime may not line-scrape, trailer-strip, or extract a JSON fragment from
+mixed stdout preamble, trailer, or incidental shell text.
+
 Bundle component validators must also keep working-directory contract explicit.
 
 The admitted validator execution working directory is repo_root.
