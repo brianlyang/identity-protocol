@@ -251,6 +251,14 @@ top-level member of the admitted verdict object.
 Runtime must not search nested objects, alias keys, pointer paths, or other
 local convenience structures to reconstruct missing status truth.
 
+Runtime must also keep bound component validator execution-input contract
+explicit; runtime executes bound component validators with devnull-backed
+noninteractive stdin.
+
+Runtime must not let bound validators inherit ambient stdin, wait for
+operator keystrokes, or convert interactive prompt dialogue into admitted
+validator execution truth.
+
 Runtime must also keep bound component validator working-directory contract
 explicit; runtime executes bound component validators with repo_root as the
 governed working directory.

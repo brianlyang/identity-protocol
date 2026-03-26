@@ -51,6 +51,7 @@ component_validator_invocation_contract: python3_repo_root_json_only
 component_validator_output_channel_contract: stdout_only
 component_validator_stdout_framing_contract: whole_stdout_single_json_object
 component_validator_status_key_resolution_contract: top_level_direct_member_only
+component_validator_execution_input_contract: stdin_devnull_noninteractive
 component_validator_working_directory_contract: repo_root
 component_validator_execution_transport_contract: local_direct_subprocess_vector
 required_component_descriptor_fields:
@@ -171,6 +172,12 @@ bundle_anchor_checks:
     fields, pointer paths, or other local convenience structures to reconstruct
     status truth when the disclosed status key is not present as a direct
     top-level member.
+  - Bundle component validator execution-input contract must stay explicit too.
+  - The admitted execution-input contract is devnull-backed noninteractive
+    stdin.
+  - machine world must not let a bound validator inherit ambient stdin, block
+    for operator keystrokes, or convert interactive prompt dialogue into
+    governed validator execution truth.
   - Bundle component validator working-directory contract must stay explicit too.
   - The admitted validator execution working directory is repo_root.
   - machine world must not run a bound component validator from arbitrary cwd
@@ -278,6 +285,12 @@ bundle_anchor_checks:
     the verdict-bearing JSON object.
   - Runtime may not search nested objects, alias keys, pointer paths, or other
     local convenience structures to recover missing status truth.
+  - Bundle component validators must also keep execution-input contract explicit.
+  - The admitted validator execution input is devnull-backed noninteractive
+    stdin.
+  - Runtime may not let bound validators inherit ambient stdin, wait for
+    operator keystrokes, or convert interactive prompt dialogue into validator
+    truth.
   - Bundle component validators must also keep working-directory contract explicit.
   - The admitted validator execution working directory is repo_root.
   - Runtime may not substitute arbitrary cwd or ambient shell location for that
@@ -382,6 +395,11 @@ bundle_anchor_checks:
     direct top-level member of the admitted verdict object.
   - Local search across nested objects, alias keys, pointer paths, or other
     convenience structures is forbidden inside the bundle.
+  - Root-law bundle rows must also keep component validator execution-input
+    contract explicit; bound component validators execute with devnull-backed
+    noninteractive stdin.
+  - Local inheritance of ambient stdin or dependence on operator keystrokes is
+    forbidden inside the bundle.
   - Root-law bundle rows must also keep component validator working-directory
     contract explicit; bound component validators execute with repo_root as the
     governed working directory.
@@ -483,6 +501,12 @@ bundle_anchor_checks:
     top-level member of the admitted verdict object.
   - Runtime must not search nested objects, alias keys, pointer paths, or other
     local convenience structures to reconstruct missing status truth.
+  - Runtime must also keep bound component validator execution-input contract
+    explicit; runtime executes bound component validators with devnull-backed
+    noninteractive stdin.
+  - Runtime must not let bound validators inherit ambient stdin, wait for
+    operator keystrokes, or convert interactive prompt dialogue into admitted
+    validator execution truth.
   - Runtime must also keep bound component validator working-directory contract
     explicit; runtime executes bound component validators with repo_root as the
     governed working directory.

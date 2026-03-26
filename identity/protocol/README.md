@@ -561,6 +561,13 @@ verdict-bearing JSON object.
 Runtime may not search nested objects, alias keys, pointer paths, or other
 local convenience structures to recover missing status truth.
 
+Bundle component validators must also keep execution-input contract explicit.
+
+The admitted validator execution input is devnull-backed noninteractive stdin.
+
+Runtime may not let bound validators inherit ambient stdin, wait for operator
+keystrokes, or convert interactive prompt dialogue into validator truth.
+
 Bundle component validators must also keep working-directory contract explicit.
 
 The admitted validator execution working directory is repo_root.

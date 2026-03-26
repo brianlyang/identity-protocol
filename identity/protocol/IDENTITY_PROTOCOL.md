@@ -307,6 +307,13 @@ direct top-level member of the admitted verdict object.
 Local search across nested objects, alias keys, pointer paths, or other
 convenience structures is forbidden inside the bundle.
 
+Root-law bundle rows must also keep component validator execution-input
+contract explicit; bound component validators execute with devnull-backed
+noninteractive stdin.
+
+Local inheritance of ambient stdin or dependence on operator keystrokes is
+forbidden inside the bundle.
+
 Root-law bundle rows must also keep component validator working-directory
 contract explicit; bound component validators execute with repo_root as the
 governed working directory.

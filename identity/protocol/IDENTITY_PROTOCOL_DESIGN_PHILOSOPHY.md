@@ -544,6 +544,14 @@ alias fields, pointer paths, or other local convenience structures to
 reconstruct status truth when the disclosed status key is not present as a
 direct top-level member.
 
+Bundle component validator execution-input contract must stay explicit too.
+
+The admitted execution-input contract is devnull-backed noninteractive stdin.
+
+The machine world must not let a bound validator inherit ambient stdin, block
+for operator keystrokes, or convert interactive prompt dialogue into governed
+validator execution truth.
+
 Bundle component validator working-directory contract must stay explicit too.
 
 The admitted validator execution working directory is repo_root.
