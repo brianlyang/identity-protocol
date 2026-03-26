@@ -2407,6 +2407,7 @@ def main() -> int:
             "run_id_report_selection",
             "outlet_matrix",
             "promotion_pipeline",
+            "cross_workflow_schema",
         }:
             _append_supported_flag(
                 cmd,
@@ -2421,6 +2422,14 @@ def main() -> int:
                         cmd,
                         script_path=spec.script_path,
                         flag="--report",
+                        value=report_selected_path,
+                        repo_root=repo_root,
+                    )
+                elif spec.target_name == "cross_workflow_schema":
+                    _append_supported_flag(
+                        cmd,
+                        script_path=spec.script_path,
+                        flag="--evidence",
                         value=report_selected_path,
                         repo_root=repo_root,
                     )

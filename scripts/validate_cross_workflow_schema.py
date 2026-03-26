@@ -8,12 +8,12 @@ from typing import Any
 
 from normalize_cross_workflow_evidence import STATUS_FAIL_REQUIRED, STATUS_PASS_REQUIRED, STATUS_SKIPPED_NOT_REQUIRED, compute_cross_workflow_receipt
 from tool_vendor_governance_common import (
+    build_identity_upgrade_evidence_selection_projection,
     contract_required,
-    latest_identity_upgrade_report,
     load_json,
     load_yaml,
     resolve_pack_and_task,
-    resolve_report_path,
+    resolve_identity_upgrade_evidence_selection,
 )
 
 ERR_EVIDENCE_SOURCE_MISSING = "IP-XWF-001"
@@ -103,26 +103,18 @@ def _has_dedup_signal(doc: Any) -> bool:
     return any(doc.get(k) is not None for k in ("dedup", "dedup_monotonicity", "winner"))
 
 
-def _resolve_evidence_path(*, explicit_evidence: str, pack_path: Path, identity_id: str, contract: dict[str, Any]) -> Path | None:
-    if explicit_evidence.strip():
-        p = Path(explicit_evidence).expanduser().resolve()
-        return p if p.exists() and p.is_file() else None
-
-    pattern = _nonempty(
-        contract.get("evidence_path_pattern"),
-        contract.get("report_path_pattern"),
-        contract.get("source_pattern"),
+def _resolve_evidence_selection(*, explicit_report: str, pack_path: Path, identity_id: str) -> dict[str, Any]:
+    resolution = resolve_identity_upgrade_evidence_selection(
+        identity_id,
+        pack_path,
+        explicit_report=explicit_report,
     )
-    if pattern:
-        p = resolve_report_path(report="", pattern=pattern, pack_root=pack_path)
-        if p and p.exists() and p.is_file():
-            return p.resolve()
-
-    latest = latest_identity_upgrade_report(identity_id, pack_path)
-    if latest and latest.exists() and latest.is_file():
-        return latest.resolve()
-
-    return None
+    payload = build_identity_upgrade_evidence_selection_projection(
+        resolution,
+        field_prefix="evidence",
+    )
+    payload["_selected_evidence_path"] = resolution.selected_path
+    return payload
 
 
 def main() -> int:
@@ -130,6 +122,7 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--evidence", default="")
+    ap.add_argument("--report", default="", help="alias of --evidence for identity upgrade report carriers")
     ap.add_argument("--run-id", default="")
     ap.add_argument("--route-action", default="")
     ap.add_argument("--quality-meta-state", default="")
@@ -168,6 +161,12 @@ def main() -> int:
         "requiredization_current_round_linked": False,
         "cross_workflow_schema_status": STATUS_SKIPPED_NOT_REQUIRED,
         "error_code": "",
+        "evidence_selected_path": "",
+        "evidence_selection_mode": "",
+        "evidence_selected_authority_class": "",
+        "evidence_pointer_resolution_mode": "",
+        "evidence_pointer_path": "",
+        "evidence_kind": "",
         "evidence_ref": "",
         "run_id": "",
         "route_action": "",
@@ -195,6 +194,7 @@ def main() -> int:
         _nonempty(v)
         for v in (
             args.evidence,
+            args.report,
             args.run_id,
             args.route_action,
             args.quality_meta_state,
@@ -212,17 +212,22 @@ def main() -> int:
     payload["auto_required_signal"] = auto_required
     payload["requiredization_current_round_linked"] = explicit_current_round_linked
 
+    explicit_report = _nonempty(args.report, args.evidence)
+    evidence_selection = _resolve_evidence_selection(
+        explicit_report=explicit_report,
+        pack_path=pack_path,
+        identity_id=args.identity_id,
+    )
+    payload.update({k: v for k, v in evidence_selection.items() if not k.startswith("_")})
+    evidence_path = evidence_selection.get("_selected_evidence_path")
+    if evidence_path is not None:
+        payload["evidence_selected_path"] = str(evidence_path)
+
     if not required:
         payload["stale_reasons"] = ["contract_not_required"]
         _emit(payload, json_only=args.json_only)
         return 0
 
-    evidence_path = _resolve_evidence_path(
-        explicit_evidence=args.evidence,
-        pack_path=pack_path,
-        identity_id=args.identity_id,
-        contract=contract if isinstance(contract, dict) else {},
-    )
     payload["producer_readiness"] = evidence_path is not None
     if evidence_path is not None:
         payload["evidence_ref"] = str(evidence_path)

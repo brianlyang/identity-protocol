@@ -4382,6 +4382,16 @@ def _instance_plane_status(
             "error_code": xwf_schema_payload.get("error_code", ""),
             "required_contract": xwf_schema_payload.get("required_contract"),
             "auto_required_signal": xwf_schema_payload.get("auto_required_signal"),
+            "evidence_selected_path": xwf_schema_payload.get("evidence_selected_path", ""),
+            "evidence_selection_mode": xwf_schema_payload.get("evidence_selection_mode", ""),
+            "evidence_selected_authority_class": xwf_schema_payload.get(
+                "evidence_selected_authority_class", ""
+            ),
+            "evidence_pointer_resolution_mode": xwf_schema_payload.get(
+                "evidence_pointer_resolution_mode", ""
+            ),
+            "evidence_pointer_path": xwf_schema_payload.get("evidence_pointer_path", ""),
+            "evidence_kind": xwf_schema_payload.get("evidence_kind", ""),
             "run_id": xwf_schema_payload.get("run_id", ""),
             "route_action": xwf_schema_payload.get("route_action", ""),
             "quality_meta_state": xwf_schema_payload.get("quality_meta_state", ""),

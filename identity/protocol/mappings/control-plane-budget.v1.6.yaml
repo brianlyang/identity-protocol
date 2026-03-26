@@ -1,6 +1,6 @@
 schema_version: 1
 budget_version: v1.6
-last_updated_utc: '2026-03-26T15:41:42Z'
+last_updated_utc: '2026-03-26T15:49:58Z'
 policy_mode: dual_threshold_with_family_convergence
 budgets:
   validator_scripts:
@@ -38,7 +38,7 @@ convergence_guard:
   enabled: true
   mode: no_rebound
   enforce_mode: fail_required
-  baseline_snapshot_utc: '2026-03-26T15:41:42Z'
+  baseline_snapshot_utc: '2026-03-26T15:49:58Z'
   ceilings:
     validator_scripts: 248
     error_codes: 691

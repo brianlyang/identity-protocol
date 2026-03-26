@@ -126,6 +126,13 @@ fallback_contract = {
     "validator": "scripts/validate_fallback_taxonomy_normalization.py",
 }
 
+xwf_contract = {
+    "required": True,
+    "contract_id": "rq_019_cross_workflow_evidence_schema_contract_v1",
+    "validator": "scripts/validate_cross_workflow_schema.py",
+    "evidence_path_pattern": "runtime/reports/identity-upgrade-exec-probe-mm-*.json",
+}
+
 
 def compute_promotion_decision_hash(doc: dict[str, object]) -> str:
     base = {
@@ -171,6 +178,7 @@ def build_probe_runtime_report_path(pack_root: Path, identity_id: str, report_ro
             "status_promotion_evidence_contract_v1": promotion_contract,
             "phase_bootstrap_before_strict_contract_v1": phase_contract,
             "fallback_taxonomy_normalization_contract_v1": fallback_contract,
+            "cross_workflow_evidence_schema_contract_v1": xwf_contract,
             "reasoning_loop_failclose_contract_v1": reasoning_contract_mm,
         },
         ensure_ascii=False,
@@ -234,6 +242,9 @@ pointer_report_doc = {
     "multimodal_runtime_evidence_status": "SKIPPED_NOT_REQUIRED",
     "runtime_stage_deferred": True,
     "runtime_stage_deferred_reason": "legacy_report_missing_runtime_stage_pre_execution",
+    "route_action": "pointer_selected_validation_path",
+    "dedup_state": "pointer_selected_stable_winner",
+    "schema_version": "v1",
     "send_time_gate_status": "PASS_REQUIRED",
     "governed_outlet_enforced": True,
     "outlet_bypass_detected": False,
@@ -261,6 +272,9 @@ explicit_report_doc = {
     "phase_a_refresh_applied": True,
     "phase_b_strict_revalidate_status": "PASS_REQUIRED",
     "run_id": "identity-upgrade-exec-probe-mm-explicit",
+    "route_action": "explicit_override_validation_path",
+    "dedup_state": "explicit_override_stable_winner",
+    "schema_version": "v1",
     "check_results": [
         {
             "cmd": "python3 scripts/validate_multimodal_plugin_enforcement.py --json-only",
@@ -602,6 +616,32 @@ elif name == "fallback_explicit_override_pass":
         raise SystemExit("fallback_explicit_override_pass: authority class mismatch")
     if str(doc.get("report_pointer_resolution_mode", "")).strip() != "explicit_report_override":
         raise SystemExit("fallback_explicit_override_pass: pointer resolution mismatch")
+elif name == "xwf_pointer_selection_pass":
+    if rc != 0:
+        raise SystemExit("xwf_pointer_selection_pass: expected rc=0")
+    if str(doc.get("cross_workflow_schema_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("xwf_pointer_selection_pass: status mismatch")
+    if str(doc.get("evidence_selection_mode", "")).strip() != "active_execution_pointer":
+        raise SystemExit("xwf_pointer_selection_pass: selection mode mismatch")
+    if str(doc.get("evidence_selected_authority_class", "")).strip() != "active_execution_pointer_pack_local_report":
+        raise SystemExit("xwf_pointer_selection_pass: authority class mismatch")
+    if str(doc.get("evidence_pointer_resolution_mode", "")).strip() != "pointer_candidate_root_report":
+        raise SystemExit("xwf_pointer_selection_pass: pointer resolution mismatch")
+    if str(doc.get("evidence_kind", "")).strip() != "report":
+        raise SystemExit("xwf_pointer_selection_pass: evidence kind mismatch")
+elif name == "xwf_explicit_override_pass":
+    if rc != 0:
+        raise SystemExit("xwf_explicit_override_pass: expected rc=0")
+    if str(doc.get("cross_workflow_schema_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("xwf_explicit_override_pass: status mismatch")
+    if str(doc.get("evidence_selection_mode", "")).strip() != "explicit_report_override":
+        raise SystemExit("xwf_explicit_override_pass: selection mode mismatch")
+    if str(doc.get("evidence_selected_authority_class", "")).strip() != "explicit_report_override":
+        raise SystemExit("xwf_explicit_override_pass: authority class mismatch")
+    if str(doc.get("evidence_pointer_resolution_mode", "")).strip() != "explicit_report_override":
+        raise SystemExit("xwf_explicit_override_pass: pointer resolution mismatch")
+    if str(doc.get("evidence_kind", "")).strip() != "report":
+        raise SystemExit("xwf_explicit_override_pass: evidence kind mismatch")
 else:
     raise SystemExit(f"unknown probe name: {name}")
 PY
@@ -812,6 +852,43 @@ run_probe fallback_explicit_override_pass \
   --operation validate \
   --report "${EXPLICIT_REPORT_PATH}" \
   --fallback-reason protocol_trigger_not_met \
+  --json-only
+
+run_probe xwf_pointer_selection_pass \
+  python3 scripts/required_gate_bundle_runner.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id probe-mm \
+  --operation validate \
+  --run-id identity-upgrade-exec-probe-mm-old \
+  --target-name cross_workflow_schema \
+  --actor-id assistant:codex \
+  --resolved-work-layer protocol \
+  --resolved-source-layer project \
+  --lock-state LOCK_MATCH \
+  --send-time-gate-status PASS_REQUIRED \
+  --outlet-bypass-detected false \
+  --final-emit-contract-status PASS_REQUIRED \
+  --final-emit-policy-mode tool_choice_required \
+  --final-emit-schema-status PASS_REQUIRED \
+  --json-only
+
+run_probe xwf_explicit_override_pass \
+  python3 scripts/required_gate_bundle_runner.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id probe-mm \
+  --operation validate \
+  --run-id identity-upgrade-exec-probe-mm-explicit \
+  --report-selected-path "${EXPLICIT_REPORT_PATH}" \
+  --target-name cross_workflow_schema \
+  --actor-id assistant:codex \
+  --resolved-work-layer protocol \
+  --resolved-source-layer project \
+  --lock-state LOCK_MATCH \
+  --send-time-gate-status PASS_REQUIRED \
+  --outlet-bypass-detected false \
+  --final-emit-contract-status PASS_REQUIRED \
+  --final-emit-policy-mode tool_choice_required \
+  --final-emit-schema-status PASS_REQUIRED \
   --json-only
 
 python3 - <<'PY' "${RESULT_ROOT}" "${MANIFEST_PATH}"
