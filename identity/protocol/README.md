@@ -544,6 +544,13 @@ The verdict-bearing machine-output channel is stdout only.
 stderr diagnostics do not become an alternate status-bearing channel and may
 not replace missing stdout truth.
 
+Bundle component validators must also keep working-directory contract explicit.
+
+The admitted validator execution working directory is repo_root.
+
+Runtime may not substitute arbitrary cwd or ambient shell location for that
+governed execution context.
+
 ---
 
 ## Conflict-handling rule

@@ -525,6 +525,14 @@ stderr may carry incidental diagnostics, but it does not become an alternate
 status-bearing verdict channel and may not be scraped to replace missing
 stdout truth.
 
+Bundle component validator working-directory contract must stay explicit too.
+
+The admitted validator execution working directory is repo_root.
+
+The machine world must not run a bound component validator from arbitrary cwd
+or ambient shell location and then treat that convenience execution context as
+if it were governed validator law.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

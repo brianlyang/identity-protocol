@@ -237,6 +237,13 @@ only.
 Runtime must not elevate stderr diagnostics into an alternate status-bearing
 channel or use them to replace missing stdout truth.
 
+Runtime must also keep bound component validator working-directory contract
+explicit; runtime executes bound component validators with repo_root as the
+governed working directory.
+
+Runtime must not substitute arbitrary cwd or ambient shell location for that
+governed execution context.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

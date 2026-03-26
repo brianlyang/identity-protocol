@@ -293,6 +293,13 @@ only.
 stderr diagnostics must not be promoted into an alternate status-bearing
 verdict channel inside the bundle.
 
+Root-law bundle rows must also keep component validator working-directory
+contract explicit; bound component validators execute with repo_root as the
+governed working directory.
+
+Local substitution of arbitrary cwd or ambient shell location is forbidden
+inside the bundle.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

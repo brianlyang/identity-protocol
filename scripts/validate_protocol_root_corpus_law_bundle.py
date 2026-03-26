@@ -33,6 +33,7 @@ from root_corpus_law_bundle_common import (
     component_validator_output_contract_from_doc,
     component_validator_invocation_contract_from_doc,
     component_validator_output_channel_contract_from_doc,
+    component_validator_working_directory_contract_from_doc,
     component_self_describing_family_requirement_fallback_policy_from_doc,
     component_self_describing_family_requirement_inheritance_mode_from_doc,
     component_self_describing_family_requirement_local_redeclaration_policy_from_doc,
@@ -83,6 +84,7 @@ ERR_STRUCTURE = "IP-RCLB-002"
 ERR_BUNDLE = "IP-RCLB-003"
 COMPONENT_VALIDATOR_INVOCATION_CONTRACT = "python3_repo_root_json_only"
 COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT = "stdout_only"
+COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT = "repo_root"
 
 EXPECTED_COMPONENTS = {
     "root_corpus_governance": {
@@ -206,11 +208,23 @@ def _component_validator_cmd(repo_root: Path, validator_script: str, invocation_
     return ["python3", validator_script, "--repo-root", str(repo_root), "--json-only"]
 
 
+def _component_validator_cwd(repo_root: Path, working_directory_contract: str) -> Path:
+    if working_directory_contract == COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT:
+        return repo_root
+    return repo_root
+
+
 def _run_component_validator(
-    repo_root, validator_script: str, status_key: str, invocation_contract: str
+    repo_root, validator_script: str, status_key: str, invocation_contract: str, working_directory_contract: str
 ) -> tuple[int, dict[str, Any], str]:
-    cmd = _component_validator_cmd(Path(repo_root), validator_script, invocation_contract)
-    proc = subprocess.run(cmd, cwd=repo_root, capture_output=True, text=True)
+    repo_root_path = Path(repo_root)
+    cmd = _component_validator_cmd(repo_root_path, validator_script, invocation_contract)
+    proc = subprocess.run(
+        cmd,
+        cwd=_component_validator_cwd(repo_root_path, working_directory_contract),
+        capture_output=True,
+        text=True,
+    )
     stdout = (proc.stdout or "").strip()
     if not stdout:
         return proc.returncode, {}, "validator_output_missing"
@@ -379,6 +393,9 @@ def main() -> int:
     component_validator_output_channel_contract = (
         component_validator_output_channel_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_working_directory_contract = (
+        component_validator_working_directory_contract_from_doc(bundle_doc) if bundle_doc else ""
+    )
     effective_component_validator_status_requirement = (
         component_validator_status_requirement
         if component_validator_status_requirement == STATUS_PASS_REQUIRED
@@ -393,6 +410,11 @@ def main() -> int:
         component_validator_output_channel_contract
         if component_validator_output_channel_contract == COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT
         else COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT
+    )
+    effective_component_validator_working_directory_contract = (
+        component_validator_working_directory_contract
+        if component_validator_working_directory_contract == COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT
+        else COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT
     )
     source_required_descriptor_fields = (
         registry_required_descriptor_fields_from_doc(machine_registry_completeness_doc)
@@ -648,6 +670,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_validator_output_channel_contract != COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_output_channel_contract_invalid")
+            error_code = ERR_REGISTRY
+        if component_validator_working_directory_contract != COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT:
+            stale_reasons.append("root_corpus_law_bundle_component_validator_working_directory_contract_invalid")
             error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
@@ -1095,6 +1120,7 @@ def main() -> int:
                 row.validator_script,
                 row.status_key,
                 effective_component_validator_invocation_contract,
+                effective_component_validator_working_directory_contract,
             )
             component_status = str(payload.get(row.status_key) or "")
             descriptor_field_rows: list[dict[str, str]] = []
@@ -1324,6 +1350,7 @@ def main() -> int:
         "component_validator_output_contract": component_validator_output_contract,
         "component_validator_invocation_contract": component_validator_invocation_contract,
         "component_validator_output_channel_contract": component_validator_output_channel_contract,
+        "component_validator_working_directory_contract": component_validator_working_directory_contract,
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
         "component_ids": [row.component_id for row in sorted_components],
