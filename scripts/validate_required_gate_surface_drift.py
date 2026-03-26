@@ -17,6 +17,10 @@ from protocol_infra_contract import (
     VALIDATOR_ACTOR_ID_REQUIRED_SCRIPTS as INFRA_VALIDATOR_ACTOR_ID_REQUIRED_SCRIPTS,
     VALIDATOR_SESSION_ID_REQUIRED_SCRIPTS as INFRA_VALIDATOR_SESSION_ID_REQUIRED_SCRIPTS,
 )
+from workspace_runtime_closure_command_common import (
+    WORKSPACE_RUNTIME_CLOSURE_RUNNER_FORBIDDEN_SELECTOR_TOKENS,
+    WORKSPACE_RUNTIME_CLOSURE_RUNNER_REQUIRED_TOKENS,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -61,6 +65,9 @@ GATEWAY_WRAPPER_BUS_FORBIDDEN_LEGACY_HELPERS: tuple[str, ...] = (
 WORKFLOW_REQUIRED_GATE_SURFACE = ".github/workflows/_identity-required-gates.yml"
 SUPER_LINTER_WORKFLOW_SURFACE = ".github/workflows/super-linter.yml"
 REQUIRED_GATE_CI_DELEGATE_SCRIPT = "scripts/ci/run_required_runtime_gates_ci.sh"
+REQUIRED_GATE_SURFACE_DRIFT_PROBE_CI_DELEGATE_SCRIPT = (
+    "scripts/ci/run_required_gate_surface_drift_probes_ci.sh"
+)
 FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT = "scripts/ci/run_full_scan_target_regression_ci.sh"
 MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_monotonic_floor_probes_ci.sh"
 GATEWAY_TRUST_BOUNDARY_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh"
@@ -93,11 +100,44 @@ WORKFLOW_REQUIRED_EXECUTION_SCRIPTS: tuple[str, ...] = (
 REQUIRED_GATE_CI_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
     "scripts/render_identity_response_stamp.py",
     "scripts/validate_response_stamp_operator_envelope.py",
+    "scripts/run_workspace_runtime_closure_checks.py",
 )
 REQUIRED_GATE_CI_DELEGATED_REQUIRED_TOKENS: tuple[str, ...] = (
     "--stamp-json",
     "--repo-root",
     "--json-only",
+)
+PROBE_FIXTURE_SHELL_COMMON_SCRIPT = "scripts/probe_fixture_shell_common.sh"
+PROBE_FIXTURE_SHELL_COMMON_REQUIRED_TOKENS: tuple[str, ...] = (
+    "resolve_python_module_constant()",
+    "resolve_python_module_expression()",
+    "mutate_probe_literal()",
+    "probe_fixture_literal_mutation.py",
+)
+WORKSPACE_RUNTIME_CLOSURE_COMMON_SURFACE = "scripts/workspace_runtime_closure_command_common.py"
+WORKSPACE_RUNTIME_CLOSURE_COMMON_REQUIRED_MARKERS: tuple[str, ...] = (
+    "WORKSPACE_RUNTIME_CLOSURE_RUNNER_REQUIRED_TOKENS",
+    '"--catalog"',
+    '"--repo-catalog"',
+    '"--json-only"',
+    "WORKSPACE_RUNTIME_CLOSURE_RUNNER_FORBIDDEN_SELECTOR_TOKENS",
+    '"--family"',
+    '"--checker-id"',
+    "WORKSPACE_RUNTIME_CLOSURE_RUNNER_SELECTOR_POLICY_MARKER",
+    "workspace_runtime_runner_selector_policy=full_surface_non_shrinkable",
+    "WORKSPACE_RUNTIME_CLOSURE_RUNNER_GOVERNANCE_PROBE_SCRIPT",
+    "scripts/ci/run_required_gate_surface_drift_probes_ci.sh",
+    "WORKSPACE_RUNTIME_CLOSURE_RUNNER_SURFACE_CONSTRAINTS",
+)
+REQUIRED_GATE_SURFACE_DRIFT_PROBE_REQUIRED_TOKENS: tuple[str, ...] = (
+    "scripts/validate_required_gate_surface_drift.py --json-only",
+    "scripts/run_workspace_runtime_closure_checks.py",
+    "required_gate_workspace_runtime_runner_missing:--repo-catalog",
+    "required_gate_workspace_runtime_runner_forbidden_selector:--family",
+    "required_gate_workspace_runtime_runner_forbidden_selector:--checker-id",
+    "workspace_runtime_runner_selector_policy=full_surface_non_shrinkable",
+    "scripts/workspace_runtime_closure_command_common.py",
+    "scripts/probe_fixture_shell_common.sh",
 )
 CI_DELEGATED_LINEAGE_SURFACES: tuple[str, ...] = (
     REQUIRED_GATE_CI_DELEGATE_SCRIPT,
@@ -1305,6 +1345,8 @@ def main() -> int:
         rel = REQUIRED_GATE_CI_DELEGATE_SCRIPT
         text = _read_text(required_gate_ci_delegate_path)
         invoked_python_scripts = _extract_shell_invocations(text, executable="python3")
+        invoked_bash_scripts = _extract_shell_invocations(text, executable="bash")
+        invoked_bash_scripts.update(_extract_shell_invocations(text, executable="sh"))
         missing_python = [
             script
             for script in REQUIRED_GATE_CI_DELEGATED_REQUIRED_PYTHON_SCRIPTS
@@ -1326,6 +1368,90 @@ def main() -> int:
         if required_gate_missing_tokens:
             existing_tokens = list(missing_execution_tokens.get(rel, []))
             missing_execution_tokens[rel] = sorted(set(existing_tokens + required_gate_missing_tokens))
+        if REQUIRED_GATE_SURFACE_DRIFT_PROBE_CI_DELEGATE_SCRIPT not in invoked_bash_scripts:
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(
+                set(existing_tokens + [REQUIRED_GATE_SURFACE_DRIFT_PROBE_CI_DELEGATE_SCRIPT])
+            )
+
+        workspace_runtime_runner_args = _extract_shell_invocation_args(
+            text,
+            executable="python3",
+            script="scripts/run_workspace_runtime_closure_checks.py",
+        )
+        workspace_runtime_runner_missing_tokens = [
+            token
+            for token in WORKSPACE_RUNTIME_CLOSURE_RUNNER_REQUIRED_TOKENS
+            if not any(_arg_token_present(args, token) for args in workspace_runtime_runner_args)
+        ]
+        if workspace_runtime_runner_missing_tokens:
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(
+                set(
+                    existing_tokens
+                    + [
+                        f"required_gate_workspace_runtime_runner_missing:{token}"
+                        for token in workspace_runtime_runner_missing_tokens
+                    ]
+                )
+            )
+        workspace_runtime_runner_forbidden_selectors = [
+            token
+            for token in WORKSPACE_RUNTIME_CLOSURE_RUNNER_FORBIDDEN_SELECTOR_TOKENS
+            if any(_arg_token_present(args, token) for args in workspace_runtime_runner_args)
+        ]
+        if workspace_runtime_runner_forbidden_selectors:
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(
+                set(
+                    existing_tokens
+                    + [
+                        f"required_gate_workspace_runtime_runner_forbidden_selector:{token}"
+                        for token in workspace_runtime_runner_forbidden_selectors
+                    ]
+                )
+            )
+
+    probe_fixture_shell_common_path = repo_root / PROBE_FIXTURE_SHELL_COMMON_SCRIPT
+    if not probe_fixture_shell_common_path.exists():
+        missing_surface_files.append(PROBE_FIXTURE_SHELL_COMMON_SCRIPT)
+    else:
+        rel = PROBE_FIXTURE_SHELL_COMMON_SCRIPT
+        text = _read_text(probe_fixture_shell_common_path)
+        missing_helper_tokens = [
+            token for token in PROBE_FIXTURE_SHELL_COMMON_REQUIRED_TOKENS if token not in text
+        ]
+        if missing_helper_tokens:
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(set(existing_tokens + missing_helper_tokens))
+
+    workspace_runtime_common_path = repo_root / WORKSPACE_RUNTIME_CLOSURE_COMMON_SURFACE
+    if not workspace_runtime_common_path.exists():
+        missing_surface_files.append(WORKSPACE_RUNTIME_CLOSURE_COMMON_SURFACE)
+    else:
+        rel = WORKSPACE_RUNTIME_CLOSURE_COMMON_SURFACE
+        text = _read_text(workspace_runtime_common_path)
+        missing_common_markers = [
+            token for token in WORKSPACE_RUNTIME_CLOSURE_COMMON_REQUIRED_MARKERS if token not in text
+        ]
+        if missing_common_markers:
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(set(existing_tokens + missing_common_markers))
+
+    required_gate_surface_drift_probe_path = (
+        repo_root / REQUIRED_GATE_SURFACE_DRIFT_PROBE_CI_DELEGATE_SCRIPT
+    )
+    if not required_gate_surface_drift_probe_path.exists():
+        missing_surface_files.append(REQUIRED_GATE_SURFACE_DRIFT_PROBE_CI_DELEGATE_SCRIPT)
+    else:
+        rel = REQUIRED_GATE_SURFACE_DRIFT_PROBE_CI_DELEGATE_SCRIPT
+        text = _read_text(required_gate_surface_drift_probe_path)
+        missing_probe_tokens = [
+            token for token in REQUIRED_GATE_SURFACE_DRIFT_PROBE_REQUIRED_TOKENS if token not in text
+        ]
+        if missing_probe_tokens:
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(set(existing_tokens + missing_probe_tokens))
 
     full_scan_delegate_path = repo_root / FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT
     if not full_scan_delegate_path.exists():
@@ -1541,6 +1667,14 @@ def main() -> int:
                 "--json-only",
             )
         )
+        has_timeout_profile_coverage_probe = all(
+            token in text
+            for token in (
+                "run_probe long_running_update_timeout_profile_covered",
+                "python3 scripts/validate_gateway_timeout_profile_coverage.py",
+                "--json-only",
+            )
+        )
         has_fixture_identity_runtime_egress_probe = all(
             token in text
             for token in (
@@ -1618,6 +1752,8 @@ def main() -> int:
             gateway_missing_tokens.append("gateway_channel_bypass_emit_probe_invocation_missing")
         if not has_context_timeout_probe:
             gateway_missing_tokens.append("gateway_context_timeout_probe_invocation_missing")
+        if not has_timeout_profile_coverage_probe:
+            gateway_missing_tokens.append("gateway_timeout_profile_coverage_probe_invocation_missing")
         if not has_fixture_identity_runtime_egress_probe:
             gateway_missing_tokens.append("gateway_fixture_identity_runtime_egress_probe_invocation_missing")
         if not has_session_chain_non_json_probe:
@@ -2331,6 +2467,18 @@ def main() -> int:
         "monotonic_floor_probe_ci_delegate_script": MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT,
         "monotonic_probe_delegate_required_python_scripts": list(MONOTONIC_PROBE_DELEGATED_REQUIRED_PYTHON_SCRIPTS),
         "monotonic_probe_required_target": MONOTONIC_PROBE_REQUIRED_TARGET,
+        "required_gate_surface_drift_probe_ci_delegate_script": REQUIRED_GATE_SURFACE_DRIFT_PROBE_CI_DELEGATE_SCRIPT,
+        "required_gate_surface_drift_probe_required_tokens": list(
+            REQUIRED_GATE_SURFACE_DRIFT_PROBE_REQUIRED_TOKENS
+        ),
+        "probe_fixture_shell_common_script": PROBE_FIXTURE_SHELL_COMMON_SCRIPT,
+        "probe_fixture_shell_common_required_tokens": list(
+            PROBE_FIXTURE_SHELL_COMMON_REQUIRED_TOKENS
+        ),
+        "workspace_runtime_closure_common_surface": WORKSPACE_RUNTIME_CLOSURE_COMMON_SURFACE,
+        "workspace_runtime_closure_common_required_markers": list(
+            WORKSPACE_RUNTIME_CLOSURE_COMMON_REQUIRED_MARKERS
+        ),
         "gateway_trust_boundary_probe_ci_delegate_script": GATEWAY_TRUST_BOUNDARY_PROBE_CI_DELEGATE_SCRIPT,
         "gateway_trust_boundary_delegate_required_python_scripts": list(
             GATEWAY_TRUST_BOUNDARY_DELEGATED_REQUIRED_PYTHON_SCRIPTS

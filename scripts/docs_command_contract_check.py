@@ -1179,6 +1179,28 @@ def main() -> int:
     else:
         failures.append("[MISSING_SCRIPT] scripts/validate_release_doc_surface_governance.py not found")
 
+    workspace_runtime_closure_command_surface_script = (
+        repo_root / "scripts/validate_workspace_runtime_closure_command_surface.py"
+    )
+    if workspace_runtime_closure_command_surface_script.exists():
+        proc = subprocess.run(
+            [sys.executable, str(workspace_runtime_closure_command_surface_script), "--json-only"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+        )
+        if proc.returncode != 0:
+            failures.append(
+                "[WORKSPACE_RUNTIME_CLOSURE_COMMAND_SURFACE_FAIL] "
+                + (
+                    proc.stdout.strip()
+                    or proc.stderr.strip()
+                    or "validate_workspace_runtime_closure_command_surface failed"
+                )
+            )
+    else:
+        failures.append("[MISSING_SCRIPT] scripts/validate_workspace_runtime_closure_command_surface.py not found")
+
     audit_snapshot_index_script = repo_root / "scripts/validate_audit_snapshot_index.py"
     if audit_snapshot_index_script.exists():
         proc = subprocess.run(

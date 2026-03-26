@@ -31,6 +31,7 @@ run_cmd() {
 
 run_global_protocol_gates() {
   run_cmd python3 scripts/validate_required_gate_surface_drift.py --json-only
+  run_cmd bash scripts/ci/run_required_gate_surface_drift_probes_ci.sh
   run_cmd python3 scripts/sync_plugin_join_wiring.py --check --json-only
   run_cmd python3 scripts/docs_command_contract_check.py
   run_cmd python3 scripts/validate_control_plane_budget_sync.py --json-only
@@ -47,13 +48,19 @@ run_global_protocol_gates() {
   run_cmd bash scripts/ci/run_identity_dialogue_retention_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_artifact_family_routing_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_weak_live_linkage_probes_ci.sh
+  run_cmd bash scripts/ci/run_identity_weak_live_linkage_pointer_locality_probes_ci.sh
   run_cmd bash scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh
   run_cmd bash scripts/ci/run_post_execution_report_repair_probes_ci.sh
+  run_cmd bash scripts/ci/run_execution_report_selection_convergence_probes_ci.sh
+  run_cmd bash scripts/ci/run_active_execution_report_pointer_locality_probes_ci.sh
+  run_cmd bash scripts/ci/run_strict_live_active_pointer_locality_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_update_preflight_terminal_truth_split_probes_ci.sh
   run_cmd bash scripts/ci/run_terminal_truth_boundary_projection_probes_ci.sh
   run_cmd bash scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_broadcast_delivery_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_communication_transport_probes_ci.sh
+  run_cmd bash scripts/ci/run_identity_transport_fleet_closure_convergence_probes_ci.sh
+  run_cmd bash scripts/ci/run_active_runtime_pack_closure_convergence_probes_ci.sh
   run_cmd bash scripts/ci/run_executable_surface_runtime_literal_lock_probes_ci.sh
   run_cmd python3 scripts/validate_executable_surface_runtime_literal_lock.py --catalog "${CATALOG_PATH}" --include-active-pack-scripts --json-only
   run_cmd bash scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh
@@ -66,9 +73,9 @@ run_global_protocol_gates() {
   run_cmd bash scripts/ci/run_identity_instance_script_orchestration_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_codex_launcher_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh
-  run_cmd python3 scripts/check_identity_codex_launcher_migration_closure.py --catalog "${CATALOG_PATH}" --workspace-runtime-only --json-only
-  run_cmd python3 scripts/check_identity_broadcast_migration_closure.py --catalog "${CATALOG_PATH}" --workspace-runtime-only --json-only
-  run_cmd python3 scripts/check_identity_communication_transport_closure.py --catalog "${CATALOG_PATH}" --workspace-runtime-only --json-only
+  run_cmd bash scripts/ci/run_repair_contract_backfill_status_profile_probes_ci.sh
+  run_cmd python3 scripts/run_workspace_runtime_closure_checks.py --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --json-only
+  run_cmd python3 scripts/validate_resolve_identity_context_default_local_catalog.py --json-only
   run_cmd python3 scripts/validate_runtime_catalog_metadata_hygiene.py --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --require-active --json-only
   run_cmd python3 scripts/validate_identity_instance_script_cross_pack_adoption.py --catalog "${CATALOG_PATH}" --json-only
   run_cmd python3 scripts/validate_gateway_wrapper_trust_boundary_cross_cwd.py --json-only

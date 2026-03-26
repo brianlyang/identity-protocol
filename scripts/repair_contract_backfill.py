@@ -182,6 +182,10 @@ from version_baseline_common import (
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+STATUS_PROFILE_STRICT_FULL = "strict_full"
+STATUS_PROFILE_LAUNCHER_WORKSPACE_CONVERGENCE = "launcher_workspace_convergence"
+CURRENT_RUN_PROJECTION_ENFORCEMENT_BLOCKING = "blocking"
+CURRENT_RUN_PROJECTION_ENFORCEMENT_OBSERVE_NON_BLOCKING = "observe_non_blocking"
 ERR_LAUNCHER_WIRE_MISSING = "IP-ILAUNCH-003"
 ERR_LAUNCHER_WIRE_INVALID = "IP-ILAUNCH-004"
 
@@ -322,6 +326,13 @@ SKILL_SUPPLY_CHAIN_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     "skill_frontmatter_contract_v1": _skill_frontmatter_contract_skeleton(),
     "skill_sync_drift_guard_contract_v1": _skill_sync_drift_guard_contract_skeleton(),
 }
+
+
+def _resolve_current_run_projection_enforcement_mode(*, status_profile: str) -> str:
+    profile = str(status_profile or "").strip()
+    if profile == STATUS_PROFILE_LAUNCHER_WORKSPACE_CONVERGENCE:
+        return CURRENT_RUN_PROJECTION_ENFORCEMENT_OBSERVE_NON_BLOCKING
+    return CURRENT_RUN_PROJECTION_ENFORCEMENT_BLOCKING
 
 CAPABILITY_DRIVER_VALIDATOR_IDS: tuple[str, ...] = (
     "scripts/validate_identity_tool_installation.py",
@@ -2478,19 +2489,41 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Backfill intake contract set into CURRENT_TASK.json.")
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--identity-id", required=True)
+    ap.add_argument("--repo-catalog", default="")
     ap.add_argument(
         "--scope",
         choices=["full", "blocker_taxonomy"],
         default="full",
         help="limit backfill to a specific shared contract family",
     )
+    ap.add_argument(
+        "--status-profile",
+        choices=[STATUS_PROFILE_STRICT_FULL, STATUS_PROFILE_LAUNCHER_WORKSPACE_CONVERGENCE],
+        default=STATUS_PROFILE_STRICT_FULL,
+        help=(
+            "strict_full preserves full fail-close semantics for current-run projection integrity failures; "
+            "launcher_workspace_convergence keeps current-run projection integrity failures as observation-only "
+            "so launcher workspace adoption can close without claiming terminal-truth or live-linkage closure"
+        ),
+    )
     ap.add_argument("--apply", action="store_true", help="persist updates to CURRENT_TASK.json")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
+    current_run_projection_enforcement_mode = _resolve_current_run_projection_enforcement_mode(
+        status_profile=args.status_profile
+    )
 
     catalog = Path(args.catalog).expanduser().resolve()
+    repo_catalog = (
+        Path(args.repo_catalog).expanduser().resolve()
+        if str(args.repo_catalog or "").strip()
+        else catalog
+    )
     if not catalog.exists():
         print(f"[FAIL] catalog not found: {catalog}")
+        return 2
+    if not repo_catalog.exists():
+        print(f"[FAIL] repo catalog not found: {repo_catalog}")
         return 2
 
     try:
@@ -2500,6 +2533,18 @@ def main() -> int:
         print(f"[FAIL] {exc}")
         return 1
 
+    catalog_doc = _safe_load_yaml(catalog)
+    catalog_rows = catalog_doc.get("identities")
+    catalog_rows = catalog_rows if isinstance(catalog_rows, list) else []
+    catalog_row = next(
+        (
+            row
+            for row in catalog_rows
+            if isinstance(row, dict) and str(row.get("id", "")).strip() == str(args.identity_id or "").strip()
+        ),
+        None,
+    )
+
     if args.scope == "blocker_taxonomy":
         before = json.loads(json.dumps(task_doc))
         updated = json.loads(json.dumps(task_doc))
@@ -2507,6 +2552,8 @@ def main() -> int:
             updated,
             sync_human_collab_blockers_if_present=True,
             include_default_legacy_aliases=True,
+            prune_disallowed_legacy_alias_bridge=True,
+            identity_row=catalog_row,
         )
         blocker_surface_applicable = bool(blocker_surface_backfill.get("applicable", False))
         blocker_surface_invalid_after = blocker_surface_backfill.get("invalid_blockers_by_surface") or {}
@@ -2533,6 +2580,12 @@ def main() -> int:
             "pack_path": str(pack_path),
             "task_path": str(task_path),
             "scope": args.scope,
+            "status_profile": args.status_profile,
+            "current_run_projection_enforcement_mode": current_run_projection_enforcement_mode,
+            "status_profile_boundary_note": (
+                "launcher_workspace_convergence may observe current-run weak-live / terminal-truth projection integrity failures "
+                "without letting them block launcher workspace adoption; strict_full keeps those integrity failures fail-closed"
+            ),
             "contract_backfill_status": status,
             "error_code": error_code,
             "changed": changed,
@@ -2554,6 +2607,12 @@ def main() -> int:
             "catalog_path": str(catalog),
             "pack_path": str(pack_path),
             "task_path": str(task_path),
+            "status_profile": args.status_profile,
+            "current_run_projection_enforcement_mode": current_run_projection_enforcement_mode,
+            "status_profile_boundary_note": (
+                "launcher_workspace_convergence may observe current-run weak-live / terminal-truth projection integrity failures "
+                "without letting them block launcher workspace adoption; strict_full keeps those integrity failures fail-closed"
+            ),
             "contract_backfill_status": STATUS_FAIL_REQUIRED,
             "error_code": "IP-CBKF-001",
             "changed": False,
@@ -2565,17 +2624,6 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 1
 
-    catalog_doc = _safe_load_yaml(catalog)
-    catalog_rows = catalog_doc.get("identities")
-    catalog_rows = catalog_rows if isinstance(catalog_rows, list) else []
-    catalog_row = next(
-        (
-            row
-            for row in catalog_rows
-            if isinstance(row, dict) and str(row.get("id", "")).strip() == str(args.identity_id or "").strip()
-        ),
-        None,
-    )
     catalog_row_before = json.loads(json.dumps(catalog_row)) if isinstance(catalog_row, dict) else {}
     catalog_row_version_changed = False
     if isinstance(catalog_row, dict):
@@ -2624,6 +2672,8 @@ def main() -> int:
         updated,
         sync_human_collab_blockers_if_present=True,
         include_default_legacy_aliases=True,
+        prune_disallowed_legacy_alias_bridge=True,
+        identity_row=catalog_row,
     )
     (
         forced_communication_required_keys,
@@ -3194,9 +3244,30 @@ def main() -> int:
         task_doc=updated,
         apply=args.apply,
     )
+    from contract_bootstrap_emitter_common import materialize_required_bootstrap_emitters
+    from post_execution_report_repair_common import enrich_post_execution_report
     from strict_live_evidence_resolution_common import resolve_active_execution_context
     from weak_live_current_run_projection_common import materialize_current_run_weak_live_projection
 
+    staged_task_changed = before != updated
+    staged_catalog_changed = catalog_row_version_changed
+    staged_meta_changed = meta_version_changed
+    if args.apply:
+        if staged_task_changed:
+            task_path.write_text(json.dumps(updated, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        if staged_catalog_changed:
+            _safe_dump_yaml(catalog, catalog_doc)
+        if staged_meta_changed:
+            _safe_dump_yaml(meta_path, meta_doc)
+
+    contract_bootstrap_emitter_result = materialize_required_bootstrap_emitters(
+        repo_root=Path(__file__).resolve().parent.parent,
+        catalog_path=catalog,
+        identity_id=str(args.identity_id or "").strip(),
+        task_doc=updated,
+        operation="readiness",
+        apply=args.apply,
+    )
     active_execution_context = resolve_active_execution_context(pack_path)
     active_report_path_token = str(active_execution_context.get("report_path", "")).strip()
     current_run_live_projection_result: dict[str, Any]
@@ -3217,25 +3288,109 @@ def main() -> int:
                 active_report_doc=active_report_doc,
                 apply=args.apply,
             )
-            projected_report_doc = project_terminal_truth_fields(
-                load_json(active_report_path) if active_report_path.exists() else active_report_doc
+            current_report_doc = load_json(active_report_path) if active_report_path.exists() else active_report_doc
+            projection_result = enrich_post_execution_report(
+                report_doc=current_report_doc,
+                report_path=active_report_path,
+                catalog_path=catalog,
+                repo_catalog_path=repo_catalog,
+                identity_id=str(args.identity_id or "").strip(),
+                operation="readiness",
             )
-            terminal_truth_report_changed = projected_report_doc != (
-                load_json(active_report_path) if active_report_path.exists() else active_report_doc
+            projected_report_doc = (
+                projection_result.get("report_after")
+                if isinstance(projection_result.get("report_after"), dict)
+                else current_report_doc
             )
+            terminal_truth_report_changed = bool(projection_result.get("report_changed"))
             if args.apply and terminal_truth_report_changed and active_report_path.exists():
                 _write_json(active_report_path, projected_report_doc)
+            projection_applicability = (
+                projection_result.get("projection_applicability")
+                if isinstance(projection_result.get("projection_applicability"), dict)
+                else {}
+            )
+            projection_applicability_status = str(projection_applicability.get("status", "")).strip().upper()
+            repair_projection_status = str(projection_result.get("repair_projection_status", "")).strip().upper()
+            post_execution_validation_status = str(
+                ((projection_result.get("post_execution_validation") or {}).get("status", "")) or ""
+            ).strip().upper()
+            writeback_continuity_status = str(
+                ((projection_result.get("writeback_continuity_validation") or {}).get("status", "")) or ""
+            ).strip().upper()
+            terminal_truth_validation_status = str(
+                ((projection_result.get("terminal_truth_validation") or {}).get("status", ""))
+                or projected_report_doc.get("identity_terminal_truth_cleanliness_status", "")
+            ).strip().upper()
+            observation_stale_reasons = [
+                str(reason).strip()
+                for reason in (projection_result.get("observation_stale_reasons") or [])
+                if str(reason).strip()
+            ]
+            terminal_truth_projection_blocking_reasons = [
+                str(reason).strip()
+                for reason in (projection_result.get("stale_reasons") or [])
+                if str(reason).strip()
+            ]
+            if (
+                projection_applicability_status
+                and projection_applicability_status
+                not in {STATUS_PASS_REQUIRED, STATUS_SKIPPED_NOT_REQUIRED}
+            ):
+                terminal_truth_projection_blocking_reasons.append(
+                    "terminal_truth_projection_applicability_not_green"
+                )
+            if repair_projection_status and repair_projection_status != STATUS_PASS_REQUIRED:
+                terminal_truth_projection_blocking_reasons.append(
+                    "terminal_truth_projection_repair_lane_not_green"
+                )
+            if (
+                post_execution_validation_status
+                and post_execution_validation_status != STATUS_PASS_REQUIRED
+                and "post_execution_validator_not_green_after_projection"
+                not in terminal_truth_projection_blocking_reasons
+            ):
+                terminal_truth_projection_blocking_reasons.append(
+                    "post_execution_validator_not_green_after_projection"
+                )
+            if (
+                writeback_continuity_status
+                and writeback_continuity_status != STATUS_PASS_REQUIRED
+                and "writeback_continuity_not_green_after_projection"
+                not in terminal_truth_projection_blocking_reasons
+            ):
+                terminal_truth_projection_blocking_reasons.append(
+                    "writeback_continuity_not_green_after_projection"
+                )
+            terminal_truth_projection_status = (
+                STATUS_SKIPPED_NOT_REQUIRED
+                if projection_applicability_status == STATUS_SKIPPED_NOT_REQUIRED
+                else (
+                    STATUS_FAIL_REQUIRED
+                    if terminal_truth_projection_blocking_reasons
+                    else STATUS_PASS_REQUIRED
+                )
+            )
             current_run_terminal_truth_projection_result = {
-                "current_run_terminal_truth_projection_status": STATUS_PASS_REQUIRED,
+                "current_run_terminal_truth_projection_status": terminal_truth_projection_status,
                 "active_run_present": True,
                 "active_run_id": str(active_execution_context.get("run_id", "")).strip(),
                 "report_changed": bool(terminal_truth_report_changed),
                 "report_selected_path": str(active_report_path),
-                "terminal_truth_status": str(
-                    projected_report_doc.get("identity_terminal_truth_cleanliness_status", "")
+                "projection_applicability_status": projection_applicability_status
+                or STATUS_SKIPPED_NOT_REQUIRED,
+                "report_surface_class": str(projection_applicability.get("report_surface_class", "")).strip(),
+                "projection_applicability_reason": str(
+                    projection_applicability.get("applicability_reason", "")
                 ).strip(),
+                "post_execution_validation_status": post_execution_validation_status,
+                "writeback_continuity_status": writeback_continuity_status,
+                "terminal_truth_status": terminal_truth_validation_status,
                 "terminal_truth_class": str(projected_report_doc.get("terminal_truth_class", "")).strip(),
-                "stale_reasons": [],
+                "repair_projection_status": repair_projection_status,
+                "stale_reasons": terminal_truth_projection_blocking_reasons,
+                "observation_stale_reasons": observation_stale_reasons,
+                "projection_enrichment": projection_result,
             }
         except Exception as exc:
             current_run_live_projection_result = {
@@ -3258,6 +3413,9 @@ def main() -> int:
                 "active_run_id": str(active_execution_context.get("run_id", "")).strip(),
                 "report_changed": False,
                 "report_selected_path": active_report_path_token,
+                "projection_applicability_status": "",
+                "report_surface_class": "",
+                "projection_applicability_reason": "",
                 "terminal_truth_status": "",
                 "terminal_truth_class": "",
                 "stale_reasons": [f"projection_exception:{type(exc).__name__}"],
@@ -3283,10 +3441,42 @@ def main() -> int:
             "active_run_id": "",
             "report_changed": False,
             "report_selected_path": "",
+            "projection_applicability_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "report_surface_class": "",
+            "projection_applicability_reason": "active_execution_report_missing",
             "terminal_truth_status": "",
             "terminal_truth_class": "",
             "stale_reasons": ["active_execution_report_missing"],
         }
+
+    current_run_projection_failure_reasons: list[str] = []
+    if (
+        bool(current_run_live_projection_result.get("active_run_present"))
+        and str(current_run_live_projection_result.get("current_run_live_projection_status", "")).strip().upper()
+        == STATUS_FAIL_REQUIRED
+    ):
+        current_run_projection_failure_reasons.append("current_run_weak_live_projection_failed")
+    if (
+        bool(current_run_terminal_truth_projection_result.get("active_run_present"))
+        and str(
+            current_run_terminal_truth_projection_result.get(
+                "current_run_terminal_truth_projection_status",
+                "",
+            )
+        ).strip().upper()
+        == STATUS_FAIL_REQUIRED
+    ):
+        current_run_projection_failure_reasons.append("current_run_terminal_truth_projection_failed")
+    current_run_projection_blocking_failures = (
+        list(current_run_projection_failure_reasons)
+        if current_run_projection_enforcement_mode == CURRENT_RUN_PROJECTION_ENFORCEMENT_BLOCKING
+        else []
+    )
+    current_run_projection_observation_failures = (
+        []
+        if current_run_projection_enforcement_mode == CURRENT_RUN_PROJECTION_ENFORCEMENT_BLOCKING
+        else list(current_run_projection_failure_reasons)
+    )
 
     task_changed = before != updated
     catalog_changed = catalog_row_version_changed
@@ -3308,6 +3498,7 @@ def main() -> int:
         or bool(current_run_live_projection_result.get("report_changed"))
         or bool(current_run_terminal_truth_projection_result.get("report_changed"))
         or bool(current_run_live_projection_result.get("artifacts_written"))
+        or (args.apply and bool(contract_bootstrap_emitter_result.get("rows")))
     )
     applied = False
     if args.apply:
@@ -3453,27 +3644,21 @@ def main() -> int:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-SSUP-001"
         stale_reasons = ["required_skill_supply_chain_contract_keys_missing_after_backfill"]
-    elif (
-        bool(current_run_live_projection_result.get("active_run_present"))
-        and str(current_run_live_projection_result.get("current_run_live_projection_status", "")).strip().upper()
-        == STATUS_FAIL_REQUIRED
-    ):
+    elif "current_run_weak_live_projection_failed" in current_run_projection_blocking_failures:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-WLL-PRJ-001"
         stale_reasons = ["current_run_weak_live_projection_failed"]
-    elif (
-        bool(current_run_terminal_truth_projection_result.get("active_run_present"))
-        and str(
-            current_run_terminal_truth_projection_result.get(
-                "current_run_terminal_truth_projection_status",
-                "",
-            )
-        ).strip().upper()
-        == STATUS_FAIL_REQUIRED
-    ):
+    elif "current_run_terminal_truth_projection_failed" in current_run_projection_blocking_failures:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-TTC-001"
         stale_reasons = ["current_run_terminal_truth_projection_failed"]
+    elif (
+        str(contract_bootstrap_emitter_result.get("materialized_bootstrap_emitter_status", "")).strip().upper()
+        == STATUS_FAIL_REQUIRED
+    ):
+        status = STATUS_FAIL_REQUIRED
+        error_code = "IP-CBE-001"
+        stale_reasons = ["required_contract_bootstrap_emitter_materialization_failed"]
     elif legacy_drift_after:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-CBKF-002"
@@ -3509,6 +3694,13 @@ def main() -> int:
         "catalog_path": str(catalog),
         "pack_path": str(pack_path),
         "task_path": str(task_path),
+        "scope": args.scope,
+        "status_profile": args.status_profile,
+        "current_run_projection_enforcement_mode": current_run_projection_enforcement_mode,
+        "status_profile_boundary_note": (
+            "launcher_workspace_convergence may observe current-run weak-live / terminal-truth projection integrity failures "
+            "without letting them block launcher workspace adoption; strict_full keeps those integrity failures fail-closed"
+        ),
         "contract_backfill_status": status,
         "error_code": error_code,
         "changed": changed,
@@ -3542,8 +3734,12 @@ def main() -> int:
         "update_replay_runtime_evidence_backfill": update_replay_runtime_evidence_result,
         "handoff_runtime_log_backfill": handoff_runtime_log_result,
         "feedback_runtime_log_backfill": feedback_runtime_log_result,
+        "contract_bootstrap_emitter_backfill": contract_bootstrap_emitter_result,
         "current_run_live_projection_backfill": current_run_live_projection_result,
         "current_run_terminal_truth_projection_backfill": current_run_terminal_truth_projection_result,
+        "current_run_projection_failure_reasons": current_run_projection_failure_reasons,
+        "current_run_projection_blocking_failures": current_run_projection_blocking_failures,
+        "current_run_projection_observation_failures": current_run_projection_observation_failures,
         "applied": applied,
         "response_stamp_profile_present_before": response_stamp_profile_present_before,
         "response_stamp_profile_present_after": response_stamp_profile_present_after,
