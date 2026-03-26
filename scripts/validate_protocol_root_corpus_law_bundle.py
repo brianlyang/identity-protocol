@@ -30,6 +30,7 @@ from root_corpus_law_bundle_common import (
     component_self_describing_family_requirement_local_override_policy_from_doc,
     descriptor_family_surface_binding_fallback_policy_from_doc,
     descriptor_family_surface_binding_inheritance_mode_from_doc,
+    descriptor_family_surface_binding_local_redeclaration_policy_from_doc,
     descriptor_family_surface_binding_local_override_policy_from_doc,
     descriptor_repo_rel_path_discipline_fallback_policy_from_doc,
     descriptor_repo_rel_path_discipline_inheritance_mode_from_doc,
@@ -276,6 +277,9 @@ def main() -> int:
     descriptor_family_surface_binding_local_override_policy = (
         descriptor_family_surface_binding_local_override_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    descriptor_family_surface_binding_local_redeclaration_policy = (
+        descriptor_family_surface_binding_local_redeclaration_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     descriptor_family_surface_binding_fallback_policy = (
         descriptor_family_surface_binding_fallback_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
@@ -476,6 +480,11 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if descriptor_family_surface_binding_local_override_policy != "forbidden":
             stale_reasons.append("root_corpus_law_bundle_descriptor_family_surface_binding_local_override_policy_invalid")
+            error_code = ERR_REGISTRY
+        if descriptor_family_surface_binding_local_redeclaration_policy != "forbidden":
+            stale_reasons.append(
+                "root_corpus_law_bundle_descriptor_family_surface_binding_local_redeclaration_policy_invalid"
+            )
             error_code = ERR_REGISTRY
         if descriptor_family_surface_binding_fallback_policy != "fail_closed":
             stale_reasons.append("root_corpus_law_bundle_descriptor_family_surface_binding_fallback_policy_invalid")
@@ -1170,6 +1179,7 @@ def main() -> int:
         "component_self_describing_family_requirement_fallback_policy": component_self_describing_family_requirement_fallback_policy,
         "descriptor_family_surface_binding_inheritance_mode": descriptor_family_surface_binding_inheritance_mode,
         "descriptor_family_surface_binding_local_override_policy": descriptor_family_surface_binding_local_override_policy,
+        "descriptor_family_surface_binding_local_redeclaration_policy": descriptor_family_surface_binding_local_redeclaration_policy,
         "descriptor_family_surface_binding_fallback_policy": descriptor_family_surface_binding_fallback_policy,
         "descriptor_repo_rel_path_pattern_inheritance_mode": descriptor_repo_rel_path_pattern_inheritance_mode,
         "descriptor_repo_rel_path_pattern_local_redeclaration_policy": descriptor_repo_rel_path_pattern_local_redeclaration_policy,

@@ -145,6 +145,9 @@ If the admitted source does not disclose that family-surface binding law,
 runtime must fail-close rather than locally reconstructing
 descriptor-family binding legality law.
 
+Runtime must also reject local redeclaration of family-surface binding
+governance inside the bundle.
+
 Runtime must also reject a root-law bundle that redeclares or loosens
 machine-registry completeness repo-relative descriptor path patterns;
 descriptor-stem capture patterns for validator/probe/shared-common surfaces

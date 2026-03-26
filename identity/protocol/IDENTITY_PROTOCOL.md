@@ -200,6 +200,9 @@ If the admitted source does not disclose that family-surface binding law,
 protocol legality must fail-close rather than locally reconstructing
 descriptor-family binding legality.
 
+Local redeclaration of family-surface binding governance must remain
+forbidden inside the bundle.
+
 The bundle must also inherit machine-registry completeness repo-relative
 descriptor path-pattern law; descriptor-stem capture patterns for validator,
 probe, and shared-common surfaces may not be silently redeclared, loosened, or

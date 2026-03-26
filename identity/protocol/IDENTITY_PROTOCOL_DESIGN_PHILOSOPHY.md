@@ -408,6 +408,9 @@ If the admitted source does not disclose that family-surface binding law, the
 machine world must fail-close rather than locally reconstructing
 descriptor-family binding legality from bundle convenience.
 
+Local redeclaration of family-surface binding governance must remain
+forbidden inside the bundle.
+
 Where machine-registry completeness supplies an explicit cross-family descriptor-stem binding, the bundle must inherit that declaration rather than reauthoring, omitting, or locally overriding it.
 
 Bundle descriptor surface-pattern law must also remain inherited from
