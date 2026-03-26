@@ -747,9 +747,6 @@ The admitted runtime origins are alias error, document invalidity,
 canonical contract-row invalidity, and required-surface absence, all
 before violation projection.
 
-Runtime must fail-close on unclassified direct stale-reason origin rather
-than silently expanding registry ontology.
-
 Bundle registry direct-stale-reason source policy must also stay
 explicit.
 
@@ -765,6 +762,15 @@ explicit.
 Each local stale reason present before violation projection must classify
 exactly once as alias, document, contract-row, required-surface, or
 unknown ontology drift.
+
+Bundle registry direct-stale-reason unclassified policy must also stay
+explicit.
+
+The admitted runtime policy is fail-closed on unclassified direct
+stale-reason origin.
+
+Runtime must fail-close on unclassified direct stale-reason origin rather
+than silently expanding registry ontology.
 
 Bundle component-validator observation-reason policy must also stay
 explicit.

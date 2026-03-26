@@ -750,6 +750,12 @@ Each local stale reason present before violation projection must classify
 exactly once as alias, document, contract-row, required-surface, or
 unknown ontology drift.
 
+Bundle registry direct-stale-reason unclassified policy must stay
+explicit too.
+
+The admitted policy is fail-closed on unclassified direct stale-reason
+origin.
+
 The machine world must fail-close on unclassified direct stale-reason
 origin rather than silently expanding registry ontology.
 

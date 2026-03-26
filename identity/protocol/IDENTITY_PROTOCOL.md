@@ -473,6 +473,10 @@ partition policy explicit; each local stale reason present before
 violation projection classifies exactly once as alias, document,
 contract-row, required-surface, or unknown ontology drift.
 
+Root-law bundle rows must also keep registry direct-stale-reason
+unclassified policy explicit; unclassified direct stale-reason origin
+must remain fail-closed.
+
 Local direct stale-reason ontology must not silently expand beyond those
 admitted origins.
 

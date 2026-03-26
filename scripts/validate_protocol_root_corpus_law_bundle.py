@@ -89,6 +89,7 @@ from root_corpus_law_bundle_common import (
     registry_direct_stale_reason_origin_policy_from_doc,
     registry_direct_stale_reason_partition_policy_from_doc,
     registry_direct_stale_reason_source_policy_from_doc,
+    registry_direct_stale_reason_unclassified_policy_from_doc,
     violation_projection_policy_from_doc,
 )
 from root_machine_registry_completeness_common import (
@@ -157,6 +158,7 @@ REGISTRY_DIRECT_STALE_REASON_SOURCE_POLICY = (
 REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY = (
     "local_stale_reasons_partitioned_into_alias_document_contract_row_required_surface_or_unknown_exactly_once_before_violation_projection"
 )
+REGISTRY_DIRECT_STALE_REASON_UNCLASSIFIED_POLICY = "fail_closed"
 COMPONENT_VALIDATOR_OBSERVATION_REASON_ADMISSION_POLICY = (
     "parse_status_nonzero_rc_or_nonpass_only_before_bundle_violation_projection"
 )
@@ -760,6 +762,9 @@ def main() -> int:
     registry_direct_stale_reason_partition_policy = (
         registry_direct_stale_reason_partition_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    registry_direct_stale_reason_unclassified_policy = (
+        registry_direct_stale_reason_unclassified_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     component_validator_observation_reason_admission_policy = (
         component_validator_observation_reason_admission_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
@@ -871,6 +876,14 @@ def main() -> int:
         registry_direct_stale_reason_partition_policy
         if registry_direct_stale_reason_partition_policy == REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY
         else REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY
+    )
+    effective_registry_direct_stale_reason_unclassified_policy = (
+        registry_direct_stale_reason_unclassified_policy
+        if (
+            registry_direct_stale_reason_unclassified_policy
+            == REGISTRY_DIRECT_STALE_REASON_UNCLASSIFIED_POLICY
+        )
+        else REGISTRY_DIRECT_STALE_REASON_UNCLASSIFIED_POLICY
     )
     effective_component_validator_observation_reason_admission_policy = (
         component_validator_observation_reason_admission_policy
@@ -1300,6 +1313,12 @@ def main() -> int:
             != REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY
         ):
             stale_reasons.append("root_corpus_law_bundle_registry_direct_stale_reason_partition_policy_invalid")
+            error_code = ERR_REGISTRY
+        if (
+            registry_direct_stale_reason_unclassified_policy
+            != REGISTRY_DIRECT_STALE_REASON_UNCLASSIFIED_POLICY
+        ):
+            stale_reasons.append("root_corpus_law_bundle_registry_direct_stale_reason_unclassified_policy_invalid")
             error_code = ERR_REGISTRY
         if (
             component_validator_observation_reason_admission_policy
@@ -2076,7 +2095,8 @@ def main() -> int:
     registry_direct_stale_reason_origin_status = (
         STATUS_FAIL_REQUIRED
         if (
-            effective_registry_direct_stale_reason_origin_policy == REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY
+            effective_registry_direct_stale_reason_unclassified_policy
+            == REGISTRY_DIRECT_STALE_REASON_UNCLASSIFIED_POLICY
             and registry_direct_stale_reason_unknown_count
         )
         else STATUS_PASS_REQUIRED
@@ -2261,6 +2281,9 @@ def main() -> int:
         "registry_direct_stale_reason_source_policy": registry_direct_stale_reason_source_policy,
         "registry_direct_stale_reason_partition_policy": (
             registry_direct_stale_reason_partition_policy
+        ),
+        "registry_direct_stale_reason_unclassified_policy": (
+            registry_direct_stale_reason_unclassified_policy
         ),
         "component_validator_observation_reason_admission_policy": (
             component_validator_observation_reason_admission_policy
