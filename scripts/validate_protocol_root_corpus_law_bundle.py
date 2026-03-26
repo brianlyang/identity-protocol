@@ -90,6 +90,7 @@ from root_corpus_law_bundle_common import (
     require_component_descriptor_concordance,
     registry_class_admission_policy_from_doc,
     registry_direct_stale_reason_origin_policy_from_doc,
+    registry_direct_stale_reason_alias_origin_policy_from_doc,
     registry_direct_stale_reason_required_surface_origin_policy_from_doc,
     registry_direct_stale_reason_contract_row_origin_policy_from_doc,
     registry_direct_stale_reason_origin_classifier_precedence_policy_from_doc,
@@ -157,6 +158,9 @@ REGISTRY_CLASS_ADMISSION_POLICY = (
 )
 REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY = (
     "alias_document_contract_row_required_surface_only_before_violation_projection"
+)
+REGISTRY_DIRECT_STALE_REASON_ALIAS_ORIGIN_POLICY = (
+    "alias_error_marker_rows_only_before_document_required_surface_contract_row_classification_and_violation_projection"
 )
 REGISTRY_DIRECT_STALE_REASON_REQUIRED_SURFACE_ORIGIN_POLICY = (
     "required_component_descriptor_fields_missing_surface_missing_anchor_checks_missing_components_missing_only_before_violation_projection"
@@ -314,11 +318,14 @@ def _descriptor_is_present(value: Any) -> bool:
 def _classify_direct_stale_reason_origin(
     reason: str,
     precedence_policy: str = REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY,
+    alias_origin_policy: str = REGISTRY_DIRECT_STALE_REASON_ALIAS_ORIGIN_POLICY,
     required_surface_origin_policy: str = REGISTRY_DIRECT_STALE_REASON_REQUIRED_SURFACE_ORIGIN_POLICY,
     contract_row_origin_policy: str = REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY,
 ) -> str:
     if precedence_policy != REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY:
         precedence_policy = REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY
+    if alias_origin_policy != REGISTRY_DIRECT_STALE_REASON_ALIAS_ORIGIN_POLICY:
+        alias_origin_policy = REGISTRY_DIRECT_STALE_REASON_ALIAS_ORIGIN_POLICY
     if (
         required_surface_origin_policy
         != REGISTRY_DIRECT_STALE_REASON_REQUIRED_SURFACE_ORIGIN_POLICY
@@ -329,7 +336,10 @@ def _classify_direct_stale_reason_origin(
         != REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY
     ):
         contract_row_origin_policy = REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY
-    if "_alias_error:" in reason:
+    if (
+        alias_origin_policy == REGISTRY_DIRECT_STALE_REASON_ALIAS_ORIGIN_POLICY
+        and "_alias_error:" in reason
+    ):
         return "alias"
     if reason.endswith("_empty_or_invalid"):
         return "document"
@@ -359,6 +369,7 @@ def _classify_direct_stale_reason_origin(
 def _direct_stale_reason_origin_counts(
     stale_reasons: list[str],
     precedence_policy: str = REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY,
+    alias_origin_policy: str = REGISTRY_DIRECT_STALE_REASON_ALIAS_ORIGIN_POLICY,
     required_surface_origin_policy: str = REGISTRY_DIRECT_STALE_REASON_REQUIRED_SURFACE_ORIGIN_POLICY,
     contract_row_origin_policy: str = REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY,
 ) -> tuple[dict[str, int], int]:
@@ -373,6 +384,7 @@ def _direct_stale_reason_origin_counts(
         origin = _classify_direct_stale_reason_origin(
             reason,
             precedence_policy,
+            alias_origin_policy,
             required_surface_origin_policy,
             contract_row_origin_policy,
         )
@@ -834,6 +846,11 @@ def main() -> int:
     registry_direct_stale_reason_origin_policy = (
         registry_direct_stale_reason_origin_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    registry_direct_stale_reason_alias_origin_policy = (
+        registry_direct_stale_reason_alias_origin_policy_from_doc(bundle_doc)
+        if bundle_doc
+        else ""
+    )
     registry_direct_stale_reason_required_surface_origin_policy = (
         registry_direct_stale_reason_required_surface_origin_policy_from_doc(bundle_doc)
         if bundle_doc
@@ -970,6 +987,11 @@ def main() -> int:
         registry_direct_stale_reason_origin_policy
         if registry_direct_stale_reason_origin_policy == REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY
         else REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY
+    )
+    effective_registry_direct_stale_reason_alias_origin_policy = (
+        registry_direct_stale_reason_alias_origin_policy
+        if registry_direct_stale_reason_alias_origin_policy == REGISTRY_DIRECT_STALE_REASON_ALIAS_ORIGIN_POLICY
+        else REGISTRY_DIRECT_STALE_REASON_ALIAS_ORIGIN_POLICY
     )
     effective_registry_direct_stale_reason_required_surface_origin_policy = (
         registry_direct_stale_reason_required_surface_origin_policy
@@ -1456,6 +1478,14 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if registry_direct_stale_reason_origin_policy != REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY:
             stale_reasons.append("root_corpus_law_bundle_registry_direct_stale_reason_origin_policy_invalid")
+            error_code = ERR_REGISTRY
+        if (
+            registry_direct_stale_reason_alias_origin_policy
+            != REGISTRY_DIRECT_STALE_REASON_ALIAS_ORIGIN_POLICY
+        ):
+            stale_reasons.append(
+                "root_corpus_law_bundle_registry_direct_stale_reason_alias_origin_policy_invalid"
+            )
             error_code = ERR_REGISTRY
         if (
             registry_direct_stale_reason_required_surface_origin_policy
@@ -2293,6 +2323,7 @@ def main() -> int:
         _direct_stale_reason_origin_counts(
             stale_reasons,
             effective_registry_direct_stale_reason_origin_classifier_precedence_policy,
+            effective_registry_direct_stale_reason_alias_origin_policy,
             effective_registry_direct_stale_reason_required_surface_origin_policy,
             effective_registry_direct_stale_reason_contract_row_origin_policy,
         )
@@ -2314,6 +2345,7 @@ def main() -> int:
         _direct_stale_reason_origin_counts(
             stale_reasons,
             effective_registry_direct_stale_reason_origin_classifier_precedence_policy,
+            effective_registry_direct_stale_reason_alias_origin_policy,
             effective_registry_direct_stale_reason_required_surface_origin_policy,
             effective_registry_direct_stale_reason_contract_row_origin_policy,
         )
@@ -2352,6 +2384,7 @@ def main() -> int:
             _direct_stale_reason_origin_counts(
                 stale_reasons,
                 effective_registry_direct_stale_reason_origin_classifier_precedence_policy,
+                effective_registry_direct_stale_reason_alias_origin_policy,
                 effective_registry_direct_stale_reason_required_surface_origin_policy,
                 effective_registry_direct_stale_reason_contract_row_origin_policy,
             )
@@ -2371,6 +2404,7 @@ def main() -> int:
             _direct_stale_reason_origin_counts(
                 stale_reasons,
                 effective_registry_direct_stale_reason_origin_classifier_precedence_policy,
+                effective_registry_direct_stale_reason_alias_origin_policy,
                 effective_registry_direct_stale_reason_required_surface_origin_policy,
                 effective_registry_direct_stale_reason_contract_row_origin_policy,
             )
@@ -2498,6 +2532,9 @@ def main() -> int:
         "failure_classification_policy": failure_classification_policy,
         "registry_class_admission_policy": registry_class_admission_policy,
         "registry_direct_stale_reason_origin_policy": registry_direct_stale_reason_origin_policy,
+        "registry_direct_stale_reason_alias_origin_policy": (
+            registry_direct_stale_reason_alias_origin_policy
+        ),
         "registry_direct_stale_reason_required_surface_origin_policy": (
             registry_direct_stale_reason_required_surface_origin_policy
         ),

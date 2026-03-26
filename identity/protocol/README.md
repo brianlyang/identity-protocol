@@ -747,6 +747,13 @@ The admitted runtime origins are alias error, document invalidity,
 canonical contract-row invalidity, and required-surface absence, all
 before violation projection.
 
+Bundle registry direct-stale-reason alias origin policy must also stay
+explicit.
+
+The admitted runtime alias direct stale reasons are rows containing the
+`_alias_error:` marker before document, required-surface, and
+contract-row classification.
+
 Bundle registry direct-stale-reason required-surface origin policy must
 also stay explicit.
 

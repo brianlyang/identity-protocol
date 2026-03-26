@@ -406,6 +406,11 @@ explicit; admitted direct origins are alias error, document invalidity,
 canonical contract-row invalidity, and required-surface absence before
 violation projection.
 
+Runtime must also keep registry direct-stale-reason alias origin policy
+explicit; admitted alias direct reasons are rows containing the
+`_alias_error:` marker before document, required-surface, and
+contract-row classification.
+
 Runtime must also keep registry direct-stale-reason required-surface
 origin policy explicit; admitted required-surface direct reasons are
 required-component-descriptor-fields missing, surface-missing rows,
