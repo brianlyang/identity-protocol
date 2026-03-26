@@ -46,6 +46,7 @@ require_component_descriptor_concordance: true
 component_descriptor_concordance_local_waiver_policy: forbidden
 component_validator_status_requirement: PASS_REQUIRED
 component_validator_execution_failure_policy: fail_closed
+component_validator_returncode_observation_contract: nonzero_returncode_observed_without_host_exception_overlay
 component_validator_output_contract: json_object_with_disclosed_status_key
 component_validator_invocation_contract: python3_repo_root_json_only
 component_validator_output_channel_contract: stdout_only
@@ -151,6 +152,13 @@ bundle_anchor_checks:
   - emits invalid machine
     output, or omits its disclosed status key, the machine world must not invent a
   - substitute verdict from bundle convenience.
+  - Bundle component validator returncode-observation contract must stay explicit
+    too.
+  - The admitted returncode-observation contract is nonzero returncode observed
+    without host exception overlay.
+  - The machine world must not let a host-language subprocess helper raise on
+    nonzero exit, bypass the governed execution-failure policy, or convert host
+    exception convenience into validator law.
   - Bundle component validator machine-output contract must stay explicit too.
   - machine world must consume a bound component validator through structured
     machine output carrying the validator's disclosed status key rather than
@@ -306,6 +314,13 @@ bundle_anchor_checks:
   - emits invalid machine
     output, or omits its disclosed status key, runtime may not synthesize a
   - passing verdict from surrounding bundle metadata.
+  - Bundle component validators must also keep returncode-observation contract
+    explicit.
+  - The admitted validator returncode-observation contract is nonzero returncode
+    observed without host exception overlay.
+  - Runtime may not let a host-language subprocess helper raise on nonzero exit,
+    bypass the governed execution-failure policy, or convert host exception
+    convenience into validator truth.
   - Bundle component validators must also remain machine-readable.
   - Runtime consumes them through structured machine output carrying the disclosed
     status key, not by scraping prose, logs, or incidental terminal text.
@@ -452,6 +467,11 @@ bundle_anchor_checks:
   - Root-law bundle rows must also keep component validator execution-failure
     policy fail-closed; missing execution, nonzero exit, invalid machine output,
   - or missing disclosed status key may not be downgraded into advisory noise.
+  - Root-law bundle rows must also keep component validator returncode-observation
+    contract explicit; nonzero returncode is observed without host exception
+    overlay inside the bundle.
+  - Local substitution of host-language exception raising for governed nonzero
+    returncode handling is forbidden inside the bundle.
   - Root-law bundle rows must also keep component validator machine-output
     contract explicit; bundle legality consumes structured machine output carrying
   - the disclosed status key, not human-readable logs or incidental shell text.
@@ -583,6 +603,12 @@ bundle_anchor_checks:
   - Runtime must also keep validator execution-failure handling fail-closed;
   - invalid machine output, or omission of the disclosed
     status key may not be repaired by local inference.
+  - Runtime must also keep bound component validator returncode-observation
+    contract explicit; runtime observes nonzero returncode without host exception
+    overlay.
+  - Runtime must not let a host-language subprocess helper raise on nonzero exit,
+    bypass the governed execution-failure policy, or convert host exception
+    convenience into admitted validator truth.
   - Runtime must also require a structured machine-output contract for bound
     component validators; runtime consumes the disclosed status key from machine
   - output rather than scraping logs or incidental shell text.

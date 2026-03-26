@@ -30,6 +30,7 @@ from root_corpus_law_bundle_common import (
     component_descriptor_concordance_local_waiver_policy_from_doc,
     component_validator_status_requirement_from_doc,
     component_validator_execution_failure_policy_from_doc,
+    component_validator_returncode_observation_contract_from_doc,
     component_validator_output_contract_from_doc,
     component_validator_invocation_contract_from_doc,
     component_validator_output_channel_contract_from_doc,
@@ -92,6 +93,7 @@ STATUS_KEY = "protocol_root_corpus_law_bundle_status"
 ERR_REGISTRY = "IP-RCLB-001"
 ERR_STRUCTURE = "IP-RCLB-002"
 ERR_BUNDLE = "IP-RCLB-003"
+COMPONENT_VALIDATOR_RETURNCODE_OBSERVATION_CONTRACT = "nonzero_returncode_observed_without_host_exception_overlay"
 COMPONENT_VALIDATOR_INVOCATION_CONTRACT = "python3_repo_root_json_only"
 COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT = "stdout_only"
 COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT = "stderr_captured_separate_from_stdout"
@@ -252,6 +254,7 @@ def _component_validator_run_kwargs(
         "text": True,
         "encoding": "utf-8",
         "errors": "strict",
+        "check": False,
         "shell": False,
         "stdin": subprocess.DEVNULL,
         "env": None,
@@ -515,6 +518,9 @@ def main() -> int:
     )
     component_validator_execution_failure_policy = (
         component_validator_execution_failure_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
+    component_validator_returncode_observation_contract = (
+        component_validator_returncode_observation_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
     component_validator_output_contract = (
         component_validator_output_contract_from_doc(bundle_doc) if bundle_doc else ""
@@ -878,6 +884,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_validator_execution_failure_policy != "fail_closed":
             stale_reasons.append("root_corpus_law_bundle_component_validator_execution_failure_policy_invalid")
+            error_code = ERR_REGISTRY
+        if component_validator_returncode_observation_contract != COMPONENT_VALIDATOR_RETURNCODE_OBSERVATION_CONTRACT:
+            stale_reasons.append("root_corpus_law_bundle_component_validator_returncode_observation_contract_invalid")
             error_code = ERR_REGISTRY
         if component_validator_output_contract != COMPONENT_VALIDATOR_OUTPUT_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_output_contract_invalid")
@@ -1390,6 +1399,7 @@ def main() -> int:
                     "validator_script": row.validator_script,
                     "probe_script": row.probe_script,
                     "common_script": row.common_script,
+                    "validator_returncode_observation_contract": component_validator_returncode_observation_contract,
                     "validator_output_contract": effective_component_validator_output_contract,
                     "validator_invocation_contract": effective_component_validator_invocation_contract,
                     "validator_output_channel_contract": effective_component_validator_output_channel_contract,
@@ -1619,6 +1629,7 @@ def main() -> int:
         "component_descriptor_concordance_local_waiver_policy": component_descriptor_concordance_local_waiver_policy,
         "component_validator_status_requirement": component_validator_status_requirement,
         "component_validator_execution_failure_policy": component_validator_execution_failure_policy,
+        "component_validator_returncode_observation_contract": component_validator_returncode_observation_contract,
         "component_validator_output_contract": component_validator_output_contract,
         "component_validator_invocation_contract": component_validator_invocation_contract,
         "component_validator_output_channel_contract": component_validator_output_channel_contract,

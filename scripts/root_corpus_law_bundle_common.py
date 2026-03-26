@@ -207,6 +207,10 @@ def component_validator_execution_failure_policy_from_doc(bundle_doc: Mapping[st
     return _norm_str(bundle_doc.get("component_validator_execution_failure_policy"))
 
 
+def component_validator_returncode_observation_contract_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("component_validator_returncode_observation_contract"))
+
+
 def component_validator_output_contract_from_doc(bundle_doc: Mapping[str, Any]) -> str:
     return _norm_str(bundle_doc.get("component_validator_output_contract"))
 

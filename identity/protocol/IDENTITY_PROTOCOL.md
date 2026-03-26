@@ -275,6 +275,13 @@ Root-law bundle rows must also keep component validator execution-failure
 policy fail-closed; missing execution, nonzero exit, invalid machine output,
 or missing disclosed status key may not be downgraded into advisory noise.
 
+Root-law bundle rows must also keep component validator returncode-observation
+contract explicit; nonzero returncode is observed without host exception
+overlay inside the bundle.
+
+Local substitution of host-language exception raising for governed nonzero
+returncode handling is forbidden inside the bundle.
+
 Root-law bundle rows must also keep component validator machine-output
 contract explicit; bundle legality consumes structured machine output carrying
 the disclosed status key, not human-readable logs or incidental shell text.

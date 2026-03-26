@@ -524,6 +524,16 @@ If a bound validator cannot execute, exits nonzero, emits invalid machine
 output, or omits its disclosed status key, runtime may not synthesize a
 passing verdict from surrounding bundle metadata.
 
+Bundle component validators must also keep returncode-observation contract
+explicit.
+
+The admitted validator returncode-observation contract is nonzero returncode
+observed without host exception overlay.
+
+Runtime may not let a host-language subprocess helper raise on nonzero exit,
+bypass the governed execution-failure policy, or convert host exception
+convenience into validator truth.
+
 Bundle component validators must also remain machine-readable.
 
 Runtime consumes them through structured machine output carrying the disclosed

@@ -219,6 +219,14 @@ Runtime must also keep validator execution-failure handling fail-closed;
 missing machine output, invalid machine output, or omission of the disclosed
 status key may not be repaired by local inference.
 
+Runtime must also keep bound component validator returncode-observation
+contract explicit; runtime observes nonzero returncode without host exception
+overlay.
+
+Runtime must not let a host-language subprocess helper raise on nonzero exit,
+bypass the governed execution-failure policy, or convert host exception
+convenience into admitted validator truth.
+
 Runtime must also require a structured machine-output contract for bound
 component validators; runtime consumes the disclosed status key from machine
 output rather than scraping logs or incidental shell text.

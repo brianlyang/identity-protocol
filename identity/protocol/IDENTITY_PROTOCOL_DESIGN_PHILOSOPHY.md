@@ -503,6 +503,16 @@ If a bound validator cannot execute, exits nonzero, emits invalid machine
 output, or omits its disclosed status key, the machine world must not invent a
 substitute verdict from bundle convenience.
 
+Bundle component validator returncode-observation contract must stay explicit
+too.
+
+The admitted returncode-observation contract is nonzero returncode observed
+without host exception overlay.
+
+The machine world must not let a host-language subprocess helper raise on
+nonzero exit, bypass the governed execution-failure policy, or convert host
+exception convenience into validator law.
+
 Bundle component validator machine-output contract must stay explicit too.
 
 The machine world must consume a bound component validator through structured
