@@ -1158,16 +1158,23 @@ def _instance_plane_status(
             "python3",
             "scripts/validate_identity_experience_writeback.py",
             "--repo-catalog",
-            "identity/catalog/identities.yaml",
+            args.repo_catalog,
             "--local-catalog",
             args.catalog,
             "--identity-id",
             args.identity_id,
             "--execution-report",
             str(report_path),
+            "--json-only",
         ]
     )
+    experience_writeback_payload = _parse_json_payload(out_wb) or {}
     validators["experience_writeback"] = {"rc": rc_wb, "ok": rc_wb == 0, "out": out_wb, "err": err_wb}
+    experience_writeback_status = str(
+        experience_writeback_payload.get("experience_writeback_validation_status", "")
+    ).strip().upper()
+    if rc_wb != 0 or experience_writeback_status == "FAIL_REQUIRED":
+        hard_boundary = True
 
     perm_cmd = ["python3", "scripts/validate_identity_permission_state.py", "--identity-id", args.identity_id, "--report", str(report_path), "--ci"]
     if all_ok and wb == "WRITTEN" and ps == "WRITEBACK_WRITTEN":
@@ -3878,6 +3885,29 @@ def _instance_plane_status(
             "prompt_runtime_state_binding_status": data.get("prompt_runtime_state_binding_status", ""),
             "prompt_runtime_state_externalization_status": data.get("prompt_runtime_state_externalization_status", ""),
             "prompt_runtime_state_externalization_error_code": data.get("prompt_runtime_state_externalization_error_code", ""),
+        },
+        "experience_writeback": {
+            "experience_writeback_validation_status": experience_writeback_payload.get(
+                "experience_writeback_validation_status"
+            ),
+            "error_code": experience_writeback_payload.get("error_code", ""),
+            "report_selected_path": experience_writeback_payload.get("report_selected_path", ""),
+            "report_selection_mode": experience_writeback_payload.get("report_selection_mode", ""),
+            "report_selected_authority_class": experience_writeback_payload.get(
+                "report_selected_authority_class", ""
+            ),
+            "report_pointer_resolution_mode": experience_writeback_payload.get(
+                "report_pointer_resolution_mode", ""
+            ),
+            "report_pointer_path": experience_writeback_payload.get("report_pointer_path", ""),
+            "report_run_id": experience_writeback_payload.get("report_run_id", ""),
+            "writeback_status": experience_writeback_payload.get("writeback_status", ""),
+            "writeback_rule_id": experience_writeback_payload.get("writeback_rule_id", ""),
+            "rulebook_match_count": experience_writeback_payload.get("rulebook_match_count"),
+            "task_history_contains_run_id": experience_writeback_payload.get(
+                "task_history_contains_run_id"
+            ),
+            "stale_reasons": experience_writeback_payload.get("stale_reasons", []),
         },
         "required_contract_coverage": {
             "required_contract_total": coverage_payload.get("required_contract_total"),

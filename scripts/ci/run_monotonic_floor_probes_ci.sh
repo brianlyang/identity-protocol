@@ -230,7 +230,14 @@ pointer_report_doc = {
     "identity_id": "probe-mm",
     "report_path": str(pointer_report_path),
     "all_ok": True,
+    "upgrade_required": True,
     "writeback_status": "WRITTEN",
+    "writeback_rule_id": "probe-mm-ewb-pointer-rule",
+    "writeback_paths": ["RULEBOOK.jsonl", "TASK_HISTORY.md"],
+    "experience_writeback": {
+        "status": "WRITTEN",
+        "error_code": "",
+    },
     "permission_state": "PASS_REQUIRED",
     "protocol_mode": "strict",
     "input_hash": "probe-mm-promotion-input-pointer",
@@ -262,7 +269,14 @@ explicit_report_doc = {
     "identity_id": "probe-mm",
     "report_path": str(explicit_report_path),
     "all_ok": True,
+    "upgrade_required": True,
     "writeback_status": "WRITTEN",
+    "writeback_rule_id": "probe-mm-ewb-explicit-rule",
+    "writeback_paths": ["RULEBOOK.jsonl", "TASK_HISTORY.md"],
+    "experience_writeback": {
+        "status": "WRITTEN",
+        "error_code": "",
+    },
     "permission_state": "PASS_REQUIRED",
     "protocol_mode": "strict",
     "input_hash": "probe-mm-promotion-input-explicit-report",
@@ -356,6 +370,40 @@ explicit_receipt_path.write_text(
         explicit_receipt_doc,
         ensure_ascii=False,
         indent=2,
+    )
+    + "\n",
+    encoding="utf-8",
+)
+
+(probe_mm_pack / "RULEBOOK.jsonl").write_text(
+    "\n".join(
+        [
+            json.dumps(
+                {
+                    "entry_id": "probe-mm-ewb-pointer-rule",
+                    "evidence_run_id": "identity-upgrade-exec-probe-mm-old",
+                },
+                ensure_ascii=False,
+            ),
+            json.dumps(
+                {
+                    "entry_id": "probe-mm-ewb-explicit-rule",
+                    "evidence_run_id": "identity-upgrade-exec-probe-mm-explicit",
+                },
+                ensure_ascii=False,
+            ),
+        ]
+    )
+    + "\n",
+    encoding="utf-8",
+)
+
+(probe_mm_pack / "TASK_HISTORY.md").write_text(
+    "\n".join(
+        [
+            "- identity-upgrade-exec-probe-mm-old",
+            "- identity-upgrade-exec-probe-mm-explicit",
+        ]
     )
     + "\n",
     encoding="utf-8",
@@ -642,6 +690,40 @@ elif name == "xwf_explicit_override_pass":
         raise SystemExit("xwf_explicit_override_pass: pointer resolution mismatch")
     if str(doc.get("evidence_kind", "")).strip() != "report":
         raise SystemExit("xwf_explicit_override_pass: evidence kind mismatch")
+elif name == "experience_writeback_pointer_selection_pass":
+    if rc != 0:
+        raise SystemExit("experience_writeback_pointer_selection_pass: expected rc=0")
+    if str(doc.get("experience_writeback_validation_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("experience_writeback_pointer_selection_pass: status mismatch")
+    if str(doc.get("report_selection_mode", "")).strip() != "active_execution_pointer":
+        raise SystemExit("experience_writeback_pointer_selection_pass: selection mode mismatch")
+    if str(doc.get("report_selected_authority_class", "")).strip() != "active_execution_pointer_pack_local_report":
+        raise SystemExit("experience_writeback_pointer_selection_pass: authority class mismatch")
+    if str(doc.get("report_pointer_resolution_mode", "")).strip() != "pointer_candidate_root_report":
+        raise SystemExit("experience_writeback_pointer_selection_pass: pointer resolution mismatch")
+    if str(doc.get("writeback_status", "")).strip() != "WRITTEN":
+        raise SystemExit("experience_writeback_pointer_selection_pass: writeback status mismatch")
+    if int(doc.get("rulebook_match_count", 0) or 0) < 1:
+        raise SystemExit("experience_writeback_pointer_selection_pass: rulebook match count mismatch")
+    if bool(doc.get("task_history_contains_run_id")) is not True:
+        raise SystemExit("experience_writeback_pointer_selection_pass: task history linkage mismatch")
+elif name == "experience_writeback_explicit_override_pass":
+    if rc != 0:
+        raise SystemExit("experience_writeback_explicit_override_pass: expected rc=0")
+    if str(doc.get("experience_writeback_validation_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("experience_writeback_explicit_override_pass: status mismatch")
+    if str(doc.get("report_selection_mode", "")).strip() != "explicit_report_override":
+        raise SystemExit("experience_writeback_explicit_override_pass: selection mode mismatch")
+    if str(doc.get("report_selected_authority_class", "")).strip() != "explicit_report_override":
+        raise SystemExit("experience_writeback_explicit_override_pass: authority class mismatch")
+    if str(doc.get("report_pointer_resolution_mode", "")).strip() != "explicit_report_override":
+        raise SystemExit("experience_writeback_explicit_override_pass: pointer resolution mismatch")
+    if str(doc.get("writeback_status", "")).strip() != "WRITTEN":
+        raise SystemExit("experience_writeback_explicit_override_pass: writeback status mismatch")
+    if int(doc.get("rulebook_match_count", 0) or 0) < 1:
+        raise SystemExit("experience_writeback_explicit_override_pass: rulebook match count mismatch")
+    if bool(doc.get("task_history_contains_run_id")) is not True:
+        raise SystemExit("experience_writeback_explicit_override_pass: task history linkage mismatch")
 else:
     raise SystemExit(f"unknown probe name: {name}")
 PY
@@ -889,6 +971,21 @@ run_probe xwf_explicit_override_pass \
   --final-emit-contract-status PASS_REQUIRED \
   --final-emit-policy-mode tool_choice_required \
   --final-emit-schema-status PASS_REQUIRED \
+  --json-only
+
+run_probe experience_writeback_pointer_selection_pass \
+  python3 scripts/validate_identity_experience_writeback.py \
+  --repo-catalog "${CATALOG_PATH}" \
+  --local-catalog "${CATALOG_PATH}" \
+  --identity-id probe-mm \
+  --json-only
+
+run_probe experience_writeback_explicit_override_pass \
+  python3 scripts/validate_identity_experience_writeback.py \
+  --repo-catalog "${CATALOG_PATH}" \
+  --local-catalog "${CATALOG_PATH}" \
+  --identity-id probe-mm \
+  --execution-report "${EXPLICIT_REPORT_PATH}" \
   --json-only
 
 python3 - <<'PY' "${RESULT_ROOT}" "${MANIFEST_PATH}"

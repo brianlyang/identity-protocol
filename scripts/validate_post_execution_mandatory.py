@@ -116,6 +116,7 @@ def _run_experience_writeback_validator(
         identity_id,
         "--execution-report",
         str(report_path),
+        "--json-only",
     ]
     p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO_ROOT))
     return p.returncode, (p.stdout or "").strip(), (p.stderr or "").strip()
@@ -181,6 +182,13 @@ def main() -> int:
         "report_selected_authority_class": "",
         "report_pointer_resolution_mode": "",
         "report_pointer_path": "",
+        "experience_writeback_validation_status": "",
+        "experience_writeback_error_code": "",
+        "experience_writeback_report_selected_path": "",
+        "experience_writeback_report_selection_mode": "",
+        "experience_writeback_report_selected_authority_class": "",
+        "experience_writeback_report_pointer_resolution_mode": "",
+        "experience_writeback_report_pointer_path": "",
         "missing_fields": [],
         "writeback_mode": "",
         "writeback_status": "",
@@ -320,12 +328,45 @@ def main() -> int:
             repo_catalog_path=repo_catalog_path,
             report_path=report_path,
         )
-        if rc_ew != 0:
-            tail = ""
-            if out_ew:
-                tail = out_ew.splitlines()[-1]
-            elif err_ew:
-                tail = err_ew.splitlines()[-1]
+        ew_payload = _parse_json_payload(out_ew) or {}
+        payload.update(
+            {
+                "experience_writeback_validation_status": ew_payload.get(
+                    "experience_writeback_validation_status", ""
+                ),
+                "experience_writeback_error_code": ew_payload.get("error_code", ""),
+                "experience_writeback_report_selected_path": ew_payload.get(
+                    "report_selected_path", ""
+                ),
+                "experience_writeback_report_selection_mode": ew_payload.get(
+                    "report_selection_mode", ""
+                ),
+                "experience_writeback_report_selected_authority_class": ew_payload.get(
+                    "report_selected_authority_class", ""
+                ),
+                "experience_writeback_report_pointer_resolution_mode": ew_payload.get(
+                    "report_pointer_resolution_mode", ""
+                ),
+                "experience_writeback_report_pointer_path": ew_payload.get(
+                    "report_pointer_path", ""
+                ),
+            }
+        )
+        ew_status = str(
+            payload.get("experience_writeback_validation_status", "")
+        ).strip().upper()
+        if rc_ew != 0 or ew_status != STATUS_PASS_REQUIRED:
+            child_error = str(payload.get("experience_writeback_error_code", "")).strip()
+            child_reasons = ew_payload.get("stale_reasons", [])
+            first_reason = ""
+            if isinstance(child_reasons, list) and child_reasons:
+                first_reason = str(child_reasons[0]).strip()
+            tail = child_error or first_reason
+            if not tail:
+                if out_ew:
+                    tail = out_ew.splitlines()[-1]
+                elif err_ew:
+                    tail = err_ew.splitlines()[-1]
             stale_reasons.append(f"experience_writeback_linkage_failed:{tail or 'validator_failed'}")
     elif strict_non_upgrade_closed:
         # Non-upgrade closure path: strict execution can legitimately finish without writeback mutation.
