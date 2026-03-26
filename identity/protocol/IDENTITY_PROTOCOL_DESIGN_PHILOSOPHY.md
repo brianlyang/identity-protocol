@@ -721,6 +721,14 @@ otherwise failure class is pass.
 The machine world must not invent an anchor-only failure class, bypass
 direct stale reasons, or classify failure from local convenience surfaces.
 
+Bundle registry-class admission policy must stay explicit too.
+
+The admitted policy is only direct stale reasons already present before
+violation projection may admit registry failure class.
+
+Projected structure, bundle, and anchor stale reasons must not retroactively
+upgrade failure class to registry.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

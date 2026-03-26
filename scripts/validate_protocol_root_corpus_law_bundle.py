@@ -81,6 +81,7 @@ from root_corpus_law_bundle_common import (
     required_component_descriptor_field_modes_from_doc,
     required_component_descriptor_fields_from_doc,
     require_component_descriptor_concordance,
+    registry_class_admission_policy_from_doc,
     violation_projection_policy_from_doc,
 )
 from root_machine_registry_completeness_common import (
@@ -136,6 +137,9 @@ FINAL_STATUS_DERIVATION_POLICY = (
 ERROR_CODE_PRECEDENCE_POLICY = "registry_preempts_structure_preempts_bundle_else_empty_when_pass_required"
 FAILURE_CLASSIFICATION_POLICY = (
     "registry_from_direct_stale_reasons_structure_from_structure_violations_bundle_from_bundle_and_anchor_violations_else_pass"
+)
+REGISTRY_CLASS_ADMISSION_POLICY = (
+    "only_direct_stale_reasons_present_before_violation_projection_admit_registry_failure_class"
 )
 COMPONENT_VALIDATOR_OUTPUT_CONTRACT = "json_object_with_disclosed_status_key"
 
@@ -632,6 +636,7 @@ def main() -> int:
     final_status_derivation_policy = final_status_derivation_policy_from_doc(bundle_doc) if bundle_doc else ""
     error_code_precedence_policy = error_code_precedence_policy_from_doc(bundle_doc) if bundle_doc else ""
     failure_classification_policy = failure_classification_policy_from_doc(bundle_doc) if bundle_doc else ""
+    registry_class_admission_policy = registry_class_admission_policy_from_doc(bundle_doc) if bundle_doc else ""
     effective_component_validator_status_requirement = (
         component_validator_status_requirement
         if component_validator_status_requirement == STATUS_PASS_REQUIRED
@@ -711,6 +716,11 @@ def main() -> int:
         failure_classification_policy
         if failure_classification_policy == FAILURE_CLASSIFICATION_POLICY
         else FAILURE_CLASSIFICATION_POLICY
+    )
+    effective_registry_class_admission_policy = (
+        registry_class_admission_policy
+        if registry_class_admission_policy == REGISTRY_CLASS_ADMISSION_POLICY
+        else REGISTRY_CLASS_ADMISSION_POLICY
     )
     effective_component_validator_stdout_normalization_contract = (
         component_validator_stdout_normalization_contract
@@ -1093,6 +1103,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if failure_classification_policy != FAILURE_CLASSIFICATION_POLICY:
             stale_reasons.append("root_corpus_law_bundle_failure_classification_policy_invalid")
+            error_code = ERR_REGISTRY
+        if registry_class_admission_policy != REGISTRY_CLASS_ADMISSION_POLICY:
+            stale_reasons.append("root_corpus_law_bundle_registry_class_admission_policy_invalid")
             error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
@@ -1790,7 +1803,8 @@ def main() -> int:
     expected_projected_violation_reason_count = (
         len(structure_violations) + len(bundle_violations) + len(anchor_violations)
     )
-    registry_precedence_reason_count = len(stale_reasons)
+    direct_stale_reason_count_before_violation_projection = len(stale_reasons)
+    registry_precedence_reason_count = direct_stale_reason_count_before_violation_projection
     violation_projection_incomplete = (
         effective_violation_projection_policy == VIOLATION_PROJECTION_POLICY
         and projected_violation_reason_count != expected_projected_violation_reason_count
@@ -1807,7 +1821,10 @@ def main() -> int:
     derived_status_from_stale_reasons = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
     derived_failure_class = "pass"
     if effective_failure_classification_policy == FAILURE_CLASSIFICATION_POLICY:
-        if registry_precedence_reason_count:
+        if (
+            effective_registry_class_admission_policy == REGISTRY_CLASS_ADMISSION_POLICY
+            and direct_stale_reason_count_before_violation_projection
+        ):
             derived_failure_class = "registry"
         elif structure_violations:
             derived_failure_class = "structure"
@@ -1901,6 +1918,7 @@ def main() -> int:
         "final_status_derivation_policy": final_status_derivation_policy,
         "error_code_precedence_policy": error_code_precedence_policy,
         "failure_classification_policy": failure_classification_policy,
+        "registry_class_admission_policy": registry_class_admission_policy,
         "derived_status_from_stale_reasons": derived_status_from_stale_reasons,
         "derived_failure_class": derived_failure_class,
         "derived_error_code_from_precedence": derived_error_code_from_precedence,
@@ -1910,6 +1928,9 @@ def main() -> int:
         "structure_violation_count": len(structure_violations),
         "bundle_violation_count": len(bundle_violations),
         "anchor_violation_count": len(anchor_violations),
+        "direct_stale_reason_count_before_violation_projection": (
+            direct_stale_reason_count_before_violation_projection
+        ),
         "registry_class_reason_count": registry_precedence_reason_count,
         "registry_precedence_reason_count": registry_precedence_reason_count,
         "projected_violation_reason_count": projected_violation_reason_count,

@@ -449,6 +449,13 @@ pass.
 Local classification path must not invent an anchor-only failure class or
 bypass direct stale reasons.
 
+Root-law bundle rows must also keep registry-class admission policy
+explicit; only direct stale reasons already present before violation
+projection may admit registry failure class.
+
+Projected violation reasons must not be reclassified as registry failure
+basis.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

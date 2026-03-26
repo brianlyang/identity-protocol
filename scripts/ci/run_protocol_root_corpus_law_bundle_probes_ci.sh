@@ -86,6 +86,7 @@ assert payload["violation_projection_policy"] == "all_structure_bundle_anchor_vi
 assert payload["final_status_derivation_policy"] == "pass_required_if_and_only_if_stale_reasons_empty_after_violation_projection_else_fail_required", payload
 assert payload["error_code_precedence_policy"] == "registry_preempts_structure_preempts_bundle_else_empty_when_pass_required", payload
 assert payload["failure_classification_policy"] == "registry_from_direct_stale_reasons_structure_from_structure_violations_bundle_from_bundle_and_anchor_violations_else_pass", payload
+assert payload["registry_class_admission_policy"] == "only_direct_stale_reasons_present_before_violation_projection_admit_registry_failure_class", payload
 assert payload["derived_status_from_stale_reasons"] == "PASS_REQUIRED", payload
 assert payload["derived_failure_class"] == "pass", payload
 assert payload["derived_error_code_from_precedence"] == "", payload
@@ -138,6 +139,7 @@ assert payload["component_status_row_count"] == payload["component_count"] == 10
 assert payload["structure_violation_count"] == 0, payload
 assert payload["bundle_violation_count"] == 0, payload
 assert payload["anchor_violation_count"] == 0, payload
+assert payload["direct_stale_reason_count_before_violation_projection"] == 0, payload
 assert payload["registry_class_reason_count"] == 0, payload
 assert payload["registry_precedence_reason_count"] == 0, payload
 assert payload["projected_violation_reason_count"] == 0, payload
@@ -736,7 +738,44 @@ assert payload["derived_failure_class"] == "registry", payload
 assert payload["derived_error_code_from_precedence"] == "IP-RCLB-001", payload
 assert "root_corpus_law_bundle_failure_classification_policy_invalid" in payload["stale_reasons"], payload
 assert payload["failure_classification_policy"] == "anchor_may_form_separate_failure_class", payload
+assert payload["direct_stale_reason_count_before_violation_projection"] >= 1, payload
 assert payload["registry_class_reason_count"] >= 1, payload
+PY
+
+REGISTRY_CLASS_ADMISSION_POLICY_REPO="${TMP_ROOT}/registry-class-admission-policy-drift-repo"
+mirror_repo "${REGISTRY_CLASS_ADMISSION_POLICY_REPO}"
+python3 - <<'PY' "${REGISTRY_CLASS_ADMISSION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["registry_class_admission_policy"] = "projected_violation_reasons_may_upgrade_registry_class"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_CLASS_ADMISSION_POLICY_JSON="${TMP_ROOT}/registry-class-admission-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_CLASS_ADMISSION_POLICY_REPO}" \
+  --json-only >"${REGISTRY_CLASS_ADMISSION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry-class admission policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_CLASS_ADMISSION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["derived_failure_class"] == "registry", payload
+assert payload["derived_error_code_from_precedence"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_registry_class_admission_policy_invalid" in payload["stale_reasons"], payload
+assert payload["registry_class_admission_policy"] == "projected_violation_reasons_may_upgrade_registry_class", payload
+assert payload["direct_stale_reason_count_before_violation_projection"] >= 1, payload
 PY
 
 MISSING_COMPONENT_VALIDATOR_REPO="${TMP_ROOT}/missing-component-validator-repo"
@@ -762,6 +801,7 @@ assert payload["error_code"] == "IP-RCLB-003", payload
 assert payload["derived_status_from_stale_reasons"] == payload["protocol_root_corpus_law_bundle_status"], payload
 assert payload["derived_failure_class"] == "bundle", payload
 assert payload["derived_error_code_from_precedence"] == payload["error_code"] == "IP-RCLB-003", payload
+assert payload["direct_stale_reason_count_before_violation_projection"] == 0, payload
 assert payload["component_status_row_count"] == payload["component_count"] - 1, payload
 assert payload["bundle_violation_count"] >= 2, payload
 assert payload["registry_precedence_reason_count"] == 0, payload
@@ -806,6 +846,7 @@ assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", pay
 assert payload["error_code"] == "IP-RCLB-002", payload
 assert payload["derived_failure_class"] == "structure", payload
 assert payload["derived_error_code_from_precedence"] == "IP-RCLB-002", payload
+assert payload["direct_stale_reason_count_before_violation_projection"] == 0, payload
 assert payload["structure_violation_count"] >= 1, payload
 assert payload["bundle_violation_count"] >= 1, payload
 assert payload["registry_precedence_reason_count"] == 0, payload
@@ -845,6 +886,7 @@ assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", pay
 assert payload["error_code"] == "IP-RCLB-001", payload
 assert payload["derived_failure_class"] == "registry", payload
 assert payload["derived_error_code_from_precedence"] == "IP-RCLB-001", payload
+assert payload["direct_stale_reason_count_before_violation_projection"] >= 1, payload
 assert payload["registry_precedence_reason_count"] >= 1, payload
 assert payload["bundle_violation_count"] >= 1, payload
 assert "root_corpus_law_bundle_component_status_row_coverage_policy_invalid" in payload["stale_reasons"], payload
@@ -884,6 +926,7 @@ assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", pay
 assert payload["derived_failure_class"] == "bundle", payload
 assert payload["derived_error_code_from_precedence"] == payload["error_code"] == "IP-RCLB-003", payload
 assert payload["anchor_violation_count"] >= 1, payload
+assert payload["direct_stale_reason_count_before_violation_projection"] == 0, payload
 assert payload["registry_class_reason_count"] == 0, payload
 assert "anchor_violation:identity/protocol/README.md:required_marker_missing" in payload["stale_reasons"], payload
 PY

@@ -733,6 +733,14 @@ violations, and otherwise failure class is pass.
 Runtime may not invent an anchor-only failure class, bypass direct stale
 reasons, or classify failure from local convenience surfaces.
 
+Bundle registry-class admission policy must also stay explicit.
+
+The admitted runtime policy is only direct stale reasons already present
+before violation projection may admit registry failure class.
+
+Projected structure, bundle, and anchor stale reasons must not
+retroactively upgrade failure class to registry.
+
 ---
 
 ## Conflict-handling rule

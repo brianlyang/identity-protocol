@@ -71,6 +71,7 @@ violation_projection_policy: all_structure_bundle_anchor_violations_projected_in
 final_status_derivation_policy: pass_required_if_and_only_if_stale_reasons_empty_after_violation_projection_else_fail_required
 error_code_precedence_policy: registry_preempts_structure_preempts_bundle_else_empty_when_pass_required
 failure_classification_policy: registry_from_direct_stale_reasons_structure_from_structure_violations_bundle_from_bundle_and_anchor_violations_else_pass
+registry_class_admission_policy: only_direct_stale_reasons_present_before_violation_projection_admit_registry_failure_class
 required_component_descriptor_fields:
 - validator_script
 - probe_script
@@ -310,6 +311,11 @@ bundle_anchor_checks:
     otherwise failure class is pass.
   - The machine world must not invent an anchor-only failure class, bypass
     direct stale reasons, or classify failure from local convenience surfaces.
+  - Bundle registry-class admission policy must stay explicit too.
+  - The admitted policy is only direct stale reasons already present before
+    violation projection may admit registry failure class.
+  - Projected structure, bundle, and anchor stale reasons must not retroactively
+    upgrade failure class to registry.
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root-law bundle discipline'
@@ -524,6 +530,11 @@ bundle_anchor_checks:
     violations, and otherwise failure class is pass.
   - Runtime may not invent an anchor-only failure class, bypass direct stale
     reasons, or classify failure from local convenience surfaces.
+  - Bundle registry-class admission policy must also stay explicit.
+  - The admitted runtime policy is only direct stale reasons already present
+    before violation projection may admit registry failure class.
+  - Projected structure, bundle, and anchor stale reasons must not
+    retroactively upgrade failure class to registry.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root-law bundle boundary'
@@ -716,6 +727,11 @@ bundle_anchor_checks:
     pass.
   - Local classification path must not invent an anchor-only failure class or
     bypass direct stale reasons.
+  - Root-law bundle rows must also keep registry-class admission policy
+    explicit; only direct stale reasons already present before violation
+    projection may admit registry failure class.
+  - Projected violation reasons must not be reclassified as registry failure
+    basis.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime consumption of the root-law bundle'
@@ -910,6 +926,11 @@ bundle_anchor_checks:
     pass.
   - Runtime must not invent an anchor-only failure class or bypass direct stale
     reasons through local classification paths.
+  - Runtime must also keep registry-class admission policy explicit; only
+    direct stale reasons already present before violation projection may admit
+    registry failure class.
+  - Projected structure, bundle, and anchor stale reasons must not
+    retroactively upgrade failure class to registry.
 component_rows:
 - order: 1
   component_id: root_corpus_governance

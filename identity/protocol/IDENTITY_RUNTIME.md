@@ -394,6 +394,13 @@ pass.
 Runtime must not invent an anchor-only failure class or bypass direct stale
 reasons through local classification paths.
 
+Runtime must also keep registry-class admission policy explicit; only
+direct stale reasons already present before violation projection may admit
+registry failure class.
+
+Projected structure, bundle, and anchor stale reasons must not
+retroactively upgrade failure class to registry.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.
