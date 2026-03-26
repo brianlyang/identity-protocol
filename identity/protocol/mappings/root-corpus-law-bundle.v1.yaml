@@ -76,6 +76,7 @@ registry_direct_stale_reason_origin_policy: alias_document_contract_row_required
 component_validator_observation_reason_admission_policy: parse_status_nonzero_rc_or_nonpass_only_before_bundle_violation_projection
 component_validator_observation_reason_exclusion_policy: non_execution_bundle_rows_remain_outside_observation_reason_ontology
 component_validator_observation_reason_source_policy: bundle_violation_rows_only_before_violation_projection
+component_validator_observation_reason_partition_policy: bundle_violation_rows_partitioned_into_admitted_excluded_or_unknown_exactly_once_before_violation_projection
 required_component_descriptor_fields:
 - validator_script
 - probe_script
@@ -341,6 +342,11 @@ bundle_anchor_checks:
   - Direct stale reasons, structure violations, anchor violations, and
     projected stale-reason strings do not become substitute observation
     source.
+  - Bundle component-validator observation-reason partition policy must stay
+    explicit too.
+  - Each bundle-violation row must classify exactly once as admitted
+    observation reason, excluded non-observation row, or unknown ontology
+    drift, all before violation projection.
   - The machine world must fail-close on unclassified component-validator
     observation reason rather than silently expanding bundle observation
     ontology.
@@ -584,6 +590,11 @@ bundle_anchor_checks:
   - Direct stale reasons, structure violations, anchor violations, and
     projected stale-reason strings do not become substitute runtime
     observation source.
+  - Bundle component-validator observation-reason partition policy must also
+    stay explicit.
+  - Each bundle-violation row must classify exactly once as admitted runtime
+    observation reason, excluded non-observation row, or unknown ontology
+    drift, all before violation projection.
   - Runtime must fail-close on unclassified component-validator observation
     reason rather than silently expanding bundle observation ontology.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
@@ -801,6 +812,10 @@ bundle_anchor_checks:
   - Direct stale reasons, structure violations, anchor violations, and
     projected stale-reason strings must not be reinterpreted as observation
     source.
+  - Root-law bundle rows must also keep component-validator observation-reason
+    partition policy explicit; each bundle-violation row classifies exactly
+    once as admitted observation reason, excluded non-observation row, or
+    unknown ontology drift before violation projection.
   - Local bundle observation ontology must not silently expand beyond those
     admitted component-validator observation reasons.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
@@ -1021,6 +1036,10 @@ bundle_anchor_checks:
   - Runtime must not reinterpret direct stale reasons, structure violations,
     anchor violations, or projected stale-reason strings as substitute
     observation source.
+  - Runtime must also keep component-validator observation-reason partition
+    policy explicit; each bundle-violation row classifies exactly once as
+    admitted observation reason, excluded non-observation row, or unknown
+    ontology drift before violation projection.
   - Runtime must fail-close on unclassified component-validator observation
     reason rather than silently expanding bundle observation ontology.
 component_rows:

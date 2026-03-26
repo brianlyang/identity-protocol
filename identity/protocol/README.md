@@ -771,6 +771,13 @@ Direct stale reasons, structure violations, anchor violations, and
 projected stale-reason strings do not become substitute runtime
 observation source.
 
+Bundle component-validator observation-reason partition policy must also
+stay explicit.
+
+Each bundle-violation row must classify exactly once as admitted runtime
+observation reason, excluded non-observation row, or unknown ontology
+drift, all before violation projection.
+
 Runtime must fail-close on unclassified component-validator observation
 reason rather than silently expanding bundle observation ontology.
 

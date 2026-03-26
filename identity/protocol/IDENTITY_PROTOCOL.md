@@ -480,6 +480,11 @@ Direct stale reasons, structure violations, anchor violations, and
 projected stale-reason strings must not be reinterpreted as observation
 source.
 
+Root-law bundle rows must also keep component-validator observation-reason
+partition policy explicit; each bundle-violation row classifies exactly
+once as admitted observation reason, excluded non-observation row, or
+unknown ontology drift before violation projection.
+
 Local bundle observation ontology must not silently expand beyond those
 admitted component-validator observation reasons.
 

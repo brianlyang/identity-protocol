@@ -52,6 +52,7 @@ from root_corpus_law_bundle_common import (
     component_validator_observation_continuity_policy_from_doc,
     component_validator_observation_reason_admission_policy_from_doc,
     component_validator_observation_reason_exclusion_policy_from_doc,
+    component_validator_observation_reason_partition_policy_from_doc,
     component_validator_observation_reason_source_policy_from_doc,
     component_status_row_coverage_policy_from_doc,
     component_self_describing_family_requirement_fallback_policy_from_doc,
@@ -156,6 +157,9 @@ COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY = (
 )
 COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY = (
     "bundle_violation_rows_only_before_violation_projection"
+)
+COMPONENT_VALIDATOR_OBSERVATION_REASON_PARTITION_POLICY = (
+    "bundle_violation_rows_partitioned_into_admitted_excluded_or_unknown_exactly_once_before_violation_projection"
 )
 COMPONENT_VALIDATOR_OUTPUT_CONTRACT = "json_object_with_disclosed_status_key"
 
@@ -751,6 +755,9 @@ def main() -> int:
     component_validator_observation_reason_source_policy = (
         component_validator_observation_reason_source_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_observation_reason_partition_policy = (
+        component_validator_observation_reason_partition_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     effective_component_validator_status_requirement = (
         component_validator_status_requirement
         if component_validator_status_requirement == STATUS_PASS_REQUIRED
@@ -864,6 +871,14 @@ def main() -> int:
             == COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY
         )
         else COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY
+    )
+    effective_component_validator_observation_reason_partition_policy = (
+        component_validator_observation_reason_partition_policy
+        if (
+            component_validator_observation_reason_partition_policy
+            == COMPONENT_VALIDATOR_OBSERVATION_REASON_PARTITION_POLICY
+        )
+        else COMPONENT_VALIDATOR_OBSERVATION_REASON_PARTITION_POLICY
     )
     effective_component_validator_stdout_normalization_contract = (
         component_validator_stdout_normalization_contract
@@ -1275,6 +1290,14 @@ def main() -> int:
         ):
             stale_reasons.append(
                 "root_corpus_law_bundle_component_validator_observation_reason_source_policy_invalid"
+            )
+            error_code = ERR_REGISTRY
+        if (
+            component_validator_observation_reason_partition_policy
+            != COMPONENT_VALIDATOR_OBSERVATION_REASON_PARTITION_POLICY
+        ):
+            stale_reasons.append(
+                "root_corpus_law_bundle_component_validator_observation_reason_partition_policy_invalid"
             )
             error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
@@ -1956,6 +1979,11 @@ def main() -> int:
         component_validator_observation_reason_unknown_count,
         component_validator_observation_reason_non_applicable_count,
     ) = _component_validator_observation_reason_counts(bundle_violations)
+    component_validator_observation_reason_partition_total_count = (
+        sum(component_validator_observation_reason_counts.values())
+        + component_validator_observation_reason_unknown_count
+        + component_validator_observation_reason_non_applicable_count
+    )
     component_validator_observation_reason_status = (
         STATUS_FAIL_REQUIRED
         if (
@@ -1971,6 +1999,19 @@ def main() -> int:
     )
     if component_validator_observation_reason_status == STATUS_FAIL_REQUIRED:
         stale_reasons.append("root_corpus_law_bundle_component_validator_observation_reason_unclassified")
+        if not error_code:
+            error_code = ERR_REGISTRY
+    component_validator_observation_reason_partition_status = (
+        STATUS_FAIL_REQUIRED
+        if (
+            effective_component_validator_observation_reason_partition_policy
+            == COMPONENT_VALIDATOR_OBSERVATION_REASON_PARTITION_POLICY
+            and component_validator_observation_reason_partition_total_count != len(bundle_violations)
+        )
+        else STATUS_PASS_REQUIRED
+    )
+    if component_validator_observation_reason_partition_status == STATUS_FAIL_REQUIRED:
+        stale_reasons.append("root_corpus_law_bundle_component_validator_observation_reason_partition_incomplete")
         if not error_code:
             error_code = ERR_REGISTRY
 
@@ -2140,6 +2181,9 @@ def main() -> int:
         "component_validator_observation_reason_source_policy": (
             component_validator_observation_reason_source_policy
         ),
+        "component_validator_observation_reason_partition_policy": (
+            component_validator_observation_reason_partition_policy
+        ),
         "derived_status_from_stale_reasons": derived_status_from_stale_reasons,
         "derived_failure_class": derived_failure_class,
         "derived_error_code_from_precedence": derived_error_code_from_precedence,
@@ -2156,6 +2200,9 @@ def main() -> int:
         "direct_stale_reason_origin_counts": dict(direct_stale_reason_origin_counts),
         "registry_direct_stale_reason_unknown_count": registry_direct_stale_reason_unknown_count,
         "component_validator_observation_reason_status": component_validator_observation_reason_status,
+        "component_validator_observation_reason_partition_status": (
+            component_validator_observation_reason_partition_status
+        ),
         "component_validator_observation_reason_counts": dict(
             component_validator_observation_reason_counts
         ),
@@ -2164,6 +2211,9 @@ def main() -> int:
         ),
         "component_validator_observation_reason_non_applicable_count": (
             component_validator_observation_reason_non_applicable_count
+        ),
+        "component_validator_observation_reason_partition_total_count": (
+            component_validator_observation_reason_partition_total_count
         ),
         "registry_class_reason_count": registry_precedence_reason_count,
         "registry_precedence_reason_count": registry_precedence_reason_count,
