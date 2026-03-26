@@ -241,6 +241,9 @@ admission law; canonical registry directory, admitted registry-current entry,
 and registered child-set membership for component current/version files may
 not be silently redeclared, weakened, or guessed inside the bundle.
 
+Local redeclaration of registry-child admission governance must remain
+forbidden inside the bundle.
+
 If the admitted source does not disclose that registry-child admission law,
 protocol legality must fail-close rather than locally reconstructing
 component-admission law.

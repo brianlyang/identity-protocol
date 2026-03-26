@@ -459,6 +459,9 @@ The canonical registry directory, the admitted registry-current entry, and the
 registered child set that legalizes component current/version files belong to
 that source law rather than to local bundle restatement.
 
+Local redeclaration of registry-child admission governance must remain
+forbidden inside the bundle.
+
 If the admitted source does not disclose that registry-child admission law,
 the machine world must fail-close rather than locally reconstructing component
 admission from bundle convenience.

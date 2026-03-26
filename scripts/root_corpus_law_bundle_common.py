@@ -171,6 +171,10 @@ def component_registry_child_membership_local_override_policy_from_doc(bundle_do
     return _norm_str(bundle_doc.get("component_registry_child_membership_local_override_policy"))
 
 
+def component_registry_child_membership_local_redeclaration_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("component_registry_child_membership_local_redeclaration_policy"))
+
+
 def component_registry_child_membership_fallback_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
     return _norm_str(bundle_doc.get("component_registry_child_membership_fallback_policy"))
 

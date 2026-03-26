@@ -485,6 +485,9 @@ The canonical registry directory, the admitted registry-current entry, and
 the registered child set that legalizes component current/version files may
 not be silently redeclared or weakened inside the bundle.
 
+Local redeclaration of registry-child admission governance must remain
+forbidden inside the bundle.
+
 If the admitted source does not disclose that registry-child admission law,
 the machine world must fail-close rather than locally reconstructing
 component admission.

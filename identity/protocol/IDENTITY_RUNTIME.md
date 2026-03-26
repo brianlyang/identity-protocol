@@ -185,6 +185,9 @@ directory, admitted registry-current entry, and registered child-set
 membership for component current/version files must be inherited from the
 admitted source component.
 
+Runtime must also reject local redeclaration of registry-child admission
+governance inside the bundle.
+
 If the admitted source does not disclose that registry-child admission law,
 runtime must fail-close rather than locally reconstructing component-admission
 law.

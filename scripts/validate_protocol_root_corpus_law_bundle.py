@@ -18,6 +18,7 @@ from root_corpus_law_bundle_common import (
     bundle_components_from_doc,
     component_registry_child_membership_fallback_policy_from_doc,
     component_registry_child_membership_inheritance_mode_from_doc,
+    component_registry_child_membership_local_redeclaration_policy_from_doc,
     component_registry_child_membership_local_override_policy_from_doc,
     component_current_version_naming_fallback_policy_from_doc,
     component_current_version_naming_inheritance_mode_from_doc,
@@ -326,6 +327,9 @@ def main() -> int:
     component_registry_child_membership_local_override_policy = (
         component_registry_child_membership_local_override_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_registry_child_membership_local_redeclaration_policy = (
+        component_registry_child_membership_local_redeclaration_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     component_registry_child_membership_fallback_policy = (
         component_registry_child_membership_fallback_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
@@ -546,6 +550,11 @@ def main() -> int:
         if component_registry_child_membership_local_override_policy != "forbidden":
             stale_reasons.append(
                 "root_corpus_law_bundle_component_registry_child_membership_local_override_policy_invalid"
+            )
+            error_code = ERR_REGISTRY
+        if component_registry_child_membership_local_redeclaration_policy != "forbidden":
+            stale_reasons.append(
+                "root_corpus_law_bundle_component_registry_child_membership_local_redeclaration_policy_invalid"
             )
             error_code = ERR_REGISTRY
         if component_registry_child_membership_fallback_policy != "fail_closed":
@@ -1214,6 +1223,7 @@ def main() -> int:
         "component_current_version_naming_fallback_policy": component_current_version_naming_fallback_policy,
         "component_registry_child_membership_inheritance_mode": component_registry_child_membership_inheritance_mode,
         "component_registry_child_membership_local_override_policy": component_registry_child_membership_local_override_policy,
+        "component_registry_child_membership_local_redeclaration_policy": component_registry_child_membership_local_redeclaration_policy,
         "component_registry_child_membership_fallback_policy": component_registry_child_membership_fallback_policy,
         "component_descriptor_resolution_mode": component_descriptor_resolution_mode,
         "component_descriptor_version_pinning_policy": component_descriptor_version_pinning_policy,

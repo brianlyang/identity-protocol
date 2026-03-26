@@ -36,6 +36,7 @@ component_current_version_naming_local_redeclaration_policy: forbidden
 component_current_version_naming_fallback_policy: fail_closed
 component_registry_child_membership_inheritance_mode: inherit_machine_registry_completeness_current_only
 component_registry_child_membership_local_override_policy: forbidden
+component_registry_child_membership_local_redeclaration_policy: forbidden
 component_registry_child_membership_fallback_policy: fail_closed
 component_descriptor_resolution_mode: current_alias_only
 component_descriptor_version_pinning_policy: forbidden
@@ -106,6 +107,8 @@ bundle_anchor_checks:
   - Bundle registry-child admission law must also remain inherited from
     machine-registry completeness.
   - canonical registry directory, the admitted registry-current entry, and the
+  - Local redeclaration of registry-child admission governance must remain
+    forbidden inside the bundle.
   - fail-close rather than locally reconstructing component
     admission from bundle convenience.
   - Bundle component descriptors must remain current-entry mediated as well.
@@ -163,6 +166,8 @@ bundle_anchor_checks:
   - fail-close rather than locally reconstructing current/version mediation.
   - The bundle must also inherit machine-registry completeness registry-child
   - canonical registry directory, the admitted registry-current entry, and
+  - Local redeclaration of registry-child admission governance must remain
+    forbidden inside the bundle.
   - fail-close rather than locally reconstructing
     component admission.
   - Bundle component descriptors must also remain current-entry mediated.
@@ -218,6 +223,8 @@ bundle_anchor_checks:
     law.
   - The bundle must also inherit machine-registry completeness registry-child
   - admission law; canonical registry directory, admitted registry-current entry,
+  - Local redeclaration of registry-child admission governance must remain
+    forbidden inside the bundle.
   - protocol legality must fail-close rather than locally reconstructing
     component-admission law.
   - Bundle component descriptors must also stay current-entry mediated
@@ -269,6 +276,8 @@ bundle_anchor_checks:
   - fail-close rather than locally reconstructing current/version mediation law.
   - Runtime must also reject a root-law bundle that redeclares or weakens
   - canonical registry directory, admitted registry-current entry, and registered child-set
+  - Runtime must also reject local redeclaration of registry-child admission
+    governance inside the bundle.
   - runtime must fail-close rather than locally reconstructing component-admission
     law.
   - Runtime must also treat bundle component descriptors as current-entry
