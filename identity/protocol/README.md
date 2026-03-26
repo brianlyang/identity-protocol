@@ -696,6 +696,14 @@ before final status.
 Runtime may not finalize on partial component-row coverage when the bound
 component set is already known.
 
+Bundle violation-projection policy must also stay explicit.
+
+The admitted runtime policy is all structure, bundle, and anchor violations
+are projected into stale reasons before final status.
+
+Runtime may not keep violation rows private while presenting a final verdict
+surface that withholds their stale-reason projection.
+
 ---
 
 ## Conflict-handling rule

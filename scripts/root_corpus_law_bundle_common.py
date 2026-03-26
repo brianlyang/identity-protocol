@@ -291,6 +291,10 @@ def component_status_row_coverage_policy_from_doc(bundle_doc: Mapping[str, Any])
     return _norm_str(bundle_doc.get("component_status_row_coverage_policy"))
 
 
+def violation_projection_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("violation_projection_policy"))
+
+
 def require_component_descriptor_concordance(bundle_doc: Mapping[str, Any]) -> bool:
     return _as_bool(bundle_doc.get("require_component_descriptor_concordance"))
 

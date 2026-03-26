@@ -684,6 +684,14 @@ final status.
 The machine world must not finalize root-law bundle truth on partial
 component-row coverage when bound component set remains known.
 
+Bundle violation-projection policy must stay explicit too.
+
+The admitted policy is all structure, bundle, and anchor violations are
+projected into stale reasons before final status.
+
+The machine world must not keep violation rows internally while emitting a
+final verdict surface that withholds their stale-reason projection.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

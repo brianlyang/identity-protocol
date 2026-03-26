@@ -82,6 +82,7 @@ assert payload["component_validator_contract_drift_execution_policy"] == "execut
 assert payload["component_validator_contract_surface_projection_policy"] == "bundle_summary_disclosed_component_rows_effective_execution_surface", payload
 assert payload["component_validator_observation_continuity_policy"] == "continue_bound_component_observation_under_canonical_surface_before_final_fail_close", payload
 assert payload["component_status_row_coverage_policy"] == "all_bound_components_must_emit_status_rows_before_final_status", payload
+assert payload["violation_projection_policy"] == "all_structure_bundle_anchor_violations_projected_into_stale_reasons_before_final_status", payload
 assert payload["bundle_redeclares_required_repo_rel_path_patterns"] is False, payload
 assert payload["bundle_local_required_repo_rel_path_patterns"] == {}, payload
 assert payload["bundle_redeclares_family_surface_binding_governance"] is False, payload
@@ -127,6 +128,10 @@ assert payload["source_registry_directory_rel_path"] == "identity/protocol/mappi
 assert payload["source_registry_current_file"] == "identity/protocol/mappings/root-corpus-registry.current.yaml", payload
 assert payload["source_registered_mapping_children_count"] > 0, payload
 assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
+assert payload["structure_violation_count"] == 0, payload
+assert payload["bundle_violation_count"] == 0, payload
+assert payload["anchor_violation_count"] == 0, payload
+assert payload["projected_violation_reason_count"] == 0, payload
 assert all(row["component_status"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
 assert all(
     row["validator_status_requirement"] == "PASS_REQUIRED"
@@ -582,6 +587,40 @@ assert payload["component_status_row_coverage_policy"] == "partial_component_row
 assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
 PY
 
+VIOLATION_PROJECTION_POLICY_REPO="${TMP_ROOT}/violation-projection-policy-drift-repo"
+mirror_repo "${VIOLATION_PROJECTION_POLICY_REPO}"
+python3 - <<'PY' "${VIOLATION_PROJECTION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["violation_projection_policy"] = "local_violation_rows_may_remain_unprojected"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+VIOLATION_PROJECTION_POLICY_JSON="${TMP_ROOT}/violation-projection-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${VIOLATION_PROJECTION_POLICY_REPO}" \
+  --json-only >"${VIOLATION_PROJECTION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed violation projection policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${VIOLATION_PROJECTION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_violation_projection_policy_invalid" in payload["stale_reasons"], payload
+assert payload["violation_projection_policy"] == "local_violation_rows_may_remain_unprojected", payload
+assert payload["projected_violation_reason_count"] == 0, payload
+PY
+
 MISSING_COMPONENT_VALIDATOR_REPO="${TMP_ROOT}/missing-component-validator-repo"
 mirror_repo "${MISSING_COMPONENT_VALIDATOR_REPO}"
 rm -f "${MISSING_COMPONENT_VALIDATOR_REPO}/scripts/validate_protocol_root_corpus_precedence.py"
@@ -603,6 +642,10 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCLB-003", payload
 assert payload["component_status_row_count"] == payload["component_count"] - 1, payload
+assert payload["bundle_violation_count"] >= 2, payload
+assert payload["projected_violation_reason_count"] == (
+    payload["structure_violation_count"] + payload["bundle_violation_count"] + payload["anchor_violation_count"]
+), payload
 assert "bundle_violation:root_corpus_law_bundle:component_status_row_coverage_incomplete" in payload["stale_reasons"], payload
 assert "bundle_violation:root_corpus_precedence:component_validator_missing" in payload["stale_reasons"], payload
 PY

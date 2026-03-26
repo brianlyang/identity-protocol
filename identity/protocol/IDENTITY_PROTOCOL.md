@@ -419,6 +419,13 @@ status.
 Local finalization on partial component-row coverage is forbidden inside
 the bundle.
 
+Root-law bundle rows must also keep violation-projection policy explicit;
+all structure, bundle, and anchor violations must be projected into stale
+reasons before final status.
+
+Local final verdict must not withhold stale-reason projection for known
+violation rows.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

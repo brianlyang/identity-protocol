@@ -364,6 +364,13 @@ every bound component must emit one status row before final status.
 Runtime must not emit final bundle truth with partial component-row
 coverage when bound component set remains known.
 
+Runtime must also keep bundle violation-projection policy explicit; all
+structure, bundle, and anchor violations must be projected into stale
+reasons before final status.
+
+Runtime must not emit final bundle truth while withholding stale-reason
+projection for already discovered violation rows.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

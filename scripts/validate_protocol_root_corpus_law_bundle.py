@@ -78,6 +78,7 @@ from root_corpus_law_bundle_common import (
     required_component_descriptor_field_modes_from_doc,
     required_component_descriptor_fields_from_doc,
     require_component_descriptor_concordance,
+    violation_projection_policy_from_doc,
 )
 from root_machine_registry_completeness_common import (
     default_surface_stem_from_family_id,
@@ -123,6 +124,9 @@ COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY = (
     "continue_bound_component_observation_under_canonical_surface_before_final_fail_close"
 )
 COMPONENT_STATUS_ROW_COVERAGE_POLICY = "all_bound_components_must_emit_status_rows_before_final_status"
+VIOLATION_PROJECTION_POLICY = (
+    "all_structure_bundle_anchor_violations_projected_into_stale_reasons_before_final_status"
+)
 COMPONENT_VALIDATOR_OUTPUT_CONTRACT = "json_object_with_disclosed_status_key"
 
 EXPECTED_COMPONENTS = {
@@ -614,6 +618,7 @@ def main() -> int:
     component_status_row_coverage_policy = (
         component_status_row_coverage_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    violation_projection_policy = violation_projection_policy_from_doc(bundle_doc) if bundle_doc else ""
     effective_component_validator_status_requirement = (
         component_validator_status_requirement
         if component_validator_status_requirement == STATUS_PASS_REQUIRED
@@ -673,6 +678,11 @@ def main() -> int:
         component_status_row_coverage_policy
         if component_status_row_coverage_policy == COMPONENT_STATUS_ROW_COVERAGE_POLICY
         else COMPONENT_STATUS_ROW_COVERAGE_POLICY
+    )
+    effective_violation_projection_policy = (
+        violation_projection_policy
+        if violation_projection_policy == VIOLATION_PROJECTION_POLICY
+        else VIOLATION_PROJECTION_POLICY
     )
     effective_component_validator_stdout_normalization_contract = (
         component_validator_stdout_normalization_contract
@@ -1043,6 +1053,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_status_row_coverage_policy != COMPONENT_STATUS_ROW_COVERAGE_POLICY:
             stale_reasons.append("root_corpus_law_bundle_component_status_row_coverage_policy_invalid")
+            error_code = ERR_REGISTRY
+        if violation_projection_policy != VIOLATION_PROJECTION_POLICY:
+            stale_reasons.append("root_corpus_law_bundle_violation_projection_policy_invalid")
             error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
@@ -1723,9 +1736,34 @@ def main() -> int:
     if not error_code and (bundle_violations or anchor_violations):
         error_code = ERR_BUNDLE
 
-    stale_reasons.extend(f"structure_violation:{row['field']}:{row['reason']}" for row in structure_violations)
-    stale_reasons.extend(f"bundle_violation:{row['component_id']}:{row['reason']}" for row in bundle_violations)
-    stale_reasons.extend(f"anchor_violation:{row['rel_path']}:{row['reason']}" for row in anchor_violations)
+    structure_violation_stale_reasons = [
+        f"structure_violation:{row['field']}:{row['reason']}" for row in structure_violations
+    ]
+    bundle_violation_stale_reasons = [
+        f"bundle_violation:{row['component_id']}:{row['reason']}" for row in bundle_violations
+    ]
+    anchor_violation_stale_reasons = [
+        f"anchor_violation:{row['rel_path']}:{row['reason']}" for row in anchor_violations
+    ]
+    projected_violation_reason_count = (
+        len(structure_violation_stale_reasons)
+        + len(bundle_violation_stale_reasons)
+        + len(anchor_violation_stale_reasons)
+    )
+    expected_projected_violation_reason_count = (
+        len(structure_violations) + len(bundle_violations) + len(anchor_violations)
+    )
+
+    stale_reasons.extend(structure_violation_stale_reasons)
+    stale_reasons.extend(bundle_violation_stale_reasons)
+    stale_reasons.extend(anchor_violation_stale_reasons)
+    if (
+        effective_violation_projection_policy == VIOLATION_PROJECTION_POLICY
+        and projected_violation_reason_count != expected_projected_violation_reason_count
+    ):
+        stale_reasons.append("root_corpus_law_bundle_violation_projection_incomplete")
+        if not error_code:
+            error_code = ERR_BUNDLE
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
     payload: dict[str, Any] = {
@@ -1794,9 +1832,14 @@ def main() -> int:
         ),
         "component_validator_observation_continuity_policy": component_validator_observation_continuity_policy,
         "component_status_row_coverage_policy": component_status_row_coverage_policy,
+        "violation_projection_policy": violation_projection_policy,
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
         "component_status_row_count": len(component_status_rows),
+        "structure_violation_count": len(structure_violations),
+        "bundle_violation_count": len(bundle_violations),
+        "anchor_violation_count": len(anchor_violations),
+        "projected_violation_reason_count": projected_violation_reason_count,
         "component_ids": [row.component_id for row in sorted_components],
         "required_component_descriptor_fields": list(required_component_descriptor_fields),
         "required_component_descriptor_field_modes": dict(required_component_descriptor_field_modes),
