@@ -2,6 +2,10 @@
   "schema_version": "v1",
   "items": [
     {
+      "file": "v16x-dppl-output-layout-standard-20260326.json",
+      "broadcast_id": "v16x-dppl-output-layout-standard-20260326"
+    },
+    {
       "file": "v166-hard-closure-headstamp-required-20260314.json",
       "broadcast_id": "v166-hard-closure-headstamp-required-20260314"
     },

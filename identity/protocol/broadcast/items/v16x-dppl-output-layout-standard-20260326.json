@@ -1,0 +1,32 @@
+{
+  "broadcast_id": "v16x-dppl-output-layout-standard-20260326",
+  "created_at_utc": "2026-03-26T15:30:00Z",
+  "expire_at_utc": "2026-04-09T15:30:00Z",
+  "title": "[通知标准][v1.6.x] 统一输出布局：高密度分点段落式布局（DPPL，必须ACK）",
+  "message": "【通知编号】v16x-dppl-output-layout-standard-20260326\\n【适用范围】all runtime identities\\n【执行模式】立即吸收，后续默认执行\\n\\n【目标】\\n- 统一 identity 实例在 protocol feedback、审计结论、收口汇报、运行复盘中的输出布局。\\n- 提升跨实例转发、人工扫读、机器抽取、审计复盘的一致性。\\n\\n【标准布局（DPPL）】\\n1) 每个主点必须单独成段，禁止整页墙式文本。\\n2) 每段内部要高密度，优先写成：判断 -> 依据 -> 后果/动作。\\n3) 建议显式使用标签：结论 / 证据 / 影响 / 边界 / 下一步。\\n4) 尽量显式写对象名、文件名、字段名、状态名，少用“这个/那个/它”等模糊代词。\\n5) 禁止把 probe 结论、runtime 结论、建议动作、治理边界混写在同一段。\\n6) 禁止碎片化聊天体（一句一行、信息过散）。\\n\\n【推荐输出顺序】\\n1) 总判断\\n2) 关键证据\\n3) 已完成收口\\n4) 剩余缺口\\n5) 风险边界\\n6) 下一步动作\\n\\n【执行要求】\\n1) 后续涉及 protocol / audit / remediation / closure 的实例输出，优先采用 DPPL。\\n2) 如需转发给其他 identity，优先保留标签、对象名、状态名，不做口语化压缩。\\n3) 若实例已有固定输出模板，应在不破坏 machine-law 字段的前提下向 DPPL 靠拢。\\n\\n【禁止事项】\\n- 禁止把局部 probe 绿误报为全局 runtime closure。\\n- 禁止把 hermetic proof 误写成 live/runtime truth。\\n- 禁止用美观理由牺牲对象显式化和状态可抽取性。\\n\\n【ACK要求】\\n- 本通知为输出规范统一通知，实例吸收后需 ACK，便于后续审计 adoption 覆盖率。",
+  "severity": "warning",
+  "requires_ack": true,
+  "scope": "all",
+  "tags": [
+    "v1.6.x",
+    "dppl",
+    "output-layout",
+    "protocol-feedback",
+    "audit",
+    "closure"
+  ],
+  "metadata": {
+    "source_class": "protocol_broadcast_guidance",
+    "derived_from": [
+      "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
+      "identity/protocol/IDENTITY_RUNTIME.md",
+      "identity/protocol/broadcast/README.md"
+    ],
+    "adoption_target": "all runtime identities",
+    "notes": [
+      "This item standardizes presentation layout rather than business semantics.",
+      "Object names and machine states should remain explicit in cross-instance relay.",
+      "Do not confuse local probe success with global runtime closure."
+    ]
+  }
+}
