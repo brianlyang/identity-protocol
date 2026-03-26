@@ -319,6 +319,10 @@ def registry_direct_stale_reason_alias_origin_policy_from_doc(bundle_doc: Mappin
     return _norm_str(bundle_doc.get("registry_direct_stale_reason_alias_origin_policy"))
 
 
+def registry_direct_stale_reason_document_origin_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("registry_direct_stale_reason_document_origin_policy"))
+
+
 def registry_direct_stale_reason_required_surface_origin_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
     return _norm_str(bundle_doc.get("registry_direct_stale_reason_required_surface_origin_policy"))
 

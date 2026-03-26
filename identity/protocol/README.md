@@ -754,6 +754,13 @@ The admitted runtime alias direct stale reasons are rows containing the
 `_alias_error:` marker before document, required-surface, and
 contract-row classification.
 
+Bundle registry direct-stale-reason document origin policy must also
+stay explicit.
+
+The admitted runtime document direct stale reasons are rows ending with
+`_empty_or_invalid` after alias exclusion and before required-surface
+and contract-row classification.
+
 Bundle registry direct-stale-reason required-surface origin policy must
 also stay explicit.
 

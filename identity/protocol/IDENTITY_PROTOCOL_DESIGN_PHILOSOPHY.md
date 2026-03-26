@@ -742,6 +742,13 @@ The admitted alias direct stale reasons are rows containing the
 `_alias_error:` marker before document, required-surface, and
 contract-row classification.
 
+Bundle registry direct-stale-reason document origin policy must stay
+explicit too.
+
+The admitted document direct stale reasons are rows ending with
+`_empty_or_invalid` after alias exclusion and before required-surface
+and contract-row classification.
+
 Bundle registry direct-stale-reason required-surface origin policy must
 stay explicit too.
 
