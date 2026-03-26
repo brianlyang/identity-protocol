@@ -61,6 +61,7 @@ identity_specs = {
         "boundary_health_class": "repair_green_terminal_truth_clean",
         "admission_lane_projection": "NOT_BLOCKED_BY_TERMINAL_TRUTH",
         "terminal_truth_observation_status": "PASS_REQUIRED",
+        "experience_writeback_validation_status": "SKIPPED_NOT_REQUIRED",
         "repair_success_not_clean_terminal_truth": False,
         "report_suffix": "clean",
     },
@@ -78,6 +79,7 @@ identity_specs = {
         "boundary_health_class": "repair_green_terminal_truth_blocked",
         "admission_lane_projection": "BLOCKED_BY_TERMINAL_TRUTH",
         "terminal_truth_observation_status": "FAIL_REQUIRED",
+        "experience_writeback_validation_status": "SKIPPED_NOT_REQUIRED",
         "repair_success_not_clean_terminal_truth": True,
         "report_suffix": "review-required",
     },
@@ -326,6 +328,10 @@ def _load_json(path: Path) -> dict:
 def _assert_projection(surface: str, payload: dict, spec: dict[str, object]) -> None:
     assert payload["terminal_truth_boundary_projection_status"] == "PASS_REQUIRED", (surface, payload)
     assert payload["repair_lane_status"] == "PASS_REQUIRED", (surface, payload)
+    assert payload["experience_writeback_validation_status"] == spec["experience_writeback_validation_status"], (
+        surface,
+        payload,
+    )
     assert payload["terminal_truth_observation_status"] == spec["terminal_truth_observation_status"], (surface, payload)
     assert payload["admission_lane_projection"] == spec["admission_lane_projection"], (surface, payload)
     assert payload["boundary_health_class"] == spec["boundary_health_class"], (surface, payload)
@@ -454,6 +460,10 @@ for row in seeded:
     one_look = readiness_payload.get("one_look") or {}
     assert one_look["terminal_truth_boundary_projection_status"] == "PASS_REQUIRED", (identity_id, one_look)
     assert one_look["repair_lane_status"] == "PASS_REQUIRED", (identity_id, one_look)
+    assert one_look["experience_writeback_validation_status"] == spec["experience_writeback_validation_status"], (
+        identity_id,
+        one_look,
+    )
     assert one_look["terminal_truth_observation_status"] == spec["terminal_truth_observation_status"], (
         identity_id,
         one_look,

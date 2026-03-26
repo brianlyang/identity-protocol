@@ -56,6 +56,8 @@ def _skip_payload(*, reason: str, report_selected_path: str = "") -> dict[str, A
         "repair_observation_stale_reasons": [],
         "post_execution_obligation_status": STATUS_SKIPPED_NOT_REQUIRED,
         "writeback_continuity_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "experience_writeback_validation_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "experience_writeback_validation_stale_reasons": [],
         "terminal_truth_observation_status": STATUS_SKIPPED_NOT_REQUIRED,
         "terminal_truth_class": "",
         "terminal_state_class": "",
@@ -111,6 +113,20 @@ def build_terminal_truth_boundary_projection_from_enrichment(
     writeback_status = _clean_status(
         ((projection_result.get("writeback_continuity_validation") or {}).get("status", ""))
     )
+    experience_writeback_validation = (
+        projection_result.get("experience_writeback_validation")
+        if isinstance(projection_result.get("experience_writeback_validation"), dict)
+        else {}
+    )
+    experience_writeback_status = _clean_status(experience_writeback_validation.get("status"))
+    experience_writeback_payload = (
+        experience_writeback_validation.get("payload")
+        if isinstance(experience_writeback_validation.get("payload"), dict)
+        else {}
+    )
+    experience_writeback_stale_reasons = _clean_reason_list(
+        experience_writeback_payload.get("stale_reasons")
+    )
     terminal_truth_status = _clean_status(
         ((projection_result.get("terminal_truth_validation") or {}).get("status", ""))
     )
@@ -147,6 +163,13 @@ def build_terminal_truth_boundary_projection_from_enrichment(
         stale_reasons.append("post_execution_obligation_status_missing")
     if not writeback_status:
         stale_reasons.append("writeback_continuity_status_missing")
+    if experience_writeback_status not in {
+        STATUS_PASS_REQUIRED,
+        STATUS_SKIPPED_NOT_REQUIRED,
+        STATUS_FAIL_REQUIRED,
+        STATUS_WARN_NON_BLOCKING,
+    }:
+        stale_reasons.append("experience_writeback_validation_status_missing")
     if not terminal_truth_status:
         stale_reasons.append("terminal_truth_observation_status_missing")
     if admission_lane_projection_status == STATUS_FAIL_REQUIRED:
@@ -167,6 +190,8 @@ def build_terminal_truth_boundary_projection_from_enrichment(
         "repair_observation_stale_reasons": repair_observation_stale_reasons,
         "post_execution_obligation_status": post_execution_status or STATUS_UNKNOWN,
         "writeback_continuity_status": writeback_status or STATUS_UNKNOWN,
+        "experience_writeback_validation_status": experience_writeback_status or STATUS_UNKNOWN,
+        "experience_writeback_validation_stale_reasons": experience_writeback_stale_reasons,
         "terminal_truth_observation_status": terminal_truth_status or STATUS_UNKNOWN,
         "terminal_truth_class": _clean_string(report_after.get("terminal_truth_class")),
         "terminal_state_class": _clean_string(report_after.get("terminal_state_class")),
@@ -227,6 +252,8 @@ def build_terminal_truth_boundary_projection_from_report(
             "repair_observation_stale_reasons": [],
             "post_execution_obligation_status": STATUS_UNKNOWN,
             "writeback_continuity_status": STATUS_UNKNOWN,
+            "experience_writeback_validation_status": STATUS_UNKNOWN,
+            "experience_writeback_validation_stale_reasons": [],
             "terminal_truth_observation_status": STATUS_UNKNOWN,
             "terminal_truth_class": "",
             "terminal_state_class": "",

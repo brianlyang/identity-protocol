@@ -353,6 +353,10 @@ def enrich_post_execution_report(
                 "status": STATUS_SKIPPED_NOT_REQUIRED,
                 "skip_reason": projection_applicability.get("applicability_reason", ""),
             },
+            "experience_writeback_validation": {
+                "status": STATUS_SKIPPED_NOT_REQUIRED,
+                "skip_reason": projection_applicability.get("applicability_reason", ""),
+            },
             "terminal_truth_validation": {
                 "status": STATUS_SKIPPED_NOT_REQUIRED,
                 "skip_reason": projection_applicability.get("applicability_reason", ""),
@@ -404,6 +408,15 @@ def enrich_post_execution_report(
             report_path=temp_report_path,
             operation=operation,
         )
+        experience_writeback_result = _run_report_validator(
+            validator_script="validate_identity_experience_writeback.py",
+            status_field="experience_writeback_validation_status",
+            catalog_path=catalog_path,
+            repo_catalog_path=repo_catalog_path,
+            identity_id=identity_id,
+            report_path=temp_report_path,
+            operation=operation,
+        )
     finally:
         try:
             temp_report_path.unlink(missing_ok=True)
@@ -432,6 +445,9 @@ def enrich_post_execution_report(
         blocking_stale_reasons.append("post_execution_validator_not_green_after_projection")
     if str(writeback_result.get("status", "")).strip().upper() != STATUS_PASS_REQUIRED:
         blocking_stale_reasons.append("writeback_continuity_not_green_after_projection")
+    experience_writeback_status = str(experience_writeback_result.get("status", "")).strip().upper()
+    if experience_writeback_status not in {STATUS_PASS_REQUIRED, STATUS_SKIPPED_NOT_REQUIRED}:
+        blocking_stale_reasons.append("experience_writeback_not_green_after_projection")
     if str(terminal_truth_result.get("status", "")).strip().upper() != STATUS_PASS_REQUIRED:
         observation_stale_reasons.append("terminal_truth_validator_not_green_after_projection")
 
@@ -452,6 +468,7 @@ def enrich_post_execution_report(
         "capability_activation_missing_fields_after": capability_missing_after,
         "post_execution_validation": post_execution_result,
         "writeback_continuity_validation": writeback_result,
+        "experience_writeback_validation": experience_writeback_result,
         "terminal_truth_validation": terminal_truth_result,
         "repair_projection_status": STATUS_PASS_REQUIRED if not blocking_stale_reasons else STATUS_FAIL_REQUIRED,
         "stale_reasons": sorted(

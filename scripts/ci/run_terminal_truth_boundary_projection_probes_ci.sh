@@ -13,6 +13,7 @@ PACK_PATH="${TMP_DIR}/${IDENTITY_ID}"
 CATALOG_PATH="${TMP_DIR}/catalog.local.yaml"
 CLEAN_REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-${IDENTITY_ID}-clean.json"
 REVIEW_REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-${IDENTITY_ID}-review-required.json"
+REPAIR_BLOCKED_REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-${IDENTITY_ID}-repair-blocked.json"
 NON_CLOSEOUT_REPORT_PATH="${PACK_PATH}/runtime/reports/${IDENTITY_ID}-active-run.json"
 RULEBOOK_PATH="${PACK_PATH}/RULEBOOK.jsonl"
 TASK_HISTORY_PATH="${PACK_PATH}/TASK_HISTORY.md"
@@ -20,7 +21,7 @@ PROMPT_CONTRACT_PATH="${PACK_PATH}/runtime/state/prompt_contract.json"
 
 mkdir -p "${PACK_PATH}/runtime/reports" "${PACK_PATH}/runtime/state"
 
-python3 - <<'PY' "${CATALOG_PATH}" "${PACK_PATH}" "${IDENTITY_ID}" "${CLEAN_REPORT_PATH}" "${REVIEW_REPORT_PATH}" "${NON_CLOSEOUT_REPORT_PATH}" "${RULEBOOK_PATH}" "${TASK_HISTORY_PATH}" "${PROMPT_CONTRACT_PATH}"
+python3 - <<'PY' "${CATALOG_PATH}" "${PACK_PATH}" "${IDENTITY_ID}" "${CLEAN_REPORT_PATH}" "${REVIEW_REPORT_PATH}" "${REPAIR_BLOCKED_REPORT_PATH}" "${NON_CLOSEOUT_REPORT_PATH}" "${RULEBOOK_PATH}" "${TASK_HISTORY_PATH}" "${PROMPT_CONTRACT_PATH}"
 import json
 import sys
 from pathlib import Path
@@ -39,10 +40,11 @@ pack_path = Path(sys.argv[2]).resolve()
 identity_id = sys.argv[3]
 clean_report_path = Path(sys.argv[4]).resolve()
 review_report_path = Path(sys.argv[5]).resolve()
-non_closeout_report_path = Path(sys.argv[6]).resolve()
-rulebook_path = Path(sys.argv[7]).resolve()
-task_history_path = Path(sys.argv[8]).resolve()
-prompt_contract_path = Path(sys.argv[9]).resolve()
+repair_blocked_report_path = Path(sys.argv[6]).resolve()
+non_closeout_report_path = Path(sys.argv[7]).resolve()
+rulebook_path = Path(sys.argv[8]).resolve()
+task_history_path = Path(sys.argv[9]).resolve()
+prompt_contract_path = Path(sys.argv[10]).resolve()
 
 canonical_blockers = list(CANONICAL_BLOCKER_TYPES)
 catalog_doc = {
@@ -190,6 +192,35 @@ review_doc.update(
 )
 review_report_path.write_text(json.dumps(review_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
+repair_blocked_doc = dict(base_doc)
+repair_blocked_doc.update(
+    {
+        "run_id": f"identity-upgrade-exec-{identity_id}-repair-blocked",
+        "mode": "safe-auto",
+        "next_action": "mutate_prompt_and_writeback",
+        "upgrade_required": True,
+        "writeback_status": "WRITTEN",
+        "writeback_mode": "STRICT_WRITEBACK",
+        "writeback_rule_id": "rule-entry-terminal-truth-boundary-probe",
+        "experience_writeback": {
+            "required": True,
+            "status": "WRITTEN",
+            "error_code": "",
+            "mode": "safe-auto",
+        },
+        "is_terminal_clean": True,
+        "publishable": True,
+        "canonical_result_eligible": True,
+        "terminal_truth_class": "clean_terminal_truth",
+        "terminal_state_class": "completed_clean",
+        "negative_feedback_class": "",
+    }
+)
+repair_blocked_report_path.write_text(
+    json.dumps(repair_blocked_doc, ensure_ascii=False, indent=2) + "\n",
+    encoding="utf-8",
+)
+
 non_closeout_report_path.write_text(
     json.dumps(
         {
@@ -206,7 +237,7 @@ non_closeout_report_path.write_text(
 )
 PY
 
-python3 - <<'PY' "${CATALOG_PATH}" "${CLEAN_REPORT_PATH}" "${REVIEW_REPORT_PATH}" "${NON_CLOSEOUT_REPORT_PATH}" "${IDENTITY_ID}"
+python3 - <<'PY' "${CATALOG_PATH}" "${CLEAN_REPORT_PATH}" "${REVIEW_REPORT_PATH}" "${REPAIR_BLOCKED_REPORT_PATH}" "${NON_CLOSEOUT_REPORT_PATH}" "${IDENTITY_ID}"
 import json
 import sys
 from pathlib import Path
@@ -220,8 +251,9 @@ from terminal_truth_boundary_projection_common import build_terminal_truth_bound
 catalog_path = Path(sys.argv[1]).resolve()
 clean_report_path = Path(sys.argv[2]).resolve()
 review_report_path = Path(sys.argv[3]).resolve()
-non_closeout_report_path = Path(sys.argv[4]).resolve()
-identity_id = sys.argv[5]
+repair_blocked_report_path = Path(sys.argv[4]).resolve()
+non_closeout_report_path = Path(sys.argv[5]).resolve()
+identity_id = sys.argv[6]
 
 def load_doc(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -236,6 +268,7 @@ clean_projection = build_terminal_truth_boundary_projection_from_report(
 )
 assert clean_projection["terminal_truth_boundary_projection_status"] == "PASS_REQUIRED", clean_projection
 assert clean_projection["repair_lane_status"] == "PASS_REQUIRED", clean_projection
+assert clean_projection["experience_writeback_validation_status"] == "SKIPPED_NOT_REQUIRED", clean_projection
 assert clean_projection["terminal_truth_observation_status"] == "PASS_REQUIRED", clean_projection
 assert clean_projection["admission_lane_projection"] == "NOT_BLOCKED_BY_TERMINAL_TRUTH", clean_projection
 assert clean_projection["boundary_health_class"] == "repair_green_terminal_truth_clean", clean_projection
@@ -252,12 +285,33 @@ review_projection = build_terminal_truth_boundary_projection_from_report(
 assert review_projection["terminal_truth_boundary_projection_status"] == "PASS_REQUIRED", review_projection
 assert review_projection["repair_lane_status"] == "PASS_REQUIRED", review_projection
 assert review_projection["repair_observation_status"] == "WARN_NON_BLOCKING", review_projection
+assert review_projection["experience_writeback_validation_status"] == "SKIPPED_NOT_REQUIRED", review_projection
 assert review_projection["terminal_truth_observation_status"] == "FAIL_REQUIRED", review_projection
 assert review_projection["admission_lane_projection"] == "BLOCKED_BY_TERMINAL_TRUTH", review_projection
 assert review_projection["boundary_health_class"] == "repair_green_terminal_truth_blocked", review_projection
 assert review_projection["repair_success_not_clean_terminal_truth"] is True, review_projection
 assert review_projection["terminal_truth_class"] == "review_required_execution_closure", review_projection
 assert review_projection["terminal_state_class"] == "review_pending", review_projection
+
+repair_blocked_projection = build_terminal_truth_boundary_projection_from_report(
+    report_doc=load_doc(repair_blocked_report_path),
+    report_path=repair_blocked_report_path,
+    catalog_path=catalog_path,
+    repo_catalog_path=catalog_path,
+    identity_id=identity_id,
+    operation="readiness",
+)
+assert repair_blocked_projection["terminal_truth_boundary_projection_status"] == "PASS_REQUIRED", repair_blocked_projection
+assert repair_blocked_projection["repair_lane_status"] == "FAIL_REQUIRED", repair_blocked_projection
+assert repair_blocked_projection["experience_writeback_validation_status"] == "FAIL_REQUIRED", repair_blocked_projection
+assert repair_blocked_projection["terminal_truth_observation_status"] == "FAIL_REQUIRED", repair_blocked_projection
+assert repair_blocked_projection["admission_lane_projection"] == "BLOCKED_BY_TERMINAL_TRUTH", repair_blocked_projection
+assert repair_blocked_projection["boundary_health_class"] == "repair_blocked_terminal_truth_blocked", repair_blocked_projection
+assert repair_blocked_projection["terminal_truth_class"] == "non_terminal_or_failed_execution", repair_blocked_projection
+assert repair_blocked_projection["terminal_state_class"] == "non_terminal_pending", repair_blocked_projection
+assert "rulebook_missing_run_link" in " ".join(
+    repair_blocked_projection.get("experience_writeback_validation_stale_reasons", [])
+), repair_blocked_projection
 
 non_closeout_projection = build_terminal_truth_boundary_projection_from_report(
     report_doc=load_doc(non_closeout_report_path),
@@ -277,6 +331,7 @@ readiness._hydrate_one_look_projection(summary)
 one_look = summary["one_look"]
 assert one_look["terminal_truth_boundary_projection_status"] == "PASS_REQUIRED", one_look
 assert one_look["repair_lane_status"] == "PASS_REQUIRED", one_look
+assert one_look["experience_writeback_validation_status"] == "SKIPPED_NOT_REQUIRED", one_look
 assert one_look["terminal_truth_observation_status"] == "FAIL_REQUIRED", one_look
 assert one_look["admission_lane_projection"] == "BLOCKED_BY_TERMINAL_TRUTH", one_look
 assert one_look["repair_success_not_clean_terminal_truth"] is True, one_look
@@ -286,6 +341,7 @@ print(json.dumps({
     "terminal_truth_boundary_projection_probe_status": "PASS_REQUIRED",
     "review_boundary_health_class": review_projection["boundary_health_class"],
     "clean_boundary_health_class": clean_projection["boundary_health_class"],
+    "repair_blocked_boundary_health_class": repair_blocked_projection["boundary_health_class"],
 }, ensure_ascii=False))
 PY
 

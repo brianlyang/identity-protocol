@@ -1636,6 +1636,10 @@ def _hydrate_one_look_projection(summary: dict[str, Any]) -> None:
         or STATUS_UNKNOWN,
         "repair_lane_status": _clean_str(terminal_truth_boundary.get("repair_lane_status")).upper()
         or STATUS_UNKNOWN,
+        "experience_writeback_validation_status": _clean_str(
+            terminal_truth_boundary.get("experience_writeback_validation_status")
+        ).upper()
+        or STATUS_UNKNOWN,
         "terminal_truth_observation_status": _clean_str(
             terminal_truth_boundary.get("terminal_truth_observation_status")
         ).upper()
@@ -1710,6 +1714,7 @@ def _finalize_release_readiness_summary(
         summary["terminal_truth_boundary_projection"] = {
             "terminal_truth_boundary_projection_status": STATUS_SKIPPED_NOT_REQUIRED,
             "repair_lane_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "experience_writeback_validation_status": STATUS_SKIPPED_NOT_REQUIRED,
             "terminal_truth_observation_status": STATUS_SKIPPED_NOT_REQUIRED,
             "stale_reasons": ["execution_report_missing"],
         }
