@@ -275,6 +275,10 @@ Root-law bundle rows must also keep component validator execution-failure
 policy fail-closed; missing execution, nonzero exit, invalid machine output,
 or missing disclosed status key may not be downgraded into advisory noise.
 
+Root-law bundle rows must also keep component validator machine-output
+contract explicit; bundle legality consumes structured machine output carrying
+the disclosed status key, not human-readable logs or incidental shell text.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

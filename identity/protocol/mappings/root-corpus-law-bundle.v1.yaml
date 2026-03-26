@@ -46,6 +46,7 @@ require_component_descriptor_concordance: true
 component_descriptor_concordance_local_waiver_policy: forbidden
 component_validator_status_requirement: PASS_REQUIRED
 component_validator_execution_failure_policy: fail_closed
+component_validator_output_contract: json_object_with_disclosed_status_key
 required_component_descriptor_fields:
 - validator_script
 - probe_script
@@ -137,6 +138,10 @@ bundle_anchor_checks:
   - emits invalid machine
     output, or omits its disclosed status key, the machine world must not invent a
   - substitute verdict from bundle convenience.
+  - Bundle component validator machine-output contract must stay explicit too.
+  - machine world must consume a bound component validator through structured
+    machine output carrying the validator's disclosed status key rather than
+  - scraping human-readable logs, prose, or incidental shell text.
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root-law bundle discipline'
@@ -211,6 +216,9 @@ bundle_anchor_checks:
   - emits invalid machine
     output, or omits its disclosed status key, runtime may not synthesize a
   - passing verdict from surrounding bundle metadata.
+  - Bundle component validators must also remain machine-readable.
+  - Runtime consumes them through structured machine output carrying the disclosed
+    status key, not by scraping prose, logs, or incidental terminal text.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root-law bundle boundary'
@@ -283,6 +291,9 @@ bundle_anchor_checks:
   - Root-law bundle rows must also keep component validator execution-failure
     policy fail-closed; missing execution, nonzero exit, invalid machine output,
   - or missing disclosed status key may not be downgraded into advisory noise.
+  - Root-law bundle rows must also keep component validator machine-output
+    contract explicit; bundle legality consumes structured machine output carrying
+  - the disclosed status key, not human-readable logs or incidental shell text.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime consumption of the root-law bundle'
@@ -351,6 +362,9 @@ bundle_anchor_checks:
   - Runtime must also keep validator execution-failure handling fail-closed;
   - invalid machine output, or omission of the disclosed
     status key may not be repaired by local inference.
+  - Runtime must also require a structured machine-output contract for bound
+    component validators; runtime consumes the disclosed status key from machine
+  - output rather than scraping logs or incidental shell text.
 component_rows:
 - order: 1
   component_id: root_corpus_governance

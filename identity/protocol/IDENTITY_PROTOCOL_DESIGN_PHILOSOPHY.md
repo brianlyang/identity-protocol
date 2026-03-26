@@ -503,6 +503,12 @@ If a bound validator cannot execute, exits nonzero, emits invalid machine
 output, or omits its disclosed status key, the machine world must not invent a
 substitute verdict from bundle convenience.
 
+Bundle component validator machine-output contract must stay explicit too.
+
+The machine world must consume a bound component validator through structured
+machine output carrying the validator's disclosed status key rather than
+scraping human-readable logs, prose, or incidental shell text.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

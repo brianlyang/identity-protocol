@@ -524,6 +524,11 @@ If a bound validator cannot execute, exits nonzero, emits invalid machine
 output, or omits its disclosed status key, runtime may not synthesize a
 passing verdict from surrounding bundle metadata.
 
+Bundle component validators must also remain machine-readable.
+
+Runtime consumes them through structured machine output carrying the disclosed
+status key, not by scraping prose, logs, or incidental terminal text.
+
 ---
 
 ## Conflict-handling rule

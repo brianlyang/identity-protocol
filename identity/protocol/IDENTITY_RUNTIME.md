@@ -219,6 +219,10 @@ Runtime must also keep validator execution-failure handling fail-closed;
 missing machine output, invalid machine output, or omission of the disclosed
 status key may not be repaired by local inference.
 
+Runtime must also require a structured machine-output contract for bound
+component validators; runtime consumes the disclosed status key from machine
+output rather than scraping logs or incidental shell text.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.
