@@ -138,6 +138,11 @@ BASE_CHECKS: tuple[CheckSpec, ...] = (
         status_key="v16x_release_closure_summary_status",
     ),
     CheckSpec(
+        name="doc_command_surface_registry",
+        command=("python3", "scripts/validate_doc_command_surface_registry.py", "--json-only"),
+        status_key="doc_command_surface_registry_status",
+    ),
+    CheckSpec(
         name="docs_command_contract",
         command=("python3", "scripts/docs_command_contract_check.py"),
         status_key=None,

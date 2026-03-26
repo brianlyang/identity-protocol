@@ -104,6 +104,8 @@ PROTOCOL_PUBLISH_SCRIPTS = {
     "scripts/validate_release_freeze_boundary.py",
 }
 POST_CLOSURE_GOVERNANCE_SCRIPTS = [
+    ["python3", "scripts/validate_doc_command_surface_registry.py", "--json-only"],
+    ["bash", "scripts/ci/run_doc_command_surface_probes_ci.sh"],
     ["python3", "scripts/docs_command_contract_check.py"],
     ["python3", "scripts/validate_control_plane_budget.py", "--json-only"],
     ["python3", "scripts/validate_control_plane_budget_sync.py", "--json-only"],
@@ -174,6 +176,7 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_UNKNOWN = "UNKNOWN"
 READINESS_PREFLIGHT_COMMAND_COUNT = 8
 SUMMARY_CAPTURE_SCRIPTS: dict[str, str] = {
+    "scripts/validate_doc_command_surface_registry.py": "doc_command_surface_registry",
     "scripts/validate_control_plane_budget.py": "control_plane_budget",
     "scripts/validate_control_plane_budget_sync.py": "control_plane_budget_sync",
     "scripts/validate_control_plane_status_sync.py": "control_plane_status_sync",
@@ -199,6 +202,11 @@ SUMMARY_CAPTURE_SCRIPTS: dict[str, str] = {
     **release_readiness_governance_probe_capture_script_map(),
 }
 STRUCTURED_SUMMARY_CAPTURE_SPECS: dict[str, dict[str, tuple[str, ...]]] = {
+    "doc_command_surface_registry": {
+        "status_fields": ("doc_command_surface_registry_status",),
+        "error_fields": ("error_code",),
+        "keep_fields": ("mode_count", "doc_row_count", "self_prefixes", "stale_reasons"),
+    },
     "control_plane_budget": {
         "status_fields": ("control_plane_budget_status",),
         "error_fields": ("error_code",),
@@ -1544,6 +1552,7 @@ def _hydrate_one_look_projection(summary: dict[str, Any]) -> None:
     control_plane_budget_sync = summary.get("control_plane_budget_sync") or {}
     control_plane_status_sync = summary.get("control_plane_status_sync") or {}
     control_plane_surface_materialization = summary.get("control_plane_surface_materialization") or {}
+    doc_command_surface_registry = summary.get("doc_command_surface_registry") or {}
     resolve_identity_context_local_catalog_closure = summary.get("resolve_identity_context_local_catalog_closure") or {}
     plugin_projection = summary.get("failclose_plugin_projection") or {}
     full_scan = summary.get("full_scan_target_regression") or {}
@@ -1594,6 +1603,10 @@ def _hydrate_one_look_projection(summary: dict[str, Any]) -> None:
         "control_plane_budget_sync_status": _clean_str(control_plane_budget_sync.get("status")).upper()
         or STATUS_UNKNOWN,
         "control_plane_status_sync_status": _clean_str(control_plane_status_sync.get("status")).upper()
+        or STATUS_UNKNOWN,
+        "doc_command_surface_registry_status": _clean_str(
+            doc_command_surface_registry.get("status")
+        ).upper()
         or STATUS_UNKNOWN,
         "control_plane_live_status": _clean_str(control_plane_status_sync.get("live_control_plane_status")).upper()
         or STATUS_UNKNOWN,
