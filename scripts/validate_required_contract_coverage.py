@@ -11,6 +11,9 @@ from typing import Any
 
 import yaml
 
+from actor_session_common import list_actor_bindings, resolve_bound_session_id_for_identity
+from cross_verification_bundle_common import resolve_cross_verification_bundle_context
+from gate_status_projection_common import resolve_projected_status_value
 from identity_context_continuity_common import (
     CONTEXT_CONTINUITY_CONTRACT_ID,
     CONTEXT_CONTINUITY_CONTRACT_KEY,
@@ -35,6 +38,9 @@ from terminal_truth_cleanliness_common import (
     TERMINAL_TRUTH_CLEANLINESS_CONTRACT_KEY,
 )
 from response_stamp_common import resolve_layer_intent
+from required_contract_coverage_projection_common import build_required_contract_coverage_projection
+from resolve_identity_context import resolve_repo_catalog_path
+from strict_live_evidence_resolution_common import resolve_current_round_report_context
 from tool_vendor_governance_common import (
     contract_required,
     load_json,
@@ -255,6 +261,43 @@ def _resolve_repo_path(path_like: str) -> Path:
     if candidate.is_absolute():
         return candidate.resolve()
     return (REPO_ROOT / candidate).resolve()
+
+
+def _resolve_validator_tuple_binding(
+    *,
+    script: str,
+    session_id: str,
+    run_id: str,
+    evidence_session_id: str,
+    evidence_run_id: str,
+) -> tuple[str, str]:
+    """Resolve the canonical tuple to bind into a downstream validator.
+
+    Aggregate coverage runners carry two tuple notions at the same time:
+
+    1. the requested operation tuple (`session_id` / `run_id`) used by ingress
+       and current-turn legality surfaces;
+    2. the selected evidence tuple (`evidence_session_id` / `evidence_run_id`)
+       used by validators that are anchored to a chosen execution report.
+
+    `validate_protocol_unique_entry_gate.py` validates ingress receipt
+    provenance against the requested operation tuple, so binding it to the
+    evidence tuple would incorrectly collapse ingress legality into
+    report-selection lineage.
+    """
+
+    request_session_id = str(session_id or "").strip()
+    request_run_id = str(run_id or "").strip()
+    selected_evidence_session_id = str(evidence_session_id or "").strip()
+    selected_evidence_run_id = str(evidence_run_id or "").strip()
+
+    if script == "scripts/validate_protocol_unique_entry_gate.py":
+        return request_session_id, request_run_id
+
+    return (
+        selected_evidence_session_id or request_session_id,
+        selected_evidence_run_id or request_run_id,
+    )
 
 
 @dataclass
@@ -833,6 +876,76 @@ def _extract_reason(out: str, err: str, default_reason: str) -> str:
     return default_reason
 
 
+def _binding_sort_key(row: dict[str, Any]) -> tuple[int, str]:
+    try:
+        version = int(row.get("binding_version") or 0)
+    except Exception:
+        version = 0
+    updated = str(row.get("updated_at", "")).strip() or str(row.get("bound_at", "")).strip()
+    return (version, updated)
+
+
+def _resolve_effective_runtime_tuple(
+    *,
+    catalog_path: Path,
+    identity_id: str,
+    actor_id: str,
+    session_id: str,
+    run_id: str,
+) -> dict[str, str]:
+    explicit_actor = str(actor_id or "").strip()
+    explicit_session = str(session_id or "").strip()
+    explicit_run = str(run_id or "").strip()
+
+    bindings = [
+        row
+        for row in list_actor_bindings(catalog_path)
+        if isinstance(row, dict) and str(row.get("identity_id", "")).strip() == str(identity_id or "").strip()
+    ]
+    active_bindings = [
+        row
+        for row in bindings
+        if str(row.get("status", "")).strip().lower() == "active"
+    ]
+    candidate_rows = active_bindings or bindings
+    latest = sorted(candidate_rows, key=_binding_sort_key)[-1] if candidate_rows else {}
+
+    effective_actor_id = explicit_actor or str(latest.get("actor_id", "")).strip()
+    effective_session_id = explicit_session
+    session_source = "explicit_session_id" if explicit_session else ""
+    if effective_actor_id and not effective_session_id:
+        resolved_session_id, resolved_session_source = resolve_bound_session_id_for_identity(
+            catalog_path,
+            effective_actor_id,
+            identity_id=identity_id,
+            explicit_session_id="",
+        )
+        effective_session_id = str(resolved_session_id or "").strip()
+        session_source = str(resolved_session_source or "").strip()
+    if not effective_session_id:
+        effective_session_id = str(latest.get("session_id", "")).strip()
+        if effective_session_id and not session_source:
+            session_source = "latest_identity_binding"
+
+    effective_run_id = explicit_run
+    run_source = "explicit_run_id" if explicit_run else ""
+    if not effective_run_id and effective_session_id.startswith("run:") and len(effective_session_id) > 4:
+        effective_run_id = effective_session_id.split(":", 1)[1].strip()
+        run_source = "derived_from_session_id"
+    if not effective_run_id:
+        effective_run_id = str(latest.get("run_id", "")).strip()
+        if effective_run_id and not run_source:
+            run_source = "latest_identity_binding"
+
+    return {
+        "actor_id": effective_actor_id,
+        "session_id": effective_session_id,
+        "run_id": effective_run_id,
+        "session_id_source": session_source,
+        "run_id_source": run_source,
+    }
+
+
 def _runtime_path_like(value: Any) -> bool:
     token = str(value or "").strip()
     if not token:
@@ -931,7 +1044,11 @@ def _classify_from_payload(
     fallback_rc: int,
 ) -> tuple[str, str]:
     status_key = STATUS_FIELD_BY_SCRIPT.get(script, "")
-    validator_status = str(payload.get(status_key, "")).strip().upper() if status_key else ""
+    validator_status, _projected_status_field = resolve_projected_status_value(
+        payload,
+        script=script,
+        default_field=status_key,
+    )
     if required and validator_status == STATUS_SKIPPED_NOT_REQUIRED:
         stale_reasons = payload.get("stale_reasons")
         stale_tokens = (
@@ -966,85 +1083,6 @@ def _classify_from_payload(
     return _classify(required, fallback_rc)
 
 
-def _file_contains_token(path: Path, token: str, *, max_chars: int = 400_000) -> bool:
-    target = str(token or "").strip()
-    if not target:
-        return False
-    try:
-        text = path.read_text(encoding="utf-8", errors="ignore")
-    except Exception:
-        return False
-    return target in text[:max_chars]
-
-
-def _extract_bundle_id_from_text(raw: str) -> str:
-    patterns = (
-        r"cross_verification_bundle_id\s*[:=]\s*([^\s,;]+)",
-        r"bundle_id\s*[:=]\s*([^\s,;]+)",
-        r"evidence_bundle_id\s*[:=]\s*([^\s,;]+)",
-    )
-    for pat in patterns:
-        m = re.search(pat, raw, flags=re.IGNORECASE)
-        if m:
-            return str(m.group(1) or "").strip()
-    return ""
-
-
-def _resolve_cross_verification_bundle_context(
-    *,
-    catalog: str,
-    identity_id: str,
-    run_id: str,
-) -> tuple[str, str]:
-    try:
-        pack_path, _task_path = resolve_pack_and_task(Path(catalog).expanduser().resolve(), identity_id)
-    except Exception:
-        return "", ""
-    feedback_root = (pack_path / "runtime" / "protocol-feedback").resolve()
-    if not feedback_root.exists():
-        return "", ""
-
-    patterns = (
-        "outbox-to-protocol/*cross*verification*.*",
-        "outbox-to-protocol/*xverify*.*",
-        "outbox-to-protocol/FEEDBACK_BATCH_*.md",
-        "**/*cross*verification*.*",
-        "**/*intake*evidence*.*",
-        "**/*quorum*.*",
-    )
-    seen: set[str] = set()
-    candidates: list[Path] = []
-    for pattern in patterns:
-        for hit in feedback_root.glob(pattern):
-            if not hit.is_file():
-                continue
-            resolved = hit.resolve()
-            key = str(resolved)
-            if key in seen:
-                continue
-            seen.add(key)
-            candidates.append(resolved)
-    if not candidates:
-        return "", ""
-
-    candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-    selected = candidates[0]
-    run_token = str(run_id or "").strip()
-    if run_token:
-        filtered = [p for p in candidates if run_token in p.name or _file_contains_token(p, run_token)]
-        if filtered:
-            selected = filtered[0]
-    bundle_id = selected.stem
-    try:
-        raw = selected.read_text(encoding="utf-8", errors="ignore")
-    except Exception:
-        raw = ""
-    parsed_bundle_id = _extract_bundle_id_from_text(raw)
-    if parsed_bundle_id:
-        bundle_id = parsed_bundle_id
-    return str(selected), str(bundle_id or "").strip()
-
-
 def _run_validator(
     script: str,
     catalog: str,
@@ -1059,13 +1097,18 @@ def _run_validator(
     layer_intent_text: str,
     run_id: str,
     report_selected_path: str,
+    evidence_run_id: str,
+    evidence_session_id: str,
+    evidence_report_selected_path: str,
+    evidence_expected_work_layer: str,
+    evidence_expected_source_layer: str,
     current_stamp_json: str,
     current_entry_receipt: str,
     force_required: bool,
     extra_args: tuple[str, ...],
 ) -> tuple[int, str, str]:
     script_path = _resolve_repo_path(script)
-    repo_catalog_path = _resolve_repo_path(repo_catalog)
+    repo_catalog_path = resolve_repo_catalog_path(repo_catalog, start=SCRIPT_PATH)
     cmd = ["python3", str(script_path), "--catalog", catalog, "--identity-id", identity_id]
     if script in {
         "scripts/validate_unlock_formula.py",
@@ -1105,6 +1148,7 @@ def _run_validator(
         "scripts/validate_protocol_downsink_path_immutability.py",
         "scripts/validate_protocol_downsink_path_write_guard.py",
         "scripts/validate_protocol_downsink_path_literal_lock.py",
+        "scripts/validate_host_transport_wiring_attestation.py",
     }:
         cmd += ["--operation", operation]
     if script in {
@@ -1113,31 +1157,42 @@ def _run_validator(
     }:
         if actor_id:
             cmd += ["--actor-id", actor_id]
-        if session_id:
-            cmd += ["--session-id", session_id]
-        if run_id:
-            cmd += ["--run-id", run_id]
+        effective_tuple_session_id, effective_tuple_run_id = _resolve_validator_tuple_binding(
+            script=script,
+            session_id=session_id,
+            run_id=run_id,
+            evidence_session_id=evidence_session_id,
+            evidence_run_id=evidence_run_id,
+        )
+        if effective_tuple_session_id:
+            cmd += ["--session-id", effective_tuple_session_id]
+        if effective_tuple_run_id:
+            cmd += ["--run-id", effective_tuple_run_id]
     if script == "scripts/validate_host_transport_wiring_attestation.py":
-        effective_run_id = str(run_id or "").strip()
+        effective_run_id = str(evidence_run_id or run_id or "").strip()
         if not effective_run_id:
             session_token = str(session_id or "").strip()
             if session_token.startswith("run:") and len(session_token) > 4:
                 effective_run_id = session_token.split(":", 1)[1].strip()
         if actor_id:
             cmd += ["--require-actor-id", actor_id]
-        if session_id:
-            cmd += ["--require-session-id", session_id]
+        effective_required_session_id = str(evidence_session_id or session_id or "").strip()
+        if effective_required_session_id:
+            cmd += ["--require-session-id", effective_required_session_id]
         if effective_run_id:
             cmd += ["--require-run-id", effective_run_id]
     if script == "scripts/validate_protocol_lane_headstamp_continuity.py":
-        if str(report_selected_path or "").strip():
-            cmd += ["--report", str(report_selected_path).strip()]
+        headstamp_report_path = str(evidence_report_selected_path or report_selected_path or "").strip()
+        if headstamp_report_path:
+            cmd += ["--report", headstamp_report_path]
         if str(current_stamp_json or "").strip():
             cmd += ["--stamp-json", str(current_stamp_json).strip()]
-        if expected_work_layer:
-            cmd += ["--expected-work-layer", expected_work_layer]
-        if expected_source_layer:
-            cmd += ["--expected-source-layer", expected_source_layer]
+        effective_work_layer = str(evidence_expected_work_layer or expected_work_layer or "").strip()
+        effective_source_layer = str(evidence_expected_source_layer or expected_source_layer or "").strip()
+        if effective_work_layer:
+            cmd += ["--expected-work-layer", effective_work_layer]
+        if effective_source_layer:
+            cmd += ["--expected-source-layer", effective_source_layer]
         if layer_intent_text:
             cmd += ["--layer-intent-text", layer_intent_text]
     if script == "scripts/validate_protocol_unique_entry_gate.py" and str(current_entry_receipt or "").strip():
@@ -1171,21 +1226,27 @@ def _run_validator(
         if layer_intent_text:
             cmd += ["--layer-intent-text", layer_intent_text]
     if script == "scripts/validate_run_id_report_selection.py":
-        if run_id:
-            cmd += ["--run-id", run_id]
-        if str(report_selected_path or "").strip():
-            cmd += ["--report", str(report_selected_path).strip()]
-    if script == "scripts/validate_outlet_matrix.py" and str(report_selected_path or "").strip():
-        cmd += ["--report", str(report_selected_path).strip()]
+        effective_selection_run_id = str(evidence_run_id or run_id or "").strip()
+        if effective_selection_run_id:
+            cmd += ["--run-id", effective_selection_run_id]
+        effective_selection_report = str(evidence_report_selected_path or report_selected_path or "").strip()
+        if effective_selection_report:
+            cmd += ["--report", effective_selection_report]
+    if script == "scripts/validate_outlet_matrix.py":
+        effective_outlet_report = str(evidence_report_selected_path or report_selected_path or "").strip()
+        if effective_outlet_report:
+            cmd += ["--report", effective_outlet_report]
     if script in {
         "scripts/validate_cross_verification_tracks.py",
         "scripts/validate_intake_evidence_quorum.py",
     }:
-        bundle_path, bundle_id = _resolve_cross_verification_bundle_context(
-            catalog=catalog,
+        bundle_context = resolve_cross_verification_bundle_context(
+            catalog_path=catalog,
             identity_id=identity_id,
             run_id=run_id,
         )
+        bundle_path = str(bundle_context.get("bundle_path", "")).strip()
+        bundle_id = str(bundle_context.get("bundle_id", "")).strip()
         if bundle_path:
             cmd += ["--bundle", bundle_path]
         if bundle_id:
@@ -1279,6 +1340,49 @@ def main() -> int:
         print(f"[FAIL] unable to resolve identity runtime task: {exc}")
         return 2
 
+    effective_runtime_tuple = _resolve_effective_runtime_tuple(
+        catalog_path=catalog_path,
+        identity_id=args.identity_id,
+        actor_id=str(args.actor_id or "").strip(),
+        session_id=str(args.session_id or "").strip(),
+        run_id=str(args.run_id or "").strip(),
+    )
+    effective_actor_id = str(effective_runtime_tuple.get("actor_id", "")).strip()
+    effective_session_id = str(effective_runtime_tuple.get("session_id", "")).strip()
+    effective_run_id = str(effective_runtime_tuple.get("run_id", "")).strip()
+    effective_session_id_source = str(effective_runtime_tuple.get("session_id_source", "")).strip()
+    effective_run_id_source = str(effective_runtime_tuple.get("run_id_source", "")).strip()
+    current_round_report_context = resolve_current_round_report_context(
+        pack_path,
+        explicit_report_path=str(args.report_selected_path or "").strip(),
+        requested_run_id=effective_run_id,
+    )
+    effective_report_selected_path = str(
+        current_round_report_context.get("selected_report_path", "") or str(args.report_selected_path or "").strip()
+    ).strip()
+    effective_report_selected_path_source = str(
+        current_round_report_context.get("selected_report_source", "")
+        or ("explicit_argument" if str(args.report_selected_path or "").strip() else "")
+    ).strip()
+    effective_evidence_run_id = str(
+        current_round_report_context.get("effective_run_id", "") or effective_run_id
+    ).strip()
+    effective_evidence_run_id_source = str(
+        current_round_report_context.get("effective_run_id_source", "") or effective_run_id_source
+    ).strip()
+    effective_evidence_session_id = str(
+        current_round_report_context.get("effective_session_id", "") or effective_session_id
+    ).strip()
+    effective_evidence_session_id_source = str(
+        current_round_report_context.get("effective_session_id_source", "") or effective_session_id_source
+    ).strip()
+    evidence_expected_work_layer = str(
+        current_round_report_context.get("selected_report_work_layer", "")
+    ).strip()
+    evidence_expected_source_layer = str(
+        current_round_report_context.get("selected_report_source_layer", "")
+    ).strip()
+
     rows: list[dict[str, Any]] = []
     required_total = 0
     required_passed = 0
@@ -1342,14 +1446,19 @@ def main() -> int:
             str(catalog_path),
             args.identity_id,
             repo_catalog=args.repo_catalog,
-            actor_id=str(args.actor_id or "").strip(),
-            session_id=str(args.session_id or "").strip(),
+            actor_id=effective_actor_id,
+            session_id=effective_session_id,
             operation=args.operation,
             expected_work_layer=str(args.expected_work_layer or "").strip(),
             expected_source_layer=str(args.expected_source_layer or "").strip(),
             layer_intent_text=str(args.layer_intent_text or "").strip(),
-            run_id=str(args.run_id or "").strip(),
+            run_id=effective_run_id,
             report_selected_path=str(args.report_selected_path or "").strip(),
+            evidence_run_id=effective_evidence_run_id,
+            evidence_session_id=effective_evidence_session_id,
+            evidence_report_selected_path=effective_report_selected_path,
+            evidence_expected_work_layer=evidence_expected_work_layer,
+            evidence_expected_source_layer=evidence_expected_source_layer,
             current_stamp_json=str(args.current_stamp_json or "").strip(),
             current_entry_receipt=str(args.current_entry_receipt or "").strip(),
             force_required=force_required,
@@ -1492,6 +1601,24 @@ def main() -> int:
         "catalog_path": str(catalog_path),
         "pack_path": str(pack_path),
         "operation": args.operation,
+        "effective_actor_id": effective_actor_id,
+        "effective_session_id": effective_session_id,
+        "effective_session_id_source": effective_session_id_source,
+        "effective_run_id": effective_run_id,
+        "effective_run_id_source": effective_run_id_source,
+        "effective_evidence_run_id": effective_evidence_run_id,
+        "effective_evidence_run_id_source": effective_evidence_run_id_source,
+        "effective_evidence_session_id": effective_evidence_session_id,
+        "effective_evidence_session_id_source": effective_evidence_session_id_source,
+        "effective_report_selected_path": effective_report_selected_path,
+        "effective_report_selected_path_source": effective_report_selected_path_source,
+        "active_execution_pointer_path": str(
+            current_round_report_context.get("active_execution_pointer_path", "")
+        ),
+        "active_execution_report_path": str(
+            current_round_report_context.get("active_execution_report_path", "")
+        ),
+        "active_execution_run_id": str(current_round_report_context.get("active_execution_run_id", "")),
         "fixture_identity": fixture_identity,
         "strict_instance_floor_fixture_ci_exempt": fixture_ci_floor_exempt,
         "coverage_lane": coverage_lane,
@@ -1534,6 +1661,7 @@ def main() -> int:
         "coverage_counter_overflow": coverage_counter_overflow,
         "discovery_counter_overflow": discovery_counter_overflow,
     }
+    payload.update(build_required_contract_coverage_projection(payload))
 
     min_cov = args.min_required_contract_coverage
     coverage_gate_enabled = min_cov >= 0.0

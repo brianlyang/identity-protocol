@@ -255,6 +255,8 @@ def main() -> int:
         "headstamp_live_receipt_age_seconds": -1,
         "headstamp_live_receipt_fallback_applied": False,
         "headstamp_live_receipt_binding_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "headstamp_report_fallback_applied": False,
+        "headstamp_report_binding_status": STATUS_SKIPPED_NOT_REQUIRED,
         "stale_reasons": [],
         "evidence_ref": "",
     }
@@ -327,6 +329,7 @@ def main() -> int:
         report_doc.get("route_source_ref"),
         report_doc.get("lane_resolution_decision"),
         report_doc.get("lane_resolution_source"),
+        report_doc.get("lane_transition_reason"),
         stamp_doc.get("intent_source"),
         stamp_doc.get("layer_intent_resolution_status"),
     )
@@ -370,6 +373,7 @@ def main() -> int:
     head_reasons: list[str] = []
 
     live_receipt_headstamp_ok = False
+    report_headstamp_ok = False
     if not stamp_line and isinstance(live_receipt_doc, dict) and live_receipt_doc:
         receipt_headstamp_status = str(live_receipt_doc.get("headstamp_first_line_status", "")).strip().upper()
         receipt_send_time_status = str(live_receipt_doc.get("send_time_gate_status", "")).strip().upper()
@@ -390,11 +394,65 @@ def main() -> int:
                 head_reasons.append("headstamp_live_receipt_status_not_pass")
             if receipt_send_time_status not in {STATUS_PASS_REQUIRED, "NOT_APPLICABLE"}:
                 head_reasons.append("headstamp_live_receipt_send_time_status_not_pass")
+    if not stamp_line and not live_receipt_headstamp_ok and isinstance(report_doc, dict) and report_doc:
+        report_headstamp_status = str(report_doc.get("headstamp_first_line_status", "")).strip().upper()
+        report_send_time_status = str(report_doc.get("send_time_gate_status", "")).strip().upper()
+        report_reply_binding_status = str(report_doc.get("reply_transport_binding_status", "")).strip().upper()
+        report_pre_mutation_status = str(report_doc.get("pre_mutation_projection_status", "")).strip().upper()
+        report_final_emit_contract_status = str(report_doc.get("final_emit_contract_status", "")).strip().upper()
+        report_final_emit_schema_status = str(report_doc.get("final_emit_schema_status", "")).strip().upper()
+        report_outlet_bypass_detected = bool(report_doc.get("outlet_bypass_detected", False))
+        if (
+            report_headstamp_status == STATUS_PASS_REQUIRED
+            and report_send_time_status == STATUS_PASS_REQUIRED
+            and report_reply_binding_status == STATUS_PASS_REQUIRED
+            and report_pre_mutation_status == STATUS_PASS_REQUIRED
+            and report_final_emit_contract_status == STATUS_PASS_REQUIRED
+            and report_final_emit_schema_status == STATUS_PASS_REQUIRED
+            and not report_outlet_bypass_detected
+        ):
+            report_headstamp_ok = True
+            payload["headstamp_report_fallback_applied"] = True
+            payload["headstamp_report_binding_status"] = STATUS_PASS_REQUIRED
+            payload["headstamp_present"] = True
+            payload["headstamp_has_layer_context"] = bool(
+                _nonempty(
+                    report_doc.get("work_layer"),
+                    report_doc.get("resolved_work_layer"),
+                    args.expected_work_layer,
+                )
+                and _nonempty(
+                    report_doc.get("source_layer"),
+                    report_doc.get("resolved_source_layer"),
+                    args.expected_source_layer,
+                )
+            )
+            payload["headstamp_identity_id"] = args.identity_id
+            payload["headstamp_actor_id"] = _nonempty(args.actor_id, report_doc.get("actor_id"))
+        else:
+            payload["headstamp_report_binding_status"] = STATUS_FAIL_REQUIRED
+            if report_headstamp_status != STATUS_PASS_REQUIRED:
+                head_reasons.append("headstamp_report_status_not_pass")
+            if report_send_time_status != STATUS_PASS_REQUIRED:
+                head_reasons.append("headstamp_report_send_time_status_not_pass")
+            if report_reply_binding_status != STATUS_PASS_REQUIRED:
+                head_reasons.append("headstamp_report_reply_binding_status_not_pass")
+            if report_pre_mutation_status != STATUS_PASS_REQUIRED:
+                head_reasons.append("headstamp_report_pre_mutation_projection_not_pass")
+            if report_final_emit_contract_status != STATUS_PASS_REQUIRED:
+                head_reasons.append("headstamp_report_final_emit_contract_status_not_pass")
+            if report_final_emit_schema_status != STATUS_PASS_REQUIRED:
+                head_reasons.append("headstamp_report_final_emit_schema_status_not_pass")
+            if report_outlet_bypass_detected:
+                head_reasons.append("headstamp_report_outlet_bypass_detected")
     if not stamp_line and not live_receipt_headstamp_ok:
-        head_status = STATUS_FAIL_REQUIRED
-        head_error_code = ERR_HEADSTAMP_RECEIPT_MISSING
-        if "headstamp_receipt_missing" not in head_reasons:
-            head_reasons.append("headstamp_receipt_missing")
+        if report_headstamp_ok:
+            pass
+        else:
+            head_status = STATUS_FAIL_REQUIRED
+            head_error_code = ERR_HEADSTAMP_RECEIPT_MISSING
+            if "headstamp_receipt_missing" not in head_reasons:
+                head_reasons.append("headstamp_receipt_missing")
     elif live_receipt_headstamp_ok:
         if payload["headstamp_identity_id"] and payload["headstamp_identity_id"] != args.identity_id:
             head_status = STATUS_FAIL_REQUIRED
@@ -415,6 +473,21 @@ def main() -> int:
                     head_status = STATUS_FAIL_REQUIRED
                     head_error_code = ERR_HEADSTAMP_ACTOR_BINDING_MISMATCH
                     head_reasons.append("actor_binding_identity_mismatch")
+    elif report_headstamp_ok:
+        actor_id_effective = _nonempty(args.actor_id, payload["headstamp_actor_id"])
+        if actor_id_effective:
+            binding = load_actor_binding(
+                catalog_path,
+                actor_id_effective,
+                identity_id=args.identity_id,
+                session_id=str(args.session_id or "").strip(),
+            )
+            binding_identity = str(binding.get("identity_id", "")).strip()
+            payload["actor_binding_identity_id"] = binding_identity
+            if binding_identity and binding_identity != args.identity_id:
+                head_status = STATUS_FAIL_REQUIRED
+                head_error_code = ERR_HEADSTAMP_ACTOR_BINDING_MISMATCH
+                head_reasons.append("actor_binding_identity_mismatch")
     elif not parsed_stamp or not parsed_stamp.get("_has_layer_context"):
         head_status = STATUS_FAIL_REQUIRED
         head_error_code = ERR_HEADSTAMP_MISSING_OR_MALFORMED

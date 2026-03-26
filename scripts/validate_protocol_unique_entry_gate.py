@@ -975,6 +975,8 @@ def main() -> int:
         "protocol_unique_entry_receipt_payload_timestamp_epoch": 0,
         "protocol_unique_entry_receipt_payload_timestamp_field": "",
         "protocol_unique_entry_receipt_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "protocol_unique_entry_receipt_provenance_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "protocol_unique_entry_receipt_bundle_verdict_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_unique_entry_receipt_selector_policy_id": "",
         "protocol_unique_entry_receipt_selector_precedence": [],
         "protocol_unique_entry_receipt_selector_source_fields": [],
@@ -2658,6 +2660,23 @@ def main() -> int:
         payload["protocol_unique_entry_receipt_session_id_field"] = receipt_session_id_field
         payload["protocol_unique_entry_receipt_operation"] = receipt_operation
         payload["protocol_unique_entry_receipt_operation_field"] = receipt_operation_field
+        wrapper_provenance_pass = (
+            receipt_wrapper_surface_status == STATUS_PASS_REQUIRED
+            and receipt_wrapper_dispatch_status == STATUS_PASS_REQUIRED
+            and receipt_wrapper_dispatch_required is True
+            and receipt_wrapper_proof_required is True
+            and receipt_wrapper_proof_status == STATUS_PASS_REQUIRED
+            and (
+                receipt_wrapper_parent_required is not True
+                or receipt_wrapper_parent_status == STATUS_PASS_REQUIRED
+            )
+        )
+        payload["protocol_unique_entry_receipt_provenance_status"] = (
+            STATUS_PASS_REQUIRED if wrapper_provenance_pass else STATUS_FAIL_REQUIRED
+        )
+        payload["protocol_unique_entry_receipt_bundle_verdict_status"] = (
+            STATUS_PASS_REQUIRED if receipt_bundle_status == STATUS_PASS_REQUIRED else STATUS_FAIL_REQUIRED
+        )
         payload["protocol_unique_entry_receipt_operation_bridge_allowed"] = (
             receipt_operation_bridge_allowed
         )
@@ -2720,8 +2739,6 @@ def main() -> int:
             and not receipt_operation_bridge_allowed
         ):
             receipt_issues.append("entry_receipt_operation_mismatch")
-        if receipt_bundle_status != STATUS_PASS_REQUIRED:
-            receipt_issues.append("entry_receipt_bundle_status_not_pass")
         if run_id and receipt_run_id != run_id:
             receipt_issues.append("entry_receipt_run_id_mismatch")
         if actor_id and receipt_actor_id != actor_id:
@@ -2822,7 +2839,6 @@ def main() -> int:
                 "entry_receipt_run_id_mismatch",
                 "entry_receipt_actor_id_mismatch",
                 "entry_receipt_session_id_mismatch",
-                "entry_receipt_bundle_status_not_pass",
             }
             tuple_primary_detected = any(
                 token in {
@@ -2846,7 +2862,11 @@ def main() -> int:
             _emit(payload, json_only=args.json_only)
             return 1
 
-        payload["protocol_unique_entry_receipt_status"] = STATUS_PASS_REQUIRED
+        payload["protocol_unique_entry_receipt_status"] = (
+            STATUS_PASS_REQUIRED
+            if payload.get("protocol_unique_entry_receipt_bundle_verdict_status") == STATUS_PASS_REQUIRED
+            else STATUS_FAIL_REQUIRED
+        )
         if payload.get("protocol_unique_entry_receipt_tuple_context_required_fields"):
             payload["protocol_unique_entry_receipt_tuple_context_status"] = STATUS_PASS_REQUIRED
         payload["protocol_unique_entry_receipt_tuple_context_only_failure"] = False
