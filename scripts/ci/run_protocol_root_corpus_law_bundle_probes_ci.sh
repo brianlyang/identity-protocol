@@ -87,6 +87,7 @@ assert payload["final_status_derivation_policy"] == "pass_required_if_and_only_i
 assert payload["error_code_precedence_policy"] == "registry_preempts_structure_preempts_bundle_else_empty_when_pass_required", payload
 assert payload["failure_classification_policy"] == "registry_from_direct_stale_reasons_structure_from_structure_violations_bundle_from_bundle_and_anchor_violations_else_pass", payload
 assert payload["registry_class_admission_policy"] == "only_direct_stale_reasons_present_before_violation_projection_admit_registry_failure_class", payload
+assert payload["registry_direct_stale_reason_origin_policy"] == "alias_document_contract_row_required_surface_only_before_violation_projection", payload
 assert payload["derived_status_from_stale_reasons"] == "PASS_REQUIRED", payload
 assert payload["derived_failure_class"] == "pass", payload
 assert payload["derived_error_code_from_precedence"] == "", payload
@@ -140,6 +141,14 @@ assert payload["structure_violation_count"] == 0, payload
 assert payload["bundle_violation_count"] == 0, payload
 assert payload["anchor_violation_count"] == 0, payload
 assert payload["direct_stale_reason_count_before_violation_projection"] == 0, payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["direct_stale_reason_origin_counts"] == {
+    "alias": 0,
+    "document": 0,
+    "contract_row": 0,
+    "required_surface": 0,
+}, payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
 assert payload["registry_class_reason_count"] == 0, payload
 assert payload["registry_precedence_reason_count"] == 0, payload
 assert payload["projected_violation_reason_count"] == 0, payload
@@ -778,6 +787,138 @@ assert payload["registry_class_admission_policy"] == "projected_violation_reason
 assert payload["direct_stale_reason_count_before_violation_projection"] >= 1, payload
 PY
 
+REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY_REPO="${TMP_ROOT}/registry-direct-stale-reason-origin-policy-drift-repo"
+mirror_repo "${REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY_REPO}"
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["registry_direct_stale_reason_origin_policy"] = "expanded_local_direct_reason_ontology"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY_JSON="${TMP_ROOT}/registry-direct-stale-reason-origin-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY_REPO}" \
+  --json-only >"${REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry direct stale-reason origin policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_registry_direct_stale_reason_origin_policy_invalid" in payload["stale_reasons"], payload
+assert payload["registry_direct_stale_reason_origin_policy"] == "expanded_local_direct_reason_ontology", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+PY
+
+ALIAS_DIRECT_REASON_ORIGIN_REPO="${TMP_ROOT}/alias-direct-reason-origin-repo"
+mirror_repo "${ALIAS_DIRECT_REASON_ORIGIN_REPO}"
+python3 - <<'PY' "${ALIAS_DIRECT_REASON_ORIGIN_REPO}/identity/protocol/mappings/root-corpus-law-bundle.current.yaml"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+path.write_text(
+    "active_file: identity/protocol/mappings/root-corpus-law-bundle.missing.yaml\n",
+    encoding="utf-8",
+)
+PY
+
+ALIAS_DIRECT_REASON_ORIGIN_JSON="${TMP_ROOT}/alias-direct-reason-origin.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${ALIAS_DIRECT_REASON_ORIGIN_REPO}" \
+  --json-only >"${ALIAS_DIRECT_REASON_ORIGIN_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed alias direct stale-reason origin case"
+  exit 1
+fi
+
+python3 - <<'PY' "${ALIAS_DIRECT_REASON_ORIGIN_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["derived_failure_class"] == "registry", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["direct_stale_reason_origin_counts"]["alias"] >= 1, payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+assert payload["direct_stale_reason_count_before_violation_projection"] >= 1, payload
+PY
+
+DOCUMENT_DIRECT_REASON_ORIGIN_REPO="${TMP_ROOT}/document-direct-reason-origin-repo"
+mirror_repo "${DOCUMENT_DIRECT_REASON_ORIGIN_REPO}"
+python3 - <<'PY' "${DOCUMENT_DIRECT_REASON_ORIGIN_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+path.write_text("[\n", encoding="utf-8")
+PY
+
+DOCUMENT_DIRECT_REASON_ORIGIN_JSON="${TMP_ROOT}/document-direct-reason-origin.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${DOCUMENT_DIRECT_REASON_ORIGIN_REPO}" \
+  --json-only >"${DOCUMENT_DIRECT_REASON_ORIGIN_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed document direct stale-reason origin case"
+  exit 1
+fi
+
+python3 - <<'PY' "${DOCUMENT_DIRECT_REASON_ORIGIN_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["derived_failure_class"] == "registry", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["direct_stale_reason_origin_counts"]["document"] >= 1, payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+assert payload["direct_stale_reason_count_before_violation_projection"] >= 1, payload
+PY
+
+REQUIRED_SURFACE_DIRECT_REASON_ORIGIN_REPO="${TMP_ROOT}/required-surface-direct-reason-origin-repo"
+mirror_repo "${REQUIRED_SURFACE_DIRECT_REASON_ORIGIN_REPO}"
+rm -f "${REQUIRED_SURFACE_DIRECT_REASON_ORIGIN_REPO}/scripts/root_corpus_law_bundle_common.py"
+
+REQUIRED_SURFACE_DIRECT_REASON_ORIGIN_JSON="${TMP_ROOT}/required-surface-direct-reason-origin.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REQUIRED_SURFACE_DIRECT_REASON_ORIGIN_REPO}" \
+  --json-only >"${REQUIRED_SURFACE_DIRECT_REASON_ORIGIN_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed required-surface direct stale-reason origin case"
+  exit 1
+fi
+
+python3 - <<'PY' "${REQUIRED_SURFACE_DIRECT_REASON_ORIGIN_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["derived_failure_class"] == "registry", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["direct_stale_reason_origin_counts"]["required_surface"] >= 1, payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+assert payload["direct_stale_reason_count_before_violation_projection"] >= 1, payload
+assert "root_corpus_law_bundle_surface_missing:common_script:scripts/root_corpus_law_bundle_common.py" in payload["stale_reasons"], payload
+PY
+
 MISSING_COMPONENT_VALIDATOR_REPO="${TMP_ROOT}/missing-component-validator-repo"
 mirror_repo "${MISSING_COMPONENT_VALIDATOR_REPO}"
 rm -f "${MISSING_COMPONENT_VALIDATOR_REPO}/scripts/validate_protocol_root_corpus_precedence.py"
@@ -802,6 +943,14 @@ assert payload["derived_status_from_stale_reasons"] == payload["protocol_root_co
 assert payload["derived_failure_class"] == "bundle", payload
 assert payload["derived_error_code_from_precedence"] == payload["error_code"] == "IP-RCLB-003", payload
 assert payload["direct_stale_reason_count_before_violation_projection"] == 0, payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["direct_stale_reason_origin_counts"] == {
+    "alias": 0,
+    "document": 0,
+    "contract_row": 0,
+    "required_surface": 0,
+}, payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
 assert payload["component_status_row_count"] == payload["component_count"] - 1, payload
 assert payload["bundle_violation_count"] >= 2, payload
 assert payload["registry_precedence_reason_count"] == 0, payload
@@ -847,6 +996,14 @@ assert payload["error_code"] == "IP-RCLB-002", payload
 assert payload["derived_failure_class"] == "structure", payload
 assert payload["derived_error_code_from_precedence"] == "IP-RCLB-002", payload
 assert payload["direct_stale_reason_count_before_violation_projection"] == 0, payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["direct_stale_reason_origin_counts"] == {
+    "alias": 0,
+    "document": 0,
+    "contract_row": 0,
+    "required_surface": 0,
+}, payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
 assert payload["structure_violation_count"] >= 1, payload
 assert payload["bundle_violation_count"] >= 1, payload
 assert payload["registry_precedence_reason_count"] == 0, payload
@@ -887,6 +1044,9 @@ assert payload["error_code"] == "IP-RCLB-001", payload
 assert payload["derived_failure_class"] == "registry", payload
 assert payload["derived_error_code_from_precedence"] == "IP-RCLB-001", payload
 assert payload["direct_stale_reason_count_before_violation_projection"] >= 1, payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["direct_stale_reason_origin_counts"]["contract_row"] >= 1, payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
 assert payload["registry_precedence_reason_count"] >= 1, payload
 assert payload["bundle_violation_count"] >= 1, payload
 assert "root_corpus_law_bundle_component_status_row_coverage_policy_invalid" in payload["stale_reasons"], payload
@@ -927,6 +1087,14 @@ assert payload["derived_failure_class"] == "bundle", payload
 assert payload["derived_error_code_from_precedence"] == payload["error_code"] == "IP-RCLB-003", payload
 assert payload["anchor_violation_count"] >= 1, payload
 assert payload["direct_stale_reason_count_before_violation_projection"] == 0, payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["direct_stale_reason_origin_counts"] == {
+    "alias": 0,
+    "document": 0,
+    "contract_row": 0,
+    "required_surface": 0,
+}, payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
 assert payload["registry_class_reason_count"] == 0, payload
 assert "anchor_violation:identity/protocol/README.md:required_marker_missing" in payload["stale_reasons"], payload
 PY

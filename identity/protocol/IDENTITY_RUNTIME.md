@@ -401,6 +401,14 @@ registry failure class.
 Projected structure, bundle, and anchor stale reasons must not
 retroactively upgrade failure class to registry.
 
+Runtime must also keep registry direct-stale-reason origin policy
+explicit; admitted direct origins are alias error, document invalidity,
+canonical contract-row invalidity, and required-surface absence before
+violation projection.
+
+Runtime must fail-close on unclassified direct stale-reason origin rather
+than silently expanding registry ontology.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

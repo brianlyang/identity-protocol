@@ -729,6 +729,15 @@ violation projection may admit registry failure class.
 Projected structure, bundle, and anchor stale reasons must not retroactively
 upgrade failure class to registry.
 
+Bundle registry direct-stale-reason origin policy must stay explicit too.
+
+The admitted origins are alias error, document invalidity, canonical
+contract-row invalidity, and required-surface absence, all before
+violation projection.
+
+The machine world must fail-close on unclassified direct stale-reason
+origin rather than silently expanding registry ontology.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

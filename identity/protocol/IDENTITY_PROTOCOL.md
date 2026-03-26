@@ -456,6 +456,14 @@ projection may admit registry failure class.
 Projected violation reasons must not be reclassified as registry failure
 basis.
 
+Root-law bundle rows must also keep registry direct-stale-reason origin
+policy explicit; admitted direct origins are alias error, document
+invalidity, canonical contract-row invalidity, and required-surface
+absence before violation projection.
+
+Local direct stale-reason ontology must not silently expand beyond those
+admitted origins.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

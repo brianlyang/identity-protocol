@@ -741,6 +741,15 @@ before violation projection may admit registry failure class.
 Projected structure, bundle, and anchor stale reasons must not
 retroactively upgrade failure class to registry.
 
+Bundle registry direct-stale-reason origin policy must also stay explicit.
+
+The admitted runtime origins are alias error, document invalidity,
+canonical contract-row invalidity, and required-surface absence, all
+before violation projection.
+
+Runtime must fail-close on unclassified direct stale-reason origin rather
+than silently expanding registry ontology.
+
 ---
 
 ## Conflict-handling rule

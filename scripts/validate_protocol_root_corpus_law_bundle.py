@@ -82,6 +82,7 @@ from root_corpus_law_bundle_common import (
     required_component_descriptor_fields_from_doc,
     require_component_descriptor_concordance,
     registry_class_admission_policy_from_doc,
+    registry_direct_stale_reason_origin_policy_from_doc,
     violation_projection_policy_from_doc,
 )
 from root_machine_registry_completeness_common import (
@@ -140,6 +141,9 @@ FAILURE_CLASSIFICATION_POLICY = (
 )
 REGISTRY_CLASS_ADMISSION_POLICY = (
     "only_direct_stale_reasons_present_before_violation_projection_admit_registry_failure_class"
+)
+REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY = (
+    "alias_document_contract_row_required_surface_only_before_violation_projection"
 )
 COMPONENT_VALIDATOR_OUTPUT_CONTRACT = "json_object_with_disclosed_status_key"
 
@@ -257,6 +261,42 @@ def _descriptor_is_present(value: Any) -> bool:
     if isinstance(value, tuple):
         return bool(value)
     return bool(str(value or "").strip())
+
+
+def _classify_direct_stale_reason_origin(reason: str) -> str:
+    if "_alias_error:" in reason:
+        return "alias"
+    if reason.endswith("_empty_or_invalid"):
+        return "document"
+    if (
+        reason == "root_corpus_law_bundle_required_component_descriptor_fields_missing"
+        or reason.startswith("root_corpus_law_bundle_surface_missing:")
+        or reason == "root_corpus_law_bundle_anchor_checks_missing"
+        or reason == "root_corpus_law_bundle_components_missing"
+    ):
+        return "required_surface"
+    if reason.startswith("root_corpus_law_bundle_") or reason.startswith(
+        "root_machine_registry_completeness_"
+    ):
+        return "contract_row"
+    return "unknown"
+
+
+def _direct_stale_reason_origin_counts(stale_reasons: list[str]) -> tuple[dict[str, int], int]:
+    counts = {
+        "alias": 0,
+        "document": 0,
+        "contract_row": 0,
+        "required_surface": 0,
+    }
+    unknown_count = 0
+    for reason in stale_reasons:
+        origin = _classify_direct_stale_reason_origin(reason)
+        if origin == "unknown":
+            unknown_count += 1
+            continue
+        counts[origin] += 1
+    return counts, unknown_count
 
 
 def _component_validator_cmd(repo_root: Path, validator_script: str, invocation_contract: str) -> list[str]:
@@ -637,6 +677,9 @@ def main() -> int:
     error_code_precedence_policy = error_code_precedence_policy_from_doc(bundle_doc) if bundle_doc else ""
     failure_classification_policy = failure_classification_policy_from_doc(bundle_doc) if bundle_doc else ""
     registry_class_admission_policy = registry_class_admission_policy_from_doc(bundle_doc) if bundle_doc else ""
+    registry_direct_stale_reason_origin_policy = (
+        registry_direct_stale_reason_origin_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     effective_component_validator_status_requirement = (
         component_validator_status_requirement
         if component_validator_status_requirement == STATUS_PASS_REQUIRED
@@ -721,6 +764,11 @@ def main() -> int:
         registry_class_admission_policy
         if registry_class_admission_policy == REGISTRY_CLASS_ADMISSION_POLICY
         else REGISTRY_CLASS_ADMISSION_POLICY
+    )
+    effective_registry_direct_stale_reason_origin_policy = (
+        registry_direct_stale_reason_origin_policy
+        if registry_direct_stale_reason_origin_policy == REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY
+        else REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY
     )
     effective_component_validator_stdout_normalization_contract = (
         component_validator_stdout_normalization_contract
@@ -1106,6 +1154,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if registry_class_admission_policy != REGISTRY_CLASS_ADMISSION_POLICY:
             stale_reasons.append("root_corpus_law_bundle_registry_class_admission_policy_invalid")
+            error_code = ERR_REGISTRY
+        if registry_direct_stale_reason_origin_policy != REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY:
+            stale_reasons.append("root_corpus_law_bundle_registry_direct_stale_reason_origin_policy_invalid")
             error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
@@ -1803,6 +1854,24 @@ def main() -> int:
     expected_projected_violation_reason_count = (
         len(structure_violations) + len(bundle_violations) + len(anchor_violations)
     )
+    direct_stale_reason_origin_counts, registry_direct_stale_reason_unknown_count = (
+        _direct_stale_reason_origin_counts(stale_reasons)
+    )
+    registry_direct_stale_reason_origin_status = (
+        STATUS_FAIL_REQUIRED
+        if (
+            effective_registry_direct_stale_reason_origin_policy == REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY
+            and registry_direct_stale_reason_unknown_count
+        )
+        else STATUS_PASS_REQUIRED
+    )
+    if registry_direct_stale_reason_origin_status == STATUS_FAIL_REQUIRED:
+        stale_reasons.append("root_corpus_law_bundle_registry_direct_stale_reason_origin_unclassified")
+        if not error_code:
+            error_code = ERR_REGISTRY
+    direct_stale_reason_origin_counts, registry_direct_stale_reason_unknown_count = (
+        _direct_stale_reason_origin_counts(stale_reasons)
+    )
     direct_stale_reason_count_before_violation_projection = len(stale_reasons)
     registry_precedence_reason_count = direct_stale_reason_count_before_violation_projection
     violation_projection_incomplete = (
@@ -1919,6 +1988,7 @@ def main() -> int:
         "error_code_precedence_policy": error_code_precedence_policy,
         "failure_classification_policy": failure_classification_policy,
         "registry_class_admission_policy": registry_class_admission_policy,
+        "registry_direct_stale_reason_origin_policy": registry_direct_stale_reason_origin_policy,
         "derived_status_from_stale_reasons": derived_status_from_stale_reasons,
         "derived_failure_class": derived_failure_class,
         "derived_error_code_from_precedence": derived_error_code_from_precedence,
@@ -1931,6 +2001,9 @@ def main() -> int:
         "direct_stale_reason_count_before_violation_projection": (
             direct_stale_reason_count_before_violation_projection
         ),
+        "registry_direct_stale_reason_origin_status": registry_direct_stale_reason_origin_status,
+        "direct_stale_reason_origin_counts": dict(direct_stale_reason_origin_counts),
+        "registry_direct_stale_reason_unknown_count": registry_direct_stale_reason_unknown_count,
         "registry_class_reason_count": registry_precedence_reason_count,
         "registry_precedence_reason_count": registry_precedence_reason_count,
         "projected_violation_reason_count": projected_violation_reason_count,
