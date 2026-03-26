@@ -7,7 +7,13 @@ import json
 from pathlib import Path
 from typing import Any
 
-from tool_vendor_governance_common import contract_required, latest_identity_upgrade_report, load_json, resolve_pack_and_task
+from tool_vendor_governance_common import (
+    build_identity_upgrade_evidence_selection_projection,
+    contract_required,
+    load_json,
+    resolve_identity_upgrade_evidence_selection,
+    resolve_pack_and_task,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -54,24 +60,25 @@ def _load_json_file(path: Path) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
-def _resolve_receipt_path(pack_path: Path, identity_id: str, explicit_receipt: str, explicit_report: str) -> tuple[Path | None, dict[str, Any] | None]:
-    if explicit_receipt.strip():
-        rp = Path(explicit_receipt).expanduser().resolve()
-        if rp.exists() and rp.is_file():
-            return rp, _load_json_file(rp)
-        return None, None
-
-    if explicit_report.strip():
-        report_path = Path(explicit_report).expanduser().resolve()
-        if report_path.exists() and report_path.is_file():
-            report_doc = _load_json_file(report_path)
-            return report_path, report_doc
-        return None, None
-
-    latest = latest_identity_upgrade_report(identity_id, pack_path)
-    if latest and latest.exists():
-        return latest.resolve(), _load_json_file(latest.resolve())
-    return None, None
+def _resolve_promotion_evidence(
+    pack_path: Path,
+    identity_id: str,
+    explicit_receipt: str,
+    explicit_report: str,
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    resolution = resolve_identity_upgrade_evidence_selection(
+        identity_id,
+        pack_path,
+        explicit_receipt=explicit_receipt,
+        explicit_report=explicit_report,
+    )
+    selection_payload = build_identity_upgrade_evidence_selection_projection(
+        resolution,
+        field_prefix="promotion_evidence",
+    )
+    selection_payload["_selected_path"] = resolution.selected_path
+    evidence_doc = _load_json_file(resolution.selected_path) if resolution.selected_path is not None else None
+    return selection_payload, evidence_doc
 
 
 def _compute_expected_decision_hash(doc: dict[str, Any]) -> str:
@@ -140,6 +147,12 @@ def main() -> int:
         "reviewer_role": "",
         "reviewer_signature_ref": "",
         "evidence_bundle_refs": [],
+        "promotion_evidence_selected_path": "",
+        "promotion_evidence_selection_mode": "",
+        "promotion_evidence_selected_authority_class": "",
+        "promotion_evidence_pointer_resolution_mode": "",
+        "promotion_evidence_pointer_path": "",
+        "promotion_evidence_kind": "",
         "receipt_path": "",
         "evidence_ref": "",
         "stale_reasons": [],
@@ -150,7 +163,14 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 0
 
-    receipt_path, receipt_doc = _resolve_receipt_path(pack_path, args.identity_id, args.receipt, args.report)
+    promotion_evidence_selection, receipt_doc = _resolve_promotion_evidence(
+        pack_path,
+        args.identity_id,
+        args.receipt,
+        args.report,
+    )
+    payload.update({k: v for k, v in promotion_evidence_selection.items() if not k.startswith("_")})
+    receipt_path = promotion_evidence_selection.get("_selected_path")
     if receipt_doc is None or receipt_path is None:
         payload["stale_reasons"] = ["promotion_receipt_not_found"]
         payload["error_code"] = ""

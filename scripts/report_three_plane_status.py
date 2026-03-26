@@ -4010,6 +4010,24 @@ def _instance_plane_status(
             "error_code": promotion_pipeline_payload.get("error_code", ""),
             "required_contract": promotion_pipeline_payload.get("required_contract"),
             "auto_required_signal": promotion_pipeline_payload.get("auto_required_signal"),
+            "promotion_evidence_selected_path": promotion_pipeline_payload.get(
+                "promotion_evidence_selected_path", ""
+            ),
+            "promotion_evidence_selection_mode": promotion_pipeline_payload.get(
+                "promotion_evidence_selection_mode", ""
+            ),
+            "promotion_evidence_selected_authority_class": promotion_pipeline_payload.get(
+                "promotion_evidence_selected_authority_class", ""
+            ),
+            "promotion_evidence_pointer_resolution_mode": promotion_pipeline_payload.get(
+                "promotion_evidence_pointer_resolution_mode", ""
+            ),
+            "promotion_evidence_pointer_path": promotion_pipeline_payload.get(
+                "promotion_evidence_pointer_path", ""
+            ),
+            "promotion_evidence_kind": promotion_pipeline_payload.get(
+                "promotion_evidence_kind", ""
+            ),
             "decision_hash": promotion_pipeline_payload.get("decision_hash", ""),
             "input_hash": promotion_pipeline_payload.get("input_hash", ""),
             "reviewer_role": promotion_pipeline_payload.get("reviewer_role", ""),

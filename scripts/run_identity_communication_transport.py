@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from resolve_identity_context import resolve_repo_catalog_path
 from tool_vendor_governance_common import resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -71,11 +72,7 @@ def main() -> int:
 
     repo_root = Path(__file__).resolve().parents[1]
     catalog_path = Path(args.catalog).expanduser().resolve()
-    repo_catalog_path = Path(args.repo_catalog).expanduser()
-    if not repo_catalog_path.is_absolute():
-        repo_catalog_path = (repo_root / repo_catalog_path).resolve()
-    else:
-        repo_catalog_path = repo_catalog_path.resolve()
+    repo_catalog_path = resolve_repo_catalog_path(args.repo_catalog, start=Path(__file__).resolve())
 
     payload: dict[str, Any] = {
         "identity_communication_transport_run_status": STATUS_FAIL_REQUIRED,

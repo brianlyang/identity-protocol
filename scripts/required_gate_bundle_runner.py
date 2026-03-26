@@ -2406,6 +2406,7 @@ def main() -> int:
             "multimodal_plugin_enforcement",
             "run_id_report_selection",
             "outlet_matrix",
+            "promotion_pipeline",
         }:
             _append_supported_flag(
                 cmd,
@@ -2415,7 +2416,7 @@ def main() -> int:
                 repo_root=repo_root,
             )
             if report_selected_path:
-                if spec.target_name in {"run_id_report_selection", "outlet_matrix"}:
+                if spec.target_name in {"run_id_report_selection", "outlet_matrix", "promotion_pipeline"}:
                     _append_supported_flag(
                         cmd,
                         script_path=spec.script_path,

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from protocol_feedback_contract_common import (
+    ALLOWED_FEEDBACK_DIRS,
     is_strict_operation,
     list_feedback_files,
     rel_to_feedback_root,
@@ -22,20 +23,6 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_CH_MISSING = "IP-PFB-INBOX-001"
 ERR_NON_STANDARD_PRIMARY = "IP-PFB-INBOX-002"
 ERR_MIRROR_WITHOUT_PRIMARY = "IP-PFB-INBOX-003"
-
-ALLOWED_FEEDBACK_DIRS = {
-    "outbox-to-protocol",
-    "inbox-from-protocol",
-    "evidence-index",
-    "upgrade-proposals",
-    "issues",
-    "roundtables",
-    "protocol-vendor-intel",
-    "business-partner-intel",
-    "vendor-intel",
-    "review-notes",
-}
-
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:

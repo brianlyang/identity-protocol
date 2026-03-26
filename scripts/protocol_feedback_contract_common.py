@@ -20,17 +20,37 @@ CANONICAL_REQUIRED_DIR_PATHS = tuple(
 )
 
 DEFAULT_ACTIVITY_DIRS = (
-    "outbox-to-protocol",
-    "inbox-from-protocol",
-    "evidence-index",
-    "upgrade-proposals",
     "issues",
     "roundtables",
+    "optimization",
+    "upgrade-proposals",
+    "validation",
     "protocol-vendor-intel",
     "business-partner-intel",
     "vendor-intel",
     "review-notes",
 )
+
+ALLOWED_FEEDBACK_DIRS = frozenset(
+    (
+        "outbox-to-protocol",
+        "inbox-from-protocol",
+        "evidence-index",
+        "upgrade-proposals",
+        "atomic",
+        *DEFAULT_ACTIVITY_DIRS,
+    )
+)
+
+CAPABILITY_FIT_MATRIX_PATTERN = (
+    PROTOCOL_FEEDBACK_ROOT_REL / "optimization" / "capability-fit-matrix-*.json"
+).as_posix()
+CAPABILITY_FIT_ROUNDTABLE_JSON_PATTERN = (
+    PROTOCOL_FEEDBACK_ROOT_REL / "roundtables" / "capability-fit-roundtable-*.json"
+).as_posix()
+CAPABILITY_FIT_ROUNDTABLE_MARKDOWN_PATTERN = (
+    PROTOCOL_FEEDBACK_ROOT_REL / "roundtables" / "ROUNDTABLE_*.md"
+).as_posix()
 
 STRICT_OPERATIONS = {"activate", "update", "mutation", "readiness", "e2e", "ci", "validate"}
 

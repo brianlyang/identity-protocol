@@ -101,6 +101,8 @@ Shared protocol-owned surfaces landed in this stream:
 18. `identity/protocol/broadcast/BROADCAST_DOC_CONTROL.current.yaml`
 19. `scripts/validate_protocol_broadcast_doc_control.py`
 20. `scripts/ci/run_protocol_broadcast_doc_control_probes_ci.sh`
+21. `scripts/runtime_fleet_closure_common.py`
+22. `scripts/ci/run_identity_transport_fleet_closure_convergence_probes_ci.sh`
 
 ## 4) Machine closure landed
 
@@ -129,6 +131,14 @@ Shared protocol-owned surfaces landed in this stream:
    - canonical runtime-root set,
    - canonical live-bootstrap-step set.
 6. `scripts/ci/run_identity_communication_transport_probes_ci.sh` now proves the missing-contract fail-close lane, the shared backfill repair lane, the shared convergence executor lane, the missing-runtime-root fail-close lane, and the closure-checker green lane.
+7. The communication-transport / protocol-feedback reply chain now canonically resolves `--repo-catalog` through `resolve_repo_catalog_path(...)` before downstream subprocess replay, so prefixed relative inputs such as `identity-protocol-local/identity/catalog/identities.yaml` remain cross-CWD safe instead of doubling the protocol-root prefix.
+8. `scripts/ci/run_identity_communication_transport_probes_ci.sh` now also freezes that invariance by requiring both the aggregate validator and shared convergence executor to pass under the prefixed relative `repo-catalog` surface.
+
+### 4.3 Shared fleet-closure projection convergence remained explicit
+
+1. `scripts/check_identity_broadcast_migration_closure.py` and `scripts/check_identity_communication_transport_closure.py` now consume `scripts/runtime_fleet_closure_common.py` for active-runtime validator fleet closure instead of duplicating catalog selection, active-runtime iteration, subprocess JSON parsing, or violation aggregation.
+2. The shared projection now self-describes `active_runtime_validator_fleet_closure_v1`, keeps `workspace_runtime_only` bounded to explicitly supplied runtime catalogs, and keeps `repo_catalog_inclusive` replay explicit when the repo catalog is intentionally included.
+3. `scripts/ci/run_identity_transport_fleet_closure_convergence_probes_ci.sh` proves both closure checkers preserve the same fleet projection semantics while keeping validator-specific status surfaces separate.
 
 ## 5) Live fleet convergence proof
 
@@ -142,7 +152,8 @@ Shared protocol-owned surfaces landed in this stream:
    - `base-repo-closure-orchestrator`
 3. `python3 scripts/check_identity_broadcast_migration_closure.py --catalog ../.identity/catalog.local.yaml --workspace-runtime-only --json-only` now returns `PASS_REQUIRED`.
 4. `python3 scripts/check_identity_communication_transport_closure.py --catalog ../.identity/catalog.local.yaml --workspace-runtime-only --json-only` now returns `PASS_REQUIRED`.
-5. Closure is therefore no longer docs-only or owner-only; it is live fleet-green on the active workspace runtime catalog.
+5. `bash scripts/ci/run_identity_transport_fleet_closure_convergence_probes_ci.sh` now returns `PASS` and proves the pair share one active-runtime fleet projection in both bounded `workspace_runtime_only` mode and explicit `repo_catalog_inclusive` mode.
+6. Closure is therefore no longer docs-only or owner-only; it is live fleet-green on the active workspace runtime catalog.
 
 ## 6) Closed-state stop condition
 

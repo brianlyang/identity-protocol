@@ -14,6 +14,7 @@ from protocol_feedback_lane_common import (
     discover_default_correlation_keys,
     should_seed_default_correlation_keys,
 )
+from resolve_identity_context import resolve_repo_catalog_path
 from response_stamp_common import resolve_layer_intent, resolve_stamp_context
 from tool_vendor_governance_common import boolish, contract_required, load_json, resolve_pack_and_task, resolve_report_path
 
@@ -203,7 +204,7 @@ def main() -> int:
     trigger_contract = _select_trigger_contract(task)
     required_declared = contract_required(split_contract) if split_contract else False
 
-    repo_catalog_path = Path(args.repo_catalog).expanduser().resolve()
+    repo_catalog_path = resolve_repo_catalog_path(args.repo_catalog, start=Path(__file__).resolve())
     source_default = "auto"
     if repo_catalog_path.exists():
         try:

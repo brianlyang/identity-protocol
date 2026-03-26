@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from identity_communication_transport_common import collect_identity_communication_transport_projection
+from resolve_identity_context import resolve_repo_catalog_path
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 
 
@@ -27,11 +28,7 @@ def main() -> int:
 
     repo_root = Path(__file__).resolve().parents[1]
     catalog_path = Path(args.catalog).expanduser().resolve()
-    repo_catalog_path = Path(args.repo_catalog).expanduser()
-    if not repo_catalog_path.is_absolute():
-        repo_catalog_path = (repo_root / repo_catalog_path).resolve()
-    else:
-        repo_catalog_path = repo_catalog_path.resolve()
+    repo_catalog_path = resolve_repo_catalog_path(args.repo_catalog, start=Path(__file__).resolve())
 
     if not catalog_path.exists():
         payload = {

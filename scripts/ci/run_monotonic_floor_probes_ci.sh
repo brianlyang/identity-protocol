@@ -5,20 +5,23 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TMP_ROOT_BASE="${RUNNER_TEMP:-${TMPDIR:-${GITHUB_WORKSPACE:-${REPO_ROOT}}/.tmp-runtime}}"
 WORK_ROOT="${MONOTONIC_PROBE_WORK_ROOT:-${TMP_ROOT_BASE%/}/identity-monotonic-floor-probes}"
 FIXTURE_ROOT="${WORK_ROOT}/fixtures"
+FIXTURE_MANIFEST_PATH="${WORK_ROOT}/fixture_paths.monotonic_floor_probes.json"
 RESULT_ROOT="${WORK_ROOT}/results"
 MANIFEST_PATH="${WORK_ROOT}/manifest.monotonic_floor_probes.json"
 
 mkdir -p "${FIXTURE_ROOT}" "${RESULT_ROOT}"
 
-python3 - <<'PY' "${FIXTURE_ROOT}"
+python3 - <<'PY' "${FIXTURE_ROOT}" "${FIXTURE_MANIFEST_PATH}"
 from __future__ import annotations
 
 import json
 from pathlib import Path
+import hashlib
 import yaml
 import sys
 
 fixture_root = Path(sys.argv[1]).resolve()
+fixture_manifest_path = Path(sys.argv[2]).resolve()
 fixture_root.mkdir(parents=True, exist_ok=True)
 
 identity_root = fixture_root / "identity"
@@ -105,6 +108,27 @@ outlet_contract = {
     "validator": "scripts/validate_outlet_matrix.py",
 }
 
+promotion_contract = {
+    "required": True,
+    "contract_id": "rq_003_promotion_evidence_pipeline_contract_v1",
+    "validator": "scripts/validate_promotion_pipeline.py",
+}
+
+
+def compute_promotion_decision_hash(doc: dict[str, object]) -> str:
+    base = {
+        "identity_id": str(doc.get("identity_id", "")),
+        "report_path": str(doc.get("report_path", "")),
+        "all_ok": bool(doc.get("all_ok", False)),
+        "writeback_status": str(doc.get("writeback_status", "")),
+        "permission_state": str(doc.get("permission_state", "")),
+        "error_code": str(doc.get("error_code", "")),
+        "protocol_mode": str(doc.get("protocol_mode", "")),
+    }
+    return hashlib.sha256(
+        json.dumps(base, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+
 (probe_floor_pack / "CURRENT_TASK.json").write_text(
     json.dumps(
         {
@@ -123,6 +147,7 @@ outlet_contract = {
             "protocol_host_unique_channel_contract_v1": probe_gateway_contract,
             "multimodal_plugin_enforcement_contract_v1": multimodal_contract,
             "outlet_regression_matrix_contract_v1": outlet_contract,
+            "status_promotion_evidence_contract_v1": promotion_contract,
             "reasoning_loop_failclose_contract_v1": reasoning_contract_mm,
         },
         ensure_ascii=False,
@@ -162,8 +187,21 @@ pointer_report_path = (
 explicit_report_path = (
     probe_mm_pack / "runtime" / "reports" / "identity-upgrade-exec-probe-mm-1700000001.json"
 )
+explicit_receipt_path = (
+    probe_mm_pack / "runtime" / "reports" / "promotion-evidence-explicit-receipt.json"
+)
 
 pointer_report_doc = {
+    "identity_id": "probe-mm",
+    "report_path": str(pointer_report_path),
+    "all_ok": True,
+    "writeback_status": "WRITTEN",
+    "permission_state": "PASS_REQUIRED",
+    "protocol_mode": "strict",
+    "input_hash": "probe-mm-promotion-input-pointer",
+    "reviewer_role": "protocol_auditor",
+    "reviewer_signature_ref": "runtime/reports/promotion/pointer-review.sig",
+    "evidence_bundle_refs": ["runtime/reports/promotion/pointer-evidence.json"],
     "run_id": "identity-upgrade-exec-probe-mm-old",
     "check_results": [],
     "multimodal_runtime_evidence_status": "SKIPPED_NOT_REQUIRED",
@@ -183,6 +221,16 @@ pointer_report_doc = {
 }
 
 explicit_report_doc = {
+    "identity_id": "probe-mm",
+    "report_path": str(explicit_report_path),
+    "all_ok": True,
+    "writeback_status": "WRITTEN",
+    "permission_state": "PASS_REQUIRED",
+    "protocol_mode": "strict",
+    "input_hash": "probe-mm-promotion-input-explicit-report",
+    "reviewer_role": "protocol_auditor",
+    "reviewer_signature_ref": "runtime/reports/promotion/explicit-report-review.sig",
+    "evidence_bundle_refs": ["runtime/reports/promotion/explicit-report-evidence.json"],
     "run_id": "identity-upgrade-exec-probe-mm-explicit",
     "check_results": [
         {
@@ -223,6 +271,23 @@ explicit_report_doc = {
     "outlet_preflight_receipt": "runtime/receipts/outlet-preflight-explicit.json",
 }
 
+explicit_receipt_doc = {
+    "identity_id": "probe-mm",
+    "report_path": str(explicit_report_path),
+    "all_ok": True,
+    "writeback_status": "WRITTEN",
+    "permission_state": "PASS_REQUIRED",
+    "protocol_mode": "strict",
+    "input_hash": "probe-mm-promotion-input-explicit-receipt",
+    "reviewer_role": "protocol_auditor",
+    "reviewer_signature_ref": "runtime/reports/promotion/explicit-receipt-review.sig",
+    "evidence_bundle_refs": ["runtime/reports/promotion/explicit-receipt-evidence.json"],
+}
+
+pointer_report_doc["decision_hash"] = compute_promotion_decision_hash(pointer_report_doc)
+explicit_report_doc["decision_hash"] = compute_promotion_decision_hash(explicit_report_doc)
+explicit_receipt_doc["decision_hash"] = compute_promotion_decision_hash(explicit_receipt_doc)
+
 pointer_report_path.write_text(
     json.dumps(
         pointer_report_doc,
@@ -236,6 +301,16 @@ pointer_report_path.write_text(
 explicit_report_path.write_text(
     json.dumps(
         explicit_report_doc,
+        ensure_ascii=False,
+        indent=2,
+    )
+    + "\n",
+    encoding="utf-8",
+)
+
+explicit_receipt_path.write_text(
+    json.dumps(
+        explicit_receipt_doc,
         ensure_ascii=False,
         indent=2,
     )
@@ -267,9 +342,47 @@ explicit_report_path.write_text(
     yaml.safe_dump(catalog, sort_keys=False, allow_unicode=True),
     encoding="utf-8",
 )
+
+fixture_manifest_path.parent.mkdir(parents=True, exist_ok=True)
+fixture_manifest_path.write_text(
+    json.dumps(
+        {
+            "catalog_path": str((fixture_root / "catalog.yaml").resolve()),
+            "pointer_report_path": str(pointer_report_path.resolve()),
+            "explicit_report_path": str(explicit_report_path.resolve()),
+            "explicit_receipt_path": str(explicit_receipt_path.resolve()),
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+    + "\n",
+    encoding="utf-8",
+)
 PY
 
 CATALOG_PATH="${FIXTURE_ROOT}/catalog.yaml"
+EXPLICIT_REPORT_PATH="$(python3 - <<'PY' "${FIXTURE_MANIFEST_PATH}"
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+doc = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+print(str(doc.get('explicit_report_path', '')).strip())
+PY
+)"
+EXPLICIT_RECEIPT_PATH="$(python3 - <<'PY' "${FIXTURE_MANIFEST_PATH}"
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+doc = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+print(str(doc.get('explicit_receipt_path', '')).strip())
+PY
+)"
 
 run_probe() {
   local name="$1"
@@ -377,6 +490,45 @@ elif name == "outlet_explicit_override_pass":
         raise SystemExit("outlet_explicit_override_pass: authority class mismatch")
     if str(doc.get("report_pointer_resolution_mode", "")).strip() != "explicit_report_override":
         raise SystemExit("outlet_explicit_override_pass: pointer resolution mismatch")
+elif name == "promotion_pointer_selection_pass":
+    if rc != 0:
+        raise SystemExit("promotion_pointer_selection_pass: expected rc=0")
+    if str(doc.get("promotion_pipeline_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("promotion_pointer_selection_pass: promotion status mismatch")
+    if str(doc.get("promotion_evidence_selection_mode", "")).strip() != "active_execution_pointer":
+        raise SystemExit("promotion_pointer_selection_pass: selection mode mismatch")
+    if str(doc.get("promotion_evidence_selected_authority_class", "")).strip() != "active_execution_pointer_pack_local_report":
+        raise SystemExit("promotion_pointer_selection_pass: authority class mismatch")
+    if str(doc.get("promotion_evidence_pointer_resolution_mode", "")).strip() != "pointer_candidate_root_report":
+        raise SystemExit("promotion_pointer_selection_pass: pointer resolution mismatch")
+    if str(doc.get("promotion_evidence_kind", "")).strip() != "report":
+        raise SystemExit("promotion_pointer_selection_pass: evidence kind mismatch")
+elif name == "promotion_explicit_report_override_pass":
+    if rc != 0:
+        raise SystemExit("promotion_explicit_report_override_pass: expected rc=0")
+    if str(doc.get("promotion_pipeline_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("promotion_explicit_report_override_pass: promotion status mismatch")
+    if str(doc.get("promotion_evidence_selection_mode", "")).strip() != "explicit_report_override":
+        raise SystemExit("promotion_explicit_report_override_pass: selection mode mismatch")
+    if str(doc.get("promotion_evidence_selected_authority_class", "")).strip() != "explicit_report_override":
+        raise SystemExit("promotion_explicit_report_override_pass: authority class mismatch")
+    if str(doc.get("promotion_evidence_pointer_resolution_mode", "")).strip() != "explicit_report_override":
+        raise SystemExit("promotion_explicit_report_override_pass: pointer resolution mismatch")
+    if str(doc.get("promotion_evidence_kind", "")).strip() != "report":
+        raise SystemExit("promotion_explicit_report_override_pass: evidence kind mismatch")
+elif name == "promotion_explicit_receipt_override_pass":
+    if rc != 0:
+        raise SystemExit("promotion_explicit_receipt_override_pass: expected rc=0")
+    if str(doc.get("promotion_pipeline_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("promotion_explicit_receipt_override_pass: promotion status mismatch")
+    if str(doc.get("promotion_evidence_selection_mode", "")).strip() != "explicit_receipt_override":
+        raise SystemExit("promotion_explicit_receipt_override_pass: selection mode mismatch")
+    if str(doc.get("promotion_evidence_selected_authority_class", "")).strip() != "explicit_receipt_override":
+        raise SystemExit("promotion_explicit_receipt_override_pass: authority class mismatch")
+    if str(doc.get("promotion_evidence_pointer_resolution_mode", "")).strip() != "explicit_receipt_override":
+        raise SystemExit("promotion_explicit_receipt_override_pass: pointer resolution mismatch")
+    if str(doc.get("promotion_evidence_kind", "")).strip() != "receipt":
+        raise SystemExit("promotion_explicit_receipt_override_pass: evidence kind mismatch")
 else:
     raise SystemExit(f"unknown probe name: {name}")
 PY
@@ -474,7 +626,7 @@ run_probe multimodal_explicit_override_pass \
   --identity-id probe-mm \
   --operation readiness \
   --run-id identity-upgrade-exec-probe-mm-explicit \
-  --report-selected-path "${FIXTURE_ROOT}/identity/probe-mm/runtime/reports/identity-upgrade-exec-probe-mm-1700000001.json" \
+  --report-selected-path "${EXPLICIT_REPORT_PATH}" \
   --json-only
 
 run_probe outlet_pointer_selection_pass \
@@ -501,7 +653,7 @@ run_probe outlet_explicit_override_pass \
   --identity-id probe-mm \
   --operation validate \
   --run-id identity-upgrade-exec-probe-mm-explicit \
-  --report-selected-path "${FIXTURE_ROOT}/identity/probe-mm/runtime/reports/identity-upgrade-exec-probe-mm-1700000001.json" \
+  --report-selected-path "${EXPLICIT_REPORT_PATH}" \
   --target-name outlet_matrix \
   --actor-id assistant:codex \
   --resolved-work-layer protocol \
@@ -512,6 +664,49 @@ run_probe outlet_explicit_override_pass \
   --final-emit-contract-status PASS_REQUIRED \
   --final-emit-policy-mode tool_choice_required \
   --final-emit-schema-status PASS_REQUIRED \
+  --json-only
+
+run_probe promotion_pointer_selection_pass \
+  python3 scripts/required_gate_bundle_runner.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id probe-mm \
+  --operation validate \
+  --target-name promotion_pipeline \
+  --actor-id assistant:codex \
+  --resolved-work-layer protocol \
+  --resolved-source-layer project \
+  --lock-state LOCK_MATCH \
+  --send-time-gate-status PASS_REQUIRED \
+  --outlet-bypass-detected false \
+  --final-emit-contract-status PASS_REQUIRED \
+  --final-emit-policy-mode tool_choice_required \
+  --final-emit-schema-status PASS_REQUIRED \
+  --json-only
+
+run_probe promotion_explicit_report_override_pass \
+  python3 scripts/required_gate_bundle_runner.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id probe-mm \
+  --operation validate \
+  --report-selected-path "${EXPLICIT_REPORT_PATH}" \
+  --target-name promotion_pipeline \
+  --actor-id assistant:codex \
+  --resolved-work-layer protocol \
+  --resolved-source-layer project \
+  --lock-state LOCK_MATCH \
+  --send-time-gate-status PASS_REQUIRED \
+  --outlet-bypass-detected false \
+  --final-emit-contract-status PASS_REQUIRED \
+  --final-emit-policy-mode tool_choice_required \
+  --final-emit-schema-status PASS_REQUIRED \
+  --json-only
+
+run_probe promotion_explicit_receipt_override_pass \
+  python3 scripts/validate_promotion_pipeline.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id probe-mm \
+  --operation validate \
+  --receipt "${EXPLICIT_RECEIPT_PATH}" \
   --json-only
 
 python3 - <<'PY' "${RESULT_ROOT}" "${MANIFEST_PATH}"

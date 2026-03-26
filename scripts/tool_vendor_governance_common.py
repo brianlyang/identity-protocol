@@ -16,6 +16,10 @@ IDENTITY_UPGRADE_REPORT_SELECTION_MODE_ACTIVE_EXECUTION_POINTER = "active_execut
 IDENTITY_UPGRADE_REPORT_SELECTION_MODE_CANDIDATE_ROOT_LATEST = "candidate_root_latest_report"
 IDENTITY_UPGRADE_REPORT_SELECTION_MODE_EXPLICIT_REPORT_OVERRIDE = "explicit_report_override"
 IDENTITY_UPGRADE_REPORT_SELECTION_MODE_NONE = "no_admissible_report"
+IDENTITY_UPGRADE_EVIDENCE_SELECTION_MODE_EXPLICIT_RECEIPT_OVERRIDE = (
+    "explicit_receipt_override"
+)
+IDENTITY_UPGRADE_EVIDENCE_SELECTION_MODE_NONE = "no_admissible_evidence"
 
 IDENTITY_UPGRADE_REPORT_AUTHORITY_CLASS_ACTIVE_EXECUTION_POINTER = (
     "active_execution_pointer_pack_local_report"
@@ -32,6 +36,15 @@ IDENTITY_UPGRADE_REPORT_POINTER_RESOLUTION_MODE_EXPLICIT_REPORT_OVERRIDE = (
 IDENTITY_UPGRADE_REPORT_POINTER_RESOLUTION_MODE_EXPLICIT_REPORT_OVERRIDE_MISSING = (
     "explicit_report_override_missing"
 )
+IDENTITY_UPGRADE_EVIDENCE_POINTER_RESOLUTION_MODE_EXPLICIT_RECEIPT_OVERRIDE = (
+    "explicit_receipt_override"
+)
+IDENTITY_UPGRADE_EVIDENCE_POINTER_RESOLUTION_MODE_EXPLICIT_RECEIPT_OVERRIDE_MISSING = (
+    "explicit_receipt_override_missing"
+)
+
+IDENTITY_UPGRADE_EVIDENCE_KIND_RECEIPT = "receipt"
+IDENTITY_UPGRADE_EVIDENCE_KIND_REPORT = "report"
 
 
 @dataclass(frozen=True)
@@ -41,6 +54,16 @@ class LatestIdentityUpgradeReportResolution:
     selected_report_authority_class: str
     pointer_resolution_mode: str
     pointer_path: Path | None
+
+
+@dataclass(frozen=True)
+class IdentityUpgradeEvidenceSelectionResolution:
+    selected_path: Path | None
+    selection_mode: str
+    selected_authority_class: str
+    pointer_resolution_mode: str
+    pointer_path: Path | None
+    evidence_kind: str
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -429,6 +452,83 @@ def build_identity_upgrade_report_selection_projection(
         ).strip(),
         f"{prefix}_pointer_resolution_mode": str(resolution.pointer_resolution_mode or "").strip(),
         f"{prefix}_pointer_path": str(resolution.pointer_path) if resolution.pointer_path is not None else "",
+    }
+
+
+def resolve_identity_upgrade_evidence_selection(
+    identity_id: str,
+    pack_root: Path,
+    *,
+    explicit_receipt: str = "",
+    explicit_report: str = "",
+) -> IdentityUpgradeEvidenceSelectionResolution:
+    explicit_receipt_token = str(explicit_receipt or "").strip()
+    if explicit_receipt_token:
+        explicit_receipt_path = Path(explicit_receipt_token).expanduser().resolve()
+        if explicit_receipt_path.exists() and explicit_receipt_path.is_file():
+            return IdentityUpgradeEvidenceSelectionResolution(
+                selected_path=explicit_receipt_path,
+                selection_mode=IDENTITY_UPGRADE_EVIDENCE_SELECTION_MODE_EXPLICIT_RECEIPT_OVERRIDE,
+                selected_authority_class=IDENTITY_UPGRADE_EVIDENCE_SELECTION_MODE_EXPLICIT_RECEIPT_OVERRIDE,
+                pointer_resolution_mode=(
+                    IDENTITY_UPGRADE_EVIDENCE_POINTER_RESOLUTION_MODE_EXPLICIT_RECEIPT_OVERRIDE
+                ),
+                pointer_path=None,
+                evidence_kind=IDENTITY_UPGRADE_EVIDENCE_KIND_RECEIPT,
+            )
+        return IdentityUpgradeEvidenceSelectionResolution(
+            selected_path=None,
+            selection_mode=IDENTITY_UPGRADE_EVIDENCE_SELECTION_MODE_EXPLICIT_RECEIPT_OVERRIDE,
+            selected_authority_class=IDENTITY_UPGRADE_EVIDENCE_SELECTION_MODE_EXPLICIT_RECEIPT_OVERRIDE,
+            pointer_resolution_mode=(
+                IDENTITY_UPGRADE_EVIDENCE_POINTER_RESOLUTION_MODE_EXPLICIT_RECEIPT_OVERRIDE_MISSING
+            ),
+            pointer_path=None,
+            evidence_kind=IDENTITY_UPGRADE_EVIDENCE_KIND_RECEIPT,
+        )
+
+    report_resolution = resolve_identity_upgrade_report_selection(
+        identity_id,
+        pack_root,
+        explicit_report=explicit_report,
+    )
+    evidence_kind = (
+        IDENTITY_UPGRADE_EVIDENCE_KIND_REPORT if report_resolution.selected_report is not None else ""
+    )
+    selection_mode = str(report_resolution.selection_mode or "").strip()
+    if selection_mode == IDENTITY_UPGRADE_REPORT_SELECTION_MODE_NONE:
+        selection_mode = IDENTITY_UPGRADE_EVIDENCE_SELECTION_MODE_NONE
+    return IdentityUpgradeEvidenceSelectionResolution(
+        selected_path=report_resolution.selected_report,
+        selection_mode=selection_mode,
+        selected_authority_class=str(
+            report_resolution.selected_report_authority_class or ""
+        ).strip(),
+        pointer_resolution_mode=str(report_resolution.pointer_resolution_mode or "").strip(),
+        pointer_path=report_resolution.pointer_path,
+        evidence_kind=evidence_kind,
+    )
+
+
+def build_identity_upgrade_evidence_selection_projection(
+    resolution: IdentityUpgradeEvidenceSelectionResolution,
+    *,
+    field_prefix: str = "evidence",
+) -> dict[str, Any]:
+    prefix = str(field_prefix or "").strip() or "evidence"
+    return {
+        f"{prefix}_selected_path": (
+            str(resolution.selected_path) if resolution.selected_path is not None else ""
+        ),
+        f"{prefix}_selection_mode": str(resolution.selection_mode or "").strip(),
+        f"{prefix}_selected_authority_class": str(
+            resolution.selected_authority_class or ""
+        ).strip(),
+        f"{prefix}_pointer_resolution_mode": str(
+            resolution.pointer_resolution_mode or ""
+        ).strip(),
+        f"{prefix}_pointer_path": str(resolution.pointer_path) if resolution.pointer_path is not None else "",
+        f"{prefix}_kind": str(resolution.evidence_kind or "").strip(),
     }
 
 

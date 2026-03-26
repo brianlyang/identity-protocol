@@ -15,6 +15,7 @@ from protocol_feedback_contract_common import (
     rel_to_feedback_root,
     resolve_feedback_root,
 )
+from resolve_identity_context import resolve_repo_catalog_path
 from tool_vendor_governance_common import contract_required, load_json, load_yaml, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -152,7 +153,7 @@ def main() -> int:
     args = ap.parse_args()
 
     catalog_path = Path(args.catalog).expanduser().resolve()
-    repo_catalog_path = Path(args.repo_catalog).expanduser().resolve()
+    repo_catalog_path = resolve_repo_catalog_path(args.repo_catalog, start=Path(__file__).resolve())
     if not catalog_path.exists():
         print(f"[FAIL] catalog not found: {catalog_path}")
         return 2

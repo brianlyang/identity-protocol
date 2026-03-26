@@ -16,6 +16,8 @@ FAIL_JSON="${TMP_ROOT}/communication-missing-contract.json"
 BACKFILL_JSON="${TMP_ROOT}/communication-backfill.json"
 RUN_JSON="${TMP_ROOT}/communication-run.json"
 PASS_JSON="${TMP_ROOT}/communication-pass.json"
+PREFIXED_PASS_JSON="${TMP_ROOT}/communication-prefixed-pass.json"
+PREFIXED_RUN_JSON="${TMP_ROOT}/communication-prefixed-run.json"
 MISSING_ROOT_JSON="${TMP_ROOT}/communication-missing-root.json"
 REPAIRED_JSON="${TMP_ROOT}/communication-repaired.json"
 CLOSURE_JSON="${TMP_ROOT}/communication-closure.json"
@@ -167,6 +169,44 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["identity_communication_transport_status"] == "PASS_REQUIRED", payload
 assert payload["broadcast_transport_status"] == "PASS_REQUIRED", payload
 assert payload["protocol_feedback_atomic_transport_status"] == "PASS_REQUIRED", payload
+PY
+
+python3 "${ROOT}/scripts/validate_identity_communication_transport.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --catalog "${CATALOG_PATH}" \
+  --repo-catalog "identity-protocol-local/identity/catalog/identities.yaml" \
+  --json-only >"${PREFIXED_PASS_JSON}"
+
+python3 - <<'PY' "${PREFIXED_PASS_JSON}" "${ROOT}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+root = pathlib.Path(sys.argv[2]).resolve()
+expected = (root / "identity" / "catalog" / "identities.yaml").resolve()
+assert payload["identity_communication_transport_status"] == "PASS_REQUIRED", payload
+assert pathlib.Path(payload["repo_catalog_path"]).resolve() == expected, payload
+PY
+
+python3 "${ROOT}/scripts/run_identity_communication_transport.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --catalog "${CATALOG_PATH}" \
+  --repo-catalog "identity-protocol-local/identity/catalog/identities.yaml" \
+  --run-id "communication-probe-prefixed-sync" \
+  --json-only >"${PREFIXED_RUN_JSON}"
+
+python3 - <<'PY' "${PREFIXED_RUN_JSON}" "${ROOT}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+root = pathlib.Path(sys.argv[2]).resolve()
+expected = (root / "identity" / "catalog" / "identities.yaml").resolve()
+assert payload["identity_communication_transport_run_status"] == "PASS_REQUIRED", payload
+assert payload["identity_communication_transport_status"] == "PASS_REQUIRED", payload
+assert pathlib.Path(payload["repo_catalog_path"]).resolve() == expected, payload
 PY
 
 rm -rf "${PACK_ROOT}/runtime/protocol-feedback/inbox-from-protocol"

@@ -93,6 +93,7 @@ Landed shared remediation:
 Audit judgment:
 
 - `rq_054` is now a dedicated aggregate convergence lane with its own shared executor, validator, and fleet closure checker.
+- Cross-CWD repo-catalog resolution is now hardened inside the transport chain itself, not left to caller luck: the aggregate validator, shared executor, canonical reply-channel validator, and split-receipt sub-validator now all canonicalize `repo-catalog` via the shared `resolve_repo_catalog_path(...)` primitive before spawning downstream replay.
 
 ### 2.3 Creator/backfill/gate wiring landed
 
@@ -108,10 +109,20 @@ Shared infrastructure now also consumes the stream through:
 8. `identity/protocol/broadcast/BROADCAST_DOC_CONTROL.current.yaml`
 9. `scripts/validate_protocol_broadcast_doc_control.py`
 10. `scripts/ci/run_protocol_broadcast_doc_control_probes_ci.sh`
+11. `scripts/runtime_fleet_closure_common.py`
+12. `scripts/ci/run_identity_transport_fleet_closure_convergence_probes_ci.sh`
 
 Audit judgment:
 
 - the stream is not isolated tooling; it is now wired into creator/update/gate/readiness surfaces.
+
+### 2.4 Shared fleet-closure projection convergence landed
+
+Shared remediation now also freezes the fleet-scan primitive itself:
+
+1. `scripts/check_identity_broadcast_migration_closure.py` and `scripts/check_identity_communication_transport_closure.py` now consume `scripts/runtime_fleet_closure_common.py` rather than each reimplementing catalog selection, active-runtime iteration, validator subprocess decoding, and violation aggregation.
+2. The shared primitive exposes `active_runtime_validator_fleet_closure_v1`, keeps `workspace_runtime_only` bounded to the explicit runtime catalog set, and keeps `repo_catalog_inclusive` replay explicit instead of silently widening the scan surface.
+3. `scripts/ci/run_identity_transport_fleet_closure_convergence_probes_ci.sh` is the additive proof that both closure checkers preserve the same fleet projection semantics while still surfacing their own validator-specific status rows.
 
 ## 3) Live proof and cross-verification
 
@@ -125,9 +136,11 @@ Cross-verified machine proof accepted in this stream:
    - `custom-creative-ecom-analyst`
    - `base-repo-architect`
    - `base-repo-closure-orchestrator`
-6. `scripts/check_identity_broadcast_migration_closure.py --workspace-runtime-only --json-only` now returns `PASS_REQUIRED`.
-7. `scripts/check_identity_communication_transport_closure.py --workspace-runtime-only --json-only` now returns `PASS_REQUIRED`.
-8. `scripts/validate_required_contract_coverage.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --operation scan --json-only` continues to return overall green required coverage after the stream landed, confirming the new adoption did not reopen the required-coverage floor.
+6. `python3 scripts/check_identity_broadcast_migration_closure.py --catalog <project-local absolute catalog> --workspace-runtime-only --json-only` now returns `PASS_REQUIRED`.
+7. `python3 scripts/check_identity_communication_transport_closure.py --catalog <project-local absolute catalog> --workspace-runtime-only --json-only` now returns `PASS_REQUIRED`.
+8. `bash scripts/ci/run_identity_transport_fleet_closure_convergence_probes_ci.sh` -> `PASS`, proving the two closure checkers share one active-runtime fleet projection in both `workspace_runtime_only` and `repo_catalog_inclusive` modes.
+9. `scripts/validate_required_contract_coverage.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --operation scan --json-only` continues to return overall green required coverage after the stream landed, confirming the new adoption did not reopen the required-coverage floor.
+10. `bash scripts/ci/run_identity_communication_transport_probes_ci.sh` now also proves the prefixed relative `repo-catalog` surface stays green for both `scripts/validate_identity_communication_transport.py` and `scripts/run_identity_communication_transport.py`, closing the cross-CWD false-red that previously surfaced only when the aggregate validator spawned the reply-channel validator from protocol-root CWD.
 
 ## 4) Closed-state audit judgment
 

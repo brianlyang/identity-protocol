@@ -362,10 +362,12 @@ def resolve_local_catalog_path(raw_local_catalog: str | Path | None, *, start: P
     if raw_path.is_absolute():
         return raw_path.resolve()
 
+    anchor_root = _normalize_anchor(start)
     workspace_root = default_workspace_root(start=start)
     protocol_root = default_protocol_home(start=start)
     candidates = _dedupe_path_candidates(
         [
+            (anchor_root / raw_path).resolve(),
             (workspace_root / raw_path).resolve(),
             (protocol_root / raw_path).resolve(),
         ]
