@@ -223,6 +223,10 @@ def component_validator_stderr_isolation_contract_from_doc(bundle_doc: Mapping[s
     return _norm_str(bundle_doc.get("component_validator_stderr_isolation_contract"))
 
 
+def component_validator_stdio_text_decoding_contract_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("component_validator_stdio_text_decoding_contract"))
+
+
 def component_validator_stdout_framing_contract_from_doc(bundle_doc: Mapping[str, Any]) -> str:
     return _norm_str(bundle_doc.get("component_validator_stdout_framing_contract"))
 

@@ -65,6 +65,7 @@ assert payload["component_validator_output_contract"] == "json_object_with_discl
 assert payload["component_validator_invocation_contract"] == "python3_repo_root_json_only", payload
 assert payload["component_validator_output_channel_contract"] == "stdout_only", payload
 assert payload["component_validator_stderr_isolation_contract"] == "stderr_captured_separate_from_stdout", payload
+assert payload["component_validator_stdio_text_decoding_contract"] == "utf8_strict_text_decode_no_locale_overlay", payload
 assert payload["component_validator_stdout_framing_contract"] == "whole_stdout_single_json_object", payload
 assert payload["component_validator_status_key_resolution_contract"] == "top_level_direct_member_only", payload
 assert payload["component_validator_status_literal_contract"] == "exact_canonical_string_literal", payload
@@ -125,6 +126,10 @@ assert all(
 ), payload
 assert all(
     row["validator_execution_timeout_contract"] == "no_local_timeout_overlay"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    row["validator_stdio_text_decoding_contract"] == "utf8_strict_text_decode_no_locale_overlay"
     for row in payload["component_status_rows"]
 ), payload
 assert all(
@@ -340,6 +345,38 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCLB-001", payload
 assert "root_corpus_law_bundle_component_validator_stderr_isolation_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT_REPO="${TMP_ROOT}/component-validator-stdio-text-decoding-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_stdio_text_decoding_contract"] = "ambient_locale_decode_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT_JSON="${TMP_ROOT}/component-validator-stdio-text-decoding-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator stdio text-decoding contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_stdio_text_decoding_contract_invalid" in payload["stale_reasons"], payload
 PY
 
 COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT_REPO="${TMP_ROOT}/component-validator-stdout-framing-contract-drift-repo"

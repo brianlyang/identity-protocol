@@ -243,6 +243,14 @@ explicit; runtime captures stderr separately from verdict-bearing stdout.
 Runtime must not merge stderr into stdout or treat a mixed stream as admitted
 validator truth.
 
+Runtime must also keep bound component validator stdio text-decoding contract
+explicit; runtime executes bound component validators with utf-8 strict text
+decode and no locale overlay.
+
+Runtime must not let ambient locale choose the decoder, substitute an
+alternate codec or replacement policy, or treat locale-shaped text coercion
+as admitted validator truth.
+
 Runtime must also keep bound component validator stdout-framing contract
 explicit; runtime parses whole stdout as a single JSON object carrying the
 disclosed status key.

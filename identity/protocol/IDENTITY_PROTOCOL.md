@@ -300,6 +300,13 @@ stdout.
 Local merging of stderr into stdout or admission of a mixed stream is
 forbidden inside the bundle.
 
+Root-law bundle rows must also keep component validator stdio text-decoding
+contract explicit; bound component validators execute with utf-8 strict text
+decode and no locale overlay.
+
+Local substitution of codec, locale-shaped decoder choice, or replacement
+policy is forbidden inside the bundle.
+
 Root-law bundle rows must also keep component validator stdout-framing
 contract explicit; bound component validator verdict is consumed only when
 whole stdout is a single JSON object carrying the disclosed status key.

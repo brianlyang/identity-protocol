@@ -34,6 +34,7 @@ from root_corpus_law_bundle_common import (
     component_validator_invocation_contract_from_doc,
     component_validator_output_channel_contract_from_doc,
     component_validator_stderr_isolation_contract_from_doc,
+    component_validator_stdio_text_decoding_contract_from_doc,
     component_validator_stdout_framing_contract_from_doc,
     component_validator_status_key_resolution_contract_from_doc,
     component_validator_status_literal_contract_from_doc,
@@ -94,6 +95,7 @@ ERR_BUNDLE = "IP-RCLB-003"
 COMPONENT_VALIDATOR_INVOCATION_CONTRACT = "python3_repo_root_json_only"
 COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT = "stdout_only"
 COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT = "stderr_captured_separate_from_stdout"
+COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT = "utf8_strict_text_decode_no_locale_overlay"
 COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT = "whole_stdout_single_json_object"
 COMPONENT_VALIDATOR_STATUS_KEY_RESOLUTION_CONTRACT = "top_level_direct_member_only"
 COMPONENT_VALIDATOR_STATUS_LITERAL_CONTRACT = "exact_canonical_string_literal"
@@ -240,6 +242,7 @@ def _component_validator_run_kwargs(
     execution_transport_contract: str,
     execution_input_contract: str,
     stderr_isolation_contract: str,
+    stdio_text_decoding_contract: str,
     execution_timeout_contract: str,
 ) -> dict[str, Any]:
     kwargs: dict[str, Any] = {
@@ -247,6 +250,8 @@ def _component_validator_run_kwargs(
         "stdout": subprocess.PIPE,
         "stderr": subprocess.PIPE,
         "text": True,
+        "encoding": "utf-8",
+        "errors": "strict",
         "shell": False,
         "stdin": subprocess.DEVNULL,
         "env": None,
@@ -256,6 +261,9 @@ def _component_validator_run_kwargs(
         kwargs["stdin"] = subprocess.DEVNULL
     if execution_environment_contract != COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT:
         kwargs["env"] = None
+    if stdio_text_decoding_contract != COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT:
+        kwargs["encoding"] = "utf-8"
+        kwargs["errors"] = "strict"
     if execution_timeout_contract != COMPONENT_VALIDATOR_EXECUTION_TIMEOUT_CONTRACT:
         kwargs["timeout"] = None
     if stderr_isolation_contract != COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT:
@@ -319,6 +327,7 @@ def _run_component_validator(
     status_literal_contract: str,
     execution_input_contract: str,
     verdict_admission_timing_contract: str,
+    stdio_text_decoding_contract: str,
     execution_timeout_contract: str,
     working_directory_contract: str,
     execution_environment_contract: str,
@@ -335,6 +344,7 @@ def _run_component_validator(
             execution_transport_contract,
             execution_input_contract,
             stderr_isolation_contract,
+            stdio_text_decoding_contract,
             execution_timeout_contract,
         ),
     )
@@ -518,6 +528,9 @@ def main() -> int:
     component_validator_stderr_isolation_contract = (
         component_validator_stderr_isolation_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_stdio_text_decoding_contract = (
+        component_validator_stdio_text_decoding_contract_from_doc(bundle_doc) if bundle_doc else ""
+    )
     component_validator_stdout_framing_contract = (
         component_validator_stdout_framing_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
@@ -564,6 +577,11 @@ def main() -> int:
         component_validator_stderr_isolation_contract
         if component_validator_stderr_isolation_contract == COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT
         else COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT
+    )
+    effective_component_validator_stdio_text_decoding_contract = (
+        component_validator_stdio_text_decoding_contract
+        if component_validator_stdio_text_decoding_contract == COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT
+        else COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT
     )
     effective_component_validator_output_contract = (
         component_validator_output_contract
@@ -872,6 +890,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_validator_stderr_isolation_contract != COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_stderr_isolation_contract_invalid")
+            error_code = ERR_REGISTRY
+        if component_validator_stdio_text_decoding_contract != COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT:
+            stale_reasons.append("root_corpus_law_bundle_component_validator_stdio_text_decoding_contract_invalid")
             error_code = ERR_REGISTRY
         if component_validator_stdout_framing_contract != COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_stdout_framing_contract_invalid")
@@ -1353,6 +1374,7 @@ def main() -> int:
                 effective_component_validator_status_literal_contract,
                 effective_component_validator_execution_input_contract,
                 effective_component_validator_verdict_admission_timing_contract,
+                effective_component_validator_stdio_text_decoding_contract,
                 effective_component_validator_execution_timeout_contract,
                 effective_component_validator_working_directory_contract,
                 effective_component_validator_execution_environment_contract,
@@ -1372,6 +1394,7 @@ def main() -> int:
                     "validator_invocation_contract": effective_component_validator_invocation_contract,
                     "validator_output_channel_contract": effective_component_validator_output_channel_contract,
                     "validator_stderr_isolation_contract": effective_component_validator_stderr_isolation_contract,
+                    "validator_stdio_text_decoding_contract": effective_component_validator_stdio_text_decoding_contract,
                     "validator_stdout_framing_contract": effective_component_validator_stdout_framing_contract,
                     "validator_status_key_resolution_contract": effective_component_validator_status_key_resolution_contract,
                     "validator_status_literal_contract": effective_component_validator_status_literal_contract,
@@ -1600,6 +1623,7 @@ def main() -> int:
         "component_validator_invocation_contract": component_validator_invocation_contract,
         "component_validator_output_channel_contract": component_validator_output_channel_contract,
         "component_validator_stderr_isolation_contract": component_validator_stderr_isolation_contract,
+        "component_validator_stdio_text_decoding_contract": component_validator_stdio_text_decoding_contract,
         "component_validator_stdout_framing_contract": component_validator_stdout_framing_contract,
         "component_validator_status_key_resolution_contract": component_validator_status_key_resolution_contract,
         "component_validator_status_literal_contract": component_validator_status_literal_contract,

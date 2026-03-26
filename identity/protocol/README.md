@@ -552,6 +552,16 @@ stdout.
 Runtime may not merge stderr into stdout or treat a mixed stream as admitted
 validator truth.
 
+Bundle component validators must also keep stdio text-decoding contract
+explicit.
+
+The admitted validator stdio text-decoding contract is utf-8 strict text
+decode with no locale overlay.
+
+Runtime may not let ambient locale choose the decoder, substitute an
+alternate codec or replacement policy, or treat locale-shaped text coercion
+as admitted validator truth.
+
 Bundle component validators must also keep stdout-framing contract explicit.
 
 The verdict-bearing machine output occupies whole stdout as a single JSON

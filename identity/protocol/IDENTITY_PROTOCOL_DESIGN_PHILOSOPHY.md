@@ -533,6 +533,16 @@ The machine world must not merge stderr into stdout, let diagnostic text
 cohabit the verdict-bearing stream, or treat a merged stream as if it were
 governed validator truth.
 
+Bundle component validator stdio text-decoding contract must stay explicit
+too.
+
+The admitted stdio text-decoding contract is utf-8 strict text decode with no
+locale overlay.
+
+The machine world must not let ambient locale choose the decoder, substitute
+an alternate codec or replacement policy, or treat locale-shaped text
+coercion as if it were governed validator truth.
+
 Bundle component validator stdout-framing contract must stay explicit too.
 
 The admitted stdout framing contract is a single JSON object occupying whole
