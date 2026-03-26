@@ -94,6 +94,7 @@ assert payload["registry_direct_stale_reason_origin_classifier_precedence_policy
 assert payload["registry_direct_stale_reason_unclassified_policy"] == "fail_closed", payload
 assert payload["component_validator_observation_reason_admission_policy"] == "parse_status_nonzero_rc_or_nonpass_only_before_bundle_violation_projection", payload
 assert payload["component_validator_observation_reason_classifier_precedence_policy"] == "parse_status_preempts_nonzero_rc_preempts_nonpass_status_preempts_explicit_non_execution_exclusion_preempts_prefixed_observation_family_ontology_drift_else_not_applicable", payload
+assert payload["component_validator_observation_reason_exclusion_origin_policy"] == "component_validator_missing_or_component_status_row_coverage_incomplete_only_before_bundle_violation_projection", payload
 assert payload["component_validator_observation_reason_exclusion_policy"] == "non_execution_bundle_rows_remain_outside_observation_reason_ontology", payload
 assert payload["component_validator_observation_reason_source_policy"] == "bundle_violation_rows_only_before_violation_projection", payload
 assert payload["component_validator_observation_reason_partition_policy"] == "bundle_violation_rows_partitioned_into_admitted_excluded_or_unknown_exactly_once_before_violation_projection", payload
@@ -1142,6 +1143,42 @@ assert payload["component_validator_observation_reason_unknown_count"] == 0, pay
 assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
 PY
 
+COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_REPO="${TMP_ROOT}/component-validator-observation-reason-exclusion-origin-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_observation_reason_exclusion_origin_policy"] = "any_component_validator_family_reason_may_be_rebucketed_as_non_execution_exclusion"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_JSON="${TMP_ROOT}/component-validator-observation-reason-exclusion-origin-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator observation reason exclusion-origin drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_exclusion_origin_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_observation_reason_exclusion_origin_policy"] == "any_component_validator_family_reason_may_be_rebucketed_as_non_execution_exclusion", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+PY
+
 COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_REPO="${TMP_ROOT}/component-validator-observation-reason-classifier-precedence-drift-repo"
 mirror_repo "${COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_REPO}"
 python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
@@ -1485,7 +1522,7 @@ assert payload["component_validator_observation_reason_counts"]["parse_status"] 
 assert payload["component_validator_observation_reason_counts"]["nonzero_rc"] >= 1, payload
 assert payload["component_validator_observation_reason_counts"]["nonpass_status"] == 0, payload
 assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
-assert payload["component_validator_observation_reason_non_applicable_count"] >= 1, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 2, payload
 assert payload["component_validator_observation_reason_partition_total_count"] == payload["bundle_violation_count"], payload
 assert payload["component_status_row_count"] == payload["component_count"] - 1, payload
 assert payload["bundle_violation_count"] >= 2, payload

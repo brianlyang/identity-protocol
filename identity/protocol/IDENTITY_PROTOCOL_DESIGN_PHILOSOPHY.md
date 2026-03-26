@@ -784,6 +784,16 @@ classification preempts explicit non-execution row exclusion, explicit
 non-execution row exclusion preempts prefixed observation-family
 ontology drift, and otherwise classification remains not-applicable.
 
+Bundle component-validator observation-reason exclusion-origin policy
+must stay explicit too.
+
+The admitted excluded non-observation rows are component-validator
+missing and component-status-row coverage incomplete, both before
+bundle-violation projection.
+
+Observation reasons and prefixed observation-family ontology drift must
+not be silently re-bucketed as excluded non-observation rows.
+
 Non-execution bundle rows must remain outside component-validator
 observation ontology rather than being silently re-bucketed as
 observation reasons.

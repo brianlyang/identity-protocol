@@ -52,6 +52,7 @@ from root_corpus_law_bundle_common import (
     component_validator_observation_continuity_policy_from_doc,
     component_validator_observation_reason_admission_policy_from_doc,
     component_validator_observation_reason_classifier_precedence_policy_from_doc,
+    component_validator_observation_reason_exclusion_origin_policy_from_doc,
     component_validator_observation_reason_exclusion_policy_from_doc,
     component_validator_observation_reason_partition_policy_from_doc,
     component_validator_observation_reason_source_policy_from_doc,
@@ -170,6 +171,9 @@ COMPONENT_VALIDATOR_OBSERVATION_REASON_ADMISSION_POLICY = (
 )
 COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_POLICY = (
     "parse_status_preempts_nonzero_rc_preempts_nonpass_status_preempts_explicit_non_execution_exclusion_preempts_prefixed_observation_family_ontology_drift_else_not_applicable"
+)
+COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_POLICY = (
+    "component_validator_missing_or_component_status_row_coverage_incomplete_only_before_bundle_violation_projection"
 )
 COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY = (
     "non_execution_bundle_rows_remain_outside_observation_reason_ontology"
@@ -346,12 +350,18 @@ def _direct_stale_reason_origin_counts(
 def _classify_component_validator_observation_reason(
     reason: str,
     precedence_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_POLICY,
+    exclusion_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_POLICY,
 ) -> str:
     if (
         precedence_policy
         != COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_POLICY
     ):
         precedence_policy = COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_POLICY
+    if (
+        exclusion_origin_policy
+        != COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_POLICY
+    ):
+        exclusion_origin_policy = COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_POLICY
     if reason in {
         "validator_output_missing",
         "validator_output_invalid_json",
@@ -364,7 +374,7 @@ def _classify_component_validator_observation_reason(
         return "nonzero_rc"
     if reason == "component_status_not_pass_required":
         return "nonpass_status"
-    if reason in {
+    if exclusion_origin_policy == COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_POLICY and reason in {
         "component_status_row_coverage_incomplete",
         "component_validator_missing",
     }:
@@ -381,6 +391,7 @@ def _classify_component_validator_observation_reason(
 def _component_validator_observation_reason_counts(
     bundle_violations: list[dict[str, Any]],
     precedence_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_POLICY,
+    exclusion_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_POLICY,
 ) -> tuple[dict[str, int], int, int]:
     counts = {
         "parse_status": 0,
@@ -391,7 +402,11 @@ def _component_validator_observation_reason_counts(
     non_applicable_count = 0
     for row in bundle_violations:
         reason = str(row.get("reason") or "")
-        category = _classify_component_validator_observation_reason(reason, precedence_policy)
+        category = _classify_component_validator_observation_reason(
+            reason,
+            precedence_policy,
+            exclusion_origin_policy,
+        )
         if category == "not_applicable":
             non_applicable_count += 1
             continue
@@ -803,6 +818,11 @@ def main() -> int:
         if bundle_doc
         else ""
     )
+    component_validator_observation_reason_exclusion_origin_policy = (
+        component_validator_observation_reason_exclusion_origin_policy_from_doc(bundle_doc)
+        if bundle_doc
+        else ""
+    )
     component_validator_observation_reason_exclusion_policy = (
         component_validator_observation_reason_exclusion_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
@@ -946,6 +966,14 @@ def main() -> int:
             == COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_POLICY
         )
         else COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_POLICY
+    )
+    effective_component_validator_observation_reason_exclusion_origin_policy = (
+        component_validator_observation_reason_exclusion_origin_policy
+        if (
+            component_validator_observation_reason_exclusion_origin_policy
+            == COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_POLICY
+        )
+        else COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_POLICY
     )
     effective_component_validator_observation_reason_exclusion_policy = (
         component_validator_observation_reason_exclusion_policy
@@ -1404,6 +1432,14 @@ def main() -> int:
         ):
             stale_reasons.append(
                 "root_corpus_law_bundle_component_validator_observation_reason_classifier_precedence_policy_invalid"
+            )
+            error_code = ERR_REGISTRY
+        if (
+            component_validator_observation_reason_exclusion_origin_policy
+            != COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_POLICY
+        ):
+            stale_reasons.append(
+                "root_corpus_law_bundle_component_validator_observation_reason_exclusion_origin_policy_invalid"
             )
             error_code = ERR_REGISTRY
         if (
@@ -2119,6 +2155,7 @@ def main() -> int:
     ) = _component_validator_observation_reason_counts(
         bundle_violations,
         effective_component_validator_observation_reason_classifier_precedence_policy,
+        effective_component_validator_observation_reason_exclusion_origin_policy,
     )
     component_validator_observation_reason_partition_total_count = (
         sum(component_validator_observation_reason_counts.values())
@@ -2390,6 +2427,9 @@ def main() -> int:
         ),
         "component_validator_observation_reason_classifier_precedence_policy": (
             component_validator_observation_reason_classifier_precedence_policy
+        ),
+        "component_validator_observation_reason_exclusion_origin_policy": (
+            component_validator_observation_reason_exclusion_origin_policy
         ),
         "component_validator_observation_reason_exclusion_policy": (
             component_validator_observation_reason_exclusion_policy
