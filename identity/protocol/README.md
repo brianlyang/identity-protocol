@@ -569,6 +569,14 @@ verdict-bearing JSON object.
 Runtime may not search nested objects, alias keys, pointer paths, or other
 local convenience structures to recover missing status truth.
 
+Bundle component validators must also keep status-literal contract explicit.
+
+The disclosed status value is admitted only as the exact canonical string
+literal.
+
+Runtime may not trim whitespace, fold case, coerce non-string values, or map
+alternate literals into admitted status truth.
+
 Bundle component validators must also keep execution-input contract explicit.
 
 The admitted validator execution input is devnull-backed noninteractive stdin.

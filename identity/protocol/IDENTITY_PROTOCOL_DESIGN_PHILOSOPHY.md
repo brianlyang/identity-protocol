@@ -552,6 +552,14 @@ alias fields, pointer paths, or other local convenience structures to
 reconstruct status truth when the disclosed status key is not present as a
 direct top-level member.
 
+Bundle component validator status-literal contract must stay explicit too.
+
+The admitted status-literal contract is exact canonical string literal.
+
+The machine world must not trim whitespace, fold case, coerce non-string
+values, or map alternate literals onto the admitted status truth when the
+validator did not emit the exact canonical status token.
+
 Bundle component validator execution-input contract must stay explicit too.
 
 The admitted execution-input contract is devnull-backed noninteractive stdin.

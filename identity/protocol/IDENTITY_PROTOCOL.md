@@ -314,6 +314,13 @@ direct top-level member of the admitted verdict object.
 Local search across nested objects, alias keys, pointer paths, or other
 convenience structures is forbidden inside the bundle.
 
+Root-law bundle rows must also keep component validator status-literal
+contract explicit; the disclosed status value is admitted only as the exact
+canonical string literal.
+
+Local trimming, case-folding, non-string coercion, or alternate-literal
+mapping is forbidden inside the bundle.
+
 Root-law bundle rows must also keep component validator execution-input
 contract explicit; bound component validators execute with devnull-backed
 noninteractive stdin.

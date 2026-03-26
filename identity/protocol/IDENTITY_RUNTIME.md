@@ -257,6 +257,13 @@ top-level member of the admitted verdict object.
 Runtime must not search nested objects, alias keys, pointer paths, or other
 local convenience structures to reconstruct missing status truth.
 
+Runtime must also keep bound component validator status-literal contract
+explicit; runtime admits the disclosed status value only as the exact
+canonical string literal.
+
+Runtime must not trim whitespace, fold case, coerce non-string values, or map
+alternate literals into admitted status truth.
+
 Runtime must also keep bound component validator execution-input contract
 explicit; runtime executes bound component validators with devnull-backed
 noninteractive stdin.

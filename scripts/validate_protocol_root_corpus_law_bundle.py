@@ -36,6 +36,7 @@ from root_corpus_law_bundle_common import (
     component_validator_stderr_isolation_contract_from_doc,
     component_validator_stdout_framing_contract_from_doc,
     component_validator_status_key_resolution_contract_from_doc,
+    component_validator_status_literal_contract_from_doc,
     component_validator_execution_input_contract_from_doc,
     component_validator_verdict_admission_timing_contract_from_doc,
     component_validator_working_directory_contract_from_doc,
@@ -93,6 +94,7 @@ COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT = "stdout_only"
 COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT = "stderr_captured_separate_from_stdout"
 COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT = "whole_stdout_single_json_object"
 COMPONENT_VALIDATOR_STATUS_KEY_RESOLUTION_CONTRACT = "top_level_direct_member_only"
+COMPONENT_VALIDATOR_STATUS_LITERAL_CONTRACT = "exact_canonical_string_literal"
 COMPONENT_VALIDATOR_EXECUTION_INPUT_CONTRACT = "stdin_devnull_noninteractive"
 COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT = "completed_process_post_exit_only"
 COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT = "repo_root"
@@ -276,14 +278,21 @@ def _resolve_component_validator_status(
     payload: dict[str, Any],
     status_key: str,
     status_key_resolution_contract: str,
+    status_literal_contract: str,
 ) -> tuple[str, str]:
     if status_key_resolution_contract == COMPONENT_VALIDATOR_STATUS_KEY_RESOLUTION_CONTRACT:
         if status_key not in payload:
             return "", "validator_status_key_missing"
-        return str(payload.get(status_key) or ""), ""
+        value = payload.get(status_key)
+        if status_literal_contract == COMPONENT_VALIDATOR_STATUS_LITERAL_CONTRACT and not isinstance(value, str):
+            return "", "validator_status_literal_not_string"
+        return str(value or ""), ""
     if status_key not in payload:
         return "", "validator_status_key_missing"
-    return str(payload.get(status_key) or ""), ""
+    value = payload.get(status_key)
+    if status_literal_contract == COMPONENT_VALIDATOR_STATUS_LITERAL_CONTRACT and not isinstance(value, str):
+        return "", "validator_status_literal_not_string"
+    return str(value or ""), ""
 
 
 def _run_component_validator(
@@ -295,6 +304,7 @@ def _run_component_validator(
     stderr_isolation_contract: str,
     stdout_framing_contract: str,
     status_key_resolution_contract: str,
+    status_literal_contract: str,
     execution_input_contract: str,
     verdict_admission_timing_contract: str,
     working_directory_contract: str,
@@ -326,6 +336,7 @@ def _run_component_validator(
         payload,
         status_key,
         status_key_resolution_contract,
+        status_literal_contract,
     )
     if status_error:
         return proc.returncode, payload, status_error
@@ -497,6 +508,9 @@ def main() -> int:
     component_validator_status_key_resolution_contract = (
         component_validator_status_key_resolution_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_status_literal_contract = (
+        component_validator_status_literal_contract_from_doc(bundle_doc) if bundle_doc else ""
+    )
     component_validator_execution_input_contract = (
         component_validator_execution_input_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
@@ -543,6 +557,11 @@ def main() -> int:
         component_validator_status_key_resolution_contract
         if component_validator_status_key_resolution_contract == COMPONENT_VALIDATOR_STATUS_KEY_RESOLUTION_CONTRACT
         else COMPONENT_VALIDATOR_STATUS_KEY_RESOLUTION_CONTRACT
+    )
+    effective_component_validator_status_literal_contract = (
+        component_validator_status_literal_contract
+        if component_validator_status_literal_contract == COMPONENT_VALIDATOR_STATUS_LITERAL_CONTRACT
+        else COMPONENT_VALIDATOR_STATUS_LITERAL_CONTRACT
     )
     effective_component_validator_execution_input_contract = (
         component_validator_execution_input_contract
@@ -827,6 +846,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_validator_status_key_resolution_contract != COMPONENT_VALIDATOR_STATUS_KEY_RESOLUTION_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_status_key_resolution_contract_invalid")
+            error_code = ERR_REGISTRY
+        if component_validator_status_literal_contract != COMPONENT_VALIDATOR_STATUS_LITERAL_CONTRACT:
+            stale_reasons.append("root_corpus_law_bundle_component_validator_status_literal_contract_invalid")
             error_code = ERR_REGISTRY
         if component_validator_execution_input_contract != COMPONENT_VALIDATOR_EXECUTION_INPUT_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_execution_input_contract_invalid")
@@ -1290,6 +1312,7 @@ def main() -> int:
                 effective_component_validator_stderr_isolation_contract,
                 effective_component_validator_stdout_framing_contract,
                 effective_component_validator_status_key_resolution_contract,
+                effective_component_validator_status_literal_contract,
                 effective_component_validator_execution_input_contract,
                 effective_component_validator_verdict_admission_timing_contract,
                 effective_component_validator_working_directory_contract,
@@ -1311,6 +1334,7 @@ def main() -> int:
                     "validator_stderr_isolation_contract": effective_component_validator_stderr_isolation_contract,
                     "validator_stdout_framing_contract": effective_component_validator_stdout_framing_contract,
                     "validator_status_key_resolution_contract": effective_component_validator_status_key_resolution_contract,
+                    "validator_status_literal_contract": effective_component_validator_status_literal_contract,
                     "validator_execution_input_contract": effective_component_validator_execution_input_contract,
                     "validator_verdict_admission_timing_contract": effective_component_validator_verdict_admission_timing_contract,
                     "validator_working_directory_contract": effective_component_validator_working_directory_contract,
@@ -1536,6 +1560,7 @@ def main() -> int:
         "component_validator_stderr_isolation_contract": component_validator_stderr_isolation_contract,
         "component_validator_stdout_framing_contract": component_validator_stdout_framing_contract,
         "component_validator_status_key_resolution_contract": component_validator_status_key_resolution_contract,
+        "component_validator_status_literal_contract": component_validator_status_literal_contract,
         "component_validator_execution_input_contract": component_validator_execution_input_contract,
         "component_validator_verdict_admission_timing_contract": component_validator_verdict_admission_timing_contract,
         "component_validator_working_directory_contract": component_validator_working_directory_contract,
