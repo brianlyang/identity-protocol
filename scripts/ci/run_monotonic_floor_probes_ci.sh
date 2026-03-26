@@ -114,6 +114,18 @@ promotion_contract = {
     "validator": "scripts/validate_promotion_pipeline.py",
 }
 
+phase_contract = {
+    "required": True,
+    "contract_id": "rq_010_phase_a_bootstrap_before_strict_contract_v1",
+    "validator": "scripts/validate_phase_bootstrap_before_strict.py",
+}
+
+fallback_contract = {
+    "required": True,
+    "contract_id": "rq_022_fallback_taxonomy_normalization_contract_v1",
+    "validator": "scripts/validate_fallback_taxonomy_normalization.py",
+}
+
 
 def compute_promotion_decision_hash(doc: dict[str, object]) -> str:
     base = {
@@ -128,6 +140,15 @@ def compute_promotion_decision_hash(doc: dict[str, object]) -> str:
     return hashlib.sha256(
         json.dumps(base, ensure_ascii=False, sort_keys=True).encode("utf-8")
     ).hexdigest()
+
+
+def build_probe_runtime_report_path(pack_root: Path, identity_id: str, report_role: str) -> Path:
+    return (
+        pack_root
+        / "runtime"
+        / "reports"
+        / f"identity-upgrade-exec-{identity_id}-{report_role}.json"
+    )
 
 (probe_floor_pack / "CURRENT_TASK.json").write_text(
     json.dumps(
@@ -148,6 +169,8 @@ def compute_promotion_decision_hash(doc: dict[str, object]) -> str:
             "multimodal_plugin_enforcement_contract_v1": multimodal_contract,
             "outlet_regression_matrix_contract_v1": outlet_contract,
             "status_promotion_evidence_contract_v1": promotion_contract,
+            "phase_bootstrap_before_strict_contract_v1": phase_contract,
+            "fallback_taxonomy_normalization_contract_v1": fallback_contract,
             "reasoning_loop_failclose_contract_v1": reasoning_contract_mm,
         },
         ensure_ascii=False,
@@ -181,11 +204,15 @@ def compute_promotion_decision_hash(doc: dict[str, object]) -> str:
     encoding="utf-8",
 )
 
-pointer_report_path = (
-    probe_mm_pack / "runtime" / "reports" / "identity-upgrade-exec-probe-mm-1700000000.json"
+pointer_report_path = build_probe_runtime_report_path(
+    probe_mm_pack,
+    "probe-mm",
+    "pointer-selected-upgrade-report",
 )
-explicit_report_path = (
-    probe_mm_pack / "runtime" / "reports" / "identity-upgrade-exec-probe-mm-1700000001.json"
+explicit_report_path = build_probe_runtime_report_path(
+    probe_mm_pack,
+    "probe-mm",
+    "explicit-override-upgrade-report",
 )
 explicit_receipt_path = (
     probe_mm_pack / "runtime" / "reports" / "promotion-evidence-explicit-receipt.json"
@@ -231,6 +258,8 @@ explicit_report_doc = {
     "reviewer_role": "protocol_auditor",
     "reviewer_signature_ref": "runtime/reports/promotion/explicit-report-review.sig",
     "evidence_bundle_refs": ["runtime/reports/promotion/explicit-report-evidence.json"],
+    "phase_a_refresh_applied": True,
+    "phase_b_strict_revalidate_status": "PASS_REQUIRED",
     "run_id": "identity-upgrade-exec-probe-mm-explicit",
     "check_results": [
         {
@@ -529,6 +558,50 @@ elif name == "promotion_explicit_receipt_override_pass":
         raise SystemExit("promotion_explicit_receipt_override_pass: pointer resolution mismatch")
     if str(doc.get("promotion_evidence_kind", "")).strip() != "receipt":
         raise SystemExit("promotion_explicit_receipt_override_pass: evidence kind mismatch")
+elif name == "phase_pointer_selection_pass":
+    if rc != 0:
+        raise SystemExit("phase_pointer_selection_pass: expected rc=0")
+    if str(doc.get("phase_bootstrap_before_strict_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("phase_pointer_selection_pass: status mismatch")
+    if str(doc.get("report_selection_mode", "")).strip() != "active_execution_pointer":
+        raise SystemExit("phase_pointer_selection_pass: selection mode mismatch")
+    if str(doc.get("report_selected_authority_class", "")).strip() != "active_execution_pointer_pack_local_report":
+        raise SystemExit("phase_pointer_selection_pass: authority class mismatch")
+    if str(doc.get("report_pointer_resolution_mode", "")).strip() != "pointer_candidate_root_report":
+        raise SystemExit("phase_pointer_selection_pass: pointer resolution mismatch")
+elif name == "phase_explicit_override_pass":
+    if rc != 0:
+        raise SystemExit("phase_explicit_override_pass: expected rc=0")
+    if str(doc.get("phase_bootstrap_before_strict_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("phase_explicit_override_pass: status mismatch")
+    if str(doc.get("report_selection_mode", "")).strip() != "explicit_report_override":
+        raise SystemExit("phase_explicit_override_pass: selection mode mismatch")
+    if str(doc.get("report_selected_authority_class", "")).strip() != "explicit_report_override":
+        raise SystemExit("phase_explicit_override_pass: authority class mismatch")
+    if str(doc.get("report_pointer_resolution_mode", "")).strip() != "explicit_report_override":
+        raise SystemExit("phase_explicit_override_pass: pointer resolution mismatch")
+elif name == "fallback_pointer_selection_pass":
+    if rc != 0:
+        raise SystemExit("fallback_pointer_selection_pass: expected rc=0")
+    if str(doc.get("fallback_taxonomy_normalization_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("fallback_pointer_selection_pass: status mismatch")
+    if str(doc.get("report_selection_mode", "")).strip() != "active_execution_pointer":
+        raise SystemExit("fallback_pointer_selection_pass: selection mode mismatch")
+    if str(doc.get("report_selected_authority_class", "")).strip() != "active_execution_pointer_pack_local_report":
+        raise SystemExit("fallback_pointer_selection_pass: authority class mismatch")
+    if str(doc.get("report_pointer_resolution_mode", "")).strip() != "pointer_candidate_root_report":
+        raise SystemExit("fallback_pointer_selection_pass: pointer resolution mismatch")
+elif name == "fallback_explicit_override_pass":
+    if rc != 0:
+        raise SystemExit("fallback_explicit_override_pass: expected rc=0")
+    if str(doc.get("fallback_taxonomy_normalization_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("fallback_explicit_override_pass: status mismatch")
+    if str(doc.get("report_selection_mode", "")).strip() != "explicit_report_override":
+        raise SystemExit("fallback_explicit_override_pass: selection mode mismatch")
+    if str(doc.get("report_selected_authority_class", "")).strip() != "explicit_report_override":
+        raise SystemExit("fallback_explicit_override_pass: authority class mismatch")
+    if str(doc.get("report_pointer_resolution_mode", "")).strip() != "explicit_report_override":
+        raise SystemExit("fallback_explicit_override_pass: pointer resolution mismatch")
 else:
     raise SystemExit(f"unknown probe name: {name}")
 PY
@@ -707,6 +780,38 @@ run_probe promotion_explicit_receipt_override_pass \
   --identity-id probe-mm \
   --operation validate \
   --receipt "${EXPLICIT_RECEIPT_PATH}" \
+  --json-only
+
+run_probe phase_pointer_selection_pass \
+  python3 scripts/validate_phase_bootstrap_before_strict.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id probe-mm \
+  --operation validate \
+  --json-only
+
+run_probe phase_explicit_override_pass \
+  python3 scripts/validate_phase_bootstrap_before_strict.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id probe-mm \
+  --operation validate \
+  --report "${EXPLICIT_REPORT_PATH}" \
+  --json-only
+
+run_probe fallback_pointer_selection_pass \
+  python3 scripts/validate_fallback_taxonomy_normalization.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id probe-mm \
+  --operation validate \
+  --fallback-reason protocol_trigger_not_met \
+  --json-only
+
+run_probe fallback_explicit_override_pass \
+  python3 scripts/validate_fallback_taxonomy_normalization.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id probe-mm \
+  --operation validate \
+  --report "${EXPLICIT_REPORT_PATH}" \
+  --fallback-reason protocol_trigger_not_met \
   --json-only
 
 python3 - <<'PY' "${RESULT_ROOT}" "${MANIFEST_PATH}"

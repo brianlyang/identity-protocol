@@ -14,10 +14,11 @@ from blocker_taxonomy_common import (
 )
 from response_stamp_common import FALLBACK_TAXONOMY_VERSION, normalize_fallback_taxonomy_class
 from tool_vendor_governance_common import (
+    build_identity_upgrade_report_selection_projection,
     contract_required,
-    latest_identity_upgrade_report,
     load_json,
     load_yaml,
+    resolve_identity_upgrade_report_selection,
     resolve_pack_and_task,
 )
 
@@ -139,14 +140,18 @@ def _normalize_blocker_types(raw_blockers: list[Any]) -> list[str]:
     return _dedupe_keep_order(normalized)
 
 
-def _resolve_report_path(pack_path: Path, identity_id: str, explicit_report: str) -> Path | None:
-    if explicit_report.strip():
-        p = Path(explicit_report).expanduser().resolve()
-        return p if p.exists() and p.is_file() else None
-    latest = latest_identity_upgrade_report(identity_id, pack_path)
-    if latest and latest.exists():
-        return latest.resolve()
-    return None
+def _resolve_report_selection(pack_path: Path, identity_id: str, explicit_report: str) -> dict[str, Any]:
+    resolution = resolve_identity_upgrade_report_selection(
+        identity_id,
+        pack_path,
+        explicit_report=explicit_report,
+    )
+    payload = build_identity_upgrade_report_selection_projection(
+        resolution,
+        field_prefix="report",
+    )
+    payload["_selected_report_path"] = resolution.selected_report
+    return payload
 
 
 def main() -> int:
@@ -191,6 +196,11 @@ def main() -> int:
         "error_code": "",
         "normalization_error_code": "",
         "taxonomy_version": FALLBACK_TAXONOMY_VERSION,
+        "report_selected_path": "",
+        "report_selection_mode": "",
+        "report_selected_authority_class": "",
+        "report_pointer_resolution_mode": "",
+        "report_pointer_path": "",
         "report_path": "",
         "evidence_ref": "",
         "fallback_reason_row_count": 0,
@@ -212,7 +222,11 @@ def main() -> int:
     required = contract_required(contract) if contract else False
     auto_required = False
 
-    report_path = _resolve_report_path(pack_path, args.identity_id, args.report)
+    report_selection = _resolve_report_selection(pack_path, args.identity_id, args.report)
+    payload.update({k: v for k, v in report_selection.items() if not k.startswith("_")})
+    report_path = report_selection.get("_selected_report_path")
+    if report_path is not None:
+        payload["report_selected_path"] = str(report_path)
     explicit_current_round_linked = bool(args.fallback_reason or args.report.strip())
     if explicit_current_round_linked:
         required = True

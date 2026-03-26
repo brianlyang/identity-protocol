@@ -6,7 +6,13 @@ import json
 from pathlib import Path
 from typing import Any
 
-from tool_vendor_governance_common import contract_required, latest_identity_upgrade_report, load_json, resolve_pack_and_task
+from tool_vendor_governance_common import (
+    build_identity_upgrade_report_selection_projection,
+    contract_required,
+    load_json,
+    resolve_identity_upgrade_report_selection,
+    resolve_pack_and_task,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -46,6 +52,20 @@ def _load_report(path: Path) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
+def _resolve_report_selection(pack_path: Path, identity_id: str, explicit_report: str) -> dict[str, Any]:
+    resolution = resolve_identity_upgrade_report_selection(
+        identity_id,
+        pack_path,
+        explicit_report=explicit_report,
+    )
+    payload = build_identity_upgrade_report_selection_projection(
+        resolution,
+        field_prefix="report",
+    )
+    payload["_selected_report_path"] = resolution.selected_report
+    return payload
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate phase-A bootstrap before strict contract (RQ-010).")
     ap.add_argument("--catalog", required=True)
@@ -77,16 +97,8 @@ def main() -> int:
     if args.force_required:
         required = True
 
-    report_path: Path | None = None
-    if args.report.strip():
-        candidate = Path(args.report).expanduser().resolve()
-        if candidate.exists() and candidate.is_file():
-            report_path = candidate
-    else:
-        latest = latest_identity_upgrade_report(args.identity_id, pack_path)
-        if latest and latest.exists():
-            report_path = latest.resolve()
-
+    report_selection = _resolve_report_selection(pack_path, args.identity_id, args.report)
+    report_path = report_selection.get("_selected_report_path")
     report_doc = _load_report(report_path) if report_path else None
     phase_a_applied = bool((report_doc or {}).get("phase_a_refresh_applied", False))
     phase_b_status = str((report_doc or {}).get("phase_b_strict_revalidate_status", "")).strip().upper()
@@ -101,6 +113,11 @@ def main() -> int:
         "auto_required_signal": bool(required and args.operation in STRICT_OPERATIONS),
         "producer_readiness": report_doc is not None,
         "requiredization_current_round_linked": bool(report_doc),
+        "report_selected_path": "",
+        "report_selection_mode": "",
+        "report_selected_authority_class": "",
+        "report_pointer_resolution_mode": "",
+        "report_pointer_path": "",
         "phase_bootstrap_before_strict_status": STATUS_SKIPPED_NOT_REQUIRED,
         "error_code": "",
         "report_path": str(report_path) if report_path else "",
@@ -110,6 +127,9 @@ def main() -> int:
         "evidence_ref": str(report_path) if report_path else "",
         "stale_reasons": [],
     }
+    payload.update({k: v for k, v in report_selection.items() if not k.startswith("_")})
+    if report_path is not None:
+        payload["report_selected_path"] = str(report_path)
 
     if not required:
         payload["stale_reasons"] = ["required_contract_disabled_or_missing"]

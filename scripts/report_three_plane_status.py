@@ -3951,6 +3951,16 @@ def _instance_plane_status(
             "error_code": phase_bootstrap_payload.get("error_code", ""),
             "required_contract": phase_bootstrap_payload.get("required_contract"),
             "auto_required_signal": phase_bootstrap_payload.get("auto_required_signal"),
+            "report_selected_path": phase_bootstrap_payload.get("report_selected_path", ""),
+            "report_selection_mode": phase_bootstrap_payload.get("report_selection_mode", ""),
+            "report_selected_authority_class": phase_bootstrap_payload.get(
+                "report_selected_authority_class", ""
+            ),
+            "report_pointer_resolution_mode": phase_bootstrap_payload.get(
+                "report_pointer_resolution_mode", ""
+            ),
+            "report_pointer_path": phase_bootstrap_payload.get("report_pointer_path", ""),
+            "report_path": phase_bootstrap_payload.get("report_path", ""),
             "phase_a_refresh_applied": phase_bootstrap_payload.get("phase_a_refresh_applied"),
             "phase_b_strict_revalidate_status": phase_bootstrap_payload.get("phase_b_strict_revalidate_status", ""),
             "phase_trace_status": phase_bootstrap_payload.get("phase_trace_status", ""),
@@ -4330,6 +4340,16 @@ def _instance_plane_status(
             "normalization_error_code": fallback_norm_payload.get("normalization_error_code", ""),
             "required_contract": fallback_norm_payload.get("required_contract"),
             "auto_required_signal": fallback_norm_payload.get("auto_required_signal"),
+            "report_selected_path": fallback_norm_payload.get("report_selected_path", ""),
+            "report_selection_mode": fallback_norm_payload.get("report_selection_mode", ""),
+            "report_selected_authority_class": fallback_norm_payload.get(
+                "report_selected_authority_class", ""
+            ),
+            "report_pointer_resolution_mode": fallback_norm_payload.get(
+                "report_pointer_resolution_mode", ""
+            ),
+            "report_pointer_path": fallback_norm_payload.get("report_pointer_path", ""),
+            "report_path": fallback_norm_payload.get("report_path", ""),
             "taxonomy_version": fallback_norm_payload.get("taxonomy_version", ""),
             "fallback_reason_row_count": fallback_norm_payload.get("fallback_reason_row_count"),
             "fallback_reason_rows": fallback_norm_payload.get("fallback_reason_rows", []),
