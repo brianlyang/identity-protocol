@@ -57,6 +57,8 @@ run_global_protocol_gates() {
   run_cmd bash scripts/ci/run_identity_update_preflight_terminal_truth_split_probes_ci.sh
   run_cmd bash scripts/ci/run_terminal_truth_boundary_projection_probes_ci.sh
   run_cmd bash scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh
+  run_cmd bash scripts/ci/run_identity_health_report_probes_ci.sh
+  run_cmd bash scripts/ci/run_identity_heal_replay_closure_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_broadcast_delivery_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_communication_transport_probes_ci.sh
   run_cmd bash scripts/ci/run_identity_transport_fleet_closure_convergence_probes_ci.sh

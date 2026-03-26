@@ -33,6 +33,24 @@ def _read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _clean_str(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _closure_projection(doc: dict[str, Any]) -> dict[str, Any]:
+    closure = doc.get("experience_writeback_closure")
+    if not isinstance(closure, dict):
+        closure = {}
+    return {
+        "status": _clean_str(closure.get("status")).upper(),
+        "validation_status": _clean_str(closure.get("validation_status")).upper(),
+        "report_run_id": _clean_str(closure.get("report_run_id")),
+        "writeback_status": _clean_str(closure.get("writeback_status")).upper(),
+        "writeback_rule_id": _clean_str(closure.get("writeback_rule_id")),
+        "stale_reasons": [str(x).strip() for x in (closure.get("stale_reasons") or []) if str(x).strip()],
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate health->heal->post-validate replay closure refs.")
     ap.add_argument("--identity-id", required=True)
@@ -106,6 +124,20 @@ def main() -> int:
             error_code = error_code or ERR_MISSING
 
     post_doc: dict[str, Any] = {}
+    health_projection: dict[str, Any] = {}
+    post_projection: dict[str, Any] = {}
+    if health_path and health_path.exists():
+        try:
+            health_doc = _read_json(health_path)
+        except Exception:
+            stale_reasons.append("health_report_json_invalid")
+            error_code = error_code or ERR_MISSING
+            health_doc = {}
+        if health_doc:
+            health_projection = _closure_projection(health_doc)
+            if not health_projection["status"] or not health_projection["validation_status"]:
+                stale_reasons.append("health_report_experience_writeback_projection_missing")
+                error_code = error_code or ERR_REF_MISMATCH
     if post_path and post_path.exists():
         try:
             post_doc = _read_json(post_path)
@@ -114,8 +146,15 @@ def main() -> int:
             error_code = error_code or ERR_POST_VALIDATE
     if post_doc:
         post_status = str(post_doc.get("overall_status", "")).strip().upper()
+        post_projection = _closure_projection(post_doc)
+        if not post_projection["status"] or not post_projection["validation_status"]:
+            stale_reasons.append("post_validate_experience_writeback_projection_missing")
+            error_code = error_code or ERR_POST_VALIDATE
         if post_status == "FAIL":
             stale_reasons.append("post_validate_health_still_fail")
+            error_code = error_code or ERR_POST_VALIDATE
+        if post_projection.get("status") == "FAIL" or post_projection.get("validation_status") == "FAIL_REQUIRED":
+            stale_reasons.append("post_validate_experience_writeback_still_fail")
             error_code = error_code or ERR_POST_VALIDATE
         # actor-risk closure requires no FAIL rows in actor-risk quartet
         for field in (
@@ -136,6 +175,10 @@ def main() -> int:
         "health_report_ref": health_ref,
         "heal_report_ref": heal_ref,
         "post_validate_ref": post_ref,
+        "health_report_experience_writeback_closure_status": health_projection.get("status", ""),
+        "health_report_experience_writeback_validation_status": health_projection.get("validation_status", ""),
+        "post_validate_experience_writeback_closure_status": post_projection.get("status", ""),
+        "post_validate_experience_writeback_validation_status": post_projection.get("validation_status", ""),
         "heal_replay_closure_status": "PASS_REQUIRED" if ok else "FAIL_REQUIRED",
         "error_code": "" if ok else error_code,
         "stale_reasons": stale_reasons,
@@ -145,4 +188,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
