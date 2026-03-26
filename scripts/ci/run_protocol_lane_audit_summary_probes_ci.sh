@@ -38,7 +38,13 @@ render_summary_expect_rc() {
 create_temp_workspace() {
   local name="$1"
   local ws_root="${TMP_ROOT}/${name}-workspace"
-  git clone --quiet --local "${REPO_ROOT}" "${ws_root}/identity-protocol-local" >/dev/null 2>&1
+  python3 "${REPO_ROOT}/scripts/materialize_temp_repo_workspace.py" \
+    --source-repo "${REPO_ROOT}" \
+    --target-repo "${ws_root}/identity-protocol-local" \
+    --history-mode clone_with_worktree_overlay \
+    --create-baseline-commit \
+    --baseline-message "probe: current worktree baseline" \
+    --json-only >/dev/null
   ln -s "${WORKSPACE_ROOT}/.identity" "${ws_root}/.identity"
   ln -s "${WORKSPACE_ROOT}/scripts" "${ws_root}/scripts"
   mkdir -p "${ws_root}/activity"
@@ -102,33 +108,18 @@ PY
 
 PARITY_WS="$(create_temp_workspace projection-parity)"
 PARITY_REPO="${PARITY_WS}/identity-protocol-local"
-python3 - "${PARITY_REPO}/identity/protocol/mappings/workbook-registry.v1.6.yaml" "${PARITY_WS}" "${WORKSPACE_ROOT}" <<'PY'
+python3 - "${PARITY_REPO}/identity/protocol/mappings/workbook-registry.v1.6.yaml" "${PARITY_WS}" <<'PY'
 from __future__ import annotations
 
-import re
-import shutil
 import sys
 from pathlib import Path
 
 import yaml
 
-DOCS_RE = re.compile(r"docs checked:\s*(\d+)", flags=re.IGNORECASE)
-SNIPPETS_RE = re.compile(r"command snippets checked:\s*(\d+)", flags=re.IGNORECASE)
-
 registry_path = Path(sys.argv[1]).resolve()
 parity_ws = Path(sys.argv[2]).resolve()
-live_ws = Path(sys.argv[3]).resolve()
-repo_root = registry_path.parents[3]
 doc = yaml.safe_load(registry_path.read_text(encoding="utf-8")) or {}
 family = doc["active_workbook_family"]
-issue_register_doc = repo_root / str(family.get("issue_register_doc", "")).strip()
-canonical_text = issue_register_doc.read_text(encoding="utf-8")
-docs_match = DOCS_RE.search(canonical_text)
-snippets_match = SNIPPETS_RE.search(canonical_text)
-if not docs_match or not snippets_match:
-    raise SystemExit("missing canonical docs checker markers in issue register doc")
-canonical_docs = int(docs_match.group(1))
-canonical_snippets = int(snippets_match.group(1))
 evidence_root = parity_ws / "activity" / "evidence"
 if evidence_root.is_symlink():
     evidence_root.unlink()
@@ -136,24 +127,24 @@ evidence_root.mkdir(parents=True, exist_ok=True)
 
 for row in family.get("projection_exports", []) or []:
     row["freshness_mode"] = "summary_snapshot_parity_required"
-    rel = str(row.get("path", "")).strip()
-    if not rel:
-        continue
-    source_path = (live_ws / rel).resolve()
-    target_path = (parity_ws / rel).resolve()
-    target_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source_path, target_path)
-    projection_text = target_path.read_text(encoding="utf-8")
-    if not DOCS_RE.search(projection_text) or not SNIPPETS_RE.search(projection_text):
-        raise SystemExit(f"missing projection docs checker markers: {target_path}")
-    projection_text = DOCS_RE.sub(f"docs checked: {canonical_docs}", projection_text, count=1)
-    projection_text = SNIPPETS_RE.sub(
-        f"command snippets checked: {canonical_snippets}",
-        projection_text,
-        count=1,
-    )
-    target_path.write_text(projection_text, encoding="utf-8")
 registry_path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+python3 "${PARITY_REPO}/scripts/render_active_workbook_projections.py" \
+  --repo-root "${PARITY_REPO}" \
+  --workspace-root "${PARITY_WS}" \
+  --write \
+  --json-only > "${TMP_ROOT}/rendered-projection-parity.json"
+python3 - "${TMP_ROOT}/rendered-projection-parity.json" <<'PY'
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["workbook_projection_render_status"] == "PASS_REQUIRED", payload
+assert payload["projection_results"], payload
+print("protocol_lane_audit_summary_projection_render_status=PASS_REQUIRED")
 PY
 commit_temp_repo "${PARITY_REPO}" "probe: parity required projection freshness"
 PARITY_JSON="${TMP_ROOT}/summary-projection-parity.json"

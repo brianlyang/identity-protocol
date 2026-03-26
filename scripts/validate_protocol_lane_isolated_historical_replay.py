@@ -10,12 +10,25 @@ from typing import Any
 
 from repo_root_resolution_common import resolve_protocol_repo_root, resolve_workspace_root
 from runtime_temp_path_common import runtime_temp_dir
+from temp_repo_materialization_common import (
+    DEFAULT_BASELINE_COMMIT_MESSAGE,
+    HISTORY_MODE_CLONE_ONLY,
+    HISTORY_MODE_CLONE_WITH_WORKTREE_OVERLAY,
+    create_baseline_commit,
+    materialize_repo_snapshot,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_ISOLATED_REPLAY = "IP-LANE-REPLAY-001"
 DEFAULT_LANE_ID = "identity_codex_launcher_v1_6_14"
 SUMMARY_TIMEOUT_SECONDS = 300
+REPLAY_SOURCE_MODE_REQUESTED_COMMIT_HISTORY = "requested_commit_history"
+REPLAY_SOURCE_MODE_CURRENT_WORKTREE_BASELINE = "current_worktree_baseline"
+SUPPORTED_REPLAY_SOURCE_MODES = (
+    REPLAY_SOURCE_MODE_REQUESTED_COMMIT_HISTORY,
+    REPLAY_SOURCE_MODE_CURRENT_WORKTREE_BASELINE,
+)
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -153,6 +166,17 @@ def main() -> int:
     ap.add_argument("--workspace-root", default="")
     ap.add_argument("--lane", default=DEFAULT_LANE_ID)
     ap.add_argument("--commit", default="HEAD")
+    ap.add_argument(
+        "--replay-source-mode",
+        default=REPLAY_SOURCE_MODE_CURRENT_WORKTREE_BASELINE,
+        choices=SUPPORTED_REPLAY_SOURCE_MODES,
+        help=(
+            "current_worktree_baseline snapshots the current worktree into a materialized baseline while "
+            "keeping diff/commit scope pinned to the requested source-history commit; "
+            "requested_commit_history replays the requested committed tree through isolated clone-only "
+            "workspaces."
+        ),
+    )
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
@@ -160,21 +184,32 @@ def main() -> int:
     workspace_root = resolve_workspace_root(args.workspace_root, start=__file__)
     requested_commit = str(args.commit or "HEAD").strip() or "HEAD"
     lane_id = str(args.lane or DEFAULT_LANE_ID).strip() or DEFAULT_LANE_ID
+    requested_replay_source_mode = (
+        str(args.replay_source_mode or REPLAY_SOURCE_MODE_CURRENT_WORKTREE_BASELINE).strip()
+        or REPLAY_SOURCE_MODE_CURRENT_WORKTREE_BASELINE
+    )
 
     payload: dict[str, Any] = {
         "isolated_historical_replay_status": STATUS_FAIL_REQUIRED,
         "error_code": ERR_ISOLATED_REPLAY,
         "lane_id": lane_id,
         "requested_commit": requested_commit,
+        "requested_replay_source_mode": requested_replay_source_mode,
         "resolved_commit": "",
+        "replay_source_mode": "",
         "repo_root": str(repo_root),
         "workspace_root": str(workspace_root),
+        "direct_workspace_root": "",
+        "direct_repo_root": "",
         "isolated_workspace_root": "",
         "isolated_repo_root": "",
+        "direct_repo_materialization": {},
+        "isolated_repo_materialization": {},
         "bridged_workspace_assets": [],
         "direct_projection": {},
         "isolated_projection": {},
         "projection_parity_match": False,
+        "baseline_commit": "",
         "stale_reasons": [],
     }
 
@@ -184,39 +219,78 @@ def main() -> int:
         identity_id="shared",
         prefix="run",
     )
-    isolated_workspace_root = (temp_root / "workspace").resolve()
+    direct_workspace_root = (temp_root / "direct-workspace").resolve()
+    direct_repo_root = (direct_workspace_root / repo_root.name).resolve()
+    isolated_workspace_root = (temp_root / "isolated-workspace").resolve()
     isolated_repo_root = (isolated_workspace_root / repo_root.name).resolve()
+    payload["direct_workspace_root"] = str(direct_workspace_root)
+    payload["direct_repo_root"] = str(direct_repo_root)
     payload["isolated_workspace_root"] = str(isolated_workspace_root)
     payload["isolated_repo_root"] = str(isolated_repo_root)
 
     try:
-        resolved_commit = _run_git(repo_root, "rev-parse", requested_commit)
+        direct_workspace_root.mkdir(parents=True, exist_ok=True)
+        source_resolved_commit = _run_git(repo_root, "rev-parse", requested_commit)
+
+        direct_history_mode = (
+            HISTORY_MODE_CLONE_ONLY
+            if requested_replay_source_mode == REPLAY_SOURCE_MODE_REQUESTED_COMMIT_HISTORY
+            else HISTORY_MODE_CLONE_WITH_WORKTREE_OVERLAY
+        )
+        direct_materialization = materialize_repo_snapshot(
+            source_repo_root=repo_root,
+            target_repo_root=direct_repo_root,
+            history_mode=direct_history_mode,
+        )
+        payload["direct_repo_materialization"] = direct_materialization.to_dict()
+        baseline_commit = ""
+        if requested_replay_source_mode == REPLAY_SOURCE_MODE_CURRENT_WORKTREE_BASELINE:
+            baseline_commit = create_baseline_commit(
+                target_repo_root=direct_repo_root,
+                message=DEFAULT_BASELINE_COMMIT_MESSAGE,
+            )
+        payload["baseline_commit"] = baseline_commit
+        resolved_commit = source_resolved_commit
+        if requested_replay_source_mode == REPLAY_SOURCE_MODE_REQUESTED_COMMIT_HISTORY:
+            _run_text(
+                ["git", "-C", str(direct_repo_root), "checkout", "--quiet", "--detach", resolved_commit],
+                cwd=direct_workspace_root,
+            )
+        payload["replay_source_mode"] = requested_replay_source_mode
+        direct_bridged_assets = _bridge_workspace_assets(workspace_root, direct_workspace_root)
         payload["resolved_commit"] = resolved_commit
         direct_summary = _render_lane_summary(
-            runner_repo_root=repo_root,
-            target_repo_root=repo_root,
-            target_workspace_root=workspace_root,
-            commit=resolved_commit,
+            runner_repo_root=direct_repo_root,
+            target_repo_root=direct_repo_root,
+            target_workspace_root=direct_workspace_root,
+            commit="HEAD" if requested_replay_source_mode == REPLAY_SOURCE_MODE_REQUESTED_COMMIT_HISTORY else resolved_commit,
             lane_id=lane_id,
         )
         payload["direct_projection"] = _lane_projection(direct_summary)
 
         isolated_workspace_root.mkdir(parents=True, exist_ok=True)
-        _run_text(
-            ["git", "clone", "--quiet", "--local", str(repo_root), str(isolated_repo_root)],
-            cwd=isolated_workspace_root,
+        materialization = materialize_repo_snapshot(
+            source_repo_root=direct_repo_root,
+            target_repo_root=isolated_repo_root,
+            history_mode=HISTORY_MODE_CLONE_ONLY,
         )
-        _run_text(
-            ["git", "-C", str(isolated_repo_root), "checkout", "--quiet", "--detach", resolved_commit],
-            cwd=isolated_workspace_root,
-        )
-        payload["bridged_workspace_assets"] = _bridge_workspace_assets(workspace_root, isolated_workspace_root)
+        payload["isolated_repo_materialization"] = materialization.to_dict()
+        if requested_replay_source_mode == REPLAY_SOURCE_MODE_REQUESTED_COMMIT_HISTORY:
+            _run_text(
+                ["git", "-C", str(isolated_repo_root), "checkout", "--quiet", "--detach", resolved_commit],
+                cwd=isolated_workspace_root,
+            )
+        isolated_bridged_assets = _bridge_workspace_assets(workspace_root, isolated_workspace_root)
+        payload["bridged_workspace_assets"] = [
+            *direct_bridged_assets,
+            *isolated_bridged_assets,
+        ]
 
         isolated_summary = _render_lane_summary(
             runner_repo_root=isolated_repo_root,
             target_repo_root=isolated_repo_root,
             target_workspace_root=isolated_workspace_root,
-            commit="HEAD",
+            commit="HEAD" if requested_replay_source_mode == REPLAY_SOURCE_MODE_REQUESTED_COMMIT_HISTORY else resolved_commit,
             lane_id=lane_id,
         )
         payload["isolated_projection"] = _lane_projection(isolated_summary)
