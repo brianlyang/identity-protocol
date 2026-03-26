@@ -229,6 +229,9 @@ naming law; root family prefix, current-entry suffix, active-version regex,
 and current/version pair requirement may not be silently redeclared,
 weakened, or guessed inside the bundle.
 
+Local redeclaration of current/version naming governance must remain
+forbidden inside the bundle.
+
 If the admitted source does not disclose that naming law, protocol legality
 must fail-close rather than locally reconstructing current/version mediation
 law.

@@ -445,6 +445,9 @@ Root family prefix, current-entry suffix, active-version regex, and the
 requirement that admitted mapping families remain current/version paired
 belong to that source law rather than to local bundle restatement.
 
+Local redeclaration of current/version naming governance must remain
+forbidden inside the bundle.
+
 If the admitted source does not disclose that naming law, the machine world
 must fail-close rather than locally reconstructing current/version mediation
 from bundle convention.

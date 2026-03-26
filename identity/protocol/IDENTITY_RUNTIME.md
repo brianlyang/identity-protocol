@@ -173,6 +173,9 @@ machine-registry completeness current/version naming law; root family prefix,
 current-entry suffix, active-version regex, and current/version pair
 requirement must be inherited from the admitted source component.
 
+Runtime must also reject local redeclaration of current/version naming
+governance inside the bundle.
+
 If the admitted source does not disclose that naming law, runtime must
 fail-close rather than locally reconstructing current/version mediation law.
 

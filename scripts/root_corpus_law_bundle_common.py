@@ -155,6 +155,10 @@ def component_current_version_naming_local_override_policy_from_doc(bundle_doc: 
     return _norm_str(bundle_doc.get("component_current_version_naming_local_override_policy"))
 
 
+def component_current_version_naming_local_redeclaration_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("component_current_version_naming_local_redeclaration_policy"))
+
+
 def component_current_version_naming_fallback_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
     return _norm_str(bundle_doc.get("component_current_version_naming_fallback_policy"))
 

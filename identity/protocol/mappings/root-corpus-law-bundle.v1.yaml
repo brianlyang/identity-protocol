@@ -32,6 +32,7 @@ descriptor_repo_rel_path_discipline_local_override_policy: forbidden
 descriptor_repo_rel_path_discipline_fallback_policy: fail_closed
 component_current_version_naming_inheritance_mode: inherit_machine_registry_completeness_current_only
 component_current_version_naming_local_override_policy: forbidden
+component_current_version_naming_local_redeclaration_policy: forbidden
 component_current_version_naming_fallback_policy: fail_closed
 component_registry_child_membership_inheritance_mode: inherit_machine_registry_completeness_current_only
 component_registry_child_membership_local_override_policy: forbidden
@@ -98,6 +99,8 @@ bundle_anchor_checks:
   - Bundle current/version naming law must also remain inherited from
     machine-registry completeness.
   - Root family prefix, current-entry suffix, active-version regex, and the
+  - Local redeclaration of current/version naming governance must remain
+    forbidden inside the bundle.
   - fail-close rather than locally reconstructing current/version mediation
     from bundle convention.
   - Bundle registry-child admission law must also remain inherited from
@@ -155,6 +158,8 @@ bundle_anchor_checks:
     path legality.
   - The bundle must also inherit machine-registry completeness current/version
   - Root family prefix, current-entry suffix, active-version regex, and the
+  - Local redeclaration of current/version naming governance must remain
+    forbidden inside the bundle.
   - fail-close rather than locally reconstructing current/version mediation.
   - The bundle must also inherit machine-registry completeness registry-child
   - canonical registry directory, the admitted registry-current entry, and
@@ -207,6 +212,8 @@ bundle_anchor_checks:
     descriptor-path legality law.
   - The bundle must also inherit machine-registry completeness current/version
   - naming law; root family prefix, current-entry suffix, active-version regex,
+  - Local redeclaration of current/version naming governance must remain
+    forbidden inside the bundle.
   - protocol legality must fail-close rather than locally reconstructing current/version mediation
     law.
   - The bundle must also inherit machine-registry completeness registry-child
@@ -257,6 +264,8 @@ bundle_anchor_checks:
     legality law.
   - Runtime must also reject a root-law bundle that redeclares or weakens
   - current-entry suffix, active-version regex, and current/version pair
+  - Runtime must also reject local redeclaration of current/version naming
+    governance inside the bundle.
   - fail-close rather than locally reconstructing current/version mediation law.
   - Runtime must also reject a root-law bundle that redeclares or weakens
   - canonical registry directory, admitted registry-current entry, and registered child-set
