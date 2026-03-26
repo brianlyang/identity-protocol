@@ -1032,6 +1032,16 @@ elif name == "resolve_context_timeout_guard":
     error_code = str(doc.get("gateway_timeout_guard_probe_observed_error_code", "")).strip()
     if error_code != "IP-CTX-TOOL-001":
         raise SystemExit("resolve_context_timeout_guard: expected IP-CTX-TOOL-001 error code")
+elif name == "long_running_update_timeout_profile_covered":
+    if rc != 0:
+        raise SystemExit("long_running_update_timeout_profile_covered: expected zero rc")
+    status = str(doc.get("gateway_timeout_profile_coverage_status", "")).strip().upper()
+    if status != "PASS_REQUIRED":
+        raise SystemExit("long_running_update_timeout_profile_covered: expected PASS_REQUIRED status")
+    if doc.get("missing_scripts"):
+        raise SystemExit("long_running_update_timeout_profile_covered: expected empty missing_scripts")
+    if doc.get("underprovisioned_scripts"):
+        raise SystemExit("long_running_update_timeout_profile_covered: expected empty underprovisioned_scripts")
 elif name == "fixture_identity_runtime_egress_blocked":
     if rc == 0:
         raise SystemExit("fixture_identity_runtime_egress_blocked: expected non-zero rc")
@@ -1562,6 +1572,10 @@ run_probe resolve_context_timeout_guard \
   --protocol-root "${REPO_ROOT}" \
   --timeout-seconds 1 \
   --sleep-seconds 2 \
+  --json-only
+
+run_probe long_running_update_timeout_profile_covered \
+  python3 scripts/validate_gateway_timeout_profile_coverage.py \
   --json-only
 
 run_probe fixture_identity_runtime_egress_blocked \

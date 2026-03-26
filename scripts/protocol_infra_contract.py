@@ -161,8 +161,92 @@ CTX_TOOL_TIMEOUT_MARKER = "CTX_TOOL_TIMEOUT"
 CTX_TOOL_TIMEOUT_REASON_PREFIX = "context_tool_timeout"
 GATEWAY_WRAPPER_SUBPROCESS_TIMEOUT_SECONDS_DEFAULT = 30
 GATEWAY_CONTEXT_RESOLVE_TIMEOUT_SECONDS_DEFAULT = 5
+GATEWAY_WRAPPER_LONG_RUNNING_UPDATE_TIMEOUT_SECONDS = 300
+GATEWAY_WRAPPER_LONG_RUNNING_UPDATE_REQUIRED_SCRIPTS: tuple[str, ...] = (
+    "scripts/identity_creator.py",
+    "scripts/execute_identity_upgrade.py",
+)
+GATEWAY_WRAPPER_REPLAY_HEAVY_TIMEOUT_SECONDS = 900
+GATEWAY_WRAPPER_REPLAY_HEAVY_REQUIRED_SCRIPTS: tuple[str, ...] = (
+    "scripts/validate_protocol_lane_isolated_historical_replay.py",
+    "scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh",
+)
+GATEWAY_WRAPPER_WORKBOOK_CONTROL_TIMEOUT_SECONDS = 180
+GATEWAY_WRAPPER_WORKBOOK_CONTROL_REQUIRED_SCRIPTS: tuple[str, ...] = (
+    "scripts/validate_issue_register_consistency.py",
+)
+GATEWAY_WRAPPER_WORKBOOK_PROBE_TIMEOUT_SECONDS = 600
+GATEWAY_WRAPPER_WORKBOOK_PROBE_REQUIRED_SCRIPTS: tuple[str, ...] = (
+    "scripts/ci/run_workbook_control_plane_probes_ci.sh",
+)
+GATEWAY_WRAPPER_CONTROL_PLANE_SURFACE_MATERIALIZATION_TIMEOUT_SECONDS = 180
+GATEWAY_WRAPPER_CONTROL_PLANE_SURFACE_MATERIALIZATION_REQUIRED_SCRIPTS: tuple[str, ...] = (
+    "scripts/materialize_control_plane_surfaces.py",
+    "scripts/ci/run_control_plane_surface_materialization_probes_ci.sh",
+)
+# Release-closure control-plane status now re-renders the governed release
+# closure subset against a larger root-control-plane corpus. Direct runtime sits
+# above 100 seconds on current repo scale, so the wrapper budget must leave
+# margin for context resolution and nested status-sync validation.
+GATEWAY_WRAPPER_RELEASE_CLOSURE_CONTROL_PLANE_TIMEOUT_SECONDS = 240
+GATEWAY_WRAPPER_RELEASE_CLOSURE_CONTROL_PLANE_REQUIRED_SCRIPTS: tuple[str, ...] = (
+    "scripts/ci/run_release_closure_control_plane_status_probes_ci.sh",
+)
+GATEWAY_WRAPPER_TERMINAL_TRUTH_OUTER_SURFACE_E2E_TIMEOUT_SECONDS = 300
+GATEWAY_WRAPPER_TERMINAL_TRUTH_OUTER_SURFACE_E2E_REQUIRED_SCRIPTS: tuple[str, ...] = (
+    "scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh",
+)
+GATEWAY_WRAPPER_TIMEOUT_PROFILE_REQUIREMENTS: tuple[tuple[str, int, str], ...] = (
+    *(
+        (script_name, GATEWAY_WRAPPER_LONG_RUNNING_UPDATE_TIMEOUT_SECONDS, "long_running_update")
+        for script_name in GATEWAY_WRAPPER_LONG_RUNNING_UPDATE_REQUIRED_SCRIPTS
+    ),
+    *(
+        (script_name, GATEWAY_WRAPPER_REPLAY_HEAVY_TIMEOUT_SECONDS, "replay_heavy")
+        for script_name in GATEWAY_WRAPPER_REPLAY_HEAVY_REQUIRED_SCRIPTS
+    ),
+    *(
+        (script_name, GATEWAY_WRAPPER_WORKBOOK_CONTROL_TIMEOUT_SECONDS, "workbook_control")
+        for script_name in GATEWAY_WRAPPER_WORKBOOK_CONTROL_REQUIRED_SCRIPTS
+    ),
+    *(
+        (script_name, GATEWAY_WRAPPER_WORKBOOK_PROBE_TIMEOUT_SECONDS, "workbook_probe")
+        for script_name in GATEWAY_WRAPPER_WORKBOOK_PROBE_REQUIRED_SCRIPTS
+    ),
+    *(
+        (
+            script_name,
+            GATEWAY_WRAPPER_CONTROL_PLANE_SURFACE_MATERIALIZATION_TIMEOUT_SECONDS,
+            "control_plane_surface_materialization",
+        )
+        for script_name in GATEWAY_WRAPPER_CONTROL_PLANE_SURFACE_MATERIALIZATION_REQUIRED_SCRIPTS
+    ),
+    *(
+        (
+            script_name,
+            GATEWAY_WRAPPER_RELEASE_CLOSURE_CONTROL_PLANE_TIMEOUT_SECONDS,
+            "release_closure_control_plane",
+        )
+        for script_name in GATEWAY_WRAPPER_RELEASE_CLOSURE_CONTROL_PLANE_REQUIRED_SCRIPTS
+    ),
+    *(
+        (
+            script_name,
+            GATEWAY_WRAPPER_TERMINAL_TRUTH_OUTER_SURFACE_E2E_TIMEOUT_SECONDS,
+            "terminal_truth_outer_surface_e2e",
+        )
+        for script_name in GATEWAY_WRAPPER_TERMINAL_TRUTH_OUTER_SURFACE_E2E_REQUIRED_SCRIPTS
+    ),
+)
 GATEWAY_WRAPPER_TIMEOUT_PROFILE_SECONDS: tuple[tuple[str, int], ...] = (
-    ("scripts/identity_creator.py", 240),
+    # Strict update entrypoints can traverse the full capability preflight,
+    # required gate bundle, replay archive, and protocol-publish validator set.
+    # Their runtime materially exceeds the generic passthrough timeout, so both
+    # the outer coordinator and the inner executor must share an explicit
+    # long-running profile to avoid false-red `CTX_TOOL_TIMEOUT` failures at the
+    # gateway boundary.
+    ("scripts/identity_creator.py", GATEWAY_WRAPPER_LONG_RUNNING_UPDATE_TIMEOUT_SECONDS),
+    ("scripts/execute_identity_upgrade.py", GATEWAY_WRAPPER_LONG_RUNNING_UPDATE_TIMEOUT_SECONDS),
     ("scripts/repair_contract_backfill.py", 120),
     ("scripts/required_gate_bundle_runner.py", 120),
     ("scripts/report_three_plane_status.py", 180),
@@ -170,7 +254,10 @@ GATEWAY_WRAPPER_TIMEOUT_PROFILE_SECONDS: tuple[tuple[str, int], ...] = (
     # and replay commit-pinned control-plane summaries; keep them on an explicit
     # long-running profile so wrapper-only release gates do not false-red at the
     # default passthrough timeout.
-    ("scripts/validate_protocol_lane_isolated_historical_replay.py", 300),
+    (
+        "scripts/validate_protocol_lane_isolated_historical_replay.py",
+        GATEWAY_WRAPPER_REPLAY_HEAVY_TIMEOUT_SECONDS,
+    ),
     ("scripts/ci/run_protocol_root_corpus_governance_probes_ci.sh", 300),
     ("scripts/ci/run_protocol_root_corpus_ordering_probes_ci.sh", 300),
     ("scripts/ci/run_protocol_root_corpus_authority_probes_ci.sh", 300),
@@ -179,15 +266,58 @@ GATEWAY_WRAPPER_TIMEOUT_PROFILE_SECONDS: tuple[tuple[str, int], ...] = (
     ("scripts/ci/run_protocol_root_corpus_gateway_admissibility_probes_ci.sh", 300),
     ("scripts/ci/run_protocol_root_corpus_precedence_probes_ci.sh", 300),
     ("scripts/ci/run_protocol_root_corpus_question_routing_probes_ci.sh", 300),
-    ("scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh", 600),
+    (
+        "scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh",
+        GATEWAY_WRAPPER_REPLAY_HEAVY_TIMEOUT_SECONDS,
+    ),
+    # Docs command contract sweeps the full governed doc corpus plus embedded
+    # command snippets. The direct runtime now sits near the generic wrapper
+    # ceiling, and wrapper context resolution can push the end-to-end path past
+    # 30 seconds. Give readiness an explicit timeout profile so it fails only on
+    # real contract drift, not wrapper-edge timing noise.
+    ("scripts/docs_command_contract_check.py", 120),
     # Workbook control-plane probes materialize shadow repos, rerender governed
     # projection outputs, and replay multiple negative-path registry checks.
-    # The direct probe runtime is substantially above the default passthrough
-    # timeout, so release-readiness must route it through an explicit long-run
-    # profile instead of timing out at the wrapper boundary.
-    ("scripts/ci/run_workbook_control_plane_probes_ci.sh", 300),
+    # On direct timing, the control-plane probe itself now exceeds five minutes.
+    # Keep it on its own explicit workbook-probe profile so readiness fails only
+    # on real contract drift instead of the gateway's timeout envelope.
+    ("scripts/validate_issue_register_consistency.py", GATEWAY_WRAPPER_WORKBOOK_CONTROL_TIMEOUT_SECONDS),
+    ("scripts/ci/run_workbook_control_plane_probes_ci.sh", GATEWAY_WRAPPER_WORKBOOK_PROBE_TIMEOUT_SECONDS),
+    # Control-plane surface materialization now rerenders both budget and status
+    # plus their sync validators in a single canonical sequence. Direct runtime
+    # sits around 70 seconds on current repo scale, so release-readiness must
+    # not leave it on the default 30s passthrough budget.
+    (
+        "scripts/materialize_control_plane_surfaces.py",
+        GATEWAY_WRAPPER_CONTROL_PLANE_SURFACE_MATERIALIZATION_TIMEOUT_SECONDS,
+    ),
+    (
+        "scripts/ci/run_control_plane_surface_materialization_probes_ci.sh",
+        GATEWAY_WRAPPER_CONTROL_PLANE_SURFACE_MATERIALIZATION_TIMEOUT_SECONDS,
+    ),
+    # Release-closure control-plane status probes intentionally rerender the
+    # positive and shadow-negative subsets. Even after subset selection, the
+    # dual render path sits just above the generic 30s passthrough envelope, so
+    # wrapper execution needs an explicit control-plane profile instead of
+    # failing red on timing noise.
+    (
+        "scripts/ci/run_release_closure_control_plane_status_probes_ci.sh",
+        GATEWAY_WRAPPER_RELEASE_CLOSURE_CONTROL_PLANE_TIMEOUT_SECONDS,
+    ),
+    # Terminal-truth outer-surface E2E intentionally traverses the governed
+    # three-plane surface, the release-readiness summary surface, and the
+    # target-scoped full-scan summary surface. Direct runtime is materially
+    # above the generic 30s passthrough budget, so wrapper execution needs a
+    # dedicated profile that reflects its real governed surface class.
+    (
+        "scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh",
+        GATEWAY_WRAPPER_TERMINAL_TRUTH_OUTER_SURFACE_E2E_TIMEOUT_SECONDS,
+    ),
     ("scripts/validate_control_plane_status_sync.py", 180),
     ("scripts/validate_required_contract_coverage.py", 180),
+)
+VALIDATOR_IDENTITY_SCOPE_EXEMPT_SCRIPTS: tuple[str, ...] = (
+    "scripts/validate_release_metadata_sync.py",
 )
 VALIDATOR_ACTOR_ID_REQUIRED_SCRIPTS: tuple[str, ...] = (
     "scripts/validate_required_contract_coverage.py",
@@ -390,6 +520,8 @@ HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS: tuple[str, ...] = (
 HOST_GATEWAY_BROADCAST_ITEMS_DIR = "identity/protocol/broadcast/items"
 HOST_GATEWAY_BROADCAST_INDEX_FILE = "identity/protocol/broadcast/index.json"
 HOST_GATEWAY_BROADCAST_SCHEMA_FILE = "identity/protocol/broadcast/schema/broadcast-item.v1.json"
+HOST_GATEWAY_BROADCAST_ROOT_README = "identity/protocol/broadcast/README.md"
+HOST_GATEWAY_BROADCAST_DOC_CONTROL_CURRENT_FILE = "identity/protocol/broadcast/BROADCAST_DOC_CONTROL.current.yaml"
 HOST_GATEWAY_BROADCAST_STATE_FILE = "runtime/state/broadcast_state.json"
 HOST_GATEWAY_BROADCAST_RECEIPT_PATTERN = "runtime/reports/broadcast/broadcast-receipt-*.json"
 HOST_GATEWAY_BROADCAST_ACK_PATTERN = "runtime/reports/broadcast/broadcast-ack-*.json"
