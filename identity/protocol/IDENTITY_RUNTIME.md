@@ -446,6 +446,10 @@ policy explicit; each bundle-violation row classifies exactly once as
 admitted observation reason, excluded non-observation row, or unknown
 ontology drift before violation projection.
 
+Runtime must also keep component-validator observation-reason
+unclassified policy explicit; unclassified observation reason must
+remain fail-closed.
+
 Runtime must fail-close on unclassified component-validator observation
 reason rather than silently expanding bundle observation ontology.
 

@@ -80,6 +80,7 @@ component_validator_observation_reason_admission_policy: parse_status_nonzero_rc
 component_validator_observation_reason_exclusion_policy: non_execution_bundle_rows_remain_outside_observation_reason_ontology
 component_validator_observation_reason_source_policy: bundle_violation_rows_only_before_violation_projection
 component_validator_observation_reason_partition_policy: bundle_violation_rows_partitioned_into_admitted_excluded_or_unknown_exactly_once_before_violation_projection
+component_validator_observation_reason_unclassified_policy: fail_closed
 required_component_descriptor_fields:
 - validator_script
 - probe_script
@@ -365,6 +366,10 @@ bundle_anchor_checks:
   - Each bundle-violation row must classify exactly once as admitted
     observation reason, excluded non-observation row, or unknown ontology
     drift, all before violation projection.
+  - Bundle component-validator observation-reason unclassified policy must
+    stay explicit too.
+  - The admitted policy is fail-closed on unclassified component-validator
+    observation reason.
   - The machine world must fail-close on unclassified component-validator
     observation reason rather than silently expanding bundle observation
     ontology.
@@ -628,6 +633,10 @@ bundle_anchor_checks:
   - Each bundle-violation row must classify exactly once as admitted runtime
     observation reason, excluded non-observation row, or unknown ontology
     drift, all before violation projection.
+  - Bundle component-validator observation-reason unclassified policy must
+    also stay explicit.
+  - The admitted runtime policy is fail-closed on unclassified
+    component-validator observation reason.
   - Runtime must fail-close on unclassified component-validator observation
     reason rather than silently expanding bundle observation ontology.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
@@ -861,6 +870,9 @@ bundle_anchor_checks:
     partition policy explicit; each bundle-violation row classifies exactly
     once as admitted observation reason, excluded non-observation row, or
     unknown ontology drift before violation projection.
+  - Root-law bundle rows must also keep component-validator observation-reason
+    unclassified policy explicit; unclassified observation reason must
+    remain fail-closed.
   - Local bundle observation ontology must not silently expand beyond those
     admitted component-validator observation reasons.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
@@ -1097,6 +1109,9 @@ bundle_anchor_checks:
     policy explicit; each bundle-violation row classifies exactly once as
     admitted observation reason, excluded non-observation row, or unknown
     ontology drift before violation projection.
+  - Runtime must also keep component-validator observation-reason
+    unclassified policy explicit; unclassified observation reason must
+    remain fail-closed.
   - Runtime must fail-close on unclassified component-validator observation
     reason rather than silently expanding bundle observation ontology.
 component_rows:

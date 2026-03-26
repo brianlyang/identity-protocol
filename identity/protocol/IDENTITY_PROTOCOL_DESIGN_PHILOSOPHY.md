@@ -787,6 +787,12 @@ Each bundle-violation row must classify exactly once as admitted
 observation reason, excluded non-observation row, or unknown ontology
 drift, all before violation projection.
 
+Bundle component-validator observation-reason unclassified policy must
+stay explicit too.
+
+The admitted policy is fail-closed on unclassified component-validator
+observation reason.
+
 The machine world must fail-close on unclassified component-validator
 observation reason rather than silently expanding bundle observation
 ontology.

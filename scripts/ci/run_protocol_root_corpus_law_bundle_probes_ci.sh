@@ -95,6 +95,7 @@ assert payload["component_validator_observation_reason_admission_policy"] == "pa
 assert payload["component_validator_observation_reason_exclusion_policy"] == "non_execution_bundle_rows_remain_outside_observation_reason_ontology", payload
 assert payload["component_validator_observation_reason_source_policy"] == "bundle_violation_rows_only_before_violation_projection", payload
 assert payload["component_validator_observation_reason_partition_policy"] == "bundle_violation_rows_partitioned_into_admitted_excluded_or_unknown_exactly_once_before_violation_projection", payload
+assert payload["component_validator_observation_reason_unclassified_policy"] == "fail_closed", payload
 assert payload["derived_status_from_stale_reasons"] == "PASS_REQUIRED", payload
 assert payload["derived_failure_class"] == "pass", payload
 assert payload["derived_error_code_from_precedence"] == "", payload
@@ -1170,6 +1171,41 @@ assert "root_corpus_law_bundle_component_validator_observation_reason_partition_
 assert payload["component_validator_observation_reason_partition_policy"] == "bundle_violation_rows_may_remain_unpartitioned", payload
 assert payload["component_validator_observation_reason_partition_status"] == "PASS_REQUIRED", payload
 assert payload["component_validator_observation_reason_partition_total_count"] == payload["bundle_violation_count"], payload
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_UNCLASSIFIED_POLICY_REPO="${TMP_ROOT}/component-validator-observation-reason-unclassified-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_OBSERVATION_REASON_UNCLASSIFIED_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_UNCLASSIFIED_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_observation_reason_unclassified_policy"] = "advisory_only"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_UNCLASSIFIED_POLICY_JSON="${TMP_ROOT}/component-validator-observation-reason-unclassified-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_OBSERVATION_REASON_UNCLASSIFIED_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_OBSERVATION_REASON_UNCLASSIFIED_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator observation reason unclassified policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_UNCLASSIFIED_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_unclassified_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_observation_reason_unclassified_policy"] == "advisory_only", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
 PY
 
 COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY_REPO="${TMP_ROOT}/component-validator-observation-reason-exclusion-policy-drift-repo"

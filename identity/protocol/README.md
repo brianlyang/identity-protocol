@@ -800,6 +800,12 @@ Each bundle-violation row must classify exactly once as admitted runtime
 observation reason, excluded non-observation row, or unknown ontology
 drift, all before violation projection.
 
+Bundle component-validator observation-reason unclassified policy must
+also stay explicit.
+
+The admitted runtime policy is fail-closed on unclassified
+component-validator observation reason.
+
 Runtime must fail-close on unclassified component-validator observation
 reason rather than silently expanding bundle observation ontology.
 

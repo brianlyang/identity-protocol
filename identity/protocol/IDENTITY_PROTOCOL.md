@@ -501,6 +501,10 @@ partition policy explicit; each bundle-violation row classifies exactly
 once as admitted observation reason, excluded non-observation row, or
 unknown ontology drift before violation projection.
 
+Root-law bundle rows must also keep component-validator observation-reason
+unclassified policy explicit; unclassified observation reason must
+remain fail-closed.
+
 Local bundle observation ontology must not silently expand beyond those
 admitted component-validator observation reasons.
 
