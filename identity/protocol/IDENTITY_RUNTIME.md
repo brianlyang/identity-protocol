@@ -385,6 +385,15 @@ bundle-class failure, and pass-state emits empty error code.
 Runtime must not derive failure code through any alternate local precedence
 path.
 
+Runtime must also keep failure-classification policy explicit; registry
+class derives from direct stale reasons present before violation
+projection, structure class derives from structure violations, bundle class
+derives from bundle and anchor violations, and otherwise failure class is
+pass.
+
+Runtime must not invent an anchor-only failure class or bypass direct stale
+reasons through local classification paths.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

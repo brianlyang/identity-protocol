@@ -723,6 +723,16 @@ failure, and pass-state emits empty error code.
 Runtime may not derive failure code from first local convenience, last
 mutation side effect, or any alternate precedence order.
 
+Bundle failure-classification policy must also stay explicit.
+
+The admitted runtime policy is registry class derives from direct stale
+reasons present before violation projection, structure class derives from
+structure violations, bundle class derives from bundle and anchor
+violations, and otherwise failure class is pass.
+
+Runtime may not invent an anchor-only failure class, bypass direct stale
+reasons, or classify failure from local convenience surfaces.
+
 ---
 
 ## Conflict-handling rule

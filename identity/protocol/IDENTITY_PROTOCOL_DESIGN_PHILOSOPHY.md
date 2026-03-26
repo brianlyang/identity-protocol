@@ -711,6 +711,16 @@ pass-state emits empty error code.
 The machine world must not derive failure code from first local convenience,
 last mutation side effect, or any alternate precedence order.
 
+Bundle failure-classification policy must stay explicit too.
+
+The admitted policy is registry class derives from direct stale reasons
+present before violation projection, structure class derives from structure
+violations, bundle class derives from bundle and anchor violations, and
+otherwise failure class is pass.
+
+The machine world must not invent an anchor-only failure class, bypass
+direct stale reasons, or classify failure from local convenience surfaces.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

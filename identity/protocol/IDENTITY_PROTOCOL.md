@@ -440,6 +440,15 @@ code.
 Local error-code derivation must not bypass precedence-adjudicated failure
 classification.
 
+Root-law bundle rows must also keep failure-classification policy explicit;
+registry class derives from direct stale reasons present before violation
+projection, structure class derives from structure violations, bundle class
+derives from bundle and anchor violations, and otherwise failure class is
+pass.
+
+Local classification path must not invent an anchor-only failure class or
+bypass direct stale reasons.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.
