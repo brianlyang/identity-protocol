@@ -37,6 +37,7 @@ from root_corpus_law_bundle_common import (
     descriptor_family_surface_binding_local_override_policy_from_doc,
     descriptor_repo_rel_path_discipline_fallback_policy_from_doc,
     descriptor_repo_rel_path_discipline_inheritance_mode_from_doc,
+    descriptor_repo_rel_path_discipline_local_redeclaration_policy_from_doc,
     descriptor_repo_rel_path_discipline_local_override_policy_from_doc,
     descriptor_repo_rel_path_pattern_fallback_policy_from_doc,
     descriptor_repo_rel_path_pattern_inheritance_mode_from_doc,
@@ -306,6 +307,9 @@ def main() -> int:
     descriptor_repo_rel_path_discipline_local_override_policy = (
         descriptor_repo_rel_path_discipline_local_override_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    descriptor_repo_rel_path_discipline_local_redeclaration_policy = (
+        descriptor_repo_rel_path_discipline_local_redeclaration_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     descriptor_repo_rel_path_discipline_fallback_policy = (
         descriptor_repo_rel_path_discipline_fallback_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
@@ -524,6 +528,11 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if descriptor_repo_rel_path_discipline_local_override_policy != "forbidden":
             stale_reasons.append("root_corpus_law_bundle_descriptor_repo_rel_path_discipline_local_override_policy_invalid")
+            error_code = ERR_REGISTRY
+        if descriptor_repo_rel_path_discipline_local_redeclaration_policy != "forbidden":
+            stale_reasons.append(
+                "root_corpus_law_bundle_descriptor_repo_rel_path_discipline_local_redeclaration_policy_invalid"
+            )
             error_code = ERR_REGISTRY
         if descriptor_repo_rel_path_discipline_fallback_policy != "fail_closed":
             stale_reasons.append("root_corpus_law_bundle_descriptor_repo_rel_path_discipline_fallback_policy_invalid")
@@ -1216,6 +1225,7 @@ def main() -> int:
         "descriptor_repo_rel_path_pattern_fallback_policy": descriptor_repo_rel_path_pattern_fallback_policy,
         "descriptor_repo_rel_path_discipline_inheritance_mode": descriptor_repo_rel_path_discipline_inheritance_mode,
         "descriptor_repo_rel_path_discipline_local_override_policy": descriptor_repo_rel_path_discipline_local_override_policy,
+        "descriptor_repo_rel_path_discipline_local_redeclaration_policy": descriptor_repo_rel_path_discipline_local_redeclaration_policy,
         "descriptor_repo_rel_path_discipline_fallback_policy": descriptor_repo_rel_path_discipline_fallback_policy,
         "component_current_version_naming_inheritance_mode": component_current_version_naming_inheritance_mode,
         "component_current_version_naming_local_override_policy": component_current_version_naming_local_override_policy,

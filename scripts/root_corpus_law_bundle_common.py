@@ -143,6 +143,10 @@ def descriptor_repo_rel_path_discipline_local_override_policy_from_doc(bundle_do
     return _norm_str(bundle_doc.get("descriptor_repo_rel_path_discipline_local_override_policy"))
 
 
+def descriptor_repo_rel_path_discipline_local_redeclaration_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("descriptor_repo_rel_path_discipline_local_redeclaration_policy"))
+
+
 def descriptor_repo_rel_path_discipline_fallback_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
     return _norm_str(bundle_doc.get("descriptor_repo_rel_path_discipline_fallback_policy"))
 

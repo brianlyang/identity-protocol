@@ -434,6 +434,9 @@ Repo-root-relative scope, parent-escape rejection, role-typed path law, and
 cross-role surface-stem coherence belong to that admitted source law rather
 than to local bundle restatement.
 
+Local redeclaration of repo-relative discipline governance must remain
+forbidden inside the bundle.
+
 If the admitted source does not disclose that repo-relative discipline, the
 machine world must fail-close rather than locally reconstructing descriptor
 path legality from bundle convenience.

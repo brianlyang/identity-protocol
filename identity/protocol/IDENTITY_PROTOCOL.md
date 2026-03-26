@@ -220,6 +220,9 @@ descriptor discipline law; repo-root-relative scope, parent-escape rejection,
 role-typed path classes, and cross-role surface-stem coherence may not be
 silently redeclared, weakened, or guessed inside the bundle.
 
+Local redeclaration of repo-relative discipline governance must remain
+forbidden inside the bundle.
+
 If the admitted source does not disclose that repo-relative discipline,
 protocol legality must fail-close rather than locally reconstructing
 descriptor-path legality law.

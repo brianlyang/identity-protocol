@@ -29,6 +29,7 @@ descriptor_repo_rel_path_pattern_local_redeclaration_policy: forbidden
 descriptor_repo_rel_path_pattern_fallback_policy: fail_closed
 descriptor_repo_rel_path_discipline_inheritance_mode: inherit_machine_registry_completeness_current_only
 descriptor_repo_rel_path_discipline_local_override_policy: forbidden
+descriptor_repo_rel_path_discipline_local_redeclaration_policy: forbidden
 descriptor_repo_rel_path_discipline_fallback_policy: fail_closed
 component_current_version_naming_inheritance_mode: inherit_machine_registry_completeness_current_only
 component_current_version_naming_local_override_policy: forbidden
@@ -95,6 +96,8 @@ bundle_anchor_checks:
   - Bundle descriptor repo-relative discipline must also remain inherited from
     machine-registry completeness.
   - Repo-root-relative scope, parent-escape rejection, role-typed path law, and
+  - Local redeclaration of repo-relative discipline governance must remain
+    forbidden inside the bundle.
   - fail-close rather than locally reconstructing descriptor
     path legality from bundle convenience.
   - Bundle current/version naming law must also remain inherited from
@@ -157,6 +160,8 @@ bundle_anchor_checks:
     law.
   - The bundle must also inherit machine-registry completeness repo-relative
   - Repo-root-relative scope, parent-escape rejection, role-typed path law, and
+  - Local redeclaration of repo-relative discipline governance must remain
+    forbidden inside the bundle.
   - fail-close rather than locally reconstructing descriptor
     path legality.
   - The bundle must also inherit machine-registry completeness current/version
@@ -213,6 +218,8 @@ bundle_anchor_checks:
     law.
   - The bundle must also inherit machine-registry completeness repo-relative
   - descriptor discipline law; repo-root-relative scope, parent-escape rejection,
+  - Local redeclaration of repo-relative discipline governance must remain
+    forbidden inside the bundle.
   - protocol legality must fail-close rather than locally reconstructing
     descriptor-path legality law.
   - The bundle must also inherit machine-registry completeness current/version
@@ -267,6 +274,8 @@ bundle_anchor_checks:
   - fail-close rather than locally reconstructing descriptor-surface pattern law.
   - Runtime must also reject a root-law bundle that redeclares or weakens
   - scope, parent-escape rejection, role-typed path classes, and cross-role
+  - Runtime must also reject local redeclaration of repo-relative discipline
+    governance inside the bundle.
   - runtime must fail-close rather than locally reconstructing descriptor-path
     legality law.
   - Runtime must also reject a root-law bundle that redeclares or weakens

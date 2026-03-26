@@ -164,6 +164,9 @@ machine-registry completeness repo-relative descriptor discipline; repo-root
 scope, parent-escape rejection, role-typed path classes, and cross-role
 surface-stem coherence must be inherited from the admitted source component.
 
+Runtime must also reject local redeclaration of repo-relative discipline
+governance inside the bundle.
+
 If the admitted source does not disclose that repo-relative discipline,
 runtime must fail-close rather than locally reconstructing descriptor-path
 legality law.
