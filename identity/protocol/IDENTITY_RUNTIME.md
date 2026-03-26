@@ -344,6 +344,13 @@ drift.
 Runtime must not obey a drifted disclosed contract row during validator
 execution or treat drift-shaped execution as admitted validator truth.
 
+Runtime must also keep bound component validator contract-surface projection
+policy explicit; runtime preserves disclosed bundle summary and effective
+component execution rows as distinct surfaces.
+
+Runtime must not collapse those surfaces or conceal drift by overwriting one
+with the other.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

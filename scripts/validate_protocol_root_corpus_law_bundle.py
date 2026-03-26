@@ -48,6 +48,7 @@ from root_corpus_law_bundle_common import (
     component_validator_execution_environment_contract_from_doc,
     component_validator_execution_transport_contract_from_doc,
     component_validator_contract_drift_execution_policy_from_doc,
+    component_validator_contract_surface_projection_policy_from_doc,
     component_self_describing_family_requirement_fallback_policy_from_doc,
     component_self_describing_family_requirement_inheritance_mode_from_doc,
     component_self_describing_family_requirement_local_redeclaration_policy_from_doc,
@@ -113,6 +114,9 @@ COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT = "repo_root"
 COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT = "inherited_parent_process_env_no_local_overlay"
 COMPONENT_VALIDATOR_EXECUTION_TRANSPORT_CONTRACT = "local_direct_subprocess_vector"
 COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY = "execute_under_canonical_contract_and_fail_closed_on_drift"
+COMPONENT_VALIDATOR_CONTRACT_SURFACE_PROJECTION_POLICY = (
+    "bundle_summary_disclosed_component_rows_effective_execution_surface"
+)
 COMPONENT_VALIDATOR_OUTPUT_CONTRACT = "json_object_with_disclosed_status_key"
 
 EXPECTED_COMPONENTS = {
@@ -595,10 +599,23 @@ def main() -> int:
     component_validator_contract_drift_execution_policy = (
         component_validator_contract_drift_execution_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_contract_surface_projection_policy = (
+        component_validator_contract_surface_projection_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     effective_component_validator_status_requirement = (
         component_validator_status_requirement
         if component_validator_status_requirement == STATUS_PASS_REQUIRED
         else STATUS_PASS_REQUIRED
+    )
+    effective_component_validator_execution_failure_policy = (
+        component_validator_execution_failure_policy
+        if component_validator_execution_failure_policy == "fail_closed"
+        else "fail_closed"
+    )
+    effective_component_validator_returncode_observation_contract = (
+        component_validator_returncode_observation_contract
+        if component_validator_returncode_observation_contract == COMPONENT_VALIDATOR_RETURNCODE_OBSERVATION_CONTRACT
+        else COMPONENT_VALIDATOR_RETURNCODE_OBSERVATION_CONTRACT
     )
     effective_component_validator_invocation_contract = (
         component_validator_invocation_contract
@@ -629,6 +646,11 @@ def main() -> int:
         component_validator_contract_drift_execution_policy
         if component_validator_contract_drift_execution_policy == COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY
         else COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY
+    )
+    effective_component_validator_contract_surface_projection_policy = (
+        component_validator_contract_surface_projection_policy
+        if component_validator_contract_surface_projection_policy == COMPONENT_VALIDATOR_CONTRACT_SURFACE_PROJECTION_POLICY
+        else COMPONENT_VALIDATOR_CONTRACT_SURFACE_PROJECTION_POLICY
     )
     effective_component_validator_stdout_normalization_contract = (
         component_validator_stdout_normalization_contract
@@ -984,6 +1006,12 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_validator_contract_drift_execution_policy != COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY:
             stale_reasons.append("root_corpus_law_bundle_component_validator_contract_drift_execution_policy_invalid")
+            error_code = ERR_REGISTRY
+        if (
+            component_validator_contract_surface_projection_policy
+            != COMPONENT_VALIDATOR_CONTRACT_SURFACE_PROJECTION_POLICY
+        ):
+            stale_reasons.append("root_corpus_law_bundle_component_validator_contract_surface_projection_policy_invalid")
             error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
@@ -1456,7 +1484,9 @@ def main() -> int:
                     "validator_script": row.validator_script,
                     "probe_script": row.probe_script,
                     "common_script": row.common_script,
-                    "validator_returncode_observation_contract": component_validator_returncode_observation_contract,
+                    "validator_status_requirement": effective_component_validator_status_requirement,
+                    "validator_execution_failure_policy": effective_component_validator_execution_failure_policy,
+                    "validator_returncode_observation_contract": effective_component_validator_returncode_observation_contract,
                     "validator_output_contract": effective_component_validator_output_contract,
                     "validator_invocation_contract": effective_component_validator_invocation_contract,
                     "validator_output_channel_contract": effective_component_validator_output_channel_contract,
@@ -1474,6 +1504,9 @@ def main() -> int:
                     "validator_execution_environment_contract": effective_component_validator_execution_environment_contract,
                     "validator_execution_transport_contract": effective_component_validator_execution_transport_contract,
                     "validator_contract_drift_execution_policy": effective_component_validator_contract_drift_execution_policy,
+                    "validator_contract_surface_projection_policy": (
+                        effective_component_validator_contract_surface_projection_policy
+                    ),
                     "validator_rc": rc,
                     "component_status": component_status,
                     "error_codes": list(row.error_codes),
@@ -1707,6 +1740,9 @@ def main() -> int:
         "component_validator_execution_environment_contract": component_validator_execution_environment_contract,
         "component_validator_execution_transport_contract": component_validator_execution_transport_contract,
         "component_validator_contract_drift_execution_policy": component_validator_contract_drift_execution_policy,
+        "component_validator_contract_surface_projection_policy": (
+            component_validator_contract_surface_projection_policy
+        ),
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
         "component_ids": [row.component_id for row in sorted_components],

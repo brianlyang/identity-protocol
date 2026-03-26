@@ -279,6 +279,10 @@ def component_validator_contract_drift_execution_policy_from_doc(bundle_doc: Map
     return _norm_str(bundle_doc.get("component_validator_contract_drift_execution_policy"))
 
 
+def component_validator_contract_surface_projection_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("component_validator_contract_surface_projection_policy"))
+
+
 def require_component_descriptor_concordance(bundle_doc: Mapping[str, Any]) -> bool:
     return _as_bool(bundle_doc.get("require_component_descriptor_concordance"))
 

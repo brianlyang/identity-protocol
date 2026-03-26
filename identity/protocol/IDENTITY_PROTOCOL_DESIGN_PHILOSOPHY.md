@@ -658,6 +658,15 @@ The machine world must not obey a drifted disclosed contract row during
 validator execution or treat drift-shaped execution as if it were governed
 validator law.
 
+Bundle component validator contract-surface projection policy must stay
+explicit too.
+
+The admitted policy is bundle summary discloses disclosed contract rows while
+component rows disclose effective canonical execution surface.
+
+The machine world must not collapse disclosed drift and effective execution
+into a single ambiguous surface or misreport one as the other.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

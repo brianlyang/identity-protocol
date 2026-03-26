@@ -670,6 +670,15 @@ fail-closed on drift.
 Runtime may not obey a drifted disclosed contract row during validator
 execution or treat drift-shaped execution as admitted validator truth.
 
+Bundle component validators must also keep contract-surface projection policy
+explicit.
+
+The admitted validator surface split is disclosed bundle summary plus
+effective component execution rows.
+
+Runtime may not hide disclosed drift by rewriting summary to canonical values
+or project drifted declared rows as applied execution truth.
+
 ---
 
 ## Conflict-handling rule
