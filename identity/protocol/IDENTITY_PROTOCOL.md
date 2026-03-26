@@ -314,6 +314,13 @@ decode and no locale overlay.
 Local substitution of codec, locale-shaped decoder choice, or replacement
 policy is forbidden inside the bundle.
 
+Root-law bundle rows must also keep component validator stdout-normalization
+contract explicit; only outer-whitespace trim may occur before JSON decode
+inside the bundle.
+
+Local line selection, inner-content trimming, or JSON reconstruction from
+mixed stdout is forbidden inside the bundle.
+
 Root-law bundle rows must also keep component validator stdout-framing
 contract explicit; bound component validator verdict is consumed only when
 whole stdout is a single JSON object carrying the disclosed status key.

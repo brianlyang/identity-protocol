@@ -52,6 +52,7 @@ component_validator_invocation_contract: python3_repo_root_json_only
 component_validator_output_channel_contract: stdout_only
 component_validator_stderr_isolation_contract: stderr_captured_separate_from_stdout
 component_validator_stdio_text_decoding_contract: utf8_strict_text_decode_no_locale_overlay
+component_validator_stdout_normalization_contract: outer_whitespace_trim_only_before_json_decode
 component_validator_stdout_framing_contract: whole_stdout_single_json_object
 component_validator_status_key_resolution_contract: top_level_direct_member_only
 component_validator_status_literal_contract: exact_canonical_string_literal
@@ -186,6 +187,12 @@ bundle_anchor_checks:
   - machine world must not let ambient locale choose the decoder, substitute
     an alternate codec or replacement policy, or treat locale-shaped text
     coercion as if it were governed validator truth.
+  - Bundle component validator stdout-normalization contract must stay explicit
+    too.
+  - The admitted stdout-normalization contract is outer-whitespace trim only
+    before JSON decode.
+  - The machine world must not line-scrape, select a preferred line, trim inner
+    content, or reconstruct JSON from mixed stdout.
   - Bundle component validator stdout-framing contract must stay explicit too.
   - The admitted stdout framing contract is a single JSON object occupying whole
     stdout.
@@ -346,6 +353,12 @@ bundle_anchor_checks:
   - Runtime may not let ambient locale choose the decoder, substitute an
     alternate codec or replacement policy, or treat locale-shaped text coercion
     as admitted validator truth.
+  - Bundle component validators must also keep stdout-normalization contract
+    explicit.
+  - The admitted validator stdout-normalization contract is outer-whitespace trim
+    only before JSON decode.
+  - Runtime may not line-scrape, select a preferred line, trim inner content, or
+    reconstruct JSON from mixed stdout.
   - Bundle component validators must also keep stdout-framing contract explicit.
   - The verdict-bearing machine output occupies whole stdout as a single JSON
     object.
@@ -490,6 +503,11 @@ bundle_anchor_checks:
     stdout.
   - Local merging of stderr into stdout or admission of a mixed stream is
     forbidden inside the bundle.
+  - Root-law bundle rows must also keep component validator stdout-normalization
+    contract explicit; only outer-whitespace trim may occur before JSON decode
+    inside the bundle.
+  - Local line selection, inner-content trimming, or JSON reconstruction from
+    mixed stdout is forbidden inside the bundle.
   - Root-law bundle rows must also keep component validator stdout-framing
     contract explicit; bound component validator verdict is consumed only when
     whole stdout is a single JSON object carrying the disclosed status key.
@@ -632,6 +650,11 @@ bundle_anchor_checks:
   - Runtime must not let ambient locale choose the decoder, substitute an
     alternate codec or replacement policy, or treat locale-shaped text coercion
     as admitted validator truth.
+  - Runtime must also keep bound component validator stdout-normalization
+    contract explicit; runtime applies only outer-whitespace trim before JSON
+    decode.
+  - Runtime must not line-scrape, select a preferred line, trim inner content, or
+    reconstruct JSON from mixed stdout.
   - Runtime must also keep bound component validator stdout-framing contract
     explicit; runtime parses whole stdout as a single JSON object carrying the
     disclosed status key.

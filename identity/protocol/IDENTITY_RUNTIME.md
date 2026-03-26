@@ -259,6 +259,13 @@ Runtime must not let ambient locale choose the decoder, substitute an
 alternate codec or replacement policy, or treat locale-shaped text coercion
 as admitted validator truth.
 
+Runtime must also keep bound component validator stdout-normalization
+contract explicit; runtime applies only outer-whitespace trim before JSON
+decode.
+
+Runtime must not line-scrape, select a preferred line, trim inner content, or
+reconstruct JSON from mixed stdout.
+
 Runtime must also keep bound component validator stdout-framing contract
 explicit; runtime parses whole stdout as a single JSON object carrying the
 disclosed status key.

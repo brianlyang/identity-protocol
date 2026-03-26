@@ -572,6 +572,15 @@ Runtime may not let ambient locale choose the decoder, substitute an
 alternate codec or replacement policy, or treat locale-shaped text coercion
 as admitted validator truth.
 
+Bundle component validators must also keep stdout-normalization contract
+explicit.
+
+The admitted validator stdout-normalization contract is outer-whitespace trim
+only before JSON decode.
+
+Runtime may not line-scrape, select a preferred line, trim inner content, or
+reconstruct JSON from mixed stdout.
+
 Bundle component validators must also keep stdout-framing contract explicit.
 
 The verdict-bearing machine output occupies whole stdout as a single JSON

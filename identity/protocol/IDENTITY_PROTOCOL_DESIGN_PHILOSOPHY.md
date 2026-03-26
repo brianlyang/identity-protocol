@@ -553,6 +553,15 @@ The machine world must not let ambient locale choose the decoder, substitute
 an alternate codec or replacement policy, or treat locale-shaped text
 coercion as if it were governed validator truth.
 
+Bundle component validator stdout-normalization contract must stay explicit
+too.
+
+The admitted stdout-normalization contract is outer-whitespace trim only
+before JSON decode.
+
+The machine world must not line-scrape, select a preferred line, trim inner
+content, or reconstruct JSON from mixed stdout.
+
 Bundle component validator stdout-framing contract must stay explicit too.
 
 The admitted stdout framing contract is a single JSON object occupying whole
