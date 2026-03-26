@@ -562,6 +562,13 @@ before JSON decode.
 The machine world must not line-scrape, select a preferred line, trim inner
 content, or reconstruct JSON from mixed stdout.
 
+Bundle component validator stdout-presence contract must stay explicit too.
+
+The admitted stdout-presence contract is nonempty after outer-whitespace trim.
+
+The machine world must not treat empty or whitespace-only stdout as implicit
+success, an invented empty object, or an advisory no-op verdict surface.
+
 Bundle component validator stdout-framing contract must stay explicit too.
 
 The admitted stdout framing contract is a single JSON object occupying whole

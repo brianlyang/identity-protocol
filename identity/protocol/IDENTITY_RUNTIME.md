@@ -266,6 +266,12 @@ decode.
 Runtime must not line-scrape, select a preferred line, trim inner content, or
 reconstruct JSON from mixed stdout.
 
+Runtime must also keep bound component validator stdout-presence contract
+explicit; runtime requires nonempty stdout after outer-whitespace trim.
+
+Runtime must not treat empty or whitespace-only stdout as implicit success, an
+invented empty object, or an advisory no-op verdict surface.
+
 Runtime must also keep bound component validator stdout-framing contract
 explicit; runtime parses whole stdout as a single JSON object carrying the
 disclosed status key.

@@ -37,6 +37,7 @@ from root_corpus_law_bundle_common import (
     component_validator_stderr_isolation_contract_from_doc,
     component_validator_stdio_text_decoding_contract_from_doc,
     component_validator_stdout_normalization_contract_from_doc,
+    component_validator_stdout_presence_contract_from_doc,
     component_validator_stdout_framing_contract_from_doc,
     component_validator_status_key_resolution_contract_from_doc,
     component_validator_status_literal_contract_from_doc,
@@ -100,6 +101,7 @@ COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT = "stdout_only"
 COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT = "stderr_captured_separate_from_stdout"
 COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT = "utf8_strict_text_decode_no_locale_overlay"
 COMPONENT_VALIDATOR_STDOUT_NORMALIZATION_CONTRACT = "outer_whitespace_trim_only_before_json_decode"
+COMPONENT_VALIDATOR_STDOUT_PRESENCE_CONTRACT = "nonempty_after_outer_whitespace_trim_required"
 COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT = "whole_stdout_single_json_object"
 COMPONENT_VALIDATOR_STATUS_KEY_RESOLUTION_CONTRACT = "top_level_direct_member_only"
 COMPONENT_VALIDATOR_STATUS_LITERAL_CONTRACT = "exact_canonical_string_literal"
@@ -281,9 +283,12 @@ def _component_validator_run_kwargs(
 
 def _parse_component_validator_stdout(
     stdout: str,
+    stdout_presence_contract: str,
     output_contract: str,
     stdout_framing_contract: str,
 ) -> tuple[dict[str, Any], str]:
+    if stdout_presence_contract == COMPONENT_VALIDATOR_STDOUT_PRESENCE_CONTRACT and not stdout:
+        return {}, "validator_output_missing"
     if not stdout:
         return {}, "validator_output_missing"
     try:
@@ -338,6 +343,7 @@ def _run_component_validator(
     invocation_contract: str,
     stderr_isolation_contract: str,
     stdout_normalization_contract: str,
+    stdout_presence_contract: str,
     stdout_framing_contract: str,
     status_key_resolution_contract: str,
     status_literal_contract: str,
@@ -369,6 +375,7 @@ def _run_component_validator(
     stdout = _normalize_component_validator_stdout(proc.stdout or "", stdout_normalization_contract)
     payload, parse_error = _parse_component_validator_stdout(
         stdout,
+        stdout_presence_contract,
         output_contract,
         stdout_framing_contract,
     )
@@ -553,6 +560,9 @@ def main() -> int:
     component_validator_stdout_normalization_contract = (
         component_validator_stdout_normalization_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_stdout_presence_contract = (
+        component_validator_stdout_presence_contract_from_doc(bundle_doc) if bundle_doc else ""
+    )
     component_validator_stdout_framing_contract = (
         component_validator_stdout_framing_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
@@ -614,6 +624,11 @@ def main() -> int:
         component_validator_stdout_normalization_contract
         if component_validator_stdout_normalization_contract == COMPONENT_VALIDATOR_STDOUT_NORMALIZATION_CONTRACT
         else COMPONENT_VALIDATOR_STDOUT_NORMALIZATION_CONTRACT
+    )
+    effective_component_validator_stdout_presence_contract = (
+        component_validator_stdout_presence_contract
+        if component_validator_stdout_presence_contract == COMPONENT_VALIDATOR_STDOUT_PRESENCE_CONTRACT
+        else COMPONENT_VALIDATOR_STDOUT_PRESENCE_CONTRACT
     )
     effective_component_validator_stdout_framing_contract = (
         component_validator_stdout_framing_contract
@@ -926,6 +941,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_validator_stdout_normalization_contract != COMPONENT_VALIDATOR_STDOUT_NORMALIZATION_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_stdout_normalization_contract_invalid")
+            error_code = ERR_REGISTRY
+        if component_validator_stdout_presence_contract != COMPONENT_VALIDATOR_STDOUT_PRESENCE_CONTRACT:
+            stale_reasons.append("root_corpus_law_bundle_component_validator_stdout_presence_contract_invalid")
             error_code = ERR_REGISTRY
         if component_validator_stdout_framing_contract != COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_stdout_framing_contract_invalid")
@@ -1403,6 +1421,7 @@ def main() -> int:
                 effective_component_validator_invocation_contract,
                 effective_component_validator_stderr_isolation_contract,
                 effective_component_validator_stdout_normalization_contract,
+                effective_component_validator_stdout_presence_contract,
                 effective_component_validator_stdout_framing_contract,
                 effective_component_validator_status_key_resolution_contract,
                 effective_component_validator_status_literal_contract,
@@ -1431,6 +1450,7 @@ def main() -> int:
                     "validator_stderr_isolation_contract": effective_component_validator_stderr_isolation_contract,
                     "validator_stdio_text_decoding_contract": effective_component_validator_stdio_text_decoding_contract,
                     "validator_stdout_normalization_contract": effective_component_validator_stdout_normalization_contract,
+                    "validator_stdout_presence_contract": effective_component_validator_stdout_presence_contract,
                     "validator_stdout_framing_contract": effective_component_validator_stdout_framing_contract,
                     "validator_status_key_resolution_contract": effective_component_validator_status_key_resolution_contract,
                     "validator_status_literal_contract": effective_component_validator_status_literal_contract,
@@ -1662,6 +1682,7 @@ def main() -> int:
         "component_validator_stderr_isolation_contract": component_validator_stderr_isolation_contract,
         "component_validator_stdio_text_decoding_contract": component_validator_stdio_text_decoding_contract,
         "component_validator_stdout_normalization_contract": component_validator_stdout_normalization_contract,
+        "component_validator_stdout_presence_contract": component_validator_stdout_presence_contract,
         "component_validator_stdout_framing_contract": component_validator_stdout_framing_contract,
         "component_validator_status_key_resolution_contract": component_validator_status_key_resolution_contract,
         "component_validator_status_literal_contract": component_validator_status_literal_contract,

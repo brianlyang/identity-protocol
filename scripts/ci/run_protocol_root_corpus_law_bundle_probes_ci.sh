@@ -68,6 +68,7 @@ assert payload["component_validator_output_channel_contract"] == "stdout_only", 
 assert payload["component_validator_stderr_isolation_contract"] == "stderr_captured_separate_from_stdout", payload
 assert payload["component_validator_stdio_text_decoding_contract"] == "utf8_strict_text_decode_no_locale_overlay", payload
 assert payload["component_validator_stdout_normalization_contract"] == "outer_whitespace_trim_only_before_json_decode", payload
+assert payload["component_validator_stdout_presence_contract"] == "nonempty_after_outer_whitespace_trim_required", payload
 assert payload["component_validator_stdout_framing_contract"] == "whole_stdout_single_json_object", payload
 assert payload["component_validator_status_key_resolution_contract"] == "top_level_direct_member_only", payload
 assert payload["component_validator_status_literal_contract"] == "exact_canonical_string_literal", payload
@@ -140,6 +141,10 @@ assert all(
 ), payload
 assert all(
     row["validator_stdout_normalization_contract"] == "outer_whitespace_trim_only_before_json_decode"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    row["validator_stdout_presence_contract"] == "nonempty_after_outer_whitespace_trim_required"
     for row in payload["component_status_rows"]
 ), payload
 assert all(
@@ -327,6 +332,38 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCLB-001", payload
 assert "root_corpus_law_bundle_component_validator_stdout_normalization_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_STDOUT_PRESENCE_CONTRACT_REPO="${TMP_ROOT}/component-validator-stdout-presence-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_STDOUT_PRESENCE_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STDOUT_PRESENCE_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_stdout_presence_contract"] = "empty_stdout_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_STDOUT_PRESENCE_CONTRACT_JSON="${TMP_ROOT}/component-validator-stdout-presence-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_STDOUT_PRESENCE_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_STDOUT_PRESENCE_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator stdout-presence contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_STDOUT_PRESENCE_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_stdout_presence_contract_invalid" in payload["stale_reasons"], payload
 PY
 
 COMPONENT_VALIDATOR_INVOCATION_CONTRACT_REPO="${TMP_ROOT}/component-validator-invocation-contract-drift-repo"

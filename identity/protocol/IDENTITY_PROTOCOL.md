@@ -321,6 +321,13 @@ inside the bundle.
 Local line selection, inner-content trimming, or JSON reconstruction from
 mixed stdout is forbidden inside the bundle.
 
+Root-law bundle rows must also keep component validator stdout-presence
+contract explicit; bound component validator stdout must remain nonempty after
+outer-whitespace trim.
+
+Local treatment of empty or whitespace-only stdout as implicit success, an
+invented empty object, or advisory silence is forbidden inside the bundle.
+
 Root-law bundle rows must also keep component validator stdout-framing
 contract explicit; bound component validator verdict is consumed only when
 whole stdout is a single JSON object carrying the disclosed status key.

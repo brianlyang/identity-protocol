@@ -581,6 +581,14 @@ only before JSON decode.
 Runtime may not line-scrape, select a preferred line, trim inner content, or
 reconstruct JSON from mixed stdout.
 
+Bundle component validators must also keep stdout-presence contract explicit.
+
+The admitted validator stdout-presence contract is nonempty after
+outer-whitespace trim.
+
+Runtime may not treat empty or whitespace-only stdout as implicit success, an
+invented empty object, or an advisory no-op verdict surface.
+
 Bundle component validators must also keep stdout-framing contract explicit.
 
 The verdict-bearing machine output occupies whole stdout as a single JSON
