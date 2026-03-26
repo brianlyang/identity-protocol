@@ -787,6 +787,17 @@ The admitted runtime observation reasons are parse/status failure,
 nonzero returncode after admitted parse/status resolution, and non-pass
 component status, all before bundle-violation projection.
 
+Bundle component-validator observation-reason classifier precedence
+policy must also stay explicit.
+
+Parse/status runtime classification preempts nonzero returncode
+classification, nonzero returncode classification preempts non-pass
+component-status classification, non-pass component-status
+classification preempts explicit non-execution row exclusion, explicit
+non-execution row exclusion preempts prefixed observation-family
+ontology drift, and otherwise runtime classification remains
+not-applicable.
+
 Non-execution bundle rows must remain outside component-validator
 observation ontology rather than being silently re-bucketed as runtime
 observation reasons.
