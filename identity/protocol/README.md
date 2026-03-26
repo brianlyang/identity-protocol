@@ -392,6 +392,9 @@ repaired at the matching root-law layer.
 Bundle membership must also remain descriptor-concordant with the admitted
 component families it binds.
 
+Local waiver of descriptor concordance must remain forbidden inside the
+bundle.
+
 A bundle row may not silently drift from a component family's own disclosed
 validator, probe, shared-common, emitted status-key, or emitted error-code
 surfaces.

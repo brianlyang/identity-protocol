@@ -58,6 +58,7 @@ assert payload["component_registry_child_membership_local_redeclaration_policy"]
 assert payload["component_registry_child_membership_fallback_policy"] == "fail_closed", payload
 assert payload["component_descriptor_resolution_mode"] == "current_alias_only", payload
 assert payload["component_descriptor_version_pinning_policy"] == "forbidden", payload
+assert payload["component_descriptor_concordance_local_waiver_policy"] == "forbidden", payload
 assert payload["bundle_redeclares_required_repo_rel_path_patterns"] is False, payload
 assert payload["bundle_local_required_repo_rel_path_patterns"] == {}, payload
 assert payload["bundle_redeclares_family_surface_binding_governance"] is False, payload
@@ -1213,6 +1214,38 @@ assert any(
     and row["reason"] == "descriptor_field_modes_not_aligned_to_machine_registry_completeness"
     for row in payload["bundle_violations"]
 ), payload
+PY
+
+CONCORDANCE_WAIVER_POLICY_REPO="${TMP_ROOT}/descriptor-concordance-waiver-policy-drift-repo"
+mirror_repo "${CONCORDANCE_WAIVER_POLICY_REPO}"
+python3 - <<'PY' "${CONCORDANCE_WAIVER_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_descriptor_concordance_local_waiver_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+CONCORDANCE_WAIVER_POLICY_JSON="${TMP_ROOT}/descriptor-concordance-waiver-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${CONCORDANCE_WAIVER_POLICY_REPO}" \
+  --json-only >"${CONCORDANCE_WAIVER_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor concordance waiver-policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${CONCORDANCE_WAIVER_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_descriptor_concordance_local_waiver_policy_invalid" in payload["stale_reasons"], payload
 PY
 
 DESCRIPTOR_REPO="${TMP_ROOT}/descriptor-drift-repo"

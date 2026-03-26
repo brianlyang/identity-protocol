@@ -43,6 +43,7 @@ component_registry_child_membership_fallback_policy: fail_closed
 component_descriptor_resolution_mode: current_alias_only
 component_descriptor_version_pinning_policy: forbidden
 require_component_descriptor_concordance: true
+component_descriptor_concordance_local_waiver_policy: forbidden
 required_component_descriptor_fields:
 - validator_script
 - probe_script
@@ -63,6 +64,8 @@ bundle_anchor_checks:
   - machine-registry completeness, and conflict precedence are not optional
   - Weakening one slice while keeping the others green is a root-law coherence
   - That joint governance also requires descriptor concordance across the bundle.
+  - Local waiver of descriptor concordance must remain forbidden inside the
+    bundle.
   - emitted status-key, or emitted error-code surfaces, the machine world is being asked
   - to trust shadow bundle knowledge instead of the admitted family descriptor.
   - Descriptor concordance must also preserve descriptor-field mode.
@@ -130,6 +133,8 @@ bundle_anchor_checks:
     as one governed root-law bundle.
   - Bundle membership must also remain descriptor-concordant with the admitted
     component families it binds.
+  - Local waiver of descriptor concordance must remain forbidden inside the
+    bundle.
   - A bundle row may not silently drift from a component family's own disclosed
     validator, probe, shared-common, emitted status-key, or emitted error-code
     surfaces.
@@ -192,6 +197,8 @@ bundle_anchor_checks:
   - Root-law bundle rows must also remain descriptor-concordant with the active
   - component family's own disclosed validator/probe/common/status-key/error-code
     surfaces.
+  - Local waiver of descriptor concordance must remain forbidden inside the
+    bundle.
   - Root-law bundle rows must also preserve descriptor-field mode; a repo-relative
   - validator-emitted status-key/error-code fields may not be reinterpreted as
     ordinary path strings.
@@ -253,6 +260,8 @@ bundle_anchor_checks:
   - Runtime must not select the most convenient slice in isolation.
   - Runtime must also reject a root-law bundle row whose validator/probe/common/status-key/error-code
   - surfaces drift from the active component descriptor it claims to bind.
+  - Runtime must also reject local waiver of descriptor concordance inside the
+    bundle.
   - Runtime must also reject a root-law bundle row whose descriptor-field mode
   - error-code family.
   - Runtime must also reject a root-law bundle whose descriptor schema diverges

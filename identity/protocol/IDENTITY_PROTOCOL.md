@@ -167,6 +167,9 @@ component families they bind; bundle metadata may not override or hide a
 component family's own disclosed validator/probe/common/status-key/error-code
 surfaces.
 
+Local waiver of descriptor concordance must remain forbidden inside the
+bundle.
+
 Root-law bundle rows must also preserve descriptor-field mode; a repo-relative
 path field may not be reinterpreted as validator-emitted metadata, and
 validator-emitted status-key/error-code fields may not be reinterpreted as

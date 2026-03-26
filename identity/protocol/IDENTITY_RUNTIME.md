@@ -110,6 +110,9 @@ Runtime must not select the most convenient slice in isolation.
 Runtime must also reject a root-law bundle row whose validator/probe/common/status-key/error-code
 surfaces drift from the active component descriptor it claims to bind.
 
+Runtime must also reject local waiver of descriptor concordance inside the
+bundle.
+
 Runtime must also reject a root-law bundle row whose descriptor-field mode
 drifts from the admitted component descriptor; runtime must not guess whether a
 field is a path surface, a validator-emitted status key, or a validator-emitted

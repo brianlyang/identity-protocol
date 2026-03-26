@@ -27,6 +27,7 @@ from root_corpus_law_bundle_common import (
     component_mapping_family_id_from_current_file,
     component_descriptor_resolution_mode_from_doc,
     component_descriptor_version_pinning_policy_from_doc,
+    component_descriptor_concordance_local_waiver_policy_from_doc,
     component_self_describing_family_requirement_fallback_policy_from_doc,
     component_self_describing_family_requirement_inheritance_mode_from_doc,
     component_self_describing_family_requirement_local_redeclaration_policy_from_doc,
@@ -345,6 +346,9 @@ def main() -> int:
     component_descriptor_version_pinning_policy = (
         component_descriptor_version_pinning_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_descriptor_concordance_local_waiver_policy = (
+        component_descriptor_concordance_local_waiver_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     source_required_descriptor_fields = (
         registry_required_descriptor_fields_from_doc(machine_registry_completeness_doc)
         if machine_registry_completeness_doc
@@ -581,6 +585,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_descriptor_version_pinning_policy != "forbidden":
             stale_reasons.append("root_corpus_law_bundle_component_descriptor_version_pinning_policy_invalid")
+            error_code = ERR_REGISTRY
+        if component_descriptor_concordance_local_waiver_policy != "forbidden":
+            stale_reasons.append("root_corpus_law_bundle_component_descriptor_concordance_local_waiver_policy_invalid")
             error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
@@ -1245,6 +1252,7 @@ def main() -> int:
         "component_registry_child_membership_fallback_policy": component_registry_child_membership_fallback_policy,
         "component_descriptor_resolution_mode": component_descriptor_resolution_mode,
         "component_descriptor_version_pinning_policy": component_descriptor_version_pinning_policy,
+        "component_descriptor_concordance_local_waiver_policy": component_descriptor_concordance_local_waiver_policy,
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
         "component_ids": [row.component_id for row in sorted_components],
