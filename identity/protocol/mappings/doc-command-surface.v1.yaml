@@ -1,0 +1,101 @@
+schema_version: 1
+command_surface_family: protocol_doc_command_surface
+command_surface_version: v1
+stream_doc_registry_current_file: identity/protocol/mappings/stream-doc-registry.current.yaml
+validator_script: scripts/validate_doc_command_surface_registry.py
+probe_script: scripts/ci/run_doc_command_surface_probes_ci.sh
+common_script: scripts/doc_command_surface_common.py
+status_key: doc_command_surface_registry_status
+error_codes:
+  - IP-DCSR-001
+  - IP-DCSR-002
+self_prefix_contract:
+  repo_self_prefixes:
+    - identity-protocol-local
+  repo_self_prefix_resolution: fallback_to_repo_root_relative
+surface_modes:
+  - mode: live_contract
+    enforce_script_existence: true
+    enforce_current_flag_contract: true
+    enforce_workspace_semantic_probe: true
+    description: >
+      Current executable contract. Docs in this mode must resolve against the
+      active script surface and current CLI flags.
+  - mode: historical_replay_trace
+    enforce_script_existence: true
+    enforce_current_flag_contract: false
+    enforce_workspace_semantic_probe: false
+    description: >
+      Historical or replay evidence. The command path must still resolve to a
+      governed script surface when present, but current flag parity is not
+      required because the snippet is archival rather than live.
+  - mode: compatibility_bridge_trace
+    enforce_script_existence: false
+    enforce_current_flag_contract: false
+    enforce_workspace_semantic_probe: false
+    description: >
+      Compatibility bridge evidence only. The snippet records a governed
+      migration helper and must not be promoted into a live executable contract
+      surface.
+doc_command_surface_rows:
+  - doc: docs/governance/audit-snapshot-2026-02-23-v1.4.6-role-binding-bootstrap.md
+    default_mode: historical_replay_trace
+    rationale: audit_snapshot_archival_replay
+  - doc: docs/governance/audit-snapshot-2026-02-24-release-doc-governance-closure-v1.4.12.md
+    default_mode: historical_replay_trace
+    rationale: audit_snapshot_archival_replay
+  - doc: docs/governance/identity-actor-session-binding-governance-v1.5.0.md
+    default_mode: historical_replay_trace
+    rationale: historical_baseline_governance
+  - doc: docs/review/protocol-remediation-audit-ledger-v1.5.md
+    default_mode: historical_replay_trace
+    rationale: historical_review_ledger
+  - doc: docs/governance/github-native-control-plane-specialization-v1.6.3.md
+    default_mode: live_contract
+    rationale: active_stream_doc
+    script_rules:
+      - script_rel: scripts/full_identity_protocol_scan.py
+        mode: historical_replay_trace
+        rationale: predevelopment_replay_trace
+  - doc: docs/review/protocol-remediation-audit-ledger-v1.6.6.md
+    default_mode: live_contract
+    rationale: active_review_doc
+    script_rules:
+      - script_rel: scripts/full_identity_protocol_scan.py
+        mode: historical_replay_trace
+        rationale: serialized_review_replay_trace
+  - doc: docs/governance/identity-native-chat-bootstrap-entry-governance-v1.6.12.md
+    default_mode: live_contract
+    rationale: active_stream_doc
+    script_rules:
+      - script_prefix: scripts/codex_native_chat/
+        mode: compatibility_bridge_trace
+        rationale: workspace_bridge_evidence_only
+  - doc: docs/review/protocol-remediation-audit-ledger-v1.6.12-native-chat-bootstrap-entry.md
+    default_mode: live_contract
+    rationale: active_review_doc
+    script_rules:
+      - script_prefix: scripts/codex_native_chat/
+        mode: compatibility_bridge_trace
+        rationale: workspace_bridge_evidence_only
+  - doc: docs/review/protocol-remediation-audit-ledger-v1.6.13-instance-pack-topology.md
+    default_mode: live_contract
+    rationale: active_review_doc
+    script_rules:
+      - script_prefix: scripts/codex_native_chat/
+        mode: compatibility_bridge_trace
+        rationale: workspace_bridge_evidence_only
+  - doc: docs/governance/identity-codex-launcher-governance-v1.6.14.md
+    default_mode: live_contract
+    rationale: active_stream_doc
+    script_rules:
+      - script_prefix: scripts/codex_native_chat/
+        mode: compatibility_bridge_trace
+        rationale: workspace_bridge_evidence_only
+  - doc: docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md
+    default_mode: live_contract
+    rationale: active_review_doc
+    script_rules:
+      - script_prefix: scripts/codex_native_chat/
+        mode: compatibility_bridge_trace
+        rationale: workspace_bridge_evidence_only

@@ -28,6 +28,16 @@ from typing import List, Set, Tuple
 import yaml
 
 from contract_binding_mapping_common import is_stream_version
+from doc_command_surface_common import (
+    MODE_LIVE_CONTRACT,
+    canonicalize_repo_self_prefix_path,
+    doc_command_surface_rows_from_doc,
+    load_doc_command_surface,
+    repo_self_prefixes_from_doc,
+    resolve_doc_command_surface_mode,
+    resolve_doc_script_target,
+    surface_mode_profiles_from_doc,
+)
 from registry_alias_control_plane_common import STREAM_DOC_REGISTRY_CURRENT, resolve_current_yaml_alias
 from reference_visual_atlas_governance_common import discover_visual_atlas_governance_scripts
 
@@ -197,12 +207,12 @@ def _docs_from_index(repo_root: Path) -> List[str]:
 
 
 def _canonical_script_rel(script_rel: str) -> str:
-    normalized = _norm_path(script_rel)
-    if normalized.startswith(f"{_resolve_repo_root('').name}/"):
-        return normalized.split("/", 1)[1]
-    if normalized.startswith("identity-protocol-local/"):
-        return normalized.split("/", 1)[1]
-    return normalized
+    repo_root = _resolve_repo_root("")
+    return canonicalize_repo_self_prefix_path(
+        script_rel,
+        repo_name=repo_root.name,
+        self_prefixes=("identity-protocol-local",),
+    )
 
 
 def _norm_path(value: str) -> str:
@@ -776,34 +786,38 @@ def load_help_flags(script_path: Path, subcommands: List[str], cwd_root: Path) -
     return _load_help_flags_cached(str(script_path.resolve()), tuple(subcommands), str(cwd_root.resolve()))
 
 
-def resolve_script_target(repo_root: Path, script_rel: str) -> tuple[Path, Path]:
-    workspace_root = _resolve_workspace_root(repo_root)
-    normalized = _norm_path(script_rel)
-    if normalized.startswith(f"{repo_root.name}/"):
-        candidate = (workspace_root / normalized).resolve()
-        return candidate, workspace_root
-    if normalized.startswith("identity-protocol-local/"):
-        candidate = (workspace_root / normalized).resolve()
-        return candidate, workspace_root
-    candidates = [
-        ((repo_root / normalized).resolve(), repo_root),
-    ]
-    if workspace_root != repo_root:
-        candidates.append(((workspace_root / normalized).resolve(), workspace_root))
-    for candidate_path, candidate_cwd in candidates:
-        if candidate_path.exists():
-            return candidate_path, candidate_cwd
-    return candidates[0]
+def resolve_script_target(
+    repo_root: Path,
+    script_rel: str,
+    repo_self_prefixes: tuple[str, ...] = ("identity-protocol-local",),
+) -> tuple[Path, Path]:
+    return resolve_doc_script_target(
+        repo_root,
+        script_rel,
+        workspace_root=_resolve_workspace_root(repo_root),
+        self_prefixes=repo_self_prefixes,
+    )
 
 
-def _rewrite_path_value_for_workspace(raw_value: str, *, repo_root: Path, workspace_root: Path, script_rel: str) -> str:
+def _rewrite_path_value_for_workspace(
+    raw_value: str,
+    *,
+    repo_root: Path,
+    workspace_root: Path,
+    script_rel: str,
+    repo_self_prefixes: tuple[str, ...],
+) -> str:
     token = str(raw_value or "").strip()
     if not token or token.startswith("<") or "..." in token:
         return token
     candidate = Path(token).expanduser()
     if candidate.is_absolute():
         return str(candidate.resolve())
-    normalized_script = _canonical_script_rel(script_rel)
+    normalized_script = canonicalize_repo_self_prefix_path(
+        script_rel,
+        repo_name=repo_root.name,
+        self_prefixes=repo_self_prefixes,
+    )
     base_root = repo_root if _norm_path(script_rel) == normalized_script else workspace_root
     absolute = (base_root / candidate).resolve()
     try:
@@ -818,9 +832,14 @@ def _build_workspace_semantic_probe_tokens(
     script_rel: str,
     repo_root: Path,
     workspace_root: Path,
+    repo_self_prefixes: tuple[str, ...],
 ) -> List[str]:
     rewritten = list(tokens)
-    normalized_script = _canonical_script_rel(script_rel)
+    normalized_script = canonicalize_repo_self_prefix_path(
+        script_rel,
+        repo_name=repo_root.name,
+        self_prefixes=repo_self_prefixes,
+    )
     script_token = f"{repo_root.name}/{normalized_script}"
     try:
         script_idx = rewritten.index(script_rel)
@@ -838,6 +857,7 @@ def _build_workspace_semantic_probe_tokens(
             repo_root=repo_root,
             workspace_root=workspace_root,
             script_rel=script_rel,
+            repo_self_prefixes=repo_self_prefixes,
         )
         idx += 2
     return rewritten
@@ -848,8 +868,13 @@ def _run_workspace_semantic_probe(
     repo_root: Path,
     script_rel: str,
     cmd_snippet: str,
+    repo_self_prefixes: tuple[str, ...],
 ) -> tuple[bool, str]:
-    normalized_script = _canonical_script_rel(script_rel)
+    normalized_script = canonicalize_repo_self_prefix_path(
+        script_rel,
+        repo_name=repo_root.name,
+        self_prefixes=repo_self_prefixes,
+    )
     if normalized_script not in DOC_SEMANTIC_SAFE_SCRIPTS:
         return True, ""
     if any(marker in cmd_snippet for marker in ("<", "...", ">", "|")):
@@ -866,6 +891,7 @@ def _run_workspace_semantic_probe(
         script_rel=script_rel,
         repo_root=repo_root,
         workspace_root=workspace_root,
+        repo_self_prefixes=repo_self_prefixes,
     )
     try:
         proc = subprocess.run(probe_tokens, capture_output=True, text=True, cwd=workspace_root, timeout=20)
@@ -897,6 +923,9 @@ def main() -> int:
     legacy_archival_docs: List[str] = []
     release_doc_surface: dict[str, object] = {}
     required_current_docs: List[str] = []
+    doc_command_surface_rows = ()
+    doc_command_surface_mode_map = {}
+    repo_self_prefixes: tuple[str, ...] = ("identity-protocol-local",)
     playbook_path: Path | None = None
     playbook_required_tokens: List[str] = []
     (
@@ -908,6 +937,27 @@ def main() -> int:
         registry_errors,
     ) = _load_stream_doc_registry(repo_root)
     bootstrap_failures.extend(registry_errors)
+    (
+        doc_command_surface_doc,
+        _doc_command_surface_entry_path,
+        _doc_command_surface_active_path,
+        doc_command_surface_alias_error,
+    ) = load_doc_command_surface(repo_root)
+    if doc_command_surface_alias_error:
+        bootstrap_failures.append(
+            f"[INVALID_DOC_COMMAND_SURFACE] alias resolution failed: identity/protocol/mappings/doc-command-surface.current.yaml:{doc_command_surface_alias_error}"
+        )
+    elif not doc_command_surface_doc:
+        bootstrap_failures.append("[INVALID_DOC_COMMAND_SURFACE] doc-command surface registry empty or invalid")
+    else:
+        doc_command_surface_rows = doc_command_surface_rows_from_doc(doc_command_surface_doc)
+        mode_profiles = surface_mode_profiles_from_doc(doc_command_surface_doc)
+        doc_command_surface_mode_map = {row.mode: row for row in mode_profiles}
+        repo_self_prefixes = repo_self_prefixes_from_doc(doc_command_surface_doc)
+        if not doc_command_surface_rows:
+            bootstrap_failures.append("[INVALID_DOC_COMMAND_SURFACE] doc_command_surface_rows missing")
+        if MODE_LIVE_CONTRACT not in doc_command_surface_mode_map:
+            bootstrap_failures.append("[INVALID_DOC_COMMAND_SURFACE] live_contract mode missing")
     playbook_path, playbook_required_tokens, playbook_errors = _load_playbook_requirements(repo_root)
     bootstrap_failures.extend(playbook_errors)
     if args.docs is None:
@@ -1095,13 +1145,27 @@ def main() -> int:
                 if not script_rel:
                     continue
                 checks += 1
-                script_path, script_cwd = resolve_script_target(repo_root, script_rel)
-                if not script_path.exists():
+                surface_mode, _surface_rationale = resolve_doc_command_surface_mode(
+                    surface_rows=doc_command_surface_rows,
+                    doc_rel=doc,
+                    script_rel=script_rel,
+                    repo_name=repo_root.name,
+                    self_prefixes=repo_self_prefixes,
+                )
+                mode_profile = doc_command_surface_mode_map.get(surface_mode)
+                if mode_profile is None:
                     failures.append(
-                        f"[MISSING_SCRIPT] {doc}: `{cmd_snippet}` -> `{script_rel}` not found"
+                        f"[INVALID_DOC_COMMAND_SURFACE_MODE] {doc}: `{cmd_snippet}` -> unresolved mode `{surface_mode}`"
                     )
                     continue
-                if is_python:
+                script_path, script_cwd = resolve_script_target(repo_root, script_rel, repo_self_prefixes)
+                if not script_path.exists():
+                    if mode_profile.enforce_script_existence:
+                        failures.append(
+                            f"[MISSING_SCRIPT] {doc}: `{cmd_snippet}` -> `{script_rel}` not found"
+                        )
+                    continue
+                if is_python and mode_profile.enforce_current_flag_contract:
                     help_flags = load_help_flags(script_path, subcommands, script_cwd)
                     for flag in flags:
                         # allow aliases in prose-style snippets using "..." or placeholders
@@ -1109,10 +1173,12 @@ def main() -> int:
                             failures.append(
                                 f"[FLAG_MISMATCH] {doc}: `{cmd_snippet}` -> `{flag}` not in {script_rel} --help"
                             )
+                if is_python and mode_profile.enforce_workspace_semantic_probe:
                     semantic_ok, semantic_reason = _run_workspace_semantic_probe(
                         repo_root=repo_root,
                         script_rel=script_rel,
                         cmd_snippet=cmd_snippet,
+                        repo_self_prefixes=repo_self_prefixes,
                     )
                     if not semantic_ok:
                         failures.append(
@@ -1236,6 +1302,26 @@ def main() -> int:
             )
     else:
         failures.append("[MISSING_SCRIPT] scripts/validate_runtime_summary_surface_governance.py not found")
+
+    doc_command_surface_registry_script = repo_root / "scripts/validate_doc_command_surface_registry.py"
+    if doc_command_surface_registry_script.exists():
+        proc = subprocess.run(
+            [sys.executable, str(doc_command_surface_registry_script), "--json-only"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+        )
+        if proc.returncode != 0:
+            failures.append(
+                "[DOC_COMMAND_SURFACE_REGISTRY_FAIL] "
+                + (
+                    proc.stdout.strip()
+                    or proc.stderr.strip()
+                    or "validate_doc_command_surface_registry failed"
+                )
+            )
+    else:
+        failures.append("[MISSING_SCRIPT] scripts/validate_doc_command_surface_registry.py not found")
 
     # Round-29.5: enforce doc evidence persistence policy
     evidence_policy_script = repo_root / "scripts/validate_doc_evidence_persistence.py"
