@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from protocol_feedback_contract_common import DEFAULT_ACTIVITY_DIRS
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -18,17 +19,6 @@ ERR_MIRROR_ONLY = "IP-GOV-FEEDBACK-003"
 
 STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate", "mutation"}
 INSPECTION_OPERATIONS = {"scan", "three-plane", "inspection"}
-
-DEFAULT_ACTIVITY_DIRS = (
-    "issues",
-    "roundtables",
-    "upgrade-proposals",
-    "protocol-vendor-intel",
-    "business-partner-intel",
-    "vendor-intel",
-    "review-notes",
-)
-
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:

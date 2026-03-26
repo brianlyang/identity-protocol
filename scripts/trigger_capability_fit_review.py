@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import argparse
-import glob
 import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from capability_fit_roundtable_common import (
+    resolve_fit_matrix_artifact_path,
+    resolve_roundtable_artifact_path,
+)
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -45,34 +48,6 @@ def _select_contract(task: dict[str, Any]) -> dict[str, Any]:
             return nested
 
     return {}
-
-
-def _resolve_path(pack_path: Path, explicit: str, pattern: str, default_pattern: str) -> Path | None:
-    if explicit.strip():
-        p = Path(explicit).expanduser().resolve()
-        return p if p.exists() and p.is_file() else None
-
-    raw = str(pattern or "").strip() or default_pattern
-    p = Path(raw).expanduser()
-    has_magic = any(ch in raw for ch in ["*", "?", "["])
-    hits: list[Path] = []
-    if p.is_absolute():
-        if has_magic:
-            hits = [Path(x).expanduser().resolve() for x in glob.glob(str(p))]
-        elif p.exists():
-            hits = [p.resolve()]
-    else:
-        preferred = sorted(pack_path.glob(raw))
-        if preferred:
-            hits = [x.resolve() for x in preferred]
-        else:
-            hits = [x.resolve() for x in Path(".").glob(raw)]
-
-    hits = [x for x in hits if x.exists() and x.is_file()]
-    if not hits:
-        return None
-    hits.sort(key=lambda x: x.stat().st_mtime)
-    return hits[-1]
 
 
 def _extract_json_obj(raw: str) -> dict[str, Any] | None:
@@ -173,11 +148,10 @@ def main() -> int:
         return 0
 
     fit_pattern = str(contract.get("fit_matrix_path_pattern", "")).strip()
-    fit_path = _resolve_path(
-        pack_path,
+    fit_path = resolve_fit_matrix_artifact_path(
+        pack_root=pack_path,
         explicit=args.fit_matrix,
         pattern=fit_pattern,
-        default_pattern="runtime/protocol-feedback/optimization/capability-fit-matrix-*.json",  # downsink-path-lock: allow-nonregistry-literal
     )
     if fit_path is None:
         payload["capability_fit_review_trigger_status"] = STATUS_WARN_NON_BLOCKING
@@ -224,11 +198,10 @@ def main() -> int:
     roundtable_required = bool(tags & ROUND_TABLE_REQUIRED_TAGS)
     payload["roundtable_required"] = roundtable_required
 
-    rt_path = _resolve_path(
-        pack_path,
+    rt_path = resolve_roundtable_artifact_path(
+        pack_root=pack_path,
         explicit=args.roundtable_evidence,
         pattern=str(contract.get("roundtable_evidence_path_pattern", "")).strip(),
-        default_pattern="runtime/protocol-feedback/roundtables/capability-fit-roundtable-*.json",  # downsink-path-lock: allow-nonregistry-literal
     )
     payload["roundtable_evidence_path"] = str(rt_path) if rt_path else ""
 

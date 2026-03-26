@@ -6,22 +6,12 @@ import json
 from pathlib import Path
 from typing import Any
 
+from protocol_feedback_contract_common import DEFAULT_ACTIVITY_DIRS
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
-
-DEFAULT_ACTIVITY_DIRS = (
-    "issues",
-    "roundtables",
-    "upgrade-proposals",
-    "protocol-vendor-intel",
-    "business-partner-intel",
-    "vendor-intel",
-    "review-notes",
-)
-
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:

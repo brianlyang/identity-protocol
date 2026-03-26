@@ -6,7 +6,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from protocol_feedback_contract_common import PROTOCOL_FEEDBACK_ROOT_REL
+from protocol_feedback_contract_common import (
+    CAPABILITY_FIT_MATRIX_PATTERN,
+    CAPABILITY_FIT_ROUNDTABLE_JSON_PATTERN,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -17,12 +20,8 @@ ERR_ROUNDTABLE_MISSING = "IP-CFIT-RTB-002"
 ERR_FACT_INFERENCE_INVALID = "IP-CFIT-RTB-003"
 ERR_SELECTED_FACT_MAPPING = "IP-CFIT-RTB-004"
 
-DEFAULT_FIT_MATRIX_PATTERN = (
-    PROTOCOL_FEEDBACK_ROOT_REL / "optimization" / "capability-fit-matrix-*.json"
-).as_posix()
-DEFAULT_ROUNDTABLE_PATTERN = (
-    PROTOCOL_FEEDBACK_ROOT_REL / "roundtables" / "capability-fit-roundtable-*.json"
-).as_posix()
+DEFAULT_FIT_MATRIX_PATTERN = CAPABILITY_FIT_MATRIX_PATTERN
+DEFAULT_ROUNDTABLE_PATTERN = CAPABILITY_FIT_ROUNDTABLE_JSON_PATTERN
 
 ROUND_TABLE_IMPACT_FIELDS = (
     "decision_impacts",

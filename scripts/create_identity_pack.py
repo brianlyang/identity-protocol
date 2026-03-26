@@ -23,6 +23,11 @@ from blocker_taxonomy_common import (
 )
 from collaboration_trigger_sample_common import materialize_collaboration_trigger_samples
 from contract_binding_doc_defaults_common import resolve_validator_doc_defaults
+from protocol_feedback_contract_common import (
+    CAPABILITY_FIT_MATRIX_PATTERN,
+    CAPABILITY_FIT_ROUNDTABLE_JSON_PATTERN,
+    CAPABILITY_FIT_ROUNDTABLE_MARKDOWN_PATTERN,
+)
 from resolve_identity_context import default_identity_home, default_local_catalog_path, default_local_instances_root
 from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID
 from repo_root_resolution_common import detect_git_repository_root, resolve_protocol_repo_root
@@ -37,9 +42,11 @@ from protocol_infra_contract import (
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
     HOST_GATEWAY_ALLOW_UPGRADE_ONLY as INFRA_HOST_GATEWAY_ALLOW_UPGRADE_ONLY,
     HOST_GATEWAY_BROADCAST_ACK_PATTERN as INFRA_HOST_GATEWAY_BROADCAST_ACK_PATTERN,
+    HOST_GATEWAY_BROADCAST_DOC_CONTROL_CURRENT_FILE as INFRA_HOST_GATEWAY_BROADCAST_DOC_CONTROL_CURRENT_FILE,
     HOST_GATEWAY_BROADCAST_INDEX_FILE as INFRA_HOST_GATEWAY_BROADCAST_INDEX_FILE,
     HOST_GATEWAY_BROADCAST_ITEMS_DIR as INFRA_HOST_GATEWAY_BROADCAST_ITEMS_DIR,
     HOST_GATEWAY_BROADCAST_RECEIPT_PATTERN as INFRA_HOST_GATEWAY_BROADCAST_RECEIPT_PATTERN,
+    HOST_GATEWAY_BROADCAST_ROOT_README as INFRA_HOST_GATEWAY_BROADCAST_ROOT_README,
     HOST_GATEWAY_BROADCAST_SCHEMA_FILE as INFRA_HOST_GATEWAY_BROADCAST_SCHEMA_FILE,
     HOST_GATEWAY_BROADCAST_STATE_FILE as INFRA_HOST_GATEWAY_BROADCAST_STATE_FILE,
     HOST_GATEWAY_CONTRACT_ID as INFRA_HOST_GATEWAY_CONTRACT_ID,
@@ -180,6 +187,7 @@ from native_chat_headstamp_common import (
     ensure_native_chat_prompt_hard_guard as _ensure_native_chat_prompt_hard_guard,
     render_native_chat_prompt_hard_guard_markdown,
 )
+from tool_vendor_governance_common import TOOL_VENDOR_GOVERNANCE_REPORT_DIR_REL
 
 ensure_native_chat_prompt_hard_guard = _ensure_native_chat_prompt_hard_guard
 
@@ -275,6 +283,8 @@ HOST_GATEWAY_RELATIVE_SESSION_CHAIN_WRAPPER_PATH = INFRA_HOST_GATEWAY_RELATIVE_S
 HOST_GATEWAY_BROADCAST_ITEMS_DIR = INFRA_HOST_GATEWAY_BROADCAST_ITEMS_DIR
 HOST_GATEWAY_BROADCAST_INDEX_FILE = INFRA_HOST_GATEWAY_BROADCAST_INDEX_FILE
 HOST_GATEWAY_BROADCAST_SCHEMA_FILE = INFRA_HOST_GATEWAY_BROADCAST_SCHEMA_FILE
+HOST_GATEWAY_BROADCAST_ROOT_README = INFRA_HOST_GATEWAY_BROADCAST_ROOT_README
+HOST_GATEWAY_BROADCAST_DOC_CONTROL_CURRENT_FILE = INFRA_HOST_GATEWAY_BROADCAST_DOC_CONTROL_CURRENT_FILE
 HOST_GATEWAY_BROADCAST_STATE_FILE = INFRA_HOST_GATEWAY_BROADCAST_STATE_FILE
 HOST_GATEWAY_BROADCAST_RECEIPT_PATTERN = INFRA_HOST_GATEWAY_BROADCAST_RECEIPT_PATTERN
 HOST_GATEWAY_BROADCAST_ACK_PATTERN = INFRA_HOST_GATEWAY_BROADCAST_ACK_PATTERN
@@ -1002,9 +1012,12 @@ def _instance_pack_topology_contract_skeleton(identity_id: str) -> dict:
             "runtime/protocol-feedback/evidence-index",  # downsink-path-lock: allow-nonregistry-literal
             "runtime/protocol-feedback/inbox-from-protocol",  # downsink-path-lock: allow-nonregistry-literal
             "runtime/protocol-feedback/outbox-to-protocol",  # downsink-path-lock: allow-nonregistry-literal
+            "runtime/protocol-feedback/optimization",  # downsink-path-lock: allow-nonregistry-literal
+            "runtime/protocol-feedback/roundtables",  # downsink-path-lock: allow-nonregistry-literal
             "runtime/protocol-feedback/review-notes",  # review-note archives remain governed runtime evidence
             "runtime/protocol-feedback/review-notes/*",
             "runtime/protocol-feedback/upgrade-proposals",  # downsink-path-lock: allow-nonregistry-literal
+            "runtime/protocol-feedback/validation",  # downsink-path-lock: allow-nonregistry-literal
             "runtime/memory-absorption",  # absorbed legacy runtime evidence stays pack-local under governance
             "runtime/memory-absorption/*",
             "runtime/reports",
@@ -1020,6 +1033,7 @@ def _instance_pack_topology_contract_skeleton(identity_id: str) -> dict:
             "runtime/reports/instance-script-recovery",
             "runtime/reports/multimodal-runtime-stage",
             "runtime/reports/required-gate-bundle-entry",
+            TOOL_VENDOR_GOVERNANCE_REPORT_DIR_REL.as_posix(),
             "runtime/reports/v*-wrapper-*",
             "runtime/rulebooks",
             "runtime/state/context-continuity",
@@ -1971,7 +1985,17 @@ def _protocol_downsink_path_registry_skeleton() -> dict:
                 {
                     "path_id": "runtime_protocol_feedback.roundtables",
                     "entry_type": "glob",
-                    "path": "runtime/protocol-feedback/roundtables/ROUNDTABLE_*.md",
+                    "path": CAPABILITY_FIT_ROUNDTABLE_MARKDOWN_PATTERN,
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.roundtables_json",
+                    "entry_type": "glob",
+                    "path": CAPABILITY_FIT_ROUNDTABLE_JSON_PATTERN,
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.optimization_matrix",
+                    "entry_type": "glob",
+                    "path": CAPABILITY_FIT_MATRIX_PATTERN,
                 },
                 {
                     "path_id": "runtime_protocol_feedback.protocol_vendor_intel",
@@ -2088,6 +2112,16 @@ def _protocol_downsink_path_registry_skeleton() -> dict:
         DOWNSINK_PROTOCOL_BROADCAST_SOURCE_DOMAIN: {
             "anchor_ref": "protocol_repo_root_ref",
             "entries": [
+                {
+                    "path_id": "protocol_broadcast_source.root_readme",
+                    "entry_type": "file",
+                    "path": HOST_GATEWAY_BROADCAST_ROOT_README,
+                },
+                {
+                    "path_id": "protocol_broadcast_source.doc_control_current",
+                    "entry_type": "file",
+                    "path": HOST_GATEWAY_BROADCAST_DOC_CONTROL_CURRENT_FILE,
+                },
                 {
                     "path_id": "protocol_broadcast_source.items_dir",
                     "entry_type": "dir",
