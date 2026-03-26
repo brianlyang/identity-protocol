@@ -244,6 +244,13 @@ disclosed status key.
 Runtime must not line-scrape, trailer-strip, or extract a JSON fragment from
 mixed stdout preamble, trailer, or incidental shell text.
 
+Runtime must also keep bound component validator status-key resolution
+contract explicit; runtime resolves the disclosed status key only as a direct
+top-level member of the admitted verdict object.
+
+Runtime must not search nested objects, alias keys, pointer paths, or other
+local convenience structures to reconstruct missing status truth.
+
 Runtime must also keep bound component validator working-directory contract
 explicit; runtime executes bound component validators with repo_root as the
 governed working directory.

@@ -552,6 +552,15 @@ object.
 Runtime may not line-scrape, trailer-strip, or extract a JSON fragment from
 mixed stdout preamble, trailer, or incidental shell text.
 
+Bundle component validators must also keep status-key resolution contract
+explicit.
+
+The disclosed status key is resolved only as a direct top-level member of the
+verdict-bearing JSON object.
+
+Runtime may not search nested objects, alias keys, pointer paths, or other
+local convenience structures to recover missing status truth.
+
 Bundle component validators must also keep working-directory contract explicit.
 
 The admitted validator execution working directory is repo_root.

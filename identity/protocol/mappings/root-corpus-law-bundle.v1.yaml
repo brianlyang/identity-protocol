@@ -50,6 +50,7 @@ component_validator_output_contract: json_object_with_disclosed_status_key
 component_validator_invocation_contract: python3_repo_root_json_only
 component_validator_output_channel_contract: stdout_only
 component_validator_stdout_framing_contract: whole_stdout_single_json_object
+component_validator_status_key_resolution_contract: top_level_direct_member_only
 component_validator_working_directory_contract: repo_root
 component_validator_execution_transport_contract: local_direct_subprocess_vector
 required_component_descriptor_fields:
@@ -163,6 +164,13 @@ bundle_anchor_checks:
   - machine world must not line-scrape, trailer-strip, or extract a JSON
     fragment from mixed stdout preamble, trailer, or incidental shell text and
     then treat that fragment as governed validator truth.
+  - Bundle component validator status-key resolution contract must stay explicit
+    too.
+  - The admitted status-key resolution contract is top-level direct member only.
+  - machine world must not search nested objects, alternate key spellings, alias
+    fields, pointer paths, or other local convenience structures to reconstruct
+    status truth when the disclosed status key is not present as a direct
+    top-level member.
   - Bundle component validator working-directory contract must stay explicit too.
   - The admitted validator execution working directory is repo_root.
   - machine world must not run a bound component validator from arbitrary cwd
@@ -264,6 +272,12 @@ bundle_anchor_checks:
     object.
   - Runtime may not line-scrape, trailer-strip, or extract a JSON fragment from
     mixed stdout preamble, trailer, or incidental shell text.
+  - Bundle component validators must also keep status-key resolution contract
+    explicit.
+  - The disclosed status key is resolved only as a direct top-level member of
+    the verdict-bearing JSON object.
+  - Runtime may not search nested objects, alias keys, pointer paths, or other
+    local convenience structures to recover missing status truth.
   - Bundle component validators must also keep working-directory contract explicit.
   - The admitted validator execution working directory is repo_root.
   - Runtime may not substitute arbitrary cwd or ambient shell location for that
@@ -363,6 +377,11 @@ bundle_anchor_checks:
     whole stdout is a single JSON object carrying the disclosed status key.
   - Local extraction of a JSON fragment from mixed stdout preamble, trailer, or
     incidental shell text is forbidden inside the bundle.
+  - Root-law bundle rows must also keep component validator status-key
+    resolution contract explicit; the disclosed status key is resolved only as a
+    direct top-level member of the admitted verdict object.
+  - Local search across nested objects, alias keys, pointer paths, or other
+    convenience structures is forbidden inside the bundle.
   - Root-law bundle rows must also keep component validator working-directory
     contract explicit; bound component validators execute with repo_root as the
     governed working directory.
@@ -459,6 +478,11 @@ bundle_anchor_checks:
     disclosed status key.
   - Runtime must not line-scrape, trailer-strip, or extract a JSON fragment from
     mixed stdout preamble, trailer, or incidental shell text.
+  - Runtime must also keep bound component validator status-key resolution
+    contract explicit; runtime resolves the disclosed status key only as a direct
+    top-level member of the admitted verdict object.
+  - Runtime must not search nested objects, alias keys, pointer paths, or other
+    local convenience structures to reconstruct missing status truth.
   - Runtime must also keep bound component validator working-directory contract
     explicit; runtime executes bound component validators with repo_root as the
     governed working directory.

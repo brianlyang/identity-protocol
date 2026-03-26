@@ -300,6 +300,13 @@ whole stdout is a single JSON object carrying the disclosed status key.
 Local extraction of a JSON fragment from mixed stdout preamble, trailer, or
 incidental shell text is forbidden inside the bundle.
 
+Root-law bundle rows must also keep component validator status-key
+resolution contract explicit; the disclosed status key is resolved only as a
+direct top-level member of the admitted verdict object.
+
+Local search across nested objects, alias keys, pointer paths, or other
+convenience structures is forbidden inside the bundle.
+
 Root-law bundle rows must also keep component validator working-directory
 contract explicit; bound component validators execute with repo_root as the
 governed working directory.

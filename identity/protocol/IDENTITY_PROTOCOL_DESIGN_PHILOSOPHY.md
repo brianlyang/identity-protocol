@@ -534,6 +534,16 @@ The machine world must not line-scrape, trailer-strip, or extract a JSON
 fragment from mixed stdout preamble, trailer, or incidental shell text and
 then treat that fragment as governed validator truth.
 
+Bundle component validator status-key resolution contract must stay explicit
+too.
+
+The admitted status-key resolution contract is top-level direct member only.
+
+The machine world must not search nested objects, alternate key spellings,
+alias fields, pointer paths, or other local convenience structures to
+reconstruct status truth when the disclosed status key is not present as a
+direct top-level member.
+
 Bundle component validator working-directory contract must stay explicit too.
 
 The admitted validator execution working directory is repo_root.
