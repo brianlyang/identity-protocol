@@ -7,94 +7,6 @@ CURRENT_WORKSPACE_ROOT="$(cd "${REPO_ROOT}/.." && pwd)"
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/identity-codex-launcher-cross-workspace-ci.XXXXXX")"
 trap 'rm -rf "${TMP_ROOT}"' EXIT
 
-DISCOVERY_JSON="${TMP_ROOT}/discovery.json"
-python3 - "${CURRENT_WORKSPACE_ROOT}" "${IDENTITY_LAUNCHER_PILOT_CATALOG:-}" > "${DISCOVERY_JSON}" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-import yaml
-
-current_workspace_root = Path(sys.argv[1]).resolve()
-explicit_catalog = str(sys.argv[2] or "").strip()
-current_catalog = (current_workspace_root / ".identity" / "catalog.local.yaml").resolve()
-
-
-def active_runtime_identity_ids(catalog_path: Path) -> list[str]:
-    doc = yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
-    rows = doc.get("identities") or []
-    active: list[str] = []
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        identity_id = str(row.get("id", "")).strip()
-        if not identity_id:
-            continue
-        if str(row.get("status", "")).strip().lower() != "active":
-            continue
-        if str(row.get("profile", "")).strip().lower() != "runtime":
-            continue
-        if str(row.get("runtime_mode", "")).strip().lower() == "demo_only":
-            continue
-        active.append(identity_id)
-    return active
-
-
-def build_result(catalog_path: Path) -> dict[str, object]:
-    ids = active_runtime_identity_ids(catalog_path)
-    return {
-        "catalog_path": str(catalog_path.resolve()),
-        "workspace_root": str(catalog_path.resolve().parent.parent),
-        "active_runtime_identity_ids": ids,
-        "checked_identity_count": len(ids),
-    }
-
-candidate_catalogs: list[Path] = []
-if explicit_catalog:
-    candidate_catalogs.append(Path(explicit_catalog).expanduser().resolve())
-else:
-    sibling_root = current_workspace_root.parent.resolve()
-    for path in sorted(sibling_root.glob("*/.identity/catalog.local.yaml")):
-        if path.resolve() == current_catalog:
-            continue
-        candidate_catalogs.append(path.resolve())
-
-for candidate in candidate_catalogs:
-    if not candidate.exists() or not candidate.is_file():
-        continue
-    result = build_result(candidate)
-    if result["checked_identity_count"]:
-        print(json.dumps(result, ensure_ascii=False))
-        raise SystemExit(0)
-
-raise SystemExit("no eligible cross-workspace runtime catalog discovered")
-PY
-
-SOURCE_CATALOG="$(python3 - <<'PY' "${DISCOVERY_JSON}"
-import json
-import sys
-from pathlib import Path
-payload = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
-print(payload['catalog_path'])
-PY
-)"
-SOURCE_WORKSPACE_ROOT="$(python3 - <<'PY' "${DISCOVERY_JSON}"
-import json
-import sys
-from pathlib import Path
-payload = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
-print(payload['workspace_root'])
-PY
-)"
-FIRST_IDENTITY_ID="$(python3 - <<'PY' "${DISCOVERY_JSON}"
-import json
-import sys
-from pathlib import Path
-payload = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
-print(payload['active_runtime_identity_ids'][0])
-PY
-)"
-
 TMP_WORKSPACE_ROOT="${TMP_ROOT}/workspace"
 TMP_IDENTITY_HOME="${TMP_WORKSPACE_ROOT}/.identity"
 TMP_CATALOG="${TMP_IDENTITY_HOME}/catalog.local.yaml"
@@ -102,36 +14,72 @@ TMP_CODEX_HOME="${TMP_ROOT}/codex-home"
 TMP_EVIDENCE_ROOT="${TMP_ROOT}/evidence"
 mkdir -p "${TMP_WORKSPACE_ROOT}" "${TMP_CODEX_HOME}" "${TMP_EVIDENCE_ROOT}"
 
-python3 - "${SOURCE_WORKSPACE_ROOT}" "${TMP_WORKSPACE_ROOT}" <<'PY'
-import shutil
+MATERIALIZED_CONTEXT_JSON="${TMP_ROOT}/materialized-context.json"
+python3 "${REPO_ROOT}/scripts/materialize_cross_workspace_runtime_probe_context.py" \
+  --current-workspace-root "${CURRENT_WORKSPACE_ROOT}" \
+  --target-workspace-root "${TMP_WORKSPACE_ROOT}" \
+  --catalog "${IDENTITY_LAUNCHER_PILOT_CATALOG:-}" \
+  --repo-root "${REPO_ROOT}" \
+  --require-active-execution-report \
+  --json-only > "${MATERIALIZED_CONTEXT_JSON}"
+
+FIRST_IDENTITY_ID="$(python3 - <<'PY' "${MATERIALIZED_CONTEXT_JSON}"
+import json
+import sys
+from pathlib import Path
+payload = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+print(payload['first_identity_id'])
+PY
+)"
+STRICT_PROFILE_IDENTITY_ID="$(python3 - <<'PY' "${MATERIALIZED_CONTEXT_JSON}"
+import json
+import sys
+from pathlib import Path
+payload = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+print(payload['active_execution_report']['identity_id'])
+PY
+)"
+STRICT_PROFILE_REPORT_PATH="$(python3 - <<'PY' "${MATERIALIZED_CONTEXT_JSON}"
+import json
+import sys
+from pathlib import Path
+payload = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+print(payload['active_execution_report']['report_path'])
+PY
+)"
+
+STRICT_BACKFILL_JSON="${TMP_ROOT}/strict-backfill.json"
+python3 "${REPO_ROOT}/scripts/run_repair_contract_backfill_strict_profile_probe.py" \
+  --repo-root "${REPO_ROOT}" \
+  --workspace-root "${TMP_WORKSPACE_ROOT}" \
+  --catalog .identity/catalog.local.yaml \
+  --identity-id "${STRICT_PROFILE_IDENTITY_ID}" \
+  --report-path "${STRICT_PROFILE_REPORT_PATH}" \
+  --codex-home "${TMP_CODEX_HOME}" \
+  --json-only > "${STRICT_BACKFILL_JSON}"
+
+python3 - "${STRICT_BACKFILL_JSON}" "${STRICT_PROFILE_IDENTITY_ID}" "${STRICT_PROFILE_REPORT_PATH}" <<'PY'
+import json
 import sys
 from pathlib import Path
 
-import yaml
-
-source_workspace = Path(sys.argv[1]).resolve()
-target_workspace = Path(sys.argv[2]).resolve()
-source_identity = (source_workspace / '.identity').resolve()
-target_identity = (target_workspace / '.identity').resolve()
-shutil.copytree(source_identity, target_identity, symlinks=False, ignore=shutil.ignore_patterns('__pycache__'))
-
-catalog_path = (target_identity / 'catalog.local.yaml').resolve()
-doc = yaml.safe_load(catalog_path.read_text(encoding='utf-8')) or {}
-rows = doc.get('identities') or []
-rewritten = []
-for row in rows:
-    if not isinstance(row, dict):
-        continue
-    next_row = dict(row)
-    identity_id = str(next_row.get('id', '')).strip()
-    if identity_id:
-        pack_path = (target_identity / identity_id).resolve()
-        next_row['pack_path'] = str(pack_path)
-        next_row['canonical_pack_path'] = ""
-        next_row['canonical_scope'] = "UNKNOWN"
-    rewritten.append(next_row)
-doc['identities'] = rewritten
-catalog_path.write_text(yaml.safe_dump(doc, allow_unicode=True, sort_keys=False), encoding='utf-8')
+payload = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+expected_identity_id = str(sys.argv[2]).strip()
+expected_report_path = str(Path(sys.argv[3]).resolve())
+assert payload['status'] == 'PASS_REQUIRED', payload
+assert payload['identity_id'] == expected_identity_id, payload
+probe = payload.get('strict_profile_probe') or {}
+assert probe.get('strict_profile_status') == 'FAIL_REQUIRED', payload
+assert probe.get('status_profile') == 'strict_full', payload
+assert probe.get('current_run_projection_enforcement_mode') == 'blocking', payload
+assert probe.get('current_run_projection_observation_failures') == [], payload
+blocking = probe.get('current_run_projection_blocking_failures') or []
+assert any(
+    item in blocking
+    for item in ('current_run_terminal_truth_projection_failed', 'current_run_weak_live_projection_failed')
+), payload
+assert probe.get('report_selected_path') == expected_report_path, payload
+print('launcher_cross_workspace_strict_profile_status=FAIL_REQUIRED')
 PY
 
 DRY_JSON="${TMP_ROOT}/dry-run.json"
@@ -148,15 +96,8 @@ fi
 
 python3 - "${DRY_JSON}" "${TMP_CATALOG}" "${TMP_WORKSPACE_ROOT}" <<'PY'
 import json
-import hashlib
 import sys
 from pathlib import Path
-
-def resolve_manifest_member(manifest_path: Path, value: str) -> Path:
-    raw = Path(str(value).strip())
-    if raw.is_absolute():
-        return raw.resolve()
-    return (manifest_path.parent / raw).resolve()
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
 expected_catalog = str(Path(sys.argv[2]).resolve())
@@ -168,17 +109,20 @@ assert payload['workspace_root'] == expected_workspace, payload
 assert payload['checked_identity_count'] > 0, payload
 assert payload['planned_repair_count'] > 0, payload
 assert payload['repair_status'] == 'dry_run_preview', payload
-assert Path(payload['manifest_ref']).exists(), payload
-manifest_path = Path(payload['manifest_ref']).resolve()
-manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
-kinds = {str(row.get('kind', '')).strip() for row in (manifest.get('evidence_records') or []) if isinstance(row, dict)}
-assert kinds == {'launcher_convergence_receipt', 'launcher_convergence_precheck'}, kinds
-for row in manifest.get('evidence_records') or []:
-    mirror = resolve_manifest_member(manifest_path, str(row['mirror_path']))
-    digest = hashlib.sha256(mirror.read_bytes()).hexdigest()
-    assert digest == str(row['sha256']).strip(), row
-print('launcher_cross_workspace_dry_run_status=FAIL_REQUIRED')
 PY
+
+DRY_BUNDLE_JSON="${TMP_ROOT}/dry-run-bundle.json"
+python3 "${REPO_ROOT}/scripts/validate_identity_codex_launcher_evidence_bundle.py" \
+  --payload-json "${DRY_JSON}" \
+  --require-ref-field precheck_evidence_ref \
+  --require-ref-field evidence_ref \
+  --require-ref-field manifest_ref \
+  --require-summary-ref \
+  --expected-kind launcher_convergence_receipt \
+  --expected-kind launcher_convergence_precheck \
+  --json-only > "${DRY_BUNDLE_JSON}"
+
+echo 'launcher_cross_workspace_dry_run_status=FAIL_REQUIRED'
 
 APPLY_JSON="${TMP_ROOT}/apply.json"
 python3 "${REPO_ROOT}/scripts/run_identity_codex_launcher_workspace_convergence.py" \
@@ -191,15 +135,8 @@ python3 "${REPO_ROOT}/scripts/run_identity_codex_launcher_workspace_convergence.
 
 python3 - "${APPLY_JSON}" "${TMP_CATALOG}" "${TMP_WORKSPACE_ROOT}" <<'PY'
 import json
-import hashlib
 import sys
 from pathlib import Path
-
-def resolve_manifest_member(manifest_path: Path, value: str) -> Path:
-    raw = Path(str(value).strip())
-    if raw.is_absolute():
-        return raw.resolve()
-    return (manifest_path.parent / raw).resolve()
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
 expected_catalog = str(Path(sys.argv[2]).resolve())
@@ -213,41 +150,54 @@ assert payload['postcheck_status'] == 'PASS_REQUIRED', payload
 assert Path(payload['evidence_ref']).exists(), payload
 assert Path(payload['manifest_ref']).exists(), payload
 assert payload['repair_results'], payload
-row = payload['repair_results'][0]
-assert row['metadata_repair_status'] == 'PASS_REQUIRED', row
-assert row['metadata_hygiene_status'] == 'PASS_REQUIRED', row
-assert row['backfill_status'] == 'PASS_REQUIRED', row
-assert row['install_status'] == 'PASS_REQUIRED', row
-assert row['validator_status'] == 'PASS_REQUIRED', row
-manifest_path = Path(payload['manifest_ref']).resolve()
-manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
-kinds = {str(row.get('kind', '')).strip() for row in (manifest.get('evidence_records') or []) if isinstance(row, dict)}
-assert kinds == {
-    'launcher_convergence_receipt',
-    'launcher_convergence_precheck',
-    'launcher_convergence_postcheck',
-}, kinds
-for row in manifest.get('evidence_records') or []:
-    mirror = resolve_manifest_member(manifest_path, str(row['mirror_path']))
-    digest = hashlib.sha256(mirror.read_bytes()).hexdigest()
-    assert digest == str(row['sha256']).strip(), row
-print('launcher_cross_workspace_apply_status=PASS_REQUIRED')
+for row in payload['repair_results']:
+    assert row['metadata_repair_status'] == 'PASS_REQUIRED', row
+    assert row['metadata_hygiene_status'] == 'PASS_REQUIRED', row
+    assert row['backfill_status'] == 'PASS_REQUIRED', row
+    assert row['backfill_status_profile'] == 'launcher_workspace_convergence', row
+    assert row['backfill_current_run_projection_enforcement_mode'] == 'observe_non_blocking', row
+    assert row['install_status'] == 'PASS_REQUIRED', row
+    assert row['validator_status'] == 'PASS_REQUIRED', row
+    assert row['backfill_current_run_projection_observation_failures'] in (
+        [],
+        ['current_run_terminal_truth_projection_failed'],
+        ['current_run_weak_live_projection_failed'],
+        ['current_run_weak_live_projection_failed', 'current_run_terminal_truth_projection_failed'],
+    ), row
 PY
 
-python3 - "${TMP_CATALOG}" <<'PY'
+APPLY_BUNDLE_JSON="${TMP_ROOT}/apply-bundle.json"
+python3 "${REPO_ROOT}/scripts/validate_identity_codex_launcher_evidence_bundle.py" \
+  --payload-json "${APPLY_JSON}" \
+  --require-ref-field precheck_evidence_ref \
+  --require-ref-field postcheck_evidence_ref \
+  --require-ref-field evidence_ref \
+  --require-ref-field manifest_ref \
+  --require-summary-ref \
+  --expected-kind launcher_convergence_receipt \
+  --expected-kind launcher_convergence_precheck \
+  --expected-kind launcher_convergence_postcheck \
+  --json-only > "${APPLY_BUNDLE_JSON}"
+
+echo 'launcher_cross_workspace_apply_status=PASS_REQUIRED'
+
+METADATA_HYGIENE_JSON="${TMP_ROOT}/metadata-hygiene.json"
+python3 "${REPO_ROOT}/scripts/validate_runtime_catalog_metadata_hygiene.py" \
+  --catalog "${TMP_CATALOG}" \
+  --require-active \
+  --json-only > "${METADATA_HYGIENE_JSON}"
+
+python3 - "${METADATA_HYGIENE_JSON}" <<'PY'
+import json
 import sys
-from pathlib import Path
 
-import yaml
-
-catalog_path = Path(sys.argv[1]).resolve()
-doc = yaml.safe_load(catalog_path.read_text(encoding='utf-8')) or {}
-rows = [row for row in (doc.get('identities') or []) if isinstance(row, dict)]
-assert rows, rows
-for row in rows:
-    assert str(row.get('canonical_scope', '')).strip() == 'USER', row
-    assert str(row.get('canonical_pack_path', '')).strip(), row
-    assert str(row.get('canonical_pack_path', '')).strip() == str(Path(str(row.get('pack_path', '')).strip()).resolve()), row
+payload = json.loads(open(sys.argv[1], "r", encoding="utf-8").read())
+assert payload["runtime_catalog_metadata_hygiene_status"] == "PASS_REQUIRED", payload
+assert payload["checked_identity_count"] > 0, payload
+assert payload["violation_count"] == 0, payload
+for row in payload.get("checked_rows") or []:
+    assert row["status"] == "PASS_REQUIRED", row
+    assert row["canonical_scope"] == "USER", row
 print('launcher_cross_workspace_metadata_hygiene_apply_status=PASS_REQUIRED')
 PY
 
@@ -341,6 +291,8 @@ expected_identity_home = str((Path(sys.argv[2]).resolve() / '.identity').resolve
 expected_catalog = str(Path(sys.argv[3]).resolve())
 assert payload['identity_codex_launcher_status'] == 'PASS_REQUIRED', payload
 assert payload['runtime_paths_status'] == 'PASS_REQUIRED', payload
+assert payload['launcher_runtime_admissibility_projection_status'] == 'PASS_REQUIRED', payload
+assert payload['launcher_runtime_admissibility_status'] == 'PASS_REQUIRED', payload
 assert payload['launcher_config_identity_home'] == expected_identity_home, payload
 assert payload['runtime_identity_home'] == str(Path(expected_catalog).parent.resolve()), payload
 print('launcher_cross_workspace_validator_status=PASS_REQUIRED')

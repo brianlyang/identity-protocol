@@ -8,6 +8,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+from workspace_runtime_closure_command_common import (
+    build_workspace_runtime_closure_checker_command,
+)
+
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+
 LAUNCHER_CONVERGENCE_STREAM_VERSION = "v1.6.14"
 LAUNCHER_CONVERGENCE_EVIDENCE_TOPIC = "identity_codex_launcher_workspace_convergence"
 LAUNCHER_CONVERGENCE_MANIFEST_PREFIX = "EVIDENCE_MANIFEST"
@@ -72,16 +79,13 @@ def launcher_convergence_entry_command(
 
 
 def launcher_convergence_closure_checker_command(*, repo_root: Path, catalog_path: Path) -> list[str]:
-    return [
-        "python3",
-        str((repo_root / "scripts" / "check_identity_codex_launcher_migration_closure.py").resolve()),
-        "--repo-catalog",
-        str((repo_root / "identity" / "catalog" / "identities.yaml").resolve()),
-        "--catalog",
-        str(catalog_path.resolve()),
-        "--workspace-runtime-only",
-        "--json-only",
-    ]
+    return build_workspace_runtime_closure_checker_command(
+        checker_id="scripts/check_identity_codex_launcher_migration_closure.py",
+        repo_root=repo_root.resolve(),
+        repo_catalog_path="identity/catalog/identities.yaml",
+        catalog_path=catalog_path.resolve(),
+        json_only=True,
+    )
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -89,6 +93,13 @@ def load_json(path: Path) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError(f"expected JSON object at {path}")
     return data
+
+
+def resolve_manifest_member(manifest_path: Path, value: str) -> Path:
+    raw = Path(str(value).strip())
+    if raw.is_absolute():
+        return raw.resolve()
+    return (manifest_path.parent / raw).resolve()
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -124,6 +135,178 @@ def command_string(command: str | Iterable[str]) -> str:
     if isinstance(command, str):
         return command.strip()
     return shlex.join([str(part) for part in command if str(part).strip()])
+
+
+def inspect_launcher_convergence_manifest(
+    *,
+    manifest_path: Path,
+    expected_kinds: Iterable[str] | None = None,
+    require_summary_ref: bool = False,
+) -> dict[str, Any]:
+    manifest_path = manifest_path.resolve()
+    manifest = load_json(manifest_path)
+    evidence_records = manifest.get("evidence_records")
+    expected_kind_set = {
+        str(kind).strip()
+        for kind in (expected_kinds or [])
+        if str(kind).strip()
+    }
+    errors: list[str] = []
+    validated_kinds: list[str] = []
+    missing_mirror_paths: list[str] = []
+    digest_mismatches: list[str] = []
+    record_count = 0
+
+    summary_ref = str(manifest.get("summary_ref", "")).strip()
+    if require_summary_ref and not summary_ref:
+        errors.append("manifest_summary_ref_missing")
+
+    if not isinstance(evidence_records, list) or not evidence_records:
+        errors.append("manifest_evidence_records_missing")
+        evidence_records = []
+
+    for row in evidence_records:
+        if not isinstance(row, dict):
+            errors.append("manifest_record_invalid")
+            continue
+        record_count += 1
+        kind = str(row.get("kind", "")).strip()
+        if kind:
+            validated_kinds.append(kind)
+        mirror_value = str(row.get("mirror_path", "")).strip()
+        if not mirror_value:
+            errors.append("manifest_mirror_path_missing")
+            continue
+        mirror_path = resolve_manifest_member(manifest_path, mirror_value)
+        if not mirror_path.exists():
+            missing_mirror_paths.append(str(mirror_path))
+            continue
+        expected_digest = str(row.get("sha256", "")).strip()
+        if not expected_digest:
+            errors.append("manifest_sha256_missing")
+            continue
+        actual_digest = sha256_file(mirror_path)
+        if actual_digest != expected_digest:
+            digest_mismatches.append(str(mirror_path))
+
+    validated_kind_set = {kind for kind in validated_kinds if kind}
+    if expected_kind_set and validated_kind_set != expected_kind_set:
+        errors.append("manifest_expected_kind_set_mismatch")
+
+    if missing_mirror_paths:
+        errors.append("manifest_mirror_path_unavailable")
+    if digest_mismatches:
+        errors.append("manifest_sha256_mismatch")
+
+    return {
+        "status": STATUS_PASS_REQUIRED if not errors else STATUS_FAIL_REQUIRED,
+        "manifest_path": str(manifest_path),
+        "summary_ref": summary_ref,
+        "record_count": record_count,
+        "validated_kinds": sorted(validated_kind_set),
+        "expected_kinds": sorted(expected_kind_set),
+        "missing_kinds": sorted(expected_kind_set - validated_kind_set),
+        "unexpected_kinds": sorted(validated_kind_set - expected_kind_set),
+        "missing_mirror_paths": missing_mirror_paths,
+        "digest_mismatches": digest_mismatches,
+        "errors": errors,
+        "manifest": manifest,
+    }
+
+
+def inspect_launcher_convergence_payload_bundle(
+    *,
+    payload: dict[str, Any],
+    required_ref_fields: Iterable[str] | None = None,
+    expected_kinds: Iterable[str] | None = None,
+    require_summary_ref: bool = False,
+) -> dict[str, Any]:
+    required_fields = [
+        str(field).strip()
+        for field in (required_ref_fields or [])
+        if str(field).strip()
+    ]
+    resolved_ref_paths: dict[str, str] = {}
+    missing_ref_fields: list[str] = []
+    missing_ref_paths: list[str] = []
+    errors: list[str] = []
+
+    for field in required_fields:
+        raw = str(payload.get(field, "")).strip()
+        if not raw:
+            missing_ref_fields.append(field)
+            continue
+        resolved = Path(raw).expanduser().resolve()
+        resolved_ref_paths[field] = str(resolved)
+        if not resolved.exists():
+            missing_ref_paths.append(field)
+
+    manifest_token = str(payload.get("manifest_ref", "")).strip()
+    manifest_path: Path | None = None
+    manifest_inspection: dict[str, Any] = {}
+    if manifest_token:
+        manifest_path = Path(manifest_token).expanduser().resolve()
+        if not manifest_path.exists():
+            missing_ref_paths.append("manifest_ref")
+        else:
+            manifest_inspection = inspect_launcher_convergence_manifest(
+                manifest_path=manifest_path,
+                expected_kinds=expected_kinds,
+                require_summary_ref=require_summary_ref,
+            )
+            if str(manifest_inspection.get("status", "")).strip() != STATUS_PASS_REQUIRED:
+                errors.extend(
+                    [
+                        str(item).strip()
+                        for item in (manifest_inspection.get("errors") or [])
+                        if str(item).strip()
+                    ]
+                )
+    elif expected_kinds or require_summary_ref:
+        missing_ref_fields.append("manifest_ref")
+
+    if missing_ref_fields:
+        errors.append("bundle_required_ref_missing")
+    if missing_ref_paths:
+        errors.append("bundle_required_ref_path_missing")
+
+    return {
+        "status": STATUS_PASS_REQUIRED if not errors else STATUS_FAIL_REQUIRED,
+        "required_ref_fields": required_fields,
+        "resolved_ref_paths": resolved_ref_paths,
+        "missing_ref_fields": missing_ref_fields,
+        "missing_ref_paths": missing_ref_paths,
+        "errors": errors,
+        "manifest_status": str(manifest_inspection.get("status", "")).strip() if manifest_inspection else "",
+        "manifest_inspection": manifest_inspection,
+    }
+
+
+def inspect_launcher_convergence_receipt_bundle(
+    *,
+    receipt_path: Path,
+    expected_kinds: Iterable[str] | None = None,
+    require_summary_ref: bool = False,
+    require_self_evidence_ref_match: bool = False,
+) -> dict[str, Any]:
+    receipt_path = receipt_path.resolve()
+    payload = load_json(receipt_path)
+    inspection = inspect_launcher_convergence_payload_bundle(
+        payload=payload,
+        required_ref_fields=("evidence_ref", "manifest_ref"),
+        expected_kinds=expected_kinds,
+        require_summary_ref=require_summary_ref,
+    )
+    errors = [str(item).strip() for item in (inspection.get("errors") or []) if str(item).strip()]
+    evidence_ref = str(payload.get("evidence_ref", "")).strip()
+    if require_self_evidence_ref_match and evidence_ref and Path(evidence_ref).expanduser().resolve() != receipt_path:
+        errors.append("receipt_evidence_ref_mismatch")
+    inspection["receipt_path"] = str(receipt_path)
+    inspection["receipt_evidence_ref"] = evidence_ref
+    inspection["receipt_payload"] = payload
+    inspection["errors"] = errors
+    inspection["status"] = STATUS_PASS_REQUIRED if not errors else STATUS_FAIL_REQUIRED
+    return inspection
 
 
 def build_manifest_record(

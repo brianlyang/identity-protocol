@@ -46,6 +46,8 @@ FORBIDDEN_RUNTIME_OVERRIDE_KEYS: tuple[str, ...] = (
     "project_doc_fallback_filenames",
 )
 RUNTIME_PATHS_CONFIG_REL = Path("config") / "runtime-paths.env"
+RUNTIME_PATHS_BINDING_MODE_FULL = "full_runtime_selection"
+RUNTIME_PATHS_BINDING_MODE_PROTOCOL_HOME_ONLY = "bootstrap_protocol_home_only"
 PROJECT_DOC_FALLBACK_PREFIX = ".IDENTITY."
 REPAIRABLE_CONTINUITY_RECEIPT_STALE_PREFIXES: tuple[str, ...] = (
     "missing_receipt_role:migration_handoff",
@@ -127,6 +129,11 @@ def default_identity_home() -> Path:
 
 def default_bin_dir() -> Path:
     return (default_codex_home() / "bin").resolve()
+
+
+def default_launcher_config_home(bin_dir: Path | None = None) -> Path:
+    resolved_bin_dir = (bin_dir or default_bin_dir()).expanduser().resolve()
+    return (resolved_bin_dir.parent / ".identity").resolve()
 
 
 def runtime_paths_config_path(identity_home: Path | None = None) -> Path:
@@ -240,20 +247,36 @@ def write_runtime_paths_config(
     protocol_home: Path,
     runtime_identity_home: Path | None = None,
     runtime_catalog: Path | None = None,
+    binding_mode: str = RUNTIME_PATHS_BINDING_MODE_FULL,
 ) -> Path:
     config_home = identity_home.resolve()
     target_identity_home = (runtime_identity_home or config_home).resolve()
     target_catalog = (runtime_catalog or (target_identity_home / "catalog.local.yaml")).resolve()
     config_path = runtime_paths_config_path(config_home)
     config_path.parent.mkdir(parents=True, exist_ok=True)
-    payload = (
+    mode = str(binding_mode or RUNTIME_PATHS_BINDING_MODE_FULL).strip() or RUNTIME_PATHS_BINDING_MODE_FULL
+    lines = [
         "# identity runtime shared path config\n"
-        "# priority: environment variable > this file > built-in fallback\n"
-        f"IDENTITY_HOME={target_identity_home}\n"
-        f"IDENTITY_CATALOG={target_catalog}\n"
-        f"IDENTITY_PROTOCOL_HOME={protocol_home.resolve()}\n"
-    )
-    config_path.write_text(payload, encoding="utf-8")
+        "# priority: environment variable > this file > built-in fallback\n",
+        f"# binding_mode={mode}\n",
+    ]
+    if mode != RUNTIME_PATHS_BINDING_MODE_PROTOCOL_HOME_ONLY:
+        lines.extend(
+            [
+                f"IDENTITY_HOME={target_identity_home}\n",
+                f"IDENTITY_CATALOG={target_catalog}\n",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "# IDENTITY_HOME/IDENTITY_CATALOG intentionally omitted here.\n",
+                "# Shortcut launchers and explicit runtime-selection surfaces own runtime authority.\n",
+                "# This shared bootstrap file only pins protocol-home discovery for fresh-shell launcher entry.\n",
+            ]
+        )
+    lines.append(f"IDENTITY_PROTOCOL_HOME={protocol_home.resolve()}\n")
+    config_path.write_text("".join(lines), encoding="utf-8")
     return config_path
 
 
@@ -765,19 +788,26 @@ exec python3 "${IDENTITY_PROTOCOL_HOME}/scripts/render_identity_codex_launcher.p
 """
 
 
-def render_shortcut_launcher_sh(identity_id: str, catalog_path: Path) -> str:
+def render_shortcut_launcher_sh(identity_id: str, catalog_path: Path, protocol_home: Path) -> str:
     shortcut = shortcut_launcher_name(identity_id)
     catalog_token = shlex.quote(str(catalog_path.expanduser().resolve()))
+    protocol_home_token = shlex.quote(str(protocol_home.expanduser().resolve()))
     return f"""#!/usr/bin/env bash
 set -euo pipefail
 
 LAUNCHER_DIR="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)"
+BOUND_IDENTITY_HOME="$(cd "$(dirname {catalog_token})" && pwd)"
 
 # identity-codex shortcut shim
 # contract_id={IDENTITY_CODEX_LAUNCHER_CONTRACT_ID}
 # identity_id={identity_id}
 # shortcut_name={shortcut}
 # catalog_binding={catalog_token}
+# protocol_home_binding={protocol_home_token}
+
+export IDENTITY_HOME="${{IDENTITY_HOME:-${{BOUND_IDENTITY_HOME}}}}"
+export IDENTITY_CATALOG="${{IDENTITY_CATALOG:-{catalog_token}}}"
+export IDENTITY_PROTOCOL_HOME="${{IDENTITY_PROTOCOL_HOME:-{protocol_home_token}}}"
 
 if [[ "${{1:-}}" == "commands" ]]; then
   shift
@@ -788,7 +818,7 @@ exec "${{LAUNCHER_DIR}}/{GENERIC_LAUNCHER_NAME}" --identity-id {shlex.quote(iden
 """
 
 
-def install_launcher_shims(*, identity_id: str, bin_dir: Path, catalog_path: Path) -> dict[str, Any]:
+def install_launcher_shims(*, identity_id: str, bin_dir: Path, catalog_path: Path, protocol_home: Path) -> dict[str, Any]:
     bin_root = bin_dir.expanduser().resolve()
     bin_root.mkdir(parents=True, exist_ok=True)
     generic_path = (bin_root / GENERIC_LAUNCHER_NAME).resolve()
@@ -796,7 +826,7 @@ def install_launcher_shims(*, identity_id: str, bin_dir: Path, catalog_path: Pat
     generic_changed = _write_text_if_changed(generic_path, render_generic_launcher_sh(), executable=True)
     shortcut_changed = _write_text_if_changed(
         shortcut_path,
-        render_shortcut_launcher_sh(identity_id, catalog_path),
+        render_shortcut_launcher_sh(identity_id, catalog_path, protocol_home),
         executable=True,
     )
     return {

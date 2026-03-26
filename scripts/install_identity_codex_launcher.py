@@ -8,9 +8,10 @@ from typing import Any
 
 from identity_codex_launcher_common import (
     IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY,
+    RUNTIME_PATHS_BINDING_MODE_PROTOCOL_HOME_ONLY,
     STATUS_PASS_REQUIRED,
     default_bin_dir,
-    default_identity_home,
+    default_launcher_config_home,
     ensure_launcher_assets,
     ensure_launcher_contract,
     install_launcher_shims,
@@ -55,28 +56,30 @@ def main() -> int:
 
     asset_result = ensure_launcher_assets(pack_root, args.identity_id)
     bin_dir = Path(args.bin_dir).expanduser().resolve() if str(args.bin_dir or "").strip() else default_bin_dir()
-    shim_result = install_launcher_shims(
-        identity_id=args.identity_id,
-        bin_dir=bin_dir,
-        catalog_path=catalog_path,
-    )
-
-    identity_home = (
-        Path(args.identity_home).expanduser().resolve()
-        if str(args.identity_home or "").strip()
-        else default_identity_home()
-    )
-    runtime_identity_home = runtime_identity_home_for_catalog(catalog_path)
     protocol_home = (
         Path(args.protocol_home).expanduser().resolve()
         if str(args.protocol_home or "").strip()
         else Path(__file__).resolve().parents[1]
     )
+    shim_result = install_launcher_shims(
+        identity_id=args.identity_id,
+        bin_dir=bin_dir,
+        catalog_path=catalog_path,
+        protocol_home=protocol_home,
+    )
+
+    identity_home = (
+        Path(args.identity_home).expanduser().resolve()
+        if str(args.identity_home or "").strip()
+        else default_launcher_config_home(bin_dir)
+    )
+    runtime_identity_home = runtime_identity_home_for_catalog(catalog_path)
     runtime_paths_env = write_runtime_paths_config(
         identity_home=identity_home,
         protocol_home=protocol_home,
         runtime_identity_home=runtime_identity_home,
         runtime_catalog=catalog_path,
+        binding_mode=RUNTIME_PATHS_BINDING_MODE_PROTOCOL_HOME_ONLY,
     )
     generic_surface = observe_launcher_surface(GENERIC_LAUNCHER_NAME, Path(shim_result["generic_launcher_path"]))
     shortcut_surface = observe_launcher_surface(

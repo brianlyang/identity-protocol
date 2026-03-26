@@ -21,6 +21,7 @@ from identity_codex_launcher_common import (
     STATUS_SKIPPED_NOT_REQUIRED,
     active_identity_install_required,
     default_bin_dir,
+    default_launcher_config_home,
     launcher_manifest_path,
     launcher_readme_path,
     launcher_required,
@@ -33,6 +34,9 @@ from identity_codex_launcher_common import (
     shortcut_launcher_name,
     validate_launcher_contract_doc,
     validate_launcher_manifest_doc,
+)
+from launcher_runtime_admissibility_projection_common import (
+    build_launcher_runtime_admissibility_projection,
 )
 from resolve_identity_context import resolve_identity
 
@@ -61,6 +65,13 @@ def _path_matches(raw_value: str, expected: Path) -> bool:
         return False
 
 
+def _text_contains_path_binding(text: str, expected: Path) -> bool:
+    raw_text = str(text or "")
+    expected_token = str(expected.expanduser().resolve())
+    quoted_token = shlex.quote(expected_token)
+    return expected_token in raw_text or quoted_token in raw_text
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate protocol-owned identity Codex launcher assets.")
     ap.add_argument("--identity-id", required=True)
@@ -84,7 +95,7 @@ def main() -> int:
     config_identity_home = (
         Path(args.identity_home).expanduser().resolve()
         if str(args.identity_home or "").strip()
-        else (bin_dir.parent / ".identity").resolve()
+        else default_launcher_config_home(bin_dir)
     )
     runtime_identity_home = runtime_identity_home_for_catalog(catalog_path)
     runtime_paths_env = runtime_paths_config_path(config_identity_home)
@@ -149,6 +160,42 @@ def main() -> int:
         "stale_reasons": [],
         "evidence_ref": str(task_path),
     }
+    admissibility_projection = build_launcher_runtime_admissibility_projection(
+        identity_id=args.identity_id,
+        catalog_path=catalog_path,
+        protocol_home=protocol_home,
+        operation="validate",
+    )
+    payload.update(
+        {
+            "launcher_runtime_admissibility_projection": admissibility_projection,
+            "launcher_runtime_admissibility_projection_status": str(
+                admissibility_projection.get("launcher_runtime_admissibility_projection_status", STATUS_FAIL_REQUIRED)
+            ).strip()
+            or STATUS_FAIL_REQUIRED,
+            "launcher_runtime_admissibility_status": str(
+                admissibility_projection.get("launcher_runtime_admissibility_status", STATUS_FAIL_REQUIRED)
+            ).strip()
+            or STATUS_FAIL_REQUIRED,
+            "launcher_runtime_admissibility_reason": str(
+                admissibility_projection.get("launcher_runtime_admissibility_reason", "")
+            ).strip(),
+            "runtime_mode_guard_status": str(
+                admissibility_projection.get("runtime_mode_guard_status", STATUS_FAIL_REQUIRED)
+            ).strip()
+            or STATUS_FAIL_REQUIRED,
+            "runtime_mode_guard_error_code": str(
+                admissibility_projection.get("runtime_mode_guard_error_code", "")
+            ).strip(),
+            "runtime_mode_guard_binding_class": str(
+                admissibility_projection.get("runtime_mode_guard_binding_class", "")
+            ).strip(),
+            "runtime_mode_guard_stale_reasons": list(
+                admissibility_projection.get("runtime_mode_guard_stale_reasons") or []
+            ),
+            "projection_stale_reasons": list(admissibility_projection.get("stale_reasons") or []),
+        }
+    )
 
     if not required:
         payload["stale_reasons"] = ["contract_not_required"]
@@ -181,6 +228,7 @@ def main() -> int:
     payload["pack_assets_status"] = STATUS_PASS_REQUIRED if pack_assets_ok else STATUS_FAIL_REQUIRED
 
     install_stale: list[str] = []
+    shortcut_binding_stale: list[str] = []
     if install_required:
         if not generic_path.exists():
             install_stale.append("generic_launcher_missing")
@@ -197,7 +245,7 @@ def main() -> int:
         else:
             text = shortcut_path.read_text(encoding="utf-8", errors="ignore")
             if f"--identity-id {args.identity_id}" not in text:
-                install_stale.append("shortcut_launcher_identity_binding_missing")
+                shortcut_binding_stale.append("shortcut_launcher_identity_binding_missing")
             expected_catalog = str(catalog_path.resolve())
             quoted_catalog = shlex.quote(expected_catalog)
             if "--catalog" not in text or (
@@ -205,25 +253,42 @@ def main() -> int:
                 and quoted_catalog not in text
                 and f"# catalog_binding={quoted_catalog}" not in text
             ):
-                install_stale.append("shortcut_launcher_catalog_binding_missing")
+                shortcut_binding_stale.append("shortcut_launcher_catalog_binding_missing")
+            if not _text_contains_path_binding(text, protocol_home):
+                shortcut_binding_stale.append("shortcut_launcher_protocol_home_binding_missing")
     runtime_stale: list[str] = []
+    ambient_runtime_default_stale: list[str] = []
     if install_required:
         if not runtime_paths_env.exists():
             runtime_stale.append("runtime_paths_config_missing")
         else:
-            if not _path_matches(runtime_paths_doc.get("IDENTITY_HOME", ""), runtime_identity_home):
-                runtime_stale.append("runtime_paths_identity_home_mismatch")
-            if not _path_matches(runtime_paths_doc.get("IDENTITY_CATALOG", ""), catalog_path):
-                runtime_stale.append("runtime_paths_catalog_mismatch")
             if not _path_matches(runtime_paths_doc.get("IDENTITY_PROTOCOL_HOME", ""), protocol_home):
                 runtime_stale.append("runtime_paths_protocol_home_mismatch")
+            if not _path_matches(runtime_paths_doc.get("IDENTITY_HOME", ""), runtime_identity_home):
+                ambient_runtime_default_stale.append("runtime_paths_identity_home_mismatch")
+            if not _path_matches(runtime_paths_doc.get("IDENTITY_CATALOG", ""), catalog_path):
+                ambient_runtime_default_stale.append("runtime_paths_catalog_mismatch")
     payload["installed_launcher_status"] = (
         STATUS_PASS_REQUIRED if not install_stale else STATUS_FAIL_REQUIRED
+    ) if install_required else STATUS_SKIPPED_NOT_REQUIRED
+    payload["shortcut_binding_status"] = (
+        STATUS_PASS_REQUIRED if not shortcut_binding_stale else STATUS_FAIL_REQUIRED
     ) if install_required else STATUS_SKIPPED_NOT_REQUIRED
     payload["runtime_paths_status"] = (
         STATUS_PASS_REQUIRED if not runtime_stale else STATUS_FAIL_REQUIRED
     ) if install_required else STATUS_SKIPPED_NOT_REQUIRED
+    payload["runtime_paths_bootstrap_status"] = payload["runtime_paths_status"]
+    payload["runtime_paths_bootstrap_stale_reasons"] = list(runtime_stale)
+    payload["ambient_runtime_default_status"] = (
+        STATUS_PASS_REQUIRED if not ambient_runtime_default_stale else STATUS_FAIL_REQUIRED
+    ) if install_required else STATUS_SKIPPED_NOT_REQUIRED
+    payload["ambient_runtime_default_stale_reasons"] = list(ambient_runtime_default_stale)
+    payload["runtime_paths_protocol_home_status"] = (
+        STATUS_PASS_REQUIRED if install_required and not runtime_stale else STATUS_FAIL_REQUIRED
+    ) if install_required else STATUS_SKIPPED_NOT_REQUIRED
+    payload["shortcut_binding_stale_reasons"] = list(shortcut_binding_stale)
     stale_reasons.extend(install_stale)
+    stale_reasons.extend(shortcut_binding_stale)
     stale_reasons.extend(runtime_stale)
     payload["stale_reasons"] = stale_reasons
 

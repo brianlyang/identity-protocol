@@ -15,47 +15,31 @@ EVIDENCE_ROOT="${TMP_ROOT}/evidence"
 CODEX_HOME="${TMP_ROOT}/codex-home"
 mkdir -p "${WORKSPACE_ROOT}" "${EVIDENCE_ROOT}" "${CODEX_HOME}"
 
-export REPO_ROOT CATALOG_PATH IDENTITY_ID WORKSPACE_ROOT
-python3 - <<'PY'
+PROBE_CONTEXT_JSON="${TMP_ROOT}/probe-context.json"
+python3 "${REPO_ROOT}/scripts/materialize_launcher_convergence_probe_context.py" \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --target-workspace-root "${WORKSPACE_ROOT}" \
+  --json-only > "${PROBE_CONTEXT_JSON}"
+
+python3 - "${PROBE_CONTEXT_JSON}" "${WORKSPACE_ROOT}" "${IDENTITY_ID}" <<'PY'
 import json
-import os
-import shutil
+import sys
 from pathlib import Path
 
-import yaml
-
-catalog_path = Path(os.environ["CATALOG_PATH"]).resolve()
-identity_id = os.environ["IDENTITY_ID"].strip()
-workspace_root = Path(os.environ["WORKSPACE_ROOT"]).resolve()
-
-doc = yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
-rows = [row for row in (doc.get("identities") or []) if isinstance(row, dict)]
-row = next((row for row in rows if str(row.get("id", "")).strip() == identity_id), None)
-if row is None:
-    raise SystemExit(f"missing identity row: {identity_id}")
-pack_src = Path(str(row.get("canonical_pack_path") or row.get("pack_path") or "")).expanduser().resolve()
-if not pack_src.exists():
-    raise SystemExit(f"missing pack source: {pack_src}")
-pack_dst = (workspace_root / ".identity" / identity_id).resolve()
-pack_dst.parent.mkdir(parents=True, exist_ok=True)
-shutil.copytree(pack_src, pack_dst)
-for rel in (Path("scripts/launchers/identity-codex-launcher.manifest.json"), Path("scripts/launchers/README.md")):
-    target = pack_dst / rel
-    if target.exists():
-        target.unlink()
-minimal_row = {
-    "id": identity_id,
-    "status": str(row.get("status", "active") or "active"),
-    "profile": str(row.get("profile", "runtime") or "runtime"),
-    "runtime_mode": str(row.get("runtime_mode", "local_only") or "local_only"),
-    "canonical_scope": "UNKNOWN",
-    "pack_path": str(pack_dst),
-    "canonical_pack_path": "",
-}
-catalog_doc = {"identities": [minimal_row]}
-catalog_dst = (workspace_root / ".identity" / "catalog.local.yaml").resolve()
-catalog_dst.write_text(yaml.safe_dump(catalog_doc, allow_unicode=True, sort_keys=False), encoding="utf-8")
-print(json.dumps({"catalog": str(catalog_dst), "pack": str(pack_dst)}))
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+expected_workspace = str(Path(sys.argv[2]).resolve())
+expected_identity_id = str(sys.argv[3]).strip()
+assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["identity_id"] == expected_identity_id, payload
+assert payload["target_workspace_root"] == expected_workspace, payload
+assert payload["target_catalog_path"] == str((Path(expected_workspace) / ".identity" / "catalog.local.yaml").resolve()), payload
+assert payload["target_pack_path"] == str((Path(expected_workspace) / ".identity" / expected_identity_id).resolve()), payload
+assert payload["materialized_catalog_identity_count"] == 1, payload
+materialized = payload["materialized_runtime_row"]
+assert materialized["canonical_scope"] == "UNKNOWN", payload
+assert materialized["canonical_pack_path"] == "", payload
+print("launcher_convergence_probe_context_status=PASS_REQUIRED")
 PY
 
 TMP_CATALOG="${WORKSPACE_ROOT}/.identity/catalog.local.yaml"
@@ -74,15 +58,9 @@ fi
 
 python3 - "${DRY_JSON}" <<'PY'
 import json
-import hashlib
 import sys
-from pathlib import Path
 
-def resolve_manifest_member(manifest_path: Path, value: str) -> Path:
-    raw = Path(str(value).strip())
-    if raw.is_absolute():
-        return raw.resolve()
-    return (manifest_path.parent / raw).resolve()
+from pathlib import Path
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["status"] == "FAIL_REQUIRED", payload
@@ -91,22 +69,20 @@ assert payload["planned_repair_count"] == 1, payload
 assert payload["precheck_status"] == "FAIL_REQUIRED", payload
 assert payload["mutation_applied"] is False, payload
 assert payload["receipt_family"] == "identity_codex_launcher_workspace_convergence_receipt_v1", payload
-assert Path(payload["precheck_evidence_ref"]).exists(), payload
-assert Path(payload["evidence_ref"]).exists(), payload
-assert Path(payload["manifest_ref"]).exists(), payload
-manifest_path = Path(payload["manifest_ref"]).resolve()
-manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-assert str(manifest["summary_ref"]).strip(), manifest
-records = manifest.get("evidence_records") or []
-assert isinstance(records, list) and records, manifest
-kinds = {str(row.get("kind", "")).strip() for row in records if isinstance(row, dict)}
-assert kinds == {"launcher_convergence_receipt", "launcher_convergence_precheck"}, kinds
-for row in records:
-    mirror = resolve_manifest_member(manifest_path, str(row["mirror_path"]))
-    digest = hashlib.sha256(mirror.read_bytes()).hexdigest()
-    assert digest == str(row["sha256"]).strip(), row
-print("launcher_convergence_dry_run_status=FAIL_REQUIRED")
 PY
+
+DRY_BUNDLE_JSON="${TMP_ROOT}/dry-run-bundle.json"
+python3 "${REPO_ROOT}/scripts/validate_identity_codex_launcher_evidence_bundle.py" \
+  --payload-json "${DRY_JSON}" \
+  --require-ref-field precheck_evidence_ref \
+  --require-ref-field evidence_ref \
+  --require-ref-field manifest_ref \
+  --require-summary-ref \
+  --expected-kind launcher_convergence_receipt \
+  --expected-kind launcher_convergence_precheck \
+  --json-only > "${DRY_BUNDLE_JSON}"
+
+echo "launcher_convergence_dry_run_status=FAIL_REQUIRED"
 
 APPLY_JSON="${TMP_ROOT}/apply.json"
 python3 "${REPO_ROOT}/scripts/run_identity_codex_launcher_workspace_convergence.py" \
@@ -119,15 +95,8 @@ python3 "${REPO_ROOT}/scripts/run_identity_codex_launcher_workspace_convergence.
 
 python3 - "${APPLY_JSON}" <<'PY'
 import json
-import hashlib
 import sys
 from pathlib import Path
-
-def resolve_manifest_member(manifest_path: Path, value: str) -> Path:
-    raw = Path(str(value).strip())
-    if raw.is_absolute():
-        return raw.resolve()
-    return (manifest_path.parent / raw).resolve()
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["status"] == "PASS_REQUIRED", payload
@@ -146,36 +115,45 @@ assert row["metadata_hygiene_status"] == "PASS_REQUIRED", row
 assert row["backfill_status"] == "PASS_REQUIRED", row
 assert row["install_status"] == "PASS_REQUIRED", row
 assert row["validator_status"] == "PASS_REQUIRED", row
-manifest_path = Path(payload["manifest_ref"]).resolve()
-manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-records = manifest.get("evidence_records") or []
-kinds = {str(row.get("kind", "")).strip() for row in records if isinstance(row, dict)}
-assert kinds == {
-    "launcher_convergence_receipt",
-    "launcher_convergence_precheck",
-    "launcher_convergence_postcheck",
-}, kinds
-for row in records:
-    mirror = resolve_manifest_member(manifest_path, str(row["mirror_path"]))
-    digest = hashlib.sha256(mirror.read_bytes()).hexdigest()
-    assert digest == str(row["sha256"]).strip(), row
-print("launcher_convergence_apply_status=PASS_REQUIRED")
 PY
 
-python3 - "${TMP_CATALOG}" <<'PY'
+APPLY_BUNDLE_JSON="${TMP_ROOT}/apply-bundle.json"
+python3 "${REPO_ROOT}/scripts/validate_identity_codex_launcher_evidence_bundle.py" \
+  --payload-json "${APPLY_JSON}" \
+  --require-ref-field precheck_evidence_ref \
+  --require-ref-field postcheck_evidence_ref \
+  --require-ref-field evidence_ref \
+  --require-ref-field manifest_ref \
+  --require-summary-ref \
+  --expected-kind launcher_convergence_receipt \
+  --expected-kind launcher_convergence_precheck \
+  --expected-kind launcher_convergence_postcheck \
+  --json-only > "${APPLY_BUNDLE_JSON}"
+
+echo "launcher_convergence_apply_status=PASS_REQUIRED"
+
+METADATA_HYGIENE_JSON="${TMP_ROOT}/metadata-hygiene.json"
+python3 "${REPO_ROOT}/scripts/validate_runtime_catalog_metadata_hygiene.py" \
+  --catalog "${TMP_CATALOG}" \
+  --identity-id "${IDENTITY_ID}" \
+  --require-active \
+  --json-only > "${METADATA_HYGIENE_JSON}"
+
+python3 - "${METADATA_HYGIENE_JSON}" "${IDENTITY_ID}" <<'PY'
+import json
 import sys
-from pathlib import Path
 
-import yaml
-
-catalog_path = Path(sys.argv[1]).resolve()
-doc = yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
-rows = [row for row in (doc.get("identities") or []) if isinstance(row, dict)]
-assert len(rows) == 1, rows
+payload = json.loads(open(sys.argv[1], "r", encoding="utf-8").read())
+identity_id = str(sys.argv[2]).strip()
+assert payload["runtime_catalog_metadata_hygiene_status"] == "PASS_REQUIRED", payload
+assert payload["checked_identity_count"] == 1, payload
+assert payload["violation_count"] == 0, payload
+rows = payload.get("checked_rows") or []
+assert len(rows) == 1, payload
 row = rows[0]
-assert str(row.get("canonical_scope", "")).strip() == "USER", row
-assert str(row.get("canonical_pack_path", "")).strip(), row
-assert str(row.get("canonical_pack_path", "")).strip() == str(Path(str(row.get("pack_path", "")).strip()).resolve()), row
+assert row["identity_id"] == identity_id, row
+assert row["status"] == "PASS_REQUIRED", row
+assert row["canonical_scope"] == "USER", row
 print("launcher_convergence_metadata_hygiene_apply_status=PASS_REQUIRED")
 PY
 
@@ -249,17 +227,10 @@ python3 "${REPO_ROOT}/scripts/refresh_identity_codex_launcher_evidence_truth_syn
   --apply \
   --json-only > "${REFRESH_APPLY_JSON}"
 
-python3 - "${REFRESH_APPLY_JSON}" "${APPLY_JSON}" <<'PY'
+APPLY_RECEIPT_PATH="$(python3 - "${REFRESH_APPLY_JSON}" "${APPLY_JSON}" <<'PY'
 import json
-import hashlib
 import sys
 from pathlib import Path
-
-def resolve_manifest_member(manifest_path: Path, value: str) -> Path:
-    raw = Path(str(value).strip())
-    if raw.is_absolute():
-        return raw.resolve()
-    return (manifest_path.parent / raw).resolve()
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 apply_payload = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
@@ -269,16 +240,21 @@ assert payload["repair_status"] == "apply_truth_synced", payload
 receipt_path = Path(apply_payload["evidence_ref"]).resolve()
 receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
 assert receipt["evidence_ref"] == str(receipt_path), receipt
-manifest_path = Path(receipt["manifest_ref"]).resolve()
-assert manifest_path.exists(), receipt
-manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-assert str(manifest["summary_ref"]).strip(), manifest
-for row in manifest.get("evidence_records") or []:
-    mirror = resolve_manifest_member(manifest_path, str(row["mirror_path"]))
-    digest = hashlib.sha256(mirror.read_bytes()).hexdigest()
-    assert digest == str(row["sha256"]).strip(), row
-print("launcher_convergence_truth_sync_apply_status=PASS_REQUIRED")
+print(receipt_path)
 PY
+)"
+
+REFRESH_APPLY_BUNDLE_JSON="${TMP_ROOT}/refresh-apply-bundle.json"
+python3 "${REPO_ROOT}/scripts/validate_identity_codex_launcher_evidence_bundle.py" \
+  --receipt-path "${APPLY_RECEIPT_PATH}" \
+  --require-summary-ref \
+  --require-self-evidence-ref-match \
+  --expected-kind launcher_convergence_receipt \
+  --expected-kind launcher_convergence_precheck \
+  --expected-kind launcher_convergence_postcheck \
+  --json-only > "${REFRESH_APPLY_BUNDLE_JSON}"
+
+echo "launcher_convergence_truth_sync_apply_status=PASS_REQUIRED"
 
 if python3 "${REPO_ROOT}/scripts/run_identity_codex_launcher_workspace_convergence.py" \
   --catalog "${REPO_ROOT}/identity/catalog/identities.yaml" \
@@ -295,5 +271,32 @@ if ! grep -q 'IP-ILAUNCH-CONV-001' "${TMP_ROOT}/invalid.json"; then
   cat "${TMP_ROOT}/invalid.json"
   exit 1
 fi
+
+python3 - "${PROBE_CONTEXT_JSON}" "${APPLY_JSON}" "${METADATA_HYGIENE_JSON}" "${REFRESH_APPLY_JSON}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+probe_context = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+apply_payload = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+metadata_hygiene = json.loads(Path(sys.argv[3]).read_text(encoding="utf-8"))
+truth_sync_apply = json.loads(Path(sys.argv[4]).read_text(encoding="utf-8"))
+
+print(
+    json.dumps(
+        {
+            "identity_codex_launcher_convergence_probe_status": "PASS_REQUIRED",
+            "probe_context_status": probe_context.get("status", ""),
+            "metadata_hygiene_apply_status": metadata_hygiene.get(
+                "runtime_catalog_metadata_hygiene_status", ""
+            ),
+            "truth_sync_apply_status": truth_sync_apply.get("truth_sync_status", ""),
+            "repo_catalog_rejection_status": "PASS_REQUIRED",
+            "repaired_identity_count": apply_payload.get("repaired_identity_count", 0),
+        },
+        ensure_ascii=False,
+    )
+)
+PY
 
 echo "[PASS] identity codex launcher convergence probes passed"

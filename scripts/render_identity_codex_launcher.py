@@ -5,8 +5,6 @@ import argparse
 import json
 import os
 import shlex
-import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +33,11 @@ from identity_codex_launcher_common import (
     resolve_required_protocol_actor_id,
     shortcut_launcher_name,
 )
+from launcher_runtime_admissibility_projection_common import (
+    build_launcher_runtime_admissibility_projection,
+)
+
+
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
@@ -50,73 +53,14 @@ def _build_display_command(raw_command: list[str]) -> str:
     return _shell_join(raw_command)
 
 
-def _run_launcher_runtime_mode_guard(
-    *,
-    identity_id: str,
-    catalog_path: Path,
-    protocol_home: Path,
-    operation: str,
-) -> tuple[int, dict[str, Any]]:
-    repo_catalog_path = (protocol_home / "identity" / "catalog" / "identities.yaml").resolve()
-    cmd = [
-        sys.executable,
-        str((protocol_home / "scripts" / "validate_identity_runtime_mode_guard.py").resolve()),
-        "--identity-id",
-        identity_id,
-        "--catalog",
-        str(catalog_path),
-        "--repo-catalog",
-        str(repo_catalog_path),
-        "--expect-mode",
-        "auto",
-        "--operation",
-        operation,
-        "--admissibility-profile",
-        "launcher_outer_surface",
-        "--env-catalog-mismatch-mode",
-        "observe",
-        "--json-only",
-    ]
-    proc = subprocess.run(
-        cmd,
-        cwd=str(protocol_home.resolve()),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    try:
-        payload = json.loads(proc.stdout) if str(proc.stdout or "").strip() else {}
-    except Exception:
-        payload = {
-            "runtime_mode_guard_status": STATUS_FAIL_REQUIRED,
-            "error_code": "IP-ENV-002",
-            "binding_class": "runtime_guard_payload_unparseable",
-            "stale_reasons": ["runtime_mode_guard_payload_unparseable"],
-            "raw_stdout": proc.stdout,
-            "raw_stderr": proc.stderr,
-        }
-        return 1, payload
-    if not isinstance(payload, dict):
-        payload = {
-            "runtime_mode_guard_status": STATUS_FAIL_REQUIRED,
-            "error_code": "IP-ENV-002",
-            "binding_class": "runtime_guard_payload_not_object",
-            "stale_reasons": ["runtime_mode_guard_payload_not_object"],
-            "raw_stdout": proc.stdout,
-            "raw_stderr": proc.stderr,
-        }
-        return 1, payload
-    return proc.returncode, payload
-
-
 def _build_launcher_runtime_guard_fail_payload(
     *,
     identity_id: str,
     catalog_path: Path,
-    guard_payload: dict[str, Any],
+    admissibility_projection: dict[str, Any],
 ) -> dict[str, Any]:
-    binding_class = str(guard_payload.get("binding_class", "")).strip()
-    error_code = str(guard_payload.get("error_code", "")).strip()
+    binding_class = str(admissibility_projection.get("runtime_mode_guard_binding_class", "")).strip()
+    error_code = str(admissibility_projection.get("runtime_mode_guard_error_code", "")).strip()
     admissibility_reason = binding_class or error_code or "runtime_mode_guard_blocked"
     return {
         "status": STATUS_FAIL_REQUIRED,
@@ -128,22 +72,44 @@ def _build_launcher_runtime_guard_fail_payload(
         "identity_id": identity_id,
         "catalog_path": str(catalog_path),
         "ambient_catalog_path": str(resolve_catalog_path("")),
-        "launcher_operator_surface_admissibility_status": STATUS_FAIL_REQUIRED,
+        "launcher_operator_surface_admissibility_status": str(
+            admissibility_projection.get("launcher_runtime_admissibility_status", STATUS_FAIL_REQUIRED)
+        ).strip()
+        or STATUS_FAIL_REQUIRED,
         "launcher_operator_surface_admissibility_reason": admissibility_reason,
+        "launcher_runtime_admissibility_projection": admissibility_projection,
+        "launcher_runtime_admissibility_projection_status": str(
+            admissibility_projection.get("launcher_runtime_admissibility_projection_status", STATUS_FAIL_REQUIRED)
+        ).strip()
+        or STATUS_FAIL_REQUIRED,
+        "launcher_runtime_admissibility_status": str(
+            admissibility_projection.get("launcher_runtime_admissibility_status", STATUS_FAIL_REQUIRED)
+        ).strip()
+        or STATUS_FAIL_REQUIRED,
+        "launcher_runtime_admissibility_reason": str(
+            admissibility_projection.get("launcher_runtime_admissibility_reason", admissibility_reason)
+        ).strip()
+        or admissibility_reason,
         "runtime_mode_guard_status": str(
-            guard_payload.get("runtime_mode_guard_status", STATUS_FAIL_REQUIRED)
+            admissibility_projection.get("runtime_mode_guard_status", STATUS_FAIL_REQUIRED)
         ).strip()
         or STATUS_FAIL_REQUIRED,
         "runtime_mode_guard_error_code": error_code,
         "runtime_mode_guard_binding_class": binding_class,
-        "runtime_mode_guard_payload": guard_payload,
+        "runtime_mode_guard_payload": admissibility_projection.get("runtime_mode_guard_payload", {}),
         "preferred_start_command": "",
         "recommended_start_command": "",
         "preferred_resume_command": "",
         "recommended_resume_command": "",
         "recommended_user_command": "",
         "resume_status": STATUS_FAIL_REQUIRED,
-        "stale_reasons": list(guard_payload.get("stale_reasons") or []),
+        "runtime_mode_guard_stale_reasons": list(admissibility_projection.get("runtime_mode_guard_stale_reasons") or []),
+        "projection_stale_reasons": list(admissibility_projection.get("stale_reasons") or []),
+        "stale_reasons": list(
+            admissibility_projection.get("runtime_mode_guard_stale_reasons")
+            or admissibility_projection.get("stale_reasons")
+            or []
+        ),
         "error_code": error_code,
         "error": f"launcher_runtime_admissibility_blocked:{admissibility_reason}",
         "copyable_commands": {"start": None, "resume": None},
@@ -267,7 +233,11 @@ def _cmd_render(args: argparse.Namespace) -> int:
         "manifest_doc": launcher_manifest_doc(args.identity_id),
         "readme_text": launcher_readme_text(args.identity_id),
         "generic_launcher_text": render_generic_launcher_sh(),
-        "shortcut_launcher_text": render_shortcut_launcher_sh(args.identity_id, catalog_path),
+        "shortcut_launcher_text": render_shortcut_launcher_sh(
+            args.identity_id,
+            catalog_path,
+            resolve_protocol_root(),
+        ),
     }
     _emit(payload, json_only=args.json_only)
     return 0
@@ -297,29 +267,42 @@ def _cmd_exec(args: argparse.Namespace) -> int:
     codex_args = list(args.codex_args or [])
     protocol_home = resolve_protocol_root(str(os.environ.get("IDENTITY_PROTOCOL_HOME", "")).strip())
     catalog_path = resolve_catalog_path(args.catalog)
-    guard_rc, guard_payload = _run_launcher_runtime_mode_guard(
+    admissibility_projection = build_launcher_runtime_admissibility_projection(
         identity_id=args.identity_id,
         catalog_path=catalog_path,
         protocol_home=protocol_home,
         operation="validate",
     )
-    if guard_rc != 0:
+    projection_status = str(
+        admissibility_projection.get("launcher_runtime_admissibility_projection_status", "")
+    ).strip()
+    admissibility_status = str(admissibility_projection.get("launcher_runtime_admissibility_status", "")).strip()
+    if projection_status != STATUS_PASS_REQUIRED or admissibility_status != STATUS_PASS_REQUIRED:
         _emit(
             {
                 "status": STATUS_FAIL_REQUIRED,
                 "identity_id": args.identity_id,
                 "catalog_path": str(catalog_path),
-                "launcher_exec_admissibility_status": STATUS_FAIL_REQUIRED,
+                "launcher_exec_admissibility_status": admissibility_status or STATUS_FAIL_REQUIRED,
                 "launcher_exec_admissibility_reason": str(
-                    guard_payload.get("binding_class") or guard_payload.get("error_code") or "runtime_mode_guard_blocked"
+                    admissibility_projection.get("launcher_runtime_admissibility_reason")
+                    or admissibility_projection.get("runtime_mode_guard_binding_class")
+                    or admissibility_projection.get("runtime_mode_guard_error_code")
+                    or "runtime_mode_guard_blocked"
                 ),
                 "runtime_mode_guard_status": str(
-                    guard_payload.get("runtime_mode_guard_status", STATUS_FAIL_REQUIRED)
+                    admissibility_projection.get("runtime_mode_guard_status", STATUS_FAIL_REQUIRED)
                 ).strip()
                 or STATUS_FAIL_REQUIRED,
-                "runtime_mode_guard_error_code": str(guard_payload.get("error_code", "")).strip(),
-                "runtime_mode_guard_binding_class": str(guard_payload.get("binding_class", "")).strip(),
-                "runtime_mode_guard_payload": guard_payload,
+                "runtime_mode_guard_error_code": str(
+                    admissibility_projection.get("runtime_mode_guard_error_code", "")
+                ).strip(),
+                "runtime_mode_guard_binding_class": str(
+                    admissibility_projection.get("runtime_mode_guard_binding_class", "")
+                ).strip(),
+                "launcher_runtime_admissibility_projection": admissibility_projection,
+                "launcher_runtime_admissibility_projection_status": projection_status or STATUS_FAIL_REQUIRED,
+                "runtime_mode_guard_payload": admissibility_projection.get("runtime_mode_guard_payload", {}),
                 "error": "launcher_exec_runtime_admissibility_blocked",
             },
             json_only=args.json_only,
@@ -348,6 +331,30 @@ def _cmd_exec(args: argparse.Namespace) -> int:
             json_only=args.json_only,
         )
         return 1
+    payload.update(
+        {
+            "launcher_runtime_admissibility_projection": admissibility_projection,
+            "launcher_runtime_admissibility_projection_status": projection_status or STATUS_FAIL_REQUIRED,
+            "launcher_runtime_admissibility_status": admissibility_status or STATUS_FAIL_REQUIRED,
+            "launcher_runtime_admissibility_reason": str(
+                admissibility_projection.get("launcher_runtime_admissibility_reason", "")
+            ).strip(),
+            "runtime_mode_guard_status": str(
+                admissibility_projection.get("runtime_mode_guard_status", STATUS_FAIL_REQUIRED)
+            ).strip()
+            or STATUS_FAIL_REQUIRED,
+            "runtime_mode_guard_error_code": str(
+                admissibility_projection.get("runtime_mode_guard_error_code", "")
+            ).strip(),
+            "runtime_mode_guard_binding_class": str(
+                admissibility_projection.get("runtime_mode_guard_binding_class", "")
+            ).strip(),
+            "runtime_mode_guard_stale_reasons": list(
+                admissibility_projection.get("runtime_mode_guard_stale_reasons") or []
+            ),
+            "projection_stale_reasons": list(admissibility_projection.get("stale_reasons") or []),
+        }
+    )
     if args.dry_run:
         _emit(payload, json_only=args.json_only)
         return 0
@@ -357,18 +364,22 @@ def _cmd_exec(args: argparse.Namespace) -> int:
 def _cmd_commands(args: argparse.Namespace) -> int:
     catalog_path = resolve_catalog_path(args.catalog)
     protocol_home = resolve_protocol_root(str(os.environ.get("IDENTITY_PROTOCOL_HOME", "")).strip())
-    guard_rc, guard_payload = _run_launcher_runtime_mode_guard(
+    admissibility_projection = build_launcher_runtime_admissibility_projection(
         identity_id=args.identity_id,
         catalog_path=catalog_path,
         protocol_home=protocol_home,
         operation="inspection",
     )
-    if guard_rc != 0:
+    projection_status = str(
+        admissibility_projection.get("launcher_runtime_admissibility_projection_status", "")
+    ).strip()
+    admissibility_status = str(admissibility_projection.get("launcher_runtime_admissibility_status", "")).strip()
+    if projection_status != STATUS_PASS_REQUIRED or admissibility_status != STATUS_PASS_REQUIRED:
         _emit_commands(
             _build_launcher_runtime_guard_fail_payload(
                 identity_id=args.identity_id,
                 catalog_path=catalog_path,
-                guard_payload=guard_payload,
+                admissibility_projection=admissibility_projection,
             ),
             json_only=args.json_only,
         )
@@ -536,6 +547,26 @@ def _cmd_commands(args: argparse.Namespace) -> int:
         "resume_command_fresh_shell_executable_status": resume_command_fresh_shell_executable_status,
         "command_discovery": command_discovery,
         "continuity_support": continuity_support,
+        "launcher_runtime_admissibility_projection": admissibility_projection,
+        "launcher_runtime_admissibility_projection_status": projection_status or STATUS_FAIL_REQUIRED,
+        "launcher_runtime_admissibility_status": admissibility_status or STATUS_FAIL_REQUIRED,
+        "launcher_runtime_admissibility_reason": str(
+            admissibility_projection.get("launcher_runtime_admissibility_reason", "")
+        ).strip(),
+        "runtime_mode_guard_status": str(
+            admissibility_projection.get("runtime_mode_guard_status", STATUS_FAIL_REQUIRED)
+        ).strip()
+        or STATUS_FAIL_REQUIRED,
+        "runtime_mode_guard_error_code": str(
+            admissibility_projection.get("runtime_mode_guard_error_code", "")
+        ).strip(),
+        "runtime_mode_guard_binding_class": str(
+            admissibility_projection.get("runtime_mode_guard_binding_class", "")
+        ).strip(),
+        "runtime_mode_guard_stale_reasons": list(
+            admissibility_projection.get("runtime_mode_guard_stale_reasons") or []
+        ),
+        "projection_stale_reasons": list(admissibility_projection.get("stale_reasons") or []),
         "instance_answer_guidance": {
             "instance_returns_concrete_commands": True,
             "manual_command_assembly_forbidden": True,

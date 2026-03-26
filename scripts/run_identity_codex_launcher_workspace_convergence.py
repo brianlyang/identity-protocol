@@ -167,6 +167,9 @@ def _apply_repair_for_identity(
         "metadata_changed": False,
         "metadata_hygiene_status": "",
         "backfill_status": "",
+        "backfill_status_profile": "",
+        "backfill_current_run_projection_enforcement_mode": "",
+        "backfill_current_run_projection_observation_failures": [],
         "backfill_changed": False,
         "backfill_evidence_ref": "",
         "install_status": "",
@@ -211,11 +214,23 @@ def _apply_repair_for_identity(
         str(catalog_path),
         "--identity-id",
         identity_id,
+        "--status-profile",
+        "launcher_workspace_convergence",
         "--apply",
         "--json-only",
     ]
     rc_backfill, backfill_payload, _, _ = _run_json(backfill_cmd, env=env)
     result["backfill_status"] = str(backfill_payload.get("contract_backfill_status", "")).strip().upper()
+    result["backfill_status_profile"] = str(backfill_payload.get("status_profile", "")).strip()
+    result["backfill_current_run_projection_enforcement_mode"] = str(
+        backfill_payload.get("current_run_projection_enforcement_mode", "")
+    ).strip()
+    observation_failures = backfill_payload.get("current_run_projection_observation_failures")
+    result["backfill_current_run_projection_observation_failures"] = (
+        [str(item).strip() for item in observation_failures if str(item).strip()]
+        if isinstance(observation_failures, list)
+        else []
+    )
     result["backfill_changed"] = bool(backfill_payload.get("changed", False))
     result["backfill_evidence_ref"] = str(backfill_payload.get("evidence_ref", "")).strip()
     if rc_backfill != 0 or result["backfill_status"] != STATUS_PASS_REQUIRED:

@@ -163,12 +163,13 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - launcher probe lane `scripts/ci/run_identity_codex_launcher_probes_ci.sh`,
    - launcher-owned continuity bind proof inside that same launcher probe lane, proving `pre-migrate -> launcher exec/startup -> reentry-consumption-receipt` through the protocol-owned launcher path rather than through ad hoc manual post-recover calls,
    - convergence-entry probe lane `scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh`,
+   - status-profile boundary probe lane `scripts/ci/run_repair_contract_backfill_status_profile_probes_ci.sh`,
    - active-runtime launcher migration closure checker `scripts/check_identity_codex_launcher_migration_closure.py`,
    - governed launcher convergence evidence bundles whose receipts self-pin `evidence_ref` / `manifest_ref` and whose archival root carries `EVIDENCE_MANIFEST.<run_token>.json`,
    - post-closure evidence truth-sync/backfill through `scripts/refresh_identity_codex_launcher_evidence_truth_sync.py`,
    - lifecycle enforcement where `identity_creator validate` fail-closes on active-runtime launcher migration debt and `identity_creator update` performs governed auto-repair + recheck,
-   - required-runtime-gates inclusion for the launcher probe lane,
-   - explicit `scripts/release_readiness_check.py` consumption of both the convergence-entry probe lane and the aggregate launcher migration closure checker so readiness no longer depends only on the single-identity launcher validator.
+   - required-runtime-gates inclusion for the launcher probe lane and the status-profile boundary probe lane,
+   - explicit `scripts/release_readiness_check.py` consumption of the convergence-entry probe lane, the status-profile boundary probe lane, and the aggregate launcher migration closure checker so readiness no longer depends only on the single-identity launcher validator.
 4. Reviewers must not collapse `Architecture PASS` into `Implementation PASS`.
 
 ## 6) Accepted closure boundary
@@ -215,13 +216,19 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
 
 ### 6.4 Current machine-proof note and closer handoff boundary
 
-1. Current-state note (2026-03-22): reviewers may now treat launcher runtime-path authority as part of formal launcher closure rather than as install-time operator folklore.
-2. The machine-proof family for that claim is:
+1. Current-state note (2026-03-26): reviewers may now treat launcher bootstrap truth and shortcut-bound runtime authority as separate but jointly governed launcher proof surfaces.
+2. The frozen split is:
+   - the shared bootstrap file under `${CODEX_HOME}/.identity/config/runtime-paths.env` owns only fresh-shell `IDENTITY_PROTOCOL_HOME` discovery for the generic launcher entry,
+   - explicit runtime-selection surfaces own current-shell `IDENTITY_HOME` / `IDENTITY_CATALOG`,
+   - installed `id-<identity-id>` shims own identity-local runtime authority by exporting their bound `IDENTITY_HOME`, `IDENTITY_CATALOG`, and `IDENTITY_PROTOCOL_HOME` before delegating to the shared generic launcher.
+3. Therefore review must not treat ambient-default `IDENTITY_HOME` / `IDENTITY_CATALOG` drift inside the shared bootstrap file as a shortcut-closure failure when the explicit shortcut binding and shared protocol-home bootstrap are both green.
+4. The machine-proof family for that claim is:
    - `scripts/validate_identity_codex_launcher.py`, which now exports `runtime_paths_status`,
+   - `runtime_paths_bootstrap_status`, `runtime_paths_protocol_home_status`, `shortcut_binding_status`, and `ambient_runtime_default_status`,
    - `scripts/check_identity_codex_launcher_migration_closure.py`, which now carries the same runtime-path closure family into aggregate active-runtime proof,
    - runtime-only consumers in required gates, readiness, and `identity_creator`.
-3. Cross-workspace portability proof is also now machine-landed through `scripts/ci/run_identity_codex_launcher_cross_workspace_pilot_probes_ci.sh`, which replays the **same** convergence entry against another workspace-local runtime catalog with no workspace-specific wrapper exception.
-4. Current-state note (2026-03-22): the cross-workspace pilot now also verifies the direct-entry/runtime-authority conditions raised by the `fqsh` feedback:
+5. Cross-workspace portability proof is also now machine-landed through `scripts/ci/run_identity_codex_launcher_cross_workspace_pilot_probes_ci.sh`, which replays the **same** convergence entry against another workspace-local runtime catalog with no workspace-specific wrapper exception.
+6. Current-state note (2026-03-22): the cross-workspace pilot now also verifies the direct-entry/runtime-authority conditions raised by the `fqsh` feedback:
    - fresh convergence apply emits a receipt/manifest bundle that is already truth-synced on the first dry-run;
    - aggregate closure with `--catalog .identity/catalog.local.yaml` resolves against the caller workspace rather than the protocol repo;
    - `resolve_identity_context.py resolve --identity-id <id>` from the sibling workspace classifies that runtime catalog as `source_layer=project` with `resolved_scope=USER`.
@@ -233,20 +240,32 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - even under catalog match, the bundle must not keep a bare short launcher on the preferred lane once `shortcut_shell_discoverability_status` is red; the preferred lane must downgrade to a discoverability-safe absolute or generic surface while leaving short launchers only in reference fields.
    - under `ambient_catalog_mismatch_requires_explicit_catalog`, the bundle must also promote the same canonical fresh-shell command into `preferred_start_command` / `preferred_resume_command`; any retained short launcher command is audit-acceptable only as a convenience/reference field, not as the preferred operator surface.
    - the installed `id-<id>` shim must nevertheless stay execution-stable under that same mismatch by forwarding its governed install catalog through explicit `--catalog <resolved-catalog>` internally, so ambient `IDENTITY_CATALOG` drift cannot silently rebind the shortcut to a foreign catalog.
+   - launcher command-bundle and exec surfaces now also consume the shared runtime-mode guard in observational admissibility mode, so runtime-unadmitted repo-metadata fallback identities fail-close with structured machine payloads rather than traceback-only crashes, while launcher-owned env/catalog mismatch projection remains intact and does not become a second semantic owner.
    - that internal catalog pinning is an execution-stability guarantee only; it must not be misread as permission to relabel the mismatch bundle’s preferred discovery surface back to the short launcher.
    - host-thread UUID presence alone must not be audited as resume readiness; the machine-visible decomposition must distinguish `host_thread_id_status`, `identity_session_tuple_status`, and `resume_command_fresh_shell_executable_status`.
+7. Current-state note (2026-03-26): the same cross-workspace pilot now additionally proves the owner-boundary status-profile split for borrowed runtime catalogs:
+   - a seeded current-run projection failure still makes `repair_contract_backfill.py` fail-close under `status_profile=strict_full`;
+   - `run_identity_codex_launcher_workspace_convergence.py --mode apply` then replays the same borrowed workspace through `status_profile=launcher_workspace_convergence`, where those current-run projection failures remain machine-visible observation residuals instead of blocking launcher adoption closure;
+   - review interpretation must stay strict here: this proves launcher/workspace convergence closure only, not terminal-truth or weak-live closure on the borrowed runtime identity.
    - explicit `--session-id run:<...>` is not sufficient by shape alone: command discovery and dry-run must fail-close unless that tuple is authoritative for the requested identity, and `resume <host-thread-uuid>` must remain the Codex recovery target rather than being semantically replaced by the launcher tuple.
    - `identity-codex commands --identity-id <id> --json-only` returns a structured bundle with `recommended_user_command`, `copyable_commands`, and `instance_answer_guidance`, preserving the boundary “protocol guides, instance answers”.
+8. Current-state note (2026-03-26): the same status-profile split is now also guarded through a dedicated CI lane `scripts/ci/run_repair_contract_backfill_status_profile_probes_ci.sh`, so closer review and readiness no longer depend on one broader launcher pilot to preserve this owner-boundary invariant.
+9. Current-state note (2026-03-26): borrowed-workspace probe setup is now also shared through `scripts/materialize_cross_workspace_runtime_probe_context.py` and `scripts/cross_workspace_runtime_probe_context_common.py`, reducing shell-local duplication across launcher probe families while preserving the same workspace-local runtime authority semantics.
+10. Current-state note (2026-03-26): the seeded strict-profile fail-close precheck is now likewise shared through `scripts/run_repair_contract_backfill_strict_profile_probe.py` and `scripts/repair_contract_backfill_strict_profile_probe_common.py`, so the broader cross-workspace pilot and the dedicated status-profile lane reuse one machine-owned failure-seeding / assertion surface.
+11. Current-state note (2026-03-26): the single-identity launcher-convergence probe workspace is now also shared through `scripts/materialize_launcher_convergence_probe_context.py` and `scripts/launcher_convergence_probe_context_common.py`, so the temporary runtime catalog materialization, pack copy, and launcher-asset stripping used by `scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh` no longer drift as another embedded shell-local Python block.
+12. Current-state note (2026-03-26): launcher convergence evidence-bundle assertion is now likewise shared through `scripts/validate_identity_codex_launcher_evidence_bundle.py` and reusable inspection helpers in `scripts/identity_codex_launcher_evidence_common.py`, so manifest `summary_ref`, `evidence_records.kind`, and `mirror_path -> sha256` verification no longer drift as duplicated embedded Python across the convergence and cross-workspace pilot probe lanes.
+13. Current-state note (2026-03-26): explicit relative local catalog paths now resolve caller-anchor-first in `scripts/resolve_identity_context.py`, so borrowed/temp workspace invocations such as `--catalog .identity/catalog.local.yaml` keep binding to the caller workspace even after launcher rollout writes runtime defaults into `${CODEX_HOME}/.identity/config/runtime-paths.env`; the convergence and cross-workspace probe lanes now also consume `scripts/validate_runtime_catalog_metadata_hygiene.py` for post-apply metadata proof instead of ad hoc YAML row inspection.
+14. Current-state note (2026-03-26): audit now also treats that invariant as a dedicated machine-owned resolver proof via `scripts/validate_resolve_identity_context_default_local_catalog.py` and the shared temp-workspace helper `scripts/resolve_identity_context_probe_common.py`; required gates plus release readiness consume the owner validator directly, so ambient runtime-default hijack regressions are no longer discoverable only through the broader launcher pilot lane.
    - `scripts/render_identity_codex_launcher.py` command-bundle output remains a governed launcher command bundle surface on an outer runtime-state layer.
    - It may project canonical start/resume commands and operator guidance, but it must not replace root-law owners, direct validator receipts, actor-session tuple truth, or host-thread recovery target authority.
    - It must not promote convenience/reference fields, shell-wrapper helper strings, or manual command assembly into canonical operator authority.
    - The command-bundle payload must self-describe this bounded authority in machine-readable form.
-5. Audit follow-on closure note (2026-03-23): the raw runtime-catalog metadata follow-on is now closed on its own `v1.6.10` lane:
+15. Audit follow-on closure note (2026-03-23): the raw runtime-catalog metadata follow-on is now closed on its own `v1.6.10` lane:
    - `scripts/validate_runtime_catalog_metadata_hygiene.py` / `scripts/repair_runtime_catalog_metadata_hygiene.py` now own raw row self-description;
    - launcher closure now projects `runtime_catalog_metadata_hygiene_status`;
    - convergence probes seed stale metadata and prove apply-time repair.
    Review interpretation is frozen: launcher truth remains closed, and raw metadata cleanup must not be misreported as launcher-semantic debt.
-6. The closer handoff boundary after this landing is therefore narrow and explicit:
+16. The closer handoff boundary after this landing is therefore narrow and explicit:
    - continue using the same convergence entry, the same receipt family, and the same runtime-only closure semantics,
    - treat launcher convergence receipt/manifest truth-sync as already landed, and keep remaining work mainly on broader rollout breadth plus additional archival coverage,
    - do **not** reopen launcher semantics,
@@ -300,6 +319,8 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
      - and launcher command discovery now recommends resume only when the command is fresh-shell executable with both `resume <host-thread-uuid>` recovery targeting and authoritative `--session-id run:<...>` tuple closure preserved as distinct objects.
 2. The remaining tail is also frozen precisely:
    - current-state note (2026-03-22): `python3 scripts/validate_protocol_lane_isolated_historical_replay.py --repo-root identity-protocol-local --workspace-root . --commit HEAD --json-only` returned `PASS_REQUIRED` with `projection_parity_match=true`,
+   - the isolated replay validator now separates requested commit/diff scope from current-worktree baseline materialization, preventing unrelated dirty multi-stream worktree edits from falsely expanding single-lane replay scope,
+   - pure committed-tree replay remains an explicit historical mode rather than the silent default for the lane-summary replay path,
    - remaining work belongs mainly to legacy rollout outside the already governed catalogs and broader evidence breadth,
    - the current asset is **not** a universal isolated historical replay engine for arbitrary commits unless it is run against an isolated clone/worktree representing that historical tree,
    - it does **not** belong to unresolved launcher semantics.

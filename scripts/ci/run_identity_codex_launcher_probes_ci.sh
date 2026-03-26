@@ -213,6 +213,7 @@ assert_env_loader_path_probe \
 
 INSTALL_JSON="${TMP_ROOT}/launcher-install.json"
 VALIDATE_JSON="${TMP_ROOT}/launcher-validate.json"
+VALIDATE_FOREIGN_DEFAULTS_JSON="${TMP_ROOT}/launcher-validate-foreign-defaults.json"
 
 echo "[RUN] install launcher assets and capture install-vs-discoverability projection"
 python3 "${REPO_ROOT}/scripts/install_identity_codex_launcher.py" \
@@ -267,6 +268,10 @@ bin_dir = str(Path(sys.argv[2]).resolve())
 assert payload["identity_codex_launcher_status"] == "PASS_REQUIRED", payload
 assert payload["installed_launcher_status"] == "PASS_REQUIRED", payload
 assert payload["runtime_paths_status"] == "PASS_REQUIRED", payload
+assert payload["launcher_runtime_admissibility_projection_status"] == "PASS_REQUIRED", payload
+assert payload["launcher_runtime_admissibility_status"] == "PASS_REQUIRED", payload
+assert payload["launcher_runtime_admissibility_reason"] == "runtime_catalog_admitted", payload
+assert payload["runtime_mode_guard_status"] == "PASS_REQUIRED", payload
 assert payload["operator_shell_path_hint"] == bin_dir, payload
 assert payload["generic_launcher_install_status"] == "PASS_REQUIRED", payload
 assert payload["shortcut_launcher_install_status"] == "PASS_REQUIRED", payload
@@ -284,6 +289,43 @@ assert payload["generic_command_on_path"] is False, payload
 assert payload["shortcut_command_on_path"] is False, payload
 assert payload["stale_reasons"] == [], payload
 print("launcher_validator_install_vs_discoverability_status=PASS_REQUIRED")
+PY
+
+echo "[RUN] rewrite shared launcher bootstrap defaults to a foreign runtime home/catalog while keeping protocol_home canonical"
+mkdir -p "${IDENTITY_HOME}/config"
+cat > "${IDENTITY_HOME}/config/runtime-paths.env" <<EOF
+# identity runtime shared path config
+# priority: environment variable > this file > built-in fallback
+# binding_mode=legacy_full_runtime_selection_probe
+IDENTITY_HOME=${TMP_ROOT}/foreign-runtime/.identity
+IDENTITY_CATALOG=${TMP_ROOT}/foreign-runtime/.identity/catalog.local.yaml
+IDENTITY_PROTOCOL_HOME=${REPO_ROOT}
+EOF
+
+python3 "${REPO_ROOT}/scripts/validate_identity_codex_launcher.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --catalog "${CATALOG_PATH}" \
+  --bin-dir "${BIN_DIR}" \
+  --require-installed \
+  --json-only > "${VALIDATE_FOREIGN_DEFAULTS_JSON}"
+
+python3 - "${VALIDATE_FOREIGN_DEFAULTS_JSON}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["identity_codex_launcher_status"] == "PASS_REQUIRED", payload
+assert payload["runtime_paths_status"] == "PASS_REQUIRED", payload
+assert payload["runtime_paths_protocol_home_status"] == "PASS_REQUIRED", payload
+assert payload["shortcut_binding_status"] == "PASS_REQUIRED", payload
+assert payload["ambient_runtime_default_status"] == "FAIL_REQUIRED", payload
+assert set(payload["ambient_runtime_default_stale_reasons"]) == {
+    "runtime_paths_identity_home_mismatch",
+    "runtime_paths_catalog_mismatch",
+}, payload
+assert payload["stale_reasons"] == [], payload
+print("launcher_validator_bootstrap_vs_runtime_defaults_split_status=PASS_REQUIRED")
 PY
 
 PROBE_RUNTIME_ROOT="${TMP_ROOT}/probe-runtime"
