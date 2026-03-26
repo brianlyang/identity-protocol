@@ -147,6 +147,16 @@ DEFAULT_CHECKS: list[tuple[str, list[str]]] = [
         ],
     ),
     (
+        "experience_writeback",
+        [
+            "python3",
+            "scripts/validate_identity_experience_writeback.py",
+            "--operation",
+            "scan",
+            "--json-only",
+        ],
+    ),
+    (
         "outlet_matrix",
         [
             "python3",
@@ -194,6 +204,7 @@ OPERATION_AWARE_CHECKS: set[str] = {
     "protocol_feedback_sidecar",
     "writeback_continuity",
     "post_execution_mandatory",
+    "experience_writeback",
     "outlet_matrix",
     "protocol_version_alignment",
 }
@@ -230,6 +241,7 @@ SUGGESTIONS = {
     "protocol_feedback_sidecar": "Align protocol_feedback_sidecar_contract_v1 (default non-blocking + auditable P0 escalation); resolve blocking IP-WRB/IP-SEM violations before strict gates.",
     "writeback_continuity": "Regenerate update execution report and ensure writeback_mode/degrade_reason/risk_level/next_recovery_action satisfy continuity contract.",
     "post_execution_mandatory": "Ensure post-execution mandatory fields and recovery actions are complete in execution report; rerun update and validate.",
+    "experience_writeback": "Regenerate update execution report and ensure experience_writeback, RULEBOOK linkage, TASK_HISTORY linkage, and writeback_rule_id close on the same run.",
     "outlet_matrix": "Run `validate_outlet_matrix --operation validate --force-required --report <execution_report>` and fix final_emit_governed / tool_choice_required / schema passthrough before release promotion.",
     "protocol_baseline_freshness": "Run identity_creator update to regenerate execution report on current protocol baseline commit.",
     "protocol_version_alignment": "Run identity_creator update (or refresh execution report) and resolve prompt/binding tuple mismatches before release closure.",
@@ -253,6 +265,7 @@ UPGRADE_TRIGGER_CHECKS = {
     "headstamp_recurrence_closure",
     "writeback_continuity",
     "post_execution_mandatory",
+    "experience_writeback",
     "outlet_matrix",
     "protocol_baseline_freshness",
     "protocol_version_alignment",
@@ -260,6 +273,7 @@ UPGRADE_TRIGGER_CHECKS = {
     "capability_arbitration",
 }
 UPGRADE_TRIGGER_CODE_PREFIXES = (
+    "IP-EWB-",
     "IP-WRB-",
     "IP-PBL-",
     "IP-PVA-",
@@ -340,6 +354,14 @@ def _build_self_upgrade_plan(
             f"--catalog {catalog_path} "
             f"--repo-catalog {repo_catalog} "
             '--report "$LATEST_REPORT" '
+            "--operation validate --json-only"
+        ),
+        (
+            'python3 "$IDENTITY_PROTOCOL_HOME"/scripts/validate_identity_experience_writeback.py '
+            f"--identity-id {identity_id} "
+            f"--repo-catalog {repo_catalog} "
+            f"--local-catalog {catalog_path} "
+            '--execution-report "$LATEST_REPORT" '
             "--operation validate --json-only"
         ),
         (
@@ -505,6 +527,10 @@ def main() -> int:
             cmd += ["--catalog", str(catalog_path), "--repo-catalog", str(repo_catalog_path)]
             if execution_report:
                 cmd += ["--report", execution_report]
+        elif name == "experience_writeback":
+            cmd += ["--repo-catalog", str(repo_catalog_path), "--local-catalog", str(catalog_path)]
+            if execution_report:
+                cmd += ["--execution-report", execution_report]
         elif name == "outlet_matrix":
             cmd += ["--catalog", str(catalog_path)]
             if execution_report:
@@ -617,6 +643,17 @@ def main() -> int:
             post_exec_code = str(payload.get("error_code", "")).strip()
             if post_exec_code:
                 error_code = post_exec_code
+        elif name == "experience_writeback":
+            ewb_status = str(payload.get("experience_writeback_validation_status", "")).strip().upper()
+            if ewb_status in {"PASS_REQUIRED", "SKIPPED_NOT_REQUIRED"}:
+                status = "PASS"
+            elif ewb_status == "WARN_NON_BLOCKING":
+                status = "WARN"
+            elif ewb_status == "FAIL_REQUIRED":
+                status = "FAIL"
+            ewb_code = str(payload.get("error_code", "")).strip()
+            if ewb_code:
+                error_code = ewb_code
         elif name == "outlet_matrix":
             outlet_status = str(payload.get("outlet_matrix_status", "")).strip().upper()
             if outlet_status == "PASS_REQUIRED":
@@ -738,6 +775,34 @@ def main() -> int:
     )
     implicit_switch_guard = _actor_field("implicit_switch_guard", default_code="IP-ASB-SWITCH-001")
     pointer_drift_guard = _actor_field("pointer_drift_guard", default_code="IP-ASB-POINTER-001")
+    experience_writeback_payload = by_name.get("experience_writeback", {}).get("payload")
+    if not isinstance(experience_writeback_payload, dict):
+        experience_writeback_payload = {}
+    experience_writeback_row = by_name.get("experience_writeback") or {}
+    experience_writeback_closure = {
+        "status": str(experience_writeback_row.get("status", "")),
+        "error_code": str(experience_writeback_row.get("error_code", "")).strip(),
+        "suggestion": str(experience_writeback_row.get("suggestion", "")),
+        "validation_status": str(
+            experience_writeback_payload.get("experience_writeback_validation_status", "")
+        ).strip().upper(),
+        "report_selected_path": str(experience_writeback_payload.get("report_selected_path", "")).strip(),
+        "report_selection_mode": str(experience_writeback_payload.get("report_selection_mode", "")).strip(),
+        "report_selected_authority_class": str(
+            experience_writeback_payload.get("report_selected_authority_class", "")
+        ).strip(),
+        "report_pointer_resolution_mode": str(
+            experience_writeback_payload.get("report_pointer_resolution_mode", "")
+        ).strip(),
+        "report_run_id": str(experience_writeback_payload.get("report_run_id", "")).strip(),
+        "writeback_status": str(experience_writeback_payload.get("writeback_status", "")).strip(),
+        "writeback_rule_id": str(experience_writeback_payload.get("writeback_rule_id", "")).strip(),
+        "rulebook_match_count": int(experience_writeback_payload.get("rulebook_match_count", 0) or 0),
+        "task_history_contains_run_id": bool(
+            experience_writeback_payload.get("task_history_contains_run_id", False)
+        ),
+        "stale_reasons": list(experience_writeback_payload.get("stale_reasons") or []),
+    }
 
     actor_risk_required_count = len(ACTOR_RISK_FIELDS)
     actor_risk_present_count = sum(
@@ -809,6 +874,7 @@ def main() -> int:
         "actor_lease_freshness": actor_lease_freshness,
         "implicit_switch_guard": implicit_switch_guard,
         "pointer_drift_guard": pointer_drift_guard,
+        "experience_writeback_closure": experience_writeback_closure,
         "actor_risk_required_count": actor_risk_required_count,
         "actor_risk_present_count": actor_risk_present_count,
         "actor_risk_coverage_rate": actor_risk_coverage_rate,

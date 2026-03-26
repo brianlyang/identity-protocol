@@ -34,7 +34,17 @@ def main() -> int:
         return 1
 
     data = json.loads(path.read_text(encoding="utf-8"))
-    required = ["report_id", "generated_at", "identity_id", "overall_status", "warning_count", "failed_count", "checks", "recommendations"]
+    required = [
+        "report_id",
+        "generated_at",
+        "identity_id",
+        "overall_status",
+        "warning_count",
+        "failed_count",
+        "checks",
+        "recommendations",
+        "experience_writeback_closure",
+    ]
     miss = [k for k in required if k not in data]
     if miss:
         print(f"[FAIL] health report missing fields: {miss}")
@@ -51,7 +61,11 @@ def main() -> int:
 
     failed: list[dict] = []
     warns: list[dict] = []
+    checks_by_name: dict[str, dict] = {}
     for c in checks:
+        name = str(c.get("name", "")).strip()
+        if name:
+            checks_by_name[name] = c
         status = str(c.get("status", "")).strip().upper()
         if not status:
             status = "PASS" if bool(c.get("ok")) else "FAIL"
@@ -61,6 +75,40 @@ def main() -> int:
             warns.append(c)
         elif status != "PASS":
             print(f"[FAIL] invalid health check status={status!r} in check={c.get('name')}")
+            return 1
+
+    experience_writeback_closure = data.get("experience_writeback_closure")
+    if not isinstance(experience_writeback_closure, dict):
+        print("[FAIL] experience_writeback_closure must be a dict")
+        return 1
+    experience_writeback_check = checks_by_name.get("experience_writeback")
+    if not isinstance(experience_writeback_check, dict):
+        print("[FAIL] health report missing experience_writeback check row")
+        return 1
+    check_status = str(experience_writeback_check.get("status", "")).strip().upper()
+    if not check_status:
+        check_status = "PASS" if bool(experience_writeback_check.get("ok")) else "FAIL"
+    closure_status = str(experience_writeback_closure.get("status", "")).strip().upper()
+    if closure_status != check_status:
+        print(
+            "[FAIL] experience_writeback_closure.status mismatch: "
+            f"closure={experience_writeback_closure.get('status')!r} check={experience_writeback_check.get('status')!r}"
+        )
+        return 1
+    validation_status = str(experience_writeback_closure.get("validation_status", "")).strip().upper()
+    if validation_status not in {"PASS_REQUIRED", "SKIPPED_NOT_REQUIRED", "WARN_NON_BLOCKING", "FAIL_REQUIRED"}:
+        print(f"[FAIL] invalid experience_writeback_closure.validation_status={validation_status!r}")
+        return 1
+    stale_reasons = experience_writeback_closure.get("stale_reasons")
+    if stale_reasons is not None and not isinstance(stale_reasons, list):
+        print("[FAIL] experience_writeback_closure.stale_reasons must be a list")
+        return 1
+    if closure_status in {"WARN", "FAIL"}:
+        if not str(experience_writeback_closure.get("error_code", "")).strip():
+            print("[FAIL] non-pass experience_writeback_closure requires error_code")
+            return 1
+        if not str(experience_writeback_closure.get("suggestion", "")).strip():
+            print("[FAIL] non-pass experience_writeback_closure requires suggestion")
             return 1
 
     recs = data.get("recommendations") or []
