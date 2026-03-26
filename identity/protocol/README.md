@@ -429,6 +429,10 @@ reconstructing self-describing-family legality.
 The bundle must also inherit machine-registry completeness family-surface
 binding law.
 
+If the admitted source does not disclose that family-surface binding law, the
+machine world must fail-close rather than locally reconstructing
+descriptor-family binding legality.
+
 If machine-registry completeness explicitly declares a cross-family
 descriptor-stem binding, the bundle must not locally override or suppress that
 binding.

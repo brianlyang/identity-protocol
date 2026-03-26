@@ -37,6 +37,7 @@ assert payload["component_self_describing_family_requirement_local_override_poli
 assert payload["component_self_describing_family_requirement_fallback_policy"] == "fail_closed", payload
 assert payload["descriptor_family_surface_binding_inheritance_mode"] == "inherit_machine_registry_completeness_current_only", payload
 assert payload["descriptor_family_surface_binding_local_override_policy"] == "forbidden", payload
+assert payload["descriptor_family_surface_binding_fallback_policy"] == "fail_closed", payload
 assert payload["descriptor_repo_rel_path_pattern_inheritance_mode"] == "inherit_machine_registry_completeness_current_only", payload
 assert payload["descriptor_repo_rel_path_pattern_local_redeclaration_policy"] == "forbidden", payload
 assert payload["descriptor_repo_rel_path_pattern_fallback_policy"] == "fail_closed", payload
@@ -53,6 +54,8 @@ assert payload["component_descriptor_resolution_mode"] == "current_alias_only", 
 assert payload["component_descriptor_version_pinning_policy"] == "forbidden", payload
 assert payload["bundle_redeclares_required_repo_rel_path_patterns"] is False, payload
 assert payload["bundle_local_required_repo_rel_path_patterns"] == {}, payload
+assert payload["bundle_redeclares_family_surface_binding_governance"] is False, payload
+assert payload["bundle_local_family_surface_binding_governance"] == {}, payload
 assert payload["bundle_redeclares_repo_rel_path_governance"] is False, payload
 assert payload["bundle_local_repo_rel_path_governance"] == {}, payload
 assert payload["bundle_redeclares_component_naming_governance"] is False, payload
@@ -759,6 +762,75 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCLB-001", payload
 assert "root_corpus_law_bundle_descriptor_family_surface_binding_local_override_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+FAMILY_BINDING_FALLBACK_REPO="${TMP_ROOT}/descriptor-family-binding-fallback-policy-drift-repo"
+mirror_repo "${FAMILY_BINDING_FALLBACK_REPO}"
+python3 - <<'PY' "${FAMILY_BINDING_FALLBACK_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["descriptor_family_surface_binding_fallback_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+FAMILY_BINDING_FALLBACK_JSON="${TMP_ROOT}/descriptor-family-binding-fallback-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${FAMILY_BINDING_FALLBACK_REPO}" \
+  --json-only >"${FAMILY_BINDING_FALLBACK_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor-family binding fallback-policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${FAMILY_BINDING_FALLBACK_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_descriptor_family_surface_binding_fallback_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+FAMILY_BINDING_LOCAL_REDECLARATION_REPO="${TMP_ROOT}/descriptor-family-binding-local-redeclaration-repo"
+mirror_repo "${FAMILY_BINDING_LOCAL_REDECLARATION_REPO}"
+python3 - <<'PY' "${FAMILY_BINDING_LOCAL_REDECLARATION_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["family_surface_stem_overrides"] = {"root-corpus-registry": "shadow_surface"}
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+FAMILY_BINDING_LOCAL_REDECLARATION_JSON="${TMP_ROOT}/descriptor-family-binding-local-redeclaration.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${FAMILY_BINDING_LOCAL_REDECLARATION_REPO}" \
+  --json-only >"${FAMILY_BINDING_LOCAL_REDECLARATION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed local family-surface binding governance redeclaration"
+  exit 1
+fi
+
+python3 - <<'PY' "${FAMILY_BINDING_LOCAL_REDECLARATION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "descriptor_family_surface_binding_governance_local_redeclaration_forbidden"
+    for row in payload["bundle_violations"]
+), payload
+assert payload["bundle_redeclares_family_surface_binding_governance"] is True, payload
 PY
 
 COMPONENT_RESOLUTION_POLICY_REPO="${TMP_ROOT}/component-descriptor-resolution-policy-drift-repo"

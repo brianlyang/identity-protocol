@@ -196,6 +196,10 @@ The bundle must also inherit machine-registry completeness family-surface
 binding law; explicit cross-family descriptor-stem bindings declared there may
 not be silently reauthored, suppressed, or replaced by local bundle convenience.
 
+If the admitted source does not disclose that family-surface binding law,
+protocol legality must fail-close rather than locally reconstructing
+descriptor-family binding legality.
+
 The bundle must also inherit machine-registry completeness repo-relative
 descriptor path-pattern law; descriptor-stem capture patterns for validator,
 probe, and shared-common surfaces may not be silently redeclared, loosened, or

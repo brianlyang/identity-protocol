@@ -404,6 +404,10 @@ reconstructing self-describing-family legality from bundle convenience.
 Bundle descriptor binding must also remain inherited from machine-registry
 completeness family-surface law.
 
+If the admitted source does not disclose that family-surface binding law, the
+machine world must fail-close rather than locally reconstructing
+descriptor-family binding legality from bundle convenience.
+
 Where machine-registry completeness supplies an explicit cross-family descriptor-stem binding, the bundle must inherit that declaration rather than reauthoring, omitting, or locally overriding it.
 
 Bundle descriptor surface-pattern law must also remain inherited from

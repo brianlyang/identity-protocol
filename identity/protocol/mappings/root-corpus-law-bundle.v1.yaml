@@ -21,6 +21,7 @@ component_self_describing_family_requirement_local_override_policy: forbidden
 component_self_describing_family_requirement_fallback_policy: fail_closed
 descriptor_family_surface_binding_inheritance_mode: inherit_machine_registry_completeness_current_only
 descriptor_family_surface_binding_local_override_policy: forbidden
+descriptor_family_surface_binding_fallback_policy: fail_closed
 descriptor_repo_rel_path_pattern_inheritance_mode: inherit_machine_registry_completeness_current_only
 descriptor_repo_rel_path_pattern_local_redeclaration_policy: forbidden
 descriptor_repo_rel_path_pattern_fallback_policy: fail_closed
@@ -75,6 +76,9 @@ bundle_anchor_checks:
     requirement law, the machine world must fail-close rather than locally
     reconstructing self-describing-family legality from bundle convenience.
   - Bundle descriptor binding must also remain inherited from machine-registry
+  - If the admitted source does not disclose that family-surface binding law,
+    the machine world must fail-close rather than locally reconstructing
+    descriptor-family binding legality from bundle convenience.
   - explicit cross-family descriptor-stem binding, the bundle must inherit that
   - declaration rather than reauthoring, omitting, or locally overriding it.
   - Bundle descriptor surface-pattern law must also remain inherited from
@@ -130,6 +134,9 @@ bundle_anchor_checks:
     requirement law, the machine world must fail-close rather than locally
     reconstructing self-describing-family legality.
   - The bundle must also inherit machine-registry completeness family-surface
+  - If the admitted source does not disclose that family-surface binding law,
+    the machine world must fail-close rather than locally reconstructing
+    descriptor-family binding legality.
   - explicitly declares a cross-family descriptor-stem binding, the bundle must
   - not locally override or suppress that binding.
   - The bundle must also inherit machine-registry completeness repo-relative
@@ -177,6 +184,9 @@ bundle_anchor_checks:
     reconstructing self-describing-family legality.
   - The bundle must also inherit machine-registry completeness family-surface
     binding law
+  - If the admitted source does not disclose that family-surface binding law,
+    protocol legality must fail-close rather than locally reconstructing
+    descriptor-family binding legality.
   - explicit cross-family descriptor-stem bindings declared there may not be
     silently reauthored, suppressed, or replaced by local bundle convenience.
   - The bundle must also inherit machine-registry completeness repo-relative
@@ -223,6 +233,9 @@ bundle_anchor_checks:
     requirement law, runtime must fail-close rather than locally
     reconstructing self-describing-family legality law.
   - Runtime must also reject a root-law bundle that locally overrides or suppresses
+  - If the admitted source does not disclose that family-surface binding law,
+    runtime must fail-close rather than locally reconstructing
+    descriptor-family binding legality law.
   - explicit cross-family descriptor-stem bindings must be inherited from the
     admitted source component rather than guessed.
   - Runtime must also reject a root-law bundle that redeclares or loosens

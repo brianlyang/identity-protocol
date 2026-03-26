@@ -109,6 +109,10 @@ def descriptor_family_surface_binding_local_override_policy_from_doc(bundle_doc:
     return _norm_str(bundle_doc.get("descriptor_family_surface_binding_local_override_policy"))
 
 
+def descriptor_family_surface_binding_fallback_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("descriptor_family_surface_binding_fallback_policy"))
+
+
 def descriptor_repo_rel_path_pattern_inheritance_mode_from_doc(bundle_doc: Mapping[str, Any]) -> str:
     return _norm_str(bundle_doc.get("descriptor_repo_rel_path_pattern_inheritance_mode"))
 
