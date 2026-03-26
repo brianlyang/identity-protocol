@@ -426,6 +426,9 @@ If the admitted source does not disclose that self-describing-family
 requirement law, the machine world must fail-close rather than locally
 reconstructing self-describing-family legality.
 
+Local redeclaration of self-describing-family requirement governance must
+remain forbidden inside the bundle.
+
 The bundle must also inherit machine-registry completeness family-surface
 binding law.
 

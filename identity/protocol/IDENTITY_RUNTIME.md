@@ -136,6 +136,9 @@ If the admitted source does not disclose that self-describing-family
 requirement law, runtime must fail-close rather than locally reconstructing
 self-describing-family legality law.
 
+Runtime must also reject local redeclaration of self-describing-family
+requirement governance inside the bundle.
+
 Runtime must also reject a root-law bundle that locally overrides or suppresses
 machine-registry completeness family-surface binding law; explicit
 cross-family descriptor-stem bindings must be inherited from the admitted
