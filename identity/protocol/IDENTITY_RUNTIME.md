@@ -409,6 +409,14 @@ violation projection.
 Runtime must fail-close on unclassified direct stale-reason origin rather
 than silently expanding registry ontology.
 
+Runtime must also keep component-validator observation-reason policy
+explicit; admitted observation reasons are parse/status failure, nonzero
+returncode after admitted parse/status resolution, and non-pass component
+status before bundle-violation projection.
+
+Runtime must fail-close on unclassified component-validator observation
+reason rather than silently expanding bundle observation ontology.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

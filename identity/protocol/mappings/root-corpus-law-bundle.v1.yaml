@@ -73,6 +73,7 @@ error_code_precedence_policy: registry_preempts_structure_preempts_bundle_else_e
 failure_classification_policy: registry_from_direct_stale_reasons_structure_from_structure_violations_bundle_from_bundle_and_anchor_violations_else_pass
 registry_class_admission_policy: only_direct_stale_reasons_present_before_violation_projection_admit_registry_failure_class
 registry_direct_stale_reason_origin_policy: alias_document_contract_row_required_surface_only_before_violation_projection
+component_validator_observation_reason_admission_policy: parse_status_nonzero_rc_or_nonpass_only_before_bundle_violation_projection
 required_component_descriptor_fields:
 - validator_script
 - probe_script
@@ -323,6 +324,14 @@ bundle_anchor_checks:
     violation projection.
   - The machine world must fail-close on unclassified direct stale-reason
     origin rather than silently expanding registry ontology.
+  - Bundle component-validator observation-reason policy must stay explicit
+    too.
+  - The admitted observation reasons are parse/status failure, nonzero
+    returncode after admitted parse/status resolution, and non-pass component
+    status, all before bundle-violation projection.
+  - The machine world must fail-close on unclassified component-validator
+    observation reason rather than silently expanding bundle observation
+    ontology.
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root-law bundle discipline'
@@ -548,6 +557,13 @@ bundle_anchor_checks:
     before violation projection.
   - Runtime must fail-close on unclassified direct stale-reason origin rather
     than silently expanding registry ontology.
+  - Bundle component-validator observation-reason policy must also stay
+    explicit.
+  - The admitted runtime observation reasons are parse/status failure,
+    nonzero returncode after admitted parse/status resolution, and non-pass
+    component status, all before bundle-violation projection.
+  - Runtime must fail-close on unclassified component-validator observation
+    reason rather than silently expanding bundle observation ontology.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root-law bundle boundary'
@@ -751,6 +767,12 @@ bundle_anchor_checks:
     absence before violation projection.
   - Local direct stale-reason ontology must not silently expand beyond those
     admitted origins.
+  - Root-law bundle rows must also keep component-validator observation-reason
+    policy explicit; admitted observation reasons are parse/status failure,
+    nonzero returncode after admitted parse/status resolution, and non-pass
+    component status before bundle-violation projection.
+  - Local bundle observation ontology must not silently expand beyond those
+    admitted component-validator observation reasons.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime consumption of the root-law bundle'
@@ -956,6 +978,12 @@ bundle_anchor_checks:
     violation projection.
   - Runtime must fail-close on unclassified direct stale-reason origin rather
     than silently expanding registry ontology.
+  - Runtime must also keep component-validator observation-reason policy
+    explicit; admitted observation reasons are parse/status failure, nonzero
+    returncode after admitted parse/status resolution, and non-pass component
+    status before bundle-violation projection.
+  - Runtime must fail-close on unclassified component-validator observation
+    reason rather than silently expanding bundle observation ontology.
 component_rows:
 - order: 1
   component_id: root_corpus_governance

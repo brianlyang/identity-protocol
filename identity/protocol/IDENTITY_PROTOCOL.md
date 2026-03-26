@@ -464,6 +464,14 @@ absence before violation projection.
 Local direct stale-reason ontology must not silently expand beyond those
 admitted origins.
 
+Root-law bundle rows must also keep component-validator observation-reason
+policy explicit; admitted observation reasons are parse/status failure,
+nonzero returncode after admitted parse/status resolution, and non-pass
+component status before bundle-violation projection.
+
+Local bundle observation ontology must not silently expand beyond those
+admitted component-validator observation reasons.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

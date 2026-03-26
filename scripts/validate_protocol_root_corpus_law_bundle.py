@@ -50,6 +50,7 @@ from root_corpus_law_bundle_common import (
     component_validator_contract_drift_execution_policy_from_doc,
     component_validator_contract_surface_projection_policy_from_doc,
     component_validator_observation_continuity_policy_from_doc,
+    component_validator_observation_reason_admission_policy_from_doc,
     component_status_row_coverage_policy_from_doc,
     component_self_describing_family_requirement_fallback_policy_from_doc,
     component_self_describing_family_requirement_inheritance_mode_from_doc,
@@ -144,6 +145,9 @@ REGISTRY_CLASS_ADMISSION_POLICY = (
 )
 REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY = (
     "alias_document_contract_row_required_surface_only_before_violation_projection"
+)
+COMPONENT_VALIDATOR_OBSERVATION_REASON_ADMISSION_POLICY = (
+    "parse_status_nonzero_rc_or_nonpass_only_before_bundle_violation_projection"
 )
 COMPONENT_VALIDATOR_OUTPUT_CONTRACT = "json_object_with_disclosed_status_key"
 
@@ -296,6 +300,50 @@ def _direct_stale_reason_origin_counts(stale_reasons: list[str]) -> tuple[dict[s
             unknown_count += 1
             continue
         counts[origin] += 1
+    return counts, unknown_count
+
+
+def _classify_component_validator_observation_reason(reason: str) -> str:
+    if reason in {
+        "validator_output_missing",
+        "validator_output_invalid_json",
+        "validator_output_not_json_object",
+        "validator_status_key_missing",
+        "validator_status_literal_not_string",
+    }:
+        return "parse_status"
+    if reason == "component_validator_nonzero_rc":
+        return "nonzero_rc"
+    if reason == "component_status_not_pass_required":
+        return "nonpass_status"
+    if reason.startswith("validator_output_") or reason.startswith("validator_status_"):
+        return "unknown"
+    if reason.startswith("component_validator_") and reason not in {
+        "component_validator_missing",
+        "component_validator_nonzero_rc",
+    }:
+        return "unknown"
+    return "not_applicable"
+
+
+def _component_validator_observation_reason_counts(
+    bundle_violations: list[dict[str, Any]]
+) -> tuple[dict[str, int], int]:
+    counts = {
+        "parse_status": 0,
+        "nonzero_rc": 0,
+        "nonpass_status": 0,
+    }
+    unknown_count = 0
+    for row in bundle_violations:
+        reason = str(row.get("reason") or "")
+        category = _classify_component_validator_observation_reason(reason)
+        if category == "not_applicable":
+            continue
+        if category == "unknown":
+            unknown_count += 1
+            continue
+        counts[category] += 1
     return counts, unknown_count
 
 
@@ -680,6 +728,9 @@ def main() -> int:
     registry_direct_stale_reason_origin_policy = (
         registry_direct_stale_reason_origin_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_observation_reason_admission_policy = (
+        component_validator_observation_reason_admission_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     effective_component_validator_status_requirement = (
         component_validator_status_requirement
         if component_validator_status_requirement == STATUS_PASS_REQUIRED
@@ -769,6 +820,14 @@ def main() -> int:
         registry_direct_stale_reason_origin_policy
         if registry_direct_stale_reason_origin_policy == REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY
         else REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY
+    )
+    effective_component_validator_observation_reason_admission_policy = (
+        component_validator_observation_reason_admission_policy
+        if (
+            component_validator_observation_reason_admission_policy
+            == COMPONENT_VALIDATOR_OBSERVATION_REASON_ADMISSION_POLICY
+        )
+        else COMPONENT_VALIDATOR_OBSERVATION_REASON_ADMISSION_POLICY
     )
     effective_component_validator_stdout_normalization_contract = (
         component_validator_stdout_normalization_contract
@@ -1157,6 +1216,14 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if registry_direct_stale_reason_origin_policy != REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY:
             stale_reasons.append("root_corpus_law_bundle_registry_direct_stale_reason_origin_policy_invalid")
+            error_code = ERR_REGISTRY
+        if (
+            component_validator_observation_reason_admission_policy
+            != COMPONENT_VALIDATOR_OBSERVATION_REASON_ADMISSION_POLICY
+        ):
+            stale_reasons.append(
+                "root_corpus_law_bundle_component_validator_observation_reason_admission_policy_invalid"
+            )
             error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
@@ -1832,6 +1899,24 @@ def main() -> int:
                 }
             )
 
+    (
+        component_validator_observation_reason_counts,
+        component_validator_observation_reason_unknown_count,
+    ) = _component_validator_observation_reason_counts(bundle_violations)
+    component_validator_observation_reason_status = (
+        STATUS_FAIL_REQUIRED
+        if (
+            effective_component_validator_observation_reason_admission_policy
+            == COMPONENT_VALIDATOR_OBSERVATION_REASON_ADMISSION_POLICY
+            and component_validator_observation_reason_unknown_count
+        )
+        else STATUS_PASS_REQUIRED
+    )
+    if component_validator_observation_reason_status == STATUS_FAIL_REQUIRED:
+        stale_reasons.append("root_corpus_law_bundle_component_validator_observation_reason_unclassified")
+        if not error_code:
+            error_code = ERR_REGISTRY
+
     if not error_code and structure_violations:
         error_code = ERR_STRUCTURE
     if not error_code and (bundle_violations or anchor_violations):
@@ -1989,6 +2074,9 @@ def main() -> int:
         "failure_classification_policy": failure_classification_policy,
         "registry_class_admission_policy": registry_class_admission_policy,
         "registry_direct_stale_reason_origin_policy": registry_direct_stale_reason_origin_policy,
+        "component_validator_observation_reason_admission_policy": (
+            component_validator_observation_reason_admission_policy
+        ),
         "derived_status_from_stale_reasons": derived_status_from_stale_reasons,
         "derived_failure_class": derived_failure_class,
         "derived_error_code_from_precedence": derived_error_code_from_precedence,
@@ -2004,6 +2092,13 @@ def main() -> int:
         "registry_direct_stale_reason_origin_status": registry_direct_stale_reason_origin_status,
         "direct_stale_reason_origin_counts": dict(direct_stale_reason_origin_counts),
         "registry_direct_stale_reason_unknown_count": registry_direct_stale_reason_unknown_count,
+        "component_validator_observation_reason_status": component_validator_observation_reason_status,
+        "component_validator_observation_reason_counts": dict(
+            component_validator_observation_reason_counts
+        ),
+        "component_validator_observation_reason_unknown_count": (
+            component_validator_observation_reason_unknown_count
+        ),
         "registry_class_reason_count": registry_precedence_reason_count,
         "registry_precedence_reason_count": registry_precedence_reason_count,
         "projected_violation_reason_count": projected_violation_reason_count,

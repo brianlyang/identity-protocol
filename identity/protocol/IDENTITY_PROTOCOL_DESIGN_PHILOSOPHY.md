@@ -738,6 +738,17 @@ violation projection.
 The machine world must fail-close on unclassified direct stale-reason
 origin rather than silently expanding registry ontology.
 
+Bundle component-validator observation-reason policy must stay explicit
+too.
+
+The admitted observation reasons are parse/status failure, nonzero
+returncode after admitted parse/status resolution, and non-pass component
+status, all before bundle-violation projection.
+
+The machine world must fail-close on unclassified component-validator
+observation reason rather than silently expanding bundle observation
+ontology.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

@@ -315,6 +315,10 @@ def registry_direct_stale_reason_origin_policy_from_doc(bundle_doc: Mapping[str,
     return _norm_str(bundle_doc.get("registry_direct_stale_reason_origin_policy"))
 
 
+def component_validator_observation_reason_admission_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("component_validator_observation_reason_admission_policy"))
+
+
 def require_component_descriptor_concordance(bundle_doc: Mapping[str, Any]) -> bool:
     return _as_bool(bundle_doc.get("require_component_descriptor_concordance"))
 
