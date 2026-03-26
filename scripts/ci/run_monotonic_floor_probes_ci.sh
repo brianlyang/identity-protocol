@@ -724,6 +724,20 @@ elif name == "experience_writeback_explicit_override_pass":
         raise SystemExit("experience_writeback_explicit_override_pass: rulebook match count mismatch")
     if bool(doc.get("task_history_contains_run_id")) is not True:
         raise SystemExit("experience_writeback_explicit_override_pass: task history linkage mismatch")
+elif name == "experience_writeback_scan_skip_no_current_round":
+    if rc != 0:
+        raise SystemExit("experience_writeback_scan_skip_no_current_round: expected rc=0")
+    if str(doc.get("experience_writeback_validation_status", "")).strip().upper() != "SKIPPED_NOT_REQUIRED":
+        raise SystemExit("experience_writeback_scan_skip_no_current_round: status mismatch")
+    if str(doc.get("report_selected_path", "")).strip():
+        raise SystemExit("experience_writeback_scan_skip_no_current_round: report path must be empty")
+    if str(doc.get("report_selection_mode", "")).strip() != "no_admissible_report":
+        raise SystemExit("experience_writeback_scan_skip_no_current_round: selection mode mismatch")
+    if str(doc.get("report_selected_authority_class", "")).strip() != "no_selected_report":
+        raise SystemExit("experience_writeback_scan_skip_no_current_round: authority class mismatch")
+    stale_reasons = doc.get("stale_reasons", [])
+    if not isinstance(stale_reasons, list) or "required_contract_not_applicable_no_current_round_evidence_source" not in stale_reasons:
+        raise SystemExit("experience_writeback_scan_skip_no_current_round: stale reasons mismatch")
 else:
     raise SystemExit(f"unknown probe name: {name}")
 PY
@@ -986,6 +1000,14 @@ run_probe experience_writeback_explicit_override_pass \
   --local-catalog "${CATALOG_PATH}" \
   --identity-id probe-mm \
   --execution-report "${EXPLICIT_REPORT_PATH}" \
+  --json-only
+
+run_probe experience_writeback_scan_skip_no_current_round \
+  python3 scripts/validate_identity_experience_writeback.py \
+  --repo-catalog "${CATALOG_PATH}" \
+  --local-catalog "${CATALOG_PATH}" \
+  --identity-id probe-floor \
+  --operation scan \
   --json-only
 
 python3 - <<'PY' "${RESULT_ROOT}" "${MANIFEST_PATH}"

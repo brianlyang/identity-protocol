@@ -21,6 +21,7 @@ from tool_vendor_governance_common import (
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
+INSPECTION_OPERATIONS = {"scan", "three-plane", "inspection"}
 
 ERR_REPORT_NOT_FOUND = "IP-EWB-001"
 ERR_REPORT_INVALID = "IP-EWB-002"
@@ -173,11 +174,17 @@ def main() -> int:
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--execution-report", default="")
     ap.add_argument("--report", default="", help="alias of --execution-report")
+    ap.add_argument(
+        "--operation",
+        choices=["activate", "update", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection"],
+        default="validate",
+    )
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
     payload: dict[str, Any] = {
         "identity_id": args.identity_id,
+        "operation": args.operation,
         "repo_catalog_path": "",
         "local_catalog_path": "",
         "resolved_pack_path": "",
@@ -225,6 +232,7 @@ def main() -> int:
         return 1
 
     override = str(args.execution_report or args.report or "").strip()
+    explicit_override_supplied = bool(override)
     report_selection = _resolve_report_selection(args.identity_id, pack, override)
     payload.update({k: v for k, v in report_selection.items() if not k.startswith("_")})
     report_path = report_selection.get("_selected_report_path")
@@ -232,6 +240,17 @@ def main() -> int:
     if report_path is None:
         payload["error_code"] = ERR_REPORT_NOT_FOUND
         payload["stale_reasons"] = ["execution_report_not_found"]
+        if args.operation in INSPECTION_OPERATIONS and not explicit_override_supplied:
+            payload["experience_writeback_validation_status"] = STATUS_SKIPPED_NOT_REQUIRED
+            payload["stale_reasons"] = ["required_contract_not_applicable_no_current_round_evidence_source"]
+            if args.json_only:
+                _emit(payload, json_only=True)
+            else:
+                print(
+                    "[OK] no current-round execution report; "
+                    "experience writeback not required for inspection-style operation"
+                )
+            return 0
         if args.json_only:
             _emit(payload, json_only=True)
         else:

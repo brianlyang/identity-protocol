@@ -1392,6 +1392,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "host_transport_wiring_attestation",
             "headstamp_recurrence_closure",
             "execution_reply_identity_coherence",
+            "experience_writeback",
             "writeback_continuity",
             "post_execution_mandatory",
             "semantic_routing_guard",
@@ -4157,6 +4158,19 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "experience_writeback": [
+                    "python3",
+                    "scripts/validate_identity_experience_writeback.py",
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--local-catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "post_execution_mandatory": [
                     "python3",
                     "scripts/validate_post_execution_mandatory.py",
@@ -5746,6 +5760,26 @@ def main() -> int:
                     ):
                         if k in writeback_doc:
                             check_payload[k] = writeback_doc.get(k)
+                if name == "experience_writeback":
+                    experience_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "experience_writeback_validation_status",
+                        "error_code",
+                        "report_selected_path",
+                        "report_selection_mode",
+                        "report_selected_authority_class",
+                        "report_pointer_resolution_mode",
+                        "report_pointer_path",
+                        "report_run_id",
+                        "writeback_status",
+                        "writeback_rule_id",
+                        "rulebook_match_count",
+                        "task_history_contains_run_id",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in experience_doc:
+                            check_payload[k] = experience_doc.get(k)
                 if name == "post_execution_mandatory":
                     post_exec_doc = _parse_json_safely(r.stdout) or {}
                     for k in (
