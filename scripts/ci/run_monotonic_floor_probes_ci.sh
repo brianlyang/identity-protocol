@@ -99,6 +99,12 @@ probe_gateway_contract = {
     },
 }
 
+outlet_contract = {
+    "required": True,
+    "contract_id": "rq_004_outlet_matrix_contract_v1",
+    "validator": "scripts/validate_outlet_matrix.py",
+}
+
 (probe_floor_pack / "CURRENT_TASK.json").write_text(
     json.dumps(
         {
@@ -116,6 +122,7 @@ probe_gateway_contract = {
         {
             "protocol_host_unique_channel_contract_v1": probe_gateway_contract,
             "multimodal_plugin_enforcement_contract_v1": multimodal_contract,
+            "outlet_regression_matrix_contract_v1": outlet_contract,
             "reasoning_loop_failclose_contract_v1": reasoning_contract_mm,
         },
         ensure_ascii=False,
@@ -149,19 +156,110 @@ probe_gateway_contract = {
     encoding="utf-8",
 )
 
-(probe_mm_pack / "runtime" / "reports" / "identity-upgrade-exec-probe-mm-1700000000.json").write_text(
+pointer_report_path = (
+    probe_mm_pack / "runtime" / "reports" / "identity-upgrade-exec-probe-mm-1700000000.json"
+)
+explicit_report_path = (
+    probe_mm_pack / "runtime" / "reports" / "identity-upgrade-exec-probe-mm-1700000001.json"
+)
+
+pointer_report_doc = {
+    "run_id": "identity-upgrade-exec-probe-mm-old",
+    "check_results": [],
+    "multimodal_runtime_evidence_status": "SKIPPED_NOT_REQUIRED",
+    "runtime_stage_deferred": True,
+    "runtime_stage_deferred_reason": "legacy_report_missing_runtime_stage_pre_execution",
+    "send_time_gate_status": "PASS_REQUIRED",
+    "governed_outlet_enforced": True,
+    "outlet_bypass_detected": False,
+    "outlet_channel_id": "final_emit_governed",
+    "final_emit_channel_id": "final_emit_governed",
+    "final_emit_policy_mode": "tool_choice_required",
+    "final_emit_schema_id": "protocol.final_emit.v1",
+    "final_emit_schema_status": "PASS_REQUIRED",
+    "final_emit_contract_status": "PASS_REQUIRED",
+    "blocker_receipt_path": "",
+    "outlet_preflight_receipt": "runtime/receipts/outlet-preflight-pointer.json",
+}
+
+explicit_report_doc = {
+    "run_id": "identity-upgrade-exec-probe-mm-explicit",
+    "check_results": [
+        {
+            "cmd": "python3 scripts/validate_multimodal_plugin_enforcement.py --json-only",
+            "stdout": "{\"multimodal_runtime_evidence_status\":\"PASS_REQUIRED\"}",
+        }
+    ],
+    "multimodal_summary": {
+        "calls": 1,
+        "resolved": 1,
+        "unresolved": 0,
+        "errors": 0,
+        "retry_calls": 0,
+        "mode": "required",
+        "required_confidence": 0.92,
+    },
+    "multimodal_calls": 1,
+    "multimodal_resolved": 1,
+    "multimodal_unresolved": 0,
+    "multimodal_errors": 0,
+    "multimodal_retry_calls": 0,
+    "multimodal_preflight_status": "PASS_REQUIRED",
+    "runtime_gate_mode": "required",
+    "runtime_gate_required_confidence": 0.92,
+    "multimodal_evidence_refs": [
+        "runtime/reports/input-gate/probe-mm-input-gate.json"
+    ],
+    "send_time_gate_status": "PASS_REQUIRED",
+    "governed_outlet_enforced": True,
+    "outlet_bypass_detected": False,
+    "outlet_channel_id": "final_emit_governed",
+    "final_emit_channel_id": "final_emit_governed",
+    "final_emit_policy_mode": "tool_choice_required",
+    "final_emit_schema_id": "protocol.final_emit.v1",
+    "final_emit_schema_status": "PASS_REQUIRED",
+    "final_emit_contract_status": "PASS_REQUIRED",
+    "blocker_receipt_path": "",
+    "outlet_preflight_receipt": "runtime/receipts/outlet-preflight-explicit.json",
+}
+
+pointer_report_path.write_text(
+    json.dumps(
+        pointer_report_doc,
+        ensure_ascii=False,
+        indent=2,
+    )
+    + "\n",
+    encoding="utf-8",
+)
+
+explicit_report_path.write_text(
+    json.dumps(
+        explicit_report_doc,
+        ensure_ascii=False,
+        indent=2,
+    )
+    + "\n",
+    encoding="utf-8",
+)
+
+(probe_mm_pack / "runtime" / "state").mkdir(parents=True, exist_ok=True)
+(probe_mm_pack / "runtime" / "state" / "active_execution_report.json").write_text(
     json.dumps(
         {
-            "run_id": "identity-upgrade-exec-probe-mm-old",
-            "check_results": [],
-            "multimodal_runtime_evidence_status": "SKIPPED_NOT_REQUIRED",
-            "runtime_stage_deferred": True,
-            "runtime_stage_deferred_reason": "legacy_report_missing_runtime_stage_pre_execution",
+            "report_path": str(pointer_report_path),
         },
         ensure_ascii=False,
         indent=2,
     )
     + "\n",
+    encoding="utf-8",
+)
+
+(probe_mm_pack / "runtime" / "receipts").mkdir(parents=True, exist_ok=True)
+(probe_mm_pack / "runtime" / "reports" / "input-gate").mkdir(parents=True, exist_ok=True)
+(probe_mm_pack / "runtime" / "reports" / "input-gate" / "probe-mm-input-gate.json").write_text(
+    json.dumps({"status": "PASS_REQUIRED"}, ensure_ascii=False, indent=2) + "\n",
     encoding="utf-8",
 )
 
@@ -224,6 +322,12 @@ elif name == "multimodal_update_defer_allowed":
         raise SystemExit("multimodal_update_defer_allowed: plugin status mismatch")
     if str(doc.get("multimodal_runtime_evidence_status", "")).strip().upper() != "SKIPPED_NOT_REQUIRED":
         raise SystemExit("multimodal_update_defer_allowed: runtime evidence status mismatch")
+    if str(doc.get("runtime_report_selection_mode", "")).strip() != "active_execution_pointer":
+        raise SystemExit("multimodal_update_defer_allowed: selection mode mismatch")
+    if str(doc.get("runtime_report_selected_authority_class", "")).strip() != "active_execution_pointer_pack_local_report":
+        raise SystemExit("multimodal_update_defer_allowed: authority class mismatch")
+    if str(doc.get("runtime_report_pointer_resolution_mode", "")).strip() != "pointer_candidate_root_report":
+        raise SystemExit("multimodal_update_defer_allowed: pointer resolution mismatch")
 elif name == "multimodal_readiness_skip_blocked":
     if rc == 0:
         raise SystemExit("multimodal_readiness_skip_blocked: expected non-zero rc")
@@ -236,6 +340,43 @@ elif name == "multimodal_readiness_skip_blocked":
             "multimodal_readiness_skip_blocked: unexpected error_code "
             + (error_code or "<empty>")
         )
+    if str(doc.get("runtime_report_selection_mode", "")).strip() != "active_execution_pointer":
+        raise SystemExit("multimodal_readiness_skip_blocked: selection mode mismatch")
+elif name == "multimodal_explicit_override_pass":
+    if rc != 0:
+        raise SystemExit("multimodal_explicit_override_pass: expected rc=0")
+    if str(doc.get("multimodal_plugin_enforcement_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("multimodal_explicit_override_pass: plugin status mismatch")
+    if str(doc.get("multimodal_runtime_evidence_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("multimodal_explicit_override_pass: runtime evidence status mismatch")
+    if str(doc.get("runtime_report_selection_mode", "")).strip() != "explicit_report_override":
+        raise SystemExit("multimodal_explicit_override_pass: selection mode mismatch")
+    if str(doc.get("runtime_report_selected_authority_class", "")).strip() != "explicit_report_override":
+        raise SystemExit("multimodal_explicit_override_pass: authority class mismatch")
+    if str(doc.get("runtime_report_pointer_resolution_mode", "")).strip() != "explicit_report_override":
+        raise SystemExit("multimodal_explicit_override_pass: pointer resolution mismatch")
+elif name == "outlet_pointer_selection_pass":
+    if rc != 0:
+        raise SystemExit("outlet_pointer_selection_pass: expected rc=0")
+    if str(doc.get("outlet_matrix_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("outlet_pointer_selection_pass: outlet status mismatch")
+    if str(doc.get("report_selection_mode", "")).strip() != "active_execution_pointer":
+        raise SystemExit("outlet_pointer_selection_pass: selection mode mismatch")
+    if str(doc.get("report_selected_authority_class", "")).strip() != "active_execution_pointer_pack_local_report":
+        raise SystemExit("outlet_pointer_selection_pass: authority class mismatch")
+    if str(doc.get("report_pointer_resolution_mode", "")).strip() != "pointer_candidate_root_report":
+        raise SystemExit("outlet_pointer_selection_pass: pointer resolution mismatch")
+elif name == "outlet_explicit_override_pass":
+    if rc != 0:
+        raise SystemExit("outlet_explicit_override_pass: expected rc=0")
+    if str(doc.get("outlet_matrix_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("outlet_explicit_override_pass: outlet status mismatch")
+    if str(doc.get("report_selection_mode", "")).strip() != "explicit_report_override":
+        raise SystemExit("outlet_explicit_override_pass: selection mode mismatch")
+    if str(doc.get("report_selected_authority_class", "")).strip() != "explicit_report_override":
+        raise SystemExit("outlet_explicit_override_pass: authority class mismatch")
+    if str(doc.get("report_pointer_resolution_mode", "")).strip() != "explicit_report_override":
+        raise SystemExit("outlet_explicit_override_pass: pointer resolution mismatch")
 else:
     raise SystemExit(f"unknown probe name: {name}")
 PY
@@ -316,6 +457,52 @@ run_probe multimodal_readiness_skip_blocked \
   --operation readiness \
   --run-id identity-upgrade-exec-probe-mm-new \
   --target-name multimodal_plugin_enforcement \
+  --actor-id assistant:codex \
+  --resolved-work-layer protocol \
+  --resolved-source-layer project \
+  --lock-state LOCK_MATCH \
+  --send-time-gate-status PASS_REQUIRED \
+  --outlet-bypass-detected false \
+  --final-emit-contract-status PASS_REQUIRED \
+  --final-emit-policy-mode tool_choice_required \
+  --final-emit-schema-status PASS_REQUIRED \
+  --json-only
+
+run_probe multimodal_explicit_override_pass \
+  python3 scripts/validate_multimodal_plugin_enforcement.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id probe-mm \
+  --operation readiness \
+  --run-id identity-upgrade-exec-probe-mm-explicit \
+  --report-selected-path "${FIXTURE_ROOT}/identity/probe-mm/runtime/reports/identity-upgrade-exec-probe-mm-1700000001.json" \
+  --json-only
+
+run_probe outlet_pointer_selection_pass \
+  python3 scripts/required_gate_bundle_runner.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id probe-mm \
+  --operation validate \
+  --run-id identity-upgrade-exec-probe-mm-old \
+  --target-name outlet_matrix \
+  --actor-id assistant:codex \
+  --resolved-work-layer protocol \
+  --resolved-source-layer project \
+  --lock-state LOCK_MATCH \
+  --send-time-gate-status PASS_REQUIRED \
+  --outlet-bypass-detected false \
+  --final-emit-contract-status PASS_REQUIRED \
+  --final-emit-policy-mode tool_choice_required \
+  --final-emit-schema-status PASS_REQUIRED \
+  --json-only
+
+run_probe outlet_explicit_override_pass \
+  python3 scripts/required_gate_bundle_runner.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id probe-mm \
+  --operation validate \
+  --run-id identity-upgrade-exec-probe-mm-explicit \
+  --report-selected-path "${FIXTURE_ROOT}/identity/probe-mm/runtime/reports/identity-upgrade-exec-probe-mm-1700000001.json" \
+  --target-name outlet_matrix \
   --actor-id assistant:codex \
   --resolved-work-layer protocol \
   --resolved-source-layer project \

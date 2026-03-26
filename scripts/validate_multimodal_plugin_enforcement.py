@@ -11,9 +11,11 @@ from typing import Any
 import yaml
 
 from tool_vendor_governance_common import (
+    IDENTITY_UPGRADE_REPORT_SELECTION_MODE_EXPLICIT_REPORT_OVERRIDE,
+    build_identity_upgrade_report_selection_projection,
     contract_required,
-    latest_identity_upgrade_report,
     load_json,
+    resolve_identity_upgrade_report_selection,
     resolve_pack_and_task,
 )
 
@@ -202,17 +204,23 @@ def _to_float(value: Any) -> float | None:
         return None
 
 
-def _resolve_runtime_report(
+def _resolve_runtime_report_selection(
     *,
     pack_path: Path,
     identity_id: str,
-    report_selected_path: str,
-) -> Path | None:
-    raw = str(report_selected_path or "").strip()
-    if raw:
-        p = Path(raw).expanduser().resolve()
-        return p if p.exists() and p.is_file() else None
-    return latest_identity_upgrade_report(identity_id, pack_path)
+    explicit_report: str,
+) -> dict[str, Any]:
+    resolution = resolve_identity_upgrade_report_selection(
+        identity_id,
+        pack_path,
+        explicit_report=explicit_report,
+    )
+    payload = build_identity_upgrade_report_selection_projection(
+        resolution,
+        field_prefix="runtime_report",
+    )
+    payload["_selected_report_path"] = resolution.selected_report
+    return payload
 
 
 def _has_multimodal_validator_receipt(runtime_report_doc: dict[str, Any]) -> bool:
@@ -348,6 +356,12 @@ def main() -> int:
         "runtime_stage_deferred": False,
         "runtime_stage_deferred_reason": "",
         "multimodal_preflight_status": "",
+        "report_selected_path": "",
+        "runtime_report_selected_path": "",
+        "runtime_report_selection_mode": "",
+        "runtime_report_selected_authority_class": "",
+        "runtime_report_pointer_resolution_mode": "",
+        "runtime_report_pointer_path": "",
         "runtime_report_path": "",
         "runtime_report_run_id": "",
         "multimodal_calls": None,
@@ -784,11 +798,17 @@ def main() -> int:
     payload["forbidden_copy_refs"] = sorted(dict.fromkeys(forbidden_hits))
 
     runtime_required = str(args.operation or "").strip().lower() in RUNTIME_PROOF_REQUIRED_OPERATIONS
-    runtime_report_path = _resolve_runtime_report(
+    runtime_report_selection = _resolve_runtime_report_selection(
         pack_path=pack_path,
         identity_id=args.identity_id,
-        report_selected_path=str(args.report_selected_path or "").strip(),
+        explicit_report=str(args.report_selected_path or "").strip(),
     )
+    payload.update({k: v for k, v in runtime_report_selection.items() if not k.startswith("_")})
+    runtime_report_path = runtime_report_selection.get("_selected_report_path")
+    if runtime_report_path is not None:
+        payload["runtime_report_path"] = str(runtime_report_path)
+        payload["report_selected_path"] = str(runtime_report_path)
+
     runtime_report_doc: dict[str, Any] = {}
     if runtime_required:
         if runtime_report_path is None:
@@ -797,7 +817,6 @@ def main() -> int:
             stale_reasons.append("runtime_report_missing")
             error_code = error_code or ERR_RUNTIME_REPORT_MISSING
         else:
-            payload["runtime_report_path"] = str(runtime_report_path)
             try:
                 runtime_report_doc = load_json(runtime_report_path)
             except Exception:
@@ -813,6 +832,10 @@ def main() -> int:
         )
         requested_run_id = str(args.run_id or "").strip()
         runtime_report_run_id = str(runtime_report_doc.get("run_id", "")).strip()
+        explicit_runtime_report_override = (
+            str(payload.get("runtime_report_selection_mode", "")).strip()
+            == IDENTITY_UPGRADE_REPORT_SELECTION_MODE_EXPLICIT_REPORT_OVERRIDE
+        )
         payload["runtime_report_run_id"] = runtime_report_run_id
         runtime_stage_producer_detected = _has_multimodal_validator_receipt(runtime_report_doc)
         payload["runtime_stage_producer_detected"] = runtime_stage_producer_detected
@@ -834,7 +857,7 @@ def main() -> int:
         ):
             defer_current_round_report = (
                 operation_name in RUNTIME_STAGE_DEFER_OPERATIONS
-                and not str(args.report_selected_path or "").strip()
+                and not explicit_runtime_report_override
             )
             if defer_current_round_report:
                 payload["multimodal_runtime_evidence_status"] = STATUS_SKIPPED_NOT_REQUIRED
@@ -970,12 +993,15 @@ def main() -> int:
             ):
                 defer_legacy_update_stage = (
                     operation_name in RUNTIME_STAGE_DEFER_OPERATIONS
-                    and not str(args.report_selected_path or "").strip()
+                    and not explicit_runtime_report_override
                 )
                 defer_legacy_report_stage = (
                     operation_name in RUNTIME_STAGE_LEGACY_REPORT_DEFER_OPERATIONS
                     and not runtime_stage_producer_detected
-                    and (not requested_run_id.startswith("identity-upgrade-exec-") or not str(args.report_selected_path or "").strip())
+                    and (
+                        not requested_run_id.startswith("identity-upgrade-exec-")
+                        or not explicit_runtime_report_override
+                    )
                 )
                 defer_from_report = (
                     runtime_stage_deferred_from_report

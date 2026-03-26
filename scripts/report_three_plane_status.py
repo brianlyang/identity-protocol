@@ -4024,6 +4024,17 @@ def _instance_plane_status(
             "error_code": outlet_matrix_payload.get("error_code", ""),
             "required_contract": outlet_matrix_payload.get("required_contract"),
             "auto_required_signal": outlet_matrix_payload.get("auto_required_signal"),
+            "report_selected_path": outlet_matrix_payload.get("report_selected_path", ""),
+            "report_selection_mode": outlet_matrix_payload.get("report_selection_mode", ""),
+            "report_selected_authority_class": outlet_matrix_payload.get(
+                "report_selected_authority_class", ""
+            ),
+            "report_pointer_resolution_mode": outlet_matrix_payload.get(
+                "report_pointer_resolution_mode", ""
+            ),
+            "report_pointer_path": outlet_matrix_payload.get("report_pointer_path", ""),
+            "report_path": outlet_matrix_payload.get("report_path", ""),
+            "report_run_id": outlet_matrix_payload.get("report_run_id", ""),
             "matrix_positive_status": outlet_matrix_payload.get("matrix_positive_status", ""),
             "matrix_negative_status": outlet_matrix_payload.get("matrix_negative_status", ""),
             "cross_cwd_parity_status": outlet_matrix_payload.get("cross_cwd_parity_status", ""),
@@ -4395,6 +4406,21 @@ def _instance_plane_status(
             "plugin_contract_owner": multimodal_plugin_payload.get("plugin_contract_owner", ""),
             "plugin_resolution_mode": multimodal_plugin_payload.get("plugin_resolution_mode", ""),
             "report_selected_path": multimodal_plugin_payload.get("report_selected_path", ""),
+            "runtime_report_selected_path": multimodal_plugin_payload.get(
+                "runtime_report_selected_path", ""
+            ),
+            "runtime_report_selection_mode": multimodal_plugin_payload.get(
+                "runtime_report_selection_mode", ""
+            ),
+            "runtime_report_selected_authority_class": multimodal_plugin_payload.get(
+                "runtime_report_selected_authority_class", ""
+            ),
+            "runtime_report_pointer_resolution_mode": multimodal_plugin_payload.get(
+                "runtime_report_pointer_resolution_mode", ""
+            ),
+            "runtime_report_pointer_path": multimodal_plugin_payload.get(
+                "runtime_report_pointer_path", ""
+            ),
             "runtime_report_path": multimodal_plugin_payload.get("runtime_report_path", ""),
             "runtime_report_run_id": multimodal_plugin_payload.get("runtime_report_run_id", ""),
             "multimodal_calls": multimodal_plugin_payload.get("multimodal_calls"),

@@ -8,7 +8,14 @@ from typing import Any
 
 from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID, FINAL_EMIT_POLICY_MODE
 from protocol_infra_contract import HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS
-from tool_vendor_governance_common import contract_required, latest_identity_upgrade_report, load_json, resolve_pack_and_task
+from tool_vendor_governance_common import (
+    IDENTITY_UPGRADE_REPORT_SELECTION_MODE_EXPLICIT_REPORT_OVERRIDE,
+    build_identity_upgrade_report_selection_projection,
+    contract_required,
+    load_json,
+    resolve_identity_upgrade_report_selection,
+    resolve_pack_and_task,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -56,16 +63,24 @@ def _load_json_file(path: Path) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
-def _resolve_report_path(pack_path: Path, identity_id: str, explicit_report: str) -> tuple[Path | None, dict[str, Any] | None]:
-    if explicit_report.strip():
-        rp = Path(explicit_report).expanduser().resolve()
-        if rp.exists() and rp.is_file():
-            return rp, _load_json_file(rp)
-        return None, None
-    latest = latest_identity_upgrade_report(identity_id, pack_path)
-    if latest and latest.exists():
-        return latest.resolve(), _load_json_file(latest.resolve())
-    return None, None
+def _resolve_report_selection(
+    pack_path: Path,
+    identity_id: str,
+    explicit_report: str,
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    resolution = resolve_identity_upgrade_report_selection(
+        identity_id,
+        pack_path,
+        explicit_report=explicit_report,
+    )
+    selection_payload = build_identity_upgrade_report_selection_projection(
+        resolution,
+        field_prefix="report",
+    )
+    selection_payload["_selected_report_path"] = resolution.selected_report
+    report_path = resolution.selected_report
+    report_doc = _load_json_file(report_path) if report_path is not None else None
+    return selection_payload, report_doc
 
 
 def _report_run_id(report_path: Path, report_doc: dict[str, Any]) -> str:
@@ -137,6 +152,11 @@ def main() -> int:
         "outlet_bypass_detected": False,
         "blocker_receipt_path": "",
         "outlet_preflight_receipt": "",
+        "report_selected_path": "",
+        "report_selection_mode": "",
+        "report_selected_authority_class": "",
+        "report_pointer_resolution_mode": "",
+        "report_pointer_path": "",
         "report_path": "",
         "evidence_ref": "",
         "stale_reasons": [],
@@ -147,7 +167,9 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 0
 
-    report_path, report_doc = _resolve_report_path(pack_path, args.identity_id, args.report)
+    report_selection, report_doc = _resolve_report_selection(pack_path, args.identity_id, args.report)
+    payload.update({k: v for k, v in report_selection.items() if not k.startswith("_")})
+    report_path = report_selection.get("_selected_report_path")
     if report_path is None or report_doc is None:
         payload["stale_reasons"] = ["outlet_matrix_report_not_found"]
         _emit(payload, json_only=args.json_only)
@@ -155,11 +177,15 @@ def main() -> int:
 
     payload["producer_readiness"] = True
     payload["report_path"] = str(report_path)
+    payload["report_selected_path"] = str(report_path)
     payload["evidence_ref"] = str(report_path)
     report_run_id = _report_run_id(report_path, report_doc)
     requested_run_id = str(args.run_id or "").strip()
     payload["report_run_id"] = report_run_id
-    payload["requiredization_current_round_linked"] = bool(args.report.strip()) or bool(
+    payload["requiredization_current_round_linked"] = (
+        str(payload.get("report_selection_mode", "")).strip()
+        == IDENTITY_UPGRADE_REPORT_SELECTION_MODE_EXPLICIT_REPORT_OVERRIDE
+    ) or bool(
         requested_run_id and report_run_id and requested_run_id == report_run_id
     )
 

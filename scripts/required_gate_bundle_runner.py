@@ -18,7 +18,14 @@ from typing import Any
 
 import yaml
 
-from contract_binding_mapping_common import requirement_row_keys
+from contract_binding_mapping_common import (
+    canonical_gate_surface_candidates,
+    filter_requirement_keys_by_surfaces,
+    requirement_row_keys,
+)
+from contract_bootstrap_emitter_common import materialize_required_bootstrap_emitters
+from cross_verification_bundle_common import resolve_cross_verification_bundle_context
+from gate_status_projection_common import resolve_projected_status_value
 from protocol_infra_contract import (
     CTX_TOOL_TIMEOUT_ERROR_CODE,
     CTX_TOOL_TIMEOUT_MARKER,
@@ -1307,6 +1314,7 @@ def _load_gate_profile_selection(
     resolved_work_layer: str,
     default_requirement_order: tuple[str, ...],
     known_requirement_keys: set[str],
+    mapping_path: Path,
 ) -> tuple[GateProfileSelection | None, Path, list[str]]:
     errors: list[str] = []
     profile_entry_path = (repo_root / str(profile_file or DEFAULT_GATE_PROFILE_FILE)).resolve()
@@ -1377,6 +1385,15 @@ def _load_gate_profile_selection(
     if require_layers and normalized_work_layer and normalized_work_layer not in require_layers:
         errors.append(f"gate_profile_work_layer_not_allowed:{selected_name}:{normalized_work_layer}")
 
+    try:
+        mapping_doc = yaml.safe_load(mapping_path.read_text(encoding="utf-8")) or {}
+    except Exception as exc:
+        errors.append(f"contract_mapping_parse_failed_for_gate_profile_selection:{mapping_path}:{exc}")
+        mapping_doc = {}
+    if not isinstance(mapping_doc, dict):
+        errors.append(f"contract_mapping_invalid_root_for_gate_profile_selection:{mapping_path}")
+        mapping_doc = {}
+
     if mode == "full":
         requirement_keys = tuple(default_requirement_order)
     else:
@@ -1418,6 +1435,14 @@ def _load_gate_profile_selection(
                 requirement_keys = tuple(key for key in requirement_keys if key not in exclude_keys_set)
             if not requirement_keys:
                 errors.append(f"gate_profile_requirement_keys_empty_after_override:{selected_name}:{normalized_operation}")
+
+    requirement_keys = tuple(
+        filter_requirement_keys_by_surfaces(
+            mapping_doc,
+            list(requirement_keys),
+            surfaces=canonical_gate_surface_candidates(normalized_operation),
+        )
+    )
 
     selection = GateProfileSelection(
         profile_name=selected_name,
@@ -1542,7 +1567,13 @@ def _classify_status(
     status_field_by_target: dict[str, str],
 ) -> tuple[str, str]:
     status_field = status_field_by_target[target_name]
-    status_value = str(payload.get(status_field, "")).strip().upper()
+    status_value, projected_status_field = resolve_projected_status_value(
+        payload,
+        target_name=target_name,
+        default_field=status_field,
+    )
+    if projected_status_field:
+        status_field = projected_status_field
     if status_value in {
         STATUS_PASS_REQUIRED,
         STATUS_SKIPPED_NOT_REQUIRED,
@@ -1862,85 +1893,6 @@ def _resolve_skill_path_active_repo_root_binding(
         return str(fallback_root), "bundle_repo_root_fallback", f"skill_path_active_repo_root_resolve_failed:{exc}"
 
 
-def _file_contains_token(path: Path, token: str, *, max_chars: int = 400_000) -> bool:
-    target = str(token or "").strip()
-    if not target:
-        return False
-    try:
-        text = path.read_text(encoding="utf-8", errors="ignore")
-    except Exception:
-        return False
-    return target in text[:max_chars]
-
-
-def _extract_bundle_id_from_text(raw: str) -> str:
-    patterns = (
-        r"cross_verification_bundle_id\s*[:=]\s*([^\s,;]+)",
-        r"bundle_id\s*[:=]\s*([^\s,;]+)",
-        r"evidence_bundle_id\s*[:=]\s*([^\s,;]+)",
-    )
-    for pat in patterns:
-        m = re.search(pat, raw, flags=re.IGNORECASE)
-        if m:
-            return str(m.group(1) or "").strip()
-    return ""
-
-
-def _resolve_cross_verification_bundle_context(
-    *,
-    pack_path: Path,
-    run_id: str,
-) -> tuple[str, str, str]:
-    feedback_root = (pack_path / "runtime" / "protocol-feedback").resolve()
-    if not feedback_root.exists():
-        return "", "", "cross_verification_bundle_feedback_root_missing"
-
-    patterns = (
-        "outbox-to-protocol/*cross*verification*.*",
-        "outbox-to-protocol/*xverify*.*",
-        "outbox-to-protocol/FEEDBACK_BATCH_*.md",
-        "**/*cross*verification*.*",
-        "**/*intake*evidence*.*",
-        "**/*quorum*.*",
-    )
-    seen: set[str] = set()
-    candidates: list[Path] = []
-    for pattern in patterns:
-        for hit in feedback_root.glob(pattern):
-            if not hit.is_file():
-                continue
-            resolved = hit.resolve()
-            key = str(resolved)
-            if key in seen:
-                continue
-            seen.add(key)
-            candidates.append(resolved)
-    if not candidates:
-        return "", "", "cross_verification_bundle_candidates_missing"
-
-    candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-    selected = candidates[0]
-    run_token = str(run_id or "").strip()
-    if run_token:
-        filtered = [
-            p for p in candidates if run_token in p.name or _file_contains_token(p, run_token)
-        ]
-        if filtered:
-            selected = filtered[0]
-        else:
-            return "", "", "bundle_current_round_unresolved"
-
-    bundle_id = selected.stem
-    try:
-        raw = selected.read_text(encoding="utf-8", errors="ignore")
-    except Exception:
-        raw = ""
-    extracted = _extract_bundle_id_from_text(raw)
-    if extracted:
-        bundle_id = extracted
-    return str(selected), str(bundle_id or "").strip(), "bundle_runtime_feedback_latest"
-
-
 def _is_strict_no_trim_operation(operation: str) -> bool:
     return str(operation or "").strip().lower() in set(STRICT_NO_TRIM_OPERATIONS_DEFAULT)
 
@@ -2008,11 +1960,14 @@ def main() -> int:
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
-    repo_catalog_path = (
-        Path(str(args.repo_catalog or "")).expanduser().resolve()
-        if str(args.repo_catalog or "").strip()
-        else (repo_root / "identity" / "catalog" / "identities.yaml").resolve()
-    )
+    if str(args.repo_catalog or "").strip():
+        repo_catalog_candidate = Path(str(args.repo_catalog or "")).expanduser()
+        if repo_catalog_candidate.is_absolute():
+            repo_catalog_path = repo_catalog_candidate.resolve()
+        else:
+            repo_catalog_path = (repo_root / repo_catalog_candidate).resolve()
+    else:
+        repo_catalog_path = (repo_root / "identity" / "catalog" / "identities.yaml").resolve()
     mapping_path = Path(args.contract_mapping).expanduser().resolve() if str(args.contract_mapping or "").strip() else _resolve_default_contract_mapping(repo_root)
     mapping_alias_error = ""
     if mapping_path.name.endswith(".current.yaml"):
@@ -2051,6 +2006,7 @@ def main() -> int:
         resolved_work_layer=str(args.resolved_work_layer or "").strip(),
         default_requirement_order=effective_requirement_order,
         known_requirement_keys=known_requirement_keys,
+        mapping_path=mapping_path,
     )
     requirement_keys = (
         gate_profile_selection.requirement_keys
@@ -2090,6 +2046,44 @@ def main() -> int:
         target_name_by_requirement=effective_target_name_by_requirement,
     )
     mapping_errors.extend(spec_errors)
+    contract_bootstrap_emitter_result: dict[str, Any] = {
+        "apply": operation_normalized in RUNTIME_PROOF_REQUIRED_OPERATIONS,
+        "contract_bootstrap_emitter_count": 0,
+        "required_bootstrap_emitter_count": 0,
+        "materialized_bootstrap_emitter_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "error_code": "",
+        "rows": [],
+        "stale_reasons": [],
+    }
+    try:
+        _bundle_pack_path, bundle_task_path = resolve_pack_and_task(
+            Path(args.catalog).expanduser().resolve(),
+            args.identity_id,
+        )
+        bundle_task_doc = load_json(bundle_task_path)
+    except Exception as exc:
+        bundle_task_doc = {}
+        contract_bootstrap_emitter_result = {
+            **contract_bootstrap_emitter_result,
+            "materialized_bootstrap_emitter_status": STATUS_FAIL_REQUIRED,
+            "error_code": "IP-CBE-ENTRY-001",
+            "stale_reasons": [f"contract_bootstrap_emitter_task_resolve_failed:{exc}"],
+        }
+    else:
+        contract_bootstrap_emitter_result = materialize_required_bootstrap_emitters(
+            repo_root=repo_root,
+            catalog_path=Path(args.catalog).expanduser().resolve(),
+            identity_id=args.identity_id,
+            task_doc=bundle_task_doc if isinstance(bundle_task_doc, dict) else {},
+            operation=operation_normalized or effective_validator_operation,
+            apply=operation_normalized in RUNTIME_PROOF_REQUIRED_OPERATIONS,
+        )
+    if str(contract_bootstrap_emitter_result.get("materialized_bootstrap_emitter_status", "")).strip().upper() == STATUS_FAIL_REQUIRED:
+        mapping_errors.extend(
+            str(reason).strip()
+            for reason in (contract_bootstrap_emitter_result.get("stale_reasons") or [])
+            if str(reason).strip()
+        )
     needs_cross_verification_bundle = any(
         spec.target_name in {"cross_verification_tracks", "intake_evidence_quorum"}
         for spec in specs
@@ -2123,21 +2117,22 @@ def main() -> int:
     cross_verification_bundle_path = ""
     cross_verification_bundle_id = ""
     cross_verification_bundle_source = ""
+    cross_verification_bundle_selection_status = ""
     cross_verification_bundle_error = ""
     if needs_cross_verification_bundle:
         try:
-            pack_path_for_bundle, _task_path = resolve_pack_and_task(
-                Path(args.catalog).expanduser().resolve(),
-                str(args.identity_id),
-            )
-            (
-                cross_verification_bundle_path,
-                cross_verification_bundle_id,
-                cross_verification_bundle_source,
-            ) = _resolve_cross_verification_bundle_context(
-                pack_path=pack_path_for_bundle,
+            bundle_context = resolve_cross_verification_bundle_context(
+                catalog_path=str(args.catalog),
+                identity_id=str(args.identity_id),
                 run_id=run_id_binding,
             )
+            cross_verification_bundle_path = str(bundle_context.get("bundle_path", "")).strip()
+            cross_verification_bundle_id = str(bundle_context.get("bundle_id", "")).strip()
+            cross_verification_bundle_source = str(bundle_context.get("selection_source", "")).strip()
+            cross_verification_bundle_selection_status = str(
+                bundle_context.get("selection_status", "")
+            ).strip()
+            cross_verification_bundle_error = str(bundle_context.get("selection_error", "")).strip()
         except Exception as exc:
             cross_verification_bundle_error = f"cross_verification_bundle_context_resolve_failed:{exc}"
         if cross_verification_bundle_error:
@@ -2410,6 +2405,7 @@ def main() -> int:
         if spec.target_name in {
             "multimodal_plugin_enforcement",
             "run_id_report_selection",
+            "outlet_matrix",
         }:
             _append_supported_flag(
                 cmd,
@@ -2419,7 +2415,7 @@ def main() -> int:
                 repo_root=repo_root,
             )
             if report_selected_path:
-                if spec.target_name == "run_id_report_selection":
+                if spec.target_name in {"run_id_report_selection", "outlet_matrix"}:
                     _append_supported_flag(
                         cmd,
                         script_path=spec.script_path,
@@ -2579,6 +2575,11 @@ def main() -> int:
                     if spec.target_name in {"cross_verification_tracks", "intake_evidence_quorum"}
                     else ""
                 ),
+                "cross_verification_bundle_selection_status": (
+                    cross_verification_bundle_selection_status
+                    if spec.target_name in {"cross_verification_tracks", "intake_evidence_quorum"}
+                    else ""
+                ),
                 "payload_contract_issues": payload_contract_issues,
                 "monotonic_policy": {
                     "strict_skip_policy": strict_skip_policy,
@@ -2729,7 +2730,9 @@ def main() -> int:
         "cross_verification_bundle_path": cross_verification_bundle_path,
         "cross_verification_bundle_id": cross_verification_bundle_id,
         "cross_verification_bundle_source": cross_verification_bundle_source,
+        "cross_verification_bundle_selection_status": cross_verification_bundle_selection_status,
         "cross_verification_bundle_error": cross_verification_bundle_error,
+        "contract_bootstrap_emitter_materialization": contract_bootstrap_emitter_result,
         "actor_id": str(args.actor_id or "").strip(),
         "resolved_work_layer": str(args.resolved_work_layer or "").strip(),
         "resolved_source_layer": str(args.resolved_source_layer or "").strip(),
@@ -2755,6 +2758,8 @@ def main() -> int:
             "target_probe_mode" if target_probe_mode else "strict_operation_or_wrapper_surface"
         ),
         "protocol_unique_entry_receipt_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "protocol_unique_entry_receipt_provenance_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "protocol_unique_entry_receipt_bundle_verdict_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_unique_entry_receipt_path": "",
         "protocol_unique_entry_receipt_history_path": "",
     }
@@ -2785,6 +2790,8 @@ def main() -> int:
         )
         if receipt_error:
             payload["protocol_unique_entry_receipt_status"] = STATUS_FAIL_REQUIRED
+            payload["protocol_unique_entry_receipt_provenance_status"] = STATUS_FAIL_REQUIRED
+            payload["protocol_unique_entry_receipt_bundle_verdict_status"] = STATUS_FAIL_REQUIRED
             payload["protocol_unique_entry_receipt_path"] = ""
             payload["protocol_unique_entry_receipt_history_path"] = ""
             entry_issue = f"entry_receipt_persist_failed:{receipt_error}"
@@ -2802,10 +2809,26 @@ def main() -> int:
             else:
                 error_code = ERR_ENTRY_REQUIRED
         else:
-            if str(payload.get("bundle_status", "")).strip().upper() == STATUS_PASS_REQUIRED:
-                payload["protocol_unique_entry_receipt_status"] = STATUS_PASS_REQUIRED
-            else:
-                payload["protocol_unique_entry_receipt_status"] = STATUS_FAIL_REQUIRED
+            wrapper_parent_required = bool(payload.get("wrapper_parent_attestation_required", False))
+            wrapper_parent_status = str(payload.get("wrapper_parent_attestation_status", "")).strip().upper()
+            wrapper_provenance_ok = (
+                str(payload.get("wrapper_surface_status", "")).strip().upper() == STATUS_PASS_REQUIRED
+                and str(payload.get("wrapper_dispatch_token_status", "")).strip().upper() == STATUS_PASS_REQUIRED
+                and str(payload.get("wrapper_dispatch_proof_status", "")).strip().upper() == STATUS_PASS_REQUIRED
+                and (not wrapper_parent_required or wrapper_parent_status == STATUS_PASS_REQUIRED)
+            )
+            bundle_status_pass = str(payload.get("bundle_status", "")).strip().upper() == STATUS_PASS_REQUIRED
+            payload["protocol_unique_entry_receipt_provenance_status"] = (
+                STATUS_PASS_REQUIRED if wrapper_provenance_ok else STATUS_FAIL_REQUIRED
+            )
+            payload["protocol_unique_entry_receipt_bundle_verdict_status"] = (
+                STATUS_PASS_REQUIRED if bundle_status_pass else STATUS_FAIL_REQUIRED
+            )
+            payload["protocol_unique_entry_receipt_status"] = (
+                STATUS_PASS_REQUIRED
+                if wrapper_provenance_ok and bundle_status_pass
+                else STATUS_FAIL_REQUIRED
+            )
             payload["protocol_unique_entry_receipt_path"] = receipt_path
             payload["protocol_unique_entry_receipt_history_path"] = receipt_history_path
 
@@ -2848,6 +2871,7 @@ def main() -> int:
                 "final_emit_contract_status": str(args.final_emit_contract_status or "").strip().upper(),
                 "final_emit_policy_mode": str(args.final_emit_policy_mode or "").strip(),
                 "final_emit_schema_status": str(args.final_emit_schema_status or "").strip().upper(),
+                "contract_bootstrap_emitter_materialization": contract_bootstrap_emitter_result,
                 "protocol_unique_entry_receipt_required": payload.get(
                     "protocol_unique_entry_receipt_required", False
                 ),
@@ -2899,6 +2923,7 @@ def main() -> int:
                 "resolved_work_layer": str(args.resolved_work_layer or "").strip(),
                 "resolved_source_layer": str(args.resolved_source_layer or "").strip(),
                 "lock_state": str(args.lock_state or "").strip(),
+                "contract_bootstrap_emitter_materialization": contract_bootstrap_emitter_result,
                 "protocol_unique_entry_receipt_required": payload.get(
                     "protocol_unique_entry_receipt_required", False
                 ),
@@ -2952,6 +2977,10 @@ def main() -> int:
         target_payload.setdefault("resolved_work_layer", str(args.resolved_work_layer or "").strip())
         target_payload.setdefault("resolved_source_layer", str(args.resolved_source_layer or "").strip())
         target_payload.setdefault("lock_state", str(args.lock_state or "").strip())
+        target_payload.setdefault(
+            "contract_bootstrap_emitter_materialization",
+            contract_bootstrap_emitter_result,
+        )
         target_payload.setdefault("parity_operation_scope", parity_operation_scope)
         target_payload.setdefault(
             "required_contract_reason",
