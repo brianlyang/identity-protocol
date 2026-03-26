@@ -747,6 +747,14 @@ The admitted runtime origins are alias error, document invalidity,
 canonical contract-row invalidity, and required-surface absence, all
 before violation projection.
 
+Bundle registry direct-stale-reason required-surface origin policy must
+also stay explicit.
+
+The admitted runtime required-surface direct stale reasons are
+required-component-descriptor-fields missing, surface-missing rows,
+anchor-checks missing, and components missing before violation
+projection.
+
 Bundle registry direct-stale-reason source policy must also stay
 explicit.
 

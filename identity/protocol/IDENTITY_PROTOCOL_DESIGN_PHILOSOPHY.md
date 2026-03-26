@@ -735,6 +735,14 @@ The admitted origins are alias error, document invalidity, canonical
 contract-row invalidity, and required-surface absence, all before
 violation projection.
 
+Bundle registry direct-stale-reason required-surface origin policy must
+stay explicit too.
+
+The admitted required-surface direct stale reasons are
+required-component-descriptor-fields missing, surface-missing rows,
+anchor-checks missing, and components missing before violation
+projection.
+
 Bundle registry direct-stale-reason source policy must stay explicit too.
 
 The admitted source is local stale reasons already present before
