@@ -1,0 +1,11 @@
+schema_version: 1
+registry_family: governed_subdomain_doc_control
+registry_version: v1
+last_updated_utc: "2026-03-24T00:00:00Z"
+
+subdomains:
+  - subdomain_id: broadcast
+    current_file: identity/protocol/broadcast/BROADCAST_DOC_CONTROL.current.yaml
+    root_readme: identity/protocol/broadcast/README.md
+    validator_script: scripts/validate_protocol_broadcast_doc_control.py
+    probe_script: scripts/ci/run_protocol_broadcast_doc_control_probes_ci.sh

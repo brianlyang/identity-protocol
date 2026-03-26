@@ -47,9 +47,11 @@ This directory is the governed broadcast extension pack for the identity protoco
 2. `schema/broadcast-item.v1.json`
 3. `items/*.json`
 4. `BROADCAST_DOC_CONTROL.current.yaml`
+5. `identity/protocol/mappings/governed-subdomain-doc-control.current.yaml`
 
 ## Readability and governance control
 
 1. `BROADCAST_DOC_CONTROL.current.yaml` is the stable doc-control entry for this subdomain.
-2. `scripts/validate_protocol_broadcast_doc_control.py` fail-closes when broadcast extension-law readability drifts.
-3. `scripts/ci/run_protocol_broadcast_doc_control_probes_ci.sh` proves positive and negative doc-control paths.
+2. `identity/protocol/mappings/governed-subdomain-doc-control.current.yaml` is the machine-consumed registry that binds `broadcast` to its active doc-control carrier.
+3. `scripts/validate_protocol_broadcast_doc_control.py` fail-closes when broadcast extension-law readability drifts.
+4. `scripts/ci/run_protocol_broadcast_doc_control_probes_ci.sh` proves positive and negative doc-control paths.

@@ -1,0 +1,8 @@
+schema_version: 1
+registry_family: governed_subdomain_doc_control
+registry_version: current
+last_updated_utc: "2026-03-24T00:00:00Z"
+pointer_contract: frozen_versioned_active_carrier
+upgrade_switch_mode: pointer_only
+replay_snapshot_immutable: true
+active_file: identity/protocol/mappings/governed-subdomain-doc-control.v1.yaml
