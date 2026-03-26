@@ -750,6 +750,14 @@ Each local stale reason present before violation projection must classify
 exactly once as alias, document, contract-row, required-surface, or
 unknown ontology drift.
 
+Bundle registry direct-stale-reason origin-classifier precedence policy
+must stay explicit too.
+
+Alias classification preempts document classification, document
+classification preempts required-surface classification, required-surface
+classification preempts contract-row classification, and otherwise origin
+remains unknown.
+
 Bundle registry direct-stale-reason unclassified policy must stay
 explicit too.
 

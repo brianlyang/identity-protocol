@@ -88,6 +88,7 @@ from root_corpus_law_bundle_common import (
     require_component_descriptor_concordance,
     registry_class_admission_policy_from_doc,
     registry_direct_stale_reason_origin_policy_from_doc,
+    registry_direct_stale_reason_origin_classifier_precedence_policy_from_doc,
     registry_direct_stale_reason_partition_policy_from_doc,
     registry_direct_stale_reason_source_policy_from_doc,
     registry_direct_stale_reason_unclassified_policy_from_doc,
@@ -158,6 +159,9 @@ REGISTRY_DIRECT_STALE_REASON_SOURCE_POLICY = (
 )
 REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY = (
     "local_stale_reasons_partitioned_into_alias_document_contract_row_required_surface_or_unknown_exactly_once_before_violation_projection"
+)
+REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY = (
+    "alias_preempts_document_preempts_required_surface_preempts_contract_row_else_unknown"
 )
 REGISTRY_DIRECT_STALE_REASON_UNCLASSIFIED_POLICY = "fail_closed"
 COMPONENT_VALIDATOR_OBSERVATION_REASON_ADMISSION_POLICY = (
@@ -291,7 +295,12 @@ def _descriptor_is_present(value: Any) -> bool:
     return bool(str(value or "").strip())
 
 
-def _classify_direct_stale_reason_origin(reason: str) -> str:
+def _classify_direct_stale_reason_origin(
+    reason: str,
+    precedence_policy: str = REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY,
+) -> str:
+    if precedence_policy != REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY:
+        precedence_policy = REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY
     if "_alias_error:" in reason:
         return "alias"
     if reason.endswith("_empty_or_invalid"):
@@ -310,7 +319,10 @@ def _classify_direct_stale_reason_origin(reason: str) -> str:
     return "unknown"
 
 
-def _direct_stale_reason_origin_counts(stale_reasons: list[str]) -> tuple[dict[str, int], int]:
+def _direct_stale_reason_origin_counts(
+    stale_reasons: list[str],
+    precedence_policy: str = REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY,
+) -> tuple[dict[str, int], int]:
     counts = {
         "alias": 0,
         "document": 0,
@@ -319,7 +331,7 @@ def _direct_stale_reason_origin_counts(stale_reasons: list[str]) -> tuple[dict[s
     }
     unknown_count = 0
     for reason in stale_reasons:
-        origin = _classify_direct_stale_reason_origin(reason)
+        origin = _classify_direct_stale_reason_origin(reason, precedence_policy)
         if origin == "unknown":
             unknown_count += 1
             continue
@@ -764,6 +776,9 @@ def main() -> int:
     registry_direct_stale_reason_partition_policy = (
         registry_direct_stale_reason_partition_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    registry_direct_stale_reason_origin_classifier_precedence_policy = (
+        registry_direct_stale_reason_origin_classifier_precedence_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     registry_direct_stale_reason_unclassified_policy = (
         registry_direct_stale_reason_unclassified_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
@@ -881,6 +896,14 @@ def main() -> int:
         registry_direct_stale_reason_partition_policy
         if registry_direct_stale_reason_partition_policy == REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY
         else REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY
+    )
+    effective_registry_direct_stale_reason_origin_classifier_precedence_policy = (
+        registry_direct_stale_reason_origin_classifier_precedence_policy
+        if (
+            registry_direct_stale_reason_origin_classifier_precedence_policy
+            == REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY
+        )
+        else REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY
     )
     effective_registry_direct_stale_reason_unclassified_policy = (
         registry_direct_stale_reason_unclassified_policy
@@ -1326,6 +1349,14 @@ def main() -> int:
             != REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY
         ):
             stale_reasons.append("root_corpus_law_bundle_registry_direct_stale_reason_partition_policy_invalid")
+            error_code = ERR_REGISTRY
+        if (
+            registry_direct_stale_reason_origin_classifier_precedence_policy
+            != REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY
+        ):
+            stale_reasons.append(
+                "root_corpus_law_bundle_registry_direct_stale_reason_origin_classifier_precedence_policy_invalid"
+            )
             error_code = ERR_REGISTRY
         if (
             registry_direct_stale_reason_unclassified_policy
@@ -2107,7 +2138,10 @@ def main() -> int:
         len(structure_violations) + len(bundle_violations) + len(anchor_violations)
     )
     direct_stale_reason_origin_counts, registry_direct_stale_reason_unknown_count = (
-        _direct_stale_reason_origin_counts(stale_reasons)
+        _direct_stale_reason_origin_counts(
+            stale_reasons,
+            effective_registry_direct_stale_reason_origin_classifier_precedence_policy,
+        )
     )
     registry_direct_stale_reason_origin_status = (
         STATUS_FAIL_REQUIRED
@@ -2123,7 +2157,10 @@ def main() -> int:
         if not error_code:
             error_code = ERR_REGISTRY
     direct_stale_reason_origin_counts, registry_direct_stale_reason_unknown_count = (
-        _direct_stale_reason_origin_counts(stale_reasons)
+        _direct_stale_reason_origin_counts(
+            stale_reasons,
+            effective_registry_direct_stale_reason_origin_classifier_precedence_policy,
+        )
     )
     registry_direct_stale_reason_source_total_count = (
         sum(direct_stale_reason_origin_counts.values()) + registry_direct_stale_reason_unknown_count
@@ -2156,7 +2193,10 @@ def main() -> int:
         if not error_code:
             error_code = ERR_REGISTRY
         direct_stale_reason_origin_counts, registry_direct_stale_reason_unknown_count = (
-            _direct_stale_reason_origin_counts(stale_reasons)
+            _direct_stale_reason_origin_counts(
+                stale_reasons,
+                effective_registry_direct_stale_reason_origin_classifier_precedence_policy,
+            )
         )
         registry_direct_stale_reason_source_total_count = (
             sum(direct_stale_reason_origin_counts.values()) + registry_direct_stale_reason_unknown_count
@@ -2170,7 +2210,10 @@ def main() -> int:
         if not error_code:
             error_code = ERR_REGISTRY
         direct_stale_reason_origin_counts, registry_direct_stale_reason_unknown_count = (
-            _direct_stale_reason_origin_counts(stale_reasons)
+            _direct_stale_reason_origin_counts(
+                stale_reasons,
+                effective_registry_direct_stale_reason_origin_classifier_precedence_policy,
+            )
         )
         registry_direct_stale_reason_source_total_count = (
             sum(direct_stale_reason_origin_counts.values()) + registry_direct_stale_reason_unknown_count
@@ -2298,6 +2341,9 @@ def main() -> int:
         "registry_direct_stale_reason_source_policy": registry_direct_stale_reason_source_policy,
         "registry_direct_stale_reason_partition_policy": (
             registry_direct_stale_reason_partition_policy
+        ),
+        "registry_direct_stale_reason_origin_classifier_precedence_policy": (
+            registry_direct_stale_reason_origin_classifier_precedence_policy
         ),
         "registry_direct_stale_reason_unclassified_policy": (
             registry_direct_stale_reason_unclassified_policy

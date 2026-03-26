@@ -75,6 +75,7 @@ registry_class_admission_policy: only_direct_stale_reasons_present_before_violat
 registry_direct_stale_reason_origin_policy: alias_document_contract_row_required_surface_only_before_violation_projection
 registry_direct_stale_reason_source_policy: local_stale_reasons_only_before_violation_projection
 registry_direct_stale_reason_partition_policy: local_stale_reasons_partitioned_into_alias_document_contract_row_required_surface_or_unknown_exactly_once_before_violation_projection
+registry_direct_stale_reason_origin_classifier_precedence_policy: alias_preempts_document_preempts_required_surface_preempts_contract_row_else_unknown
 registry_direct_stale_reason_unclassified_policy: fail_closed
 component_validator_observation_reason_admission_policy: parse_status_nonzero_rc_or_nonpass_only_before_bundle_violation_projection
 component_validator_observation_reason_exclusion_policy: non_execution_bundle_rows_remain_outside_observation_reason_ontology
@@ -340,6 +341,12 @@ bundle_anchor_checks:
   - Each local stale reason present before violation projection must classify
     exactly once as alias, document, contract-row, required-surface, or
     unknown ontology drift.
+  - Bundle registry direct-stale-reason origin-classifier precedence policy
+    must stay explicit too.
+  - Alias classification preempts document classification, document
+    classification preempts required-surface classification,
+    required-surface classification preempts contract-row classification,
+    and otherwise origin remains unknown.
   - Bundle registry direct-stale-reason unclassified policy must stay
     explicit too.
   - The admitted policy is fail-closed on unclassified direct stale-reason
@@ -607,6 +614,12 @@ bundle_anchor_checks:
   - Each local stale reason present before violation projection must classify
     exactly once as alias, document, contract-row, required-surface, or
     unknown ontology drift.
+  - Bundle registry direct-stale-reason origin-classifier precedence policy
+    must also stay explicit.
+  - Alias runtime classification preempts document classification, document
+    classification preempts required-surface classification,
+    required-surface classification preempts contract-row classification,
+    and otherwise runtime origin remains unknown.
   - Bundle registry direct-stale-reason unclassified policy must also stay
     explicit.
   - The admitted runtime policy is fail-closed on unclassified direct
@@ -850,6 +863,11 @@ bundle_anchor_checks:
     violation projection classifies exactly once as alias, document,
     contract-row, required-surface, or unknown ontology drift.
   - Root-law bundle rows must also keep registry direct-stale-reason
+    origin-classifier precedence policy explicit; alias classification
+    preempts document, document preempts required-surface,
+    required-surface preempts contract-row, and otherwise origin remains
+    unknown.
+  - Root-law bundle rows must also keep registry direct-stale-reason
     unclassified policy explicit; unclassified direct stale-reason origin
     must remain fail-closed.
   - Local direct stale-reason ontology must not silently expand beyond those
@@ -1087,6 +1105,10 @@ bundle_anchor_checks:
     explicit; each local stale reason present before violation projection
     classifies exactly once as alias, document, contract-row,
     required-surface, or unknown ontology drift.
+  - Runtime must also keep registry direct-stale-reason origin-classifier
+    precedence policy explicit; alias classification preempts document,
+    document preempts required-surface, required-surface preempts
+    contract-row, and otherwise origin remains unknown.
   - Runtime must also keep registry direct-stale-reason unclassified policy
     explicit; unclassified direct stale-reason origin must remain
     fail-closed.

@@ -418,6 +418,11 @@ explicit; each local stale reason present before violation projection
 classifies exactly once as alias, document, contract-row, required-surface,
 or unknown ontology drift.
 
+Runtime must also keep registry direct-stale-reason origin-classifier
+precedence policy explicit; alias classification preempts document,
+document preempts required-surface, required-surface preempts
+contract-row, and otherwise origin remains unknown.
+
 Runtime must also keep registry direct-stale-reason unclassified policy
 explicit; unclassified direct stale-reason origin must remain fail-closed.
 
