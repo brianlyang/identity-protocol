@@ -237,6 +237,12 @@ only.
 Runtime must not elevate stderr diagnostics into an alternate status-bearing
 channel or use them to replace missing stdout truth.
 
+Runtime must also keep bound component validator stderr-isolation contract
+explicit; runtime captures stderr separately from verdict-bearing stdout.
+
+Runtime must not merge stderr into stdout or treat a mixed stream as admitted
+validator truth.
+
 Runtime must also keep bound component validator stdout-framing contract
 explicit; runtime parses whole stdout as a single JSON object carrying the
 disclosed status key.

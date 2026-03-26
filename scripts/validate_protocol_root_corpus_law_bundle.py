@@ -33,6 +33,7 @@ from root_corpus_law_bundle_common import (
     component_validator_output_contract_from_doc,
     component_validator_invocation_contract_from_doc,
     component_validator_output_channel_contract_from_doc,
+    component_validator_stderr_isolation_contract_from_doc,
     component_validator_stdout_framing_contract_from_doc,
     component_validator_status_key_resolution_contract_from_doc,
     component_validator_execution_input_contract_from_doc,
@@ -89,6 +90,7 @@ ERR_STRUCTURE = "IP-RCLB-002"
 ERR_BUNDLE = "IP-RCLB-003"
 COMPONENT_VALIDATOR_INVOCATION_CONTRACT = "python3_repo_root_json_only"
 COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT = "stdout_only"
+COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT = "stderr_captured_separate_from_stdout"
 COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT = "whole_stdout_single_json_object"
 COMPONENT_VALIDATOR_STATUS_KEY_RESOLUTION_CONTRACT = "top_level_direct_member_only"
 COMPONENT_VALIDATOR_EXECUTION_INPUT_CONTRACT = "stdin_devnull_noninteractive"
@@ -230,16 +232,21 @@ def _component_validator_run_kwargs(
     working_directory_contract: str,
     execution_transport_contract: str,
     execution_input_contract: str,
+    stderr_isolation_contract: str,
 ) -> dict[str, Any]:
     kwargs: dict[str, Any] = {
         "cwd": _component_validator_cwd(repo_root, working_directory_contract),
-        "capture_output": True,
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
         "text": True,
         "shell": False,
         "stdin": subprocess.DEVNULL,
     }
     if execution_input_contract != COMPONENT_VALIDATOR_EXECUTION_INPUT_CONTRACT:
         kwargs["stdin"] = subprocess.DEVNULL
+    if stderr_isolation_contract != COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT:
+        kwargs["stdout"] = subprocess.PIPE
+        kwargs["stderr"] = subprocess.PIPE
     if execution_transport_contract == COMPONENT_VALIDATOR_EXECUTION_TRANSPORT_CONTRACT:
         return kwargs
     return kwargs
@@ -285,6 +292,7 @@ def _run_component_validator(
     status_key: str,
     output_contract: str,
     invocation_contract: str,
+    stderr_isolation_contract: str,
     stdout_framing_contract: str,
     status_key_resolution_contract: str,
     execution_input_contract: str,
@@ -301,6 +309,7 @@ def _run_component_validator(
             working_directory_contract,
             execution_transport_contract,
             execution_input_contract,
+            stderr_isolation_contract,
         ),
     )
     if verdict_admission_timing_contract != COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT:
@@ -479,6 +488,9 @@ def main() -> int:
     component_validator_output_channel_contract = (
         component_validator_output_channel_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_stderr_isolation_contract = (
+        component_validator_stderr_isolation_contract_from_doc(bundle_doc) if bundle_doc else ""
+    )
     component_validator_stdout_framing_contract = (
         component_validator_stdout_framing_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
@@ -511,6 +523,11 @@ def main() -> int:
         component_validator_output_channel_contract
         if component_validator_output_channel_contract == COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT
         else COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT
+    )
+    effective_component_validator_stderr_isolation_contract = (
+        component_validator_stderr_isolation_contract
+        if component_validator_stderr_isolation_contract == COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT
+        else COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT
     )
     effective_component_validator_output_contract = (
         component_validator_output_contract
@@ -801,6 +818,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_validator_output_channel_contract != COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_output_channel_contract_invalid")
+            error_code = ERR_REGISTRY
+        if component_validator_stderr_isolation_contract != COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT:
+            stale_reasons.append("root_corpus_law_bundle_component_validator_stderr_isolation_contract_invalid")
             error_code = ERR_REGISTRY
         if component_validator_stdout_framing_contract != COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_stdout_framing_contract_invalid")
@@ -1267,6 +1287,7 @@ def main() -> int:
                 row.status_key,
                 effective_component_validator_output_contract,
                 effective_component_validator_invocation_contract,
+                effective_component_validator_stderr_isolation_contract,
                 effective_component_validator_stdout_framing_contract,
                 effective_component_validator_status_key_resolution_contract,
                 effective_component_validator_execution_input_contract,
@@ -1287,6 +1308,7 @@ def main() -> int:
                     "validator_output_contract": effective_component_validator_output_contract,
                     "validator_invocation_contract": effective_component_validator_invocation_contract,
                     "validator_output_channel_contract": effective_component_validator_output_channel_contract,
+                    "validator_stderr_isolation_contract": effective_component_validator_stderr_isolation_contract,
                     "validator_stdout_framing_contract": effective_component_validator_stdout_framing_contract,
                     "validator_status_key_resolution_contract": effective_component_validator_status_key_resolution_contract,
                     "validator_execution_input_contract": effective_component_validator_execution_input_contract,
@@ -1511,6 +1533,7 @@ def main() -> int:
         "component_validator_output_contract": component_validator_output_contract,
         "component_validator_invocation_contract": component_validator_invocation_contract,
         "component_validator_output_channel_contract": component_validator_output_channel_contract,
+        "component_validator_stderr_isolation_contract": component_validator_stderr_isolation_contract,
         "component_validator_stdout_framing_contract": component_validator_stdout_framing_contract,
         "component_validator_status_key_resolution_contract": component_validator_status_key_resolution_contract,
         "component_validator_execution_input_contract": component_validator_execution_input_contract,

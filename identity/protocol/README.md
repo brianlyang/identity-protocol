@@ -544,6 +544,14 @@ The verdict-bearing machine-output channel is stdout only.
 stderr diagnostics do not become an alternate status-bearing channel and may
 not replace missing stdout truth.
 
+Bundle component validators must also keep stderr-isolation contract explicit.
+
+The admitted stderr channel remains separately captured from verdict-bearing
+stdout.
+
+Runtime may not merge stderr into stdout or treat a mixed stream as admitted
+validator truth.
+
 Bundle component validators must also keep stdout-framing contract explicit.
 
 The verdict-bearing machine output occupies whole stdout as a single JSON

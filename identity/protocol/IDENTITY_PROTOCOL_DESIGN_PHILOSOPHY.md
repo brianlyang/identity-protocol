@@ -525,6 +525,14 @@ stderr may carry incidental diagnostics, but it does not become an alternate
 status-bearing verdict channel and may not be scraped to replace missing
 stdout truth.
 
+Bundle component validator stderr-isolation contract must stay explicit too.
+
+The admitted stderr-isolation contract is stderr captured separate from stdout.
+
+The machine world must not merge stderr into stdout, let diagnostic text
+cohabit the verdict-bearing stream, or treat a merged stream as if it were
+governed validator truth.
+
 Bundle component validator stdout-framing contract must stay explicit too.
 
 The admitted stdout framing contract is a single JSON object occupying whole
