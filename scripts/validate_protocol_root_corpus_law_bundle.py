@@ -29,6 +29,7 @@ from root_corpus_law_bundle_common import (
     component_descriptor_version_pinning_policy_from_doc,
     component_descriptor_concordance_local_waiver_policy_from_doc,
     component_validator_status_requirement_from_doc,
+    component_validator_execution_failure_policy_from_doc,
     component_self_describing_family_requirement_fallback_policy_from_doc,
     component_self_describing_family_requirement_inheritance_mode_from_doc,
     component_self_describing_family_requirement_local_redeclaration_policy_from_doc,
@@ -353,6 +354,9 @@ def main() -> int:
     component_validator_status_requirement = (
         component_validator_status_requirement_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_execution_failure_policy = (
+        component_validator_execution_failure_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     effective_component_validator_status_requirement = (
         component_validator_status_requirement
         if component_validator_status_requirement == STATUS_PASS_REQUIRED
@@ -600,6 +604,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_validator_status_requirement != STATUS_PASS_REQUIRED:
             stale_reasons.append("root_corpus_law_bundle_component_validator_status_requirement_invalid")
+            error_code = ERR_REGISTRY
+        if component_validator_execution_failure_policy != "fail_closed":
+            stale_reasons.append("root_corpus_law_bundle_component_validator_execution_failure_policy_invalid")
             error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
@@ -1267,6 +1274,7 @@ def main() -> int:
         "component_descriptor_version_pinning_policy": component_descriptor_version_pinning_policy,
         "component_descriptor_concordance_local_waiver_policy": component_descriptor_concordance_local_waiver_policy,
         "component_validator_status_requirement": component_validator_status_requirement,
+        "component_validator_execution_failure_policy": component_validator_execution_failure_policy,
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
         "component_ids": [row.component_id for row in sorted_components],

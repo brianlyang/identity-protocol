@@ -496,6 +496,13 @@ If a bound component validator fails execution or emits some other status, the
 machine world must fail-close rather than treating descriptor concordance or
 file presence as sufficient root-law health.
 
+Bundle component validator execution-failure policy must remain fail-closed as
+well.
+
+If a bound validator cannot execute, exits nonzero, emits invalid machine
+output, or omits its disclosed status key, the machine world must not invent a
+substitute verdict from bundle convenience.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

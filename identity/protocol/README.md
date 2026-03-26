@@ -517,6 +517,13 @@ surface and emit `PASS_REQUIRED` through its disclosed status key.
 Descriptor concordance and file presence are not enough if that validator
 fails execution or emits a weaker verdict.
 
+Bundle component validator execution-failure handling must also stay
+fail-closed.
+
+If a bound validator cannot execute, exits nonzero, emits invalid machine
+output, or omits its disclosed status key, runtime may not synthesize a
+passing verdict from surrounding bundle metadata.
+
 ---
 
 ## Conflict-handling rule

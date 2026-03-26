@@ -215,6 +215,10 @@ disclosed status key.
 Runtime must fail-close on validator execution failure, nonzero exit, or any
 emitted status other than `PASS_REQUIRED`.
 
+Runtime must also keep validator execution-failure handling fail-closed;
+missing machine output, invalid machine output, or omission of the disclosed
+status key may not be repaired by local inference.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

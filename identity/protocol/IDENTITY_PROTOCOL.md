@@ -271,6 +271,10 @@ validator must execute through its disclosed validator surface and emit
 Descriptor concordance or file presence may not override a non-passing
 component validator verdict.
 
+Root-law bundle rows must also keep component validator execution-failure
+policy fail-closed; missing execution, nonzero exit, invalid machine output,
+or missing disclosed status key may not be downgraded into advisory noise.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

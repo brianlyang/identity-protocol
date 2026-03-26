@@ -45,6 +45,7 @@ component_descriptor_version_pinning_policy: forbidden
 require_component_descriptor_concordance: true
 component_descriptor_concordance_local_waiver_policy: forbidden
 component_validator_status_requirement: PASS_REQUIRED
+component_validator_execution_failure_policy: fail_closed
 required_component_descriptor_fields:
 - validator_script
 - probe_script
@@ -131,6 +132,11 @@ bundle_anchor_checks:
     to remain current.
   - machine world must fail-close rather than treating descriptor concordance or
   - file presence as sufficient root-law health.
+  - Bundle component validator execution-failure policy must remain fail-closed as
+    well.
+  - emits invalid machine
+    output, or omits its disclosed status key, the machine world must not invent a
+  - substitute verdict from bundle convenience.
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root-law bundle discipline'
@@ -200,6 +206,11 @@ bundle_anchor_checks:
   - surface and emit `PASS_REQUIRED` through its disclosed status key.
   - Descriptor concordance and file presence are not enough if that validator
   - fails execution or emits a weaker verdict.
+  - Bundle component validator execution-failure handling must also stay
+    fail-closed.
+  - emits invalid machine
+    output, or omits its disclosed status key, runtime may not synthesize a
+  - passing verdict from surrounding bundle metadata.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root-law bundle boundary'
@@ -269,6 +280,9 @@ bundle_anchor_checks:
   - '`PASS_REQUIRED` through its disclosed status key.'
   - Descriptor concordance or file presence may not override a non-passing
   - component validator verdict.
+  - Root-law bundle rows must also keep component validator execution-failure
+    policy fail-closed; missing execution, nonzero exit, invalid machine output,
+  - or missing disclosed status key may not be downgraded into advisory noise.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime consumption of the root-law bundle'
@@ -334,6 +348,9 @@ bundle_anchor_checks:
   - disclosed status key.
   - Runtime must fail-close on validator execution failure, nonzero exit, or any
   - emitted status other than `PASS_REQUIRED`.
+  - Runtime must also keep validator execution-failure handling fail-closed;
+  - invalid machine output, or omission of the disclosed
+    status key may not be repaired by local inference.
 component_rows:
 - order: 1
   component_id: root_corpus_governance
