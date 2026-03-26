@@ -461,6 +461,13 @@ policy explicit; admitted direct origins are alias error, document
 invalidity, canonical contract-row invalidity, and required-surface
 absence before violation projection.
 
+Root-law bundle rows must also keep registry direct-stale-reason source
+policy explicit; direct stale-reason source is local stale reasons
+already present before violation projection.
+
+Projected structure, bundle, and anchor stale reasons must not be
+reinterpreted as direct stale-reason source.
+
 Local direct stale-reason ontology must not silently expand beyond those
 admitted origins.
 

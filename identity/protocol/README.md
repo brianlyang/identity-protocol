@@ -750,6 +750,15 @@ before violation projection.
 Runtime must fail-close on unclassified direct stale-reason origin rather
 than silently expanding registry ontology.
 
+Bundle registry direct-stale-reason source policy must also stay
+explicit.
+
+The admitted runtime source is local stale reasons already present before
+violation projection.
+
+Projected structure, bundle, and anchor stale reasons do not become
+substitute direct stale-reason source.
+
 Bundle component-validator observation-reason policy must also stay
 explicit.
 

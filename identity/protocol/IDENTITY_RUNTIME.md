@@ -406,6 +406,13 @@ explicit; admitted direct origins are alias error, document invalidity,
 canonical contract-row invalidity, and required-surface absence before
 violation projection.
 
+Runtime must also keep registry direct-stale-reason source policy
+explicit; direct stale-reason source is local stale reasons already
+present before violation projection.
+
+Runtime must not reinterpret projected structure, bundle, or anchor stale
+reasons as substitute direct stale-reason source.
+
 Runtime must fail-close on unclassified direct stale-reason origin rather
 than silently expanding registry ontology.
 

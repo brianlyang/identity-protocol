@@ -735,6 +735,14 @@ The admitted origins are alias error, document invalidity, canonical
 contract-row invalidity, and required-surface absence, all before
 violation projection.
 
+Bundle registry direct-stale-reason source policy must stay explicit too.
+
+The admitted source is local stale reasons already present before
+violation projection.
+
+Projected structure, bundle, and anchor stale reasons do not become
+substitute direct stale-reason source.
+
 The machine world must fail-close on unclassified direct stale-reason
 origin rather than silently expanding registry ontology.
 

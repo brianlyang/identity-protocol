@@ -73,6 +73,7 @@ error_code_precedence_policy: registry_preempts_structure_preempts_bundle_else_e
 failure_classification_policy: registry_from_direct_stale_reasons_structure_from_structure_violations_bundle_from_bundle_and_anchor_violations_else_pass
 registry_class_admission_policy: only_direct_stale_reasons_present_before_violation_projection_admit_registry_failure_class
 registry_direct_stale_reason_origin_policy: alias_document_contract_row_required_surface_only_before_violation_projection
+registry_direct_stale_reason_source_policy: local_stale_reasons_only_before_violation_projection
 component_validator_observation_reason_admission_policy: parse_status_nonzero_rc_or_nonpass_only_before_bundle_violation_projection
 component_validator_observation_reason_exclusion_policy: non_execution_bundle_rows_remain_outside_observation_reason_ontology
 component_validator_observation_reason_source_policy: bundle_violation_rows_only_before_violation_projection
@@ -325,6 +326,12 @@ bundle_anchor_checks:
   - The admitted origins are alias error, document invalidity, canonical
     contract-row invalidity, and required-surface absence, all before
     violation projection.
+  - Bundle registry direct-stale-reason source policy must stay explicit
+    too.
+  - The admitted source is local stale reasons already present before
+    violation projection.
+  - Projected structure, bundle, and anchor stale reasons do not become
+    substitute direct stale-reason source.
   - The machine world must fail-close on unclassified direct stale-reason
     origin rather than silently expanding registry ontology.
   - Bundle component-validator observation-reason policy must stay explicit
@@ -573,6 +580,12 @@ bundle_anchor_checks:
   - The admitted runtime origins are alias error, document invalidity,
     canonical contract-row invalidity, and required-surface absence, all
     before violation projection.
+  - Bundle registry direct-stale-reason source policy must also stay
+    explicit.
+  - The admitted runtime source is local stale reasons already present
+    before violation projection.
+  - Projected structure, bundle, and anchor stale reasons do not become
+    substitute direct stale-reason source.
   - Runtime must fail-close on unclassified direct stale-reason origin rather
     than silently expanding registry ontology.
   - Bundle component-validator observation-reason policy must also stay
@@ -798,6 +811,11 @@ bundle_anchor_checks:
     policy explicit; admitted direct origins are alias error, document
     invalidity, canonical contract-row invalidity, and required-surface
     absence before violation projection.
+  - Root-law bundle rows must also keep registry direct-stale-reason source
+    policy explicit; direct stale-reason source is local stale reasons
+    already present before violation projection.
+  - Projected structure, bundle, and anchor stale reasons must not be
+    reinterpreted as direct stale-reason source.
   - Local direct stale-reason ontology must not silently expand beyond those
     admitted origins.
   - Root-law bundle rows must also keep component-validator observation-reason
@@ -1021,6 +1039,11 @@ bundle_anchor_checks:
     explicit; admitted direct origins are alias error, document invalidity,
     canonical contract-row invalidity, and required-surface absence before
     violation projection.
+  - Runtime must also keep registry direct-stale-reason source policy
+    explicit; direct stale-reason source is local stale reasons already
+    present before violation projection.
+  - Runtime must not reinterpret projected structure, bundle, or anchor
+    stale reasons as substitute direct stale-reason source.
   - Runtime must fail-close on unclassified direct stale-reason origin rather
     than silently expanding registry ontology.
   - Runtime must also keep component-validator observation-reason policy
