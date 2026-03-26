@@ -32,6 +32,7 @@ from root_corpus_law_bundle_common import (
     component_validator_execution_failure_policy_from_doc,
     component_validator_output_contract_from_doc,
     component_validator_invocation_contract_from_doc,
+    component_validator_output_channel_contract_from_doc,
     component_self_describing_family_requirement_fallback_policy_from_doc,
     component_self_describing_family_requirement_inheritance_mode_from_doc,
     component_self_describing_family_requirement_local_redeclaration_policy_from_doc,
@@ -81,6 +82,7 @@ ERR_REGISTRY = "IP-RCLB-001"
 ERR_STRUCTURE = "IP-RCLB-002"
 ERR_BUNDLE = "IP-RCLB-003"
 COMPONENT_VALIDATOR_INVOCATION_CONTRACT = "python3_repo_root_json_only"
+COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT = "stdout_only"
 
 EXPECTED_COMPONENTS = {
     "root_corpus_governance": {
@@ -374,6 +376,9 @@ def main() -> int:
     component_validator_invocation_contract = (
         component_validator_invocation_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_output_channel_contract = (
+        component_validator_output_channel_contract_from_doc(bundle_doc) if bundle_doc else ""
+    )
     effective_component_validator_status_requirement = (
         component_validator_status_requirement
         if component_validator_status_requirement == STATUS_PASS_REQUIRED
@@ -383,6 +388,11 @@ def main() -> int:
         component_validator_invocation_contract
         if component_validator_invocation_contract == COMPONENT_VALIDATOR_INVOCATION_CONTRACT
         else COMPONENT_VALIDATOR_INVOCATION_CONTRACT
+    )
+    effective_component_validator_output_channel_contract = (
+        component_validator_output_channel_contract
+        if component_validator_output_channel_contract == COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT
+        else COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT
     )
     source_required_descriptor_fields = (
         registry_required_descriptor_fields_from_doc(machine_registry_completeness_doc)
@@ -635,6 +645,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_validator_invocation_contract != COMPONENT_VALIDATOR_INVOCATION_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_invocation_contract_invalid")
+            error_code = ERR_REGISTRY
+        if component_validator_output_channel_contract != COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT:
+            stale_reasons.append("root_corpus_law_bundle_component_validator_output_channel_contract_invalid")
             error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
@@ -1310,6 +1323,7 @@ def main() -> int:
         "component_validator_execution_failure_policy": component_validator_execution_failure_policy,
         "component_validator_output_contract": component_validator_output_contract,
         "component_validator_invocation_contract": component_validator_invocation_contract,
+        "component_validator_output_channel_contract": component_validator_output_channel_contract,
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
         "component_ids": [row.component_id for row in sorted_components],

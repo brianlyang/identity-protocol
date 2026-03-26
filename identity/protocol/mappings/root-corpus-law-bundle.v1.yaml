@@ -48,6 +48,7 @@ component_validator_status_requirement: PASS_REQUIRED
 component_validator_execution_failure_policy: fail_closed
 component_validator_output_contract: json_object_with_disclosed_status_key
 component_validator_invocation_contract: python3_repo_root_json_only
+component_validator_output_channel_contract: stdout_only
 required_component_descriptor_fields:
 - validator_script
 - probe_script
@@ -148,6 +149,11 @@ bundle_anchor_checks:
     <repo_root> --json-only`.
   - machine world must not invent an alternate interpreter, drop repo-root
     binding, or drop compact machine-output mode for local convenience.
+  - Bundle component validator output-channel contract must stay explicit too.
+  - The admitted verdict-bearing machine-output channel is stdout only.
+  - stderr may carry incidental diagnostics, but it does not become an alternate
+    status-bearing verdict channel and may not be scraped to replace missing
+    stdout truth.
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root-law bundle discipline'
@@ -230,6 +236,10 @@ bundle_anchor_checks:
     <repo_root> --json-only`.
   - Runtime may not swap interpreter, omit repo-root binding, or omit compact
     machine-output mode.
+  - Bundle component validators must also keep output-channel contract explicit.
+  - The verdict-bearing machine-output channel is stdout only.
+  - stderr diagnostics do not become an alternate status-bearing channel and may
+    not replace missing stdout truth.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root-law bundle boundary'
@@ -310,6 +320,11 @@ bundle_anchor_checks:
     <validator_script> --repo-root <repo_root> --json-only`.
   - Local substitution of interpreter, repo-root binding, or compact
     machine-output mode is forbidden inside the bundle.
+  - Root-law bundle rows must also keep component validator output-channel
+    contract explicit; the disclosed validator verdict is consumed from stdout
+    only.
+  - stderr diagnostics must not be promoted into an alternate status-bearing
+    verdict channel inside the bundle.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime consumption of the root-law bundle'
@@ -386,6 +401,11 @@ bundle_anchor_checks:
     <validator_script> --repo-root <repo_root> --json-only`.
   - Runtime must not substitute a different interpreter, omit repo-root binding,
     or omit compact machine-output mode.
+  - Runtime must also keep bound component validator output-channel contract
+    explicit; runtime consumes the verdict-bearing machine output from stdout
+    only.
+  - Runtime must not elevate stderr diagnostics into an alternate status-bearing
+    channel or use them to replace missing stdout truth.
 component_rows:
 - order: 1
   component_id: root_corpus_governance

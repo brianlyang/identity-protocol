@@ -230,6 +230,13 @@ runtime invokes the disclosed validator surface as `python3
 Runtime must not substitute a different interpreter, omit repo-root binding,
 or omit compact machine-output mode.
 
+Runtime must also keep bound component validator output-channel contract
+explicit; runtime consumes the verdict-bearing machine output from stdout
+only.
+
+Runtime must not elevate stderr diagnostics into an alternate status-bearing
+channel or use them to replace missing stdout truth.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

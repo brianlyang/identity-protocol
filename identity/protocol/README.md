@@ -537,6 +537,13 @@ Bundle legality invokes them as `python3 <validator_script> --repo-root
 Runtime may not swap interpreter, omit repo-root binding, or omit compact
 machine-output mode.
 
+Bundle component validators must also keep output-channel contract explicit.
+
+The verdict-bearing machine-output channel is stdout only.
+
+stderr diagnostics do not become an alternate status-bearing channel and may
+not replace missing stdout truth.
+
 ---
 
 ## Conflict-handling rule

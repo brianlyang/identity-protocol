@@ -286,6 +286,13 @@ explicit; bundle legality invokes the disclosed validator surface as `python3
 Local substitution of interpreter, repo-root binding, or compact
 machine-output mode is forbidden inside the bundle.
 
+Root-law bundle rows must also keep component validator output-channel
+contract explicit; the disclosed validator verdict is consumed from stdout
+only.
+
+stderr diagnostics must not be promoted into an alternate status-bearing
+verdict channel inside the bundle.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

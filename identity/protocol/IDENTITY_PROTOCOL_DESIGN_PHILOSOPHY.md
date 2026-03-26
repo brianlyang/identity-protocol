@@ -517,6 +517,14 @@ The admitted invocation contract is `python3 <validator_script> --repo-root
 The machine world must not invent an alternate interpreter, drop repo-root
 binding, or drop compact machine-output mode for local convenience.
 
+Bundle component validator output-channel contract must stay explicit too.
+
+The admitted verdict-bearing machine-output channel is stdout only.
+
+stderr may carry incidental diagnostics, but it does not become an alternate
+status-bearing verdict channel and may not be scraped to replace missing
+stdout truth.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file
