@@ -52,6 +52,7 @@ component_validator_output_channel_contract: stdout_only
 component_validator_stdout_framing_contract: whole_stdout_single_json_object
 component_validator_status_key_resolution_contract: top_level_direct_member_only
 component_validator_execution_input_contract: stdin_devnull_noninteractive
+component_validator_verdict_admission_timing_contract: completed_process_post_exit_only
 component_validator_working_directory_contract: repo_root
 component_validator_execution_transport_contract: local_direct_subprocess_vector
 required_component_descriptor_fields:
@@ -178,6 +179,13 @@ bundle_anchor_checks:
   - machine world must not let a bound validator inherit ambient stdin, block
     for operator keystrokes, or convert interactive prompt dialogue into
     governed validator execution truth.
+  - Bundle component validator verdict-admission timing contract must stay
+    explicit too.
+  - The admitted verdict-admission timing contract is completed-process
+    post-exit only.
+  - machine world must not stream partial stdout into verdict truth, parse a
+    pre-exit fragment, or treat a background-launched validator as if its
+    verdict had already been admitted.
   - Bundle component validator working-directory contract must stay explicit too.
   - The admitted validator execution working directory is repo_root.
   - machine world must not run a bound component validator from arbitrary cwd
@@ -291,6 +299,12 @@ bundle_anchor_checks:
   - Runtime may not let bound validators inherit ambient stdin, wait for
     operator keystrokes, or convert interactive prompt dialogue into validator
     truth.
+  - Bundle component validators must also keep verdict-admission timing
+    contract explicit.
+  - The admitted validator verdict is consumed only after completed process
+    exit.
+  - Runtime may not stream partial stdout into verdict truth, parse pre-exit
+    fragments, or treat background-launched validators as already admitted.
   - Bundle component validators must also keep working-directory contract explicit.
   - The admitted validator execution working directory is repo_root.
   - Runtime may not substitute arbitrary cwd or ambient shell location for that
@@ -400,6 +414,11 @@ bundle_anchor_checks:
     noninteractive stdin.
   - Local inheritance of ambient stdin or dependence on operator keystrokes is
     forbidden inside the bundle.
+  - Root-law bundle rows must also keep component validator verdict-admission
+    timing contract explicit; bound component validator verdict is admitted only
+    after completed process exit.
+  - Local streaming of partial stdout, pre-exit parsing, or background-process
+    substitution is forbidden inside the bundle.
   - Root-law bundle rows must also keep component validator working-directory
     contract explicit; bound component validators execute with repo_root as the
     governed working directory.
@@ -507,6 +526,11 @@ bundle_anchor_checks:
   - Runtime must not let bound validators inherit ambient stdin, wait for
     operator keystrokes, or convert interactive prompt dialogue into admitted
     validator execution truth.
+  - Runtime must also keep bound component validator verdict-admission timing
+    contract explicit; runtime admits validator verdict only after completed
+    process exit.
+  - Runtime must not stream partial stdout into verdict truth, parse pre-exit
+    fragments, or treat background-launched validators as already admitted.
   - Runtime must also keep bound component validator working-directory contract
     explicit; runtime executes bound component validators with repo_root as the
     governed working directory.

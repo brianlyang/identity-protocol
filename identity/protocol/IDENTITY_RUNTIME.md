@@ -259,6 +259,13 @@ Runtime must not let bound validators inherit ambient stdin, wait for
 operator keystrokes, or convert interactive prompt dialogue into admitted
 validator execution truth.
 
+Runtime must also keep bound component validator verdict-admission timing
+contract explicit; runtime admits validator verdict only after completed
+process exit.
+
+Runtime must not stream partial stdout into verdict truth, parse pre-exit
+fragments, or treat background-launched validators as already admitted.
+
 Runtime must also keep bound component validator working-directory contract
 explicit; runtime executes bound component validators with repo_root as the
 governed working directory.

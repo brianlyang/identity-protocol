@@ -36,6 +36,7 @@ from root_corpus_law_bundle_common import (
     component_validator_stdout_framing_contract_from_doc,
     component_validator_status_key_resolution_contract_from_doc,
     component_validator_execution_input_contract_from_doc,
+    component_validator_verdict_admission_timing_contract_from_doc,
     component_validator_working_directory_contract_from_doc,
     component_validator_execution_transport_contract_from_doc,
     component_self_describing_family_requirement_fallback_policy_from_doc,
@@ -91,6 +92,7 @@ COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT = "stdout_only"
 COMPONENT_VALIDATOR_STDOUT_FRAMING_CONTRACT = "whole_stdout_single_json_object"
 COMPONENT_VALIDATOR_STATUS_KEY_RESOLUTION_CONTRACT = "top_level_direct_member_only"
 COMPONENT_VALIDATOR_EXECUTION_INPUT_CONTRACT = "stdin_devnull_noninteractive"
+COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT = "completed_process_post_exit_only"
 COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT = "repo_root"
 COMPONENT_VALIDATOR_EXECUTION_TRANSPORT_CONTRACT = "local_direct_subprocess_vector"
 COMPONENT_VALIDATOR_OUTPUT_CONTRACT = "json_object_with_disclosed_status_key"
@@ -286,6 +288,7 @@ def _run_component_validator(
     stdout_framing_contract: str,
     status_key_resolution_contract: str,
     execution_input_contract: str,
+    verdict_admission_timing_contract: str,
     working_directory_contract: str,
     execution_transport_contract: str,
 ) -> tuple[int, dict[str, Any], str]:
@@ -300,6 +303,8 @@ def _run_component_validator(
             execution_input_contract,
         ),
     )
+    if verdict_admission_timing_contract != COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT:
+        return proc.returncode, {}, "validator_verdict_admission_timing_contract_invalid"
     stdout = (proc.stdout or "").strip()
     payload, parse_error = _parse_component_validator_stdout(
         stdout,
@@ -483,6 +488,9 @@ def main() -> int:
     component_validator_execution_input_contract = (
         component_validator_execution_input_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_verdict_admission_timing_contract = (
+        component_validator_verdict_admission_timing_contract_from_doc(bundle_doc) if bundle_doc else ""
+    )
     component_validator_working_directory_contract = (
         component_validator_working_directory_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
@@ -523,6 +531,11 @@ def main() -> int:
         component_validator_execution_input_contract
         if component_validator_execution_input_contract == COMPONENT_VALIDATOR_EXECUTION_INPUT_CONTRACT
         else COMPONENT_VALIDATOR_EXECUTION_INPUT_CONTRACT
+    )
+    effective_component_validator_verdict_admission_timing_contract = (
+        component_validator_verdict_admission_timing_contract
+        if component_validator_verdict_admission_timing_contract == COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT
+        else COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT
     )
     effective_component_validator_working_directory_contract = (
         component_validator_working_directory_contract
@@ -797,6 +810,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_validator_execution_input_contract != COMPONENT_VALIDATOR_EXECUTION_INPUT_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_execution_input_contract_invalid")
+            error_code = ERR_REGISTRY
+        if component_validator_verdict_admission_timing_contract != COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT:
+            stale_reasons.append("root_corpus_law_bundle_component_validator_verdict_admission_timing_contract_invalid")
             error_code = ERR_REGISTRY
         if component_validator_working_directory_contract != COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_working_directory_contract_invalid")
@@ -1254,6 +1270,7 @@ def main() -> int:
                 effective_component_validator_stdout_framing_contract,
                 effective_component_validator_status_key_resolution_contract,
                 effective_component_validator_execution_input_contract,
+                effective_component_validator_verdict_admission_timing_contract,
                 effective_component_validator_working_directory_contract,
                 effective_component_validator_execution_transport_contract,
             )
@@ -1273,6 +1290,7 @@ def main() -> int:
                     "validator_stdout_framing_contract": effective_component_validator_stdout_framing_contract,
                     "validator_status_key_resolution_contract": effective_component_validator_status_key_resolution_contract,
                     "validator_execution_input_contract": effective_component_validator_execution_input_contract,
+                    "validator_verdict_admission_timing_contract": effective_component_validator_verdict_admission_timing_contract,
                     "validator_working_directory_contract": effective_component_validator_working_directory_contract,
                     "validator_execution_transport_contract": effective_component_validator_execution_transport_contract,
                     "validator_rc": rc,
@@ -1496,6 +1514,7 @@ def main() -> int:
         "component_validator_stdout_framing_contract": component_validator_stdout_framing_contract,
         "component_validator_status_key_resolution_contract": component_validator_status_key_resolution_contract,
         "component_validator_execution_input_contract": component_validator_execution_input_contract,
+        "component_validator_verdict_admission_timing_contract": component_validator_verdict_admission_timing_contract,
         "component_validator_working_directory_contract": component_validator_working_directory_contract,
         "component_validator_execution_transport_contract": component_validator_execution_transport_contract,
         "bundle_anchor_check_count": len(anchor_checks),

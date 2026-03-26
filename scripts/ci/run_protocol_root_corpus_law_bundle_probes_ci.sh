@@ -67,6 +67,7 @@ assert payload["component_validator_output_channel_contract"] == "stdout_only", 
 assert payload["component_validator_stdout_framing_contract"] == "whole_stdout_single_json_object", payload
 assert payload["component_validator_status_key_resolution_contract"] == "top_level_direct_member_only", payload
 assert payload["component_validator_execution_input_contract"] == "stdin_devnull_noninteractive", payload
+assert payload["component_validator_verdict_admission_timing_contract"] == "completed_process_post_exit_only", payload
 assert payload["component_validator_working_directory_contract"] == "repo_root", payload
 assert payload["component_validator_execution_transport_contract"] == "local_direct_subprocess_vector", payload
 assert payload["bundle_redeclares_required_repo_rel_path_patterns"] is False, payload
@@ -391,6 +392,38 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCLB-001", payload
 assert "root_corpus_law_bundle_component_validator_execution_input_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT_REPO="${TMP_ROOT}/component-validator-verdict-admission-timing-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_verdict_admission_timing_contract"] = "partial_stream_preexit_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT_JSON="${TMP_ROOT}/component-validator-verdict-admission-timing-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator verdict-admission timing contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_verdict_admission_timing_contract_invalid" in payload["stale_reasons"], payload
 PY
 
 COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT_REPO="${TMP_ROOT}/component-validator-working-directory-contract-drift-repo"

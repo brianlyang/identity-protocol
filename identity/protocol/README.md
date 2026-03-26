@@ -568,6 +568,14 @@ The admitted validator execution input is devnull-backed noninteractive stdin.
 Runtime may not let bound validators inherit ambient stdin, wait for operator
 keystrokes, or convert interactive prompt dialogue into validator truth.
 
+Bundle component validators must also keep verdict-admission timing contract
+explicit.
+
+The admitted validator verdict is consumed only after completed process exit.
+
+Runtime may not stream partial stdout into verdict truth, parse pre-exit
+fragments, or treat background-launched validators as already admitted.
+
 Bundle component validators must also keep working-directory contract explicit.
 
 The admitted validator execution working directory is repo_root.

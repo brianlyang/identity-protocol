@@ -552,6 +552,16 @@ The machine world must not let a bound validator inherit ambient stdin, block
 for operator keystrokes, or convert interactive prompt dialogue into governed
 validator execution truth.
 
+Bundle component validator verdict-admission timing contract must stay
+explicit too.
+
+The admitted verdict-admission timing contract is completed-process post-exit
+only.
+
+The machine world must not stream partial stdout into verdict truth, parse a
+pre-exit fragment, or treat a background-launched validator as if its verdict
+had already been admitted.
+
 Bundle component validator working-directory contract must stay explicit too.
 
 The admitted validator execution working directory is repo_root.

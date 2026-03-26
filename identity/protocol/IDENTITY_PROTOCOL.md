@@ -314,6 +314,13 @@ noninteractive stdin.
 Local inheritance of ambient stdin or dependence on operator keystrokes is
 forbidden inside the bundle.
 
+Root-law bundle rows must also keep component validator verdict-admission
+timing contract explicit; bound component validator verdict is admitted only
+after completed process exit.
+
+Local streaming of partial stdout, pre-exit parsing, or background-process
+substitution is forbidden inside the bundle.
+
 Root-law bundle rows must also keep component validator working-directory
 contract explicit; bound component validators execute with repo_root as the
 governed working directory.
