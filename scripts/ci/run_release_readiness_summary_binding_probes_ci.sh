@@ -103,8 +103,10 @@ assert summary_targeted_subset_excluded['selected_check_scope_projection']['stat
 assert summary_targeted_subset_excluded['selected_check_scope_projection']['scope_class'] == 'bounded_targeted_subset_exclusion', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['selected_check_scope_projection']['scope_reason'] == 'selected_check_out_of_scope_for_targeted_subset', summary_targeted_subset_excluded
 assert 'identity_codex_launcher' in summary_targeted_subset_excluded['selected_check_scope_projection']['excluded_summary_keys'], summary_targeted_subset_excluded
+assert 'identity_experience_writeback' in summary_targeted_subset_excluded['selected_check_scope_projection']['excluded_summary_keys'], summary_targeted_subset_excluded
 assert 'release_plane_cloud_evidence' in summary_targeted_subset_excluded['selected_check_scope_projection']['excluded_summary_keys'], summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['identity_codex_launcher']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['identity_experience_writeback']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['required_gate_surface_drift']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['runtime_summary_surface_governance_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['required_gate_surface_drift_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
@@ -129,6 +131,10 @@ assert summary_targeted_subset_excluded['one_look']['selected_check_scope_reason
 assert summary_targeted_subset_excluded['one_look']['selected_check_scope_excluded_summary_key_count'] > 0, summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['release_cloud_evidence_adapter_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['release_plane_required_checks_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['identity_experience_writeback_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['identity_experience_writeback_report_selection_mode'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['identity_experience_writeback_report_authority_class'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['identity_experience_writeback_report_pointer_resolution_mode'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_surface_drift_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_surface_drift_probe_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['active_execution_report_pointer_locality_probe_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
@@ -260,6 +266,13 @@ summary_release_projection = {
         'status': 'PASS_REQUIRED',
         'subdomain_count': 1,
     },
+    'identity_experience_writeback': {
+        'status': 'PASS_REQUIRED',
+        'report_selection_mode': 'active_execution_pointer',
+        'report_selected_authority_class': 'active_execution_pointer_pack_local_report',
+        'report_pointer_resolution_mode': 'pointer_candidate_root_report',
+        'writeback_status': 'WRITTEN',
+    },
     'terminal_truth_boundary_outer_surface_e2e_probe': {
         'status': 'PASS_REQUIRED',
     },
@@ -361,6 +374,11 @@ assert summary_release_projection['one_look']['release_cloud_evidence_adapter_st
 assert summary_release_projection['one_look']['release_cloud_evidence_adapter_source_kind'] == 'gh_run_list_json', summary_release_projection
 assert summary_release_projection['one_look']['release_cloud_evidence_adapter_local_dev_canonical'] is True, summary_release_projection
 assert summary_release_projection['one_look']['control_plane_budget_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['identity_experience_writeback_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['identity_experience_writeback_report_selection_mode'] == 'active_execution_pointer', summary_release_projection
+assert summary_release_projection['one_look']['identity_experience_writeback_report_authority_class'] == 'active_execution_pointer_pack_local_report', summary_release_projection
+assert summary_release_projection['one_look']['identity_experience_writeback_report_pointer_resolution_mode'] == 'pointer_candidate_root_report', summary_release_projection
+assert summary_release_projection['one_look']['identity_experience_writeback_writeback_status'] == 'WRITTEN', summary_release_projection
 assert summary_release_projection['one_look']['control_plane_budget_sync_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['control_plane_status_sync_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['control_plane_live_status'] == 'PASS_REQUIRED', summary_release_projection

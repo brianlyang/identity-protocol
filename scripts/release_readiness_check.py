@@ -806,13 +806,14 @@ def _build_post_execution_report_stage_checks(
                 "python3",
                 "scripts/validate_identity_experience_writeback.py",
                 "--repo-catalog",
-                "identity/catalog/identities.yaml",
+                REPO_CATALOG_REL,
                 "--local-catalog",
                 catalog,
                 "--identity-id",
                 identity_id,
                 "--execution-report",
                 execution_report,
+                "--json-only",
             ],
         ]
     )

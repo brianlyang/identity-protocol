@@ -139,6 +139,24 @@ RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SPECS: tuple[ReleaseReadinessActiveRunt
         ),
     ),
     ReleaseReadinessActiveRuntimeClosureSpec(
+        script_rel="scripts/validate_identity_experience_writeback.py",
+        summary_key="identity_experience_writeback",
+        one_look_field="identity_experience_writeback_status",
+        status_fields=("experience_writeback_validation_status",),
+        keep_fields=(
+            "report_selection_mode",
+            "report_selected_authority_class",
+            "report_pointer_resolution_mode",
+            "writeback_status",
+        ),
+        one_look_passthrough_fields=(
+            ("report_selection_mode", "identity_experience_writeback_report_selection_mode"),
+            ("report_selected_authority_class", "identity_experience_writeback_report_authority_class"),
+            ("report_pointer_resolution_mode", "identity_experience_writeback_report_pointer_resolution_mode"),
+            ("writeback_status", "identity_experience_writeback_writeback_status"),
+        ),
+    ),
+    ReleaseReadinessActiveRuntimeClosureSpec(
         script_rel="scripts/validate_identity_weak_live_linkage.py",
         summary_key="identity_weak_live_linkage",
         one_look_field="identity_weak_live_linkage_status",
@@ -175,6 +193,9 @@ RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_ONE_LOOK_FIELDS: tuple[str, ...] = tupl
 )
 RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_DETAIL_FIELDS: tuple[str, ...] = (
     "one_look.identity_codex_launcher_ambient_runtime_default_status",
+    "one_look.identity_experience_writeback_report_selection_mode",
+    "one_look.identity_experience_writeback_report_authority_class",
+    "one_look.identity_experience_writeback_report_pointer_resolution_mode",
     "one_look.identity_communication_transport_reply_transport_status",
     "one_look.identity_weak_live_operational_closure_class",
     "one_look.identity_terminal_truth_class",
