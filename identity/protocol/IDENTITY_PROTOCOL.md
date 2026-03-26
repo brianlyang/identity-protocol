@@ -335,6 +335,13 @@ after completed process exit.
 Local streaming of partial stdout, pre-exit parsing, or background-process
 substitution is forbidden inside the bundle.
 
+Root-law bundle rows must also keep component validator execution-timeout
+contract explicit; bound component validators execute with no local timeout
+overlay inside the bundle.
+
+Local injection of deadlines, kill-after policies, or timeout overlays is
+forbidden inside the bundle.
+
 Root-law bundle rows must also keep component validator working-directory
 contract explicit; bound component validators execute with repo_root as the
 governed working directory.

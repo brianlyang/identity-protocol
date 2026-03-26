@@ -243,6 +243,10 @@ def component_validator_verdict_admission_timing_contract_from_doc(bundle_doc: M
     return _norm_str(bundle_doc.get("component_validator_verdict_admission_timing_contract"))
 
 
+def component_validator_execution_timeout_contract_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("component_validator_execution_timeout_contract"))
+
+
 def component_validator_working_directory_contract_from_doc(bundle_doc: Mapping[str, Any]) -> str:
     return _norm_str(bundle_doc.get("component_validator_working_directory_contract"))
 

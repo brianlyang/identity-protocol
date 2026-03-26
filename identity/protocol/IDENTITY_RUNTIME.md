@@ -279,6 +279,14 @@ process exit.
 Runtime must not stream partial stdout into verdict truth, parse pre-exit
 fragments, or treat background-launched validators as already admitted.
 
+Runtime must also keep bound component validator execution-timeout contract
+explicit; runtime executes bound component validators with no local timeout
+overlay inside the bundle.
+
+Runtime must not inject a bundle-local deadline, kill-after policy, or
+timeout overlay and then treat timeout-shaped termination as admitted
+validator truth.
+
 Runtime must also keep bound component validator working-directory contract
 explicit; runtime executes bound component validators with repo_root as the
 governed working directory.

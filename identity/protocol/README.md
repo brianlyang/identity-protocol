@@ -592,6 +592,14 @@ The admitted validator verdict is consumed only after completed process exit.
 Runtime may not stream partial stdout into verdict truth, parse pre-exit
 fragments, or treat background-launched validators as already admitted.
 
+Bundle component validators must also keep execution-timeout contract
+explicit.
+
+The admitted validator execution-timeout contract is no local timeout overlay.
+
+Runtime may not inject a bundle-local deadline, kill-after policy, or timeout
+overlay and then treat timeout-shaped termination as admitted validator truth.
+
 Bundle component validators must also keep working-directory contract explicit.
 
 The admitted validator execution working directory is repo_root.

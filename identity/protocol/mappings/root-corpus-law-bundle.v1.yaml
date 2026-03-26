@@ -55,6 +55,7 @@ component_validator_status_key_resolution_contract: top_level_direct_member_only
 component_validator_status_literal_contract: exact_canonical_string_literal
 component_validator_execution_input_contract: stdin_devnull_noninteractive
 component_validator_verdict_admission_timing_contract: completed_process_post_exit_only
+component_validator_execution_timeout_contract: no_local_timeout_overlay
 component_validator_working_directory_contract: repo_root
 component_validator_execution_environment_contract: inherited_parent_process_env_no_local_overlay
 component_validator_execution_transport_contract: local_direct_subprocess_vector
@@ -200,6 +201,12 @@ bundle_anchor_checks:
   - machine world must not stream partial stdout into verdict truth, parse a
     pre-exit fragment, or treat a background-launched validator as if its
     verdict had already been admitted.
+  - Bundle component validator execution-timeout contract must stay explicit
+    too.
+  - The admitted execution-timeout contract is no local timeout overlay.
+  - machine world must not inject a bundle-local deadline, kill-after policy,
+    or timeout overlay and then treat timeout-shaped termination as if it were
+    governed validator law.
   - Bundle component validator working-directory contract must stay explicit too.
   - The admitted validator execution working directory is repo_root.
   - machine world must not run a bound component validator from arbitrary cwd
@@ -338,6 +345,11 @@ bundle_anchor_checks:
     exit.
   - Runtime may not stream partial stdout into verdict truth, parse pre-exit
     fragments, or treat background-launched validators as already admitted.
+  - Bundle component validators must also keep execution-timeout contract
+    explicit.
+  - The admitted validator execution-timeout contract is no local timeout overlay.
+  - Runtime may not inject a bundle-local deadline, kill-after policy, or timeout
+    overlay and then treat timeout-shaped termination as admitted validator truth.
   - Bundle component validators must also keep working-directory contract explicit.
   - The admitted validator execution working directory is repo_root.
   - Runtime may not substitute arbitrary cwd or ambient shell location for that
@@ -468,6 +480,11 @@ bundle_anchor_checks:
     after completed process exit.
   - Local streaming of partial stdout, pre-exit parsing, or background-process
     substitution is forbidden inside the bundle.
+  - Root-law bundle rows must also keep component validator execution-timeout
+    contract explicit; bound component validators execute with no local timeout
+    overlay inside the bundle.
+  - Local injection of deadlines, kill-after policies, or timeout overlays is
+    forbidden inside the bundle.
   - Root-law bundle rows must also keep component validator working-directory
     contract explicit; bound component validators execute with repo_root as the
     governed working directory.
@@ -594,6 +611,12 @@ bundle_anchor_checks:
     process exit.
   - Runtime must not stream partial stdout into verdict truth, parse pre-exit
     fragments, or treat background-launched validators as already admitted.
+  - Runtime must also keep bound component validator execution-timeout contract
+    explicit; runtime executes bound component validators with no local timeout
+    overlay inside the bundle.
+  - Runtime must not inject a bundle-local deadline, kill-after policy, or
+    timeout overlay and then treat timeout-shaped termination as admitted
+    validator truth.
   - Runtime must also keep bound component validator working-directory contract
     explicit; runtime executes bound component validators with repo_root as the
     governed working directory.

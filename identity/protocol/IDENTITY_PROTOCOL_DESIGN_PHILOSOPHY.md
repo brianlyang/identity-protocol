@@ -578,6 +578,14 @@ The machine world must not stream partial stdout into verdict truth, parse a
 pre-exit fragment, or treat a background-launched validator as if its verdict
 had already been admitted.
 
+Bundle component validator execution-timeout contract must stay explicit too.
+
+The admitted execution-timeout contract is no local timeout overlay.
+
+The machine world must not inject a bundle-local deadline, kill-after policy,
+or timeout overlay and then treat timeout-shaped termination as if it were
+governed validator law.
+
 Bundle component validator working-directory contract must stay explicit too.
 
 The admitted validator execution working directory is repo_root.
