@@ -3,15 +3,17 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
+from execution_report_selection_common import (
+    collect_reports as collect_execution_reports,
+    evaluate_report_candidate,
+    select_best_evaluated_candidate,
+)
 from resolve_identity_context import resolve_identity
-from runtime_temp_path_common import runtime_temp_root
 
 ERR_BASELINE_STALE = "IP-PBL-001"
 ERR_REPORT_INVALID = "IP-PBL-002"
@@ -40,89 +42,6 @@ def _run(cmd: list[str]) -> tuple[int, str, str]:
     return p.returncode, (p.stdout or "").strip(), (p.stderr or "").strip()
 
 
-def _safe_json(path: Path) -> dict[str, Any]:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
-def _collect_from_roots(identity_id: str, roots: list[Path]) -> list[Path]:
-    rows: list[Path] = []
-    for root in roots:
-        if not root.exists():
-            continue
-        for p in root.glob(f"**/identity-upgrade-exec-{identity_id}-*.json"):
-            if p.name.endswith("-patch-plan.json"):
-                continue
-            rows.append(p.resolve())
-    return sorted(set(rows), key=lambda p: p.stat().st_mtime, reverse=True)
-
-
-def _collect_reports(identity_id: str, resolved_pack_path: Path, explicit_report: str) -> list[Path]:
-    if explicit_report.strip():
-        rp = Path(explicit_report).expanduser().resolve()
-        return [rp] if rp.exists() else []
-
-    preferred_roots: list[Path] = [
-        (resolved_pack_path / "runtime" / "reports").resolve(),
-        (resolved_pack_path / "runtime").resolve(),
-    ]
-    preferred = _collect_from_roots(identity_id, preferred_roots)
-    if preferred:
-        return preferred
-
-    runtime_tmp_root = runtime_temp_root()
-    fallback_roots: list[Path] = [
-        (runtime_tmp_root / "identity-upgrade-reports").resolve(),
-        (runtime_tmp_root / "identity-runtime").resolve(),
-    ]
-    runtime_output_root = os.environ.get("IDENTITY_RUNTIME_OUTPUT_ROOT", "").strip()
-    if runtime_output_root:
-        fallback_roots.append(Path(runtime_output_root).expanduser().resolve())
-    identity_home = os.environ.get("IDENTITY_HOME", "").strip()
-    if identity_home:
-        fallback_roots.append(Path(identity_home).expanduser().resolve())
-    return _collect_from_roots(identity_id, fallback_roots)
-
-
-def _identity_tuple_checks(
-    *,
-    report_data: dict[str, Any],
-    identity_id: str,
-    catalog_path: Path,
-    resolved_pack_path: Path,
-) -> tuple[dict[str, bool], list[str]]:
-    report_identity_id = str(report_data.get("identity_id", "")).strip()
-    report_catalog_path = str(report_data.get("catalog_path", "")).strip()
-    report_pack_path = str(
-        report_data.get("resolved_pack_path", "")
-        or report_data.get("pack_path", "")
-        or ""
-    ).strip()
-
-    identity_id_match = bool(report_identity_id) and report_identity_id == identity_id
-    catalog_path_match = bool(report_catalog_path) and Path(report_catalog_path).expanduser().resolve() == catalog_path
-    pack_path_match = bool(report_pack_path) and Path(report_pack_path).expanduser().resolve() == resolved_pack_path
-    strict_identity_tuple_match = identity_id_match and pack_path_match
-
-    checks = {
-        "identity_id_match": identity_id_match,
-        "catalog_path_match": catalog_path_match,
-        "pack_path_match": pack_path_match,
-        "strict_identity_tuple_match": strict_identity_tuple_match,
-    }
-    stale_reasons: list[str] = []
-    if not identity_id_match:
-        stale_reasons.append("identity_id_mismatch_or_missing")
-    if not catalog_path_match:
-        stale_reasons.append("catalog_path_mismatch_or_missing")
-    if not pack_path_match:
-        stale_reasons.append("pack_path_mismatch_or_missing")
-    return checks, stale_reasons
-
-
 def _resolve_current_head(protocol_root: Path) -> tuple[str, str]:
     rc, out, _ = _run(["git", "-C", str(protocol_root), "rev-parse", "HEAD"])
     if rc != 0:
@@ -143,7 +62,7 @@ def _resolve_lag_commits(protocol_root: Path, old_sha: str, new_sha: str) -> int
 
 
 def _evaluate(
-    report_data: dict[str, Any],
+    report_data: dict[str, object],
     *,
     baseline_policy: str,
 ) -> BaselineResult:
@@ -315,7 +234,22 @@ def main() -> int:
         return 2
 
     resolved_pack_path = Path(str(ctx.get("resolved_pack_path") or ctx.get("pack_path") or "")).expanduser().resolve()
-    reports = _collect_reports(args.identity_id, resolved_pack_path, args.execution_report)
+    if args.execution_report.strip():
+        reports = [Path(args.execution_report).expanduser().resolve()] if Path(args.execution_report).expanduser().resolve().exists() else []
+    else:
+        reports = collect_execution_reports(
+            resolved_pack_path,
+            args.identity_id,
+            include_fallback_roots=False,
+            include_generic_upgrade_json=True,
+        )
+        if not reports:
+            reports = collect_execution_reports(
+                resolved_pack_path,
+                args.identity_id,
+                include_fallback_roots=True,
+                include_generic_upgrade_json=True,
+            )
     if not reports:
         status = "FAIL" if args.baseline_policy == "strict" else "WARN"
         payload = {
@@ -341,24 +275,19 @@ def main() -> int:
             print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 1 if args.baseline_policy == "strict" else 0
 
-    selected = reports[0]
-    report_data = _safe_json(selected)
-    evaluated_reports: list[tuple[Path, dict[str, bool], list[str], dict[str, Any]]] = []
-    for candidate in reports:
-        candidate_data = _safe_json(candidate)
-        if not candidate_data:
-            continue
-        tuple_checks, tuple_reasons = _identity_tuple_checks(
-            report_data=candidate_data,
+    evaluated = [
+        evaluate_report_candidate(
+            report_path,
             identity_id=args.identity_id,
             catalog_path=catalog_path,
             resolved_pack_path=resolved_pack_path,
         )
-        evaluated_reports.append((candidate, tuple_checks, tuple_reasons, candidate_data))
-    strict_tuple_matches = [x for x in evaluated_reports if bool(x[1].get("strict_identity_tuple_match", False))]
+        for report_path in reports
+    ]
+    strict_tuple_matches = [row for row in evaluated if row.strict_identity_tuple_match]
 
     if not args.execution_report.strip() and strict_tuple_matches:
-        selected, tuple_checks, tuple_reasons, report_data = strict_tuple_matches[0]
+        selected = select_best_evaluated_candidate(strict_tuple_matches)
     elif not args.execution_report.strip() and not strict_tuple_matches:
         status = "FAIL" if args.baseline_policy == "strict" else "WARN"
         payload = {
@@ -388,49 +317,23 @@ def main() -> int:
             print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 1 if args.baseline_policy == "strict" else 0
     else:
-        tuple_checks, tuple_reasons = _identity_tuple_checks(
-            report_data=report_data,
-            identity_id=args.identity_id,
-            catalog_path=catalog_path,
-            resolved_pack_path=resolved_pack_path,
-        )
+        selected = select_best_evaluated_candidate(evaluated)
 
-    if not report_data:
-        status = "FAIL" if args.baseline_policy == "strict" else "WARN"
-        payload = {
-            "identity_id": args.identity_id,
-            "catalog_path": str(catalog_path),
-            "resolved_pack_path": str(resolved_pack_path),
-            "report_selected_path": str(selected),
-            "report_protocol_root": "",
-            "report_protocol_commit_sha": "",
-            "protocol_head_sha_at_run_start": "",
-            "baseline_reference_mode": "",
-            "current_protocol_head_sha": "",
-            "head_drift_detected": False,
-            "baseline_status": status,
-            "baseline_error_code": ERR_REPORT_INVALID,
-            "lag_commits": None,
-            "tuple_checks": {},
-            "strict_tuple_candidate_count": len(strict_tuple_matches),
-            "stale_reasons": ["execution_report_invalid_json"],
-        }
-        if args.json_only:
-            print(json.dumps(payload, ensure_ascii=False))
-        else:
-            print(f"[WARN] {ERR_REPORT_INVALID} invalid execution report json: {selected}")
-            print(json.dumps(payload, ensure_ascii=False, indent=2))
-        return 1 if args.baseline_policy == "strict" else 0
+    tuple_checks = {
+        "identity_id_match": selected.identity_id_match,
+        "catalog_path_match": selected.catalog_path_match,
+        "pack_path_match": selected.pack_path_match,
+        "strict_identity_tuple_match": selected.strict_identity_tuple_match,
+    }
 
-    tuple_ok = bool(tuple_checks.get("strict_identity_tuple_match", False))
-    if tuple_ok:
-        result = _evaluate(report_data, baseline_policy=args.baseline_policy)
+    if tuple_checks["strict_identity_tuple_match"]:
+        result = _evaluate(selected.report_data, baseline_policy=args.baseline_policy)
     else:
         status = "FAIL" if args.baseline_policy == "strict" else "WARN"
         result = BaselineResult(
             status=status,
             error_code=ERR_REPORT_INVALID,
-            stale_reasons=list(tuple_reasons),
+            stale_reasons=list(selected.stale_reasons),
             lag_commits=None,
             current_head_sha="",
             protocol_head_sha_at_run_start="",
@@ -441,9 +344,9 @@ def main() -> int:
         "identity_id": args.identity_id,
         "catalog_path": str(catalog_path),
         "resolved_pack_path": str(resolved_pack_path),
-        "report_selected_path": str(selected),
-        "report_protocol_root": str(report_data.get("protocol_root", "")).strip(),
-        "report_protocol_commit_sha": str(report_data.get("protocol_commit_sha", "")).strip().lower(),
+        "report_selected_path": str(selected.path),
+        "report_protocol_root": str(selected.report_data.get("protocol_root", "")).strip(),
+        "report_protocol_commit_sha": str(selected.report_data.get("protocol_commit_sha", "")).strip().lower(),
         "protocol_head_sha_at_run_start": result.protocol_head_sha_at_run_start,
         "baseline_reference_mode": result.baseline_reference_mode,
         "current_protocol_head_sha": result.current_head_sha,
@@ -462,12 +365,12 @@ def main() -> int:
         if result.status == "PASS":
             print(
                 "[OK] protocol baseline freshness validated: "
-                f"identity={args.identity_id} report={selected}"
+                f"identity={args.identity_id} report={selected.path}"
             )
         else:
             print(
                 f"[WARN] {result.error_code} protocol baseline stale: "
-                f"identity={args.identity_id} report={selected}"
+                f"identity={args.identity_id} report={selected.path}"
             )
         print(json.dumps(payload, ensure_ascii=False, indent=2))
 

@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from execution_report_selection_common import collect_reports, select_report
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -36,65 +37,6 @@ def _select_contract(task: dict[str, Any]) -> dict[str, Any]:
         if isinstance(node, dict):
             return node
     return {}
-
-
-def _candidate_report_roots(pack_path: Path) -> list[Path]:
-    roots: list[Path] = []
-    roots.append((pack_path / "runtime" / "reports").resolve())
-    roots.append((pack_path / "runtime").resolve())
-    for parent in [pack_path.resolve(), *pack_path.resolve().parents]:
-        candidate = (parent / "resource" / "reports").resolve()
-        roots.append(candidate)
-        if candidate.exists():
-            break
-    dedup: dict[str, Path] = {}
-    for root in roots:
-        dedup[root.as_posix()] = root
-    return list(dedup.values())
-
-
-def _collect_reports(pack_path: Path, identity_id: str) -> list[Path]:
-    rows: list[Path] = []
-    pattern = f"**/identity-upgrade-exec-{identity_id}-*.json"
-    for root in _candidate_report_roots(pack_path):
-        if not root.exists():
-            continue
-        for p in root.glob(pattern):
-            if p.is_file() and not p.name.endswith("-patch-plan.json"):
-                rows.append(p.resolve())
-    unique: dict[str, Path] = {p.as_posix(): p for p in rows}
-    return sorted(unique.values(), key=lambda p: p.stat().st_mtime)
-
-
-def _report_run_id(path: Path) -> str:
-    try:
-        data = load_json(path)
-    except Exception:
-        data = {}
-    run_id = str(data.get("run_id", "")).strip()
-    if run_id:
-        return run_id
-    if path.name.startswith("identity-upgrade-exec-") and path.name.endswith(".json") and not path.name.endswith("-patch-plan.json"):
-        return path.stem
-    return ""
-
-
-def _select_report(*, explicit_report: str, run_id: str, reports: list[Path]) -> tuple[Path | None, str]:
-    if explicit_report.strip():
-        p = Path(explicit_report).expanduser().resolve()
-        if p.exists() and p.is_file():
-            return p, "explicit_report"
-        return None, "explicit_report_missing"
-
-    if run_id.strip():
-        run_hits = [p for p in reports if run_id in p.name or _report_run_id(p) == run_id]
-        if run_hits:
-            return sorted(run_hits, key=lambda p: p.stat().st_mtime)[-1], "run_id_bound"
-        return None, "run_id_not_found"
-
-    if not reports:
-        return None, "no_reports"
-    return reports[-1], "mtime_fallback"
 
 
 def main() -> int:
@@ -131,8 +73,8 @@ def main() -> int:
 
     run_id = str(args.run_id or contract.get("run_id", "")).strip()
     explicit_report = str(args.report or "").strip()
-    reports = _collect_reports(pack_path, args.identity_id)
-    selected_report, selection_strategy = _select_report(explicit_report=explicit_report, run_id=run_id, reports=reports)
+    reports = collect_reports(pack_path, args.identity_id)
+    selected_report, selection_strategy = select_report(explicit_report=explicit_report, run_id=run_id, reports=reports)
 
     payload: dict[str, Any] = {
         "identity_id": args.identity_id,

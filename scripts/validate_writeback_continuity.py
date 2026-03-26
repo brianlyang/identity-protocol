@@ -8,9 +8,10 @@ from pathlib import Path
 from typing import Any
 
 from tool_vendor_governance_common import (
+    build_identity_upgrade_report_selection_projection,
     contract_required,
-    latest_identity_upgrade_report,
     load_json,
+    resolve_identity_upgrade_report_selection,
     resolve_pack_and_task,
 )
 
@@ -60,11 +61,15 @@ def _bool(v: Any) -> bool:
     return str(v).strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
-def _resolve_report(identity_id: str, pack_path: Path, explicit: str) -> Path | None:
-    if explicit.strip():
-        p = Path(explicit).expanduser().resolve()
-        return p if p.exists() else None
-    return latest_identity_upgrade_report(identity_id, pack_path)
+def _resolve_report_selection(identity_id: str, pack_path: Path, explicit: str) -> dict[str, Any]:
+    resolution = resolve_identity_upgrade_report_selection(
+        identity_id,
+        pack_path,
+        explicit_report=explicit,
+    )
+    payload = build_identity_upgrade_report_selection_projection(resolution, field_prefix="report")
+    payload["_selected_report_path"] = resolution.selected_report
+    return payload
 
 
 def _report_run_id(report_path: Path, report_doc: dict[str, Any]) -> str:
@@ -161,6 +166,10 @@ def main() -> int:
         "required_contract": required_contract,
         "contract_ref": "writeback_continuity_contract_v1" if contract_doc else "",
         "report_selected_path": "",
+        "report_selection_mode": "",
+        "report_selected_authority_class": "",
+        "report_pointer_resolution_mode": "",
+        "report_pointer_path": "",
         "requested_run_id": str(args.run_id or "").strip(),
         "report_run_id": "",
         "requiredization_current_round_linked": False,
@@ -181,7 +190,9 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 0
 
-    report_path = _resolve_report(args.identity_id, pack_path, args.report)
+    report_selection = _resolve_report_selection(args.identity_id, pack_path, args.report)
+    payload.update({k: v for k, v in report_selection.items() if not k.startswith("_")})
+    report_path = report_selection.get("_selected_report_path")
     if report_path is None:
         payload["error_code"] = ERR_MISSING_WRITEBACK
         payload["stale_reasons"] = [
@@ -196,8 +207,6 @@ def main() -> int:
         payload["writeback_continuity_status"] = STATUS_FAIL_REQUIRED
         _emit(payload, json_only=args.json_only)
         return 1
-
-    payload["report_selected_path"] = str(report_path)
 
     ok_path, path_error = _path_contract_ok(args.identity_id, catalog_path, repo_catalog_path, report_path)
     if not ok_path:

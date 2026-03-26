@@ -4,33 +4,17 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
+from execution_report_selection_common import (
+    collect_reports as collect_execution_reports,
+    evaluate_report_candidate,
+    select_best_evaluated_candidate,
+)
 from resolve_identity_context import resolve_identity
-from runtime_temp_path_common import runtime_temp_root
-
 
 ERROR_STALE = "IP-REL-001"
-
-
-@dataclass
-class CandidateEval:
-    path: Path
-    identity_id_match: bool
-    catalog_path_match: bool
-    pack_path_match: bool
-    prompt_path_match: bool
-    prompt_sha_match: bool
-    report_newer_than_key_inputs: bool
-    strict_identity_tuple_match: bool
-    score: int
-    report_mtime: float
-    stale_reasons: list[str]
-    report_data: dict[str, Any]
 
 
 def _iso_from_ts(ts: float) -> str:
@@ -66,146 +50,6 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: f.read(8192), b""):
             h.update(chunk)
     return h.hexdigest()
-
-
-def _safe_json(path: Path) -> dict[str, Any]:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
-def _collect_from_roots(identity_id: str, roots: list[Path]) -> list[Path]:
-    rows: list[Path] = []
-    generic_rows: list[Path] = []
-    generic_seen: set[Path] = set()
-    for root in roots:
-        if not root.exists():
-            continue
-        for p in root.glob(f"**/identity-upgrade-exec-{identity_id}-*.json"):
-            if p.name.endswith("-patch-plan.json"):
-                continue
-            rows.append(p.resolve())
-        # Accept additional upgrade report naming styles and defer strict tuple
-        # checks (identity/catalog/prompt/freshness) to candidate scoring.
-        for p in root.glob("**/*.json"):
-            name = p.name.lower()
-            if not name.endswith(".json") or name.endswith("-patch-plan.json"):
-                continue
-            if "upgrade" not in name:
-                continue
-            resolved = p.resolve()
-            if resolved in generic_seen:
-                continue
-            generic_seen.add(resolved)
-            generic_rows.append(resolved)
-    merged = set(rows)
-    merged.update(generic_rows)
-    return sorted(merged, key=lambda p: p.stat().st_mtime, reverse=True)
-
-
-def _collect_candidates(identity_id: str, preferred_pack: Path | None, report: str) -> list[Path]:
-    if report.strip():
-        p = Path(report).expanduser().resolve()
-        return [p] if p.exists() else []
-
-    preferred_roots: list[Path] = []
-    if preferred_pack is not None:
-        preferred_roots.append((preferred_pack / "runtime" / "reports").resolve())
-        preferred_roots.append((preferred_pack / "runtime").resolve())
-    preferred_rows = _collect_from_roots(identity_id, preferred_roots)
-    if preferred_rows:
-        return preferred_rows
-
-    runtime_tmp_root = runtime_temp_root()
-    fallback_roots: list[Path] = [
-        (runtime_tmp_root / "identity-upgrade-reports").resolve(),
-        (runtime_tmp_root / "identity-runtime").resolve(),
-    ]
-    runtime_output_root = os.environ.get("IDENTITY_RUNTIME_OUTPUT_ROOT", "").strip()
-    if runtime_output_root:
-        fallback_roots.append(Path(runtime_output_root).expanduser().resolve())
-    identity_home = os.environ.get("IDENTITY_HOME", "").strip()
-    if identity_home:
-        fallback_roots.append(Path(identity_home).expanduser().resolve())
-    return _collect_from_roots(identity_id, fallback_roots)
-
-
-def _eval_candidate(
-    path: Path,
-    *,
-    identity_id: str,
-    catalog_path: Path,
-    resolved_pack: Path,
-    prompt_path: Path,
-    prompt_sha: str,
-    key_input_latest_mtime: float,
-) -> CandidateEval:
-    data = _safe_json(path)
-    rid = str(data.get("identity_id", "")).strip()
-    report_catalog = str(data.get("catalog_path", "")).strip()
-    report_pack = str(data.get("resolved_pack_path", "")).strip()
-    report_prompt = str(data.get("identity_prompt_path", "")).strip()
-    report_prompt_sha = str(data.get("identity_prompt_sha256", "")).strip()
-
-    identity_id_match = rid == identity_id
-    catalog_path_match = bool(report_catalog) and Path(report_catalog).expanduser().resolve() == catalog_path
-    if report_pack:
-        pack_candidate = Path(report_pack).expanduser().resolve()
-    elif report_prompt:
-        pack_candidate = Path(report_prompt).expanduser().resolve().parent
-    else:
-        pack_candidate = None
-    pack_path_match = pack_candidate is not None and pack_candidate == resolved_pack
-    prompt_path_match = bool(report_prompt) and Path(report_prompt).expanduser().resolve() == prompt_path
-    prompt_sha_match = bool(report_prompt_sha) and report_prompt_sha == prompt_sha
-    report_newer_than_key_inputs = path.stat().st_mtime >= key_input_latest_mtime
-    strict_identity_tuple_match = identity_id_match and pack_path_match and prompt_path_match
-
-    reasons: list[str] = []
-    if not identity_id_match:
-        reasons.append("identity_id_mismatch")
-    if not catalog_path_match:
-        reasons.append("catalog_path_mismatch_or_missing")
-    if not pack_path_match:
-        reasons.append("pack_path_mismatch_or_missing")
-    if not prompt_path_match:
-        reasons.append("prompt_path_mismatch_or_missing")
-    if not prompt_sha_match:
-        reasons.append("prompt_sha_mismatch_or_missing")
-    if not report_newer_than_key_inputs:
-        reasons.append("report_older_than_key_inputs")
-
-    score = 0
-    score += 32 if identity_id_match else 0
-    score += 16 if pack_path_match else 0
-    score += 8 if prompt_sha_match else 0
-    score += 4 if prompt_path_match else 0
-    score += 2 if catalog_path_match else 0
-    score += 1 if report_newer_than_key_inputs else 0
-    report_mtime = path.stat().st_mtime
-
-    return CandidateEval(
-        path=path,
-        identity_id_match=identity_id_match,
-        catalog_path_match=catalog_path_match,
-        pack_path_match=pack_path_match,
-        prompt_path_match=prompt_path_match,
-        prompt_sha_match=prompt_sha_match,
-        report_newer_than_key_inputs=report_newer_than_key_inputs,
-        strict_identity_tuple_match=strict_identity_tuple_match,
-        score=score,
-        report_mtime=report_mtime,
-        stale_reasons=reasons,
-        report_data=data,
-    )
-
-
-def _select_best(candidates: list[CandidateEval]) -> CandidateEval:
-    if not candidates:
-        raise RuntimeError("no_execution_report_candidates")
-    return sorted(candidates, key=lambda c: (c.score, c.report_mtime), reverse=True)[0]
 
 
 def main() -> int:
@@ -252,13 +96,29 @@ def main() -> int:
     key_inputs = [prompt_path, task_path]
     key_input_latest_mtime = max(p.stat().st_mtime for p in key_inputs)
 
-    raw_candidates = _collect_candidates(args.identity_id, resolved_pack, args.report)
+    if args.report.strip():
+        raw_candidates = [Path(args.report).expanduser().resolve()] if Path(args.report).expanduser().resolve().exists() else []
+    else:
+        raw_candidates = collect_execution_reports(
+            resolved_pack,
+            args.identity_id,
+            include_fallback_roots=False,
+            include_generic_upgrade_json=True,
+        )
+        if not raw_candidates:
+            raw_candidates = collect_execution_reports(
+                resolved_pack,
+                args.identity_id,
+                include_fallback_roots=True,
+                include_generic_upgrade_json=True,
+            )
+
     evaluated = [
-        _eval_candidate(
+        evaluate_report_candidate(
             p,
             identity_id=args.identity_id,
             catalog_path=catalog_path,
-            resolved_pack=resolved_pack,
+            resolved_pack_path=resolved_pack,
             prompt_path=prompt_path,
             prompt_sha=prompt_sha,
             key_input_latest_mtime=key_input_latest_mtime,
@@ -327,9 +187,9 @@ def main() -> int:
                 print(f"[HINT] {hint}")
                 print(json.dumps(payload, ensure_ascii=False, indent=2))
             return 1 if args.execution_report_policy == "strict" else 0
-        selected = _select_best(strict_tuple_candidates)
+        selected = select_best_evaluated_candidate(strict_tuple_candidates)
     else:
-        selected = _select_best(evaluated)
+        selected = select_best_evaluated_candidate(evaluated)
     checks = {
         "identity_id_match": selected.identity_id_match,
         "catalog_path_match": selected.catalog_path_match,

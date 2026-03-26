@@ -24,7 +24,8 @@ from identity_weak_live_linkage_common import (
     resolve_weak_live_linkage_contract,
     weak_live_linkage_contract_issues,
 )
-from tool_vendor_governance_common import ACTIVE_EXECUTION_POINTER_REL, resolve_report_path
+from strict_live_evidence_resolution_common import resolve_active_execution_context
+from tool_vendor_governance_common import resolve_report_path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
@@ -123,30 +124,6 @@ def _run_json_validator(cmd: list[str], status_field: str) -> dict[str, Any]:
         "stdout_tail": (proc.stdout or "")[-400:],
         "stderr_tail": (proc.stderr or "")[-400:],
     }
-
-
-def _current_run_pointer(pack_root: Path) -> Path | None:
-    pointer_path = (pack_root / ACTIVE_EXECUTION_POINTER_REL).resolve()
-    if not pointer_path.exists():
-        return None
-    try:
-        doc = json.loads(pointer_path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-    if not isinstance(doc, dict):
-        return None
-    for key in ("report_path", "execution_report", "selected_report_path"):
-        raw = clean_string(doc.get(key))
-        if not raw:
-            continue
-        p = Path(raw).expanduser()
-        if not p.is_absolute():
-            p = (pack_root / raw).resolve()
-        else:
-            p = p.resolve()
-        if p.exists():
-            return p
-    return None
 
 
 def _resolve_contract_paths(pack_root: Path, contract_doc: dict[str, Any]) -> list[Path]:
@@ -461,10 +438,18 @@ def _sample_family(
         if downstream_projection_present and (downstream_next_hop_absorbed or run_binding_status == STATUS_PASS_REQUIRED)
         else STATUS_FAIL_REQUIRED
     )
+    support_artifact_origins = sorted({origin for origin in origins if origin in {"sample", "history"}})
+    effective_evidence_origin = (
+        "live"
+        if downstream_all_live_proof
+        and downstream_projection_present
+        and (downstream_next_hop_absorbed or run_binding_status == STATUS_PASS_REQUIRED)
+        else history_or_sample
+    )
     reasons: list[str] = []
     if artifact_status != STATUS_PASS_REQUIRED:
         reasons.append("sample_or_history_artifact_missing")
-    if any(origin in {"sample", "history"} for origin in origins):
+    if support_artifact_origins and effective_evidence_origin != "live":
         reasons.append("sample_or_history_artifact_selected_on_strict_lane")
     if run_binding_status != STATUS_PASS_REQUIRED:
         reasons.append("sample_or_history_live_run_binding_unproven")
@@ -482,11 +467,12 @@ def _sample_family(
             artifact_status=artifact_status,
             run_binding_status=run_binding_status,
             consumption_status=consumption_status,
-            evidence_origin=history_or_sample,
+            evidence_origin=effective_evidence_origin,
             reasons=sorted(set(reasons)),
             extra={
                 "selected_paths": [str(path) for path in selected_paths],
                 "downstream_projection_present": downstream_projection_present,
+                "support_artifact_origins": support_artifact_origins,
             },
         ),
         sample_validator_rows,
@@ -739,6 +725,7 @@ def main() -> int:
         choices=["activate", "update", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection"],
         default="validate",
     )
+    ap.add_argument("--force-required", action="store_true")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
@@ -777,10 +764,19 @@ def main() -> int:
         return 1
 
     required, contract_doc, contract_key = resolve_weak_live_linkage_contract(task_doc)
+    if args.force_required:
+        required = True
     contract_issues = weak_live_linkage_contract_issues(contract_doc if isinstance(contract_doc, dict) else {}) if required else ["required_contract_disabled_or_missing"]
     philosophy_truth_lifecycle_status = STATUS_PASS_REQUIRED if required and not any(issue.endswith("mismatch") and issue.startswith("truth_") for issue in contract_issues) and "philosophy_anchor_refs_mismatch" not in contract_issues else STATUS_FAIL_REQUIRED
     contract_status = STATUS_PASS_REQUIRED if required and not contract_issues else STATUS_FAIL_REQUIRED
-    current_run_pointer = _current_run_pointer(pack_root)
+    active_execution_context = resolve_active_execution_context(pack_root)
+    current_run_pointer_token = clean_string(active_execution_context.get("report_path"))
+    current_run_pointer = (
+        Path(current_run_pointer_token).expanduser().resolve()
+        if current_run_pointer_token and Path(current_run_pointer_token).expanduser().exists()
+        else None
+    )
+    current_run_pointer_resolution_mode = clean_string(active_execution_context.get("report_resolution_mode")) or "pointer_missing"
 
     prompt_family, prompt_bootstrap, prompt_matrix, prompt_derivation_rows = _prompt_family(
         catalog_path=catalog_path or Path(""),
@@ -899,6 +895,7 @@ def main() -> int:
         ).upper(),
         "philosophy_truth_lifecycle_status": philosophy_truth_lifecycle_status,
         "current_run_pointer": str(current_run_pointer) if current_run_pointer else "",
+        "current_run_pointer_resolution_mode": current_run_pointer_resolution_mode,
         "contract_issues": contract_issues,
         "family_rows": family_rows,
         "component_validator_rows": {

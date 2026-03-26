@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+from dataclasses import dataclass
 import glob
 import json
 from pathlib import Path
@@ -9,6 +10,37 @@ from typing import Any
 import yaml
 
 ACTIVE_EXECUTION_POINTER_REL = Path("runtime/state/active_execution_report.json")
+TOOL_VENDOR_GOVERNANCE_REPORT_DIR_REL = Path("runtime/reports/tool-vendor-governance")
+
+IDENTITY_UPGRADE_REPORT_SELECTION_MODE_ACTIVE_EXECUTION_POINTER = "active_execution_pointer"
+IDENTITY_UPGRADE_REPORT_SELECTION_MODE_CANDIDATE_ROOT_LATEST = "candidate_root_latest_report"
+IDENTITY_UPGRADE_REPORT_SELECTION_MODE_EXPLICIT_REPORT_OVERRIDE = "explicit_report_override"
+IDENTITY_UPGRADE_REPORT_SELECTION_MODE_NONE = "no_admissible_report"
+
+IDENTITY_UPGRADE_REPORT_AUTHORITY_CLASS_ACTIVE_EXECUTION_POINTER = (
+    "active_execution_pointer_pack_local_report"
+)
+IDENTITY_UPGRADE_REPORT_AUTHORITY_CLASS_CANDIDATE_ROOT_LATEST = (
+    "candidate_root_latest_pack_local_report"
+)
+IDENTITY_UPGRADE_REPORT_AUTHORITY_CLASS_EXPLICIT_REPORT_OVERRIDE = "explicit_report_override"
+IDENTITY_UPGRADE_REPORT_AUTHORITY_CLASS_NONE = "no_selected_report"
+
+IDENTITY_UPGRADE_REPORT_POINTER_RESOLUTION_MODE_EXPLICIT_REPORT_OVERRIDE = (
+    "explicit_report_override"
+)
+IDENTITY_UPGRADE_REPORT_POINTER_RESOLUTION_MODE_EXPLICIT_REPORT_OVERRIDE_MISSING = (
+    "explicit_report_override_missing"
+)
+
+
+@dataclass(frozen=True)
+class LatestIdentityUpgradeReportResolution:
+    selected_report: Path | None
+    selection_mode: str
+    selected_report_authority_class: str
+    pointer_resolution_mode: str
+    pointer_path: Path | None
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -173,7 +205,37 @@ def resolve_report_path(
     return None
 
 
-def _candidate_upgrade_report_roots(pack_root: Path) -> list[Path]:
+def materialize_report_path(
+    *,
+    pattern: str,
+    identity_id: str,
+    pack_root: Path,
+    timestamp_token: str | int,
+) -> Path:
+    raw = str(pattern or "").strip()
+    if not raw:
+        raise ValueError("report pattern missing")
+    materialized = raw.replace("<identity-id>", str(identity_id or "").strip())
+    if "*" in materialized:
+        materialized = materialized.replace("*", str(timestamp_token))
+    path = Path(materialized).expanduser()
+    if path.is_absolute():
+        return path.resolve()
+
+    normalized = materialized.replace("\\", "/")
+    pack_resolved = pack_root.expanduser().resolve()
+    workspace_root = _workspace_root_from_pack(pack_resolved)
+
+    if normalized.startswith("identity/runtime/"):
+        return (pack_resolved / normalized[len("identity/") :]).resolve()
+    if normalized.startswith("runtime/"):
+        return (pack_resolved / normalized).resolve()
+    if workspace_root is not None:
+        return (workspace_root / normalized).resolve()
+    return (pack_resolved / normalized).resolve()
+
+
+def candidate_upgrade_report_roots(pack_root: Path) -> list[Path]:
     roots: list[Path] = []
     seen: set[str] = set()
 
@@ -197,40 +259,63 @@ def _candidate_upgrade_report_roots(pack_root: Path) -> list[Path]:
     return roots
 
 
-def _read_active_execution_report_pointer(pack_root: Path, identity_id: str) -> Path | None:
+def _candidate_upgrade_report_roots(pack_root: Path) -> list[Path]:
+    # Backward-compatible private alias for older call sites inside this module.
+    return candidate_upgrade_report_roots(pack_root)
+
+
+def _resolve_active_execution_report_pointer(
+    pack_root: Path,
+    identity_id: str,
+) -> tuple[Path | None, str, Path | None]:
     pointer_path = (pack_root.resolve() / ACTIVE_EXECUTION_POINTER_REL).resolve()
     if not pointer_path.exists():
-        return None
+        return None, "pointer_missing", pointer_path
     try:
         pointer = load_json(pointer_path)
     except Exception:
-        return None
+        return None, "pointer_parse_failed", pointer_path
     report_raw = str(pointer.get("report_path", "")).strip()
     run_id = str(pointer.get("run_id", "")).strip()
     if not report_raw:
-        return None
-    report_path = Path(report_raw).expanduser().resolve()
+        return None, "pointer_report_path_missing", pointer_path
+    report_path = Path(report_raw).expanduser()
+    if not report_path.is_absolute():
+        report_path = (pack_root.resolve() / report_path).resolve()
+    else:
+        report_path = report_path.resolve()
     if not report_path.exists() or not report_path.is_file():
-        return None
+        return None, "pointer_report_missing", pointer_path
     name = report_path.name
     if not name.startswith("identity-upgrade-exec-") or not name.endswith(".json"):
-        return None
+        return None, "pointer_report_name_invalid", pointer_path
     if name.endswith("-patch-plan.json"):
-        return None
+        return None, "pointer_report_name_invalid", pointer_path
     normalized = str(identity_id or "").strip()
     if normalized not in {"", "*"} and f"identity-upgrade-exec-{normalized}-" not in name:
-        return None
+        return None, "pointer_identity_mismatch", pointer_path
     if run_id and run_id not in name:
         # Pointer stale / mismatched run id.
-        return None
-    return report_path
+        return None, "pointer_run_id_mismatch", pointer_path
+    candidate_roots = _candidate_upgrade_report_roots(pack_root)
+    if not any(path_within(report_path, root) for root in candidate_roots):
+        # Runtime active-report pointers are pack-local authority hints. A copied
+        # or relocated pack may inherit an absolute pointer that still targets
+        # the source pack; reject that drift and fall back to local discovery
+        # rather than mutating a foreign report through the cloned runtime.
+        return None, "external_pointer_report_rejected", pointer_path
+    return report_path, "pointer_candidate_root_report", pointer_path
 
 
-def latest_identity_upgrade_report(identity_id: str, pack_root: Path) -> Path | None:
-    pointed = _read_active_execution_report_pointer(pack_root, identity_id)
-    if pointed is not None:
-        return pointed
+def _read_active_execution_report_pointer(pack_root: Path, identity_id: str) -> Path | None:
+    pointed_report, _resolution_mode, _pointer_path = _resolve_active_execution_report_pointer(
+        pack_root,
+        identity_id,
+    )
+    return pointed_report
 
+
+def _discover_latest_identity_upgrade_report(identity_id: str, pack_root: Path) -> Path | None:
     rows: list[Path] = []
     normalized = str(identity_id or "").strip()
     if normalized in {"", "*"}:
@@ -253,6 +338,102 @@ def latest_identity_upgrade_report(identity_id: str, pack_root: Path) -> Path | 
         return None
     rows.sort(key=lambda p: p.stat().st_mtime)
     return rows[-1]
+
+
+def resolve_latest_identity_upgrade_report(
+    identity_id: str,
+    pack_root: Path,
+) -> LatestIdentityUpgradeReportResolution:
+    pointed, pointer_resolution_mode, pointer_path = _resolve_active_execution_report_pointer(
+        pack_root,
+        identity_id,
+    )
+    if pointed is not None:
+        return LatestIdentityUpgradeReportResolution(
+            selected_report=pointed,
+            selection_mode=IDENTITY_UPGRADE_REPORT_SELECTION_MODE_ACTIVE_EXECUTION_POINTER,
+            selected_report_authority_class=(
+                IDENTITY_UPGRADE_REPORT_AUTHORITY_CLASS_ACTIVE_EXECUTION_POINTER
+            ),
+            pointer_resolution_mode=pointer_resolution_mode,
+            pointer_path=pointer_path,
+        )
+
+    fallback_report = _discover_latest_identity_upgrade_report(identity_id, pack_root)
+    if fallback_report is not None:
+        return LatestIdentityUpgradeReportResolution(
+            selected_report=fallback_report,
+            selection_mode=IDENTITY_UPGRADE_REPORT_SELECTION_MODE_CANDIDATE_ROOT_LATEST,
+            selected_report_authority_class=IDENTITY_UPGRADE_REPORT_AUTHORITY_CLASS_CANDIDATE_ROOT_LATEST,
+            pointer_resolution_mode=pointer_resolution_mode,
+            pointer_path=pointer_path,
+        )
+
+    return LatestIdentityUpgradeReportResolution(
+        selected_report=None,
+        selection_mode=IDENTITY_UPGRADE_REPORT_SELECTION_MODE_NONE,
+        selected_report_authority_class=IDENTITY_UPGRADE_REPORT_AUTHORITY_CLASS_NONE,
+        pointer_resolution_mode=pointer_resolution_mode,
+        pointer_path=pointer_path,
+    )
+
+
+def resolve_identity_upgrade_report_selection(
+    identity_id: str,
+    pack_root: Path,
+    *,
+    explicit_report: str = "",
+) -> LatestIdentityUpgradeReportResolution:
+    explicit_token = str(explicit_report or "").strip()
+    if explicit_token:
+        explicit_path = Path(explicit_token).expanduser().resolve()
+        if explicit_path.exists() and explicit_path.is_file():
+            return LatestIdentityUpgradeReportResolution(
+                selected_report=explicit_path,
+                selection_mode=IDENTITY_UPGRADE_REPORT_SELECTION_MODE_EXPLICIT_REPORT_OVERRIDE,
+                selected_report_authority_class=(
+                    IDENTITY_UPGRADE_REPORT_AUTHORITY_CLASS_EXPLICIT_REPORT_OVERRIDE
+                ),
+                pointer_resolution_mode=(
+                    IDENTITY_UPGRADE_REPORT_POINTER_RESOLUTION_MODE_EXPLICIT_REPORT_OVERRIDE
+                ),
+                pointer_path=None,
+            )
+        return LatestIdentityUpgradeReportResolution(
+            selected_report=None,
+            selection_mode=IDENTITY_UPGRADE_REPORT_SELECTION_MODE_EXPLICIT_REPORT_OVERRIDE,
+            selected_report_authority_class=(
+                IDENTITY_UPGRADE_REPORT_AUTHORITY_CLASS_EXPLICIT_REPORT_OVERRIDE
+            ),
+            pointer_resolution_mode=(
+                IDENTITY_UPGRADE_REPORT_POINTER_RESOLUTION_MODE_EXPLICIT_REPORT_OVERRIDE_MISSING
+            ),
+            pointer_path=None,
+        )
+    return resolve_latest_identity_upgrade_report(identity_id, pack_root)
+
+
+def build_identity_upgrade_report_selection_projection(
+    resolution: LatestIdentityUpgradeReportResolution,
+    *,
+    field_prefix: str = "report",
+) -> dict[str, Any]:
+    prefix = str(field_prefix or "").strip() or "report"
+    return {
+        f"{prefix}_selected_path": (
+            str(resolution.selected_report) if resolution.selected_report is not None else ""
+        ),
+        f"{prefix}_selection_mode": str(resolution.selection_mode or "").strip(),
+        f"{prefix}_selected_authority_class": str(
+            resolution.selected_report_authority_class or ""
+        ).strip(),
+        f"{prefix}_pointer_resolution_mode": str(resolution.pointer_resolution_mode or "").strip(),
+        f"{prefix}_pointer_path": str(resolution.pointer_path) if resolution.pointer_path is not None else "",
+    }
+
+
+def latest_identity_upgrade_report(identity_id: str, pack_root: Path) -> Path | None:
+    return resolve_latest_identity_upgrade_report(identity_id, pack_root).selected_report
 
 
 def path_within(path: Path, root: Path) -> bool:

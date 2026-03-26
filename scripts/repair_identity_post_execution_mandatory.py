@@ -7,13 +7,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from capability_activation_projection_common import CAPABILITY_ACTIVATION_REPORT_REQUIRED_FIELDS
 from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID, FINAL_EMIT_POLICY_MODE, FINAL_EMIT_SCHEMA_ID
+from post_execution_report_repair_common import enrich_post_execution_report
 from tool_vendor_governance_common import boolish, latest_identity_upgrade_report, load_json, resolve_pack_and_task
 from writeback_continuity_common import derive_writeback_continuity_fields
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
+STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
 
 
 def _nonempty(value: Any) -> bool:
@@ -80,14 +83,19 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Repair post-execution mandatory fields in the latest upgrade report.")
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--identity-id", required=True)
+    ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--report", default="")
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
     catalog = Path(args.catalog).expanduser().resolve()
+    repo_catalog = Path(args.repo_catalog).expanduser().resolve()
     if not catalog.exists():
         print(f"[FAIL] catalog not found: {catalog}")
+        return 2
+    if not repo_catalog.exists():
+        print(f"[FAIL] repo catalog not found: {repo_catalog}")
         return 2
 
     try:
@@ -202,6 +210,18 @@ def main() -> int:
         artifacts.append(str(receipt_path))
     report_after["artifacts"] = artifacts
 
+    projection_result = enrich_post_execution_report(
+        report_doc=report_after,
+        report_path=report_path,
+        catalog_path=catalog,
+        repo_catalog_path=repo_catalog,
+        identity_id=args.identity_id,
+        operation="readiness",
+    )
+    projected_report = projection_result.get("report_after")
+    if isinstance(projected_report, dict):
+        report_after = projected_report
+
     changed_keys = sorted([k for k in report_after.keys() if report_before.get(k) != report_after.get(k)])
     report_changed = report_after != report_before
     receipt_written = False
@@ -222,16 +242,31 @@ def main() -> int:
         receipt_written = True
 
     stale_reasons: list[str] = []
+    stale_reasons.extend(list(projection_result.get("stale_reasons") or []))
+    observation_stale_reasons: list[str] = list(projection_result.get("observation_stale_reasons") or [])
+    capability_missing_after = list(projection_result.get("capability_activation_missing_fields_after") or [])
+    if capability_missing_after:
+        stale_reasons.append("capability_activation_required_fields_still_missing_after_repair")
     if report_changed and not args.apply:
         stale_reasons.append("apply_required_for_post_execution_report_repair")
+
+    if "apply_required_for_post_execution_report_repair" in stale_reasons:
+        error_code = "IP-WRB-REPAIR-DRYRUN"
+    elif stale_reasons:
+        error_code = "IP-WRB-REPAIR-002"
+    else:
+        error_code = ""
 
     payload = {
         "identity_id": args.identity_id,
         "catalog_path": str(catalog),
+        "repo_catalog_path": str(repo_catalog),
         "resolved_pack_path": str(pack_path),
         "report_selected_path": str(report_path),
         "post_execution_report_repair_status": STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED,
-        "error_code": "" if not stale_reasons else "IP-WRB-REPAIR-DRYRUN",
+        "repair_blocking_status": STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED,
+        "repair_observation_status": STATUS_WARN_NON_BLOCKING if observation_stale_reasons else STATUS_PASS_REQUIRED,
+        "error_code": error_code,
         "report_updated": bool(args.apply and report_changed),
         "receipt_written": bool(receipt_written),
         "changed_key_count": len(changed_keys),
@@ -239,6 +274,45 @@ def main() -> int:
         "writeback_status_after": writeback_status,
         "writeback_mode_after": writeback_mode,
         "outlet_preflight_receipt_after": outlet_receipt,
+        "capability_activation_required_fields": list(CAPABILITY_ACTIVATION_REPORT_REQUIRED_FIELDS),
+        "capability_activation_missing_fields_before": list(
+            projection_result.get("capability_activation_missing_fields_before") or []
+        ),
+        "capability_activation_missing_fields_after": capability_missing_after,
+        "capability_activation_projection_status": str(
+            ((projection_result.get("capability_activation_projection") or {}).get("status", "")) or ""
+        ).strip(),
+        "projection_applicability_status_after": str(
+            ((projection_result.get("projection_applicability") or {}).get("status", "")) or STATUS_SKIPPED_NOT_REQUIRED
+        ).strip(),
+        "projection_report_surface_class": str(
+            ((projection_result.get("projection_applicability") or {}).get("report_surface_class", "")) or ""
+        ).strip(),
+        "projection_applicability_reason": str(
+            ((projection_result.get("projection_applicability") or {}).get("applicability_reason", "")) or ""
+        ).strip(),
+        "post_execution_validation_status_after": str(
+            ((projection_result.get("post_execution_validation") or {}).get("status", "")) or ""
+        ).strip(),
+        "writeback_continuity_status_after": str(
+            ((projection_result.get("writeback_continuity_validation") or {}).get("status", "")) or ""
+        ).strip(),
+        "terminal_truth_validation_status_after": str(
+            ((projection_result.get("terminal_truth_validation") or {}).get("status", "")) or ""
+        ).strip(),
+        "terminal_truth_class_after": str(
+            (report_after.get("terminal_truth_class", "")) or ""
+        ).strip(),
+        "terminal_state_class_after": str(
+            (report_after.get("terminal_state_class", "")) or ""
+        ).strip(),
+        "negative_feedback_class_after": str(
+            (report_after.get("negative_feedback_class", "")) or ""
+        ).strip(),
+        "publishable_after": bool(report_after.get("publishable", False)),
+        "canonical_result_eligible_after": bool(report_after.get("canonical_result_eligible", False)),
+        "observation_stale_reasons": observation_stale_reasons,
+        "projection_enrichment": projection_result,
         "stale_reasons": stale_reasons,
     }
     _emit(payload, json_only=args.json_only)

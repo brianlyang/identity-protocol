@@ -224,6 +224,7 @@ Interpretation rule:
    - auto-wires the contract for new packs;
 5. `scripts/repair_contract_backfill.py`
    - backfills the contract for adopted packs and projects the shared fields onto the active execution report;
+   - projection integrity must stay separate from terminal cleanliness: coherently projected `review_pending` / non-clean verdicts remain observation-side output, while only projection-structure failures are allowed to fail-close the shared backfill lane itself;
 6. `scripts/execute_identity_upgrade.py`
    - emits the same projection family onto fresh execution reports;
 7. `scripts/required_gate_bundle_runner.py`, `scripts/validate_required_contract_coverage.py`, and `scripts/ci/run_required_runtime_gates_ci.sh`
@@ -254,7 +255,8 @@ Current landed evidence:
    - placeholder fixture -> `negative_feedback_class=placeholder_result`, `terminal_state_machine_status=PASS_REQUIRED`, `terminal_state_class=repair_pending`
    - adoption-mismatch fixture -> `terminal_state_machine_status=FAIL_REQUIRED` with explicit `state_machine_blockers` projection mismatch evidence
    - clean-alias-drift fixture -> `terminal_clean_alias_surface_status=FAIL_REQUIRED` when generic `status` / `done` surfaces claim completed-clean semantics while the higher-order lane remains non-clean
-3. direct runtime replay on `base-repo-audit-expert-v3` against its latest workspace-local execution report now fail-closes as non-clean terminal truth because the active report remains pre-mutation-gate blocked (`all_ok=false`, `writeback_status=MISSING`, `next_action=satisfy_pre_mutation_gate_and_rerun_update`). The higher-order validator now keeps the degraded loopback projection coherent (`negative_feedback_terminal_veto_status=PASS_REQUIRED`) while still refusing to promote the report into clean terminal truth, while separately projecting `terminal_state_machine_status=PASS_REQUIRED` when the non-clean state itself is coherent.
+3. the closeout consumer family (`scripts/validate_post_execution_mandatory.py`, `scripts/validate_writeback_continuity.py`, and `scripts/validate_terminal_truth_cleanliness.py`) now self-describes report provenance through `report_selection_mode`, `report_selected_authority_class`, and `report_pointer_resolution_mode`, so clean-terminal / writeback judgment no longer collapses down to a bare `report_selected_path`.
+4. direct runtime replay on `base-repo-audit-expert-v3` against its latest workspace-local execution report now fail-closes as non-clean terminal truth because the active report remains pre-mutation-gate blocked (`all_ok=false`, `writeback_status=MISSING`, `next_action=satisfy_pre_mutation_gate_and_rerun_update`). The higher-order validator now keeps the degraded loopback projection coherent (`negative_feedback_terminal_veto_status=PASS_REQUIRED`) while still refusing to promote the report into clean terminal truth, while separately projecting `terminal_state_machine_status=PASS_REQUIRED` when the non-clean state itself is coherent.
 
 ## 7) Closure addendum (authoritative current-state judgment)
 

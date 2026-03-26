@@ -89,6 +89,7 @@ The stream is no longer docs-only because:
 
 1. `scripts/create_identity_pack.py` now auto-wires the contract;
 2. `scripts/repair_contract_backfill.py` backfills the contract and projects the shared fields onto the active execution report for adopted packs;
+   - audit now also freezes that this shared backfill lane must distinguish projection integrity from dirty-terminal observation: a coherently projected `review_required_execution_closure` result remains non-clean, but it is not by itself evidence that the projection lane failed;
 3. `scripts/execute_identity_upgrade.py` now writes the same projection family onto fresh reports;
 4. required-gate / readiness / CI coverage now includes the validator and probe lane.
 
@@ -136,5 +137,6 @@ Current evidence set:
 5. dirty terminal states now fail-close instead of ambiguously surviving as “done enough”;
 6. non-clean states are now machine-distinguished through explicit terminal-state equivalence classes rather than inferred only from narrative review;
 7. generic completed/done alias surfaces are now subordinated to the same higher-order machine law instead of remaining an ungoverned escape hatch.
+8. the closeout consumer family now also self-describes report-selection provenance (`report_selection_mode`, `report_selected_authority_class`, `report_pointer_resolution_mode`) so audit can distinguish explicit overrides from pack-local pointer authority instead of inferring that distinction from a path string.
 
 That is the correct 1.6.x outcome: the current universe now has one more root-closed / machine-closed boundary, and 1.7.x does not need to inherit this debt.

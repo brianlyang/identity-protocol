@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from tool_vendor_governance_common import ACTIVE_EXECUTION_POINTER_REL
+from tool_vendor_governance_common import ACTIVE_EXECUTION_POINTER_REL, candidate_upgrade_report_roots
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -148,7 +148,58 @@ def _load_json(path: Path) -> dict[str, Any] | None:
     return doc if isinstance(doc, dict) else None
 
 
-def _resolve_report_pointer_path(pack_root: Path, pointer_doc: dict[str, Any]) -> Path | None:
+def _path_within(path: Path, root: Path) -> bool:
+    try:
+        path.expanduser().resolve().relative_to(root.expanduser().resolve())
+        return True
+    except Exception:
+        return False
+
+
+def _path_within_any(path: Path, roots: list[Path]) -> bool:
+    return any(_path_within(path, root) for root in roots)
+
+
+def _derive_pack_local_report_candidate(
+    *,
+    pack_root: Path,
+    report_path: Path,
+    report_doc: dict[str, Any],
+) -> tuple[Path | None, str]:
+    resolved_pack = pack_root.expanduser().resolve()
+    candidate_roots = candidate_upgrade_report_roots(resolved_pack)
+    if _path_within_any(report_path, candidate_roots):
+        return report_path, "pointer_candidate_root_report"
+
+    pointer_run_id = clean_string((report_doc or {}).get("run_id"))
+    rehome_hits: list[Path] = []
+    seen: set[str] = set()
+    for root in candidate_roots:
+        if not root.exists():
+            continue
+        for candidate in root.glob(f"**/{report_path.name}"):
+            if not candidate.exists() or not candidate.is_file():
+                continue
+            resolved_candidate = candidate.expanduser().resolve()
+            key = resolved_candidate.as_posix()
+            if key in seen:
+                continue
+            seen.add(key)
+            candidate_doc = _load_json(resolved_candidate) or {}
+            candidate_run_id = clean_string(candidate_doc.get("run_id"))
+            if pointer_run_id and candidate_run_id and candidate_run_id != pointer_run_id:
+                continue
+            rehome_hits.append(resolved_candidate)
+
+    if rehome_hits:
+        rehome_hits.sort(key=lambda item: item.stat().st_mtime)
+        return rehome_hits[-1], "pointer_report_name_rehomed_candidate_root"
+
+    return None, "external_pointer_report_rejected"
+
+
+def _resolve_report_pointer_path(pack_root: Path, pointer_doc: dict[str, Any]) -> tuple[Path | None, str]:
+    last_resolution_mode = "pointer_report_missing"
     for key in ("report_path", "execution_report", "selected_report_path"):
         raw = clean_string(pointer_doc.get(key))
         if not raw:
@@ -158,15 +209,27 @@ def _resolve_report_pointer_path(pack_root: Path, pointer_doc: dict[str, Any]) -
             candidate = (pack_root / candidate).resolve()
         else:
             candidate = candidate.resolve()
-        if candidate.exists():
-            return candidate
-    return None
+        if not candidate.exists():
+            continue
+        report_doc = _load_json(candidate) or {}
+        resolved_candidate, resolution_mode = _derive_pack_local_report_candidate(
+            pack_root=pack_root,
+            report_path=candidate,
+            report_doc=report_doc,
+        )
+        last_resolution_mode = resolution_mode
+        if resolved_candidate is not None and resolved_candidate.exists():
+            return resolved_candidate, resolution_mode
+    return None, last_resolution_mode
 
 
 def resolve_active_execution_context(pack_root: Path) -> dict[str, Any]:
     pointer_path = (pack_root / ACTIVE_EXECUTION_POINTER_REL).resolve()
     pointer_doc = _load_json(pointer_path) if pointer_path.exists() else None
-    report_path = _resolve_report_pointer_path(pack_root, pointer_doc or {}) if isinstance(pointer_doc, dict) else None
+    report_resolution_mode = "pointer_missing"
+    report_path = None
+    if isinstance(pointer_doc, dict):
+        report_path, report_resolution_mode = _resolve_report_pointer_path(pack_root, pointer_doc or {})
     report_doc = _load_json(report_path) if report_path is not None and report_path.exists() else None
     current_run_id = ""
     for doc in (pointer_doc, report_doc):
@@ -178,8 +241,101 @@ def resolve_active_execution_context(pack_root: Path) -> dict[str, Any]:
         "pointer_path": str(pointer_path) if pointer_path.exists() else "",
         "pointer_doc": pointer_doc or {},
         "report_path": str(report_path) if report_path is not None else "",
+        "report_resolution_mode": report_resolution_mode,
         "report_doc": report_doc or {},
         "run_id": current_run_id,
+    }
+
+
+def resolve_current_round_report_context(
+    pack_root: Path,
+    *,
+    explicit_report_path: str = "",
+    requested_run_id: str = "",
+) -> dict[str, Any]:
+    active_context = resolve_active_execution_context(pack_root)
+    explicit_report_token = clean_string(explicit_report_path)
+    selected_path: Path | None = None
+    selection_source = ""
+    if explicit_report_token:
+        explicit_path = Path(explicit_report_token).expanduser()
+        candidate = explicit_path if explicit_path.is_absolute() else (pack_root / explicit_path)
+        candidate = candidate.resolve()
+        if candidate.exists():
+            selected_path = candidate
+            selection_source = "explicit_report_override"
+    if selected_path is None:
+        active_report = clean_string(active_context.get("report_path"))
+        if active_report:
+            candidate = Path(active_report).expanduser().resolve()
+            if candidate.exists():
+                selected_path = candidate
+                selection_source = "active_execution_pointer"
+
+    report_doc = _load_json(selected_path) if isinstance(selected_path, Path) and selected_path.exists() else {}
+    report_run_ids = (
+        extract_run_id_candidates(report_doc or {}, list(DEFAULT_RUN_ID_FIELD_CANDIDATES))
+        if isinstance(report_doc, dict)
+        else []
+    )
+    active_run_id = clean_string(active_context.get("run_id"))
+    requested_token = clean_string(requested_run_id)
+
+    effective_run_id = ""
+    effective_run_id_source = ""
+    if requested_token and requested_token in report_run_ids:
+        effective_run_id = requested_token
+        effective_run_id_source = "requested_run_id_matched_report"
+    elif active_run_id and active_run_id in report_run_ids:
+        effective_run_id = active_run_id
+        effective_run_id_source = "active_execution_pointer_matched_report"
+    elif report_run_ids:
+        effective_run_id = report_run_ids[0]
+        effective_run_id_source = "selected_report_run_id"
+    elif requested_token:
+        effective_run_id = requested_token
+        effective_run_id_source = "requested_run_id_unmatched"
+    elif active_run_id:
+        effective_run_id = active_run_id
+        effective_run_id_source = "active_execution_pointer_unmatched"
+
+    effective_session_id = ""
+    effective_session_id_source = ""
+    for doc, source in (
+        (report_doc if isinstance(report_doc, dict) else {}, "selected_report_session_id"),
+        (active_context.get("pointer_doc", {}) if isinstance(active_context.get("pointer_doc"), dict) else {}, "active_execution_pointer_session_id"),
+        (active_context.get("report_doc", {}) if isinstance(active_context.get("report_doc"), dict) else {}, "active_execution_report_session_id"),
+    ):
+        session_token = clean_string(doc.get("session_id"))
+        if session_token:
+            effective_session_id = session_token
+            effective_session_id_source = source
+            break
+    if not effective_session_id and effective_run_id:
+        effective_session_id = f"run:{effective_run_id}"
+        effective_session_id_source = "derived_from_effective_run_id"
+
+    report_work_layer = clean_string((report_doc or {}).get("work_layer")) or clean_string(
+        (report_doc or {}).get("resolved_work_layer")
+    )
+    report_source_layer = clean_string((report_doc or {}).get("source_layer")) or clean_string(
+        (report_doc or {}).get("resolved_source_layer")
+    )
+
+    return {
+        "active_execution_pointer_path": clean_string(active_context.get("pointer_path")),
+        "active_execution_report_path": clean_string(active_context.get("report_path")),
+        "active_execution_run_id": active_run_id,
+        "selected_report_path": str(selected_path) if selected_path is not None else "",
+        "selected_report_source": selection_source,
+        "selected_report_doc": report_doc or {},
+        "selected_report_run_ids": report_run_ids,
+        "selected_report_work_layer": report_work_layer,
+        "selected_report_source_layer": report_source_layer,
+        "effective_run_id": effective_run_id,
+        "effective_run_id_source": effective_run_id_source,
+        "effective_session_id": effective_session_id,
+        "effective_session_id_source": effective_session_id_source,
     }
 
 

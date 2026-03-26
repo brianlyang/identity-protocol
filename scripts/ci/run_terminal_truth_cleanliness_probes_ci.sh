@@ -126,23 +126,36 @@ alias_conflict_report = {
     "artifacts": [],
 }
 (report_root := pack_root / 'runtime' / 'reports').mkdir(parents=True, exist_ok=True)
+(state_root := pack_root / 'runtime' / 'state').mkdir(parents=True, exist_ok=True)
 for name, doc in {
-    'identity-upgrade-exec-terminal-truth-clean-run.json': clean_report,
-    'identity-upgrade-exec-terminal-truth-review-run.json': review_required_report,
-    'identity-upgrade-exec-terminal-truth-degraded-run.json': degraded_report,
-    'identity-upgrade-exec-terminal-truth-placeholder-run.json': placeholder_report,
-    'identity-upgrade-exec-terminal-truth-conflict-run.json': conflict_report,
-    'identity-upgrade-exec-terminal-truth-alias-conflict-run.json': alias_conflict_report,
+    'identity-upgrade-exec-terminal-truth-probe-terminal-truth-clean-run.json': clean_report,
+    'identity-upgrade-exec-terminal-truth-probe-terminal-truth-review-run.json': review_required_report,
+    'identity-upgrade-exec-terminal-truth-probe-terminal-truth-degraded-run.json': degraded_report,
+    'identity-upgrade-exec-terminal-truth-probe-terminal-truth-placeholder-run.json': placeholder_report,
+    'identity-upgrade-exec-terminal-truth-probe-terminal-truth-conflict-run.json': conflict_report,
+    'identity-upgrade-exec-terminal-truth-probe-terminal-truth-alias-conflict-run.json': alias_conflict_report,
 }.items():
     (report_root / name).write_text(json.dumps(doc, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+(state_root / 'active_execution_report.json').write_text(
+    json.dumps(
+        {
+            'run_id': 'terminal-truth-clean-run',
+            'report_path': str((report_root / 'identity-upgrade-exec-terminal-truth-probe-terminal-truth-clean-run.json').resolve()),
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+    + '\n',
+    encoding='utf-8',
+)
 PY
 
-CLEAN_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-clean-run.json"
-REVIEW_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-review-run.json"
-DEGRADED_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-degraded-run.json"
-PLACEHOLDER_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-placeholder-run.json"
-CONFLICT_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-conflict-run.json"
-ALIAS_CONFLICT_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-alias-conflict-run.json"
+CLEAN_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-probe-terminal-truth-clean-run.json"
+REVIEW_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-probe-terminal-truth-review-run.json"
+DEGRADED_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-probe-terminal-truth-degraded-run.json"
+PLACEHOLDER_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-probe-terminal-truth-placeholder-run.json"
+CONFLICT_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-probe-terminal-truth-conflict-run.json"
+ALIAS_CONFLICT_REPORT="${REPORT_ROOT}/identity-upgrade-exec-terminal-truth-probe-terminal-truth-alias-conflict-run.json"
 
 printf '[RUN] clean fixture\n'
 python3 scripts/validate_terminal_truth_cleanliness.py \
@@ -151,6 +164,13 @@ python3 scripts/validate_terminal_truth_cleanliness.py \
   --report "${CLEAN_REPORT}" \
   --skip-support-validators \
   --json-only > "${TMP_ROOT}/clean.json"
+
+printf '[RUN] clean auto-selection fixture\n'
+python3 scripts/validate_terminal_truth_cleanliness.py \
+  --catalog "${TMP_ROOT}/catalog.local.yaml" \
+  --identity-id "${IDENTITY_ID}" \
+  --skip-support-validators \
+  --json-only > "${TMP_ROOT}/clean_auto.json"
 
 printf '[RUN] review-required fixture\n'
 if python3 scripts/validate_terminal_truth_cleanliness.py \
@@ -207,20 +227,28 @@ if python3 scripts/validate_terminal_truth_cleanliness.py \
   exit 1
 fi
 
-python3 - <<'PY' "${TMP_ROOT}/clean.json" "${TMP_ROOT}/review.json" "${TMP_ROOT}/degraded.json" "${TMP_ROOT}/placeholder.json" "${TMP_ROOT}/conflict.json" "${TMP_ROOT}/alias_conflict.json"
+python3 - <<'PY' "${TMP_ROOT}/clean.json" "${TMP_ROOT}/clean_auto.json" "${TMP_ROOT}/review.json" "${TMP_ROOT}/degraded.json" "${TMP_ROOT}/placeholder.json" "${TMP_ROOT}/conflict.json" "${TMP_ROOT}/alias_conflict.json" "${CLEAN_REPORT}"
 import json
 import sys
 from pathlib import Path
 
 clean = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
-review = json.loads(Path(sys.argv[2]).read_text(encoding='utf-8'))
-degraded = json.loads(Path(sys.argv[3]).read_text(encoding='utf-8'))
-placeholder = json.loads(Path(sys.argv[4]).read_text(encoding='utf-8'))
-conflict = json.loads(Path(sys.argv[5]).read_text(encoding='utf-8'))
-alias_conflict = json.loads(Path(sys.argv[6]).read_text(encoding='utf-8'))
+clean_auto = json.loads(Path(sys.argv[2]).read_text(encoding='utf-8'))
+review = json.loads(Path(sys.argv[3]).read_text(encoding='utf-8'))
+degraded = json.loads(Path(sys.argv[4]).read_text(encoding='utf-8'))
+placeholder = json.loads(Path(sys.argv[5]).read_text(encoding='utf-8'))
+conflict = json.loads(Path(sys.argv[6]).read_text(encoding='utf-8'))
+alias_conflict = json.loads(Path(sys.argv[7]).read_text(encoding='utf-8'))
+clean_report_path = str(Path(sys.argv[8]).resolve())
 
 if clean.get('identity_terminal_truth_cleanliness_status') != 'PASS_REQUIRED':
     raise SystemExit('clean fixture top-level status must PASS_REQUIRED')
+if clean.get('report_selection_mode') != 'explicit_report_override':
+    raise SystemExit('clean fixture report_selection_mode must be explicit_report_override')
+if clean.get('report_selected_authority_class') != 'explicit_report_override':
+    raise SystemExit('clean fixture report_selected_authority_class must be explicit_report_override')
+if clean.get('report_pointer_resolution_mode') != 'explicit_report_override':
+    raise SystemExit('clean fixture report_pointer_resolution_mode must be explicit_report_override')
 if clean.get('terminal_truth_class') != 'clean_terminal_truth':
     raise SystemExit('clean fixture terminal_truth_class must be clean_terminal_truth')
 if clean.get('publishable') is not True or clean.get('canonical_result_eligible') is not True:
@@ -230,8 +258,21 @@ if clean.get('negative_feedback_terminal_veto_status') != 'PASS_REQUIRED':
 if clean.get('terminal_state_machine_status') != 'PASS_REQUIRED' or clean.get('terminal_state_class') != 'completed_clean':
     raise SystemExit('clean fixture terminal state machine must classify as completed_clean')
 
+if clean_auto.get('identity_terminal_truth_cleanliness_status') != 'PASS_REQUIRED':
+    raise SystemExit('clean auto-selection fixture top-level status must PASS_REQUIRED')
+if clean_auto.get('report_selected_path') != clean_report_path:
+    raise SystemExit('clean auto-selection fixture must select the active pointer report')
+if clean_auto.get('report_selection_mode') != 'active_execution_pointer':
+    raise SystemExit('clean auto-selection fixture report_selection_mode must be active_execution_pointer')
+if clean_auto.get('report_selected_authority_class') != 'active_execution_pointer_pack_local_report':
+    raise SystemExit('clean auto-selection fixture authority class must be active_execution_pointer_pack_local_report')
+if clean_auto.get('report_pointer_resolution_mode') != 'pointer_candidate_root_report':
+    raise SystemExit('clean auto-selection fixture pointer resolution mode must be pointer_candidate_root_report')
+
 if review.get('execution_closure_status') != 'PASS_REQUIRED':
     raise SystemExit('review-required fixture must preserve execution closure status')
+if review.get('report_selection_mode') != 'explicit_report_override':
+    raise SystemExit('review-required fixture report_selection_mode must be explicit_report_override')
 if review.get('terminal_truth_cleanliness_status') != 'FAIL_REQUIRED':
     raise SystemExit('review-required fixture must fail clean terminal truth status')
 if review.get('terminal_truth_class') != 'review_required_execution_closure':
@@ -247,6 +288,8 @@ if review.get('requires_review') is not True or review.get('requires_human') is 
 
 if degraded.get('execution_closure_status') != 'FAIL_REQUIRED':
     raise SystemExit('degraded fixture must fail execution closure status')
+if degraded.get('report_selection_mode') != 'explicit_report_override':
+    raise SystemExit('degraded fixture report_selection_mode must be explicit_report_override')
 if degraded.get('negative_feedback_class') != 'degraded_execution':
     raise SystemExit('degraded fixture negative_feedback_class must be degraded_execution')
 if degraded.get('negative_feedback_terminal_veto_status') != 'PASS_REQUIRED':

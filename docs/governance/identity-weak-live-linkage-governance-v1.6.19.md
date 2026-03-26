@@ -59,6 +59,11 @@ The authoritative current-state judgment for `v1.6.19` is now:
    - `live_bridge_status=PASS_REQUIRED`
    - `route_live_binding_status=PASS_REQUIRED`;
 6. `bash scripts/ci/run_identity_weak_live_linkage_probes_ci.sh` remains green, but hermetic proof is still bounded hermetic proof only and must not be used as a substitute for real-runtime payload truth.
+7. post-closure hardening now also freezes consumer-side current-run pointer locality inside the weak-live differential-audit owner itself:
+   - `scripts/validate_identity_weak_live_linkage.py` no longer parses `runtime/state/active_execution_report.json` directly;
+   - it must resolve current-run report truth through `resolve_active_execution_context()` and expose `current_run_pointer_resolution_mode`;
+   - foreign active-report pointers must therefore fail-close as `external_pointer_report_rejected` instead of laundering a contract/path hint into fake live-binding evidence.
+8. `bash scripts/ci/run_identity_weak_live_linkage_pointer_locality_probes_ci.sh` is the additive machine-law freeze for that owner-side boundary: it proves that a foreign active pointer cannot upgrade `sample_report_path_pattern` evidence into current-run live truth inside `scripts/validate_identity_weak_live_linkage.py`.
 
 Interpretive rule:
 
@@ -276,6 +281,7 @@ Sample/self-test families remain valid, but strict live closure must differentia
 4. `strict_live_proof_status`
 
 Strict validators must default to live families for strict operations. Sample families may remain for fixture/self-test/fallback interpretation only and must not silently satisfy full strict success.
+When downstream strict-live proof plus next-hop consumption closes the current run, owner aggregation may still preserve sample/history support artifacts in `selected_paths`, but the projected strict-lane `evidence_origin` must flip to `live` instead of relabeling `full_operational_closure` as sample/history truth.
 
 ### 5.3 Loop semantic-center vs live-bridge split
 

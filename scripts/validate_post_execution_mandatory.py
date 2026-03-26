@@ -7,9 +7,15 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from capability_activation_projection_common import CAPABILITY_ACTIVATION_REPORT_REQUIRED_FIELDS
 from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID, FINAL_EMIT_POLICY_MODE
 from protocol_infra_contract import HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS
-from tool_vendor_governance_common import latest_identity_upgrade_report, load_json, resolve_pack_and_task
+from tool_vendor_governance_common import (
+    build_identity_upgrade_report_selection_projection,
+    load_json,
+    resolve_identity_upgrade_report_selection,
+    resolve_pack_and_task,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -32,11 +38,6 @@ MANDATORY_REPORT_FIELDS = (
     "permission_state",
     "writeback_status",
     "next_action",
-    "skills_used",
-    "mcp_tools_used",
-    "tool_calls_used",
-    "capability_activation_status",
-    "capability_activation_error_code",
     "writeback_mode",
     "phase_a_refresh_applied",
     "phase_b_strict_revalidate_status",
@@ -51,6 +52,7 @@ MANDATORY_REPORT_FIELDS = (
     "final_emit_schema_id",
     "final_emit_schema_status",
     "final_emit_contract_status",
+    *CAPABILITY_ACTIVATION_REPORT_REQUIRED_FIELDS,
 )
 
 
@@ -85,11 +87,15 @@ def _parse_json_payload(raw: str) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
-def _resolve_report(identity_id: str, pack_path: Path, explicit: str) -> Path | None:
-    if explicit.strip():
-        p = Path(explicit).expanduser().resolve()
-        return p if p.exists() else None
-    return latest_identity_upgrade_report(identity_id, pack_path)
+def _resolve_report_selection(identity_id: str, pack_path: Path, explicit: str) -> dict[str, Any]:
+    resolution = resolve_identity_upgrade_report_selection(
+        identity_id,
+        pack_path,
+        explicit_report=explicit,
+    )
+    payload = build_identity_upgrade_report_selection_projection(resolution, field_prefix="report")
+    payload["_selected_report_path"] = resolution.selected_report
+    return payload
 
 
 def _run_experience_writeback_validator(
@@ -171,6 +177,10 @@ def main() -> int:
         "post_execution_mandatory_status": STATUS_SKIPPED_NOT_REQUIRED,
         "error_code": "",
         "report_selected_path": "",
+        "report_selection_mode": "",
+        "report_selected_authority_class": "",
+        "report_pointer_resolution_mode": "",
+        "report_pointer_path": "",
         "missing_fields": [],
         "writeback_mode": "",
         "writeback_status": "",
@@ -197,7 +207,9 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 0
 
-    report_path = _resolve_report(args.identity_id, pack_path, args.report)
+    report_selection = _resolve_report_selection(args.identity_id, pack_path, args.report)
+    payload.update({k: v for k, v in report_selection.items() if not k.startswith("_")})
+    report_path = report_selection.get("_selected_report_path")
     if report_path is None:
         payload["error_code"] = ERR_MANDATORY_STATE
         payload["stale_reasons"] = ["execution_report_not_found"]
@@ -209,7 +221,6 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 1
 
-    payload["report_selected_path"] = str(report_path)
     try:
         report = load_json(report_path)
     except Exception as exc:

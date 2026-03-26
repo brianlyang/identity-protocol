@@ -47,6 +47,11 @@ Authoritative current-state audit facts:
    - `custom-creative-ecom-analyst`;
 4. direct self-run on `base-repo-audit-expert-v3` produced `identity-upgrade-exec-base-repo-audit-expert-v3-1774398915.json`, and that report now carries `weak_live_current_run_projection_status=PASS_REQUIRED` plus the projection refs in `artifacts`, proving that producer closure is live-run-owned rather than repair-only;
 5. hermetic probe closure remains green under `bash scripts/ci/run_identity_weak_live_linkage_probes_ci.sh`, but that hermetic proof is still audit-bounded and must not be substituted for real-runtime closure.
+6. audit now also freezes owner-side current-run pointer locality:
+   - `scripts/validate_identity_weak_live_linkage.py` must consume `resolve_active_execution_context()` rather than reparsing `runtime/state/active_execution_report.json` on its own;
+   - the validator must expose `current_run_pointer_resolution_mode`;
+   - foreign active-report pointers must fail-close as `external_pointer_report_rejected` instead of upgrading contract/path hints into fake live evidence.
+7. `bash scripts/ci/run_identity_weak_live_linkage_pointer_locality_probes_ci.sh` is now required additive proof that the weak-live owner itself cannot silently absorb cross-pack absolute report drift.
 
 Interpretive rule:
 
@@ -151,6 +156,9 @@ Latest additive strengthening:
    - default sample replay remains sample/self-test only,
    - active-run-linked live reports can now be auto-selected onto the strict lane without per-validator `--report` overrides;
 5. `scripts/validate_identity_weak_live_linkage.py` now consumes those downstream projections instead of relying only on static path-family interpretation.
+6. owner aggregation now also keeps support artifacts and strict-live truth distinct:
+   - `sample_report_only` may still retain sample/history support paths in `selected_paths`,
+   - but once downstream strict-live proof closes current-run binding plus next-hop consumption, the owner row must project `evidence_origin=live` rather than relabeling full operational closure as sample/history green.
 
 ### 2.5 Loop-center validators currently prove semantic-center readiness more strongly than live bridge closure
 

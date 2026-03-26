@@ -52,6 +52,58 @@ def _unique_strings(values: list[str]) -> list[str]:
     return rows
 
 
+def _canonicalize_current_run_projection_artifacts(
+    *,
+    existing_artifacts: list[str],
+    projection_refs: list[str],
+) -> list[str]:
+    canonical_projection_paths: list[str] = []
+    canonical_projection_names: dict[str, str] = {}
+    for raw in projection_refs:
+        token = clean_string(raw)
+        if not token:
+            continue
+        try:
+            canonical = str(Path(token).expanduser().resolve())
+        except Exception:
+            canonical = token
+        if canonical not in canonical_projection_paths:
+            canonical_projection_paths.append(canonical)
+        name = Path(canonical).name
+        if name and name not in canonical_projection_names:
+            canonical_projection_names[name] = canonical
+
+    normalized: list[str] = []
+    for raw in existing_artifacts:
+        token = clean_string(raw)
+        if not token:
+            continue
+        candidate = token
+        basename = ""
+        try:
+            candidate_path = Path(token).expanduser()
+            if candidate_path.is_absolute() or "/" in token or "\\" in token:
+                candidate = str(candidate_path.resolve())
+                basename = candidate_path.name
+        except Exception:
+            candidate = token
+            basename = Path(token).name if ("/" in token or "\\" in token) else ""
+
+        canonical_for_basename = canonical_projection_names.get(basename, "")
+        if canonical_for_basename and candidate != canonical_for_basename:
+            # Current-run projection artifacts are shared, canonical pack-local surfaces.
+            # If the same projection-owned basename appears from a temp workspace or any
+            # non-canonical lane, keep only the canonical projection path.
+            continue
+        if candidate not in normalized:
+            normalized.append(candidate)
+
+    for canonical in canonical_projection_paths:
+        if canonical not in normalized:
+            normalized.append(canonical)
+    return normalized
+
+
 def _deep_merge_defaults(base: dict[str, Any], current: dict[str, Any]) -> dict[str, Any]:
     merged = deepcopy(base)
     for key, value in (current or {}).items():
@@ -752,7 +804,10 @@ def materialize_current_run_weak_live_projection(
     existing_artifacts = list(report_doc.get("artifacts") or [])
     existing_projection_refs = list(report_doc.get("weak_live_current_run_projection_refs") or [])
     existing_projection_status = clean_string(report_doc.get("weak_live_current_run_projection_status"))
-    merged_artifacts = _unique_strings(existing_artifacts + projection_refs)
+    merged_artifacts = _canonicalize_current_run_projection_artifacts(
+        existing_artifacts=existing_artifacts,
+        projection_refs=projection_refs,
+    )
     if merged_artifacts != existing_artifacts:
         report_doc["artifacts"] = merged_artifacts
         report_changed = True

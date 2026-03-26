@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from resolve_identity_context import resolve_repo_catalog_path
 from terminal_truth_cleanliness_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -21,7 +22,11 @@ from terminal_truth_cleanliness_common import (
     resolve_terminal_truth_cleanliness_contract,
     terminal_truth_cleanliness_contract_issues,
 )
-from tool_vendor_governance_common import latest_identity_upgrade_report, load_json
+from tool_vendor_governance_common import (
+    build_identity_upgrade_report_selection_projection,
+    load_json,
+    resolve_identity_upgrade_report_selection,
+)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
@@ -59,11 +64,15 @@ def _parse_json_payload(raw: str) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
-def _resolve_report(identity_id: str, pack_root: Path, explicit: str) -> Path | None:
-    if clean_string(explicit):
-        path = Path(clean_string(explicit)).expanduser().resolve()
-        return path if path.exists() else None
-    return latest_identity_upgrade_report(identity_id, pack_root)
+def _resolve_report_selection(identity_id: str, pack_root: Path, explicit: str) -> dict[str, Any]:
+    resolution = resolve_identity_upgrade_report_selection(
+        identity_id,
+        pack_root,
+        explicit_report=explicit,
+    )
+    payload = build_identity_upgrade_report_selection_projection(resolution, field_prefix="report")
+    payload["_selected_report_path"] = resolution.selected_report
+    return payload
 
 
 def _run_support_validator(cmd: list[str], *, status_field: str) -> dict[str, Any]:
@@ -100,9 +109,11 @@ def main() -> int:
     args = ap.parse_args()
 
     catalog_path = Path(args.catalog).expanduser().resolve() if clean_string(args.catalog) else None
+    repo_catalog_path = resolve_repo_catalog_path(args.repo_catalog, start=SCRIPT_DIR)
     payload: dict[str, Any] = {
         "identity_id": args.identity_id,
         "catalog_path": str(catalog_path) if catalog_path else "",
+        "repo_catalog_path": str(repo_catalog_path) if repo_catalog_path else "",
         "current_task": clean_string(args.current_task),
         "operation": args.operation,
         "resolved_pack_path": "",
@@ -122,6 +133,10 @@ def main() -> int:
         "identity_terminal_truth_cleanliness_status": STATUS_SKIPPED_NOT_REQUIRED,
         "error_code": "",
         "report_selected_path": "",
+        "report_selection_mode": "",
+        "report_selected_authority_class": "",
+        "report_pointer_resolution_mode": "",
+        "report_pointer_path": "",
         "post_execution_mandatory_status": STATUS_SKIPPED_NOT_REQUIRED,
         "writeback_continuity_status": STATUS_SKIPPED_NOT_REQUIRED,
         "support_validator_mode": "skipped" if args.skip_support_validators else "required",
@@ -180,7 +195,9 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 1
 
-    report_path = _resolve_report(args.identity_id, pack_root, args.report)
+    report_selection = _resolve_report_selection(args.identity_id, pack_root, args.report)
+    payload.update({k: v for k, v in report_selection.items() if not k.startswith("_")})
+    report_path = report_selection.get("_selected_report_path")
     if report_path is None:
         payload["error_code"] = ERR_RUNTIME
         payload["stale_reasons"] = [
@@ -196,7 +213,6 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 1
 
-    payload["report_selected_path"] = str(report_path)
     try:
         report_doc = load_json(report_path)
     except Exception as exc:
@@ -219,7 +235,7 @@ def main() -> int:
                 "--catalog",
                 str(catalog_path),
                 "--repo-catalog",
-                args.repo_catalog,
+                str(repo_catalog_path),
                 "--identity-id",
                 args.identity_id,
                 "--report",
@@ -237,7 +253,7 @@ def main() -> int:
                 "--catalog",
                 str(catalog_path),
                 "--repo-catalog",
-                args.repo_catalog,
+                str(repo_catalog_path),
                 "--identity-id",
                 args.identity_id,
                 "--report",
