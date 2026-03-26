@@ -412,6 +412,13 @@ continues under canonical surface before final fail-close.
 Local short-circuit that suppresses bound component observation merely
 because a bundle contract row drifted is forbidden inside the bundle.
 
+Root-law bundle rows must also keep component status-row coverage policy
+explicit; every bound component must emit one status row before final
+status.
+
+Local finalization on partial component-row coverage is forbidden inside
+the bundle.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

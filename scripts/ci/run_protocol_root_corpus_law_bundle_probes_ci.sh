@@ -81,6 +81,7 @@ assert payload["component_validator_execution_transport_contract"] == "local_dir
 assert payload["component_validator_contract_drift_execution_policy"] == "execute_under_canonical_contract_and_fail_closed_on_drift", payload
 assert payload["component_validator_contract_surface_projection_policy"] == "bundle_summary_disclosed_component_rows_effective_execution_surface", payload
 assert payload["component_validator_observation_continuity_policy"] == "continue_bound_component_observation_under_canonical_surface_before_final_fail_close", payload
+assert payload["component_status_row_coverage_policy"] == "all_bound_components_must_emit_status_rows_before_final_status", payload
 assert payload["bundle_redeclares_required_repo_rel_path_patterns"] is False, payload
 assert payload["bundle_local_required_repo_rel_path_patterns"] == {}, payload
 assert payload["bundle_redeclares_family_surface_binding_governance"] is False, payload
@@ -545,6 +546,65 @@ assert payload["error_code"] == "IP-RCLB-001", payload
 assert "root_corpus_law_bundle_component_validator_observation_continuity_policy_invalid" in payload["stale_reasons"], payload
 assert payload["component_validator_observation_continuity_policy"] == "abort_component_observation_on_bundle_drift", payload
 assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
+PY
+
+COMPONENT_STATUS_ROW_COVERAGE_POLICY_REPO="${TMP_ROOT}/component-status-row-coverage-policy-drift-repo"
+mirror_repo "${COMPONENT_STATUS_ROW_COVERAGE_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_STATUS_ROW_COVERAGE_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_status_row_coverage_policy"] = "partial_component_rows_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_STATUS_ROW_COVERAGE_POLICY_JSON="${TMP_ROOT}/component-status-row-coverage-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_STATUS_ROW_COVERAGE_POLICY_REPO}" \
+  --json-only >"${COMPONENT_STATUS_ROW_COVERAGE_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component status-row coverage policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_STATUS_ROW_COVERAGE_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_status_row_coverage_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_status_row_coverage_policy"] == "partial_component_rows_allowed", payload
+assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
+PY
+
+MISSING_COMPONENT_VALIDATOR_REPO="${TMP_ROOT}/missing-component-validator-repo"
+mirror_repo "${MISSING_COMPONENT_VALIDATOR_REPO}"
+rm -f "${MISSING_COMPONENT_VALIDATOR_REPO}/scripts/validate_protocol_root_corpus_precedence.py"
+
+MISSING_COMPONENT_VALIDATOR_JSON="${TMP_ROOT}/missing-component-validator.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${MISSING_COMPONENT_VALIDATOR_REPO}" \
+  --json-only >"${MISSING_COMPONENT_VALIDATOR_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed missing component validator coverage case"
+  exit 1
+fi
+
+python3 - <<'PY' "${MISSING_COMPONENT_VALIDATOR_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["component_status_row_count"] == payload["component_count"] - 1, payload
+assert "bundle_violation:root_corpus_law_bundle:component_status_row_coverage_incomplete" in payload["stale_reasons"], payload
+assert "bundle_violation:root_corpus_precedence:component_validator_missing" in payload["stale_reasons"], payload
 PY
 
 COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT_REPO="${TMP_ROOT}/component-validator-output-channel-contract-drift-repo"

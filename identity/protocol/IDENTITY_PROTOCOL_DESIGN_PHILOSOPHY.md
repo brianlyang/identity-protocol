@@ -676,6 +676,14 @@ surface before final fail-close.
 The machine world must not use fail-close drift as a pretext for blind
 short-circuit that suppresses bound component observation.
 
+Bundle component status-row coverage policy must stay explicit too.
+
+The admitted policy is every bound component emits one status row before
+final status.
+
+The machine world must not finalize root-law bundle truth on partial
+component-row coverage when bound component set remains known.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

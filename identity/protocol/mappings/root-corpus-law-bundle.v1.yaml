@@ -66,6 +66,7 @@ component_validator_execution_transport_contract: local_direct_subprocess_vector
 component_validator_contract_drift_execution_policy: execute_under_canonical_contract_and_fail_closed_on_drift
 component_validator_contract_surface_projection_policy: bundle_summary_disclosed_component_rows_effective_execution_surface
 component_validator_observation_continuity_policy: continue_bound_component_observation_under_canonical_surface_before_final_fail_close
+component_status_row_coverage_policy: all_bound_components_must_emit_status_rows_before_final_status
 required_component_descriptor_fields:
 - validator_script
 - probe_script
@@ -275,6 +276,11 @@ bundle_anchor_checks:
     surface before final fail-close.
   - The machine world must not use fail-close drift as a pretext for blind
     short-circuit that suppresses bound component observation.
+  - Bundle component status-row coverage policy must stay explicit too.
+  - The admitted policy is every bound component emits one status row before
+    final status.
+  - The machine world must not finalize root-law bundle truth on partial
+    component-row coverage when bound component set remains known.
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root-law bundle discipline'
@@ -459,6 +465,11 @@ bundle_anchor_checks:
     canonical surface before final fail-close.
   - Runtime may not use bundle drift as a reason to suppress otherwise bindable
     component observation before final verdict.
+  - Bundle component status-row coverage policy must also stay explicit.
+  - The admitted runtime policy is every bound component emits one status row
+    before final status.
+  - Runtime may not finalize on partial component-row coverage when the bound
+    component set is already known.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root-law bundle boundary'
@@ -624,6 +635,11 @@ bundle_anchor_checks:
     observation continues under canonical surface before final fail-close.
   - Local short-circuit that suppresses bound component observation merely
     because a bundle contract row drifted is forbidden inside the bundle.
+  - Root-law bundle rows must also keep component status-row coverage policy
+    explicit; every bound component must emit one status row before final
+    status.
+  - Local finalization on partial component-row coverage is forbidden inside
+    the bundle.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime consumption of the root-law bundle'
@@ -792,6 +808,10 @@ bundle_anchor_checks:
     component observation under canonical surface before final fail-close.
   - Runtime must not let bundle drift erase otherwise available component
     observation before emitting final failure.
+  - Runtime must also keep bound component status-row coverage policy explicit;
+    every bound component must emit one status row before final status.
+  - Runtime must not emit final bundle truth with partial component-row
+    coverage when bound component set remains known.
 component_rows:
 - order: 1
   component_id: root_corpus_governance

@@ -688,6 +688,14 @@ canonical surface before final fail-close.
 Runtime may not use bundle drift as a reason to suppress otherwise bindable
 component observation before final verdict.
 
+Bundle component status-row coverage policy must also stay explicit.
+
+The admitted runtime policy is every bound component emits one status row
+before final status.
+
+Runtime may not finalize on partial component-row coverage when the bound
+component set is already known.
+
 ---
 
 ## Conflict-handling rule

@@ -50,6 +50,7 @@ from root_corpus_law_bundle_common import (
     component_validator_contract_drift_execution_policy_from_doc,
     component_validator_contract_surface_projection_policy_from_doc,
     component_validator_observation_continuity_policy_from_doc,
+    component_status_row_coverage_policy_from_doc,
     component_self_describing_family_requirement_fallback_policy_from_doc,
     component_self_describing_family_requirement_inheritance_mode_from_doc,
     component_self_describing_family_requirement_local_redeclaration_policy_from_doc,
@@ -121,6 +122,7 @@ COMPONENT_VALIDATOR_CONTRACT_SURFACE_PROJECTION_POLICY = (
 COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY = (
     "continue_bound_component_observation_under_canonical_surface_before_final_fail_close"
 )
+COMPONENT_STATUS_ROW_COVERAGE_POLICY = "all_bound_components_must_emit_status_rows_before_final_status"
 COMPONENT_VALIDATOR_OUTPUT_CONTRACT = "json_object_with_disclosed_status_key"
 
 EXPECTED_COMPONENTS = {
@@ -609,6 +611,9 @@ def main() -> int:
     component_validator_observation_continuity_policy = (
         component_validator_observation_continuity_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_status_row_coverage_policy = (
+        component_status_row_coverage_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     effective_component_validator_status_requirement = (
         component_validator_status_requirement
         if component_validator_status_requirement == STATUS_PASS_REQUIRED
@@ -663,6 +668,11 @@ def main() -> int:
         component_validator_observation_continuity_policy
         if component_validator_observation_continuity_policy == COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY
         else COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY
+    )
+    effective_component_status_row_coverage_policy = (
+        component_status_row_coverage_policy
+        if component_status_row_coverage_policy == COMPONENT_STATUS_ROW_COVERAGE_POLICY
+        else COMPONENT_STATUS_ROW_COVERAGE_POLICY
     )
     effective_component_validator_stdout_normalization_contract = (
         component_validator_stdout_normalization_contract
@@ -1030,6 +1040,9 @@ def main() -> int:
             != COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY
         ):
             stale_reasons.append("root_corpus_law_bundle_component_validator_observation_continuity_policy_invalid")
+            error_code = ERR_REGISTRY
+        if component_status_row_coverage_policy != COMPONENT_STATUS_ROW_COVERAGE_POLICY:
+            stale_reasons.append("root_corpus_law_bundle_component_status_row_coverage_policy_invalid")
             error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
@@ -1692,6 +1705,19 @@ def main() -> int:
                     }
                 )
 
+        if (
+            effective_component_status_row_coverage_policy == COMPONENT_STATUS_ROW_COVERAGE_POLICY
+            and len(component_status_rows) != len(sorted_components)
+        ):
+            bundle_violations.append(
+                {
+                    "component_id": "root_corpus_law_bundle",
+                    "reason": "component_status_row_coverage_incomplete",
+                    "expected_count": len(sorted_components),
+                    "actual_count": len(component_status_rows),
+                }
+            )
+
     if not error_code and structure_violations:
         error_code = ERR_STRUCTURE
     if not error_code and (bundle_violations or anchor_violations):
@@ -1767,6 +1793,7 @@ def main() -> int:
             component_validator_contract_surface_projection_policy
         ),
         "component_validator_observation_continuity_policy": component_validator_observation_continuity_policy,
+        "component_status_row_coverage_policy": component_status_row_coverage_policy,
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
         "component_status_row_count": len(component_status_rows),

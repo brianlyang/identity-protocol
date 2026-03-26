@@ -358,6 +358,12 @@ component observation under canonical surface before final fail-close.
 Runtime must not let bundle drift erase otherwise available component
 observation before emitting final failure.
 
+Runtime must also keep bound component status-row coverage policy explicit;
+every bound component must emit one status row before final status.
+
+Runtime must not emit final bundle truth with partial component-row
+coverage when bound component set remains known.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.
