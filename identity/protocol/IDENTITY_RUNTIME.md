@@ -371,6 +371,13 @@ reasons before final status.
 Runtime must not emit final bundle truth while withholding stale-reason
 projection for already discovered violation rows.
 
+Runtime must also keep final-status derivation policy explicit; final
+status is `PASS_REQUIRED` if and only if stale reasons remain empty after
+violation projection; otherwise final status is `FAIL_REQUIRED`.
+
+Runtime must not bypass stale-reason-adjudicated final status through any
+alternate local verdict path.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

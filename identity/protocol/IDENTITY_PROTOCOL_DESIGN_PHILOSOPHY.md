@@ -692,6 +692,16 @@ projected into stale reasons before final status.
 The machine world must not keep violation rows internally while emitting a
 final verdict surface that withholds their stale-reason projection.
 
+Bundle final-status derivation policy must stay explicit too.
+
+The admitted policy is `PASS_REQUIRED` if and only if stale reasons remain
+empty after violation projection; otherwise final status is
+`FAIL_REQUIRED`.
+
+The machine world must not derive a clean final verdict from pre-projection
+convenience, raw green component counts, or any alternate local verdict
+path.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

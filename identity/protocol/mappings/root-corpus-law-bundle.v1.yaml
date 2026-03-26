@@ -68,6 +68,7 @@ component_validator_contract_surface_projection_policy: bundle_summary_disclosed
 component_validator_observation_continuity_policy: continue_bound_component_observation_under_canonical_surface_before_final_fail_close
 component_status_row_coverage_policy: all_bound_components_must_emit_status_rows_before_final_status
 violation_projection_policy: all_structure_bundle_anchor_violations_projected_into_stale_reasons_before_final_status
+final_status_derivation_policy: pass_required_if_and_only_if_stale_reasons_empty_after_violation_projection_else_fail_required
 required_component_descriptor_fields:
 - validator_script
 - probe_script
@@ -287,6 +288,13 @@ bundle_anchor_checks:
     projected into stale reasons before final status.
   - The machine world must not keep violation rows internally while emitting a
     final verdict surface that withholds their stale-reason projection.
+  - Bundle final-status derivation policy must stay explicit too.
+  - The admitted policy is `PASS_REQUIRED` if and only if stale reasons remain
+    empty after violation projection; otherwise final status is
+    `FAIL_REQUIRED`.
+  - The machine world must not derive a clean final verdict from pre-projection
+    convenience, raw green component counts, or any alternate local verdict
+    path.
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root-law bundle discipline'
@@ -481,6 +489,13 @@ bundle_anchor_checks:
     are projected into stale reasons before final status.
   - Runtime may not keep violation rows private while presenting a final verdict
     surface that withholds their stale-reason projection.
+  - Bundle final-status derivation policy must also stay explicit.
+  - The admitted runtime policy is `PASS_REQUIRED` if and only if stale reasons
+    remain empty after violation projection; otherwise final status is
+    `FAIL_REQUIRED`.
+  - Runtime may not derive a clean final verdict from pre-projection
+    convenience, raw green component counts, or any alternate local verdict
+    path.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root-law bundle boundary'
@@ -656,6 +671,10 @@ bundle_anchor_checks:
     reasons before final status.
   - Local final verdict must not withhold stale-reason projection for known
     violation rows.
+  - Root-law bundle rows must also keep final-status derivation policy explicit;
+    final status is `PASS_REQUIRED` if and only if stale reasons remain empty
+    after violation projection; otherwise final status is `FAIL_REQUIRED`.
+  - Local verdict path must not bypass stale-reason-adjudicated final status.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime consumption of the root-law bundle'
@@ -833,6 +852,11 @@ bundle_anchor_checks:
     reasons before final status.
   - Runtime must not emit final bundle truth while withholding stale-reason
     projection for already discovered violation rows.
+  - Runtime must also keep final-status derivation policy explicit; final
+    status is `PASS_REQUIRED` if and only if stale reasons remain empty after
+    violation projection; otherwise final status is `FAIL_REQUIRED`.
+  - Runtime must not bypass stale-reason-adjudicated final status through any
+    alternate local verdict path.
 component_rows:
 - order: 1
   component_id: root_corpus_governance

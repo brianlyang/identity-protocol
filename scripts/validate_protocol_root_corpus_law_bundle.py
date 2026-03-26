@@ -72,6 +72,7 @@ from root_corpus_law_bundle_common import (
     descriptor_schema_source_binding_mode_from_doc,
     descriptor_schema_source_substitution_policy_from_doc,
     descriptor_schema_local_reconstruction_policy_from_doc,
+    final_status_derivation_policy_from_doc,
     load_mapping_descriptor,
     load_root_corpus_law_bundle,
     machine_registry_completeness_current_file_from_doc,
@@ -126,6 +127,9 @@ COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY = (
 COMPONENT_STATUS_ROW_COVERAGE_POLICY = "all_bound_components_must_emit_status_rows_before_final_status"
 VIOLATION_PROJECTION_POLICY = (
     "all_structure_bundle_anchor_violations_projected_into_stale_reasons_before_final_status"
+)
+FINAL_STATUS_DERIVATION_POLICY = (
+    "pass_required_if_and_only_if_stale_reasons_empty_after_violation_projection_else_fail_required"
 )
 COMPONENT_VALIDATOR_OUTPUT_CONTRACT = "json_object_with_disclosed_status_key"
 
@@ -619,6 +623,7 @@ def main() -> int:
         component_status_row_coverage_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
     violation_projection_policy = violation_projection_policy_from_doc(bundle_doc) if bundle_doc else ""
+    final_status_derivation_policy = final_status_derivation_policy_from_doc(bundle_doc) if bundle_doc else ""
     effective_component_validator_status_requirement = (
         component_validator_status_requirement
         if component_validator_status_requirement == STATUS_PASS_REQUIRED
@@ -683,6 +688,11 @@ def main() -> int:
         violation_projection_policy
         if violation_projection_policy == VIOLATION_PROJECTION_POLICY
         else VIOLATION_PROJECTION_POLICY
+    )
+    effective_final_status_derivation_policy = (
+        final_status_derivation_policy
+        if final_status_derivation_policy == FINAL_STATUS_DERIVATION_POLICY
+        else FINAL_STATUS_DERIVATION_POLICY
     )
     effective_component_validator_stdout_normalization_contract = (
         component_validator_stdout_normalization_contract
@@ -1056,6 +1066,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if violation_projection_policy != VIOLATION_PROJECTION_POLICY:
             stale_reasons.append("root_corpus_law_bundle_violation_projection_policy_invalid")
+            error_code = ERR_REGISTRY
+        if final_status_derivation_policy != FINAL_STATUS_DERIVATION_POLICY:
+            stale_reasons.append("root_corpus_law_bundle_final_status_derivation_policy_invalid")
             error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
@@ -1765,7 +1778,12 @@ def main() -> int:
         if not error_code:
             error_code = ERR_BUNDLE
 
-    status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
+    derived_status_from_stale_reasons = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
+    status = (
+        derived_status_from_stale_reasons
+        if effective_final_status_derivation_policy == FINAL_STATUS_DERIVATION_POLICY
+        else derived_status_from_stale_reasons
+    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_BUNDLE),
@@ -1833,6 +1851,8 @@ def main() -> int:
         "component_validator_observation_continuity_policy": component_validator_observation_continuity_policy,
         "component_status_row_coverage_policy": component_status_row_coverage_policy,
         "violation_projection_policy": violation_projection_policy,
+        "final_status_derivation_policy": final_status_derivation_policy,
+        "derived_status_from_stale_reasons": derived_status_from_stale_reasons,
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
         "component_status_row_count": len(component_status_rows),
@@ -1840,6 +1860,7 @@ def main() -> int:
         "bundle_violation_count": len(bundle_violations),
         "anchor_violation_count": len(anchor_violations),
         "projected_violation_reason_count": projected_violation_reason_count,
+        "stale_reason_count": len(stale_reasons),
         "component_ids": [row.component_id for row in sorted_components],
         "required_component_descriptor_fields": list(required_component_descriptor_fields),
         "required_component_descriptor_field_modes": dict(required_component_descriptor_field_modes),

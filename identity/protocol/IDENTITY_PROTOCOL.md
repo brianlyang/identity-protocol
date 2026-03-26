@@ -426,6 +426,12 @@ reasons before final status.
 Local final verdict must not withhold stale-reason projection for known
 violation rows.
 
+Root-law bundle rows must also keep final-status derivation policy explicit;
+final status is `PASS_REQUIRED` if and only if stale reasons remain empty
+after violation projection; otherwise final status is `FAIL_REQUIRED`.
+
+Local verdict path must not bypass stale-reason-adjudicated final status.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

@@ -83,6 +83,8 @@ assert payload["component_validator_contract_surface_projection_policy"] == "bun
 assert payload["component_validator_observation_continuity_policy"] == "continue_bound_component_observation_under_canonical_surface_before_final_fail_close", payload
 assert payload["component_status_row_coverage_policy"] == "all_bound_components_must_emit_status_rows_before_final_status", payload
 assert payload["violation_projection_policy"] == "all_structure_bundle_anchor_violations_projected_into_stale_reasons_before_final_status", payload
+assert payload["final_status_derivation_policy"] == "pass_required_if_and_only_if_stale_reasons_empty_after_violation_projection_else_fail_required", payload
+assert payload["derived_status_from_stale_reasons"] == "PASS_REQUIRED", payload
 assert payload["bundle_redeclares_required_repo_rel_path_patterns"] is False, payload
 assert payload["bundle_local_required_repo_rel_path_patterns"] == {}, payload
 assert payload["bundle_redeclares_family_surface_binding_governance"] is False, payload
@@ -132,6 +134,7 @@ assert payload["structure_violation_count"] == 0, payload
 assert payload["bundle_violation_count"] == 0, payload
 assert payload["anchor_violation_count"] == 0, payload
 assert payload["projected_violation_reason_count"] == 0, payload
+assert payload["stale_reason_count"] == 0, payload
 assert all(row["component_status"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
 assert all(
     row["validator_status_requirement"] == "PASS_REQUIRED"
@@ -621,6 +624,41 @@ assert payload["violation_projection_policy"] == "local_violation_rows_may_remai
 assert payload["projected_violation_reason_count"] == 0, payload
 PY
 
+FINAL_STATUS_DERIVATION_POLICY_REPO="${TMP_ROOT}/final-status-derivation-policy-drift-repo"
+mirror_repo "${FINAL_STATUS_DERIVATION_POLICY_REPO}"
+python3 - <<'PY' "${FINAL_STATUS_DERIVATION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["final_status_derivation_policy"] = "local_verdict_path_may_bypass_stale_reasons"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+FINAL_STATUS_DERIVATION_POLICY_JSON="${TMP_ROOT}/final-status-derivation-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${FINAL_STATUS_DERIVATION_POLICY_REPO}" \
+  --json-only >"${FINAL_STATUS_DERIVATION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed final status derivation policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${FINAL_STATUS_DERIVATION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_final_status_derivation_policy_invalid" in payload["stale_reasons"], payload
+assert payload["final_status_derivation_policy"] == "local_verdict_path_may_bypass_stale_reasons", payload
+assert payload["derived_status_from_stale_reasons"] == "FAIL_REQUIRED", payload
+assert payload["stale_reason_count"] >= 1, payload
+PY
+
 MISSING_COMPONENT_VALIDATOR_REPO="${TMP_ROOT}/missing-component-validator-repo"
 mirror_repo "${MISSING_COMPONENT_VALIDATOR_REPO}"
 rm -f "${MISSING_COMPONENT_VALIDATOR_REPO}/scripts/validate_protocol_root_corpus_precedence.py"
@@ -641,11 +679,13 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["derived_status_from_stale_reasons"] == payload["protocol_root_corpus_law_bundle_status"], payload
 assert payload["component_status_row_count"] == payload["component_count"] - 1, payload
 assert payload["bundle_violation_count"] >= 2, payload
 assert payload["projected_violation_reason_count"] == (
     payload["structure_violation_count"] + payload["bundle_violation_count"] + payload["anchor_violation_count"]
 ), payload
+assert payload["stale_reason_count"] == payload["projected_violation_reason_count"], payload
 assert "bundle_violation:root_corpus_law_bundle:component_status_row_coverage_incomplete" in payload["stale_reasons"], payload
 assert "bundle_violation:root_corpus_precedence:component_validator_missing" in payload["stale_reasons"], payload
 PY

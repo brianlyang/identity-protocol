@@ -704,6 +704,16 @@ are projected into stale reasons before final status.
 Runtime may not keep violation rows private while presenting a final verdict
 surface that withholds their stale-reason projection.
 
+Bundle final-status derivation policy must also stay explicit.
+
+The admitted runtime policy is `PASS_REQUIRED` if and only if stale reasons
+remain empty after violation projection; otherwise final status is
+`FAIL_REQUIRED`.
+
+Runtime may not derive a clean final verdict from pre-projection
+convenience, raw green component counts, or any alternate local verdict
+path.
+
 ---
 
 ## Conflict-handling rule
