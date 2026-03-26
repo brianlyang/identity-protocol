@@ -183,6 +183,15 @@ component/current mapping pair, no substitute source, and no fallback source.
 If that admitted source is unavailable or invalid, protocol legality must
 fail-close rather than locally reconstructing descriptor schema.
 
+The bundle must also inherit machine-registry completeness
+self-describing-family requirement law; the admitted requirement that
+law-bearing root mapping families stay self-describing may not be silently
+redeclared, weakened, or guessed inside the bundle.
+
+If the admitted source does not disclose that self-describing-family
+requirement law, protocol legality must fail-close rather than locally
+reconstructing self-describing-family legality.
+
 The bundle must also inherit machine-registry completeness family-surface
 binding law; explicit cross-family descriptor-stem bindings declared there may
 not be silently reauthored, suppressed, or replaced by local bundle convenience.

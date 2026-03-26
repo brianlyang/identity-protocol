@@ -16,6 +16,9 @@ descriptor_schema_source_binding_mode: canonical_source_component_current_only
 descriptor_schema_source_substitution_policy: forbidden
 descriptor_schema_fallback_policy: fail_closed
 descriptor_schema_local_reconstruction_policy: forbidden
+component_self_describing_family_requirement_inheritance_mode: inherit_machine_registry_completeness_current_only
+component_self_describing_family_requirement_local_override_policy: forbidden
+component_self_describing_family_requirement_fallback_policy: fail_closed
 descriptor_family_surface_binding_inheritance_mode: inherit_machine_registry_completeness_current_only
 descriptor_family_surface_binding_local_override_policy: forbidden
 descriptor_repo_rel_path_pattern_inheritance_mode: inherit_machine_registry_completeness_current_only
@@ -64,6 +67,13 @@ bundle_anchor_checks:
   - The bundle descriptor schema must also stay source-singular.
   - not a substitute source chosen for local convenience.
   - fail-close rather than locally reconstructing descriptor schema from shadow bundle knowledge.
+  - Bundle self-describing-family requirement law must also remain inherited
+    from machine-registry completeness.
+  - The admitted requirement that root mapping families stay self-describing
+    belongs to that source law rather than to local bundle restatement.
+  - If the admitted source does not disclose that self-describing-family
+    requirement law, the machine world must fail-close rather than locally
+    reconstructing self-describing-family legality from bundle convenience.
   - Bundle descriptor binding must also remain inherited from machine-registry
   - explicit cross-family descriptor-stem binding, the bundle must inherit that
   - declaration rather than reauthoring, omitting, or locally overriding it.
@@ -112,6 +122,13 @@ bundle_anchor_checks:
   - The bundle's descriptor schema must remain source-singular as well.
   - fallback source for convenience.
   - fail-close rather than locally reconstructing descriptor schema.
+  - The bundle must also inherit machine-registry completeness
+    self-describing-family requirement law.
+  - The admitted requirement that root mapping families stay self-describing may
+    not be silently redeclared, weakened, or guessed inside the bundle.
+  - If the admitted source does not disclose that self-describing-family
+    requirement law, the machine world must fail-close rather than locally
+    reconstructing self-describing-family legality.
   - The bundle must also inherit machine-registry completeness family-surface
   - explicitly declares a cross-family descriptor-stem binding, the bundle must
   - not locally override or suppress that binding.
@@ -151,6 +168,13 @@ bundle_anchor_checks:
   - The bundle's descriptor schema must stay source-singular
   - no substitute source, and no fallback source.
   - fail-close rather than locally reconstructing descriptor schema.
+  - The bundle must also inherit machine-registry completeness
+    self-describing-family requirement law; the admitted requirement that
+    law-bearing root mapping families stay self-describing may not be silently
+    redeclared, weakened, or guessed inside the bundle.
+  - If the admitted source does not disclose that self-describing-family
+    requirement law, protocol legality must fail-close rather than locally
+    reconstructing self-describing-family legality.
   - The bundle must also inherit machine-registry completeness family-surface
     binding law
   - explicit cross-family descriptor-stem bindings declared there may not be
@@ -191,6 +215,13 @@ bundle_anchor_checks:
   - no substitute source, and no
     fallback source.
   - locally reconstructing descriptor schema.
+  - Runtime must also reject a root-law bundle that redeclares or weakens
+    machine-registry completeness self-describing-family requirement law; the
+    admitted requirement that law-bearing root mapping families stay
+    self-describing must be inherited from the admitted source component.
+  - If the admitted source does not disclose that self-describing-family
+    requirement law, runtime must fail-close rather than locally
+    reconstructing self-describing-family legality law.
   - Runtime must also reject a root-law bundle that locally overrides or suppresses
   - explicit cross-family descriptor-stem bindings must be inherited from the
     admitted source component rather than guessed.

@@ -391,6 +391,16 @@ If that admitted source is unavailable or invalid, the machine world must
 fail-close rather than locally reconstructing descriptor schema from shadow
 bundle knowledge.
 
+Bundle self-describing-family requirement law must also remain inherited from
+machine-registry completeness.
+
+The admitted requirement that root mapping families stay self-describing
+belongs to that source law rather than to local bundle restatement.
+
+If the admitted source does not disclose that self-describing-family
+requirement law, the machine world must fail-close rather than locally
+reconstructing self-describing-family legality from bundle convenience.
+
 Bundle descriptor binding must also remain inherited from machine-registry
 completeness family-surface law.
 

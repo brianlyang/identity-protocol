@@ -25,6 +25,9 @@ from root_corpus_law_bundle_common import (
     component_mapping_family_id_from_current_file,
     component_descriptor_resolution_mode_from_doc,
     component_descriptor_version_pinning_policy_from_doc,
+    component_self_describing_family_requirement_fallback_policy_from_doc,
+    component_self_describing_family_requirement_inheritance_mode_from_doc,
+    component_self_describing_family_requirement_local_override_policy_from_doc,
     descriptor_family_surface_binding_inheritance_mode_from_doc,
     descriptor_family_surface_binding_local_override_policy_from_doc,
     descriptor_repo_rel_path_discipline_fallback_policy_from_doc,
@@ -257,6 +260,15 @@ def main() -> int:
     descriptor_schema_local_reconstruction_policy = (
         descriptor_schema_local_reconstruction_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_self_describing_family_requirement_inheritance_mode = (
+        component_self_describing_family_requirement_inheritance_mode_from_doc(bundle_doc) if bundle_doc else ""
+    )
+    component_self_describing_family_requirement_local_override_policy = (
+        component_self_describing_family_requirement_local_override_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
+    component_self_describing_family_requirement_fallback_policy = (
+        component_self_describing_family_requirement_fallback_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     descriptor_family_surface_binding_inheritance_mode = (
         descriptor_family_surface_binding_inheritance_mode_from_doc(bundle_doc) if bundle_doc else ""
     )
@@ -378,6 +390,14 @@ def main() -> int:
         if bool(bundle_doc) and key in bundle_doc
     }
     bundle_redeclares_component_naming_governance = bool(bundle_local_component_naming_governance)
+    bundle_local_self_describing_family_requirement_governance = {
+        "require_self_describing_families": bundle_doc.get("require_self_describing_families")
+        for _ in [0]
+        if bool(bundle_doc) and "require_self_describing_families" in bundle_doc
+    }
+    bundle_redeclares_self_describing_family_requirement_governance = bool(
+        bundle_local_self_describing_family_requirement_governance
+    )
     bundle_local_registry_child_membership_governance = {
         key: str(bundle_doc.get(key) or "").strip()
         for key in ("registry_directory_rel_path", "registry_current_file")
@@ -425,6 +445,21 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if descriptor_schema_local_reconstruction_policy != "forbidden":
             stale_reasons.append("root_corpus_law_bundle_descriptor_schema_local_reconstruction_policy_invalid")
+            error_code = ERR_REGISTRY
+        if component_self_describing_family_requirement_inheritance_mode != "inherit_machine_registry_completeness_current_only":
+            stale_reasons.append(
+                "root_corpus_law_bundle_component_self_describing_family_requirement_inheritance_mode_invalid"
+            )
+            error_code = ERR_REGISTRY
+        if component_self_describing_family_requirement_local_override_policy != "forbidden":
+            stale_reasons.append(
+                "root_corpus_law_bundle_component_self_describing_family_requirement_local_override_policy_invalid"
+            )
+            error_code = ERR_REGISTRY
+        if component_self_describing_family_requirement_fallback_policy != "fail_closed":
+            stale_reasons.append(
+                "root_corpus_law_bundle_component_self_describing_family_requirement_fallback_policy_invalid"
+            )
             error_code = ERR_REGISTRY
         if descriptor_family_surface_binding_inheritance_mode != "inherit_machine_registry_completeness_current_only":
             stale_reasons.append("root_corpus_law_bundle_descriptor_family_surface_binding_inheritance_mode_invalid")
@@ -591,6 +626,16 @@ def main() -> int:
                     "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
                     "reason": "component_current_version_naming_governance_local_redeclaration_forbidden",
                     "bundle_local_component_naming_governance": dict(bundle_local_component_naming_governance),
+                }
+            )
+        if bundle_redeclares_self_describing_family_requirement_governance:
+            bundle_violations.append(
+                {
+                    "component_id": descriptor_schema_source_component_id or "root_machine_registry_completeness",
+                    "reason": "component_self_describing_family_requirement_governance_local_redeclaration_forbidden",
+                    "bundle_local_self_describing_family_requirement_governance": dict(
+                        bundle_local_self_describing_family_requirement_governance
+                    ),
                 }
             )
         missing_component_naming_fields = [
@@ -1099,6 +1144,9 @@ def main() -> int:
         "descriptor_schema_source_substitution_policy": descriptor_schema_source_substitution_policy,
         "descriptor_schema_fallback_policy": descriptor_schema_fallback_policy,
         "descriptor_schema_local_reconstruction_policy": descriptor_schema_local_reconstruction_policy,
+        "component_self_describing_family_requirement_inheritance_mode": component_self_describing_family_requirement_inheritance_mode,
+        "component_self_describing_family_requirement_local_override_policy": component_self_describing_family_requirement_local_override_policy,
+        "component_self_describing_family_requirement_fallback_policy": component_self_describing_family_requirement_fallback_policy,
         "descriptor_family_surface_binding_inheritance_mode": descriptor_family_surface_binding_inheritance_mode,
         "descriptor_family_surface_binding_local_override_policy": descriptor_family_surface_binding_local_override_policy,
         "descriptor_repo_rel_path_pattern_inheritance_mode": descriptor_repo_rel_path_pattern_inheritance_mode,
@@ -1142,6 +1190,8 @@ def main() -> int:
         "bundle_local_repo_rel_path_governance": dict(bundle_local_repo_rel_path_governance),
         "bundle_redeclares_component_naming_governance": bundle_redeclares_component_naming_governance,
         "bundle_local_component_naming_governance": dict(bundle_local_component_naming_governance),
+        "bundle_redeclares_self_describing_family_requirement_governance": bundle_redeclares_self_describing_family_requirement_governance,
+        "bundle_local_self_describing_family_requirement_governance": dict(bundle_local_self_describing_family_requirement_governance),
         "bundle_redeclares_registry_child_membership_governance": bundle_redeclares_registry_child_membership_governance,
         "bundle_local_registry_child_membership_governance": dict(bundle_local_registry_child_membership_governance),
         "source_required_repo_rel_path_patterns": dict(source_required_repo_rel_path_patterns),

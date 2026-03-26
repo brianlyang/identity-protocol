@@ -127,6 +127,15 @@ fallback source.
 If that source is unavailable or invalid, runtime must fail-close rather than
 locally reconstructing descriptor schema.
 
+Runtime must also reject a root-law bundle that redeclares or weakens
+machine-registry completeness self-describing-family requirement law; the
+admitted requirement that law-bearing root mapping families stay
+self-describing must be inherited from the admitted source component.
+
+If the admitted source does not disclose that self-describing-family
+requirement law, runtime must fail-close rather than locally reconstructing
+self-describing-family legality law.
+
 Runtime must also reject a root-law bundle that locally overrides or suppresses
 machine-registry completeness family-surface binding law; explicit
 cross-family descriptor-stem bindings must be inherited from the admitted

@@ -416,6 +416,16 @@ fallback source for convenience.
 If that admitted source is unavailable or invalid, the machine world must
 fail-close rather than locally reconstructing descriptor schema.
 
+The bundle must also inherit machine-registry completeness
+self-describing-family requirement law.
+
+The admitted requirement that root mapping families stay self-describing may
+not be silently redeclared, weakened, or guessed inside the bundle.
+
+If the admitted source does not disclose that self-describing-family
+requirement law, the machine world must fail-close rather than locally
+reconstructing self-describing-family legality.
+
 The bundle must also inherit machine-registry completeness family-surface
 binding law.
 

@@ -89,6 +89,18 @@ def descriptor_schema_local_reconstruction_policy_from_doc(bundle_doc: Mapping[s
     return _norm_str(bundle_doc.get("descriptor_schema_local_reconstruction_policy"))
 
 
+def component_self_describing_family_requirement_inheritance_mode_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("component_self_describing_family_requirement_inheritance_mode"))
+
+
+def component_self_describing_family_requirement_local_override_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("component_self_describing_family_requirement_local_override_policy"))
+
+
+def component_self_describing_family_requirement_fallback_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("component_self_describing_family_requirement_fallback_policy"))
+
+
 def descriptor_family_surface_binding_inheritance_mode_from_doc(bundle_doc: Mapping[str, Any]) -> str:
     return _norm_str(bundle_doc.get("descriptor_family_surface_binding_inheritance_mode"))
 
