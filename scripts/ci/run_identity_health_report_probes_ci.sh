@@ -214,6 +214,29 @@ SKIP_REPORT_PATH="$(printf '%s\n' "${SKIP_STDOUT}" | awk -F= '/^report=/{print $
 test -n "${SKIP_REPORT_PATH}"
 python3 scripts/validate_identity_health_contract.py --identity-id "${SKIP_ID}" --report "${SKIP_REPORT_PATH}"
 
+TAMPERED_REPORT_PATH="${OUT_DIR}/identity-health-${PASS_ID}-tampered.json"
+python3 - <<'PY' "${PASS_REPORT_PATH}" "${TAMPERED_REPORT_PATH}"
+import json
+import sys
+from pathlib import Path
+
+src = Path(sys.argv[1]).resolve()
+dst = Path(sys.argv[2]).resolve()
+doc = json.loads(src.read_text(encoding="utf-8"))
+closure = doc.get("experience_writeback_closure") or {}
+closure["report_selected_path"] = "/tmp/tampered-report.json"
+doc["experience_writeback_closure"] = closure
+dst.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+if python3 scripts/validate_identity_health_contract.py --identity-id "${PASS_ID}" --report "${TAMPERED_REPORT_PATH}" >/tmp/identity-health-tampered.out 2>/tmp/identity-health-tampered.err; then
+  echo "[FAIL] tampered health report unexpectedly passed contract validation"
+  cat /tmp/identity-health-tampered.out
+  cat /tmp/identity-health-tampered.err
+  exit 1
+fi
+grep -q 'experience_writeback_closure projection mismatch' /tmp/identity-health-tampered.out
+
 python3 - <<'PY' "${PASS_REPORT_PATH}" "${SKIP_REPORT_PATH}" "${PASS_REPORT}"
 import json
 import sys

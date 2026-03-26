@@ -12,6 +12,19 @@ def _latest_for_identity(report_dir: Path, identity_id: str) -> Path | None:
     return rows[-1] if rows else None
 
 
+def _clean_str(value: object) -> str:
+    return str(value or "").strip()
+
+
+def _clean_list(value: object) -> list[str]:
+    rows: list[str] = []
+    for item in value or []:
+        token = _clean_str(item)
+        if token:
+            rows.append(token)
+    return rows
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity health report contract.")
     ap.add_argument("--identity-id", required=True)
@@ -85,6 +98,10 @@ def main() -> int:
     if not isinstance(experience_writeback_check, dict):
         print("[FAIL] health report missing experience_writeback check row")
         return 1
+    experience_writeback_payload = experience_writeback_check.get("payload")
+    if not isinstance(experience_writeback_payload, dict):
+        print("[FAIL] experience_writeback check row missing payload dict")
+        return 1
     check_status = str(experience_writeback_check.get("status", "")).strip().upper()
     if not check_status:
         check_status = "PASS" if bool(experience_writeback_check.get("ok")) else "FAIL"
@@ -99,9 +116,45 @@ def main() -> int:
     if validation_status not in {"PASS_REQUIRED", "SKIPPED_NOT_REQUIRED", "WARN_NON_BLOCKING", "FAIL_REQUIRED"}:
         print(f"[FAIL] invalid experience_writeback_closure.validation_status={validation_status!r}")
         return 1
+    if validation_status != _clean_str(
+        experience_writeback_payload.get("experience_writeback_validation_status")
+    ).upper():
+        print("[FAIL] experience_writeback_closure.validation_status mismatch with check payload")
+        return 1
+    projection_field_pairs = (
+        ("report_selected_path", "report_selected_path"),
+        ("report_selection_mode", "report_selection_mode"),
+        ("report_selected_authority_class", "report_selected_authority_class"),
+        ("report_pointer_resolution_mode", "report_pointer_resolution_mode"),
+        ("report_run_id", "report_run_id"),
+        ("writeback_status", "writeback_status"),
+        ("writeback_rule_id", "writeback_rule_id"),
+    )
+    for closure_field, payload_field in projection_field_pairs:
+        if _clean_str(experience_writeback_closure.get(closure_field)) != _clean_str(
+            experience_writeback_payload.get(payload_field)
+        ):
+            print(
+                "[FAIL] experience_writeback_closure projection mismatch: "
+                f"{closure_field} vs payload.{payload_field}"
+            )
+            return 1
+    if int(experience_writeback_closure.get("rulebook_match_count", 0) or 0) != int(
+        experience_writeback_payload.get("rulebook_match_count", 0) or 0
+    ):
+        print("[FAIL] experience_writeback_closure.rulebook_match_count mismatch with check payload")
+        return 1
+    if bool(experience_writeback_closure.get("task_history_contains_run_id", False)) != bool(
+        experience_writeback_payload.get("task_history_contains_run_id", False)
+    ):
+        print("[FAIL] experience_writeback_closure.task_history_contains_run_id mismatch with check payload")
+        return 1
     stale_reasons = experience_writeback_closure.get("stale_reasons")
     if stale_reasons is not None and not isinstance(stale_reasons, list):
         print("[FAIL] experience_writeback_closure.stale_reasons must be a list")
+        return 1
+    if _clean_list(stale_reasons) != _clean_list(experience_writeback_payload.get("stale_reasons")):
+        print("[FAIL] experience_writeback_closure.stale_reasons mismatch with check payload")
         return 1
     if closure_status in {"WARN", "FAIL"}:
         if not str(experience_writeback_closure.get("error_code", "")).strip():
