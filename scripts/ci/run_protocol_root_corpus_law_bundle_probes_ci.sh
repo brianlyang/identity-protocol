@@ -90,6 +90,7 @@ assert payload["registry_class_admission_policy"] == "only_direct_stale_reasons_
 assert payload["registry_direct_stale_reason_origin_policy"] == "alias_document_contract_row_required_surface_only_before_violation_projection", payload
 assert payload["component_validator_observation_reason_admission_policy"] == "parse_status_nonzero_rc_or_nonpass_only_before_bundle_violation_projection", payload
 assert payload["component_validator_observation_reason_exclusion_policy"] == "non_execution_bundle_rows_remain_outside_observation_reason_ontology", payload
+assert payload["component_validator_observation_reason_source_policy"] == "bundle_violation_rows_only_before_violation_projection", payload
 assert payload["derived_status_from_stale_reasons"] == "PASS_REQUIRED", payload
 assert payload["derived_failure_class"] == "pass", payload
 assert payload["derived_error_code_from_precedence"] == "", payload
@@ -960,6 +961,42 @@ assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", pay
 assert payload["error_code"] == "IP-RCLB-001", payload
 assert "root_corpus_law_bundle_component_validator_observation_reason_admission_policy_invalid" in payload["stale_reasons"], payload
 assert payload["component_validator_observation_reason_admission_policy"] == "local_component_validator_reason_bucket_allowed", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY_REPO="${TMP_ROOT}/component-validator-observation-reason-source-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_observation_reason_source_policy"] = "projected_stale_reason_strings_may_supply_observation_source"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY_JSON="${TMP_ROOT}/component-validator-observation-reason-source-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator observation reason source policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_source_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_observation_reason_source_policy"] == "projected_stale_reason_strings_may_supply_observation_source", payload
 assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
 assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
 assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload

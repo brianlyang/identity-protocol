@@ -418,6 +418,14 @@ Runtime must keep non-execution bundle rows outside component-validator
 observation ontology rather than re-bucketing descriptor, support, or
 coverage rows as runtime observation reasons.
 
+Runtime must also keep component-validator observation-reason source
+policy explicit; runtime observation source is bundle-violation rows only
+before violation projection.
+
+Runtime must not reinterpret direct stale reasons, structure violations,
+anchor violations, or projected stale-reason strings as substitute
+observation source.
+
 Runtime must fail-close on unclassified component-validator observation
 reason rather than silently expanding bundle observation ontology.
 

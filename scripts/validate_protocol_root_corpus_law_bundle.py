@@ -52,6 +52,7 @@ from root_corpus_law_bundle_common import (
     component_validator_observation_continuity_policy_from_doc,
     component_validator_observation_reason_admission_policy_from_doc,
     component_validator_observation_reason_exclusion_policy_from_doc,
+    component_validator_observation_reason_source_policy_from_doc,
     component_status_row_coverage_policy_from_doc,
     component_self_describing_family_requirement_fallback_policy_from_doc,
     component_self_describing_family_requirement_inheritance_mode_from_doc,
@@ -152,6 +153,9 @@ COMPONENT_VALIDATOR_OBSERVATION_REASON_ADMISSION_POLICY = (
 )
 COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY = (
     "non_execution_bundle_rows_remain_outside_observation_reason_ontology"
+)
+COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY = (
+    "bundle_violation_rows_only_before_violation_projection"
 )
 COMPONENT_VALIDATOR_OUTPUT_CONTRACT = "json_object_with_disclosed_status_key"
 
@@ -744,6 +748,9 @@ def main() -> int:
     component_validator_observation_reason_exclusion_policy = (
         component_validator_observation_reason_exclusion_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_observation_reason_source_policy = (
+        component_validator_observation_reason_source_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     effective_component_validator_status_requirement = (
         component_validator_status_requirement
         if component_validator_status_requirement == STATUS_PASS_REQUIRED
@@ -849,6 +856,14 @@ def main() -> int:
             == COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY
         )
         else COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY
+    )
+    effective_component_validator_observation_reason_source_policy = (
+        component_validator_observation_reason_source_policy
+        if (
+            component_validator_observation_reason_source_policy
+            == COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY
+        )
+        else COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY
     )
     effective_component_validator_stdout_normalization_contract = (
         component_validator_stdout_normalization_contract
@@ -1252,6 +1267,14 @@ def main() -> int:
         ):
             stale_reasons.append(
                 "root_corpus_law_bundle_component_validator_observation_reason_exclusion_policy_invalid"
+            )
+            error_code = ERR_REGISTRY
+        if (
+            component_validator_observation_reason_source_policy
+            != COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY
+        ):
+            stale_reasons.append(
+                "root_corpus_law_bundle_component_validator_observation_reason_source_policy_invalid"
             )
             error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
@@ -1940,6 +1963,8 @@ def main() -> int:
             == COMPONENT_VALIDATOR_OBSERVATION_REASON_ADMISSION_POLICY
             and effective_component_validator_observation_reason_exclusion_policy
             == COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY
+            and effective_component_validator_observation_reason_source_policy
+            == COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY
             and component_validator_observation_reason_unknown_count
         )
         else STATUS_PASS_REQUIRED
@@ -2111,6 +2136,9 @@ def main() -> int:
         ),
         "component_validator_observation_reason_exclusion_policy": (
             component_validator_observation_reason_exclusion_policy
+        ),
+        "component_validator_observation_reason_source_policy": (
+            component_validator_observation_reason_source_policy
         ),
         "derived_status_from_stale_reasons": derived_status_from_stale_reasons,
         "derived_failure_class": derived_failure_class,

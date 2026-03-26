@@ -472,6 +472,14 @@ component status before bundle-violation projection.
 Local bundle law must keep non-execution bundle rows outside
 component-validator observation ontology.
 
+Root-law bundle rows must also keep component-validator observation-reason
+source policy explicit; observation source is bundle-violation rows only
+before violation projection.
+
+Direct stale reasons, structure violations, anchor violations, and
+projected stale-reason strings must not be reinterpreted as observation
+source.
+
 Local bundle observation ontology must not silently expand beyond those
 admitted component-validator observation reasons.
 

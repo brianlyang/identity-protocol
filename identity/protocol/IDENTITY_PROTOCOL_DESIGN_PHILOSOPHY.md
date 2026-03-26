@@ -749,6 +749,16 @@ Non-execution bundle rows must remain outside component-validator
 observation ontology rather than being silently re-bucketed as
 observation reasons.
 
+Bundle component-validator observation-reason source policy must stay
+explicit too.
+
+The admitted observation source is bundle-violation rows only, before
+violation projection.
+
+Direct stale reasons, structure violations, anchor violations, and
+projected stale-reason strings do not become substitute observation
+source.
+
 The machine world must fail-close on unclassified component-validator
 observation reason rather than silently expanding bundle observation
 ontology.
