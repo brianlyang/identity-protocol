@@ -286,6 +286,13 @@ governed working directory.
 Runtime must not substitute arbitrary cwd or ambient shell location for that
 governed execution context.
 
+Runtime must also keep bound component validator execution-environment
+contract explicit; runtime executes bound component validators with inherited
+parent-process environment and no local overlay.
+
+Runtime must not inject a local env map, scrub inherited variables, or
+substitute a shadow environment overlay for that governed execution context.
+
 Runtime must also keep bound component validator execution-transport contract
 explicit; runtime executes bound component validators through local direct
 subprocess vector transport.

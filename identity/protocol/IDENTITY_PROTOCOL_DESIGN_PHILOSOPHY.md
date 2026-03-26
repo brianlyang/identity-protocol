@@ -586,6 +586,16 @@ The machine world must not run a bound component validator from arbitrary cwd
 or ambient shell location and then treat that convenience execution context as
 if it were governed validator law.
 
+Bundle component validator execution-environment contract must stay explicit
+too.
+
+The admitted execution-environment contract is inherited parent-process
+environment with no local overlay.
+
+The machine world must not inject a local env map, scrub inherited variables,
+or substitute a shadow environment overlay and then treat that altered
+execution context as if it were governed validator law.
+
 Bundle component validator execution-transport contract must stay explicit too.
 
 The admitted execution transport is local direct subprocess vector execution.

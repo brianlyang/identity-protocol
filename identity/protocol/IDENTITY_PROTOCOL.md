@@ -342,6 +342,13 @@ governed working directory.
 Local substitution of arbitrary cwd or ambient shell location is forbidden
 inside the bundle.
 
+Root-law bundle rows must also keep component validator execution-environment
+contract explicit; bound component validators execute with inherited
+parent-process environment and no local overlay.
+
+Local injection of env maps, scrubbing of inherited variables, or shadow
+environment overlay is forbidden inside the bundle.
+
 Root-law bundle rows must also keep component validator execution-transport
 contract explicit; bound component validators execute through local direct
 subprocess vector transport.

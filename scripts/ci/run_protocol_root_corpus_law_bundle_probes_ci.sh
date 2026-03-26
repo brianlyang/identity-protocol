@@ -71,6 +71,7 @@ assert payload["component_validator_status_literal_contract"] == "exact_canonica
 assert payload["component_validator_execution_input_contract"] == "stdin_devnull_noninteractive", payload
 assert payload["component_validator_verdict_admission_timing_contract"] == "completed_process_post_exit_only", payload
 assert payload["component_validator_working_directory_contract"] == "repo_root", payload
+assert payload["component_validator_execution_environment_contract"] == "inherited_parent_process_env_no_local_overlay", payload
 assert payload["component_validator_execution_transport_contract"] == "local_direct_subprocess_vector", payload
 assert payload["bundle_redeclares_required_repo_rel_path_patterns"] is False, payload
 assert payload["bundle_local_required_repo_rel_path_patterns"] == {}, payload
@@ -117,6 +118,10 @@ assert payload["source_registry_directory_rel_path"] == "identity/protocol/mappi
 assert payload["source_registry_current_file"] == "identity/protocol/mappings/root-corpus-registry.current.yaml", payload
 assert payload["source_registered_mapping_children_count"] > 0, payload
 assert all(row["component_status"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
+assert all(
+    row["validator_execution_environment_contract"] == "inherited_parent_process_env_no_local_overlay"
+    for row in payload["component_status_rows"]
+), payload
 assert all(
     all(cell["status"] == "PASS_REQUIRED" for cell in row.get("descriptor_field_rows", []))
     for row in payload["component_status_rows"]
@@ -522,6 +527,38 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCLB-001", payload
 assert "root_corpus_law_bundle_component_validator_working_directory_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT_REPO="${TMP_ROOT}/component-validator-execution-environment-contract-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_execution_environment_contract"] = "local_env_overlay_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT_JSON="${TMP_ROOT}/component-validator-execution-environment-contract-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator execution-environment contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_execution_environment_contract_invalid" in payload["stale_reasons"], payload
 PY
 
 COMPONENT_VALIDATOR_EXECUTION_TRANSPORT_CONTRACT_REPO="${TMP_ROOT}/component-validator-execution-transport-contract-drift-repo"

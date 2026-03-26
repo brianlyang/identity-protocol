@@ -599,6 +599,15 @@ The admitted validator execution working directory is repo_root.
 Runtime may not substitute arbitrary cwd or ambient shell location for that
 governed execution context.
 
+Bundle component validators must also keep execution-environment contract
+explicit.
+
+The admitted validator execution environment is the inherited parent-process
+environment with no local overlay.
+
+Runtime may not inject a local env map, scrub inherited variables, or
+substitute a shadow environment overlay for that governed execution context.
+
 Bundle component validators must also keep execution-transport contract
 explicit.
 

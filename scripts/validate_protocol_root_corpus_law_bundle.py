@@ -40,6 +40,7 @@ from root_corpus_law_bundle_common import (
     component_validator_execution_input_contract_from_doc,
     component_validator_verdict_admission_timing_contract_from_doc,
     component_validator_working_directory_contract_from_doc,
+    component_validator_execution_environment_contract_from_doc,
     component_validator_execution_transport_contract_from_doc,
     component_self_describing_family_requirement_fallback_policy_from_doc,
     component_self_describing_family_requirement_inheritance_mode_from_doc,
@@ -98,6 +99,7 @@ COMPONENT_VALIDATOR_STATUS_LITERAL_CONTRACT = "exact_canonical_string_literal"
 COMPONENT_VALIDATOR_EXECUTION_INPUT_CONTRACT = "stdin_devnull_noninteractive"
 COMPONENT_VALIDATOR_VERDICT_ADMISSION_TIMING_CONTRACT = "completed_process_post_exit_only"
 COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT = "repo_root"
+COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT = "inherited_parent_process_env_no_local_overlay"
 COMPONENT_VALIDATOR_EXECUTION_TRANSPORT_CONTRACT = "local_direct_subprocess_vector"
 COMPONENT_VALIDATOR_OUTPUT_CONTRACT = "json_object_with_disclosed_status_key"
 
@@ -232,6 +234,7 @@ def _component_validator_cwd(repo_root: Path, working_directory_contract: str) -
 def _component_validator_run_kwargs(
     repo_root: Path,
     working_directory_contract: str,
+    execution_environment_contract: str,
     execution_transport_contract: str,
     execution_input_contract: str,
     stderr_isolation_contract: str,
@@ -243,9 +246,12 @@ def _component_validator_run_kwargs(
         "text": True,
         "shell": False,
         "stdin": subprocess.DEVNULL,
+        "env": None,
     }
     if execution_input_contract != COMPONENT_VALIDATOR_EXECUTION_INPUT_CONTRACT:
         kwargs["stdin"] = subprocess.DEVNULL
+    if execution_environment_contract != COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT:
+        kwargs["env"] = None
     if stderr_isolation_contract != COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT:
         kwargs["stdout"] = subprocess.PIPE
         kwargs["stderr"] = subprocess.PIPE
@@ -308,6 +314,7 @@ def _run_component_validator(
     execution_input_contract: str,
     verdict_admission_timing_contract: str,
     working_directory_contract: str,
+    execution_environment_contract: str,
     execution_transport_contract: str,
 ) -> tuple[int, dict[str, Any], str]:
     repo_root_path = Path(repo_root)
@@ -317,6 +324,7 @@ def _run_component_validator(
         **_component_validator_run_kwargs(
             repo_root_path,
             working_directory_contract,
+            execution_environment_contract,
             execution_transport_contract,
             execution_input_contract,
             stderr_isolation_contract,
@@ -520,6 +528,9 @@ def main() -> int:
     component_validator_working_directory_contract = (
         component_validator_working_directory_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_execution_environment_contract = (
+        component_validator_execution_environment_contract_from_doc(bundle_doc) if bundle_doc else ""
+    )
     component_validator_execution_transport_contract = (
         component_validator_execution_transport_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
@@ -577,6 +588,11 @@ def main() -> int:
         component_validator_working_directory_contract
         if component_validator_working_directory_contract == COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT
         else COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT
+    )
+    effective_component_validator_execution_environment_contract = (
+        component_validator_execution_environment_contract
+        if component_validator_execution_environment_contract == COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT
+        else COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT
     )
     effective_component_validator_execution_transport_contract = (
         component_validator_execution_transport_contract
@@ -858,6 +874,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_validator_working_directory_contract != COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_working_directory_contract_invalid")
+            error_code = ERR_REGISTRY
+        if component_validator_execution_environment_contract != COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT:
+            stale_reasons.append("root_corpus_law_bundle_component_validator_execution_environment_contract_invalid")
             error_code = ERR_REGISTRY
         if component_validator_execution_transport_contract != COMPONENT_VALIDATOR_EXECUTION_TRANSPORT_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_execution_transport_contract_invalid")
@@ -1316,6 +1335,7 @@ def main() -> int:
                 effective_component_validator_execution_input_contract,
                 effective_component_validator_verdict_admission_timing_contract,
                 effective_component_validator_working_directory_contract,
+                effective_component_validator_execution_environment_contract,
                 effective_component_validator_execution_transport_contract,
             )
             component_status = str(payload.get(row.status_key) or "")
@@ -1338,6 +1358,7 @@ def main() -> int:
                     "validator_execution_input_contract": effective_component_validator_execution_input_contract,
                     "validator_verdict_admission_timing_contract": effective_component_validator_verdict_admission_timing_contract,
                     "validator_working_directory_contract": effective_component_validator_working_directory_contract,
+                    "validator_execution_environment_contract": effective_component_validator_execution_environment_contract,
                     "validator_execution_transport_contract": effective_component_validator_execution_transport_contract,
                     "validator_rc": rc,
                     "component_status": component_status,
@@ -1564,6 +1585,7 @@ def main() -> int:
         "component_validator_execution_input_contract": component_validator_execution_input_contract,
         "component_validator_verdict_admission_timing_contract": component_validator_verdict_admission_timing_contract,
         "component_validator_working_directory_contract": component_validator_working_directory_contract,
+        "component_validator_execution_environment_contract": component_validator_execution_environment_contract,
         "component_validator_execution_transport_contract": component_validator_execution_transport_contract,
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
