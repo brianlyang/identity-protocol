@@ -89,6 +89,7 @@ assert payload["failure_classification_policy"] == "registry_from_direct_stale_r
 assert payload["registry_class_admission_policy"] == "only_direct_stale_reasons_present_before_violation_projection_admit_registry_failure_class", payload
 assert payload["registry_direct_stale_reason_origin_policy"] == "alias_document_contract_row_required_surface_only_before_violation_projection", payload
 assert payload["registry_direct_stale_reason_required_surface_origin_policy"] == "required_component_descriptor_fields_missing_surface_missing_anchor_checks_missing_components_missing_only_before_violation_projection", payload
+assert payload["registry_direct_stale_reason_contract_row_origin_policy"] == "root_corpus_law_bundle_or_root_machine_registry_completeness_prefixed_rows_only_after_alias_document_required_surface_exclusion_before_violation_projection", payload
 assert payload["registry_direct_stale_reason_source_policy"] == "local_stale_reasons_only_before_violation_projection", payload
 assert payload["registry_direct_stale_reason_partition_policy"] == "local_stale_reasons_partitioned_into_alias_document_contract_row_required_surface_or_unknown_exactly_once_before_violation_projection", payload
 assert payload["registry_direct_stale_reason_origin_classifier_precedence_policy"] == "alias_preempts_document_preempts_required_surface_preempts_contract_row_else_unknown", payload
@@ -883,6 +884,45 @@ assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", pay
 assert payload["error_code"] == "IP-RCLB-001", payload
 assert "root_corpus_law_bundle_registry_direct_stale_reason_required_surface_origin_policy_invalid" in payload["stale_reasons"], payload
 assert payload["registry_direct_stale_reason_required_surface_origin_policy"] == "surface_missing_only_before_violation_projection", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+assert payload["registry_direct_stale_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+PY
+
+REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY_REPO="${TMP_ROOT}/registry-direct-stale-reason-contract-row-origin-policy-drift-repo"
+mirror_repo "${REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY_REPO}"
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["registry_direct_stale_reason_contract_row_origin_policy"] = "root_corpus_law_bundle_prefixed_rows_only_before_violation_projection"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY_JSON="${TMP_ROOT}/registry-direct-stale-reason-contract-row-origin-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY_REPO}" \
+  --json-only >"${REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry direct stale-reason contract-row origin policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_registry_direct_stale_reason_contract_row_origin_policy_invalid" in payload["stale_reasons"], payload
+assert payload["registry_direct_stale_reason_contract_row_origin_policy"] == "root_corpus_law_bundle_prefixed_rows_only_before_violation_projection", payload
 assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
 assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
 assert payload["registry_direct_stale_reason_source_status"] == "PASS_REQUIRED", payload

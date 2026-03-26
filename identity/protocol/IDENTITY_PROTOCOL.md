@@ -467,6 +467,12 @@ direct reasons are required-component-descriptor-fields missing,
 surface-missing rows, anchor-checks missing, and components missing
 before violation projection.
 
+Root-law bundle rows must also keep registry direct-stale-reason
+contract-row origin policy explicit; admitted contract-row direct
+reasons are root-corpus-law-bundle prefixed rows and
+root-machine-registry-completeness prefixed rows that remain after
+alias, document, and required-surface classification.
+
 Root-law bundle rows must also keep registry direct-stale-reason source
 policy explicit; direct stale-reason source is local stale reasons
 already present before violation projection.

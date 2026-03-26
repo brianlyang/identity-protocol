@@ -743,6 +743,13 @@ required-component-descriptor-fields missing, surface-missing rows,
 anchor-checks missing, and components missing before violation
 projection.
 
+Bundle registry direct-stale-reason contract-row origin policy must stay
+explicit too.
+
+The admitted contract-row direct stale reasons are root-corpus-law-bundle
+prefixed rows and root-machine-registry-completeness prefixed rows that
+remain after alias, document, and required-surface classification.
+
 Bundle registry direct-stale-reason source policy must stay explicit too.
 
 The admitted source is local stale reasons already present before

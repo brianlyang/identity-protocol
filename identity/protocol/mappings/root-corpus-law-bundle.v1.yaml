@@ -74,6 +74,7 @@ failure_classification_policy: registry_from_direct_stale_reasons_structure_from
 registry_class_admission_policy: only_direct_stale_reasons_present_before_violation_projection_admit_registry_failure_class
 registry_direct_stale_reason_origin_policy: alias_document_contract_row_required_surface_only_before_violation_projection
 registry_direct_stale_reason_required_surface_origin_policy: required_component_descriptor_fields_missing_surface_missing_anchor_checks_missing_components_missing_only_before_violation_projection
+registry_direct_stale_reason_contract_row_origin_policy: root_corpus_law_bundle_or_root_machine_registry_completeness_prefixed_rows_only_after_alias_document_required_surface_exclusion_before_violation_projection
 registry_direct_stale_reason_source_policy: local_stale_reasons_only_before_violation_projection
 registry_direct_stale_reason_partition_policy: local_stale_reasons_partitioned_into_alias_document_contract_row_required_surface_or_unknown_exactly_once_before_violation_projection
 registry_direct_stale_reason_origin_classifier_precedence_policy: alias_preempts_document_preempts_required_surface_preempts_contract_row_else_unknown
@@ -339,6 +340,11 @@ bundle_anchor_checks:
     required-component-descriptor-fields missing, surface-missing rows,
     anchor-checks missing, and components missing before violation
     projection.
+  - Bundle registry direct-stale-reason contract-row origin policy must stay
+    explicit too.
+  - The admitted contract-row direct stale reasons are root-corpus-law-bundle
+    prefixed rows and root-machine-registry-completeness prefixed rows that
+    remain after alias, document, and required-surface classification.
   - Bundle registry direct-stale-reason source policy must stay explicit
     too.
   - The admitted source is local stale reasons already present before
@@ -634,6 +640,12 @@ bundle_anchor_checks:
     required-component-descriptor-fields missing, surface-missing rows,
     anchor-checks missing, and components missing before violation
     projection.
+  - Bundle registry direct-stale-reason contract-row origin policy must also
+    stay explicit.
+  - The admitted runtime contract-row direct stale reasons are
+    root-corpus-law-bundle prefixed rows and
+    root-machine-registry-completeness prefixed rows that remain after
+    alias, document, and required-surface classification.
   - Bundle registry direct-stale-reason source policy must also stay
     explicit.
   - The admitted runtime source is local stale reasons already present
@@ -906,6 +918,11 @@ bundle_anchor_checks:
     direct reasons are required-component-descriptor-fields missing,
     surface-missing rows, anchor-checks missing, and components missing
     before violation projection.
+  - Root-law bundle rows must also keep registry direct-stale-reason
+    contract-row origin policy explicit; admitted contract-row direct
+    reasons are root-corpus-law-bundle prefixed rows and
+    root-machine-registry-completeness prefixed rows that remain after alias,
+    document, and required-surface classification.
   - Root-law bundle rows must also keep registry direct-stale-reason source
     policy explicit; direct stale-reason source is local stale reasons
     already present before violation projection.
@@ -1168,6 +1185,11 @@ bundle_anchor_checks:
     required-component-descriptor-fields missing, surface-missing rows,
     anchor-checks missing, and components missing before violation
     projection.
+  - Runtime must also keep registry direct-stale-reason contract-row origin
+    policy explicit; admitted contract-row direct reasons are
+    root-corpus-law-bundle prefixed rows and
+    root-machine-registry-completeness prefixed rows that remain after alias,
+    document, and required-surface classification.
   - Runtime must also keep registry direct-stale-reason source policy
     explicit; direct stale-reason source is local stale reasons already
     present before violation projection.
