@@ -211,6 +211,10 @@ def component_validator_output_contract_from_doc(bundle_doc: Mapping[str, Any]) 
     return _norm_str(bundle_doc.get("component_validator_output_contract"))
 
 
+def component_validator_invocation_contract_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("component_validator_invocation_contract"))
+
+
 def require_component_descriptor_concordance(bundle_doc: Mapping[str, Any]) -> bool:
     return _as_bool(bundle_doc.get("require_component_descriptor_concordance"))
 

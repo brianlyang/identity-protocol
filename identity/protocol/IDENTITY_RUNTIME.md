@@ -223,6 +223,13 @@ Runtime must also require a structured machine-output contract for bound
 component validators; runtime consumes the disclosed status key from machine
 output rather than scraping logs or incidental shell text.
 
+Runtime must also keep bound component validator invocation contract explicit;
+runtime invokes the disclosed validator surface as `python3
+<validator_script> --repo-root <repo_root> --json-only`.
+
+Runtime must not substitute a different interpreter, omit repo-root binding,
+or omit compact machine-output mode.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

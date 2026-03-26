@@ -279,6 +279,13 @@ Root-law bundle rows must also keep component validator machine-output
 contract explicit; bundle legality consumes structured machine output carrying
 the disclosed status key, not human-readable logs or incidental shell text.
 
+Root-law bundle rows must also keep component validator invocation contract
+explicit; bundle legality invokes the disclosed validator surface as `python3
+<validator_script> --repo-root <repo_root> --json-only`.
+
+Local substitution of interpreter, repo-root binding, or compact
+machine-output mode is forbidden inside the bundle.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

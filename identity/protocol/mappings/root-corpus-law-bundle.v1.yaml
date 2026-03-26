@@ -47,6 +47,7 @@ component_descriptor_concordance_local_waiver_policy: forbidden
 component_validator_status_requirement: PASS_REQUIRED
 component_validator_execution_failure_policy: fail_closed
 component_validator_output_contract: json_object_with_disclosed_status_key
+component_validator_invocation_contract: python3_repo_root_json_only
 required_component_descriptor_fields:
 - validator_script
 - probe_script
@@ -142,6 +143,11 @@ bundle_anchor_checks:
   - machine world must consume a bound component validator through structured
     machine output carrying the validator's disclosed status key rather than
   - scraping human-readable logs, prose, or incidental shell text.
+  - Bundle component validator invocation contract must stay explicit too.
+  - The admitted invocation contract is `python3 <validator_script> --repo-root
+    <repo_root> --json-only`.
+  - machine world must not invent an alternate interpreter, drop repo-root
+    binding, or drop compact machine-output mode for local convenience.
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root-law bundle discipline'
@@ -219,6 +225,11 @@ bundle_anchor_checks:
   - Bundle component validators must also remain machine-readable.
   - Runtime consumes them through structured machine output carrying the disclosed
     status key, not by scraping prose, logs, or incidental terminal text.
+  - Bundle component validators must also keep their invocation contract explicit.
+  - Bundle legality invokes them as `python3 <validator_script> --repo-root
+    <repo_root> --json-only`.
+  - Runtime may not swap interpreter, omit repo-root binding, or omit compact
+    machine-output mode.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root-law bundle boundary'
@@ -294,6 +305,11 @@ bundle_anchor_checks:
   - Root-law bundle rows must also keep component validator machine-output
     contract explicit; bundle legality consumes structured machine output carrying
   - the disclosed status key, not human-readable logs or incidental shell text.
+  - Root-law bundle rows must also keep component validator invocation contract
+    explicit; bundle legality invokes the disclosed validator surface as `python3
+    <validator_script> --repo-root <repo_root> --json-only`.
+  - Local substitution of interpreter, repo-root binding, or compact
+    machine-output mode is forbidden inside the bundle.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime consumption of the root-law bundle'
@@ -365,6 +381,11 @@ bundle_anchor_checks:
   - Runtime must also require a structured machine-output contract for bound
     component validators; runtime consumes the disclosed status key from machine
   - output rather than scraping logs or incidental shell text.
+  - Runtime must also keep bound component validator invocation contract
+    explicit; runtime invokes the disclosed validator surface as `python3
+    <validator_script> --repo-root <repo_root> --json-only`.
+  - Runtime must not substitute a different interpreter, omit repo-root binding,
+    or omit compact machine-output mode.
 component_rows:
 - order: 1
   component_id: root_corpus_governance

@@ -529,6 +529,14 @@ Bundle component validators must also remain machine-readable.
 Runtime consumes them through structured machine output carrying the disclosed
 status key, not by scraping prose, logs, or incidental terminal text.
 
+Bundle component validators must also keep their invocation contract explicit.
+
+Bundle legality invokes them as `python3 <validator_script> --repo-root
+<repo_root> --json-only`.
+
+Runtime may not swap interpreter, omit repo-root binding, or omit compact
+machine-output mode.
+
 ---
 
 ## Conflict-handling rule

@@ -509,6 +509,14 @@ The machine world must consume a bound component validator through structured
 machine output carrying the validator's disclosed status key rather than
 scraping human-readable logs, prose, or incidental shell text.
 
+Bundle component validator invocation contract must stay explicit too.
+
+The admitted invocation contract is `python3 <validator_script> --repo-root
+<repo_root> --json-only`.
+
+The machine world must not invent an alternate interpreter, drop repo-root
+binding, or drop compact machine-output mode for local convenience.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

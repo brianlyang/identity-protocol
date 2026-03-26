@@ -31,6 +31,7 @@ from root_corpus_law_bundle_common import (
     component_validator_status_requirement_from_doc,
     component_validator_execution_failure_policy_from_doc,
     component_validator_output_contract_from_doc,
+    component_validator_invocation_contract_from_doc,
     component_self_describing_family_requirement_fallback_policy_from_doc,
     component_self_describing_family_requirement_inheritance_mode_from_doc,
     component_self_describing_family_requirement_local_redeclaration_policy_from_doc,
@@ -79,6 +80,7 @@ STATUS_KEY = "protocol_root_corpus_law_bundle_status"
 ERR_REGISTRY = "IP-RCLB-001"
 ERR_STRUCTURE = "IP-RCLB-002"
 ERR_BUNDLE = "IP-RCLB-003"
+COMPONENT_VALIDATOR_INVOCATION_CONTRACT = "python3_repo_root_json_only"
 
 EXPECTED_COMPONENTS = {
     "root_corpus_governance": {
@@ -196,8 +198,16 @@ def _descriptor_is_present(value: Any) -> bool:
     return bool(str(value or "").strip())
 
 
-def _run_component_validator(repo_root, validator_script: str, status_key: str) -> tuple[int, dict[str, Any], str]:
-    cmd = ["python3", validator_script, "--repo-root", str(repo_root), "--json-only"]
+def _component_validator_cmd(repo_root: Path, validator_script: str, invocation_contract: str) -> list[str]:
+    if invocation_contract == COMPONENT_VALIDATOR_INVOCATION_CONTRACT:
+        return ["python3", validator_script, "--repo-root", str(repo_root), "--json-only"]
+    return ["python3", validator_script, "--repo-root", str(repo_root), "--json-only"]
+
+
+def _run_component_validator(
+    repo_root, validator_script: str, status_key: str, invocation_contract: str
+) -> tuple[int, dict[str, Any], str]:
+    cmd = _component_validator_cmd(Path(repo_root), validator_script, invocation_contract)
     proc = subprocess.run(cmd, cwd=repo_root, capture_output=True, text=True)
     stdout = (proc.stdout or "").strip()
     if not stdout:
@@ -361,10 +371,18 @@ def main() -> int:
     component_validator_output_contract = (
         component_validator_output_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_invocation_contract = (
+        component_validator_invocation_contract_from_doc(bundle_doc) if bundle_doc else ""
+    )
     effective_component_validator_status_requirement = (
         component_validator_status_requirement
         if component_validator_status_requirement == STATUS_PASS_REQUIRED
         else STATUS_PASS_REQUIRED
+    )
+    effective_component_validator_invocation_contract = (
+        component_validator_invocation_contract
+        if component_validator_invocation_contract == COMPONENT_VALIDATOR_INVOCATION_CONTRACT
+        else COMPONENT_VALIDATOR_INVOCATION_CONTRACT
     )
     source_required_descriptor_fields = (
         registry_required_descriptor_fields_from_doc(machine_registry_completeness_doc)
@@ -614,6 +632,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_validator_output_contract != "json_object_with_disclosed_status_key":
             stale_reasons.append("root_corpus_law_bundle_component_validator_output_contract_invalid")
+            error_code = ERR_REGISTRY
+        if component_validator_invocation_contract != COMPONENT_VALIDATOR_INVOCATION_CONTRACT:
+            stale_reasons.append("root_corpus_law_bundle_component_validator_invocation_contract_invalid")
             error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
@@ -1056,7 +1077,12 @@ def main() -> int:
                 if surface_stem_error:
                     component_descriptor_surface_stem_errors[descriptor_field] = surface_stem_error
 
-            rc, payload, run_error = _run_component_validator(repo_root, row.validator_script, row.status_key)
+            rc, payload, run_error = _run_component_validator(
+                repo_root,
+                row.validator_script,
+                row.status_key,
+                effective_component_validator_invocation_contract,
+            )
             component_status = str(payload.get(row.status_key) or "")
             descriptor_field_rows: list[dict[str, str]] = []
             component_status_rows.append(
@@ -1283,6 +1309,7 @@ def main() -> int:
         "component_validator_status_requirement": component_validator_status_requirement,
         "component_validator_execution_failure_policy": component_validator_execution_failure_policy,
         "component_validator_output_contract": component_validator_output_contract,
+        "component_validator_invocation_contract": component_validator_invocation_contract,
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
         "component_ids": [row.component_id for row in sorted_components],
