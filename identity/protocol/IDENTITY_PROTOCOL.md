@@ -300,6 +300,13 @@ governed working directory.
 Local substitution of arbitrary cwd or ambient shell location is forbidden
 inside the bundle.
 
+Root-law bundle rows must also keep component validator execution-transport
+contract explicit; bound component validators execute through local direct
+subprocess vector transport.
+
+Local substitution of shell mediation, remote hop, or other ambient transport
+is forbidden inside the bundle.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

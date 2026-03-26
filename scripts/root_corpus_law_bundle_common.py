@@ -223,6 +223,10 @@ def component_validator_working_directory_contract_from_doc(bundle_doc: Mapping[
     return _norm_str(bundle_doc.get("component_validator_working_directory_contract"))
 
 
+def component_validator_execution_transport_contract_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("component_validator_execution_transport_contract"))
+
+
 def require_component_descriptor_concordance(bundle_doc: Mapping[str, Any]) -> bool:
     return _as_bool(bundle_doc.get("require_component_descriptor_concordance"))
 

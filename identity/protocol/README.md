@@ -551,6 +551,14 @@ The admitted validator execution working directory is repo_root.
 Runtime may not substitute arbitrary cwd or ambient shell location for that
 governed execution context.
 
+Bundle component validators must also keep execution-transport contract
+explicit.
+
+The admitted transport is local direct subprocess vector execution.
+
+Runtime may not substitute shell mediation, remote hop, or other ambient
+transport for that governed execution path.
+
 ---
 
 ## Conflict-handling rule

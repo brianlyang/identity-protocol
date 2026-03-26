@@ -244,6 +244,13 @@ governed working directory.
 Runtime must not substitute arbitrary cwd or ambient shell location for that
 governed execution context.
 
+Runtime must also keep bound component validator execution-transport contract
+explicit; runtime executes bound component validators through local direct
+subprocess vector transport.
+
+Runtime must not substitute shell mediation, remote hop, or other ambient
+transport for that governed execution path.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

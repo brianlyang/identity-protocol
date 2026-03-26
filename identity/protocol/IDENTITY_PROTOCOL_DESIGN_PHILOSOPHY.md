@@ -533,6 +533,14 @@ The machine world must not run a bound component validator from arbitrary cwd
 or ambient shell location and then treat that convenience execution context as
 if it were governed validator law.
 
+Bundle component validator execution-transport contract must stay explicit too.
+
+The admitted execution transport is local direct subprocess vector execution.
+
+The machine world must not route bound component validator execution through a
+shell wrapper, remote hop, or other ambient transport layer and then treat
+that transport substitution as if it were governed validator law.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file
