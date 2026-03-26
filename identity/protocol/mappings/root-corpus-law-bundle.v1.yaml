@@ -74,6 +74,7 @@ failure_classification_policy: registry_from_direct_stale_reasons_structure_from
 registry_class_admission_policy: only_direct_stale_reasons_present_before_violation_projection_admit_registry_failure_class
 registry_direct_stale_reason_origin_policy: alias_document_contract_row_required_surface_only_before_violation_projection
 component_validator_observation_reason_admission_policy: parse_status_nonzero_rc_or_nonpass_only_before_bundle_violation_projection
+component_validator_observation_reason_exclusion_policy: non_execution_bundle_rows_remain_outside_observation_reason_ontology
 required_component_descriptor_fields:
 - validator_script
 - probe_script
@@ -329,6 +330,9 @@ bundle_anchor_checks:
   - The admitted observation reasons are parse/status failure, nonzero
     returncode after admitted parse/status resolution, and non-pass component
     status, all before bundle-violation projection.
+  - Non-execution bundle rows must remain outside component-validator
+    observation ontology rather than being silently re-bucketed as
+    observation reasons.
   - The machine world must fail-close on unclassified component-validator
     observation reason rather than silently expanding bundle observation
     ontology.
@@ -562,6 +566,9 @@ bundle_anchor_checks:
   - The admitted runtime observation reasons are parse/status failure,
     nonzero returncode after admitted parse/status resolution, and non-pass
     component status, all before bundle-violation projection.
+  - Non-execution bundle rows must remain outside component-validator
+    observation ontology rather than being silently re-bucketed as runtime
+    observation reasons.
   - Runtime must fail-close on unclassified component-validator observation
     reason rather than silently expanding bundle observation ontology.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
@@ -771,6 +778,8 @@ bundle_anchor_checks:
     policy explicit; admitted observation reasons are parse/status failure,
     nonzero returncode after admitted parse/status resolution, and non-pass
     component status before bundle-violation projection.
+  - Local bundle law must keep non-execution bundle rows outside
+    component-validator observation ontology.
   - Local bundle observation ontology must not silently expand beyond those
     admitted component-validator observation reasons.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
@@ -982,6 +991,9 @@ bundle_anchor_checks:
     explicit; admitted observation reasons are parse/status failure, nonzero
     returncode after admitted parse/status resolution, and non-pass component
     status before bundle-violation projection.
+  - Runtime must keep non-execution bundle rows outside component-validator
+    observation ontology rather than re-bucketing descriptor, support, or
+    coverage rows as runtime observation reasons.
   - Runtime must fail-close on unclassified component-validator observation
     reason rather than silently expanding bundle observation ontology.
 component_rows:

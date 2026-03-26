@@ -414,6 +414,10 @@ explicit; admitted observation reasons are parse/status failure, nonzero
 returncode after admitted parse/status resolution, and non-pass component
 status before bundle-violation projection.
 
+Runtime must keep non-execution bundle rows outside component-validator
+observation ontology rather than re-bucketing descriptor, support, or
+coverage rows as runtime observation reasons.
+
 Runtime must fail-close on unclassified component-validator observation
 reason rather than silently expanding bundle observation ontology.
 

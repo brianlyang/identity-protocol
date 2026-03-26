@@ -89,6 +89,7 @@ assert payload["failure_classification_policy"] == "registry_from_direct_stale_r
 assert payload["registry_class_admission_policy"] == "only_direct_stale_reasons_present_before_violation_projection_admit_registry_failure_class", payload
 assert payload["registry_direct_stale_reason_origin_policy"] == "alias_document_contract_row_required_surface_only_before_violation_projection", payload
 assert payload["component_validator_observation_reason_admission_policy"] == "parse_status_nonzero_rc_or_nonpass_only_before_bundle_violation_projection", payload
+assert payload["component_validator_observation_reason_exclusion_policy"] == "non_execution_bundle_rows_remain_outside_observation_reason_ontology", payload
 assert payload["derived_status_from_stale_reasons"] == "PASS_REQUIRED", payload
 assert payload["derived_failure_class"] == "pass", payload
 assert payload["derived_error_code_from_precedence"] == "", payload
@@ -157,6 +158,7 @@ assert payload["component_validator_observation_reason_counts"] == {
     "nonpass_status": 0,
 }, payload
 assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
 assert payload["registry_class_reason_count"] == 0, payload
 assert payload["registry_precedence_reason_count"] == 0, payload
 assert payload["projected_violation_reason_count"] == 0, payload
@@ -960,6 +962,43 @@ assert "root_corpus_law_bundle_component_validator_observation_reason_admission_
 assert payload["component_validator_observation_reason_admission_policy"] == "local_component_validator_reason_bucket_allowed", payload
 assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
 assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY_REPO="${TMP_ROOT}/component-validator-observation-reason-exclusion-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_observation_reason_exclusion_policy"] = "local_non_execution_bundle_rows_may_enter_observation_ontology"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY_JSON="${TMP_ROOT}/component-validator-observation-reason-exclusion-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator observation reason exclusion policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_exclusion_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_observation_reason_exclusion_policy"] == "local_non_execution_bundle_rows_may_enter_observation_ontology", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
 PY
 
 COMPONENT_VALIDATOR_PARSE_STATUS_OBSERVATION_REPO="${TMP_ROOT}/component-validator-parse-status-observation-repo"
@@ -996,6 +1035,7 @@ assert payload["derived_failure_class"] == "bundle", payload
 assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
 assert payload["component_validator_observation_reason_counts"]["parse_status"] >= 1, payload
 assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
 assert "bundle_violation:root_corpus_precedence:validator_output_invalid_json" in payload["stale_reasons"], payload
 PY
 
@@ -1035,6 +1075,7 @@ assert payload["derived_failure_class"] == "bundle", payload
 assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
 assert payload["component_validator_observation_reason_counts"]["nonzero_rc"] >= 1, payload
 assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
 assert "bundle_violation:root_corpus_precedence:component_validator_nonzero_rc" in payload["stale_reasons"], payload
 PY
 
@@ -1073,6 +1114,7 @@ assert payload["derived_failure_class"] == "bundle", payload
 assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
 assert payload["component_validator_observation_reason_counts"]["nonpass_status"] >= 1, payload
 assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
 assert "bundle_violation:root_corpus_precedence:component_status_not_pass_required" in payload["stale_reasons"], payload
 PY
 
@@ -1113,6 +1155,7 @@ assert payload["component_validator_observation_reason_counts"]["parse_status"] 
 assert payload["component_validator_observation_reason_counts"]["nonzero_rc"] >= 1, payload
 assert payload["component_validator_observation_reason_counts"]["nonpass_status"] == 0, payload
 assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] >= 1, payload
 assert payload["component_status_row_count"] == payload["component_count"] - 1, payload
 assert payload["bundle_violation_count"] >= 2, payload
 assert payload["registry_precedence_reason_count"] == 0, payload
@@ -1171,6 +1214,7 @@ assert payload["component_validator_observation_reason_counts"]["parse_status"] 
 assert payload["component_validator_observation_reason_counts"]["nonzero_rc"] >= 1, payload
 assert payload["component_validator_observation_reason_counts"]["nonpass_status"] == 0, payload
 assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] >= 1, payload
 assert payload["structure_violation_count"] >= 1, payload
 assert payload["bundle_violation_count"] >= 1, payload
 assert payload["registry_precedence_reason_count"] == 0, payload
@@ -1219,6 +1263,7 @@ assert payload["component_validator_observation_reason_counts"]["parse_status"] 
 assert payload["component_validator_observation_reason_counts"]["nonzero_rc"] >= 1, payload
 assert payload["component_validator_observation_reason_counts"]["nonpass_status"] == 0, payload
 assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] >= 1, payload
 assert payload["registry_precedence_reason_count"] >= 1, payload
 assert payload["bundle_violation_count"] >= 1, payload
 assert "root_corpus_law_bundle_component_status_row_coverage_policy_invalid" in payload["stale_reasons"], payload
@@ -1274,6 +1319,7 @@ assert payload["component_validator_observation_reason_counts"] == {
     "nonpass_status": 0,
 }, payload
 assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
 assert payload["registry_class_reason_count"] == 0, payload
 assert "anchor_violation:identity/protocol/README.md:required_marker_missing" in payload["stale_reasons"], payload
 PY

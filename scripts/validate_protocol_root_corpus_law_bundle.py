@@ -51,6 +51,7 @@ from root_corpus_law_bundle_common import (
     component_validator_contract_surface_projection_policy_from_doc,
     component_validator_observation_continuity_policy_from_doc,
     component_validator_observation_reason_admission_policy_from_doc,
+    component_validator_observation_reason_exclusion_policy_from_doc,
     component_status_row_coverage_policy_from_doc,
     component_self_describing_family_requirement_fallback_policy_from_doc,
     component_self_describing_family_requirement_inheritance_mode_from_doc,
@@ -148,6 +149,9 @@ REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY = (
 )
 COMPONENT_VALIDATOR_OBSERVATION_REASON_ADMISSION_POLICY = (
     "parse_status_nonzero_rc_or_nonpass_only_before_bundle_violation_projection"
+)
+COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY = (
+    "non_execution_bundle_rows_remain_outside_observation_reason_ontology"
 )
 COMPONENT_VALIDATOR_OUTPUT_CONTRACT = "json_object_with_disclosed_status_key"
 
@@ -316,7 +320,11 @@ def _classify_component_validator_observation_reason(reason: str) -> str:
         return "nonzero_rc"
     if reason == "component_status_not_pass_required":
         return "nonpass_status"
+    if reason == "component_status_row_coverage_incomplete":
+        return "not_applicable"
     if reason.startswith("validator_output_") or reason.startswith("validator_status_"):
+        return "unknown"
+    if reason.startswith("component_status_"):
         return "unknown"
     if reason.startswith("component_validator_") and reason not in {
         "component_validator_missing",
@@ -328,23 +336,25 @@ def _classify_component_validator_observation_reason(reason: str) -> str:
 
 def _component_validator_observation_reason_counts(
     bundle_violations: list[dict[str, Any]]
-) -> tuple[dict[str, int], int]:
+) -> tuple[dict[str, int], int, int]:
     counts = {
         "parse_status": 0,
         "nonzero_rc": 0,
         "nonpass_status": 0,
     }
     unknown_count = 0
+    non_applicable_count = 0
     for row in bundle_violations:
         reason = str(row.get("reason") or "")
         category = _classify_component_validator_observation_reason(reason)
         if category == "not_applicable":
+            non_applicable_count += 1
             continue
         if category == "unknown":
             unknown_count += 1
             continue
         counts[category] += 1
-    return counts, unknown_count
+    return counts, unknown_count, non_applicable_count
 
 
 def _component_validator_cmd(repo_root: Path, validator_script: str, invocation_contract: str) -> list[str]:
@@ -731,6 +741,9 @@ def main() -> int:
     component_validator_observation_reason_admission_policy = (
         component_validator_observation_reason_admission_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_observation_reason_exclusion_policy = (
+        component_validator_observation_reason_exclusion_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     effective_component_validator_status_requirement = (
         component_validator_status_requirement
         if component_validator_status_requirement == STATUS_PASS_REQUIRED
@@ -828,6 +841,14 @@ def main() -> int:
             == COMPONENT_VALIDATOR_OBSERVATION_REASON_ADMISSION_POLICY
         )
         else COMPONENT_VALIDATOR_OBSERVATION_REASON_ADMISSION_POLICY
+    )
+    effective_component_validator_observation_reason_exclusion_policy = (
+        component_validator_observation_reason_exclusion_policy
+        if (
+            component_validator_observation_reason_exclusion_policy
+            == COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY
+        )
+        else COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY
     )
     effective_component_validator_stdout_normalization_contract = (
         component_validator_stdout_normalization_contract
@@ -1223,6 +1244,14 @@ def main() -> int:
         ):
             stale_reasons.append(
                 "root_corpus_law_bundle_component_validator_observation_reason_admission_policy_invalid"
+            )
+            error_code = ERR_REGISTRY
+        if (
+            component_validator_observation_reason_exclusion_policy
+            != COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY
+        ):
+            stale_reasons.append(
+                "root_corpus_law_bundle_component_validator_observation_reason_exclusion_policy_invalid"
             )
             error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
@@ -1902,12 +1931,15 @@ def main() -> int:
     (
         component_validator_observation_reason_counts,
         component_validator_observation_reason_unknown_count,
+        component_validator_observation_reason_non_applicable_count,
     ) = _component_validator_observation_reason_counts(bundle_violations)
     component_validator_observation_reason_status = (
         STATUS_FAIL_REQUIRED
         if (
             effective_component_validator_observation_reason_admission_policy
             == COMPONENT_VALIDATOR_OBSERVATION_REASON_ADMISSION_POLICY
+            and effective_component_validator_observation_reason_exclusion_policy
+            == COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY
             and component_validator_observation_reason_unknown_count
         )
         else STATUS_PASS_REQUIRED
@@ -2077,6 +2109,9 @@ def main() -> int:
         "component_validator_observation_reason_admission_policy": (
             component_validator_observation_reason_admission_policy
         ),
+        "component_validator_observation_reason_exclusion_policy": (
+            component_validator_observation_reason_exclusion_policy
+        ),
         "derived_status_from_stale_reasons": derived_status_from_stale_reasons,
         "derived_failure_class": derived_failure_class,
         "derived_error_code_from_precedence": derived_error_code_from_precedence,
@@ -2098,6 +2133,9 @@ def main() -> int:
         ),
         "component_validator_observation_reason_unknown_count": (
             component_validator_observation_reason_unknown_count
+        ),
+        "component_validator_observation_reason_non_applicable_count": (
+            component_validator_observation_reason_non_applicable_count
         ),
         "registry_class_reason_count": registry_precedence_reason_count,
         "registry_precedence_reason_count": registry_precedence_reason_count,

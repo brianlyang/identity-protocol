@@ -469,6 +469,9 @@ policy explicit; admitted observation reasons are parse/status failure,
 nonzero returncode after admitted parse/status resolution, and non-pass
 component status before bundle-violation projection.
 
+Local bundle law must keep non-execution bundle rows outside
+component-validator observation ontology.
+
 Local bundle observation ontology must not silently expand beyond those
 admitted component-validator observation reasons.
 
