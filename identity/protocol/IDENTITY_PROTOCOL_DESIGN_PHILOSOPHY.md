@@ -667,6 +667,15 @@ component rows disclose effective canonical execution surface.
 The machine world must not collapse disclosed drift and effective execution
 into a single ambiguous surface or misreport one as the other.
 
+Bundle component validator observation-continuity policy must stay explicit
+too.
+
+The admitted policy is continue bound component observation under canonical
+surface before final fail-close.
+
+The machine world must not use fail-close drift as a pretext for blind
+short-circuit that suppresses bound component observation.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

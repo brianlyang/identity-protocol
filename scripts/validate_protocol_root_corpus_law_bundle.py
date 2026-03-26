@@ -49,6 +49,7 @@ from root_corpus_law_bundle_common import (
     component_validator_execution_transport_contract_from_doc,
     component_validator_contract_drift_execution_policy_from_doc,
     component_validator_contract_surface_projection_policy_from_doc,
+    component_validator_observation_continuity_policy_from_doc,
     component_self_describing_family_requirement_fallback_policy_from_doc,
     component_self_describing_family_requirement_inheritance_mode_from_doc,
     component_self_describing_family_requirement_local_redeclaration_policy_from_doc,
@@ -116,6 +117,9 @@ COMPONENT_VALIDATOR_EXECUTION_TRANSPORT_CONTRACT = "local_direct_subprocess_vect
 COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY = "execute_under_canonical_contract_and_fail_closed_on_drift"
 COMPONENT_VALIDATOR_CONTRACT_SURFACE_PROJECTION_POLICY = (
     "bundle_summary_disclosed_component_rows_effective_execution_surface"
+)
+COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY = (
+    "continue_bound_component_observation_under_canonical_surface_before_final_fail_close"
 )
 COMPONENT_VALIDATOR_OUTPUT_CONTRACT = "json_object_with_disclosed_status_key"
 
@@ -602,6 +606,9 @@ def main() -> int:
     component_validator_contract_surface_projection_policy = (
         component_validator_contract_surface_projection_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_observation_continuity_policy = (
+        component_validator_observation_continuity_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     effective_component_validator_status_requirement = (
         component_validator_status_requirement
         if component_validator_status_requirement == STATUS_PASS_REQUIRED
@@ -651,6 +658,11 @@ def main() -> int:
         component_validator_contract_surface_projection_policy
         if component_validator_contract_surface_projection_policy == COMPONENT_VALIDATOR_CONTRACT_SURFACE_PROJECTION_POLICY
         else COMPONENT_VALIDATOR_CONTRACT_SURFACE_PROJECTION_POLICY
+    )
+    effective_component_validator_observation_continuity_policy = (
+        component_validator_observation_continuity_policy
+        if component_validator_observation_continuity_policy == COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY
+        else COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY
     )
     effective_component_validator_stdout_normalization_contract = (
         component_validator_stdout_normalization_contract
@@ -1013,6 +1025,12 @@ def main() -> int:
         ):
             stale_reasons.append("root_corpus_law_bundle_component_validator_contract_surface_projection_policy_invalid")
             error_code = ERR_REGISTRY
+        if (
+            component_validator_observation_continuity_policy
+            != COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY
+        ):
+            stale_reasons.append("root_corpus_law_bundle_component_validator_observation_continuity_policy_invalid")
+            error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
             error_code = ERR_REGISTRY
@@ -1211,7 +1229,12 @@ def main() -> int:
             stale_reasons.append("root_corpus_law_bundle_components_missing")
             error_code = ERR_REGISTRY
 
-    if not stale_reasons:
+    if (
+        bundle_doc
+        and components
+        and effective_component_validator_observation_continuity_policy
+        == COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY
+    ):
         if len(component_map) != len(components):
             structure_violations.append({"field": "component_rows", "reason": "duplicate_component_id"})
         if len(set(component_orders)) != len(component_orders) or not _contiguous_orders(sorted(component_orders)):
@@ -1743,8 +1766,10 @@ def main() -> int:
         "component_validator_contract_surface_projection_policy": (
             component_validator_contract_surface_projection_policy
         ),
+        "component_validator_observation_continuity_policy": component_validator_observation_continuity_policy,
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
+        "component_status_row_count": len(component_status_rows),
         "component_ids": [row.component_id for row in sorted_components],
         "required_component_descriptor_fields": list(required_component_descriptor_fields),
         "required_component_descriptor_field_modes": dict(required_component_descriptor_field_modes),

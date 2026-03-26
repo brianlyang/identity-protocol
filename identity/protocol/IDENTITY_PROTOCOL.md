@@ -405,6 +405,13 @@ while component rows disclose effective canonical execution surface.
 Local collapse of disclosed drift and effective execution or projection of
 one as the other is forbidden inside the bundle.
 
+Root-law bundle rows must also keep component validator observation-continuity
+policy explicit; once bound component surfaces resolve, component observation
+continues under canonical surface before final fail-close.
+
+Local short-circuit that suppresses bound component observation merely
+because a bundle contract row drifted is forbidden inside the bundle.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

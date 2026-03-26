@@ -80,6 +80,7 @@ assert payload["component_validator_execution_environment_contract"] == "inherit
 assert payload["component_validator_execution_transport_contract"] == "local_direct_subprocess_vector", payload
 assert payload["component_validator_contract_drift_execution_policy"] == "execute_under_canonical_contract_and_fail_closed_on_drift", payload
 assert payload["component_validator_contract_surface_projection_policy"] == "bundle_summary_disclosed_component_rows_effective_execution_surface", payload
+assert payload["component_validator_observation_continuity_policy"] == "continue_bound_component_observation_under_canonical_surface_before_final_fail_close", payload
 assert payload["bundle_redeclares_required_repo_rel_path_patterns"] is False, payload
 assert payload["bundle_local_required_repo_rel_path_patterns"] == {}, payload
 assert payload["bundle_redeclares_family_surface_binding_governance"] is False, payload
@@ -124,6 +125,7 @@ assert payload["source_require_self_describing_families"] is True, payload
 assert payload["source_registry_directory_rel_path"] == "identity/protocol/mappings", payload
 assert payload["source_registry_current_file"] == "identity/protocol/mappings/root-corpus-registry.current.yaml", payload
 assert payload["source_registered_mapping_children_count"] > 0, payload
+assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
 assert all(row["component_status"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
 assert all(
     row["validator_status_requirement"] == "PASS_REQUIRED"
@@ -223,6 +225,7 @@ assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", pay
 assert payload["error_code"] == "IP-RCLB-001", payload
 assert "root_corpus_law_bundle_component_validator_status_requirement_invalid" in payload["stale_reasons"], payload
 assert payload["component_validator_status_requirement"] == "SKIPPED_NOT_REQUIRED", payload
+assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
 assert all(row["validator_status_requirement"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
 PY
 
@@ -257,6 +260,7 @@ assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", pay
 assert payload["error_code"] == "IP-RCLB-001", payload
 assert "root_corpus_law_bundle_component_validator_execution_failure_policy_invalid" in payload["stale_reasons"], payload
 assert payload["component_validator_execution_failure_policy"] == "advisory_only", payload
+assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
 assert all(
     row["validator_execution_failure_policy"] == "fail_closed"
     for row in payload["component_status_rows"]
@@ -294,6 +298,7 @@ assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", pay
 assert payload["error_code"] == "IP-RCLB-001", payload
 assert "root_corpus_law_bundle_component_validator_returncode_observation_contract_invalid" in payload["stale_reasons"], payload
 assert payload["component_validator_returncode_observation_contract"] == "host_exception_overlay_allowed", payload
+assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
 assert all(
     row["validator_returncode_observation_contract"] == "nonzero_returncode_observed_without_host_exception_overlay"
     for row in payload["component_status_rows"]
@@ -459,6 +464,7 @@ assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", pay
 assert payload["error_code"] == "IP-RCLB-001", payload
 assert "root_corpus_law_bundle_component_validator_contract_drift_execution_policy_invalid" in payload["stale_reasons"], payload
 assert payload["component_validator_contract_drift_execution_policy"] == "execute_under_drifted_contract_allowed", payload
+assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
 assert all(
     row["validator_contract_drift_execution_policy"] == "execute_under_canonical_contract_and_fail_closed_on_drift"
     for row in payload["component_status_rows"]
@@ -500,10 +506,45 @@ assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", pay
 assert payload["error_code"] == "IP-RCLB-001", payload
 assert "root_corpus_law_bundle_component_validator_contract_surface_projection_policy_invalid" in payload["stale_reasons"], payload
 assert payload["component_validator_contract_surface_projection_policy"] == "bundle_summary_and_component_rows_follow_declared_drift", payload
+assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
 assert all(
     row["validator_contract_surface_projection_policy"] == "bundle_summary_disclosed_component_rows_effective_execution_surface"
     for row in payload["component_status_rows"]
 ), payload
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY_REPO="${TMP_ROOT}/component-validator-observation-continuity-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_observation_continuity_policy"] = "abort_component_observation_on_bundle_drift"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY_JSON="${TMP_ROOT}/component-validator-observation-continuity-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator observation-continuity policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_CONTINUITY_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_observation_continuity_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_observation_continuity_policy"] == "abort_component_observation_on_bundle_drift", payload
+assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
 PY
 
 COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT_REPO="${TMP_ROOT}/component-validator-output-channel-contract-drift-repo"

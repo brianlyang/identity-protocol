@@ -679,6 +679,15 @@ effective component execution rows.
 Runtime may not hide disclosed drift by rewriting summary to canonical values
 or project drifted declared rows as applied execution truth.
 
+Bundle component validators must also keep observation-continuity policy
+explicit.
+
+The admitted runtime policy is continue bound component observation under
+canonical surface before final fail-close.
+
+Runtime may not use bundle drift as a reason to suppress otherwise bindable
+component observation before final verdict.
+
 ---
 
 ## Conflict-handling rule

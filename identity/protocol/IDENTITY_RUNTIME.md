@@ -351,6 +351,13 @@ component execution rows as distinct surfaces.
 Runtime must not collapse those surfaces or conceal drift by overwriting one
 with the other.
 
+Runtime must also keep bound component validator observation-continuity
+policy explicit; once bound component surfaces resolve, runtime continues
+component observation under canonical surface before final fail-close.
+
+Runtime must not let bundle drift erase otherwise available component
+observation before emitting final failure.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

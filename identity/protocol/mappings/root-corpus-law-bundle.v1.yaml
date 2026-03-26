@@ -65,6 +65,7 @@ component_validator_execution_environment_contract: inherited_parent_process_env
 component_validator_execution_transport_contract: local_direct_subprocess_vector
 component_validator_contract_drift_execution_policy: execute_under_canonical_contract_and_fail_closed_on_drift
 component_validator_contract_surface_projection_policy: bundle_summary_disclosed_component_rows_effective_execution_surface
+component_validator_observation_continuity_policy: continue_bound_component_observation_under_canonical_surface_before_final_fail_close
 required_component_descriptor_fields:
 - validator_script
 - probe_script
@@ -268,6 +269,12 @@ bundle_anchor_checks:
     component rows disclose effective canonical execution surface.
   - The machine world must not collapse disclosed drift and effective execution
     into a single ambiguous surface or misreport one as the other.
+  - Bundle component validator observation-continuity policy must stay explicit
+    too.
+  - The admitted policy is continue bound component observation under canonical
+    surface before final fail-close.
+  - The machine world must not use fail-close drift as a pretext for blind
+    short-circuit that suppresses bound component observation.
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root-law bundle discipline'
@@ -446,6 +453,12 @@ bundle_anchor_checks:
     effective component execution rows.
   - Runtime may not hide disclosed drift by rewriting summary to canonical
     values or project drifted declared rows as applied execution truth.
+  - Bundle component validators must also keep observation-continuity policy
+    explicit.
+  - The admitted runtime policy is continue bound component observation under
+    canonical surface before final fail-close.
+  - Runtime may not use bundle drift as a reason to suppress otherwise bindable
+    component observation before final verdict.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root-law bundle boundary'
@@ -606,6 +619,11 @@ bundle_anchor_checks:
     while component rows disclose effective canonical execution surface.
   - Local collapse of disclosed drift and effective execution or projection of
     one as the other is forbidden inside the bundle.
+  - Root-law bundle rows must also keep component validator observation-continuity
+    policy explicit; once bound component surfaces resolve, component
+    observation continues under canonical surface before final fail-close.
+  - Local short-circuit that suppresses bound component observation merely
+    because a bundle contract row drifted is forbidden inside the bundle.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime consumption of the root-law bundle'
@@ -769,6 +787,11 @@ bundle_anchor_checks:
     component execution rows as distinct surfaces.
   - Runtime must not collapse those surfaces or conceal drift by overwriting one
     with the other.
+  - Runtime must also keep bound component validator observation-continuity
+    policy explicit; once bound component surfaces resolve, runtime continues
+    component observation under canonical surface before final fail-close.
+  - Runtime must not let bundle drift erase otherwise available component
+    observation before emitting final failure.
 component_rows:
 - order: 1
   component_id: root_corpus_governance
