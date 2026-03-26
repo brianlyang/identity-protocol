@@ -78,6 +78,7 @@ assert payload["component_validator_execution_timeout_contract"] == "no_local_ti
 assert payload["component_validator_working_directory_contract"] == "repo_root", payload
 assert payload["component_validator_execution_environment_contract"] == "inherited_parent_process_env_no_local_overlay", payload
 assert payload["component_validator_execution_transport_contract"] == "local_direct_subprocess_vector", payload
+assert payload["component_validator_contract_drift_execution_policy"] == "execute_under_canonical_contract_and_fail_closed_on_drift", payload
 assert payload["bundle_redeclares_required_repo_rel_path_patterns"] is False, payload
 assert payload["bundle_local_required_repo_rel_path_patterns"] == {}, payload
 assert payload["bundle_redeclares_family_surface_binding_governance"] is False, payload
@@ -149,6 +150,10 @@ assert all(
 ), payload
 assert all(
     row["validator_stdout_framing_contract"] == "whole_stdout_single_json_object"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    row["validator_contract_drift_execution_policy"] == "execute_under_canonical_contract_and_fail_closed_on_drift"
     for row in payload["component_status_rows"]
 ), payload
 assert all(
@@ -396,6 +401,38 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCLB-001", payload
 assert "root_corpus_law_bundle_component_validator_invocation_contract_invalid" in payload["stale_reasons"], payload
+PY
+
+COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY_REPO="${TMP_ROOT}/component-validator-contract-drift-execution-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_contract_drift_execution_policy"] = "execute_under_drifted_contract_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY_JSON="${TMP_ROOT}/component-validator-contract-drift-execution-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component validator contract-drift execution policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_contract_drift_execution_policy_invalid" in payload["stale_reasons"], payload
 PY
 
 COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT_REPO="${TMP_ROOT}/component-validator-output-channel-contract-drift-repo"

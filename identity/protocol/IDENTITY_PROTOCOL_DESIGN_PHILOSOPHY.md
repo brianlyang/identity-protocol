@@ -648,6 +648,16 @@ The machine world must not route bound component validator execution through a
 shell wrapper, remote hop, or other ambient transport layer and then treat
 that transport substitution as if it were governed validator law.
 
+Bundle component validator contract-drift execution policy must stay explicit
+too.
+
+The admitted policy is execute under canonical contract and fail-closed on
+drift.
+
+The machine world must not obey a drifted disclosed contract row during
+validator execution or treat drift-shaped execution as if it were governed
+validator law.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

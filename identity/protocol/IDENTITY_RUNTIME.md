@@ -337,6 +337,13 @@ subprocess vector transport.
 Runtime must not substitute shell mediation, remote hop, or other ambient
 transport for that governed execution path.
 
+Runtime must also keep bound component validator contract-drift execution
+policy explicit; runtime executes under canonical contract and fail-closed on
+drift.
+
+Runtime must not obey a drifted disclosed contract row during validator
+execution or treat drift-shaped execution as admitted validator truth.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

@@ -275,6 +275,10 @@ def component_validator_execution_transport_contract_from_doc(bundle_doc: Mappin
     return _norm_str(bundle_doc.get("component_validator_execution_transport_contract"))
 
 
+def component_validator_contract_drift_execution_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("component_validator_contract_drift_execution_policy"))
+
+
 def require_component_descriptor_concordance(bundle_doc: Mapping[str, Any]) -> bool:
     return _as_bool(bundle_doc.get("require_component_descriptor_concordance"))
 

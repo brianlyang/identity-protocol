@@ -47,6 +47,7 @@ from root_corpus_law_bundle_common import (
     component_validator_working_directory_contract_from_doc,
     component_validator_execution_environment_contract_from_doc,
     component_validator_execution_transport_contract_from_doc,
+    component_validator_contract_drift_execution_policy_from_doc,
     component_self_describing_family_requirement_fallback_policy_from_doc,
     component_self_describing_family_requirement_inheritance_mode_from_doc,
     component_self_describing_family_requirement_local_redeclaration_policy_from_doc,
@@ -111,6 +112,7 @@ COMPONENT_VALIDATOR_EXECUTION_TIMEOUT_CONTRACT = "no_local_timeout_overlay"
 COMPONENT_VALIDATOR_WORKING_DIRECTORY_CONTRACT = "repo_root"
 COMPONENT_VALIDATOR_EXECUTION_ENVIRONMENT_CONTRACT = "inherited_parent_process_env_no_local_overlay"
 COMPONENT_VALIDATOR_EXECUTION_TRANSPORT_CONTRACT = "local_direct_subprocess_vector"
+COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY = "execute_under_canonical_contract_and_fail_closed_on_drift"
 COMPONENT_VALIDATOR_OUTPUT_CONTRACT = "json_object_with_disclosed_status_key"
 
 EXPECTED_COMPONENTS = {
@@ -590,6 +592,9 @@ def main() -> int:
     component_validator_execution_transport_contract = (
         component_validator_execution_transport_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_contract_drift_execution_policy = (
+        component_validator_contract_drift_execution_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     effective_component_validator_status_requirement = (
         component_validator_status_requirement
         if component_validator_status_requirement == STATUS_PASS_REQUIRED
@@ -619,6 +624,11 @@ def main() -> int:
         component_validator_output_contract
         if component_validator_output_contract == COMPONENT_VALIDATOR_OUTPUT_CONTRACT
         else COMPONENT_VALIDATOR_OUTPUT_CONTRACT
+    )
+    effective_component_validator_contract_drift_execution_policy = (
+        component_validator_contract_drift_execution_policy
+        if component_validator_contract_drift_execution_policy == COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY
+        else COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY
     )
     effective_component_validator_stdout_normalization_contract = (
         component_validator_stdout_normalization_contract
@@ -971,6 +981,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_validator_execution_transport_contract != COMPONENT_VALIDATOR_EXECUTION_TRANSPORT_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_execution_transport_contract_invalid")
+            error_code = ERR_REGISTRY
+        if component_validator_contract_drift_execution_policy != COMPONENT_VALIDATOR_CONTRACT_DRIFT_EXECUTION_POLICY:
+            stale_reasons.append("root_corpus_law_bundle_component_validator_contract_drift_execution_policy_invalid")
             error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
@@ -1460,6 +1473,7 @@ def main() -> int:
                     "validator_working_directory_contract": effective_component_validator_working_directory_contract,
                     "validator_execution_environment_contract": effective_component_validator_execution_environment_contract,
                     "validator_execution_transport_contract": effective_component_validator_execution_transport_contract,
+                    "validator_contract_drift_execution_policy": effective_component_validator_contract_drift_execution_policy,
                     "validator_rc": rc,
                     "component_status": component_status,
                     "error_codes": list(row.error_codes),
@@ -1692,6 +1706,7 @@ def main() -> int:
         "component_validator_working_directory_contract": component_validator_working_directory_contract,
         "component_validator_execution_environment_contract": component_validator_execution_environment_contract,
         "component_validator_execution_transport_contract": component_validator_execution_transport_contract,
+        "component_validator_contract_drift_execution_policy": component_validator_contract_drift_execution_policy,
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
         "component_ids": [row.component_id for row in sorted_components],

@@ -63,6 +63,7 @@ component_validator_execution_timeout_contract: no_local_timeout_overlay
 component_validator_working_directory_contract: repo_root
 component_validator_execution_environment_contract: inherited_parent_process_env_no_local_overlay
 component_validator_execution_transport_contract: local_direct_subprocess_vector
+component_validator_contract_drift_execution_policy: execute_under_canonical_contract_and_fail_closed_on_drift
 required_component_descriptor_fields:
 - validator_script
 - probe_script
@@ -253,6 +254,13 @@ bundle_anchor_checks:
   - machine world must not route bound component validator execution through a
     shell wrapper, remote hop, or other ambient transport layer and then treat
     that transport substitution as if it were governed validator law.
+  - Bundle component validator contract-drift execution policy must stay explicit
+    too.
+  - The admitted policy is execute under canonical contract and fail-closed on
+    drift.
+  - The machine world must not obey a drifted disclosed contract row during
+    validator execution or treat drift-shaped execution as if it were governed
+    validator law.
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root-law bundle discipline'
@@ -419,6 +427,12 @@ bundle_anchor_checks:
   - The admitted transport is local direct subprocess vector execution.
   - Runtime may not substitute shell mediation, remote hop, or other ambient
     transport for that governed execution path.
+  - Bundle component validators must also keep contract-drift execution policy
+    explicit.
+  - The admitted validator policy is execute under canonical contract and
+    fail-closed on drift.
+  - Runtime may not obey a drifted disclosed contract row during validator
+    execution or treat drift-shaped execution as admitted validator truth.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root-law bundle boundary'
@@ -569,6 +583,11 @@ bundle_anchor_checks:
     subprocess vector transport.
   - Local substitution of shell mediation, remote hop, or other ambient transport
     is forbidden inside the bundle.
+  - Root-law bundle rows must also keep component validator contract-drift
+    execution policy explicit; bound component validators execute under canonical
+    contract and fail-closed on drift.
+  - Local obedience to a drifted disclosed contract row or admission of
+    drift-shaped execution is forbidden inside the bundle.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime consumption of the root-law bundle'
@@ -722,6 +741,11 @@ bundle_anchor_checks:
     subprocess vector transport.
   - Runtime must not substitute shell mediation, remote hop, or other ambient
     transport for that governed execution path.
+  - Runtime must also keep bound component validator contract-drift execution
+    policy explicit; runtime executes under canonical contract and fail-closed on
+    drift.
+  - Runtime must not obey a drifted disclosed contract row during validator
+    execution or treat drift-shaped execution as admitted validator truth.
 component_rows:
 - order: 1
   component_id: root_corpus_governance

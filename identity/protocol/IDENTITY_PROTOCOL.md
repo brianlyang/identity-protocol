@@ -391,6 +391,13 @@ subprocess vector transport.
 Local substitution of shell mediation, remote hop, or other ambient transport
 is forbidden inside the bundle.
 
+Root-law bundle rows must also keep component validator contract-drift
+execution policy explicit; bound component validators execute under canonical
+contract and fail-closed on drift.
+
+Local obedience to a drifted disclosed contract row or admission of
+drift-shaped execution is forbidden inside the bundle.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

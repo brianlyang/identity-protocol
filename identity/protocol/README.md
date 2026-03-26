@@ -661,6 +661,15 @@ The admitted transport is local direct subprocess vector execution.
 Runtime may not substitute shell mediation, remote hop, or other ambient
 transport for that governed execution path.
 
+Bundle component validators must also keep contract-drift execution policy
+explicit.
+
+The admitted validator policy is execute under canonical contract and
+fail-closed on drift.
+
+Runtime may not obey a drifted disclosed contract row during validator
+execution or treat drift-shaped execution as admitted validator truth.
+
 ---
 
 ## Conflict-handling rule
