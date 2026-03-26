@@ -432,6 +432,14 @@ after violation projection; otherwise final status is `FAIL_REQUIRED`.
 
 Local verdict path must not bypass stale-reason-adjudicated final status.
 
+Root-law bundle rows must also keep error-code precedence policy explicit;
+registry-class failure preempts structure-class failure, structure-class
+failure preempts bundle-class failure, and pass-state emits empty error
+code.
+
+Local error-code derivation must not bypass precedence-adjudicated failure
+classification.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

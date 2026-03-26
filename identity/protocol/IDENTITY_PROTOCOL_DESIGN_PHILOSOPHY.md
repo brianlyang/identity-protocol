@@ -702,6 +702,15 @@ The machine world must not derive a clean final verdict from pre-projection
 convenience, raw green component counts, or any alternate local verdict
 path.
 
+Bundle error-code precedence policy must stay explicit too.
+
+The admitted policy is registry-class failure preempts structure-class
+failure, structure-class failure preempts bundle-class failure, and
+pass-state emits empty error code.
+
+The machine world must not derive failure code from first local convenience,
+last mutation side effect, or any alternate precedence order.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

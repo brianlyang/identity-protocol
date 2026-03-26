@@ -72,6 +72,7 @@ from root_corpus_law_bundle_common import (
     descriptor_schema_source_binding_mode_from_doc,
     descriptor_schema_source_substitution_policy_from_doc,
     descriptor_schema_local_reconstruction_policy_from_doc,
+    error_code_precedence_policy_from_doc,
     final_status_derivation_policy_from_doc,
     load_mapping_descriptor,
     load_root_corpus_law_bundle,
@@ -131,6 +132,7 @@ VIOLATION_PROJECTION_POLICY = (
 FINAL_STATUS_DERIVATION_POLICY = (
     "pass_required_if_and_only_if_stale_reasons_empty_after_violation_projection_else_fail_required"
 )
+ERROR_CODE_PRECEDENCE_POLICY = "registry_preempts_structure_preempts_bundle_else_empty_when_pass_required"
 COMPONENT_VALIDATOR_OUTPUT_CONTRACT = "json_object_with_disclosed_status_key"
 
 EXPECTED_COMPONENTS = {
@@ -624,6 +626,7 @@ def main() -> int:
     )
     violation_projection_policy = violation_projection_policy_from_doc(bundle_doc) if bundle_doc else ""
     final_status_derivation_policy = final_status_derivation_policy_from_doc(bundle_doc) if bundle_doc else ""
+    error_code_precedence_policy = error_code_precedence_policy_from_doc(bundle_doc) if bundle_doc else ""
     effective_component_validator_status_requirement = (
         component_validator_status_requirement
         if component_validator_status_requirement == STATUS_PASS_REQUIRED
@@ -693,6 +696,11 @@ def main() -> int:
         final_status_derivation_policy
         if final_status_derivation_policy == FINAL_STATUS_DERIVATION_POLICY
         else FINAL_STATUS_DERIVATION_POLICY
+    )
+    effective_error_code_precedence_policy = (
+        error_code_precedence_policy
+        if error_code_precedence_policy == ERROR_CODE_PRECEDENCE_POLICY
+        else ERROR_CODE_PRECEDENCE_POLICY
     )
     effective_component_validator_stdout_normalization_contract = (
         component_validator_stdout_normalization_contract
@@ -1069,6 +1077,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if final_status_derivation_policy != FINAL_STATUS_DERIVATION_POLICY:
             stale_reasons.append("root_corpus_law_bundle_final_status_derivation_policy_invalid")
+            error_code = ERR_REGISTRY
+        if error_code_precedence_policy != ERROR_CODE_PRECEDENCE_POLICY:
+            stale_reasons.append("root_corpus_law_bundle_error_code_precedence_policy_invalid")
             error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
@@ -1766,19 +1777,34 @@ def main() -> int:
     expected_projected_violation_reason_count = (
         len(structure_violations) + len(bundle_violations) + len(anchor_violations)
     )
+    registry_precedence_reason_count = len(stale_reasons)
+    violation_projection_incomplete = (
+        effective_violation_projection_policy == VIOLATION_PROJECTION_POLICY
+        and projected_violation_reason_count != expected_projected_violation_reason_count
+    )
 
     stale_reasons.extend(structure_violation_stale_reasons)
     stale_reasons.extend(bundle_violation_stale_reasons)
     stale_reasons.extend(anchor_violation_stale_reasons)
-    if (
-        effective_violation_projection_policy == VIOLATION_PROJECTION_POLICY
-        and projected_violation_reason_count != expected_projected_violation_reason_count
-    ):
+    if violation_projection_incomplete:
         stale_reasons.append("root_corpus_law_bundle_violation_projection_incomplete")
         if not error_code:
             error_code = ERR_BUNDLE
 
     derived_status_from_stale_reasons = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
+    derived_error_code_from_precedence = ""
+    if effective_error_code_precedence_policy == ERROR_CODE_PRECEDENCE_POLICY:
+        if registry_precedence_reason_count:
+            derived_error_code_from_precedence = ERR_REGISTRY
+        elif structure_violations:
+            derived_error_code_from_precedence = ERR_STRUCTURE
+        elif bundle_violations or anchor_violations or violation_projection_incomplete:
+            derived_error_code_from_precedence = ERR_BUNDLE
+    final_error_code = (
+        "" if derived_status_from_stale_reasons == STATUS_PASS_REQUIRED else (
+            derived_error_code_from_precedence or error_code or ERR_BUNDLE
+        )
+    )
     status = (
         derived_status_from_stale_reasons
         if effective_final_status_derivation_policy == FINAL_STATUS_DERIVATION_POLICY
@@ -1786,7 +1812,7 @@ def main() -> int:
     )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
-        "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_BUNDLE),
+        "error_code": final_error_code,
         "bundle_entry_path": str(bundle_entry_path),
         "bundle_active_path": str(bundle_active_path),
         "machine_registry_completeness_entry_path": str(machine_registry_completeness_entry_path),
@@ -1852,13 +1878,16 @@ def main() -> int:
         "component_status_row_coverage_policy": component_status_row_coverage_policy,
         "violation_projection_policy": violation_projection_policy,
         "final_status_derivation_policy": final_status_derivation_policy,
+        "error_code_precedence_policy": error_code_precedence_policy,
         "derived_status_from_stale_reasons": derived_status_from_stale_reasons,
+        "derived_error_code_from_precedence": derived_error_code_from_precedence,
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
         "component_status_row_count": len(component_status_rows),
         "structure_violation_count": len(structure_violations),
         "bundle_violation_count": len(bundle_violations),
         "anchor_violation_count": len(anchor_violations),
+        "registry_precedence_reason_count": registry_precedence_reason_count,
         "projected_violation_reason_count": projected_violation_reason_count,
         "stale_reason_count": len(stale_reasons),
         "component_ids": [row.component_id for row in sorted_components],

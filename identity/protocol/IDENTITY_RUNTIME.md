@@ -378,6 +378,13 @@ violation projection; otherwise final status is `FAIL_REQUIRED`.
 Runtime must not bypass stale-reason-adjudicated final status through any
 alternate local verdict path.
 
+Runtime must also keep error-code precedence policy explicit; registry-class
+failure preempts structure-class failure, structure-class failure preempts
+bundle-class failure, and pass-state emits empty error code.
+
+Runtime must not derive failure code through any alternate local precedence
+path.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

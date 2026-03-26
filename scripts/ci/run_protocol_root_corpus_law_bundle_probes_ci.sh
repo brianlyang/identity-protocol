@@ -84,7 +84,10 @@ assert payload["component_validator_observation_continuity_policy"] == "continue
 assert payload["component_status_row_coverage_policy"] == "all_bound_components_must_emit_status_rows_before_final_status", payload
 assert payload["violation_projection_policy"] == "all_structure_bundle_anchor_violations_projected_into_stale_reasons_before_final_status", payload
 assert payload["final_status_derivation_policy"] == "pass_required_if_and_only_if_stale_reasons_empty_after_violation_projection_else_fail_required", payload
+assert payload["error_code_precedence_policy"] == "registry_preempts_structure_preempts_bundle_else_empty_when_pass_required", payload
 assert payload["derived_status_from_stale_reasons"] == "PASS_REQUIRED", payload
+assert payload["derived_error_code_from_precedence"] == "", payload
+assert payload["error_code"] == "", payload
 assert payload["bundle_redeclares_required_repo_rel_path_patterns"] is False, payload
 assert payload["bundle_local_required_repo_rel_path_patterns"] == {}, payload
 assert payload["bundle_redeclares_family_surface_binding_governance"] is False, payload
@@ -133,6 +136,7 @@ assert payload["component_status_row_count"] == payload["component_count"] == 10
 assert payload["structure_violation_count"] == 0, payload
 assert payload["bundle_violation_count"] == 0, payload
 assert payload["anchor_violation_count"] == 0, payload
+assert payload["registry_precedence_reason_count"] == 0, payload
 assert payload["projected_violation_reason_count"] == 0, payload
 assert payload["stale_reason_count"] == 0, payload
 assert all(row["component_status"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
@@ -656,7 +660,43 @@ assert payload["error_code"] == "IP-RCLB-001", payload
 assert "root_corpus_law_bundle_final_status_derivation_policy_invalid" in payload["stale_reasons"], payload
 assert payload["final_status_derivation_policy"] == "local_verdict_path_may_bypass_stale_reasons", payload
 assert payload["derived_status_from_stale_reasons"] == "FAIL_REQUIRED", payload
+assert payload["derived_error_code_from_precedence"] == "IP-RCLB-001", payload
 assert payload["stale_reason_count"] >= 1, payload
+PY
+
+ERROR_CODE_PRECEDENCE_POLICY_REPO="${TMP_ROOT}/error-code-precedence-policy-drift-repo"
+mirror_repo "${ERROR_CODE_PRECEDENCE_POLICY_REPO}"
+python3 - <<'PY' "${ERROR_CODE_PRECEDENCE_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["error_code_precedence_policy"] = "bundle_preempts_structure_preempts_registry"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+ERROR_CODE_PRECEDENCE_POLICY_JSON="${TMP_ROOT}/error-code-precedence-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${ERROR_CODE_PRECEDENCE_POLICY_REPO}" \
+  --json-only >"${ERROR_CODE_PRECEDENCE_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed error-code precedence policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ERROR_CODE_PRECEDENCE_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["derived_error_code_from_precedence"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_error_code_precedence_policy_invalid" in payload["stale_reasons"], payload
+assert payload["error_code_precedence_policy"] == "bundle_preempts_structure_preempts_registry", payload
+assert payload["registry_precedence_reason_count"] >= 1, payload
 PY
 
 MISSING_COMPONENT_VALIDATOR_REPO="${TMP_ROOT}/missing-component-validator-repo"
@@ -680,13 +720,91 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCLB-003", payload
 assert payload["derived_status_from_stale_reasons"] == payload["protocol_root_corpus_law_bundle_status"], payload
+assert payload["derived_error_code_from_precedence"] == payload["error_code"] == "IP-RCLB-003", payload
 assert payload["component_status_row_count"] == payload["component_count"] - 1, payload
 assert payload["bundle_violation_count"] >= 2, payload
+assert payload["registry_precedence_reason_count"] == 0, payload
 assert payload["projected_violation_reason_count"] == (
     payload["structure_violation_count"] + payload["bundle_violation_count"] + payload["anchor_violation_count"]
 ), payload
 assert payload["stale_reason_count"] == payload["projected_violation_reason_count"], payload
 assert "bundle_violation:root_corpus_law_bundle:component_status_row_coverage_incomplete" in payload["stale_reasons"], payload
+assert "bundle_violation:root_corpus_precedence:component_validator_missing" in payload["stale_reasons"], payload
+PY
+
+STRUCTURE_PRECEDENCE_OVER_BUNDLE_REPO="${TMP_ROOT}/structure-precedence-over-bundle-repo"
+mirror_repo "${STRUCTURE_PRECEDENCE_OVER_BUNDLE_REPO}"
+python3 - <<'PY' "${STRUCTURE_PRECEDENCE_OVER_BUNDLE_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+rows = doc["component_rows"]
+rows[1]["component_id"] = rows[0]["component_id"]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+rm -f "${STRUCTURE_PRECEDENCE_OVER_BUNDLE_REPO}/scripts/validate_protocol_root_corpus_precedence.py"
+
+STRUCTURE_PRECEDENCE_OVER_BUNDLE_JSON="${TMP_ROOT}/structure-precedence-over-bundle.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${STRUCTURE_PRECEDENCE_OVER_BUNDLE_REPO}" \
+  --json-only >"${STRUCTURE_PRECEDENCE_OVER_BUNDLE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed structure-precedence-over-bundle case"
+  exit 1
+fi
+
+python3 - <<'PY' "${STRUCTURE_PRECEDENCE_OVER_BUNDLE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-002", payload
+assert payload["derived_error_code_from_precedence"] == "IP-RCLB-002", payload
+assert payload["structure_violation_count"] >= 1, payload
+assert payload["bundle_violation_count"] >= 1, payload
+assert payload["registry_precedence_reason_count"] == 0, payload
+assert "structure_violation:component_rows:duplicate_component_id" in payload["stale_reasons"], payload
+assert "bundle_violation:root_corpus_precedence:component_validator_missing" in payload["stale_reasons"], payload
+PY
+
+REGISTRY_PRECEDENCE_OVER_BUNDLE_REPO="${TMP_ROOT}/registry-precedence-over-bundle-repo"
+mirror_repo "${REGISTRY_PRECEDENCE_OVER_BUNDLE_REPO}"
+python3 - <<'PY' "${REGISTRY_PRECEDENCE_OVER_BUNDLE_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_status_row_coverage_policy"] = "partial_component_rows_allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+rm -f "${REGISTRY_PRECEDENCE_OVER_BUNDLE_REPO}/scripts/validate_protocol_root_corpus_precedence.py"
+
+REGISTRY_PRECEDENCE_OVER_BUNDLE_JSON="${TMP_ROOT}/registry-precedence-over-bundle.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_PRECEDENCE_OVER_BUNDLE_REPO}" \
+  --json-only >"${REGISTRY_PRECEDENCE_OVER_BUNDLE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry-precedence-over-bundle case"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_PRECEDENCE_OVER_BUNDLE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["derived_error_code_from_precedence"] == "IP-RCLB-001", payload
+assert payload["registry_precedence_reason_count"] >= 1, payload
+assert payload["bundle_violation_count"] >= 1, payload
+assert "root_corpus_law_bundle_component_status_row_coverage_policy_invalid" in payload["stale_reasons"], payload
 assert "bundle_violation:root_corpus_precedence:component_validator_missing" in payload["stale_reasons"], payload
 PY
 

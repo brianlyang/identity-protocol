@@ -714,6 +714,15 @@ Runtime may not derive a clean final verdict from pre-projection
 convenience, raw green component counts, or any alternate local verdict
 path.
 
+Bundle error-code precedence policy must also stay explicit.
+
+The admitted runtime policy is registry-class failure preempts
+structure-class failure, structure-class failure preempts bundle-class
+failure, and pass-state emits empty error code.
+
+Runtime may not derive failure code from first local convenience, last
+mutation side effect, or any alternate precedence order.
+
 ---
 
 ## Conflict-handling rule
