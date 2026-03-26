@@ -485,6 +485,17 @@ If a component current entry is absent or invalid, the machine world must
 fail-close rather than bypassing current mediation and binding directly to a
 version file.
 
+Bundle component validator verdict law must stay explicit as well.
+
+The bundle does not merely point at admitted component current rows; each
+bound component validator must execute through its disclosed validator surface
+and emit `PASS_REQUIRED` through its disclosed status key for bundle legality
+to remain current.
+
+If a bound component validator fails execution or emits some other status, the
+machine world must fail-close rather than treating descriptor concordance or
+file presence as sufficient root-law health.
+
 ### Machine-registry completeness must stay explicit
 
 Machine-registry law does not become canonical merely because a mapping file

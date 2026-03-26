@@ -28,6 +28,7 @@ from root_corpus_law_bundle_common import (
     component_descriptor_resolution_mode_from_doc,
     component_descriptor_version_pinning_policy_from_doc,
     component_descriptor_concordance_local_waiver_policy_from_doc,
+    component_validator_status_requirement_from_doc,
     component_self_describing_family_requirement_fallback_policy_from_doc,
     component_self_describing_family_requirement_inheritance_mode_from_doc,
     component_self_describing_family_requirement_local_redeclaration_policy_from_doc,
@@ -349,6 +350,14 @@ def main() -> int:
     component_descriptor_concordance_local_waiver_policy = (
         component_descriptor_concordance_local_waiver_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_status_requirement = (
+        component_validator_status_requirement_from_doc(bundle_doc) if bundle_doc else ""
+    )
+    effective_component_validator_status_requirement = (
+        component_validator_status_requirement
+        if component_validator_status_requirement == STATUS_PASS_REQUIRED
+        else STATUS_PASS_REQUIRED
+    )
     source_required_descriptor_fields = (
         registry_required_descriptor_fields_from_doc(machine_registry_completeness_doc)
         if machine_registry_completeness_doc
@@ -588,6 +597,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_descriptor_concordance_local_waiver_policy != "forbidden":
             stale_reasons.append("root_corpus_law_bundle_component_descriptor_concordance_local_waiver_policy_invalid")
+            error_code = ERR_REGISTRY
+        if component_validator_status_requirement != STATUS_PASS_REQUIRED:
+            stale_reasons.append("root_corpus_law_bundle_component_validator_status_requirement_invalid")
             error_code = ERR_REGISTRY
         if bundle_doc.get("require_component_descriptor_concordance") is not True:
             stale_reasons.append("root_corpus_law_bundle_descriptor_concordance_rule_invalid")
@@ -1075,12 +1087,13 @@ def main() -> int:
                         "component_status": component_status,
                     }
                 )
-            elif component_status != STATUS_PASS_REQUIRED:
+            elif component_status != effective_component_validator_status_requirement:
                 bundle_violations.append(
                     {
                         "component_id": row.component_id,
                         "reason": "component_status_not_pass_required",
                         "component_status": component_status,
+                        "required_component_status": effective_component_validator_status_requirement,
                     }
                 )
 
@@ -1253,6 +1266,7 @@ def main() -> int:
         "component_descriptor_resolution_mode": component_descriptor_resolution_mode,
         "component_descriptor_version_pinning_policy": component_descriptor_version_pinning_policy,
         "component_descriptor_concordance_local_waiver_policy": component_descriptor_concordance_local_waiver_policy,
+        "component_validator_status_requirement": component_validator_status_requirement,
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
         "component_ids": [row.component_id for row in sorted_components],

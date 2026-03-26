@@ -208,6 +208,13 @@ not direct version-file pinning.
 If a component current row is absent or invalid, runtime must fail-close
 rather than bypassing current mediation.
 
+Runtime must also require each bound component validator to execute through
+its disclosed validator surface and emit `PASS_REQUIRED` through its
+disclosed status key.
+
+Runtime must fail-close on validator execution failure, nonzero exit, or any
+emitted status other than `PASS_REQUIRED`.
+
 ## Startup sequence
 
 1. Read `.codex/config.toml`.

@@ -264,6 +264,13 @@ pinning.
 If a component current row is absent or invalid, protocol legality must
 fail-close rather than bypassing current mediation.
 
+Root-law bundle rows must also remain validator-live; each bound component
+validator must execute through its disclosed validator surface and emit
+`PASS_REQUIRED` through its disclosed status key.
+
+Descriptor concordance or file presence may not override a non-passing
+component validator verdict.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.

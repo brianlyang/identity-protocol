@@ -509,6 +509,14 @@ version truth through those rows, not pin directly to version files.
 If a component current row is absent or invalid, the machine world must
 fail-close rather than bypassing current mediation.
 
+Bundle component legality must also remain validator-live.
+
+Each bound component validator must execute through its disclosed validator
+surface and emit `PASS_REQUIRED` through its disclosed status key.
+
+Descriptor concordance and file presence are not enough if that validator
+fails execution or emits a weaker verdict.
+
 ---
 
 ## Conflict-handling rule

@@ -44,6 +44,7 @@ component_descriptor_resolution_mode: current_alias_only
 component_descriptor_version_pinning_policy: forbidden
 require_component_descriptor_concordance: true
 component_descriptor_concordance_local_waiver_policy: forbidden
+component_validator_status_requirement: PASS_REQUIRED
 required_component_descriptor_fields:
 - validator_script
 - probe_script
@@ -124,6 +125,12 @@ bundle_anchor_checks:
   - version file for local convenience.
   - fail-close rather than bypassing current mediation and binding directly to a
     version file.
+  - Bundle component validator verdict law must stay explicit as well.
+  - bound component validator must execute through its disclosed validator surface
+  - and emit `PASS_REQUIRED` through its disclosed status key for bundle legality
+    to remain current.
+  - machine world must fail-close rather than treating descriptor concordance or
+  - file presence as sufficient root-law health.
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root-law bundle discipline'
@@ -188,6 +195,11 @@ bundle_anchor_checks:
   - Bundle component descriptors must also remain current-entry mediated.
   - version truth through those rows, not pin directly to version files.
   - fail-close rather than bypassing current mediation.
+  - Bundle component legality must also remain validator-live.
+  - Each bound component validator must execute through its disclosed validator
+  - surface and emit `PASS_REQUIRED` through its disclosed status key.
+  - Descriptor concordance and file presence are not enough if that validator
+  - fails execution or emits a weaker verdict.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root-law bundle boundary'
@@ -252,6 +264,11 @@ bundle_anchor_checks:
   - not direct version-file
     pinning.
   - fail-close rather than bypassing current mediation.
+  - Root-law bundle rows must also remain validator-live; each bound component
+  - validator must execute through its disclosed validator surface and emit
+  - '`PASS_REQUIRED` through its disclosed status key.'
+  - Descriptor concordance or file presence may not override a non-passing
+  - component validator verdict.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime consumption of the root-law bundle'
@@ -312,6 +329,11 @@ bundle_anchor_checks:
   - not direct version-file pinning.
   - fail-close
     rather than bypassing current mediation.
+  - Runtime must also require each bound component validator to execute through
+  - its disclosed validator surface and emit `PASS_REQUIRED` through its
+  - disclosed status key.
+  - Runtime must fail-close on validator execution failure, nonzero exit, or any
+  - emitted status other than `PASS_REQUIRED`.
 component_rows:
 - order: 1
   component_id: root_corpus_governance
