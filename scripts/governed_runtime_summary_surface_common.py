@@ -4,6 +4,30 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from projection_profile_exclusion_scope_common import (
+    PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS,
+)
+from release_readiness_active_runtime_closure_projection_common import (
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
+)
+from release_readiness_governance_probe_projection_common import (
+    RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
+)
+from release_readiness_required_gate_bundle_scope_common import (
+    RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS,
+)
+from release_readiness_repo_global_closure_projection_common import (
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
+)
+from release_readiness_selected_check_scope_common import (
+    RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
+)
+from release_readiness_runtime_closure_convergence_common import (
+    RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CONVERGENCE_MARKERS,
+    RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS,
+    RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_COMMAND_CONVERGENCE_MARKERS,
+)
+
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 
 CURRENT_AUTHORITY_REDIRECT_REFS: tuple[str, ...] = (
@@ -49,6 +73,7 @@ class GovernedRuntimeSummarySurfaceProfile:
     current_authority_redirect_refs: tuple[str, ...] = CURRENT_AUTHORITY_REDIRECT_REFS
     forbidden_replacements: tuple[str, ...] = FORBIDDEN_REPLACEMENTS
     strengthening_gateways: tuple[str, ...] = DEFAULT_STRENGTHENING_GATEWAYS
+    operational_constraints: tuple[str, ...] = ()
 
 
 LANE_AUDIT_SUMMARY_REDIRECT_REFS: tuple[str, ...] = (
@@ -104,6 +129,14 @@ SURFACE_PROFILES: dict[str, GovernedRuntimeSummarySurfaceProfile] = {
         surface_id="semantic_tuple_three_plane",
         surface_label="semantic tuple three-plane verdict",
         governed_verdict_kind="governed_cross_plane_verdict",
+        operational_constraints=(
+            "projection_profile_default=projection_profile=full|projection_profile_execution_mode=full_verdict",
+            "projection_profile_terminal_truth_boundary=projection_profile=terminal_truth_boundary_projection|projection_profile_execution_mode=projection_only",
+            "projection_profile_terminal_truth_boundary_excluded_areas=repo_plane|release_plane|release_cloud_evidence_adapter|required_gate_bundle_projection|current_chat_surface_exclusion|m2m_projection|tuple_context_projection|governance_closure_axes",
+            "projection_profile_terminal_truth_boundary_repo_release_skip=repo_plane_status=SKIPPED_NOT_REQUIRED|release_plane_status=SKIPPED_NOT_REQUIRED",
+            *PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS,
+            "projection_profile_terminal_truth_boundary_boundary_surface=terminal_truth_boundary_projection|instance_plane_detail.terminal_truth_boundary_projection",
+        ),
         authority_rule=(
             "The three-plane verdict is a governed cross-plane verdict object on an outer runtime-state "
             "surface; it may aggregate current plane status, but it must not replace root-law owners, "
@@ -118,6 +151,23 @@ SURFACE_PROFILES: dict[str, GovernedRuntimeSummarySurfaceProfile] = {
         surface_id="release_readiness_summary",
         surface_label="release readiness one-look summary",
         governed_verdict_kind="machine_readable_readiness_summary",
+        operational_constraints=(
+            "lifecycle_checkpoint=summary_lifecycle_status=IN_PROGRESS|summary_checkpoint_kind=checkpoint",
+            "lifecycle_final=summary_lifecycle_status=FINALIZED|summary_checkpoint_kind=final",
+            "resume_source_mode=stable_prewrite_snapshot",
+            "same_path_resume_allowed_only_when=stable_prewrite_snapshot",
+            "continuation_surface=scripts/run_release_readiness_continuation.py",
+            "continuation_inner_resolution_anchor=protocol_owned_repo_root_not_caller_cwd",
+            "continuation_forbidden_forward_flags=--summary-out,--resume-from-summary,--max-command-sequence-checks",
+            *RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS,
+            *RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CONVERGENCE_MARKERS,
+            *RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_COMMAND_CONVERGENCE_MARKERS,
+        ),
         authority_rule=(
             "The release-readiness summary is a governed one-look readiness summary on an outer runtime-state "
             "surface; it may compress readiness state, but it must not replace root-law owners, direct "
@@ -150,6 +200,15 @@ SURFACE_PROFILES: dict[str, GovernedRuntimeSummarySurfaceProfile] = {
         surface_label="aggregate identity scan summary",
         governed_verdict_kind="aggregate_runtime_diagnostic_summary",
         forbidden_replacements=FULL_SCAN_SUMMARY_FORBIDDEN_REPLACEMENTS,
+        operational_constraints=(
+            "projection_profile_default=projection_profile=full|projection_profile_execution_mode=full_verdict",
+            "projection_profile_terminal_truth_boundary=projection_profile=terminal_truth_boundary_projection|projection_profile_execution_mode=projection_only",
+            "projection_profile_terminal_truth_boundary_excluded_areas=release_cloud_evidence_adapter|host_visible_post_check_metrics",
+            *PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS,
+            "projection_profile_terminal_truth_boundary_forwarding=scan_projection_profile=terminal_truth_boundary_projection|check_matrix_mode=projection_only",
+            "projection_profile_terminal_truth_boundary_host_visible_skip=host_visible_post_check_metrics_status=SKIPPED_NOT_REQUIRED|chat_egress_uniqueness_status=SKIPPED_NOT_REQUIRED",
+            "projection_profile_terminal_truth_boundary_boundary_surface=three_plane_terminal_truth_boundary_projection|summary_terminal_truth_boundary",
+        ),
         authority_rule=(
             "The full identity protocol scan payload is an aggregate runtime diagnostic summary on an outer "
             "runtime-state surface; it may compress per-identity severity, tuple, and gate state, but it must "
@@ -294,4 +353,5 @@ def build_governed_runtime_summary_surface_payload(surface_id: str) -> dict[str,
         "historical_accident_as_resolution_forbidden": True,
         "authority_rule": profile.authority_rule,
         "operator_interpretation_rule": profile.operator_interpretation_rule,
+        "operational_constraints": list(profile.operational_constraints),
     }

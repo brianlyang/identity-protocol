@@ -37,6 +37,19 @@ path = Path(sys.argv[1]).resolve()
 text = path.read_text(encoding="utf-8")
 text = text.replace("`v1.6.21`", "`v1.6.20`")
 text = text.replace("fleet-scope closure matrix", "fleet matrix")
+text = text.replace("repair success != clean terminal truth", "repair success means clean terminal truth")
+text = text.replace("summary_terminal_truth_boundary", "summary boundary aggregate")
+text = text.replace("resume_capture_mode=stable_prewrite_snapshot", "resume_capture_mode=resume_snapshot")
+text = text.replace("caller cwd", "caller working directory")
+text = text.replace("scripts/run_workspace_runtime_closure_checks.py", "scripts/run_workspace_runtime_pack_checks.py")
+text = text.replace(
+    "active_runtime_closure_projection=one_look.identity_codex_launcher_status",
+    "active_runtime_projection=one_look.identity_codex_launcher_status",
+)
+text = text.replace(
+    "one_look.identity_terminal_truth_class",
+    "one_look.identity_terminal_truth_kind",
+)
 path.write_text(text, encoding="utf-8")
 PY
 
@@ -68,6 +81,20 @@ if "summary_doc_missing_highest_v16_stream_version" not in reasons:
     raise SystemExit("negative release-closure summary must detect missing highest v1.6 stream version")
 if "summary_doc_missing_scope_separation_markers" not in reasons:
     raise SystemExit("negative release-closure summary must detect scope-separation marker drift")
+if "summary_doc_missing_terminal_truth_split_marker:repair success != clean terminal truth" not in reasons:
+    raise SystemExit("negative release-closure summary must detect terminal-truth split marker drift")
+if "summary_doc_missing_outer_surface_e2e_marker:summary_terminal_truth_boundary" not in reasons:
+    raise SystemExit("negative release-closure summary must detect outer-surface e2e marker drift")
+if "summary_doc_missing_release_readiness_lifecycle_marker:resume_capture_mode=stable_prewrite_snapshot" not in reasons:
+    raise SystemExit("negative release-closure summary must detect release-readiness lifecycle drift")
+if "summary_doc_missing_release_readiness_lifecycle_marker:caller cwd" not in reasons:
+    raise SystemExit("negative release-closure summary must detect continuation cwd-anchor drift")
+if "summary_doc_missing_workspace_runtime_closure_command_convergence_marker:scripts/run_workspace_runtime_closure_checks.py" not in reasons:
+    raise SystemExit("negative release-closure summary must detect workspace-runtime closure runner drift")
+if "summary_doc_missing_active_runtime_closure_projection_marker:active_runtime_closure_projection=one_look.identity_codex_launcher_status|one_look.identity_context_continuity_status|one_look.identity_context_continuity_receipt_family_status|one_look.identity_reentry_brief_status|one_look.identity_reentry_consumption_status|one_look.protocol_dialogue_retention_status|one_look.artifact_family_routing_status|one_look.identity_broadcast_delivery_status|one_look.identity_communication_transport_status|one_look.identity_weak_live_linkage_status|one_look.identity_terminal_truth_cleanliness_status" not in reasons:
+    raise SystemExit("negative release-closure summary must detect active-runtime closure projection drift")
+if "summary_doc_missing_active_runtime_closure_projection_marker:one_look.identity_terminal_truth_class" not in reasons:
+    raise SystemExit("negative release-closure summary must detect active-runtime companion detail drift")
 PY
 
 echo "[PASS] v1.6.x release closure summary probes passed"

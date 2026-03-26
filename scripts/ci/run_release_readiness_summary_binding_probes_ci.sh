@@ -16,6 +16,22 @@ import json
 import sys
 from pathlib import Path
 
+from governed_runtime_summary_checkpoint_common import (
+    capture_governed_runtime_summary_resume_source,
+    derive_governed_runtime_summary_resume_projection,
+)
+from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
+from release_readiness_governance_probe_projection_common import (
+    RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
+)
+from release_readiness_repo_global_closure_projection_common import (
+    RELEASE_READINESS_REPO_GLOBAL_ACTIVE_RUNTIME_SUMMARY_KEYS,
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SUMMARY_BINDINGS,
+)
+from release_readiness_selected_check_scope_common import (
+    RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
+)
 import release_readiness_check as readiness
 from runtime_temp_path_common import runtime_temp_file
 
@@ -25,6 +41,7 @@ tmp_root = Path(sys.argv[1]).resolve()
 receipt_path = (tmp_root / 'required-gate-bundle.json').resolve()
 probe_path = (tmp_root / 'required-gate-bundle-scan-probe.json').resolve()
 missing_path = (tmp_root / 'required-gate-bundle-missing.json').resolve()
+probe_actor_id = 'assistant:probe'
 
 base_payload = {
     'bundle_status': 'PASS_REQUIRED',
@@ -33,7 +50,7 @@ base_payload = {
     'bundle_key': 'required_gate_bundle_contract_v1',
     'surface_label': 'ci_probe',
     'identity_id': 'probe-identity',
-    'actor_id': 'assistant:codex',
+    'actor_id': probe_actor_id,
     'resolved_work_layer': 'instance',
     'resolved_source_layer': 'project',
     'lock_state': 'LOCK_MATCH',
@@ -60,6 +77,103 @@ assert summary_unobserved['required_gate_bundle']['projection_stale_reasons'] ==
     'bundle_receipt_not_observed_in_current_release_readiness_run'
 ], summary_unobserved
 assert summary_unobserved['required_gate_bundle_scan_probe']['bundle_status'] == 'UNKNOWN', summary_unobserved
+
+summary_targeted_subset_excluded = {
+    'selected_check_mode': 'targeted_subset',
+    'selected_check_dependency_mode': 'report_independent_targeted_subset',
+    'selected_check_names': ['scripts/validate_issue_register_consistency.py'],
+}
+readiness._hydrate_required_gate_bundle_summary(
+    summary_targeted_subset_excluded,
+    repo_root=repo_root,
+    receipt_path=str(receipt_path),
+    receipt_probe_path=str(probe_path),
+)
+readiness.materialize_targeted_subset_selected_check_scope_exclusions(
+    summary_targeted_subset_excluded,
+    summary_capture_scripts=readiness.SUMMARY_CAPTURE_SCRIPTS,
+    structured_summary_capture_specs=readiness.STRUCTURED_SUMMARY_CAPTURE_SPECS,
+)
+assert summary_targeted_subset_excluded['required_gate_bundle']['bundle_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['required_gate_bundle']['projection_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['required_gate_bundle']['projection_stale_reasons'] == [], summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['required_gate_bundle']['scope_class'] == 'bounded_targeted_subset_exclusion', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['required_gate_bundle']['scope_reason'] == 'required_gate_bundle_out_of_scope_for_targeted_subset', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['selected_check_scope_projection']['status'] == 'PASS_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['selected_check_scope_projection']['scope_class'] == 'bounded_targeted_subset_exclusion', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['selected_check_scope_projection']['scope_reason'] == 'selected_check_out_of_scope_for_targeted_subset', summary_targeted_subset_excluded
+assert 'identity_codex_launcher' in summary_targeted_subset_excluded['selected_check_scope_projection']['excluded_summary_keys'], summary_targeted_subset_excluded
+assert 'release_plane_cloud_evidence' in summary_targeted_subset_excluded['selected_check_scope_projection']['excluded_summary_keys'], summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['identity_codex_launcher']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['required_gate_surface_drift']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['runtime_summary_surface_governance_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['required_gate_surface_drift_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['active_execution_report_pointer_locality_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['strict_live_active_pointer_locality_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['execution_report_selection_convergence_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['identity_codex_launcher_convergence_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['identity_transport_fleet_closure_convergence_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['active_runtime_pack_closure_convergence_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['release_plane_cloud_evidence']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['release_plane_cloud_evidence']['conditions']['required_checks_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['release_cloud_evidence_adapter']['release_cloud_evidence_adapter_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+summary_targeted_subset_excluded['terminal_truth_boundary_projection'] = {
+    'terminal_truth_boundary_projection_status': 'SKIPPED_NOT_REQUIRED',
+    'repair_lane_status': 'SKIPPED_NOT_REQUIRED',
+    'terminal_truth_observation_status': 'SKIPPED_NOT_REQUIRED',
+}
+readiness._hydrate_one_look_projection(summary_targeted_subset_excluded)
+assert summary_targeted_subset_excluded['one_look']['selected_check_scope_projection_status'] == 'PASS_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['selected_check_scope_class'] == 'bounded_targeted_subset_exclusion', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['selected_check_scope_reason'] == 'selected_check_out_of_scope_for_targeted_subset', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['selected_check_scope_excluded_summary_key_count'] > 0, summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['release_cloud_evidence_adapter_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['release_plane_required_checks_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_surface_drift_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_surface_drift_probe_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['active_execution_report_pointer_locality_probe_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['active_execution_report_pointer_external_rejection_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['active_execution_report_pointer_external_resolution_mode'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['active_execution_report_pointer_external_selection_mode'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['active_execution_report_pointer_external_authority_class'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['active_execution_report_pointer_external_selected_report'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['active_execution_report_pointer_pack_local_authority_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['active_execution_report_pointer_pack_local_resolution_mode'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['active_execution_report_pointer_pack_local_selection_mode'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['active_execution_report_pointer_pack_local_authority_class'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['active_execution_report_pointer_pack_local_selected_report'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['strict_live_active_pointer_locality_probe_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['strict_live_active_pointer_external_rejection_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['strict_live_active_pointer_rehome_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['strict_live_active_pointer_candidate_root_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['strict_live_active_pointer_external_resolution_mode'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['strict_live_active_pointer_rehome_resolution_mode'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['strict_live_active_pointer_candidate_root_resolution_mode'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['execution_report_selection_convergence_probe_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['execution_report_selection_convergence_candidate_count'] == 0, summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['execution_report_selection_convergence_freshness_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['execution_report_selection_convergence_baseline_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['execution_report_selection_convergence_run_id_selection_strategy'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['identity_codex_launcher_convergence_probe_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['identity_codex_launcher_convergence_probe_context_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['identity_codex_launcher_convergence_metadata_hygiene_apply_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['identity_codex_launcher_convergence_truth_sync_apply_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['identity_codex_launcher_convergence_repo_catalog_rejection_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['identity_codex_launcher_convergence_repaired_identity_count'] == 0, summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['identity_transport_fleet_closure_convergence_probe_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['identity_transport_fleet_closure_convergence_workspace_checked_identity_count'] == 0, summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['identity_transport_fleet_closure_convergence_repo_inclusive_violation_count'] == 0, summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['identity_transport_fleet_closure_convergence_policy_id'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['active_runtime_pack_closure_convergence_probe_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['active_runtime_pack_closure_convergence_workspace_checked_identity_count'] == 0, summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['active_runtime_pack_closure_convergence_repo_inclusive_violation_count'] == 0, summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['active_runtime_pack_closure_convergence_policy_id'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['repair_lane_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['terminal_truth_observation_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_projection_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scope_class'] == 'bounded_targeted_subset_exclusion', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scope_reason'] == 'required_gate_bundle_out_of_scope_for_targeted_subset', summary_targeted_subset_excluded
 
 summary_observed = {
     'required_gate_bundle_execution': {
@@ -130,7 +244,116 @@ summary_release_projection = {
         'control_plane_status': 'PASS_REQUIRED',
         'promotion_ready': True,
     },
+    'executable_surface_runtime_literal_lock': {
+        'status': 'PASS_REQUIRED',
+        'violation_count': 0,
+    },
+    'issue_register_consistency': {
+        'status': 'PASS_REQUIRED',
+        'current_issue_horizon': 'ISSUE-039',
+    },
+    'protocol_broadcast_doc_control': {
+        'status': 'PASS_REQUIRED',
+        'subdomain_id': 'broadcast',
+    },
+    'protocol_governed_subdomain_doc_control_registry': {
+        'status': 'PASS_REQUIRED',
+        'subdomain_count': 1,
+    },
+    'terminal_truth_boundary_outer_surface_e2e_probe': {
+        'status': 'PASS_REQUIRED',
+    },
+    'runtime_summary_surface_governance_probe': {
+        'status': 'PASS_REQUIRED',
+    },
+    'required_gate_surface_drift_probe': {
+        'status': 'PASS_REQUIRED',
+    },
+    'active_execution_report_pointer_locality_probe': {
+        'status': 'PASS_REQUIRED',
+        'external_pointer_rejection_status': 'PASS_REQUIRED',
+        'external_pointer_resolution_mode': 'external_pointer_report_rejected',
+        'external_pointer_selection_mode': 'candidate_root_latest_report',
+        'external_pointer_selected_report_authority_class': 'candidate_root_latest_pack_local_report',
+        'external_pointer_rejected_selected_report': '/tmp/clone-pack/runtime/reports/probe.json',
+        'pack_local_pointer_authority_status': 'PASS_REQUIRED',
+        'pack_local_pointer_resolution_mode': 'pointer_candidate_root_report',
+        'pack_local_pointer_selection_mode': 'active_execution_pointer',
+        'pack_local_pointer_selected_report_authority_class': 'active_execution_pointer_pack_local_report',
+        'pack_local_pointer_selected_report': '/tmp/clone-pack/runtime/reports/probe.json',
+    },
+    'strict_live_active_pointer_locality_probe': {
+        'status': 'PASS_REQUIRED',
+        'external_pointer_rejection_status': 'PASS_REQUIRED',
+        'report_name_rehome_status': 'PASS_REQUIRED',
+        'candidate_root_binding_status': 'PASS_REQUIRED',
+        'external_pointer_resolution_mode': 'external_pointer_report_rejected',
+        'rehome_resolution_mode': 'pointer_report_name_rehomed_candidate_root',
+        'candidate_root_resolution_mode': 'pointer_candidate_root_report',
+    },
+    'execution_report_selection_convergence_probe': {
+        'status': 'PASS_REQUIRED',
+        'selected_report_path': '/tmp/probe-report.json',
+        'candidate_count': 1,
+        'freshness_status': 'PASS_REQUIRED',
+        'baseline_status': 'PASS_REQUIRED',
+        'run_id_selection_strategy': 'primary_execution_report_candidate',
+    },
+    'identity_codex_launcher_convergence_probe': {
+        'status': 'PASS_REQUIRED',
+        'probe_context_status': 'PASS_REQUIRED',
+        'metadata_hygiene_apply_status': 'PASS_REQUIRED',
+        'truth_sync_apply_status': 'PASS_REQUIRED',
+        'repo_catalog_rejection_status': 'PASS_REQUIRED',
+        'repaired_identity_count': 1,
+    },
+    'identity_transport_fleet_closure_convergence_probe': {
+        'status': 'PASS_REQUIRED',
+        'workspace_checked_identity_count': 1,
+        'repo_inclusive_violation_count': 1,
+        'fleet_projection_policy_id': 'active_runtime_validator_fleet_closure_v1',
+    },
+    'active_runtime_pack_closure_convergence_probe': {
+        'status': 'PASS_REQUIRED',
+        'workspace_checked_identity_count': 1,
+        'repo_inclusive_violation_count': 1,
+        'pack_scan_policy_id': 'active_runtime_pack_closure_scan_v1',
+    },
+    'release_readiness_summary_binding_probe': {
+        'status': 'PASS_REQUIRED',
+    },
+    'release_readiness_continuation_probe': {
+        'status': 'PASS_REQUIRED',
+    },
+    'release_plane_context_resolution_probe': {
+        'status': 'PASS_REQUIRED',
+    },
+    'active_execution_report_pointer_locality_probe': {
+        'status': 'PASS_REQUIRED',
+        'external_pointer_rejection_status': 'PASS_REQUIRED',
+        'external_pointer_resolution_mode': 'external_pointer_report_rejected',
+        'external_pointer_selection_mode': 'candidate_root_latest_report',
+        'external_pointer_selected_report_authority_class': 'candidate_root_latest_pack_local_report',
+        'external_pointer_rejected_selected_report': '/tmp/clone-pack/runtime/reports/probe.json',
+        'pack_local_pointer_authority_status': 'PASS_REQUIRED',
+        'pack_local_pointer_resolution_mode': 'pointer_candidate_root_report',
+        'pack_local_pointer_selection_mode': 'active_execution_pointer',
+        'pack_local_pointer_selected_report_authority_class': 'active_execution_pointer_pack_local_report',
+        'pack_local_pointer_selected_report': '/tmp/clone-pack/runtime/reports/probe.json',
+    },
 }
+
+repo_global_checked_counts = {
+    summary_key: index + 4
+    for index, summary_key in enumerate(RELEASE_READINESS_REPO_GLOBAL_ACTIVE_RUNTIME_SUMMARY_KEYS)
+}
+for summary_key, _one_look_field in RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SUMMARY_BINDINGS:
+    row = summary_release_projection.setdefault(summary_key, {})
+    row.setdefault('status', 'PASS_REQUIRED')
+    if summary_key in repo_global_checked_counts:
+        row.setdefault('checked_identity_count', repo_global_checked_counts[summary_key])
+        row.setdefault('violation_count', 0)
+
 readiness._hydrate_one_look_projection(summary_release_projection)
 assert summary_release_projection['one_look']['release_plane_cloud_evidence_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['release_plane_required_checks_status'] == 'PASS', summary_release_projection
@@ -146,6 +369,269 @@ assert summary_release_projection['one_look']['control_plane_sync_mismatch_count
 assert summary_release_projection['one_look']['control_plane_surface_materialization_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['control_plane_materialized_control_plane_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['control_plane_materialized_promotion_ready'] is True, summary_release_projection
+assert summary_release_projection['one_look']['executable_surface_runtime_literal_lock_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['executable_surface_runtime_literal_lock_violation_count'] == 0, summary_release_projection
+assert summary_release_projection['one_look']['issue_register_consistency_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['protocol_broadcast_doc_control_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['protocol_governed_subdomain_doc_control_registry_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['terminal_truth_boundary_outer_surface_e2e_probe_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['runtime_summary_surface_governance_probe_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_surface_drift_probe_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['active_execution_report_pointer_locality_probe_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['active_execution_report_pointer_external_rejection_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['active_execution_report_pointer_external_resolution_mode'] == 'external_pointer_report_rejected', summary_release_projection
+assert summary_release_projection['one_look']['active_execution_report_pointer_external_selection_mode'] == 'candidate_root_latest_report', summary_release_projection
+assert summary_release_projection['one_look']['active_execution_report_pointer_external_authority_class'] == 'candidate_root_latest_pack_local_report', summary_release_projection
+assert summary_release_projection['one_look']['active_execution_report_pointer_external_selected_report'] == '/tmp/clone-pack/runtime/reports/probe.json', summary_release_projection
+assert summary_release_projection['one_look']['active_execution_report_pointer_pack_local_authority_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['active_execution_report_pointer_pack_local_resolution_mode'] == 'pointer_candidate_root_report', summary_release_projection
+assert summary_release_projection['one_look']['active_execution_report_pointer_pack_local_selection_mode'] == 'active_execution_pointer', summary_release_projection
+assert summary_release_projection['one_look']['active_execution_report_pointer_pack_local_authority_class'] == 'active_execution_pointer_pack_local_report', summary_release_projection
+assert summary_release_projection['one_look']['active_execution_report_pointer_pack_local_selected_report'] == '/tmp/clone-pack/runtime/reports/probe.json', summary_release_projection
+assert summary_release_projection['one_look']['strict_live_active_pointer_locality_probe_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['strict_live_active_pointer_external_rejection_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['strict_live_active_pointer_rehome_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['strict_live_active_pointer_candidate_root_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['strict_live_active_pointer_external_resolution_mode'] == 'external_pointer_report_rejected', summary_release_projection
+assert summary_release_projection['one_look']['strict_live_active_pointer_rehome_resolution_mode'] == 'pointer_report_name_rehomed_candidate_root', summary_release_projection
+assert summary_release_projection['one_look']['strict_live_active_pointer_candidate_root_resolution_mode'] == 'pointer_candidate_root_report', summary_release_projection
+assert summary_release_projection['one_look']['execution_report_selection_convergence_probe_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['execution_report_selection_convergence_candidate_count'] == 1, summary_release_projection
+assert summary_release_projection['one_look']['execution_report_selection_convergence_freshness_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['execution_report_selection_convergence_baseline_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['execution_report_selection_convergence_run_id_selection_strategy'] == 'primary_execution_report_candidate', summary_release_projection
+assert summary_release_projection['one_look']['identity_codex_launcher_convergence_probe_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['identity_codex_launcher_convergence_probe_context_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['identity_codex_launcher_convergence_metadata_hygiene_apply_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['identity_codex_launcher_convergence_truth_sync_apply_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['identity_codex_launcher_convergence_repo_catalog_rejection_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['identity_codex_launcher_convergence_repaired_identity_count'] == 1, summary_release_projection
+assert summary_release_projection['one_look']['identity_transport_fleet_closure_convergence_probe_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['identity_transport_fleet_closure_convergence_workspace_checked_identity_count'] == 1, summary_release_projection
+assert summary_release_projection['one_look']['identity_transport_fleet_closure_convergence_repo_inclusive_violation_count'] == 1, summary_release_projection
+assert summary_release_projection['one_look']['identity_transport_fleet_closure_convergence_policy_id'] == 'active_runtime_validator_fleet_closure_v1', summary_release_projection
+assert summary_release_projection['one_look']['active_runtime_pack_closure_convergence_probe_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['active_runtime_pack_closure_convergence_workspace_checked_identity_count'] == 1, summary_release_projection
+assert summary_release_projection['one_look']['active_runtime_pack_closure_convergence_repo_inclusive_violation_count'] == 1, summary_release_projection
+assert summary_release_projection['one_look']['active_runtime_pack_closure_convergence_policy_id'] == 'active_runtime_pack_closure_scan_v1', summary_release_projection
+assert summary_release_projection['one_look']['release_readiness_summary_binding_probe_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['release_readiness_continuation_probe_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['release_plane_context_resolution_probe_status'] == 'PASS_REQUIRED', summary_release_projection
+for summary_key, one_look_field in RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SUMMARY_BINDINGS:
+    assert summary_release_projection['one_look'][one_look_field] == 'PASS_REQUIRED', summary_release_projection
+    if summary_key in repo_global_checked_counts:
+        assert (
+            summary_release_projection['one_look'][f'{summary_key}_checked_identity_count']
+            == repo_global_checked_counts[summary_key]
+        ), summary_release_projection
+        assert summary_release_projection['one_look'][f'{summary_key}_violation_count'] == 0, summary_release_projection
+
+checkpoint_path = (tmp_root / 'release-readiness-checkpoint.json').resolve()
+checkpoint_summary = {
+    'identity_id': 'probe-identity',
+    'catalog': str(repo_root / 'identity' / 'catalog' / 'identities.yaml'),
+    'lane_context': {
+        'work_layer': 'instance',
+        'source_layer': 'project',
+    },
+    'command_execution': {
+        'executed_command_count': 3,
+        'failed_command_count': 0,
+        'failed_scripts': [],
+        'first_failed_script': '',
+        'last_completed_script': 'scripts/validate_fixture_runtime_boundary.py',
+    },
+}
+checkpoint_summary['surface_governance'] = build_governed_runtime_summary_surface_payload(
+    'release_readiness_summary'
+)
+for marker in RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS:
+    assert marker in checkpoint_summary['surface_governance']['operational_constraints'], checkpoint_summary
+for marker in RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS:
+    assert marker in checkpoint_summary['surface_governance']['operational_constraints'], checkpoint_summary
+for marker in RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS:
+    assert marker in checkpoint_summary['surface_governance']['operational_constraints'], checkpoint_summary
+readiness._checkpoint_release_readiness_summary(
+    checkpoint_summary,
+    summary_out=str(checkpoint_path),
+    phase='preflight',
+    current_check_name='scripts/validate_identity_session_refresh_status.py',
+    current_check_state='running',
+    phase_step_index=8,
+    phase_step_total=8,
+)
+checkpoint_doc = json.loads(checkpoint_path.read_text(encoding='utf-8'))
+assert checkpoint_doc['summary_lifecycle_status'] == 'IN_PROGRESS', checkpoint_doc
+assert checkpoint_doc['summary_checkpoint_kind'] == 'checkpoint', checkpoint_doc
+assert checkpoint_doc['summary_progress']['phase'] == 'preflight', checkpoint_doc
+assert checkpoint_doc['summary_progress']['current_check_name'] == 'scripts/validate_identity_session_refresh_status.py', checkpoint_doc
+assert checkpoint_doc['summary_progress']['current_check_state'] == 'running', checkpoint_doc
+assert checkpoint_doc['summary_progress']['phase_step_index'] == 8, checkpoint_doc
+assert checkpoint_doc['summary_progress']['phase_step_total'] == 8, checkpoint_doc
+assert checkpoint_doc['summary_progress']['last_completed_check_name'] == 'scripts/validate_fixture_runtime_boundary.py', checkpoint_doc
+
+stable_resume_source = capture_governed_runtime_summary_resume_source(
+    str(checkpoint_path),
+    summary_out=str(checkpoint_path),
+)
+assert stable_resume_source['resume_capture_mode'] == 'stable_prewrite_snapshot', stable_resume_source
+assert stable_resume_source['same_path_as_summary_out'] is True, stable_resume_source
+assert stable_resume_source['resume_doc']['summary_progress']['phase'] == 'preflight', stable_resume_source
+
+# Simulate an in-place summary rewrite before resume derivation; the captured source must remain stable.
+overwrite_summary = {
+    'identity_id': 'probe-identity',
+    'catalog': str(repo_root / 'identity' / 'catalog' / 'identities.yaml'),
+    'lane_context': {
+        'work_layer': 'instance',
+        'source_layer': 'project',
+    },
+    'command_execution': {
+        'executed_command_count': 4,
+        'failed_command_count': 0,
+        'failed_scripts': [],
+        'first_failed_script': '',
+        'last_completed_script': 'scripts/validate_fixture_runtime_boundary.py',
+    },
+}
+overwrite_summary['surface_governance'] = build_governed_runtime_summary_surface_payload(
+    'release_readiness_summary'
+)
+readiness._checkpoint_release_readiness_summary(
+    overwrite_summary,
+    summary_out=str(checkpoint_path),
+    phase='bootstrap',
+    current_check_name='',
+    current_check_state='idle',
+    phase_step_index=0,
+    phase_step_total=8,
+)
+overwritten_doc = json.loads(checkpoint_path.read_text(encoding='utf-8'))
+assert overwritten_doc['summary_progress']['phase'] == 'bootstrap', overwritten_doc
+
+stable_resume_projection = derive_governed_runtime_summary_resume_projection(
+    [
+        'scripts/validate_identity_protocol.py',
+        'scripts/validate_actor_session_multibinding_concurrency.py',
+        'scripts/validate_identity_session_refresh_status.py',
+        'scripts/validate_identity_switch_closure_semantics.py',
+    ],
+    stable_resume_source['resume_doc'],
+    resumable_phase='preflight',
+)
+assert stable_resume_projection['resume_projection_status'] == 'PASS_REQUIRED', stable_resume_projection
+assert stable_resume_projection['resume_reason'] == 'resume_from_running_check', stable_resume_projection
+assert stable_resume_projection['resume_start_index'] == 2, stable_resume_projection
+
+final_summary = {
+    'identity_id': 'probe-identity',
+    'catalog': str(repo_root / 'identity' / 'catalog' / 'identities.yaml'),
+    'lane_context': {
+        'work_layer': 'instance',
+        'source_layer': 'project',
+    },
+    'command_execution': {
+        'executed_command_count': 4,
+        'failed_command_count': 0,
+        'failed_scripts': [],
+        'first_failed_script': '',
+        'last_completed_script': 'scripts/validate_identity_session_refresh_status.py',
+    },
+}
+final_summary['surface_governance'] = build_governed_runtime_summary_surface_payload(
+    'release_readiness_summary'
+)
+final_rc = readiness._finalize_release_readiness_summary(
+    final_summary,
+    summary_out=str(checkpoint_path),
+    exit_code=0,
+    execution_report='',
+    required_gate_bundle_receipt='',
+    required_gate_bundle_receipt_probe='',
+    repo_root=repo_root,
+)
+assert final_rc == 0, final_rc
+final_doc = json.loads(checkpoint_path.read_text(encoding='utf-8'))
+assert final_doc['summary_lifecycle_status'] == 'FINALIZED', final_doc
+assert final_doc['summary_checkpoint_kind'] == 'final', final_doc
+assert final_doc['release_readiness_status'] == 'PASS_REQUIRED', final_doc
+assert final_doc['summary_progress']['phase'] == 'finalized', final_doc
+assert final_doc['summary_progress']['current_check_name'] == '', final_doc
+assert final_doc['summary_progress']['last_completed_check_name'] == 'scripts/validate_identity_session_refresh_status.py', final_doc
+
+resume_projection = derive_governed_runtime_summary_resume_projection(
+    [
+        'scripts/validate_identity_protocol.py',
+        'scripts/validate_actor_session_multibinding_concurrency.py',
+        'scripts/validate_identity_session_refresh_status.py',
+        'scripts/validate_identity_switch_closure_semantics.py',
+    ],
+    checkpoint_doc,
+    resumable_phase='preflight',
+)
+assert resume_projection['resume_projection_status'] == 'PASS_REQUIRED', resume_projection
+assert resume_projection['resume_reason'] == 'resume_from_running_check', resume_projection
+assert resume_projection['resume_start_index'] == 2, resume_projection
+assert resume_projection['resume_start_check_name'] == 'scripts/validate_identity_session_refresh_status.py', resume_projection
+assert resume_projection['resume_skipped_check_count'] == 2, resume_projection
+
+final_resume_projection = derive_governed_runtime_summary_resume_projection(
+    ['scripts/validate_identity_session_refresh_status.py'],
+    final_doc,
+    resumable_phase='finalized',
+)
+assert final_resume_projection['resume_projection_status'] == 'SKIPPED_NOT_REQUIRED', final_resume_projection
+assert final_resume_projection['resume_reason'] == 'summary_already_finalized', final_resume_projection
+
+post_execution_stage = readiness._build_post_execution_report_stage_checks(
+    identity_id='probe-identity',
+    catalog=str(repo_root / '.identity' / 'catalog.local.yaml'),
+    execution_report='/tmp/probe-report.json',
+    report_meta={},
+    health_report_dir=str(tmp_root / 'health-report'),
+    actor_id=probe_actor_id,
+    session_id='run:probe-session',
+    scope='USER',
+    base='base-ref',
+    head='head-ref',
+    capability_activation_policy='inherit',
+    expected_work_layer='instance',
+    expected_source_layer='project',
+)
+preview_seq, selectable_post_execution_names = readiness._extend_selection_candidates_with_unique_script_names(
+    [
+        ['python3', 'scripts/validate_identity_capability_activation.py'],
+        ['python3', 'scripts/validate_resolve_identity_context_default_local_catalog.py', '--json-only'],
+    ],
+    post_execution_stage,
+)
+assert 'scripts/validate_identity_prompt_activation.py' in selectable_post_execution_names, selectable_post_execution_names
+assert 'scripts/validate_identity_prompt_lifecycle.py' in selectable_post_execution_names, selectable_post_execution_names
+assert 'scripts/validate_identity_capability_activation.py' not in selectable_post_execution_names, selectable_post_execution_names
+
+post_execution_projection = readiness._build_selected_check_projection(
+    preview_seq,
+    selected_check_names=('scripts/validate_identity_prompt_activation.py',),
+)
+assert post_execution_projection['missing_selected_check_names'] == [], post_execution_projection
+assert post_execution_projection['selected_check_dependency_mode'] == 'requires_execution_report', post_execution_projection
+assert post_execution_projection['execution_report_required'] is True, post_execution_projection
+
+report_independent_projection = readiness._build_selected_check_projection(
+    preview_seq,
+    selected_check_names=('scripts/validate_resolve_identity_context_default_local_catalog.py',),
+)
+assert report_independent_projection['missing_selected_check_names'] == [], report_independent_projection
+assert report_independent_projection['selected_check_dependency_mode'] == 'report_independent_targeted_subset', report_independent_projection
+assert report_independent_projection['execution_report_required'] is False, report_independent_projection
+
+repo_global_projection = readiness._build_selected_check_projection(
+    preview_seq + [['python3', 'scripts/validate_executable_surface_runtime_literal_lock.py', '--json-only']],
+    selected_check_names=('scripts/validate_executable_surface_runtime_literal_lock.py',),
+)
+assert repo_global_projection['missing_selected_check_names'] == [], repo_global_projection
+assert repo_global_projection['selected_check_dependency_mode'] == 'report_independent_targeted_subset', repo_global_projection
+assert repo_global_projection['execution_report_required'] is False, repo_global_projection
 
 report_derived_token = readiness._derive_bundle_run_token(
     required_gates_run_id='',

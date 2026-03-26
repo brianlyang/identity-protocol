@@ -8,6 +8,22 @@ from pathlib import Path
 from typing import Any
 
 from repo_root_resolution_common import resolve_protocol_repo_root
+from release_readiness_active_runtime_closure_projection_common import (
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
+)
+from release_readiness_governance_probe_projection_common import (
+    RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
+)
+from release_readiness_repo_global_closure_projection_common import (
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_CHECKED_IDENTITY_COUNT_FIELDS,
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OWNER_LANES,
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER,
+)
+from release_readiness_runtime_closure_convergence_common import (
+    RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CONVERGENCE_MARKERS,
+    RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS,
+    RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_COMMAND_CONVERGENCE_MARKERS,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -27,6 +43,82 @@ STREAM_VERSION_RE = re.compile(r"\bv1\.6\.(\d+)\b")
 FORBIDDEN_STALE_MARKERS = (
     "Workspace-local core-role required closure: **Go**",
     "workspace-local core release scope is now green on required closure",
+)
+REQUIRED_TERMINAL_TRUTH_SPLIT_MARKERS = (
+    "repair lane",
+    "terminal-truth observation lane",
+    "creator/update admission lane",
+    "repair success != clean terminal truth",
+)
+REQUIRED_OUTER_SURFACE_E2E_MARKERS = (
+    "scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh",
+    "terminal_truth_boundary_projection",
+    "three_plane_terminal_truth_boundary_projection",
+    "summary_terminal_truth_boundary",
+    "one_look.terminal_truth_boundary_projection_status",
+    "scripts/validate_executable_surface_runtime_literal_lock.py",
+    "one_look.executable_surface_runtime_literal_lock_status",
+    "one_look.issue_register_consistency_status",
+    "one_look.protocol_broadcast_doc_control_status",
+    "one_look.protocol_governed_subdomain_doc_control_registry_status",
+    "one_look.identity_codex_launcher_migration_closure_status",
+    "one_look.identity_broadcast_migration_closure_status",
+    "one_look.identity_communication_transport_closure_status",
+    "one_look.unique_entry_contract_migration_closure_status",
+    "one_look.version_baseline_migration_closure_status",
+    *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_CHECKED_IDENTITY_COUNT_FIELDS,
+    *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OWNER_LANES,
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER,
+)
+REQUIRED_RELEASE_READINESS_LIFECYCLE_MARKERS = (
+    "summary_lifecycle_status=IN_PROGRESS",
+    "summary_checkpoint_kind=checkpoint",
+    "summary_lifecycle_status=FINALIZED",
+    "summary_checkpoint_kind=final",
+    "stable prewrite snapshot",
+    "resume_capture_mode=stable_prewrite_snapshot",
+    "same_path_as_summary_out",
+    "scripts/run_release_readiness_continuation.py",
+    "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh",
+    "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh",
+    "scripts/ci/run_release_readiness_continuation_probes_ci.sh",
+    "scripts/ci/run_release_plane_context_resolution_probes_ci.sh",
+    *RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
+    "caller cwd",
+)
+REQUIRED_ACTIVE_REPORT_POINTER_LOCALITY_MARKERS = (
+    "scripts/ci/run_active_execution_report_pointer_locality_probes_ci.sh",
+    "active_execution_report pointer",
+    "cross-pack absolute pointer drift",
+    "pack-local candidate roots",
+    "latest_identity_upgrade_report()",
+    "selected_report_authority_class",
+    "selection_mode",
+    "active_execution_pointer_pack_local_report",
+    "candidate_root_latest_pack_local_report",
+)
+REQUIRED_STRICT_LIVE_ACTIVE_POINTER_LOCALITY_MARKERS = (
+    "scripts/ci/run_strict_live_active_pointer_locality_probes_ci.sh",
+    "strict-live current-run pointer",
+    "resolve_active_execution_context()",
+    "pointer_candidate_root_report",
+    "pointer_report_name_rehomed_candidate_root",
+    "external_pointer_report_rejected",
+)
+REQUIRED_WEAK_LIVE_POINTER_ABSORPTION_MARKERS = (
+    "scripts/ci/run_identity_weak_live_linkage_pointer_locality_probes_ci.sh",
+    "validate_identity_weak_live_linkage.py",
+    "current_run_pointer_resolution_mode",
+    "external_pointer_report_rejected",
+)
+REQUIRED_EXECUTION_REPORT_SELECTION_CONVERGENCE_MARKERS = (
+    "scripts/ci/run_execution_report_selection_convergence_probes_ci.sh",
+    "execution_report_selection_common.py",
+    "primary execution report selection",
+    "derivative report artifacts",
+    "validate_execution_report_freshness.py",
+    "validate_identity_protocol_baseline_freshness.py",
+    "validate_run_id_report_selection.py",
 )
 
 
@@ -67,6 +159,11 @@ def _parse_issue_register(text: str) -> tuple[str, list[str]]:
 def _contains_issue_horizon(text: str, highest_issue: str) -> bool:
     pattern = rf"`ISSUE-001`\s+through\s+`{re.escape(highest_issue)}`"
     return re.search(pattern, text) is not None
+
+
+def _collect_issue_horizon_targets(text: str) -> list[str]:
+    pattern = re.compile(r"`ISSUE-001`\s+through\s+`(ISSUE-\d+)`")
+    return [str(match.group(1)).strip() for match in pattern.finditer(text)]
 
 
 def _extract_boundary_versions(*texts: str) -> list[str]:
@@ -164,6 +261,9 @@ def main() -> int:
         stale_reasons.append("summary_doc_missing_root_machine_runtime_closure_markers")
     if not _contains_issue_horizon(summary_text, highest_issue):
         stale_reasons.append("summary_doc_issue_horizon_mismatch")
+    for target_issue in _collect_issue_horizon_targets(summary_text):
+        if target_issue != highest_issue:
+            stale_reasons.append(f"summary_doc_stale_issue_horizon:{target_issue}")
     if highest_version and highest_version not in summary_text:
         stale_reasons.append("summary_doc_missing_highest_v16_stream_version")
     for version in boundary_versions:
@@ -174,6 +274,49 @@ def main() -> int:
         stale_reasons.append("summary_doc_missing_scope_separation_markers")
     if "not declare a release tag" not in summary_text:
         stale_reasons.append("summary_doc_missing_release_tag_boundary")
+    for marker in REQUIRED_TERMINAL_TRUTH_SPLIT_MARKERS:
+        if marker not in summary_text:
+            stale_reasons.append(f"summary_doc_missing_terminal_truth_split_marker:{marker}")
+    for marker in REQUIRED_OUTER_SURFACE_E2E_MARKERS:
+        if marker not in summary_text:
+            stale_reasons.append(f"summary_doc_missing_outer_surface_e2e_marker:{marker}")
+    for marker in REQUIRED_RELEASE_READINESS_LIFECYCLE_MARKERS:
+        if marker not in summary_text:
+            stale_reasons.append(f"summary_doc_missing_release_readiness_lifecycle_marker:{marker}")
+    for marker in RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS:
+        if marker not in summary_text:
+            stale_reasons.append(
+                f"summary_doc_missing_active_runtime_closure_projection_marker:{marker}"
+            )
+    for marker in REQUIRED_ACTIVE_REPORT_POINTER_LOCALITY_MARKERS:
+        if marker not in summary_text:
+            stale_reasons.append(f"summary_doc_missing_active_report_pointer_locality_marker:{marker}")
+    for marker in REQUIRED_STRICT_LIVE_ACTIVE_POINTER_LOCALITY_MARKERS:
+        if marker not in summary_text:
+            stale_reasons.append(f"summary_doc_missing_strict_live_active_pointer_locality_marker:{marker}")
+    for marker in REQUIRED_WEAK_LIVE_POINTER_ABSORPTION_MARKERS:
+        if marker not in summary_text:
+            stale_reasons.append(f"summary_doc_missing_weak_live_pointer_absorption_marker:{marker}")
+    for marker in REQUIRED_EXECUTION_REPORT_SELECTION_CONVERGENCE_MARKERS:
+        if marker not in summary_text:
+            stale_reasons.append(
+                f"summary_doc_missing_execution_report_selection_convergence_marker:{marker}"
+            )
+    for marker in RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS:
+        if marker not in summary_text:
+            stale_reasons.append(
+                f"summary_doc_missing_transport_fleet_closure_convergence_marker:{marker}"
+            )
+    for marker in RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CONVERGENCE_MARKERS:
+        if marker not in summary_text:
+            stale_reasons.append(
+                f"summary_doc_missing_active_runtime_pack_closure_convergence_marker:{marker}"
+            )
+    for marker in RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_COMMAND_CONVERGENCE_MARKERS:
+        if marker not in summary_text:
+            stale_reasons.append(
+                f"summary_doc_missing_workspace_runtime_closure_command_convergence_marker:{marker}"
+            )
 
     for marker in FORBIDDEN_STALE_MARKERS:
         if marker in summary_text:

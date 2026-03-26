@@ -11,6 +11,29 @@ from governed_runtime_summary_surface_common import (
     SURFACE_PROFILES,
     build_governed_runtime_summary_surface_payload,
 )
+from projection_profile_exclusion_scope_common import (
+    PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS,
+)
+from release_readiness_active_runtime_closure_projection_common import (
+    RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
+)
+from release_readiness_governance_probe_projection_common import (
+    RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
+)
+from release_readiness_required_gate_bundle_scope_common import (
+    RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS,
+)
+from release_readiness_repo_global_closure_projection_common import (
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
+)
+from release_readiness_selected_check_scope_common import (
+    RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
+)
+from release_readiness_runtime_closure_convergence_common import (
+    RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CONVERGENCE_MARKERS,
+    RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS,
+    RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_COMMAND_CONVERGENCE_MARKERS,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -40,6 +63,16 @@ SCRIPT_BINDINGS: tuple[ScriptBindingSpec, ...] = (
             '"surface_governance"',
             "build_governed_runtime_summary_surface_payload(",
             '"release_readiness_summary"',
+            '"terminal_truth_boundary_projection"',
+            "materialize_targeted_subset_selected_check_scope_exclusions(",
+            '"selected_check_scope_projection_status"',
+            '"selected_check_scope_class"',
+            "apply_release_readiness_repo_global_closure_one_look(",
+            "apply_release_readiness_active_runtime_closure_one_look(",
+            "build_scope_excluded_required_gate_bundle_summary(",
+            '"required_gate_bundle_scope_class"',
+            '"scripts/validate_executable_surface_runtime_literal_lock.py"',
+            '"executable_surface_runtime_literal_lock"',
         ),
     ),
     ScriptBindingSpec(
@@ -50,6 +83,13 @@ SCRIPT_BINDINGS: tuple[ScriptBindingSpec, ...] = (
             '"surface_governance"',
             "build_governed_runtime_summary_surface_payload(",
             '"semantic_tuple_three_plane"',
+            '"terminal_truth_boundary_projection"',
+            '"projection_profile"',
+            '"projection_profile_execution_mode"',
+            '"projection_excluded_areas"',
+            "build_projection_profile_exclusion_payload(",
+            "build_projection_profile_excluded_required_gate_bundle_target_projection(",
+            "terminal_truth_boundary_projection=bounded outer-surface terminal-truth projection",
         ),
     ),
     ScriptBindingSpec(
@@ -70,6 +110,14 @@ SCRIPT_BINDINGS: tuple[ScriptBindingSpec, ...] = (
             '"surface_governance"',
             "build_governed_runtime_summary_surface_payload(",
             '"full_identity_protocol_scan_summary"',
+            '"three_plane_terminal_truth_boundary_projection"',
+            '"summary_terminal_truth_boundary"',
+            '"projection_profile"',
+            '"projection_profile_execution_mode"',
+            '"projection_excluded_areas"',
+            "build_projection_profile_exclusion_payload(",
+            '"scan_projection_profile"',
+            '"check_matrix_mode"',
         ),
     ),
     ScriptBindingSpec(
@@ -133,6 +181,28 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             "`scripts/release_readiness_check.py --summary-out`, when emitted, remains a governed outer runtime-state summary surface and must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.",
             "`scripts/full_identity_protocol_scan.py` remains a governed outer runtime-state scan summary surface and must not replace root-law owners, direct validator receipts, fleet-scope closure matrices, or historical replay authority.",
             "All three surfaces must self-describe this boundary in machine-readable payload form rather than relying on operator memory.",
+            "`scripts/report_three_plane_status.py --projection-profile terminal_truth_boundary_projection`",
+            "`scripts/full_identity_protocol_scan.py --projection-profile terminal_truth_boundary_projection`",
+            "projection_profile",
+            "projection_profile_execution_mode",
+            "projection_excluded_areas",
+            *PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS,
+            "stable prewrite snapshot",
+            "scripts/run_release_readiness_continuation.py",
+            "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh",
+            "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh",
+            "scripts/ci/run_release_readiness_continuation_probes_ci.sh",
+            "scripts/ci/run_release_plane_context_resolution_probes_ci.sh",
+            "scripts/ci/run_active_execution_report_pointer_locality_probes_ci.sh",
+            *RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS,
+            *RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CONVERGENCE_MARKERS,
+            *RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_COMMAND_CONVERGENCE_MARKERS,
+            "caller cwd",
         ),
     ),
     DocAnchorSpec(
@@ -143,6 +213,28 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             "`scripts/release_readiness_check.py --summary-out`, when emitted, remains a governed outer runtime-state summary surface and must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.",
             "`scripts/full_identity_protocol_scan.py` remains a governed outer runtime-state scan summary surface and must not replace root-law owners, direct validator receipts, fleet-scope closure matrices, or historical replay authority.",
             "All three surfaces must self-describe this boundary in machine-readable payload form rather than relying on operator memory.",
+            "`scripts/report_three_plane_status.py --projection-profile terminal_truth_boundary_projection`",
+            "`scripts/full_identity_protocol_scan.py --projection-profile terminal_truth_boundary_projection`",
+            "projection_profile",
+            "projection_profile_execution_mode",
+            "projection_excluded_areas",
+            *PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS,
+            "stable prewrite snapshot",
+            "scripts/run_release_readiness_continuation.py",
+            "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh",
+            "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh",
+            "scripts/ci/run_release_readiness_continuation_probes_ci.sh",
+            "scripts/ci/run_release_plane_context_resolution_probes_ci.sh",
+            "scripts/ci/run_active_execution_report_pointer_locality_probes_ci.sh",
+            *RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS,
+            *RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CONVERGENCE_MARKERS,
+            *RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_COMMAND_CONVERGENCE_MARKERS,
+            "caller cwd",
         ),
     ),
     DocAnchorSpec(
@@ -152,6 +244,30 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             "`scripts/report_three_plane_status.py` may emit the current cross-plane verdict, but it must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.",
             "`scripts/release_readiness_check.py --summary-out`, when emitted, remains a governed outer runtime-state summary surface and must not replace root-law owners, direct validator receipts, or fleet-scope closure matrices.",
             "`scripts/full_identity_protocol_scan.py` remains a governed outer runtime-state scan summary surface and must not replace root-law owners, direct validator receipts, fleet-scope closure matrices, or historical replay authority.",
+            "`scripts/report_three_plane_status.py --projection-profile terminal_truth_boundary_projection`",
+            "`scripts/full_identity_protocol_scan.py --projection-profile terminal_truth_boundary_projection`",
+            "projection_profile",
+            "projection_profile_execution_mode",
+            "projection_excluded_areas",
+            *PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS,
+            "stable prewrite snapshot",
+            "resume_capture_mode=stable_prewrite_snapshot",
+            "same_path_as_summary_out",
+            "scripts/run_release_readiness_continuation.py",
+            "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh",
+            "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh",
+            "scripts/ci/run_release_readiness_continuation_probes_ci.sh",
+            "scripts/ci/run_release_plane_context_resolution_probes_ci.sh",
+            "scripts/ci/run_active_execution_report_pointer_locality_probes_ci.sh",
+            *RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS,
+            *RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CONVERGENCE_MARKERS,
+            *RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_COMMAND_CONVERGENCE_MARKERS,
+            "caller cwd",
         ),
     ),
     DocAnchorSpec(
@@ -244,6 +360,41 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
     ),
 )
 
+SURFACE_PAYLOAD_MARKERS: dict[str, tuple[str, ...]] = {
+    "semantic_tuple_three_plane": (
+        "projection_profile_default=projection_profile=full|projection_profile_execution_mode=full_verdict",
+        "projection_profile_terminal_truth_boundary=projection_profile=terminal_truth_boundary_projection|projection_profile_execution_mode=projection_only",
+        "projection_profile_terminal_truth_boundary_excluded_areas=repo_plane|release_plane|release_cloud_evidence_adapter|required_gate_bundle_projection|current_chat_surface_exclusion|m2m_projection|tuple_context_projection|governance_closure_axes",
+        "projection_profile_terminal_truth_boundary_repo_release_skip=repo_plane_status=SKIPPED_NOT_REQUIRED|release_plane_status=SKIPPED_NOT_REQUIRED",
+        *PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS,
+        "projection_profile_terminal_truth_boundary_boundary_surface=terminal_truth_boundary_projection|instance_plane_detail.terminal_truth_boundary_projection",
+    ),
+    "release_readiness_summary": (
+        "lifecycle_checkpoint=summary_lifecycle_status=IN_PROGRESS|summary_checkpoint_kind=checkpoint",
+        "lifecycle_final=summary_lifecycle_status=FINALIZED|summary_checkpoint_kind=final",
+        "resume_source_mode=stable_prewrite_snapshot",
+        "same_path_resume_allowed_only_when=stable_prewrite_snapshot",
+        "continuation_surface=scripts/run_release_readiness_continuation.py",
+        "continuation_inner_resolution_anchor=protocol_owned_repo_root_not_caller_cwd",
+        "continuation_forbidden_forward_flags=--summary-out,--resume-from-summary,--max-command-sequence-checks",
+        *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS,
+        *RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
+        *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
+        *RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS,
+        *RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CONVERGENCE_MARKERS,
+        *RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_COMMAND_CONVERGENCE_MARKERS,
+    ),
+    "full_identity_protocol_scan_summary": (
+        "projection_profile_default=projection_profile=full|projection_profile_execution_mode=full_verdict",
+        "projection_profile_terminal_truth_boundary=projection_profile=terminal_truth_boundary_projection|projection_profile_execution_mode=projection_only",
+        "projection_profile_terminal_truth_boundary_excluded_areas=release_cloud_evidence_adapter|host_visible_post_check_metrics",
+        *PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS,
+        "projection_profile_terminal_truth_boundary_forwarding=scan_projection_profile=terminal_truth_boundary_projection|check_matrix_mode=projection_only",
+        "projection_profile_terminal_truth_boundary_host_visible_skip=host_visible_post_check_metrics_status=SKIPPED_NOT_REQUIRED|chat_egress_uniqueness_status=SKIPPED_NOT_REQUIRED",
+        "projection_profile_terminal_truth_boundary_boundary_surface=three_plane_terminal_truth_boundary_projection|summary_terminal_truth_boundary",
+    ),
+}
+
 
 def _read_text(path: Path) -> str:
     try:
@@ -298,6 +449,27 @@ def _validate_doc_anchors(repo_root: Path) -> tuple[str, list[dict[str, Any]], l
     return (STATUS_PASS_REQUIRED if not errors else STATUS_FAIL_REQUIRED, rows, errors)
 
 
+def _validate_surface_payloads() -> tuple[str, list[dict[str, Any]], list[str]]:
+    rows: list[dict[str, Any]] = []
+    errors: list[str] = []
+    for surface_id in sorted(SURFACE_PROFILES):
+        payload = build_governed_runtime_summary_surface_payload(surface_id)
+        required_markers = SURFACE_PAYLOAD_MARKERS.get(surface_id, ())
+        operational_constraints = payload.get("operational_constraints")
+        if not isinstance(operational_constraints, list):
+            operational_constraints = []
+        missing_markers = [marker for marker in required_markers if marker not in operational_constraints]
+        row = {
+            "surface_id": surface_id,
+            "operational_constraints": operational_constraints,
+            "missing_operational_constraints": missing_markers,
+        }
+        rows.append(row)
+        if missing_markers:
+            errors.append(f"surface_payload_markers_missing:{surface_id}:{len(missing_markers)}")
+    return (STATUS_PASS_REQUIRED if not errors else STATUS_FAIL_REQUIRED, rows, errors)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate governance markers for governed outer runtime summary/support surfaces.")
     ap.add_argument("--repo-root", default=str(DEFAULT_REPO_ROOT))
@@ -307,14 +479,17 @@ def main() -> int:
     repo_root = Path(str(args.repo_root or "").strip()).expanduser().resolve()
     script_status, script_rows, script_errors = _validate_script_bindings(repo_root)
     doc_status, doc_rows, doc_errors = _validate_doc_anchors(repo_root)
-    errors = [*script_errors, *doc_errors]
+    payload_status, payload_rows, payload_errors = _validate_surface_payloads()
+    errors = [*script_errors, *doc_errors, *payload_errors]
     payload = {
         "runtime_summary_surface_governance_status": STATUS_PASS_REQUIRED if not errors else STATUS_FAIL_REQUIRED,
         "repo_root": str(repo_root),
         "script_source_status": script_status,
         "doc_anchor_status": doc_status,
+        "surface_payload_status": payload_status,
         "script_bindings_checked": script_rows,
         "doc_anchors_checked": doc_rows,
+        "surface_payloads_checked": payload_rows,
         "surface_profiles": {
             surface_id: build_governed_runtime_summary_surface_payload(surface_id)
             for surface_id in sorted(SURFACE_PROFILES)

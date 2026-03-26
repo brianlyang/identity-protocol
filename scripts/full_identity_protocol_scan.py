@@ -9,11 +9,23 @@ import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import yaml
 from actor_session_common import load_actor_binding, resolve_actor_id
+from capability_activation_policy_common import (
+    CAPABILITY_ACTIVATION_ENV_AUTH_FALLBACK_POLICY,
+    capability_env_auth_fallback_eligible,
+    replace_capability_activation_policy,
+)
+from full_identity_protocol_scan_projection_profile_common import (
+    DEFAULT_FULL_IDENTITY_PROTOCOL_SCAN_PROJECTION_PROFILE,
+    FullIdentityProtocolScanProjectionProfile,
+    full_identity_protocol_scan_projection_profile_choices,
+    resolve_full_identity_protocol_scan_projection_profile,
+)
 from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gateway_wrapped_command
+from projection_profile_exclusion_scope_common import build_projection_profile_exclusion_payload
 from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
@@ -30,7 +42,18 @@ from protocol_infra_contract import (
     HOST_VISIBLE_FALSE_GREEN_MAX_RATE,
     HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
 )
-from resolve_release_plane_cloud_evidence import resolve_release_cloud_evidence
+from release_cloud_evidence_projection_common import (
+    build_projection_profile_excluded_release_cloud_evidence_adapter,
+    build_release_cloud_evidence_adapter_projection,
+)
+from required_contract_coverage_projection_common import build_required_contract_coverage_projection
+from required_gate_bundle_projection_common import (
+    required_gate_bundle_target_projection_is_scope_excluded,
+)
+from resolve_release_plane_cloud_evidence import (
+    resolve_release_cloud_evidence,
+    resolve_release_plane_context,
+)
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
 
@@ -590,6 +613,11 @@ def _build_current_chat_surface_projection_from_three_plane(
     control_state = str(exclusion.get("control_state", "")).strip()
     display_headstamp_line = str(exclusion.get("display_headstamp_line", "")).strip()
     machine_verification_line = str(exclusion.get("machine_verification_line", "")).strip()
+    projection_skip_status = str(exclusion.get("projection_skip_status", "")).strip()
+    projection_skip_reason = str(exclusion.get("projection_skip_reason", "")).strip()
+    projection_skip_scope_class = str(exclusion.get("projection_skip_scope_class", "")).strip()
+    projection_skip_scope_reason = str(exclusion.get("projection_skip_scope_reason", "")).strip()
+    projection_excluded_area = str(exclusion.get("projection_excluded_area", "")).strip()
     non_blocking_exclusions = [
         str(item).strip()
         for item in (axes.get("non_blocking_exclusions") or [])
@@ -603,6 +631,11 @@ def _build_current_chat_surface_projection_from_three_plane(
             display_headstamp_line,
             machine_verification_line,
             parsed_machine,
+            projection_skip_status,
+            projection_skip_reason,
+            projection_skip_scope_class,
+            projection_skip_scope_reason,
+            projection_excluded_area,
             non_blocking_exclusions,
         )
     ):
@@ -616,6 +649,11 @@ def _build_current_chat_surface_projection_from_three_plane(
         "display_headstamp_line": display_headstamp_line,
         "machine_verification_line": machine_verification_line,
         "parsed_machine_verification": parsed_machine,
+        "projection_skip_status": projection_skip_status,
+        "projection_skip_reason": projection_skip_reason,
+        "projection_skip_scope_class": projection_skip_scope_class,
+        "projection_skip_scope_reason": projection_skip_scope_reason,
+        "projection_excluded_area": projection_excluded_area,
         "non_blocking_exclusions": sorted(set(non_blocking_exclusions)),
     }
 
@@ -1087,17 +1125,6 @@ def _build_host_visible_post_check_metrics(
     }
 
 
-def _replace_activation_policy(cmd: list[str], policy: str) -> list[str]:
-    out = list(cmd)
-    if "--activation-policy" in out:
-        idx = out.index("--activation-policy")
-        if idx + 1 < len(out):
-            out[idx + 1] = policy
-            return out
-    out.extend(["--activation-policy", policy])
-    return out
-
-
 def _latest_runtime_report(identity_id: str, report_dir: Path) -> Path | None:
     if not report_dir.exists():
         return None
@@ -1325,12 +1352,21 @@ def _severity_for_row(row: dict[str, Any]) -> str:
     active = str(row.get("status", "")).lower() == "active"
     profile = str(row.get("profile", "")).lower()
     runtime_mode = str(row.get("runtime_mode", "")).lower()
+    projection_profile = str(row.get("scan_projection_profile", "")).strip().lower()
     is_fixture = profile == "fixture" or runtime_mode == "demo_only"
     # Fixture/demo identities and inactive rows are visibility-only in scan output.
     # Keep their detailed check payloads for audit, but do not let them block
     # release readiness summary (prevents false non-green caused by demo lanes).
     if (not active) or is_fixture:
         return "OK"
+    if projection_profile == "terminal_truth_boundary_projection":
+        terminal_truth_boundary_projection = row.get("three_plane_terminal_truth_boundary_projection") or {}
+        terminal_truth_boundary_projection_status = str(
+            terminal_truth_boundary_projection.get("terminal_truth_boundary_projection_status", "")
+        ).strip().upper()
+        if terminal_truth_boundary_projection_status in {STATUS_PASS_REQUIRED, STATUS_SKIPPED_NOT_REQUIRED}:
+            return "OK"
+        return "P0"
     checks = row.get("checks", {})
     core_fail = any(
         not checks.get(name, {}).get("ok", False)
@@ -1501,6 +1537,267 @@ def _bump_summary(summary: dict[str, int], severity: str) -> None:
         summary["ok"] = int(summary.get("ok", 0)) + 1
 
 
+def _build_projection_profile_host_visible_post_check_metrics(
+    *,
+    projection_profile: FullIdentityProtocolScanProjectionProfile,
+) -> dict[str, Any]:
+    threshold_payload = {
+        "pre_send_gate_pass_rate_min": float(HOST_VISIBLE_PRE_SEND_GATE_MIN_PASS_RATE),
+        "post_check_detectability_rate_min": float(HOST_VISIBLE_POST_CHECK_DETECTABILITY_REQUIRED_RATE),
+        "next_hop_block_rate_min": float(HOST_VISIBLE_NEXT_HOP_BLOCK_REQUIRED_RATE),
+        "false_green_rate_max": float(HOST_VISIBLE_FALSE_GREEN_MAX_RATE),
+        "chat_egress_uniqueness_rate_min": float(HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_REQUIRED_RATE),
+        "post_gate_coverage_rate_min": float(HOST_VISIBLE_POST_GATE_COVERAGE_REQUIRED_RATE),
+        "next_hop_headstamp_rate_min": float(HOST_VISIBLE_NEXT_HOP_HEADSTAMP_REQUIRED_RATE),
+    }
+    sample_payload = {
+        "runtime_active_total": 0,
+        "pre_send_gate_total": 0,
+        "pre_send_gate_not_reached_total": 0,
+        "post_check_detectability_total": 0,
+        "next_hop_block_total": 0,
+        "next_hop_block_probe_total": 0,
+        "next_hop_block_probe_blocked_total": 0,
+        "false_green_total": 0,
+        "chat_egress_uniqueness_total": 0,
+        "post_gate_coverage_total": 0,
+        "next_hop_headstamp_total": 0,
+    }
+    metric_payload = {
+        "pre_send_gate_pass_rate": 0.0,
+        "post_check_detectability_rate": 0.0,
+        "next_hop_block_rate": 0.0,
+        "false_green_rate": 0.0,
+        "chat_egress_uniqueness_rate": 0.0,
+        "post_gate_coverage_rate": 0.0,
+        "next_hop_headstamp_rate": 0.0,
+    }
+    metric_statuses = {
+        "pre_send_gate_pass_rate_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "post_check_detectability_rate_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "next_hop_block_rate_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "false_green_rate_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "chat_egress_uniqueness_rate_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "post_gate_coverage_rate_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "next_hop_headstamp_rate_status": STATUS_SKIPPED_NOT_REQUIRED,
+    }
+    return build_projection_profile_exclusion_payload(
+        profile_id=projection_profile.profile_id,
+        execution_mode=projection_profile.execution_mode,
+        description=projection_profile.description,
+        excluded_area="host_visible_post_check_metrics",
+        owner_surface="full_identity_protocol_scan_summary",
+        extra_fields={
+            "contract_id": "rq_036_host_visible_post_check_next_hop_block_contract_v1",
+            "chat_egress_uniqueness_contract_id": HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_CONTRACT_ID,
+            "host_visible_post_check_metrics_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "chat_egress_uniqueness_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "closure_claim_ready": False,
+            "thresholds": threshold_payload,
+            "samples": sample_payload,
+            "metrics": metric_payload,
+            "metric_statuses": metric_statuses,
+            "next_hop_block_probe_manifest_paths": [],
+            "next_hop_block_probe_sample_refs": [],
+            "next_hop_block_identity_ids": [],
+            "next_hop_admission_fail_identity_ids": [],
+            "false_green_identity_ids": [],
+            "chat_egress_uniqueness_fail_identity_ids": [],
+            "next_hop_headstamp_fail_identity_ids": [],
+            "strict_skip_fail_close_reasons": [],
+        },
+    )
+
+
+def _apply_three_plane_projection(
+    *,
+    repo_root: Path,
+    catalog: Path,
+    repo_catalog: Path,
+    item: dict[str, Any],
+    payload: dict[str, Any],
+    identity_id: str,
+    actor_id: str,
+    session_id: str,
+    scope_hint: str,
+    target_branch: str,
+    release_head_sha: str,
+    required_gates_run_id: str,
+    run_url: str,
+    workflow_file_sha: str,
+    run_head_sha: str,
+    run_workflow_file_sha: str,
+    checks_json: str,
+    jobs_json: str,
+    gh_runs_json: str,
+    layer_intent_text: str,
+    effective_work_layer: str,
+    effective_source_layer: str,
+    with_docs_contract: bool,
+    record_required_gate_projection: Callable[[str, dict[str, Any]], None],
+    three_plane_projection_profile_id: str = "",
+) -> None:
+    env = os.environ.copy()
+    env["IDENTITY_CATALOG"] = str(catalog)
+    three_plane = _run(
+        [
+            "python3",
+            "scripts/report_three_plane_status.py",
+            "--identity-id",
+            identity_id,
+            "--actor-id",
+            actor_id,
+            "--session-id",
+            session_id,
+            *(["--projection-profile", three_plane_projection_profile_id] if three_plane_projection_profile_id else []),
+            "--scope",
+            scope_hint,
+            "--target-branch",
+            target_branch,
+            "--release-head-sha",
+            release_head_sha,
+            "--required-gates-run-id",
+            required_gates_run_id,
+            "--run-url",
+            run_url,
+            "--workflow-file-sha",
+            workflow_file_sha,
+            "--run-head-sha",
+            run_head_sha,
+            "--run-workflow-file-sha",
+            run_workflow_file_sha,
+            *(["--checks-json", checks_json] if checks_json else []),
+            *(["--jobs-json", jobs_json] if jobs_json and not checks_json else []),
+            *(["--gh-runs-json", gh_runs_json] if gh_runs_json and not checks_json and not jobs_json else []),
+            *(["--layer-intent-text", layer_intent_text] if layer_intent_text else []),
+            *(["--expected-work-layer", effective_work_layer] if effective_work_layer else []),
+            *(["--expected-source-layer", effective_source_layer] if effective_source_layer else []),
+            *(["--with-docs-contract"] if with_docs_contract else []),
+        ],
+        cwd=repo_root,
+        env=env,
+    )
+    item["checks"]["three_plane"] = {"rc": three_plane.rc, "ok": three_plane.ok, "tail": three_plane.tail}
+    tp = _parse_json_safely(three_plane.stdout)
+    if not tp:
+        return
+
+    current_chat_surface_projection = _build_current_chat_surface_projection_from_three_plane(
+        three_plane_payload=tp
+    )
+    item["three_plane"] = {
+        "instance": tp.get("instance_plane_status"),
+        "repo": tp.get("repo_plane_status"),
+        "release": tp.get("release_plane_status"),
+        "overall": tp.get("overall_release_decision"),
+    }
+    if isinstance(tp.get("m2m_projection"), dict):
+        item["three_plane_m2m_projection"] = tp.get("m2m_projection")
+    terminal_truth_boundary_projection = tp.get("terminal_truth_boundary_projection")
+    if isinstance(terminal_truth_boundary_projection, dict):
+        item["three_plane_terminal_truth_boundary_projection"] = terminal_truth_boundary_projection
+        item["three_plane"]["terminal_truth_boundary_projection_status"] = (
+            terminal_truth_boundary_projection.get("terminal_truth_boundary_projection_status", "")
+        )
+        item["three_plane"]["terminal_truth_boundary_health_class"] = (
+            terminal_truth_boundary_projection.get("boundary_health_class", "")
+        )
+        item["three_plane"]["admission_lane_projection"] = (
+            terminal_truth_boundary_projection.get("admission_lane_projection", "")
+        )
+        payload["summary_terminal_truth_boundary"]["total_identities"] += 1
+        boundary_status = str(
+            terminal_truth_boundary_projection.get("terminal_truth_boundary_projection_status", "")
+        ).strip().upper()
+        boundary_health = str(
+            terminal_truth_boundary_projection.get("boundary_health_class", "")
+        ).strip()
+        admission_projection = str(
+            terminal_truth_boundary_projection.get("admission_lane_projection", "")
+        ).strip()
+        if boundary_status == STATUS_PASS_REQUIRED:
+            payload["summary_terminal_truth_boundary"]["projection_pass"] += 1
+        elif boundary_status == STATUS_SKIPPED_NOT_REQUIRED:
+            payload["summary_terminal_truth_boundary"]["not_applicable"] += 1
+        else:
+            payload["summary_terminal_truth_boundary"]["projection_fail"] += 1
+        if admission_projection == "BLOCKED_BY_TERMINAL_TRUTH":
+            payload["summary_terminal_truth_boundary"]["blocked_by_terminal_truth"] += 1
+            payload["summary_terminal_truth_boundary"]["blocked_identity_ids"].append(
+                item.get("identity_id", "")
+            )
+        if boundary_health == "repair_green_terminal_truth_blocked":
+            payload["summary_terminal_truth_boundary"]["repair_green_terminal_truth_blocked"] += 1
+        elif boundary_health == "repair_green_terminal_truth_clean":
+            payload["summary_terminal_truth_boundary"]["repair_green_terminal_truth_clean"] += 1
+    required_gate_projection = tp.get("required_gate_bundle_target_projection")
+    if isinstance(required_gate_projection, dict):
+        item["three_plane_required_gate_bundle_target_projection"] = required_gate_projection
+        item["three_plane"]["required_gate_bundle_projection_status"] = required_gate_projection.get(
+            "projection_status", ""
+        )
+        item["three_plane"]["required_gate_bundle_failed_required_targets"] = required_gate_projection.get(
+            "failed_required_target_count", 0
+        )
+        item["three_plane"]["required_gate_bundle_failed_target_names"] = required_gate_projection.get(
+            "failed_target_names", []
+        )
+        item["three_plane"]["required_gate_bundle_projection_stale_reasons"] = required_gate_projection.get(
+            "stale_reasons", []
+        )
+        item["three_plane"][
+            "required_gate_bundle_rows_without_projected_report_fields"
+        ] = required_gate_projection.get("rows_without_projected_report_fields", [])
+        record_required_gate_projection(identity_id, required_gate_projection)
+    required_gate_shadow_projection = tp.get("required_gate_bundle_shadow_target_projection")
+    if isinstance(required_gate_shadow_projection, dict):
+        item["three_plane_required_gate_bundle_target_projection_shadow"] = required_gate_shadow_projection
+        item["three_plane"]["required_gate_bundle_shadow_projection_status"] = (
+            required_gate_shadow_projection.get("projection_status", "")
+        )
+        item["three_plane"]["required_gate_bundle_shadow_failed_required_targets"] = (
+            required_gate_shadow_projection.get("failed_required_target_count", 0)
+        )
+        item["three_plane"]["required_gate_bundle_shadow_failed_target_names"] = (
+            required_gate_shadow_projection.get("failed_target_names", [])
+        )
+        item["three_plane"]["required_gate_bundle_shadow_projection_stale_reasons"] = (
+            required_gate_shadow_projection.get("stale_reasons", [])
+        )
+    if current_chat_surface_projection:
+        item["current_chat_surface_projection"] = current_chat_surface_projection
+        item["current_chat_surface_explanatory_exclusion_status"] = current_chat_surface_projection.get(
+            "explanatory_exclusion_status", ""
+        )
+        item["current_chat_surface_effective_blocker_scope"] = current_chat_surface_projection.get(
+            "effective_blocker_scope", ""
+        )
+        item["current_chat_surface_excluded_from_blocker_aggregation"] = current_chat_surface_projection.get(
+            "excluded_from_blocker_aggregation", False
+        )
+        item["current_chat_surface_control_state"] = current_chat_surface_projection.get(
+            "control_state", ""
+        )
+        item["current_chat_surface_display_headstamp_line"] = current_chat_surface_projection.get(
+            "display_headstamp_line", ""
+        )
+        item["current_chat_surface_machine_verification_line"] = current_chat_surface_projection.get(
+            "machine_verification_line", ""
+        )
+        item["three_plane"]["current_chat_surface_explanatory_exclusion_status"] = (
+            current_chat_surface_projection.get("explanatory_exclusion_status", "")
+        )
+        item["three_plane"]["current_chat_surface_effective_blocker_scope"] = (
+            current_chat_surface_projection.get("effective_blocker_scope", "")
+        )
+        item["three_plane"]["current_chat_surface_excluded_from_blocker_aggregation"] = (
+            current_chat_surface_projection.get("excluded_from_blocker_aggregation", False)
+        )
+        item["three_plane"]["current_chat_surface_control_state"] = (
+            current_chat_surface_projection.get("control_state", "")
+        )
+
+
 def main() -> int:
     global SESSION_ID_FALLBACK
     ap = argparse.ArgumentParser(description="Scan all configured identities and emit cross-catalog governance status.")
@@ -1510,6 +1807,19 @@ def main() -> int:
     ap.add_argument("--global-catalog", default="")
     ap.add_argument("--include-repo-catalog", action="store_true")
     ap.add_argument("--with-docs-contract", action="store_true")
+    ap.add_argument(
+        "--projection-profile",
+        choices=full_identity_protocol_scan_projection_profile_choices(),
+        default=os.environ.get(
+            "FULL_SCAN_PROJECTION_PROFILE",
+            DEFAULT_FULL_IDENTITY_PROTOCOL_SCAN_PROJECTION_PROFILE,
+        ),
+        help=(
+            "governed scan projection profile; full=complete validator/check matrix, "
+            "terminal_truth_boundary_projection=projection-only profile for outer-surface "
+            "terminal-truth boundary consumers"
+        ),
+    )
     ap.add_argument(
         "--scan-mode",
         choices=["full", "target"],
@@ -1589,6 +1899,7 @@ def main() -> int:
     ap.add_argument("--run-workflow-file-sha", default="")
     ap.add_argument("--checks-json", default="")
     ap.add_argument("--jobs-json", default="")
+    ap.add_argument("--gh-runs-json", default="")
     ap.add_argument("--out", default="")
     args = ap.parse_args()
 
@@ -1618,25 +1929,43 @@ def main() -> int:
     layer_intent_text = args.layer_intent_text.strip()
     expected_work_layer = args.expected_work_layer.strip().lower()
     expected_source_layer = args.expected_source_layer.strip().lower()
+    projection_profile = resolve_full_identity_protocol_scan_projection_profile(str(args.projection_profile or "").strip())
     gate_profile = str(args.gate_profile or "").strip() or DEFAULT_GATE_PROFILE_NAME
     gate_profile_file = str(args.gate_profile_file or "").strip() or DEFAULT_GATE_PROFILE_FILE
     target_source_layer_mode = str(args.target_source_layer or "auto").strip().lower() or "auto"
-    target_branch = str(args.target_branch or "").strip() or str(os.environ.get("GITHUB_REF_NAME", "main")).strip() or "main"
-    release_head_sha = str(args.release_head_sha or "").strip() or _git_rev(repo_root, "HEAD")
-    required_gates_run_id = str(args.required_gates_run_id or "").strip() or str(os.environ.get("GITHUB_RUN_ID", "")).strip()
-    run_url = str(args.run_url or "").strip()
-    workflow_file_sha = str(args.workflow_file_sha or "").strip() or release_head_sha
-    run_head_sha = str(args.run_head_sha or "").strip() or release_head_sha
-    run_workflow_file_sha = str(args.run_workflow_file_sha or "").strip() or workflow_file_sha
-    checks_json = str(args.checks_json or "").strip()
-    jobs_json = str(args.jobs_json or "").strip()
+    release_context = resolve_release_plane_context(
+        explicit_target_branch=str(args.target_branch or "").strip(),
+        explicit_release_head_sha=str(args.release_head_sha or "").strip(),
+        explicit_required_gates_run_id=str(args.required_gates_run_id or "").strip(),
+        explicit_run_url=str(args.run_url or "").strip(),
+        explicit_workflow_file_sha=str(args.workflow_file_sha or "").strip(),
+        explicit_run_head_sha=str(args.run_head_sha or "").strip(),
+        explicit_run_workflow_file_sha=str(args.run_workflow_file_sha or "").strip(),
+        explicit_checks_json=str(args.checks_json or "").strip(),
+        explicit_jobs_json=str(args.jobs_json or "").strip(),
+        default_target_branch="main",
+        default_release_head_sha=_git_rev(repo_root, "HEAD"),
+    )
+    target_branch = str(release_context.get("target_branch", "")).strip()
+    release_head_sha = str(release_context.get("release_head_sha", "")).strip()
+    required_gates_run_id = str(release_context.get("required_gates_run_id", "")).strip()
+    run_url = str(release_context.get("run_url", "")).strip()
+    workflow_file_sha = str(release_context.get("workflow_file_sha", "")).strip()
+    run_head_sha = str(release_context.get("run_head_sha", "")).strip()
+    run_workflow_file_sha = str(release_context.get("run_workflow_file_sha", "")).strip()
+    checks_json = str(release_context.get("checks_json", "")).strip()
+    jobs_json = str(release_context.get("jobs_json", "")).strip()
+    gh_runs_json = str(args.gh_runs_json or "").strip()
     release_adapter_payload = resolve_release_cloud_evidence(
         identity_id="full-scan",
         operation="scan",
+        target_branch=target_branch,
+        release_head_sha=release_head_sha,
         required_gates_run_id=required_gates_run_id,
         run_url=run_url,
         checks_json=checks_json,
         jobs_json=jobs_json,
+        gh_runs_json=gh_runs_json,
     )
     required_gates_run_id = str(
         release_adapter_payload.get("required_gates_run_id", "") or required_gates_run_id
@@ -1730,6 +2059,10 @@ def main() -> int:
         "session_id_map_source": session_id_map_source,
         "session_id_map_size": len(session_id_map),
         "session_id_map_identity_ids": sorted(session_id_map.keys()),
+        "projection_profile": projection_profile.profile_id,
+        "projection_profile_execution_mode": projection_profile.execution_mode,
+        "projection_profile_description": projection_profile.description,
+        "projection_excluded_areas": list(projection_profile.excluded_areas),
         "gate_profile": gate_profile,
         "gate_profile_file": gate_profile_file,
         "target_branch": target_branch,
@@ -1741,17 +2074,16 @@ def main() -> int:
         "run_workflow_file_sha": run_workflow_file_sha,
         "checks_json": checks_json,
         "jobs_json": jobs_json,
-        "release_cloud_evidence_adapter": {
-            "release_cloud_evidence_adapter_status": release_adapter_payload.get("release_cloud_evidence_adapter_status", ""),
-            "adapter_source_kind": release_adapter_payload.get("adapter_source_kind", ""),
-            "checks_json_path": release_adapter_payload.get("checks_json_path", ""),
-            "required_gates_run_id": release_adapter_payload.get("required_gates_run_id", ""),
-            "run_url": release_adapter_payload.get("run_url", ""),
-            "adapter_http_status": release_adapter_payload.get("adapter_http_status", ""),
-            "github_rate_limit_remaining": release_adapter_payload.get("github_rate_limit_remaining", ""),
-            "github_rate_limit_reset_epoch": release_adapter_payload.get("github_rate_limit_reset_epoch", ""),
-            "stale_reasons": list(release_adapter_payload.get("stale_reasons", []) or []),
-        },
+        "release_cloud_evidence_adapter": (
+            build_projection_profile_excluded_release_cloud_evidence_adapter(
+                profile_id=projection_profile.profile_id,
+                execution_mode=projection_profile.execution_mode,
+                description=projection_profile.description,
+                owner_surface="full_identity_protocol_scan_summary",
+            )
+            if projection_profile.projection_only
+            else build_release_cloud_evidence_adapter_projection(release_adapter_payload)
+        ),
         "catalog_dedup_skips": catalog_dedup_skips,
         "catalogs": [],
         "summary": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
@@ -1759,15 +2091,33 @@ def main() -> int:
         "summary_fixture_or_demo": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
         "summary_non_active_or_non_runtime": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
         "summary_m2m": {"total_identities": 0, "pass": 0, "fail": 0},
+        "summary_terminal_truth_boundary": {
+            "total_identities": 0,
+            "projection_pass": 0,
+            "projection_fail": 0,
+            "not_applicable": 0,
+            "blocked_by_terminal_truth": 0,
+            "repair_green_terminal_truth_blocked": 0,
+            "repair_green_terminal_truth_clean": 0,
+            "blocked_identity_ids": [],
+        },
         "summary_required_gate_bundle_projection": {
             "identities_with_projection": 0,
             "projection_pass": 0,
             "projection_fail": 0,
+            "projection_skipped_not_required": 0,
+            "projection_fail_identity_ids": [],
+            "projection_scope_excluded_identity_ids": [],
+            "projection_scope_classes": [],
+            "projection_scope_reasons": [],
             "identities_with_failed_required_targets": 0,
             "total_targets": 0,
             "failed_required_targets": 0,
+            "failed_target_names": [],
             "failed_target_counts": {},
             "target_status_counts": {},
+            "rows_without_projected_report_fields": [],
+            "projection_stale_reasons": [],
         },
         "summary_tuple_context": {
             "total_identities": 0,
@@ -1877,7 +2227,7 @@ def main() -> int:
             if identity_id and identity_id not in tuple_summary["identity_ids"]:
                 tuple_summary["identity_ids"].append(identity_id)
 
-    def _record_required_gate_projection(projection: dict[str, Any]) -> None:
+    def _record_required_gate_projection(identity_id: str, projection: dict[str, Any]) -> None:
         if not isinstance(projection, dict) or not projection:
             return
         summary = payload["summary_required_gate_bundle_projection"]
@@ -1885,14 +2235,40 @@ def main() -> int:
         projection_status = str(projection.get("projection_status", "")).strip().upper()
         if projection_status == STATUS_PASS_REQUIRED:
             summary["projection_pass"] += 1
+        elif required_gate_bundle_target_projection_is_scope_excluded(projection):
+            summary["projection_skipped_not_required"] += 1
+            identity_token = str(identity_id or "").strip()
+            if identity_token and identity_token not in summary["projection_scope_excluded_identity_ids"]:
+                summary["projection_scope_excluded_identity_ids"].append(identity_token)
+            scope_class = str(projection.get("scope_class", "") or "").strip()
+            scope_reason = str(projection.get("scope_reason", "") or "").strip()
+            if scope_class and scope_class not in summary["projection_scope_classes"]:
+                summary["projection_scope_classes"].append(scope_class)
+            if scope_reason and scope_reason not in summary["projection_scope_reasons"]:
+                summary["projection_scope_reasons"].append(scope_reason)
         else:
             summary["projection_fail"] += 1
+            identity_token = str(identity_id or "").strip()
+            if identity_token and identity_token not in summary["projection_fail_identity_ids"]:
+                summary["projection_fail_identity_ids"].append(identity_token)
 
         failed_required_target_count = int(projection.get("failed_required_target_count") or 0)
         if failed_required_target_count > 0:
             summary["identities_with_failed_required_targets"] += 1
         summary["total_targets"] += int(projection.get("total_targets") or 0)
         summary["failed_required_targets"] += failed_required_target_count
+        for target_name in projection.get("failed_target_names", []):
+            target_token = str(target_name or "").strip()
+            if target_token and target_token not in summary["failed_target_names"]:
+                summary["failed_target_names"].append(target_token)
+        for row_key in projection.get("rows_without_projected_report_fields", []):
+            row_token = str(row_key or "").strip()
+            if row_token and row_token not in summary["rows_without_projected_report_fields"]:
+                summary["rows_without_projected_report_fields"].append(row_token)
+        for stale_reason in projection.get("stale_reasons", []):
+            stale_token = str(stale_reason or "").strip()
+            if stale_token and stale_token not in summary["projection_stale_reasons"]:
+                summary["projection_stale_reasons"].append(stale_token)
 
         target_status_counts = summary.get("target_status_counts")
         failed_target_counts = summary.get("failed_target_counts")
@@ -2237,6 +2613,54 @@ def main() -> int:
             vibe_pack_out_root = str(named_temp_root("vibe-coding-feeding-packs"))
             capability_fit_out_root = str(named_temp_root("capability-fit-matrices"))
             current_round_anchor_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            item["scan_projection_profile"] = projection_profile.profile_id
+            item["scan_projection_profile_execution_mode"] = projection_profile.execution_mode
+            if projection_profile.projection_only:
+                item["check_matrix_mode"] = "projection_only"
+                item["check_matrix_skip_reason"] = (
+                    f"projection_profile_restricted:{projection_profile.profile_id}"
+                )
+                _apply_three_plane_projection(
+                    repo_root=repo_root,
+                    catalog=catalog,
+                    repo_catalog=repo_catalog,
+                    item=item,
+                    payload=payload,
+                    identity_id=iid,
+                    actor_id=actor_id,
+                    session_id=scan_session_id,
+                    scope_hint=scan_scope_hint,
+                    target_branch=target_branch,
+                    release_head_sha=release_head_sha,
+                    required_gates_run_id=required_gates_run_id,
+                    run_url=run_url,
+                    workflow_file_sha=workflow_file_sha,
+                    run_head_sha=run_head_sha,
+                    run_workflow_file_sha=run_workflow_file_sha,
+                    checks_json=checks_json,
+                    jobs_json=jobs_json,
+                    gh_runs_json=gh_runs_json,
+                    layer_intent_text=layer_intent_text,
+                    effective_work_layer=effective_work_layer,
+                    effective_source_layer=effective_source_layer,
+                    with_docs_contract=bool(args.with_docs_contract),
+                    record_required_gate_projection=_record_required_gate_projection,
+                    three_plane_projection_profile_id="terminal_truth_boundary_projection",
+                )
+                item["m2m_projection"] = _classify_m2m_projection(checks=item.get("checks", {}))
+                payload["summary_m2m"]["total_identities"] += 1
+                current_m2m = str(item["m2m_projection"].get("m2m_binding_closure_status", "")).upper()
+                if current_m2m == "PASS":
+                    payload["summary_m2m"]["pass"] += 1
+                else:
+                    payload["summary_m2m"]["fail"] += 1
+                _update_target_m2m(iid, current_m2m)
+                item["severity"] = _severity_for_row(item)
+                _update_target_severity(iid, str(item["severity"]))
+                _record_summary(item)
+                all_scanned_rows.append(item)
+                layer_out["identities"].append(item)
+                continue
             checks = {
                 "scope_resolution": [
                     "python3",
@@ -3040,6 +3464,7 @@ def main() -> int:
                     run_workflow_file_sha,
                     *(["--checks-json", checks_json] if checks_json else []),
                     *(["--jobs-json", jobs_json] if jobs_json and not checks_json else []),
+                    *(["--gh-runs-json", gh_runs_json] if gh_runs_json and not checks_json and not jobs_json else []),
                     "--operation",
                     "scan",
                     "--json-only",
@@ -4043,12 +4468,21 @@ def main() -> int:
                         check_payload["capability_activation_error_code"] = cap_code
                     if cap_code == "IP-CAP-003":
                         check_payload["env_auth_blocked"] = True
-                    if name == "capability_activation_preflight" and r.rc != 0 and cap_code == "IP-CAP-003":
-                        fallback_cmd = _replace_activation_policy(cmd, "route-any-ready")
+                    if name == "capability_activation_preflight" and capability_env_auth_fallback_eligible(
+                        requested_policy="strict-union",
+                        error_code=cap_code,
+                        rc=r.rc,
+                    ):
+                        fallback_cmd = replace_capability_activation_policy(
+                            cmd,
+                            CAPABILITY_ACTIVATION_ENV_AUTH_FALLBACK_POLICY,
+                        )
                         fallback = _run(fallback_cmd, cwd=repo_root)
                         fb_status, fb_code = _extract_capability_signal(fallback.stdout)
                         check_payload["capability_activation_fallback_attempted"] = True
-                        check_payload["capability_activation_fallback_policy"] = "route-any-ready"
+                        check_payload["capability_activation_fallback_policy"] = (
+                            CAPABILITY_ACTIVATION_ENV_AUTH_FALLBACK_POLICY
+                        )
                         check_payload["capability_activation_fallback_rc"] = fallback.rc
                         check_payload["capability_activation_fallback_tail"] = fallback.tail
                         if fb_status:
@@ -4061,9 +4495,12 @@ def main() -> int:
                             check_payload["tail"] = fallback.tail
                             check_payload["capability_activation_status"] = fb_status or "ACTIVATED"
                             check_payload["capability_activation_error_code"] = fb_code
-                            check_payload["capability_activation_policy_effective"] = "route-any-ready"
+                            check_payload["capability_activation_policy_effective"] = (
+                                CAPABILITY_ACTIVATION_ENV_AUTH_FALLBACK_POLICY
+                            )
                 if name == "required_contract_coverage":
                     coverage_doc = _parse_json_safely(r.stdout) or {}
+                    coverage_projection = build_required_contract_coverage_projection(coverage_doc)
                     for k in (
                         "required_contract_total",
                         "required_contract_passed",
@@ -4078,6 +4515,8 @@ def main() -> int:
                     ):
                         if k in coverage_doc:
                             check_payload[k] = coverage_doc.get(k)
+                    for k, value in coverage_projection.items():
+                        check_payload[k] = value
                 if name == "unlock_formula_automation":
                     unlock_doc = _parse_json_safely(r.stdout) or {}
                     for k in (
@@ -5740,111 +6179,32 @@ def main() -> int:
                             check_payload[k] = inquiry_doc.get(k)
                 item["checks"][name] = check_payload
 
-            env = os.environ.copy()
-            env["IDENTITY_CATALOG"] = str(catalog)
-            three_plane = _run(
-                [
-                    "python3",
-                    "scripts/report_three_plane_status.py",
-                    "--identity-id",
-                    iid,
-                    "--actor-id",
-                    actor_id,
-                    "--session-id",
-                    scan_session_id,
-                    "--scope",
-                    scan_scope_hint,
-                    "--target-branch",
-                    target_branch,
-                    "--release-head-sha",
-                    release_head_sha,
-                    "--required-gates-run-id",
-                    required_gates_run_id,
-                    "--run-url",
-                    run_url,
-                    "--workflow-file-sha",
-                    workflow_file_sha,
-                    "--run-head-sha",
-                    run_head_sha,
-                    "--run-workflow-file-sha",
-                    run_workflow_file_sha,
-                    *(["--checks-json", checks_json] if checks_json else []),
-                    *(["--jobs-json", jobs_json] if jobs_json and not checks_json else []),
-                    *(["--layer-intent-text", layer_intent_text] if layer_intent_text else []),
-                    *(["--expected-work-layer", effective_work_layer] if effective_work_layer else []),
-                    *(["--expected-source-layer", effective_source_layer] if effective_source_layer else []),
-                    *(["--with-docs-contract"] if args.with_docs_contract else []),
-                ],
-                cwd=repo_root,
-                env=env,
+            _apply_three_plane_projection(
+                repo_root=repo_root,
+                catalog=catalog,
+                repo_catalog=repo_catalog,
+                item=item,
+                payload=payload,
+                identity_id=iid,
+                actor_id=actor_id,
+                session_id=scan_session_id,
+                scope_hint=scan_scope_hint,
+                target_branch=target_branch,
+                release_head_sha=release_head_sha,
+                required_gates_run_id=required_gates_run_id,
+                run_url=run_url,
+                workflow_file_sha=workflow_file_sha,
+                run_head_sha=run_head_sha,
+                run_workflow_file_sha=run_workflow_file_sha,
+                checks_json=checks_json,
+                jobs_json=jobs_json,
+                gh_runs_json=gh_runs_json,
+                layer_intent_text=layer_intent_text,
+                effective_work_layer=effective_work_layer,
+                effective_source_layer=effective_source_layer,
+                with_docs_contract=bool(args.with_docs_contract),
+                record_required_gate_projection=_record_required_gate_projection,
             )
-            item["checks"]["three_plane"] = {"rc": three_plane.rc, "ok": three_plane.ok, "tail": three_plane.tail}
-            tp = _parse_json_safely(three_plane.stdout)
-            if tp:
-                current_chat_surface_projection = _build_current_chat_surface_projection_from_three_plane(
-                    three_plane_payload=tp
-                )
-                item["three_plane"] = {
-                    "instance": tp.get("instance_plane_status"),
-                    "repo": tp.get("repo_plane_status"),
-                    "release": tp.get("release_plane_status"),
-                    "overall": tp.get("overall_release_decision"),
-                }
-                if isinstance(tp.get("m2m_projection"), dict):
-                    item["three_plane_m2m_projection"] = tp.get("m2m_projection")
-                required_gate_projection = tp.get("required_gate_bundle_target_projection")
-                if isinstance(required_gate_projection, dict):
-                    item["three_plane_required_gate_bundle_target_projection"] = required_gate_projection
-                    item["three_plane"]["required_gate_bundle_projection_status"] = required_gate_projection.get(
-                        "projection_status", ""
-                    )
-                    item["three_plane"]["required_gate_bundle_failed_required_targets"] = required_gate_projection.get(
-                        "failed_required_target_count", 0
-                    )
-                    _record_required_gate_projection(required_gate_projection)
-                required_gate_shadow_projection = tp.get("required_gate_bundle_shadow_target_projection")
-                if isinstance(required_gate_shadow_projection, dict):
-                    item["three_plane_required_gate_bundle_target_projection_shadow"] = (
-                        required_gate_shadow_projection
-                    )
-                    item["three_plane"]["required_gate_bundle_shadow_projection_status"] = (
-                        required_gate_shadow_projection.get("projection_status", "")
-                    )
-                    item["three_plane"]["required_gate_bundle_shadow_failed_required_targets"] = (
-                        required_gate_shadow_projection.get("failed_required_target_count", 0)
-                    )
-                if current_chat_surface_projection:
-                    item["current_chat_surface_projection"] = current_chat_surface_projection
-                    item["current_chat_surface_explanatory_exclusion_status"] = current_chat_surface_projection.get(
-                        "explanatory_exclusion_status", ""
-                    )
-                    item["current_chat_surface_effective_blocker_scope"] = current_chat_surface_projection.get(
-                        "effective_blocker_scope", ""
-                    )
-                    item["current_chat_surface_excluded_from_blocker_aggregation"] = current_chat_surface_projection.get(
-                        "excluded_from_blocker_aggregation", False
-                    )
-                    item["current_chat_surface_control_state"] = current_chat_surface_projection.get(
-                        "control_state", ""
-                    )
-                    item["current_chat_surface_display_headstamp_line"] = current_chat_surface_projection.get(
-                        "display_headstamp_line", ""
-                    )
-                    item["current_chat_surface_machine_verification_line"] = current_chat_surface_projection.get(
-                        "machine_verification_line", ""
-                    )
-                    item["three_plane"]["current_chat_surface_explanatory_exclusion_status"] = (
-                        current_chat_surface_projection.get("explanatory_exclusion_status", "")
-                    )
-                    item["three_plane"]["current_chat_surface_effective_blocker_scope"] = (
-                        current_chat_surface_projection.get("effective_blocker_scope", "")
-                    )
-                    item["three_plane"]["current_chat_surface_excluded_from_blocker_aggregation"] = (
-                        current_chat_surface_projection.get("excluded_from_blocker_aggregation", False)
-                    )
-                    item["three_plane"]["current_chat_surface_control_state"] = (
-                        current_chat_surface_projection.get("control_state", "")
-                    )
             # Keep full-scan m2m projection strictly derived from full-scan checks.
             # Three-plane projection is retained separately for observability only,
             # avoiding cross-surface aggregation noise where nested three-plane
@@ -5889,12 +6249,17 @@ def main() -> int:
             print(f"[FAIL] target identities not found in selected catalogs: {missing}")
             return 2
 
-    host_visible_post_check_metrics = _build_host_visible_post_check_metrics(
-        rows=all_scanned_rows,
-        external_next_hop_block_samples=external_next_hop_block_evidence.get("samples", []),
-        external_next_hop_block_manifest_paths=external_next_hop_block_evidence.get("manifest_paths", []),
-        external_next_hop_block_sample_refs=external_next_hop_block_evidence.get("sample_refs", []),
-    )
+    if projection_profile.host_visible_post_check_metrics_enabled:
+        host_visible_post_check_metrics = _build_host_visible_post_check_metrics(
+            rows=all_scanned_rows,
+            external_next_hop_block_samples=external_next_hop_block_evidence.get("samples", []),
+            external_next_hop_block_manifest_paths=external_next_hop_block_evidence.get("manifest_paths", []),
+            external_next_hop_block_sample_refs=external_next_hop_block_evidence.get("sample_refs", []),
+        )
+    else:
+        host_visible_post_check_metrics = _build_projection_profile_host_visible_post_check_metrics(
+            projection_profile=projection_profile,
+        )
     payload["host_visible_post_check_metrics"] = host_visible_post_check_metrics
     payload["chat_egress_uniqueness_status"] = str(
         host_visible_post_check_metrics.get("chat_egress_uniqueness_status", "")

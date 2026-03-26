@@ -8,6 +8,7 @@ import json
 import os
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +28,14 @@ from execution_report_selection_common import (
     select_report as select_execution_report,
 )
 from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gateway_wrapped_command
+from governed_runtime_summary_checkpoint_common import (
+    SUMMARY_CHECKPOINT_KIND_FINAL,
+    SUMMARY_LIFECYCLE_FINALIZED,
+    apply_governed_runtime_summary_checkpoint,
+    capture_governed_runtime_summary_resume_source,
+    derive_governed_runtime_summary_resume_projection,
+    write_governed_runtime_summary_checkpoint,
+)
 from protocol_infra_contract import (
     build_required_gate_bundle_cmd,
     CANONICAL_FINAL_EMIT_SCRIPT,
@@ -38,6 +47,28 @@ from protocol_infra_contract import (
 from release_cloud_evidence_projection_common import (
     build_release_cloud_evidence_adapter_projection,
     build_release_plane_cloud_evidence_summary_projection,
+)
+from release_readiness_active_runtime_closure_projection_common import (
+    apply_release_readiness_active_runtime_closure_one_look,
+    release_readiness_active_runtime_closure_capture_script_map,
+    release_readiness_active_runtime_closure_structured_capture_specs,
+    release_readiness_active_runtime_closure_summary_defaults,
+)
+from release_readiness_governance_probe_projection_common import (
+    apply_release_readiness_governance_probe_one_look,
+    release_readiness_governance_probe_capture_script_map,
+    release_readiness_governance_probe_structured_capture_specs,
+    release_readiness_governance_probe_summary_defaults,
+)
+from release_readiness_required_gate_bundle_scope_common import (
+    build_scope_excluded_required_gate_bundle_summary,
+    targeted_subset_excludes_required_gate_bundle,
+)
+from release_readiness_repo_global_closure_projection_common import (
+    apply_release_readiness_repo_global_closure_one_look,
+)
+from release_readiness_selected_check_scope_common import (
+    materialize_targeted_subset_selected_check_scope_exclusions,
 )
 from required_contract_coverage_projection_common import build_required_contract_coverage_projection
 from required_gate_bundle_projection_common import build_required_gate_bundle_target_projection
@@ -60,6 +91,10 @@ from response_stamp_common import (
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
 from terminal_truth_boundary_projection_common import (
     build_terminal_truth_boundary_projection_from_report,
+)
+from workspace_runtime_closure_command_common import (
+    build_workspace_runtime_closure_checker_command,
+    workspace_runtime_closure_checker_specs,
 )
 
 PROTOCOL_PUBLISH_SCRIPTS = {
@@ -86,9 +121,13 @@ POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["bash", "scripts/ci/run_identity_dialogue_retention_probes_ci.sh"],
     ["bash", "scripts/ci/run_identity_artifact_family_routing_probes_ci.sh"],
     ["bash", "scripts/ci/run_identity_weak_live_linkage_probes_ci.sh"],
+    ["bash", "scripts/ci/run_identity_weak_live_linkage_pointer_locality_probes_ci.sh"],
     ["bash", "scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh"],
     ["bash", "scripts/ci/run_contract_bootstrap_emitter_probes_ci.sh"],
     ["bash", "scripts/ci/run_post_execution_report_repair_probes_ci.sh"],
+    ["bash", "scripts/ci/run_execution_report_selection_convergence_probes_ci.sh"],
+    ["bash", "scripts/ci/run_active_execution_report_pointer_locality_probes_ci.sh"],
+    ["bash", "scripts/ci/run_strict_live_active_pointer_locality_probes_ci.sh"],
     ["bash", "scripts/ci/run_identity_update_preflight_terminal_truth_split_probes_ci.sh"],
     ["bash", "scripts/ci/run_terminal_truth_boundary_projection_probes_ci.sh"],
     ["bash", "scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh"],
@@ -98,10 +137,14 @@ POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["python3", "scripts/validate_protocol_governed_subdomain_doc_control_registry.py", "--json-only"],
     ["bash", "scripts/ci/run_protocol_governed_subdomain_doc_control_registry_probes_ci.sh"],
     ["bash", "scripts/ci/run_identity_communication_transport_probes_ci.sh"],
-    ["python3", "scripts/check_identity_broadcast_migration_closure.py", "--workspace-runtime-only", "--json-only"],
-    ["python3", "scripts/check_identity_communication_transport_closure.py", "--workspace-runtime-only", "--json-only"],
+    ["bash", "scripts/ci/run_identity_transport_fleet_closure_convergence_probes_ci.sh"],
+    ["bash", "scripts/ci/run_active_runtime_pack_closure_convergence_probes_ci.sh"],
+    ["python3", "scripts/validate_executable_surface_runtime_literal_lock.py", "--json-only"],
     ["bash", "scripts/ci/run_executable_surface_runtime_literal_lock_probes_ci.sh"],
+    ["python3", "scripts/validate_required_gate_surface_drift.py", "--json-only"],
     ["bash", "scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh"],
+    ["python3", "scripts/validate_resolve_identity_context_default_local_catalog.py", "--json-only"],
+    ["bash", "scripts/ci/run_repair_contract_backfill_status_profile_probes_ci.sh"],
     ["bash", "scripts/ci/run_protocol_root_corpus_governance_probes_ci.sh"],
     ["bash", "scripts/ci/run_protocol_root_corpus_ordering_probes_ci.sh"],
     ["bash", "scripts/ci/run_protocol_root_corpus_authority_probes_ci.sh"],
@@ -111,7 +154,10 @@ POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["bash", "scripts/ci/run_protocol_root_corpus_precedence_probes_ci.sh"],
     ["bash", "scripts/ci/run_protocol_root_corpus_question_routing_probes_ci.sh"],
     ["bash", "scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh"],
+    ["bash", "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh"],
+    ["bash", "scripts/ci/run_required_gate_surface_drift_probes_ci.sh"],
     ["bash", "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh"],
+    ["bash", "scripts/ci/run_release_readiness_continuation_probes_ci.sh"],
     ["bash", "scripts/ci/run_release_plane_context_resolution_probes_ci.sh"],
     ["bash", "scripts/ci/run_workbook_control_plane_probes_ci.sh"],
     ["bash", "scripts/ci/run_workbook_family_scaffold_probes_ci.sh"],
@@ -126,17 +172,184 @@ STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_UNKNOWN = "UNKNOWN"
+READINESS_PREFLIGHT_COMMAND_COUNT = 8
 SUMMARY_CAPTURE_SCRIPTS: dict[str, str] = {
     "scripts/validate_control_plane_budget.py": "control_plane_budget",
     "scripts/validate_control_plane_budget_sync.py": "control_plane_budget_sync",
     "scripts/validate_control_plane_status_sync.py": "control_plane_status_sync",
     "scripts/materialize_control_plane_surfaces.py": "control_plane_surface_materialization",
+    "scripts/validate_issue_register_consistency.py": "issue_register_consistency",
+    "scripts/validate_protocol_broadcast_doc_control.py": "protocol_broadcast_doc_control",
+    "scripts/validate_protocol_governed_subdomain_doc_control_registry.py": "protocol_governed_subdomain_doc_control_registry",
+    "scripts/check_identity_codex_launcher_migration_closure.py": "identity_codex_launcher_migration_closure",
+    "scripts/check_identity_broadcast_migration_closure.py": "identity_broadcast_migration_closure",
+    "scripts/check_identity_communication_transport_closure.py": "identity_communication_transport_closure",
+    "scripts/check_unique_entry_contract_migration_closure.py": "unique_entry_contract_migration_closure",
+    "scripts/check_version_baseline_migration_closure.py": "version_baseline_migration_closure",
+    "scripts/validate_executable_surface_runtime_literal_lock.py": "executable_surface_runtime_literal_lock",
+    "scripts/validate_required_gate_surface_drift.py": "required_gate_surface_drift",
+    "scripts/validate_resolve_identity_context_default_local_catalog.py": "resolve_identity_context_local_catalog_closure",
     "scripts/validate_required_contract_coverage.py": "required_contract_coverage",
     "scripts/validate_required_gate_recurrence_escalator.py": "required_gate_recurrence",
     "scripts/validate_required_gate_tuple_parity.py": "required_gate_tuple_parity",
     "scripts/validate_release_plane_cloud_evidence.py": "release_plane_cloud_evidence",
     FAILCLOSE_PLUGIN_PROJECTION_SCRIPT: "failclose_plugin_projection",
     FULL_SCAN_TARGET_REGRESSION_SCRIPT: "full_scan_target_regression",
+    **release_readiness_active_runtime_closure_capture_script_map(),
+    **release_readiness_governance_probe_capture_script_map(),
+}
+STRUCTURED_SUMMARY_CAPTURE_SPECS: dict[str, dict[str, tuple[str, ...]]] = {
+    "control_plane_budget": {
+        "status_fields": ("control_plane_budget_status",),
+        "error_fields": ("error_code",),
+        "keep_fields": ("warn_violation_count", "fail_violation_count", "stale_reasons"),
+    },
+    "control_plane_budget_sync": {
+        "status_fields": ("control_plane_budget_sync_status",),
+        "error_fields": ("error_code",),
+        "keep_fields": ("mismatch_count", "stale_reasons"),
+    },
+    "control_plane_status_sync": {
+        "status_fields": ("control_plane_status_sync_status",),
+        "error_fields": ("error_code",),
+        "keep_fields": (
+            "mismatch_count",
+            "live_control_plane_status",
+            "file_control_plane_status",
+            "stale_reasons",
+        ),
+    },
+    "control_plane_surface_materialization": {
+        "status_fields": ("materialize_control_plane_surfaces_status",),
+        "error_fields": ("error_code",),
+        "keep_fields": (
+            "control_plane_status",
+            "promotion_ready",
+            "budget_validation_status",
+            "budget_sync_status",
+            "status_sync_status",
+            "budget_sync_mismatch_count",
+            "status_sync_mismatch_count",
+            "stale_reasons",
+        ),
+    },
+    "required_gate_recurrence": {
+        "status_fields": ("required_gate_recurrence_status",),
+        "error_fields": ("error_code",),
+        "keep_fields": (
+            "escalation_level",
+            "error_family",
+            "receipt_path",
+            "state_path",
+            "stale_reasons",
+            "active_fail_families",
+        ),
+    },
+    "required_gate_tuple_parity": {
+        "status_fields": ("required_gate_tuple_parity_status",),
+        "error_fields": ("error_code",),
+        "keep_fields": (
+            "receipts_checked",
+            "parity_contract_reasons",
+            "missing_fields",
+            "mismatches",
+            "scope_groups",
+        ),
+    },
+    "issue_register_consistency": {
+        "status_fields": ("issue_register_consistency_status",),
+        "error_fields": ("error_code",),
+        "keep_fields": (
+            "current_issue_horizon",
+            "issue_register_issue_count",
+            "deep_audit_workbook_issue_count",
+            "stale_reasons",
+        ),
+    },
+    "executable_surface_runtime_literal_lock": {
+        "status_fields": ("executable_surface_runtime_literal_lock_status",),
+        "error_fields": ("error_code",),
+        "keep_fields": ("violation_count", "stale_reasons"),
+    },
+    "required_gate_surface_drift": {
+        "status_fields": ("required_gate_surface_drift_status",),
+        "error_fields": ("error_code",),
+        "keep_fields": (
+            "missing_surface_files",
+            "missing_lineage_refs",
+            "missing_execution_tokens",
+        ),
+    },
+    "protocol_broadcast_doc_control": {
+        "status_fields": ("protocol_broadcast_doc_control_status",),
+        "error_fields": ("error_code",),
+        "keep_fields": ("subdomain_id", "required_token_count", "required_file_count", "stale_reasons"),
+    },
+    "protocol_governed_subdomain_doc_control_registry": {
+        "status_fields": ("protocol_governed_subdomain_doc_control_registry_status",),
+        "error_fields": ("error_code",),
+        "keep_fields": ("subdomain_count", "stale_reasons"),
+    },
+    "identity_codex_launcher_migration_closure": {
+        "status_fields": ("identity_codex_launcher_migration_closure_status",),
+        "error_fields": ("error_code",),
+        "keep_fields": (
+            "checked_identity_count",
+            "violation_count",
+            "runtime_catalog_metadata_hygiene_status",
+            "launcher_runtime_admissibility_projection_status",
+            "launcher_runtime_admissibility_status",
+            "stale_reasons",
+        ),
+    },
+    "identity_broadcast_migration_closure": {
+        "status_fields": ("identity_broadcast_migration_closure_status",),
+        "error_fields": ("error_code",),
+        "keep_fields": ("checked_identity_count", "violation_count", "stale_reasons"),
+    },
+    "identity_communication_transport_closure": {
+        "status_fields": ("identity_communication_transport_closure_status",),
+        "error_fields": ("error_code",),
+        "keep_fields": ("checked_identity_count", "violation_count", "stale_reasons"),
+    },
+    "unique_entry_contract_migration_closure": {
+        "status_fields": ("unique_entry_contract_migration_closure_status",),
+        "error_fields": ("error_code",),
+        "keep_fields": (
+            "checked_identity_count",
+            "violation_count",
+            "catalog_selection_mode",
+            "repo_catalog_included",
+            "pack_scan_policy_id",
+            "stale_reasons",
+        ),
+    },
+    "version_baseline_migration_closure": {
+        "status_fields": ("version_baseline_migration_closure_status",),
+        "error_fields": ("error_code",),
+        "keep_fields": (
+            "checked_identity_count",
+            "violation_count",
+            "catalog_selection_mode",
+            "repo_catalog_included",
+            "pack_scan_policy_id",
+            "stale_reasons",
+        ),
+    },
+    "resolve_identity_context_local_catalog_closure": {
+        "status_fields": ("resolve_identity_context_local_catalog_closure_status",),
+        "error_fields": ("error_code",),
+        "keep_fields": (
+            "resolve_identity_context_default_local_catalog_status",
+            "resolve_identity_context_explicit_local_catalog_precedence_status",
+            "local_catalog_path",
+            "repo_catalog_path",
+            "explicit_local_catalog_runtime_defaults_ref",
+            "stale_reasons",
+        ),
+    },
+    **release_readiness_active_runtime_closure_structured_capture_specs(),
+    **release_readiness_governance_probe_structured_capture_specs(),
 }
 
 LAYER_INTENT_VALIDATOR_SCRIPTS = (
@@ -176,6 +389,17 @@ def _resolve_default_instance_layers(*, catalog: str, expected_work_layer: str, 
     )
 
 
+def _build_workspace_runtime_closure_checks(*, catalog: str) -> list[list[str]]:
+    return [
+        build_workspace_runtime_closure_checker_command(
+            checker_id=spec.checker_id,
+            catalog_path=catalog,
+            json_only=True,
+        )
+        for spec in workspace_runtime_closure_checker_specs(families={"transport", "pack"})
+    ]
+
+
 def _build_instance_runtime_closure_checks(
     *,
     catalog: str,
@@ -199,14 +423,11 @@ def _build_instance_runtime_closure_checks(
             identity_id,
             "--json-only",
         ],
-        [
-            "python3",
-            "scripts/check_identity_codex_launcher_migration_closure.py",
-            "--catalog",
-            catalog,
-            "--workspace-runtime-only",
-            "--json-only",
-        ],
+        build_workspace_runtime_closure_checker_command(
+            checker_id="scripts/check_identity_codex_launcher_migration_closure.py",
+            catalog_path=catalog,
+            json_only=True,
+        ),
         [
             "python3",
             "scripts/validate_instance_script_manifest.py",
@@ -363,6 +584,310 @@ def _build_instance_runtime_closure_checks(
                 "--json-only",
             ]
         )
+    return seq
+
+
+def _build_post_execution_report_stage_checks(
+    *,
+    identity_id: str,
+    catalog: str,
+    execution_report: str,
+    report_meta: dict[str, Any] | None,
+    health_report_dir: str,
+    actor_id: str,
+    session_id: str,
+    scope: str,
+    base: str,
+    head: str,
+    capability_activation_policy: str,
+    expected_work_layer: str,
+    expected_source_layer: str,
+) -> list[list[str]]:
+    report_meta = report_meta if isinstance(report_meta, dict) else {}
+    work_layer = str(expected_work_layer or "").strip().lower() or "instance"
+    source_layer = str(expected_source_layer or "").strip().lower() or _infer_source_layer_from_catalog_path(catalog)
+    seq: list[list[str]] = [
+        [
+            "python3",
+            "scripts/validate_writeback_continuity.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--report",
+            execution_report,
+            "--operation",
+            "readiness",
+        ],
+        [
+            "python3",
+            "scripts/validate_post_execution_mandatory.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--report",
+            execution_report,
+            "--operation",
+            "readiness",
+        ],
+    ]
+    health_report_cmd = [
+        "python3",
+        "scripts/collect_identity_health_report.py",
+        "--identity-id",
+        identity_id,
+        "--catalog",
+        catalog,
+        "--repo-catalog",
+        "identity/catalog/identities.yaml",
+        "--operation",
+        "readiness",
+        "--execution-report",
+        execution_report,
+        "--actor-id",
+        actor_id,
+        "--session-id",
+        session_id,
+        "--out-dir",
+        health_report_dir,
+        "--enforce-pass",
+    ]
+    if scope:
+        health_report_cmd.extend(["--scope", scope])
+    seq.extend(
+        [
+            health_report_cmd,
+            [
+                "python3",
+                "scripts/validate_identity_health_contract.py",
+                "--identity-id",
+                identity_id,
+                "--report-dir",
+                health_report_dir,
+                "--require-pass",
+            ],
+            [
+                "python3",
+                "scripts/validate_identity_actor_health_profile.py",
+                "--identity-id",
+                identity_id,
+                "--report-dir",
+                health_report_dir,
+                "--execution-report",
+                execution_report,
+                "--operation",
+                "readiness",
+                "--enforce-bound-report",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_protocol_feedback_reply_channel.py",
+                "--identity-id",
+                identity_id,
+                "--catalog",
+                catalog,
+                "--repo-catalog",
+                "identity/catalog/identities.yaml",
+                "--operation",
+                "readiness",
+                "--force-check",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_protocol_feedback_bootstrap_ready.py",
+                "--identity-id",
+                identity_id,
+                "--catalog",
+                catalog,
+                "--repo-catalog",
+                "identity/catalog/identities.yaml",
+                "--operation",
+                "readiness",
+                "--force-check",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_protocol_entry_candidate_bridge.py",
+                "--identity-id",
+                identity_id,
+                "--catalog",
+                catalog,
+                "--repo-catalog",
+                "identity/catalog/identities.yaml",
+                "--operation",
+                "readiness",
+                "--force-check",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_protocol_inquiry_followup_chain.py",
+                "--identity-id",
+                identity_id,
+                "--catalog",
+                catalog,
+                "--repo-catalog",
+                "identity/catalog/identities.yaml",
+                "--operation",
+                "readiness",
+                "--force-check",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_protocol_feedback_sidecar_contract.py",
+                "--identity-id",
+                identity_id,
+                "--catalog",
+                catalog,
+                "--repo-catalog",
+                "identity/catalog/identities.yaml",
+                "--report",
+                execution_report,
+                "--operation",
+                "readiness",
+                "--enforce-blocking",
+            ],
+            [
+                "python3",
+                "scripts/validate_instance_base_repo_write_boundary.py",
+                "--identity-id",
+                identity_id,
+                "--catalog",
+                catalog,
+                "--repo-catalog",
+                "identity/catalog/identities.yaml",
+                "--report",
+                execution_report,
+                "--operation",
+                "readiness",
+            ],
+            [
+                "python3",
+                "scripts/validate_protocol_feedback_ssot_archival.py",
+                "--identity-id",
+                identity_id,
+                "--catalog",
+                catalog,
+                "--repo-catalog",
+                "identity/catalog/identities.yaml",
+                "--operation",
+                "readiness",
+            ],
+            [
+                "python3",
+                "scripts/validate_identity_protocol_root_evidence.py",
+                "--identity-id",
+                identity_id,
+                "--report",
+                execution_report,
+            ],
+            [
+                "python3",
+                "scripts/validate_identity_mode_promotion_arbitration.py",
+                "--identity-id",
+                identity_id,
+                "--base",
+                base,
+                "--head",
+                head,
+                "--report",
+                execution_report,
+            ],
+            [
+                "python3",
+                "scripts/validate_identity_experience_writeback.py",
+                "--repo-catalog",
+                "identity/catalog/identities.yaml",
+                "--local-catalog",
+                catalog,
+                "--identity-id",
+                identity_id,
+                "--execution-report",
+                execution_report,
+            ],
+        ]
+    )
+    permission_cmd = [
+        "python3",
+        "scripts/validate_identity_permission_state.py",
+        "--identity-id",
+        identity_id,
+        "--report",
+        execution_report,
+    ]
+    report_all_ok = _boolish(report_meta.get("all_ok"))
+    report_writeback_status = str(report_meta.get("writeback_status", "")).strip().upper()
+    report_permission_state = str(report_meta.get("permission_state", "")).strip().upper()
+    if report_all_ok and report_writeback_status == "WRITTEN" and report_permission_state == "WRITEBACK_WRITTEN":
+        permission_cmd.append("--require-written")
+    seq.append(permission_cmd)
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_identity_binding_tuple.py",
+            "--identity-id",
+            identity_id,
+            "--report",
+            execution_report,
+        ]
+    )
+    seq.extend(
+        _build_instance_runtime_closure_checks(
+            catalog=catalog,
+            identity_id=identity_id,
+            expected_work_layer=expected_work_layer,
+            expected_source_layer=expected_source_layer,
+            include_weak_live_linkage=False,
+        )
+    )
+    seq.extend(
+        [
+            [
+                "python3",
+                "scripts/validate_identity_capability_activation.py",
+                "--identity-id",
+                identity_id,
+                "--catalog",
+                catalog,
+                "--repo-catalog",
+                REPO_CATALOG_REL,
+                "--activation-policy",
+                capability_activation_policy,
+                "--work-layer",
+                work_layer,
+                "--source-layer",
+                source_layer,
+                "--require-activated",
+            ],
+            [
+                "python3",
+                "scripts/validate_identity_prompt_activation.py",
+                "--identity-id",
+                identity_id,
+                "--catalog",
+                catalog,
+                "--report",
+                execution_report,
+            ],
+            [
+                "python3",
+                "scripts/validate_identity_prompt_lifecycle.py",
+                "--identity-id",
+                identity_id,
+                "--report",
+                execution_report,
+            ],
+        ]
+    )
     return seq
 
 
@@ -613,6 +1138,97 @@ def _filter_selected_checks(
     return filtered_seq, []
 
 
+REPORT_DEPENDENT_FLAGS: tuple[str, ...] = (
+    "--report",
+    "--execution-report",
+    "--report-selected-path",
+)
+
+
+def _command_requires_execution_report(cmd: list[str]) -> bool:
+    return any(flag in cmd for flag in REPORT_DEPENDENT_FLAGS)
+
+
+def _sequence_requires_execution_report(seq: list[list[str]]) -> bool:
+    return any(_command_requires_execution_report(cmd) for cmd in seq)
+
+
+def _build_selected_check_projection(
+    seq: list[list[str]],
+    *,
+    selected_check_names: tuple[str, ...],
+) -> dict[str, Any]:
+    targeted_subset_mode = bool(selected_check_names)
+    filtered_seq, missing_selected_check_names = _filter_selected_checks(
+        seq,
+        selected_check_names=selected_check_names,
+    )
+    selected_seq = filtered_seq if targeted_subset_mode else list(seq)
+    selected_subset_requires_execution_report = _sequence_requires_execution_report(selected_seq)
+    execution_report_required = (not targeted_subset_mode) or selected_subset_requires_execution_report
+    if targeted_subset_mode:
+        dependency_mode = (
+            "requires_execution_report"
+            if selected_subset_requires_execution_report
+            else "report_independent_targeted_subset"
+        )
+    else:
+        dependency_mode = "full_lane"
+    return {
+        "targeted_subset_mode": targeted_subset_mode,
+        "filtered_seq": selected_seq,
+        "missing_selected_check_names": missing_selected_check_names,
+        "selected_check_count": len(selected_seq),
+        "selected_subset_requires_execution_report": selected_subset_requires_execution_report,
+        "execution_report_required": execution_report_required,
+        "selected_check_dependency_mode": dependency_mode,
+        "execution_report_resolution_mode": (
+            "required"
+            if execution_report_required
+            else "skipped_not_required_targeted_subset"
+        ),
+    }
+
+
+def _apply_selected_check_projection_summary(
+    summary_payload: dict[str, Any],
+    projection: dict[str, Any],
+) -> None:
+    summary_payload["selected_check_count"] = int(projection.get("selected_check_count", 0) or 0)
+    missing_selected_check_names = projection.get("missing_selected_check_names", [])
+    if isinstance(missing_selected_check_names, list) and missing_selected_check_names:
+        summary_payload["selected_check_missing_names"] = missing_selected_check_names
+    else:
+        summary_payload.pop("selected_check_missing_names", None)
+    summary_payload["selected_check_dependency_mode"] = str(
+        projection.get("selected_check_dependency_mode", "unknown")
+    ).strip() or "unknown"
+    summary_payload["execution_report_resolution_mode"] = str(
+        projection.get("execution_report_resolution_mode", "required")
+    ).strip() or "required"
+
+
+def _extend_selection_candidates_with_unique_script_names(
+    base_seq: list[list[str]],
+    extra_seq: list[list[str]],
+) -> tuple[list[list[str]], set[str]]:
+    merged_seq = list(base_seq)
+    known_names = {
+        check_name
+        for check_name in (_command_check_name(cmd) for cmd in base_seq)
+        if check_name
+    }
+    unique_extra_names: set[str] = set()
+    for cmd in extra_seq:
+        check_name = _command_check_name(cmd)
+        if not check_name or check_name in known_names:
+            continue
+        merged_seq.append(cmd)
+        known_names.add(check_name)
+        unique_extra_names.add(check_name)
+    return merged_seq, unique_extra_names
+
+
 def _clean_list(values: Any) -> list[str]:
     if not isinstance(values, list):
         return []
@@ -651,6 +1267,10 @@ def _write_json(path_text: str, payload: dict[str, Any]) -> str:
     return str(target)
 
 
+def _utc_now_iso_z() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
 def _record_preflight(
     summary: dict[str, Any],
     *,
@@ -679,6 +1299,24 @@ def _record_preflight(
     preflight[name] = item
 
 
+def _record_preflight_skip(
+    summary: dict[str, Any],
+    *,
+    name: str,
+    reason: str,
+    extra: dict[str, Any] | None = None,
+) -> None:
+    item: dict[str, Any] = {
+        "status": STATUS_SKIPPED_NOT_REQUIRED,
+        "rc": 0,
+        "error_code": "",
+        "skip_reason": _clean_str(reason),
+    }
+    if extra:
+        item.update(extra)
+    summary.setdefault("preflight", {})[name] = item
+
+
 def _record_command_execution(summary: dict[str, Any], *, script: str, rc: int) -> None:
     command_execution = summary.setdefault(
         "command_execution",
@@ -687,10 +1325,13 @@ def _record_command_execution(summary: dict[str, Any], *, script: str, rc: int) 
             "failed_command_count": 0,
             "failed_scripts": [],
             "first_failed_script": "",
+            "last_completed_script": "",
         },
     )
     command_execution["executed_command_count"] = _safe_int(command_execution.get("executed_command_count")) + 1
     if rc == 0:
+        if script:
+            command_execution["last_completed_script"] = script
         return
     command_execution["failed_command_count"] = _safe_int(command_execution.get("failed_command_count")) + 1
     failed_scripts = command_execution.setdefault("failed_scripts", [])
@@ -698,6 +1339,32 @@ def _record_command_execution(summary: dict[str, Any], *, script: str, rc: int) 
         failed_scripts.append(script)
     if not _clean_str(command_execution.get("first_failed_script")) and script:
         command_execution["first_failed_script"] = script
+
+
+def _checkpoint_release_readiness_summary(
+    summary: dict[str, Any],
+    *,
+    summary_out: str,
+    phase: str,
+    current_check_name: str = "",
+    current_check_state: str = "idle",
+    phase_step_index: int | None = None,
+    phase_step_total: int | None = None,
+    last_completed_check_name: str = "",
+) -> None:
+    target = _clean_str(summary_out)
+    if not target:
+        return
+    apply_governed_runtime_summary_checkpoint(
+        summary,
+        phase=phase,
+        current_check_name=current_check_name,
+        current_check_state=current_check_state,
+        phase_step_index=phase_step_index,
+        phase_step_total=phase_step_total,
+        last_completed_check_name=last_completed_check_name,
+    )
+    write_governed_runtime_summary_checkpoint(target, summary)
 
 
 def _record_required_gate_bundle_execution(summary: dict[str, Any], *, cmd: list[str], rc: int) -> None:
@@ -754,6 +1421,33 @@ def _record_structured_check(
     summary[name] = item
 
 
+def _extract_control_plane_check_projection(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    status_render = payload.get("status_render") or {}
+    checks = status_render.get("checks") or []
+    if not isinstance(checks, list):
+        return {}
+    projection: dict[str, dict[str, Any]] = {}
+    for row in checks:
+        if not isinstance(row, dict):
+            continue
+        name = _clean_str(row.get("name"))
+        if not name:
+            continue
+        row_payload = row.get("payload") or {}
+        item: dict[str, Any] = {
+            "status": _clean_str(row.get("status")).upper() or STATUS_UNKNOWN,
+            "error_code": _clean_str(row.get("error_code")),
+        }
+        if isinstance(row_payload, dict):
+            if "violation_count" in row_payload:
+                item["violation_count"] = _safe_int(row_payload.get("violation_count"))
+            stale_reasons = _clean_list(row_payload.get("stale_reasons"))
+            if stale_reasons:
+                item["stale_reasons"] = stale_reasons
+        projection[name] = item
+    return projection
+
+
 def _hydrate_required_gate_bundle_summary(
     summary: dict[str, Any],
     *,
@@ -792,6 +1486,12 @@ def _hydrate_required_gate_bundle_summary(
     def _summarize_single_bundle(path_text: str) -> dict[str, Any]:
         path = Path(path_text).expanduser().resolve()
         if str(path) not in observed_receipt_paths:
+            if targeted_subset_excludes_required_gate_bundle(summary):
+                return build_scope_excluded_required_gate_bundle_summary(
+                    str(path),
+                    selected_check_mode=_clean_str(summary.get("selected_check_mode")),
+                    selected_check_dependency_mode=_clean_str(summary.get("selected_check_dependency_mode")),
+                )
             return _unknown_bundle(
                 path,
                 reason="bundle_receipt_not_observed_in_current_release_readiness_run",
@@ -832,6 +1532,7 @@ def _hydrate_required_gate_bundle_summary(
 def _hydrate_one_look_projection(summary: dict[str, Any]) -> None:
     coverage = summary.get("required_contract_coverage") or {}
     bundle = summary.get("required_gate_bundle") or {}
+    selected_check_scope_projection = summary.get("selected_check_scope_projection") or {}
     recurrence = summary.get("required_gate_recurrence") or {}
     tuple_parity = summary.get("required_gate_tuple_parity") or {}
     release_plane = summary.get("release_plane_cloud_evidence") or {}
@@ -842,6 +1543,7 @@ def _hydrate_one_look_projection(summary: dict[str, Any]) -> None:
     control_plane_budget_sync = summary.get("control_plane_budget_sync") or {}
     control_plane_status_sync = summary.get("control_plane_status_sync") or {}
     control_plane_surface_materialization = summary.get("control_plane_surface_materialization") or {}
+    resolve_identity_context_local_catalog_closure = summary.get("resolve_identity_context_local_catalog_closure") or {}
     plugin_projection = summary.get("failclose_plugin_projection") or {}
     full_scan = summary.get("full_scan_target_regression") or {}
     terminal_truth_boundary = summary.get("terminal_truth_boundary_projection") or {}
@@ -851,8 +1553,22 @@ def _hydrate_one_look_projection(summary: dict[str, Any]) -> None:
         "failed_required_contracts": _clean_list(coverage.get("failed_required_contracts")),
         "failed_optional_contract_count": _safe_int(coverage.get("failed_optional_contract_count")),
         "failed_optional_contracts": _clean_list(coverage.get("failed_optional_contracts")),
+        "selected_check_scope_projection_status": _clean_str(
+            selected_check_scope_projection.get("status")
+        ).upper()
+        or STATUS_UNKNOWN,
+        "selected_check_scope_class": _clean_str(selected_check_scope_projection.get("scope_class")),
+        "selected_check_scope_reason": _clean_str(selected_check_scope_projection.get("scope_reason")),
+        "selected_check_scope_excluded_summary_key_count": _safe_int(
+            selected_check_scope_projection.get("excluded_summary_key_count")
+        ),
+        "selected_check_scope_excluded_summary_keys": _clean_list(
+            selected_check_scope_projection.get("excluded_summary_keys")
+        ),
         "required_gate_bundle_status": _clean_str(bundle.get("bundle_status")).upper() or STATUS_UNKNOWN,
         "required_gate_bundle_projection_status": _clean_str(bundle.get("projection_status")).upper() or STATUS_UNKNOWN,
+        "required_gate_bundle_scope_class": _clean_str(bundle.get("scope_class")),
+        "required_gate_bundle_scope_reason": _clean_str(bundle.get("scope_reason")),
         "failed_required_target_count": _safe_int(bundle.get("failed_required_target_count")),
         "failed_target_names": _clean_list(bundle.get("failed_target_names")),
         "projection_stale_reasons": _clean_list(bundle.get("projection_stale_reasons")),
@@ -894,6 +1610,10 @@ def _hydrate_one_look_projection(summary: dict[str, Any]) -> None:
         "control_plane_materialized_promotion_ready": bool(
             control_plane_surface_materialization.get("promotion_ready")
         ),
+        "resolve_identity_context_local_catalog_closure_status": _clean_str(
+            resolve_identity_context_local_catalog_closure.get("status")
+        ).upper()
+        or STATUS_UNKNOWN,
         "failclose_plugin_projection_status": _clean_str(plugin_projection.get("status")).upper() or STATUS_UNKNOWN,
         "full_scan_target_regression_status": _clean_str(full_scan.get("status")).upper() or STATUS_UNKNOWN,
         "terminal_truth_boundary_projection_status": _clean_str(
@@ -913,6 +1633,9 @@ def _hydrate_one_look_projection(summary: dict[str, Any]) -> None:
         "terminal_truth_class": _clean_str(terminal_truth_boundary.get("terminal_truth_class")),
         "terminal_state_class": _clean_str(terminal_truth_boundary.get("terminal_state_class")),
     }
+    apply_release_readiness_repo_global_closure_one_look(summary, summary["one_look"])
+    apply_release_readiness_active_runtime_closure_one_look(summary, summary["one_look"])
+    apply_release_readiness_governance_probe_one_look(summary, summary["one_look"])
 
 
 def _finalize_release_readiness_summary(
@@ -930,6 +1653,16 @@ def _finalize_release_readiness_summary(
     summary["release_readiness_status"] = STATUS_PASS_REQUIRED if exit_code == 0 else STATUS_FAIL_REQUIRED
     summary["exit_code"] = int(exit_code)
     summary["execution_report"] = _clean_str(execution_report)
+    apply_governed_runtime_summary_checkpoint(
+        summary,
+        phase="finalized",
+        current_check_name="",
+        current_check_state="idle",
+        last_completed_check_name=_clean_str((summary.get("command_execution") or {}).get("last_completed_script")),
+        lifecycle_status=SUMMARY_LIFECYCLE_FINALIZED,
+        checkpoint_kind=SUMMARY_CHECKPOINT_KIND_FINAL,
+    )
+    summary["summary_finalized_utc"] = _utc_now_iso_z()
     if failed_script:
         summary["failed_script"] = failed_script
     if failed_rc is not None:
@@ -939,6 +1672,11 @@ def _finalize_release_readiness_summary(
         repo_root=repo_root,
         receipt_path=required_gate_bundle_receipt,
         receipt_probe_path=required_gate_bundle_receipt_probe,
+    )
+    materialize_targeted_subset_selected_check_scope_exclusions(
+        summary,
+        summary_capture_scripts=SUMMARY_CAPTURE_SCRIPTS,
+        structured_summary_capture_specs=STRUCTURED_SUMMARY_CAPTURE_SPECS,
     )
     report_token = _clean_str(execution_report)
     if report_token:
@@ -957,6 +1695,8 @@ def _finalize_release_readiness_summary(
     else:
         summary["terminal_truth_boundary_projection"] = {
             "terminal_truth_boundary_projection_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "repair_lane_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "terminal_truth_observation_status": STATUS_SKIPPED_NOT_REQUIRED,
             "stale_reasons": ["execution_report_missing"],
         }
     _hydrate_one_look_projection(summary)
@@ -1113,6 +1853,24 @@ def main() -> int:
     ap.add_argument("--checks-json", default="")
     ap.add_argument("--jobs-json", default="")
     ap.add_argument("--gh-runs-json", default="")
+    ap.add_argument(
+        "--resume-from-summary",
+        default="",
+        help=(
+            "optional in-progress release-readiness summary path. "
+            "When provided, command-sequence checks resume from the checkpoint's current/last-completed check "
+            "instead of replaying the full command sequence."
+        ),
+    )
+    ap.add_argument(
+        "--max-command-sequence-checks",
+        type=int,
+        default=0,
+        help=(
+            "optional positive cap on how many command-sequence checks to execute in this invocation. "
+            "When the cap is reached, the run exits 0 after writing an IN_PROGRESS checkpoint to --summary-out."
+        ),
+    )
     ap.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent for stamp render/validators")
     ap.add_argument("--expected-work-layer", default="", help="optional expected work_layer override for strict reply gates")
     ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
@@ -1190,6 +1948,18 @@ def main() -> int:
     expected_work_layer = args.expected_work_layer.strip().lower()
     expected_source_layer = args.expected_source_layer.strip().lower()
     summary_out = str(args.summary_out or "").strip()
+    resume_from_summary = str(args.resume_from_summary or "").strip()
+    max_command_sequence_checks = max(int(args.max_command_sequence_checks or 0), 0)
+    if (resume_from_summary or max_command_sequence_checks > 0) and not summary_out:
+        print(
+            "[FAIL] --summary-out is required when --resume-from-summary or "
+            "--max-command-sequence-checks is used."
+        )
+        return 2
+    resume_source = capture_governed_runtime_summary_resume_source(
+        resume_from_summary,
+        summary_out=summary_out,
+    )
     try:
         actor_id = resolve_required_protocol_actor_id(str(args.actor_id or "").strip())
     except ValueError as exc:
@@ -1222,6 +1992,9 @@ def main() -> int:
         "target_branch": target_branch,
         "selected_check_names": list(selected_check_names),
         "selected_check_mode": "targeted_subset" if selected_check_names else "full",
+        "selected_check_dependency_mode": "unknown",
+        "execution_report_resolution_mode": "required",
+        "execution_report_resolution_status": STATUS_UNKNOWN,
         "bundle_run_token": "",
         "lane_context": {},
         "preflight": {},
@@ -1243,11 +2016,14 @@ def main() -> int:
         "terminal_truth_boundary_projection": {"terminal_truth_boundary_projection_status": STATUS_UNKNOWN},
         "failclose_plugin_projection": {"status": STATUS_UNKNOWN},
         "full_scan_target_regression": {"status": STATUS_UNKNOWN},
+        **release_readiness_active_runtime_closure_summary_defaults(),
+        **release_readiness_governance_probe_summary_defaults(),
         "command_execution": {
             "executed_command_count": 0,
             "failed_command_count": 0,
             "failed_scripts": [],
             "first_failed_script": "",
+            "last_completed_script": "",
         },
     }
     from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
@@ -1289,6 +2065,15 @@ def main() -> int:
     print(
         f"[INFO] lane routing: work_layer={routed_work_layer} "
         f"source_layer={routed_source_layer} applied_gate_set={routed_applied_gate_set}"
+    )
+    _checkpoint_release_readiness_summary(
+        summary_payload,
+        summary_out=summary_out,
+        phase="bootstrap",
+        current_check_name="",
+        current_check_state="idle",
+        phase_step_index=0,
+        phase_step_total=READINESS_PREFLIGHT_COMMAND_COUNT,
     )
     stamp_artifact = str(
         runtime_temp_file(
@@ -1420,11 +2205,30 @@ def main() -> int:
     ]
     if scope:
         guard_cmd.extend(["--scope", scope])
+    _checkpoint_release_readiness_summary(
+        summary_payload,
+        summary_out=summary_out,
+        phase="preflight",
+        current_check_name="scripts/validate_identity_runtime_mode_guard.py",
+        current_check_state="running",
+        phase_step_index=1,
+        phase_step_total=READINESS_PREFLIGHT_COMMAND_COUNT,
+    )
     rc_guard = _run(guard_cmd)
     if rc_guard != 0:
         _record_command_execution(summary_payload, script="scripts/validate_identity_runtime_mode_guard.py", rc=rc_guard)
         return finish(rc_guard, failed_script="scripts/validate_identity_runtime_mode_guard.py", failed_rc=rc_guard)
     _record_command_execution(summary_payload, script="scripts/validate_identity_runtime_mode_guard.py", rc=rc_guard)
+    _checkpoint_release_readiness_summary(
+        summary_payload,
+        summary_out=summary_out,
+        phase="preflight",
+        current_check_name="",
+        current_check_state="idle",
+        phase_step_index=1,
+        phase_step_total=READINESS_PREFLIGHT_COMMAND_COUNT,
+        last_completed_check_name="scripts/validate_identity_runtime_mode_guard.py",
+    )
 
     path_pack_cmd = [
         "python3",
@@ -1435,6 +2239,15 @@ def main() -> int:
         catalog,
         "--json-only",
     ]
+    _checkpoint_release_readiness_summary(
+        summary_payload,
+        summary_out=summary_out,
+        phase="preflight",
+        current_check_name="scripts/validate_identity_pack_path_canonical.py",
+        current_check_state="running",
+        phase_step_index=2,
+        phase_step_total=READINESS_PREFLIGHT_COMMAND_COUNT,
+    )
     rc_pack, out_pack, _ = _run_capture(path_pack_cmd)
     pack_payload = _parse_json_payload(out_pack) or {}
     path_status = str(pack_payload.get("path_governance_status", "")).strip().upper() or "UNKNOWN"
@@ -1459,6 +2272,16 @@ def main() -> int:
         _record_command_execution(summary_payload, script="scripts/validate_identity_pack_path_canonical.py", rc=rc_pack)
         return finish(rc_pack, failed_script="scripts/validate_identity_pack_path_canonical.py", failed_rc=rc_pack)
     _record_command_execution(summary_payload, script="scripts/validate_identity_pack_path_canonical.py", rc=rc_pack)
+    _checkpoint_release_readiness_summary(
+        summary_payload,
+        summary_out=summary_out,
+        phase="preflight",
+        current_check_name="",
+        current_check_state="idle",
+        phase_step_index=2,
+        phase_step_total=READINESS_PREFLIGHT_COMMAND_COUNT,
+        last_completed_check_name="scripts/validate_identity_pack_path_canonical.py",
+    )
 
     home_alignment_cmd = [
         "python3",
@@ -1473,6 +2296,15 @@ def main() -> int:
         str(Path(catalog).expanduser().resolve().parent),
         "--json-only",
     ]
+    _checkpoint_release_readiness_summary(
+        summary_payload,
+        summary_out=summary_out,
+        phase="preflight",
+        current_check_name="scripts/validate_identity_home_catalog_alignment.py",
+        current_check_state="running",
+        phase_step_index=3,
+        phase_step_total=READINESS_PREFLIGHT_COMMAND_COUNT,
+    )
     rc_home_align, out_home_align, _ = _run_capture(home_alignment_cmd)
     home_align_payload = _parse_json_payload(out_home_align) or {}
     home_align_status = str(home_align_payload.get("path_governance_status", "")).strip().upper() or "UNKNOWN"
@@ -1497,6 +2329,16 @@ def main() -> int:
         _record_command_execution(summary_payload, script="scripts/validate_identity_home_catalog_alignment.py", rc=rc_home_align)
         return finish(rc_home_align, failed_script="scripts/validate_identity_home_catalog_alignment.py", failed_rc=rc_home_align)
     _record_command_execution(summary_payload, script="scripts/validate_identity_home_catalog_alignment.py", rc=rc_home_align)
+    _checkpoint_release_readiness_summary(
+        summary_payload,
+        summary_out=summary_out,
+        phase="preflight",
+        current_check_name="",
+        current_check_state="idle",
+        phase_step_index=3,
+        phase_step_total=READINESS_PREFLIGHT_COMMAND_COUNT,
+        last_completed_check_name="scripts/validate_identity_home_catalog_alignment.py",
+    )
 
     fixture_boundary_cmd = [
         "python3",
@@ -1511,6 +2353,15 @@ def main() -> int:
         "readiness",
         "--json-only",
     ]
+    _checkpoint_release_readiness_summary(
+        summary_payload,
+        summary_out=summary_out,
+        phase="preflight",
+        current_check_name="scripts/validate_fixture_runtime_boundary.py",
+        current_check_state="running",
+        phase_step_index=4,
+        phase_step_total=READINESS_PREFLIGHT_COMMAND_COUNT,
+    )
     rc_fixture_boundary, out_fixture_boundary, _ = _run_capture(fixture_boundary_cmd)
     fixture_boundary_payload = _parse_json_payload(out_fixture_boundary) or {}
     fixture_boundary_status = (
@@ -1537,6 +2388,16 @@ def main() -> int:
         _record_command_execution(summary_payload, script="scripts/validate_fixture_runtime_boundary.py", rc=rc_fixture_boundary)
         return finish(rc_fixture_boundary, failed_script="scripts/validate_fixture_runtime_boundary.py", failed_rc=rc_fixture_boundary)
     _record_command_execution(summary_payload, script="scripts/validate_fixture_runtime_boundary.py", rc=rc_fixture_boundary)
+    _checkpoint_release_readiness_summary(
+        summary_payload,
+        summary_out=summary_out,
+        phase="preflight",
+        current_check_name="",
+        current_check_state="idle",
+        phase_step_index=4,
+        phase_step_total=READINESS_PREFLIGHT_COMMAND_COUNT,
+        last_completed_check_name="scripts/validate_fixture_runtime_boundary.py",
+    )
     fixture_profile = str(fixture_boundary_payload.get("profile", "")).strip().lower()
     fixture_runtime_mode = str(fixture_boundary_payload.get("runtime_mode", "")).strip().lower()
     is_fixture_identity = fixture_profile == "fixture" or fixture_runtime_mode == "demo_only"
@@ -1711,14 +2572,11 @@ def main() -> int:
             catalog,
             "--json-only",
         ],
-        [
-            "python3",
-            "scripts/check_identity_codex_launcher_migration_closure.py",
-            "--catalog",
-            catalog,
-            "--workspace-runtime-only",
-            "--json-only",
-        ],
+        build_workspace_runtime_closure_checker_command(
+            checker_id="scripts/check_identity_codex_launcher_migration_closure.py",
+            catalog_path=catalog,
+            json_only=True,
+        ),
         [
             "python3",
             "scripts/validate_runtime_catalog_metadata_hygiene.py",
@@ -1729,6 +2587,7 @@ def main() -> int:
             "--require-active",
             "--json-only",
         ],
+        *_build_workspace_runtime_closure_checks(catalog=catalog),
         ["python3", "scripts/validate_audit_snapshot_index.py"],
         *POST_CLOSURE_GOVERNANCE_SCRIPTS,
         ["python3", "scripts/validate_native_chat_bootstrap_entry_stream.py", "--json-only"],
@@ -2704,10 +3563,51 @@ def main() -> int:
             if len(cmd) >= 2 and cmd[1] == "scripts/validate_required_contract_coverage.py":
                 cmd.extend(["--min-discovery-required-coverage", str(args.min_discovery_required_coverage)])
                 break
+    preview_stage_seq, selectable_post_execution_targeted_check_names = (
+        _extend_selection_candidates_with_unique_script_names(
+            seq,
+            _build_post_execution_report_stage_checks(
+                identity_id=identity_id,
+                catalog=catalog,
+                execution_report=str(args.execution_report or "").strip() or "__EXECUTION_REPORT__",
+                report_meta={},
+                health_report_dir=health_report_dir,
+                actor_id=actor_id,
+                session_id=session_id or "run:selection-preview",
+                scope=scope,
+                base=base,
+                head=head,
+                capability_activation_policy=args.capability_activation_policy,
+                expected_work_layer=args.expected_work_layer,
+                expected_source_layer=args.expected_source_layer,
+            ),
+        )
+    )
+    preview_selection_projection = _build_selected_check_projection(
+        preview_stage_seq,
+        selected_check_names=selected_check_names,
+    )
+    targeted_subset_mode = bool(preview_selection_projection["targeted_subset_mode"])
+    _apply_selected_check_projection_summary(summary_payload, preview_selection_projection)
+    preview_missing_selected_check_names = preview_selection_projection["missing_selected_check_names"]
+    if preview_missing_selected_check_names:
+        print(
+            "[FAIL] unknown readiness check selection: "
+            + ", ".join(str(name) for name in preview_missing_selected_check_names)
+        )
+        return finish(
+            1,
+            failed_script="release_readiness_check#check_selection",
+            failed_rc=1,
+        )
+    execution_report_required = bool(preview_selection_projection["execution_report_required"])
+    selected_subset_targets_post_execution_stage = targeted_subset_mode and bool(
+        selectable_post_execution_targeted_check_names.intersection(selected_check_names)
+    )
     execution_report = args.execution_report.strip()
     if execution_report:
         execution_report = str(Path(execution_report).expanduser().resolve())
-    if not execution_report:
+    if execution_report_required and not execution_report:
         gen_cmd = [
             "python3",
             "scripts/identity_creator.py",
@@ -2737,10 +3637,29 @@ def main() -> int:
             gen_cmd.extend(["--expected-work-layer", expected_work_layer])
         if expected_source_layer:
             gen_cmd.extend(["--expected-source-layer", expected_source_layer])
+        _checkpoint_release_readiness_summary(
+            summary_payload,
+            summary_out=summary_out,
+            phase="execution_report_resolution",
+            current_check_name="scripts/identity_creator.py",
+            current_check_state="running",
+            phase_step_index=1,
+            phase_step_total=1,
+        )
         rc = _run(gen_cmd)
         _record_command_execution(summary_payload, script="scripts/identity_creator.py", rc=rc)
         if rc != 0:
             return finish(rc, failed_script="scripts/identity_creator.py", failed_rc=rc)
+        _checkpoint_release_readiness_summary(
+            summary_payload,
+            summary_out=summary_out,
+            phase="execution_report_resolution",
+            current_check_name="",
+            current_check_state="idle",
+            phase_step_index=1,
+            phase_step_total=1,
+            last_completed_check_name="scripts/identity_creator.py",
+        )
         pack_path = _resolve_pack_path(catalog, identity_id)
         if current_round_run_id and pack_path is not None:
             current_round_reports = collect_execution_reports(pack_path, identity_id)
@@ -2808,530 +3727,346 @@ def main() -> int:
                 return finish(2)
             execution_report = str(candidates[-1])
             print(f"[INFO] auto-generated execution report: {execution_report}")
+        summary_payload["execution_report_resolution_status"] = STATUS_PASS_REQUIRED
+    elif execution_report_required:
+        summary_payload["execution_report_resolution_status"] = STATUS_PASS_REQUIRED
+    else:
+        summary_payload["execution_report_resolution_status"] = STATUS_SKIPPED_NOT_REQUIRED
     summary_payload["execution_report"] = execution_report
 
-    freshness_cmd = [
-        "python3",
-        "scripts/validate_execution_report_freshness.py",
-        "--identity-id",
-        identity_id,
-        "--catalog",
-        catalog,
-        "--repo-catalog",
-        "identity/catalog/identities.yaml",
-        "--report",
-        execution_report,
-        "--execution-report-policy",
-        args.execution_report_policy,
-        "--json-only",
-    ]
-    rc_fresh, out_fresh, _ = _run_capture(freshness_cmd)
-    freshness_payload = _parse_json_payload(out_fresh) or {}
-    freshness_status = str(freshness_payload.get("freshness_status", "")).strip().upper() or "UNKNOWN"
-    freshness_code = str(freshness_payload.get("freshness_error_code", "")).strip() or "-"
-    selected_report = str(freshness_payload.get("report_selected_path", "")).strip()
-    if selected_report and Path(selected_report).exists():
-        execution_report = selected_report
-    print(
-        "[INFO] execution report freshness preflight: "
-        f"status={freshness_status} error_code={freshness_code} report={execution_report}"
-    )
-    _record_preflight(
-        summary_payload,
-        name="execution_report_freshness",
-        rc=rc_fresh,
-        payload=freshness_payload,
-        status_fields=("freshness_status",),
-        error_fields=("freshness_error_code", "error_code"),
-        keep_fields=("report_selected_path", "freshness_error_code", "stale_reasons"),
-    )
-    if rc_fresh != 0:
+    if execution_report_required:
+        freshness_cmd = [
+            "python3",
+            "scripts/validate_execution_report_freshness.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--report",
+            execution_report,
+            "--execution-report-policy",
+            args.execution_report_policy,
+            "--json-only",
+        ]
+        _checkpoint_release_readiness_summary(
+            summary_payload,
+            summary_out=summary_out,
+            phase="preflight",
+            current_check_name="scripts/validate_execution_report_freshness.py",
+            current_check_state="running",
+            phase_step_index=5,
+            phase_step_total=READINESS_PREFLIGHT_COMMAND_COUNT,
+        )
+        rc_fresh, out_fresh, _ = _run_capture(freshness_cmd)
+        freshness_payload = _parse_json_payload(out_fresh) or {}
+        freshness_status = str(freshness_payload.get("freshness_status", "")).strip().upper() or "UNKNOWN"
+        freshness_code = str(freshness_payload.get("freshness_error_code", "")).strip() or "-"
+        selected_report = str(freshness_payload.get("report_selected_path", "")).strip()
+        if selected_report and Path(selected_report).exists():
+            execution_report = selected_report
+        print(
+            "[INFO] execution report freshness preflight: "
+            f"status={freshness_status} error_code={freshness_code} report={execution_report}"
+        )
+        _record_preflight(
+            summary_payload,
+            name="execution_report_freshness",
+            rc=rc_fresh,
+            payload=freshness_payload,
+            status_fields=("freshness_status",),
+            error_fields=("freshness_error_code", "error_code"),
+            keep_fields=("report_selected_path", "freshness_error_code", "stale_reasons"),
+        )
+        if rc_fresh != 0:
+            _record_command_execution(summary_payload, script="scripts/validate_execution_report_freshness.py", rc=rc_fresh)
+            return finish(rc_fresh, failed_script="scripts/validate_execution_report_freshness.py", failed_rc=rc_fresh)
         _record_command_execution(summary_payload, script="scripts/validate_execution_report_freshness.py", rc=rc_fresh)
-        return finish(rc_fresh, failed_script="scripts/validate_execution_report_freshness.py", failed_rc=rc_fresh)
-    _record_command_execution(summary_payload, script="scripts/validate_execution_report_freshness.py", rc=rc_fresh)
+        _checkpoint_release_readiness_summary(
+            summary_payload,
+            summary_out=summary_out,
+            phase="preflight",
+            current_check_name="",
+            current_check_state="idle",
+            phase_step_index=5,
+            phase_step_total=READINESS_PREFLIGHT_COMMAND_COUNT,
+            last_completed_check_name="scripts/validate_execution_report_freshness.py",
+        )
 
-    report_path_cmd = [
-        "python3",
-        "scripts/validate_identity_execution_report_path_contract.py",
-        "--identity-id",
-        identity_id,
-        "--catalog",
-        catalog,
-        "--repo-catalog",
-        "identity/catalog/identities.yaml",
-        "--report",
-        execution_report,
-        "--json-only",
-    ]
-    rc_report_path, out_report_path, _ = _run_capture(report_path_cmd)
-    report_path_payload = _parse_json_payload(out_report_path) or {}
-    report_path_status = str(report_path_payload.get("path_governance_status", "")).strip().upper() or "UNKNOWN"
-    report_path_codes = report_path_payload.get("path_error_codes", [])
-    if not isinstance(report_path_codes, list):
-        report_path_codes = [str(report_path_codes)]
-    print(
-        "[INFO] execution report path preflight: "
-        f"status={report_path_status} error_codes={','.join(str(x) for x in report_path_codes if str(x).strip()) or '-'} "
-        f"report={execution_report}"
-    )
-    _record_preflight(
-        summary_payload,
-        name="execution_report_path_contract",
-        rc=rc_report_path,
-        payload=report_path_payload,
-        status_fields=("path_governance_status",),
-        error_fields=("error_code", "path_error_codes"),
-        keep_fields=("path_error_codes",),
-        extra={"report": execution_report},
-    )
-    if rc_report_path != 0:
+        report_path_cmd = [
+            "python3",
+            "scripts/validate_identity_execution_report_path_contract.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--report",
+            execution_report,
+            "--json-only",
+        ]
+        _checkpoint_release_readiness_summary(
+            summary_payload,
+            summary_out=summary_out,
+            phase="preflight",
+            current_check_name="scripts/validate_identity_execution_report_path_contract.py",
+            current_check_state="running",
+            phase_step_index=6,
+            phase_step_total=READINESS_PREFLIGHT_COMMAND_COUNT,
+        )
+        rc_report_path, out_report_path, _ = _run_capture(report_path_cmd)
+        report_path_payload = _parse_json_payload(out_report_path) or {}
+        report_path_status = str(report_path_payload.get("path_governance_status", "")).strip().upper() or "UNKNOWN"
+        report_path_codes = report_path_payload.get("path_error_codes", [])
+        if not isinstance(report_path_codes, list):
+            report_path_codes = [str(report_path_codes)]
+        print(
+            "[INFO] execution report path preflight: "
+            f"status={report_path_status} error_codes={','.join(str(x) for x in report_path_codes if str(x).strip()) or '-'} "
+            f"report={execution_report}"
+        )
+        _record_preflight(
+            summary_payload,
+            name="execution_report_path_contract",
+            rc=rc_report_path,
+            payload=report_path_payload,
+            status_fields=("path_governance_status",),
+            error_fields=("error_code", "path_error_codes"),
+            keep_fields=("path_error_codes",),
+            extra={"report": execution_report},
+        )
+        if rc_report_path != 0:
+            _record_command_execution(
+                summary_payload,
+                script="scripts/validate_identity_execution_report_path_contract.py",
+                rc=rc_report_path,
+            )
+            return finish(
+                rc_report_path,
+                failed_script="scripts/validate_identity_execution_report_path_contract.py",
+                failed_rc=rc_report_path,
+            )
         _record_command_execution(
             summary_payload,
             script="scripts/validate_identity_execution_report_path_contract.py",
             rc=rc_report_path,
         )
-        return finish(
-            rc_report_path,
-            failed_script="scripts/validate_identity_execution_report_path_contract.py",
-            failed_rc=rc_report_path,
+        _checkpoint_release_readiness_summary(
+            summary_payload,
+            summary_out=summary_out,
+            phase="preflight",
+            current_check_name="",
+            current_check_state="idle",
+            phase_step_index=6,
+            phase_step_total=READINESS_PREFLIGHT_COMMAND_COUNT,
+            last_completed_check_name="scripts/validate_identity_execution_report_path_contract.py",
         )
-    _record_command_execution(
-        summary_payload,
-        script="scripts/validate_identity_execution_report_path_contract.py",
-        rc=rc_report_path,
-    )
 
-    baseline_cmd = [
-        "python3",
-        "scripts/validate_identity_protocol_baseline_freshness.py",
-        "--identity-id",
-        identity_id,
-        "--catalog",
-        catalog,
-        "--repo-catalog",
-        "identity/catalog/identities.yaml",
-        "--execution-report",
-        execution_report,
-        "--baseline-policy",
-        args.baseline_policy,
-        "--json-only",
-    ]
-    rc_baseline, out_baseline, _ = _run_capture(baseline_cmd)
-    baseline_payload = _parse_json_payload(out_baseline) or {}
-    baseline_status = str(baseline_payload.get("baseline_status", "")).strip().upper() or "UNKNOWN"
-    baseline_code = str(baseline_payload.get("baseline_error_code", "")).strip() or "-"
-    selected_report = str(baseline_payload.get("report_selected_path", "")).strip()
-    if selected_report and Path(selected_report).exists():
-        execution_report = selected_report
-    print(
-        "[INFO] protocol baseline freshness preflight: "
-        f"status={baseline_status} error_code={baseline_code} report={execution_report}"
-    )
-    _record_preflight(
-        summary_payload,
-        name="protocol_baseline_freshness",
-        rc=rc_baseline,
-        payload=baseline_payload,
-        status_fields=("baseline_status",),
-        error_fields=("baseline_error_code", "error_code"),
-        keep_fields=("report_selected_path", "baseline_error_code", "stale_reasons"),
-    )
-    if rc_baseline != 0:
+        baseline_cmd = [
+            "python3",
+            "scripts/validate_identity_protocol_baseline_freshness.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--execution-report",
+            execution_report,
+            "--baseline-policy",
+            args.baseline_policy,
+            "--json-only",
+        ]
+        _checkpoint_release_readiness_summary(
+            summary_payload,
+            summary_out=summary_out,
+            phase="preflight",
+            current_check_name="scripts/validate_identity_protocol_baseline_freshness.py",
+            current_check_state="running",
+            phase_step_index=7,
+            phase_step_total=READINESS_PREFLIGHT_COMMAND_COUNT,
+        )
+        rc_baseline, out_baseline, _ = _run_capture(baseline_cmd)
+        baseline_payload = _parse_json_payload(out_baseline) or {}
+        baseline_status = str(baseline_payload.get("baseline_status", "")).strip().upper() or "UNKNOWN"
+        baseline_code = str(baseline_payload.get("baseline_error_code", "")).strip() or "-"
+        selected_report = str(baseline_payload.get("report_selected_path", "")).strip()
+        if selected_report and Path(selected_report).exists():
+            execution_report = selected_report
+        print(
+            "[INFO] protocol baseline freshness preflight: "
+            f"status={baseline_status} error_code={baseline_code} report={execution_report}"
+        )
+        _record_preflight(
+            summary_payload,
+            name="protocol_baseline_freshness",
+            rc=rc_baseline,
+            payload=baseline_payload,
+            status_fields=("baseline_status",),
+            error_fields=("baseline_error_code", "error_code"),
+            keep_fields=("report_selected_path", "baseline_error_code", "stale_reasons"),
+        )
+        if rc_baseline != 0:
+            _record_command_execution(
+                summary_payload,
+                script="scripts/validate_identity_protocol_baseline_freshness.py",
+                rc=rc_baseline,
+            )
+            return finish(
+                rc_baseline,
+                failed_script="scripts/validate_identity_protocol_baseline_freshness.py",
+                failed_rc=rc_baseline,
+            )
         _record_command_execution(
             summary_payload,
             script="scripts/validate_identity_protocol_baseline_freshness.py",
             rc=rc_baseline,
         )
-        return finish(
-            rc_baseline,
-            failed_script="scripts/validate_identity_protocol_baseline_freshness.py",
-            failed_rc=rc_baseline,
+        _checkpoint_release_readiness_summary(
+            summary_payload,
+            summary_out=summary_out,
+            phase="preflight",
+            current_check_name="",
+            current_check_state="idle",
+            phase_step_index=7,
+            phase_step_total=READINESS_PREFLIGHT_COMMAND_COUNT,
+            last_completed_check_name="scripts/validate_identity_protocol_baseline_freshness.py",
         )
-    _record_command_execution(
-        summary_payload,
-        script="scripts/validate_identity_protocol_baseline_freshness.py",
-        rc=rc_baseline,
-    )
 
-    version_alignment_cmd = [
-        "python3",
-        "scripts/validate_identity_protocol_version_alignment.py",
-        "--identity-id",
-        identity_id,
-        "--catalog",
-        catalog,
-        "--repo-catalog",
-        "identity/catalog/identities.yaml",
-        "--execution-report",
-        execution_report,
-        "--operation",
-        "readiness",
-        "--alignment-policy",
-        args.baseline_policy,
-        "--json-only",
-    ]
-    if scope:
-        version_alignment_cmd.extend(["--scope", scope])
-    rc_align, out_align, _ = _run_capture(version_alignment_cmd)
-    align_payload = _parse_json_payload(out_align) or {}
-    align_status = str(align_payload.get("protocol_version_alignment_status", "")).strip().upper() or "UNKNOWN"
-    align_code = str(align_payload.get("error_code", "")).strip() or "-"
-    print(
-        "[INFO] protocol version alignment preflight: "
-        f"status={align_status} error_code={align_code} report={execution_report}"
-    )
-    _record_preflight(
-        summary_payload,
-        name="protocol_version_alignment",
-        rc=rc_align,
-        payload=align_payload,
-        status_fields=("protocol_version_alignment_status",),
-        error_fields=("error_code",),
-        keep_fields=("stale_reasons",),
-        extra={"report": execution_report},
-    )
-    if rc_align != 0:
+        version_alignment_cmd = [
+            "python3",
+            "scripts/validate_identity_protocol_version_alignment.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--execution-report",
+            execution_report,
+            "--operation",
+            "readiness",
+            "--alignment-policy",
+            args.baseline_policy,
+            "--json-only",
+        ]
+        if scope:
+            version_alignment_cmd.extend(["--scope", scope])
+        _checkpoint_release_readiness_summary(
+            summary_payload,
+            summary_out=summary_out,
+            phase="preflight",
+            current_check_name="scripts/validate_identity_protocol_version_alignment.py",
+            current_check_state="running",
+            phase_step_index=8,
+            phase_step_total=READINESS_PREFLIGHT_COMMAND_COUNT,
+        )
+        rc_align, out_align, _ = _run_capture(version_alignment_cmd)
+        align_payload = _parse_json_payload(out_align) or {}
+        align_status = str(align_payload.get("protocol_version_alignment_status", "")).strip().upper() or "UNKNOWN"
+        align_code = str(align_payload.get("error_code", "")).strip() or "-"
+        print(
+            "[INFO] protocol version alignment preflight: "
+            f"status={align_status} error_code={align_code} report={execution_report}"
+        )
+        _record_preflight(
+            summary_payload,
+            name="protocol_version_alignment",
+            rc=rc_align,
+            payload=align_payload,
+            status_fields=("protocol_version_alignment_status",),
+            error_fields=("error_code",),
+            keep_fields=("stale_reasons",),
+            extra={"report": execution_report},
+        )
+        if rc_align != 0:
+            _record_command_execution(
+                summary_payload,
+                script="scripts/validate_identity_protocol_version_alignment.py",
+                rc=rc_align,
+            )
+            return finish(
+                rc_align,
+                failed_script="scripts/validate_identity_protocol_version_alignment.py",
+                failed_rc=rc_align,
+            )
         _record_command_execution(
             summary_payload,
             script="scripts/validate_identity_protocol_version_alignment.py",
             rc=rc_align,
         )
-        return finish(
-            rc_align,
-            failed_script="scripts/validate_identity_protocol_version_alignment.py",
-            failed_rc=rc_align,
+        _checkpoint_release_readiness_summary(
+            summary_payload,
+            summary_out=summary_out,
+            phase="preflight",
+            current_check_name="",
+            current_check_state="idle",
+            phase_step_index=8,
+            phase_step_total=READINESS_PREFLIGHT_COMMAND_COUNT,
+            last_completed_check_name="scripts/validate_identity_protocol_version_alignment.py",
         )
-    _record_command_execution(
-        summary_payload,
-        script="scripts/validate_identity_protocol_version_alignment.py",
-        rc=rc_align,
-    )
+    else:
+        skip_reason = "selected_subset_report_independent"
+        _record_preflight_skip(
+            summary_payload,
+            name="execution_report_freshness",
+            reason=skip_reason,
+        )
+        _record_preflight_skip(
+            summary_payload,
+            name="execution_report_path_contract",
+            reason=skip_reason,
+        )
+        _record_preflight_skip(
+            summary_payload,
+            name="protocol_baseline_freshness",
+            reason=skip_reason,
+        )
+        _record_preflight_skip(
+            summary_payload,
+            name="protocol_version_alignment",
+            reason=skip_reason,
+        )
 
-    seq.append(
-        [
-            "python3",
-            "scripts/validate_writeback_continuity.py",
-            "--identity-id",
-            identity_id,
-            "--catalog",
-            catalog,
-            "--repo-catalog",
-            "identity/catalog/identities.yaml",
-            "--report",
-            execution_report,
-            "--operation",
-            "readiness",
-        ]
-    )
-    seq.append(
-        [
-            "python3",
-            "scripts/validate_post_execution_mandatory.py",
-            "--identity-id",
-            identity_id,
-            "--catalog",
-            catalog,
-            "--repo-catalog",
-            "identity/catalog/identities.yaml",
-            "--report",
-            execution_report,
-            "--operation",
-            "readiness",
-        ]
-    )
-    seq.append(
-        [
-            "python3",
-            "scripts/collect_identity_health_report.py",
-            "--identity-id",
-            identity_id,
-            "--catalog",
-            catalog,
-            "--repo-catalog",
-            "identity/catalog/identities.yaml",
-            "--operation",
-            "readiness",
-            "--execution-report",
-            execution_report,
-            "--actor-id",
-            actor_id,
-            "--session-id",
-            session_id,
-            "--out-dir",
-            health_report_dir,
-            "--enforce-pass",
-        ]
-    )
-    seq.append(
-        [
-            "python3",
-            "scripts/validate_identity_health_contract.py",
-            "--identity-id",
-            identity_id,
-            "--report-dir",
-            health_report_dir,
-            "--require-pass",
-        ]
-    )
-    seq.append(
-        [
-            "python3",
-            "scripts/validate_identity_actor_health_profile.py",
-            "--identity-id",
-            identity_id,
-            "--report-dir",
-            health_report_dir,
-            "--execution-report",
-            execution_report,
-            "--operation",
-            "readiness",
-            "--enforce-bound-report",
-            "--json-only",
-        ]
-    )
-    if scope:
-        seq[-3].extend(["--scope", scope])
-    seq.append(
-        [
-            "python3",
-            "scripts/validate_protocol_feedback_reply_channel.py",
-            "--identity-id",
-            identity_id,
-            "--catalog",
-            catalog,
-            "--repo-catalog",
-            "identity/catalog/identities.yaml",
-            "--operation",
-            "readiness",
-            "--force-check",
-            "--json-only",
-        ]
-    )
-    seq.append(
-        [
-            "python3",
-            "scripts/validate_protocol_feedback_bootstrap_ready.py",
-            "--identity-id",
-            identity_id,
-            "--catalog",
-            catalog,
-            "--repo-catalog",
-            "identity/catalog/identities.yaml",
-            "--operation",
-            "readiness",
-            "--force-check",
-            "--json-only",
-        ]
-    )
-    seq.append(
-        [
-            "python3",
-            "scripts/validate_protocol_entry_candidate_bridge.py",
-            "--identity-id",
-            identity_id,
-            "--catalog",
-            catalog,
-            "--repo-catalog",
-            "identity/catalog/identities.yaml",
-            "--operation",
-            "readiness",
-            "--force-check",
-            "--json-only",
-        ]
-    )
-    seq.append(
-        [
-            "python3",
-            "scripts/validate_protocol_inquiry_followup_chain.py",
-            "--identity-id",
-            identity_id,
-            "--catalog",
-            catalog,
-            "--repo-catalog",
-            "identity/catalog/identities.yaml",
-            "--operation",
-            "readiness",
-            "--force-check",
-            "--json-only",
-        ]
-    )
-    seq.append(
-        [
-            "python3",
-            "scripts/validate_protocol_feedback_sidecar_contract.py",
-            "--identity-id",
-            identity_id,
-            "--catalog",
-            catalog,
-            "--repo-catalog",
-            "identity/catalog/identities.yaml",
-            "--report",
-            execution_report,
-            "--operation",
-            "readiness",
-            "--enforce-blocking",
-        ]
-    )
-    seq.append(
-        [
-            "python3",
-            "scripts/validate_instance_base_repo_write_boundary.py",
-            "--identity-id",
-            identity_id,
-            "--catalog",
-            catalog,
-            "--repo-catalog",
-            "identity/catalog/identities.yaml",
-            "--report",
-            execution_report,
-            "--operation",
-            "readiness",
-        ]
-    )
-    seq.append(
-        [
-            "python3",
-            "scripts/validate_protocol_feedback_ssot_archival.py",
-            "--identity-id",
-            identity_id,
-            "--catalog",
-            catalog,
-            "--repo-catalog",
-            "identity/catalog/identities.yaml",
-            "--operation",
-            "readiness",
-        ]
-    )
-
-    seq.append(
-        [
-            "python3",
-            "scripts/validate_identity_protocol_root_evidence.py",
-            "--identity-id",
-            identity_id,
-            "--report",
-            execution_report,
-        ]
-    )
-    seq.append(
-        [
-            "python3",
-            "scripts/validate_identity_mode_promotion_arbitration.py",
-            "--identity-id",
-            identity_id,
-            "--base",
-            base,
-            "--head",
-            head,
-            "--report",
-            execution_report,
-        ]
-    )
-    seq.append(
-        [
-            "python3",
-            "scripts/validate_identity_experience_writeback.py",
-            "--repo-catalog",
-            "identity/catalog/identities.yaml",
-            "--local-catalog",
-            catalog,
-            "--identity-id",
-            identity_id,
-            "--execution-report",
-            execution_report,
-        ]
-    )
     report_meta: dict[str, Any] = {}
-    try:
-        report_meta = json.loads(Path(execution_report).read_text(encoding="utf-8"))
-    except Exception:
-        report_meta = {}
-    _apply_bundle_passthrough_from_report(seq, report_meta, execution_report)
-    coverage_cmds: list[list[str]] = []
-    seq_without_coverage: list[list[str]] = []
-    for cmd in seq:
-        if len(cmd) >= 2 and cmd[1] == "scripts/validate_required_contract_coverage.py":
-            _replace_flag_value(cmd, "--run-id", bundle_run_token)
-            _replace_flag_value(cmd, "--report-selected-path", execution_report)
-            coverage_cmds.append(cmd)
-            continue
-        seq_without_coverage.append(cmd)
-    if coverage_cmds:
-        seq = seq_without_coverage + coverage_cmds
-    permission_cmd = [
-        "python3",
-        "scripts/validate_identity_permission_state.py",
-        "--identity-id",
-        identity_id,
-        "--report",
-        execution_report,
-    ]
-    report_all_ok = _boolish(report_meta.get("all_ok"))
-    report_writeback_status = str(report_meta.get("writeback_status", "")).strip().upper()
-    report_permission_state = str(report_meta.get("permission_state", "")).strip().upper()
-    if report_all_ok and report_writeback_status == "WRITTEN" and report_permission_state == "WRITEBACK_WRITTEN":
-        permission_cmd.append("--require-written")
-    seq.append(permission_cmd)
-    seq.append(
-        [
-            "python3",
-            "scripts/validate_identity_binding_tuple.py",
-            "--identity-id",
-            identity_id,
-            "--report",
-            execution_report,
-        ]
-    )
-    seq.extend(
-        _build_instance_runtime_closure_checks(
-            catalog=catalog,
-            identity_id=identity_id,
-            expected_work_layer=args.expected_work_layer,
-            expected_source_layer=args.expected_source_layer,
-            include_weak_live_linkage=False,
+    if execution_report_required:
+        try:
+            report_meta = json.loads(Path(execution_report).read_text(encoding="utf-8"))
+        except Exception:
+            report_meta = {}
+        _apply_bundle_passthrough_from_report(seq, report_meta, execution_report)
+        coverage_cmds: list[list[str]] = []
+        seq_without_coverage: list[list[str]] = []
+        for cmd in seq:
+            if len(cmd) >= 2 and cmd[1] == "scripts/validate_required_contract_coverage.py":
+                _replace_flag_value(cmd, "--run-id", bundle_run_token)
+                _replace_flag_value(cmd, "--report-selected-path", execution_report)
+                coverage_cmds.append(cmd)
+                continue
+            seq_without_coverage.append(cmd)
+        if coverage_cmds:
+            seq = seq_without_coverage + coverage_cmds
+
+    if (not targeted_subset_mode) or selected_subset_targets_post_execution_stage:
+        seq.extend(
+            _build_post_execution_report_stage_checks(
+                identity_id=identity_id,
+                catalog=catalog,
+                execution_report=execution_report,
+                report_meta=report_meta,
+                health_report_dir=health_report_dir,
+                actor_id=actor_id,
+                session_id=session_id,
+                scope=scope,
+                base=base,
+                head=head,
+                capability_activation_policy=args.capability_activation_policy,
+                expected_work_layer=args.expected_work_layer,
+                expected_source_layer=args.expected_source_layer,
+            )
         )
-    )
-    seq.append(
-        [
-            "python3",
-            "scripts/validate_identity_capability_activation.py",
-            "--identity-id",
-            identity_id,
-            "--catalog",
-            catalog,
-            "--repo-catalog",
-            REPO_CATALOG_REL,
-            "--activation-policy",
-            args.capability_activation_policy,
-            "--work-layer",
-            (str(args.expected_work_layer or "").strip().lower() or "instance"),
-            "--source-layer",
-            (str(args.expected_source_layer or "").strip().lower() or _infer_source_layer_from_catalog_path(catalog)),
-            "--require-activated",
-        ]
-    )
-    seq.append(
-        [
-            "python3",
-            "scripts/validate_identity_prompt_activation.py",
-            "--identity-id",
-            identity_id,
-            "--catalog",
-            catalog,
-            "--report",
-            execution_report,
-        ]
-    )
-    seq.append(
-        [
-            "python3",
-            "scripts/validate_identity_prompt_lifecycle.py",
-            "--identity-id",
-            identity_id,
-            "--report",
-            execution_report,
-        ]
-    )
 
     seq, skipped_protocol_publish_checks = _route_release_seq_for_lane(seq, work_layer=routed_work_layer)
     if skipped_protocol_publish_checks:
@@ -3399,29 +4134,83 @@ def main() -> int:
         ):
             cmd.extend(["--session-id", session_id])
 
-    filtered_seq, missing_selected_check_names = _filter_selected_checks(
+    final_selection_projection = _build_selected_check_projection(
         seq,
         selected_check_names=selected_check_names,
     )
-    if selected_check_names:
-        summary_payload["selected_check_count"] = len(filtered_seq)
-        if missing_selected_check_names:
-            summary_payload["selected_check_missing_names"] = missing_selected_check_names
-            print(
-                "[FAIL] unknown readiness check selection: "
-                + ", ".join(missing_selected_check_names)
-            )
-            return finish(
-                1,
-                failed_script="release_readiness_check#check_selection",
-                failed_rc=1,
-            )
-        seq = filtered_seq
+    targeted_subset_mode = bool(final_selection_projection["targeted_subset_mode"])
+    _apply_selected_check_projection_summary(summary_payload, final_selection_projection)
+    missing_selected_check_names = final_selection_projection["missing_selected_check_names"]
+    if missing_selected_check_names:
+        print(
+            "[FAIL] unknown readiness check selection: "
+            + ", ".join(str(name) for name in missing_selected_check_names)
+        )
+        return finish(
+            1,
+            failed_script="release_readiness_check#check_selection",
+            failed_rc=1,
+        )
+    seq = list(final_selection_projection["filtered_seq"])
 
-    for cmd in seq:
+    if resume_from_summary:
+        resume_projection = derive_governed_runtime_summary_resume_projection(
+            [_command_check_name(cmd) for cmd in seq],
+            dict(resume_source.get("resume_doc") or {}),
+            resumable_phase="command_sequence",
+        )
+        resume_projection["resume_from_summary"] = _clean_str(
+            resume_source.get("resume_from_summary")
+        ) or str(Path(resume_from_summary).expanduser().resolve())
+        resume_projection["resume_capture_mode"] = _clean_str(resume_source.get("resume_capture_mode"))
+        resume_projection["same_path_as_summary_out"] = bool(resume_source.get("same_path_as_summary_out"))
+        summary_payload["resume_projection"] = resume_projection
+        if str(resume_projection.get("resume_projection_status", "")).strip().upper() == STATUS_PASS_REQUIRED:
+            start_index = _safe_int(resume_projection.get("resume_start_index"))
+            seq = seq[start_index:]
+        elif str(resume_projection.get("resume_reason", "")).strip():
+            print(
+                "[INFO] resume-from-summary not applied: "
+                f"reason={resume_projection.get('resume_reason')} source={resume_projection.get('resume_from_summary')}"
+            )
+
+    total_seq_count_before_batch_limit = len(seq)
+    batch_limit_applied = False
+    if max_command_sequence_checks > 0 and max_command_sequence_checks < total_seq_count_before_batch_limit:
+        batch_limit_applied = True
+        summary_payload["command_sequence_batch"] = {
+            "batch_status": STATUS_PASS_REQUIRED,
+            "max_command_sequence_checks": int(max_command_sequence_checks),
+            "remaining_command_check_count_before_batch": int(total_seq_count_before_batch_limit),
+            "continuation_required": True,
+        }
+        seq = seq[:max_command_sequence_checks]
+    total_seq_count = len(seq)
+    summary_payload["selected_check_count_after_resume"] = total_seq_count
+    _checkpoint_release_readiness_summary(
+        summary_payload,
+        summary_out=summary_out,
+        phase="command_sequence",
+        current_check_name="",
+        current_check_state="idle",
+        phase_step_index=0,
+        phase_step_total=total_seq_count,
+        last_completed_check_name=_clean_str((summary_payload.get("command_execution") or {}).get("last_completed_script")),
+    )
+
+    for seq_index, cmd in enumerate(seq, start=1):
         script = cmd[1] if len(cmd) >= 2 else ""
         is_capability_validator = len(cmd) >= 2 and cmd[1] == "scripts/validate_identity_capability_activation.py"
         capture_key = SUMMARY_CAPTURE_SCRIPTS.get(script, "")
+        _checkpoint_release_readiness_summary(
+            summary_payload,
+            summary_out=summary_out,
+            phase="command_sequence",
+            current_check_name=script,
+            current_check_state="running",
+            phase_step_index=seq_index,
+            phase_step_total=total_seq_count,
+        )
         if not is_capability_validator:
             if capture_key:
                 rc, out, _ = _run_capture(cmd)
@@ -3448,100 +4237,21 @@ def main() -> int:
                         "failed_required_contract_details": coverage_projection.get("failed_required_contract_details", []),
                         "failed_optional_contract_details": coverage_projection.get("failed_optional_contract_details", []),
                     }
-                elif capture_key == "control_plane_budget":
+                elif capture_key in STRUCTURED_SUMMARY_CAPTURE_SPECS:
+                    spec = STRUCTURED_SUMMARY_CAPTURE_SPECS[capture_key]
                     _record_structured_check(
                         summary_payload,
-                        name="control_plane_budget",
+                        name=capture_key,
                         rc=rc,
                         payload=payload,
-                        status_fields=("control_plane_budget_status",),
-                        error_fields=("error_code",),
-                        keep_fields=(
-                            "warn_violation_count",
-                            "fail_violation_count",
-                            "stale_reasons",
-                        ),
+                        status_fields=tuple(spec.get("status_fields", ())),
+                        error_fields=tuple(spec.get("error_fields", ())),
+                        keep_fields=tuple(spec.get("keep_fields", ())),
                     )
-                elif capture_key == "control_plane_budget_sync":
-                    _record_structured_check(
-                        summary_payload,
-                        name="control_plane_budget_sync",
-                        rc=rc,
-                        payload=payload,
-                        status_fields=("control_plane_budget_sync_status",),
-                        error_fields=("error_code",),
-                        keep_fields=(
-                            "mismatch_count",
-                            "stale_reasons",
-                        ),
-                    )
-                elif capture_key == "control_plane_status_sync":
-                    _record_structured_check(
-                        summary_payload,
-                        name="control_plane_status_sync",
-                        rc=rc,
-                        payload=payload,
-                        status_fields=("control_plane_status_sync_status",),
-                        error_fields=("error_code",),
-                        keep_fields=(
-                            "mismatch_count",
-                            "live_control_plane_status",
-                            "file_control_plane_status",
-                            "stale_reasons",
-                        ),
-                    )
-                elif capture_key == "control_plane_surface_materialization":
-                    _record_structured_check(
-                        summary_payload,
-                        name="control_plane_surface_materialization",
-                        rc=rc,
-                        payload=payload,
-                        status_fields=("materialize_control_plane_surfaces_status",),
-                        error_fields=("error_code",),
-                        keep_fields=(
-                            "control_plane_status",
-                            "promotion_ready",
-                            "budget_validation_status",
-                            "budget_sync_status",
-                            "status_sync_status",
-                            "budget_sync_mismatch_count",
-                            "status_sync_mismatch_count",
-                            "stale_reasons",
-                        ),
-                    )
-                elif capture_key == "required_gate_recurrence":
-                    _record_structured_check(
-                        summary_payload,
-                        name="required_gate_recurrence",
-                        rc=rc,
-                        payload=payload,
-                        status_fields=("required_gate_recurrence_status",),
-                        error_fields=("error_code",),
-                        keep_fields=(
-                            "escalation_level",
-                            "error_family",
-                            "receipt_path",
-                            "state_path",
-                            "stale_reasons",
-                            "active_fail_families",
-                        ),
-                    )
-                elif capture_key == "required_gate_tuple_parity":
-                    _record_structured_check(
-                        summary_payload,
-                        name="required_gate_tuple_parity",
-                        rc=rc,
-                        payload=payload,
-                        status_fields=("required_gate_tuple_parity_status",),
-                        error_fields=("error_code",),
-                        keep_fields=(
-                            "receipts_checked",
-                            "parity_contract_reasons",
-                            "missing_fields",
-                            "mismatches",
-                            "scope_groups",
-                        ),
-                    )
+                    if capture_key == "control_plane_surface_materialization":
+                        summary_payload[capture_key]["control_plane_check_projection"] = (
+                            _extract_control_plane_check_projection(payload)
+                        )
                 elif capture_key == "release_plane_cloud_evidence":
                     release_projection = build_release_plane_cloud_evidence_summary_projection(payload)
                     release_projection["status"] = _clean_str(
@@ -3585,11 +4295,31 @@ def main() -> int:
             _record_command_execution(summary_payload, script=script, rc=rc)
             if rc != 0:
                 return finish(rc, failed_script=script, failed_rc=rc)
+            _checkpoint_release_readiness_summary(
+                summary_payload,
+                summary_out=summary_out,
+                phase="command_sequence",
+                current_check_name="",
+                current_check_state="idle",
+                phase_step_index=seq_index,
+                phase_step_total=total_seq_count,
+                last_completed_check_name=script,
+            )
             continue
 
         rc, out, _ = _run_capture(cmd)
         _record_command_execution(summary_payload, script=script, rc=rc)
         if rc == 0:
+            _checkpoint_release_readiness_summary(
+                summary_payload,
+                summary_out=summary_out,
+                phase="command_sequence",
+                current_check_name="",
+                current_check_state="idle",
+                phase_step_index=seq_index,
+                phase_step_total=total_seq_count,
+                last_completed_check_name=script,
+            )
             continue
 
         payload = _parse_json_payload(out) or {}
@@ -3607,12 +4337,60 @@ def main() -> int:
                 cmd,
                 CAPABILITY_ACTIVATION_ENV_AUTH_FALLBACK_POLICY,
             )
+            _checkpoint_release_readiness_summary(
+                summary_payload,
+                summary_out=summary_out,
+                phase="command_sequence",
+                current_check_name=f"{script}#fallback",
+                current_check_state="running",
+                phase_step_index=seq_index,
+                phase_step_total=total_seq_count,
+            )
             rc_fb = _run(fallback_cmd)
             _record_command_execution(summary_payload, script=f"{script}#fallback", rc=rc_fb)
             if rc_fb == 0:
+                _checkpoint_release_readiness_summary(
+                    summary_payload,
+                    summary_out=summary_out,
+                    phase="command_sequence",
+                    current_check_name="",
+                    current_check_state="idle",
+                    phase_step_index=seq_index,
+                    phase_step_total=total_seq_count,
+                    last_completed_check_name=f"{script}#fallback",
+                )
                 continue
             return finish(rc_fb, failed_script=f"{script}#fallback", failed_rc=rc_fb)
         return finish(rc, failed_script=script, failed_rc=rc)
+
+    if batch_limit_applied:
+        executed_batch_count = len(seq)
+        remaining_after_batch = max(total_seq_count_before_batch_limit - executed_batch_count, 0)
+        summary_payload["command_sequence_batch"] = {
+            "batch_status": STATUS_PASS_REQUIRED,
+            "max_command_sequence_checks": int(max_command_sequence_checks),
+            "remaining_command_check_count_before_batch": int(total_seq_count_before_batch_limit),
+            "executed_command_check_count": int(executed_batch_count),
+            "remaining_command_check_count_after_batch": int(remaining_after_batch),
+            "continuation_required": remaining_after_batch > 0,
+            "batch_boundary_reason": "max_command_sequence_checks_reached",
+        }
+        _checkpoint_release_readiness_summary(
+            summary_payload,
+            summary_out=summary_out,
+            phase="command_sequence",
+            current_check_name="",
+            current_check_state="paused",
+            phase_step_index=executed_batch_count,
+            phase_step_total=total_seq_count_before_batch_limit,
+            last_completed_check_name=_clean_str((summary_payload.get("command_execution") or {}).get("last_completed_script")),
+        )
+        print(
+            "[INFO] command-sequence batch boundary reached: "
+            f"executed={executed_batch_count} remaining={remaining_after_batch} "
+            f"max_command_sequence_checks={max_command_sequence_checks}"
+        )
+        return 0
 
     print("[OK] release readiness checks PASSED")
     return finish(0)

@@ -7,10 +7,17 @@ from typing import Any
 import yaml
 
 from contract_binding_mapping_common import collect_requirement_rows
+from projection_profile_exclusion_scope_common import (
+    PROJECTION_PROFILE_EXCLUSION_SCOPE_CLASS,
+    PROJECTION_PROFILE_EXCLUSION_SCOPE_MODE,
+    PROJECTION_PROFILE_EXCLUSION_SCOPE_REASON,
+    build_projection_profile_exclusion_payload,
+)
 from registry_alias_control_plane_common import resolve_alias_entry_path, resolve_current_yaml_alias
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 DEFAULT_CONTRACT_BINDING_ENTRY = "identity/protocol/mappings/contract-binding.current.yaml"
 
 
@@ -208,3 +215,63 @@ def build_required_gate_bundle_target_projection(
     projection["stale_reasons"] = stale_reasons
     projection["targets"] = targets
     return projection
+
+
+def build_projection_profile_excluded_required_gate_bundle_target_projection(
+    *,
+    profile_id: str,
+    execution_mode: str,
+    description: str,
+    excluded_area: str,
+    owner_surface: str,
+) -> dict[str, Any]:
+    projection = {
+        "projection_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "error_code": "",
+        "bundle_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "bundle_contract_id": "",
+        "bundle_key": "",
+        "surface_label": str(owner_surface or "").strip(),
+        "identity_id": "",
+        "actor_id": "",
+        "resolved_work_layer": "",
+        "resolved_source_layer": "",
+        "lock_state": "",
+        "run_id_binding": "",
+        "report_selected_path": "",
+        "contract_mapping_entry": "",
+        "contract_mapping": "",
+        "contract_mapping_active_file": "",
+        "contract_mapping_alias_error": "",
+        "total_targets": 0,
+        "required_target_count": 0,
+        "failed_required_target_count": 0,
+        "target_status_counts": {},
+        "failed_target_names": [],
+        "missing_mapping_requirements": [],
+        "rows_without_projected_report_fields": [],
+        "targets": [],
+        "scope_class": PROJECTION_PROFILE_EXCLUSION_SCOPE_CLASS,
+        "scope_reason": PROJECTION_PROFILE_EXCLUSION_SCOPE_REASON,
+        "scope_mode": PROJECTION_PROFILE_EXCLUSION_SCOPE_MODE,
+    }
+    projection.update(
+        build_projection_profile_exclusion_payload(
+            profile_id=profile_id,
+            execution_mode=execution_mode,
+            description=description,
+            excluded_area=excluded_area,
+            owner_surface=owner_surface,
+        )
+    )
+    return projection
+
+
+def required_gate_bundle_target_projection_is_scope_excluded(
+    projection: dict[str, Any] | None,
+) -> bool:
+    if not isinstance(projection, dict):
+        return False
+    projection_status = str(projection.get("projection_status", "") or "").strip().upper()
+    scope_class = str(projection.get("scope_class", "") or "").strip()
+    return projection_status == STATUS_SKIPPED_NOT_REQUIRED and bool(scope_class)

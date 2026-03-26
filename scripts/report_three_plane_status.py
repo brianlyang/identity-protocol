@@ -19,11 +19,27 @@ from protocol_infra_contract import (
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
     HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
 )
-from required_gate_bundle_projection_common import build_required_gate_bundle_target_projection
+from projection_profile_exclusion_scope_common import build_projection_profile_exclusion_payload
+from required_gate_bundle_projection_common import (
+    build_projection_profile_excluded_required_gate_bundle_target_projection,
+    build_required_gate_bundle_target_projection,
+)
+from release_cloud_evidence_projection_common import (
+    build_projection_profile_excluded_release_cloud_evidence_adapter,
+)
 from resolve_release_plane_cloud_evidence import resolve_release_cloud_evidence
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from resolve_identity_context import resolve_identity
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
+from terminal_truth_boundary_projection_common import (
+    build_terminal_truth_boundary_projection_from_report,
+)
+from three_plane_projection_profile_common import (
+    DEFAULT_THREE_PLANE_PROJECTION_PROFILE,
+    ThreePlaneProjectionProfile,
+    resolve_three_plane_projection_profile,
+    three_plane_projection_profile_choices,
+)
 
 PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
 LOCK_PROTOCOL_PREFIX = "SESSION_LANE_LOCK_PROTOCOL_"
@@ -95,6 +111,7 @@ VALIDATOR_ERROR_CODE_KEYS: tuple[str, ...] = (
 )
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 CURRENT_CHAT_SURFACE_CLASS = "host_native_chat_panel"
 CURRENT_CHAT_SURFACE_WIRING_CAPABILITY = "unavailable"
 CURRENT_CHAT_SURFACE_EXCLUSION_SCOPE = "EXCLUDED_NON_BLOCKING"
@@ -110,6 +127,8 @@ TUPLE_CONTEXT_ALLOWED_MARKERS: set[str] = {
     *TUPLE_CONTEXT_PRIMARY_MARKERS,
     "entry_receipt_bundle_status_not_pass",
 }
+PROJECTION_ONLY_PLANE_STATUS = "PROJECTION_ONLY"
+PROJECTION_ONLY_RELEASE_DECISION = "Projection Only"
 
 
 def _run(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
@@ -607,6 +626,147 @@ def _build_governance_closure_axes(
     }
 
 
+def _projection_skip_reason(area: str, profile: ThreePlaneProjectionProfile) -> str:
+    payload = build_projection_profile_exclusion_payload(
+        profile_id=profile.profile_id,
+        execution_mode=profile.execution_mode,
+        description=profile.description,
+        excluded_area=area,
+        owner_surface="semantic_tuple_three_plane",
+    )
+    return str(payload.get("projection_skip_reason", "")).strip()
+
+
+def _build_projection_only_plane_detail(
+    *,
+    plane_name: str,
+    projection_profile: ThreePlaneProjectionProfile,
+) -> dict[str, Any]:
+    return build_projection_profile_exclusion_payload(
+        profile_id=projection_profile.profile_id,
+        execution_mode=projection_profile.execution_mode,
+        description=projection_profile.description,
+        excluded_area=plane_name,
+        owner_surface="semantic_tuple_three_plane",
+    )
+
+
+def _build_projection_only_m2m_projection(
+    *,
+    projection_profile: ThreePlaneProjectionProfile,
+) -> dict[str, Any]:
+    return build_projection_profile_exclusion_payload(
+        profile_id=projection_profile.profile_id,
+        execution_mode=projection_profile.execution_mode,
+        description=projection_profile.description,
+        excluded_area="m2m_projection",
+        owner_surface="semantic_tuple_three_plane",
+        extra_fields={
+            "m2m_binding_closure_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "m2m_failure_scope": "",
+            "m2m_failed_validator_count": 0,
+            "m2m_failed_validators": [],
+            "m2m_failure_reasons": [],
+            "non_m2m_failed_validator_count": 0,
+            "non_m2m_failed_validators": [],
+            "non_m2m_failure_scope": [],
+            "non_m2m_failure_reasons": [],
+            "failed_validator_count_total": 0,
+        },
+    )
+
+
+def _build_projection_only_tuple_context_projection(
+    *,
+    projection_profile: ThreePlaneProjectionProfile,
+) -> dict[str, Any]:
+    return build_projection_profile_exclusion_payload(
+        profile_id=projection_profile.profile_id,
+        execution_mode=projection_profile.execution_mode,
+        description=projection_profile.description,
+        excluded_area="tuple_context_projection",
+        owner_surface="semantic_tuple_three_plane",
+        extra_fields={
+            "tuple_context_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "tuple_context_only_failure": False,
+            "tuple_context_only_failure_count": 0,
+            "tuple_context_only_failure_validators": [],
+        },
+    )
+
+
+def _build_projection_only_governance_closure_axes(
+    *,
+    projection_profile: ThreePlaneProjectionProfile,
+) -> dict[str, Any]:
+    reason = _projection_skip_reason("governance_closure_axes", projection_profile)
+    return build_projection_profile_exclusion_payload(
+        profile_id=projection_profile.profile_id,
+        execution_mode=projection_profile.execution_mode,
+        description=projection_profile.description,
+        excluded_area="governance_closure_axes",
+        owner_surface="semantic_tuple_three_plane",
+        extra_fields={
+            "infrastructure_closure_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "runtime_readiness_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "release_readiness_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "tuple_context_consistency_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "current_chat_surface_effective_blocker_scope": "",
+            "current_chat_surface_exclusion_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "current_chat_surface_excluded_from_blocker_aggregation": False,
+            "non_blocking_exclusions": [],
+            "decision_mode": PROJECTION_ONLY_PLANE_STATUS,
+            "conditional_reasons": [reason],
+        },
+    )
+
+
+def _build_projection_only_current_chat_surface_exclusion(
+    *,
+    projection_profile: ThreePlaneProjectionProfile,
+) -> dict[str, Any]:
+    return build_projection_profile_exclusion_payload(
+        profile_id=projection_profile.profile_id,
+        execution_mode=projection_profile.execution_mode,
+        description=projection_profile.description,
+        excluded_area="current_chat_surface_exclusion",
+        owner_surface="semantic_tuple_three_plane",
+        extra_fields={
+            "render_rc": 0,
+            "render_ok": True,
+            "render_stdout": "",
+            "render_stderr": "",
+            "validator_rc": 0,
+            "validator_ok": True,
+            "validator_stdout": "",
+            "validator_stderr": "",
+            "operator_headstamp_envelope_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "explanatory_surface_exclusion_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "closure_blocker_scope": "",
+            "effective_blocker_scope": "",
+            "excluded_from_blocker_aggregation": False,
+            "control_state": PROJECTION_ONLY_PLANE_STATUS,
+            "display_headstamp_line": "",
+            "machine_verification_line": "",
+            "parsed_machine_verification": {},
+            "artifact_path": "",
+            "blocking_contract_failed": False,
+        },
+    )
+
+
+def _build_projection_only_release_cloud_evidence_adapter(
+    *,
+    projection_profile: ThreePlaneProjectionProfile,
+) -> dict[str, Any]:
+    return build_projection_profile_excluded_release_cloud_evidence_adapter(
+        profile_id=projection_profile.profile_id,
+        execution_mode=projection_profile.execution_mode,
+        description=projection_profile.description,
+        owner_surface="semantic_tuple_three_plane",
+    )
+
+
 def _tracked_worktree_state() -> tuple[bool, list[str], str]:
     rc, out, err = _run(["git", "status", "--porcelain"])
     if rc != 0:
@@ -855,6 +1015,7 @@ def _instance_plane_status(
     args: argparse.Namespace,
     report_path: Path | None,
     resolved: dict[str, Any] | None = None,
+    projection_profile: ThreePlaneProjectionProfile | None = None,
 ) -> tuple[str, dict[str, Any]]:
     global REPORT_SELECTED_PATH_FALLBACK
     if report_path is None:
@@ -937,6 +1098,55 @@ def _instance_plane_status(
         expected_work_layer=effective_work_layer,
         expected_source_layer=effective_source_layer,
     )
+    active_projection_profile = projection_profile or resolve_three_plane_projection_profile(
+        DEFAULT_THREE_PLANE_PROJECTION_PROFILE
+    )
+    if active_projection_profile.projection_only:
+        detail = {
+            "projection_profile": active_projection_profile.profile_id,
+            "projection_profile_execution_mode": active_projection_profile.execution_mode,
+            "projection_profile_description": active_projection_profile.description,
+            "projection_only_reason": f"projection_profile_restricted:{active_projection_profile.profile_id}",
+            "report_selected_path": str(report_path),
+            "report_run_id": report_run_id,
+            "resolved_work_layer": effective_work_layer,
+            "resolved_source_layer": effective_source_layer,
+            "lane_applied_gate_set": lane_applied_gate_set,
+            "validators": {},
+            "stale_reasons": [],
+        }
+        detail["terminal_truth_boundary_projection"] = build_terminal_truth_boundary_projection_from_report(
+            report_doc=data if isinstance(data, dict) else {},
+            report_path=report_path,
+            catalog_path=Path(args.catalog).expanduser().resolve(),
+            repo_catalog_path=Path(args.repo_catalog).expanduser().resolve(),
+            identity_id=args.identity_id,
+            operation="three-plane",
+            work_layer=effective_work_layer,
+            source_layer=effective_source_layer,
+        )
+        detail["current_chat_surface_exclusion"] = _build_projection_only_current_chat_surface_exclusion(
+            projection_profile=active_projection_profile
+        )
+        detail["required_gate_bundle_target_projection"] = (
+            build_projection_profile_excluded_required_gate_bundle_target_projection(
+                profile_id=active_projection_profile.profile_id,
+                execution_mode=active_projection_profile.execution_mode,
+                description=active_projection_profile.description,
+                excluded_area="required_gate_bundle_projection",
+                owner_surface="semantic_tuple_three_plane",
+            )
+        )
+        detail["required_gate_bundle_shadow_target_projection"] = (
+            build_projection_profile_excluded_required_gate_bundle_target_projection(
+                profile_id=active_projection_profile.profile_id,
+                execution_mode=active_projection_profile.execution_mode,
+                description=active_projection_profile.description,
+                excluded_area="required_gate_bundle_projection",
+                owner_surface="semantic_tuple_three_plane_shadow",
+            )
+        )
+        return PROJECTION_ONLY_PLANE_STATUS, detail
     # Always validate tuple and writeback linkage to keep evidence machine-checkable.
     rc_tuple, out_tuple, err_tuple = _run(
         ["python3", "scripts/validate_identity_binding_tuple.py", "--identity-id", args.identity_id, "--report", str(report_path)]
@@ -4882,6 +5092,17 @@ def _instance_plane_status(
         "validators": validators,
     }
 
+    detail["terminal_truth_boundary_projection"] = build_terminal_truth_boundary_projection_from_report(
+        report_doc=data if isinstance(data, dict) else {},
+        report_path=report_path,
+        catalog_path=Path(args.catalog).expanduser().resolve(),
+        repo_catalog_path=Path(args.repo_catalog).expanduser().resolve(),
+        identity_id=args.identity_id,
+        operation="three-plane",
+        work_layer=effective_work_layer,
+        source_layer=effective_source_layer,
+    )
+
     validators_all_ok = all(v.get("ok", False) for v in validators.values())
     if _instance_execution_closed(
         mandatory=mandatory,
@@ -4932,6 +5153,18 @@ def main() -> int:
     ap.add_argument("--run-workflow-file-sha", default="")
     ap.add_argument("--checks-json", default="")
     ap.add_argument("--jobs-json", default="")
+    ap.add_argument(
+        "--projection-profile",
+        choices=three_plane_projection_profile_choices(),
+        default=os.environ.get(
+            "THREE_PLANE_PROJECTION_PROFILE",
+            DEFAULT_THREE_PLANE_PROJECTION_PROFILE,
+        ),
+        help=(
+            "governed three-plane projection profile; full=complete cross-plane verdict, "
+            "terminal_truth_boundary_projection=bounded outer-surface terminal-truth projection"
+        ),
+    )
     ap.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent passed to stamp render/reply gates")
     ap.add_argument("--expected-work-layer", default="", help="optional expected work_layer override for strict reply gates")
     ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
@@ -4950,6 +5183,7 @@ def main() -> int:
     )
     ap.add_argument("--out", default="")
     args = ap.parse_args()
+    projection_profile = resolve_three_plane_projection_profile(args.projection_profile)
 
     if not args.catalog:
         print("[FAIL] --catalog is required (or export IDENTITY_CATALOG first).")
@@ -5054,11 +5288,36 @@ def main() -> int:
         os.environ.get("IDENTITY_HOME", ""),
         preferred_pack,
     )
-    instance_status, instance_detail = _instance_plane_status(args, report_path, resolved)
-    repo_status, repo_detail = _repo_plane_status(args, resolved)
-    release_status, release_detail = _release_plane_status(args)
+    instance_status, instance_detail = _instance_plane_status(
+        args,
+        report_path,
+        resolved,
+        projection_profile=projection_profile,
+    )
+    if projection_profile.projection_only:
+        repo_status, repo_detail = (
+            STATUS_SKIPPED_NOT_REQUIRED,
+            _build_projection_only_plane_detail(
+                plane_name="repo_plane",
+                projection_profile=projection_profile,
+            ),
+        )
+        release_status, release_detail = (
+            STATUS_SKIPPED_NOT_REQUIRED,
+            _build_projection_only_plane_detail(
+                plane_name="release_plane",
+                projection_profile=projection_profile,
+            ),
+        )
+    else:
+        repo_status, repo_detail = _repo_plane_status(args, resolved)
+        release_status, release_detail = _release_plane_status(args)
 
     payload = {
+        "projection_profile": projection_profile.profile_id,
+        "projection_profile_execution_mode": projection_profile.execution_mode,
+        "projection_profile_description": projection_profile.description,
+        "projection_excluded_areas": list(projection_profile.excluded_areas),
         "target_branch": args.target_branch,
         "release_head_sha": args.release_head_sha,
         "required_gates_run_id": args.required_gates_run_id,
@@ -5084,15 +5343,21 @@ def main() -> int:
         "current_chat_surface_exclusion": (
             instance_detail.get("current_chat_surface_exclusion", {}) if isinstance(instance_detail, dict) else {}
         ),
-        "release_cloud_evidence_adapter": {
-            "release_cloud_evidence_adapter_status": adapter_payload.get("release_cloud_evidence_adapter_status", ""),
-            "adapter_source_kind": adapter_payload.get("adapter_source_kind", ""),
-            "adapter_http_status": adapter_payload.get("adapter_http_status", ""),
-            "github_rate_limit_remaining": adapter_payload.get("github_rate_limit_remaining", ""),
-            "github_rate_limit_reset_epoch": adapter_payload.get("github_rate_limit_reset_epoch", ""),
-            "stale_reasons": adapter_payload.get("stale_reasons", []),
-            "checks_json_path": adapter_payload.get("checks_json_path", ""),
-        },
+        "release_cloud_evidence_adapter": (
+            _build_projection_only_release_cloud_evidence_adapter(projection_profile=projection_profile)
+            if projection_profile.projection_only
+            else {
+                "release_cloud_evidence_adapter_status": adapter_payload.get(
+                    "release_cloud_evidence_adapter_status", ""
+                ),
+                "adapter_source_kind": adapter_payload.get("adapter_source_kind", ""),
+                "adapter_http_status": adapter_payload.get("adapter_http_status", ""),
+                "github_rate_limit_remaining": adapter_payload.get("github_rate_limit_remaining", ""),
+                "github_rate_limit_reset_epoch": adapter_payload.get("github_rate_limit_reset_epoch", ""),
+                "stale_reasons": adapter_payload.get("stale_reasons", []),
+                "checks_json_path": adapter_payload.get("checks_json_path", ""),
+            }
+        ),
         "required_gate_bundle_target_projection": (
             instance_detail.get("required_gate_bundle_target_projection", {}) if isinstance(instance_detail, dict) else {}
         ),
@@ -5105,31 +5370,50 @@ def main() -> int:
     from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
 
     payload["surface_governance"] = build_governed_runtime_summary_surface_payload("semantic_tuple_three_plane")
-    m2m_projection = _classify_m2m_projection(
-        validators=instance_detail.get("validators", {}) if isinstance(instance_detail, dict) else {},
-        instance_status=instance_status,
-        repo_status=repo_status,
-        release_status=release_status,
-    )
-    tuple_context_projection = _classify_tuple_context_projection(
-        validators=instance_detail.get("validators", {}) if isinstance(instance_detail, dict) else {},
-    )
+    if projection_profile.projection_only:
+        m2m_projection = _build_projection_only_m2m_projection(projection_profile=projection_profile)
+        tuple_context_projection = _build_projection_only_tuple_context_projection(
+            projection_profile=projection_profile
+        )
+    else:
+        m2m_projection = _classify_m2m_projection(
+            validators=instance_detail.get("validators", {}) if isinstance(instance_detail, dict) else {},
+            instance_status=instance_status,
+            repo_status=repo_status,
+            release_status=release_status,
+        )
+        tuple_context_projection = _classify_tuple_context_projection(
+            validators=instance_detail.get("validators", {}) if isinstance(instance_detail, dict) else {},
+        )
     payload["m2m_projection"] = m2m_projection
     payload["tuple_context_projection"] = tuple_context_projection
     if isinstance(instance_detail, dict):
         instance_detail["m2m_projection"] = m2m_projection
         instance_detail["tuple_context_projection"] = tuple_context_projection
-    payload["governance_closure_axes"] = _build_governance_closure_axes(
-        instance_status=instance_status,
-        repo_status=repo_status,
-        release_status=release_status,
-        m2m_projection=m2m_projection,
-        tuple_context_projection=tuple_context_projection,
-        current_chat_surface_exclusion=payload.get("current_chat_surface_exclusion", {}),
+    if projection_profile.projection_only:
+        payload["governance_closure_axes"] = _build_projection_only_governance_closure_axes(
+            projection_profile=projection_profile
+        )
+    else:
+        payload["governance_closure_axes"] = _build_governance_closure_axes(
+            instance_status=instance_status,
+            repo_status=repo_status,
+            release_status=release_status,
+            m2m_projection=m2m_projection,
+            tuple_context_projection=tuple_context_projection,
+            current_chat_surface_exclusion=payload.get("current_chat_surface_exclusion", {}),
+        )
+    payload["terminal_truth_boundary_projection"] = (
+        instance_detail.get("terminal_truth_boundary_projection", {}) if isinstance(instance_detail, dict) else {}
     )
 
-    overall = "Conditional Go"
-    if instance_status == "CLOSED" and repo_status == "CLOSED" and release_status == "CLOSED":
+    overall = PROJECTION_ONLY_RELEASE_DECISION if projection_profile.projection_only else "Conditional Go"
+    if (
+        not projection_profile.projection_only
+        and instance_status == "CLOSED"
+        and repo_status == "CLOSED"
+        and release_status == "CLOSED"
+    ):
         overall = "Full Go"
     payload["overall_release_decision"] = overall
     if args.out:
