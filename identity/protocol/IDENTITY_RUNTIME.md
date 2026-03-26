@@ -413,6 +413,11 @@ present before violation projection.
 Runtime must not reinterpret projected structure, bundle, or anchor stale
 reasons as substitute direct stale-reason source.
 
+Runtime must also keep registry direct-stale-reason partition policy
+explicit; each local stale reason present before violation projection
+classifies exactly once as alias, document, contract-row, required-surface,
+or unknown ontology drift.
+
 Runtime must fail-close on unclassified direct stale-reason origin rather
 than silently expanding registry ontology.
 

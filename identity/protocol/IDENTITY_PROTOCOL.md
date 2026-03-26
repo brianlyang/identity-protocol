@@ -468,6 +468,11 @@ already present before violation projection.
 Projected structure, bundle, and anchor stale reasons must not be
 reinterpreted as direct stale-reason source.
 
+Root-law bundle rows must also keep registry direct-stale-reason
+partition policy explicit; each local stale reason present before
+violation projection classifies exactly once as alias, document,
+contract-row, required-surface, or unknown ontology drift.
+
 Local direct stale-reason ontology must not silently expand beyond those
 admitted origins.
 

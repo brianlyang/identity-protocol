@@ -87,6 +87,7 @@ from root_corpus_law_bundle_common import (
     require_component_descriptor_concordance,
     registry_class_admission_policy_from_doc,
     registry_direct_stale_reason_origin_policy_from_doc,
+    registry_direct_stale_reason_partition_policy_from_doc,
     registry_direct_stale_reason_source_policy_from_doc,
     violation_projection_policy_from_doc,
 )
@@ -152,6 +153,9 @@ REGISTRY_DIRECT_STALE_REASON_ORIGIN_POLICY = (
 )
 REGISTRY_DIRECT_STALE_REASON_SOURCE_POLICY = (
     "local_stale_reasons_only_before_violation_projection"
+)
+REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY = (
+    "local_stale_reasons_partitioned_into_alias_document_contract_row_required_surface_or_unknown_exactly_once_before_violation_projection"
 )
 COMPONENT_VALIDATOR_OBSERVATION_REASON_ADMISSION_POLICY = (
     "parse_status_nonzero_rc_or_nonpass_only_before_bundle_violation_projection"
@@ -753,6 +757,9 @@ def main() -> int:
     registry_direct_stale_reason_source_policy = (
         registry_direct_stale_reason_source_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    registry_direct_stale_reason_partition_policy = (
+        registry_direct_stale_reason_partition_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     component_validator_observation_reason_admission_policy = (
         component_validator_observation_reason_admission_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
@@ -859,6 +866,11 @@ def main() -> int:
         registry_direct_stale_reason_source_policy
         if registry_direct_stale_reason_source_policy == REGISTRY_DIRECT_STALE_REASON_SOURCE_POLICY
         else REGISTRY_DIRECT_STALE_REASON_SOURCE_POLICY
+    )
+    effective_registry_direct_stale_reason_partition_policy = (
+        registry_direct_stale_reason_partition_policy
+        if registry_direct_stale_reason_partition_policy == REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY
+        else REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY
     )
     effective_component_validator_observation_reason_admission_policy = (
         component_validator_observation_reason_admission_policy
@@ -1282,6 +1294,12 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if registry_direct_stale_reason_source_policy != REGISTRY_DIRECT_STALE_REASON_SOURCE_POLICY:
             stale_reasons.append("root_corpus_law_bundle_registry_direct_stale_reason_source_policy_invalid")
+            error_code = ERR_REGISTRY
+        if (
+            registry_direct_stale_reason_partition_policy
+            != REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY
+        ):
+            stale_reasons.append("root_corpus_law_bundle_registry_direct_stale_reason_partition_policy_invalid")
             error_code = ERR_REGISTRY
         if (
             component_validator_observation_reason_admission_policy
@@ -2073,12 +2091,25 @@ def main() -> int:
     registry_direct_stale_reason_source_total_count = (
         sum(direct_stale_reason_origin_counts.values()) + registry_direct_stale_reason_unknown_count
     )
+    registry_direct_stale_reason_partition_total_count = (
+        sum(direct_stale_reason_origin_counts.values()) + registry_direct_stale_reason_unknown_count
+    )
     direct_stale_reason_count_before_violation_projection = len(stale_reasons)
     registry_direct_stale_reason_source_status = (
         STATUS_FAIL_REQUIRED
         if (
             effective_registry_direct_stale_reason_source_policy == REGISTRY_DIRECT_STALE_REASON_SOURCE_POLICY
             and registry_direct_stale_reason_source_total_count
+            != direct_stale_reason_count_before_violation_projection
+        )
+        else STATUS_PASS_REQUIRED
+    )
+    registry_direct_stale_reason_partition_status = (
+        STATUS_FAIL_REQUIRED
+        if (
+            effective_registry_direct_stale_reason_partition_policy
+            == REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY
+            and registry_direct_stale_reason_partition_total_count
             != direct_stale_reason_count_before_violation_projection
         )
         else STATUS_PASS_REQUIRED
@@ -2091,6 +2122,23 @@ def main() -> int:
             _direct_stale_reason_origin_counts(stale_reasons)
         )
         registry_direct_stale_reason_source_total_count = (
+            sum(direct_stale_reason_origin_counts.values()) + registry_direct_stale_reason_unknown_count
+        )
+        registry_direct_stale_reason_partition_total_count = (
+            sum(direct_stale_reason_origin_counts.values()) + registry_direct_stale_reason_unknown_count
+        )
+        direct_stale_reason_count_before_violation_projection = len(stale_reasons)
+    if registry_direct_stale_reason_partition_status == STATUS_FAIL_REQUIRED:
+        stale_reasons.append("root_corpus_law_bundle_registry_direct_stale_reason_partition_incomplete")
+        if not error_code:
+            error_code = ERR_REGISTRY
+        direct_stale_reason_origin_counts, registry_direct_stale_reason_unknown_count = (
+            _direct_stale_reason_origin_counts(stale_reasons)
+        )
+        registry_direct_stale_reason_source_total_count = (
+            sum(direct_stale_reason_origin_counts.values()) + registry_direct_stale_reason_unknown_count
+        )
+        registry_direct_stale_reason_partition_total_count = (
             sum(direct_stale_reason_origin_counts.values()) + registry_direct_stale_reason_unknown_count
         )
         direct_stale_reason_count_before_violation_projection = len(stale_reasons)
@@ -2211,6 +2259,9 @@ def main() -> int:
         "registry_class_admission_policy": registry_class_admission_policy,
         "registry_direct_stale_reason_origin_policy": registry_direct_stale_reason_origin_policy,
         "registry_direct_stale_reason_source_policy": registry_direct_stale_reason_source_policy,
+        "registry_direct_stale_reason_partition_policy": (
+            registry_direct_stale_reason_partition_policy
+        ),
         "component_validator_observation_reason_admission_policy": (
             component_validator_observation_reason_admission_policy
         ),
@@ -2237,9 +2288,15 @@ def main() -> int:
         ),
         "registry_direct_stale_reason_origin_status": registry_direct_stale_reason_origin_status,
         "registry_direct_stale_reason_source_status": registry_direct_stale_reason_source_status,
+        "registry_direct_stale_reason_partition_status": (
+            registry_direct_stale_reason_partition_status
+        ),
         "direct_stale_reason_origin_counts": dict(direct_stale_reason_origin_counts),
         "registry_direct_stale_reason_unknown_count": registry_direct_stale_reason_unknown_count,
         "registry_direct_stale_reason_source_total_count": registry_direct_stale_reason_source_total_count,
+        "registry_direct_stale_reason_partition_total_count": (
+            registry_direct_stale_reason_partition_total_count
+        ),
         "component_validator_observation_reason_status": component_validator_observation_reason_status,
         "component_validator_observation_reason_partition_status": (
             component_validator_observation_reason_partition_status

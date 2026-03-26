@@ -74,6 +74,7 @@ failure_classification_policy: registry_from_direct_stale_reasons_structure_from
 registry_class_admission_policy: only_direct_stale_reasons_present_before_violation_projection_admit_registry_failure_class
 registry_direct_stale_reason_origin_policy: alias_document_contract_row_required_surface_only_before_violation_projection
 registry_direct_stale_reason_source_policy: local_stale_reasons_only_before_violation_projection
+registry_direct_stale_reason_partition_policy: local_stale_reasons_partitioned_into_alias_document_contract_row_required_surface_or_unknown_exactly_once_before_violation_projection
 component_validator_observation_reason_admission_policy: parse_status_nonzero_rc_or_nonpass_only_before_bundle_violation_projection
 component_validator_observation_reason_exclusion_policy: non_execution_bundle_rows_remain_outside_observation_reason_ontology
 component_validator_observation_reason_source_policy: bundle_violation_rows_only_before_violation_projection
@@ -332,6 +333,11 @@ bundle_anchor_checks:
     violation projection.
   - Projected structure, bundle, and anchor stale reasons do not become
     substitute direct stale-reason source.
+  - Bundle registry direct-stale-reason partition policy must stay explicit
+    too.
+  - Each local stale reason present before violation projection must classify
+    exactly once as alias, document, contract-row, required-surface, or
+    unknown ontology drift.
   - The machine world must fail-close on unclassified direct stale-reason
     origin rather than silently expanding registry ontology.
   - Bundle component-validator observation-reason policy must stay explicit
@@ -586,6 +592,11 @@ bundle_anchor_checks:
     before violation projection.
   - Projected structure, bundle, and anchor stale reasons do not become
     substitute direct stale-reason source.
+  - Bundle registry direct-stale-reason partition policy must also stay
+    explicit.
+  - Each local stale reason present before violation projection must classify
+    exactly once as alias, document, contract-row, required-surface, or
+    unknown ontology drift.
   - Runtime must fail-close on unclassified direct stale-reason origin rather
     than silently expanding registry ontology.
   - Bundle component-validator observation-reason policy must also stay
@@ -816,6 +827,10 @@ bundle_anchor_checks:
     already present before violation projection.
   - Projected structure, bundle, and anchor stale reasons must not be
     reinterpreted as direct stale-reason source.
+  - Root-law bundle rows must also keep registry direct-stale-reason
+    partition policy explicit; each local stale reason present before
+    violation projection classifies exactly once as alias, document,
+    contract-row, required-surface, or unknown ontology drift.
   - Local direct stale-reason ontology must not silently expand beyond those
     admitted origins.
   - Root-law bundle rows must also keep component-validator observation-reason
@@ -1044,6 +1059,10 @@ bundle_anchor_checks:
     present before violation projection.
   - Runtime must not reinterpret projected structure, bundle, or anchor
     stale reasons as substitute direct stale-reason source.
+  - Runtime must also keep registry direct-stale-reason partition policy
+    explicit; each local stale reason present before violation projection
+    classifies exactly once as alias, document, contract-row,
+    required-surface, or unknown ontology drift.
   - Runtime must fail-close on unclassified direct stale-reason origin rather
     than silently expanding registry ontology.
   - Runtime must also keep component-validator observation-reason policy

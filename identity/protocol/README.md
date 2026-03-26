@@ -759,6 +759,13 @@ violation projection.
 Projected structure, bundle, and anchor stale reasons do not become
 substitute direct stale-reason source.
 
+Bundle registry direct-stale-reason partition policy must also stay
+explicit.
+
+Each local stale reason present before violation projection must classify
+exactly once as alias, document, contract-row, required-surface, or
+unknown ontology drift.
+
 Bundle component-validator observation-reason policy must also stay
 explicit.
 
