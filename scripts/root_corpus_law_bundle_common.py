@@ -85,6 +85,10 @@ def descriptor_schema_fallback_policy_from_doc(bundle_doc: Mapping[str, Any]) ->
     return _norm_str(bundle_doc.get("descriptor_schema_fallback_policy"))
 
 
+def descriptor_schema_local_reauthoring_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("descriptor_schema_local_reauthoring_policy"))
+
+
 def descriptor_schema_local_reconstruction_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
     return _norm_str(bundle_doc.get("descriptor_schema_local_reconstruction_policy"))
 

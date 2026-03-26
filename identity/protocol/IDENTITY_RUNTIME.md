@@ -124,6 +124,9 @@ Runtime must also treat bundle descriptor schema as source-singular: one
 admitted source component/current mapping pair, no substitute source, and no
 fallback source.
 
+Runtime must also reject local reauthoring of descriptor schema governance
+inside the bundle.
+
 If that source is unavailable or invalid, runtime must fail-close rather than
 locally reconstructing descriptor schema.
 

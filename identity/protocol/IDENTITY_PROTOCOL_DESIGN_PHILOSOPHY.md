@@ -387,6 +387,9 @@ The bundle descriptor schema must also stay source-singular.
 It may bind to one admitted source component/current mapping pair, not a
 substitute source chosen for local convenience.
 
+Local reauthoring of descriptor schema governance must remain forbidden
+inside the bundle.
+
 If that admitted source is unavailable or invalid, the machine world must
 fail-close rather than locally reconstructing descriptor schema from shadow
 bundle knowledge.

@@ -31,6 +31,7 @@ assert payload["descriptor_schema_source_component_id"] == "root_machine_registr
 assert payload["descriptor_schema_source_binding_mode"] == "canonical_source_component_current_only", payload
 assert payload["descriptor_schema_source_substitution_policy"] == "forbidden", payload
 assert payload["descriptor_schema_fallback_policy"] == "fail_closed", payload
+assert payload["descriptor_schema_local_reauthoring_policy"] == "forbidden", payload
 assert payload["descriptor_schema_local_reconstruction_policy"] == "forbidden", payload
 assert payload["component_self_describing_family_requirement_inheritance_mode"] == "inherit_machine_registry_completeness_current_only", payload
 assert payload["component_self_describing_family_requirement_local_override_policy"] == "forbidden", payload
@@ -863,6 +864,38 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCLB-001", payload
 assert "root_corpus_law_bundle_descriptor_schema_source_substitution_policy_invalid" in payload["stale_reasons"], payload
+PY
+
+SCHEMA_LOCAL_REAUTHORING_POLICY_REPO="${TMP_ROOT}/descriptor-schema-local-reauthoring-policy-drift-repo"
+mirror_repo "${SCHEMA_LOCAL_REAUTHORING_POLICY_REPO}"
+python3 - <<'PY' "${SCHEMA_LOCAL_REAUTHORING_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["descriptor_schema_local_reauthoring_policy"] = "allowed"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SCHEMA_LOCAL_REAUTHORING_POLICY_JSON="${TMP_ROOT}/descriptor-schema-local-reauthoring-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${SCHEMA_LOCAL_REAUTHORING_POLICY_REPO}" \
+  --json-only >"${SCHEMA_LOCAL_REAUTHORING_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed descriptor schema local-reauthoring-policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SCHEMA_LOCAL_REAUTHORING_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_descriptor_schema_local_reauthoring_policy_invalid" in payload["stale_reasons"], payload
 PY
 
 FAMILY_BINDING_POLICY_REPO="${TMP_ROOT}/descriptor-family-binding-policy-drift-repo"

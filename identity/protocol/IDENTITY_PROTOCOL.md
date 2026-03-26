@@ -180,6 +180,9 @@ completeness law.
 The bundle's descriptor schema must stay source-singular: one admitted source
 component/current mapping pair, no substitute source, and no fallback source.
 
+Local reauthoring of descriptor schema governance must remain forbidden
+inside the bundle.
+
 If that admitted source is unavailable or invalid, protocol legality must
 fail-close rather than locally reconstructing descriptor schema.
 

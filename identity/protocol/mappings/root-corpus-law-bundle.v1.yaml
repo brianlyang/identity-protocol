@@ -15,6 +15,7 @@ descriptor_schema_source_component_id: root_machine_registry_completeness
 descriptor_schema_source_binding_mode: canonical_source_component_current_only
 descriptor_schema_source_substitution_policy: forbidden
 descriptor_schema_fallback_policy: fail_closed
+descriptor_schema_local_reauthoring_policy: forbidden
 descriptor_schema_local_reconstruction_policy: forbidden
 component_self_describing_family_requirement_inheritance_mode: inherit_machine_registry_completeness_current_only
 component_self_describing_family_requirement_local_override_policy: forbidden
@@ -72,6 +73,8 @@ bundle_anchor_checks:
   - bundle schema instead of the admitted registry descriptor law.
   - The bundle descriptor schema must also stay source-singular.
   - not a substitute source chosen for local convenience.
+  - Local reauthoring of descriptor schema governance must remain forbidden
+    inside the bundle.
   - fail-close rather than locally reconstructing descriptor schema from shadow bundle knowledge.
   - Bundle self-describing-family requirement law must also remain inherited
     from machine-registry completeness.
@@ -138,6 +141,8 @@ bundle_anchor_checks:
     families.
   - The bundle's descriptor schema must remain source-singular as well.
   - fallback source for convenience.
+  - Local reauthoring of descriptor schema governance must remain forbidden
+    inside the bundle.
   - fail-close rather than locally reconstructing descriptor schema.
   - The bundle must also inherit machine-registry completeness
     self-describing-family requirement law.
@@ -195,6 +200,8 @@ bundle_anchor_checks:
     completeness law.
   - The bundle's descriptor schema must stay source-singular
   - no substitute source, and no fallback source.
+  - Local reauthoring of descriptor schema governance must remain forbidden
+    inside the bundle.
   - fail-close rather than locally reconstructing descriptor schema.
   - The bundle must also inherit machine-registry completeness
     self-describing-family requirement law; the admitted requirement that
@@ -253,6 +260,8 @@ bundle_anchor_checks:
   - Runtime must also treat bundle descriptor schema as source-singular
   - no substitute source, and no
     fallback source.
+  - Runtime must also reject local reauthoring of descriptor schema governance
+    inside the bundle.
   - locally reconstructing descriptor schema.
   - Runtime must also reject a root-law bundle that redeclares or weakens
     machine-registry completeness self-describing-family requirement law; the

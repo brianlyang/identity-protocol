@@ -43,6 +43,7 @@ from root_corpus_law_bundle_common import (
     descriptor_repo_rel_path_pattern_inheritance_mode_from_doc,
     descriptor_repo_rel_path_pattern_local_redeclaration_policy_from_doc,
     descriptor_schema_fallback_policy_from_doc,
+    descriptor_schema_local_reauthoring_policy_from_doc,
     descriptor_schema_source_component_id_from_doc,
     descriptor_schema_source_binding_mode_from_doc,
     descriptor_schema_source_substitution_policy_from_doc,
@@ -263,6 +264,9 @@ def main() -> int:
         descriptor_schema_source_substitution_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
     descriptor_schema_fallback_policy = descriptor_schema_fallback_policy_from_doc(bundle_doc) if bundle_doc else ""
+    descriptor_schema_local_reauthoring_policy = (
+        descriptor_schema_local_reauthoring_policy_from_doc(bundle_doc) if bundle_doc else ""
+    )
     descriptor_schema_local_reconstruction_policy = (
         descriptor_schema_local_reconstruction_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
@@ -474,6 +478,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if descriptor_schema_fallback_policy != "fail_closed":
             stale_reasons.append("root_corpus_law_bundle_descriptor_schema_fallback_policy_invalid")
+            error_code = ERR_REGISTRY
+        if descriptor_schema_local_reauthoring_policy != "forbidden":
+            stale_reasons.append("root_corpus_law_bundle_descriptor_schema_local_reauthoring_policy_invalid")
             error_code = ERR_REGISTRY
         if descriptor_schema_local_reconstruction_policy != "forbidden":
             stale_reasons.append("root_corpus_law_bundle_descriptor_schema_local_reconstruction_policy_invalid")
@@ -1211,6 +1218,7 @@ def main() -> int:
         "descriptor_schema_source_binding_mode": descriptor_schema_source_binding_mode,
         "descriptor_schema_source_substitution_policy": descriptor_schema_source_substitution_policy,
         "descriptor_schema_fallback_policy": descriptor_schema_fallback_policy,
+        "descriptor_schema_local_reauthoring_policy": descriptor_schema_local_reauthoring_policy,
         "descriptor_schema_local_reconstruction_policy": descriptor_schema_local_reconstruction_policy,
         "component_self_describing_family_requirement_inheritance_mode": component_self_describing_family_requirement_inheritance_mode,
         "component_self_describing_family_requirement_local_override_policy": component_self_describing_family_requirement_local_override_policy,
