@@ -233,3 +233,15 @@ invariants:
       surfaces:
         - scripts
         - .github/workflows
+  governed_subdomain_doc_control_registry_alias:
+    current_file: identity/protocol/mappings/governed-subdomain-doc-control.current.yaml
+    required_fields:
+      - registry_family
+      - registry_version
+      - last_updated_utc
+      - subdomains
+    forbid_versioned_reference:
+      regex: governed-subdomain-doc-control\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows

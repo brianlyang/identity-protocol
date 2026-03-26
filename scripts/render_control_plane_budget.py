@@ -51,12 +51,21 @@ def _threshold_pair(existing: Any, observed: int, *, fallback_delta: int) -> dic
 
 
 def _collect_observed(repo_root: Path) -> dict[str, Any]:
+    error_code_inventory = budget_mod.collect_governed_error_code_inventory(repo_root)
+    tracked_validator_paths = budget_mod.tracked_validator_script_paths(repo_root)
+    untracked_validator_paths = budget_mod.untracked_validator_script_paths(repo_root)
     codes, families = budget_mod._collect_error_codes(repo_root)
     missing_cnt, _missing_rows, _bundle_rows = budget_mod._mapping_bundle_gap(repo_root)
     return {
         "validator_scripts": budget_mod._count_validator_scripts(repo_root),
+        "validator_metric_scope": budget_mod.TRACKED_VALIDATOR_METRIC_SCOPE,
+        "tracked_validator_script_paths": [str(path) for path in tracked_validator_paths],
+        "untracked_validator_scripts": [str(path) for path in untracked_validator_paths],
         "error_codes": len(codes),
         "error_code_families": len(families),
+        "error_code_metric_scope": budget_mod.TRACKED_ERROR_CODE_METRIC_SCOPE,
+        "tracked_python_script_count": len(error_code_inventory.get("tracked_script_paths") or []),
+        "ignored_partial_error_code_tokens": list(error_code_inventory.get("ignored_partial_prefixes") or []),
         "mapping_rows_missing_in_bundle": missing_cnt,
         "strict_direct_validate_calls": budget_mod._strict_direct_validate_calls(repo_root),
     }

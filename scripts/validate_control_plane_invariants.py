@@ -39,6 +39,7 @@ ROOT_CORPUS_TRANSITION_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-co
 ROOT_CORPUS_GATEWAY_ADMISSIBILITY_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-gateway-admissibility.current.yaml"
 ROOT_CORPUS_PRECEDENCE_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-precedence.current.yaml"
 ROOT_CORPUS_QUESTION_ROUTING_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-question-routing.current.yaml"
+GOVERNED_SUBDOMAIN_DOC_CONTROL_REGISTRY_CURRENT_DEFAULT_REL = "identity/protocol/mappings/governed-subdomain-doc-control.current.yaml"
 STREAM_DOC_REGISTRY_LITERAL_SINGLE_SOURCE = "scripts/registry_alias_control_plane_common.py"
 STREAM_DOC_REGISTRY_LITERAL_CONSUMER_FILES: tuple[str, ...] = (
     "scripts/docs_command_contract_check.py",
@@ -506,6 +507,10 @@ def main() -> int:
         "--root-corpus-question-routing-current-file",
         default=ROOT_CORPUS_QUESTION_ROUTING_CURRENT_DEFAULT_REL,
     )
+    parser.add_argument(
+        "--governed-subdomain-doc-control-registry-current-file",
+        default=GOVERNED_SUBDOMAIN_DOC_CONTROL_REGISTRY_CURRENT_DEFAULT_REL,
+    )
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
@@ -634,6 +639,19 @@ def main() -> int:
     root_corpus_question_routing_alias_enabled = False
     root_corpus_question_routing_parse_ok = False
     root_corpus_question_routing_violation_count = 0
+    governed_subdomain_doc_control_registry_current_configured_file = str(
+        args.governed_subdomain_doc_control_registry_current_file
+    )
+    governed_subdomain_doc_control_registry_current_path = (
+        repo_root / governed_subdomain_doc_control_registry_current_configured_file
+    ).resolve()
+    governed_subdomain_doc_control_registry_current_resolved_path = (
+        governed_subdomain_doc_control_registry_current_path
+    )
+    governed_subdomain_doc_control_registry_active_file = ""
+    governed_subdomain_doc_control_registry_alias_enabled = False
+    governed_subdomain_doc_control_registry_parse_ok = False
+    governed_subdomain_doc_control_registry_violation_count = 0
     plugin_control_plane_alias_enabled = False
     plugin_control_plane_alias_parse_ok = False
     plugin_control_plane_alias_violation_count = 0
@@ -1387,6 +1405,55 @@ def main() -> int:
         root_corpus_question_routing_parse_ok = bool(root_question_state.get("parse_ok", False))
         root_corpus_question_routing_violation_count = root_question_violation_count
         for row in root_question_violations:
+            violations.append(row)
+
+        governed_subdomain_doc_control_registry_alias_cfg = (
+            (invariants.get("governed_subdomain_doc_control_registry_alias") or {})
+            if isinstance(invariants, dict)
+            else {}
+        )
+        (
+            governed_subdomain_doc_control_registry_state,
+            governed_subdomain_doc_control_registry_violations,
+            governed_subdomain_doc_control_registry_violation_count,
+        ) = _validate_mapping_alias_contract(
+            repo_root=repo_root,
+            alias_field="governed_subdomain_doc_control_registry_alias",
+            alias_cfg=(
+                governed_subdomain_doc_control_registry_alias_cfg
+                if isinstance(governed_subdomain_doc_control_registry_alias_cfg, dict)
+                else {}
+            ),
+            configured_current_file=governed_subdomain_doc_control_registry_current_configured_file,
+            expected_active_prefix="identity/protocol/mappings/governed-subdomain-doc-control.v",
+        )
+        governed_subdomain_doc_control_registry_alias_enabled = bool(
+            governed_subdomain_doc_control_registry_state.get("alias_enabled", False)
+        )
+        governed_subdomain_doc_control_registry_current_configured_file = str(
+            governed_subdomain_doc_control_registry_state.get("current_configured_file", "")
+        )
+        governed_subdomain_doc_control_registry_current_path = Path(
+            governed_subdomain_doc_control_registry_state.get(
+                "current_path", governed_subdomain_doc_control_registry_current_path
+            )
+        )
+        governed_subdomain_doc_control_registry_current_resolved_path = Path(
+            governed_subdomain_doc_control_registry_state.get(
+                "current_resolved_path",
+                governed_subdomain_doc_control_registry_current_resolved_path,
+            )
+        )
+        governed_subdomain_doc_control_registry_active_file = str(
+            governed_subdomain_doc_control_registry_state.get("active_file", "")
+        )
+        governed_subdomain_doc_control_registry_parse_ok = bool(
+            governed_subdomain_doc_control_registry_state.get("parse_ok", False)
+        )
+        governed_subdomain_doc_control_registry_violation_count = (
+            governed_subdomain_doc_control_registry_violation_count
+        )
+        for row in governed_subdomain_doc_control_registry_violations:
             violations.append(row)
 
         plugin_alias_cfg = (invariants.get("plugin_control_plane_alias") or {}) if isinstance(invariants, dict) else {}
@@ -2683,6 +2750,23 @@ def main() -> int:
         "root_corpus_question_routing_active_file": root_corpus_question_routing_active_file,
         "root_corpus_question_routing_parse_ok": root_corpus_question_routing_parse_ok,
         "root_corpus_question_routing_violation_count": root_corpus_question_routing_violation_count,
+        "governed_subdomain_doc_control_registry_alias_enabled": governed_subdomain_doc_control_registry_alias_enabled,
+        "governed_subdomain_doc_control_registry_current_file": str(
+            governed_subdomain_doc_control_registry_current_path
+        ),
+        "governed_subdomain_doc_control_registry_current_configured_file": (
+            governed_subdomain_doc_control_registry_current_configured_file
+        ),
+        "governed_subdomain_doc_control_registry_current_resolved_file": str(
+            governed_subdomain_doc_control_registry_current_resolved_path
+        ),
+        "governed_subdomain_doc_control_registry_active_file": (
+            governed_subdomain_doc_control_registry_active_file
+        ),
+        "governed_subdomain_doc_control_registry_parse_ok": governed_subdomain_doc_control_registry_parse_ok,
+        "governed_subdomain_doc_control_registry_violation_count": (
+            governed_subdomain_doc_control_registry_violation_count
+        ),
         "plugin_control_plane_alias_enabled": plugin_control_plane_alias_enabled,
         "plugin_control_plane_alias_parse_ok": plugin_control_plane_alias_parse_ok,
         "plugin_control_plane_alias_violation_count": plugin_control_plane_alias_violation_count,

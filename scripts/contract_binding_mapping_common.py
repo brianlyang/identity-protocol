@@ -8,6 +8,15 @@ REQUIREMENT_KEY_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*-rq-\d{3}$")
 REQUIREMENT_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9_-]*-RQ-\d{3}$")
 STREAM_VERSION_RE = re.compile(r"^v\d+\.\d+\.\d+$")
 
+CANONICAL_GATE_SURFACE_ALIAS_BY_OPERATION: dict[str, tuple[str, ...]] = {
+    "activate": ("creator",),
+    "update": ("creator",),
+    "mutation": ("creator",),
+    "validate": ("creator",),
+    "status": ("inspection",),
+    "scan": ("inspection",),
+}
+
 
 def is_requirement_key(value: str) -> bool:
     token = str(value or "").strip().lower()
@@ -72,3 +81,35 @@ def requirement_keys_by_surface(mapping_doc: dict[str, Any], *, surface: str) ->
         if needle in gates or "*" in gates:
             out.append(requirement_key)
     return sorted(out)
+
+
+def canonical_gate_surface_candidates(surface: str) -> list[str]:
+    token = str(surface or "").strip().lower()
+    if not token:
+        return []
+    out = [token]
+    for alias in CANONICAL_GATE_SURFACE_ALIAS_BY_OPERATION.get(token, ()):
+        alias_token = str(alias or "").strip().lower()
+        if alias_token and alias_token not in out:
+            out.append(alias_token)
+    return out
+
+
+def filter_requirement_keys_by_surfaces(
+    mapping_doc: dict[str, Any],
+    requirement_keys: list[str] | tuple[str, ...],
+    *,
+    surfaces: list[str] | tuple[str, ...],
+) -> list[str]:
+    requested = [str(key or "").strip() for key in requirement_keys if str(key or "").strip()]
+    surface_tokens = [str(surface or "").strip() for surface in surfaces if str(surface or "").strip()]
+    if not requested or not surface_tokens:
+        return requested
+
+    allowed: set[str] = set()
+    for surface in surface_tokens:
+        allowed.update(requirement_keys_by_surface(mapping_doc, surface=surface))
+
+    if not allowed:
+        return requested
+    return [key for key in requested if key in allowed]

@@ -1,17 +1,17 @@
 schema_version: 1
 budget_version: v1.6
-last_updated_utc: '2026-03-25T17:16:08Z'
+last_updated_utc: '2026-03-26T15:41:42Z'
 policy_mode: dual_threshold_with_family_convergence
 budgets:
   validator_scripts:
-    warn: 246
-    fail: 248
+    warn: 248
+    fail: 250
   error_codes:
-    warn: 701
-    fail: 704
+    warn: 691
+    fail: 694
   error_code_families:
-    warn: 260
-    fail: 266
+    warn: 247
+    fail: 253
   mapping_rows_missing_in_bundle:
     warn: 0
     fail: 1
@@ -20,8 +20,8 @@ budgets:
       warn: 90
       fail: 95
     scripts/release_readiness_check.py:
-      warn: 134
-      fail: 139
+      warn: 138
+      fail: 143
     scripts/report_three_plane_status.py:
       warn: 80
       fail: 85
@@ -38,15 +38,15 @@ convergence_guard:
   enabled: true
   mode: no_rebound
   enforce_mode: fail_required
-  baseline_snapshot_utc: '2026-03-25T17:16:08Z'
+  baseline_snapshot_utc: '2026-03-26T15:41:42Z'
   ceilings:
-    validator_scripts: 246
-    error_codes: 701
-    error_code_families: 260
+    validator_scripts: 248
+    error_codes: 691
+    error_code_families: 247
     mapping_rows_missing_in_bundle: 0
     direct_validate_calls:
       scripts/identity_creator.py: 90
-      scripts/release_readiness_check.py: 134
+      scripts/release_readiness_check.py: 138
       scripts/report_three_plane_status.py: 80
       scripts/full_identity_protocol_scan.py: 87
       scripts/e2e_smoke_test.sh: 116

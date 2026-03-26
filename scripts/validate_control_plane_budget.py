@@ -10,6 +10,13 @@ from typing import Any
 
 import yaml
 
+from control_plane_metric_scope_common import (
+    TRACKED_ERROR_CODE_METRIC_SCOPE,
+    TRACKED_VALIDATOR_METRIC_SCOPE,
+    collect_governed_error_code_inventory,
+    tracked_validator_script_paths,
+    untracked_validator_script_paths,
+)
 from contract_binding_mapping_common import requirement_row_keys
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -36,7 +43,7 @@ def _read_text(path: Path) -> str:
 
 
 def _count_validator_scripts(repo_root: Path) -> int:
-    return len(list((repo_root / "scripts").glob("validate_*.py")))
+    return len(tracked_validator_script_paths(repo_root))
 
 
 def _normalize_error_code_family(code: str) -> str:
@@ -47,16 +54,9 @@ def _normalize_error_code_family(code: str) -> str:
 
 
 def _collect_error_codes(repo_root: Path) -> tuple[set[str], set[str]]:
-    codes: set[str] = set()
-    families: set[str] = set()
-    for path in (repo_root / "scripts").glob("*.py"):
-        text = _read_text(path)
-        for code in re.findall(r"IP-[A-Z0-9\\-]+", text):
-            if code:
-                codes.add(code)
-                family = _normalize_error_code_family(code)
-                if family:
-                    families.add(family)
+    inventory = collect_governed_error_code_inventory(repo_root)
+    codes = {str(code).strip() for code in (inventory.get("codes") or []) if str(code).strip()}
+    families = {str(code).strip() for code in (inventory.get("families") or []) if str(code).strip()}
     return codes, families
 
 
@@ -289,8 +289,16 @@ def main() -> int:
     convergence_guard = budget_doc.get("convergence_guard") or {}
     if not isinstance(convergence_guard, dict):
         convergence_guard = {}
-    observed_validator_scripts = _count_validator_scripts(repo_root)
-    observed_error_codes_raw_set, observed_error_code_families_set = _collect_error_codes(repo_root)
+    tracked_validator_paths = tracked_validator_script_paths(repo_root)
+    untracked_validator_paths = untracked_validator_script_paths(repo_root)
+    observed_validator_scripts = len(tracked_validator_paths)
+    error_code_inventory = collect_governed_error_code_inventory(repo_root)
+    observed_error_codes_raw_set = {
+        str(code).strip() for code in (error_code_inventory.get("codes") or []) if str(code).strip()
+    }
+    observed_error_code_families_set = {
+        str(code).strip() for code in (error_code_inventory.get("families") or []) if str(code).strip()
+    }
     observed_error_codes = len(observed_error_codes_raw_set)
     observed_error_code_families = len(observed_error_code_families_set)
     missing_mapping_rows_count, missing_mapping_rows, observed_bundle_rows = _mapping_bundle_gap(repo_root)
@@ -547,8 +555,14 @@ def main() -> int:
         "strict_surfaces": list(STRICT_SURFACES),
         "observed": {
             "validator_scripts": observed_validator_scripts,
+            "validator_metric_scope": TRACKED_VALIDATOR_METRIC_SCOPE,
+            "tracked_validator_script_paths": [str(path) for path in tracked_validator_paths],
+            "untracked_validator_scripts": [str(path) for path in untracked_validator_paths],
             "error_codes": observed_error_codes,
             "error_code_families": observed_error_code_families,
+            "error_code_metric_scope": TRACKED_ERROR_CODE_METRIC_SCOPE,
+            "tracked_python_script_count": len(error_code_inventory.get("tracked_script_paths") or []),
+            "ignored_partial_error_code_tokens": list(error_code_inventory.get("ignored_partial_prefixes") or []),
             "mapping_rows_missing_in_bundle": missing_mapping_rows_count,
             "bundle_rows": observed_bundle_rows,
             "missing_mapping_rows": missing_mapping_rows,
