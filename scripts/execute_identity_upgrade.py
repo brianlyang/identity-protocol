@@ -15,6 +15,15 @@ from typing import Any
 
 import yaml
 
+from capability_activation_policy_common import (
+    CAPABILITY_ACTIVATION_ENV_AUTH_FALLBACK_POLICY,
+    capability_env_auth_fallback_eligible,
+    normalize_capability_activation_policy,
+    replace_capability_activation_policy,
+)
+from capability_activation_projection_common import (
+    build_capability_activation_report_projection,
+)
 from final_emit_contract_common import (
     FINAL_EMIT_CHANNEL_ID,
     FINAL_EMIT_POLICY_MODE,
@@ -1383,6 +1392,7 @@ def _base_report(
     protocol_feedback_paths = protocol_feedback_paths or []
     planned_files = planned_files or []
     pre_mutation_projection_stale_reasons = pre_mutation_projection_stale_reasons or []
+    capability_report_projection = build_capability_activation_report_projection(capability_contract)
     return {
         "run_id": run_id,
         "identity_id": identity_id,
@@ -1478,16 +1488,7 @@ def _base_report(
         "writeback_precheck": {"all_writable": False, "reason": "unknown"},
         "runtime_output_root": runtime_output_root,
         "metrics_path": metrics_path,
-        "skills_used": list(capability_contract.get("skills_used") or []),
-        "mcp_tools_used": list(capability_contract.get("mcp_tools_used") or []),
-        "tool_calls_used": list(capability_contract.get("tool_calls_used") or []),
-        "active_skills": list(capability_contract.get("active_skills") or []),
-        "mcp_servers_checked": list(capability_contract.get("mcp_servers_checked") or []),
-        "tool_routes": list(capability_contract.get("tool_routes") or []),
-        "capability_activation_status": str(capability_contract.get("capability_activation_status", "UNKNOWN")),
-        "capability_activation_error_code": str(capability_contract.get("capability_activation_error_code", "")),
-        "capability_activation_notes": list(capability_contract.get("capability_activation_notes") or []),
-        "capability_contract_required": bool(capability_contract.get("capability_contract_required", True)),
+        **capability_report_projection,
         "next_action": "",
         "failure_reason": "",
         "protocol_mode": protocol["protocol_mode"],
@@ -1653,6 +1654,7 @@ def _resolve_capability_contract(
 ) -> dict[str, Any]:
     payload = _default_capability_contract_payload(identity_id=identity_id, catalog_path=catalog_path)
     out_path: Path | None = None
+    requested_policy = normalize_capability_activation_policy(activation_policy)
     fallback_capability_path = runtime_temp_file(
         channel="identity-upgrade",
         operation="capability-activation",
@@ -1682,23 +1684,67 @@ def _resolve_capability_contract(
         "--identity-id",
         identity_id,
         "--activation-policy",
-        str(activation_policy or "strict-union"),
+        requested_policy,
     ]
     if out_path is not None:
         cmd.extend(["--out", str(out_path)])
-    proc = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        cwd=str(protocol_root.expanduser().resolve()),
-    )
-    if out_path is not None and out_path.exists():
-        try:
-            raw = _load_json(out_path)
-            if isinstance(raw, dict):
-                payload.update(raw)
-        except Exception:
-            pass
+
+    def _run_capability_cmd(run_cmd: list[str]) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
+        proc_local = subprocess.run(
+            run_cmd,
+            capture_output=True,
+            text=True,
+            cwd=str(protocol_root.expanduser().resolve()),
+        )
+        payload_local: dict[str, Any] = {}
+        if out_path is not None and out_path.exists():
+            try:
+                raw = _load_json(out_path)
+                if isinstance(raw, dict):
+                    payload_local.update(raw)
+            except Exception:
+                pass
+        return proc_local, payload_local
+
+    proc, raw_payload = _run_capability_cmd(cmd)
+    if raw_payload:
+        payload.update(raw_payload)
+    initial_status = str(payload.get("capability_activation_status", "")).strip().upper()
+    initial_error_code = str(payload.get("capability_activation_error_code", "")).strip()
+    payload["capability_activation_policy_requested"] = requested_policy
+    payload["capability_activation_policy_effective"] = requested_policy
+    payload["capability_activation_fallback_attempted"] = False
+
+    if capability_env_auth_fallback_eligible(
+        requested_policy=requested_policy,
+        error_code=initial_error_code,
+        status=initial_status,
+        rc=proc.returncode,
+    ):
+        fallback_cmd = replace_capability_activation_policy(
+            cmd,
+            CAPABILITY_ACTIVATION_ENV_AUTH_FALLBACK_POLICY,
+        )
+        fallback_proc, fallback_payload = _run_capability_cmd(fallback_cmd)
+        payload["capability_activation_fallback_attempted"] = True
+        payload["capability_activation_fallback_policy"] = CAPABILITY_ACTIVATION_ENV_AUTH_FALLBACK_POLICY
+        payload["capability_activation_fallback_rc"] = fallback_proc.returncode
+        payload["capability_activation_initial_status"] = initial_status
+        payload["capability_activation_initial_error_code"] = initial_error_code
+        payload["capability_activation_fallback_stdout_tail"] = (
+            (fallback_proc.stdout or "").strip().splitlines()[-1] if (fallback_proc.stdout or "").strip() else ""
+        )
+        payload["capability_activation_fallback_stderr_tail"] = (
+            (fallback_proc.stderr or "").strip().splitlines()[-1] if (fallback_proc.stderr or "").strip() else ""
+        )
+        if fallback_payload:
+            payload.update(fallback_payload)
+        if fallback_proc.returncode == 0:
+            proc = fallback_proc
+            payload["capability_activation_policy_effective"] = (
+                CAPABILITY_ACTIVATION_ENV_AUTH_FALLBACK_POLICY
+            )
+
     payload["capability_activation_validator_rc"] = proc.returncode
     payload["capability_activation_validator_stdout_tail"] = (
         (proc.stdout or "").strip().splitlines()[-1] if (proc.stdout or "").strip() else ""
@@ -3395,18 +3441,7 @@ def main() -> int:
         "writeback_precheck": precheck,
         "runtime_output_root": str(runtime_output_root),
         "metrics_path": str(metrics_path),
-        "skills_used": list(capability_contract.get("skills_used") or []),
-        "mcp_tools_used": list(capability_contract.get("mcp_tools_used") or []),
-        "tool_calls_used": list(capability_contract.get("tool_calls_used") or []),
-        "active_skills": list(capability_contract.get("active_skills") or []),
-        "mcp_servers_checked": list(capability_contract.get("mcp_servers_checked") or []),
-        "tool_routes": list(capability_contract.get("tool_routes") or []),
-        "capability_activation_status": str(capability_contract.get("capability_activation_status", "UNKNOWN")),
-        "capability_activation_error_code": str(capability_contract.get("capability_activation_error_code", "")),
-        "capability_activation_notes": list(capability_contract.get("capability_activation_notes") or []),
-        "capability_contract_required": bool(capability_contract.get("capability_contract_required", True)),
-        "capability_activation_validator_rc": capability_contract.get("capability_activation_validator_rc"),
-        "capability_activation_report_path": str(capability_contract.get("capability_activation_report_path", "")),
+        **build_capability_activation_report_projection(capability_contract),
         "next_action": next_action,
         "failure_reason": "" if all_ok else "one_or_more_checks_failed_or_writeback_not_written",
         "work_layer": work_layer,

@@ -826,6 +826,14 @@ validator-status-key missing, and validator-status-literal not-string,
 all before nonzero returncode, non-pass component status, explicit
 non-execution exclusion, and bundle-violation projection.
 
+Bundle component-validator nonzero-returncode origin policy must also
+stay explicit.
+
+The admitted runtime nonzero-returncode reason is component-validator
+nonzero returncode only, after admitted parse/status resolution and
+before non-pass component status, explicit non-execution exclusion, and
+bundle-violation projection.
+
 Bundle component-validator observation-reason classifier precedence
 policy must also stay explicit.
 

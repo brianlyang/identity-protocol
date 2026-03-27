@@ -520,6 +520,12 @@ validator-status-literal not-string before nonzero returncode, non-pass
 component status, explicit non-execution exclusion, and
 bundle-violation projection.
 
+Root-law bundle rows must also keep component-validator nonzero-returncode
+origin policy explicit; admitted nonzero-returncode reason is
+component-validator nonzero returncode only, after admitted parse/status
+resolution and before non-pass component status, explicit
+non-execution exclusion, and bundle-violation projection.
+
 Root-law bundle rows must also keep component-validator observation-reason
 classifier precedence policy explicit; parse/status classification
 preempts nonzero returncode, nonzero returncode preempts non-pass

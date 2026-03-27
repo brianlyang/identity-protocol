@@ -357,6 +357,12 @@ def component_validator_observation_reason_parse_status_origin_policy_from_doc(
     return _norm_str(bundle_doc.get("component_validator_observation_reason_parse_status_origin_policy"))
 
 
+def component_validator_observation_reason_nonzero_rc_origin_policy_from_doc(
+    bundle_doc: Mapping[str, Any]
+) -> str:
+    return _norm_str(bundle_doc.get("component_validator_observation_reason_nonzero_rc_origin_policy"))
+
+
 def component_validator_observation_reason_classifier_precedence_policy_from_doc(
     bundle_doc: Mapping[str, Any]
 ) -> str:
