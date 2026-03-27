@@ -20,6 +20,7 @@ from root_corpus_question_routing_common import (
     question_class_profiles_from_doc,
     question_routing_anchor_checks_from_doc,
 )
+from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 
 STATUS_KEY = "protocol_root_corpus_question_routing_status"
 ERR_REGISTRY = "IP-RCQR-001"
@@ -139,6 +140,7 @@ def main() -> int:
     structure_violations: list[dict[str, Any]] = []
     routing_violations: list[dict[str, Any]] = []
     anchor_violations: list[dict[str, Any]] = []
+    row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
 
     if routing_alias_error:
@@ -598,6 +600,47 @@ def main() -> int:
     stale_reasons.extend(f"anchor_violation:{row['rel_path']}:{row['reason']}" for row in anchor_violations)
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
+    row_family_projection_rows = [
+        project_row_family(
+            family_id="question_class_profiles",
+            member_id_key="question_class",
+            actual_rows=question_profiles,
+            expected_rows=EXPECTED_QUESTION_RULES,
+            id_attr="question_class",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        project_row_family(
+            family_id="entry_question_projection",
+            member_id_key="rel_path",
+            actual_rows=entry_projections,
+            expected_rows={rel_path: {} for rel_path in registry_paths},
+            id_attr="rel_path",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        project_row_family(
+            family_id="gateway_question_projection",
+            member_id_key="gateway_class",
+            actual_rows=gateway_question_projections,
+            expected_rows={gateway_class: {} for gateway_class in gateway_effect_target_map},
+            id_attr="gateway_class",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+    ]
+    question_routing_row_coverage_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="coverage_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
+    question_routing_row_identity_projection_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="identity_projection_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_ROUTING),
@@ -615,6 +658,10 @@ def main() -> int:
         "question_class_profile_count": len(question_profiles),
         "entry_question_projection_count": len(entry_projections),
         "gateway_question_projection_count": len(gateway_question_projections),
+        "question_routing_row_family_count": len(row_family_projection_rows),
+        "question_routing_row_coverage_status": question_routing_row_coverage_status,
+        "question_routing_row_identity_projection_status": question_routing_row_identity_projection_status,
+        "row_family_projection_rows": row_family_projection_rows,
         "question_class_profiles": [
             {
                 "question_class": row.question_class,

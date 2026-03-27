@@ -34,6 +34,11 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_question_routing_status"] == "PASS_REQUIRED", payload
 assert payload["adjudication_redirect"]["question_class"] == "current_turn_legality", payload
+assert payload["question_routing_row_family_count"] == 3, payload
+assert payload["question_routing_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["question_routing_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(
     "current_turn_legality" not in row["question_classes"]
     for row in payload["entry_question_projection"]
@@ -44,6 +49,136 @@ assert {row["gateway_class"]: row["question_class"] for row in payload["gateway_
     "root_contract": "frozen_domain_contract_law",
     "machine_registry_directory": "registry_resolution",
 }, payload
+PY
+
+MISSING_PROFILE_REPO="${TMP_ROOT}/missing-profile-repo"
+mirror_repo "${MISSING_PROFILE_REPO}"
+python3 - <<'PY' "${MISSING_PROFILE_REPO}/identity/protocol/mappings/root-corpus-question-routing.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["question_class_profiles"] = [
+    row for row in doc["question_class_profiles"]
+    if row.get("question_class") != "support_material_lookup"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+MISSING_PROFILE_JSON="${TMP_ROOT}/missing-profile.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_question_routing.py" \
+  --repo-root "${MISSING_PROFILE_REPO}" \
+  --json-only >"${MISSING_PROFILE_JSON}"; then
+  echo "[FAIL] root corpus question-routing validator unexpectedly passed after removing question-class profile row"
+  exit 1
+fi
+
+python3 - <<'PY' "${MISSING_PROFILE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_question_routing_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCQR-002", payload
+assert payload["question_routing_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["question_routing_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["field"] == "question_class_profiles" and row["reason"] == "missing_expected_question_classes" and "support_material_lookup" in row.get("question_classes", [])
+    for row in payload["structure_violations"]
+), payload
+profile_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "question_class_profiles"
+)
+entry_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "entry_question_projection"
+)
+gateway_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "gateway_question_projection"
+)
+assert profile_row["expected_count"] == 9, payload
+assert profile_row["actual_count"] == 8, payload
+assert profile_row["missing_ids"] == ["support_material_lookup"], payload
+assert profile_row["unexpected_ids"] == [], payload
+assert profile_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert profile_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert entry_row["coverage_status"] == "PASS_REQUIRED", payload
+assert entry_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert gateway_row["coverage_status"] == "PASS_REQUIRED", payload
+assert gateway_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+IDENTITY_DRIFT_REPO="${TMP_ROOT}/identity-drift-repo"
+mirror_repo "${IDENTITY_DRIFT_REPO}"
+python3 - <<'PY' "${IDENTITY_DRIFT_REPO}/identity/protocol/mappings/root-corpus-question-routing.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["question_class_profiles"]:
+    if row.get("question_class") == "support_material_lookup":
+        row["question_class"] = "support_material_lookup_alias"
+        break
+else:
+    raise SystemExit("expected support_material_lookup row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+IDENTITY_DRIFT_JSON="${TMP_ROOT}/identity-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_question_routing.py" \
+  --repo-root "${IDENTITY_DRIFT_REPO}" \
+  --json-only >"${IDENTITY_DRIFT_JSON}"; then
+  echo "[FAIL] root corpus question-routing validator unexpectedly passed question-class identity drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${IDENTITY_DRIFT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_question_routing_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCQR-002", payload
+assert payload["question_routing_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["question_routing_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["field"] == "question_class_profiles" and row["reason"] == "missing_expected_question_classes" and "support_material_lookup" in row.get("question_classes", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "question_class_profiles" and row["reason"] == "extra_question_classes" and "support_material_lookup_alias" in row.get("question_classes", [])
+    for row in payload["structure_violations"]
+), payload
+profile_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "question_class_profiles"
+)
+entry_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "entry_question_projection"
+)
+gateway_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "gateway_question_projection"
+)
+assert profile_row["expected_count"] == 9, payload
+assert profile_row["actual_count"] == 9, payload
+assert profile_row["missing_ids"] == ["support_material_lookup"], payload
+assert profile_row["unexpected_ids"] == ["support_material_lookup_alias"], payload
+assert profile_row["coverage_status"] == "PASS_REQUIRED", payload
+assert profile_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert entry_row["coverage_status"] == "PASS_REQUIRED", payload
+assert entry_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert gateway_row["coverage_status"] == "PASS_REQUIRED", payload
+assert gateway_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 ROOT_ENTRY_REPO="${TMP_ROOT}/root-entry-drift-repo"
