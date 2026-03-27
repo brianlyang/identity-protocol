@@ -32,6 +32,11 @@ assert payload["decision_evidence_proof_count"] == 6, payload
 assert payload["evidence_class_proof_alignment_count"] == 6, payload
 assert payload["decision_evidence_limit_count"] == 7, payload
 assert payload["collapse_count"] == 8, payload
+assert payload["decision_evidence_row_family_count"] == 7, payload
+assert payload["decision_evidence_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["decision_evidence_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert payload["adjudication_phase_alignment_surfaces"] == ["runtime_state", "receipts"], payload
 assert any(
     row["evidence_class_id"] == "adjudicated_verdict_closure_evidence"
@@ -73,10 +78,22 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_decision_evidence_admissibility_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-DEA-002", payload
+assert payload["decision_evidence_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["decision_evidence_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["reason"] == "missing_expected_rows" and "demotion_confinement_decision_evidence_proof" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+proof_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_decision_evidence_proof_rows"
+)
+assert proof_row["expected_count"] == 6, payload
+assert proof_row["actual_count"] == 5, payload
+assert proof_row["missing_ids"] == ["demotion_confinement_decision_evidence_proof"], payload
+assert proof_row["unexpected_ids"] == [], payload
+assert proof_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert proof_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 CLASS_REPO="${TMP_ROOT}/class-drift-repo"
@@ -88,11 +105,12 @@ import yaml
 
 path = pathlib.Path(sys.argv[1])
 doc = yaml.safe_load(path.read_text(encoding="utf-8"))
-doc["required_evidence_class_rows"] = [
-    row for row in doc["required_evidence_class_rows"] if row.get("evidence_class_id") != "bound_runtime_evidence"
-]
-for idx, row in enumerate(doc["required_evidence_class_rows"], start=1):
-    row["order"] = idx
+for row in doc["required_evidence_class_rows"]:
+    if row.get("evidence_class_id") == "bound_runtime_evidence":
+        row["evidence_class_id"] = "bound_runtime_evidence_alias"
+        break
+else:
+    raise SystemExit("expected bound_runtime_evidence row not found")
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
 
@@ -100,7 +118,7 @@ CLASS_JSON="${TMP_ROOT}/class-drift.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_decision_evidence_admissibility.py" \
   --repo-root "${CLASS_REPO}" \
   --json-only >"${CLASS_JSON}"; then
-  echo "[FAIL] root decision-evidence admissibility validator unexpectedly passed missing evidence class row"
+  echo "[FAIL] root decision-evidence admissibility validator unexpectedly passed evidence-class identity drift"
   exit 1
 fi
 
@@ -116,6 +134,22 @@ assert any(
     row["reason"] == "missing_expected_rows" and "bound_runtime_evidence" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+assert any(
+    row["reason"] == "extra_rows" and "bound_runtime_evidence_alias" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
+assert payload["decision_evidence_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["decision_evidence_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+class_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_evidence_class_rows"
+)
+assert class_row["expected_count"] == 6, payload
+assert class_row["actual_count"] == 6, payload
+assert class_row["missing_ids"] == ["bound_runtime_evidence"], payload
+assert class_row["unexpected_ids"] == ["bound_runtime_evidence_alias"], payload
+assert class_row["coverage_status"] == "PASS_REQUIRED", payload
+assert class_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 ALIGNMENT_REPO="${TMP_ROOT}/alignment-drift-repo"
