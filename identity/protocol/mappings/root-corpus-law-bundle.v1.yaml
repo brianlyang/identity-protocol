@@ -110,6 +110,8 @@ bundle_anchor_checks:
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
   required_markers:
   - '### Root-law bundle must stay explicit and jointly governed'
+  - '### Root-law bundle component-row completeness must stay explicit'
+  - Required component-row and component-status-row families must remain explicit
   - Constitutional spine, root admission/governance, source-order, authority,
   - machine-registry completeness, and conflict precedence are not optional
   - Weakening one slice while keeping the others green is a root-law coherence
@@ -431,6 +433,8 @@ bundle_anchor_checks:
     ontology.
 - rel_path: identity/protocol/README.md
   required_markers:
+  - '## Root law-bundle component-row completeness discipline'
+  - 1. required component-row and component-status-row rows must remain explicit as separate machine-readable row families;
   - '## Root-law bundle discipline'
   - Constitutional spine, root admission/governance, source-order, authority
   - gateway-admissibility, machine-registry completeness, and conflict precedence
@@ -742,6 +746,8 @@ bundle_anchor_checks:
     reason rather than silently expanding bundle observation ontology.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
+  - '## Root law-bundle component-row completeness boundary'
+  - 1. Root-law bundle coherence must remain machine-readable as separate component-row and component-status-row families.
   - '## Root-law bundle boundary'
   - 1. constitutional spine;
   - 9. machine-registry completeness;
@@ -1015,6 +1021,8 @@ bundle_anchor_checks:
     admitted component-validator observation reasons.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
+  - '## Runtime law-bundle component-row consumption boundary'
+  - 1. Runtime consumes root-law bundle coherence as separate component-row and component-status-row families rather than as undifferentiated bundle prose.
   - '## Runtime consumption of the root-law bundle'
   - constitutional spine, admission/governance, ordering, authority, question-routing,
   - machine-registry completeness,

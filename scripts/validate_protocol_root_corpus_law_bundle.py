@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import re
 import subprocess
+from types import SimpleNamespace
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
@@ -121,6 +122,7 @@ from root_machine_registry_completeness_common import (
     required_descriptor_field_modes_from_doc as registry_required_descriptor_field_modes_from_doc,
     required_descriptor_fields_from_doc as registry_required_descriptor_fields_from_doc,
 )
+from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 
 STATUS_KEY = "protocol_root_corpus_law_bundle_status"
 ERR_REGISTRY = "IP-RCLB-001"
@@ -2517,6 +2519,49 @@ def main() -> int:
     component_status_row_coverage_status = (
         STATUS_FAIL_REQUIRED if component_status_row_coverage_incomplete else STATUS_PASS_REQUIRED
     )
+    row_family_projection_rows = [
+        project_row_family(
+            family_id="component_rows",
+            member_id_key="component_id",
+            actual_rows=sorted_components,
+            expected_rows={component_id: {} for component_id in EXPECTED_COMPONENTS},
+            id_attr="component_id",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        project_row_family(
+            family_id="component_status_rows",
+            member_id_key="component_id",
+            actual_rows=[
+                SimpleNamespace(component_id=str(row.get("component_id") or ""))
+                for row in component_status_rows
+            ],
+            expected_rows={component_id: {} for component_id in EXPECTED_COMPONENTS},
+            id_attr="component_id",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+    ]
+    law_bundle_row_coverage_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="coverage_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
+    law_bundle_row_identity_projection_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="identity_projection_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
+    component_status_row_identity_projection_status = next(
+        (
+            row["identity_projection_status"]
+            for row in row_family_projection_rows
+            if row["family_id"] == "component_status_rows"
+        ),
+        STATUS_FAIL_REQUIRED,
+    )
 
     (
         component_validator_observation_reason_counts,
@@ -2919,6 +2964,14 @@ def main() -> int:
         "component_status_row_count": len(component_status_rows),
         "expected_component_status_row_count": len(sorted_components),
         "component_status_row_coverage_status": component_status_row_coverage_status,
+        "component_status_row_identity_projection_status": (
+            component_status_row_identity_projection_status
+        ),
+        "law_bundle_row_family_count": len(row_family_projection_rows),
+        "law_bundle_row_coverage_status": law_bundle_row_coverage_status,
+        "law_bundle_row_identity_projection_status": (
+            law_bundle_row_identity_projection_status
+        ),
         "structure_violation_count": len(structure_violations),
         "bundle_violation_count": len(bundle_violations),
         "anchor_violation_count": len(anchor_violations),
@@ -3022,6 +3075,7 @@ def main() -> int:
         "bundle_redeclares_registry_child_membership_governance": bundle_redeclares_registry_child_membership_governance,
         "bundle_local_registry_child_membership_governance": dict(bundle_local_registry_child_membership_governance),
         "source_required_repo_rel_path_patterns": dict(source_required_repo_rel_path_patterns),
+        "row_family_projection_rows": row_family_projection_rows,
         "component_status_rows": component_status_rows,
         "structure_violations": structure_violations,
         "bundle_violations": bundle_violations,

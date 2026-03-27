@@ -350,6 +350,14 @@ implicit.
 4. Protocol legality must not finalize identity-instance self-judgement legality while missing or unexpected row identities remain known only inside validator logic.
 5. Fail-close identity-instance self-judgement output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
 
+## Root law-bundle component-row completeness boundary
+
+1. Root-law bundle coherence must remain machine-readable as separate component-row and component-status-row families.
+2. Aggregate row-family counts are insufficient on their own; expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness.
+3. Expected row identity set and emitted row identity set for each law-bundle family must also remain explicit; component identity drift may not be collapsed into summary-only counts.
+4. Protocol legality must not finalize root-law bundle legality while missing or unexpected component identities remain known only inside validator logic.
+5. Fail-close root-law bundle output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+
 ## Root-law bundle boundary
 
 The protocol constitution depends on a governed root-law bundle across:
