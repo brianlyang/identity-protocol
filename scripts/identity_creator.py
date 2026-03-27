@@ -427,6 +427,166 @@ def _derive_actor_session_id(explicit_session_id: str, run_id: str) -> tuple[str
     return "", "missing"
 
 
+def _materialize_update_execution_session_binding(
+    *,
+    catalog_path: str,
+    identity_id: str,
+    actor_id: str,
+    execution_run_id: str,
+    governance_override_receipt: str,
+    resolved_pack_path: str,
+) -> int:
+    catalog_resolved = Path(catalog_path).expanduser().resolve()
+    pack_resolved = Path(resolved_pack_path).expanduser().resolve()
+    override_receipt = str(governance_override_receipt or "").strip()
+    if not override_receipt:
+        print("[FAIL] update execution session binding missing governance override receipt")
+        return 1
+    actor_store = load_actor_binding_store(catalog_resolved, actor_id)
+    compare_token = str(actor_store.get("compare_token", "")).strip() or str(actor_store.get("binding_version", 0))
+    execution_run_id_token = str(execution_run_id or "").strip()
+    execution_session_id = f"run:{execution_run_id_token}"
+    binding_state_out = (
+        pack_resolved / "runtime" / "state" / "update_execution_session_binding.latest.json"
+    ).resolve()
+    cmd = [
+        "python3",
+        "scripts/sync_session_identity.py",
+        "--catalog",
+        str(catalog_resolved),
+        "--identity-id",
+        identity_id,
+        "--out",
+        str(binding_state_out),
+        "--mirror-out",
+        "",
+        "--actor-id",
+        actor_id,
+        "--run-id",
+        execution_run_id_token,
+        "--session-id",
+        execution_session_id,
+        "--session-id-source",
+        "run_id",
+        "--compare-token",
+        compare_token,
+        "--mutation-lane",
+        "update",
+        "--governance-override-receipt",
+        override_receipt,
+        "--switch-reason",
+        "identity_update_execution_session_materialization",
+        "--entrypoint-pid",
+        str(os.getpid()),
+        "--approved-by",
+        "system:auto",
+        "--switch-from-identity",
+        identity_id,
+        "--switch-prestate-mode",
+        "session_primary",
+    ]
+    rc = _run(cmd)
+    if rc != 0:
+        print("[FAIL] update execution session binding materialization failed")
+    return rc
+
+
+def _materialize_required_gate_entry_receipt_via_ingress_wrapper(
+    *,
+    catalog_path: str,
+    repo_catalog_path: str,
+    identity_id: str,
+    actor_id: str,
+    session_id: str,
+    run_id: str,
+    operation: str,
+    resolved_work_layer: str,
+    resolved_source_layer: str,
+    output_path: str,
+    send_time_gate_status: str,
+    outlet_bypass_detected: bool,
+    final_emit_contract_status: str,
+    final_emit_policy_mode: str,
+    final_emit_schema_status: str,
+) -> int:
+    catalog_resolved = Path(catalog_path).expanduser().resolve()
+    try:
+        pack_path, task_path = resolve_pack_and_task(catalog_resolved, identity_id)
+        task_doc = load_json(task_path)
+    except Exception as exc:
+        print(f"[FAIL] required gate ingress wrapper context resolve failed: {exc}")
+        return 1
+
+    host_gateway_contract = _pick_host_gateway_contract(task_doc)
+    gateway_contract_path = _resolve_pack_relative_path(
+        pack_path,
+        str(host_gateway_contract.get("gateway_contract_path", "")).strip(),
+        "runtime/gate/protocol_gateway_contract.json",
+    )
+    if not gateway_contract_path.exists():
+        print("[FAIL] required gate ingress wrapper gateway contract missing")
+        return 1
+
+    try:
+        gateway_runtime_contract = load_json(gateway_contract_path)
+    except Exception as exc:
+        print(f"[FAIL] required gate ingress wrapper gateway contract invalid: {exc}")
+        return 1
+
+    ingress_wrapper_path = _resolve_pack_relative_path(
+        pack_path,
+        str(gateway_runtime_contract.get("ingress_wrapper_path", "")).strip(),
+        HOST_GATEWAY_DEFAULT_INGRESS_WRAPPER,
+    )
+    if not ingress_wrapper_path.exists():
+        print("[FAIL] required gate ingress wrapper runtime entry missing")
+        return 1
+
+    operation_token = str(operation or "").strip().lower() or "update"
+    run_token = str(run_id or "").strip() or _default_operation_run_token(identity_id, operation_token)
+    output_resolved = Path(output_path).expanduser().resolve()
+    envelope_json = json.dumps(
+        {
+            "catalog": str(catalog_resolved),
+            "repo_catalog": str(repo_catalog_path or "").strip(),
+            "identity_id": identity_id,
+            "operation": operation_token,
+            "run_id": run_token,
+            "actor_id": str(actor_id or "").strip(),
+            "session_id": str(session_id or "").strip(),
+            "work_layer": str(resolved_work_layer or "").strip(),
+            "source_layer": str(resolved_source_layer or "").strip(),
+            "lock_state": "LOCK_MATCH",
+            "send_time_gate_status": str(send_time_gate_status or "").strip() or "FAIL_REQUIRED",
+            "outlet_bypass_detected": bool(outlet_bypass_detected),
+            "final_emit_contract_status": str(final_emit_contract_status or "").strip() or "FAIL_REQUIRED",
+            "final_emit_policy_mode": str(final_emit_policy_mode or "").strip() or "tool_choice_required",
+            "final_emit_schema_status": str(final_emit_schema_status or "").strip() or "FAIL_REQUIRED",
+            "surface_label": "host_ingress_wrapper",
+        },
+        ensure_ascii=False,
+    )
+    cmd = [
+        "python3",
+        str(ingress_wrapper_path),
+        "--envelope-json",
+        envelope_json,
+        "--contract-path",
+        str(gateway_contract_path),
+        "--out",
+        str(output_resolved),
+        "--json-only",
+    ]
+    rc, out, err = _run_capture(cmd)
+    payload = _parse_json_payload(out) or {}
+    if rc != 0 or str(payload.get("bundle_status", "")).strip().upper() != "PASS_REQUIRED":
+        if err.strip():
+            print(err.strip())
+        print("[FAIL] required gate ingress wrapper materialization failed")
+        return rc or 1
+    return 0
+
+
 def _resolve_bound_session_id_for_identity(
     *,
     catalog: str,
@@ -467,7 +627,6 @@ def _emit_two_phase_trace(
         "phase_transition_error_code": str(phase_transition_error_code or ""),
     }
     print(json.dumps(payload, ensure_ascii=False))
-
 
 def _extract_migration_violation_ids(payload: dict | None) -> list[str]:
     data = payload if isinstance(payload, dict) else {}
@@ -4588,14 +4747,7 @@ def main() -> int:
             "update",
         )
         required_gate_bundle_receipt_update = str(
-            runtime_temp_file(
-                channel="required-gate-bundle",
-                operation="update",
-                identity_id=args.identity_id,
-                run_token=update_bundle_run_token,
-                stem=f"required-gate-bundle-update-{args.identity_id}-{update_bundle_run_token}",
-                ext="json",
-            )
+            (resolved_pack_path / "runtime" / "state" / "required_gate_bundle_entry.update.json").resolve()
         )
         required_gate_bundle_receipt_update_probe = str(
             runtime_temp_file(
@@ -4607,6 +4759,33 @@ def main() -> int:
                 ext="json",
             )
         )
+        rc = _materialize_required_gate_entry_receipt_via_ingress_wrapper(
+            catalog_path=args.catalog,
+            repo_catalog_path=args.repo_catalog,
+            identity_id=args.identity_id,
+            actor_id=actor_id_update,
+            session_id=session_id_update,
+            run_id=update_bundle_run_token,
+            operation="update",
+            resolved_work_layer=(str(args.expected_work_layer or "").strip().lower() or "instance"),
+            resolved_source_layer=(
+                str(args.expected_source_layer or "").strip().lower()
+                or _infer_source_domain_from_catalog(args.catalog)
+            ),
+            output_path=required_gate_bundle_receipt_update,
+            send_time_gate_status=str(pre_mutation_header_payload.get("send_time_gate_status", "")).strip().upper(),
+            outlet_bypass_detected=bool(pre_mutation_header_payload.get("outlet_bypass_detected", False)),
+            final_emit_contract_status=str(
+                pre_mutation_header_payload.get("final_emit_contract_status", "")
+            ).strip().upper(),
+            final_emit_policy_mode=str(pre_mutation_header_payload.get("final_emit_policy_mode", "")).strip(),
+            final_emit_schema_status=str(
+                pre_mutation_header_payload.get("final_emit_schema_status", "")
+            ).strip().upper(),
+        )
+        if rc != 0:
+            print("[FAIL] update required gate ingress wrapper materialization failed; update blocked")
+            return rc
         intake_update_gates: list[list[str]] = [
             [
                 "python3",
@@ -4946,43 +5125,6 @@ def main() -> int:
                 "--lock-state",
                 "LOCK_MATCH",
                 "--surface-label",
-                "creator_update",
-                "--operation",
-                "update",
-                "--out",
-                required_gate_bundle_receipt_update,
-                "--json-only",
-            ],
-            [
-                "python3",
-                "scripts/required_gate_bundle_runner.py",
-                "--catalog",
-                args.catalog,
-                "--identity-id",
-                args.identity_id,
-                "--run-id",
-                update_bundle_run_token,
-                "--send-time-gate-status",
-                str(pre_mutation_header_payload.get("send_time_gate_status", "")).strip().upper() or "FAIL_REQUIRED",
-                "--outlet-bypass-detected",
-                "true" if bool(pre_mutation_header_payload.get("outlet_bypass_detected", False)) else "false",
-                "--final-emit-contract-status",
-                str(pre_mutation_header_payload.get("final_emit_contract_status", "")).strip().upper() or "FAIL_REQUIRED",
-                "--final-emit-policy-mode",
-                str(pre_mutation_header_payload.get("final_emit_policy_mode", "")).strip() or "tool_choice_required",
-                "--final-emit-schema-status",
-                str(pre_mutation_header_payload.get("final_emit_schema_status", "")).strip().upper() or "FAIL_REQUIRED",
-                "--actor-id",
-                actor_id_update,
-                "--session-id",
-                session_id_update,
-                "--resolved-work-layer",
-                (str(args.expected_work_layer or "").strip().lower() or "instance"),
-                "--resolved-source-layer",
-                (str(args.expected_source_layer or "").strip().lower() or _infer_source_domain_from_catalog(args.catalog)),
-                "--lock-state",
-                "LOCK_MATCH",
-                "--surface-label",
                 "creator_update_scan_probe",
                 "--operation",
                 "scan",
@@ -5052,6 +5194,43 @@ def main() -> int:
             if rc_gate != 0:
                 print(f"[FAIL] batch6/7 gate failed during update: {gate_cmd[1]}")
                 return rc_gate
+        rc_execution_session_binding = _materialize_update_execution_session_binding(
+            catalog_path=args.catalog,
+            identity_id=args.identity_id,
+            actor_id=actor_id_update,
+            execution_run_id=update_run_id,
+            governance_override_receipt=required_gate_bundle_receipt_update,
+            resolved_pack_path=str(resolved_pack_path),
+        )
+        if rc_execution_session_binding != 0:
+            return rc_execution_session_binding
+        rc_execution_entry_receipt = _materialize_required_gate_entry_receipt_via_ingress_wrapper(
+            catalog_path=args.catalog,
+            repo_catalog_path=args.repo_catalog,
+            identity_id=args.identity_id,
+            actor_id=actor_id_update,
+            session_id=f"run:{update_run_id}",
+            run_id=update_run_id,
+            operation="update",
+            resolved_work_layer=(str(args.expected_work_layer or "").strip().lower() or "instance"),
+            resolved_source_layer=(
+                str(args.expected_source_layer or "").strip().lower()
+                or _infer_source_domain_from_catalog(args.catalog)
+            ),
+            output_path=required_gate_bundle_receipt_update,
+            send_time_gate_status=str(pre_mutation_header_payload.get("send_time_gate_status", "")).strip().upper(),
+            outlet_bypass_detected=bool(pre_mutation_header_payload.get("outlet_bypass_detected", False)),
+            final_emit_contract_status=str(
+                pre_mutation_header_payload.get("final_emit_contract_status", "")
+            ).strip().upper(),
+            final_emit_policy_mode=str(pre_mutation_header_payload.get("final_emit_policy_mode", "")).strip(),
+            final_emit_schema_status=str(
+                pre_mutation_header_payload.get("final_emit_schema_status", "")
+            ).strip().upper(),
+        )
+        if rc_execution_entry_receipt != 0:
+            print("[FAIL] execution-bound required gate ingress wrapper materialization failed")
+            return rc_execution_entry_receipt
         cmd = [
             "python3",
             "scripts/execute_identity_upgrade.py",
