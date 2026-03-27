@@ -24,6 +24,7 @@ from capability_activation_policy_common import (
 )
 from execution_report_selection_common import (
     collect_reports as collect_execution_reports,
+    derive_runtime_run_token,
     derive_run_id_from_session_id,
     select_report as select_execution_report,
 )
@@ -980,13 +981,6 @@ def _read_flag_value(cmd: list[str], flag: str) -> str:
             return _clean_str(cmd[idx + 1])
     return ""
 
-
-def _stable_runtime_slug(value: str, *, default: str = "runtime") -> str:
-    raw = "".join(ch if ch.isalnum() or ch in "._-" else "-" for ch in _clean_str(value))
-    raw = raw.strip("-._")
-    return raw or default
-
-
 def _derive_bundle_run_token(
     *,
     required_gates_run_id: str,
@@ -994,18 +988,13 @@ def _derive_bundle_run_token(
     session_id: str,
     identity_id: str,
 ) -> str:
-    explicit = _clean_str(required_gates_run_id)
-    if explicit:
-        return explicit
-    report = _clean_str(execution_report)
-    if report:
-        report_stem = _stable_runtime_slug(Path(report).expanduser().stem, default="")
-        if report_stem:
-            return report_stem
-    session_slug = _stable_runtime_slug(session_id, default="")
-    if session_slug:
-        return session_slug
-    return f"readiness-{_stable_runtime_slug(identity_id, default='identity')}"
+    return derive_runtime_run_token(
+        explicit_run_id=_clean_str(required_gates_run_id),
+        execution_report=_clean_str(execution_report),
+        session_id=_clean_str(session_id),
+        identity_id=_clean_str(identity_id),
+        default_prefix="readiness",
+    )
 
 
 def _apply_bundle_passthrough_from_report(

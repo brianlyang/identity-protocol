@@ -14,6 +14,7 @@ from tool_vendor_governance_common import (
     resolve_identity_upgrade_report_selection,
     resolve_pack_and_task,
 )
+from execution_report_selection_common import report_run_id as resolve_execution_report_run_id
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -70,16 +71,6 @@ def _resolve_report_selection(identity_id: str, pack_path: Path, explicit: str) 
     payload = build_identity_upgrade_report_selection_projection(resolution, field_prefix="report")
     payload["_selected_report_path"] = resolution.selected_report
     return payload
-
-
-def _report_run_id(report_path: Path, report_doc: dict[str, Any]) -> str:
-    run_id = str(report_doc.get("run_id", "")).strip()
-    if run_id:
-        return run_id
-    if report_path.name.startswith("identity-upgrade-exec-") and report_path.name.endswith(".json") and not report_path.name.endswith("-patch-plan.json"):
-        return report_path.stem
-    return ""
-
 
 def _required_contract(task: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
     contract: dict[str, Any] = {}
@@ -225,7 +216,7 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 1
 
-    report_run_id = _report_run_id(report_path, report)
+    report_run_id = resolve_execution_report_run_id(report_path, report)
     requested_run_id = str(args.run_id or "").strip()
     payload["report_run_id"] = report_run_id
     payload["requiredization_current_round_linked"] = bool(args.report.strip()) or bool(

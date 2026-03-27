@@ -16,6 +16,7 @@ from tool_vendor_governance_common import (
     resolve_identity_upgrade_report_selection,
     resolve_pack_and_task,
 )
+from execution_report_selection_common import report_run_id as resolve_execution_report_run_id
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -81,16 +82,6 @@ def _resolve_report_selection(
     report_path = resolution.selected_report
     report_doc = _load_json_file(report_path) if report_path is not None else None
     return selection_payload, report_doc
-
-
-def _report_run_id(report_path: Path, report_doc: dict[str, Any]) -> str:
-    run_id = str(report_doc.get("run_id", "")).strip()
-    if run_id:
-        return run_id
-    if report_path.name.startswith("identity-upgrade-exec-") and report_path.name.endswith(".json") and not report_path.name.endswith("-patch-plan.json"):
-        return report_path.stem
-    return ""
-
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate outlet regression matrix contract (RQ-004).")
@@ -179,7 +170,7 @@ def main() -> int:
     payload["report_path"] = str(report_path)
     payload["report_selected_path"] = str(report_path)
     payload["evidence_ref"] = str(report_path)
-    report_run_id = _report_run_id(report_path, report_doc)
+    report_run_id = resolve_execution_report_run_id(report_path, report_doc)
     requested_run_id = str(args.run_id or "").strip()
     payload["report_run_id"] = report_run_id
     payload["requiredization_current_round_linked"] = (

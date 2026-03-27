@@ -48,6 +48,12 @@ def derive_run_id_from_session_id(session_id: str) -> str:
     return token
 
 
+def stable_runtime_slug(value: str, *, default: str = "runtime") -> str:
+    raw = "".join(ch if ch.isalnum() or ch in "._-" else "-" for ch in str(value or "").strip())
+    raw = raw.strip("-._")
+    return raw or default
+
+
 def _dedupe_paths(rows: list[Path]) -> list[Path]:
     dedup: dict[str, Path] = {}
     for row in rows:
@@ -162,17 +168,43 @@ def collect_reports(
     return sorted(_dedupe_paths(selected_rows), key=_report_mtime)
 
 
-def report_run_id(path: Path) -> str:
-    try:
-        data = load_json(path)
-    except Exception:
-        data = {}
+def report_run_id(path: Path, report_doc: dict[str, Any] | None = None) -> str:
+    data: dict[str, Any]
+    if isinstance(report_doc, dict):
+        data = report_doc
+    else:
+        try:
+            data = load_json(path)
+        except Exception:
+            data = {}
     run_id = str(data.get("run_id", "")).strip()
     if run_id:
         return run_id
     if is_primary_execution_report(path) and path.name.startswith(IDENTITY_UPGRADE_EXEC_PREFIX):
         return path.stem
     return ""
+
+
+def derive_runtime_run_token(
+    *,
+    explicit_run_id: str,
+    execution_report: str,
+    session_id: str,
+    identity_id: str,
+    default_prefix: str = "runtime",
+) -> str:
+    explicit = str(explicit_run_id or "").strip()
+    if explicit:
+        return explicit
+    report = str(execution_report or "").strip()
+    if report:
+        report_stem = stable_runtime_slug(Path(report).expanduser().stem, default="")
+        if report_stem:
+            return report_stem
+    session_slug = stable_runtime_slug(session_id, default="")
+    if session_slug:
+        return session_slug
+    return f"{default_prefix}-{stable_runtime_slug(identity_id, default='identity')}"
 
 
 def select_report(*, explicit_report: str, run_id: str, reports: list[Path]) -> tuple[Path | None, str]:
