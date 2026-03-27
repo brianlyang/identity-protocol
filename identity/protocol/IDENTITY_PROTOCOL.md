@@ -502,6 +502,10 @@ Root-law bundle rows must also keep machine-readable source completeness
 explicit; direct-stale source total must remain congruent with local
 stale-reason total rather than being left implicit.
 
+Root-law bundle rows must also preserve any pre-fail completeness
+mismatch as machine-readable evidence rather than normalizing totals
+first and only surfacing a derived failure flag.
+
 Root-law bundle rows must also keep registry direct-stale-reason
 partition policy explicit; each local stale reason present before
 violation projection classifies exactly once as alias, document,
@@ -594,6 +598,10 @@ source.
 Root-law bundle rows must also keep machine-readable source completeness
 explicit; observation-source total must remain congruent with
 bundle-violation total rather than being left implicit.
+
+Root-law bundle rows must also preserve any pre-fail completeness
+mismatch as machine-readable evidence rather than normalizing totals
+first and only surfacing a derived failure flag.
 
 Root-law bundle rows must also keep component-validator observation-reason
 partition policy explicit; each bundle-violation row classifies exactly

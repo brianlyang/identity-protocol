@@ -174,7 +174,11 @@ assert payload["direct_stale_reason_origin_counts"] == {
     "required_surface": 0,
 }, payload
 assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+assert payload["expected_registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["expected_registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_source_total_count_before_fail_close"] == payload["expected_registry_direct_stale_reason_source_total_count"], payload
 assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count_before_fail_close"] == payload["expected_registry_direct_stale_reason_partition_total_count"], payload
 assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
 assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
 assert payload["component_validator_observation_reason_partition_status"] == "PASS_REQUIRED", payload
@@ -186,7 +190,11 @@ assert payload["component_validator_observation_reason_counts"] == {
 assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
 assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
 assert payload["component_validator_observation_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["expected_component_validator_observation_reason_source_total_count"] == payload["bundle_violation_count"], payload
+assert payload["expected_component_validator_observation_reason_partition_total_count"] == payload["bundle_violation_count"], payload
+assert payload["component_validator_observation_reason_source_total_count_before_fail_close"] == payload["expected_component_validator_observation_reason_source_total_count"], payload
 assert payload["component_validator_observation_reason_source_total_count"] == payload["bundle_violation_count"], payload
+assert payload["component_validator_observation_reason_partition_total_count_before_fail_close"] == payload["expected_component_validator_observation_reason_partition_total_count"], payload
 assert payload["component_validator_observation_reason_partition_total_count"] == payload["bundle_violation_count"], payload
 assert payload["registry_class_reason_count"] == 0, payload
 assert payload["registry_precedence_reason_count"] == 0, payload
@@ -1148,6 +1156,9 @@ assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED",
 assert payload["registry_direct_stale_reason_source_status"] == "FAIL_REQUIRED", payload
 assert payload["registry_direct_stale_reason_partition_status"] == "FAIL_REQUIRED", payload
 assert payload["registry_direct_stale_reason_unknown_count"] >= 1, payload
+assert payload["expected_registry_direct_stale_reason_source_total_count"] == payload["expected_registry_direct_stale_reason_partition_total_count"], payload
+assert payload["registry_direct_stale_reason_source_total_count_before_fail_close"] < payload["expected_registry_direct_stale_reason_source_total_count"], payload
+assert payload["registry_direct_stale_reason_partition_total_count_before_fail_close"] < payload["expected_registry_direct_stale_reason_partition_total_count"], payload
 assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
 assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
 assert "root_corpus_law_bundle_registry_direct_stale_reason_source_incomplete" in payload["stale_reasons"], payload
@@ -1870,6 +1881,8 @@ assert payload["component_validator_observation_reason_source_status"] == "FAIL_
 assert payload["component_validator_observation_reason_partition_status"] == "FAIL_REQUIRED", payload
 assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
 assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+assert payload["component_validator_observation_reason_source_total_count_before_fail_close"] < payload["expected_component_validator_observation_reason_source_total_count"], payload
+assert payload["component_validator_observation_reason_partition_total_count_before_fail_close"] < payload["expected_component_validator_observation_reason_partition_total_count"], payload
 assert payload["component_validator_observation_reason_source_total_count"] < payload["bundle_violation_count"], payload
 assert payload["component_validator_observation_reason_partition_total_count"] < payload["bundle_violation_count"], payload
 assert "root_corpus_law_bundle_component_validator_observation_reason_source_incomplete" in payload["stale_reasons"], payload

@@ -2542,6 +2542,14 @@ def main() -> int:
         + component_validator_observation_reason_unknown_count
         + component_validator_observation_reason_non_applicable_count
     )
+    expected_component_validator_observation_reason_source_total_count = len(bundle_violations)
+    expected_component_validator_observation_reason_partition_total_count = len(bundle_violations)
+    component_validator_observation_reason_source_total_count_before_fail_close = (
+        component_validator_observation_reason_source_total_count
+    )
+    component_validator_observation_reason_partition_total_count_before_fail_close = (
+        component_validator_observation_reason_partition_total_count
+    )
     component_validator_observation_reason_status = (
         STATUS_FAIL_REQUIRED
         if (
@@ -2561,7 +2569,7 @@ def main() -> int:
             effective_component_validator_observation_reason_source_policy
             == COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY
             and component_validator_observation_reason_source_total_count
-            != len(bundle_violations)
+            != expected_component_validator_observation_reason_source_total_count
         )
         else STATUS_PASS_REQUIRED
     )
@@ -2574,7 +2582,8 @@ def main() -> int:
         if (
             effective_component_validator_observation_reason_partition_policy
             == COMPONENT_VALIDATOR_OBSERVATION_REASON_PARTITION_POLICY
-            and component_validator_observation_reason_partition_total_count != len(bundle_violations)
+            and component_validator_observation_reason_partition_total_count
+            != expected_component_validator_observation_reason_partition_total_count
         )
         else STATUS_PASS_REQUIRED
     )
@@ -2647,12 +2656,24 @@ def main() -> int:
         sum(direct_stale_reason_origin_counts.values()) + registry_direct_stale_reason_unknown_count
     )
     direct_stale_reason_count_before_violation_projection = len(stale_reasons)
+    expected_registry_direct_stale_reason_source_total_count = (
+        direct_stale_reason_count_before_violation_projection
+    )
+    expected_registry_direct_stale_reason_partition_total_count = (
+        direct_stale_reason_count_before_violation_projection
+    )
+    registry_direct_stale_reason_source_total_count_before_fail_close = (
+        registry_direct_stale_reason_source_total_count
+    )
+    registry_direct_stale_reason_partition_total_count_before_fail_close = (
+        registry_direct_stale_reason_partition_total_count
+    )
     registry_direct_stale_reason_source_status = (
         STATUS_FAIL_REQUIRED
         if (
             effective_registry_direct_stale_reason_source_policy == REGISTRY_DIRECT_STALE_REASON_SOURCE_POLICY
             and registry_direct_stale_reason_source_total_count
-            != direct_stale_reason_count_before_violation_projection
+            != expected_registry_direct_stale_reason_source_total_count
         )
         else STATUS_PASS_REQUIRED
     )
@@ -2662,7 +2683,7 @@ def main() -> int:
             effective_registry_direct_stale_reason_partition_policy
             == REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY
             and registry_direct_stale_reason_partition_total_count
-            != direct_stale_reason_count_before_violation_projection
+            != expected_registry_direct_stale_reason_partition_total_count
         )
         else STATUS_PASS_REQUIRED
     )
@@ -2911,7 +2932,19 @@ def main() -> int:
         ),
         "direct_stale_reason_origin_counts": dict(direct_stale_reason_origin_counts),
         "registry_direct_stale_reason_unknown_count": registry_direct_stale_reason_unknown_count,
+        "expected_registry_direct_stale_reason_source_total_count": (
+            expected_registry_direct_stale_reason_source_total_count
+        ),
+        "expected_registry_direct_stale_reason_partition_total_count": (
+            expected_registry_direct_stale_reason_partition_total_count
+        ),
+        "registry_direct_stale_reason_source_total_count_before_fail_close": (
+            registry_direct_stale_reason_source_total_count_before_fail_close
+        ),
         "registry_direct_stale_reason_source_total_count": registry_direct_stale_reason_source_total_count,
+        "registry_direct_stale_reason_partition_total_count_before_fail_close": (
+            registry_direct_stale_reason_partition_total_count_before_fail_close
+        ),
         "registry_direct_stale_reason_partition_total_count": (
             registry_direct_stale_reason_partition_total_count
         ),
@@ -2931,8 +2964,20 @@ def main() -> int:
         "component_validator_observation_reason_non_applicable_count": (
             component_validator_observation_reason_non_applicable_count
         ),
+        "expected_component_validator_observation_reason_source_total_count": (
+            expected_component_validator_observation_reason_source_total_count
+        ),
+        "expected_component_validator_observation_reason_partition_total_count": (
+            expected_component_validator_observation_reason_partition_total_count
+        ),
+        "component_validator_observation_reason_source_total_count_before_fail_close": (
+            component_validator_observation_reason_source_total_count_before_fail_close
+        ),
         "component_validator_observation_reason_source_total_count": (
             component_validator_observation_reason_source_total_count
+        ),
+        "component_validator_observation_reason_partition_total_count_before_fail_close": (
+            component_validator_observation_reason_partition_total_count_before_fail_close
         ),
         "component_validator_observation_reason_partition_total_count": (
             component_validator_observation_reason_partition_total_count

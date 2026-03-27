@@ -784,6 +784,10 @@ Direct-stale source total and local stale-reason total must therefore
 stay congruent under machine-readable source completeness rather than
 being left implicit.
 
+When completeness fails, the machine world must still preserve the
+pre-fail mismatch as machine-readable evidence rather than repairing the
+totals first and only reporting a derived failure flag.
+
 Bundle registry direct-stale-reason partition policy must stay explicit
 too.
 
@@ -901,6 +905,10 @@ source.
 Observation-source total and bundle-violation total must therefore stay
 congruent under machine-readable source completeness rather than being
 left implicit.
+
+When completeness fails, the machine world must still preserve the
+pre-fail mismatch as machine-readable evidence rather than repairing the
+totals first and only reporting a derived failure flag.
 
 Bundle component-validator observation-reason partition policy must stay
 explicit too.

@@ -447,6 +447,10 @@ Runtime must also keep machine-readable direct-stale source completeness
 explicit; runtime direct-stale source total must remain congruent with
 local stale-reason total rather than being left implicit.
 
+Runtime must also preserve any pre-fail completeness mismatch as
+machine-readable evidence rather than normalizing totals first and only
+surfacing a derived failure flag.
+
 Runtime must also keep registry direct-stale-reason partition policy
 explicit; each local stale reason present before violation projection
 classifies exactly once as alias, document, contract-row, required-surface,
@@ -538,6 +542,10 @@ observation source.
 Runtime must also keep machine-readable observation-source completeness
 explicit; runtime observation-source total must remain congruent with
 bundle-violation total rather than being left implicit.
+
+Runtime must also preserve any pre-fail completeness mismatch as
+machine-readable evidence rather than normalizing totals first and only
+surfacing a derived failure flag.
 
 Runtime must also keep component-validator observation-reason partition
 policy explicit; each bundle-violation row classifies exactly once as
