@@ -6,6 +6,10 @@ from typing import Any
 STATUS_UNKNOWN = "UNKNOWN"
 
 FULL_SCAN_REQUIRED_GATE_BUNDLE_THREE_PLANE_PASSTHROUGH_FIELDS: tuple[tuple[str, str], ...] = (
+    ("actor_id", "{prefix}_actor_id"),
+    ("resolved_work_layer", "{prefix}_resolved_work_layer"),
+    ("resolved_source_layer", "{prefix}_resolved_source_layer"),
+    ("lock_state", "{prefix}_lock_state"),
     ("report_selected_path", "{prefix}_report_selected_path"),
     ("report_selection_mode", "{prefix}_report_selection_mode"),
     ("report_selected_authority_class", "{prefix}_report_authority_class"),

@@ -3022,7 +3022,7 @@ Code closure:
    - `.github/workflows/_identity-required-gates.yml`
 6. 投影补齐：
    - `scripts/report_three_plane_status.py` 与 `scripts/full_identity_protocol_scan.py` 增加 parity `operations_checked/duplicate_operations` 与 sidecar `requiredization_scope_reason/activity_correlation_status` 等可观测字段。
-   - follow-up：`scripts/full_identity_protocol_scan.py` 补齐 `required_gate_bundle_runner(_shadow)` 投影字段镜像（`actor_id/resolved_work_layer/resolved_source_layer/lock_state`），消除 full-scan summary 与 bundle raw payload 观测断层。
+   - follow-up（2026-03-27）已按 shared projection primitive 收口：`scripts/full_scan_required_gate_bundle_projection_common.py` 现将 `required_gate_bundle_runner(_shadow)` 的 `actor_id/resolved_work_layer/resolved_source_layer/lock_state` 连同 report-authority tuple 一起镜像到 full-scan `three_plane.required_gate_bundle*` governed outer summary，并由 `scripts/ci/run_full_scan_required_gate_projection_probes_ci.sh` 冻结，消除 full-scan summary 与 bundle raw payload 的观测断层。
 7. drift gate 参数合同补齐：
    - `scripts/validate_required_gate_surface_drift.py` 新增 strict surface bundle 参数合同检查（`run-id/send-time-gate-status/outlet-bypass/actor/work/source/lock`）；
    - 任一 strict surface bundle 调用缺参时统一 `IP-GATE-ENTRY-004` fail-close。

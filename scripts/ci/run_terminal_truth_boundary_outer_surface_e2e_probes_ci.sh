@@ -630,6 +630,22 @@ for row in seeded:
         identity_id,
         three_plane_summary,
     )
+    assert three_plane_summary["required_gate_bundle_actor_id"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_resolved_work_layer"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_resolved_source_layer"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_lock_state"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
     assert three_plane_summary["required_gate_bundle_report_selected_path"] == "", (
         identity_id,
         three_plane_summary,
@@ -668,6 +684,22 @@ for row in seeded:
         three_plane_summary,
     )
     assert three_plane_summary["required_gate_bundle_shadow_scope_reason"] == "projection_profile_out_of_scope", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_shadow_actor_id"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_shadow_resolved_work_layer"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_shadow_resolved_source_layer"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_shadow_lock_state"] == "", (
         identity_id,
         three_plane_summary,
     )
