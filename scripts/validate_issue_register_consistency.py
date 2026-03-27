@@ -38,6 +38,8 @@ ERR_CHECKER_MISMATCH = "IP-IREG-006"
 ERR_WORKBOOK_REGISTRY = "IP-IREG-007"
 ERR_WORKBOOK_BOUNDARY = "IP-IREG-008"
 ERR_STREAM_DOC_REGISTRY = "IP-IREG-009"
+WORKBOOK_DOCS_CHECKER_SYNC_SCRIPT = "scripts/sync_workbook_docs_checker_counts.py"
+WORKBOOK_DOCS_CHECKER_SYNC_SOURCE_MODE = "current_worktree_baseline"
 
 ISSUE_ROW_RE = re.compile(r"^\|\s*(ISSUE-\d+)\b.*\|\s*([A-Z_]+)\s*\|")
 ISSUE_HEADER_RE = re.compile(r"^###\s+(ISSUE-\d+)\b")
@@ -635,6 +637,14 @@ def main() -> int:
         "historical_open_reference_count": 0,
         "open_rows_present": False,
         "docs_checker_counts": {},
+        "docs_checker_sync_lane": {
+            "script": WORKBOOK_DOCS_CHECKER_SYNC_SCRIPT,
+            "source_mode": WORKBOOK_DOCS_CHECKER_SYNC_SOURCE_MODE,
+            "write_command": (
+                f"python3 {WORKBOOK_DOCS_CHECKER_SYNC_SCRIPT} "
+                f"--source-mode {WORKBOOK_DOCS_CHECKER_SYNC_SOURCE_MODE} --write --json-only"
+            ),
+        },
         "doc_recorded_counts": {},
         "freshness_contract": {},
         "violation_partitions": {},
