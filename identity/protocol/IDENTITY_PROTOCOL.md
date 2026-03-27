@@ -158,6 +158,14 @@ Projected violation-reason total must remain congruent with
 structure/completeness/anchor violation-row total rather than being left
 implicit.
 
+## Root derivation completeness boundary
+
+1. Derivation law must remain machine-readable as a separate derivation-class-profile row family.
+2. Aggregate row-family counts are insufficient on their own; expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness.
+3. Expected row identity set and emitted row identity set for the derivation family must also remain explicit; corpus-class identity drift may not be collapsed into summary-only counts.
+4. Protocol legality must not finalize derivation legality while missing or unexpected corpus-class identities remain known only inside validator logic.
+5. Fail-close derivation output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+
 ## Root authority completeness boundary
 
 1. Authority law must remain machine-readable as separate authority-class-profile and entry-authority-projection row families.

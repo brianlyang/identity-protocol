@@ -114,6 +114,14 @@ Projected violation-reason total must remain congruent with
 structure/completeness/anchor violation-row total rather than being left
 implicit.
 
+## Runtime derivation consumption boundary
+
+1. Runtime consumes derivation law as a separate derivation-class-profile row family rather than as undifferentiated derivation prose.
+2. Runtime must keep expected row-family total and emitted row-family total congruent under machine-readable coverage completeness rather than relying on aggregate green shorthand.
+3. Runtime must also keep expected row identity set and emitted row identity set for the derivation family explicit rather than collapsing corpus-class identity drift into summary-only counts.
+4. Runtime must not finalize derivation legality while missing or unexpected corpus-class identities remain known only inside validator machinery.
+5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
+
 ## Runtime authority consumption boundary
 
 1. Runtime consumes authority law as separate authority-class-profile and entry-authority-projection row families rather than as undifferentiated authority prose.

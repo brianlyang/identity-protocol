@@ -33,7 +33,118 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_derivation_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_row_family_count"] == 1, payload
+assert payload["derivation_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert payload["permitted_current_turn_root_corpus_class"] == "machine_registry_directory", payload
+PY
+
+MISSING_CLASS_REPO="${TMP_ROOT}/missing-class-repo"
+mirror_repo "${MISSING_CLASS_REPO}"
+python3 - <<'PY' "${MISSING_CLASS_REPO}/identity/protocol/mappings/root-corpus-derivation.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["derivation_class_profiles"] = [
+    row for row in doc["derivation_class_profiles"]
+    if row.get("corpus_class") != "demoted_support_directory"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+MISSING_CLASS_JSON="${TMP_ROOT}/missing-class.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_derivation.py" \
+  --repo-root "${MISSING_CLASS_REPO}" \
+  --json-only >"${MISSING_CLASS_JSON}"; then
+  echo "[FAIL] root corpus derivation validator unexpectedly passed after removing derivation class profile row"
+  exit 1
+fi
+
+python3 - <<'PY' "${MISSING_CLASS_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_derivation_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCD-002", payload
+assert payload["derivation_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["derivation_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["field"] == "derivation_class_profiles" and row["reason"] == "missing_registry_classes" and "demoted_support_directory" in row.get("corpus_classes", [])
+    for row in payload["structure_violations"]
+), payload
+class_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "derivation_class_profiles"
+)
+assert class_row["expected_count"] == 8, payload
+assert class_row["actual_count"] == 7, payload
+assert class_row["missing_ids"] == ["demoted_support_directory"], payload
+assert class_row["unexpected_ids"] == [], payload
+assert class_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert class_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+IDENTITY_REPO="${TMP_ROOT}/identity-drift-repo"
+mirror_repo "${IDENTITY_REPO}"
+python3 - <<'PY' "${IDENTITY_REPO}/identity/protocol/mappings/root-corpus-derivation.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["derivation_class_profiles"]:
+    if row.get("corpus_class") == "demoted_support_directory":
+        row["corpus_class"] = "demoted_support_directory_alias"
+        break
+else:
+    raise SystemExit("expected demoted_support_directory row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+IDENTITY_JSON="${TMP_ROOT}/identity-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_derivation.py" \
+  --repo-root "${IDENTITY_REPO}" \
+  --json-only >"${IDENTITY_JSON}"; then
+  echo "[FAIL] root corpus derivation validator unexpectedly passed derivation class identity drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${IDENTITY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_derivation_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCD-002", payload
+assert payload["derivation_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["derivation_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["field"] == "derivation_class_profiles" and row["reason"] == "missing_registry_classes" and "demoted_support_directory" in row.get("corpus_classes", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "derivation_class_profiles" and row["reason"] == "extra_unregistered_classes" and "demoted_support_directory_alias" in row.get("corpus_classes", [])
+    for row in payload["structure_violations"]
+), payload
+class_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "derivation_class_profiles"
+)
+assert class_row["expected_count"] == 8, payload
+assert class_row["actual_count"] == 8, payload
+assert class_row["missing_ids"] == ["demoted_support_directory"], payload
+assert class_row["unexpected_ids"] == ["demoted_support_directory_alias"], payload
+assert class_row["coverage_status"] == "PASS_REQUIRED", payload
+assert class_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 SUPPORT_REPO="${TMP_ROOT}/support-parent-drift-repo"

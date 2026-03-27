@@ -391,6 +391,18 @@ binding must be explicitly declared in registry completeness law.
 
 ---
 
+## Root derivation completeness discipline
+
+Derivation law is not a soft prose bundle.
+
+1. required derivation-class-profile rows must remain explicit as a separate machine-readable row family;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for that family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize derivation legality while missing or unexpected corpus-class identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
 ## Root authority completeness discipline
 
 Authority law is not a soft prose bundle.
