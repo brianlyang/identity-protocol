@@ -139,6 +139,13 @@ Status transitions are controlled by governance/review, not by script commit alo
 8. Role-typed repo-relative descriptor surfaces disclosed by an admitted family must also stay cross-role coherent; validator/probe/common may not silently bind to different root surface stems.
 9. Cross-role coherent descriptor surfaces disclosed by an admitted family must also stay family-congruent; borrowing another family's descriptor stem requires explicit registry-completeness declaration rather than silent impersonation.
 
+Machine-registry completeness must also keep discovered family coverage
+explicit; discovered root-mapping-family total must remain congruent with
+family-status-row total rather than being left implicit.
+
+Registry-completeness truth may not finalize on partial family-status-row
+coverage while the discovered family set remains known.
+
 ## Root-law bundle boundary
 
 The protocol constitution depends on a governed root-law bundle across:

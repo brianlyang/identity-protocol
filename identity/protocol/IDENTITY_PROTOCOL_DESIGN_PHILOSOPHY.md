@@ -946,6 +946,14 @@ A lawful root mapping family must therefore disclose the validator, probe,
 shared-common, emitted status-key, and emitted error-code surfaces that govern
 it.
 
+Discovered root-mapping-family total and family-status-row total must
+therefore stay congruent under machine-readable coverage completeness
+rather than being left implicit.
+
+The machine world must not finalize machine-registry completeness truth
+on partial family-status-row coverage when discovered family set remains
+known.
+
 Those repo-relative path surfaces must remain repo-root relative and
 repo-contained.
 

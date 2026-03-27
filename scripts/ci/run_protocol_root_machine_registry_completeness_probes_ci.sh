@@ -40,6 +40,9 @@ assert payload["required_repo_rel_path_patterns"] == {
     "probe_script": r"^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\.sh$",
     "common_script": r"^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\.py$",
 }, payload
+assert payload["family_count"] == payload["family_status_row_count"], payload
+assert payload["expected_family_status_row_count"] == payload["family_status_row_count"], payload
+assert payload["family_status_row_coverage_status"] == "PASS_REQUIRED", payload
 assert all(row["family_status"] == "PASS_REQUIRED" for row in payload["family_status_rows"]), payload
 assert all(
     all(cell["status"] == "PASS_REQUIRED" for cell in row.get("descriptor_field_rows", []))
@@ -540,6 +543,52 @@ assert any(
     row["reason"] == "current_alias_error" and row.get("family_id") == "root-corpus-law-bundle"
     for row in payload["completeness_violations"]
 ), payload
+PY
+
+FAMILY_ROW_COVERAGE_REPO="${TMP_ROOT}/family-row-coverage-repo"
+mirror_repo "${FAMILY_ROW_COVERAGE_REPO}"
+python3 - <<'PY' "${FAMILY_ROW_COVERAGE_REPO}/scripts/validate_protocol_root_machine_registry_completeness.py"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+needle = "                family_status_rows.append(\n"
+replacement = (
+    "                if family_id == \"root-corpus-authority\":\n"
+    "                    continue\n"
+    "                family_status_rows.append(\n"
+)
+if needle not in text:
+    raise SystemExit("expected family-status row append block not found")
+path.write_text(text.replace(needle, replacement, 1), encoding="utf-8")
+PY
+
+FAMILY_ROW_COVERAGE_JSON="${TMP_ROOT}/family-row-coverage.json"
+if python3 "${FAMILY_ROW_COVERAGE_REPO}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${FAMILY_ROW_COVERAGE_REPO}" \
+  --json-only >"${FAMILY_ROW_COVERAGE_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed family-row coverage gap"
+  exit 1
+fi
+
+python3 - <<'PY' "${FAMILY_ROW_COVERAGE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert payload["family_status_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["family_status_row_count"] + 1 == payload["expected_family_status_row_count"], payload
+assert any(
+    row["reason"] == "family_status_row_coverage_incomplete"
+    and row.get("expected_count") == payload["expected_family_status_row_count"]
+    and row.get("actual_count") == payload["family_status_row_count"]
+    for row in payload["completeness_violations"]
+), payload
+assert "root-corpus-authority" not in payload["family_ids"], payload
 PY
 
 echo "[PASS] protocol root machine-registry completeness probes passed"

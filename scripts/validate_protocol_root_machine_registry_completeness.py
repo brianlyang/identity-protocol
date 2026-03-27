@@ -62,6 +62,8 @@ def main() -> int:
     completeness_violations: list[dict[str, Any]] = []
     anchor_violations: list[dict[str, Any]] = []
     family_status_rows: list[dict[str, Any]] = []
+    expected_family_status_row_count = 0
+    family_status_row_coverage_incomplete = False
     error_code = ""
 
     for prefix, doc, alias_error, empty_reason in (
@@ -228,6 +230,7 @@ def main() -> int:
                     structure_violations.append(
                         {"field": "root_mapping_family", "reason": "unclassifiable_root_yaml", "filename": name}
                     )
+            expected_family_status_row_count = len(families)
 
             for child in sorted(child for child in registered_children if child.startswith(prefix) and child.endswith(".yaml")):
                 if child not in actual_root_yaml_set:
@@ -618,6 +621,19 @@ def main() -> int:
                     }
                 )
 
+            family_status_row_coverage_incomplete = (
+                len(family_status_rows) != expected_family_status_row_count
+            )
+            if family_status_row_coverage_incomplete:
+                completeness_violations.append(
+                    {
+                        "field": "root_mapping_family",
+                        "reason": "family_status_row_coverage_incomplete",
+                        "expected_count": expected_family_status_row_count,
+                        "actual_count": len(family_status_rows),
+                    }
+                )
+
         for check in anchor_checks:
             path = (repo_root / check.rel_path).resolve()
             if not path.exists() or not path.is_file():
@@ -652,6 +668,9 @@ def main() -> int:
     )
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
+    family_status_row_coverage_status = (
+        STATUS_FAIL_REQUIRED if family_status_row_coverage_incomplete else STATUS_PASS_REQUIRED
+    )
     payload = {
         STATUS_KEY: status,
         "completeness_family": str(completeness_doc.get("completeness_family") or ""),
@@ -670,6 +689,9 @@ def main() -> int:
         "family_surface_stem_overrides": dict(family_surface_stem_overrides),
         "required_repo_rel_path_patterns": dict(required_repo_rel_path_patterns),
         "family_count": len(family_status_rows),
+        "family_status_row_count": len(family_status_rows),
+        "expected_family_status_row_count": expected_family_status_row_count,
+        "family_status_row_coverage_status": family_status_row_coverage_status,
         "family_ids": [row["family_id"] for row in family_status_rows],
         "family_status_rows": family_status_rows,
         "structure_violations": structure_violations,
