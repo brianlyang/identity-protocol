@@ -257,10 +257,11 @@ pass_closure = pass_doc.get("experience_writeback_closure") or {}
 skip_closure = skip_doc.get("experience_writeback_closure") or {}
 pass_payload = pass_check.get("payload") or {}
 assert str(pass_doc.get("execution_report_ref", "")).strip(), pass_doc
+resolved_execution_report_ref = str(Path(str(pass_doc.get("execution_report_ref", "")).strip()).resolve())
 
 assert pass_closure.get("status") == "PASS", pass_closure
 assert pass_closure.get("validation_status") == "PASS_REQUIRED", pass_closure
-assert pass_closure.get("report_selected_path") == pass_doc.get("execution_report_ref"), (pass_closure, pass_doc)
+assert pass_closure.get("report_selected_path") == resolved_execution_report_ref, (pass_closure, pass_doc)
 assert pass_closure.get("report_selection_mode") == pass_payload.get("report_selection_mode"), (pass_closure, pass_payload)
 assert pass_closure.get("report_selected_authority_class") == pass_payload.get("report_selected_authority_class"), (pass_closure, pass_payload)
 assert pass_closure.get("report_pointer_resolution_mode") == pass_payload.get("report_pointer_resolution_mode"), (pass_closure, pass_payload)
