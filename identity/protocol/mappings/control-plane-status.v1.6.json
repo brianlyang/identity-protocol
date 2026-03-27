@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-27T11:32:38Z",
-  "git_head_short": "24b46d1",
+  "generated_at_utc": "2026-03-27T12:01:53Z",
+  "git_head_short": "0dccdb7",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -429,8 +429,8 @@
         "budget_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_alias_error": "",
-        "current_last_updated_utc": "2026-03-27T11:31:59Z",
-        "live_last_updated_utc": "2026-03-27T11:32:03Z",
+        "current_last_updated_utc": "2026-03-27T12:01:12Z",
+        "live_last_updated_utc": "2026-03-27T12:01:16Z",
         "mismatch_count": 0,
         "mismatches": [],
         "observed": {
@@ -2230,6 +2230,117 @@
         "law_bearing_entry_count": 23,
         "validated_file_count": 20,
         "validated_directory_count": 4,
+        "governance_row_family_count": 3,
+        "governance_row_coverage_status": "PASS_REQUIRED",
+        "governance_row_identity_projection_status": "PASS_REQUIRED",
+        "row_family_projection_rows": [
+          {
+            "family_id": "registered_top_level_entries",
+            "member_id_key": "rel_path",
+            "expected_count": 24,
+            "actual_count": 24,
+            "expected_ids": [
+              "identity/protocol/AGENT_HANDOFF_CONTRACT.md",
+              "identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md",
+              "identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md",
+              "identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md",
+              "identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md",
+              "identity/protocol/ERROR_TERMINALITY_CONTRACT.md",
+              "identity/protocol/IDENTITY_DISCOVERY.md",
+              "identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md",
+              "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
+              "identity/protocol/IDENTITY_PROTOCOL.md",
+              "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
+              "identity/protocol/IDENTITY_RUNTIME.md",
+              "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md",
+              "identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md",
+              "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md",
+              "identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md",
+              "identity/protocol/README.md",
+              "identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md",
+              "identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md",
+              "identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md",
+              "identity/protocol/broadcast",
+              "identity/protocol/fixtures",
+              "identity/protocol/mappings",
+              "identity/protocol/plugins"
+            ],
+            "actual_ids": [
+              "identity/protocol/AGENT_HANDOFF_CONTRACT.md",
+              "identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md",
+              "identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md",
+              "identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md",
+              "identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md",
+              "identity/protocol/ERROR_TERMINALITY_CONTRACT.md",
+              "identity/protocol/IDENTITY_DISCOVERY.md",
+              "identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md",
+              "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md",
+              "identity/protocol/IDENTITY_PROTOCOL.md",
+              "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
+              "identity/protocol/IDENTITY_RUNTIME.md",
+              "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md",
+              "identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md",
+              "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md",
+              "identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md",
+              "identity/protocol/README.md",
+              "identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md",
+              "identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md",
+              "identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md",
+              "identity/protocol/broadcast",
+              "identity/protocol/fixtures",
+              "identity/protocol/mappings",
+              "identity/protocol/plugins"
+            ],
+            "missing_ids": [],
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
+          },
+          {
+            "family_id": "corpus_class_profiles",
+            "member_id_key": "corpus_class",
+            "expected_count": 5,
+            "actual_count": 5,
+            "expected_ids": [
+              "bottom_theory",
+              "constitution",
+              "root_contract",
+              "root_index",
+              "runtime_constitution"
+            ],
+            "actual_ids": [
+              "bottom_theory",
+              "constitution",
+              "root_contract",
+              "root_index",
+              "runtime_constitution"
+            ],
+            "missing_ids": [],
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
+          },
+          {
+            "family_id": "forbidden_content_classes",
+            "member_id_key": "class_id",
+            "expected_count": 3,
+            "actual_count": 3,
+            "expected_ids": [
+              "business_domain_example",
+              "closure_ledger_narration",
+              "workbook_issue_projection"
+            ],
+            "actual_ids": [
+              "business_domain_example",
+              "closure_ledger_narration",
+              "workbook_issue_projection"
+            ],
+            "missing_ids": [],
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
+          }
+        ],
         "corpus_class_profile_ids": [
           "bottom_theory",
           "constitution",
@@ -2243,6 +2354,7 @@
           "closure_ledger_narration",
           "workbook_issue_projection"
         ],
+        "structure_violations": [],
         "file_violations": [],
         "directory_violations": [],
         "forbidden_content_hits": [],
@@ -3066,6 +3178,41 @@
         "root_dir": "identity/protocol",
         "derivation_anchor_check_count": 4,
         "derivation_class_profile_count": 8,
+        "derivation_row_family_count": 1,
+        "derivation_row_coverage_status": "PASS_REQUIRED",
+        "derivation_row_identity_projection_status": "PASS_REQUIRED",
+        "row_family_projection_rows": [
+          {
+            "family_id": "derivation_class_profiles",
+            "member_id_key": "corpus_class",
+            "expected_count": 8,
+            "actual_count": 8,
+            "expected_ids": [
+              "bottom_theory",
+              "constitution",
+              "demoted_support_directory",
+              "governed_subdomain_extension",
+              "machine_registry_directory",
+              "root_contract",
+              "root_index",
+              "runtime_constitution"
+            ],
+            "actual_ids": [
+              "bottom_theory",
+              "constitution",
+              "demoted_support_directory",
+              "governed_subdomain_extension",
+              "machine_registry_directory",
+              "root_contract",
+              "root_index",
+              "runtime_constitution"
+            ],
+            "missing_ids": [],
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
+          }
+        ],
         "permitted_current_turn_root_corpus_class": "machine_registry_directory",
         "current_turn_forbidden_root_classes": [
           "bottom_theory",
@@ -3448,6 +3595,77 @@
         "gateway_order_count": 4,
         "gateway_effect_target_count": 4,
         "gateway_profile_count": 4,
+        "gateway_admissibility_row_family_count": 3,
+        "gateway_admissibility_row_coverage_status": "PASS_REQUIRED",
+        "gateway_admissibility_row_identity_projection_status": "PASS_REQUIRED",
+        "row_family_projection_rows": [
+          {
+            "family_id": "gateway_order",
+            "member_id_key": "gateway_class",
+            "expected_count": 4,
+            "actual_count": 4,
+            "expected_ids": [
+              "constitution",
+              "machine_registry_directory",
+              "root_contract",
+              "runtime_constitution"
+            ],
+            "actual_ids": [
+              "constitution",
+              "machine_registry_directory",
+              "root_contract",
+              "runtime_constitution"
+            ],
+            "missing_ids": [],
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
+          },
+          {
+            "family_id": "gateway_effect_targets",
+            "member_id_key": "gateway_class",
+            "expected_count": 4,
+            "actual_count": 4,
+            "expected_ids": [
+              "constitution",
+              "machine_registry_directory",
+              "root_contract",
+              "runtime_constitution"
+            ],
+            "actual_ids": [
+              "constitution",
+              "machine_registry_directory",
+              "root_contract",
+              "runtime_constitution"
+            ],
+            "missing_ids": [],
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
+          },
+          {
+            "family_id": "gateway_profiles",
+            "member_id_key": "gateway_class",
+            "expected_count": 4,
+            "actual_count": 4,
+            "expected_ids": [
+              "constitution",
+              "machine_registry_directory",
+              "root_contract",
+              "runtime_constitution"
+            ],
+            "actual_ids": [
+              "constitution",
+              "machine_registry_directory",
+              "root_contract",
+              "runtime_constitution"
+            ],
+            "missing_ids": [],
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
+          }
+        ],
         "current_turn_terminal_gateway": "machine_registry_directory",
         "gateway_order": [
           {
