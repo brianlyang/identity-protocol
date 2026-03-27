@@ -752,6 +752,38 @@ assert payload["error_code"] == "IP-WLL-001", payload
 assert "required_contract_disabled_or_missing" in payload.get("contract_issues", []), payload
 PY
 
+python3 - <<'PY' "${PACK_ROOT}" "${IDENTITY_ID}"
+import json
+import sys
+from pathlib import Path
+
+pack_root = Path(sys.argv[1]).resolve()
+identity_id = sys.argv[2]
+active_run_report = pack_root / "runtime" / "reports" / f"{identity_id}-active-run.json"
+doc = json.loads(active_run_report.read_text(encoding="utf-8"))
+run_id = str(doc.get("run_id") or "").strip()
+assert run_id, doc
+
+shadow_root = Path("/tmp") / "weak-live-projection-shadow" / identity_id / run_id
+projection_names = [
+    f"capability-fit-matrix-{identity_id}-{run_id}.json",
+    f"capability-fit-roundtable-{identity_id}-{run_id}.json",
+    f"{identity_id}-feedback-current-run-{run_id}.json",
+    f"{identity_id}-capability-arbitration-live-{run_id}.json",
+    f"{identity_id}-experience-feedback-live-{run_id}.json",
+    f"{identity_id}-knowledge-acquisition-live-{run_id}.json",
+    f"{identity_id}-trigger-regression-live-{run_id}.json",
+]
+shadow_refs = [str((shadow_root / name).resolve()) for name in projection_names]
+artifacts = [str(item).strip() for item in (doc.get("artifacts") or []) if str(item).strip()]
+for ref in shadow_refs:
+    if ref not in artifacts:
+        artifacts.append(ref)
+doc["artifacts"] = artifacts
+doc["weak_live_current_run_projection_refs"] = shadow_refs
+active_run_report.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
 BACKFILL_JSON="${TMP_ROOT}/weak-live-linkage-backfill.json"
 python3 "${ROOT}/scripts/repair_contract_backfill.py" \
   --identity-id "${IDENTITY_ID}" \
@@ -766,6 +798,40 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["weak_live_linkage_contract_auto_wire_status"] == "PASS_REQUIRED", payload
+PY
+
+python3 - <<'PY' "${PACK_ROOT}" "${IDENTITY_ID}"
+import json
+import sys
+from pathlib import Path
+
+pack_root = Path(sys.argv[1]).resolve()
+identity_id = sys.argv[2]
+active_run_report = pack_root / "runtime" / "reports" / f"{identity_id}-active-run.json"
+doc = json.loads(active_run_report.read_text(encoding="utf-8"))
+run_id = str(doc.get("run_id") or "").strip()
+assert run_id, doc
+
+expected_refs = [
+    str((pack_root / "runtime" / "protocol-feedback" / "optimization" / f"capability-fit-matrix-{identity_id}-{run_id}.json").resolve()),
+    str((pack_root / "runtime" / "protocol-feedback" / "roundtables" / f"capability-fit-roundtable-{identity_id}-{run_id}.json").resolve()),
+    str((pack_root / "runtime" / "logs" / "feedback" / f"{identity_id}-feedback-current-run-{run_id}.json").resolve()),
+    str((pack_root / "runtime" / "reports" / f"{identity_id}-capability-arbitration-live-{run_id}.json").resolve()),
+    str((pack_root / "runtime" / "reports" / f"{identity_id}-experience-feedback-live-{run_id}.json").resolve()),
+    str((pack_root / "runtime" / "reports" / f"{identity_id}-knowledge-acquisition-live-{run_id}.json").resolve()),
+    str((pack_root / "runtime" / "reports" / f"{identity_id}-trigger-regression-live-{run_id}.json").resolve()),
+]
+
+refs = [str(item).strip() for item in (doc.get("weak_live_current_run_projection_refs") or []) if str(item).strip()]
+assert refs == expected_refs, {"expected_refs": expected_refs, "actual_refs": refs}
+
+artifacts = [str(item).strip() for item in (doc.get("artifacts") or []) if str(item).strip()]
+projection_basenames = {Path(item).name for item in expected_refs}
+for ref in expected_refs:
+    assert ref in artifacts, {"missing_artifact": ref, "artifacts": artifacts}
+for artifact in artifacts:
+    if Path(artifact).name in projection_basenames:
+        assert artifact in expected_refs, {"non_canonical_projection_artifact": artifact, "expected_refs": expected_refs}
 PY
 
 python3 - <<'PY' "${TASK_PATH}"

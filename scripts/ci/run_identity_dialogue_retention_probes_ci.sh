@@ -188,6 +188,10 @@ assert historical_sync_payload["status"] == "PASS_REQUIRED", historical_sync_pay
 assert historical_sync_payload["thread_id"] == thread_id_b, historical_sync_payload
 assert historical_sync_payload["sync_binding_mode"] == "historical_thread_refresh", historical_sync_payload
 assert historical_sync_payload["state_binding_update_applied"] is False, historical_sync_payload
+assert historical_sync_payload["receipt_path"] != sync_payload["receipt_path"], {
+    "active_receipt_path": sync_payload["receipt_path"],
+    "historical_receipt_path": historical_sync_payload["receipt_path"],
+}
 assert historical_sync_payload["preserved_current_thread_id"] == thread_id_a, historical_sync_payload
 assert historical_receipt_doc["state_binding_update_applied"] is False, historical_receipt_doc
 assert historical_validator_payload["protocol_dialogue_retention_status"] == "PASS_REQUIRED", historical_validator_payload
@@ -195,5 +199,10 @@ assert dialogue_state["current_thread_id"] == thread_id_a, dialogue_state
 assert post_validator_payload["protocol_dialogue_retention_status"] == "PASS_REQUIRED", post_validator_payload
 assert post_validator_payload["thread_id"] == thread_id_a, post_validator_payload
 assert post_validator_payload["receipt_discovery_mode"] == "state_bound_receipt", post_validator_payload
+assert dialogue_state["latest_sync_receipt_ref"] != historical_sync_payload["receipt_ref"], dialogue_state
+assert (pack_root / dialogue_state["latest_sync_receipt_ref"]).resolve() == Path(post_validator_payload["receipt_path"]).resolve(), {
+    "state_latest_sync_receipt_ref": dialogue_state["latest_sync_receipt_ref"],
+    "post_validator_receipt_path": post_validator_payload["receipt_path"],
+}
 print("[PASS] identity dialogue retention probes passed")
 PY

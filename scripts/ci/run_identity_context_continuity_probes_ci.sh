@@ -666,6 +666,7 @@ REENTRY_RECEIPT_LOCATION_JSON="${TMP_ROOT}/reentry-receipt-location.json"
 RECEIPT_PASS_JSON="${TMP_ROOT}/receipt-family-pass.json"
 RECEIPT_MULTIHOP_JSON="${TMP_ROOT}/receipt-family-multihop.json"
 REQUIRED_COVERAGE_PASS_JSON="${TMP_ROOT}/required-coverage-pass.json"
+REQUIRED_COVERAGE_PREFIXED_JSON="${TMP_ROOT}/required-coverage-prefixed.json"
 RECEIPT_CONTRACT_DRIFT_JSON="${TMP_ROOT}/receipt-family-contract-drift.json"
 RECEIPT_CONTRACT_REPAIR_JSON="${TMP_ROOT}/receipt-family-contract-repair.json"
 RECEIPT_CONTRACT_REPAIRED_JSON="${TMP_ROOT}/receipt-family-contract-repaired.json"
@@ -876,6 +877,13 @@ run_cmd python3 "${ROOT}/scripts/validate_required_contract_coverage.py" \
   --operation inspection \
   --json-only > "${REQUIRED_COVERAGE_PASS_JSON}"
 
+run_cmd python3 "${ROOT}/scripts/validate_required_contract_coverage.py" \
+  --identity-id "${IDENTITY_ID}" \
+  --catalog "${COVERAGE_PASS_CATALOG}" \
+  --repo-catalog "${ROOT##*/}/identity/catalog/identities.yaml" \
+  --operation inspection \
+  --json-only > "${REQUIRED_COVERAGE_PREFIXED_JSON}"
+
 if python3 "${ROOT}/scripts/validate_identity_context_continuity_receipts.py" \
   --identity-id "${IDENTITY_ID}" \
   --current-task "${RECEIPT_CONTRACT_DRIFT_TASK}" \
@@ -945,6 +953,7 @@ python3 - "${TMP_ROOT}" \
   "${RECEIPT_PASS_JSON}" \
   "${RECEIPT_MULTIHOP_JSON}" \
   "${REQUIRED_COVERAGE_PASS_JSON}" \
+  "${REQUIRED_COVERAGE_PREFIXED_JSON}" \
   "${RECEIPT_CONTRACT_DRIFT_JSON}" \
   "${RECEIPT_CONTRACT_REPAIR_JSON}" \
   "${RECEIPT_CONTRACT_REPAIRED_JSON}" \
@@ -983,6 +992,7 @@ from pathlib import Path
     receipt_pass_path,
     receipt_multihop_path,
     required_coverage_pass_path,
+    required_coverage_prefixed_path,
     receipt_contract_drift_path,
     receipt_contract_repair_path,
     receipt_contract_repaired_path,
@@ -1020,6 +1030,7 @@ reentry_receipt_location = load(reentry_receipt_location_path)
 receipt_pass = load(receipt_pass_path)
 receipt_multihop = load(receipt_multihop_path)
 required_coverage_pass = load(required_coverage_pass_path)
+required_coverage_prefixed = load(required_coverage_prefixed_path)
 receipt_contract_drift = load(receipt_contract_drift_path)
 receipt_contract_repair = load(receipt_contract_repair_path)
 receipt_contract_repaired = load(receipt_contract_repaired_path)
@@ -1113,6 +1124,17 @@ assert receipt_multihop["receipt_join_status"] == "PASS_REQUIRED", receipt_multi
 assert required_coverage_pass["failed_required_contract_count"] == 0, required_coverage_pass
 assert required_coverage_pass["required_contract_total"] == 4, required_coverage_pass
 assert required_coverage_pass["required_contract_passed"] == 4, required_coverage_pass
+assert required_coverage_prefixed["failed_required_contract_count"] == 0, required_coverage_prefixed
+assert required_coverage_prefixed["required_contract_total"] == 4, required_coverage_prefixed
+assert required_coverage_prefixed["required_contract_passed"] == 4, required_coverage_prefixed
+prefixed_cross_cwd_row = next(
+    row for row in required_coverage_prefixed["contracts"] if row["name"] == "cross_cwd_absolute_input"
+)
+prefixed_cross_cwd_payload = json.loads(prefixed_cross_cwd_row["validator_tail"])
+assert prefixed_cross_cwd_payload["repo_catalog_is_absolute"] is True, prefixed_cross_cwd_payload
+assert prefixed_cross_cwd_payload["repo_catalog_exists"] is True, prefixed_cross_cwd_payload
+assert prefixed_cross_cwd_payload["repo_catalog_input"] == prefixed_cross_cwd_payload["repo_cwd_resolved_repo_catalog"], prefixed_cross_cwd_payload
+assert prefixed_cross_cwd_payload["repo_cwd_resolved_repo_catalog"] == prefixed_cross_cwd_payload["tmp_cwd_resolved_repo_catalog"], prefixed_cross_cwd_payload
 assert sorted(required_coverage_pass["instance_adopted_protocol_targets_included"]) == [
     "identity_context_continuity",
     "identity_context_continuity_receipts",
