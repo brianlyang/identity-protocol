@@ -86,6 +86,8 @@ So this file freezes success-path state admissibility law, while runtime adjudic
 
 The identity protocol must distinguish state classes rather than flattening every visible status into one vague notion of “being green enough to proceed.”
 
+Success-path state admissibility law must also remain machine-readable as separate state-class, differentiation, proof, state-class-proof-alignment, limit, and collapse row families rather than one narrative progress claim.
+
 Only states admitted by law may enter the current-turn success path.
 
 Optional non-entry, governed recovery, blocked, redirected, replay, diagnostics, archive, migration, fixture, or quarantine states may preserve context or motivate convergence, but they do not silently become active success-path state.

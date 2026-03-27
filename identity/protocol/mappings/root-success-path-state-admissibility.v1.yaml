@@ -27,6 +27,28 @@ contract_required_markers:
   - '## State-admission proof limits'
   - '## Non-compliant state collapses'
   - 'Only states admitted by law may enter the current-turn success path.'
+  - 'Success-path state admissibility law must also remain machine-readable as separate state-class, differentiation, proof, state-class-proof-alignment, limit, and collapse row families rather than one narrative progress claim.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Success-path state admissibility row-family completeness must stay explicit'
+      - "Required state-class, differentiation, proof, state-class-proof-alignment,\nlimit, and collapse families must remain explicit as separate machine-readable\nrow families."
+      - 'The machine world must not finalize success-path state admissibility while required row identity drift remains known only internally.'
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root success-path state admissibility completeness discipline'
+      - 'Success-path state admissibility law is not a soft prose bundle.'
+      - '1. required state-class, differentiation, proof, state-class-proof-alignment, limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root success-path state admissibility completeness boundary'
+      - '1. Success-path state admissibility law must remain machine-readable as separate state-class, differentiation, proof, state-class-proof-alignment, limit, and collapse row families.'
+      - '4. Protocol legality must not finalize success-path state admissibility while missing or unexpected row identities remain known only inside validator logic.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime success-path state admissibility consumption boundary'
+      - '1. Runtime consumes success-path state admissibility law as separate state-class, differentiation, proof, state-class-proof-alignment, limit, and collapse row families rather than as undifferentiated state-admission prose.'
+      - '4. Runtime must not finalize success-path state admissibility while missing or unexpected row identities remain known only inside validator machinery.'
 required_state_class_rows:
   - order: 1
     state_class_id: frozen_state_definition
