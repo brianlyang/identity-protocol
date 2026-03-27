@@ -70,6 +70,14 @@ REQUIRED_OUTER_SURFACE_E2E_MARKERS = (
     *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OWNER_LANES,
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER,
 )
+REQUIRED_RELEASE_READINESS_HEALTH_PROJECTION_MARKERS = (
+    "scripts/ci/run_release_readiness_health_projection_probes_ci.sh",
+    "health_report_experience_writeback_closure",
+    "one_look.health_report_experience_writeback_projection_status",
+    "one_look.health_report_contract_status",
+    "one_look.health_report_experience_writeback_validation_status",
+    "one_look.health_report_selected_path_matches_execution_report",
+)
 REQUIRED_RELEASE_READINESS_LIFECYCLE_MARKERS = (
     "summary_lifecycle_status=IN_PROGRESS",
     "summary_checkpoint_kind=checkpoint",
@@ -280,6 +288,11 @@ def main() -> int:
     for marker in REQUIRED_OUTER_SURFACE_E2E_MARKERS:
         if marker not in summary_text:
             stale_reasons.append(f"summary_doc_missing_outer_surface_e2e_marker:{marker}")
+    for marker in REQUIRED_RELEASE_READINESS_HEALTH_PROJECTION_MARKERS:
+        if marker not in summary_text:
+            stale_reasons.append(
+                f"summary_doc_missing_release_readiness_health_projection_marker:{marker}"
+            )
     for marker in REQUIRED_RELEASE_READINESS_LIFECYCLE_MARKERS:
         if marker not in summary_text:
             stale_reasons.append(f"summary_doc_missing_release_readiness_lifecycle_marker:{marker}")

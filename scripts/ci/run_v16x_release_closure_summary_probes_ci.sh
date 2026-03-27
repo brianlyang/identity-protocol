@@ -39,6 +39,7 @@ text = text.replace("`v1.6.21`", "`v1.6.20`")
 text = text.replace("fleet-scope closure matrix", "fleet matrix")
 text = text.replace("repair success != clean terminal truth", "repair success means clean terminal truth")
 text = text.replace("summary_terminal_truth_boundary", "summary boundary aggregate")
+text = text.replace("one_look.health_report_experience_writeback_projection_status", "one_look.health_projection_status")
 text = text.replace("resume_capture_mode=stable_prewrite_snapshot", "resume_capture_mode=resume_snapshot")
 text = text.replace("caller cwd", "caller working directory")
 text = text.replace("scripts/run_workspace_runtime_closure_checks.py", "scripts/run_workspace_runtime_pack_checks.py")
@@ -85,6 +86,8 @@ if "summary_doc_missing_terminal_truth_split_marker:repair success != clean term
     raise SystemExit("negative release-closure summary must detect terminal-truth split marker drift")
 if "summary_doc_missing_outer_surface_e2e_marker:summary_terminal_truth_boundary" not in reasons:
     raise SystemExit("negative release-closure summary must detect outer-surface e2e marker drift")
+if "summary_doc_missing_release_readiness_health_projection_marker:one_look.health_report_experience_writeback_projection_status" not in reasons:
+    raise SystemExit("negative release-closure summary must detect release-readiness health projection drift")
 if "summary_doc_missing_release_readiness_lifecycle_marker:resume_capture_mode=stable_prewrite_snapshot" not in reasons:
     raise SystemExit("negative release-closure summary must detect release-readiness lifecycle drift")
 if "summary_doc_missing_release_readiness_lifecycle_marker:caller cwd" not in reasons:
