@@ -6,17 +6,23 @@ ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/protocol-root-corpus-ci.XXXXXX")"
 trap 'rm -rf "${TMP_ROOT}"' EXIT
 
+# shellcheck source=./probe_repo_mirror_common.sh
+source "${SCRIPT_DIR}/probe_repo_mirror_common.sh"
+
+PROBE_REL_PATHS=(
+  "scripts/root_corpus_governance_common.py"
+  "scripts/root_row_family_projection_common.py"
+  "scripts/validate_protocol_root_corpus_governance.py"
+  "scripts/registry_alias_control_plane_common.py"
+  "scripts/repo_root_resolution_common.py"
+  "scripts/ci/run_protocol_root_corpus_governance_probes_ci.sh"
+)
+
 mirror_repo() {
   local dst="$1"
-  mkdir -p "${dst}/scripts/ci"
-  cp -R "${ROOT}/identity" "${dst}/"
-  cp "${ROOT}/scripts/root_corpus_governance_common.py" "${dst}/scripts/"
-  cp "${ROOT}/scripts/root_row_family_projection_common.py" "${dst}/scripts/"
-  cp "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" "${dst}/scripts/"
-  cp "${ROOT}/scripts/registry_alias_control_plane_common.py" "${dst}/scripts/"
-  cp "${ROOT}/scripts/repo_root_resolution_common.py" "${dst}/scripts/"
-  cp "${ROOT}/scripts/ci/run_protocol_root_corpus_governance_probes_ci.sh" "${dst}/scripts/ci/"
+  probe_mirror_repo_with_relpaths "${ROOT}" "${dst}" "${PROBE_REL_PATHS[@]}"
 }
+
 
 PASS_JSON="${TMP_ROOT}/pass.json"
 python3 "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" \

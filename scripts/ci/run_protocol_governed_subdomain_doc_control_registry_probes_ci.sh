@@ -6,17 +6,23 @@ ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/protocol-governed-subdomain-doc-control-registry-ci.XXXXXX")"
 trap 'rm -rf "${TMP_ROOT}"' EXIT
 
+# shellcheck source=./probe_repo_mirror_common.sh
+source "${SCRIPT_DIR}/probe_repo_mirror_common.sh"
+
+PROBE_REL_PATHS=(
+  "scripts/governed_subdomain_doc_control_common.py"
+  "scripts/validate_protocol_broadcast_doc_control.py"
+  "scripts/validate_protocol_governed_subdomain_doc_control_registry.py"
+  "scripts/registry_alias_control_plane_common.py"
+  "scripts/repo_root_resolution_common.py"
+  "scripts/ci/run_protocol_governed_subdomain_doc_control_registry_probes_ci.sh"
+)
+
 mirror_repo() {
   local dst="$1"
-  mkdir -p "${dst}/scripts/ci"
-  cp -R "${ROOT}/identity" "${dst}/"
-  cp "${ROOT}/scripts/governed_subdomain_doc_control_common.py" "${dst}/scripts/"
-  cp "${ROOT}/scripts/validate_protocol_broadcast_doc_control.py" "${dst}/scripts/"
-  cp "${ROOT}/scripts/validate_protocol_governed_subdomain_doc_control_registry.py" "${dst}/scripts/"
-  cp "${ROOT}/scripts/registry_alias_control_plane_common.py" "${dst}/scripts/"
-  cp "${ROOT}/scripts/repo_root_resolution_common.py" "${dst}/scripts/"
-  cp "${ROOT}/scripts/ci/run_protocol_governed_subdomain_doc_control_registry_probes_ci.sh" "${dst}/scripts/ci/"
+  probe_mirror_repo_with_relpaths "${ROOT}" "${dst}" "${PROBE_REL_PATHS[@]}"
 }
+
 
 PASS_JSON="${TMP_ROOT}/pass.json"
 python3 "${ROOT}/scripts/validate_protocol_governed_subdomain_doc_control_registry.py" \
