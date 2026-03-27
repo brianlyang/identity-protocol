@@ -6,7 +6,10 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
-from root_contract_anchor_checks_common import evaluate_root_doc_anchor_checks
+from root_contract_anchor_checks_common import (
+    evaluate_root_doc_anchor_checks,
+    validate_expected_root_doc_anchor_checks,
+)
 from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 from root_corpus_governance_common import (
     load_root_corpus_registry,
@@ -57,6 +60,40 @@ EXPECTED_ADJUDICATION_SURFACE_PROFILES = {
         "surface_role": "adjudicated_verdict_closure",
         "closure_terminal": True,
     },
+}
+EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
+    "identity/protocol/README.md": (
+        "## Root adjudication-surface discipline",
+        "mappings admit applicable machine law and registry truth for current-turn legality;",
+        "validators test legality against that admitted law rather than inventing new origin law;",
+        "probes negate drift by fail-closing weakened or hidden legality assumptions;",
+        "runtime state binds live current-turn truth only after prior legality phases have remained lawful;",
+        "receipts close the adjudicated verdict and must not back-author earlier legality phases.",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "### Adjudication surfaces are phase-governed, not interchangeable",
+        "mappings admit applicable law into the current-turn legality path;",
+        "validators evaluate legality against admitted law rather than inventing new origin law;",
+        "probes negate hidden drift by fail-closing weakened legality assumptions;",
+        "runtime state binds live present-turn truth only after the earlier legality phases remain lawful;",
+        "receipts close the adjudicated verdict rather than back-authoring the earlier legality phases they summarize.",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL.md": (
+        "## Root adjudication-surface boundary",
+        "mappings admit machine-consumed law and registry truth into current-turn legality;",
+        "validators evaluate legality against that admitted law rather than authoring new source law;",
+        "probes fail-close hidden drift instead of softening legality expectations;",
+        "runtime state binds live truth only after prior legality phases remain satisfied;",
+        "receipts close the adjudicated verdict and do not replace the earlier legality phases they report.",
+    ),
+    "identity/protocol/IDENTITY_RUNTIME.md": (
+        "## Runtime adjudication-surface consumption boundary",
+        "Runtime consumes mappings as admissible law-resolution surfaces rather than as optional lookup hints.",
+        "Runtime consumes validators as legality-evaluation surfaces rather than as replaceable commentary.",
+        "Runtime consumes probes as fail-close drift-negation surfaces rather than soft diagnostics.",
+        "Runtime consumes runtime state as live-truth binding only after prior legality phases remain satisfied.",
+        "Runtime consumes receipts as adjudicated verdict closure rather than as upstream law-authoring surfaces.",
+    ),
 }
 
 
@@ -176,6 +213,16 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if not ordering_anchor_checks:
             stale_reasons.append("root_corpus_ordering_anchor_checks_missing")
+            error_code = ERR_REGISTRY
+        anchor_reason_count_before = len(stale_reasons)
+        stale_reasons.extend(
+            validate_expected_root_doc_anchor_checks(
+                ordering_anchor_checks,
+                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+                stale_reason_prefix="root_corpus_ordering",
+            )
+        )
+        if len(stale_reasons) > anchor_reason_count_before:
             error_code = ERR_REGISTRY
 
     registry_paths = [entry.rel_path for entry in registry_entries]
@@ -511,6 +558,7 @@ def main() -> int:
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
+    root_doc_anchor_status = STATUS_PASS_REQUIRED if not anchor_violations else STATUS_FAIL_REQUIRED
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_COVERAGE),
@@ -523,6 +571,8 @@ def main() -> int:
         "precedence_entry_path": str(precedence_entry_path),
         "precedence_active_path": str(precedence_active_path),
         "root_dir": str(ordering_doc.get("root_dir") or ""),
+        "root_doc_anchor_check_count": len(ordering_anchor_checks),
+        "root_doc_anchor_status": root_doc_anchor_status,
         "root_index_entry": root_index_entry,
         "registry_class_ids": registry_classes,
         "expected_source_classes": expected_source_classes,

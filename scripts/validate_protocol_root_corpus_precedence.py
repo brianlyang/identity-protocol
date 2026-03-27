@@ -6,7 +6,10 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
-from root_contract_anchor_checks_common import evaluate_root_doc_anchor_checks
+from root_contract_anchor_checks_common import (
+    evaluate_root_doc_anchor_checks,
+    validate_expected_root_doc_anchor_checks,
+)
 from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 from root_corpus_authority_common import load_root_corpus_authority
 from root_corpus_gateway_admissibility_common import (
@@ -53,6 +56,31 @@ EXPECTED_PROFILES = {
         "conflict_scope": "law_bearing_status",
         "resolution_mode": "governed_reclassification_required",
     },
+}
+EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
+    "identity/protocol/README.md": (
+        "## Root conflict-precedence discipline",
+        "semantic-meaning conflict resolves by source order, not by convenience, recency, or current checker vividness;",
+        "current-turn legality conflict resolves at machine-consumed enforcement terminals, not at philosophy prose, README text, or frozen contract prose alone;",
+        "gateway-authorship conflict resolves by gateway effect scope, preserved target question class, preserved answer mode, and source order, not by the identity of the incoming motivating surface;",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "### Conflict precedence must preserve both origin and terminality",
+        "semantic-origin conflict resolves by source order;",
+        "current-turn legality conflict resolves by machine-consumed terminal enforcement;",
+        "gateway-authorship conflict resolves by gateway effect scope, preserved target question class, preserved answer mode, and source order;",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL.md": (
+        "## Root conflict-precedence boundary",
+        "Semantic-meaning conflict resolves by source-order law:",
+        "Current-turn legality conflict resolves by machine-consumed enforcement terminals, with machine-registry law as the only terminal root gateway.",
+        "Gateway-authorship conflict resolves by gateway effect scope, preserved target question class, preserved answer mode, and preserved source order, not by incoming motivating surface identity.",
+    ),
+    "identity/protocol/IDENTITY_RUNTIME.md": (
+        "## Runtime conflict-precedence boundary",
+        "Runtime current-turn legality still resolves at machine-consumed enforcement terminals rather than philosophy prose or frozen contract prose alone.",
+        "Runtime-origin motivation does not gain gateway authorship, target question class, or answer-mode override merely by being admitted into a governed gateway.",
+    ),
 }
 
 
@@ -161,6 +189,16 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if not precedence_profiles:
             stale_reasons.append("root_corpus_precedence_profiles_missing")
+            error_code = ERR_REGISTRY
+        anchor_reason_count_before = len(stale_reasons)
+        stale_reasons.extend(
+            validate_expected_root_doc_anchor_checks(
+                anchor_checks,
+                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+                stale_reason_prefix="root_corpus_precedence",
+            )
+        )
+        if len(stale_reasons) > anchor_reason_count_before:
             error_code = ERR_REGISTRY
 
     registry_paths = {entry.rel_path for entry in registry_entries}
@@ -454,6 +492,7 @@ def main() -> int:
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
+    root_doc_anchor_status = STATUS_PASS_REQUIRED if not anchor_violations else STATUS_FAIL_REQUIRED
 
     payload = {
         STATUS_KEY: status,
@@ -473,6 +512,8 @@ def main() -> int:
         "gateway_admissibility_entry_path": str(gateway_entry_path),
         "gateway_admissibility_active_path": str(gateway_active_path),
         "root_dir": str(precedence_doc.get("root_dir") or ""),
+        "root_doc_anchor_check_count": len(anchor_checks),
+        "root_doc_anchor_status": root_doc_anchor_status,
         "precedence_anchor_check_count": len(anchor_checks),
         "gateway_authorship_projection_count": len(gateway_authorship_projections),
         "precedence_profile_count": len(precedence_profiles),

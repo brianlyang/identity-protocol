@@ -6,7 +6,10 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
-from root_contract_anchor_checks_common import evaluate_root_doc_anchor_checks
+from root_contract_anchor_checks_common import (
+    evaluate_root_doc_anchor_checks,
+    validate_expected_root_doc_anchor_checks,
+)
 from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 from root_corpus_authority_common import authority_class_profiles_from_doc, load_root_corpus_authority
 from root_corpus_derivation_common import (
@@ -97,6 +100,28 @@ EXPECTED_CLASS_RULES = {
     },
 }
 EXPECTED_CURRENT_TURN_ALLOWED_CLASS = "machine_registry_directory"
+EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
+    "identity/protocol/README.md": (
+        "## One-way derivation discipline",
+        "a later enforcement verdict may expose incompleteness, but it must not become the semantic parent of the earlier layer it tests.",
+        "Explanatory or evidence surfaces may motivate strengthening, but they must re-enter root law only through governed refreezing at the proper layer.",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "### Derivation direction must stay one-way",
+        "Later enforcement may reveal incompleteness; it never becomes the semantic author of the earlier law it tests.",
+        "A motivating surface is not yet a law-bearing parent surface.",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL.md": (
+        "## Constitutional derivation discipline",
+        "Current stream, checker, or verdict state must not be reverse-projected into constitutional source law.",
+        "Operational evidence may justify constitutional strengthening, but it becomes law only after governed refreezing at constitutional or contract layers.",
+    ),
+    "identity/protocol/IDENTITY_RUNTIME.md": (
+        "## Runtime derivation boundary",
+        "Runtime execution may expose shared-law gaps, but it must not self-author protocol law by reverse projection from a current-turn verdict.",
+        "Runtime evidence can trigger strengthening; it becomes shared law only after governed refreezing through the proper root-law surfaces.",
+    ),
+}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -208,6 +233,16 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if not class_profiles:
             stale_reasons.append("root_corpus_derivation_class_profiles_missing")
+            error_code = ERR_REGISTRY
+        anchor_reason_count_before = len(stale_reasons)
+        stale_reasons.extend(
+            validate_expected_root_doc_anchor_checks(
+                anchor_checks,
+                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+                stale_reason_prefix="root_corpus_derivation",
+            )
+        )
+        if len(stale_reasons) > anchor_reason_count_before:
             error_code = ERR_REGISTRY
 
     registry_paths = [entry.rel_path for entry in registry_entries]
@@ -482,6 +517,7 @@ def main() -> int:
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
+    root_doc_anchor_status = STATUS_PASS_REQUIRED if not anchor_violations else STATUS_FAIL_REQUIRED
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_DERIVATION),
@@ -496,6 +532,8 @@ def main() -> int:
         "question_routing_entry_path": str(question_routing_entry_path),
         "question_routing_active_path": str(question_routing_active_path),
         "root_dir": str(derivation_doc.get("root_dir") or ""),
+        "root_doc_anchor_check_count": len(anchor_checks),
+        "root_doc_anchor_status": root_doc_anchor_status,
         "derivation_anchor_check_count": len(anchor_checks),
         "derivation_class_profile_count": len(class_profiles),
         "derivation_row_family_count": len(row_family_projection_rows),
