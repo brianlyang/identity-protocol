@@ -35,6 +35,23 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     print(text)
 
 
+def _classify_protocol_root_version_mode(text: str) -> tuple[str, str]:
+    versioned = re.search(
+        r"^#\s+Identity Protocol\s+v(\d+\.\d+\.\d+)\s+\(draft\)",
+        text,
+        flags=re.MULTILINE,
+    )
+    if versioned:
+        return "versioned_root_header", str(versioned.group(1)).strip()
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    first_line = lines[0] if lines else ""
+    if first_line == "# Identity Protocol":
+        return "non_versioned_root_constitution", ""
+    raise ValueError(
+        "protocol root header must be either a versioned draft header or the non-versioned '# Identity Protocol' constitution header"
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate release metadata version synchronization.")
     parser.add_argument("--repo-root", default="")
@@ -47,6 +64,7 @@ def main() -> int:
         "error_code": "",
         "repo_root": str(repo_root),
         "tracked_files": [PROTOCOL_PATH, README_PATH, VERSIONING_PATH, REQUIREMENTS_PATH],
+        "tracked_versioned_files": [README_PATH, VERSIONING_PATH, REQUIREMENTS_PATH],
         "versions": {},
         "release_metadata_mode": "active_draft_head_alignment",
         "stale_reasons": [],
@@ -57,11 +75,7 @@ def main() -> int:
         readme = _read(repo_root, README_PATH)
         versioning = _read(repo_root, VERSIONING_PATH)
         requirements = _read(repo_root, REQUIREMENTS_PATH)
-        protocol_v = _extract(
-            r"^#\s+Identity Protocol\s+v(\d+\.\d+\.\d+)\s+\(draft\)",
-            protocol,
-            "protocol version",
-        )
+        protocol_root_version_mode, protocol_v = _classify_protocol_root_version_mode(protocol)
         readme_v = _extract(
             r"Protocol version:\s+`v(\d+\.\d+\.\d+)`\s+\(draft\)",
             readme,
@@ -84,13 +98,15 @@ def main() -> int:
         return 1
 
     versions = {
-        PROTOCOL_PATH: protocol_v,
         README_PATH: readme_v,
         VERSIONING_PATH: versioning_v,
         REQUIREMENTS_PATH: requirements_v,
     }
+    payload["protocol_root_version_mode"] = protocol_root_version_mode
+    payload["protocol_root_header_version"] = protocol_v
+    payload["protocol_root_non_versioned"] = protocol_root_version_mode == "non_versioned_root_constitution"
     payload["versions"] = versions
-    baseline = protocol_v
+    baseline = readme_v
     payload["baseline_version"] = baseline
     mismatch = {path: version for path, version in versions.items() if version != baseline}
     if mismatch:

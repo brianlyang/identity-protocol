@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from release_cloud_evidence_projection_common import build_release_cloud_evidence_adapter_projection
 from resolve_release_plane_cloud_evidence import resolve_release_cloud_evidence
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
@@ -18,6 +19,7 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_EVIDENCE_MISSING = "IP-RCLOUD-001"
 ERR_VALIDATOR_EXEC_FAILED = "IP-RCLOUD-002"
 ERR_CONDITION_FAILED = "IP-RCLOUD-003"
+SKIP_REASON_MISSING_RELEASE_EVIDENCE = "required_contract_not_applicable_missing_release_evidence"
 
 STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate"}
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -139,6 +141,7 @@ def main() -> int:
     ap.add_argument("--run-workflow-file-sha", default="")
     ap.add_argument("--checks-json", default="")
     ap.add_argument("--jobs-json", default="")
+    ap.add_argument("--gh-runs-json", default="")
     ap.add_argument("--force-required", action="store_true")
     ap.add_argument(
         "--operation",
@@ -174,13 +177,17 @@ def main() -> int:
     run_workflow_file_sha = str(args.run_workflow_file_sha or contract.get("run_workflow_file_sha", "")).strip()
     checks_json = str(args.checks_json or contract.get("checks_json", "")).strip()
     jobs_json = str(args.jobs_json or contract.get("jobs_json", "")).strip()
+    gh_runs_json = str(args.gh_runs_json or contract.get("gh_runs_json", "")).strip()
     adapter_payload = resolve_release_cloud_evidence(
         identity_id=args.identity_id,
         operation=args.operation,
+        target_branch=target_branch,
+        release_head_sha=release_head_sha,
         required_gates_run_id=required_gates_run_id,
         run_url=run_url,
         checks_json=checks_json,
         jobs_json=jobs_json,
+        gh_runs_json=gh_runs_json,
     )
     required_gates_run_id = str(adapter_payload.get("required_gates_run_id", "") or required_gates_run_id).strip()
     run_url = str(adapter_payload.get("run_url", "") or run_url).strip()
@@ -218,15 +225,32 @@ def main() -> int:
         "run_workflow_file_sha": run_workflow_file_sha,
         "checks_json": checks_json,
         "jobs_json": jobs_json,
+        "gh_runs_json": gh_runs_json,
         "evidence_ref": "",
         "stale_reasons": [],
-        "release_cloud_evidence_adapter_status": str(adapter_payload.get("release_cloud_evidence_adapter_status", "")).strip(),
-        "release_cloud_evidence_adapter_source_kind": str(adapter_payload.get("adapter_source_kind", "")).strip(),
-        "release_cloud_evidence_adapter_stale_reasons": list(adapter_payload.get("stale_reasons", []) or []),
-        "adapter_http_status": adapter_payload.get("adapter_http_status", ""),
-        "github_rate_limit_remaining": adapter_payload.get("github_rate_limit_remaining", ""),
-        "github_rate_limit_reset_epoch": adapter_payload.get("github_rate_limit_reset_epoch", ""),
     }
+    adapter_projection = build_release_cloud_evidence_adapter_projection(adapter_payload)
+    payload.update(
+        {
+            "release_cloud_evidence_adapter_status": adapter_projection.get("release_cloud_evidence_adapter_status", ""),
+            "release_cloud_evidence_adapter_source_kind": adapter_projection.get("adapter_source_kind", ""),
+            "release_cloud_evidence_adapter_acquisition_mode": adapter_projection.get("adapter_acquisition_mode", ""),
+            "release_cloud_evidence_adapter_fetch_transport": adapter_projection.get("adapter_fetch_transport", ""),
+            "release_cloud_evidence_adapter_local_dev_canonical": adapter_projection.get(
+                "adapter_local_dev_canonical", False
+            ),
+            "release_cloud_evidence_adapter_best_effort_fetch": adapter_projection.get(
+                "adapter_best_effort_fetch", False
+            ),
+            "release_cloud_evidence_adapter_semantic_consumption_mode": adapter_projection.get(
+                "semantic_consumption_mode", ""
+            ),
+            "release_cloud_evidence_adapter_stale_reasons": adapter_projection.get("stale_reasons", []),
+            "adapter_http_status": adapter_projection.get("adapter_http_status", ""),
+            "github_rate_limit_remaining": adapter_projection.get("github_rate_limit_remaining", ""),
+            "github_rate_limit_reset_epoch": adapter_projection.get("github_rate_limit_reset_epoch", ""),
+        }
+    )
 
     if not required:
         payload["stale_reasons"] = ["required_contract_disabled_or_missing"]
@@ -236,7 +260,7 @@ def main() -> int:
     linked = bool(target_branch and release_head_sha and required_gates_run_id and run_url and workflow_file_sha and run_head_sha and run_workflow_file_sha)
     payload["requiredization_current_round_linked"] = linked
     if not has_release_baseline:
-        payload["stale_reasons"] = ["required_contract_not_applicable_missing_release_baseline"]
+        payload["stale_reasons"] = [SKIP_REASON_MISSING_RELEASE_EVIDENCE]
         _emit(payload, json_only=args.json_only)
         return 0
 
