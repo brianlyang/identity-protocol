@@ -23,6 +23,7 @@ from root_artifact_family_admissibility_common import (
     family_admission_class_rows_from_doc,
     load_root_artifact_family_admissibility,
 )
+from root_contract_readme_reference_common import evaluate_root_contract_readme_reference
 from root_corpus_authority_common import authority_anchor_checks_from_doc, entry_authority_projections_from_doc, load_root_corpus_authority
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, reading_order_rows_from_doc
@@ -31,7 +32,7 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 
 STATUS_KEY = "protocol_root_artifact_family_admissibility_status"
 ERR_REGISTRY = "IP-AFA-001"
@@ -477,19 +478,12 @@ def main() -> int:
                 )
             )
 
-        readme_path = repo_root / "identity/protocol/README.md"
-        if not readme_path.exists():
-            integration_violations.append({"field": "README", "reason": "root_readme_missing"})
-        else:
-            readme_text = readme_path.read_text(encoding="utf-8", errors="ignore")
-            if EXPECTED_README_MARKER not in readme_text:
-                integration_violations.append(
-                    {
-                        "field": "README",
-                        "reason": "root_readme_missing_contract_reference",
-                        "marker": EXPECTED_README_MARKER,
-                    }
-                )
+        integration_violations.extend(
+            evaluate_root_contract_readme_reference(
+                repo_root,
+                required_markers=(EXPECTED_README_MARKER,),
+            )
+        )
 
         integration_violations.extend(
             evaluate_root_contract_integration(
@@ -519,18 +513,6 @@ def main() -> int:
     )
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
-    artifact_family_row_coverage_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="coverage_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
-    artifact_family_row_identity_projection_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="identity_projection_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_ADMISSIBILITY),
@@ -546,9 +528,12 @@ def main() -> int:
         "family_admission_proof_count": len(family_admission_proof_rows),
         "family_admission_limit_count": len(family_admission_limit_rows),
         "collapse_count": len(collapse_rows),
-        "artifact_family_row_family_count": len(row_family_projection_rows),
-        "artifact_family_row_coverage_status": artifact_family_row_coverage_status,
-        "artifact_family_row_identity_projection_status": artifact_family_row_identity_projection_status,
+        **project_root_contract_support_projection(
+            prefix="artifact_family",
+            row_family_projection_rows=row_family_projection_rows,
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
         "row_family_projection_rows": row_family_projection_rows,
         "family_admission_class_ids": [row.family_admission_class_id for row in sorted(family_admission_class_rows, key=lambda item: item.order)],
         "differentiation_ids": [row.row_id for row in sorted(differentiation_rows, key=lambda item: item.order)],

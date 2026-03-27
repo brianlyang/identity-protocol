@@ -13,6 +13,7 @@ from root_contract_marker_checks_common import (
     merge_contract_text_marker_checks,
 )
 from root_contract_integration_checks_common import evaluate_root_contract_integration
+from root_contract_readme_reference_common import evaluate_root_contract_readme_reference
 from root_corpus_authority_common import authority_anchor_checks_from_doc, entry_authority_projections_from_doc, load_root_corpus_authority
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, reading_order_rows_from_doc
@@ -21,7 +22,7 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 from root_entry_surface_legitimacy_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -468,19 +469,12 @@ def main() -> int:
                 )
             )
 
-        readme_path = repo_root / "identity/protocol/README.md"
-        if not readme_path.exists():
-            integration_violations.append({"field": "README", "reason": "root_readme_missing"})
-        else:
-            readme_text = readme_path.read_text(encoding="utf-8", errors="ignore")
-            if EXPECTED_README_MARKER not in readme_text:
-                integration_violations.append(
-                    {
-                        "field": "README",
-                        "reason": "root_readme_missing_contract_reference",
-                        "marker": EXPECTED_README_MARKER,
-                    }
-                )
+        integration_violations.extend(
+            evaluate_root_contract_readme_reference(
+                repo_root,
+                required_markers=(EXPECTED_README_MARKER,),
+            )
+        )
 
         integration_violations.extend(
             evaluate_root_contract_integration(
@@ -510,18 +504,6 @@ def main() -> int:
     )
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
-    entry_surface_row_coverage_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="coverage_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
-    entry_surface_row_identity_projection_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="identity_projection_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_ENTRY_LEGITIMACY),
@@ -537,9 +519,12 @@ def main() -> int:
         "entry_admission_proof_count": len(entry_admission_proof_rows),
         "entry_admission_limit_count": len(entry_admission_limit_rows),
         "collapse_count": len(collapse_rows),
-        "entry_surface_row_family_count": len(row_family_projection_rows),
-        "entry_surface_row_coverage_status": entry_surface_row_coverage_status,
-        "entry_surface_row_identity_projection_status": entry_surface_row_identity_projection_status,
+        **project_root_contract_support_projection(
+            prefix="entry_surface",
+            row_family_projection_rows=row_family_projection_rows,
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
         "row_family_projection_rows": row_family_projection_rows,
         "entry_class_ids": [row.entry_class_id for row in sorted(entry_class_rows, key=lambda item: item.order)],
         "differentiation_ids": [row.row_id for row in sorted(differentiation_rows, key=lambda item: item.order)],
