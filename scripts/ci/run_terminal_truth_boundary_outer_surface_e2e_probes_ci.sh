@@ -646,6 +646,10 @@ for row in seeded:
         identity_id,
         three_plane_summary,
     )
+    assert three_plane_summary["required_gate_bundle_run_id_binding"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
     assert three_plane_summary["required_gate_bundle_report_selected_path"] == "", (
         identity_id,
         three_plane_summary,
@@ -700,6 +704,10 @@ for row in seeded:
         three_plane_summary,
     )
     assert three_plane_summary["required_gate_bundle_shadow_lock_state"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_shadow_run_id_binding"] == "", (
         identity_id,
         three_plane_summary,
     )

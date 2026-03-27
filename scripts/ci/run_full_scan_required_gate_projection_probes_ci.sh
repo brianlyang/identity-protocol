@@ -37,6 +37,7 @@ pass_projection = {
     "resolved_work_layer": "instance",
     "resolved_source_layer": "project",
     "lock_state": "LOCK_MATCH",
+    "run_id_binding": "run:full-scan-required-gate-probe",
     "report_selected_path": "/tmp/full-scan-required-gate-probe.json",
     "report_selection_mode": "explicit_report_override",
     "report_selected_authority_class": "explicit_report_override",
@@ -52,6 +53,7 @@ assert pass_summary["required_gate_bundle_actor_id"] == "assistant:codex", pass_
 assert pass_summary["required_gate_bundle_resolved_work_layer"] == "instance", pass_summary
 assert pass_summary["required_gate_bundle_resolved_source_layer"] == "project", pass_summary
 assert pass_summary["required_gate_bundle_lock_state"] == "LOCK_MATCH", pass_summary
+assert pass_summary["required_gate_bundle_run_id_binding"] == "run:full-scan-required-gate-probe", pass_summary
 assert pass_summary["required_gate_bundle_report_selected_path"] == "/tmp/full-scan-required-gate-probe.json", pass_summary
 assert pass_summary["required_gate_bundle_report_selection_mode"] == "explicit_report_override", pass_summary
 assert pass_summary["required_gate_bundle_report_authority_class"] == "explicit_report_override", pass_summary
@@ -67,6 +69,7 @@ assert shadow_summary["required_gate_bundle_shadow_actor_id"] == "assistant:code
 assert shadow_summary["required_gate_bundle_shadow_resolved_work_layer"] == "instance", shadow_summary
 assert shadow_summary["required_gate_bundle_shadow_resolved_source_layer"] == "project", shadow_summary
 assert shadow_summary["required_gate_bundle_shadow_lock_state"] == "LOCK_MATCH", shadow_summary
+assert shadow_summary["required_gate_bundle_shadow_run_id_binding"] == "run:full-scan-required-gate-probe", shadow_summary
 assert shadow_summary["required_gate_bundle_shadow_report_selection_mode"] == "explicit_report_override", shadow_summary
 assert shadow_summary["required_gate_bundle_shadow_report_authority_class"] == "explicit_report_override", shadow_summary
 
@@ -89,6 +92,7 @@ assert excluded_summary["required_gate_bundle_actor_id"] == "", excluded_summary
 assert excluded_summary["required_gate_bundle_resolved_work_layer"] == "", excluded_summary
 assert excluded_summary["required_gate_bundle_resolved_source_layer"] == "", excluded_summary
 assert excluded_summary["required_gate_bundle_lock_state"] == "", excluded_summary
+assert excluded_summary["required_gate_bundle_run_id_binding"] == "", excluded_summary
 assert excluded_summary["required_gate_bundle_report_selected_path"] == "", excluded_summary
 assert excluded_summary["required_gate_bundle_report_selection_mode"] == "", excluded_summary
 assert excluded_summary["required_gate_bundle_report_authority_class"] == "", excluded_summary
