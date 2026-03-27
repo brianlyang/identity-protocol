@@ -12,6 +12,7 @@ from root_contract_marker_checks_common import (
     evaluate_contract_text_marker_checks,
     merge_contract_text_marker_checks,
 )
+from root_contract_integration_checks_common import evaluate_root_contract_integration
 from root_artifact_family_admissibility_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -490,135 +491,21 @@ def main() -> int:
                     }
                 )
 
-        registry_entry_map = {entry.rel_path: entry for entry in registry_entries}
-        registry_entry = registry_entry_map.get(contract_file)
-        if registry_entry is None:
-            integration_violations.append({"field": "root_corpus_registry", "reason": "contract_not_registered"})
-        else:
-            if registry_entry.entry_kind != "file":
-                integration_violations.append(
-                    {"field": "root_corpus_registry", "reason": "registry_entry_kind_mismatch", "actual": registry_entry.entry_kind}
-                )
-            if registry_entry.corpus_class != "root_contract":
-                integration_violations.append(
-                    {
-                        "field": "root_corpus_registry",
-                        "reason": "registry_corpus_class_mismatch",
-                        "expected": "root_contract",
-                        "actual": registry_entry.corpus_class,
-                    }
-                )
-            if not bool(registry_entry.law_bearing):
-                integration_violations.append({"field": "root_corpus_registry", "reason": "registry_entry_must_be_law_bearing"})
-            missing_registry_markers = _entry_marker_missing(registry_entry.required_markers, EXPECTED_REGISTRY_MARKERS)
-            if missing_registry_markers:
-                integration_violations.append(
-                    {
-                        "field": "root_corpus_registry",
-                        "reason": "registry_required_markers_missing",
-                        "missing_markers": missing_registry_markers,
-                    }
-                )
-
-        mappings_entry = registry_entry_map.get("identity/protocol/mappings")
-        if mappings_entry is None:
-            integration_violations.append({"field": "root_corpus_registry", "reason": "mappings_directory_not_registered"})
-        else:
-            required_children = set(mappings_entry.required_children)
-            for child in ("root-artifact-family-admissibility.current.yaml", "root-artifact-family-admissibility.v1.yaml"):
-                if child not in required_children:
-                    integration_violations.append(
-                        {
-                            "field": "root_corpus_registry",
-                            "reason": "mappings_required_child_missing",
-                            "child": child,
-                        }
-                    )
-
-        ordering_map = {row.rel_path: row for row in reading_rows}
-        ordering_row = ordering_map.get(contract_file)
-        if ordering_row is None:
-            integration_violations.append({"field": "root_corpus_ordering", "reason": "reading_order_entry_missing"})
-        elif ordering_row.entry_role != "root_contract_entry":
-            integration_violations.append(
-                {
-                    "field": "root_corpus_ordering",
-                    "reason": "reading_order_entry_role_mismatch",
-                    "expected": "root_contract_entry",
-                    "actual": ordering_row.entry_role,
-                }
+        integration_violations.extend(
+            evaluate_root_contract_integration(
+                contract_file=contract_file,
+                registry_entries=registry_entries,
+                reading_rows=reading_rows,
+                authority_anchors=authority_anchors,
+                authority_projections=authority_projections,
+                routing_anchors=routing_anchors,
+                routing_projections=routing_projections,
+                expected_registry_markers=EXPECTED_REGISTRY_MARKERS,
+                mappings_required_children=('root-artifact-family-admissibility.current.yaml', 'root-artifact-family-admissibility.v1.yaml'),
+                expected_authority_markers=EXPECTED_AUTHORITY_MARKERS,
+                expected_routing_markers=EXPECTED_ROUTING_MARKERS,
             )
-
-        authority_anchor_map = {row.rel_path: row.required_markers for row in authority_anchors}
-        missing_authority_markers = _entry_marker_missing(authority_anchor_map.get(contract_file, ()), EXPECTED_AUTHORITY_MARKERS)
-        if missing_authority_markers:
-            integration_violations.append(
-                {
-                    "field": "root_corpus_authority",
-                    "reason": "authority_anchor_missing_or_incomplete",
-                    "missing_markers": missing_authority_markers,
-                }
-            )
-
-        authority_projection_map = {row.rel_path: row for row in authority_projections}
-        authority_projection = authority_projection_map.get(contract_file)
-        if authority_projection is None:
-            integration_violations.append({"field": "root_corpus_authority", "reason": "authority_projection_missing"})
-        else:
-            if authority_projection.corpus_class != "root_contract":
-                integration_violations.append(
-                    {
-                        "field": "root_corpus_authority",
-                        "reason": "authority_projection_corpus_class_mismatch",
-                        "expected": "root_contract",
-                        "actual": authority_projection.corpus_class,
-                    }
-                )
-            if authority_projection.authority_role != "root_domain_contract_law":
-                integration_violations.append(
-                    {
-                        "field": "root_corpus_authority",
-                        "reason": "authority_role_mismatch",
-                        "expected": "root_domain_contract_law",
-                        "actual": authority_projection.authority_role,
-                    }
-                )
-            if authority_projection.authority_mode != "frozen_law_only":
-                integration_violations.append(
-                    {
-                        "field": "root_corpus_authority",
-                        "reason": "authority_mode_mismatch",
-                        "expected": "frozen_law_only",
-                        "actual": authority_projection.authority_mode,
-                    }
-                )
-
-        routing_anchor_map = {row.rel_path: row.required_markers for row in routing_anchors}
-        missing_routing_markers = _entry_marker_missing(routing_anchor_map.get(contract_file, ()), EXPECTED_ROUTING_MARKERS)
-        if missing_routing_markers:
-            integration_violations.append(
-                {
-                    "field": "root_corpus_question_routing",
-                    "reason": "routing_anchor_missing_or_incomplete",
-                    "missing_markers": missing_routing_markers,
-                }
-            )
-
-        routing_projection_map = {row.rel_path: row for row in routing_projections}
-        routing_projection = routing_projection_map.get(contract_file)
-        if routing_projection is None:
-            integration_violations.append({"field": "root_corpus_question_routing", "reason": "routing_projection_missing"})
-        else:
-            actual_question_classes = tuple(routing_projection.question_classes)
-            if actual_question_classes != ("frozen_domain_contract_law",):
-                integration_violations.append(
-                    {
-                        "field": "root_corpus_question_routing",
-                        "reason": "routing_projection_question_classes_mismatch",
-                        "expected": ["frozen_domain_contract_law"],
-                        "actual": list(actual_question_classes),
-                    }
-                )
+        )
 
     if not error_code and structure_violations:
         error_code = ERR_STRUCTURE
