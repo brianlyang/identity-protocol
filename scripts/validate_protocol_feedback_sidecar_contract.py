@@ -16,6 +16,10 @@ from protocol_feedback_lane_common import (
     discover_default_correlation_keys,
     should_seed_default_correlation_keys,
 )
+from report_selection_authority_projection_common import (
+    build_report_selection_authority_projection,
+    collect_report_selection_authority_projection_stale_reasons,
+)
 from response_stamp_common import resolve_layer_intent
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
@@ -28,6 +32,8 @@ ERR_CONTRACT_MISSING_FIELDS = "IP-SID-001"
 ERR_P0_BLOCKING_REQUIRED = "IP-SID-002"
 ERR_VALIDATOR_RUNTIME = "IP-SID-003"
 ERR_ACTIVITY_UNSCOPED_WARNING = "IP-SID-004"
+ERR_TRACK_A_AUTHORITY_PROJECTION = "IP-SID-005"
+ERR_TRACK_A_AUTHORITY_MISMATCH = "IP-SID-006"
 
 STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate", "mutation"}
 REQ_CONTRACT_KEYS = (
@@ -482,6 +488,38 @@ def main() -> int:
         default_status=STATUS_FAIL_REQUIRED,
     )
 
+    writeback_projection = build_report_selection_authority_projection(
+        wb_payload,
+        selected_path_key="report_selected_path",
+        selection_mode_key="report_selection_mode",
+        selected_authority_class_key="report_selected_authority_class",
+        pointer_resolution_mode_key="report_pointer_resolution_mode",
+        pointer_path_key="report_pointer_path",
+        projection_source="writeback_continuity",
+    )
+    post_projection = build_report_selection_authority_projection(
+        post_payload,
+        selected_path_key="report_selected_path",
+        selection_mode_key="report_selection_mode",
+        selected_authority_class_key="report_selected_authority_class",
+        pointer_resolution_mode_key="report_pointer_resolution_mode",
+        pointer_path_key="report_pointer_path",
+        projection_source="post_execution_mandatory",
+    )
+    post_experience_projection = build_report_selection_authority_projection(
+        post_payload,
+        selected_path_key="experience_writeback_report_selected_path",
+        selection_mode_key="experience_writeback_report_selection_mode",
+        selected_authority_class_key="experience_writeback_report_selected_authority_class",
+        pointer_resolution_mode_key="experience_writeback_report_pointer_resolution_mode",
+        pointer_path_key="experience_writeback_report_pointer_path",
+        projection_source="post_execution_experience_writeback",
+    )
+    post_preferred = str(post_result.get("status", "")).strip().upper() == STATUS_PASS_REQUIRED or any(
+        post_projection.get(key) for key in ("selected_path", "selection_mode", "selected_authority_class", "pointer_resolution_mode")
+    )
+    aggregate_projection = post_projection if post_preferred else writeback_projection
+
     payload["track_a"] = {
         "writeback_continuity_status": wb_result["status"],
         "writeback_error_code": wb_result["error_code"],
@@ -489,9 +527,43 @@ def main() -> int:
         "post_execution_error_code": post_result["error_code"],
         "writeback_required_contract": wb_payload.get("required_contract"),
         "post_execution_required_contract": post_payload.get("required_contract"),
-        "report_selected_path": post_payload.get("report_selected_path") or wb_payload.get("report_selected_path"),
-        "writeback_report_selected_path": wb_payload.get("report_selected_path"),
-        "post_execution_report_selected_path": post_payload.get("report_selected_path"),
+        "report_selected_path": aggregate_projection.get("selected_path", ""),
+        "report_selection_mode": aggregate_projection.get("selection_mode", ""),
+        "report_selected_authority_class": aggregate_projection.get("selected_authority_class", ""),
+        "report_pointer_resolution_mode": aggregate_projection.get("pointer_resolution_mode", ""),
+        "report_pointer_path": aggregate_projection.get("pointer_path", ""),
+        "report_projection_source": aggregate_projection.get("projection_source", ""),
+        "writeback_report_selected_path": writeback_projection.get("selected_path", ""),
+        "writeback_report_selection_mode": writeback_projection.get("selection_mode", ""),
+        "writeback_report_selected_authority_class": writeback_projection.get("selected_authority_class", ""),
+        "writeback_report_pointer_resolution_mode": writeback_projection.get("pointer_resolution_mode", ""),
+        "writeback_report_pointer_path": writeback_projection.get("pointer_path", ""),
+        "post_execution_report_selected_path": post_projection.get("selected_path", ""),
+        "post_execution_report_selection_mode": post_projection.get("selection_mode", ""),
+        "post_execution_report_selected_authority_class": post_projection.get("selected_authority_class", ""),
+        "post_execution_report_pointer_resolution_mode": post_projection.get("pointer_resolution_mode", ""),
+        "post_execution_report_pointer_path": post_projection.get("pointer_path", ""),
+        "post_execution_experience_writeback_validation_status": post_payload.get(
+            "experience_writeback_validation_status", ""
+        ),
+        "post_execution_experience_writeback_error_code": post_payload.get(
+            "experience_writeback_error_code", ""
+        ),
+        "post_execution_experience_writeback_report_selected_path": post_experience_projection.get(
+            "selected_path", ""
+        ),
+        "post_execution_experience_writeback_report_selection_mode": post_experience_projection.get(
+            "selection_mode", ""
+        ),
+        "post_execution_experience_writeback_report_selected_authority_class": post_experience_projection.get(
+            "selected_authority_class", ""
+        ),
+        "post_execution_experience_writeback_report_pointer_resolution_mode": post_experience_projection.get(
+            "pointer_resolution_mode", ""
+        ),
+        "post_execution_experience_writeback_report_pointer_path": post_experience_projection.get(
+            "pointer_path", ""
+        ),
         "writeback_mode": post_payload.get("writeback_mode") or wb_payload.get("writeback_mode"),
         "writeback_status": post_payload.get("writeback_status") or wb_payload.get("writeback_status"),
         "next_action": post_payload.get("next_action") or wb_payload.get("next_action"),
@@ -516,6 +588,105 @@ def main() -> int:
         "namespace_auto_required_signal": ns_payload.get("auto_required_signal"),
         "reply_channel_auto_required_signal": reply_channel_payload.get("auto_required_signal"),
     }
+
+    track_a_stale_reasons: list[str] = []
+    if str(wb_result.get("status", "")).strip().upper() == STATUS_PASS_REQUIRED:
+        track_a_stale_reasons.extend(
+            collect_report_selection_authority_projection_stale_reasons(
+                wb_payload,
+                selected_path_key="report_selected_path",
+                selection_mode_key="report_selection_mode",
+                selected_authority_class_key="report_selected_authority_class",
+                pointer_resolution_mode_key="report_pointer_resolution_mode",
+                require_selected_path=True,
+                selected_path_reason="track_a_writeback_report_selected_path_missing",
+                authority_reason="track_a_writeback_authority_projection_missing",
+            )
+        )
+    if str(post_result.get("status", "")).strip().upper() == STATUS_PASS_REQUIRED:
+        track_a_stale_reasons.extend(
+            collect_report_selection_authority_projection_stale_reasons(
+                post_payload,
+                selected_path_key="report_selected_path",
+                selection_mode_key="report_selection_mode",
+                selected_authority_class_key="report_selected_authority_class",
+                pointer_resolution_mode_key="report_pointer_resolution_mode",
+                require_selected_path=True,
+                selected_path_reason="track_a_post_execution_report_selected_path_missing",
+                authority_reason="track_a_post_execution_authority_projection_missing",
+            )
+        )
+    if (
+        str(wb_result.get("status", "")).strip().upper() == STATUS_PASS_REQUIRED
+        and str(post_result.get("status", "")).strip().upper() == STATUS_PASS_REQUIRED
+        and writeback_projection.get("selected_path")
+        and post_projection.get("selected_path")
+        and writeback_projection.get("selected_path") != post_projection.get("selected_path")
+    ):
+        track_a_stale_reasons.append("track_a_writeback_post_execution_selected_path_mismatch")
+
+    aggregate_projection_payload = payload["track_a"]
+    aggregate_selected_path_reason = (
+        "track_a_report_selected_path_missing"
+        if post_preferred
+        else "track_a_aggregate_report_selected_path_missing"
+    )
+    aggregate_authority_reason = (
+        "track_a_report_authority_projection_missing"
+        if post_preferred
+        else "track_a_aggregate_authority_projection_missing"
+    )
+    track_a_stale_reasons.extend(
+        collect_report_selection_authority_projection_stale_reasons(
+            aggregate_projection_payload,
+            selected_path_key="report_selected_path",
+            selection_mode_key="report_selection_mode",
+            selected_authority_class_key="report_selected_authority_class",
+            pointer_resolution_mode_key="report_pointer_resolution_mode",
+            require_selected_path=True,
+            selected_path_reason=aggregate_selected_path_reason,
+            authority_reason=aggregate_authority_reason,
+        )
+    )
+
+    post_experience_status = str(
+        payload["track_a"].get("post_execution_experience_writeback_validation_status", "")
+    ).strip().upper()
+    if post_experience_status == STATUS_PASS_REQUIRED:
+        track_a_stale_reasons.extend(
+            collect_report_selection_authority_projection_stale_reasons(
+                post_payload,
+                selected_path_key="experience_writeback_report_selected_path",
+                selection_mode_key="experience_writeback_report_selection_mode",
+                selected_authority_class_key="experience_writeback_report_selected_authority_class",
+                pointer_resolution_mode_key="experience_writeback_report_pointer_resolution_mode",
+                require_selected_path=True,
+                selected_path_reason="track_a_post_execution_experience_writeback_report_selected_path_missing",
+                authority_reason="track_a_post_execution_experience_writeback_authority_projection_missing",
+            )
+        )
+        if (
+            post_projection.get("selected_path")
+            and post_experience_projection.get("selected_path")
+            and post_projection.get("selected_path") != post_experience_projection.get("selected_path")
+        ):
+            track_a_stale_reasons.append(
+                "track_a_post_execution_experience_writeback_selected_path_mismatch"
+            )
+
+    payload["track_a"]["track_a_stale_reasons"] = track_a_stale_reasons
+    if track_a_stale_reasons:
+        payload["sidecar_contract_status"] = STATUS_FAIL_REQUIRED
+        payload["sidecar_error_code"] = (
+            ERR_TRACK_A_AUTHORITY_MISMATCH
+            if any("mismatch" in reason for reason in track_a_stale_reasons)
+            else ERR_TRACK_A_AUTHORITY_PROJECTION
+        )
+        payload["escalation_required"] = True
+        payload["escalation_decision"] = "TRACK_A_AUTHORITY_FAIL_CLOSE"
+        payload["stale_reasons"] = track_a_stale_reasons
+        _emit(payload, json_only=args.json_only)
+        return 1
 
     p0_violations: list[dict[str, Any]] = []
 
