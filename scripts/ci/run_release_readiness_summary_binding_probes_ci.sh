@@ -103,6 +103,11 @@ assert summary_targeted_subset_excluded['required_gate_bundle']['projection_stat
 assert summary_targeted_subset_excluded['required_gate_bundle']['projection_stale_reasons'] == [], summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['required_gate_bundle']['scope_class'] == 'bounded_targeted_subset_exclusion', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['required_gate_bundle']['scope_reason'] == 'required_gate_bundle_out_of_scope_for_targeted_subset', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['required_gate_bundle']['report_selected_path'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['required_gate_bundle']['report_selection_mode'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['required_gate_bundle']['report_selected_authority_class'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['required_gate_bundle']['report_pointer_resolution_mode'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['required_gate_bundle']['report_pointer_path'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['selected_check_scope_projection']['status'] == 'PASS_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['selected_check_scope_projection']['scope_class'] == 'bounded_targeted_subset_exclusion', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['selected_check_scope_projection']['scope_reason'] == 'selected_check_out_of_scope_for_targeted_subset', summary_targeted_subset_excluded

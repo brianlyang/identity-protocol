@@ -4,6 +4,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from required_gate_report_authority_common import REQUIRED_GATE_REPORT_AUTHORITY_FIELDS
+
 
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 
@@ -46,7 +48,7 @@ def build_scope_excluded_required_gate_bundle_summary(
         "resolved_work_layer": "",
         "resolved_source_layer": "",
         "lock_state": "",
-        "report_selected_path": "",
+        **{field: "" for field in REQUIRED_GATE_REPORT_AUTHORITY_FIELDS},
         "total_targets": 0,
         "required_target_count": 0,
         "failed_required_target_count": 0,

@@ -1944,7 +1944,7 @@ Round-10 UCG pre-code readiness reinforcement (`HEAD=30423c5+`, 2026-03-07):
 3. UCG confirmation (`1门 + 1判 + 1账`):
    - `1门`: strict operations enter through one actor-bound/lane-bound preflight and emit one entry receipt tuple.
    - `1判`: user-visible outbound path consumes one canonical send-time verdict; bypass is fail-close.
-   - `1账`: strict surfaces converge on one machine tuple contract (`run_id_binding`, `report_selected_path`, `report_selection_mode`, `report_selected_authority_class`, `report_pointer_resolution_mode`, `report_pointer_path`, `required_contract`, `failed_required_contract_count`, `send_time_gate_status`, `outlet_bypass_detected`).
+   - `1账`: strict surfaces converge on one machine tuple contract (`run_id_binding`, `report_selected_path`, `report_selection_mode`, `report_selected_authority_class`, `report_pointer_resolution_mode`, `report_pointer_path`, `required_contract`, `failed_required_contract_count`, `send_time_gate_status`, `outlet_bypass_detected`), and scope-excluded release-readiness summaries must preserve the same tuple shape with explicit blank companions rather than regressing to path-only receipts.
 4. pre-code implementation prerequisites frozen:
    - one bundle-runner lineage for strict-surface gate-set execution;
    - one registry source (`contract-binding.v1.6.yaml`) with CI drift detection;
