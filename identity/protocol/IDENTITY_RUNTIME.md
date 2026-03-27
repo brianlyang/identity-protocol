@@ -102,6 +102,14 @@ Runtime must not emit final machine-registry completeness truth with
 partial family-status-row coverage when the discovered family set remains
 known.
 
+Runtime must also keep machine-registry violation projection explicit;
+structure, completeness, and anchor violations must be projected into
+stale reasons before final status.
+
+Projected violation-reason total must remain congruent with
+structure/completeness/anchor violation-row total rather than being left
+implicit.
+
 ## Runtime consumption of the root-law bundle
 
 Runtime does not consume root law as isolated slogans.

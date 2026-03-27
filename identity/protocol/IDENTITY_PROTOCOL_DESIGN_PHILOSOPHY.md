@@ -954,6 +954,14 @@ The machine world must not finalize machine-registry completeness truth
 on partial family-status-row coverage when discovered family set remains
 known.
 
+Structure, completeness, and anchor violations discovered by
+machine-registry completeness must also be projected into stale reasons
+before final status.
+
+Projected violation-reason total and violation-row total must therefore
+stay congruent under machine-readable projection completeness rather
+than being left implicit.
+
 Those repo-relative path surfaces must remain repo-root relative and
 repo-contained.
 

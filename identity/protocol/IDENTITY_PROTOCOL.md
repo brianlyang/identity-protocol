@@ -146,6 +146,14 @@ family-status-row total rather than being left implicit.
 Registry-completeness truth may not finalize on partial family-status-row
 coverage while the discovered family set remains known.
 
+Machine-registry completeness must also keep violation projection
+explicit; structure, completeness, and anchor violations must be
+projected into stale reasons before final status.
+
+Projected violation-reason total must remain congruent with
+structure/completeness/anchor violation-row total rather than being left
+implicit.
+
 ## Root-law bundle boundary
 
 The protocol constitution depends on a governed root-law bundle across:

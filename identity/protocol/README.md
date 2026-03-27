@@ -358,6 +358,14 @@ Runtime or validator code may not finalize machine-registry completeness
 truth on partial family-status-row coverage when the discovered family
 set remains known.
 
+Structure, completeness, and anchor violations discovered by
+machine-registry completeness must also be projected into stale reasons
+before final status.
+
+Projected violation-reason total and violation-row total must also
+remain congruent under machine-readable projection completeness rather
+than being left implicit.
+
 Runtime or validator code may consume only admitted root mapping families, not
 the most convenient file discovered on disk.
 

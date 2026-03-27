@@ -43,6 +43,12 @@ assert payload["required_repo_rel_path_patterns"] == {
 assert payload["family_count"] == payload["family_status_row_count"], payload
 assert payload["expected_family_status_row_count"] == payload["family_status_row_count"], payload
 assert payload["family_status_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["structure_violation_count"] == 0, payload
+assert payload["completeness_violation_count"] == 0, payload
+assert payload["anchor_violation_count"] == 0, payload
+assert payload["projected_violation_reason_count"] == 0, payload
+assert payload["expected_projected_violation_reason_count"] == 0, payload
+assert payload["violation_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["family_status"] == "PASS_REQUIRED" for row in payload["family_status_rows"]), payload
 assert all(
     all(cell["status"] == "PASS_REQUIRED" for cell in row.get("descriptor_field_rows", []))
@@ -589,6 +595,50 @@ assert any(
     for row in payload["completeness_violations"]
 ), payload
 assert "root-corpus-authority" not in payload["family_ids"], payload
+PY
+
+VIOLATION_PROJECTION_REPO="${TMP_ROOT}/violation-projection-repo"
+mirror_repo "${VIOLATION_PROJECTION_REPO}"
+python3 - <<'PY' "${VIOLATION_PROJECTION_REPO}/scripts/validate_protocol_root_machine_registry_completeness.py"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+needle = (
+    "    expected_projected_violation_reason_count = (\n"
+    "        len(structure_violations) + len(completeness_violations) + len(anchor_violations)\n"
+    "    )\n"
+)
+replacement = (
+    "    expected_projected_violation_reason_count = (\n"
+    "        len(structure_violations) + len(completeness_violations) + len(anchor_violations)\n"
+    "    ) + 1\n"
+)
+if needle not in text:
+    raise SystemExit("expected projected violation count block not found")
+path.write_text(text.replace(needle, replacement, 1), encoding="utf-8")
+PY
+
+VIOLATION_PROJECTION_JSON="${TMP_ROOT}/violation-projection.json"
+if python3 "${VIOLATION_PROJECTION_REPO}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${VIOLATION_PROJECTION_REPO}" \
+  --json-only >"${VIOLATION_PROJECTION_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed violation projection completeness gap"
+  exit 1
+fi
+
+python3 - <<'PY' "${VIOLATION_PROJECTION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert payload["violation_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["projected_violation_reason_count"] + 1 == payload["expected_projected_violation_reason_count"], payload
+assert "root_machine_registry_completeness_violation_projection_incomplete" in payload["stale_reasons"], payload
 PY
 
 echo "[PASS] protocol root machine-registry completeness probes passed"

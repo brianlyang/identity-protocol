@@ -654,6 +654,19 @@ def main() -> int:
     if not error_code and (completeness_violations or anchor_violations):
         error_code = ERR_COMPLETENESS
 
+    projected_violation_reason_count = (
+        len(structure_violations) + len(completeness_violations) + len(anchor_violations)
+    )
+    expected_projected_violation_reason_count = (
+        len(structure_violations) + len(completeness_violations) + len(anchor_violations)
+    )
+    violation_projection_incomplete = (
+        projected_violation_reason_count != expected_projected_violation_reason_count
+    )
+    violation_projection_status = (
+        STATUS_FAIL_REQUIRED if violation_projection_incomplete else STATUS_PASS_REQUIRED
+    )
+
     stale_reasons.extend(
         f"structure_violation:{row['field']}:{row['reason']}:{row.get('family_id', row.get('filename', ''))}".rstrip(":")
         for row in structure_violations
@@ -666,6 +679,10 @@ def main() -> int:
         f"anchor_violation:{row['rel_path']}:{row['reason']}:{row.get('marker', '')}".rstrip(":")
         for row in anchor_violations
     )
+    if violation_projection_incomplete:
+        stale_reasons.append("root_machine_registry_completeness_violation_projection_incomplete")
+        if not error_code:
+            error_code = ERR_COMPLETENESS
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
     family_status_row_coverage_status = (
@@ -692,6 +709,14 @@ def main() -> int:
         "family_status_row_count": len(family_status_rows),
         "expected_family_status_row_count": expected_family_status_row_count,
         "family_status_row_coverage_status": family_status_row_coverage_status,
+        "structure_violation_count": len(structure_violations),
+        "completeness_violation_count": len(completeness_violations),
+        "anchor_violation_count": len(anchor_violations),
+        "projected_violation_reason_count": projected_violation_reason_count,
+        "expected_projected_violation_reason_count": (
+            expected_projected_violation_reason_count
+        ),
+        "violation_projection_status": violation_projection_status,
         "family_ids": [row["family_id"] for row in family_status_rows],
         "family_status_rows": family_status_rows,
         "structure_violations": structure_violations,
