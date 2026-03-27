@@ -13,6 +13,7 @@ PACK_PATH="${TMP_DIR}/${IDENTITY_ID}"
 CATALOG_PATH="${TMP_DIR}/catalog.local.yaml"
 REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-${IDENTITY_ID}-123456.json"
 REVIEW_REQUIRED_REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-${IDENTITY_ID}-review-required.json"
+UPGRADE_CLOSED_REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-${IDENTITY_ID}-upgrade-closed.json"
 NON_CLOSEOUT_REPORT_PATH="${PACK_PATH}/runtime/reports/${IDENTITY_ID}-active-run.json"
 OUTLET_RECEIPT_PATH="${TMP_DIR}/outlet-preflight.json"
 RULEBOOK_PATH="${PACK_PATH}/RULEBOOK.jsonl"
@@ -25,7 +26,7 @@ printf '{}\n' > "${PROMPT_CONTRACT_PATH}"
 printf '' > "${RULEBOOK_PATH}"
 printf '# Task History\n' > "${TASK_HISTORY_PATH}"
 
-python3 - <<'PY' "${CATALOG_PATH}" "${PACK_PATH}" "${IDENTITY_ID}" "${REPORT_PATH}" "${REVIEW_REQUIRED_REPORT_PATH}" "${NON_CLOSEOUT_REPORT_PATH}" "${OUTLET_RECEIPT_PATH}" "${RULEBOOK_PATH}" "${TASK_HISTORY_PATH}" "${PROMPT_CONTRACT_PATH}"
+python3 - <<'PY' "${CATALOG_PATH}" "${PACK_PATH}" "${IDENTITY_ID}" "${REPORT_PATH}" "${REVIEW_REQUIRED_REPORT_PATH}" "${UPGRADE_CLOSED_REPORT_PATH}" "${NON_CLOSEOUT_REPORT_PATH}" "${OUTLET_RECEIPT_PATH}" "${RULEBOOK_PATH}" "${TASK_HISTORY_PATH}" "${PROMPT_CONTRACT_PATH}"
 import json
 import sys
 from pathlib import Path
@@ -40,11 +41,12 @@ pack_path = Path(sys.argv[2])
 identity_id = sys.argv[3]
 report_path = Path(sys.argv[4])
 review_required_report_path = Path(sys.argv[5])
-non_closeout_report_path = Path(sys.argv[6])
-outlet_receipt_path = Path(sys.argv[7])
-rulebook_path = Path(sys.argv[8])
-task_history_path = Path(sys.argv[9])
-prompt_contract_path = Path(sys.argv[10])
+upgrade_closed_report_path = Path(sys.argv[6])
+non_closeout_report_path = Path(sys.argv[7])
+outlet_receipt_path = Path(sys.argv[8])
+rulebook_path = Path(sys.argv[9])
+task_history_path = Path(sys.argv[10])
+prompt_contract_path = Path(sys.argv[11])
 
 catalog_doc = {
     "identities": [
@@ -168,6 +170,47 @@ review_required_report_path.write_text(
     encoding="utf-8",
 )
 
+upgrade_closed_report_doc = dict(report_doc)
+upgrade_closed_report_doc.update(
+    {
+        "run_id": f"identity-upgrade-exec-{identity_id}-upgrade-closed",
+        "generated_at": "2026-03-25T00:03:00Z",
+        "mode": "safe-auto",
+        "upgrade_required": True,
+        "writeback_status": "WRITTEN",
+        "writeback_mode": "STRICT_WRITEBACK",
+        "next_action": "patch_applied_and_writeback_completed",
+        "experience_writeback": {
+            "required": True,
+            "status": "WRITTEN",
+            "error_code": "",
+            "mode": "safe-auto",
+        },
+        "writeback_rule_id": "rule-entry-postexec-upgrade-closed",
+    }
+)
+rulebook_path.write_text(
+    json.dumps(
+        {
+            "rule_entry_id": "rule-entry-postexec-upgrade-closed",
+            "evidence_run_id": f"identity-upgrade-exec-{identity_id}-upgrade-closed",
+            "summary": "upgrade closed writeback continuity",
+        },
+        ensure_ascii=False,
+    )
+    + "\n",
+    encoding="utf-8",
+)
+task_history_path.write_text(
+    "# Task History\n\n"
+    f"- run_id=identity-upgrade-exec-{identity_id}-upgrade-closed writeback completed\n",
+    encoding="utf-8",
+)
+upgrade_closed_report_path.write_text(
+    json.dumps(upgrade_closed_report_doc, ensure_ascii=False, indent=2) + "\n",
+    encoding="utf-8",
+)
+
 non_closeout_report_doc = {
     "run_id": f"{identity_id}-active-run",
     "identity_id": identity_id,
@@ -187,6 +230,8 @@ TERMINAL_JSON="${TMP_DIR}/terminal-validate.json"
 REVIEW_APPLY_JSON="${TMP_DIR}/repair-review-apply.json"
 REVIEW_POSTEXEC_JSON="${TMP_DIR}/postexec-review-validate.json"
 REVIEW_TERMINAL_JSON="${TMP_DIR}/terminal-review-validate.json"
+UPGRADE_APPLY_JSON="${TMP_DIR}/repair-upgrade-apply.json"
+UPGRADE_POSTEXEC_JSON="${TMP_DIR}/postexec-upgrade-closed-validate.json"
 
 python3 scripts/repair_identity_post_execution_mandatory.py \
   --catalog "${CATALOG_PATH}" \
@@ -249,8 +294,15 @@ assert apply_payload["report_updated"] is True, apply_payload
 assert apply_payload["capability_activation_missing_fields_after"] == [], apply_payload
 assert postexec_payload["post_execution_mandatory_status"] == "PASS_REQUIRED", postexec_payload
 assert terminal_payload["identity_terminal_truth_cleanliness_status"] == "PASS_REQUIRED", terminal_payload
+assert postexec_payload["report_selected_path"] == str(Path(sys.argv[4]).resolve()), postexec_payload
 assert postexec_payload["report_selection_mode"] == "explicit_report_override", postexec_payload
 assert postexec_payload["report_selected_authority_class"] == "explicit_report_override", postexec_payload
+assert postexec_payload["report_pointer_resolution_mode"] == "explicit_report_override", postexec_payload
+assert postexec_payload["experience_writeback_validation_status"] == "", postexec_payload
+assert postexec_payload["experience_writeback_report_selected_path"] == "", postexec_payload
+assert postexec_payload["experience_writeback_report_selection_mode"] == "", postexec_payload
+assert postexec_payload["experience_writeback_report_selected_authority_class"] == "", postexec_payload
+assert postexec_payload["experience_writeback_report_pointer_resolution_mode"] == "", postexec_payload
 assert terminal_payload["report_selection_mode"] == "explicit_report_override", terminal_payload
 assert terminal_payload["report_selected_authority_class"] == "explicit_report_override", terminal_payload
 
@@ -324,14 +376,61 @@ assert apply_payload["negative_feedback_class_after"] == "review_required", appl
 assert apply_payload["publishable_after"] is False, apply_payload
 assert apply_payload["canonical_result_eligible_after"] is False, apply_payload
 assert postexec_payload["post_execution_mandatory_status"] == "PASS_REQUIRED", postexec_payload
+assert postexec_payload["report_selected_path"] == str(Path(sys.argv[4]).resolve()), postexec_payload
 assert terminal_payload["identity_terminal_truth_cleanliness_status"] == "FAIL_REQUIRED", terminal_payload
 assert postexec_payload["report_selection_mode"] == "explicit_report_override", postexec_payload
+assert postexec_payload["report_selected_authority_class"] == "explicit_report_override", postexec_payload
+assert postexec_payload["report_pointer_resolution_mode"] == "explicit_report_override", postexec_payload
+assert postexec_payload["experience_writeback_validation_status"] == "", postexec_payload
+assert postexec_payload["experience_writeback_report_selected_path"] == "", postexec_payload
+assert postexec_payload["experience_writeback_report_selection_mode"] == "", postexec_payload
+assert postexec_payload["experience_writeback_report_selected_authority_class"] == "", postexec_payload
+assert postexec_payload["experience_writeback_report_pointer_resolution_mode"] == "", postexec_payload
 assert terminal_payload["report_selection_mode"] == "explicit_report_override", terminal_payload
 assert terminal_payload["terminal_truth_class"] == "review_required_execution_closure", terminal_payload
 assert terminal_payload["execution_closure_status"] == "PASS_REQUIRED", terminal_payload
 assert report_payload["terminal_truth_class"] == "review_required_execution_closure", report_payload
 assert report_payload["publishable"] is False, report_payload
 assert report_payload["canonical_result_eligible"] is False, report_payload
+PY
+
+python3 scripts/repair_identity_post_execution_mandatory.py \
+  --catalog "${CATALOG_PATH}" \
+  --repo-catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --report "${UPGRADE_CLOSED_REPORT_PATH}" \
+  --apply \
+  --json-only > "${UPGRADE_APPLY_JSON}"
+
+python3 scripts/validate_post_execution_mandatory.py \
+  --catalog "${CATALOG_PATH}" \
+  --repo-catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --report "${UPGRADE_CLOSED_REPORT_PATH}" \
+  --operation readiness \
+  --json-only > "${UPGRADE_POSTEXEC_JSON}"
+
+python3 - <<'PY' "${UPGRADE_APPLY_JSON}" "${UPGRADE_POSTEXEC_JSON}" "${UPGRADE_CLOSED_REPORT_PATH}"
+import json
+import sys
+from pathlib import Path
+
+apply_payload = json.loads(Path(sys.argv[1]).read_text())
+postexec_payload = json.loads(Path(sys.argv[2]).read_text())
+report_path = str(Path(sys.argv[3]).resolve())
+
+assert apply_payload["post_execution_report_repair_status"] == "PASS_REQUIRED", apply_payload
+assert apply_payload["report_updated"] is True, apply_payload
+assert postexec_payload["post_execution_mandatory_status"] == "PASS_REQUIRED", postexec_payload
+assert postexec_payload["report_selected_path"] == report_path, postexec_payload
+assert postexec_payload["report_selection_mode"] == "explicit_report_override", postexec_payload
+assert postexec_payload["report_selected_authority_class"] == "explicit_report_override", postexec_payload
+assert postexec_payload["report_pointer_resolution_mode"] == "explicit_report_override", postexec_payload
+assert postexec_payload["experience_writeback_validation_status"] == "PASS_REQUIRED", postexec_payload
+assert postexec_payload["experience_writeback_report_selected_path"] == report_path, postexec_payload
+assert postexec_payload["experience_writeback_report_selection_mode"] == "explicit_report_override", postexec_payload
+assert postexec_payload["experience_writeback_report_selected_authority_class"] == "explicit_report_override", postexec_payload
+assert postexec_payload["experience_writeback_report_pointer_resolution_mode"] == "explicit_report_override", postexec_payload
 PY
 
 python3 - <<'PY' "${CATALOG_PATH}" "${PACK_PATH}" "${IDENTITY_ID}" "${NON_CLOSEOUT_REPORT_PATH}"

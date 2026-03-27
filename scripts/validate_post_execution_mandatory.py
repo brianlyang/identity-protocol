@@ -10,6 +10,9 @@ from typing import Any
 from capability_activation_projection_common import CAPABILITY_ACTIVATION_REPORT_REQUIRED_FIELDS
 from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID, FINAL_EMIT_POLICY_MODE
 from protocol_infra_contract import HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS
+from report_selection_authority_projection_common import (
+    collect_report_selection_authority_projection_stale_reasons,
+)
 from tool_vendor_governance_common import (
     build_identity_upgrade_report_selection_projection,
     load_json,
@@ -278,7 +281,16 @@ def main() -> int:
         }
     )
 
-    stale_reasons: list[str] = []
+    stale_reasons = collect_report_selection_authority_projection_stale_reasons(
+        payload,
+        selected_path_key="report_selected_path",
+        selection_mode_key="report_selection_mode",
+        selected_authority_class_key="report_selected_authority_class",
+        pointer_resolution_mode_key="report_pointer_resolution_mode",
+        expected_selected_path=report_path,
+        selected_path_reason="report_selected_path_projection_mismatch",
+        authority_reason="report_authority_projection_missing",
+    )
     if missing_fields:
         stale_reasons.append("mandatory_report_fields_missing")
 
@@ -355,6 +367,19 @@ def main() -> int:
         ew_status = str(
             payload.get("experience_writeback_validation_status", "")
         ).strip().upper()
+        if ew_status == STATUS_PASS_REQUIRED:
+            stale_reasons.extend(
+                collect_report_selection_authority_projection_stale_reasons(
+                    payload,
+                    selected_path_key="experience_writeback_report_selected_path",
+                    selection_mode_key="experience_writeback_report_selection_mode",
+                    selected_authority_class_key="experience_writeback_report_selected_authority_class",
+                    pointer_resolution_mode_key="experience_writeback_report_pointer_resolution_mode",
+                    expected_selected_path=report_path,
+                    selected_path_reason="experience_writeback_report_selected_path_projection_mismatch",
+                    authority_reason="experience_writeback_authority_projection_missing",
+                )
+            )
         if rc_ew != 0 or ew_status != STATUS_PASS_REQUIRED:
             child_error = str(payload.get("experience_writeback_error_code", "")).strip()
             child_reasons = ew_payload.get("stale_reasons", [])
