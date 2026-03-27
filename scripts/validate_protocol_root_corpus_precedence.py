@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
+from root_contract_anchor_checks_common import evaluate_root_doc_anchor_checks
 from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 from root_corpus_authority_common import load_root_corpus_authority
 from root_corpus_gateway_admissibility_common import (
@@ -13,7 +14,7 @@ from root_corpus_gateway_admissibility_common import (
     gateway_profiles_from_doc,
     load_root_corpus_gateway_admissibility,
 )
-from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
+from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, source_order_rows_from_doc
 from root_corpus_precedence_common import (
     STATUS_FAIL_REQUIRED,
@@ -406,16 +407,15 @@ def main() -> int:
                     }
                 )
 
-        for anchor in anchor_checks:
-            anchor_path = (repo_root / anchor.rel_path).resolve()
-            if not anchor_path.exists():
-                anchor_violations.append({"rel_path": anchor.rel_path, "reason": "anchor_path_missing"})
-                continue
-            missing_markers = find_missing_markers(anchor_path.read_text(encoding="utf-8"), anchor.required_markers)
-            for marker in missing_markers:
-                anchor_violations.append(
-                    {"rel_path": anchor.rel_path, "reason": "required_marker_missing", "marker": marker}
-                )
+        anchor_violations.extend(
+            evaluate_root_doc_anchor_checks(
+                repo_root,
+                anchor_checks,
+                field_name=None,
+                missing_target_reason="anchor_path_missing",
+                require_file=False,
+            )
+        )
 
     violation_count = len(structure_violations) + len(precedence_violations) + len(anchor_violations) + len(stale_reasons)
     status = STATUS_PASS_REQUIRED if violation_count == 0 else STATUS_FAIL_REQUIRED

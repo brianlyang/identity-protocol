@@ -8,16 +8,14 @@ from typing import Any, Mapping
 import yaml
 
 from registry_alias_control_plane_common import resolve_current_yaml_alias
+from root_contract_anchor_checks_common import RootDocAnchorCheck, root_doc_anchor_checks_from_doc
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ROOT_CORPUS_LAW_BUNDLE_CURRENT = "identity/protocol/mappings/root-corpus-law-bundle.current.yaml"
 
 
-@dataclass(frozen=True)
-class BundleAnchorCheck:
-    rel_path: str
-    required_markers: tuple[str, ...] = field(default_factory=tuple)
+BundleAnchorCheck = RootDocAnchorCheck
 
 
 @dataclass(frozen=True)
@@ -452,18 +450,11 @@ def component_mapping_family_id_from_current_file(current_file: str) -> tuple[st
 
 
 def bundle_anchor_checks_from_doc(bundle_doc: Mapping[str, Any]) -> tuple[BundleAnchorCheck, ...]:
-    rows = bundle_doc.get("bundle_anchor_checks")
-    if not isinstance(rows, list):
-        return ()
-    out: list[BundleAnchorCheck] = []
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        rel_path = _norm_str(row.get("rel_path"))
-        if not rel_path:
-            continue
-        out.append(BundleAnchorCheck(rel_path=rel_path, required_markers=_as_str_tuple(row.get("required_markers"))))
-    return tuple(out)
+    return root_doc_anchor_checks_from_doc(
+        bundle_doc,
+        field_name="bundle_anchor_checks",
+        require_markers=False,
+    )
 
 
 def bundle_components_from_doc(bundle_doc: Mapping[str, Any]) -> tuple[RootLawBundleComponent, ...]:

@@ -6,9 +6,9 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
+from root_contract_anchor_checks_common import evaluate_root_doc_anchor_checks
 from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 from root_corpus_governance_common import (
-    find_missing_markers,
     load_root_corpus_registry,
     root_corpus_entries_from_registry,
 )
@@ -438,27 +438,17 @@ def main() -> int:
                 )
             previous_rank = current_rank
 
-        for anchor in ordering_anchor_checks:
-            anchor_path = repo_root / anchor.rel_path
-            if not anchor_path.exists():
-                anchor_violations.append(
-                    {
-                        "field": "ordering_anchor_checks",
-                        "reason": "anchor_missing",
-                        "rel_path": anchor.rel_path,
-                    }
-                )
-                continue
-            missing_markers = find_missing_markers(anchor_path.read_text(encoding="utf-8"), anchor.required_markers)
-            if missing_markers:
-                anchor_violations.append(
-                    {
-                        "field": "ordering_anchor_checks",
-                        "reason": "missing_required_markers",
-                        "rel_path": anchor.rel_path,
-                        "missing_markers": missing_markers,
-                    }
-                )
+        anchor_violations.extend(
+            evaluate_root_doc_anchor_checks(
+                repo_root,
+                ordering_anchor_checks,
+                field_name="ordering_anchor_checks",
+                missing_target_reason="anchor_missing",
+                missing_marker_reason="missing_required_markers",
+                aggregate_missing_markers=True,
+                require_file=False,
+            )
+        )
 
     if not error_code and structure_violations:
         error_code = ERR_STRUCTURE

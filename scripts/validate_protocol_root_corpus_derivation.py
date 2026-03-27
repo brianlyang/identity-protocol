@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
+from root_contract_anchor_checks_common import evaluate_root_doc_anchor_checks
 from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 from root_corpus_authority_common import authority_class_profiles_from_doc, load_root_corpus_authority
 from root_corpus_derivation_common import (
@@ -15,7 +16,7 @@ from root_corpus_derivation_common import (
     derivation_class_profiles_from_doc,
     load_root_corpus_derivation,
 )
-from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
+from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, source_order_rows_from_doc
 from root_corpus_question_routing_common import adjudication_redirect_from_doc, load_root_corpus_question_routing
 
@@ -438,20 +439,14 @@ def main() -> int:
                             }
                         )
 
-        for row in anchor_checks:
-            path = (repo_root / row.rel_path).resolve()
-            if not path.exists() or not path.is_file():
-                anchor_violations.append({"rel_path": row.rel_path, "reason": "anchor_target_missing"})
-                continue
-            text = path.read_text(encoding="utf-8", errors="ignore")
-            for marker in find_missing_markers(text, row.required_markers):
-                anchor_violations.append(
-                    {
-                        "rel_path": row.rel_path,
-                        "reason": "required_marker_missing",
-                        "marker": marker,
-                    }
-                )
+        anchor_violations.extend(
+            evaluate_root_doc_anchor_checks(
+                repo_root,
+                anchor_checks,
+                field_name=None,
+                missing_target_reason="anchor_target_missing",
+            )
+        )
 
     if not error_code and structure_violations:
         error_code = ERR_STRUCTURE

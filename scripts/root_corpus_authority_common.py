@@ -1,23 +1,21 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
 import yaml
 
 from registry_alias_control_plane_common import resolve_current_yaml_alias
+from root_contract_anchor_checks_common import RootDocAnchorCheck, root_doc_anchor_checks_from_doc
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ROOT_CORPUS_AUTHORITY_CURRENT = "identity/protocol/mappings/root-corpus-authority.current.yaml"
 
 
-@dataclass(frozen=True)
-class AuthorityAnchorCheck:
-    rel_path: str
-    required_markers: tuple[str, ...] = field(default_factory=tuple)
+AuthorityAnchorCheck = RootDocAnchorCheck
 
 
 @dataclass(frozen=True)
@@ -66,18 +64,11 @@ def load_root_corpus_authority(repo_root: Path) -> tuple[dict[str, Any], Path, P
 
 
 def authority_anchor_checks_from_doc(authority_doc: Mapping[str, Any]) -> tuple[AuthorityAnchorCheck, ...]:
-    rows = authority_doc.get("authority_anchor_checks")
-    if not isinstance(rows, list):
-        return ()
-    out: list[AuthorityAnchorCheck] = []
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        rel_path = _norm_str(row.get("rel_path"))
-        if not rel_path:
-            continue
-        out.append(AuthorityAnchorCheck(rel_path=rel_path, required_markers=_as_str_tuple(row.get("required_markers"))))
-    return tuple(out)
+    return root_doc_anchor_checks_from_doc(
+        authority_doc,
+        field_name="authority_anchor_checks",
+        require_markers=False,
+    )
 
 
 def authority_class_profiles_from_doc(authority_doc: Mapping[str, Any]) -> tuple[AuthorityClassProfile, ...]:

@@ -8,6 +8,7 @@ from typing import Any, Mapping
 import yaml
 
 from registry_alias_control_plane_common import resolve_current_yaml_alias
+from root_contract_anchor_checks_common import RootDocAnchorCheck, root_doc_anchor_checks_from_doc
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -35,10 +36,7 @@ class AdjudicationOrderRow:
     machine_surface: str
 
 
-@dataclass(frozen=True)
-class OrderingAnchorCheck:
-    rel_path: str
-    required_markers: tuple[str, ...] = field(default_factory=tuple)
+OrderingAnchorCheck = RootDocAnchorCheck
 
 
 @dataclass(frozen=True)
@@ -78,23 +76,11 @@ def load_root_corpus_ordering(repo_root: Path) -> tuple[dict[str, Any], Path, Pa
 
 
 def ordering_anchor_checks_from_doc(ordering_doc: Mapping[str, Any]) -> tuple[OrderingAnchorCheck, ...]:
-    rows = ordering_doc.get("ordering_anchor_checks")
-    if not isinstance(rows, list):
-        return ()
-    out: list[OrderingAnchorCheck] = []
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        rel_path = _norm_str(row.get("rel_path"))
-        if not rel_path:
-            continue
-        out.append(
-            OrderingAnchorCheck(
-                rel_path=rel_path,
-                required_markers=_as_str_tuple(row.get("required_markers")),
-            )
-        )
-    return tuple(out)
+    return root_doc_anchor_checks_from_doc(
+        ordering_doc,
+        field_name="ordering_anchor_checks",
+        require_markers=False,
+    )
 
 
 def source_order_rows_from_doc(ordering_doc: Mapping[str, Any]) -> tuple[SourceOrderRow, ...]:

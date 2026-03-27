@@ -8,6 +8,7 @@ from typing import Any, Mapping
 import yaml
 
 from registry_alias_control_plane_common import resolve_current_yaml_alias
+from root_contract_anchor_checks_common import RootDocAnchorCheck, root_doc_anchor_checks_from_doc
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -16,10 +17,7 @@ ROOT_CORPUS_GATEWAY_ADMISSIBILITY_CURRENT = (
 )
 
 
-@dataclass(frozen=True)
-class GatewayAnchorCheck:
-    rel_path: str
-    required_markers: tuple[str, ...] = field(default_factory=tuple)
+GatewayAnchorCheck = RootDocAnchorCheck
 
 
 @dataclass(frozen=True)
@@ -79,23 +77,11 @@ def load_root_corpus_gateway_admissibility(repo_root: Path) -> tuple[dict[str, A
 
 
 def gateway_anchor_checks_from_doc(admissibility_doc: Mapping[str, Any]) -> tuple[GatewayAnchorCheck, ...]:
-    rows = admissibility_doc.get("gateway_anchor_checks")
-    if not isinstance(rows, list):
-        return ()
-    out: list[GatewayAnchorCheck] = []
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        rel_path = _norm_str(row.get("rel_path"))
-        if not rel_path:
-            continue
-        out.append(
-            GatewayAnchorCheck(
-                rel_path=rel_path,
-                required_markers=_as_str_tuple(row.get("required_markers")),
-            )
-        )
-    return tuple(out)
+    return root_doc_anchor_checks_from_doc(
+        admissibility_doc,
+        field_name="gateway_anchor_checks",
+        require_markers=False,
+    )
 
 
 def gateway_profiles_from_doc(admissibility_doc: Mapping[str, Any]) -> tuple[GatewayProfile, ...]:

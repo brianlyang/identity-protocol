@@ -11,7 +11,8 @@ from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
 from registry_alias_control_plane_common import resolve_current_yaml_alias
-from root_corpus_governance_common import find_missing_markers, root_corpus_entries_from_registry
+from root_contract_anchor_checks_common import evaluate_root_doc_anchor_checks
+from root_corpus_governance_common import root_corpus_entries_from_registry
 from root_corpus_law_bundle_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -2488,20 +2489,13 @@ def main() -> int:
                                     }
                                 )
 
-        for check in anchor_checks:
-            path = (repo_root / check.rel_path).resolve()
-            if not path.exists() or not path.is_file():
-                anchor_violations.append({"rel_path": check.rel_path, "reason": "anchor_file_missing"})
-                continue
-            text = path.read_text(encoding="utf-8", errors="ignore")
-            for marker in find_missing_markers(text, check.required_markers):
-                anchor_violations.append(
-                    {
-                        "rel_path": check.rel_path,
-                        "reason": "required_marker_missing",
-                        "marker": marker,
-                    }
-                )
+        anchor_violations.extend(
+            evaluate_root_doc_anchor_checks(
+                repo_root,
+                anchor_checks,
+                field_name=None,
+            )
+        )
 
         component_status_row_coverage_incomplete = (
             effective_component_status_row_coverage_policy == COMPONENT_STATUS_ROW_COVERAGE_POLICY

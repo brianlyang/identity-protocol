@@ -28,6 +28,7 @@ def root_doc_anchor_checks_from_doc(
     doc: Mapping[str, Any],
     *,
     field_name: str = "anchor_checks",
+    require_markers: bool = True,
 ) -> tuple[RootDocAnchorCheck, ...]:
     rows = doc.get(field_name)
     if not isinstance(rows, list):
@@ -38,7 +39,7 @@ def root_doc_anchor_checks_from_doc(
             continue
         rel_path = _norm_str(row.get("rel_path"))
         required_markers = _as_str_tuple(row.get("required_markers"))
-        if not rel_path or not required_markers:
+        if not rel_path or (require_markers and not required_markers):
             continue
         out.append(RootDocAnchorCheck(rel_path=rel_path, required_markers=required_markers))
     return tuple(out)
@@ -84,28 +85,44 @@ def evaluate_root_doc_anchor_checks(
     repo_root: Path,
     anchor_checks: Iterable[RootDocAnchorCheck],
     *,
-    field_name: str = "root_doc_anchor_checks",
+    field_name: str | None = "root_doc_anchor_checks",
+    missing_target_reason: str = "anchor_file_missing",
+    missing_marker_reason: str = "required_marker_missing",
+    aggregate_missing_markers: bool = False,
+    require_file: bool = True,
 ) -> list[dict[str, Any]]:
     violations: list[dict[str, Any]] = []
     for check in anchor_checks:
         path = (repo_root / check.rel_path).resolve()
-        if not path.exists() or not path.is_file():
-            violations.append(
-                {
-                    "field": field_name,
-                    "rel_path": check.rel_path,
-                    "reason": "anchor_file_missing",
-                }
-            )
+        if not path.exists() or (require_file and not path.is_file()):
+            violation = {"rel_path": check.rel_path, "reason": missing_target_reason}
+            if field_name:
+                violation["field"] = field_name
+            violations.append(violation)
             continue
-        text = path.read_text(encoding="utf-8", errors="ignore")
-        for marker in find_missing_markers(text, check.required_markers):
-            violations.append(
-                {
-                    "field": field_name,
-                    "rel_path": check.rel_path,
-                    "reason": "required_marker_missing",
-                    "marker": marker,
-                }
-            )
+        missing_markers = find_missing_markers(
+            path.read_text(encoding="utf-8", errors="ignore"),
+            check.required_markers,
+        )
+        if not missing_markers:
+            continue
+        if aggregate_missing_markers:
+            violation = {
+                "rel_path": check.rel_path,
+                "reason": missing_marker_reason,
+                "missing_markers": missing_markers,
+            }
+            if field_name:
+                violation["field"] = field_name
+            violations.append(violation)
+            continue
+        for marker in missing_markers:
+            violation = {
+                "rel_path": check.rel_path,
+                "reason": missing_marker_reason,
+                "marker": marker,
+            }
+            if field_name:
+                violation["field"] = field_name
+            violations.append(violation)
     return violations

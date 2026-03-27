@@ -8,16 +8,14 @@ from typing import Any, Mapping
 import yaml
 
 from registry_alias_control_plane_common import resolve_current_yaml_alias
+from root_contract_anchor_checks_common import RootDocAnchorCheck, root_doc_anchor_checks_from_doc
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ROOT_CORPUS_PRECEDENCE_CURRENT = "identity/protocol/mappings/root-corpus-precedence.current.yaml"
 
 
-@dataclass(frozen=True)
-class PrecedenceAnchorCheck:
-    rel_path: str
-    required_markers: tuple[str, ...] = field(default_factory=tuple)
+PrecedenceAnchorCheck = RootDocAnchorCheck
 
 
 @dataclass(frozen=True)
@@ -68,23 +66,11 @@ def load_root_corpus_precedence(repo_root: Path) -> tuple[dict[str, Any], Path, 
 
 
 def precedence_anchor_checks_from_doc(precedence_doc: Mapping[str, Any]) -> tuple[PrecedenceAnchorCheck, ...]:
-    rows = precedence_doc.get("precedence_anchor_checks")
-    if not isinstance(rows, list):
-        return ()
-    out: list[PrecedenceAnchorCheck] = []
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        rel_path = _norm_str(row.get("rel_path"))
-        if not rel_path:
-            continue
-        out.append(
-            PrecedenceAnchorCheck(
-                rel_path=rel_path,
-                required_markers=_as_str_tuple(row.get("required_markers")),
-            )
-        )
-    return tuple(out)
+    return root_doc_anchor_checks_from_doc(
+        precedence_doc,
+        field_name="precedence_anchor_checks",
+        require_markers=False,
+    )
 
 
 def precedence_profiles_from_doc(precedence_doc: Mapping[str, Any]) -> tuple[PrecedenceProfile, ...]:
