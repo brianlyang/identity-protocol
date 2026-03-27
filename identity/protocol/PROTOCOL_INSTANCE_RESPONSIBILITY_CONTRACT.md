@@ -129,6 +129,11 @@ Its layer role is `natural_language_collaboration_entry`.
 
 The protocol defines the law of the world; the instance converges its runtime back to that law.
 
+Protocol-instance responsibility law must also remain machine-readable as
+separate layer, responsibility, escalation-trigger, escalation-proof,
+escalation-limit, and boundary-collapse row families rather than one narrative
+ownership claim.
+
 ### 1. Protocol-layer obligations
 
 The protocol layer must:

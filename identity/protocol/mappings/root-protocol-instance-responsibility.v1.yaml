@@ -18,11 +18,36 @@ question_routing_current_file: identity/protocol/mappings/root-corpus-question-r
 contract_required_markers:
   - '## Four-layer relation'
   - '## Responsibility law'
+  - Protocol-instance responsibility law must also remain machine-readable as separate
+    layer, responsibility, escalation-trigger, escalation-proof,
+    escalation-limit, and boundary-collapse row families rather than one
+    narrative ownership claim.
   - '## Escalation admission law'
   - '## Escalation-proof discipline'
   - '## Escalation-proof limits'
   - '## Non-compliant boundary collapses'
   - 'The protocol defines the law of the world; the instance converges its runtime back to that law.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Protocol-instance responsibility row-family completeness must stay explicit'
+      - "Required layer, responsibility, escalation-trigger, escalation-proof,\nescalation-limit, and boundary-collapse families must remain explicit as\nseparate machine-readable row families."
+      - 'The machine world must not finalize protocol-instance responsibility legality while required row identity drift remains known only internally.'
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root protocol-instance responsibility completeness discipline'
+      - 'Protocol-instance responsibility law is not a soft prose bundle.'
+      - '1. required layer, responsibility, escalation-trigger, escalation-proof, escalation-limit, and boundary-collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root protocol-instance responsibility completeness boundary'
+      - '1. Protocol-instance responsibility law must remain machine-readable as separate layer, responsibility, escalation-trigger, escalation-proof, escalation-limit, and boundary-collapse row families.'
+      - '4. Protocol legality must not finalize protocol-instance responsibility legality while missing or unexpected row identities remain known only inside validator logic.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime protocol-instance responsibility consumption boundary'
+      - '1. Runtime consumes protocol-instance responsibility law as separate layer, responsibility, escalation-trigger, escalation-proof, escalation-limit, and boundary-collapse row families rather than as undifferentiated ownership prose.'
+      - '4. Runtime must not finalize protocol-instance responsibility legality while missing or unexpected row identities remain known only inside validator machinery.'
 required_layer_rows:
   - order: 1
     layer_id: standard_codex
