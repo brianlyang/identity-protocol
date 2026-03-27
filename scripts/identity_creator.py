@@ -63,6 +63,10 @@ from protocol_infra_contract import (
     VALIDATOR_RUN_ID_REQUIRED_SCRIPTS,
     VALIDATOR_SESSION_ID_REQUIRED_SCRIPTS,
 )
+from workspace_runtime_closure_command_common import (
+    build_workspace_runtime_closure_checker_command,
+    resolve_workspace_runtime_closure_checker_spec,
+)
 
 ERR_EXEC_ORDER_HEADER_FIRST = "IP-EXEC-ORDER-001"
 ERR_EXEC_ORDER_SCAFFOLD_CONSENT = "IP-EXEC-ORDER-002"
@@ -439,10 +443,6 @@ def _emit_two_phase_trace(
     print(json.dumps(payload, ensure_ascii=False))
 
 
-def _extract_unique_entry_migration_violation_ids(payload: dict | None) -> list[str]:
-    return _extract_migration_violation_ids(payload)
-
-
 def _extract_migration_violation_ids(payload: dict | None) -> list[str]:
     data = payload if isinstance(payload, dict) else {}
     rows = data.get("violations")
@@ -590,25 +590,19 @@ def _enforce_workspace_migration_closure(
     operation: str,
     auto_repair: bool,
     check_script: str,
-    status_field: str,
     closure_label: str,
-    workspace_runtime_only: bool,
     repair_executor: Callable[[str], int] | None,
 ) -> int:
-    check_cmd = [
-        "python3",
-        check_script,
-        "--repo-catalog",
-        str(repo_catalog),
-        "--catalog",
-        str(catalog),
-        "--json-only",
-    ]
-    if workspace_runtime_only:
-        check_cmd.append("--workspace-runtime-only")
+    spec = resolve_workspace_runtime_closure_checker_spec(check_script)
+    check_cmd = build_workspace_runtime_closure_checker_command(
+        checker_id=spec.checker_id,
+        catalog_path=str(catalog),
+        repo_catalog_path=str(repo_catalog),
+        json_only=True,
+    )
     rc_check, out_check, _ = _run_capture(check_cmd)
     payload = _parse_json_payload(out_check) or {}
-    status = str(payload.get(status_field, "")).strip().upper()
+    status = str(payload.get(spec.status_field, "")).strip().upper()
     if rc_check == 0 and status == "PASS_REQUIRED":
         return 0
 
@@ -628,7 +622,7 @@ def _enforce_workspace_migration_closure(
                 return rc_fix
         rc_recheck, out_recheck, _ = _run_capture(check_cmd)
         payload_recheck = _parse_json_payload(out_recheck) or {}
-        status_recheck = str(payload_recheck.get(status_field, "")).strip().upper()
+        status_recheck = str(payload_recheck.get(spec.status_field, "")).strip().upper()
         if rc_recheck == 0 and status_recheck == "PASS_REQUIRED":
             return 0
         remaining = _extract_migration_violation_ids(payload_recheck)
@@ -654,19 +648,18 @@ def _enforce_identity_codex_launcher_migration_closure(
     operation: str,
     auto_repair: bool,
 ) -> int:
-    check_cmd = [
-        "python3",
-        "scripts/check_identity_codex_launcher_migration_closure.py",
-        "--repo-catalog",
-        str(repo_catalog),
-        "--catalog",
-        str(catalog),
-        "--workspace-runtime-only",
-        "--json-only",
-    ]
+    spec = resolve_workspace_runtime_closure_checker_spec(
+        "scripts/check_identity_codex_launcher_migration_closure.py"
+    )
+    check_cmd = build_workspace_runtime_closure_checker_command(
+        checker_id=spec.checker_id,
+        catalog_path=str(catalog),
+        repo_catalog_path=str(repo_catalog),
+        json_only=True,
+    )
     rc_check, out_check, _ = _run_capture(check_cmd)
     payload = _parse_json_payload(out_check) or {}
-    status = str(payload.get("identity_codex_launcher_migration_closure_status", "")).strip().upper()
+    status = str(payload.get(spec.status_field, "")).strip().upper()
     if rc_check == 0 and status == "PASS_REQUIRED":
         return 0
 
@@ -718,61 +711,43 @@ def _enforce_unique_entry_migration_closure(
     operation: str,
     auto_repair: bool,
 ) -> int:
-    check_cmd = [
-        "python3",
-        "scripts/check_unique_entry_contract_migration_closure.py",
-        "--repo-catalog",
-        str(repo_catalog),
-        "--catalog",
-        str(catalog),
-        "--json-only",
-    ]
-    rc_check, out_check, _ = _run_capture(check_cmd)
-    payload = _parse_json_payload(out_check) or {}
-    status = str(payload.get("unique_entry_contract_migration_closure_status", "")).strip().upper()
-    if rc_check == 0 and status == "PASS_REQUIRED":
-        return 0
-
-    violation_ids = _extract_unique_entry_migration_violation_ids(payload)
-    if auto_repair and violation_ids:
-        print(
-            "[WARN] active runtime unique-entry migration closure not met; "
-            "running contract backfill for violating identities."
-        )
-        for violating_id in violation_ids:
-            rc_fix = _run_contract_backfill_with_instance_script_rollout(
-                identity_id=violating_id,
-                catalog=str(catalog),
-                work_layer="instance",
-                source_layer=_infer_source_domain_from_catalog(str(catalog)),
-            )
-            if rc_fix != 0:
-                print(
-                    "[FAIL] active runtime unique-entry migration auto-repair failed "
-                    f"(identity={violating_id}); {operation} blocked"
-                )
-                return rc_fix
-        rc_recheck, out_recheck, _ = _run_capture(check_cmd)
-        payload_recheck = _parse_json_payload(out_recheck) or {}
-        status_recheck = str(
-            payload_recheck.get("unique_entry_contract_migration_closure_status", "")
-        ).strip().upper()
-        if rc_recheck == 0 and status_recheck == "PASS_REQUIRED":
-            return 0
-        remaining = _extract_unique_entry_migration_violation_ids(payload_recheck)
-        remaining_token = ",".join(remaining) if remaining else "unknown"
-        print(
-            "[FAIL] active runtime unique-entry migration closure still failed after auto-repair; "
-            f"{operation} blocked (remaining={remaining_token})"
-        )
-        return 1
-
-    violation_token = ",".join(violation_ids) if violation_ids else "unknown"
-    print(
-        "[FAIL] active runtime unique-entry migration closure failed; "
-        f"{operation} blocked (violations={violation_token})"
+    return _enforce_workspace_migration_closure(
+        catalog=catalog,
+        repo_catalog=repo_catalog,
+        operation=operation,
+        auto_repair=auto_repair,
+        check_script="scripts/check_unique_entry_contract_migration_closure.py",
+        closure_label="unique-entry",
+        repair_executor=lambda identity_id: _run_contract_backfill_with_instance_script_rollout(
+            identity_id=identity_id,
+            catalog=str(catalog),
+            work_layer="instance",
+            source_layer=_infer_source_domain_from_catalog(str(catalog)),
+        ),
     )
-    return 1
+
+
+def _enforce_version_baseline_migration_closure(
+    *,
+    catalog: str,
+    repo_catalog: str,
+    operation: str,
+    auto_repair: bool,
+) -> int:
+    return _enforce_workspace_migration_closure(
+        catalog=catalog,
+        repo_catalog=repo_catalog,
+        operation=operation,
+        auto_repair=auto_repair,
+        check_script="scripts/check_version_baseline_migration_closure.py",
+        closure_label="version baseline",
+        repair_executor=lambda identity_id: _run_contract_backfill_with_instance_script_rollout(
+            identity_id=identity_id,
+            catalog=str(catalog),
+            work_layer="instance",
+            source_layer=_infer_source_domain_from_catalog(str(catalog)),
+        ),
+    )
 
 
 def _enforce_identity_broadcast_migration_closure(
@@ -788,9 +763,7 @@ def _enforce_identity_broadcast_migration_closure(
         operation=operation,
         auto_repair=auto_repair,
         check_script="scripts/check_identity_broadcast_migration_closure.py",
-        status_field="identity_broadcast_migration_closure_status",
         closure_label="broadcast delivery",
-        workspace_runtime_only=True,
         repair_executor=lambda identity_id: _run_broadcast_delivery_convergence_rollout(
             identity_id=identity_id,
             catalog=str(catalog),
@@ -813,9 +786,7 @@ def _enforce_identity_communication_transport_closure(
         operation=operation,
         auto_repair=auto_repair,
         check_script="scripts/check_identity_communication_transport_closure.py",
-        status_field="identity_communication_transport_closure_status",
         closure_label="identity communication transport",
-        workspace_runtime_only=True,
         repair_executor=lambda identity_id: _run_communication_transport_convergence_rollout(
             identity_id=identity_id,
             catalog=str(catalog),
@@ -2601,6 +2572,14 @@ def main() -> int:
         )
         if rc_unique_entry_migration != 0:
             return rc_unique_entry_migration
+        rc_version_baseline_migration = _enforce_version_baseline_migration_closure(
+            catalog=args.catalog,
+            repo_catalog=args.repo_catalog,
+            operation="validate",
+            auto_repair=False,
+        )
+        if rc_version_baseline_migration != 0:
+            return rc_version_baseline_migration
         rc_broadcast_migration = _enforce_identity_broadcast_migration_closure(
             catalog=args.catalog,
             repo_catalog=args.repo_catalog,
@@ -3974,6 +3953,14 @@ def main() -> int:
         if rc != 0:
             return rc
         rc = _enforce_unique_entry_migration_closure(
+            catalog=args.catalog,
+            repo_catalog=args.repo_catalog,
+            operation="update",
+            auto_repair=True,
+        )
+        if rc != 0:
+            return rc
+        rc = _enforce_version_baseline_migration_closure(
             catalog=args.catalog,
             repo_catalog=args.repo_catalog,
             operation="update",
