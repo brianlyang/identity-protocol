@@ -189,6 +189,11 @@ assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_status
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_projection_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scope_class'] == 'bounded_targeted_subset_exclusion', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scope_reason'] == 'required_gate_bundle_out_of_scope_for_targeted_subset', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_report_selected_path'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_report_selection_mode'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_report_authority_class'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_report_pointer_resolution_mode'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_report_pointer_path'] == '', summary_targeted_subset_excluded
 
 summary_observed = {
     'required_gate_bundle_execution': {
@@ -379,6 +384,7 @@ for summary_key, _one_look_field in RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SUMMAR
         row.setdefault('checked_identity_count', repo_global_checked_counts[summary_key])
         row.setdefault('violation_count', 0)
 
+summary_release_projection['required_gate_bundle'] = dict(summary_observed['required_gate_bundle'])
 readiness._hydrate_one_look_projection(summary_release_projection)
 assert summary_release_projection['one_look']['release_plane_cloud_evidence_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['release_plane_required_checks_status'] == 'PASS', summary_release_projection
@@ -391,6 +397,13 @@ assert summary_release_projection['one_look']['identity_experience_writeback_rep
 assert summary_release_projection['one_look']['identity_experience_writeback_report_authority_class'] == 'active_execution_pointer_pack_local_report', summary_release_projection
 assert summary_release_projection['one_look']['identity_experience_writeback_report_pointer_resolution_mode'] == 'pointer_candidate_root_report', summary_release_projection
 assert summary_release_projection['one_look']['identity_experience_writeback_writeback_status'] == 'WRITTEN', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_projection_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_report_selected_path'] == '/tmp/probe-report.json', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_report_selection_mode'] == 'explicit_report_override', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_report_authority_class'] == 'explicit_report_override', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_report_pointer_resolution_mode'] == 'explicit_report_override', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_report_pointer_path'] == '', summary_release_projection
 assert summary_release_projection['one_look']['control_plane_budget_sync_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['control_plane_status_sync_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['control_plane_live_status'] == 'PASS_REQUIRED', summary_release_projection

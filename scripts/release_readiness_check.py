@@ -63,6 +63,9 @@ from release_readiness_governance_probe_projection_common import (
     release_readiness_governance_probe_structured_capture_specs,
     release_readiness_governance_probe_summary_defaults,
 )
+from release_readiness_required_gate_bundle_projection_common import (
+    apply_release_readiness_required_gate_bundle_one_look,
+)
 from release_readiness_required_gate_bundle_scope_common import (
     build_scope_excluded_required_gate_bundle_summary,
     targeted_subset_excludes_required_gate_bundle,
@@ -1588,7 +1591,6 @@ def _hydrate_required_gate_bundle_summary(
 
 def _hydrate_one_look_projection(summary: dict[str, Any]) -> None:
     coverage = summary.get("required_contract_coverage") or {}
-    bundle = summary.get("required_gate_bundle") or {}
     selected_check_scope_projection = summary.get("selected_check_scope_projection") or {}
     recurrence = summary.get("required_gate_recurrence") or {}
     tuple_parity = summary.get("required_gate_tuple_parity") or {}
@@ -1624,15 +1626,6 @@ def _hydrate_one_look_projection(summary: dict[str, Any]) -> None:
         "selected_check_scope_excluded_summary_keys": _clean_list(
             selected_check_scope_projection.get("excluded_summary_keys")
         ),
-        "required_gate_bundle_status": _clean_str(bundle.get("bundle_status")).upper() or STATUS_UNKNOWN,
-        "required_gate_bundle_projection_status": _clean_str(bundle.get("projection_status")).upper() or STATUS_UNKNOWN,
-        "required_gate_bundle_scope_class": _clean_str(bundle.get("scope_class")),
-        "required_gate_bundle_scope_reason": _clean_str(bundle.get("scope_reason")),
-        "failed_required_target_count": _safe_int(bundle.get("failed_required_target_count")),
-        "failed_target_names": _clean_list(bundle.get("failed_target_names")),
-        "projection_stale_reasons": _clean_list(bundle.get("projection_stale_reasons")),
-        "rows_without_projected_report_fields": _clean_list(bundle.get("rows_without_projected_report_fields")),
-        "missing_mapping_requirements": _clean_list(bundle.get("missing_mapping_requirements")),
         "required_gate_recurrence_status": _clean_str(recurrence.get("status")).upper() or STATUS_UNKNOWN,
         "required_gate_tuple_parity_status": _clean_str(tuple_parity.get("status")).upper() or STATUS_UNKNOWN,
         "release_plane_cloud_evidence_status": _clean_str(release_plane.get("status")).upper() or STATUS_UNKNOWN,
@@ -1715,6 +1708,7 @@ def _hydrate_one_look_projection(summary: dict[str, Any]) -> None:
         "terminal_truth_class": _clean_str(terminal_truth_boundary.get("terminal_truth_class")),
         "terminal_state_class": _clean_str(terminal_truth_boundary.get("terminal_state_class")),
     }
+    apply_release_readiness_required_gate_bundle_one_look(summary, summary["one_look"])
     apply_release_readiness_repo_global_closure_one_look(summary, summary["one_look"])
     apply_release_readiness_active_runtime_closure_one_look(summary, summary["one_look"])
     apply_release_readiness_governance_probe_one_look(summary, summary["one_look"])

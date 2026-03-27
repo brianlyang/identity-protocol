@@ -14,6 +14,9 @@ from release_readiness_active_runtime_closure_projection_common import (
 from release_readiness_governance_probe_projection_common import (
     RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
 )
+from release_readiness_required_gate_bundle_projection_common import (
+    RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_SURFACE_CONSTRAINTS,
+)
 from release_readiness_repo_global_closure_projection_common import (
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_CHECKED_IDENTITY_COUNT_FIELDS,
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OWNER_LANES,
@@ -91,6 +94,7 @@ REQUIRED_RELEASE_READINESS_LIFECYCLE_MARKERS = (
     "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh",
     "scripts/ci/run_release_readiness_continuation_probes_ci.sh",
     "scripts/ci/run_release_plane_context_resolution_probes_ci.sh",
+    *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_SURFACE_CONSTRAINTS,
     *RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
     "caller cwd",
 )

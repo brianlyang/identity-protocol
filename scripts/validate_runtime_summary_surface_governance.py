@@ -20,6 +20,9 @@ from release_readiness_active_runtime_closure_projection_common import (
 from release_readiness_governance_probe_projection_common import (
     RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
 )
+from release_readiness_required_gate_bundle_projection_common import (
+    RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_SURFACE_CONSTRAINTS,
+)
 from release_readiness_required_gate_bundle_scope_common import (
     RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS,
 )
@@ -69,8 +72,8 @@ SCRIPT_BINDINGS: tuple[ScriptBindingSpec, ...] = (
             '"selected_check_scope_class"',
             "apply_release_readiness_repo_global_closure_one_look(",
             "apply_release_readiness_active_runtime_closure_one_look(",
+            "apply_release_readiness_required_gate_bundle_one_look(",
             "build_scope_excluded_required_gate_bundle_summary(",
-            '"required_gate_bundle_scope_class"',
             '"scripts/validate_executable_surface_runtime_literal_lock.py"',
             '"executable_surface_runtime_literal_lock"',
         ),
@@ -204,6 +207,7 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             "scripts/ci/run_release_plane_context_resolution_probes_ci.sh",
             "scripts/ci/run_active_execution_report_pointer_locality_probes_ci.sh",
             *RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
@@ -238,6 +242,7 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             "scripts/ci/run_release_plane_context_resolution_probes_ci.sh",
             "scripts/ci/run_active_execution_report_pointer_locality_probes_ci.sh",
             *RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
@@ -273,6 +278,7 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             "scripts/ci/run_release_plane_context_resolution_probes_ci.sh",
             "scripts/ci/run_active_execution_report_pointer_locality_probes_ci.sh",
             *RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
@@ -390,6 +396,7 @@ SURFACE_PAYLOAD_MARKERS: dict[str, tuple[str, ...]] = {
         "continuation_surface=scripts/run_release_readiness_continuation.py",
         "continuation_inner_resolution_anchor=protocol_owned_repo_root_not_caller_cwd",
         "continuation_forbidden_forward_flags=--summary-out,--resume-from-summary,--max-command-sequence-checks",
+        *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_SURFACE_CONSTRAINTS,
         *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS,
         *RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
         *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,

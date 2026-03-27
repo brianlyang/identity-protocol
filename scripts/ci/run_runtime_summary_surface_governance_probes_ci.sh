@@ -283,6 +283,38 @@ echo "[PASS] negative required-gate bundle scope doc probe fail-closed as expect
 cp scripts/release_readiness_check.py "$tmpdir/scripts/"
 cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
 
+mutate_probe_literal \
+  "$tmpdir/scripts/release_readiness_check.py" \
+  'apply_release_readiness_required_gate_bundle_one_look(summary, summary["one_look"])'
+
+if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-required-gate-bundle-one-look-script.json; then
+  echo "[FAIL] negative required-gate bundle one-look script probe unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] negative required-gate bundle one-look script probe fail-closed as expected"
+
+cp scripts/release_readiness_check.py "$tmpdir/scripts/"
+cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
+
+required_gate_bundle_projection_marker="$(
+  resolve_python_module_constant \
+    "release_readiness_required_gate_bundle_projection_common" \
+    "RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_MARKER"
+)"
+
+mutate_probe_literal \
+  "$tmpdir/docs/governance/identity-v1.6x-release-closure-governance.md" \
+  "$required_gate_bundle_projection_marker"
+
+if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-required-gate-bundle-one-look-doc.json; then
+  echo "[FAIL] negative required-gate bundle one-look doc probe unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] negative required-gate bundle one-look doc probe fail-closed as expected"
+
+cp scripts/release_readiness_check.py "$tmpdir/scripts/"
+cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
+
 selected_check_scope_marker="$(
   resolve_python_module_expression \
     "release_readiness_selected_check_scope_common" \
