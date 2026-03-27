@@ -14,6 +14,14 @@ probe_mirror_repo_with_relpaths() {
   shift 2
   mkdir -p "${dst}"
   _probe_mirror_copy_tree "${root}/identity" "${dst}/identity"
+  probe_mirror_relpaths_only "${root}" "${dst}" "$@"
+}
+
+probe_mirror_relpaths_only() {
+  local root="$1"
+  local dst="$2"
+  shift 2
+  mkdir -p "${dst}"
   local relpath=""
   for relpath in "$@"; do
     _probe_mirror_copy_relpath "${root}" "${dst}" "${relpath}"

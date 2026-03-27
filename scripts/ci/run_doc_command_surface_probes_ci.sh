@@ -5,34 +5,45 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/doc-command-surface-ci.XXXXXX")"
 trap 'rm -rf "${TMP_ROOT}"' EXIT
+source "${ROOT}/scripts/ci/probe_repo_mirror_common.sh"
+
+DOC_COMMAND_SURFACE_REGISTRY_REL_PATHS=(
+  "identity/protocol/mappings/doc-command-surface.current.yaml"
+  "identity/protocol/mappings/doc-command-surface.v1.yaml"
+  "identity/protocol/mappings/stream-doc-registry.current.yaml"
+  "identity/protocol/mappings/stream-doc-registry.v1.6.yaml"
+  "scripts/doc_command_surface_common.py"
+  "scripts/validate_doc_command_surface_registry.py"
+  "scripts/registry_alias_control_plane_common.py"
+  "scripts/repo_root_resolution_common.py"
+  "scripts/ci/run_doc_command_surface_probes_ci.sh"
+  "docs/governance/audit-snapshot-2026-02-23-v1.4.6-role-binding-bootstrap.md"
+  "docs/governance/audit-snapshot-2026-02-24-release-doc-governance-closure-v1.4.12.md"
+  "docs/governance/identity-actor-session-binding-governance-v1.5.0.md"
+  "docs/review/protocol-remediation-audit-ledger-v1.5.md"
+  "docs/governance/github-native-control-plane-specialization-v1.6.3.md"
+  "docs/review/protocol-remediation-audit-ledger-v1.6.6.md"
+  "docs/governance/identity-native-chat-bootstrap-entry-governance-v1.6.12.md"
+  "docs/review/protocol-remediation-audit-ledger-v1.6.12-native-chat-bootstrap-entry.md"
+  "docs/review/protocol-remediation-audit-ledger-v1.6.13-instance-pack-topology.md"
+  "docs/governance/identity-codex-launcher-governance-v1.6.14.md"
+  "docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md"
+)
+
+DOC_COMMAND_SURFACE_RANDOM_REPO_REL_PATHS=(
+  "scripts/docs_command_contract_check.py"
+  "scripts/doc_command_surface_common.py"
+  "scripts/contract_binding_mapping_common.py"
+  "scripts/registry_alias_control_plane_common.py"
+  "scripts/repo_root_resolution_common.py"
+  "scripts/reference_visual_atlas_governance_common.py"
+  "identity/protocol/mappings/doc-command-surface.current.yaml"
+  "identity/protocol/mappings/doc-command-surface.v1.yaml"
+)
 
 mirror_registry_repo() {
   local dst="$1"
-  mkdir -p "${dst}/identity/protocol/mappings" "${dst}/scripts/ci" "${dst}/docs/governance" "${dst}/docs/review"
-  cp "${ROOT}/identity/protocol/mappings/doc-command-surface.current.yaml" "${dst}/identity/protocol/mappings/"
-  cp "${ROOT}/identity/protocol/mappings/doc-command-surface.v1.yaml" "${dst}/identity/protocol/mappings/"
-  cp "${ROOT}/identity/protocol/mappings/stream-doc-registry.current.yaml" "${dst}/identity/protocol/mappings/"
-  cp "${ROOT}/identity/protocol/mappings/stream-doc-registry.v1.6.yaml" "${dst}/identity/protocol/mappings/"
-  cp "${ROOT}/scripts/doc_command_surface_common.py" "${dst}/scripts/"
-  cp "${ROOT}/scripts/validate_doc_command_surface_registry.py" "${dst}/scripts/"
-  cp "${ROOT}/scripts/registry_alias_control_plane_common.py" "${dst}/scripts/"
-  cp "${ROOT}/scripts/repo_root_resolution_common.py" "${dst}/scripts/"
-  cp "${ROOT}/scripts/ci/run_doc_command_surface_probes_ci.sh" "${dst}/scripts/ci/"
-  for rel in \
-    docs/governance/audit-snapshot-2026-02-23-v1.4.6-role-binding-bootstrap.md \
-    docs/governance/audit-snapshot-2026-02-24-release-doc-governance-closure-v1.4.12.md \
-    docs/governance/identity-actor-session-binding-governance-v1.5.0.md \
-    docs/review/protocol-remediation-audit-ledger-v1.5.md \
-    docs/governance/github-native-control-plane-specialization-v1.6.3.md \
-    docs/review/protocol-remediation-audit-ledger-v1.6.6.md \
-    docs/governance/identity-native-chat-bootstrap-entry-governance-v1.6.12.md \
-    docs/review/protocol-remediation-audit-ledger-v1.6.12-native-chat-bootstrap-entry.md \
-    docs/review/protocol-remediation-audit-ledger-v1.6.13-instance-pack-topology.md \
-    docs/governance/identity-codex-launcher-governance-v1.6.14.md \
-    docs/review/protocol-remediation-audit-ledger-v1.6.14-identity-codex-launcher.md; do
-    mkdir -p "${dst}/$(dirname "${rel}")"
-    cp "${ROOT}/${rel}" "${dst}/${rel}"
-  done
+  probe_mirror_relpaths_only "${ROOT}" "${dst}" "${DOC_COMMAND_SURFACE_REGISTRY_REL_PATHS[@]}"
 }
 
 PASS_JSON="${TMP_ROOT}/pass.json"
@@ -126,15 +137,7 @@ assert any(
 PY
 
 RANDOM_REPO="${TMP_ROOT}/random-checkout-name"
-mkdir -p "${RANDOM_REPO}/scripts" "${RANDOM_REPO}/identity/protocol/mappings"
-cp "${ROOT}/scripts/docs_command_contract_check.py" "${RANDOM_REPO}/scripts/"
-cp "${ROOT}/scripts/doc_command_surface_common.py" "${RANDOM_REPO}/scripts/"
-cp "${ROOT}/scripts/contract_binding_mapping_common.py" "${RANDOM_REPO}/scripts/"
-cp "${ROOT}/scripts/registry_alias_control_plane_common.py" "${RANDOM_REPO}/scripts/"
-cp "${ROOT}/scripts/repo_root_resolution_common.py" "${RANDOM_REPO}/scripts/"
-cp "${ROOT}/scripts/reference_visual_atlas_governance_common.py" "${RANDOM_REPO}/scripts/"
-cp "${ROOT}/identity/protocol/mappings/doc-command-surface.current.yaml" "${RANDOM_REPO}/identity/protocol/mappings/"
-cp "${ROOT}/identity/protocol/mappings/doc-command-surface.v1.yaml" "${RANDOM_REPO}/identity/protocol/mappings/"
+probe_mirror_relpaths_only "${ROOT}" "${RANDOM_REPO}" "${DOC_COMMAND_SURFACE_RANDOM_REPO_REL_PATHS[@]}"
 touch "${RANDOM_REPO}/scripts/validate_headstamp_recurrence_closure.py"
 
 python3 - <<'PY' "${RANDOM_REPO}"

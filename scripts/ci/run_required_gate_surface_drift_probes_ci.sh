@@ -8,6 +8,14 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 export PROBE_FIXTURE_REPO_ROOT="$repo_root"
 source "${repo_root}/scripts/probe_fixture_shell_common.sh"
+source "${repo_root}/scripts/ci/probe_repo_mirror_common.sh"
+
+PROBE_REL_PATHS=(
+  "scripts"
+  "docs"
+  "identity"
+  ".github"
+)
 
 run_shadow_validator() {
   local shadow_root="$1"
@@ -31,7 +39,7 @@ python3 scripts/validate_required_gate_surface_drift.py --json-only >/tmp/requir
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 
-cp -R scripts docs identity .github "$tmpdir/"
+probe_mirror_relpaths_only "$repo_root" "$tmpdir" "${PROBE_REL_PATHS[@]}"
 
 restore_shadow_file "$tmpdir" "scripts/ci/run_required_runtime_gates_ci.sh"
 # expected fail-close: required_gate_workspace_runtime_runner_missing:--repo-catalog
