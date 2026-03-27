@@ -22,6 +22,7 @@ from headstamp_error_family_common import (
 )
 from identity_runtime_authority_common import ERR_IDENTITY_AUTHORITY_VIOLATION
 from resolve_identity_context import resolve_repo_catalog_path
+from response_stamp_common import classify_headstamp_entrypoint_wiring
 from runtime_temp_path_common import runtime_temp_dir, runtime_temp_file, runtime_temp_root
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -137,28 +138,18 @@ def _static_wiring_scan() -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
             missing.append({"path": rel, "missing": "entrypoint_file"})
             continue
         text = p.read_text(encoding="utf-8", errors="ignore")
-        has_compose = "scripts/compose_and_validate_governed_reply.py" in text
-        has_send_time = "scripts/validate_send_time_reply_gate.py" in text
-        if has_compose and has_send_time:
-            mode = "compose_plus_direct"
-        elif has_compose:
-            mode = "compose_wrapper_only"
-        elif has_send_time:
-            mode = "direct_send_time_only"
-        else:
-            mode = "none"
-        normalized = bool(has_compose or has_send_time)
+        wiring = classify_headstamp_entrypoint_wiring(text)
         coverage_rows.append(
             {
                 "path": rel,
                 "entrypoint_exists": True,
-                "has_compose_wrapper": has_compose,
-                "has_direct_send_time": has_send_time,
-                "coverage_mode": mode,
-                "coverage_normalized": normalized,
+                "has_compose_wrapper": bool(wiring.get("has_governed_emit", False)),
+                "has_direct_send_time": bool(wiring.get("has_send_time", False)),
+                "coverage_mode": str(wiring.get("coverage_mode", "")),
+                "coverage_normalized": bool(wiring.get("coverage_normalized", False)),
             }
         )
-        if not normalized:
+        if not bool(wiring.get("coverage_normalized", False)):
             missing.append({"path": rel, "missing": "compose_or_send_time_reference"})
     return coverage_rows, missing
 

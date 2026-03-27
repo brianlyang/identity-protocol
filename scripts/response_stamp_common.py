@@ -12,6 +12,7 @@ from typing import Any
 
 from actor_session_common import load_actor_binding, resolve_protocol_actor_id
 from blocker_taxonomy_common import CANONICAL_BLOCKER_TYPE_SET
+from protocol_infra_contract import CANONICAL_FINAL_EMIT_SCRIPT
 from resolve_identity_context import resolve_identity
 
 
@@ -39,6 +40,27 @@ ALLOWED_RESPONSE_STAMP_MISMATCH_ACTIONS = {"blocker_receipt"}
 ALLOWED_WORK_LAYERS = {"protocol", "instance", "dual"}
 ALLOWED_SOURCE_LAYERS = {"project", "global"}
 DISPLAY_HEADSTAMP_PREFIX = "Display-Headstamp:"
+IDENTITY_RESPONSE_STAMP_RENDER_SCRIPT = "scripts/render_identity_response_stamp.py"
+IDENTITY_RESPONSE_STAMP_VALIDATOR_ID = "scripts/validate_identity_response_stamp.py"
+IDENTITY_RESPONSE_STAMP_BLOCKER_RECEIPT_VALIDATOR_ID = (
+    "scripts/validate_identity_response_stamp_blocker_receipt.py"
+)
+LAYER_INTENT_RESOLUTION_VALIDATOR_ID = "scripts/validate_layer_intent_resolution.py"
+REPLY_IDENTITY_CONTEXT_FIRST_LINE_VALIDATOR_ID = (
+    "scripts/validate_reply_identity_context_first_line.py"
+)
+SEND_TIME_REPLY_GATE_VALIDATOR_ID = "scripts/validate_send_time_reply_gate.py"
+EXECUTION_REPLY_IDENTITY_COHERENCE_VALIDATOR_ID = (
+    "scripts/validate_execution_reply_identity_coherence.py"
+)
+HEADSTAMP_RECURRENCE_CLOSURE_VALIDATOR_ID = "scripts/validate_headstamp_recurrence_closure.py"
+HEADSTAMP_GOVERNED_ENTRYPOINT_SURFACES = (
+    "scripts/compose_and_validate_governed_reply.py",
+    CANONICAL_FINAL_EMIT_SCRIPT,
+)
+HEADSTAMP_SEND_TIME_ENFORCEMENT_SURFACES = (
+    SEND_TIME_REPLY_GATE_VALIDATOR_ID,
+)
 REPLY_FIRST_LINE_SURFACE_RAW_CANONICAL = "raw_canonical"
 REPLY_FIRST_LINE_SURFACE_VISIBLE_PROJECTION = "visible_projection"
 REPLY_FIRST_LINE_SURFACE_INVALID = "invalid"
@@ -167,6 +189,26 @@ TRANSPORT_ERROR_HINTS = (
     "http_5",
     "ioerror",
 )
+
+
+def classify_headstamp_entrypoint_wiring(entrypoint_text: str) -> dict[str, Any]:
+    text = str(entrypoint_text or "")
+    has_governed_emit = any(token in text for token in HEADSTAMP_GOVERNED_ENTRYPOINT_SURFACES)
+    has_send_time = any(token in text for token in HEADSTAMP_SEND_TIME_ENFORCEMENT_SURFACES)
+    if has_governed_emit and has_send_time:
+        mode = "governed_emit_plus_direct"
+    elif has_governed_emit:
+        mode = "governed_emit_only"
+    elif has_send_time:
+        mode = "direct_send_time_only"
+    else:
+        mode = "none"
+    return {
+        "has_governed_emit": has_governed_emit,
+        "has_send_time": has_send_time,
+        "coverage_mode": mode,
+        "coverage_normalized": bool(has_governed_emit or has_send_time),
+    }
 
 
 def _has_protocol_lane_directive(text: str) -> bool:
