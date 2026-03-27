@@ -199,6 +199,20 @@ assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_report
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_report_authority_class'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_report_pointer_resolution_mode'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_report_pointer_path'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_projection_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_scope_class'] == 'bounded_targeted_subset_exclusion', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_scope_reason'] == 'required_gate_bundle_out_of_scope_for_targeted_subset', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_actor_id'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_resolved_work_layer'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_resolved_source_layer'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_lock_state'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_run_id_binding'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_report_selected_path'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_report_selection_mode'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_report_authority_class'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_report_pointer_resolution_mode'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_report_pointer_path'] == '', summary_targeted_subset_excluded
 
 summary_observed = {
     'required_gate_bundle_execution': {
@@ -390,6 +404,7 @@ for summary_key, _one_look_field in RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SUMMAR
         row.setdefault('violation_count', 0)
 
 summary_release_projection['required_gate_bundle'] = dict(summary_observed['required_gate_bundle'])
+summary_release_projection['required_gate_bundle_scan_probe'] = dict(summary_observed['required_gate_bundle_scan_probe'])
 readiness._hydrate_one_look_projection(summary_release_projection)
 assert summary_release_projection['one_look']['release_plane_cloud_evidence_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['release_plane_required_checks_status'] == 'PASS', summary_release_projection
@@ -414,6 +429,18 @@ assert summary_release_projection['one_look']['required_gate_bundle_report_selec
 assert summary_release_projection['one_look']['required_gate_bundle_report_authority_class'] == 'explicit_report_override', summary_release_projection
 assert summary_release_projection['one_look']['required_gate_bundle_report_pointer_resolution_mode'] == 'explicit_report_override', summary_release_projection
 assert summary_release_projection['one_look']['required_gate_bundle_report_pointer_path'] == '', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_status'] == 'FAIL_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_projection_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_actor_id'] == 'assistant:probe', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_resolved_work_layer'] == 'instance', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_resolved_source_layer'] == 'project', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_lock_state'] == 'LOCK_MATCH', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_run_id_binding'] == 'probe-run-id-scan', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_report_selected_path'] == '/tmp/probe-report.json', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_report_selection_mode'] == 'explicit_report_override', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_report_authority_class'] == 'explicit_report_override', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_report_pointer_resolution_mode'] == 'explicit_report_override', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_report_pointer_path'] == '', summary_release_projection
 assert summary_release_projection['one_look']['control_plane_budget_sync_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['control_plane_status_sync_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['control_plane_live_status'] == 'PASS_REQUIRED', summary_release_projection

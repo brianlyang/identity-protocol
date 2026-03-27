@@ -6,36 +6,63 @@ from typing import Any
 STATUS_UNKNOWN = "UNKNOWN"
 
 RELEASE_READINESS_REQUIRED_GATE_BUNDLE_ONE_LOOK_PASSTHROUGH_FIELDS: tuple[tuple[str, str], ...] = (
-    ("actor_id", "required_gate_bundle_actor_id"),
-    ("resolved_work_layer", "required_gate_bundle_resolved_work_layer"),
-    ("resolved_source_layer", "required_gate_bundle_resolved_source_layer"),
-    ("lock_state", "required_gate_bundle_lock_state"),
-    ("run_id_binding", "required_gate_bundle_run_id_binding"),
-    ("report_selected_path", "required_gate_bundle_report_selected_path"),
-    ("report_selection_mode", "required_gate_bundle_report_selection_mode"),
-    ("report_selected_authority_class", "required_gate_bundle_report_authority_class"),
-    ("report_pointer_resolution_mode", "required_gate_bundle_report_pointer_resolution_mode"),
-    ("report_pointer_path", "required_gate_bundle_report_pointer_path"),
+    ("actor_id", "{prefix}_actor_id"),
+    ("resolved_work_layer", "{prefix}_resolved_work_layer"),
+    ("resolved_source_layer", "{prefix}_resolved_source_layer"),
+    ("lock_state", "{prefix}_lock_state"),
+    ("run_id_binding", "{prefix}_run_id_binding"),
+    ("report_selected_path", "{prefix}_report_selected_path"),
+    ("report_selection_mode", "{prefix}_report_selection_mode"),
+    ("report_selected_authority_class", "{prefix}_report_authority_class"),
+    ("report_pointer_resolution_mode", "{prefix}_report_pointer_resolution_mode"),
+    ("report_pointer_path", "{prefix}_report_pointer_path"),
 )
-RELEASE_READINESS_REQUIRED_GATE_BUNDLE_ONE_LOOK_FIELDS: tuple[str, ...] = (
-    "required_gate_bundle_status",
-    "required_gate_bundle_projection_status",
-    "required_gate_bundle_scope_class",
-    "required_gate_bundle_scope_reason",
-    "failed_required_target_count",
-    "failed_target_names",
-    "projection_stale_reasons",
-    "rows_without_projected_report_fields",
-    "missing_mapping_requirements",
-    *(target for _, target in RELEASE_READINESS_REQUIRED_GATE_BUNDLE_ONE_LOOK_PASSTHROUGH_FIELDS),
+
+
+def release_readiness_required_gate_bundle_one_look_fields(prefix: str) -> tuple[str, ...]:
+    field_prefix = str(prefix or "").strip()
+    return (
+        f"{field_prefix}_status",
+        f"{field_prefix}_projection_status",
+        f"{field_prefix}_scope_class",
+        f"{field_prefix}_scope_reason",
+        f"{field_prefix}_failed_required_target_count",
+        f"{field_prefix}_failed_target_names",
+        f"{field_prefix}_projection_stale_reasons",
+        f"{field_prefix}_rows_without_projected_report_fields",
+        f"{field_prefix}_missing_mapping_requirements",
+        *(
+            target_template.format(prefix=field_prefix)
+            for _source_field, target_template in RELEASE_READINESS_REQUIRED_GATE_BUNDLE_ONE_LOOK_PASSTHROUGH_FIELDS
+        ),
+    )
+
+
+RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PRIMARY_ONE_LOOK_FIELDS: tuple[str, ...] = (
+    release_readiness_required_gate_bundle_one_look_fields("required_gate_bundle")
+)
+RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCAN_PROBE_ONE_LOOK_FIELDS: tuple[str, ...] = (
+    release_readiness_required_gate_bundle_one_look_fields("required_gate_bundle_scan_probe")
 )
 RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_MARKER = (
     "required_gate_bundle_projection="
-    + "|".join(f"one_look.{field}" for field in RELEASE_READINESS_REQUIRED_GATE_BUNDLE_ONE_LOOK_FIELDS)
+    + "|".join(
+        f"one_look.{field}"
+        for field in (
+            *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PRIMARY_ONE_LOOK_FIELDS,
+            *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCAN_PROBE_ONE_LOOK_FIELDS,
+        )
+    )
 )
 RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_SURFACE_CONSTRAINTS: tuple[str, ...] = (
     RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_MARKER,
-    *(f"one_look.{field}" for field in RELEASE_READINESS_REQUIRED_GATE_BUNDLE_ONE_LOOK_FIELDS),
+    *(
+        f"one_look.{field}"
+        for field in (
+            *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PRIMARY_ONE_LOOK_FIELDS,
+            *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCAN_PROBE_ONE_LOOK_FIELDS,
+        )
+    ),
 )
 
 
@@ -61,27 +88,44 @@ def _safe_int(value: Any) -> int:
         return 0
 
 
-def build_release_readiness_required_gate_bundle_one_look_projection(bundle: dict[str, Any]) -> dict[str, Any]:
+def build_release_readiness_required_gate_bundle_one_look_projection(
+    bundle: dict[str, Any],
+    *,
+    prefix: str = "required_gate_bundle",
+) -> dict[str, Any]:
     source = bundle if isinstance(bundle, dict) else {}
+    field_prefix = str(prefix or "").strip() or "required_gate_bundle"
     projection: dict[str, Any] = {
-        "required_gate_bundle_status": _clean_str(source.get("bundle_status")).upper() or STATUS_UNKNOWN,
-        "required_gate_bundle_projection_status": _clean_str(source.get("projection_status")).upper()
-        or STATUS_UNKNOWN,
-        "required_gate_bundle_scope_class": _clean_str(source.get("scope_class")),
-        "required_gate_bundle_scope_reason": _clean_str(source.get("scope_reason")),
-        "failed_required_target_count": _safe_int(source.get("failed_required_target_count")),
-        "failed_target_names": _clean_list(source.get("failed_target_names")),
-        "projection_stale_reasons": _clean_list(source.get("projection_stale_reasons")),
-        "rows_without_projected_report_fields": _clean_list(source.get("rows_without_projected_report_fields")),
-        "missing_mapping_requirements": _clean_list(source.get("missing_mapping_requirements")),
+        f"{field_prefix}_status": _clean_str(source.get("bundle_status")).upper() or STATUS_UNKNOWN,
+        f"{field_prefix}_projection_status": _clean_str(source.get("projection_status")).upper() or STATUS_UNKNOWN,
+        f"{field_prefix}_scope_class": _clean_str(source.get("scope_class")),
+        f"{field_prefix}_scope_reason": _clean_str(source.get("scope_reason")),
+        f"{field_prefix}_failed_required_target_count": _safe_int(source.get("failed_required_target_count")),
+        f"{field_prefix}_failed_target_names": _clean_list(source.get("failed_target_names")),
+        f"{field_prefix}_projection_stale_reasons": _clean_list(source.get("projection_stale_reasons")),
+        f"{field_prefix}_rows_without_projected_report_fields": _clean_list(source.get("rows_without_projected_report_fields")),
+        f"{field_prefix}_missing_mapping_requirements": _clean_list(source.get("missing_mapping_requirements")),
     }
     for source_field, target_field in RELEASE_READINESS_REQUIRED_GATE_BUNDLE_ONE_LOOK_PASSTHROUGH_FIELDS:
-        projection[target_field] = _clean_str(source.get(source_field))
+        projection[target_field.format(prefix=field_prefix)] = _clean_str(source.get(source_field))
     return projection
 
 
 def apply_release_readiness_required_gate_bundle_one_look(summary: dict[str, Any], one_look: dict[str, Any]) -> None:
     if not isinstance(one_look, dict):
         return
-    bundle = summary.get("required_gate_bundle") if isinstance(summary, dict) else {}
-    one_look.update(build_release_readiness_required_gate_bundle_one_look_projection(bundle or {}))
+    summary_payload = summary if isinstance(summary, dict) else {}
+    bundle = summary_payload.get("required_gate_bundle") or {}
+    scan_probe = summary_payload.get("required_gate_bundle_scan_probe") or {}
+    one_look.update(
+        build_release_readiness_required_gate_bundle_one_look_projection(
+            bundle or {},
+            prefix="required_gate_bundle",
+        )
+    )
+    one_look.update(
+        build_release_readiness_required_gate_bundle_one_look_projection(
+            scan_probe or {},
+            prefix="required_gate_bundle_scan_probe",
+        )
+    )
