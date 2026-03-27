@@ -403,11 +403,34 @@ def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _load_optional_json(path_text: str) -> dict[str, Any]:
+    token = str(path_text or "").strip()
+    if not token:
+        return {}
+    try:
+        path = Path(token).expanduser().resolve()
+        if not path.exists():
+            return {}
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
 def _write_json(path: Path, data: dict[str, Any]) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def _write_active_execution_report_pointer(*, pack_path: Path, report_path: Path, run_id: str) -> None:
+def _write_active_execution_report_pointer(
+    *,
+    pack_path: Path,
+    report_path: Path,
+    run_id: str,
+    actor_id: str = "",
+    session_id: str = "",
+    work_layer: str = "",
+    source_layer: str = "",
+) -> None:
     pointer_path = (pack_path.resolve() / "runtime" / "state" / "active_execution_report.json").resolve()
     pointer_path.parent.mkdir(parents=True, exist_ok=True)
     pointer = {
@@ -415,6 +438,18 @@ def _write_active_execution_report_pointer(*, pack_path: Path, report_path: Path
         "report_path": str(report_path.resolve()),
         "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
+    actor_token = str(actor_id or "").strip()
+    session_token = str(session_id or "").strip()
+    work_layer_token = str(work_layer or "").strip()
+    source_layer_token = str(source_layer or "").strip()
+    if actor_token:
+        pointer["actor_id"] = actor_token
+    if session_token:
+        pointer["session_id"] = session_token
+    if work_layer_token:
+        pointer["work_layer"] = work_layer_token
+    if source_layer_token:
+        pointer["source_layer"] = source_layer_token
     pointer_path.write_text(json.dumps(pointer, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
@@ -719,7 +754,15 @@ def _write_report_with_pointer(*, report_path: Path, data: dict[str, Any], pack_
     enriched = _ensure_multimodal_runtime_fields(dict(data), pack_path=pack_path, run_id=run_id)
     _write_json(report_path, enriched)
     try:
-        _write_active_execution_report_pointer(pack_path=pack_path, report_path=report_path, run_id=run_id)
+        _write_active_execution_report_pointer(
+            pack_path=pack_path,
+            report_path=report_path,
+            run_id=run_id,
+            actor_id=str(enriched.get("actor_id", "")).strip(),
+            session_id=str(enriched.get("session_id", "")).strip(),
+            work_layer=str(enriched.get("work_layer", "")).strip(),
+            source_layer=str(enriched.get("source_layer", "")).strip(),
+        )
     except Exception:
         # Report write must remain authoritative; pointer is best-effort metadata.
         pass
