@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import argparse
 import json
+from types import SimpleNamespace
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
+from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 from root_corpus_governance_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -41,9 +43,11 @@ def main() -> int:
     registry_doc, registry_entry_path, registry_active_path, alias_error = load_root_corpus_registry(repo_root)
 
     stale_reasons: list[str] = []
+    structure_violations: list[dict[str, Any]] = []
     file_violations: list[dict[str, Any]] = []
     directory_violations: list[dict[str, Any]] = []
     forbidden_hits: list[dict[str, Any]] = []
+    row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
 
     if alias_error:
@@ -57,6 +61,23 @@ def main() -> int:
     entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     content_classes = forbidden_classes_from_registry(registry_doc) if registry_doc else {}
     class_profiles = corpus_class_profiles_from_registry(registry_doc) if registry_doc else {}
+    raw_forbidden_rows = registry_doc.get("forbidden_content_classes") if registry_doc else []
+    raw_profile_rows = registry_doc.get("corpus_class_profiles") if registry_doc else []
+    raw_forbidden_ids = [
+        str(row.get("class_id") or "").strip()
+        for row in raw_forbidden_rows
+        if isinstance(row, dict) and str(row.get("class_id") or "").strip()
+    ]
+    raw_profile_ids = [
+        str(row.get("corpus_class") or "").strip()
+        for row in raw_profile_rows
+        if isinstance(row, dict) and str(row.get("corpus_class") or "").strip()
+    ]
+    expected_profile_ids = sorted({entry.corpus_class for entry in entries if entry.law_bearing and entry.entry_kind == "file"})
+    expected_forbidden_ids = sorted(
+        {class_id for entry in entries for class_id in entry.forbidden_content_classes}
+        | {class_id for profile in class_profiles.values() for class_id in profile.forbidden_content_classes}
+    )
 
     if not stale_reasons:
         if str(registry_doc.get("registry_family") or "").strip() != "protocol_root_corpus":
@@ -84,10 +105,6 @@ def main() -> int:
             if not content_class.patterns:
                 stale_reasons.append(f"root_corpus_forbidden_class_missing_patterns:{class_id}")
                 error_code = ERR_REGISTRY
-        for entry in entries:
-            if entry.law_bearing and entry.entry_kind == "file" and entry.corpus_class not in class_profiles:
-                stale_reasons.append(f"root_corpus_class_profile_missing:{entry.corpus_class}:{entry.rel_path}")
-                error_code = ERR_REGISTRY
 
     root_dir = (repo_root / root_dir_rel).resolve()
     if not stale_reasons and (not root_dir.exists() or not root_dir.is_dir()):
@@ -98,14 +115,45 @@ def main() -> int:
     actual_paths = collect_protocol_root_top_level_entries(repo_root, root_dir_rel) if root_dir.exists() else []
 
     if not stale_reasons:
+        if len(registered_paths) != len(entries):
+            structure_violations.append({"field": "registered_top_level_entries", "reason": "duplicate_rel_path"})
+        if len(set(raw_profile_ids)) != len(raw_profile_ids):
+            structure_violations.append({"field": "corpus_class_profiles", "reason": "duplicate_corpus_class"})
+        if len(set(raw_forbidden_ids)) != len(raw_forbidden_ids):
+            structure_violations.append({"field": "forbidden_content_classes", "reason": "duplicate_class_id"})
+
         extras = sorted(set(actual_paths) - set(registered_paths))
         missing = sorted(set(registered_paths) - set(actual_paths))
-        for rel_path in extras:
-            stale_reasons.append(f"unregistered_root_top_level_entry:{rel_path}")
-        for rel_path in missing:
-            stale_reasons.append(f"registered_root_top_level_entry_missing:{rel_path}")
-        if extras or missing:
-            error_code = ERR_STRUCTURE
+        if extras:
+            structure_violations.append(
+                {"field": "registered_top_level_entries", "reason": "extra_root_entries", "rel_paths": extras}
+            )
+        if missing:
+            structure_violations.append(
+                {"field": "registered_top_level_entries", "reason": "missing_root_entries", "rel_paths": missing}
+            )
+
+        missing_profile_ids = sorted(set(expected_profile_ids) - set(class_profiles))
+        extra_profile_ids = sorted(set(class_profiles) - set(expected_profile_ids))
+        if missing_profile_ids:
+            structure_violations.append(
+                {"field": "corpus_class_profiles", "reason": "missing_expected_corpus_classes", "corpus_classes": missing_profile_ids}
+            )
+        if extra_profile_ids:
+            structure_violations.append(
+                {"field": "corpus_class_profiles", "reason": "extra_unreferenced_corpus_classes", "corpus_classes": extra_profile_ids}
+            )
+
+        missing_forbidden_ids = sorted(set(expected_forbidden_ids) - set(content_classes))
+        extra_forbidden_ids = sorted(set(content_classes) - set(expected_forbidden_ids))
+        if missing_forbidden_ids:
+            structure_violations.append(
+                {"field": "forbidden_content_classes", "reason": "missing_expected_class_ids", "class_ids": missing_forbidden_ids}
+            )
+        if extra_forbidden_ids:
+            structure_violations.append(
+                {"field": "forbidden_content_classes", "reason": "extra_unreferenced_class_ids", "class_ids": extra_forbidden_ids}
+            )
 
     if not stale_reasons:
         for entry in entries:
@@ -156,11 +204,15 @@ def main() -> int:
                             }
                         )
 
-    if not error_code and (file_violations or directory_violations):
+    if not error_code and (structure_violations or file_violations or directory_violations):
         error_code = ERR_STRUCTURE
     if not error_code and forbidden_hits:
         error_code = ERR_CONTENT
 
+    stale_reasons.extend(
+        f"structure_violation:{item['field']}:{item['reason']}"
+        for item in structure_violations
+    )
     stale_reasons.extend(
         f"file_violation:{item['rel_path']}:{item['reason']}:{item.get('marker', '')}".rstrip(":")
         for item in file_violations
@@ -174,6 +226,47 @@ def main() -> int:
     )
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
+    row_family_projection_rows = [
+        project_row_family(
+            family_id="registered_top_level_entries",
+            member_id_key="rel_path",
+            actual_rows=[SimpleNamespace(rel_path=rel_path) for rel_path in actual_paths],
+            expected_rows={rel_path: {} for rel_path in registered_paths},
+            id_attr="rel_path",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        project_row_family(
+            family_id="corpus_class_profiles",
+            member_id_key="corpus_class",
+            actual_rows=[SimpleNamespace(corpus_class=corpus_class) for corpus_class in sorted(class_profiles.keys())],
+            expected_rows={corpus_class: {} for corpus_class in expected_profile_ids},
+            id_attr="corpus_class",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        project_row_family(
+            family_id="forbidden_content_classes",
+            member_id_key="class_id",
+            actual_rows=[SimpleNamespace(class_id=class_id) for class_id in sorted(content_classes.keys())],
+            expected_rows={class_id: {} for class_id in expected_forbidden_ids},
+            id_attr="class_id",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+    ]
+    governance_row_coverage_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="coverage_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
+    governance_row_identity_projection_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="identity_projection_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_CONTENT),
@@ -187,9 +280,14 @@ def main() -> int:
         "law_bearing_entry_count": sum(1 for entry in entries if entry.law_bearing),
         "validated_file_count": sum(1 for entry in entries if entry.entry_kind == "file"),
         "validated_directory_count": sum(1 for entry in entries if entry.entry_kind == "directory"),
+        "governance_row_family_count": len(row_family_projection_rows),
+        "governance_row_coverage_status": governance_row_coverage_status,
+        "governance_row_identity_projection_status": governance_row_identity_projection_status,
+        "row_family_projection_rows": row_family_projection_rows,
         "corpus_class_profile_ids": sorted(class_profiles.keys()),
         "corpus_class_profile_count": len(class_profiles),
         "forbidden_content_class_ids": sorted(content_classes.keys()),
+        "structure_violations": structure_violations,
         "file_violations": file_violations,
         "directory_violations": directory_violations,
         "forbidden_content_hits": forbidden_hits,

@@ -391,6 +391,18 @@ binding must be explicitly declared in registry completeness law.
 
 ---
 
+## Root governance completeness discipline
+
+Governance law is not a soft prose bundle.
+
+1. required registered-top-level-entry, corpus-class-profile, and forbidden-content-class rows must remain explicit as separate machine-readable row families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize governance legality while missing or unexpected rel-path, corpus-class, or forbidden-content-class identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
 ## Root gateway-admissibility completeness discipline
 
 Gateway-admissibility law is not a soft prose bundle.

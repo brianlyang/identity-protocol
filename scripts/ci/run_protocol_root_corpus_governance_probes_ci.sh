@@ -11,6 +11,7 @@ mirror_repo() {
   mkdir -p "${dst}/scripts/ci"
   cp -R "${ROOT}/identity" "${dst}/"
   cp "${ROOT}/scripts/root_corpus_governance_common.py" "${dst}/scripts/"
+  cp "${ROOT}/scripts/root_row_family_projection_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/registry_alias_control_plane_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/repo_root_resolution_common.py" "${dst}/scripts/"
@@ -29,9 +30,120 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_governance_status"] == "PASS_REQUIRED", payload
+assert payload["governance_row_family_count"] == 3, payload
+assert payload["governance_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["governance_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert payload["registered_top_level_count"] == payload["actual_top_level_count"], payload
 assert "root_contract" in payload["corpus_class_profile_ids"], payload
 assert "business_domain_example" in payload["forbidden_content_class_ids"], payload
+PY
+
+PROFILE_REPO="${TMP_ROOT}/missing-profile-repo"
+mirror_repo "${PROFILE_REPO}"
+python3 - <<'PY' "${PROFILE_REPO}/identity/protocol/mappings/root-corpus-registry.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["corpus_class_profiles"] = [
+    row for row in doc["corpus_class_profiles"]
+    if row.get("corpus_class") != "root_contract"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+PROFILE_JSON="${TMP_ROOT}/missing-profile.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" \
+  --repo-root "${PROFILE_REPO}" \
+  --json-only >"${PROFILE_JSON}"; then
+  echo "[FAIL] root corpus governance validator unexpectedly passed after removing corpus-class profile row"
+  exit 1
+fi
+
+python3 - <<'PY' "${PROFILE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_governance_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCG-002", payload
+assert payload["governance_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["governance_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["field"] == "corpus_class_profiles" and row["reason"] == "missing_expected_corpus_classes" and "root_contract" in row.get("corpus_classes", [])
+    for row in payload["structure_violations"]
+), payload
+profile_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "corpus_class_profiles"
+)
+assert profile_row["expected_count"] == 5, payload
+assert profile_row["actual_count"] == 4, payload
+assert profile_row["missing_ids"] == ["root_contract"], payload
+assert profile_row["unexpected_ids"] == [], payload
+assert profile_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert profile_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+FORBIDDEN_REPO="${TMP_ROOT}/forbidden-class-identity-repo"
+mirror_repo "${FORBIDDEN_REPO}"
+python3 - <<'PY' "${FORBIDDEN_REPO}/identity/protocol/mappings/root-corpus-registry.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["forbidden_content_classes"]:
+    if row.get("class_id") == "business_domain_example":
+        row["class_id"] = "business_domain_example_alias"
+        break
+else:
+    raise SystemExit("expected business_domain_example row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+FORBIDDEN_JSON="${TMP_ROOT}/forbidden-class-identity.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" \
+  --repo-root "${FORBIDDEN_REPO}" \
+  --json-only >"${FORBIDDEN_JSON}"; then
+  echo "[FAIL] root corpus governance validator unexpectedly passed forbidden-content-class identity drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${FORBIDDEN_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_governance_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCG-002", payload
+assert payload["governance_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["governance_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["field"] == "forbidden_content_classes" and row["reason"] == "missing_expected_class_ids" and "business_domain_example" in row.get("class_ids", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "forbidden_content_classes" and row["reason"] == "extra_unreferenced_class_ids" and "business_domain_example_alias" in row.get("class_ids", [])
+    for row in payload["structure_violations"]
+), payload
+forbidden_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "forbidden_content_classes"
+)
+assert forbidden_row["expected_count"] == 3, payload
+assert forbidden_row["actual_count"] == 3, payload
+assert forbidden_row["missing_ids"] == ["business_domain_example"], payload
+assert forbidden_row["unexpected_ids"] == ["business_domain_example_alias"], payload
+assert forbidden_row["coverage_status"] == "PASS_REQUIRED", payload
+assert forbidden_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 MARKER_REPO="${TMP_ROOT}/missing-marker-repo"
@@ -87,7 +199,17 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_governance_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCG-002", payload
-assert any("unregistered_root_top_level_entry:identity/protocol/TEMP_CLOSURE_NOTE.md" == reason for reason in payload["stale_reasons"]), payload
+assert any(
+    row["field"] == "registered_top_level_entries" and row["reason"] == "extra_root_entries" and "identity/protocol/TEMP_CLOSURE_NOTE.md" in row.get("rel_paths", [])
+    for row in payload["structure_violations"]
+), payload
+entry_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "registered_top_level_entries"
+)
+assert "identity/protocol/TEMP_CLOSURE_NOTE.md" in entry_row["unexpected_ids"], payload
+assert entry_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert entry_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 WORKBOOK_REPO="${TMP_ROOT}/workbook-pollution-repo"
