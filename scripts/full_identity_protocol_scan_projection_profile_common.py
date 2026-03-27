@@ -31,11 +31,17 @@ FULL_IDENTITY_PROTOCOL_SCAN_PROJECTION_PROFILES: dict[str, FullIdentityProtocolS
         profile_id="terminal_truth_boundary_projection",
         execution_mode="projection_only",
         host_visible_post_check_metrics_enabled=False,
-        excluded_areas=("release_cloud_evidence_adapter", "host_visible_post_check_metrics"),
+        excluded_areas=(
+            "release_cloud_evidence_adapter",
+            "host_visible_post_check_metrics",
+            "health_report_experience_writeback_closure",
+        ),
         description=(
             "Run the governed outer-surface terminal-truth projection path only: preserve "
-            "three-plane terminal-truth projections and aggregate summary_terminal_truth_boundary "
-            "while excluding unrelated validator-matrix/fleet-summary lanes from the scan path."
+            "three-plane terminal-truth projections, aggregate summary_terminal_truth_boundary, "
+            "and keep health-report companion closure bounded as an explicit projection-only "
+            "exclusion while excluding unrelated validator-matrix/fleet-summary lanes from the "
+            "scan path."
         ),
     ),
 }

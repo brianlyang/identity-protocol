@@ -518,6 +518,7 @@ assert full_scan_payload["projection_profile_execution_mode"] == "projection_onl
 assert full_scan_payload["projection_excluded_areas"] == [
     "release_cloud_evidence_adapter",
     "host_visible_post_check_metrics",
+    "health_report_experience_writeback_closure",
 ], full_scan_payload
 release_adapter = full_scan_payload.get("release_cloud_evidence_adapter") or {}
 assert release_adapter["release_cloud_evidence_adapter_status"] == "SKIPPED_NOT_REQUIRED", release_adapter
@@ -542,6 +543,15 @@ assert required_gate_summary["projection_fail"] == 0, required_gate_summary
 assert required_gate_summary["projection_skipped_not_required"] == 2, required_gate_summary
 assert required_gate_summary["projection_scope_classes"] == ["bounded_projection_profile_exclusion"], required_gate_summary
 assert required_gate_summary["projection_scope_reasons"] == ["projection_profile_out_of_scope"], required_gate_summary
+health_summary = full_scan_payload.get("summary_health_report_experience_writeback_closure") or {}
+assert health_summary["total_identities"] == 2, health_summary
+assert health_summary["projection_pass"] == 0, health_summary
+assert health_summary["projection_fail"] == 0, health_summary
+assert health_summary["projection_skipped_not_required"] == 2, health_summary
+assert health_summary["projection_scope_excluded_identity_ids"] == [row["identity_id"] for row in seeded], health_summary
+assert health_summary["projection_scope_classes"] == ["bounded_projection_profile_exclusion"], health_summary
+assert health_summary["projection_scope_reasons"] == ["projection_profile_out_of_scope"], health_summary
+assert health_summary["projection_stale_reasons"] == [], health_summary
 
 rows_by_identity: dict[str, dict] = {}
 for catalog_row in full_scan_payload.get("catalogs") or []:
@@ -572,6 +582,33 @@ for row in seeded:
     )
     assert identity_row["check_matrix_mode"] == "projection_only", (identity_id, identity_row)
     assert identity_row["scan_projection_profile"] == "terminal_truth_boundary_projection", (identity_id, identity_row)
+    health_projection = identity_row.get("three_plane_health_report_experience_writeback_closure") or {}
+    assert health_projection["projection_status"] == "SKIPPED_NOT_REQUIRED", (identity_id, health_projection)
+    assert health_projection["projection_excluded_area"] == "health_report_experience_writeback_closure", (
+        identity_id,
+        health_projection,
+    )
+    assert health_projection["projection_skip_scope_class"] == "bounded_projection_profile_exclusion", (
+        identity_id,
+        health_projection,
+    )
+    assert health_projection["validation_status"] == "SKIPPED_NOT_REQUIRED", (identity_id, health_projection)
+    assert three_plane_summary["health_report_experience_writeback_projection_status"] == "SKIPPED_NOT_REQUIRED", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["health_report_contract_status"] == "SKIPPED_NOT_REQUIRED", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["health_report_experience_writeback_validation_status"] == "SKIPPED_NOT_REQUIRED", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["health_report_selected_path_matches_execution_report"] is False, (
+        identity_id,
+        three_plane_summary,
+    )
     required_gate_projection = identity_row.get("three_plane_required_gate_bundle_target_projection") or {}
     assert required_gate_projection["projection_status"] == "SKIPPED_NOT_REQUIRED", (
         identity_id,
@@ -601,6 +638,7 @@ print(
             "release_readiness_outputs": readiness_out,
             "full_scan_output": str(full_scan_out),
             "summary_terminal_truth_boundary": summary_boundary,
+            "summary_health_report_experience_writeback_closure": health_summary,
         },
         ensure_ascii=False,
         indent=2,

@@ -203,11 +203,12 @@ SURFACE_PROFILES: dict[str, GovernedRuntimeSummarySurfaceProfile] = {
         operational_constraints=(
             "projection_profile_default=projection_profile=full|projection_profile_execution_mode=full_verdict",
             "projection_profile_terminal_truth_boundary=projection_profile=terminal_truth_boundary_projection|projection_profile_execution_mode=projection_only",
-            "projection_profile_terminal_truth_boundary_excluded_areas=release_cloud_evidence_adapter|host_visible_post_check_metrics",
+            "projection_profile_terminal_truth_boundary_excluded_areas=release_cloud_evidence_adapter|host_visible_post_check_metrics|health_report_experience_writeback_closure",
             *PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS,
             "projection_profile_terminal_truth_boundary_forwarding=scan_projection_profile=terminal_truth_boundary_projection|check_matrix_mode=projection_only",
             "projection_profile_terminal_truth_boundary_host_visible_skip=host_visible_post_check_metrics_status=SKIPPED_NOT_REQUIRED|chat_egress_uniqueness_status=SKIPPED_NOT_REQUIRED",
             "projection_profile_terminal_truth_boundary_boundary_surface=three_plane_terminal_truth_boundary_projection|summary_terminal_truth_boundary",
+            "projection_profile_terminal_truth_boundary_health_surface=three_plane_health_report_experience_writeback_closure|summary_health_report_experience_writeback_closure",
         ),
         authority_rule=(
             "The full identity protocol scan payload is an aggregate runtime diagnostic summary on an outer "

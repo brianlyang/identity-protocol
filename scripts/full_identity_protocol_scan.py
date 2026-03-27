@@ -25,6 +25,9 @@ from full_identity_protocol_scan_projection_profile_common import (
     resolve_full_identity_protocol_scan_projection_profile,
 )
 from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gateway_wrapped_command
+from health_report_experience_writeback_projection_common import (
+    HEALTH_REPORT_EXPERIENCE_WRITEBACK_CLOSURE_EXCLUDED_AREA,
+)
 from projection_profile_exclusion_scope_common import build_projection_profile_exclusion_payload
 from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
@@ -70,6 +73,8 @@ TUPLE_CONTEXT_ALLOWED_MARKERS: set[str] = {
     *TUPLE_CONTEXT_PRIMARY_MARKERS,
     "entry_receipt_bundle_status_not_pass",
 }
+PROJECTION_PROFILE_EXCLUSION_SCOPE_CLASS = "bounded_projection_profile_exclusion"
+PROJECTION_PROFILE_EXCLUSION_SCOPE_REASON = "projection_profile_out_of_scope"
 
 M2M_CHECK_NAMES: set[str] = {
     "requested_session_binding",
@@ -1610,6 +1615,92 @@ def _build_projection_profile_host_visible_post_check_metrics(
     )
 
 
+def _build_summary_health_report_experience_writeback_closure() -> dict[str, Any]:
+    return {
+        "total_identities": 0,
+        "projection_pass": 0,
+        "projection_fail": 0,
+        "projection_skipped_not_required": 0,
+        "health_report_collection_fail": 0,
+        "health_report_contract_fail": 0,
+        "health_report_validation_fail": 0,
+        "selected_path_mismatch": 0,
+        "execution_report_ref_mismatch": 0,
+        "boundary_validation_mismatch": 0,
+        "projection_fail_identity_ids": [],
+        "projection_scope_excluded_identity_ids": [],
+        "projection_scope_classes": [],
+        "projection_scope_reasons": [],
+        "projection_stale_reasons": [],
+    }
+
+
+def _health_report_projection_is_scope_excluded(projection: dict[str, Any] | None) -> bool:
+    if not isinstance(projection, dict) or not projection:
+        return False
+    return (
+        str(projection.get("projection_skip_scope_class", "")).strip()
+        == PROJECTION_PROFILE_EXCLUSION_SCOPE_CLASS
+        and str(projection.get("projection_skip_scope_reason", "")).strip()
+        == PROJECTION_PROFILE_EXCLUSION_SCOPE_REASON
+        and str(projection.get("projection_excluded_area", "")).strip()
+        == HEALTH_REPORT_EXPERIENCE_WRITEBACK_CLOSURE_EXCLUDED_AREA
+    )
+
+
+def _record_summary_health_report_experience_writeback_closure(
+    summary: dict[str, Any],
+    *,
+    identity_id: str,
+    projection: dict[str, Any] | None,
+) -> None:
+    if not isinstance(summary, dict) or not isinstance(projection, dict) or not projection:
+        return
+    summary["total_identities"] = int(summary.get("total_identities", 0)) + 1
+    identity_token = str(identity_id or "").strip()
+    projection_status = str(projection.get("projection_status", "")).strip().upper()
+    if projection_status == STATUS_PASS_REQUIRED:
+        summary["projection_pass"] = int(summary.get("projection_pass", 0)) + 1
+    elif _health_report_projection_is_scope_excluded(projection):
+        summary["projection_skipped_not_required"] = int(
+            summary.get("projection_skipped_not_required", 0)
+        ) + 1
+        if identity_token and identity_token not in summary["projection_scope_excluded_identity_ids"]:
+            summary["projection_scope_excluded_identity_ids"].append(identity_token)
+        scope_class = str(projection.get("projection_skip_scope_class", "")).strip()
+        scope_reason = str(projection.get("projection_skip_scope_reason", "")).strip()
+        if scope_class and scope_class not in summary["projection_scope_classes"]:
+            summary["projection_scope_classes"].append(scope_class)
+        if scope_reason and scope_reason not in summary["projection_scope_reasons"]:
+            summary["projection_scope_reasons"].append(scope_reason)
+    else:
+        summary["projection_fail"] = int(summary.get("projection_fail", 0)) + 1
+        if identity_token and identity_token not in summary["projection_fail_identity_ids"]:
+            summary["projection_fail_identity_ids"].append(identity_token)
+
+    if str(projection.get("health_report_collection_status", "")).strip().upper() == STATUS_FAIL_REQUIRED:
+        summary["health_report_collection_fail"] = int(summary.get("health_report_collection_fail", 0)) + 1
+    if str(projection.get("health_report_contract_status", "")).strip().upper() == STATUS_FAIL_REQUIRED:
+        summary["health_report_contract_fail"] = int(summary.get("health_report_contract_fail", 0)) + 1
+    if str(projection.get("validation_status", "")).strip().upper() == STATUS_FAIL_REQUIRED:
+        summary["health_report_validation_fail"] = int(summary.get("health_report_validation_fail", 0)) + 1
+
+    stale_reasons = {
+        str(reason or "").strip()
+        for reason in projection.get("stale_reasons", [])
+        if str(reason or "").strip()
+    }
+    for stale_reason in sorted(stale_reasons):
+        if stale_reason not in summary["projection_stale_reasons"]:
+            summary["projection_stale_reasons"].append(stale_reason)
+    if "health_report_selected_path_execution_report_mismatch" in stale_reasons:
+        summary["selected_path_mismatch"] = int(summary.get("selected_path_mismatch", 0)) + 1
+    if "health_report_execution_report_ref_mismatch" in stale_reasons:
+        summary["execution_report_ref_mismatch"] = int(summary.get("execution_report_ref_mismatch", 0)) + 1
+    if "health_report_boundary_validation_status_mismatch" in stale_reasons:
+        summary["boundary_validation_mismatch"] = int(summary.get("boundary_validation_mismatch", 0)) + 1
+
+
 def _apply_three_plane_projection(
     *,
     repo_root: Path,
@@ -1731,6 +1822,26 @@ def _apply_three_plane_projection(
             payload["summary_terminal_truth_boundary"]["repair_green_terminal_truth_blocked"] += 1
         elif boundary_health == "repair_green_terminal_truth_clean":
             payload["summary_terminal_truth_boundary"]["repair_green_terminal_truth_clean"] += 1
+    health_report_projection = tp.get("health_report_experience_writeback_closure")
+    if isinstance(health_report_projection, dict):
+        item["three_plane_health_report_experience_writeback_closure"] = health_report_projection
+        item["three_plane"]["health_report_experience_writeback_projection_status"] = (
+            health_report_projection.get("projection_status", "")
+        )
+        item["three_plane"]["health_report_contract_status"] = (
+            health_report_projection.get("health_report_contract_status", "")
+        )
+        item["three_plane"]["health_report_experience_writeback_validation_status"] = (
+            health_report_projection.get("validation_status", "")
+        )
+        item["three_plane"]["health_report_selected_path_matches_execution_report"] = bool(
+            health_report_projection.get("report_selected_path_matches_execution_report")
+        )
+        _record_summary_health_report_experience_writeback_closure(
+            payload["summary_health_report_experience_writeback_closure"],
+            identity_id=identity_id,
+            projection=health_report_projection,
+        )
     required_gate_projection = tp.get("required_gate_bundle_target_projection")
     if isinstance(required_gate_projection, dict):
         item["three_plane_required_gate_bundle_target_projection"] = required_gate_projection
@@ -2102,6 +2213,9 @@ def main() -> int:
             "repair_green_terminal_truth_clean": 0,
             "blocked_identity_ids": [],
         },
+        "summary_health_report_experience_writeback_closure": (
+            _build_summary_health_report_experience_writeback_closure()
+        ),
         "summary_required_gate_bundle_projection": {
             "identities_with_projection": 0,
             "projection_pass": 0,

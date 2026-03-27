@@ -28,6 +28,18 @@ RELEASE_READINESS_GOVERNANCE_PROBE_SPECS: tuple[ReleaseReadinessGovernanceProbeP
         keep_fields=("summary_terminal_truth_boundary", "seeded_identity_ids"),
     ),
     ReleaseReadinessGovernanceProbeProjectionSpec(
+        script_rel="scripts/ci/run_full_scan_health_projection_probes_ci.sh",
+        summary_key="full_scan_health_projection_probe",
+        one_look_field="full_scan_health_projection_probe_status",
+        status_fields=("full_scan_health_projection_probe_status",),
+        keep_fields=(
+            "projection_only_excluded_area",
+            "pass_projection_status",
+            "projection_only_status",
+            "fail_projection_status",
+        ),
+    ),
+    ReleaseReadinessGovernanceProbeProjectionSpec(
         script_rel="scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh",
         summary_key="runtime_summary_surface_governance_probe",
         one_look_field="runtime_summary_surface_governance_probe_status",
