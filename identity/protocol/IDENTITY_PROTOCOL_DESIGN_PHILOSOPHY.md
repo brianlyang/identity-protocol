@@ -886,6 +886,10 @@ Direct stale reasons, structure violations, anchor violations, and
 projected stale-reason strings do not become substitute observation
 source.
 
+Observation-source total and bundle-violation total must therefore stay
+congruent under machine-readable source completeness rather than being
+left implicit.
+
 Bundle component-validator observation-reason partition policy must stay
 explicit too.
 

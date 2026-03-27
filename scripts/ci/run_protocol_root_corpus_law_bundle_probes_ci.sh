@@ -183,6 +183,8 @@ assert payload["component_validator_observation_reason_counts"] == {
 }, payload
 assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
 assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+assert payload["component_validator_observation_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_source_total_count"] == payload["bundle_violation_count"], payload
 assert payload["component_validator_observation_reason_partition_total_count"] == payload["bundle_violation_count"], payload
 assert payload["registry_class_reason_count"] == 0, payload
 assert payload["registry_precedence_reason_count"] == 0, payload
@@ -1718,6 +1720,62 @@ assert payload["component_validator_observation_reason_source_policy"] == "proje
 assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
 assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
 assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+assert payload["component_validator_observation_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_source_total_count"] == payload["bundle_violation_count"], payload
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_INCOMPLETE_REPO="${TMP_ROOT}/component-validator-observation-reason-source-incomplete-repo"
+mirror_repo "${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_INCOMPLETE_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_INCOMPLETE_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+needle = "    (\n        component_validator_observation_reason_counts,\n"
+replacement = (
+    "    bundle_violations.append({\n"
+    "        \"component_id\": \"root_corpus_law_bundle\",\n"
+    "        \"reason\": \"synthetic_source_gap_probe\",\n"
+    "    })\n\n"
+    "    (\n        component_validator_observation_reason_counts,\n"
+)
+if needle not in text:
+    raise SystemExit("expected observation count block not found for source completeness probe")
+text = text.replace(needle, replacement, 1)
+needle = "    ) = _component_validator_observation_reason_counts(\n        bundle_violations,\n"
+replacement = "    ) = _component_validator_observation_reason_counts(\n        bundle_violations[:-1],\n"
+if needle not in text:
+    raise SystemExit("expected observation source call not found for source completeness probe")
+path.write_text(text.replace(needle, replacement, 1), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_INCOMPLETE_JSON="${TMP_ROOT}/component-validator-observation-reason-source-incomplete.json"
+if python3 "${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_INCOMPLETE_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_INCOMPLETE_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_INCOMPLETE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator observation reason source completeness case"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_INCOMPLETE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_source_status"] == "FAIL_REQUIRED", payload
+assert payload["component_validator_observation_reason_partition_status"] == "FAIL_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+assert payload["component_validator_observation_reason_source_total_count"] < payload["bundle_violation_count"], payload
+assert payload["component_validator_observation_reason_partition_total_count"] < payload["bundle_violation_count"], payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_source_incomplete" in payload["stale_reasons"], payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_partition_incomplete" in payload["stale_reasons"], payload
+assert "bundle_violation:root_corpus_law_bundle:synthetic_source_gap_probe" in payload["stale_reasons"], payload
 PY
 
 COMPONENT_VALIDATOR_OBSERVATION_REASON_PARTITION_POLICY_REPO="${TMP_ROOT}/component-validator-observation-reason-partition-policy-drift-repo"

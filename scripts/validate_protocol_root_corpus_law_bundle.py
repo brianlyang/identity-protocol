@@ -2532,6 +2532,11 @@ def main() -> int:
         + component_validator_observation_reason_unknown_count
         + component_validator_observation_reason_non_applicable_count
     )
+    component_validator_observation_reason_source_total_count = (
+        sum(component_validator_observation_reason_counts.values())
+        + component_validator_observation_reason_unknown_count
+        + component_validator_observation_reason_non_applicable_count
+    )
     component_validator_observation_reason_status = (
         STATUS_FAIL_REQUIRED
         if (
@@ -2543,6 +2548,20 @@ def main() -> int:
     )
     if component_validator_observation_reason_status == STATUS_FAIL_REQUIRED:
         stale_reasons.append("root_corpus_law_bundle_component_validator_observation_reason_unclassified")
+        if not error_code:
+            error_code = ERR_REGISTRY
+    component_validator_observation_reason_source_status = (
+        STATUS_FAIL_REQUIRED
+        if (
+            effective_component_validator_observation_reason_source_policy
+            == COMPONENT_VALIDATOR_OBSERVATION_REASON_SOURCE_POLICY
+            and component_validator_observation_reason_source_total_count
+            != len(bundle_violations)
+        )
+        else STATUS_PASS_REQUIRED
+    )
+    if component_validator_observation_reason_source_status == STATUS_FAIL_REQUIRED:
+        stale_reasons.append("root_corpus_law_bundle_component_validator_observation_reason_source_incomplete")
         if not error_code:
             error_code = ERR_REGISTRY
     component_validator_observation_reason_partition_status = (
@@ -2887,6 +2906,9 @@ def main() -> int:
             registry_direct_stale_reason_partition_total_count
         ),
         "component_validator_observation_reason_status": component_validator_observation_reason_status,
+        "component_validator_observation_reason_source_status": (
+            component_validator_observation_reason_source_status
+        ),
         "component_validator_observation_reason_partition_status": (
             component_validator_observation_reason_partition_status
         ),
@@ -2898,6 +2920,9 @@ def main() -> int:
         ),
         "component_validator_observation_reason_non_applicable_count": (
             component_validator_observation_reason_non_applicable_count
+        ),
+        "component_validator_observation_reason_source_total_count": (
+            component_validator_observation_reason_source_total_count
         ),
         "component_validator_observation_reason_partition_total_count": (
             component_validator_observation_reason_partition_total_count

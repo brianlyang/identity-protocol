@@ -579,6 +579,10 @@ Direct stale reasons, structure violations, anchor violations, and
 projected stale-reason strings must not be reinterpreted as observation
 source.
 
+Root-law bundle rows must also keep machine-readable source completeness
+explicit; observation-source total must remain congruent with
+bundle-violation total rather than being left implicit.
+
 Root-law bundle rows must also keep component-validator observation-reason
 partition policy explicit; each bundle-violation row classifies exactly
 once as admitted observation reason, excluded non-observation row, or

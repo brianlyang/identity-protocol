@@ -523,6 +523,10 @@ Runtime must not reinterpret direct stale reasons, structure violations,
 anchor violations, or projected stale-reason strings as substitute
 observation source.
 
+Runtime must also keep machine-readable observation-source completeness
+explicit; runtime observation-source total must remain congruent with
+bundle-violation total rather than being left implicit.
+
 Runtime must also keep component-validator observation-reason partition
 policy explicit; each bundle-violation row classifies exactly once as
 admitted observation reason, excluded non-observation row, or unknown
