@@ -12,6 +12,9 @@ from typing import Any
 
 import yaml
 
+from capability_activation_projection_common import (
+    CAPABILITY_ACTIVATION_REPORT_REQUIRED_FIELDS,
+)
 from instance_script_orchestration_common import (
     STATUS_FAIL_REQUIRED as ORCHESTRATION_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED as ORCHESTRATION_PASS_REQUIRED,
@@ -750,29 +753,7 @@ def _build_runtime_payload(
 
 def _validate_report(path: Path, require_activated: bool) -> tuple[bool, str]:
     data = _load_json(path)
-    required = [
-        "skills_used",
-        "mcp_tools_used",
-        "tool_calls_used",
-        "active_skills",
-        "mcp_servers_checked",
-        "tool_routes",
-        "capability_activation_status",
-        "capability_activation_error_code",
-        "capability_contract_required",
-        "route_scope",
-        "route_scope_mode",
-        "route_ids",
-        "route_selection_cardinality",
-        "declared_dependency_projection",
-        "observed_dependency_projection",
-        "dependency_gap_reasons",
-        "undeclared_usage_detected",
-        "undeclared_usage_rows",
-        "missing_declared_dependency_detected",
-        "missing_declared_dependency_rows",
-    ]
-    missing = [k for k in required if k not in data]
+    missing = [k for k in CAPABILITY_ACTIVATION_REPORT_REQUIRED_FIELDS if k not in data]
     if missing:
         return False, f"report_missing_fields:{missing}"
     status = str(data.get("capability_activation_status", "")).strip().upper()
