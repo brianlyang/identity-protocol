@@ -88,6 +88,10 @@ Memory in the machine world is therefore a lifecycle-bearing classification rath
 
 No truth claim may be treated as full operational closure unless all required lifecycle stages have been carried through.
 
+Truth-lifecycle law must also remain machine-readable as separate
+lifecycle-stage, memory-strata, differentiation, proof, limit, and collapse
+row families rather than one narrative truth claim.
+
 ## Five lifecycle stages
 
 ### 1. Truth exists in protocol law

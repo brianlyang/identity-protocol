@@ -18,6 +18,9 @@ question_routing_current_file: identity/protocol/mappings/root-corpus-question-r
 contract_required_markers:
 - This file remains the authoritative root-domain contract for truth-lifecycle law.
 - '## Truth-lifecycle law'
+- Truth-lifecycle law must also remain machine-readable as separate
+  lifecycle-stage, memory-strata, differentiation, proof, limit, and collapse
+  row families rather than one narrative truth claim.
 - '## Five lifecycle stages'
 - '## Memory-bearing lifecycle strata'
 - '## Required lifecycle differentiations'
@@ -26,6 +29,28 @@ contract_required_markers:
 - '## Non-compliant lifecycle collapses'
 - No truth claim may be treated as full operational closure unless all required lifecycle
   stages have been carried through.
+anchor_checks:
+- rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+  required_markers:
+  - '### Truth-lifecycle row-family completeness must stay explicit'
+  - 'Required lifecycle-stage, memory-strata, differentiation, proof, limit, and collapse families must remain explicit as separate machine-readable row families.'
+  - The machine world must not finalize truth-lifecycle legality while required
+    row identity drift remains known only internally.
+- rel_path: identity/protocol/README.md
+  required_markers:
+  - '## Root truth-lifecycle completeness discipline'
+  - Truth-lifecycle law is not a soft prose bundle.
+  - '1. required lifecycle-stage, memory-strata, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;'
+- rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+  required_markers:
+  - '## Root truth-lifecycle completeness boundary'
+  - '1. Truth-lifecycle law must remain machine-readable as separate lifecycle-stage, memory-strata, differentiation, proof, limit, and collapse row families.'
+  - '4. Protocol legality must not finalize truth-lifecycle legality while missing or unexpected row identities remain known only inside validator logic.'
+- rel_path: identity/protocol/IDENTITY_RUNTIME.md
+  required_markers:
+  - '## Runtime truth-lifecycle consumption boundary'
+  - '1. Runtime consumes truth-lifecycle law as separate lifecycle-stage, memory-strata, differentiation, proof, limit, and collapse row families rather than as undifferentiated lifecycle prose.'
+  - '4. Runtime must not finalize truth-lifecycle legality while missing or unexpected row identities remain known only inside validator machinery.'
 required_lifecycle_rows:
 - order: 1
   lifecycle_id: truth_exists
