@@ -670,6 +670,10 @@ for row in seeded:
         identity_id,
         three_plane_summary,
     )
+    assert three_plane_summary["required_gate_bundle_missing_mapping_requirements"] == [], (
+        identity_id,
+        three_plane_summary,
+    )
     shadow_projection = identity_row.get("three_plane_required_gate_bundle_target_projection_shadow") or {}
     assert shadow_projection["projection_status"] == "SKIPPED_NOT_REQUIRED", (
         identity_id,
@@ -728,6 +732,10 @@ for row in seeded:
         three_plane_summary,
     )
     assert three_plane_summary["required_gate_bundle_shadow_report_pointer_path"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_shadow_missing_mapping_requirements"] == [], (
         identity_id,
         three_plane_summary,
     )

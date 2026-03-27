@@ -33,6 +33,7 @@ pass_projection = {
     "failed_target_names": [],
     "stale_reasons": [],
     "rows_without_projected_report_fields": [],
+    "missing_mapping_requirements": ["rq_missing_projection_mapping"],
     "actor_id": "assistant:codex",
     "resolved_work_layer": "instance",
     "resolved_source_layer": "project",
@@ -59,6 +60,7 @@ assert pass_summary["required_gate_bundle_report_selection_mode"] == "explicit_r
 assert pass_summary["required_gate_bundle_report_authority_class"] == "explicit_report_override", pass_summary
 assert pass_summary["required_gate_bundle_report_pointer_resolution_mode"] == "explicit_report_override", pass_summary
 assert pass_summary["required_gate_bundle_report_pointer_path"] == "", pass_summary
+assert pass_summary["required_gate_bundle_missing_mapping_requirements"] == ["rq_missing_projection_mapping"], pass_summary
 
 shadow_summary = build_full_scan_required_gate_bundle_three_plane_projection(
     pass_projection,
@@ -72,6 +74,9 @@ assert shadow_summary["required_gate_bundle_shadow_lock_state"] == "LOCK_MATCH",
 assert shadow_summary["required_gate_bundle_shadow_run_id_binding"] == "run:full-scan-required-gate-probe", shadow_summary
 assert shadow_summary["required_gate_bundle_shadow_report_selection_mode"] == "explicit_report_override", shadow_summary
 assert shadow_summary["required_gate_bundle_shadow_report_authority_class"] == "explicit_report_override", shadow_summary
+assert shadow_summary["required_gate_bundle_shadow_missing_mapping_requirements"] == [
+    "rq_missing_projection_mapping"
+], shadow_summary
 
 profile = resolve_full_identity_protocol_scan_projection_profile("terminal_truth_boundary_projection")
 excluded_projection = build_projection_profile_excluded_required_gate_bundle_target_projection(
@@ -98,6 +103,7 @@ assert excluded_summary["required_gate_bundle_report_selection_mode"] == "", exc
 assert excluded_summary["required_gate_bundle_report_authority_class"] == "", excluded_summary
 assert excluded_summary["required_gate_bundle_report_pointer_resolution_mode"] == "", excluded_summary
 assert excluded_summary["required_gate_bundle_report_pointer_path"] == "", excluded_summary
+assert excluded_summary["required_gate_bundle_missing_mapping_requirements"] == [], excluded_summary
 
 print(
     json.dumps(

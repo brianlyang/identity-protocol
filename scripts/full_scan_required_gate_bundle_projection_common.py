@@ -29,6 +29,7 @@ def full_scan_required_gate_bundle_three_plane_fields(prefix: str) -> tuple[str,
         f"{field_prefix}_failed_target_names",
         f"{field_prefix}_projection_stale_reasons",
         f"{field_prefix}_rows_without_projected_report_fields",
+        f"{field_prefix}_missing_mapping_requirements",
         *(
             target_template.format(prefix=field_prefix)
             for _source_field, target_template in FULL_SCAN_REQUIRED_GATE_BUNDLE_THREE_PLANE_PASSTHROUGH_FIELDS
@@ -103,6 +104,7 @@ def build_full_scan_required_gate_bundle_three_plane_projection(
         f"{field_prefix}_rows_without_projected_report_fields": _clean_list(
             source.get("rows_without_projected_report_fields")
         ),
+        f"{field_prefix}_missing_mapping_requirements": _clean_list(source.get("missing_mapping_requirements")),
     }
     for source_field, target_template in FULL_SCAN_REQUIRED_GATE_BUNDLE_THREE_PLANE_PASSTHROUGH_FIELDS:
         payload[target_template.format(prefix=field_prefix)] = _clean_str(source.get(source_field))
