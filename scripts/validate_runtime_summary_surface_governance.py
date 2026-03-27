@@ -127,7 +127,7 @@ SCRIPT_BINDINGS: tuple[ScriptBindingSpec, ...] = (
             '"health_report_experience_writeback_projection_status"',
             '"health_report_selected_path_matches_execution_report"',
             "_record_summary_health_report_experience_writeback_closure(",
-            "_build_required_gate_projection_summary(",
+            "build_full_scan_required_gate_bundle_projection_summary_skeleton(",
             "apply_full_scan_required_gate_bundle_three_plane_projection(",
             '"projection_profile"',
             '"projection_profile_execution_mode"',

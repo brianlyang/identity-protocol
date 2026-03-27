@@ -26,6 +26,7 @@ from full_identity_protocol_scan_projection_profile_common import (
 )
 from full_scan_required_gate_bundle_projection_common import (
     apply_full_scan_required_gate_bundle_three_plane_projection,
+    build_full_scan_required_gate_bundle_projection_summary_skeleton,
 )
 from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gateway_wrapped_command
 from health_report_experience_writeback_projection_common import (
@@ -213,28 +214,6 @@ def _parse_path_list_arg(*, raw_value: str, repo_root: Path) -> list[Path]:
             path = path.resolve()
         out.append(path)
     return out
-
-
-def _build_required_gate_projection_summary() -> dict[str, Any]:
-    return {
-        "identities_with_projection": 0,
-        "projection_pass": 0,
-        "projection_fail": 0,
-        "projection_skipped_not_required": 0,
-        "projection_fail_identity_ids": [],
-        "projection_scope_excluded_identity_ids": [],
-        "projection_scope_classes": [],
-        "projection_scope_reasons": [],
-        "identities_with_failed_required_targets": 0,
-        "total_targets": 0,
-        "failed_required_targets": 0,
-        "failed_target_names": [],
-        "failed_target_counts": {},
-        "target_status_counts": {},
-        "rows_without_projected_report_fields": [],
-        "missing_mapping_requirements": [],
-        "projection_stale_reasons": [],
-    }
 
 
 def _discover_host_visible_probe_manifest_paths(
@@ -2229,8 +2208,8 @@ def main() -> int:
         "summary_health_report_experience_writeback_closure": (
             _build_summary_health_report_experience_writeback_closure()
         ),
-        "summary_required_gate_bundle_projection": _build_required_gate_projection_summary(),
-        "summary_required_gate_bundle_shadow_projection": _build_required_gate_projection_summary(),
+        "summary_required_gate_bundle_projection": build_full_scan_required_gate_bundle_projection_summary_skeleton(),
+        "summary_required_gate_bundle_shadow_projection": build_full_scan_required_gate_bundle_projection_summary_skeleton(),
         "summary_tuple_context": {
             "total_identities": 0,
             "tuple_context_only_failures": 0,

@@ -19,7 +19,10 @@ from full_identity_protocol_scan_projection_profile_common import (
     resolve_full_identity_protocol_scan_projection_profile,
 )
 from full_scan_required_gate_bundle_projection_common import (
+    FULL_SCAN_REQUIRED_GATE_BUNDLE_SUMMARY_MARKER,
+    FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS,
     build_full_scan_required_gate_bundle_three_plane_projection,
+    build_full_scan_required_gate_bundle_projection_summary_skeleton,
 )
 from required_gate_bundle_projection_common import (
     build_projection_profile_excluded_required_gate_bundle_target_projection,
@@ -80,6 +83,21 @@ assert shadow_summary["required_gate_bundle_shadow_report_authority_class"] == "
 assert shadow_summary["required_gate_bundle_shadow_missing_mapping_requirements"] == [
     "rq_missing_projection_mapping"
 ], shadow_summary
+
+summary_skeleton = build_full_scan_required_gate_bundle_projection_summary_skeleton()
+assert summary_skeleton["identities_with_projection"] == 0, summary_skeleton
+assert summary_skeleton["projection_pass"] == 0, summary_skeleton
+assert summary_skeleton["projection_fail"] == 0, summary_skeleton
+assert summary_skeleton["projection_skipped_not_required"] == 0, summary_skeleton
+assert summary_skeleton["projection_fail_identity_ids"] == [], summary_skeleton
+assert summary_skeleton["projection_scope_excluded_identity_ids"] == [], summary_skeleton
+assert summary_skeleton["rows_without_projected_report_fields"] == [], summary_skeleton
+assert summary_skeleton["missing_mapping_requirements"] == [], summary_skeleton
+assert summary_skeleton["projection_stale_reasons"] == [], summary_skeleton
+assert FULL_SCAN_REQUIRED_GATE_BUNDLE_SUMMARY_MARKER in FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS, (
+    FULL_SCAN_REQUIRED_GATE_BUNDLE_SUMMARY_MARKER,
+    FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS,
+)
 
 profile = resolve_full_identity_protocol_scan_projection_profile("terminal_truth_boundary_projection")
 excluded_projection = build_projection_profile_excluded_required_gate_bundle_target_projection(

@@ -111,6 +111,28 @@ FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS: tuple[str, ...] = (
 )
 
 
+def build_full_scan_required_gate_bundle_projection_summary_skeleton() -> dict[str, Any]:
+    return {
+        "identities_with_projection": 0,
+        "projection_pass": 0,
+        "projection_fail": 0,
+        "projection_skipped_not_required": 0,
+        "projection_fail_identity_ids": [],
+        "projection_scope_excluded_identity_ids": [],
+        "projection_scope_classes": [],
+        "projection_scope_reasons": [],
+        "identities_with_failed_required_targets": 0,
+        "total_targets": 0,
+        "failed_required_targets": 0,
+        "failed_target_names": [],
+        "failed_target_counts": {},
+        "target_status_counts": {},
+        "rows_without_projected_report_fields": [],
+        "missing_mapping_requirements": [],
+        "projection_stale_reasons": [],
+    }
+
+
 def _clean_str(value: Any) -> str:
     return str(value or "").strip()
 
