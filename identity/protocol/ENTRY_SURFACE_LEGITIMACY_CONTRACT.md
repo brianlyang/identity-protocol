@@ -86,6 +86,10 @@ So this file freezes entry-surface legitimacy law, while runtime adjudication de
 
 The identity protocol must distinguish entry classes rather than flattening every visible path, helper, filename, or discoverable command into one vague notion of “some way in.”
 
+Entry-surface legitimacy law must also remain machine-readable as separate
+entry-class, differentiation, proof, limit, and collapse row families rather
+than one narrative legitimacy claim.
+
 Only governed entry surfaces admitted by law may drive active execution.
 
 Recovery, migration, replay, diagnostics, helper, discoverability, fixture, import, or support surfaces may assist convergence, but they do not silently become canonical execution entry.

@@ -17,12 +17,38 @@ authority_current_file: identity/protocol/mappings/root-corpus-authority.current
 question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
 contract_required_markers:
   - '## Entry-surface legitimacy law'
+  - Entry-surface legitimacy law must also remain machine-readable as separate
+    entry-class, differentiation, proof, limit, and collapse row families rather
+    than one narrative legitimacy claim.
   - '## Six entry classes'
   - '## Required entry differentiations'
   - '## Entry-admission proof discipline'
   - '## Entry-admission proof limits'
   - '## Non-compliant entry collapses'
   - 'Only governed entry surfaces admitted by law may drive active execution.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Entry-surface legitimacy row-family completeness must stay explicit'
+      - Required entry-class, differentiation, proof, limit, and collapse families
+        must remain explicit as separate machine-readable row families.
+      - The machine world must not finalize entry-surface legitimacy while required
+        row identity drift remains known only internally.
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root entry-surface legitimacy completeness discipline'
+      - Entry-surface legitimacy law is not a soft prose bundle.
+      - '1. required entry-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root entry-surface legitimacy completeness boundary'
+      - '1. Entry-surface legitimacy law must remain machine-readable as separate entry-class, differentiation, proof, limit, and collapse row families.'
+      - '4. Protocol legality must not finalize entry-surface legitimacy truth while missing or unexpected row identities remain known only inside validator logic.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime entry-surface legitimacy consumption boundary'
+      - '1. Runtime consumes entry-surface legitimacy law as separate entry-class, differentiation, proof, limit, and collapse row families rather than as undifferentiated legitimacy prose.'
+      - '4. Runtime must not finalize entry-surface legitimacy while missing or unexpected row identities remain known only inside validator machinery.'
 required_entry_class_rows:
   - order: 1
     entry_class_id: frozen_entry_definition

@@ -31,6 +31,8 @@ assert payload["differentiation_count"] == 6, payload
 assert payload["entry_admission_proof_count"] == 5, payload
 assert payload["entry_admission_limit_count"] == 5, payload
 assert payload["collapse_count"] == 6, payload
+assert payload["root_doc_anchor_check_count"] == 4, payload
+assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["entry_surface_row_family_count"] == 5, payload
 assert payload["entry_surface_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["entry_surface_row_identity_projection_status"] == "PASS_REQUIRED", payload
@@ -254,6 +256,45 @@ assert payload["error_code"] == "IP-ESL-003", payload
 assert any(
     row["field"] == "root_corpus_question_routing" and row["reason"] == "routing_projection_question_classes_mismatch"
     for row in payload["integration_violations"]
+), payload
+PY
+
+DOC_ANCHOR_REPO="${TMP_ROOT}/doc-anchor-drift-repo"
+mirror_repo "${DOC_ANCHOR_REPO}"
+python3 - <<'PY' "${DOC_ANCHOR_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "## Root entry-surface legitimacy completeness discipline"
+new = "## Root entry-surface legitimacy discipline"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+DOC_ANCHOR_JSON="${TMP_ROOT}/doc-anchor-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_entry_surface_legitimacy.py" \
+  --repo-root "${DOC_ANCHOR_REPO}" \
+  --json-only >"${DOC_ANCHOR_JSON}"; then
+  echo "[FAIL] root entry-surface legitimacy validator unexpectedly passed root-doc anchor drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${DOC_ANCHOR_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_entry_surface_legitimacy_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-ESL-003", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["rel_path"] == "identity/protocol/README.md"
+    and row["reason"] == "required_marker_missing"
+    and row["marker"] == "## Root entry-surface legitimacy completeness discipline"
+    for row in payload["root_doc_anchor_violations"]
 ), payload
 PY
 
