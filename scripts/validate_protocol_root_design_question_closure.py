@@ -8,6 +8,11 @@ from types import SimpleNamespace
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
+from root_contract_anchor_checks_common import (
+    evaluate_root_doc_anchor_checks,
+    root_doc_anchor_checks_from_doc,
+    validate_expected_root_doc_anchor_checks,
+)
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
 from root_design_question_closure_common import (
     STATUS_FAIL_REQUIRED,
@@ -104,6 +109,28 @@ EXPECTED_MAPPING_CHILDREN = (
     "root-design-question-closure.current.yaml",
     "root-design-question-closure.v1.yaml",
 )
+EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
+    "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "### Design-question closure row-family completeness must stay explicit",
+        "Required question-closure rows and emitted question-status rows must remain explicit as separate machine-readable row families.",
+        "The machine world must not finalize design-question closure legality while required question identity drift remains known only internally.",
+    ),
+    "identity/protocol/README.md": (
+        "## Root design-question closure completeness discipline",
+        "Design-question closure law is not a soft cross-reference bundle.",
+        "1. required question-closure rows and emitted question-status rows must remain explicit as separate machine-readable row families;",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL.md": (
+        "## Root design-question closure completeness boundary",
+        "1. Design-question closure law must remain machine-readable as separate required-question-closure and emitted-question-status row families.",
+        "4. Protocol legality must not finalize design-question closure legality while missing or unexpected question identities remain known only inside validator logic.",
+    ),
+    "identity/protocol/IDENTITY_RUNTIME.md": (
+        "## Runtime design-question closure consumption boundary",
+        "1. Runtime consumes design-question closure law as separate required-question-closure and emitted-question-status row families rather than as undifferentiated design prose.",
+        "4. Runtime must not finalize design-question closure legality while missing or unexpected question identities remain known only inside validator machinery.",
+    ),
+}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -151,6 +178,7 @@ def main() -> int:
     stale_reasons: list[str] = []
     structure_violations: list[dict[str, Any]] = []
     closure_violations: list[dict[str, Any]] = []
+    root_doc_anchor_violations: list[dict[str, Any]] = []
     question_status_rows: list[dict[str, Any]] = []
     row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
@@ -168,6 +196,7 @@ def main() -> int:
             error_code = ERR_REGISTRY
 
     closure_rows = question_closure_rows_from_doc(closure_doc) if closure_doc else ()
+    root_doc_anchor_checks = root_doc_anchor_checks_from_doc(closure_doc) if closure_doc else ()
     admissibility_question_rows = required_question_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
 
@@ -194,6 +223,16 @@ def main() -> int:
                 error_code = ERR_REGISTRY
         if not closure_rows:
             stale_reasons.append("root_design_question_closure_rows_missing")
+            error_code = ERR_REGISTRY
+        anchor_reason_count_before = len(stale_reasons)
+        stale_reasons.extend(
+            validate_expected_root_doc_anchor_checks(
+                root_doc_anchor_checks,
+                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+                stale_reason_prefix="root_design_question_closure",
+            )
+        )
+        if len(stale_reasons) > anchor_reason_count_before:
             error_code = ERR_REGISTRY
 
     if not stale_reasons:
@@ -375,11 +414,19 @@ def main() -> int:
                     }
                 )
 
-        if closure_violations and not error_code:
+        root_doc_anchor_violations.extend(
+            evaluate_root_doc_anchor_checks(
+                repo_root,
+                root_doc_anchor_checks,
+                field_name="root_doc_anchor_checks",
+            )
+        )
+
+        if (closure_violations or root_doc_anchor_violations) and not error_code:
             error_code = ERR_CLOSURE
 
     status = STATUS_PASS_REQUIRED
-    if stale_reasons or structure_violations or closure_violations:
+    if stale_reasons or structure_violations or closure_violations or root_doc_anchor_violations:
         status = STATUS_FAIL_REQUIRED
 
     row_family_projection_rows = [
@@ -410,6 +457,8 @@ def main() -> int:
         "mapping_entry_file": str(closure_entry_path.relative_to(repo_root)),
         "mapping_active_file": str(closure_active_path.relative_to(repo_root)),
         "question_closure_count": len(closure_rows),
+        "root_doc_anchor_check_count": len(root_doc_anchor_checks),
+        "root_doc_anchor_status": STATUS_PASS_REQUIRED if not root_doc_anchor_violations else STATUS_FAIL_REQUIRED,
         **project_root_contract_support_projection(
             prefix="design_question_closure",
             row_family_projection_rows=row_family_projection_rows,
@@ -421,6 +470,7 @@ def main() -> int:
         "question_status_rows": question_status_rows,
         "structure_violations": structure_violations,
         "closure_violations": closure_violations,
+        "root_doc_anchor_violations": root_doc_anchor_violations,
         "stale_reasons": stale_reasons,
         "error_code": error_code,
     }

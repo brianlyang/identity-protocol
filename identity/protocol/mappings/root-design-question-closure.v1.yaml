@@ -13,6 +13,29 @@ error_codes:
 - IP-RDQC-001
 - IP-RDQC-002
 - IP-RDQC-003
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Design-question closure row-family completeness must stay explicit'
+      - Required question-closure rows and emitted question-status rows must remain
+        explicit as separate machine-readable row families.
+      - The machine world must not finalize design-question closure legality while
+        required question identity drift remains known only internally.
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root design-question closure completeness discipline'
+      - Design-question closure law is not a soft cross-reference bundle.
+      - '1. required question-closure rows and emitted question-status rows must remain explicit as separate machine-readable row families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root design-question closure completeness boundary'
+      - '1. Design-question closure law must remain machine-readable as separate required-question-closure and emitted-question-status row families.'
+      - '4. Protocol legality must not finalize design-question closure legality while missing or unexpected question identities remain known only inside validator logic.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime design-question closure consumption boundary'
+      - '1. Runtime consumes design-question closure law as separate required-question-closure and emitted-question-status row families rather than as undifferentiated design prose.'
+      - '4. Runtime must not finalize design-question closure legality while missing or unexpected question identities remain known only inside validator machinery.'
 required_question_closure_rows:
   - order: 1
     question_id: ontology

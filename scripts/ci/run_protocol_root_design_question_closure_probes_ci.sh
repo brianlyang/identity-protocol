@@ -27,6 +27,8 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_design_question_closure_status"] == "PASS_REQUIRED", payload
 assert payload["question_closure_count"] == 5, payload
+assert payload["root_doc_anchor_check_count"] == 4, payload
+assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["question_ids"] == [
     "ontology",
     "truth_lifecycle",
@@ -277,6 +279,45 @@ assert payload["error_code"] == "IP-RDQC-003", payload
 assert any(
     row["field"] == "root_corpus_registry" and row["reason"] == "mappings_required_child_missing"
     for row in payload["closure_violations"]
+), payload
+PY
+
+DOC_ANCHOR_REPO="${TMP_ROOT}/doc-anchor-drift-repo"
+mirror_repo "${DOC_ANCHOR_REPO}"
+python3 - <<'PY' "${DOC_ANCHOR_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "## Root design-question closure completeness discipline"
+new = "## Root design-question closure discipline"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+DOC_ANCHOR_JSON="${TMP_ROOT}/doc-anchor-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_design_question_closure.py" \
+  --repo-root "${DOC_ANCHOR_REPO}" \
+  --json-only >"${DOC_ANCHOR_JSON}"; then
+  echo "[FAIL] root design-question closure validator unexpectedly passed root-doc anchor drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${DOC_ANCHOR_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_design_question_closure_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RDQC-003", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["rel_path"] == "identity/protocol/README.md"
+    and row["reason"] == "required_marker_missing"
+    and row["marker"] == "## Root design-question closure completeness discipline"
+    for row in payload["root_doc_anchor_violations"]
 ), payload
 PY
 
