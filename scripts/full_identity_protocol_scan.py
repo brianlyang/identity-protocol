@@ -215,6 +215,28 @@ def _parse_path_list_arg(*, raw_value: str, repo_root: Path) -> list[Path]:
     return out
 
 
+def _build_required_gate_projection_summary() -> dict[str, Any]:
+    return {
+        "identities_with_projection": 0,
+        "projection_pass": 0,
+        "projection_fail": 0,
+        "projection_skipped_not_required": 0,
+        "projection_fail_identity_ids": [],
+        "projection_scope_excluded_identity_ids": [],
+        "projection_scope_classes": [],
+        "projection_scope_reasons": [],
+        "identities_with_failed_required_targets": 0,
+        "total_targets": 0,
+        "failed_required_targets": 0,
+        "failed_target_names": [],
+        "failed_target_counts": {},
+        "target_status_counts": {},
+        "rows_without_projected_report_fields": [],
+        "missing_mapping_requirements": [],
+        "projection_stale_reasons": [],
+    }
+
+
 def _discover_host_visible_probe_manifest_paths(
     *,
     repo_root: Path,
@@ -1862,6 +1884,11 @@ def _apply_three_plane_projection(
             required_gate_shadow_projection,
             prefix="required_gate_bundle_shadow",
         )
+        record_required_gate_projection(
+            identity_id,
+            required_gate_shadow_projection,
+            summary_key="summary_required_gate_bundle_shadow_projection",
+        )
     if current_chat_surface_projection:
         item["current_chat_surface_projection"] = current_chat_surface_projection
         item["current_chat_surface_explanatory_exclusion_status"] = current_chat_surface_projection.get(
@@ -2202,24 +2229,8 @@ def main() -> int:
         "summary_health_report_experience_writeback_closure": (
             _build_summary_health_report_experience_writeback_closure()
         ),
-        "summary_required_gate_bundle_projection": {
-            "identities_with_projection": 0,
-            "projection_pass": 0,
-            "projection_fail": 0,
-            "projection_skipped_not_required": 0,
-            "projection_fail_identity_ids": [],
-            "projection_scope_excluded_identity_ids": [],
-            "projection_scope_classes": [],
-            "projection_scope_reasons": [],
-            "identities_with_failed_required_targets": 0,
-            "total_targets": 0,
-            "failed_required_targets": 0,
-            "failed_target_names": [],
-            "failed_target_counts": {},
-            "target_status_counts": {},
-            "rows_without_projected_report_fields": [],
-            "projection_stale_reasons": [],
-        },
+        "summary_required_gate_bundle_projection": _build_required_gate_projection_summary(),
+        "summary_required_gate_bundle_shadow_projection": _build_required_gate_projection_summary(),
         "summary_tuple_context": {
             "total_identities": 0,
             "tuple_context_only_failures": 0,
@@ -2328,10 +2339,17 @@ def main() -> int:
             if identity_id and identity_id not in tuple_summary["identity_ids"]:
                 tuple_summary["identity_ids"].append(identity_id)
 
-    def _record_required_gate_projection(identity_id: str, projection: dict[str, Any]) -> None:
+    def _record_required_gate_projection(
+        identity_id: str,
+        projection: dict[str, Any],
+        *,
+        summary_key: str = "summary_required_gate_bundle_projection",
+    ) -> None:
         if not isinstance(projection, dict) or not projection:
             return
-        summary = payload["summary_required_gate_bundle_projection"]
+        summary = payload.get(summary_key)
+        if not isinstance(summary, dict):
+            return
         summary["identities_with_projection"] += 1
         projection_status = str(projection.get("projection_status", "")).strip().upper()
         if projection_status == STATUS_PASS_REQUIRED:
@@ -2366,6 +2384,10 @@ def main() -> int:
             row_token = str(row_key or "").strip()
             if row_token and row_token not in summary["rows_without_projected_report_fields"]:
                 summary["rows_without_projected_report_fields"].append(row_token)
+        for requirement_key in projection.get("missing_mapping_requirements", []):
+            requirement_token = str(requirement_key or "").strip()
+            if requirement_token and requirement_token not in summary["missing_mapping_requirements"]:
+                summary["missing_mapping_requirements"].append(requirement_token)
         for stale_reason in projection.get("stale_reasons", []):
             stale_token = str(stale_reason or "").strip()
             if stale_token and stale_token not in summary["projection_stale_reasons"]:
