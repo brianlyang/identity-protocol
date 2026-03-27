@@ -42,6 +42,7 @@ from root_decision_evidence_admissibility_common import (
     differentiation_rows_from_doc,
     evidence_class_proof_alignment_rows_from_doc,
     evidence_class_rows_from_doc,
+    evaluate_ordering_adjudication_phase_alignment,
     load_root_decision_evidence_admissibility,
 )
 
@@ -690,6 +691,13 @@ def main() -> int:
                 repo_root,
                 root_doc_anchor_checks,
                 field_name="root_doc_anchor_checks",
+            )
+        )
+
+        integration_violations.extend(
+            evaluate_ordering_adjudication_phase_alignment(
+                ordering_surface_profiles=adjudication_surface_profiles,
+                required_alignment_rows=adjudication_phase_alignment_rows,
             )
         )
 

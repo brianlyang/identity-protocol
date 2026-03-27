@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Iterable, Mapping
 
 import yaml
 
@@ -220,3 +220,66 @@ def decision_evidence_limit_rows_from_doc(doc: Mapping[str, Any]) -> tuple[Phras
 
 def collapse_rows_from_doc(doc: Mapping[str, Any]) -> tuple[PhraseRow, ...]:
     return _phrase_rows_from_field(doc, "required_collapse_rows", row_key="collapse_id")
+
+
+def evaluate_ordering_adjudication_phase_alignment(
+    *,
+    ordering_surface_profiles: Iterable[Any],
+    required_alignment_rows: Iterable[AdjudicationPhaseAlignmentRow],
+) -> list[dict[str, Any]]:
+    profile_map = {
+        _norm_str(getattr(row, "machine_surface", "")): row
+        for row in ordering_surface_profiles
+        if _norm_str(getattr(row, "machine_surface", ""))
+    }
+    violations: list[dict[str, Any]] = []
+    previous_phase_order = 0
+    for row in sorted(required_alignment_rows, key=lambda item: item.order):
+        profile = profile_map.get(row.machine_surface)
+        if profile is None:
+            violations.append(
+                {
+                    "field": "root_corpus_ordering",
+                    "reason": "ordering_adjudication_surface_missing",
+                    "machine_surface": row.machine_surface,
+                }
+            )
+            continue
+
+        phase_order = int(getattr(profile, "phase_order", 0) or 0)
+        surface_role = _norm_str(getattr(profile, "surface_role", ""))
+        closure_terminal = bool(getattr(profile, "closure_terminal", False))
+        expected_closure_terminal = row.machine_surface == "receipts"
+
+        if phase_order <= previous_phase_order:
+            violations.append(
+                {
+                    "field": "root_corpus_ordering",
+                    "reason": "ordering_adjudication_phase_order_not_increasing",
+                    "machine_surface": row.machine_surface,
+                    "phase_order": phase_order,
+                    "previous_phase_order": previous_phase_order,
+                }
+            )
+        previous_phase_order = phase_order
+        if surface_role != row.surface_role:
+            violations.append(
+                {
+                    "field": "root_corpus_ordering",
+                    "reason": "ordering_adjudication_surface_role_mismatch",
+                    "machine_surface": row.machine_surface,
+                    "expected": row.surface_role,
+                    "actual": surface_role,
+                }
+            )
+        if closure_terminal != expected_closure_terminal:
+            violations.append(
+                {
+                    "field": "root_corpus_ordering",
+                    "reason": "ordering_adjudication_closure_terminal_mismatch",
+                    "machine_surface": row.machine_surface,
+                    "expected": expected_closure_terminal,
+                    "actual": closure_terminal,
+                }
+            )
+    return violations
