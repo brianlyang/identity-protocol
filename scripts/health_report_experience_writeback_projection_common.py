@@ -5,6 +5,12 @@ import json
 from pathlib import Path
 from typing import Any, Iterable
 
+from experience_writeback_closure_projection_common import (
+    build_experience_writeback_closure_projection,
+    clean_list as extract_clean_list,
+    clean_str as extract_clean_str,
+    safe_int as extract_safe_int,
+)
 from projection_profile_exclusion_scope_common import build_projection_profile_exclusion_payload
 from runtime_temp_path_common import runtime_temp_root
 
@@ -23,25 +29,15 @@ def default_health_report_dir() -> Path:
 
 
 def _clean_str(value: Any) -> str:
-    return str(value or "").strip()
+    return extract_clean_str(value)
 
 
 def _clean_list(values: Any) -> list[str]:
-    if isinstance(values, (str, bytes)):
-        return [_clean_str(values)] if _clean_str(values) else []
-    rows: list[str] = []
-    for item in values or []:
-        token = _clean_str(item)
-        if token:
-            rows.append(token)
-    return rows
+    return extract_clean_list(values)
 
 
 def _safe_int(value: Any) -> int:
-    try:
-        return int(value)
-    except Exception:
-        return 0
+    return extract_safe_int(value)
 
 
 def _safe_load_json(path: Path) -> dict[str, Any]:
@@ -260,25 +256,31 @@ def build_health_report_experience_writeback_closure_projection(
         projection["stale_reasons"].append("health_report_experience_writeback_closure_missing")
         return projection
 
-    projection["status"] = _clean_str(closure.get("status")).upper()
-    projection["validation_status"] = _clean_str(closure.get("validation_status")).upper()
-    projection["report_selected_path"] = _clean_str(closure.get("report_selected_path"))
-    projection["report_selected_path_matches_execution_report"] = (
-        projection["report_selected_path"] == str(execution_report_path)
+    closure_projection = build_experience_writeback_closure_projection(
+        health_doc,
+        execution_report=execution_report_path,
     )
-    projection["report_selection_mode"] = _clean_str(closure.get("report_selection_mode"))
+    projection["status"] = _clean_str(closure_projection.get("status")).upper()
+    projection["validation_status"] = _clean_str(closure_projection.get("validation_status")).upper()
+    projection["report_selected_path"] = _clean_str(closure_projection.get("report_selected_path"))
+    projection["report_selected_path_matches_execution_report"] = bool(
+        closure_projection.get("report_selected_path_matches_execution_report")
+    )
+    projection["report_selection_mode"] = _clean_str(closure_projection.get("report_selection_mode"))
     projection["report_selected_authority_class"] = _clean_str(
-        closure.get("report_selected_authority_class")
+        closure_projection.get("report_selected_authority_class")
     )
     projection["report_pointer_resolution_mode"] = _clean_str(
-        closure.get("report_pointer_resolution_mode")
+        closure_projection.get("report_pointer_resolution_mode")
     )
-    projection["report_run_id"] = _clean_str(closure.get("report_run_id"))
-    projection["writeback_status"] = _clean_str(closure.get("writeback_status")).upper()
-    projection["writeback_rule_id"] = _clean_str(closure.get("writeback_rule_id"))
-    projection["rulebook_match_count"] = _safe_int(closure.get("rulebook_match_count"))
-    projection["task_history_contains_run_id"] = bool(closure.get("task_history_contains_run_id"))
-    projection["stale_reasons"].extend(_clean_list(closure.get("stale_reasons")))
+    projection["report_run_id"] = _clean_str(closure_projection.get("report_run_id"))
+    projection["writeback_status"] = _clean_str(closure_projection.get("writeback_status")).upper()
+    projection["writeback_rule_id"] = _clean_str(closure_projection.get("writeback_rule_id"))
+    projection["rulebook_match_count"] = _safe_int(closure_projection.get("rulebook_match_count"))
+    projection["task_history_contains_run_id"] = bool(
+        closure_projection.get("task_history_contains_run_id")
+    )
+    projection["stale_reasons"].extend(_clean_list(closure_projection.get("stale_reasons")))
 
     if not projection["status"]:
         projection["projection_status"] = STATUS_FAIL_REQUIRED

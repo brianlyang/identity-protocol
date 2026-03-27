@@ -46,6 +46,10 @@ def write_json(path: Path, doc: dict) -> None:
 base_closure = {
     "status": "PASS",
     "validation_status": "PASS_REQUIRED",
+    "report_selected_path": str(pass_post_report),
+    "report_selection_mode": "explicit_report",
+    "report_selected_authority_class": "explicit_report_argument",
+    "report_pointer_resolution_mode": "explicit_report",
     "report_run_id": "probe-heal-replay-run-pass",
     "writeback_status": "WRITTEN",
     "writeback_rule_id": "rule-entry-heal-replay-pass",
@@ -57,6 +61,7 @@ write_json(
     {
         "identity_id": "probe-heal-replay",
         "overall_status": "PASS",
+        "execution_report_ref": str(pass_post_report),
         "experience_writeback_closure": dict(base_closure),
     },
 )
@@ -87,6 +92,10 @@ write_json(
         "experience_writeback_closure": {
             "status": "FAIL",
             "validation_status": "FAIL_REQUIRED",
+            "report_selected_path": str(fail_post_report),
+            "report_selection_mode": "explicit_report",
+            "report_selected_authority_class": "explicit_report_argument",
+            "report_pointer_resolution_mode": "explicit_report",
             "report_run_id": "probe-heal-replay-run-fail",
             "writeback_status": "MISSING",
             "writeback_rule_id": "",
@@ -140,8 +149,21 @@ payload = json.loads(sys.argv[1])
 assert payload["heal_replay_closure_status"] == "PASS_REQUIRED", payload
 assert payload["health_report_experience_writeback_closure_status"] == "PASS", payload
 assert payload["health_report_experience_writeback_validation_status"] == "PASS_REQUIRED", payload
+assert payload["health_report_execution_report_ref"] == payload["health_report_experience_writeback_report_selected_path"], payload
+assert payload["health_report_experience_writeback_selected_path_matches_execution_report_ref"] is True, payload
+assert payload["health_report_experience_writeback_report_selection_mode"] == "explicit_report", payload
+assert payload["health_report_experience_writeback_report_selected_authority_class"] == "explicit_report_argument", payload
+assert payload["health_report_experience_writeback_report_pointer_resolution_mode"] == "explicit_report", payload
+assert payload["health_report_experience_writeback_writeback_status"] == "WRITTEN", payload
+assert payload["health_report_experience_writeback_writeback_rule_id"] == "rule-entry-heal-replay-pass", payload
 assert payload["post_validate_experience_writeback_closure_status"] == "PASS", payload
 assert payload["post_validate_experience_writeback_validation_status"] == "PASS_REQUIRED", payload
+assert payload["post_validate_experience_writeback_report_selected_path"] == payload["health_report_execution_report_ref"], payload
+assert payload["post_validate_experience_writeback_report_selection_mode"] == "explicit_report", payload
+assert payload["post_validate_experience_writeback_report_selected_authority_class"] == "explicit_report_argument", payload
+assert payload["post_validate_experience_writeback_report_pointer_resolution_mode"] == "explicit_report", payload
+assert payload["post_validate_experience_writeback_writeback_status"] == "WRITTEN", payload
+assert payload["post_validate_experience_writeback_writeback_rule_id"] == "rule-entry-heal-replay-pass", payload
 assert payload["stale_reasons"] == [], payload
 PY
 
@@ -163,6 +185,7 @@ assert payload["heal_replay_closure_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-HEAL-002", payload
 assert "health_report_experience_writeback_projection_missing" in payload["stale_reasons"], payload
 assert payload["health_report_experience_writeback_closure_status"] == "", payload
+assert payload["health_report_experience_writeback_report_selected_path"] == "", payload
 assert payload["post_validate_experience_writeback_closure_status"] == "PASS", payload
 PY
 
@@ -185,6 +208,72 @@ assert payload["error_code"] == "IP-HEAL-003", payload
 assert "post_validate_experience_writeback_still_fail" in payload["stale_reasons"], payload
 assert payload["post_validate_experience_writeback_closure_status"] == "FAIL", payload
 assert payload["post_validate_experience_writeback_validation_status"] == "FAIL_REQUIRED", payload
+assert payload["post_validate_experience_writeback_report_selection_mode"] == "explicit_report", payload
+assert payload["post_validate_experience_writeback_report_selected_authority_class"] == "explicit_report_argument", payload
+PY
+
+AUTHORITY_MISSING_HEALTH_REPORT="${TMP_DIR}/health-authority-missing.json"
+AUTHORITY_MISSING_HEAL_REPORT="${TMP_DIR}/identity-heal-probe-health-authority-missing.json"
+
+python3 - <<'PY' "${AUTHORITY_MISSING_HEALTH_REPORT}" "${AUTHORITY_MISSING_HEAL_REPORT}" "${PASS_POST_REPORT}"
+import json
+import sys
+from pathlib import Path
+
+authority_missing_health_report = Path(sys.argv[1]).resolve()
+authority_missing_heal_report = Path(sys.argv[2]).resolve()
+pass_post_report = Path(sys.argv[3]).resolve()
+
+def write_json(path: Path, doc: dict) -> None:
+    path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+write_json(
+    authority_missing_health_report,
+    {
+        "identity_id": "probe-heal-replay",
+        "execution_report_ref": str(pass_post_report),
+        "experience_writeback_closure": {
+            "status": "PASS",
+            "validation_status": "PASS_REQUIRED",
+            "report_selected_path": str(pass_post_report),
+            "report_run_id": "probe-heal-replay-run-pass",
+            "writeback_status": "WRITTEN",
+            "writeback_rule_id": "rule-entry-heal-replay-pass",
+            "stale_reasons": [],
+        },
+    },
+)
+write_json(
+    authority_missing_heal_report,
+    {
+        "identity_id": "probe-heal-replay",
+        "health_report_ref": str(authority_missing_health_report),
+        "heal_report_ref": str(authority_missing_heal_report),
+        "post_validate_ref": str(pass_post_report),
+    },
+)
+PY
+
+if python3 scripts/validate_identity_heal_replay_closure.py \
+  --identity-id probe-heal-replay \
+  --heal-report "${AUTHORITY_MISSING_HEAL_REPORT}" \
+  --json-only >"${TMP_DIR}/health-authority-missing.out"; then
+  echo "[FAIL] health authority projection missing case unexpectedly passed"
+  cat "${TMP_DIR}/health-authority-missing.out"
+  exit 1
+fi
+python3 - <<'PY' "${TMP_DIR}/health-authority-missing.out"
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["heal_replay_closure_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-HEAL-002", payload
+assert "health_report_experience_writeback_authority_projection_missing" in payload["stale_reasons"], payload
+assert payload["health_report_experience_writeback_report_selection_mode"] == "", payload
+assert payload["health_report_experience_writeback_report_selected_authority_class"] == "", payload
+assert payload["health_report_experience_writeback_report_pointer_resolution_mode"] == "", payload
 PY
 
 echo "[PASS] identity heal replay closure probes passed"
