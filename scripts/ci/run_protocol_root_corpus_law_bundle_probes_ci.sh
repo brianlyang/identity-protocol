@@ -97,6 +97,7 @@ assert payload["registry_direct_stale_reason_partition_policy"] == "local_stale_
 assert payload["registry_direct_stale_reason_origin_classifier_precedence_policy"] == "alias_preempts_document_preempts_required_surface_preempts_contract_row_else_unknown", payload
 assert payload["registry_direct_stale_reason_unclassified_policy"] == "fail_closed", payload
 assert payload["component_validator_observation_reason_admission_policy"] == "parse_status_nonzero_rc_or_nonpass_only_before_bundle_violation_projection", payload
+assert payload["component_validator_observation_reason_parse_status_origin_policy"] == "validator_output_missing_invalid_json_not_json_object_status_key_missing_status_literal_not_string_only_before_nonzero_rc_nonpass_status_exclusion_and_bundle_violation_projection", payload
 assert payload["component_validator_observation_reason_classifier_precedence_policy"] == "parse_status_preempts_nonzero_rc_preempts_nonpass_status_preempts_explicit_non_execution_exclusion_preempts_prefixed_observation_family_ontology_drift_else_not_applicable", payload
 assert payload["component_validator_observation_reason_exclusion_origin_policy"] == "component_validator_missing_or_component_status_row_coverage_incomplete_only_before_bundle_violation_projection", payload
 assert payload["component_validator_observation_reason_exclusion_policy"] == "non_execution_bundle_rows_remain_outside_observation_reason_ontology", payload
@@ -1345,6 +1346,42 @@ assert payload["component_validator_observation_reason_unknown_count"] == 0, pay
 assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
 PY
 
+COMPONENT_VALIDATOR_PARSE_STATUS_ORIGIN_POLICY_REPO="${TMP_ROOT}/component-validator-parse-status-origin-policy-drift-repo"
+mirror_repo "${COMPONENT_VALIDATOR_PARSE_STATUS_ORIGIN_POLICY_REPO}"
+python3 - <<'PY' "${COMPONENT_VALIDATOR_PARSE_STATUS_ORIGIN_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["component_validator_observation_reason_parse_status_origin_policy"] = "validator_output_missing_or_invalid_only_before_bundle_violation_projection"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_VALIDATOR_PARSE_STATUS_ORIGIN_POLICY_JSON="${TMP_ROOT}/component-validator-parse-status-origin-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_VALIDATOR_PARSE_STATUS_ORIGIN_POLICY_REPO}" \
+  --json-only >"${COMPONENT_VALIDATOR_PARSE_STATUS_ORIGIN_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component-validator parse-status origin policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_VALIDATOR_PARSE_STATUS_ORIGIN_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_parse_status_origin_policy_invalid" in payload["stale_reasons"], payload
+assert payload["component_validator_observation_reason_parse_status_origin_policy"] == "validator_output_missing_or_invalid_only_before_bundle_violation_projection", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload
+PY
+
 COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_REPO="${TMP_ROOT}/component-validator-observation-reason-exclusion-origin-drift-repo"
 mirror_repo "${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_REPO}"
 python3 - <<'PY' "${COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
@@ -1592,6 +1629,7 @@ assert payload["error_code"] == "IP-RCLB-003", payload
 assert payload["derived_failure_class"] == "bundle", payload
 assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
 assert payload["component_validator_observation_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_parse_status_origin_policy"] == "validator_output_missing_invalid_json_not_json_object_status_key_missing_status_literal_not_string_only_before_nonzero_rc_nonpass_status_exclusion_and_bundle_violation_projection", payload
 assert payload["component_validator_observation_reason_counts"]["parse_status"] >= 1, payload
 assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
 assert payload["component_validator_observation_reason_non_applicable_count"] == 0, payload

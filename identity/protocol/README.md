@@ -817,6 +817,15 @@ The admitted runtime observation reasons are parse/status failure,
 nonzero returncode after admitted parse/status resolution, and non-pass
 component status, all before bundle-violation projection.
 
+Bundle component-validator parse/status origin policy must also stay
+explicit.
+
+The admitted runtime parse/status reasons are validator-output missing,
+validator-output invalid-json, validator-output not-json-object,
+validator-status-key missing, and validator-status-literal not-string,
+all before nonzero returncode, non-pass component status, explicit
+non-execution exclusion, and bundle-violation projection.
+
 Bundle component-validator observation-reason classifier precedence
 policy must also stay explicit.
 

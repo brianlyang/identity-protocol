@@ -512,6 +512,14 @@ policy explicit; admitted observation reasons are parse/status failure,
 nonzero returncode after admitted parse/status resolution, and non-pass
 component status before bundle-violation projection.
 
+Root-law bundle rows must also keep component-validator parse/status
+origin policy explicit; admitted parse/status reasons are
+validator-output missing, validator-output invalid-json,
+validator-output not-json-object, validator-status-key missing, and
+validator-status-literal not-string before nonzero returncode, non-pass
+component status, explicit non-execution exclusion, and
+bundle-violation projection.
+
 Root-law bundle rows must also keep component-validator observation-reason
 classifier precedence policy explicit; parse/status classification
 preempts nonzero returncode, nonzero returncode preempts non-pass
