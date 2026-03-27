@@ -30,6 +30,11 @@ assert payload["differentiation_count"] == 7, payload
 assert payload["error_terminality_proof_count"] == 7, payload
 assert payload["error_terminality_limit_count"] == 7, payload
 assert payload["collapse_count"] == 7, payload
+assert payload["error_terminality_row_family_count"] == 5, payload
+assert payload["error_terminality_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["error_terminality_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -65,10 +70,22 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_error_terminality_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-ERT-002", payload
+assert payload["error_terminality_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["error_terminality_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["reason"] == "missing_expected_rows" and "support_explanatory_demotion_error_terminality_proof" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+proof_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_error_terminality_proof_rows"
+)
+assert proof_row["expected_count"] == 7, payload
+assert proof_row["actual_count"] == 6, payload
+assert proof_row["missing_ids"] == ["support_explanatory_demotion_error_terminality_proof"], payload
+assert proof_row["unexpected_ids"] == [], payload
+assert proof_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert proof_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 ERROR_REPO="${TMP_ROOT}/error-drift-repo"
@@ -80,11 +97,12 @@ import yaml
 
 path = pathlib.Path(sys.argv[1])
 doc = yaml.safe_load(path.read_text(encoding="utf-8"))
-doc["required_error_class_rows"] = [
-    row for row in doc["required_error_class_rows"] if row.get("error_class_id") != "binding_integrity_error"
-]
-for idx, row in enumerate(doc["required_error_class_rows"], start=1):
-    row["order"] = idx
+for row in doc["required_error_class_rows"]:
+    if row.get("error_class_id") == "binding_integrity_error":
+        row["error_class_id"] = "binding_integrity_error_alias"
+        break
+else:
+    raise SystemExit("expected binding_integrity_error row not found")
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
 
@@ -108,6 +126,22 @@ assert any(
     row["reason"] == "missing_expected_rows" and "binding_integrity_error" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+assert any(
+    row["reason"] == "extra_rows" and "binding_integrity_error_alias" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
+assert payload["error_terminality_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["error_terminality_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+error_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_error_class_rows"
+)
+assert error_row["expected_count"] == 7, payload
+assert error_row["actual_count"] == 7, payload
+assert error_row["missing_ids"] == ["binding_integrity_error"], payload
+assert error_row["unexpected_ids"] == ["binding_integrity_error_alias"], payload
+assert error_row["coverage_status"] == "PASS_REQUIRED", payload
+assert error_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 PHRASE_REPO="${TMP_ROOT}/phrase-drift-repo"

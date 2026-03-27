@@ -14,6 +14,7 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
+from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 from root_prompt_bootstrap_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -162,36 +163,6 @@ def _entry_marker_missing(required_markers: tuple[str, ...], expected_markers: t
     return [marker for marker in expected_markers if marker not in marker_set]
 
 
-def _project_row_family(
-    *,
-    family_id: str,
-    member_id_key: str,
-    actual_rows,
-    expected_rows: dict[str, dict[str, Any]],
-    id_attr: str,
-) -> dict[str, Any]:
-    actual_ids = sorted(str(getattr(row, id_attr)) for row in actual_rows)
-    expected_ids = sorted(str(row_id) for row_id in expected_rows)
-    missing_ids = sorted(set(expected_ids) - set(actual_ids))
-    unexpected_ids = sorted(set(actual_ids) - set(expected_ids))
-    coverage_status = STATUS_FAIL_REQUIRED if len(actual_rows) != len(expected_ids) else STATUS_PASS_REQUIRED
-    identity_projection_status = (
-        STATUS_FAIL_REQUIRED if missing_ids or unexpected_ids else STATUS_PASS_REQUIRED
-    )
-    return {
-        "family_id": family_id,
-        "member_id_key": member_id_key,
-        "expected_count": len(expected_ids),
-        "actual_count": len(actual_rows),
-        "expected_ids": expected_ids,
-        "actual_ids": actual_ids,
-        "missing_ids": missing_ids,
-        "unexpected_ids": unexpected_ids,
-        "coverage_status": coverage_status,
-        "identity_projection_status": identity_projection_status,
-    }
-
-
 def _validate_rows(
     *,
     actual_rows,
@@ -324,42 +295,42 @@ def main() -> int:
 
     if not stale_reasons:
         row_family_projection_rows = [
-            _project_row_family(
+            project_row_family(
                 family_id="required_anchor_rows",
                 member_id_key="anchor_id",
                 actual_rows=anchor_rows,
                 expected_rows=EXPECTED_ANCHOR_ROWS,
                 id_attr="anchor_id",
             ),
-            _project_row_family(
+            project_row_family(
                 family_id="required_output_field_rows",
                 member_id_key="output_field_id",
                 actual_rows=output_field_rows,
                 expected_rows=EXPECTED_OUTPUT_FIELD_ROWS,
                 id_attr="row_id",
             ),
-            _project_row_family(
+            project_row_family(
                 family_id="required_binding_field_rows",
                 member_id_key="binding_field_id",
                 actual_rows=binding_field_rows,
                 expected_rows=EXPECTED_BINDING_FIELD_ROWS,
                 id_attr="row_id",
             ),
-            _project_row_family(
+            project_row_family(
                 family_id="required_prompt_bootstrap_proof_rows",
                 member_id_key="proof_id",
                 actual_rows=prompt_bootstrap_proof_rows,
                 expected_rows=EXPECTED_PROMPT_BOOTSTRAP_PROOF_ROWS,
                 id_attr="proof_id",
             ),
-            _project_row_family(
+            project_row_family(
                 family_id="required_prompt_bootstrap_limit_rows",
                 member_id_key="limit_id",
                 actual_rows=prompt_bootstrap_limit_rows,
                 expected_rows=EXPECTED_PROMPT_BOOTSTRAP_LIMIT_ROWS,
                 id_attr="row_id",
             ),
-            _project_row_family(
+            project_row_family(
                 family_id="required_native_literal_rows",
                 member_id_key="native_literal_id",
                 actual_rows=native_literal_rows,
@@ -497,15 +468,17 @@ def main() -> int:
     status = STATUS_PASS_REQUIRED if not any((stale_reasons, structure_violations, prompt_violations, integration_violations, contract_marker_violations)) else STATUS_FAIL_REQUIRED
     rc = 0 if status == STATUS_PASS_REQUIRED else 1
     summary_markers = sorted({row.get("marker", "") for row in prompt_violations + integration_violations + contract_marker_violations if row.get("marker")})
-    prompt_bootstrap_row_coverage_status = (
-        STATUS_FAIL_REQUIRED
-        if any(row["coverage_status"] == STATUS_FAIL_REQUIRED for row in row_family_projection_rows)
-        else STATUS_PASS_REQUIRED
+    prompt_bootstrap_row_coverage_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="coverage_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
     )
-    prompt_bootstrap_row_identity_projection_status = (
-        STATUS_FAIL_REQUIRED
-        if any(row["identity_projection_status"] == STATUS_FAIL_REQUIRED for row in row_family_projection_rows)
-        else STATUS_PASS_REQUIRED
+    prompt_bootstrap_row_identity_projection_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="identity_projection_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
     )
 
     payload = {
