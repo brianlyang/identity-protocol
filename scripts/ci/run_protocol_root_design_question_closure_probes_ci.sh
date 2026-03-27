@@ -33,6 +33,11 @@ assert payload["question_ids"] == [
     "responsibility_split",
     "answer_surface",
 ], payload
+assert payload["design_question_closure_row_family_count"] == 2, payload
+assert payload["design_question_closure_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["design_question_closure_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 PY
 
 ROW_REPO="${TMP_ROOT}/missing-row-repo"
@@ -67,10 +72,98 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_design_question_closure_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RDQC-002", payload
+assert payload["design_question_closure_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["design_question_closure_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["field"] == "required_question_closure_rows" and row["reason"] == "missing_expected_rows"
     for row in payload["structure_violations"]
 ), payload
+closure_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_question_closure_rows"
+)
+status_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "question_status_rows"
+)
+assert closure_row["expected_count"] == 5, payload
+assert closure_row["actual_count"] == 4, payload
+assert closure_row["missing_ids"] == ["answer_surface"], payload
+assert closure_row["unexpected_ids"] == [], payload
+assert closure_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert closure_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert status_row["expected_count"] == 5, payload
+assert status_row["actual_count"] == 4, payload
+assert status_row["missing_ids"] == ["answer_surface"], payload
+assert status_row["unexpected_ids"] == [], payload
+assert status_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert status_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+IDENTITY_REPO="${TMP_ROOT}/identity-drift-repo"
+mirror_repo "${IDENTITY_REPO}"
+python3 - <<'PY' "${IDENTITY_REPO}/identity/protocol/mappings/root-design-question-closure.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["required_question_closure_rows"]:
+    if row.get("question_id") == "answer_surface":
+        row["question_id"] = "answer_surface_alias"
+        break
+else:
+    raise SystemExit("expected answer_surface row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+IDENTITY_JSON="${TMP_ROOT}/identity-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_design_question_closure.py" \
+  --repo-root "${IDENTITY_REPO}" \
+  --json-only >"${IDENTITY_JSON}"; then
+  echo "[FAIL] root design-question closure validator unexpectedly passed question identity drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${IDENTITY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_design_question_closure_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RDQC-002", payload
+assert payload["design_question_closure_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["design_question_closure_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["field"] == "required_question_closure_rows" and row["reason"] == "missing_expected_rows" and "answer_surface" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "required_question_closure_rows" and row["reason"] == "unexpected_rows" and "answer_surface_alias" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
+closure_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_question_closure_rows"
+)
+status_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "question_status_rows"
+)
+assert closure_row["expected_count"] == 5, payload
+assert closure_row["actual_count"] == 5, payload
+assert closure_row["missing_ids"] == ["answer_surface"], payload
+assert closure_row["unexpected_ids"] == ["answer_surface_alias"], payload
+assert closure_row["coverage_status"] == "PASS_REQUIRED", payload
+assert closure_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert status_row["expected_count"] == 5, payload
+assert status_row["actual_count"] == 5, payload
+assert status_row["missing_ids"] == ["answer_surface"], payload
+assert status_row["unexpected_ids"] == ["answer_surface_alias"], payload
+assert status_row["coverage_status"] == "PASS_REQUIRED", payload
+assert status_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 PHILOSOPHY_REPO="${TMP_ROOT}/philosophy-drift-repo"

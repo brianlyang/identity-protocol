@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+from types import SimpleNamespace
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
@@ -14,6 +15,7 @@ from root_design_question_closure_common import (
     load_root_design_question_closure,
     question_closure_rows_from_doc,
 )
+from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 from root_stream_design_admissibility_common import load_root_stream_design_admissibility, required_question_rows_from_doc
 
 STATUS_KEY = "protocol_root_design_question_closure_status"
@@ -112,6 +114,14 @@ def _contiguous_orders(values: list[int]) -> bool:
     return values == list(range(1, len(values) + 1))
 
 
+def _status_rows(question_status_rows: list[dict[str, Any]]) -> tuple[SimpleNamespace, ...]:
+    return tuple(
+        SimpleNamespace(question_id=str(row.get("question_id") or "").strip())
+        for row in question_status_rows
+        if str(row.get("question_id") or "").strip()
+    )
+
+
 def _run_component_validator(repo_root, validator_script: str, status_key: str) -> tuple[int, dict[str, Any], str]:
     cmd = ["python3", validator_script, "--repo-root", str(repo_root), "--json-only"]
     proc = subprocess.run(cmd, cwd=repo_root, capture_output=True, text=True)
@@ -142,6 +152,7 @@ def main() -> int:
     structure_violations: list[dict[str, Any]] = []
     closure_violations: list[dict[str, Any]] = []
     question_status_rows: list[dict[str, Any]] = []
+    row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
 
     for prefix, doc, alias_error, empty_reason in (
@@ -236,7 +247,7 @@ def main() -> int:
         if structure_violations:
             error_code = ERR_STRUCTURE
 
-    if not stale_reasons and not structure_violations:
+    if not stale_reasons:
         admissibility_map = {row.question_id: row for row in admissibility_question_rows}
         registry_map = {row.rel_path: row for row in registry_entries}
         mappings_entry = registry_map.get("identity/protocol/mappings")
@@ -364,12 +375,45 @@ def main() -> int:
                     }
                 )
 
-        if closure_violations:
+        if closure_violations and not error_code:
             error_code = ERR_CLOSURE
 
     status = STATUS_PASS_REQUIRED
     if stale_reasons or structure_violations or closure_violations:
         status = STATUS_FAIL_REQUIRED
+
+    row_family_projection_rows = [
+        project_row_family(
+            family_id="required_question_closure_rows",
+            member_id_key="question_id",
+            actual_rows=closure_rows,
+            expected_rows=EXPECTED_QUESTION_CLOSURE_ROWS,
+            id_attr="question_id",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        project_row_family(
+            family_id="question_status_rows",
+            member_id_key="question_id",
+            actual_rows=_status_rows(question_status_rows),
+            expected_rows=EXPECTED_QUESTION_CLOSURE_ROWS,
+            id_attr="question_id",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+    ]
+    design_question_closure_row_coverage_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="coverage_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
+    design_question_closure_row_identity_projection_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="identity_projection_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
 
     payload = {
         STATUS_KEY: status,
@@ -378,6 +422,10 @@ def main() -> int:
         "mapping_entry_file": str(closure_entry_path.relative_to(repo_root)),
         "mapping_active_file": str(closure_active_path.relative_to(repo_root)),
         "question_closure_count": len(closure_rows),
+        "design_question_closure_row_family_count": len(row_family_projection_rows),
+        "design_question_closure_row_coverage_status": design_question_closure_row_coverage_status,
+        "design_question_closure_row_identity_projection_status": design_question_closure_row_identity_projection_status,
+        "row_family_projection_rows": row_family_projection_rows,
         "question_ids": [row.question_id for row in sorted(closure_rows, key=lambda item: item.order)],
         "question_status_rows": question_status_rows,
         "structure_violations": structure_violations,
