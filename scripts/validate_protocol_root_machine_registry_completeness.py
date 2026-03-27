@@ -9,7 +9,11 @@ from typing import Any
 
 from registry_alias_control_plane_common import resolve_current_yaml_alias
 from repo_root_resolution_common import resolve_repo_root
-from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
+from root_contract_anchor_checks_common import (
+    evaluate_root_doc_anchor_checks,
+    validate_expected_root_doc_anchor_checks,
+)
+from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_machine_registry_completeness_common import (
     default_surface_stem_from_family_id,
     extract_validator_error_codes,
@@ -39,6 +43,67 @@ STATUS_KEY = "protocol_root_machine_registry_completeness_status"
 ERR_REGISTRY = "IP-RMRC-001"
 ERR_STRUCTURE = "IP-RMRC-002"
 ERR_COMPLETENESS = "IP-RMRC-003"
+
+EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
+    "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "### Machine-registry completeness must stay explicit",
+        "Registered-complete root-mapping-family total and family-status-row total must therefore stay congruent under machine-readable coverage",
+        "Machine-registry law does not become canonical merely because a mapping file",
+        "A governed root mapping family must be admitted into the registry directory",
+        "registry-completeness failure rather than a",
+        "Admission without discoverable enforcement still leaves the machine",
+        "A lawful root mapping family must therefore disclose the validator, probe,",
+        "shared-common, emitted status-key, and emitted error-code surfaces that govern it.",
+        "Those repo-relative path surfaces must remain repo-root relative and",
+        "Absolute-path capture or parent-escape capture would let local filesystem accident impersonate governed protocol law.",
+        "descriptor paths that bypass repo-root-relative discipline.",
+        "Repo-relative descriptor surfaces must also remain role-typed.",
+        "role-swapped descriptor paths inside repo root.",
+        "Those role-typed surfaces must also remain cross-role coherent.",
+        "descriptor surface sets whose role-typed paths are cross-family incoherent.",
+        "Those cross-role coherent descriptor surfaces must also remain family-congruent.",
+        "explicit registry-declared surface-stem binding when a family borrows another admitted family's enforcement surfaces.",
+        "descriptor surface sets that impersonate a different admitted family without explicit registry declaration.",
+    ),
+    "identity/protocol/README.md": (
+        "## Root machine-registry completeness discipline",
+        "Registered-complete root-mapping-family total and family-status-row total must also remain congruent under machine-readable coverage completeness",
+        "a law-bearing root mapping family does not gain canonical status from on-disk presence alone;",
+        "a governed root mapping family must appear in the admitted machine-registry child set, normally as a current file plus its active versioned file;",
+        "if a root mapping family exists on disk but is absent from that admitted child set, registry completeness has failed and current-turn consumption must fail-close.",
+        "4. an admitted root mapping family must disclose its validator, probe, shared-common, emitted status-key, and emitted error-code enforcement surfaces to the machine world;",
+        "Hidden enforcement knowledge does not satisfy registry completeness.",
+        "Repo-relative descriptor surfaces must also stay repo-root relative and",
+        "if they exist locally.",
+        "Repo-relative descriptor surfaces must also remain role-typed; validator, probe, and shared-common paths are not interchangeable repo files.",
+        "Those role-typed surfaces must also remain cross-role coherent; validator, probe, and shared-common paths for one admitted family may not silently point at different root surface stems.",
+        "Those cross-role coherent descriptor surfaces must also remain family-congruent; if an admitted family borrows another family's coherent descriptor stem, that binding must be explicitly declared in registry completeness law.",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL.md": (
+        "## Root machine-registry completeness boundary",
+        "Machine-registry completeness must also keep admitted family and emitted status disclosure explicit as separate row families",
+        "Law-bearing root mapping families under `identity/protocol/mappings/` become canonical only when admitted by the machine-registry directory child set.",
+        "On-disk presence without registry admission does not authorize current-turn consumption, legal ingress, or bundle membership.",
+        "Registry-completeness drift is a root-law failure, not a convenience-layer warning.",
+        "5. Registry admission without discoverable validator/probe/common/status-key/error-code surfaces is still incomplete.",
+        "6. Repo-relative descriptor surfaces disclosed by an admitted family must remain repo-root relative and repo-contained; absolute-path or parent-escape capture is non-compliant.",
+        "7. Repo-relative descriptor surfaces disclosed by an admitted family must also stay role-typed; validator, probe, and shared-common path classes are not interchangeable.",
+        "8. Role-typed repo-relative descriptor surfaces disclosed by an admitted family must also stay cross-role coherent; validator/probe/common may not silently bind to different root surface stems.",
+        "9. Cross-role coherent descriptor surfaces disclosed by an admitted family must also stay family-congruent; borrowing another family's descriptor stem requires explicit registry-completeness declaration rather than silent impersonation.",
+    ),
+    "identity/protocol/IDENTITY_RUNTIME.md": (
+        "## Runtime registry-completeness boundary",
+        "Runtime must also keep admitted family and emitted status disclosure explicit during machine-registry validation",
+        "Runtime may consume only root mapping families admitted by governed machine-registry completeness law.",
+        "A root mapping file present on disk but absent from the admitted child set is non-canonical for runtime legality.",
+        "Runtime must fail-close on registry-completeness drift rather than loading the most convenient on-disk mapping.",
+        "5. Runtime must discover validator/probe/common/status-key/error-code surfaces from admitted mapping-family descriptors rather than hidden local knowledge.",
+        "6. Runtime must reject descriptor paths that are absolute or escape repo root; repo-relative descriptor surfaces must stay repo-root relative and repo-contained.",
+        "7. Runtime must also reject role-swapped descriptor paths; validator, probe, and shared-common surfaces must stay role-typed rather than merely repo-local.",
+        "8. Runtime must also reject cross-role incoherent descriptor sets; validator/probe/common surfaces for one admitted family must converge on one root surface stem.",
+        "9. Runtime must also reject undeclared family-incongruent descriptor sets; even a coherent validator/probe/common set is non-canonical unless any cross-family stem binding is explicitly declared by registry completeness law.",
+    ),
+}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -166,6 +231,17 @@ def main() -> int:
             "common_script": r"^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\.py$",
         }:
             stale_reasons.append("root_machine_registry_completeness_required_repo_rel_path_patterns_invalid")
+            error_code = ERR_REGISTRY
+
+        anchor_reason_count_before = len(stale_reasons)
+        stale_reasons.extend(
+            validate_expected_root_doc_anchor_checks(
+                anchor_checks,
+                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+                stale_reason_prefix="root_machine_registry_completeness",
+            )
+        )
+        if len(stale_reasons) > anchor_reason_count_before:
             error_code = ERR_REGISTRY
 
         if not anchor_checks:
@@ -677,20 +753,13 @@ def main() -> int:
                     }
                 )
 
-        for check in anchor_checks:
-            path = (repo_root / check.rel_path).resolve()
-            if not path.exists() or not path.is_file():
-                anchor_violations.append({"rel_path": check.rel_path, "reason": "anchor_file_missing"})
-                continue
-            text = path.read_text(encoding="utf-8", errors="ignore")
-            for marker in find_missing_markers(text, check.required_markers):
-                anchor_violations.append(
-                    {
-                        "rel_path": check.rel_path,
-                        "reason": "required_marker_missing",
-                        "marker": marker,
-                    }
-                )
+        anchor_violations.extend(
+            evaluate_root_doc_anchor_checks(
+                repo_root,
+                anchor_checks,
+                field_name="root_doc_anchor_checks",
+            )
+        )
 
     if not error_code and structure_violations:
         error_code = ERR_STRUCTURE
@@ -735,6 +804,9 @@ def main() -> int:
         STATUS_FAIL_REQUIRED
         if family_status_row_identity_projection_incomplete
         else STATUS_PASS_REQUIRED
+    )
+    root_doc_anchor_status = (
+        STATUS_FAIL_REQUIRED if anchor_violations else STATUS_PASS_REQUIRED
     )
     row_family_projection_rows = [
         project_row_family(
@@ -792,6 +864,8 @@ def main() -> int:
         "family_count": len(family_status_rows),
         "registered_complete_family_count": len(registered_complete_family_ids),
         "registered_complete_family_ids": registered_complete_family_ids,
+        "root_doc_anchor_check_count": len(anchor_checks),
+        "root_doc_anchor_status": root_doc_anchor_status,
         "family_status_row_count": len(family_status_rows),
         "expected_family_status_row_count": expected_family_status_row_count,
         "family_status_row_coverage_status": family_status_row_coverage_status,

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 import re
 from typing import Any, Mapping
@@ -9,6 +9,7 @@ from typing import Any, Mapping
 import yaml
 
 from registry_alias_control_plane_common import resolve_current_yaml_alias
+from root_contract_anchor_checks_common import RootDocAnchorCheck, root_doc_anchor_checks_from_doc
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -17,10 +18,7 @@ ROOT_MACHINE_REGISTRY_COMPLETENESS_CURRENT = (
 )
 
 
-@dataclass(frozen=True)
-class AnchorCheck:
-    rel_path: str
-    required_markers: tuple[str, ...] = field(default_factory=tuple)
+AnchorCheck = RootDocAnchorCheck
 
 
 def _norm_str(value: Any) -> str:
@@ -213,16 +211,4 @@ def extract_validator_error_codes(repo_root: Path, validator_script: str) -> tup
 
 
 def anchor_checks_from_doc(doc: Mapping[str, Any]) -> tuple[AnchorCheck, ...]:
-    rows = doc.get("anchor_checks")
-    if not isinstance(rows, list):
-        return ()
-    out: list[AnchorCheck] = []
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        rel_path = _norm_str(row.get("rel_path"))
-        required_markers = _as_str_tuple(row.get("required_markers"))
-        if not rel_path or not required_markers:
-            continue
-        out.append(AnchorCheck(rel_path=rel_path, required_markers=required_markers))
-    return tuple(out)
+    return root_doc_anchor_checks_from_doc(doc, field_name="anchor_checks")
