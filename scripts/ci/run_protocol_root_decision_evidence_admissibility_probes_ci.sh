@@ -33,6 +33,8 @@ assert payload["decision_evidence_proof_count"] == 6, payload
 assert payload["evidence_class_proof_alignment_count"] == 6, payload
 assert payload["decision_evidence_limit_count"] == 7, payload
 assert payload["collapse_count"] == 8, payload
+assert payload["root_doc_anchor_check_count"] == 4, payload
+assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["decision_evidence_row_family_count"] == 7, payload
 assert payload["decision_evidence_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["decision_evidence_row_identity_projection_status"] == "PASS_REQUIRED", payload
@@ -264,6 +266,45 @@ assert payload["error_code"] == "IP-DEA-003", payload
 assert any(
     row["field"] == "root_corpus_registry" and row["reason"] == "contract_not_registered"
     for row in payload["integration_violations"]
+), payload
+PY
+
+DOC_ANCHOR_REPO="${TMP_ROOT}/doc-anchor-drift-repo"
+mirror_repo "${DOC_ANCHOR_REPO}"
+python3 - <<'PY' "${DOC_ANCHOR_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "## Root decision-evidence admissibility completeness discipline"
+new = "## Root decision-evidence admissibility discipline"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+DOC_ANCHOR_JSON="${TMP_ROOT}/doc-anchor-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_decision_evidence_admissibility.py" \
+  --repo-root "${DOC_ANCHOR_REPO}" \
+  --json-only >"${DOC_ANCHOR_JSON}"; then
+  echo "[FAIL] root decision-evidence admissibility validator unexpectedly passed root-doc anchor drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${DOC_ANCHOR_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_decision_evidence_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-DEA-003", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["rel_path"] == "identity/protocol/README.md"
+    and row["reason"] == "required_marker_missing"
+    and row["marker"] == "## Root decision-evidence admissibility completeness discipline"
+    for row in payload["root_doc_anchor_violations"]
 ), payload
 PY
 

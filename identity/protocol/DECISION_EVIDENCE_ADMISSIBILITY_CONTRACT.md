@@ -83,6 +83,8 @@ So this file freezes decision-evidence admissibility law, while runtime adjudica
 
 A machine decision may be motivated, supported, or terminally justified only by evidence classes whose provenance, admissibility, binding, and terminal scope are appropriate for that decision.
 
+Decision-evidence admissibility law must also remain machine-readable as separate evidence-class, differentiation, adjudication-phase-alignment, decision-evidence-proof, evidence-class-proof-alignment, limit, and collapse row families rather than one narrative evidence claim.
+
 No support material, historical residue, or compatibility lane may silently promote itself into terminal decision evidence for the active success path.
 
 ## Six decision-evidence classes

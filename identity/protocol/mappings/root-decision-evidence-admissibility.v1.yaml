@@ -29,6 +29,28 @@ contract_required_markers:
   - '## Decision-evidence proof limits'
   - '## Non-compliant decision-evidence collapses'
   - 'A machine decision may be motivated, supported, or terminally justified only by evidence classes whose provenance, admissibility, binding, and terminal scope are appropriate for that decision.'
+  - 'Decision-evidence admissibility law must also remain machine-readable as separate evidence-class, differentiation, adjudication-phase-alignment, decision-evidence-proof, evidence-class-proof-alignment, limit, and collapse row families rather than one narrative evidence claim.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Decision-evidence admissibility row-family completeness must stay explicit'
+      - "Required evidence-class, differentiation, adjudication-phase-alignment,\ndecision-evidence-proof, evidence-class-proof-alignment, limit, and collapse\nfamilies must remain explicit as separate machine-readable row families."
+      - 'The machine world must not finalize decision-evidence admissibility while required row identity drift remains known only internally.'
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root decision-evidence admissibility completeness discipline'
+      - 'Decision-evidence admissibility law is not a soft prose bundle.'
+      - '1. required evidence-class, differentiation, adjudication-phase-alignment, decision-evidence-proof, evidence-class-proof-alignment, limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root decision-evidence admissibility completeness boundary'
+      - '1. Decision-evidence admissibility law must remain machine-readable as separate evidence-class, differentiation, adjudication-phase-alignment, decision-evidence-proof, evidence-class-proof-alignment, limit, and collapse row families.'
+      - '4. Protocol legality must not finalize decision-evidence admissibility while missing or unexpected row identities remain known only inside validator logic.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime decision-evidence admissibility consumption boundary'
+      - '1. Runtime consumes decision-evidence admissibility law as separate evidence-class, differentiation, adjudication-phase-alignment, decision-evidence-proof, evidence-class-proof-alignment, limit, and collapse row families rather than as undifferentiated decision-evidence prose.'
+      - '4. Runtime must not finalize decision-evidence admissibility while missing or unexpected row identities remain known only inside validator machinery.'
 required_evidence_class_rows:
   - order: 1
     evidence_class_id: frozen_law_evidence
