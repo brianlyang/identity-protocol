@@ -143,6 +143,10 @@ Machine-registry completeness must also keep discovered family coverage
 explicit; discovered root-mapping-family total must remain congruent with
 family-status-row total rather than being left implicit.
 
+Machine-registry completeness must also keep discovered family identity
+projection explicit; discovered family set may not be collapsed into the
+emitted family-status-row subset.
+
 Registry-completeness truth may not finalize on partial family-status-row
 coverage while the discovered family set remains known.
 

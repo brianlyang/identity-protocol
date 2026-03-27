@@ -41,8 +41,13 @@ assert payload["required_repo_rel_path_patterns"] == {
     "common_script": r"^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\.py$",
 }, payload
 assert payload["family_count"] == payload["family_status_row_count"], payload
+assert payload["discovered_family_count"] == payload["family_status_row_count"], payload
 assert payload["expected_family_status_row_count"] == payload["family_status_row_count"], payload
 assert payload["family_status_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["family_ids"] == payload["family_status_row_ids"] == payload["discovered_family_ids"], payload
+assert payload["missing_family_status_row_ids"] == [], payload
+assert payload["unexpected_family_status_row_ids"] == [], payload
+assert payload["family_status_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["structure_violation_count"] == 0, payload
 assert payload["completeness_violation_count"] == 0, payload
 assert payload["anchor_violation_count"] == 0, payload
@@ -587,14 +592,25 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RMRC-003", payload
 assert payload["family_status_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["family_status_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert payload["family_status_row_count"] + 1 == payload["expected_family_status_row_count"], payload
+assert payload["discovered_family_count"] == payload["expected_family_status_row_count"], payload
+assert "root-corpus-authority" in payload["discovered_family_ids"], payload
+assert "root-corpus-authority" in payload["missing_family_status_row_ids"], payload
+assert "root-corpus-authority" not in payload["family_status_row_ids"], payload
+assert payload["unexpected_family_status_row_ids"] == [], payload
 assert any(
     row["reason"] == "family_status_row_coverage_incomplete"
     and row.get("expected_count") == payload["expected_family_status_row_count"]
     and row.get("actual_count") == payload["family_status_row_count"]
     for row in payload["completeness_violations"]
 ), payload
-assert "root-corpus-authority" not in payload["family_ids"], payload
+assert any(
+    row["reason"] == "family_status_row_identity_projection_incomplete"
+    and "root-corpus-authority" in row.get("missing_family_ids", [])
+    and row.get("unexpected_family_ids") == []
+    for row in payload["completeness_violations"]
+), payload
 PY
 
 VIOLATION_PROJECTION_REPO="${TMP_ROOT}/violation-projection-repo"

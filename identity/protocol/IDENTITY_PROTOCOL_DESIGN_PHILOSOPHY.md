@@ -950,6 +950,9 @@ Discovered root-mapping-family total and family-status-row total must
 therefore stay congruent under machine-readable coverage completeness
 rather than being left implicit.
 
+Discovered family identity set must also remain machine-readable rather
+than being collapsed into the emitted family-status-row subset.
+
 The machine world must not finalize machine-registry completeness truth
 on partial family-status-row coverage when discovered family set remains
 known.

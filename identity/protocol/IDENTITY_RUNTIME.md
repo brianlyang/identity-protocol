@@ -98,6 +98,10 @@ machine-registry validation; discovered root-mapping-family total must
 remain congruent with family-status-row total rather than being left
 implicit.
 
+Runtime must also keep discovered family identity projection explicit;
+discovered family set may not be collapsed into the emitted
+family-status-row subset.
+
 Runtime must not emit final machine-registry completeness truth with
 partial family-status-row coverage when the discovered family set remains
 known.

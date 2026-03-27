@@ -64,6 +64,11 @@ def main() -> int:
     family_status_rows: list[dict[str, Any]] = []
     expected_family_status_row_count = 0
     family_status_row_coverage_incomplete = False
+    discovered_family_ids: list[str] = []
+    family_status_row_ids: list[str] = []
+    missing_family_status_row_ids: list[str] = []
+    unexpected_family_status_row_ids: list[str] = []
+    family_status_row_identity_projection_incomplete = False
     error_code = ""
 
     for prefix, doc, alias_error, empty_reason in (
@@ -230,7 +235,8 @@ def main() -> int:
                     structure_violations.append(
                         {"field": "root_mapping_family", "reason": "unclassifiable_root_yaml", "filename": name}
                     )
-            expected_family_status_row_count = len(families)
+            discovered_family_ids = sorted(families)
+            expected_family_status_row_count = len(discovered_family_ids)
 
             for child in sorted(child for child in registered_children if child.startswith(prefix) and child.endswith(".yaml")):
                 if child not in actual_root_yaml_set:
@@ -633,6 +639,25 @@ def main() -> int:
                         "actual_count": len(family_status_rows),
                     }
                 )
+            family_status_row_ids = [row["family_id"] for row in family_status_rows]
+            missing_family_status_row_ids = sorted(
+                set(discovered_family_ids) - set(family_status_row_ids)
+            )
+            unexpected_family_status_row_ids = sorted(
+                set(family_status_row_ids) - set(discovered_family_ids)
+            )
+            family_status_row_identity_projection_incomplete = bool(
+                missing_family_status_row_ids or unexpected_family_status_row_ids
+            )
+            if family_status_row_identity_projection_incomplete:
+                completeness_violations.append(
+                    {
+                        "field": "root_mapping_family",
+                        "reason": "family_status_row_identity_projection_incomplete",
+                        "missing_family_ids": missing_family_status_row_ids,
+                        "unexpected_family_ids": unexpected_family_status_row_ids,
+                    }
+                )
 
         for check in anchor_checks:
             path = (repo_root / check.rel_path).resolve()
@@ -688,6 +713,11 @@ def main() -> int:
     family_status_row_coverage_status = (
         STATUS_FAIL_REQUIRED if family_status_row_coverage_incomplete else STATUS_PASS_REQUIRED
     )
+    family_status_row_identity_projection_status = (
+        STATUS_FAIL_REQUIRED
+        if family_status_row_identity_projection_incomplete
+        else STATUS_PASS_REQUIRED
+    )
     payload = {
         STATUS_KEY: status,
         "completeness_family": str(completeness_doc.get("completeness_family") or ""),
@@ -709,6 +739,14 @@ def main() -> int:
         "family_status_row_count": len(family_status_rows),
         "expected_family_status_row_count": expected_family_status_row_count,
         "family_status_row_coverage_status": family_status_row_coverage_status,
+        "discovered_family_count": len(discovered_family_ids),
+        "discovered_family_ids": discovered_family_ids,
+        "family_status_row_ids": family_status_row_ids,
+        "missing_family_status_row_ids": missing_family_status_row_ids,
+        "unexpected_family_status_row_ids": unexpected_family_status_row_ids,
+        "family_status_row_identity_projection_status": (
+            family_status_row_identity_projection_status
+        ),
         "structure_violation_count": len(structure_violations),
         "completeness_violation_count": len(completeness_violations),
         "anchor_violation_count": len(anchor_violations),
