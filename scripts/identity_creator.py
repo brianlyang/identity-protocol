@@ -4029,6 +4029,14 @@ def main() -> int:
         )
         if rc != 0:
             return rc
+        rc = _run_identity_repair_or_block(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            repair_script="scripts/repair_identity_prompt_runtime_state.py",
+            failure_message="[FAIL] prompt runtime-state refresh after contract backfill failed; update blocked",
+        )
+        if rc != 0:
+            return rc
         update_run_id, orchestration_run_token = _resolve_update_execution_identity_run(
             identity_id=args.identity_id,
             explicit_run_id=str(args.run_id or "").strip(),
@@ -4178,6 +4186,19 @@ def main() -> int:
                 ext="json",
             )
         )
+        pre_mutation_reply_transport_ref = (
+            str(pre_mutation_header_payload.get("reply_transport_ref", "")).strip() or pre_mutation_reply_file
+        )
+        pre_mutation_reply_transport_binding_status = (
+            "PASS_REQUIRED"
+            if Path(pre_mutation_reply_transport_ref).expanduser().exists()
+            else "FAIL_REQUIRED"
+        )
+        pre_mutation_emit_channel_id = (
+            str(pre_mutation_header_payload.get("emit_channel_id", "")).strip()
+            or str(pre_mutation_header_payload.get("final_emit_channel_id", "")).strip()
+            or str(pre_mutation_header_payload.get("outlet_channel_id", "")).strip()
+        )
         _write_json(
             pre_mutation_gate_receipt,
             {
@@ -4205,6 +4226,15 @@ def main() -> int:
                 "final_emit_schema_id": str(pre_mutation_header_payload.get("final_emit_schema_id", "")),
                 "final_emit_schema_status": str(pre_mutation_header_payload.get("final_emit_schema_status", "")).strip().upper(),
                 "final_emit_contract_status": str(pre_mutation_header_payload.get("final_emit_contract_status", "")).strip().upper(),
+                "reply_transport_ref": pre_mutation_reply_transport_ref,
+                "reply_transport_binding_status": pre_mutation_reply_transport_binding_status,
+                "emit_channel_id": pre_mutation_emit_channel_id,
+                "headstamp_first_line_status": str(
+                    pre_mutation_header_payload.get("headstamp_first_line_status", "")
+                ).strip().upper(),
+                "entry_receipt_tuple_status": str(
+                    pre_mutation_header_payload.get("entry_receipt_tuple_status", "")
+                ).strip().upper(),
                 "status": "PASS_REQUIRED" if not pre_mutation_gate_error_code else "FAIL_REQUIRED",
             },
         )
@@ -5070,6 +5100,12 @@ def main() -> int:
             str(pre_mutation_header_payload.get("final_emit_schema_status", "")).strip().upper(),
             "--final-emit-contract-status",
             str(pre_mutation_header_payload.get("final_emit_contract_status", "")).strip().upper(),
+            "--emit-channel-id",
+            pre_mutation_emit_channel_id,
+            "--reply-transport-binding-status",
+            pre_mutation_reply_transport_binding_status,
+            "--reply-transport-ref",
+            pre_mutation_reply_transport_ref,
             "--why-now",
             why_now,
         ]
