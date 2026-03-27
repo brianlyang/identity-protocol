@@ -1953,6 +1953,79 @@ def _run_header_first_gate(
     }
 
 
+def _run_current_run_host_visible_live_closure(
+    *,
+    identity_id: str,
+    catalog_path: Path,
+    repo_catalog_path: Path,
+    actor_id: str,
+    session_id: str,
+    run_id: str,
+    operation: str,
+    reply_transport_ref: str,
+    outlet_channel_id: str,
+    protocol_root: Path = PROTOCOL_REPO_ROOT,
+) -> tuple[int, dict[str, Any]]:
+    reply_file = str(reply_transport_ref or "").strip()
+    if not reply_file:
+        return 1, {
+            "host_visible_live_closure_status": STATUS_FAIL_REQUIRED,
+            "error_code": "IP-HDSTAMP-CLSR-002",
+            "stale_reasons": ["reply_transport_ref_missing"],
+        }
+    cmd = [
+        "python3",
+        _resolve_script_path("scripts/recover_host_visible_post_check_state.py"),
+        "--catalog",
+        str(catalog_path.expanduser().resolve()),
+        "--repo-catalog",
+        str(repo_catalog_path.expanduser().resolve()),
+        "--identity-id",
+        str(identity_id or "").strip(),
+        "--operation",
+        str(operation or "").strip() or "update",
+        "--actor-id",
+        str(actor_id or "").strip(),
+        "--session-id",
+        str(session_id or "").strip(),
+        "--run-id",
+        str(run_id or "").strip(),
+        "--receipt-source",
+        "runtime_dialogue",
+        "--reply-transport-ref",
+        reply_file,
+        "--allowed-live-receipt-sources",
+        "runtime_dialogue",
+        "--json-only",
+    ]
+    proc = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        cwd=str(protocol_root.expanduser().resolve()),
+    )
+    payload = _parse_json_payload(proc.stdout or "") or {}
+    if not payload:
+        payload = {
+            "host_visible_live_closure_status": STATUS_FAIL_REQUIRED,
+            "error_code": "IP-HDSTAMP-CLSR-001",
+            "stale_reasons": ["host_visible_live_closure_stdout_not_json"],
+            "stderr_tail": (proc.stderr or "").strip().splitlines()[-1] if (proc.stderr or "").strip() else "",
+        }
+    recovery_status = str(payload.get("recovery_status", "")).strip().upper()
+    if "host_visible_live_closure_status" not in payload:
+        payload["host_visible_live_closure_status"] = (
+            STATUS_PASS_REQUIRED if proc.returncode == 0 and recovery_status == STATUS_PASS_REQUIRED else STATUS_FAIL_REQUIRED
+        )
+    if str(outlet_channel_id or "").strip():
+        payload.setdefault("outlet_channel_id", str(outlet_channel_id or "").strip())
+    payload.setdefault("reply_file", reply_file)
+    payload.setdefault("run_id", str(run_id or "").strip())
+    payload.setdefault("session_id", str(session_id or "").strip())
+    payload.setdefault("actor_id", str(actor_id or "").strip())
+    return proc.returncode, payload
+
+
 def _enforce_protocol_runtime_separation(
     pack: Path,
     resolved_pack_path: str,
@@ -2058,6 +2131,11 @@ def main() -> int:
         "--reply-transport-binding-status",
         default="",
         help="optional pre-mutation projection field override",
+    )
+    ap.add_argument(
+        "--reply-transport-ref",
+        default="",
+        help="optional governed reply transport handoff path for current-run host-visible closure",
     )
     ap.add_argument("--phase-a-refresh-applied", action="store_true")
     ap.add_argument("--phase-b-strict-revalidate-status", default="NOT_APPLICABLE")
@@ -2227,10 +2305,12 @@ def main() -> int:
     entry_receipt_tuple_status = STATUS_SKIPPED_NOT_REQUIRED
     emit_channel_id = ""
     reply_transport_binding_status = STATUS_SKIPPED_NOT_REQUIRED
+    reply_transport_ref = ""
     pre_mutation_projection_status = STATUS_SKIPPED_NOT_REQUIRED
     pre_mutation_projection_error_code = ""
     pre_mutation_projection_stale_reasons: list[str] = []
     pre_mutation_gate_error_code = ""
+    pre_mutation_gate_receipt_payload = _load_optional_json(pre_mutation_gate_receipt)
     if not header_first_gate_status:
         if not actor_id:
             header_first_gate_status = "FAIL_REQUIRED"
@@ -2275,42 +2355,105 @@ def main() -> int:
             reply_transport_binding_status = str(
                 header_probe.get("reply_transport_binding_status", "")
             ).strip().upper()
+            reply_transport_ref = str(header_probe.get("reply_transport_ref", "")).strip()
     elif header_first_gate_status not in {"PASS_REQUIRED", "FAIL_REQUIRED"}:
         header_first_gate_status = "FAIL_REQUIRED"
         pre_mutation_gate_error_code = ERR_EXEC_ORDER_HEADER_FIRST
     else:
+        receipt_send_time_gate_status = str(
+            pre_mutation_gate_receipt_payload.get("send_time_gate_status", "")
+        ).strip().upper()
+        receipt_outlet_channel_id = str(pre_mutation_gate_receipt_payload.get("outlet_channel_id", "")).strip()
+        receipt_outlet_preflight_receipt = str(
+            pre_mutation_gate_receipt_payload.get("outlet_preflight_receipt", "")
+        ).strip()
+        receipt_outlet_bypass_detected = bool(pre_mutation_gate_receipt_payload.get("outlet_bypass_detected", False))
+        receipt_final_emit_channel_id = str(
+            pre_mutation_gate_receipt_payload.get("final_emit_channel_id", "")
+        ).strip()
+        receipt_final_emit_policy_mode = str(
+            pre_mutation_gate_receipt_payload.get("final_emit_policy_mode", "")
+        ).strip()
+        receipt_final_emit_schema_id = str(
+            pre_mutation_gate_receipt_payload.get("final_emit_schema_id", "")
+        ).strip()
+        receipt_final_emit_schema_status = str(
+            pre_mutation_gate_receipt_payload.get("final_emit_schema_status", "")
+        ).strip().upper()
+        receipt_final_emit_contract_status = str(
+            pre_mutation_gate_receipt_payload.get("final_emit_contract_status", "")
+        ).strip().upper()
+        receipt_headstamp_first_line_status = str(
+            pre_mutation_gate_receipt_payload.get("headstamp_first_line_status", "")
+        ).strip().upper()
+        receipt_entry_receipt_tuple_status = str(
+            pre_mutation_gate_receipt_payload.get("entry_receipt_tuple_status", "")
+        ).strip().upper()
+        receipt_emit_channel_id = str(pre_mutation_gate_receipt_payload.get("emit_channel_id", "")).strip()
+        receipt_reply_transport_binding_status = str(
+            pre_mutation_gate_receipt_payload.get("reply_transport_binding_status", "")
+        ).strip().upper()
+        receipt_reply_transport_ref = str(
+            pre_mutation_gate_receipt_payload.get("reply_transport_ref", "")
+        ).strip()
         governed_outlet_enforced = header_first_gate_status == "PASS_REQUIRED"
         send_time_gate_status = (
             str(args.send_time_gate_status or "").strip().upper()
+            or receipt_send_time_gate_status
             or ("PASS_REQUIRED" if header_first_gate_status == "PASS_REQUIRED" else "FAIL_REQUIRED")
         )
-        outlet_channel_id = str(args.outlet_channel_id or "").strip()
-        outlet_preflight_receipt = str(args.outlet_preflight_receipt or "").strip() or pre_mutation_gate_receipt
-        outlet_bypass_detected = _as_bool(str(args.outlet_bypass_detected or ""), default=(header_first_gate_status != "PASS_REQUIRED"))
-        final_emit_channel_id = str(args.final_emit_channel_id or "").strip()
-        final_emit_policy_mode = str(args.final_emit_policy_mode or "").strip()
-        final_emit_schema_id = str(args.final_emit_schema_id or "").strip()
+        outlet_channel_id = str(args.outlet_channel_id or "").strip() or receipt_outlet_channel_id
+        outlet_preflight_receipt = (
+            str(args.outlet_preflight_receipt or "").strip()
+            or receipt_outlet_preflight_receipt
+            or pre_mutation_gate_receipt
+        )
+        outlet_bypass_detected = _as_bool(
+            str(args.outlet_bypass_detected or ""),
+            default=receipt_outlet_bypass_detected if pre_mutation_gate_receipt_payload else (header_first_gate_status != "PASS_REQUIRED"),
+        )
+        final_emit_channel_id = str(args.final_emit_channel_id or "").strip() or receipt_final_emit_channel_id
+        final_emit_policy_mode = str(args.final_emit_policy_mode or "").strip() or receipt_final_emit_policy_mode
+        final_emit_schema_id = str(args.final_emit_schema_id or "").strip() or receipt_final_emit_schema_id
         final_emit_schema_status = (
             str(args.final_emit_schema_status or "").strip().upper()
+            or receipt_final_emit_schema_status
             or ("FAIL_REQUIRED" if header_first_gate_status != "PASS_REQUIRED" else "PASS_REQUIRED")
         )
         final_emit_contract_status = (
             str(args.final_emit_contract_status or "").strip().upper()
+            or receipt_final_emit_contract_status
             or ("FAIL_REQUIRED" if header_first_gate_status != "PASS_REQUIRED" else "PASS_REQUIRED")
         )
         headstamp_first_line_status = (
             str(args.headstamp_first_line_status or "").strip().upper()
+            or receipt_headstamp_first_line_status
             or ("PASS_REQUIRED" if header_first_gate_status == STATUS_PASS_REQUIRED else STATUS_FAIL_REQUIRED)
         )
         entry_receipt_tuple_status = (
             str(args.entry_receipt_tuple_status or "").strip().upper()
+            or receipt_entry_receipt_tuple_status
             or ("PASS_REQUIRED" if header_first_gate_status == STATUS_PASS_REQUIRED else STATUS_FAIL_REQUIRED)
         )
-        emit_channel_id = str(args.emit_channel_id or "").strip() or str(final_emit_channel_id or "").strip()
-        reply_transport_binding_status = (
-            str(args.reply_transport_binding_status or "").strip().upper()
-            or ("PASS_REQUIRED" if header_first_gate_status == STATUS_PASS_REQUIRED else STATUS_FAIL_REQUIRED)
+        emit_channel_id = (
+            str(args.emit_channel_id or "").strip()
+            or receipt_emit_channel_id
+            or str(final_emit_channel_id or "").strip()
         )
+        reply_transport_ref = str(args.reply_transport_ref or "").strip() or receipt_reply_transport_ref
+        reply_transport_binding_status = str(args.reply_transport_binding_status or "").strip().upper()
+        if not reply_transport_binding_status:
+            reply_transport_binding_status = receipt_reply_transport_binding_status
+        if not reply_transport_binding_status and reply_transport_ref:
+            reply_transport_binding_status = (
+                STATUS_PASS_REQUIRED
+                if Path(reply_transport_ref).expanduser().exists()
+                else STATUS_FAIL_REQUIRED
+            )
+        if not reply_transport_binding_status:
+            reply_transport_binding_status = (
+                "PASS_REQUIRED" if header_first_gate_status == STATUS_PASS_REQUIRED else STATUS_FAIL_REQUIRED
+            )
         if header_first_gate_status == "PASS_REQUIRED":
             final_emit_ok, _final_emit_stale_reasons = _validate_final_emit_contract_snapshot(
                 send_time_gate_status=send_time_gate_status,
@@ -3441,6 +3584,44 @@ def main() -> int:
         if not next_action.startswith("review_required"):
             next_action = "prompt_contract_update_required"
 
+    current_run_session_id = f"run:{run_id}"
+    host_visible_live_closure_payload: dict[str, Any] = {
+        "host_visible_live_closure_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "error_code": "",
+        "stale_reasons": [],
+        "reply_file": str(reply_transport_ref or "").strip(),
+        "actor_id": str(actor_id or "").strip(),
+        "session_id": current_run_session_id,
+        "run_id": run_id,
+    }
+    host_visible_live_closure_required = (
+        header_first_gate_status == STATUS_PASS_REQUIRED
+        and governed_outlet_enforced
+        and reply_transport_binding_status == STATUS_PASS_REQUIRED
+    )
+    if host_visible_live_closure_required:
+        closure_rc, host_visible_live_closure_payload = _run_current_run_host_visible_live_closure(
+            identity_id=args.identity_id,
+            catalog_path=Path(args.catalog),
+            repo_catalog_path=Path(args.repo_catalog),
+            actor_id=str(actor_id or "").strip(),
+            session_id=current_run_session_id,
+            run_id=run_id,
+            operation="update",
+            reply_transport_ref=str(reply_transport_ref or "").strip(),
+            outlet_channel_id=str(outlet_channel_id or "").strip() or FINAL_EMIT_CHANNEL_ID,
+            protocol_root=protocol_root,
+        )
+        host_visible_live_closure_status = str(
+            host_visible_live_closure_payload.get("host_visible_live_closure_status", "")
+        ).strip().upper()
+        if closure_rc == 0 and host_visible_live_closure_status == STATUS_PASS_REQUIRED:
+            actions_taken.append("current_run_host_visible_live_closure_materialized")
+        else:
+            all_ok = False
+            if not next_action.startswith("review_required"):
+                next_action = "resolve_host_visible_live_closure_then_rerun_update"
+
     prompt_contract_final = _resolve_prompt_contract(
         identity_id=args.identity_id,
         catalog_path=Path(args.catalog),
@@ -3471,6 +3652,8 @@ def main() -> int:
         "skipped_protocol_publish_checks": skipped_protocol_publish_checks,
         "upgrade_required": upgrade_required,
         "trigger_reasons": reasons,
+        "actor_id": str(actor_id or "").strip(),
+        "session_id": current_run_session_id,
         "actions_taken": actions_taken,
         "checks": checks,
         "check_results": checks,
@@ -3536,6 +3719,25 @@ def main() -> int:
             "header_first_gate_status": str(header_first_gate_status or ""),
             "lane_routing_error_code": str(lane_routing_payload.get("error_code", "")),
         },
+        "reply_transport_ref": str(reply_transport_ref or "").strip(),
+        "host_visible_live_closure_status": str(
+            host_visible_live_closure_payload.get("host_visible_live_closure_status", "")
+        ).strip(),
+        "host_visible_live_closure_error_code": str(
+            host_visible_live_closure_payload.get("error_code", "")
+        ).strip(),
+        "host_visible_live_closure_stale_reasons": list(
+            host_visible_live_closure_payload.get("stale_reasons") or []
+        ),
+        "host_visible_live_closure_reply_file": str(
+            host_visible_live_closure_payload.get("reply_file", "")
+        ).strip(),
+        "host_visible_live_closure_metrics": dict(
+            host_visible_live_closure_payload.get("host_visible_metrics") or {}
+        ),
+        "host_visible_live_closure_steps": dict(
+            host_visible_live_closure_payload.get("steps") or {}
+        ),
         "why_now": why_now,
     }
     report.update(
