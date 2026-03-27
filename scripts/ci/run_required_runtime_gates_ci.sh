@@ -41,6 +41,7 @@ run_global_protocol_gates() {
   run_cmd bash scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh
   run_cmd bash scripts/ci/run_v16x_release_closure_summary_probes_ci.sh
   run_cmd bash scripts/ci/run_release_readiness_health_projection_probes_ci.sh
+  run_cmd bash scripts/ci/run_full_scan_required_gate_projection_probes_ci.sh
   run_cmd bash scripts/ci/run_full_scan_health_projection_probes_ci.sh
   run_cmd bash scripts/ci/run_release_closure_control_plane_status_probes_ci.sh
   run_cmd python3 scripts/validate_issue_register_consistency.py --json-only

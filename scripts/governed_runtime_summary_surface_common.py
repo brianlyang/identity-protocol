@@ -7,6 +7,9 @@ from typing import Any
 from projection_profile_exclusion_scope_common import (
     PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS,
 )
+from full_scan_required_gate_bundle_projection_common import (
+    FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS,
+)
 from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
 )
@@ -213,6 +216,7 @@ SURFACE_PROFILES: dict[str, GovernedRuntimeSummarySurfaceProfile] = {
             "projection_profile_terminal_truth_boundary_host_visible_skip=host_visible_post_check_metrics_status=SKIPPED_NOT_REQUIRED|chat_egress_uniqueness_status=SKIPPED_NOT_REQUIRED",
             "projection_profile_terminal_truth_boundary_boundary_surface=three_plane_terminal_truth_boundary_projection|summary_terminal_truth_boundary",
             "projection_profile_terminal_truth_boundary_health_surface=three_plane_health_report_experience_writeback_closure|summary_health_report_experience_writeback_closure",
+            *FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS,
         ),
         authority_rule=(
             "The full identity protocol scan payload is an aggregate runtime diagnostic summary on an outer "

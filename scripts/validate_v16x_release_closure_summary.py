@@ -7,6 +7,9 @@ import re
 from pathlib import Path
 from typing import Any
 
+from full_scan_required_gate_bundle_projection_common import (
+    FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS,
+)
 from repo_root_resolution_common import resolve_protocol_repo_root
 from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
@@ -80,6 +83,10 @@ REQUIRED_RELEASE_READINESS_HEALTH_PROJECTION_MARKERS = (
     "one_look.health_report_contract_status",
     "one_look.health_report_experience_writeback_validation_status",
     "one_look.health_report_selected_path_matches_execution_report",
+)
+REQUIRED_FULL_SCAN_REQUIRED_GATE_PROJECTION_MARKERS = (
+    "scripts/ci/run_full_scan_required_gate_projection_probes_ci.sh",
+    *FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS,
 )
 REQUIRED_RELEASE_READINESS_LIFECYCLE_MARKERS = (
     "summary_lifecycle_status=IN_PROGRESS",
@@ -297,6 +304,9 @@ def main() -> int:
             stale_reasons.append(
                 f"summary_doc_missing_release_readiness_health_projection_marker:{marker}"
             )
+    for marker in REQUIRED_FULL_SCAN_REQUIRED_GATE_PROJECTION_MARKERS:
+        if marker not in summary_text:
+            stale_reasons.append(f"summary_doc_missing_full_scan_required_gate_projection_marker:{marker}")
     for marker in REQUIRED_RELEASE_READINESS_LIFECYCLE_MARKERS:
         if marker not in summary_text:
             stale_reasons.append(f"summary_doc_missing_release_readiness_lifecycle_marker:{marker}")

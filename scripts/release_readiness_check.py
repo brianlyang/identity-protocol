@@ -167,6 +167,7 @@ POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["bash", "scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh"],
     ["bash", "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh"],
     ["bash", "scripts/ci/run_three_plane_health_projection_probes_ci.sh"],
+    ["bash", "scripts/ci/run_full_scan_required_gate_projection_probes_ci.sh"],
     ["bash", "scripts/ci/run_full_scan_health_projection_probes_ci.sh"],
     ["bash", "scripts/ci/run_required_gate_surface_drift_probes_ci.sh"],
     ["bash", "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh"],

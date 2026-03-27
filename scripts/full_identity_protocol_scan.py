@@ -24,6 +24,9 @@ from full_identity_protocol_scan_projection_profile_common import (
     full_identity_protocol_scan_projection_profile_choices,
     resolve_full_identity_protocol_scan_projection_profile,
 )
+from full_scan_required_gate_bundle_projection_common import (
+    apply_full_scan_required_gate_bundle_three_plane_projection,
+)
 from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gateway_wrapped_command
 from health_report_experience_writeback_projection_common import (
     HEALTH_REPORT_EXPERIENCE_WRITEBACK_CLOSURE_EXCLUDED_AREA,
@@ -1845,36 +1848,19 @@ def _apply_three_plane_projection(
     required_gate_projection = tp.get("required_gate_bundle_target_projection")
     if isinstance(required_gate_projection, dict):
         item["three_plane_required_gate_bundle_target_projection"] = required_gate_projection
-        item["three_plane"]["required_gate_bundle_projection_status"] = required_gate_projection.get(
-            "projection_status", ""
+        apply_full_scan_required_gate_bundle_three_plane_projection(
+            item["three_plane"],
+            required_gate_projection,
+            prefix="required_gate_bundle",
         )
-        item["three_plane"]["required_gate_bundle_failed_required_targets"] = required_gate_projection.get(
-            "failed_required_target_count", 0
-        )
-        item["three_plane"]["required_gate_bundle_failed_target_names"] = required_gate_projection.get(
-            "failed_target_names", []
-        )
-        item["three_plane"]["required_gate_bundle_projection_stale_reasons"] = required_gate_projection.get(
-            "stale_reasons", []
-        )
-        item["three_plane"][
-            "required_gate_bundle_rows_without_projected_report_fields"
-        ] = required_gate_projection.get("rows_without_projected_report_fields", [])
         record_required_gate_projection(identity_id, required_gate_projection)
     required_gate_shadow_projection = tp.get("required_gate_bundle_shadow_target_projection")
     if isinstance(required_gate_shadow_projection, dict):
         item["three_plane_required_gate_bundle_target_projection_shadow"] = required_gate_shadow_projection
-        item["three_plane"]["required_gate_bundle_shadow_projection_status"] = (
-            required_gate_shadow_projection.get("projection_status", "")
-        )
-        item["three_plane"]["required_gate_bundle_shadow_failed_required_targets"] = (
-            required_gate_shadow_projection.get("failed_required_target_count", 0)
-        )
-        item["three_plane"]["required_gate_bundle_shadow_failed_target_names"] = (
-            required_gate_shadow_projection.get("failed_target_names", [])
-        )
-        item["three_plane"]["required_gate_bundle_shadow_projection_stale_reasons"] = (
-            required_gate_shadow_projection.get("stale_reasons", [])
+        apply_full_scan_required_gate_bundle_three_plane_projection(
+            item["three_plane"],
+            required_gate_shadow_projection,
+            prefix="required_gate_bundle_shadow",
         )
     if current_chat_surface_projection:
         item["current_chat_surface_projection"] = current_chat_surface_projection

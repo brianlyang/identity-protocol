@@ -618,6 +618,79 @@ for row in seeded:
         identity_id,
         required_gate_projection,
     )
+    assert three_plane_summary["required_gate_bundle_projection_status"] == "SKIPPED_NOT_REQUIRED", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_scope_class"] == "bounded_projection_profile_exclusion", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_scope_reason"] == "projection_profile_out_of_scope", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_report_selected_path"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_report_selection_mode"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_report_authority_class"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_report_pointer_resolution_mode"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_report_pointer_path"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
+    shadow_projection = identity_row.get("three_plane_required_gate_bundle_target_projection_shadow") or {}
+    assert shadow_projection["projection_status"] == "SKIPPED_NOT_REQUIRED", (
+        identity_id,
+        shadow_projection,
+    )
+    assert shadow_projection["scope_class"] == "bounded_projection_profile_exclusion", (
+        identity_id,
+        shadow_projection,
+    )
+    assert three_plane_summary["required_gate_bundle_shadow_projection_status"] == "SKIPPED_NOT_REQUIRED", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_shadow_scope_class"] == "bounded_projection_profile_exclusion", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_shadow_scope_reason"] == "projection_profile_out_of_scope", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_shadow_report_selected_path"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_shadow_report_selection_mode"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_shadow_report_authority_class"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_shadow_report_pointer_resolution_mode"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_shadow_report_pointer_path"] == "", (
+        identity_id,
+        three_plane_summary,
+    )
     current_chat_projection = identity_row.get("current_chat_surface_projection") or {}
     assert current_chat_projection["projection_skip_status"] == "SKIPPED_NOT_REQUIRED", (
         identity_id,

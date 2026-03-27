@@ -11,6 +11,9 @@ from governed_runtime_summary_surface_common import (
     SURFACE_PROFILES,
     build_governed_runtime_summary_surface_payload,
 )
+from full_scan_required_gate_bundle_projection_common import (
+    FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS,
+)
 from projection_profile_exclusion_scope_common import (
     PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS,
 )
@@ -122,6 +125,7 @@ SCRIPT_BINDINGS: tuple[ScriptBindingSpec, ...] = (
             '"health_report_experience_writeback_projection_status"',
             '"health_report_selected_path_matches_execution_report"',
             "_record_summary_health_report_experience_writeback_closure(",
+            "apply_full_scan_required_gate_bundle_three_plane_projection(",
             '"projection_profile"',
             '"projection_profile_execution_mode"',
             '"projection_excluded_areas"',
@@ -198,6 +202,7 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             "projection_excluded_areas",
             "health_report_experience_writeback_closure",
             *PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS,
+            *FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS,
             "stable prewrite snapshot",
             "scripts/run_release_readiness_continuation.py",
             "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh",
@@ -233,6 +238,7 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             "projection_excluded_areas",
             "health_report_experience_writeback_closure",
             *PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS,
+            *FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS,
             "stable prewrite snapshot",
             "scripts/run_release_readiness_continuation.py",
             "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh",
@@ -267,6 +273,7 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             "projection_excluded_areas",
             "health_report_experience_writeback_closure",
             *PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS,
+            *FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS,
             "stable prewrite snapshot",
             "resume_capture_mode=stable_prewrite_snapshot",
             "same_path_as_summary_out",

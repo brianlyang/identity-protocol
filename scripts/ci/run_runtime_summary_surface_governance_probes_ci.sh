@@ -527,6 +527,41 @@ if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$
 fi
 echo "[PASS] negative full-scan projection doc anchor probe fail-closed as expected"
 
+cp scripts/full_identity_protocol_scan.py "$tmpdir/scripts/"
+cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
+
+mutate_probe_literal \
+  "$tmpdir/scripts/full_identity_protocol_scan.py" \
+  "apply_full_scan_required_gate_bundle_three_plane_projection("
+
+if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-fullscan-required-gate-script.json; then
+  echo "[FAIL] negative full-scan required-gate projection script drift probe unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] negative full-scan required-gate projection script drift probe fail-closed as expected"
+
+cp scripts/full_identity_protocol_scan.py "$tmpdir/scripts/"
+cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
+
+full_scan_required_gate_projection_marker="$(
+  resolve_python_module_constant \
+    "full_scan_required_gate_bundle_projection_common" \
+    "FULL_SCAN_REQUIRED_GATE_BUNDLE_PROJECTION_MARKER"
+)"
+
+mutate_probe_literal \
+  "$tmpdir/docs/governance/identity-v1.6x-release-closure-governance.md" \
+  "$full_scan_required_gate_projection_marker"
+
+if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-fullscan-required-gate-doc.json; then
+  echo "[FAIL] negative full-scan required-gate projection doc anchor probe unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] negative full-scan required-gate projection doc anchor probe fail-closed as expected"
+
+cp scripts/full_identity_protocol_scan.py "$tmpdir/scripts/"
+cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
+
 mutate_probe_literal \
   "$tmpdir/scripts/full_identity_protocol_scan.py" \
   'payload["surface_governance"] = build_governed_runtime_summary_surface_payload("full_identity_protocol_scan_summary")'
