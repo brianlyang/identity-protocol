@@ -299,6 +299,30 @@ def _run(cmd: list[str]) -> int:
     return rc
 
 
+def _run_identity_repair_or_block(
+    *,
+    catalog: str,
+    identity_id: str,
+    repair_script: str,
+    failure_message: str,
+) -> int:
+    rc = _run(
+        [
+            "python3",
+            repair_script,
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--apply",
+            "--json-only",
+        ]
+    )
+    if rc != 0:
+        print(failure_message)
+    return rc
+
+
 def _run_capture(cmd: list[str]) -> tuple[int, str, str]:
     return _gw_run_gateway_wrapped_command(cmd=cmd, protocol_root=PROTOCOL_ROOT)
 
@@ -3917,50 +3941,29 @@ def main() -> int:
         )
         if rc_boundary != 0:
             return rc_boundary
-        rc = _run(
-            [
-                "python3",
-                "scripts/repair_identity_prompt_runtime_state.py",
-                "--catalog",
-                args.catalog,
-                "--identity-id",
-                args.identity_id,
-                "--apply",
-                "--json-only",
-            ]
+        rc = _run_identity_repair_or_block(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            repair_script="scripts/repair_identity_prompt_runtime_state.py",
+            failure_message="[FAIL] prompt runtime-state auto-repair failed; update blocked",
         )
         if rc != 0:
-            print("[FAIL] prompt runtime-state auto-repair failed; update blocked")
             return rc
-        rc = _run(
-            [
-                "python3",
-                "scripts/repair_identity_post_execution_mandatory.py",
-                "--catalog",
-                args.catalog,
-                "--identity-id",
-                args.identity_id,
-                "--apply",
-                "--json-only",
-            ]
+        rc = _run_identity_repair_or_block(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            repair_script="scripts/repair_identity_post_execution_mandatory.py",
+            failure_message="[FAIL] post-execution mandatory auto-repair failed; update blocked",
         )
         if rc != 0:
-            print("[FAIL] post-execution mandatory auto-repair failed; update blocked")
             return rc
-        rc = _run(
-            [
-                "python3",
-                "scripts/repair_protocol_feedback_ssot_index.py",
-                "--catalog",
-                args.catalog,
-                "--identity-id",
-                args.identity_id,
-                "--apply",
-                "--json-only",
-            ]
+        rc = _run_identity_repair_or_block(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            repair_script="scripts/repair_protocol_feedback_ssot_index.py",
+            failure_message="[FAIL] protocol-feedback SSOT index auto-repair failed; update blocked",
         )
         if rc != 0:
-            print("[FAIL] protocol-feedback SSOT index auto-repair failed; update blocked")
             return rc
         rc = _enforce_identity_codex_launcher_migration_closure(
             catalog=args.catalog,
@@ -3994,20 +3997,13 @@ def main() -> int:
         )
         if rc != 0:
             return rc
-        rc = _run(
-            [
-                "python3",
-                "scripts/repair_contract_backfill.py",
-                "--catalog",
-                args.catalog,
-                "--identity-id",
-                args.identity_id,
-                "--apply",
-                "--json-only",
-            ]
+        rc = _run_identity_repair_or_block(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            repair_script="scripts/repair_contract_backfill.py",
+            failure_message="[FAIL] contract backfill repair failed during update preflight; update blocked",
         )
         if rc != 0:
-            print("[FAIL] contract backfill repair failed during update preflight; update blocked")
             return rc
         creator_run_id = f"identity-upgrade-exec-{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
         update_run_id = str(args.run_id or "").strip() or creator_run_id
