@@ -9,6 +9,10 @@ from typing import Any
 
 import yaml
 
+from execution_report_selection_common import (
+    collect_reports as collect_execution_reports,
+    report_run_id as execution_report_run_id,
+)
 from tool_vendor_governance_common import (
     contract_required,
     latest_identity_upgrade_report,
@@ -203,27 +207,6 @@ def _select_contract(task: dict[str, Any]) -> dict[str, Any]:
     return {}
 
 
-def _candidate_upgrade_report_roots(pack_path: Path) -> list[Path]:
-    roots: list[Path] = []
-    seen: set[str] = set()
-
-    def _push(path: Path) -> None:
-        key = path.as_posix()
-        if key in seen:
-            return
-        seen.add(key)
-        roots.append(path)
-
-    pack_resolved = pack_path.resolve()
-    _push((pack_resolved / "runtime" / "reports").resolve())
-    for parent in [pack_resolved, *pack_resolved.parents]:
-        candidate = (parent / "resource" / "reports").resolve()
-        _push(candidate)
-        if candidate.exists():
-            break
-    return roots
-
-
 def _resolve_runtime_report_for_run_id(
     *,
     identity_id: str,
@@ -234,48 +217,24 @@ def _resolve_runtime_report_for_run_id(
     if not normalized_run_id:
         return None
 
-    normalized_identity = str(identity_id or "").strip()
-    if normalized_identity in {"", "*"}:
-        pattern = "**/identity-upgrade-exec-*.json"
-    else:
-        pattern = f"**/identity-upgrade-exec-{normalized_identity}-*.json"
-
-    rows: list[Path] = []
-    for root in _candidate_upgrade_report_roots(pack_path):
-        if not root.exists():
-            continue
-        for path in root.glob(pattern):
-            if not path.is_file() or path.name.endswith("-patch-plan.json"):
-                continue
-            path_text = path.as_posix()
-            if (
-                "/runtime/protocol-feedback/" in path_text
-                or "/archive/" in path_text
-                or "/archives/" in path_text
-            ):
-                continue
-            rows.append(path.resolve())
-
+    rows = collect_execution_reports(pack_path, identity_id)
     if not rows:
         return None
 
-    name_hits = [path for path in rows if normalized_run_id in path.name]
+    name_hits = [
+        path
+        for path in rows
+        if execution_report_run_id(path) == normalized_run_id or path.stem == normalized_run_id
+    ]
     if name_hits:
         name_hits.sort(key=lambda x: x.stat().st_mtime, reverse=True)
         return name_hits[0]
 
-    run_id_hits: list[Path] = []
-    for path in rows:
-        try:
-            doc = load_json(path)
-        except Exception:
-            continue
-        if str(doc.get("run_id", "")).strip() == normalized_run_id:
-            run_id_hits.append(path)
-    if not run_id_hits:
+    fuzzy_hits = [path for path in rows if normalized_run_id in path.name]
+    if not fuzzy_hits:
         return None
-    run_id_hits.sort(key=lambda x: x.stat().st_mtime, reverse=True)
-    return run_id_hits[0]
+    fuzzy_hits.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+    return fuzzy_hits[0]
 
 
 def _resolve_report_candidates(
