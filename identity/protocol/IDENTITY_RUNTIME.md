@@ -482,6 +482,12 @@ component-validator prefixed rows only, after admitted parse/status,
 nonzero returncode, non-pass-status, and exclusion-origin resolution
 and before not-applicable classification.
 
+Runtime must also keep component-validator residual not-applicable
+policy explicit; admitted residual not-applicable rows are only
+nonprefixed, nonadmitted, nonexcluded rows after parse-status, nonzero
+returncode, non-pass-status, exclusion-origin, and prefixed
+ontology-drift resolution.
+
 Runtime must also keep component-validator observation-reason classifier
 precedence policy explicit; parse/status classification preempts
 nonzero returncode, nonzero returncode preempts non-pass component

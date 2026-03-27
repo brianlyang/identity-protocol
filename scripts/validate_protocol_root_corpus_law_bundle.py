@@ -55,6 +55,7 @@ from root_corpus_law_bundle_common import (
     component_validator_observation_reason_nonzero_rc_origin_policy_from_doc,
     component_validator_observation_reason_nonpass_status_origin_policy_from_doc,
     component_validator_observation_reason_prefixed_ontology_drift_origin_policy_from_doc,
+    component_validator_observation_reason_residual_not_applicable_policy_from_doc,
     component_validator_observation_reason_classifier_precedence_policy_from_doc,
     component_validator_observation_reason_exclusion_origin_policy_from_doc,
     component_validator_observation_reason_exclusion_policy_from_doc,
@@ -200,6 +201,9 @@ COMPONENT_VALIDATOR_OBSERVATION_REASON_NONPASS_STATUS_ORIGIN_POLICY = (
 )
 COMPONENT_VALIDATOR_OBSERVATION_REASON_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY = (
     "validator_output_validator_status_component_status_component_validator_prefixed_rows_only_after_admitted_parse_status_nonzero_rc_nonpass_status_and_exclusion_origin_resolution_before_not_applicable"
+)
+COMPONENT_VALIDATOR_OBSERVATION_REASON_RESIDUAL_NOT_APPLICABLE_POLICY = (
+    "only_nonprefixed_nonadmitted_nonexcluded_rows_after_parse_status_nonzero_rc_nonpass_status_exclusion_origin_and_prefixed_ontology_drift_resolution_remain_not_applicable"
 )
 COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_POLICY = (
     "parse_status_preempts_nonzero_rc_preempts_nonpass_status_preempts_explicit_non_execution_exclusion_preempts_prefixed_observation_family_ontology_drift_else_not_applicable"
@@ -430,6 +434,7 @@ def _classify_component_validator_observation_reason(
     nonzero_rc_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_NONZERO_RC_ORIGIN_POLICY,
     nonpass_status_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_NONPASS_STATUS_ORIGIN_POLICY,
     prefixed_ontology_drift_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY,
+    residual_not_applicable_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_RESIDUAL_NOT_APPLICABLE_POLICY,
     exclusion_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_POLICY,
 ) -> str:
     if (
@@ -457,6 +462,11 @@ def _classify_component_validator_observation_reason(
         != COMPONENT_VALIDATOR_OBSERVATION_REASON_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY
     ):
         prefixed_ontology_drift_origin_policy = COMPONENT_VALIDATOR_OBSERVATION_REASON_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY
+    if (
+        residual_not_applicable_policy
+        != COMPONENT_VALIDATOR_OBSERVATION_REASON_RESIDUAL_NOT_APPLICABLE_POLICY
+    ):
+        residual_not_applicable_policy = COMPONENT_VALIDATOR_OBSERVATION_REASON_RESIDUAL_NOT_APPLICABLE_POLICY
     if (
         exclusion_origin_policy
         != COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_POLICY
@@ -510,6 +520,11 @@ def _classify_component_validator_observation_reason(
         and reason.startswith("component_validator_")
     ):
         return "unknown"
+    if (
+        residual_not_applicable_policy
+        == COMPONENT_VALIDATOR_OBSERVATION_REASON_RESIDUAL_NOT_APPLICABLE_POLICY
+    ):
+        return "not_applicable"
     return "not_applicable"
 
 
@@ -520,6 +535,7 @@ def _component_validator_observation_reason_counts(
     nonzero_rc_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_NONZERO_RC_ORIGIN_POLICY,
     nonpass_status_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_NONPASS_STATUS_ORIGIN_POLICY,
     prefixed_ontology_drift_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY,
+    residual_not_applicable_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_RESIDUAL_NOT_APPLICABLE_POLICY,
     exclusion_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_POLICY,
 ) -> tuple[dict[str, int], int, int]:
     counts = {
@@ -538,6 +554,7 @@ def _component_validator_observation_reason_counts(
             nonzero_rc_origin_policy,
             nonpass_status_origin_policy,
             prefixed_ontology_drift_origin_policy,
+            residual_not_applicable_policy,
             exclusion_origin_policy,
         )
         if category == "not_applicable":
@@ -986,6 +1003,11 @@ def main() -> int:
         if bundle_doc
         else ""
     )
+    component_validator_observation_reason_residual_not_applicable_policy = (
+        component_validator_observation_reason_residual_not_applicable_policy_from_doc(bundle_doc)
+        if bundle_doc
+        else ""
+    )
     component_validator_observation_reason_classifier_precedence_policy = (
         component_validator_observation_reason_classifier_precedence_policy_from_doc(bundle_doc)
         if bundle_doc
@@ -1189,6 +1211,14 @@ def main() -> int:
             == COMPONENT_VALIDATOR_OBSERVATION_REASON_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY
         )
         else COMPONENT_VALIDATOR_OBSERVATION_REASON_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY
+    )
+    effective_component_validator_observation_reason_residual_not_applicable_policy = (
+        component_validator_observation_reason_residual_not_applicable_policy
+        if (
+            component_validator_observation_reason_residual_not_applicable_policy
+            == COMPONENT_VALIDATOR_OBSERVATION_REASON_RESIDUAL_NOT_APPLICABLE_POLICY
+        )
+        else COMPONENT_VALIDATOR_OBSERVATION_REASON_RESIDUAL_NOT_APPLICABLE_POLICY
     )
     effective_component_validator_observation_reason_classifier_precedence_policy = (
         component_validator_observation_reason_classifier_precedence_policy
@@ -1719,6 +1749,14 @@ def main() -> int:
         ):
             stale_reasons.append(
                 "root_corpus_law_bundle_component_validator_observation_reason_prefixed_ontology_drift_origin_policy_invalid"
+            )
+            error_code = ERR_REGISTRY
+        if (
+            component_validator_observation_reason_residual_not_applicable_policy
+            != COMPONENT_VALIDATOR_OBSERVATION_REASON_RESIDUAL_NOT_APPLICABLE_POLICY
+        ):
+            stale_reasons.append(
+                "root_corpus_law_bundle_component_validator_observation_reason_residual_not_applicable_policy_invalid"
             )
             error_code = ERR_REGISTRY
         if (
@@ -2454,6 +2492,7 @@ def main() -> int:
         effective_component_validator_observation_reason_nonzero_rc_origin_policy,
         effective_component_validator_observation_reason_nonpass_status_origin_policy,
         effective_component_validator_observation_reason_prefixed_ontology_drift_origin_policy,
+        effective_component_validator_observation_reason_residual_not_applicable_policy,
         effective_component_validator_observation_reason_exclusion_origin_policy,
     )
     component_validator_observation_reason_partition_total_count = (
@@ -2763,6 +2802,9 @@ def main() -> int:
         ),
         "component_validator_observation_reason_prefixed_ontology_drift_origin_policy": (
             component_validator_observation_reason_prefixed_ontology_drift_origin_policy
+        ),
+        "component_validator_observation_reason_residual_not_applicable_policy": (
+            component_validator_observation_reason_residual_not_applicable_policy
         ),
         "component_validator_observation_reason_classifier_precedence_policy": (
             component_validator_observation_reason_classifier_precedence_policy

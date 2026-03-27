@@ -851,6 +851,14 @@ rows only, after admitted parse/status, nonzero returncode,
 non-pass-status, and exclusion-origin resolution and before
 not-applicable classification.
 
+Bundle component-validator residual not-applicable policy must also stay
+explicit.
+
+The admitted runtime residual not-applicable rows are only
+nonprefixed, nonadmitted, nonexcluded rows after parse-status, nonzero
+returncode, non-pass-status, exclusion-origin, and prefixed
+ontology-drift resolution.
+
 Bundle component-validator observation-reason classifier precedence
 policy must also stay explicit.
 

@@ -375,6 +375,12 @@ def component_validator_observation_reason_prefixed_ontology_drift_origin_policy
     return _norm_str(bundle_doc.get("component_validator_observation_reason_prefixed_ontology_drift_origin_policy"))
 
 
+def component_validator_observation_reason_residual_not_applicable_policy_from_doc(
+    bundle_doc: Mapping[str, Any]
+) -> str:
+    return _norm_str(bundle_doc.get("component_validator_observation_reason_residual_not_applicable_policy"))
+
+
 def component_validator_observation_reason_classifier_precedence_policy_from_doc(
     bundle_doc: Mapping[str, Any]
 ) -> str:
