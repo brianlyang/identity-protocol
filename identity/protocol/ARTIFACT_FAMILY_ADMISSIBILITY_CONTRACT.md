@@ -90,6 +90,10 @@ artifact compatibility, bound family admission, governed redirect, and demoted
 quarantine rather than flattening every artifact path into one vague notion of
 “some file landed somewhere.”
 
+Artifact-family admissibility law must also remain machine-readable as separate
+family-admission-class, differentiation, proof, limit, and collapse row
+families rather than one narrative admissibility claim.
+
 Only lawfully matched artifacts may be admitted into governed canonical family sinks.
 
 Visible path presence, filename similarity, cross-family convenience, recovery

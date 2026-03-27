@@ -17,12 +17,38 @@ authority_current_file: identity/protocol/mappings/root-corpus-authority.current
 question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
 contract_required_markers:
   - '## Artifact-family admissibility law'
+  - Artifact-family admissibility law must also remain machine-readable as separate
+    family-admission-class, differentiation, proof, limit, and collapse row
+    families rather than one narrative admissibility claim.
   - '## Six family-admission classes'
   - '## Required family-admission differentiations'
   - '## Family-admission proof discipline'
   - '## Family-admission proof limits'
   - '## Non-compliant family-admission collapses'
   - 'Only lawfully matched artifacts may be admitted into governed canonical family sinks.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Artifact-family admissibility row-family completeness must stay explicit'
+      - Required family-admission-class, differentiation, proof, limit, and collapse
+        families must remain explicit as separate machine-readable row families.
+      - The machine world must not finalize artifact-family admissibility while
+        required row identity drift remains known only internally.
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root artifact-family admissibility completeness discipline'
+      - Artifact-family admissibility law is not a soft prose bundle.
+      - '1. required family-admission-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root artifact-family admissibility completeness boundary'
+      - '1. Artifact-family admissibility law must remain machine-readable as separate family-admission-class, differentiation, proof, limit, and collapse row families.'
+      - '4. Protocol legality must not finalize artifact-family admissibility while missing or unexpected row identities remain known only inside validator logic.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime artifact-family admissibility consumption boundary'
+      - '1. Runtime consumes artifact-family admissibility law as separate family-admission-class, differentiation, proof, limit, and collapse row families rather than as undifferentiated admissibility prose.'
+      - '4. Runtime must not finalize artifact-family admissibility while missing or unexpected row identities remain known only inside validator machinery.'
 required_family_admission_class_rows:
   - order: 1
     family_admission_class_id: frozen_artifact_family_definition

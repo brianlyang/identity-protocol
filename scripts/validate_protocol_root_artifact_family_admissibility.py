@@ -6,6 +6,11 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
+from root_contract_anchor_checks_common import (
+    evaluate_root_doc_anchor_checks,
+    root_doc_anchor_checks_from_doc,
+    validate_expected_root_doc_anchor_checks,
+)
 from root_contract_marker_checks_common import (
     contract_required_markers_from_doc,
     contract_text_marker_checks_from_rows,
@@ -24,7 +29,6 @@ from root_artifact_family_admissibility_common import (
     family_admission_class_rows_from_doc,
     load_root_artifact_family_admissibility,
 )
-from root_contract_readme_reference_common import evaluate_root_contract_readme_reference
 from root_corpus_authority_common import authority_anchor_checks_from_doc, entry_authority_projections_from_doc, load_root_corpus_authority
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, reading_order_rows_from_doc
@@ -195,7 +199,28 @@ EXPECTED_AUTHORITY_MARKERS = (
     "Current-turn artifact-family admissibility must still resolve from machine-consumed enforcement surfaces",
 )
 EXPECTED_ROUTING_MARKERS = EXPECTED_AUTHORITY_MARKERS
-EXPECTED_README_MARKER = "`ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md`"
+EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
+    "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "### Artifact-family admissibility row-family completeness must stay explicit",
+        "Required family-admission-class, differentiation, proof, limit, and collapse families must remain explicit as separate machine-readable row families.",
+        "The machine world must not finalize artifact-family admissibility while required row identity drift remains known only internally.",
+    ),
+    "identity/protocol/README.md": (
+        "## Root artifact-family admissibility completeness discipline",
+        "Artifact-family admissibility law is not a soft prose bundle.",
+        "1. required family-admission-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL.md": (
+        "## Root artifact-family admissibility completeness boundary",
+        "1. Artifact-family admissibility law must remain machine-readable as separate family-admission-class, differentiation, proof, limit, and collapse row families.",
+        "4. Protocol legality must not finalize artifact-family admissibility while missing or unexpected row identities remain known only inside validator logic.",
+    ),
+    "identity/protocol/IDENTITY_RUNTIME.md": (
+        "## Runtime artifact-family admissibility consumption boundary",
+        "1. Runtime consumes artifact-family admissibility law as separate family-admission-class, differentiation, proof, limit, and collapse row families rather than as undifferentiated admissibility prose.",
+        "4. Runtime must not finalize artifact-family admissibility while missing or unexpected row identities remain known only inside validator machinery.",
+    ),
+}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -276,6 +301,7 @@ def main() -> int:
     admissibility_violations: list[dict[str, Any]] = []
     integration_violations: list[dict[str, Any]] = []
     contract_marker_violations: list[dict[str, Any]] = []
+    root_doc_anchor_violations: list[dict[str, Any]] = []
     row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
 
@@ -304,6 +330,7 @@ def main() -> int:
     family_admission_proof_rows = family_admission_proof_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     family_admission_limit_rows = family_admission_limit_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     collapse_rows = collapse_rows_from_doc(admissibility_doc) if admissibility_doc else ()
+    root_doc_anchor_checks = root_doc_anchor_checks_from_doc(admissibility_doc) if admissibility_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     authority_anchors = authority_anchor_checks_from_doc(authority_doc) if authority_doc else ()
@@ -343,6 +370,16 @@ def main() -> int:
                 error_code = ERR_REGISTRY
         if not admissibility_doc.get("contract_required_markers"):
             stale_reasons.append("root_artifact_family_admissibility_contract_required_markers_missing")
+            error_code = ERR_REGISTRY
+        anchor_reason_count_before = len(stale_reasons)
+        stale_reasons.extend(
+            validate_expected_root_doc_anchor_checks(
+                root_doc_anchor_checks,
+                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+                stale_reason_prefix="root_artifact_family_admissibility",
+            )
+        )
+        if len(stale_reasons) > anchor_reason_count_before:
             error_code = ERR_REGISTRY
 
         for field in ("contract_file", "philosophy_anchor_file", "validator_script", "probe_script", "common_script"):
@@ -475,10 +512,11 @@ def main() -> int:
                 )
             )
 
-        integration_violations.extend(
-            evaluate_root_contract_readme_reference(
+        root_doc_anchor_violations.extend(
+            evaluate_root_doc_anchor_checks(
                 repo_root,
-                required_markers=(EXPECTED_README_MARKER,),
+                root_doc_anchor_checks,
+                field_name="root_doc_anchor_checks",
             )
         )
 
@@ -498,7 +536,7 @@ def main() -> int:
             )
         )
 
-    support_violations = admissibility_violations + integration_violations + contract_marker_violations
+    support_violations = admissibility_violations + integration_violations + contract_marker_violations + root_doc_anchor_violations
     verdict = project_root_contract_support_verdict(
         stale_reasons=stale_reasons,
         error_code=error_code,
@@ -512,6 +550,7 @@ def main() -> int:
     )
     error_code = str(verdict["error_code"])
     status = str(verdict["status"])
+    root_doc_anchor_status = STATUS_PASS_REQUIRED if not root_doc_anchor_violations else STATUS_FAIL_REQUIRED
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_ADMISSIBILITY),
@@ -527,6 +566,8 @@ def main() -> int:
         "family_admission_proof_count": len(family_admission_proof_rows),
         "family_admission_limit_count": len(family_admission_limit_rows),
         "collapse_count": len(collapse_rows),
+        "root_doc_anchor_check_count": len(root_doc_anchor_checks),
+        "root_doc_anchor_status": root_doc_anchor_status,
         **project_root_contract_support_projection(
             prefix="artifact_family",
             row_family_projection_rows=row_family_projection_rows,
@@ -543,6 +584,7 @@ def main() -> int:
         "admissibility_violations": admissibility_violations,
         "integration_violations": integration_violations,
         "contract_marker_violations": contract_marker_violations,
+        "root_doc_anchor_violations": root_doc_anchor_violations,
         "stale_reasons": stale_reasons,
     }
     _emit(payload, json_only=args.json_only)
