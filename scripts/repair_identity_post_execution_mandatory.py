@@ -251,7 +251,7 @@ def main() -> int:
         stale_reasons.append("apply_required_for_post_execution_report_repair")
 
     if "apply_required_for_post_execution_report_repair" in stale_reasons:
-        error_code = "IP-WRB-REPAIR-DRYRUN"
+        error_code = "IP-WRB-REPAIR-002"
     elif stale_reasons:
         error_code = "IP-WRB-REPAIR-002"
     else:

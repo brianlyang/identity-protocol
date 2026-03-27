@@ -174,7 +174,7 @@ def main() -> int:
 
     if (runtime_state_changed or report_changed) and not args.apply:
         payload["prompt_runtime_state_repair_status"] = STATUS_FAIL_REQUIRED
-        payload["error_code"] = "IP-PROMPT-REPAIR-DRYRUN"
+        payload["error_code"] = "IP-PROMPT-REPAIR-001"
         payload["stale_reasons"].append("apply_required_for_prompt_runtime_state_repair")
         _emit(payload, json_only=args.json_only)
         return 1

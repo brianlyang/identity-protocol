@@ -19,6 +19,9 @@ from actor_session_common import (
     resolve_actor_id,
     resolve_protocol_actor_id,
 )
+from baseline_evidence_repair_signal_common import (
+    detect_baseline_evidence_repair_needs,
+)
 from compatibility_pointer_semantics_common import SESSION_POINTER_COMPATIBILITY_PATH_FIELD
 from create_identity_pack import (
     CONTEXT_CONTINUITY_VALIDATOR_ID,
@@ -119,6 +122,7 @@ INSTANCE_LOCAL_RUNTIME_LANE_SCOPED_VALIDATOR_IDS = {
     INSTANCE_SCRIPT_RECEIPT_JOIN_VALIDATOR_ID,
     INSTANCE_SCRIPT_EXECUTION_LANE_VALIDATOR_ID,
 }
+ROLE_BINDING_VALIDATOR_SCRIPT = "scripts/validate_identity_role_binding.py"
 
 
 def _coverage_governed_validator_scripts() -> set[str]:
@@ -378,6 +382,90 @@ def _run_identity_repair_or_block(
 
 def _run_capture(cmd: list[str]) -> tuple[int, str, str]:
     return _gw_run_gateway_wrapped_command(cmd=cmd, protocol_root=PROTOCOL_ROOT)
+
+
+def _role_binding_validator_cmd(*, catalog: str, identity_id: str) -> list[str]:
+    return [
+        "python3",
+        ROLE_BINDING_VALIDATOR_SCRIPT,
+        "--catalog",
+        str(catalog),
+        "--identity-id",
+        identity_id,
+    ]
+
+
+def _resolve_refresh_phase_transition_error_code(*, refresh_error: str, baseline_error_code: str) -> str:
+    return (
+        str(baseline_error_code or "").strip()
+        or str(refresh_error or "").strip()
+        or "IP-ASB-RFS-004"
+    )
+
+
+def _run_identity_baseline_evidence_repair(
+    *,
+    catalog: str,
+    identity_id: str,
+    repair_protocol: bool = False,
+    repair_role_binding: bool = False,
+) -> int:
+    cmd = [
+        "python3",
+        "scripts/repair_identity_baseline_evidence.py",
+        "--catalog",
+        str(catalog),
+        "--identity-id",
+        identity_id,
+        "--apply",
+    ]
+    if repair_protocol and not repair_role_binding:
+        cmd.append("--repair-protocol")
+    if repair_role_binding and not repair_protocol:
+        cmd.append("--repair-role-binding")
+    return _run(cmd)
+
+
+def _ensure_role_binding_evidence_fresh(
+    *,
+    catalog: str,
+    identity_id: str,
+    operation_label: str,
+) -> int:
+    validator_cmd = _role_binding_validator_cmd(catalog=str(catalog), identity_id=identity_id)
+    rc, out, err = _run_capture(validator_cmd)
+    if rc == 0:
+        return 0
+
+    merged = f"{out}\n{err}"
+    repair_needs = detect_baseline_evidence_repair_needs(merged)
+    if repair_needs.get("repair_role_binding"):
+        detected = ",".join(str(x) for x in (repair_needs.get("detected_signals") or []) if str(x).strip()) or "role_binding_evidence_repairable"
+        print(
+            "[WARN] role-binding validator reported repairable baseline evidence drift; "
+            f"running shared baseline evidence repair (operation={operation_label}, identity={identity_id}, signals={detected})"
+        )
+        rc_repair = _run_identity_baseline_evidence_repair(
+            catalog=str(catalog),
+            identity_id=identity_id,
+            repair_role_binding=True,
+        )
+        if rc_repair == 0:
+            rc_revalidate, out_revalidate, err_revalidate = _run_capture(validator_cmd)
+            if rc_revalidate == 0:
+                return 0
+            merged = f"{out_revalidate}\n{err_revalidate}"
+            rc = rc_revalidate
+
+    print(
+        "[FAIL] role-binding validation failed after shared baseline evidence repair boundary; "
+        f"{operation_label} blocked"
+    )
+    if out.strip():
+        print(out.strip())
+    if err.strip():
+        print(err.strip())
+    return rc or 1
 
 
 def _parse_json_payload(raw: str) -> dict | None:
@@ -1472,9 +1560,12 @@ def _activate_identity(
             )
             return 1
 
-    rc = _run(["python3", "scripts/validate_identity_role_binding.py", "--catalog", str(local_catalog), "--identity-id", identity_id])
+    rc = _ensure_role_binding_evidence_fresh(
+        catalog=str(local_catalog),
+        identity_id=identity_id,
+        operation_label="activate",
+    )
     if rc != 0:
-        print("[FAIL] role-binding validation failed; activation blocked")
         return rc
 
     if not local_catalog.exists():
@@ -1529,7 +1620,7 @@ def _activate_identity(
 
         meta_backups = _sync_meta_statuses(data)
         _dump_yaml(local_catalog, data)
-        rc = _run(["python3", "scripts/validate_identity_role_binding.py", "--catalog", str(local_catalog), "--identity-id", identity_id])
+        rc = _run(_role_binding_validator_cmd(catalog=str(local_catalog), identity_id=identity_id))
         if rc != 0:
             raise RuntimeError("post-activation role-binding validation failed")
         rc = _run(["python3", "scripts/validate_identity_state_consistency.py", "--catalog", str(local_catalog)])
@@ -2034,8 +2125,9 @@ def _heal_identity(
                 last = report["steps"][-1]
                 merged = f"{last.get('stdout','')}\n{last.get('stderr','')}"
 
-        needs_protocol = "no protocol review evidence file matched" in merged
-        needs_binding = "role-binding evidence not found" in merged
+        baseline_repair_needs = detect_baseline_evidence_repair_needs(merged)
+        needs_protocol = bool(baseline_repair_needs.get("repair_protocol"))
+        needs_binding = bool(baseline_repair_needs.get("repair_role_binding"))
         needs_replay = "replay evidence file not found" in merged
         if needs_protocol or needs_binding:
             repair_cmd = [
@@ -2804,6 +2896,13 @@ def main() -> int:
         )
         if rc_communication_transport != 0:
             return rc_communication_transport
+        rc = _ensure_role_binding_evidence_fresh(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            operation_label="validate",
+        )
+        if rc != 0:
+            return rc
         checks = [
             ["python3", "scripts/validate_identity_scope_resolution.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
             ["python3", "scripts/validate_identity_scope_isolation.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
@@ -2820,7 +2919,6 @@ def main() -> int:
                 args.scope,
             ],
             ["python3", "scripts/validate_identity_runtime_contract.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
-            ["python3", "scripts/validate_identity_role_binding.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             [
                 "python3",
                 "scripts/validate_identity_home_catalog_alignment.py",
@@ -4545,7 +4643,10 @@ def main() -> int:
                 rc_phase_a, _, _ = _run_capture(refresh_cmd)
                 if rc_phase_a != 0:
                     phase_b_strict_revalidate_status = "FAIL_REQUIRED"
-                    phase_transition_error_code = "IP-UPG-BASE-001"
+                    phase_transition_error_code = _resolve_refresh_phase_transition_error_code(
+                        refresh_error=refresh_error,
+                        baseline_error_code=baseline_error_code,
+                    )
                     _emit_two_phase_trace(
                         identity_id=args.identity_id,
                         phase_a_refresh_applied=phase_a_refresh_applied,
@@ -4560,7 +4661,10 @@ def main() -> int:
                 phase_b_status = str(phase_b_payload.get("session_refresh_status", "")).strip().upper()
                 phase_b_strict_revalidate_status = phase_b_status or ("PASS_REQUIRED" if rc_phase_b == 0 else "FAIL_REQUIRED")
                 if rc_phase_b != 0:
-                    phase_transition_error_code = "IP-UPG-BASE-001"
+                    phase_transition_error_code = _resolve_refresh_phase_transition_error_code(
+                        refresh_error=refresh_error,
+                        baseline_error_code=baseline_error_code,
+                    )
                     _emit_two_phase_trace(
                         identity_id=args.identity_id,
                         phase_a_refresh_applied=phase_a_refresh_applied,
@@ -4764,6 +4868,13 @@ def main() -> int:
         )
         if rc != 0:
             print("[FAIL] discovery requiredization validation failed; update blocked")
+            return rc
+        rc = _ensure_role_binding_evidence_fresh(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            operation_label="update",
+        )
+        if rc != 0:
             return rc
         update_bundle_run_token = str(update_required_gates_run_id or update_run_id).strip() or _default_operation_run_token(
             args.identity_id,
