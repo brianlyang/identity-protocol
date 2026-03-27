@@ -87,6 +87,8 @@ The identity protocol must remain machine law first rather than a compatibility 
 
 Active success paths may preserve governed migration, diagnostics, import, or fixture lanes only as demoted support surfaces, never as silent substitutes for current law.
 
+Machine-law primacy law must also remain machine-readable as separate commitment, anchor, primacy-proof, primacy-limit, and collapse row families rather than one narrative anti-compatibility claim.
+
 ## Four primacy commitments
 
 ### 1. Law before compatibility shelter

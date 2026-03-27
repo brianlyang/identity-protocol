@@ -23,6 +23,28 @@ contract_required_markers:
   - '## Machine-law primacy proof limits'
   - '## Non-compliant compatibility collapses'
   - 'The identity protocol must remain machine law first rather than a compatibility shelter or historical backstop.'
+  - 'Machine-law primacy law must also remain machine-readable as separate commitment, anchor, primacy-proof, primacy-limit, and collapse row families rather than one narrative anti-compatibility claim.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Machine-law primacy row-family completeness must stay explicit'
+      - 'Required commitment, anchor, primacy-proof, primacy-limit, and collapse families must remain explicit as separate machine-readable row families.'
+      - 'The machine world must not finalize machine-law primacy legality while required row identity drift remains known only internally.'
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root machine-law primacy completeness discipline'
+      - 'Machine-law primacy law is not a soft prose bundle.'
+      - '1. required commitment, anchor, primacy-proof, primacy-limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root machine-law primacy completeness boundary'
+      - '1. Machine-law primacy law must remain machine-readable as separate commitment, anchor, primacy-proof, primacy-limit, and collapse row families.'
+      - '4. Protocol legality must not finalize machine-law primacy legality while missing or unexpected row identities remain known only inside validator logic.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime machine-law primacy consumption boundary'
+      - '1. Runtime consumes machine-law primacy law as separate commitment, anchor, primacy-proof, primacy-limit, and collapse row families rather than as undifferentiated anti-compatibility prose.'
+      - '4. Runtime must not finalize machine-law primacy legality while missing or unexpected row identities remain known only inside validator machinery.'
 required_commitment_rows:
   - order: 1
     commitment_id: law_before_compatibility_shelter
