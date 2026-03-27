@@ -85,6 +85,10 @@ So this file freezes error terminality law, while runtime adjudication determine
 
 The identity protocol must distinguish error classes rather than flattening every anomaly into one vague notion of “some issue happened.”
 
+Error-terminality law must also remain machine-readable as separate error-class,
+differentiation, proof, limit, and collapse row families rather than one
+narrative terminality claim.
+
 Only lawfully classified errors may fail-close, redirect, or remain non-blocking in current-turn execution.
 
 Contradiction, missing canonical truth, broken binding, active-path contamination, governed recovery redirect, observation-only drift, and explanatory materials are not interchangeable categories.

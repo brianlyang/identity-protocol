@@ -17,12 +17,38 @@ authority_current_file: identity/protocol/mappings/root-corpus-authority.current
 question_routing_current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
 contract_required_markers:
   - '## Error terminality law'
+  - Error-terminality law must also remain machine-readable as separate error-class,
+    differentiation, proof, limit, and collapse row families rather than one
+    narrative terminality claim.
   - '## Seven error classes'
   - '## Required error differentiations'
   - '## Error-terminality proof discipline'
   - '## Error-terminality proof limits'
   - '## Non-compliant error collapses'
   - 'Only lawfully classified errors may fail-close, redirect, or remain non-blocking in current-turn execution.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Error-terminality row-family completeness must stay explicit'
+      - Required error-class, differentiation, proof, limit, and collapse families
+        must remain explicit as separate machine-readable row families.
+      - The machine world must not finalize error-terminality legality while required
+        row identity drift remains known only internally.
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root error-terminality completeness discipline'
+      - Error-terminality law is not a soft prose bundle.
+      - '1. required error-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root error-terminality completeness boundary'
+      - '1. Error-terminality law must remain machine-readable as separate error-class, differentiation, proof, limit, and collapse row families.'
+      - '4. Protocol legality must not finalize error-terminality truth while missing or unexpected row identities remain known only inside validator logic.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime error-terminality consumption boundary'
+      - '1. Runtime consumes error-terminality law as separate error-class, differentiation, proof, limit, and collapse row families rather than as undifferentiated terminality prose.'
+      - '4. Runtime must not finalize error-terminality legality while missing or unexpected row identities remain known only inside validator machinery.'
 required_error_class_rows:
   - order: 1
     error_class_id: frozen_error_definition
