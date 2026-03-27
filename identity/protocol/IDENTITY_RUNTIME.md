@@ -469,6 +469,12 @@ component-validator nonzero returncode only, after admitted parse/status
 resolution and before non-pass component status, explicit
 non-execution exclusion, and bundle-violation projection.
 
+Runtime must also keep component-validator non-pass-status origin policy
+explicit; admitted non-pass-status reason is component-status
+not-pass-required only, after admitted parse/status and nonzero
+returncode resolution and before explicit non-execution exclusion and
+bundle-violation projection.
+
 Runtime must also keep component-validator observation-reason classifier
 precedence policy explicit; parse/status classification preempts
 nonzero returncode, nonzero returncode preempts non-pass component

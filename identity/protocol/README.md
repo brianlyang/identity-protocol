@@ -834,6 +834,14 @@ nonzero returncode only, after admitted parse/status resolution and
 before non-pass component status, explicit non-execution exclusion, and
 bundle-violation projection.
 
+Bundle component-validator non-pass-status origin policy must also stay
+explicit.
+
+The admitted runtime non-pass-status reason is component-status
+not-pass-required only, after admitted parse/status and nonzero
+returncode resolution and before explicit non-execution exclusion and
+bundle-violation projection.
+
 Bundle component-validator observation-reason classifier precedence
 policy must also stay explicit.
 
