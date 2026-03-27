@@ -130,6 +130,14 @@ implicit.
 4. Runtime must not finalize machine-world ontology legality while missing or unexpected row identities remain known only inside validator machinery.
 5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
 
+## Runtime stream-design admissibility consumption boundary
+
+1. Runtime consumes stream-design admissibility law as separate question, admissibility-proof, admissibility-limit, outcome-class, and projection-surface row families rather than as undifferentiated design prose.
+2. Runtime must keep expected row-family total and emitted row-family total congruent under machine-readable coverage completeness rather than relying on aggregate green shorthand.
+3. Runtime must also keep expected row identity set and emitted row identity set for each stream-design admissibility family explicit rather than collapsing identity drift into summary-only counts.
+4. Runtime must not finalize stream-design admissibility legality while missing or unexpected row identities remain known only inside validator machinery.
+5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
+
 ## Runtime prompt-bootstrap consumption boundary
 
 1. Runtime consumes prompt-bootstrap law as separate anchor, output-field, binding-field, proof, limit, and native-literal row families rather than as undifferentiated prompt prose.

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from types import SimpleNamespace
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
@@ -14,6 +15,7 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
+from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 from root_stream_design_admissibility_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -149,6 +151,10 @@ def _entry_marker_missing(required_markers: tuple[str, ...], expected_markers: t
     return [marker for marker in expected_markers if marker not in marker_set]
 
 
+def _surface_rows(surface_ids: tuple[str, ...]) -> tuple[SimpleNamespace, ...]:
+    return tuple(SimpleNamespace(surface_id=surface_id) for surface_id in surface_ids)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate root stream-design admissibility law and root-corpus integration.")
     ap.add_argument("--repo-root", default="", help="optional protocol repo root override")
@@ -167,6 +173,7 @@ def main() -> int:
     admissibility_violations: list[dict[str, Any]] = []
     integration_violations: list[dict[str, Any]] = []
     contract_marker_violations: list[dict[str, Any]] = []
+    row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
 
     if admissibility_alias_error:
@@ -194,6 +201,7 @@ def main() -> int:
     limit_rows = admissibility_limit_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     outcome_rows = outcome_class_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     projection_surfaces = required_projection_surfaces_from_doc(admissibility_doc) if admissibility_doc else ()
+    projection_surface_rows = _surface_rows(projection_surfaces)
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     authority_anchors = authority_anchor_checks_from_doc(authority_doc) if authority_doc else ()
@@ -247,6 +255,53 @@ def main() -> int:
                 error_code = ERR_REGISTRY
 
     if not stale_reasons:
+        row_family_projection_rows = [
+            project_row_family(
+                family_id="required_question_rows",
+                member_id_key="question_id",
+                actual_rows=question_rows,
+                expected_rows=EXPECTED_QUESTION_ROWS,
+                id_attr="question_id",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+            project_row_family(
+                family_id="required_admissibility_proof_rows",
+                member_id_key="proof_id",
+                actual_rows=proof_rows,
+                expected_rows=EXPECTED_ADMISSIBILITY_PROOF_ROWS,
+                id_attr="proof_id",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+            project_row_family(
+                family_id="required_admissibility_limit_rows",
+                member_id_key="limit_id",
+                actual_rows=limit_rows,
+                expected_rows=EXPECTED_ADMISSIBILITY_LIMIT_ROWS,
+                id_attr="row_id",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+            project_row_family(
+                family_id="admissibility_outcome_rows",
+                member_id_key="outcome_class",
+                actual_rows=outcome_rows,
+                expected_rows={outcome_class: {"order": idx} for idx, outcome_class in enumerate(EXPECTED_OUTCOME_CLASSES, start=1)},
+                id_attr="outcome_class",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+            project_row_family(
+                family_id="required_projection_surfaces",
+                member_id_key="surface_id",
+                actual_rows=projection_surface_rows,
+                expected_rows={surface_id: {"order": idx} for idx, surface_id in enumerate(EXPECTED_PROJECTION_SURFACES, start=1)},
+                id_attr="surface_id",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+        ]
         question_orders = [row.order for row in question_rows]
         proof_orders = [row.order for row in proof_rows]
         limit_orders = [row.order for row in limit_rows]
@@ -599,6 +654,18 @@ def main() -> int:
     )
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
+    stream_design_row_coverage_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="coverage_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
+    stream_design_row_identity_projection_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="identity_projection_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_ADMISSIBILITY),
@@ -614,6 +681,10 @@ def main() -> int:
         "limit_count": len(limit_rows),
         "outcome_count": len(outcome_rows),
         "projection_surface_count": len(projection_surfaces),
+        "stream_design_row_family_count": len(row_family_projection_rows),
+        "stream_design_row_coverage_status": stream_design_row_coverage_status,
+        "stream_design_row_identity_projection_status": stream_design_row_identity_projection_status,
+        "row_family_projection_rows": row_family_projection_rows,
         "question_ids": [row.question_id for row in sorted(question_rows, key=lambda item: item.order)],
         "proof_ids": [row.proof_id for row in sorted(proof_rows, key=lambda item: item.order)],
         "limit_ids": [row.row_id for row in sorted(limit_rows, key=lambda item: item.order)],

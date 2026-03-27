@@ -30,6 +30,11 @@ assert payload["proof_count"] == 5, payload
 assert payload["limit_count"] == 5, payload
 assert payload["outcome_count"] == 5, payload
 assert payload["projection_surface_count"] == 5, payload
+assert payload["stream_design_row_family_count"] == 5, payload
+assert payload["stream_design_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["stream_design_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -65,10 +70,22 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_stream_design_admissibility_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RSDA-002", payload
+assert payload["stream_design_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["stream_design_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["reason"] == "missing_expected_rows" and "answer_surface_closure_proof" in row.get("proof_ids", [])
     for row in payload["structure_violations"]
 ), payload
+proof_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_admissibility_proof_rows"
+)
+assert proof_row["expected_count"] == 5, payload
+assert proof_row["actual_count"] == 4, payload
+assert proof_row["missing_ids"] == ["answer_surface_closure_proof"], payload
+assert proof_row["unexpected_ids"] == [], payload
+assert proof_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert proof_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 QUESTION_REPO="${TMP_ROOT}/question-drift-repo"
@@ -102,10 +119,78 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_stream_design_admissibility_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RSDA-002", payload
+assert payload["stream_design_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["stream_design_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["reason"] == "missing_expected_questions" and "answer_surface" in row.get("question_ids", [])
     for row in payload["structure_violations"]
 ), payload
+question_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_question_rows"
+)
+assert question_row["expected_count"] == 5, payload
+assert question_row["actual_count"] == 4, payload
+assert question_row["missing_ids"] == ["answer_surface"], payload
+assert question_row["unexpected_ids"] == [], payload
+assert question_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert question_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+IDENTITY_REPO="${TMP_ROOT}/identity-drift-repo"
+mirror_repo "${IDENTITY_REPO}"
+python3 - <<'PY' "${IDENTITY_REPO}/identity/protocol/mappings/root-stream-design-admissibility.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["required_question_rows"]:
+    if row.get("question_id") == "answer_surface":
+        row["question_id"] = "answer_surface_alias"
+        break
+else:
+    raise SystemExit("expected answer_surface row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+IDENTITY_JSON="${TMP_ROOT}/identity-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_stream_design_admissibility.py" \
+  --repo-root "${IDENTITY_REPO}" \
+  --json-only >"${IDENTITY_JSON}"; then
+  echo "[FAIL] root stream-design admissibility validator unexpectedly passed question identity drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${IDENTITY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_stream_design_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RSDA-002", payload
+assert payload["stream_design_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["stream_design_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["reason"] == "missing_expected_questions" and "answer_surface" in row.get("question_ids", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["reason"] == "extra_questions" and "answer_surface_alias" in row.get("question_ids", [])
+    for row in payload["structure_violations"]
+), payload
+question_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_question_rows"
+)
+assert question_row["expected_count"] == 5, payload
+assert question_row["actual_count"] == 5, payload
+assert question_row["missing_ids"] == ["answer_surface"], payload
+assert question_row["unexpected_ids"] == ["answer_surface_alias"], payload
+assert question_row["coverage_status"] == "PASS_REQUIRED", payload
+assert question_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 ANCHOR_REPO="${TMP_ROOT}/anchor-drift-repo"
