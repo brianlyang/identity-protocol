@@ -416,6 +416,10 @@ Root-law bundle rows must also keep component status-row coverage policy
 explicit; every bound component must emit one status row before final
 status.
 
+Root-law bundle rows must also keep machine-readable coverage
+completeness explicit; bound component total must remain congruent with
+component-status-row total rather than being left implicit.
+
 Local finalization on partial component-row coverage is forbidden inside
 the bundle.
 

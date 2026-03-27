@@ -693,6 +693,10 @@ Bundle component status-row coverage policy must also stay explicit.
 The admitted runtime policy is every bound component emits one status row
 before final status.
 
+Bound component total and component-status-row total must remain
+congruent under machine-readable coverage completeness rather than being
+left implicit.
+
 Runtime may not finalize on partial component-row coverage when the bound
 component set is already known.
 

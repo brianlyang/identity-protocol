@@ -158,6 +158,8 @@ assert payload["source_registry_directory_rel_path"] == "identity/protocol/mappi
 assert payload["source_registry_current_file"] == "identity/protocol/mappings/root-corpus-registry.current.yaml", payload
 assert payload["source_registered_mapping_children_count"] > 0, payload
 assert payload["component_status_row_count"] == payload["component_count"] == 10, payload
+assert payload["expected_component_status_row_count"] == payload["component_count"] == 10, payload
+assert payload["component_status_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["structure_violation_count"] == 0, payload
 assert payload["bundle_violation_count"] == 0, payload
 assert payload["anchor_violation_count"] == 0, payload
@@ -2245,6 +2247,8 @@ assert payload["component_validator_observation_reason_unknown_count"] == 0, pay
 assert payload["component_validator_observation_reason_non_applicable_count"] == 2, payload
 assert payload["component_validator_observation_reason_partition_total_count"] == payload["bundle_violation_count"], payload
 assert payload["component_status_row_count"] == payload["component_count"] - 1, payload
+assert payload["expected_component_status_row_count"] == payload["component_count"], payload
+assert payload["component_status_row_coverage_status"] == "FAIL_REQUIRED", payload
 assert payload["bundle_violation_count"] >= 2, payload
 assert payload["registry_precedence_reason_count"] == 0, payload
 assert payload["projected_violation_reason_count"] == (

@@ -361,6 +361,10 @@ observation before emitting final failure.
 Runtime must also keep bound component status-row coverage policy explicit;
 every bound component must emit one status row before final status.
 
+Runtime must also keep machine-readable coverage completeness explicit;
+bound component total must remain congruent with component-status-row
+total rather than being left implicit.
+
 Runtime must not emit final bundle truth with partial component-row
 coverage when bound component set remains known.
 

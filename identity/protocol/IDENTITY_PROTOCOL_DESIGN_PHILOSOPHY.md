@@ -681,6 +681,10 @@ Bundle component status-row coverage policy must stay explicit too.
 The admitted policy is every bound component emits one status row before
 final status.
 
+Bound component total and component-status-row total must therefore stay
+congruent under machine-readable coverage completeness rather than being
+left implicit.
+
 The machine world must not finalize root-law bundle truth on partial
 component-row coverage when bound component set remains known.
 

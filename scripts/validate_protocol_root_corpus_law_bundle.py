@@ -761,6 +761,7 @@ def main() -> int:
     bundle_violations: list[dict[str, Any]] = []
     anchor_violations: list[dict[str, Any]] = []
     component_status_rows: list[dict[str, Any]] = []
+    component_status_row_coverage_incomplete = False
     error_code = ""
 
     if bundle_alias_error:
@@ -2500,10 +2501,11 @@ def main() -> int:
                     }
                 )
 
-        if (
+        component_status_row_coverage_incomplete = (
             effective_component_status_row_coverage_policy == COMPONENT_STATUS_ROW_COVERAGE_POLICY
             and len(component_status_rows) != len(sorted_components)
-        ):
+        )
+        if component_status_row_coverage_incomplete:
             bundle_violations.append(
                 {
                     "component_id": "root_corpus_law_bundle",
@@ -2512,6 +2514,9 @@ def main() -> int:
                     "actual_count": len(component_status_rows),
                 }
             )
+    component_status_row_coverage_status = (
+        STATUS_FAIL_REQUIRED if component_status_row_coverage_incomplete else STATUS_PASS_REQUIRED
+    )
 
     (
         component_validator_observation_reason_counts,
@@ -2891,6 +2896,8 @@ def main() -> int:
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
         "component_status_row_count": len(component_status_rows),
+        "expected_component_status_row_count": len(sorted_components),
+        "component_status_row_coverage_status": component_status_row_coverage_status,
         "structure_violation_count": len(structure_violations),
         "bundle_violation_count": len(bundle_violations),
         "anchor_violation_count": len(anchor_violations),
