@@ -34,6 +34,11 @@ assert payload["answer_surface_proof_count"] == 5, payload
 assert payload["answer_surface_limit_count"] == 6, payload
 assert payload["boundary_count"] == 4, payload
 assert payload["collapse_count"] == 7, payload
+assert payload["operator_answer_row_family_count"] == 9, payload
+assert payload["operator_answer_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["operator_answer_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert any(
     row["claim_id"] == "realized_effect_answer_claim"
     and row["decision_evidence_proof_id"] == "adjudicated_verdict_closure_decision_evidence_proof"
@@ -79,10 +84,22 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_operator_answer_surface_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-ROAS-002", payload
+assert payload["operator_answer_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["operator_answer_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["reason"] == "missing_expected_rows" and "realized_effect_answer_backing_proof" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+proof_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_answer_surface_proof_rows"
+)
+assert proof_row["expected_count"] == 5, payload
+assert proof_row["actual_count"] == 4, payload
+assert proof_row["missing_ids"] == ["realized_effect_answer_backing_proof"], payload
+assert proof_row["unexpected_ids"] == [], payload
+assert proof_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert proof_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 SUPPORT_REPO="${TMP_ROOT}/support-drift-repo"
@@ -94,11 +111,12 @@ import yaml
 
 path = pathlib.Path(sys.argv[1])
 doc = yaml.safe_load(path.read_text(encoding="utf-8"))
-doc["required_support_memory_rows"] = [
-    row for row in doc["required_support_memory_rows"] if row.get("support_id") != "consumption_memory_support"
-]
-for idx, row in enumerate(doc["required_support_memory_rows"], start=1):
-    row["order"] = idx
+for row in doc["required_support_memory_rows"]:
+    if row.get("support_id") == "consumption_memory_support":
+        row["support_id"] = "consumption_memory_support_alias"
+        break
+else:
+    raise SystemExit("expected consumption_memory_support row not found")
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
 
@@ -106,7 +124,7 @@ SUPPORT_JSON="${TMP_ROOT}/support-drift.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_operator_answer_surface.py" \
   --repo-root "${SUPPORT_REPO}" \
   --json-only >"${SUPPORT_JSON}"; then
-  echo "[FAIL] root operator answer-surface validator unexpectedly passed missing support-memory row"
+  echo "[FAIL] root operator answer-surface validator unexpectedly passed support-memory identity drift"
   exit 1
 fi
 
@@ -122,45 +140,22 @@ assert any(
     row["reason"] == "missing_expected_rows" and "consumption_memory_support" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
-PY
-
-SURFACE_REPO="${TMP_ROOT}/surface-drift-repo"
-mirror_repo "${SURFACE_REPO}"
-python3 - <<'PY' "${SURFACE_REPO}/identity/protocol/mappings/root-operator-answer-surface.v1.yaml"
-import pathlib
-import sys
-import yaml
-
-path = pathlib.Path(sys.argv[1])
-doc = yaml.safe_load(path.read_text(encoding="utf-8"))
-doc["required_surface_rows"] = [
-    row for row in doc["required_surface_rows"] if row.get("surface_id") != "terminal_machine_enforcement"
-]
-for idx, row in enumerate(doc["required_surface_rows"], start=1):
-    row["order"] = idx
-path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
-PY
-
-SURFACE_JSON="${TMP_ROOT}/surface-drift.json"
-if python3 "${ROOT}/scripts/validate_protocol_root_operator_answer_surface.py" \
-  --repo-root "${SURFACE_REPO}" \
-  --json-only >"${SURFACE_JSON}"; then
-  echo "[FAIL] root operator answer-surface validator unexpectedly passed missing surface row"
-  exit 1
-fi
-
-python3 - <<'PY' "${SURFACE_JSON}"
-import json
-import pathlib
-import sys
-
-payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_operator_answer_surface_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-ROAS-002", payload
 assert any(
-    row["reason"] == "missing_expected_rows" and "terminal_machine_enforcement" in row.get("row_ids", [])
+    row["reason"] == "extra_rows" and "consumption_memory_support_alias" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+assert payload["operator_answer_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["operator_answer_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+support_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_support_memory_rows"
+)
+assert support_row["expected_count"] == 5, payload
+assert support_row["actual_count"] == 5, payload
+assert support_row["missing_ids"] == ["consumption_memory_support"], payload
+assert support_row["unexpected_ids"] == ["consumption_memory_support_alias"], payload
+assert support_row["coverage_status"] == "PASS_REQUIRED", payload
+assert support_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 HEADING_REPO="${TMP_ROOT}/heading-drift-repo"

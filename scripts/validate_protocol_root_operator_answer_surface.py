@@ -14,6 +14,7 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
+from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 from root_current_truth_epistemology_common import (
     epistemic_proof_rows_from_doc,
     load_root_current_truth_epistemology,
@@ -382,6 +383,7 @@ def main() -> int:
     answer_violations: list[dict[str, Any]] = []
     integration_violations: list[dict[str, Any]] = []
     contract_marker_violations: list[dict[str, Any]] = []
+    row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
 
     if answer_alias_error:
@@ -477,6 +479,90 @@ def main() -> int:
                 error_code = ERR_REGISTRY
 
     if not stale_reasons:
+        row_family_projection_rows = [
+            project_row_family(
+                family_id="required_surface_rows",
+                member_id_key="surface_id",
+                actual_rows=surface_rows,
+                expected_rows=EXPECTED_SURFACE_ROWS,
+                id_attr="surface_id",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+            project_row_family(
+                family_id="required_support_memory_rows",
+                member_id_key="support_id",
+                actual_rows=support_memory_rows,
+                expected_rows=EXPECTED_SUPPORT_MEMORY_ROWS,
+                id_attr="support_id",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+            project_row_family(
+                family_id="required_support_limit_rows",
+                member_id_key="limit_id",
+                actual_rows=support_limit_rows,
+                expected_rows=EXPECTED_SUPPORT_LIMIT_ROWS,
+                id_attr="row_id",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+            project_row_family(
+                family_id="required_answer_claim_alignment_rows",
+                member_id_key="claim_id",
+                actual_rows=answer_claim_alignment_rows,
+                expected_rows=EXPECTED_ANSWER_CLAIM_ALIGNMENT_ROWS,
+                id_attr="claim_id",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+            project_row_family(
+                family_id="required_answer_claim_epistemic_alignment_rows",
+                member_id_key="claim_id",
+                actual_rows=answer_claim_epistemic_alignment_rows,
+                expected_rows=EXPECTED_ANSWER_CLAIM_EPISTEMIC_ALIGNMENT_ROWS,
+                id_attr="claim_id",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+            project_row_family(
+                family_id="required_answer_surface_proof_rows",
+                member_id_key="proof_id",
+                actual_rows=answer_surface_proof_rows,
+                expected_rows=EXPECTED_ANSWER_SURFACE_PROOF_ROWS,
+                id_attr="proof_id",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+            project_row_family(
+                family_id="required_answer_surface_limit_rows",
+                member_id_key="limit_id",
+                actual_rows=answer_surface_limit_rows,
+                expected_rows=EXPECTED_ANSWER_SURFACE_LIMIT_ROWS,
+                id_attr="row_id",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+            project_row_family(
+                family_id="required_boundary_rows",
+                member_id_key="boundary_id",
+                actual_rows=boundary_rows,
+                expected_rows=EXPECTED_BOUNDARY_ROWS,
+                id_attr="row_id",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+            project_row_family(
+                family_id="required_collapse_rows",
+                member_id_key="collapse_id",
+                actual_rows=collapse_rows,
+                expected_rows=EXPECTED_COLLAPSE_ROWS,
+                id_attr="row_id",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+        ]
+
         _validate_rows(
             actual_rows=surface_rows,
             expected_rows=EXPECTED_SURFACE_ROWS,
@@ -871,6 +957,18 @@ def main() -> int:
     )
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
+    operator_answer_row_coverage_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="coverage_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
+    operator_answer_row_identity_projection_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="identity_projection_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_ANSWER),
@@ -894,6 +992,10 @@ def main() -> int:
         "answer_surface_limit_count": len(answer_surface_limit_rows),
         "boundary_count": len(boundary_rows),
         "collapse_count": len(collapse_rows),
+        "operator_answer_row_family_count": len(row_family_projection_rows),
+        "operator_answer_row_coverage_status": operator_answer_row_coverage_status,
+        "operator_answer_row_identity_projection_status": operator_answer_row_identity_projection_status,
+        "row_family_projection_rows": row_family_projection_rows,
         "surface_ids": [row.surface_id for row in sorted(surface_rows, key=lambda item: item.order)],
         "support_memory_ids": [row.support_id for row in sorted(support_memory_rows, key=lambda item: item.order)],
         "support_limit_ids": [row.row_id for row in sorted(support_limit_rows, key=lambda item: item.order)],

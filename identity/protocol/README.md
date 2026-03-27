@@ -499,6 +499,18 @@ Decision-evidence admissibility law is not a soft prose bundle.
 
 ---
 
+## Root operator answer-surface completeness discipline
+
+Operator answer-surface law is not a soft prose bundle.
+
+1. required surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize operator answer-surface legality while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
 ## Root-law bundle discipline
 
 The root corpus is not governed by one monolithic text or one isolated
