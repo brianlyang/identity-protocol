@@ -38,6 +38,9 @@ from protocol_infra_contract import (
     UNIQUE_ENTRY_RECEIPT_SELECTOR_PRECEDENCE,
     UNIQUE_ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS,
 )
+from required_gate_report_authority_common import (
+    build_required_gate_report_authority_projection,
+)
 from tool_vendor_governance_common import derive_active_repo_root, load_json, resolve_pack_and_task
 
 try:
@@ -2055,8 +2058,9 @@ def main() -> int:
         "rows": [],
         "stale_reasons": [],
     }
+    bundle_pack_path: Path | None = None
     try:
-        _bundle_pack_path, bundle_task_path = resolve_pack_and_task(
+        bundle_pack_path, bundle_task_path = resolve_pack_and_task(
             Path(args.catalog).expanduser().resolve(),
             args.identity_id,
         )
@@ -2097,6 +2101,11 @@ def main() -> int:
     wrapper_proof_signature = str(args.wrapper_proof_signature or "").strip()
     run_id_binding = str(args.run_id or "").strip()
     report_selected_path = str(args.report_selected_path or "").strip()
+    report_authority_projection = build_required_gate_report_authority_projection(
+        identity_id=args.identity_id,
+        explicit_report=report_selected_path,
+        pack_root=bundle_pack_path,
+    )
     actor_id = str(args.actor_id or "").strip()
     session_id = str(args.session_id or "").strip()
     send_time_gate_status = str(args.send_time_gate_status or "").strip()
@@ -2736,7 +2745,7 @@ def main() -> int:
         "wrapper_parent_attestation_command_sha256": wrapper_parent_attestation_command_sha256,
         "run_id_binding": run_id_binding,
         "session_id": session_id,
-        "report_selected_path": report_selected_path,
+        **report_authority_projection,
         "cross_verification_bundle_path": cross_verification_bundle_path,
         "cross_verification_bundle_id": cross_verification_bundle_id,
         "cross_verification_bundle_source": cross_verification_bundle_source,
@@ -2857,7 +2866,7 @@ def main() -> int:
                 "bundle_target_name": target_name,
                 "surface_label": surface_label,
                 "run_id_binding": run_id_binding,
-                "report_selected_path": report_selected_path,
+                **report_authority_projection,
                 "gate_profile": gate_profile,
                 "gate_profile_mode": (
                     gate_profile_selection.profile_mode
@@ -2916,6 +2925,9 @@ def main() -> int:
                 "bundle_key": BUNDLE_KEY,
                 "bundle_target_name": target_name,
                 "target_probe_mode": target_probe_mode,
+                "surface_label": surface_label,
+                "run_id_binding": run_id_binding,
+                **report_authority_projection,
                 "mapping_errors": mapping_errors,
                 "gate_profile": gate_profile,
                 "gate_profile_mode": (
@@ -2982,7 +2994,8 @@ def main() -> int:
         target_payload.setdefault("gate_profile_requirement_keys", list(requirement_keys))
         target_payload.setdefault("surface_label", surface_label)
         target_payload.setdefault("run_id_binding", run_id_binding)
-        target_payload.setdefault("report_selected_path", report_selected_path)
+        for field, value in report_authority_projection.items():
+            target_payload.setdefault(field, value)
         target_payload.setdefault("actor_id", str(args.actor_id or "").strip())
         target_payload.setdefault("resolved_work_layer", str(args.resolved_work_layer or "").strip())
         target_payload.setdefault("resolved_source_layer", str(args.resolved_source_layer or "").strip())

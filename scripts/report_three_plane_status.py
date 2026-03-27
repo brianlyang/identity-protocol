@@ -4397,6 +4397,14 @@ def _instance_plane_status(
             "row_contract_error_count": required_bundle_payload.get("row_contract_error_count"),
             "run_id_binding": required_bundle_payload.get("run_id_binding", ""),
             "report_selected_path": required_bundle_payload.get("report_selected_path", ""),
+            "report_selection_mode": required_bundle_payload.get("report_selection_mode", ""),
+            "report_selected_authority_class": required_bundle_payload.get(
+                "report_selected_authority_class", ""
+            ),
+            "report_pointer_resolution_mode": required_bundle_payload.get(
+                "report_pointer_resolution_mode", ""
+            ),
+            "report_pointer_path": required_bundle_payload.get("report_pointer_path", ""),
             "send_time_gate_status": required_bundle_payload.get("send_time_gate_status", ""),
             "outlet_bypass_detected": required_bundle_payload.get("outlet_bypass_detected"),
             "final_emit_contract_status": required_bundle_payload.get("final_emit_contract_status", ""),
@@ -4423,6 +4431,14 @@ def _instance_plane_status(
             "row_contract_error_count": required_bundle_shadow_payload.get("row_contract_error_count"),
             "run_id_binding": required_bundle_shadow_payload.get("run_id_binding", ""),
             "report_selected_path": required_bundle_shadow_payload.get("report_selected_path", ""),
+            "report_selection_mode": required_bundle_shadow_payload.get("report_selection_mode", ""),
+            "report_selected_authority_class": required_bundle_shadow_payload.get(
+                "report_selected_authority_class", ""
+            ),
+            "report_pointer_resolution_mode": required_bundle_shadow_payload.get(
+                "report_pointer_resolution_mode", ""
+            ),
+            "report_pointer_path": required_bundle_shadow_payload.get("report_pointer_path", ""),
             "send_time_gate_status": required_bundle_shadow_payload.get("send_time_gate_status", ""),
             "outlet_bypass_detected": required_bundle_shadow_payload.get("outlet_bypass_detected"),
             "final_emit_contract_status": required_bundle_shadow_payload.get("final_emit_contract_status", ""),

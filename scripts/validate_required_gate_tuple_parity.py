@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from required_gate_report_authority_common import REQUIRED_GATE_REPORT_AUTHORITY_FIELDS
+
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
@@ -18,7 +20,7 @@ INVARIANT_TUPLE_FIELDS: tuple[str, ...] = (
     "lock_state",
 )
 OPERATION_SCOPED_TUPLE_FIELDS: tuple[str, ...] = (
-    "report_selected_path",
+    *REQUIRED_GATE_REPORT_AUTHORITY_FIELDS,
     "required_contract",
     "failed_required_contract_count",
     "send_time_gate_status",
@@ -35,6 +37,10 @@ FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "resolved_source_layer": ("resolved_source_layer", "source_layer"),
     "lock_state": ("lock_state", "context_lock_state"),
     "report_selected_path": ("report_selected_path",),
+    "report_selection_mode": ("report_selection_mode",),
+    "report_selected_authority_class": ("report_selected_authority_class",),
+    "report_pointer_resolution_mode": ("report_pointer_resolution_mode",),
+    "report_pointer_path": ("report_pointer_path",),
     "required_contract": ("required_contract",),
     "failed_required_contract_count": ("failed_required_contract_count",),
     "send_time_gate_status": ("send_time_gate_status",),

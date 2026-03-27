@@ -13,6 +13,7 @@ from projection_profile_exclusion_scope_common import (
     PROJECTION_PROFILE_EXCLUSION_SCOPE_REASON,
     build_projection_profile_exclusion_payload,
 )
+from required_gate_report_authority_common import REQUIRED_GATE_REPORT_AUTHORITY_FIELDS
 from registry_alias_control_plane_common import resolve_alias_entry_path, resolve_current_yaml_alias
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -83,6 +84,14 @@ def build_required_gate_bundle_target_projection(
         "lock_state": str(bundle_payload.get("lock_state", "") or "").strip(),
         "run_id_binding": str(bundle_payload.get("run_id_binding", "") or "").strip(),
         "report_selected_path": str(bundle_payload.get("report_selected_path", "") or "").strip(),
+        "report_selection_mode": str(bundle_payload.get("report_selection_mode", "") or "").strip(),
+        "report_selected_authority_class": str(
+            bundle_payload.get("report_selected_authority_class", "") or ""
+        ).strip(),
+        "report_pointer_resolution_mode": str(
+            bundle_payload.get("report_pointer_resolution_mode", "") or ""
+        ).strip(),
+        "report_pointer_path": str(bundle_payload.get("report_pointer_path", "") or "").strip(),
         "contract_mapping_entry": "",
         "contract_mapping": "",
         "contract_mapping_active_file": "",
@@ -238,7 +247,7 @@ def build_projection_profile_excluded_required_gate_bundle_target_projection(
         "resolved_source_layer": "",
         "lock_state": "",
         "run_id_binding": "",
-        "report_selected_path": "",
+        **{field: "" for field in REQUIRED_GATE_REPORT_AUTHORITY_FIELDS},
         "contract_mapping_entry": "",
         "contract_mapping": "",
         "contract_mapping_active_file": "",

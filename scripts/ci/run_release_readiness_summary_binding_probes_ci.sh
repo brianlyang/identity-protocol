@@ -56,6 +56,10 @@ base_payload = {
     'lock_state': 'LOCK_MATCH',
     'run_id_binding': 'probe-run-id',
     'report_selected_path': '/tmp/probe-report.json',
+    'report_selection_mode': 'explicit_report_override',
+    'report_selected_authority_class': 'explicit_report_override',
+    'report_pointer_resolution_mode': 'explicit_report_override',
+    'report_pointer_path': '',
     'results': [],
 }
 receipt_path.write_text(json.dumps(base_payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
@@ -194,6 +198,9 @@ readiness._hydrate_required_gate_bundle_summary(
 )
 assert summary_observed['required_gate_bundle']['bundle_status'] == 'PASS_REQUIRED', summary_observed
 assert summary_observed['required_gate_bundle']['projection_status'] == 'PASS_REQUIRED', summary_observed
+assert summary_observed['required_gate_bundle']['report_selection_mode'] == 'explicit_report_override', summary_observed
+assert summary_observed['required_gate_bundle']['report_selected_authority_class'] == 'explicit_report_override', summary_observed
+assert summary_observed['required_gate_bundle']['report_pointer_resolution_mode'] == 'explicit_report_override', summary_observed
 assert summary_observed['required_gate_bundle_scan_probe']['bundle_status'] == 'FAIL_REQUIRED', summary_observed
 assert summary_observed['required_gate_bundle_scan_probe']['projection_status'] == 'PASS_REQUIRED', summary_observed
 
@@ -564,6 +571,7 @@ final_rc = readiness._finalize_release_readiness_summary(
     summary_out=str(checkpoint_path),
     exit_code=0,
     execution_report='',
+    health_report_dir=str(tmp_root / 'health-report'),
     required_gate_bundle_receipt='',
     required_gate_bundle_receipt_probe='',
     repo_root=repo_root,
