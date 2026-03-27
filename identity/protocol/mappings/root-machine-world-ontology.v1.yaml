@@ -23,6 +23,28 @@ contract_required_markers:
   - '## Machine-world ontology proof limits'
   - '## Non-compliant ontology collapses'
   - 'The protocol must first define what objects are allowed to exist in the machine world, what each object is, and what it is not.'
+  - 'Machine-world ontology law must also remain machine-readable as separate strata, object, ontology-proof, ontology-limit, and collapse row families rather than one narrative naming claim.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Machine-world ontology row-family completeness must stay explicit'
+      - 'Required strata, object, ontology-proof, ontology-limit, and collapse families must remain explicit as separate machine-readable row families.'
+      - 'The machine world must not finalize machine-world ontology legality while required row identity drift remains known only internally.'
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root machine-world ontology completeness discipline'
+      - 'Machine-world ontology law is not a soft prose bundle.'
+      - '1. required strata, object, ontology-proof, ontology-limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root machine-world ontology completeness boundary'
+      - '1. Machine-world ontology law must remain machine-readable as separate strata, object, ontology-proof, ontology-limit, and collapse row families.'
+      - '4. Protocol legality must not finalize machine-world ontology legality while missing or unexpected row identities remain known only inside validator logic.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime machine-world ontology consumption boundary'
+      - '1. Runtime consumes machine-world ontology law as separate strata, object, ontology-proof, ontology-limit, and collapse row families rather than as undifferentiated naming prose.'
+      - '4. Runtime must not finalize machine-world ontology legality while missing or unexpected row identities remain known only inside validator machinery.'
 required_strata_rows:
   - order: 1
     stratum_id: identity_resolution_objects

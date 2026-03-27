@@ -84,6 +84,8 @@ So this file freezes machine-world ontology law, while runtime adjudication dete
 
 The protocol must first define what objects are allowed to exist in the machine world, what each object is, and what it is not.
 
+Machine-world ontology law must also remain machine-readable as separate strata, object, ontology-proof, ontology-limit, and collapse row families rather than one narrative naming claim.
+
 If object boundaries become vague, the machine world collapses into borrowed meanings, drifting paths, latest-as-current confusion, summary-as-truth confusion, history-as-authority confusion, or vague “memory” swallowing multiple distinct families.
 
 ## Four ontology strata
