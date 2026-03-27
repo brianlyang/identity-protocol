@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import tempfile
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -76,7 +77,21 @@ def utc_iso() -> str:
 
 
 def utc_timestamp() -> str:
-    return _utc_now().strftime("%Y%m%dT%H%M%SZ")
+    return _utc_now().strftime("%Y%m%dT%H%M%S%fZ")
+
+
+def _artifact_component(value: Any) -> str:
+    text = clean_string(value)
+    if not text:
+        return ""
+    cleaned = "".join(ch if ch.isalnum() or ch in "._-" else "-" for ch in text).strip("-._")
+    return cleaned or ""
+
+
+def _unique_runtime_artifact_token(*components: Any) -> str:
+    normalized = [_artifact_component(item) for item in components if _artifact_component(item)]
+    normalized.extend([utc_timestamp(), uuid.uuid4().hex[:8]])
+    return "-".join(normalized)
 
 
 def _json_text(payload: dict[str, Any]) -> str:
@@ -396,7 +411,25 @@ def resolve_dialogue_retention_reference(token: str, *, pack_root: Path) -> Path
     return None
 
 
-def latest_dialogue_retention_receipt(pack_root: Path) -> Path | None:
+def _receipt_matches_state_thread(receipt_doc: dict[str, Any], *, thread_id: str) -> bool:
+    expected_thread = clean_string(thread_id)
+    if expected_thread and clean_string(receipt_doc.get("thread_id")) != expected_thread:
+        return False
+    state_binding_update_applied = receipt_doc.get("state_binding_update_applied")
+    if state_binding_update_applied is False:
+        return False
+    sync_binding_mode = clean_string(receipt_doc.get("sync_binding_mode"))
+    if sync_binding_mode and sync_binding_mode != "active_current_thread":
+        return False
+    return True
+
+
+def latest_dialogue_retention_receipt(
+    pack_root: Path,
+    *,
+    thread_id: str = "",
+    state_bound_only: bool = False,
+) -> Path | None:
     report_root = dialogue_retention_report_root(pack_root)
     hits = sorted(
         (
@@ -405,17 +438,39 @@ def latest_dialogue_retention_receipt(pack_root: Path) -> Path | None:
             if path.is_file()
         ),
         key=lambda item: item.stat().st_mtime,
+        reverse=True,
     )
-    return hits[-1] if hits else None
+    expected_thread = clean_string(thread_id)
+    for candidate in hits:
+        if not expected_thread and not state_bound_only:
+            return candidate
+        try:
+            receipt_doc = _load_json(candidate)
+        except Exception:
+            continue
+        if expected_thread and clean_string(receipt_doc.get("thread_id")) != expected_thread:
+            continue
+        if state_bound_only and not _receipt_matches_state_thread(receipt_doc, thread_id=expected_thread):
+            continue
+        return candidate
+    return None
 
 
 def state_bound_dialogue_retention_receipt(pack_root: Path, *, state_doc: dict[str, Any] | None = None) -> Path | None:
     live_state = state_doc if isinstance(state_doc, dict) else load_optional_state(pack_root, identity_id=pack_root.name)
+    state_thread_id = clean_string(live_state.get("current_thread_id"))
     token = clean_string(live_state.get("latest_sync_receipt_ref"))
     if not token:
-        return None
+        return latest_dialogue_retention_receipt(pack_root, thread_id=state_thread_id, state_bound_only=True) if state_thread_id else None
     resolved = resolve_dialogue_retention_reference(token, pack_root=pack_root)
-    return resolved if resolved is not None and resolved.is_file() else None
+    if resolved is not None and resolved.is_file():
+        try:
+            receipt_doc = _load_json(resolved)
+        except Exception:
+            receipt_doc = {}
+        if not state_thread_id or _receipt_matches_state_thread(receipt_doc, thread_id=state_thread_id):
+            return resolved
+    return latest_dialogue_retention_receipt(pack_root, thread_id=state_thread_id, state_bound_only=True) if state_thread_id else None
 
 
 def resolve_dialogue_retention_validation_receipt(
@@ -512,7 +567,8 @@ def _write_delivery_supplement(
     apply: bool,
 ) -> dict[str, Any]:
     supplement_path = (
-        ctx.report_root / f"{DIALOGUE_RETENTION_SUPPLEMENT_PREFIX}{clean_string(thread_id)}-{utc_timestamp()}{DIALOGUE_RETENTION_SUPPLEMENT_SUFFIX}"
+        ctx.report_root
+        / f"{DIALOGUE_RETENTION_SUPPLEMENT_PREFIX}{_unique_runtime_artifact_token(thread_id)}{DIALOGUE_RETENTION_SUPPLEMENT_SUFFIX}"
     ).resolve()
     reply_payload = _reply_metrics(reply_file)
     payload = {
@@ -651,7 +707,8 @@ def sync_dialogue_retention(
             apply=apply,
         )
     receipt_path = (
-        ctx.report_root / f"{DIALOGUE_RETENTION_RECEIPT_PREFIX}{utc_timestamp()}{DIALOGUE_RETENTION_RECEIPT_SUFFIX}"
+        ctx.report_root
+        / f"{DIALOGUE_RETENTION_RECEIPT_PREFIX}{_unique_runtime_artifact_token(resolved_thread_id)}{DIALOGUE_RETENTION_RECEIPT_SUFFIX}"
     ).resolve()
     state_path = dialogue_retention_state_path(ctx.pack_root)
     receipt_doc = {
