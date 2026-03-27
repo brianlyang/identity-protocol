@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-27T12:01:53Z",
-  "git_head_short": "0dccdb7",
+  "generated_at_utc": "2026-03-27T12:13:56Z",
+  "git_head_short": "a93bc38",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -429,8 +429,8 @@
         "budget_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_alias_error": "",
-        "current_last_updated_utc": "2026-03-27T12:01:12Z",
-        "live_last_updated_utc": "2026-03-27T12:01:16Z",
+        "current_last_updated_utc": "2026-03-27T12:13:20Z",
+        "live_last_updated_utc": "2026-03-27T12:13:24Z",
         "mismatch_count": 0,
         "mismatches": [],
         "observed": {
@@ -3340,6 +3340,195 @@
         "root_dir": "identity/protocol",
         "transition_anchor_check_count": 4,
         "surface_class_profile_count": 16,
+        "direct_root_target_edge_count": 14,
+        "strengthening_gateway_edge_count": 40,
+        "transition_row_family_count": 3,
+        "transition_row_coverage_status": "PASS_REQUIRED",
+        "transition_row_identity_projection_status": "PASS_REQUIRED",
+        "row_family_projection_rows": [
+          {
+            "family_id": "surface_class_profiles",
+            "member_id_key": "surface_class",
+            "expected_count": 16,
+            "actual_count": 16,
+            "expected_ids": [
+              "bottom_theory",
+              "constitution",
+              "demoted_support_directory",
+              "governed_subdomain_extension",
+              "machine_registry_directory",
+              "outer_evidence_surface",
+              "outer_governance_surface",
+              "outer_implementation_surface",
+              "outer_receipt_surface",
+              "outer_reference_surface",
+              "outer_review_surface",
+              "outer_runtime_state_surface",
+              "outer_workbook_surface",
+              "root_contract",
+              "root_index",
+              "runtime_constitution"
+            ],
+            "actual_ids": [
+              "bottom_theory",
+              "constitution",
+              "demoted_support_directory",
+              "governed_subdomain_extension",
+              "machine_registry_directory",
+              "outer_evidence_surface",
+              "outer_governance_surface",
+              "outer_implementation_surface",
+              "outer_receipt_surface",
+              "outer_reference_surface",
+              "outer_review_surface",
+              "outer_runtime_state_surface",
+              "outer_workbook_surface",
+              "root_contract",
+              "root_index",
+              "runtime_constitution"
+            ],
+            "missing_ids": [],
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
+          },
+          {
+            "family_id": "direct_root_target_edges",
+            "member_id_key": "edge_id",
+            "expected_count": 14,
+            "actual_count": 14,
+            "expected_ids": [
+              "bottom_theory->constitution",
+              "bottom_theory->governed_subdomain_extension",
+              "bottom_theory->machine_registry_directory",
+              "bottom_theory->root_contract",
+              "bottom_theory->runtime_constitution",
+              "constitution->governed_subdomain_extension",
+              "constitution->machine_registry_directory",
+              "constitution->root_contract",
+              "constitution->runtime_constitution",
+              "root_contract->governed_subdomain_extension",
+              "root_contract->machine_registry_directory",
+              "runtime_constitution->governed_subdomain_extension",
+              "runtime_constitution->machine_registry_directory",
+              "runtime_constitution->root_contract"
+            ],
+            "actual_ids": [
+              "bottom_theory->constitution",
+              "bottom_theory->governed_subdomain_extension",
+              "bottom_theory->machine_registry_directory",
+              "bottom_theory->root_contract",
+              "bottom_theory->runtime_constitution",
+              "constitution->governed_subdomain_extension",
+              "constitution->machine_registry_directory",
+              "constitution->root_contract",
+              "constitution->runtime_constitution",
+              "root_contract->governed_subdomain_extension",
+              "root_contract->machine_registry_directory",
+              "runtime_constitution->governed_subdomain_extension",
+              "runtime_constitution->machine_registry_directory",
+              "runtime_constitution->root_contract"
+            ],
+            "missing_ids": [],
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
+          },
+          {
+            "family_id": "strengthening_gateway_edges",
+            "member_id_key": "edge_id",
+            "expected_count": 40,
+            "actual_count": 40,
+            "expected_ids": [
+              "demoted_support_directory->constitution",
+              "demoted_support_directory->machine_registry_directory",
+              "demoted_support_directory->root_contract",
+              "demoted_support_directory->runtime_constitution",
+              "governed_subdomain_extension->constitution",
+              "governed_subdomain_extension->machine_registry_directory",
+              "governed_subdomain_extension->root_contract",
+              "governed_subdomain_extension->runtime_constitution",
+              "machine_registry_directory->constitution",
+              "machine_registry_directory->root_contract",
+              "machine_registry_directory->runtime_constitution",
+              "outer_evidence_surface->constitution",
+              "outer_evidence_surface->machine_registry_directory",
+              "outer_evidence_surface->root_contract",
+              "outer_evidence_surface->runtime_constitution",
+              "outer_governance_surface->constitution",
+              "outer_governance_surface->machine_registry_directory",
+              "outer_governance_surface->root_contract",
+              "outer_governance_surface->runtime_constitution",
+              "outer_implementation_surface->machine_registry_directory",
+              "outer_implementation_surface->root_contract",
+              "outer_receipt_surface->machine_registry_directory",
+              "outer_receipt_surface->root_contract",
+              "outer_reference_surface->machine_registry_directory",
+              "outer_reference_surface->root_contract",
+              "outer_review_surface->constitution",
+              "outer_review_surface->machine_registry_directory",
+              "outer_review_surface->root_contract",
+              "outer_review_surface->runtime_constitution",
+              "outer_runtime_state_surface->machine_registry_directory",
+              "outer_runtime_state_surface->root_contract",
+              "outer_runtime_state_surface->runtime_constitution",
+              "outer_workbook_surface->constitution",
+              "outer_workbook_surface->machine_registry_directory",
+              "outer_workbook_surface->root_contract",
+              "outer_workbook_surface->runtime_constitution",
+              "root_index->constitution",
+              "root_index->machine_registry_directory",
+              "root_index->root_contract",
+              "root_index->runtime_constitution"
+            ],
+            "actual_ids": [
+              "demoted_support_directory->constitution",
+              "demoted_support_directory->machine_registry_directory",
+              "demoted_support_directory->root_contract",
+              "demoted_support_directory->runtime_constitution",
+              "governed_subdomain_extension->constitution",
+              "governed_subdomain_extension->machine_registry_directory",
+              "governed_subdomain_extension->root_contract",
+              "governed_subdomain_extension->runtime_constitution",
+              "machine_registry_directory->constitution",
+              "machine_registry_directory->root_contract",
+              "machine_registry_directory->runtime_constitution",
+              "outer_evidence_surface->constitution",
+              "outer_evidence_surface->machine_registry_directory",
+              "outer_evidence_surface->root_contract",
+              "outer_evidence_surface->runtime_constitution",
+              "outer_governance_surface->constitution",
+              "outer_governance_surface->machine_registry_directory",
+              "outer_governance_surface->root_contract",
+              "outer_governance_surface->runtime_constitution",
+              "outer_implementation_surface->machine_registry_directory",
+              "outer_implementation_surface->root_contract",
+              "outer_receipt_surface->machine_registry_directory",
+              "outer_receipt_surface->root_contract",
+              "outer_reference_surface->machine_registry_directory",
+              "outer_reference_surface->root_contract",
+              "outer_review_surface->constitution",
+              "outer_review_surface->machine_registry_directory",
+              "outer_review_surface->root_contract",
+              "outer_review_surface->runtime_constitution",
+              "outer_runtime_state_surface->machine_registry_directory",
+              "outer_runtime_state_surface->root_contract",
+              "outer_runtime_state_surface->runtime_constitution",
+              "outer_workbook_surface->constitution",
+              "outer_workbook_surface->machine_registry_directory",
+              "outer_workbook_surface->root_contract",
+              "outer_workbook_surface->runtime_constitution",
+              "root_index->constitution",
+              "root_index->machine_registry_directory",
+              "root_index->root_contract",
+              "root_index->runtime_constitution"
+            ],
+            "missing_ids": [],
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
+          }
+        ],
         "current_turn_allowed_root_surface": "machine_registry_directory",
         "surface_class_profiles": [
           {
@@ -3555,6 +3744,226 @@
             ],
             "direct_current_turn_legality_allowed": false,
             "strengthening_gateways": []
+          }
+        ],
+        "direct_root_target_edges": [
+          {
+            "surface_class": "bottom_theory",
+            "target": "constitution"
+          },
+          {
+            "surface_class": "bottom_theory",
+            "target": "governed_subdomain_extension"
+          },
+          {
+            "surface_class": "bottom_theory",
+            "target": "machine_registry_directory"
+          },
+          {
+            "surface_class": "bottom_theory",
+            "target": "root_contract"
+          },
+          {
+            "surface_class": "bottom_theory",
+            "target": "runtime_constitution"
+          },
+          {
+            "surface_class": "constitution",
+            "target": "governed_subdomain_extension"
+          },
+          {
+            "surface_class": "constitution",
+            "target": "machine_registry_directory"
+          },
+          {
+            "surface_class": "constitution",
+            "target": "root_contract"
+          },
+          {
+            "surface_class": "constitution",
+            "target": "runtime_constitution"
+          },
+          {
+            "surface_class": "root_contract",
+            "target": "governed_subdomain_extension"
+          },
+          {
+            "surface_class": "root_contract",
+            "target": "machine_registry_directory"
+          },
+          {
+            "surface_class": "runtime_constitution",
+            "target": "governed_subdomain_extension"
+          },
+          {
+            "surface_class": "runtime_constitution",
+            "target": "machine_registry_directory"
+          },
+          {
+            "surface_class": "runtime_constitution",
+            "target": "root_contract"
+          }
+        ],
+        "strengthening_gateway_edges": [
+          {
+            "surface_class": "demoted_support_directory",
+            "gateway": "constitution"
+          },
+          {
+            "surface_class": "demoted_support_directory",
+            "gateway": "machine_registry_directory"
+          },
+          {
+            "surface_class": "demoted_support_directory",
+            "gateway": "root_contract"
+          },
+          {
+            "surface_class": "demoted_support_directory",
+            "gateway": "runtime_constitution"
+          },
+          {
+            "surface_class": "governed_subdomain_extension",
+            "gateway": "constitution"
+          },
+          {
+            "surface_class": "governed_subdomain_extension",
+            "gateway": "machine_registry_directory"
+          },
+          {
+            "surface_class": "governed_subdomain_extension",
+            "gateway": "root_contract"
+          },
+          {
+            "surface_class": "governed_subdomain_extension",
+            "gateway": "runtime_constitution"
+          },
+          {
+            "surface_class": "machine_registry_directory",
+            "gateway": "constitution"
+          },
+          {
+            "surface_class": "machine_registry_directory",
+            "gateway": "root_contract"
+          },
+          {
+            "surface_class": "machine_registry_directory",
+            "gateway": "runtime_constitution"
+          },
+          {
+            "surface_class": "outer_evidence_surface",
+            "gateway": "constitution"
+          },
+          {
+            "surface_class": "outer_evidence_surface",
+            "gateway": "machine_registry_directory"
+          },
+          {
+            "surface_class": "outer_evidence_surface",
+            "gateway": "root_contract"
+          },
+          {
+            "surface_class": "outer_evidence_surface",
+            "gateway": "runtime_constitution"
+          },
+          {
+            "surface_class": "outer_governance_surface",
+            "gateway": "constitution"
+          },
+          {
+            "surface_class": "outer_governance_surface",
+            "gateway": "machine_registry_directory"
+          },
+          {
+            "surface_class": "outer_governance_surface",
+            "gateway": "root_contract"
+          },
+          {
+            "surface_class": "outer_governance_surface",
+            "gateway": "runtime_constitution"
+          },
+          {
+            "surface_class": "outer_implementation_surface",
+            "gateway": "machine_registry_directory"
+          },
+          {
+            "surface_class": "outer_implementation_surface",
+            "gateway": "root_contract"
+          },
+          {
+            "surface_class": "outer_receipt_surface",
+            "gateway": "machine_registry_directory"
+          },
+          {
+            "surface_class": "outer_receipt_surface",
+            "gateway": "root_contract"
+          },
+          {
+            "surface_class": "outer_reference_surface",
+            "gateway": "machine_registry_directory"
+          },
+          {
+            "surface_class": "outer_reference_surface",
+            "gateway": "root_contract"
+          },
+          {
+            "surface_class": "outer_review_surface",
+            "gateway": "constitution"
+          },
+          {
+            "surface_class": "outer_review_surface",
+            "gateway": "machine_registry_directory"
+          },
+          {
+            "surface_class": "outer_review_surface",
+            "gateway": "root_contract"
+          },
+          {
+            "surface_class": "outer_review_surface",
+            "gateway": "runtime_constitution"
+          },
+          {
+            "surface_class": "outer_runtime_state_surface",
+            "gateway": "machine_registry_directory"
+          },
+          {
+            "surface_class": "outer_runtime_state_surface",
+            "gateway": "root_contract"
+          },
+          {
+            "surface_class": "outer_runtime_state_surface",
+            "gateway": "runtime_constitution"
+          },
+          {
+            "surface_class": "outer_workbook_surface",
+            "gateway": "constitution"
+          },
+          {
+            "surface_class": "outer_workbook_surface",
+            "gateway": "machine_registry_directory"
+          },
+          {
+            "surface_class": "outer_workbook_surface",
+            "gateway": "root_contract"
+          },
+          {
+            "surface_class": "outer_workbook_surface",
+            "gateway": "runtime_constitution"
+          },
+          {
+            "surface_class": "root_index",
+            "gateway": "constitution"
+          },
+          {
+            "surface_class": "root_index",
+            "gateway": "machine_registry_directory"
+          },
+          {
+            "surface_class": "root_index",
+            "gateway": "root_contract"
+          },
+          {
+            "surface_class": "root_index",
+            "gateway": "runtime_constitution"
           }
         ],
         "structure_violations": [],
