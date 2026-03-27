@@ -7,7 +7,10 @@ from types import SimpleNamespace
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
-from root_contract_anchor_checks_common import evaluate_root_doc_anchor_checks
+from root_contract_anchor_checks_common import (
+    evaluate_root_doc_anchor_checks,
+    validate_expected_root_doc_anchor_checks,
+)
 from root_corpus_derivation_common import derivation_class_profiles_from_doc, load_root_corpus_derivation
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_question_routing_common import adjudication_redirect_from_doc, load_root_corpus_question_routing
@@ -154,6 +157,26 @@ ROOT_TRANSITION_EXPECTATIONS = {
 ALLOWED_REENTRY_GATEWAYS = {"constitution", "runtime_constitution", "root_contract", "machine_registry_directory"}
 EXPECTED_CURRENT_TURN_ROOT_CLASS = "machine_registry_directory"
 EXPECTED_SURFACE_CLASSES = sorted(set(ROOT_TRANSITION_EXPECTATIONS) | set(OUTER_SURFACE_EXPECTATIONS))
+EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
+    "identity/protocol/README.md": (
+        "## Root promotion-demotion discipline",
+        "outer governance, review, workbook, reference, evidence, runtime, receipt, and implementation surfaces may motivate strengthening, but they do not directly promote themselves into root law;",
+        "demoted support material cannot directly climb back into law-bearing root status;",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "### Promotion, demotion, and re-entry must stay governed",
+        "demotion removes law-bearing authority; it does not preserve a suspended sovereignty that can silently reclaim root status later;",
+        "outer governance, review, workbook, reference, evidence, runtime, receipt, and implementation surfaces may motivate strengthening, but they do not directly author root law by themselves;",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL.md": (
+        "## Root-law promotion and re-entry boundary",
+        "Promotion into root law without governed refreezing is non-compliant, even if the motivating surface contains true evidence.",
+    ),
+    "identity/protocol/IDENTITY_RUNTIME.md": (
+        "## Runtime-to-root promotion boundary",
+        "Runtime-origin evidence must re-enter shared law only through governed refreezing at constitutional, runtime-constitutional, root-contract, or machine-registry gateways.",
+    ),
+}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -239,6 +262,16 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if str(transition_doc.get("probe_script") or "").strip() != "scripts/ci/run_protocol_root_corpus_transition_probes_ci.sh":
             stale_reasons.append("root_corpus_transition_probe_script_invalid")
+            error_code = ERR_REGISTRY
+        anchor_reason_count_before = len(stale_reasons)
+        stale_reasons.extend(
+            validate_expected_root_doc_anchor_checks(
+                anchor_checks,
+                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+                stale_reason_prefix="root_corpus_transition",
+            )
+        )
+        if len(stale_reasons) > anchor_reason_count_before:
             error_code = ERR_REGISTRY
         if str(transition_doc.get("common_script") or "").strip() != "scripts/root_corpus_transition_common.py":
             stale_reasons.append("root_corpus_transition_common_script_invalid")
@@ -560,6 +593,7 @@ def main() -> int:
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
+    root_doc_anchor_status = STATUS_PASS_REQUIRED if not anchor_violations else STATUS_FAIL_REQUIRED
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_TRANSITION),
@@ -572,6 +606,8 @@ def main() -> int:
         "question_routing_entry_path": str(question_routing_entry_path),
         "question_routing_active_path": str(question_routing_active_path),
         "root_dir": str(transition_doc.get("root_dir") or ""),
+        "root_doc_anchor_check_count": len(anchor_checks),
+        "root_doc_anchor_status": root_doc_anchor_status,
         "transition_anchor_check_count": len(anchor_checks),
         "surface_class_profile_count": len(surface_profiles),
         "direct_root_target_edge_count": len(direct_root_target_edges),

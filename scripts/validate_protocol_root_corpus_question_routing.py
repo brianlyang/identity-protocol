@@ -6,7 +6,10 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
-from root_contract_anchor_checks_common import evaluate_root_doc_anchor_checks
+from root_contract_anchor_checks_common import (
+    evaluate_root_doc_anchor_checks,
+    validate_expected_root_doc_anchor_checks,
+)
 from root_corpus_authority_common import entry_authority_projections_from_doc, load_root_corpus_authority
 from root_corpus_gateway_admissibility_common import gateway_effect_targets_from_doc, load_root_corpus_gateway_admissibility
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
@@ -118,6 +121,82 @@ EXPECTED_FORBIDDEN_ROOT_CLASSES = (
     "governed_subdomain_extension",
     "demoted_support_directory",
 )
+EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
+    "identity/protocol/README.md": (
+        "## Root question-routing discipline",
+        "current-turn legality question must never terminate in philosophy text, README text, or frozen contract prose alone.",
+        "gateway-mediated refreezing or projection keeps the question class governed by the gateway target layer:",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "### Question class and answer surface must stay paired",
+        "No layer should answer a question that belongs to a different layer.",
+        "Gateway-mediated refreezing or projection must preserve the question class of its governed target layer rather than inheriting a new answer class from incoming motivation.",
+    ),
+    "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn machine-law primacy legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn machine-world ontology legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn epistemic legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn decision-evidence legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn success-path state legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn entry-surface legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/ERROR_TERMINALITY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn error terminality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn artifact-family admissibility must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn prompt legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/IDENTITY_DISCOVERY.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn discovery legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn self-judgement legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/AGENT_HANDOFF_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn handoff legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn responsibility legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn stream-design legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn truth lifecycle legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn answer-surface legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -238,6 +317,16 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if not adjudication_redirect.question_class:
             stale_reasons.append("root_corpus_question_routing_adjudication_redirect_missing")
+        anchor_reason_count_before = len(stale_reasons)
+        stale_reasons.extend(
+            validate_expected_root_doc_anchor_checks(
+                anchor_checks,
+                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+                stale_reason_prefix="root_corpus_question_routing",
+            )
+        )
+        if len(stale_reasons) > anchor_reason_count_before:
+            error_code = ERR_REGISTRY
             error_code = ERR_REGISTRY
 
     registry_paths = [entry.rel_path for entry in registry_entries]
@@ -631,6 +720,7 @@ def main() -> int:
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
+    root_doc_anchor_status = STATUS_PASS_REQUIRED if not anchor_violations else STATUS_FAIL_REQUIRED
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_ROUTING),
@@ -644,6 +734,8 @@ def main() -> int:
         "authority_active_path": str(authority_active_path),
         "root_dir": str(routing_doc.get("root_dir") or ""),
         "root_index_entry": root_index_entry,
+        "root_doc_anchor_check_count": len(anchor_checks),
+        "root_doc_anchor_status": root_doc_anchor_status,
         "question_routing_anchor_check_count": len(anchor_checks),
         "question_class_profile_count": len(question_profiles),
         "entry_question_projection_count": len(entry_projections),

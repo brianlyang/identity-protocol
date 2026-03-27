@@ -39,6 +39,8 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_question_routing_status"] == "PASS_REQUIRED", payload
+assert payload["root_doc_anchor_check_count"] == 18, payload
+assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["adjudication_redirect"]["question_class"] == "current_turn_legality", payload
 assert payload["question_routing_row_family_count"] == 3, payload
 assert payload["question_routing_row_coverage_status"] == "PASS_REQUIRED", payload
@@ -328,6 +330,7 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_question_routing_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCQR-003", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
 assert any(
     "anchor_violation:identity/protocol/README.md:required_marker_missing" == reason
     for reason in payload["stale_reasons"]

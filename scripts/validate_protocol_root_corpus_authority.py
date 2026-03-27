@@ -6,7 +6,10 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
-from root_contract_anchor_checks_common import evaluate_root_doc_anchor_checks
+from root_contract_anchor_checks_common import (
+    evaluate_root_doc_anchor_checks,
+    validate_expected_root_doc_anchor_checks,
+)
 from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 from root_corpus_authority_common import (
     STATUS_FAIL_REQUIRED,
@@ -81,6 +84,81 @@ ALLOWED_AUTHORITY_MODES = {
     "machine_consumed_family",
     "extension_family",
     "demoted_support_only",
+}
+EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
+    "identity/protocol/README.md": (
+        "## Authority layering",
+        "machine-consumed enforcement authority",
+        "Philosophical primacy, however, is not the same as runtime-source primacy.",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "philosophical primacy does not mean runtime-source primacy",
+        "machine-consumed authority still lives in frozen contracts, mappings, validators, runtime state, and receipts",
+    ),
+    "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn machine-law primacy legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn machine-world ontology legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn epistemic legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn decision-evidence legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn success-path state legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn entry-surface legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/ERROR_TERMINALITY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn error terminality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn artifact-family admissibility must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn prompt legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/IDENTITY_DISCOVERY.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn discovery legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn self-judgement legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/AGENT_HANDOFF_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn handoff legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn responsibility legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn stream-design legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn truth lifecycle legality must still resolve from machine-consumed enforcement surfaces",
+    ),
+    "identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md": (
+        "## Runtime adjudication boundary",
+        "Current-turn answer-surface legality must still resolve from machine-consumed enforcement surfaces",
+    ),
 }
 
 
@@ -171,6 +249,16 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if not entry_projections:
             stale_reasons.append("root_corpus_authority_entry_projection_missing")
+            error_code = ERR_REGISTRY
+        anchor_reason_count_before = len(stale_reasons)
+        stale_reasons.extend(
+            validate_expected_root_doc_anchor_checks(
+                anchor_checks,
+                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+                stale_reason_prefix="root_corpus_authority",
+            )
+        )
+        if len(stale_reasons) > anchor_reason_count_before:
             error_code = ERR_REGISTRY
 
     registry_paths = [entry.rel_path for entry in registry_entries]
@@ -441,6 +529,7 @@ def main() -> int:
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
+    root_doc_anchor_status = STATUS_PASS_REQUIRED if not anchor_violations else STATUS_FAIL_REQUIRED
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_AUTHORITY),
@@ -452,6 +541,8 @@ def main() -> int:
         "ordering_active_path": str(ordering_active_path),
         "root_dir": str(authority_doc.get("root_dir") or ""),
         "root_index_entry": root_index_entry,
+        "root_doc_anchor_check_count": len(anchor_checks),
+        "root_doc_anchor_status": root_doc_anchor_status,
         "authority_anchor_check_count": len(anchor_checks),
         "authority_class_profile_count": len(class_profiles),
         "entry_authority_projection_count": len(entry_projections),

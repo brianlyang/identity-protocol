@@ -37,6 +37,8 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_authority_status"] == "PASS_REQUIRED", payload
+assert payload["root_doc_anchor_check_count"] == 18, payload
+assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["authority_row_family_count"] == 2, payload
 assert payload["authority_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["authority_row_identity_projection_status"] == "PASS_REQUIRED", payload
@@ -298,6 +300,7 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_authority_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCA-003", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
 assert any("anchor_violation:identity/protocol/README.md:required_marker_missing" == reason for reason in payload["stale_reasons"]), payload
 PY
 

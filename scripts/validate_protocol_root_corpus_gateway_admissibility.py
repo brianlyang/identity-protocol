@@ -7,7 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
-from root_contract_anchor_checks_common import evaluate_root_doc_anchor_checks
+from root_contract_anchor_checks_common import (
+    evaluate_root_doc_anchor_checks,
+    validate_expected_root_doc_anchor_checks,
+)
 from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 from root_corpus_authority_common import authority_class_profiles_from_doc, load_root_corpus_authority
 from root_corpus_gateway_admissibility_common import (
@@ -75,6 +78,41 @@ EXPECTED_GATEWAY_METADATA = {
         "expected_effect_target_question_class": "registry_resolution",
         "expected_effect_target_answer_mode": "machine_registry_answer",
     },
+}
+EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
+    "identity/protocol/README.md": (
+        "## Root gateway-admissibility discipline",
+        "gateway admission decides which non-origin surfaces may legally motivate each root gateway;",
+        "admission only permits governed re-entry at that gateway's own effect scope and effect target class;",
+        "gateway effect target stays fixed by gateway class itself; incoming motivation may not choose a different root output class;",
+        "gateway effect target also keeps the question class governed for that target layer; incoming motivation may not retag gateway output as a different answer class;",
+        "gateway admission does not let an incoming surface inherit the gateway's authorship.",
+        "The governed re-entry chain stays explicit as: constitution -> runtime constitution -> root contract -> machine-registry.",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "### Gateway admission must preserve source order",
+        "a gateway is a legal re-entry port, not an origin substitute;",
+        "entering a gateway does not let an incoming surface inherit bottom-theory or constitutional authorship;",
+        "gateway effect target stays fixed by gateway kind; entering one gateway does not let incoming motivation choose a different downstream root class;",
+        "gateway output must also retain the question class governed for that target layer, rather than inheriting a new answer class from incoming motivation;",
+        "The governed re-entry chain must stay explicit as: constitution -> runtime constitution -> root contract -> machine-registry.",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL.md": (
+        "## Root gateway-admissibility boundary",
+        "Gateway admission is narrower than general motivation to strengthen.",
+        "Gateway effect target is fixed by gateway class itself; gateway admission cannot directly emit a different root target class than the one governed for that gateway.",
+        "Gateway effect target also retains the question class governed for that target layer rather than inheriting a new answer class from incoming motivation.",
+        "Machine-registry gateway may terminate current-turn legality, but that does not let incoming motivation surfaces author upstream law.",
+        "- governed re-entry chain: constitution -> runtime constitution -> root contract -> machine-registry",
+    ),
+    "identity/protocol/IDENTITY_RUNTIME.md": (
+        "## Runtime-origin gateway-admissibility boundary",
+        "Runtime-origin material may motivate only the gateways whose admissibility contract explicitly allows it;",
+        "Runtime-origin admission cannot choose a different gateway effect target than the class governed for that gateway.",
+        "Runtime-origin admission also cannot retag gateway output into a different question class than the one governed for that target layer.",
+        "Runtime motivation entering a gateway still requires governed refreezing or governed projection before it becomes shared law.",
+        "Runtime-origin gateway progression still follows the explicit re-entry chain: constitution -> runtime constitution -> root contract -> machine-registry.",
+    ),
 }
 
 
@@ -233,6 +271,16 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if not gateway_profiles:
             stale_reasons.append("root_corpus_gateway_admissibility_profiles_missing")
+            error_code = ERR_REGISTRY
+        anchor_reason_count_before = len(stale_reasons)
+        stale_reasons.extend(
+            validate_expected_root_doc_anchor_checks(
+                anchor_checks,
+                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+                stale_reason_prefix="root_corpus_gateway_admissibility",
+            )
+        )
+        if len(stale_reasons) > anchor_reason_count_before:
             error_code = ERR_REGISTRY
 
     registry_paths = {entry.rel_path for entry in registry_entries}
@@ -698,6 +746,7 @@ def main() -> int:
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
+    root_doc_anchor_status = STATUS_PASS_REQUIRED if not anchor_violations else STATUS_FAIL_REQUIRED
 
     payload = {
         STATUS_KEY: status,
@@ -715,6 +764,8 @@ def main() -> int:
         "question_routing_entry_path": str(question_routing_entry_path),
         "question_routing_active_path": str(question_routing_active_path),
         "root_dir": str(admissibility_doc.get("root_dir") or ""),
+        "root_doc_anchor_check_count": len(anchor_checks),
+        "root_doc_anchor_status": root_doc_anchor_status,
         "gateway_anchor_check_count": len(anchor_checks),
         "gateway_order_count": len(gateway_order_rows),
         "gateway_effect_target_count": len(gateway_effect_targets),

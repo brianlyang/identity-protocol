@@ -41,6 +41,8 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_gateway_admissibility_status"] == "PASS_REQUIRED", payload
+assert payload["root_doc_anchor_check_count"] == 4, payload
+assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["gateway_admissibility_row_family_count"] == 3, payload
 assert payload["gateway_admissibility_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["gateway_admissibility_row_identity_projection_status"] == "PASS_REQUIRED", payload
@@ -391,6 +393,7 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_gateway_admissibility_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RGA-003", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["rel_path"] == "identity/protocol/README.md" and row["reason"] == "required_marker_missing"
     for row in payload["anchor_violations"]

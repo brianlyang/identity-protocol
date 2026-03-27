@@ -39,6 +39,8 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_transition_status"] == "PASS_REQUIRED", payload
+assert payload["root_doc_anchor_check_count"] == 4, payload
+assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["current_turn_allowed_root_surface"] == "machine_registry_directory", payload
 assert payload["transition_row_family_count"] == 3, payload
 assert payload["transition_row_coverage_status"] == "PASS_REQUIRED", payload
@@ -304,6 +306,7 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_transition_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCT-003", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["rel_path"] == "identity/protocol/README.md" and row["reason"] == "required_marker_missing"
     for row in payload["anchor_violations"]
