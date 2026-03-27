@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
+from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 from root_corpus_authority_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -101,6 +102,7 @@ def main() -> int:
     structure_violations: list[dict[str, Any]] = []
     authority_violations: list[dict[str, Any]] = []
     anchor_violations: list[dict[str, Any]] = []
+    row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
 
     if authority_alias_error:
@@ -417,6 +419,38 @@ def main() -> int:
     stale_reasons.extend(f"anchor_violation:{row['rel_path']}:{row['reason']}" for row in anchor_violations)
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
+    row_family_projection_rows = [
+        project_row_family(
+            family_id="authority_class_profiles",
+            member_id_key="corpus_class",
+            actual_rows=class_profiles,
+            expected_rows={corpus_class: {} for corpus_class in registry_classes},
+            id_attr="corpus_class",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        project_row_family(
+            family_id="entry_authority_projection",
+            member_id_key="rel_path",
+            actual_rows=entry_projections,
+            expected_rows={rel_path: {} for rel_path in registry_paths},
+            id_attr="rel_path",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+    ]
+    authority_row_coverage_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="coverage_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
+    authority_row_identity_projection_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="identity_projection_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_AUTHORITY),
@@ -431,6 +465,10 @@ def main() -> int:
         "authority_anchor_check_count": len(anchor_checks),
         "authority_class_profile_count": len(class_profiles),
         "entry_authority_projection_count": len(entry_projections),
+        "authority_row_family_count": len(row_family_projection_rows),
+        "authority_row_coverage_status": authority_row_coverage_status,
+        "authority_row_identity_projection_status": authority_row_identity_projection_status,
+        "row_family_projection_rows": row_family_projection_rows,
         "authority_class_profiles": [
             {
                 "corpus_class": row.corpus_class,

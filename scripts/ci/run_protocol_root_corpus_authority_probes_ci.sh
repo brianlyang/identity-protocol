@@ -31,8 +31,131 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_authority_status"] == "PASS_REQUIRED", payload
+assert payload["authority_row_family_count"] == 2, payload
+assert payload["authority_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["authority_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert payload["root_index_entry"] == "identity/protocol/README.md", payload
 assert any(row["corpus_class"] == "bottom_theory" and row["philosophical_primacy"] for row in payload["authority_class_profiles"]), payload
+PY
+
+MISSING_CLASS_REPO="${TMP_ROOT}/missing-class-repo"
+mirror_repo "${MISSING_CLASS_REPO}"
+python3 - <<'PY' "${MISSING_CLASS_REPO}/identity/protocol/mappings/root-corpus-authority.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["authority_class_profiles"] = [
+    row for row in doc["authority_class_profiles"]
+    if row.get("corpus_class") != "demoted_support_directory"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+MISSING_CLASS_JSON="${TMP_ROOT}/missing-class.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_authority.py" \
+  --repo-root "${MISSING_CLASS_REPO}" \
+  --json-only >"${MISSING_CLASS_JSON}"; then
+  echo "[FAIL] root corpus authority validator unexpectedly passed after removing authority class profile row"
+  exit 1
+fi
+
+python3 - <<'PY' "${MISSING_CLASS_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_authority_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCA-002", payload
+assert payload["authority_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["authority_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["field"] == "authority_class_profiles" and row["reason"] == "missing_registry_classes" and "demoted_support_directory" in row.get("corpus_classes", [])
+    for row in payload["structure_violations"]
+), payload
+class_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "authority_class_profiles"
+)
+entry_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "entry_authority_projection"
+)
+assert class_row["expected_count"] == 8, payload
+assert class_row["actual_count"] == 7, payload
+assert class_row["missing_ids"] == ["demoted_support_directory"], payload
+assert class_row["unexpected_ids"] == [], payload
+assert class_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert class_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert entry_row["coverage_status"] == "PASS_REQUIRED", payload
+assert entry_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+IDENTITY_REPO="${TMP_ROOT}/identity-drift-repo"
+mirror_repo "${IDENTITY_REPO}"
+python3 - <<'PY' "${IDENTITY_REPO}/identity/protocol/mappings/root-corpus-authority.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["authority_class_profiles"]:
+    if row.get("corpus_class") == "demoted_support_directory":
+        row["corpus_class"] = "demoted_support_directory_alias"
+        break
+else:
+    raise SystemExit("expected demoted_support_directory row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+IDENTITY_JSON="${TMP_ROOT}/identity-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_authority.py" \
+  --repo-root "${IDENTITY_REPO}" \
+  --json-only >"${IDENTITY_JSON}"; then
+  echo "[FAIL] root corpus authority validator unexpectedly passed authority class identity drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${IDENTITY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_authority_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCA-002", payload
+assert payload["authority_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["authority_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["field"] == "authority_class_profiles" and row["reason"] == "missing_registry_classes" and "demoted_support_directory" in row.get("corpus_classes", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "authority_class_profiles" and row["reason"] == "extra_unregistered_classes" and "demoted_support_directory_alias" in row.get("corpus_classes", [])
+    for row in payload["structure_violations"]
+), payload
+class_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "authority_class_profiles"
+)
+entry_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "entry_authority_projection"
+)
+assert class_row["expected_count"] == 8, payload
+assert class_row["actual_count"] == 8, payload
+assert class_row["missing_ids"] == ["demoted_support_directory"], payload
+assert class_row["unexpected_ids"] == ["demoted_support_directory_alias"], payload
+assert class_row["coverage_status"] == "PASS_REQUIRED", payload
+assert class_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert entry_row["coverage_status"] == "PASS_REQUIRED", payload
+assert entry_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 PRIMACY_REPO="${TMP_ROOT}/primacy-drift-repo"
