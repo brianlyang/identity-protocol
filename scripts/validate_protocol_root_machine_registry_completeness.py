@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+from types import SimpleNamespace
 from typing import Any
 
 from registry_alias_control_plane_common import resolve_current_yaml_alias
@@ -32,6 +33,7 @@ from root_machine_registry_completeness_common import (
     required_descriptor_fields_from_doc,
     require_self_describing_families,
 )
+from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 
 STATUS_KEY = "protocol_root_machine_registry_completeness_status"
 ERR_REGISTRY = "IP-RMRC-001"
@@ -69,6 +71,8 @@ def main() -> int:
     missing_family_status_row_ids: list[str] = []
     unexpected_family_status_row_ids: list[str] = []
     family_status_row_identity_projection_incomplete = False
+    registered_complete_family_ids: list[str] = []
+    row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
 
     for prefix, doc, alias_error, empty_reason in (
@@ -206,6 +210,20 @@ def main() -> int:
             registered_children: set[str] = set()
         else:
             registered_children = set(mappings_entry.required_children)
+            prefix = str(completeness_doc.get("root_family_prefix") or "")
+            current_suffix = str(completeness_doc.get("current_suffix") or "")
+            registered_current_family_ids: set[str] = set()
+            registered_version_family_ids: set[str] = set()
+            for child in sorted(
+                child for child in registered_children if child.startswith(prefix) and child.endswith(".yaml")
+            ):
+                if current_suffix and child.endswith(current_suffix):
+                    registered_current_family_ids.add(child[: -len(current_suffix)])
+                elif version_re and version_re.fullmatch(child):
+                    registered_version_family_ids.add(child.split(".v", 1)[0])
+            registered_complete_family_ids = sorted(
+                registered_current_family_ids & registered_version_family_ids
+            )
 
         if registry_dir.exists() and registry_dir.is_dir():
             prefix = str(completeness_doc.get("root_family_prefix") or "")
@@ -718,6 +736,42 @@ def main() -> int:
         if family_status_row_identity_projection_incomplete
         else STATUS_PASS_REQUIRED
     )
+    row_family_projection_rows = [
+        project_row_family(
+            family_id="registered_complete_root_mapping_families",
+            member_id_key="family_id",
+            actual_rows=[
+                SimpleNamespace(family_id=family_id) for family_id in discovered_family_ids
+            ],
+            expected_rows={family_id: {} for family_id in registered_complete_family_ids},
+            id_attr="family_id",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        project_row_family(
+            family_id="family_status_rows",
+            member_id_key="family_id",
+            actual_rows=[
+                SimpleNamespace(family_id=family_id) for family_id in family_status_row_ids
+            ],
+            expected_rows={family_id: {} for family_id in discovered_family_ids},
+            id_attr="family_id",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+    ]
+    machine_registry_completeness_row_coverage_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="coverage_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
+    machine_registry_completeness_row_identity_projection_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="identity_projection_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
     payload = {
         STATUS_KEY: status,
         "completeness_family": str(completeness_doc.get("completeness_family") or ""),
@@ -736,6 +790,8 @@ def main() -> int:
         "family_surface_stem_overrides": dict(family_surface_stem_overrides),
         "required_repo_rel_path_patterns": dict(required_repo_rel_path_patterns),
         "family_count": len(family_status_rows),
+        "registered_complete_family_count": len(registered_complete_family_ids),
+        "registered_complete_family_ids": registered_complete_family_ids,
         "family_status_row_count": len(family_status_rows),
         "expected_family_status_row_count": expected_family_status_row_count,
         "family_status_row_coverage_status": family_status_row_coverage_status,
@@ -747,6 +803,13 @@ def main() -> int:
         "family_status_row_identity_projection_status": (
             family_status_row_identity_projection_status
         ),
+        "machine_registry_completeness_row_family_count": len(row_family_projection_rows),
+        "machine_registry_completeness_row_coverage_status": (
+            machine_registry_completeness_row_coverage_status
+        ),
+        "machine_registry_completeness_row_identity_projection_status": (
+            machine_registry_completeness_row_identity_projection_status
+        ),
         "structure_violation_count": len(structure_violations),
         "completeness_violation_count": len(completeness_violations),
         "anchor_violation_count": len(anchor_violations),
@@ -756,6 +819,7 @@ def main() -> int:
         ),
         "violation_projection_status": violation_projection_status,
         "family_ids": [row["family_id"] for row in family_status_rows],
+        "row_family_projection_rows": row_family_projection_rows,
         "family_status_rows": family_status_rows,
         "structure_violations": structure_violations,
         "completeness_violations": completeness_violations,

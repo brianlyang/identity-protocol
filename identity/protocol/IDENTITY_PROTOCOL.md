@@ -139,16 +139,17 @@ Status transitions are controlled by governance/review, not by script commit alo
 8. Role-typed repo-relative descriptor surfaces disclosed by an admitted family must also stay cross-role coherent; validator/probe/common may not silently bind to different root surface stems.
 9. Cross-role coherent descriptor surfaces disclosed by an admitted family must also stay family-congruent; borrowing another family's descriptor stem requires explicit registry-completeness declaration rather than silent impersonation.
 
-Machine-registry completeness must also keep discovered family coverage
-explicit; discovered root-mapping-family total must remain congruent with
-family-status-row total rather than being left implicit.
+Machine-registry completeness must also keep admitted family and emitted
+status disclosure explicit as separate row families; registered-complete
+root-mapping-family total must remain congruent with family-status-row
+total rather than being left implicit.
 
-Machine-registry completeness must also keep discovered family identity
-projection explicit; discovered family set may not be collapsed into the
-emitted family-status-row subset.
+Machine-registry completeness must also keep admitted family identity
+projection explicit; the registered complete family set may not be
+collapsed into the emitted family-status-row subset.
 
 Registry-completeness truth may not finalize on partial family-status-row
-coverage while the discovered family set remains known.
+coverage while the registered complete family set remains known.
 
 Machine-registry completeness must also keep violation projection
 explicit; structure, completeness, and anchor violations must be

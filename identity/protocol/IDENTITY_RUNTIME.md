@@ -93,18 +93,18 @@ Runtime meaning:
 8. Runtime must also reject cross-role incoherent descriptor sets; validator/probe/common surfaces for one admitted family must converge on one root surface stem.
 9. Runtime must also reject undeclared family-incongruent descriptor sets; even a coherent validator/probe/common set is non-canonical unless any cross-family stem binding is explicitly declared by registry completeness law.
 
-Runtime must also keep discovered family coverage explicit during
-machine-registry validation; discovered root-mapping-family total must
-remain congruent with family-status-row total rather than being left
-implicit.
+Runtime must also keep admitted family and emitted status disclosure
+explicit during machine-registry validation; registered-complete
+root-mapping-family total must remain congruent with family-status-row
+total rather than being left implicit.
 
-Runtime must also keep discovered family identity projection explicit;
-discovered family set may not be collapsed into the emitted
+Runtime must also keep admitted family identity projection explicit; the
+registered complete family set may not be collapsed into the emitted
 family-status-row subset.
 
 Runtime must not emit final machine-registry completeness truth with
-partial family-status-row coverage when the discovered family set remains
-known.
+partial family-status-row coverage when the registered complete family
+set remains known.
 
 Runtime must also keep machine-registry violation projection explicit;
 structure, completeness, and anchor violations must be projected into

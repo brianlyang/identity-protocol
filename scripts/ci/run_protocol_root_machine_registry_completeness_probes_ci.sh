@@ -41,10 +41,15 @@ assert payload["required_repo_rel_path_patterns"] == {
     "common_script": r"^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\.py$",
 }, payload
 assert payload["family_count"] == payload["family_status_row_count"], payload
+assert payload["registered_complete_family_count"] == payload["discovered_family_count"], payload
 assert payload["discovered_family_count"] == payload["family_status_row_count"], payload
 assert payload["expected_family_status_row_count"] == payload["family_status_row_count"], payload
 assert payload["family_status_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_registry_completeness_row_family_count"] == 2, payload
+assert payload["machine_registry_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_registry_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["family_ids"] == payload["family_status_row_ids"] == payload["discovered_family_ids"], payload
+assert payload["registered_complete_family_ids"] == payload["discovered_family_ids"], payload
 assert payload["missing_family_status_row_ids"] == [], payload
 assert payload["unexpected_family_status_row_ids"] == [], payload
 assert payload["family_status_row_identity_projection_status"] == "PASS_REQUIRED", payload
@@ -82,6 +87,32 @@ assert any(
     and row.get("expected_family_surface_stem") == "root_corpus_governance"
     for row in payload["family_status_rows"]
 ), payload
+assert {row["family_id"] for row in payload["row_family_projection_rows"]} == {
+    "registered_complete_root_mapping_families",
+    "family_status_rows",
+}, payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+registered_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "registered_complete_root_mapping_families"
+)
+status_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "family_status_rows"
+)
+assert registered_row["expected_count"] == payload["registered_complete_family_count"], payload
+assert registered_row["actual_count"] == payload["discovered_family_count"], payload
+assert registered_row["missing_ids"] == [], payload
+assert registered_row["unexpected_ids"] == [], payload
+assert registered_row["coverage_status"] == "PASS_REQUIRED", payload
+assert registered_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert status_row["expected_count"] == payload["discovered_family_count"], payload
+assert status_row["actual_count"] == payload["family_status_row_count"], payload
+assert status_row["missing_ids"] == [], payload
+assert status_row["unexpected_ids"] == [], payload
+assert status_row["coverage_status"] == "PASS_REQUIRED", payload
+assert status_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 ABSOLUTE_PATH_REPO="${TMP_ROOT}/absolute-path-drift-repo"
@@ -460,6 +491,23 @@ assert any(
     row["reason"] == "version_file_not_registered" and row.get("family_id") == "root-corpus-law-bundle"
     for row in payload["completeness_violations"]
 ), payload
+assert payload["machine_registry_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["machine_registry_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+registered_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "registered_complete_root_mapping_families"
+)
+status_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "family_status_rows"
+)
+assert registered_row["expected_count"] + 1 == registered_row["actual_count"], payload
+assert registered_row["missing_ids"] == [], payload
+assert registered_row["unexpected_ids"] == ["root-corpus-law-bundle"], payload
+assert registered_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert registered_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert status_row["coverage_status"] == "PASS_REQUIRED", payload
+assert status_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 STRAY_REPO="${TMP_ROOT}/stray-family-repo"
@@ -490,6 +538,23 @@ assert any(
     row["reason"] == "current_file_not_registered" and row.get("family_id") == "root-shadow-lane"
     for row in payload["completeness_violations"]
 ), payload
+assert payload["machine_registry_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["machine_registry_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+registered_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "registered_complete_root_mapping_families"
+)
+status_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "family_status_rows"
+)
+assert registered_row["expected_count"] + 1 == registered_row["actual_count"], payload
+assert registered_row["missing_ids"] == [], payload
+assert "root-shadow-lane" in registered_row["unexpected_ids"], payload
+assert registered_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert registered_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert status_row["coverage_status"] == "PASS_REQUIRED", payload
+assert status_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 ANCHOR_REPO="${TMP_ROOT}/anchor-drift-repo"
@@ -556,6 +621,67 @@ assert any(
 ), payload
 PY
 
+FAMILY_IDENTITY_DRIFT_REPO="${TMP_ROOT}/family-identity-drift-repo"
+mirror_repo "${FAMILY_IDENTITY_DRIFT_REPO}"
+cp "${FAMILY_IDENTITY_DRIFT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml" \
+  "${FAMILY_IDENTITY_DRIFT_REPO}/identity/protocol/mappings/root-shadow-lane.v1.yaml"
+cat > "${FAMILY_IDENTITY_DRIFT_REPO}/identity/protocol/mappings/root-shadow-lane.current.yaml" <<'EOF'
+active_file: identity/protocol/mappings/root-shadow-lane.v1.yaml
+EOF
+rm \
+  "${FAMILY_IDENTITY_DRIFT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.current.yaml" \
+  "${FAMILY_IDENTITY_DRIFT_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+
+FAMILY_IDENTITY_DRIFT_JSON="${TMP_ROOT}/family-identity-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${FAMILY_IDENTITY_DRIFT_REPO}" \
+  --json-only >"${FAMILY_IDENTITY_DRIFT_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed family identity drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${FAMILY_IDENTITY_DRIFT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert any(
+    row["reason"] == "registered_child_missing_on_disk"
+    and row.get("child") == "root-corpus-law-bundle.current.yaml"
+    for row in payload["completeness_violations"]
+), payload
+assert any(
+    row["reason"] == "registered_child_missing_on_disk"
+    and row.get("child") == "root-corpus-law-bundle.v1.yaml"
+    for row in payload["completeness_violations"]
+), payload
+assert any(
+    row["reason"] == "current_file_not_registered"
+    and row.get("family_id") == "root-shadow-lane"
+    for row in payload["completeness_violations"]
+), payload
+assert payload["machine_registry_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_registry_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+registered_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "registered_complete_root_mapping_families"
+)
+status_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "family_status_rows"
+)
+assert registered_row["expected_count"] == registered_row["actual_count"], payload
+assert registered_row["missing_ids"] == ["root-corpus-law-bundle"], payload
+assert registered_row["unexpected_ids"] == ["root-shadow-lane"], payload
+assert registered_row["coverage_status"] == "PASS_REQUIRED", payload
+assert registered_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert status_row["coverage_status"] == "PASS_REQUIRED", payload
+assert status_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
 FAMILY_ROW_COVERAGE_REPO="${TMP_ROOT}/family-row-coverage-repo"
 mirror_repo "${FAMILY_ROW_COVERAGE_REPO}"
 python3 - <<'PY' "${FAMILY_ROW_COVERAGE_REPO}/scripts/validate_protocol_root_machine_registry_completeness.py"
@@ -593,12 +719,28 @@ assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_RE
 assert payload["error_code"] == "IP-RMRC-003", payload
 assert payload["family_status_row_coverage_status"] == "FAIL_REQUIRED", payload
 assert payload["family_status_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["machine_registry_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["machine_registry_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert payload["family_status_row_count"] + 1 == payload["expected_family_status_row_count"], payload
 assert payload["discovered_family_count"] == payload["expected_family_status_row_count"], payload
 assert "root-corpus-authority" in payload["discovered_family_ids"], payload
 assert "root-corpus-authority" in payload["missing_family_status_row_ids"], payload
 assert "root-corpus-authority" not in payload["family_status_row_ids"], payload
 assert payload["unexpected_family_status_row_ids"] == [], payload
+registered_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "registered_complete_root_mapping_families"
+)
+status_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "family_status_rows"
+)
+assert registered_row["coverage_status"] == "PASS_REQUIRED", payload
+assert registered_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert status_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert status_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert "root-corpus-authority" in status_row["missing_ids"], payload
+assert status_row["unexpected_ids"] == [], payload
 assert any(
     row["reason"] == "family_status_row_coverage_incomplete"
     and row.get("expected_count") == payload["expected_family_status_row_count"]

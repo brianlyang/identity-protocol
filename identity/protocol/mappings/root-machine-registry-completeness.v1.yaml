@@ -43,6 +43,8 @@ anchor_checks:
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
   required_markers:
   - '### Machine-registry completeness must stay explicit'
+  - Registered-complete root-mapping-family total and family-status-row total
+    must therefore stay congruent under machine-readable coverage
   - Machine-registry law does not become canonical merely because a mapping file
   - A governed root mapping family must be admitted into the registry directory
   - registry-completeness failure rather than a
@@ -66,6 +68,8 @@ anchor_checks:
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root machine-registry completeness discipline'
+  - Registered-complete root-mapping-family total and family-status-row total
+    must also remain congruent under machine-readable coverage completeness
   - a law-bearing root mapping family does not gain canonical status from on-disk
     presence alone;
   - a governed root mapping family must appear in the admitted machine-registry child
@@ -89,6 +93,8 @@ anchor_checks:
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root machine-registry completeness boundary'
+  - Machine-registry completeness must also keep admitted family and emitted
+    status disclosure explicit as separate row families
   - Law-bearing root mapping families under `identity/protocol/mappings/` become canonical
     only when admitted by the machine-registry directory child set.
   - On-disk presence without registry admission does not authorize current-turn consumption,
@@ -112,6 +118,8 @@ anchor_checks:
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime registry-completeness boundary'
+  - Runtime must also keep admitted family and emitted status disclosure
+    explicit during machine-registry validation
   - Runtime may consume only root mapping families admitted by governed machine-registry
     completeness law.
   - A root mapping file present on disk but absent from the admitted child set is
