@@ -136,6 +136,22 @@ def default_launcher_config_home(bin_dir: Path | None = None) -> Path:
     return (resolved_bin_dir.parent / ".identity").resolve()
 
 
+def resolve_launcher_config_home(
+    *,
+    explicit_identity_home: str | Path | None = None,
+    bin_dir: Path | None = None,
+) -> tuple[Path, str]:
+    explicit_token = str(explicit_identity_home or "").strip()
+    if explicit_token:
+        return Path(explicit_token).expanduser().resolve(), "explicit_identity_home"
+
+    ambient_identity_home = str(os.environ.get("IDENTITY_HOME", "")).strip()
+    if ambient_identity_home:
+        return Path(ambient_identity_home).expanduser().resolve(), "ambient_identity_home_env"
+
+    return default_launcher_config_home(bin_dir), "bin_dir_parent_identity_home"
+
+
 def runtime_paths_config_path(identity_home: Path | None = None) -> Path:
     root = identity_home if identity_home is not None else default_identity_home()
     return (root / RUNTIME_PATHS_CONFIG_REL).resolve()

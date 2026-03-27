@@ -11,11 +11,11 @@ from identity_codex_launcher_common import (
     RUNTIME_PATHS_BINDING_MODE_PROTOCOL_HOME_ONLY,
     STATUS_PASS_REQUIRED,
     default_bin_dir,
-    default_launcher_config_home,
     ensure_launcher_assets,
     ensure_launcher_contract,
     install_launcher_shims,
     observe_launcher_surface,
+    resolve_launcher_config_home,
     runtime_identity_home_for_catalog,
     resolve_catalog_path,
     resolve_launcher_pack_task,
@@ -68,10 +68,9 @@ def main() -> int:
         protocol_home=protocol_home,
     )
 
-    identity_home = (
-        Path(args.identity_home).expanduser().resolve()
-        if str(args.identity_home or "").strip()
-        else default_launcher_config_home(bin_dir)
+    identity_home, identity_home_source = resolve_launcher_config_home(
+        explicit_identity_home=str(args.identity_home or "").strip(),
+        bin_dir=bin_dir,
     )
     runtime_identity_home = runtime_identity_home_for_catalog(catalog_path)
     runtime_paths_env = write_runtime_paths_config(
@@ -94,6 +93,7 @@ def main() -> int:
         "pack_path": str(pack_root),
         "task_path": str(task_path),
         "launcher_config_identity_home": str(identity_home),
+        "launcher_config_identity_home_source": identity_home_source,
         "runtime_identity_home": str(runtime_identity_home),
         "contract_key": IDENTITY_CODEX_LAUNCHER_CONTRACT_KEY,
         "contract_changed": contract_changed,

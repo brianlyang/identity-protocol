@@ -132,6 +132,60 @@ python3 "${REPO_ROOT}/scripts/validate_identity_codex_launcher_evidence_bundle.p
 
 echo "launcher_convergence_apply_status=PASS_REQUIRED"
 
+AMBIENT_INSTALL_JSON="${TMP_ROOT}/ambient-install.json"
+env \
+  CODEX_HOME="${CODEX_HOME}" \
+  IDENTITY_HOME="${WORKSPACE_ROOT}/.identity" \
+  IDENTITY_CATALOG="${TMP_CATALOG}" \
+  python3 "${REPO_ROOT}/scripts/install_identity_codex_launcher.py" \
+    --catalog "${TMP_CATALOG}" \
+    --identity-id "${IDENTITY_ID}" \
+    --bin-dir "${CODEX_HOME}/bin" \
+    --json-only > "${AMBIENT_INSTALL_JSON}"
+
+python3 - "${AMBIENT_INSTALL_JSON}" "${WORKSPACE_ROOT}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+workspace_root = Path(sys.argv[2]).resolve()
+expected_identity_home = (workspace_root / ".identity").resolve()
+expected_runtime_env = (expected_identity_home / "config" / "runtime-paths.env").resolve()
+assert payload["status"] == "PASS_REQUIRED", payload
+assert payload["launcher_config_identity_home"] == str(expected_identity_home), payload
+assert payload["launcher_config_identity_home_source"] == "ambient_identity_home_env", payload
+assert payload["runtime_paths_env"] == str(expected_runtime_env), payload
+print("launcher_convergence_ambient_config_home_install_status=PASS_REQUIRED")
+PY
+
+AMBIENT_VALIDATE_JSON="${TMP_ROOT}/ambient-validate.json"
+env \
+  CODEX_HOME="${CODEX_HOME}" \
+  IDENTITY_HOME="${WORKSPACE_ROOT}/.identity" \
+  IDENTITY_CATALOG="${TMP_CATALOG}" \
+  python3 "${REPO_ROOT}/scripts/validate_identity_codex_launcher.py" \
+    --catalog "${TMP_CATALOG}" \
+    --identity-id "${IDENTITY_ID}" \
+    --bin-dir "${CODEX_HOME}/bin" \
+    --require-installed \
+    --json-only > "${AMBIENT_VALIDATE_JSON}"
+
+python3 - "${AMBIENT_VALIDATE_JSON}" "${WORKSPACE_ROOT}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+workspace_root = Path(sys.argv[2]).resolve()
+expected_identity_home = (workspace_root / ".identity").resolve()
+assert payload["identity_codex_launcher_status"] == "PASS_REQUIRED", payload
+assert payload["launcher_config_identity_home"] == str(expected_identity_home), payload
+assert payload["launcher_config_identity_home_source"] == "ambient_identity_home_env", payload
+assert payload["runtime_paths_status"] == "PASS_REQUIRED", payload
+print("launcher_convergence_ambient_config_home_validate_status=PASS_REQUIRED")
+PY
+
 METADATA_HYGIENE_JSON="${TMP_ROOT}/metadata-hygiene.json"
 python3 "${REPO_ROOT}/scripts/validate_runtime_catalog_metadata_hygiene.py" \
   --catalog "${TMP_CATALOG}" \

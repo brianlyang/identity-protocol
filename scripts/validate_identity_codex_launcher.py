@@ -21,12 +21,12 @@ from identity_codex_launcher_common import (
     STATUS_SKIPPED_NOT_REQUIRED,
     active_identity_install_required,
     default_bin_dir,
-    default_launcher_config_home,
     launcher_manifest_path,
     launcher_readme_path,
     launcher_required,
     observe_launcher_surface,
     read_runtime_paths_config,
+    resolve_launcher_config_home,
     resolve_catalog_path,
     resolve_launcher_pack_task,
     runtime_identity_home_for_catalog,
@@ -92,10 +92,9 @@ def main() -> int:
     manifest_path = launcher_manifest_path(pack_root)
     readme_path = launcher_readme_path(pack_root)
     bin_dir = Path(args.bin_dir).expanduser().resolve() if str(args.bin_dir or "").strip() else default_bin_dir()
-    config_identity_home = (
-        Path(args.identity_home).expanduser().resolve()
-        if str(args.identity_home or "").strip()
-        else default_launcher_config_home(bin_dir)
+    config_identity_home, config_identity_home_source = resolve_launcher_config_home(
+        explicit_identity_home=str(args.identity_home or "").strip(),
+        bin_dir=bin_dir,
     )
     runtime_identity_home = runtime_identity_home_for_catalog(catalog_path)
     runtime_paths_env = runtime_paths_config_path(config_identity_home)
@@ -128,6 +127,7 @@ def main() -> int:
         "readme_path": str(readme_path),
         "bin_dir": str(bin_dir),
         "launcher_config_identity_home": str(config_identity_home),
+        "launcher_config_identity_home_source": config_identity_home_source,
         "runtime_identity_home": str(runtime_identity_home),
         "runtime_paths_env": str(runtime_paths_env),
         "generic_launcher_path": str(generic_path),
