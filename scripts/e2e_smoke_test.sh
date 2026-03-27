@@ -580,6 +580,14 @@ for ID in $IDS; do
     --operation e2e \
     --json-only
 
+  echo "[23.450595/30][$ID] materialize required contract bootstrap emitters before strict runtime proof"
+  python3 scripts/materialize_contract_bootstrap_emitters.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --apply \
+    --json-only
+
   echo "[23.45060/30][$ID] validate handoff/collab freshness autorotation contract (RQ-012)"
   python3 scripts/validate_handoff_collab_freshness_rotation.py \
     --catalog "$CATALOG_PATH" \
@@ -950,11 +958,13 @@ PY
 
   UPG_META_LINE=$(python3 - "$UPGRADE_REPORT" <<'PY'
 import json,sys
+sys.path.insert(0, "scripts")
+from capability_activation_projection_common import CAPABILITY_ACTIVATION_REPORT_REQUIRED_FIELDS
 p=sys.argv[1]
 d=json.load(open(p))
 ew=d.get("experience_writeback") or {}
 mandatory = all(
-    k in d for k in ("permission_state","writeback_status","next_action","skills_used","mcp_tools_used","tool_calls_used","capability_activation_status","capability_activation_error_code")
+    k in d for k in ("permission_state","writeback_status","next_action", *CAPABILITY_ACTIVATION_REPORT_REQUIRED_FIELDS)
 ) and isinstance(ew, dict) and ("status" in ew) and ("error_code" in ew)
 vals = [
     str(bool(d.get("all_ok", False))).lower(),

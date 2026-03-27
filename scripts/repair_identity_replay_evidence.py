@@ -10,6 +10,7 @@ from typing import Any
 
 import yaml
 
+from protocol_infra_contract import VALIDATOR_IDENTITY_SCOPE_EXEMPT_SCRIPTS
 from resolve_identity_context import default_local_catalog_path
 
 
@@ -81,7 +82,7 @@ def _replay_path(task: dict[str, Any], identity_id: str, ts: int, pack_root: Pat
 
 
 def _build_command(check: str, identity_id: str, catalog: str) -> str:
-    if check.endswith("validate_release_metadata_sync.py"):
+    if check in VALIDATOR_IDENTITY_SCOPE_EXEMPT_SCRIPTS:
         return f"python3 {check}"
     if check.endswith("validate_identity_self_upgrade_enforcement.py"):
         return f"python3 {check} --identity-id {identity_id} --base HEAD~1 --head HEAD --catalog {catalog}"

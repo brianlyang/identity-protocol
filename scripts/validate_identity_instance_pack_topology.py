@@ -74,6 +74,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity pack topology and root scripts surface.")
     ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
+    ap.add_argument("--operation", default="", help="Optional caller operation tag for strict-wrapper parity.")
     ap.add_argument("--current-task", default="")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
@@ -103,6 +104,7 @@ def main() -> int:
         "identity_id": args.identity_id,
         "catalog_path": str(catalog_path) if catalog_path is not None else "",
         "resolved_pack_path": str(pack_root),
+        "operation": str(args.operation or "").strip(),
         "task_path": str(task_path),
         "required_contract": required,
         "contract_key": contract_key,

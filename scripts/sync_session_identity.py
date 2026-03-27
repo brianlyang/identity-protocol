@@ -573,7 +573,7 @@ def main() -> int:
     ap.add_argument(
         "--mutation-lane",
         default="activate",
-        choices=["activate", "validate", "scan", "readiness", "three-plane", "full-scan", "ci", "inspection"],
+        choices=["activate", "update", "validate", "scan", "readiness", "three-plane", "full-scan", "ci", "inspection"],
         help="operation lane for canonical actor binding mutation boundary",
     )
     ap.add_argument(
