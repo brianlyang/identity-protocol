@@ -14,6 +14,7 @@ mirror_repo() {
   cp "${ROOT}/scripts/root_corpus_derivation_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/root_corpus_question_routing_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/root_corpus_transition_common.py" "${dst}/scripts/"
+  cp "${ROOT}/scripts/root_row_family_projection_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/validate_protocol_root_corpus_transition.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/registry_alias_control_plane_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/repo_root_resolution_common.py" "${dst}/scripts/"
@@ -33,6 +34,161 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_transition_status"] == "PASS_REQUIRED", payload
 assert payload["current_turn_allowed_root_surface"] == "machine_registry_directory", payload
+assert payload["transition_row_family_count"] == 3, payload
+assert payload["transition_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["transition_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["surface_class_profile_count"] == 16, payload
+assert payload["direct_root_target_edge_count"] == 14, payload
+assert payload["strengthening_gateway_edge_count"] == 40, payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+PY
+
+MISSING_PROFILE_REPO="${TMP_ROOT}/missing-profile-repo"
+mirror_repo "${MISSING_PROFILE_REPO}"
+python3 - <<'PY' "${MISSING_PROFILE_REPO}/identity/protocol/mappings/root-corpus-transition.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["surface_class_profiles"] = [
+    row for row in doc["surface_class_profiles"]
+    if row.get("surface_class") != "root_contract"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+MISSING_PROFILE_JSON="${TMP_ROOT}/missing-profile.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_transition.py" \
+  --repo-root "${MISSING_PROFILE_REPO}" \
+  --json-only >"${MISSING_PROFILE_JSON}"; then
+  echo "[FAIL] root corpus transition validator unexpectedly passed after removing root-contract surface profile row"
+  exit 1
+fi
+
+python3 - <<'PY' "${MISSING_PROFILE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_transition_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCT-002", payload
+assert payload["transition_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["transition_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["field"] == "surface_class_profiles" and row["reason"] == "missing_expected_surface_classes" and "root_contract" in row.get("surface_classes", [])
+    for row in payload["structure_violations"]
+), payload
+profile_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "surface_class_profiles"
+)
+edge_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "direct_root_target_edges"
+)
+gateway_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "strengthening_gateway_edges"
+)
+assert profile_row["expected_count"] == 16, payload
+assert profile_row["actual_count"] == 15, payload
+assert profile_row["missing_ids"] == ["root_contract"], payload
+assert profile_row["unexpected_ids"] == [], payload
+assert profile_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert profile_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert edge_row["expected_count"] == 14, payload
+assert edge_row["actual_count"] == 12, payload
+assert edge_row["missing_ids"] == [
+    "root_contract->governed_subdomain_extension",
+    "root_contract->machine_registry_directory",
+], payload
+assert edge_row["unexpected_ids"] == [], payload
+assert edge_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert edge_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert gateway_row["coverage_status"] == "PASS_REQUIRED", payload
+assert gateway_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+IDENTITY_DRIFT_REPO="${TMP_ROOT}/identity-drift-repo"
+mirror_repo "${IDENTITY_DRIFT_REPO}"
+python3 - <<'PY' "${IDENTITY_DRIFT_REPO}/identity/protocol/mappings/root-corpus-transition.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["surface_class_profiles"]:
+    if row.get("surface_class") == "root_contract":
+        row["surface_class"] = "root_contract_alias"
+        break
+else:
+    raise SystemExit("expected root_contract row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+IDENTITY_DRIFT_JSON="${TMP_ROOT}/identity-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_transition.py" \
+  --repo-root "${IDENTITY_DRIFT_REPO}" \
+  --json-only >"${IDENTITY_DRIFT_JSON}"; then
+  echo "[FAIL] root corpus transition validator unexpectedly passed surface-class identity drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${IDENTITY_DRIFT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_transition_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCT-002", payload
+assert payload["transition_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["transition_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["field"] == "surface_class_profiles" and row["reason"] == "missing_expected_surface_classes" and "root_contract" in row.get("surface_classes", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "surface_class_profiles" and row["reason"] == "extra_surface_classes" and "root_contract_alias" in row.get("surface_classes", [])
+    for row in payload["structure_violations"]
+), payload
+profile_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "surface_class_profiles"
+)
+edge_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "direct_root_target_edges"
+)
+gateway_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "strengthening_gateway_edges"
+)
+assert profile_row["expected_count"] == 16, payload
+assert profile_row["actual_count"] == 16, payload
+assert profile_row["missing_ids"] == ["root_contract"], payload
+assert profile_row["unexpected_ids"] == ["root_contract_alias"], payload
+assert profile_row["coverage_status"] == "PASS_REQUIRED", payload
+assert profile_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert edge_row["expected_count"] == 14, payload
+assert edge_row["actual_count"] == 14, payload
+assert edge_row["missing_ids"] == [
+    "root_contract->governed_subdomain_extension",
+    "root_contract->machine_registry_directory",
+], payload
+assert edge_row["unexpected_ids"] == [
+    "root_contract_alias->governed_subdomain_extension",
+    "root_contract_alias->machine_registry_directory",
+], payload
+assert edge_row["coverage_status"] == "PASS_REQUIRED", payload
+assert edge_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert gateway_row["coverage_status"] == "PASS_REQUIRED", payload
+assert gateway_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 OUTER_PROMOTION_REPO="${TMP_ROOT}/outer-promotion-drift-repo"

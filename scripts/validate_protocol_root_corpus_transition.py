@@ -3,12 +3,14 @@ from __future__ import annotations
 
 import argparse
 import json
+from types import SimpleNamespace
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
 from root_corpus_derivation_common import derivation_class_profiles_from_doc, load_root_corpus_derivation
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_question_routing_common import adjudication_redirect_from_doc, load_root_corpus_question_routing
+from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 from root_corpus_transition_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -150,6 +152,7 @@ ROOT_TRANSITION_EXPECTATIONS = {
 
 ALLOWED_REENTRY_GATEWAYS = {"constitution", "runtime_constitution", "root_contract", "machine_registry_directory"}
 EXPECTED_CURRENT_TURN_ROOT_CLASS = "machine_registry_directory"
+EXPECTED_SURFACE_CLASSES = sorted(set(ROOT_TRANSITION_EXPECTATIONS) | set(OUTER_SURFACE_EXPECTATIONS))
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -174,6 +177,7 @@ def main() -> int:
     structure_violations: list[dict[str, Any]] = []
     transition_violations: list[dict[str, Any]] = []
     anchor_violations: list[dict[str, Any]] = []
+    row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
 
     if transition_alias_error:
@@ -255,7 +259,42 @@ def main() -> int:
     derivation_upstream_map = {row.corpus_class: set(row.allowed_upstream_classes) for row in derivation_profiles}
     anchor_rel_paths = [row.rel_path for row in anchor_checks]
     surface_profile_map = {row.surface_class: row for row in surface_profiles}
-    expected_surface_classes = sorted(set(registry_classes) | set(OUTER_SURFACE_EXPECTATIONS))
+    expected_surface_classes = EXPECTED_SURFACE_CLASSES
+    sorted_profiles = sorted(surface_profiles, key=lambda item: item.surface_class)
+    direct_root_target_edges = sorted(
+        (
+            SimpleNamespace(
+                edge_id=f"{row.surface_class}->{target}",
+                surface_class=row.surface_class,
+                target=target,
+            )
+            for row in sorted_profiles
+            for target in row.direct_root_targets
+        ),
+        key=lambda item: item.edge_id,
+    )
+    strengthening_gateway_edges = sorted(
+        (
+            SimpleNamespace(
+                edge_id=f"{row.surface_class}->{gateway}",
+                surface_class=row.surface_class,
+                gateway=gateway,
+            )
+            for row in sorted_profiles
+            for gateway in row.strengthening_gateways
+        ),
+        key=lambda item: item.edge_id,
+    )
+    expected_direct_root_target_edges = {
+        f"{surface_class}->{target}": {"surface_class": surface_class, "target": target}
+        for surface_class, expected in {**ROOT_TRANSITION_EXPECTATIONS, **OUTER_SURFACE_EXPECTATIONS}.items()
+        for target in expected["direct_root_targets"]
+    }
+    expected_strengthening_gateway_edges = {
+        f"{surface_class}->{gateway}": {"surface_class": surface_class, "gateway": gateway}
+        for surface_class, expected in {**ROOT_TRANSITION_EXPECTATIONS, **OUTER_SURFACE_EXPECTATIONS}.items()
+        for gateway in expected["strengthening_gateways"]
+    }
 
     if not stale_reasons:
         if len(surface_profile_map) != len(surface_profiles):
@@ -484,8 +523,48 @@ def main() -> int:
     stale_reasons.extend(f"transition_violation:{row['field']}:{row['reason']}" for row in transition_violations)
     stale_reasons.extend(f"anchor_violation:{row['rel_path']}:{row['reason']}" for row in anchor_violations)
 
-    sorted_profiles = sorted(surface_profiles, key=lambda item: item.surface_class)
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
+    row_family_projection_rows = [
+        project_row_family(
+            family_id="surface_class_profiles",
+            member_id_key="surface_class",
+            actual_rows=[SimpleNamespace(surface_class=row.surface_class) for row in sorted_profiles],
+            expected_rows={surface_class: {} for surface_class in expected_surface_classes},
+            id_attr="surface_class",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        project_row_family(
+            family_id="direct_root_target_edges",
+            member_id_key="edge_id",
+            actual_rows=direct_root_target_edges,
+            expected_rows=expected_direct_root_target_edges,
+            id_attr="edge_id",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        project_row_family(
+            family_id="strengthening_gateway_edges",
+            member_id_key="edge_id",
+            actual_rows=strengthening_gateway_edges,
+            expected_rows=expected_strengthening_gateway_edges,
+            id_attr="edge_id",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+    ]
+    transition_row_coverage_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="coverage_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
+    transition_row_identity_projection_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="identity_projection_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_TRANSITION),
@@ -500,6 +579,12 @@ def main() -> int:
         "root_dir": str(transition_doc.get("root_dir") or ""),
         "transition_anchor_check_count": len(anchor_checks),
         "surface_class_profile_count": len(surface_profiles),
+        "direct_root_target_edge_count": len(direct_root_target_edges),
+        "strengthening_gateway_edge_count": len(strengthening_gateway_edges),
+        "transition_row_family_count": len(row_family_projection_rows),
+        "transition_row_coverage_status": transition_row_coverage_status,
+        "transition_row_identity_projection_status": transition_row_identity_projection_status,
+        "row_family_projection_rows": row_family_projection_rows,
         "current_turn_allowed_root_surface": EXPECTED_CURRENT_TURN_ROOT_CLASS,
         "surface_class_profiles": [
             {
@@ -512,6 +597,20 @@ def main() -> int:
                 "strengthening_gateways": list(row.strengthening_gateways),
             }
             for row in sorted_profiles
+        ],
+        "direct_root_target_edges": [
+            {
+                "surface_class": row.surface_class,
+                "target": row.target,
+            }
+            for row in direct_root_target_edges
+        ],
+        "strengthening_gateway_edges": [
+            {
+                "surface_class": row.surface_class,
+                "gateway": row.gateway,
+            }
+            for row in strengthening_gateway_edges
         ],
         "structure_violations": structure_violations,
         "transition_violations": transition_violations,
