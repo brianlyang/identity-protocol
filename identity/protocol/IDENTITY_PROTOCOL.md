@@ -190,6 +190,14 @@ implicit.
 4. Protocol legality must not finalize error-terminality truth while missing or unexpected row identities remain known only inside validator logic.
 5. Fail-close error-terminality output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
 
+## Root truth-lifecycle completeness boundary
+
+1. Truth-lifecycle law must remain machine-readable as separate lifecycle-stage, memory-strata, differentiation, proof, limit, and collapse row families.
+2. Aggregate row-family counts are insufficient on their own; expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness.
+3. Expected row identity set and emitted row identity set for each truth-lifecycle family must also remain explicit; identity drift may not be collapsed into summary-only counts.
+4. Protocol legality must not finalize truth-lifecycle legality while missing or unexpected row identities remain known only inside validator logic.
+5. Fail-close truth-lifecycle output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+
 ## Root-law bundle boundary
 
 The protocol constitution depends on a governed root-law bundle across:

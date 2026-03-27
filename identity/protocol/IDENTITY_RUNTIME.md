@@ -146,6 +146,14 @@ implicit.
 4. Runtime must not finalize error-terminality legality while missing or unexpected row identities remain known only inside validator machinery.
 5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
 
+## Runtime truth-lifecycle consumption boundary
+
+1. Runtime consumes truth-lifecycle law as separate lifecycle-stage, memory-strata, differentiation, proof, limit, and collapse row families rather than as undifferentiated lifecycle prose.
+2. Runtime must keep expected row-family total and emitted row-family total congruent under machine-readable coverage completeness rather than relying on aggregate green shorthand.
+3. Runtime must also keep expected row identity set and emitted row identity set for each truth-lifecycle family explicit rather than collapsing identity drift into summary-only counts.
+4. Runtime must not finalize truth-lifecycle legality while missing or unexpected row identities remain known only inside validator machinery.
+5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
+
 ## Runtime consumption of the root-law bundle
 
 Runtime does not consume root law as isolated slogans.
