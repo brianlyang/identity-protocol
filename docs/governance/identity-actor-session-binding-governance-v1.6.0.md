@@ -2506,17 +2506,25 @@ Required protocol-layer hardening (architect lane):
    - `failed_required_contract_count`
    - `report_selected_path`
    - `run_id_binding`
-3. promote strict session-refresh pointer/binding divergence from warning to fail-close on strict operations unless explicit audited override is present.
-4. split reply-channel applicability from canonical egress gateway applicability:
+3. required-contract coverage projection-export surfaces must not stop at counts only:
+   - `validate_required_contract_coverage.py` remains the canonical registry-source validator;
+   - `report_three_plane_status.py` and `full_identity_protocol_scan.py` must surface exact `failed_required_contracts` / `failed_optional_contracts`;
+   - and must propagate machine-readable failure detail projection (at minimum `name`, `validator_status`, `reason_code`, `error_code`, `stale_reasons`) so one-look summaries can distinguish contract drift from stale live evidence.
+4. required-gate bundle projection-export surfaces must not stop at aggregate fail counts only:
+   - `required_gate_bundle_projection_common.py` remains the canonical bundle-target projection source;
+   - `report_three_plane_status.py` and `full_identity_protocol_scan.py` must surface exact `failed_target_names`, projection `stale_reasons`, and `rows_without_projected_report_fields`;
+   - and repo-level scan summaries must retain the identity ids whose required-gate projection failed, so replay operators can distinguish “bundle projection broken” from “projection passed but zero/positive required residuals”.
+5. promote strict session-refresh pointer/binding divergence from warning to fail-close on strict operations unless explicit audited override is present.
+6. split reply-channel applicability from canonical egress gateway applicability:
    - `validate_protocol_feedback_reply_channel` may remain `SKIPPED_NOT_REQUIRED(contract_not_required)` when contract is not requiredized;
    - canonical send-time egress gateway (`validate_send_time_reply_gate`) must be requiredized for user-visible outbound strict operations and cannot stay skip-only.
-5. require cross-surface egress tuple parity across creator/readiness/three-plane/full-scan/e2e/ci:
+7. require cross-surface egress tuple parity across creator/readiness/three-plane/full-scan/e2e/ci:
    - `send_time_gate_enforced`
    - `required_contract`
    - `send_time_gate_status`
    - `governed_outlet_enforced`
    - `outlet_bypass_detected`
-6. enforce semantic metadata completeness contract on protocol-feedback path:
+8. enforce semantic metadata completeness contract on protocol-feedback path:
    - strict protocol-lane semantic guard must emit deterministic `intent_domain`, `intent_confidence`, and `classifier_reason`;
    - if activity correlation is not scoped, emit explicit correlated blocker receipt with recovery key instead of silently degrading semantic tuple completeness.
 

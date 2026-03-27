@@ -476,6 +476,111 @@ Interpretation lock:
    - `python3 scripts/validate_control_plane_invariants.py --json-only`
 3. Manual counter edits remain forbidden; only renderer-produced baseline refresh is compliant.
 
+### 8.9 1.6.x freeze-aligned absorber checkpoint (mandatory)
+
+1. Once adjacent `v1.6.x` motherline/freeze work lands as shared protocol infrastructure, `v1.6.5` still owns the control-plane rebound absorber:
+   - additive stream completion does **not** authorize stale budget/status mirrors,
+   - root/control-plane growth must be absorbed through the canonical renderer flow in the same checkpoint.
+2. Freeze-aligned growth may include both:
+   - higher repo-global counts (`validator_scripts`, `error_codes`, `error_code_families`, mapping parity rows),
+   - lower strict-surface density on a specific core surface after shared-form optimization (for example reduced direct validator literals on `scripts/release_readiness_check.py`).
+3. Those two facts must not be collapsed:
+   - local strict-surface dedup is structural improvement,
+   - repo-global control-plane rebound still requires baseline refresh.
+4. The only compliant absorption path remains:
+   - `python3 scripts/render_control_plane_budget.py --write --json-only`
+   - `python3 scripts/render_control_plane_status.py --write --json-only`
+   - `python3 scripts/validate_control_plane_budget.py --json-only`
+   - `python3 scripts/validate_control_plane_status_sync.py --json-only`
+   - `python3 scripts/validate_control_plane_invariants.py --json-only`
+   - `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+   - `python3 scripts/docs_command_contract_check.py`
+5. Manual literal counter edits remain forbidden; the current freeze is only legitimate when:
+   - budget/status are renderer-produced,
+   - invariants stay green,
+   - required-gate surface drift stays green,
+   - docs command contract stays green.
+
+### 8.10 Iterative freeze-lane rebound re-entry (mandatory)
+
+1. A previously absorbed freeze-aligned checkpoint does **not** exempt later adjacent infrastructure growth from the same v1.6.5 no-rebound law.
+2. Even when rebound is single-digit and local strict-surface density stays flat, a new live delta still reopens the guard if it crosses the last rendered baseline, for example:
+   - `validator_scripts: 234 -> 235`
+   - `error_codes: 670 -> 673`
+   - `error_code_families: 246 -> 247`
+   - while `scripts/release_readiness_check.py direct_validate_calls` remains `131`
+3. Interpretation lock:
+   - flat direct-validate density on a core strict surface does **not** authorize keeping stale repo-global mirrors,
+   - zero mapping-row drift does **not** authorize skipping the absorber replay,
+   - prior absorber success does **not** grandfather later live growth.
+4. The compliant re-entry path remains serial, alias-driven, and machine-generated:
+   - `python3 scripts/render_control_plane_budget.py --write --json-only`
+   - `python3 scripts/render_control_plane_status.py --write --json-only`
+   - `python3 scripts/validate_control_plane_budget.py --json-only`
+   - `python3 scripts/validate_control_plane_status_sync.py --json-only`
+   - `python3 scripts/validate_control_plane_invariants.py --json-only`
+   - `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+   - `python3 scripts/docs_command_contract_check.py`
+5. When the same checkpoint also touches canonical SSOT-coupled protocol surfaces, `python3 scripts/validate_protocol_ssot_source.py` remains the required supporting verifier for the same closeout.
+6. Manual literal counter edits, validator relaxation, and narrative-only “already absorbed once” claims remain non-compliant.
+
+### 8.11 Projection-export strengthening rebound handling (mandatory)
+
+1. Export-surface strengthening that improves machine readability without increasing strict direct-validate density can still reopen the repo-global no-rebound guard when it adds shared protocol code and telemetry families.
+2. This includes cases where:
+   - `scripts/report_three_plane_status.py` and `scripts/full_identity_protocol_scan.py` gain richer required-coverage projection,
+   - those same export surfaces also gain richer required-gate bundle target projection (`failed_target_names`, projection stale reasons, projection-fail identity ids),
+   - `scripts/validate_required_contract_coverage.py` emits direct failure-detail projection,
+   - strict direct validate ceilings remain unchanged on the core strict surfaces,
+   - but repo-global counts rise because the shared projection primitive becomes part of the protocol codebase.
+3. Example freeze-aligned rebound shape:
+   - `validator_scripts: 235 -> 236`
+   - `error_codes: 673 -> 676`
+   - `error_code_families: 247 -> 248`
+   - while strict-surface direct-validate counts remain flat:
+     - `scripts/report_three_plane_status.py = 80`
+     - `scripts/full_identity_protocol_scan.py = 87`
+     - `scripts/release_readiness_check.py = 131`
+4. Interpretation lock:
+   - improved one-look export visibility is a structural gain,
+   - but structural gain does not exempt the checkpoint from no-rebound absorption,
+   - counts must still be re-anchored through renderer-produced mirrors.
+5. Canonical absorber replay remains:
+   - `python3 scripts/render_control_plane_budget.py --write --json-only`
+   - `python3 scripts/render_control_plane_status.py --write --json-only`
+   - `python3 scripts/validate_control_plane_budget.py --json-only`
+   - `python3 scripts/validate_control_plane_status_sync.py --json-only`
+   - `python3 scripts/validate_control_plane_invariants.py --json-only`
+   - `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+   - `python3 scripts/docs_command_contract_check.py`
+   - `python3 scripts/validate_protocol_ssot_source.py`
+
+### 8.12 Root/broadcast doc-control expansion rebound handling (mandatory)
+
+1. When late `v1.6.x` root-law, governed-subdomain doc-control, and broadcast control-plane growth land together as shared protocol infrastructure, `v1.6.5` still owns the repo-global no-rebound absorber even when monitored strict direct-validate surfaces stay flat.
+2. Example rebound shape for this class of checkpoint:
+   - `validator_scripts: 242 -> 245`
+   - `error_codes: 686 -> 695`
+   - `error_code_families: 254 -> 257`
+   - while strict direct-validate density remains unchanged on core monitored surfaces:
+     - `scripts/release_readiness_check.py = 131`
+     - `scripts/report_three_plane_status.py = 80`
+     - `scripts/full_identity_protocol_scan.py = 87`
+3. Interpretation lock:
+   - new root/broadcast/governed-subdomain machine-law surfaces are legitimate additive infrastructure growth,
+   - legitimate additive growth still does **not** authorize stale budget/status mirrors,
+   - operator-visible promotion posture must not advance until repo-global counters are re-anchored by machine-generated artifacts.
+4. Canonical absorber replay remains serial, alias-driven, and machine-generated:
+   - `python3 scripts/render_control_plane_budget.py --write --json-only`
+   - `python3 scripts/render_control_plane_status.py --write --json-only`
+   - `python3 scripts/validate_control_plane_budget.py --json-only`
+   - `python3 scripts/validate_control_plane_status_sync.py --json-only`
+   - `python3 scripts/validate_control_plane_invariants.py --json-only`
+   - `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+   - `python3 scripts/docs_command_contract_check.py`
+   - `python3 scripts/validate_protocol_ssot_source.py`
+5. Manual counter edits, check suppression, or narrative-only “root/broadcast work is still in flight” excuses remain non-compliant; only renderer-produced mirrors plus green validators close this rebound class.
+
 ## 9) External references
 
 1. GitHub rulesets available rules:

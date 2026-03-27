@@ -203,4 +203,5 @@ Execution mode: governance interpretation layer for how to handle remaining debt
 5. Run release hygiene as a separate owner lane:
    - clean freeze,
    - workbook freshness,
-   - simplification / consolidation of validators and current-authoritative-source boundaries.
+   - simplification / consolidation of validators and current-authoritative-source boundaries,
+   - governed outer runtime summary lifecycle discipline, including `scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh`, `scripts/ci/run_release_readiness_summary_binding_probes_ci.sh`, and `scripts/ci/run_release_readiness_continuation_probes_ci.sh`.

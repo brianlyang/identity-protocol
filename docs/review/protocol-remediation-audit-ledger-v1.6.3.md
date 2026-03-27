@@ -892,3 +892,47 @@ Observed:
    - target-regression remains `p0=0` for both target identities.
 7. Final decision:
    - approve close for all v1.6-v1.6.3 fixes with one explicit tracked platform exception (`merge_queue` ruleset rule support).
+
+### 11.26 Coverage failure-detail projection materialization for one-look export surfaces (2026-03-25)
+
+1. Objective:
+   - remove the remaining summary/export ambiguity where three-plane/full-scan only carried failure counts while the canonical coverage validator already knew the exact residual contract IDs and stale-live-evidence reasons.
+2. Patch:
+   - added shared helper `scripts/required_contract_coverage_projection_common.py`;
+   - `scripts/validate_required_contract_coverage.py` now emits:
+     - `failed_required_contracts`
+     - `failed_required_contract_details`
+     - `failed_optional_contract_details`
+     - `failed_required_contracts_with_stale_reasons`
+     - `failed_optional_contracts_with_stale_reasons`
+   - `scripts/report_three_plane_status.py` and `scripts/full_identity_protocol_scan.py` now project the same failure-detail bundle instead of exposing counts only.
+3. Why this matters:
+   - one-look machine summaries can now distinguish “required coverage reopened” from “optional residual is stale live evidence” without secondary parsing of `contracts[].validator_tail`.
+4. Replay posture:
+   - current project-local runtime replay keeps required coverage green for `base-repo-closure-orchestrator`;
+   - export surfaces now still show the remaining optional residual identity directly when present.
+5. Control-plane checks:
+   - `validate_control_plane_invariants` => `PASS_REQUIRED`
+   - `validate_required_gate_surface_drift` => `PASS_REQUIRED`
+   - `docs_command_contract_check` => `PASS`
+
+### 11.27 Required-gate bundle target projection strengthening for one-look scan surfaces (2026-03-25)
+
+1. Objective:
+   - remove the remaining one-look ambiguity where three-plane/full-scan summary blocks still stopped at `failed_required_target_count`, even though the canonical bundle-target projection already knew exact failed target names and projection stale reasons.
+2. Patch:
+   - reused the existing shared projection source `scripts/required_gate_bundle_projection_common.py`;
+   - `scripts/report_three_plane_status.py` now surfaces, in the one-look `required_gate_bundle_runner` sections:
+     - `failed_target_names`
+     - `projection_stale_reasons`
+     - `rows_without_projected_report_fields`
+     - `missing_mapping_requirements`
+   - `scripts/full_identity_protocol_scan.py` now projects:
+     - per-identity `required_gate_bundle_failed_target_names`
+     - per-identity projection stale reasons / missing projected-report rows
+     - repo-level `projection_fail_identity_ids`
+     - repo-level aggregated `failed_target_names`
+3. Why this matters:
+   - machine readers no longer need to descend into the full `targets[]` payload just to answer “which gate target is red?” or “which identity’s bundle projection drifted?”.
+4. Replay posture:
+   - this is additive shared export strengthening only; it does not relax any gate and does not change the canonical bundle-target projection semantics.

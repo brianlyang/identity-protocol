@@ -1083,6 +1083,37 @@ Interpretation lock:
 3. `PASS_REQUIRED` from this checker is active-runtime fleet evidence only when the selected runtime surface contains checked active runtime identities; `checked_identity_count=0` is wiring sanity, not fleet-closure proof.
 4. Current-state note (2026-03-22): replaying `python3 scripts/check_unique_entry_contract_migration_closure.py --catalog <project-local absolute catalog> --json-only` against the current workspace runtime surface returned `PASS_REQUIRED` with `checked_identity_count=4`; this is the current non-empty active-runtime proof and does not replace the standing empty-scan caveat above.
 
+### 5.17.1 Active-runtime pack-scan convergence freeze (2026-03-26)
+
+This checkpoint freezes the **scan semantics** behind active-runtime pack closure without changing
+v1.6.6 semantic ownership of unique-entry migration law.
+
+Contract rule:
+
+1. `scripts/check_unique_entry_contract_migration_closure.py` must keep owning unique-entry migration semantics only.
+2. Active-runtime catalog selection, pack-path resolution, and row aggregation must no longer drift checker-locally once the same pack universe is also scanned by `scripts/check_version_baseline_migration_closure.py`.
+3. Shared scan semantics are now frozen through:
+   - `scripts/runtime_pack_closure_common.py`
+   - `active_runtime_pack_closure_scan_v1`
+4. Bounded workspace replay must stay explicit as `workspace_runtime_only`.
+5. Repo-inclusive replay must stay explicit as `repo_catalog_inclusive`; it must not silently collapse back to the local runtime catalog when stray repo runtime identities exist.
+
+Implementation anchors:
+
+1. `scripts/runtime_pack_closure_common.py`
+   - shared owner for active-runtime pack-path resolution and scan aggregation.
+2. `scripts/check_unique_entry_contract_migration_closure.py`
+   - now consumes the shared pack-scan primitive while preserving unique-entry-specific contract checks.
+3. `scripts/ci/run_active_runtime_pack_closure_convergence_probes_ci.sh`
+   - proves that unique-entry migration closure and version-baseline migration closure share one pack-scan projection while keeping their semantic owners separate.
+
+Interpretation lock:
+
+1. This checkpoint does **not** move version-baseline semantics into v1.6.6.
+2. It only freezes that active-runtime pack scan is shared infrastructure, not duplicated checker-local logic.
+3. Workspace creator/update admission must consume the same bounded pack-closure command surface instead of re-spelling repo-inclusive unique-entry checks ad hoc; `workspace_runtime_closure_command_common.py` is the shared owner for that executable replay surface.
+4. Current-state note (2026-03-26): replaying `bash scripts/ci/run_active_runtime_pack_closure_convergence_probes_ci.sh` returned `PASS`, and replaying `python3 scripts/check_unique_entry_contract_migration_closure.py --catalog <project-local absolute catalog> --workspace-runtime-only --json-only` returned `PASS_REQUIRED` with `checked_identity_count=4`, `catalog_selection_mode=workspace_runtime_only`, and `pack_scan_policy_id=active_runtime_pack_closure_scan_v1`.
+
 ### 5.18 Strict operation default entry-receipt requiredization (2026-03-15)
 
 This checkpoint closes a bypass surface where strict operations could still rely on

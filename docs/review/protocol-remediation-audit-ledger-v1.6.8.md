@@ -512,6 +512,33 @@ Checkpoint verdict update:
 3. "Version governance" is now machine-enforced instead of memory-enforced.
 4. Current-state note (2026-03-22): replaying `python3 scripts/check_version_baseline_migration_closure.py --catalog <project-local absolute catalog> --json-only` against the current workspace runtime surface returned `PASS_REQUIRED` with `checked_identity_count=4`; this is the canonical non-empty version-baseline migration proof for the current workspace.
 
+### 17.4.1 Active-runtime pack-scan convergence audit freeze (2026-03-26)
+
+Audit finding:
+
+1. Version-baseline migration closure and unique-entry migration closure were both scanning the same active-runtime pack universe with duplicated local scan logic.
+2. That duplication risked future divergence in workspace-vs-repo replay semantics even while both semantic owners remained individually correct.
+
+Fix landed:
+
+1. Added shared primitive:
+   - `scripts/runtime_pack_closure_common.py`
+   - projection id: `active_runtime_pack_closure_scan_v1`
+2. Migrated:
+   - `scripts/check_version_baseline_migration_closure.py`
+   - `scripts/check_unique_entry_contract_migration_closure.py`
+3. Added additive proof:
+   - `scripts/ci/run_active_runtime_pack_closure_convergence_probes_ci.sh`
+   - proves both consumers keep `workspace_runtime_only` bounded
+   - proves `repo_catalog_inclusive` replay fail-closes when a stray repo runtime identity is present
+
+Audit interpretation:
+
+1. Version-baseline semantic ownership stays with v1.6.8.
+2. Shared pack-scan mechanics are now protocol-owned infrastructure instead of duplicated checker-local code.
+3. Workspace creator/update admission now consumes version-baseline migration closure through the same bounded workspace-runtime command surface, so v1.6.8 pack closure is no longer left outside instance preflight.
+4. Current-state note (2026-03-26): `bash scripts/ci/run_active_runtime_pack_closure_convergence_probes_ci.sh` returned `PASS`, and the direct workspace replay of `python3 scripts/check_version_baseline_migration_closure.py --catalog <project-local absolute catalog> --workspace-runtime-only --json-only` returned `PASS_REQUIRED` with `checked_identity_count=4` and `pack_scan_policy_id=active_runtime_pack_closure_scan_v1`.
+
 ## 18) Installer atomic closure + report selector isolation (2026-03-16)
 
 ### 18.1 Problem reconfirmed

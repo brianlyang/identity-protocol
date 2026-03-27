@@ -869,3 +869,217 @@ Result:
 
 1. budget/status mirrors are re-synchronized to the new live baseline by renderer flow only.
 2. no manual literal counter patching was introduced.
+
+### 7.24 Freeze-aligned no-rebound absorber replay after late 1.6.x motherline growth (2026-03-25)
+
+Context:
+
+1. late `v1.6.x` motherline/freeze landing plus adjacent control-plane growth reopened the no-rebound guard:
+   - `validator_scripts: 214 -> 234`
+   - `error_codes: 605 -> 670`
+   - `error_code_families: 220 -> 246`
+2. the same checkpoint also included invariant-coupled row growth:
+   - `contract_binding_meta_row_count: 55 -> 56`
+   - `contract_binding_actual_row_count: 55 -> 56`
+3. shared-form optimization reduced strict-surface density on one core surface at the same time:
+   - `scripts/release_readiness_check.py direct_validate_calls: 133 -> 131`
+4. interpretation lock:
+   - local strict-surface dedup is a real structural improvement,
+   - but repo-global rebound still requires canonical renderer absorption.
+
+Action (canonical, alias-driven, serial):
+
+1. `python3 scripts/render_control_plane_budget.py --write --json-only`
+2. `python3 scripts/render_control_plane_status.py --write --json-only`
+3. `python3 scripts/validate_control_plane_budget.py --json-only`
+4. `python3 scripts/validate_control_plane_status_sync.py --json-only`
+5. `python3 scripts/validate_control_plane_invariants.py --json-only`
+6. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+7. `python3 scripts/docs_command_contract_check.py`
+8. `python3 scripts/validate_protocol_ssot_source.py`
+
+Result:
+
+1. the budget renderer re-anchored the live baseline without manual counter edits:
+   - `validator_scripts.warn/fail = 234/236`
+   - `error_codes.warn/fail = 670/673`
+   - `error_code_families.warn/fail = 246/252`
+   - `scripts/release_readiness_check.py direct_validate_calls.warn/fail = 131/136`
+2. `validate_control_plane_budget.py --json-only` returned `PASS_REQUIRED`.
+3. `render_control_plane_status.py --write --json-only` produced:
+   - `control_plane_status=PASS_REQUIRED`
+   - `promotion_ready=true`
+   - `summary.pass_count=22`
+   - `summary.fail_count=0`
+4. `validate_control_plane_status_sync.py --json-only` returned `PASS_REQUIRED` with `mismatch_count=0`.
+5. `validate_control_plane_invariants.py --json-only` returned `PASS_REQUIRED`.
+6. `validate_required_gate_surface_drift.py --json-only` returned `PASS_REQUIRED`.
+7. `docs_command_contract_check.py` returned `PASS`.
+8. this checkpoint confirms that the remaining repo-global control-plane blocker was a canonical v1.6.5 absorber problem, not a justification for hardcoded literal edits or validator relaxation.
+
+### 7.25 Iterative no-rebound re-entry after additional freeze-aligned infrastructure growth (2026-03-25)
+
+Context:
+
+1. after checkpoint 7.24, adjacent freeze-aligned infrastructure growth reopened the same v1.6.5 no-rebound guard again:
+   - `validator_scripts: 234 -> 235`
+   - `error_codes: 670 -> 673`
+   - `error_code_families: 246 -> 247`
+2. the rebound did **not** come with new strict-surface density on the already-optimized core surface:
+   - `scripts/release_readiness_check.py direct_validate_calls` remained `131`
+3. invariant-coupled parity stayed closed during the rebound:
+   - `contract_binding_meta_row_count = 56`
+   - `contract_binding_actual_row_count = 56`
+   - `mapping_rows_missing_in_bundle = 0`
+
+Action (canonical, alias-driven, serial):
+
+1. `python3 scripts/render_control_plane_budget.py --write --json-only`
+2. `python3 scripts/render_control_plane_status.py --write --json-only`
+3. `python3 scripts/validate_control_plane_budget.py --json-only`
+4. `python3 scripts/validate_control_plane_status_sync.py --json-only`
+5. `python3 scripts/validate_control_plane_invariants.py --json-only`
+6. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+7. `python3 scripts/docs_command_contract_check.py`
+8. `python3 scripts/validate_protocol_ssot_source.py`
+
+Result:
+
+1. the budget renderer re-anchored the new live baseline without hardcoded/manual counter edits:
+   - `validator_scripts.warn/fail = 235/237`
+   - `error_codes.warn/fail = 673/676`
+   - `error_code_families.warn/fail = 247/253`
+   - `scripts/release_readiness_check.py direct_validate_calls.warn/fail = 131/136`
+2. `validate_control_plane_budget.py --json-only` returned `PASS_REQUIRED`.
+3. `render_control_plane_status.py --write --json-only` produced:
+   - `control_plane_status=PASS_REQUIRED`
+   - `promotion_ready=true`
+   - `summary.pass_count=22`
+   - `summary.fail_count=0`
+4. `validate_control_plane_status_sync.py --json-only` returned `PASS_REQUIRED` with `mismatch_count=0`.
+5. `validate_control_plane_invariants.py --json-only` returned `PASS_REQUIRED`.
+6. `validate_required_gate_surface_drift.py --json-only` returned `PASS_REQUIRED`.
+7. `docs_command_contract_check.py` returned `PASS`.
+8. `validate_protocol_ssot_source.py` returned `PASS`.
+9. this checkpoint confirms that iterative freeze-lane rebound re-entry remains a v1.6.5 absorber concern and still closes only through renderer-produced mirrors plus machine validators, never through hardcoded literals or validator downgrades.
+
+### 7.26 Projection-export strengthening rebound replay after coverage detail materialization (2026-03-25)
+
+Context:
+
+1. export-surface strengthening landed as shared protocol infrastructure:
+   - new helper: `scripts/required_contract_coverage_projection_common.py`
+   - richer projection emitted by:
+     - `scripts/validate_required_contract_coverage.py`
+     - `scripts/report_three_plane_status.py`
+     - `scripts/full_identity_protocol_scan.py`
+2. the change improves one-look machine visibility of optional/required residuals without increasing strict direct-validate density on the monitored core strict surfaces.
+3. repo-global no-rebound still reopened because live telemetry grew:
+   - `validator_scripts: 235 -> 236`
+   - `error_codes: 673 -> 676`
+   - `error_code_families: 247 -> 248`
+4. strict direct-validate density stayed flat:
+   - `scripts/report_three_plane_status.py: 80`
+   - `scripts/full_identity_protocol_scan.py: 87`
+   - `scripts/release_readiness_check.py: 131`
+
+Action (canonical, alias-driven, serial):
+
+1. `python3 scripts/render_control_plane_budget.py --write --json-only`
+2. `python3 scripts/render_control_plane_status.py --write --json-only`
+3. `python3 scripts/validate_control_plane_budget.py --json-only`
+4. `python3 scripts/validate_control_plane_status_sync.py --json-only`
+5. `python3 scripts/validate_control_plane_invariants.py --json-only`
+6. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+7. `python3 scripts/docs_command_contract_check.py`
+8. `python3 scripts/validate_protocol_ssot_source.py`
+
+Result:
+
+1. the budget renderer re-anchored the new live baseline without hardcoded/manual counter edits:
+   - `validator_scripts.warn/fail = 236/238`
+   - `error_codes.warn/fail = 676/679`
+   - `error_code_families.warn/fail = 248/254`
+   - strict direct-validate ceilings unchanged for:
+     - `scripts/report_three_plane_status.py = 80/85`
+     - `scripts/full_identity_protocol_scan.py = 87/92`
+     - `scripts/release_readiness_check.py = 131/136`
+2. `validate_control_plane_budget.py --json-only` returned `PASS_REQUIRED`.
+3. `render_control_plane_status.py --write --json-only` produced:
+   - `control_plane_status=PASS_REQUIRED`
+   - `promotion_ready=true`
+4. `validate_control_plane_status_sync.py --json-only` returned `PASS_REQUIRED` with `mismatch_count=0`.
+5. `validate_control_plane_invariants.py --json-only` returned `PASS_REQUIRED`.
+6. `validate_required_gate_surface_drift.py --json-only` returned `PASS_REQUIRED`.
+7. `docs_command_contract_check.py` returned `PASS`.
+8. `validate_protocol_ssot_source.py` returned `PASS`.
+9. this checkpoint confirms that projection-export strengthening is still governed by the same v1.6.5 no-rebound absorber law: better machine visibility is valid, but stale budget/status mirrors are never grandfathered.
+
+### 7.27 Bundle-target projection export strengthening inherits the same absorber law (2026-03-25)
+
+1. follow-up export strengthening extended beyond required-contract coverage into required-gate bundle target projection:
+   - `scripts/report_three_plane_status.py`
+   - `scripts/full_identity_protocol_scan.py`
+   now surface exact failed target names and projection stale reasons from `required_gate_bundle_projection_common.py`.
+2. the strengthening is still structural only:
+   - no validator was relaxed;
+   - no required-gate semantics changed;
+   - only one-look machine visibility improved.
+3. absorber interpretation remains identical:
+   - if repo-global validator/error-family telemetry reopens, the only compliant response is canonical v1.6.5 renderer replay;
+   - manual “small additive export only” exemptions remain forbidden.
+
+### 7.28 Root/broadcast doc-control expansion rebound replay (2026-03-25)
+
+Context:
+
+1. additional late `v1.6.x` infrastructure growth landed across root-law, governed-subdomain doc-control, and broadcast-facing protocol surfaces as shared machine-law infrastructure.
+2. repo-global no-rebound telemetry reopened again:
+   - `validator_scripts: 242 -> 245`
+   - `error_codes: 686 -> 695`
+   - `error_code_families: 254 -> 257`
+3. strict direct-validate density remained flat on the monitored core surfaces:
+   - `scripts/release_readiness_check.py: 131`
+   - `scripts/report_three_plane_status.py: 80`
+   - `scripts/full_identity_protocol_scan.py: 87`
+4. delegate-inclusive required-gate visibility also advanced in the same checkpoint:
+   - `required_gate_delegate_inclusive_python_invocations: 264 -> 265`
+   - `required_gate_delegate_inclusive_unique_python_scripts: 181 -> 182`
+5. interpretation lock:
+   - additive root/broadcast/doc-control hardening is valid structural growth,
+   - structural growth still reopens the same v1.6.5 no-rebound absorber,
+   - no manual literal refresh or validator relaxation is admissible.
+
+Action (canonical, alias-driven, serial):
+
+1. `python3 scripts/render_control_plane_budget.py --write --json-only`
+2. `python3 scripts/render_control_plane_status.py --write --json-only`
+3. `python3 scripts/validate_control_plane_budget.py --json-only`
+4. `python3 scripts/validate_control_plane_status_sync.py --json-only`
+5. `python3 scripts/validate_control_plane_invariants.py --json-only`
+6. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+7. `python3 scripts/docs_command_contract_check.py`
+8. `python3 scripts/validate_protocol_ssot_source.py`
+
+Result:
+
+1. the budget renderer re-anchored the live baseline without hardcoded/manual counter edits:
+   - `validator_scripts.warn/fail = 245/247`
+   - `error_codes.warn/fail = 695/698`
+   - `error_code_families.warn/fail = 257/263`
+   - strict direct-validate ceilings remained unchanged for:
+     - `scripts/release_readiness_check.py = 131/136`
+     - `scripts/report_three_plane_status.py = 80/85`
+     - `scripts/full_identity_protocol_scan.py = 87/92`
+2. `render_control_plane_status.py --write --json-only` produced:
+   - `control_plane_status=PASS_REQUIRED`
+   - `promotion_ready=true`
+   - `summary.pass_count=22`
+   - `summary.fail_count=0`
+3. `validate_control_plane_budget.py --json-only` returned `PASS_REQUIRED`.
+4. `validate_control_plane_status_sync.py --json-only` returned `PASS_REQUIRED` with `mismatch_count=0`.
+5. `validate_control_plane_invariants.py --json-only` returned `PASS_REQUIRED`.
+6. `validate_required_gate_surface_drift.py --json-only` returned `PASS_REQUIRED`.
+7. `docs_command_contract_check.py` returned `PASS`.
+8. `validate_protocol_ssot_source.py` returned `PASS`.
+9. this checkpoint confirms that ongoing root/broadcast/governed-subdomain strengthening is still absorbed by the same v1.6.5 canonical no-rebound lane, never by hardcoded counters, check suppression, or narrative-only exemptions.

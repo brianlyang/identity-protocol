@@ -485,6 +485,34 @@ Interpretation lock:
 3. This closure is infrastructure-first: humans do not need to remember version tuples for correctness.
 4. Current-state note (2026-03-22): replaying `python3 scripts/check_version_baseline_migration_closure.py --catalog <project-local absolute catalog> --json-only` against the current workspace runtime surface returned `PASS_REQUIRED` with `checked_identity_count=4`; this is the current non-empty version-baseline migration proof for the workspace.
 
+### 16.5.1 Active-runtime pack-scan convergence freeze (2026-03-26)
+
+This checkpoint freezes the **shared scan layer** behind version-baseline migration closure without
+changing v1.6.8 semantic ownership of scaffold-baseline law.
+
+Mandatory rules:
+
+1. `scripts/check_version_baseline_migration_closure.py` must keep owning version-baseline semantics only.
+2. Active-runtime pack-path resolution, catalog selection, and checked-row aggregation are now shared infrastructure because the same pack universe is also scanned by `scripts/check_unique_entry_contract_migration_closure.py`.
+3. The shared projection is frozen as:
+   - `scripts/runtime_pack_closure_common.py`
+   - `active_runtime_pack_closure_scan_v1`
+4. `workspace_runtime_only` remains the bounded workspace replay mode.
+5. `repo_catalog_inclusive` remains the explicit wider replay mode and must fail closed on stray repo runtime identities instead of silently reusing the workspace-only scan surface.
+
+Implementation anchors:
+
+1. `scripts/runtime_pack_closure_common.py`
+2. `scripts/check_version_baseline_migration_closure.py`
+3. `scripts/ci/run_active_runtime_pack_closure_convergence_probes_ci.sh`
+
+Interpretation lock:
+
+1. This checkpoint does **not** move unique-entry semantics into v1.6.8.
+2. It freezes that shared pack-scan mechanics are protocol-owned infrastructure, not duplicated script-local logic.
+3. Workspace creator/update admission must now consume version-baseline migration closure through the same bounded workspace-runtime command surface rather than leaving v1.6.8 pack closure outside instance preflight.
+4. Current-state note (2026-03-26): replaying `bash scripts/ci/run_active_runtime_pack_closure_convergence_probes_ci.sh` returned `PASS`, and replaying `python3 scripts/check_version_baseline_migration_closure.py --catalog <project-local absolute catalog> --workspace-runtime-only --json-only` returned `PASS_REQUIRED` with `checked_identity_count=4`, `catalog_selection_mode=workspace_runtime_only`, and `pack_scan_policy_id=active_runtime_pack_closure_scan_v1`.
+
 ## 17) Installer atomic baseline closure + report selector isolation (2026-03-16)
 
 ### 17.1 Problem statement

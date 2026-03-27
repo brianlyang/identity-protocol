@@ -2127,6 +2127,33 @@ Checkpoint verdict update:
 2. this reduces “code upgraded but active pack schema stale” blind spots in v1.6.6 closure.
 3. Current-state note (2026-03-22): replaying `python3 scripts/check_unique_entry_contract_migration_closure.py --catalog <project-local absolute catalog> --json-only` against the current workspace runtime surface returned `PASS_REQUIRED` with `checked_identity_count=4`; this is the canonical non-empty active-runtime proof for the current workspace and should be narrated separately from empty-scan wiring sanity.
 
+### 26.23.1 Active-runtime pack-scan convergence audit freeze (2026-03-26)
+
+Audit finding:
+
+1. After v1.6.8 version-baseline migration closure landed, both unique-entry and version-baseline streams were scanning the same active-runtime pack universe with duplicated local logic.
+2. That duplication created future drift risk in catalog selection, pack-path resolution, and stray-repo replay behavior even when each semantic checker still passed on its own.
+
+Fix landed:
+
+1. Added shared active-runtime pack scan primitive:
+   - `scripts/runtime_pack_closure_common.py`
+   - projection id: `active_runtime_pack_closure_scan_v1`
+2. Migrated:
+   - `scripts/check_unique_entry_contract_migration_closure.py`
+   - `scripts/check_version_baseline_migration_closure.py`
+3. Added additive proof:
+   - `scripts/ci/run_active_runtime_pack_closure_convergence_probes_ci.sh`
+   - verifies shared `workspace_runtime_only` bounded replay
+   - verifies explicit `repo_catalog_inclusive` replay fail-closes on stray repo runtime identities
+
+Audit interpretation:
+
+1. Unique-entry semantic ownership stays with v1.6.6.
+2. Shared pack-scan mechanics are now protocol-owned infrastructure instead of checker-local glue.
+3. Workspace creator/update admission now consumes unique-entry closure through the same bounded workspace-runtime command surface; it no longer needs checker-local repo-inclusive command spelling that can widen the active-runtime pack scan unintentionally.
+4. Current-state note (2026-03-26): `bash scripts/ci/run_active_runtime_pack_closure_convergence_probes_ci.sh` returned `PASS`, and the direct workspace replay of `python3 scripts/check_unique_entry_contract_migration_closure.py --catalog <project-local absolute catalog> --workspace-runtime-only --json-only` returned `PASS_REQUIRED` with `checked_identity_count=4` and `pack_scan_policy_id=active_runtime_pack_closure_scan_v1`.
+
 ### 26.24 Strict receipt default + coverage parity + cross-cwd/live fallback hardening (2026-03-15)
 
 Problem:
