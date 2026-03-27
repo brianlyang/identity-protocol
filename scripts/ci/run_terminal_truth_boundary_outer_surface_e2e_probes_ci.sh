@@ -539,17 +539,27 @@ assert summary_boundary["repair_green_terminal_truth_blocked"] == 1, summary_bou
 assert summary_boundary["repair_green_terminal_truth_clean"] == 1, summary_boundary
 assert summary_boundary["blocked_identity_ids"] == [identity_specs["review"]["identity_id"]], summary_boundary
 required_gate_summary = full_scan_payload.get("summary_required_gate_bundle_projection") or {}
+assert required_gate_summary["identities_with_projection"] == 2, required_gate_summary
 assert required_gate_summary["projection_fail"] == 0, required_gate_summary
 assert required_gate_summary["projection_skipped_not_required"] == 2, required_gate_summary
+assert required_gate_summary["projection_fail_identity_ids"] == [], required_gate_summary
+assert required_gate_summary["projection_scope_excluded_identity_ids"] == [row["identity_id"] for row in seeded], required_gate_summary
 assert required_gate_summary["projection_scope_classes"] == ["bounded_projection_profile_exclusion"], required_gate_summary
 assert required_gate_summary["projection_scope_reasons"] == ["projection_profile_out_of_scope"], required_gate_summary
+assert required_gate_summary["rows_without_projected_report_fields"] == [], required_gate_summary
 assert required_gate_summary["missing_mapping_requirements"] == [], required_gate_summary
+assert required_gate_summary["projection_stale_reasons"] == [], required_gate_summary
 required_gate_shadow_summary = full_scan_payload.get("summary_required_gate_bundle_shadow_projection") or {}
+assert required_gate_shadow_summary["identities_with_projection"] == 2, required_gate_shadow_summary
 assert required_gate_shadow_summary["projection_fail"] == 0, required_gate_shadow_summary
 assert required_gate_shadow_summary["projection_skipped_not_required"] == 2, required_gate_shadow_summary
+assert required_gate_shadow_summary["projection_fail_identity_ids"] == [], required_gate_shadow_summary
+assert required_gate_shadow_summary["projection_scope_excluded_identity_ids"] == [row["identity_id"] for row in seeded], required_gate_shadow_summary
 assert required_gate_shadow_summary["projection_scope_classes"] == ["bounded_projection_profile_exclusion"], required_gate_shadow_summary
 assert required_gate_shadow_summary["projection_scope_reasons"] == ["projection_profile_out_of_scope"], required_gate_shadow_summary
+assert required_gate_shadow_summary["rows_without_projected_report_fields"] == [], required_gate_shadow_summary
 assert required_gate_shadow_summary["missing_mapping_requirements"] == [], required_gate_shadow_summary
+assert required_gate_shadow_summary["projection_stale_reasons"] == [], required_gate_shadow_summary
 health_summary = full_scan_payload.get("summary_health_report_experience_writeback_closure") or {}
 assert health_summary["total_identities"] == 2, health_summary
 assert health_summary["projection_pass"] == 0, health_summary

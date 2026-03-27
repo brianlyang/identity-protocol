@@ -44,6 +44,38 @@ FULL_SCAN_REQUIRED_GATE_BUNDLE_PRIMARY_THREE_PLANE_FIELDS: tuple[str, ...] = (
 FULL_SCAN_REQUIRED_GATE_BUNDLE_SHADOW_THREE_PLANE_FIELDS: tuple[str, ...] = (
     full_scan_required_gate_bundle_three_plane_fields("required_gate_bundle_shadow")
 )
+FULL_SCAN_REQUIRED_GATE_BUNDLE_SUMMARY_FIELDS: tuple[str, ...] = (
+    "identities_with_projection",
+    "projection_pass",
+    "projection_fail",
+    "projection_skipped_not_required",
+    "projection_fail_identity_ids",
+    "projection_scope_excluded_identity_ids",
+    "projection_scope_classes",
+    "projection_scope_reasons",
+    "identities_with_failed_required_targets",
+    "total_targets",
+    "failed_required_targets",
+    "failed_target_names",
+    "failed_target_counts",
+    "target_status_counts",
+    "rows_without_projected_report_fields",
+    "missing_mapping_requirements",
+    "projection_stale_reasons",
+)
+
+
+def full_scan_required_gate_bundle_summary_field_refs(summary_key: str) -> tuple[str, ...]:
+    summary_prefix = str(summary_key or "").strip()
+    return tuple(f"{summary_prefix}.{field}" for field in FULL_SCAN_REQUIRED_GATE_BUNDLE_SUMMARY_FIELDS)
+
+
+FULL_SCAN_REQUIRED_GATE_BUNDLE_PRIMARY_SUMMARY_FIELDS: tuple[str, ...] = (
+    full_scan_required_gate_bundle_summary_field_refs("summary_required_gate_bundle_projection")
+)
+FULL_SCAN_REQUIRED_GATE_BUNDLE_SHADOW_SUMMARY_FIELDS: tuple[str, ...] = (
+    full_scan_required_gate_bundle_summary_field_refs("summary_required_gate_bundle_shadow_projection")
+)
 FULL_SCAN_REQUIRED_GATE_BUNDLE_PROJECTION_MARKER = (
     "full_scan_required_gate_bundle_projection="
     + "|".join(
@@ -54,8 +86,19 @@ FULL_SCAN_REQUIRED_GATE_BUNDLE_PROJECTION_MARKER = (
         )
     )
 )
+FULL_SCAN_REQUIRED_GATE_BUNDLE_SUMMARY_MARKER = (
+    "full_scan_required_gate_bundle_summary="
+    + "|".join(
+        field
+        for field in (
+            *FULL_SCAN_REQUIRED_GATE_BUNDLE_PRIMARY_SUMMARY_FIELDS,
+            *FULL_SCAN_REQUIRED_GATE_BUNDLE_SHADOW_SUMMARY_FIELDS,
+        )
+    )
+)
 FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS: tuple[str, ...] = (
     FULL_SCAN_REQUIRED_GATE_BUNDLE_PROJECTION_MARKER,
+    FULL_SCAN_REQUIRED_GATE_BUNDLE_SUMMARY_MARKER,
     *(
         f"three_plane.{field}"
         for field in (
@@ -63,6 +106,8 @@ FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS: tuple[str, ...] = (
             *FULL_SCAN_REQUIRED_GATE_BUNDLE_SHADOW_THREE_PLANE_FIELDS,
         )
     ),
+    *FULL_SCAN_REQUIRED_GATE_BUNDLE_PRIMARY_SUMMARY_FIELDS,
+    *FULL_SCAN_REQUIRED_GATE_BUNDLE_SHADOW_SUMMARY_FIELDS,
 )
 
 
