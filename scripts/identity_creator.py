@@ -48,7 +48,7 @@ from resolve_identity_context import (
     resolve_protocol_root,
     resolve_identity,
 )
-from tool_vendor_governance_common import load_json, resolve_pack_and_task
+from tool_vendor_governance_common import latest_identity_upgrade_report, load_json, resolve_pack_and_task
 from gateway_wrapper_enforcement import run_gateway_wrapped_command as _gw_run_gateway_wrapped_command
 from identity_codex_launcher_common import IDENTITY_CODEX_LAUNCHER_CONVERGENCE_ENTRY_ID
 from protocol_infra_contract import (
@@ -324,33 +324,8 @@ def _parse_json_payload(raw: str) -> dict | None:
 
 
 def _resolve_active_execution_report_from_pack(pack_path: Path, identity_id: str) -> str:
-    pointer_path = (pack_path / "runtime" / "state" / "active_execution_report.json").resolve()
-    if not pointer_path.exists():
-        return ""
-    try:
-        pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
-    except Exception:
-        return ""
-    if not isinstance(pointer, dict):
-        return ""
-    report_path_raw = str(pointer.get("report_path", "")).strip()
-    if not report_path_raw:
-        return ""
-    report_path = Path(report_path_raw).expanduser().resolve()
-    if not report_path.exists() or not report_path.is_file():
-        return ""
-    name = report_path.name
-    if not name.startswith("identity-upgrade-exec-") or not name.endswith(".json"):
-        return ""
-    if name.endswith("-patch-plan.json"):
-        return ""
-    token = str(identity_id or "").strip()
-    if token and f"identity-upgrade-exec-{token}-" not in name:
-        return ""
-    run_id = str(pointer.get("run_id", "")).strip()
-    if run_id and run_id not in name:
-        return ""
-    return str(report_path)
+    resolved = latest_identity_upgrade_report(identity_id, pack_path)
+    return str(resolved) if resolved is not None else ""
 
 
 def _inject_bundle_report_selected_path(commands: list[list[str]], report_selected_path: str) -> None:
