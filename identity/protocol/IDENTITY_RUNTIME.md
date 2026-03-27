@@ -475,6 +475,13 @@ not-pass-required only, after admitted parse/status and nonzero
 returncode resolution and before explicit non-execution exclusion and
 bundle-violation projection.
 
+Runtime must also keep component-validator prefixed ontology-drift
+origin policy explicit; admitted prefixed ontology-drift rows are
+validator-output, validator-status, component-status, and
+component-validator prefixed rows only, after admitted parse/status,
+nonzero returncode, non-pass-status, and exclusion-origin resolution
+and before not-applicable classification.
+
 Runtime must also keep component-validator observation-reason classifier
 precedence policy explicit; parse/status classification preempts
 nonzero returncode, nonzero returncode preempts non-pass component

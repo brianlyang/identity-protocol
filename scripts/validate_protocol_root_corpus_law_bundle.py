@@ -54,6 +54,7 @@ from root_corpus_law_bundle_common import (
     component_validator_observation_reason_parse_status_origin_policy_from_doc,
     component_validator_observation_reason_nonzero_rc_origin_policy_from_doc,
     component_validator_observation_reason_nonpass_status_origin_policy_from_doc,
+    component_validator_observation_reason_prefixed_ontology_drift_origin_policy_from_doc,
     component_validator_observation_reason_classifier_precedence_policy_from_doc,
     component_validator_observation_reason_exclusion_origin_policy_from_doc,
     component_validator_observation_reason_exclusion_policy_from_doc,
@@ -196,6 +197,9 @@ COMPONENT_VALIDATOR_OBSERVATION_REASON_NONZERO_RC_ORIGIN_POLICY = (
 )
 COMPONENT_VALIDATOR_OBSERVATION_REASON_NONPASS_STATUS_ORIGIN_POLICY = (
     "component_status_not_pass_required_only_after_admitted_parse_status_and_nonzero_rc_resolution_before_explicit_non_execution_exclusion_and_bundle_violation_projection"
+)
+COMPONENT_VALIDATOR_OBSERVATION_REASON_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY = (
+    "validator_output_validator_status_component_status_component_validator_prefixed_rows_only_after_admitted_parse_status_nonzero_rc_nonpass_status_and_exclusion_origin_resolution_before_not_applicable"
 )
 COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_POLICY = (
     "parse_status_preempts_nonzero_rc_preempts_nonpass_status_preempts_explicit_non_execution_exclusion_preempts_prefixed_observation_family_ontology_drift_else_not_applicable"
@@ -425,6 +429,7 @@ def _classify_component_validator_observation_reason(
     parse_status_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_PARSE_STATUS_ORIGIN_POLICY,
     nonzero_rc_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_NONZERO_RC_ORIGIN_POLICY,
     nonpass_status_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_NONPASS_STATUS_ORIGIN_POLICY,
+    prefixed_ontology_drift_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY,
     exclusion_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_POLICY,
 ) -> str:
     if (
@@ -447,6 +452,11 @@ def _classify_component_validator_observation_reason(
         != COMPONENT_VALIDATOR_OBSERVATION_REASON_NONPASS_STATUS_ORIGIN_POLICY
     ):
         nonpass_status_origin_policy = COMPONENT_VALIDATOR_OBSERVATION_REASON_NONPASS_STATUS_ORIGIN_POLICY
+    if (
+        prefixed_ontology_drift_origin_policy
+        != COMPONENT_VALIDATOR_OBSERVATION_REASON_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY
+    ):
+        prefixed_ontology_drift_origin_policy = COMPONENT_VALIDATOR_OBSERVATION_REASON_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY
     if (
         exclusion_origin_policy
         != COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_POLICY
@@ -482,11 +492,23 @@ def _classify_component_validator_observation_reason(
         "component_validator_missing",
     }:
         return "not_applicable"
-    if reason.startswith("validator_output_") or reason.startswith("validator_status_"):
+    if (
+        prefixed_ontology_drift_origin_policy
+        == COMPONENT_VALIDATOR_OBSERVATION_REASON_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY
+        and (reason.startswith("validator_output_") or reason.startswith("validator_status_"))
+    ):
         return "unknown"
-    if reason.startswith("component_status_"):
+    if (
+        prefixed_ontology_drift_origin_policy
+        == COMPONENT_VALIDATOR_OBSERVATION_REASON_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY
+        and reason.startswith("component_status_")
+    ):
         return "unknown"
-    if reason.startswith("component_validator_"):
+    if (
+        prefixed_ontology_drift_origin_policy
+        == COMPONENT_VALIDATOR_OBSERVATION_REASON_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY
+        and reason.startswith("component_validator_")
+    ):
         return "unknown"
     return "not_applicable"
 
@@ -497,6 +519,7 @@ def _component_validator_observation_reason_counts(
     parse_status_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_PARSE_STATUS_ORIGIN_POLICY,
     nonzero_rc_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_NONZERO_RC_ORIGIN_POLICY,
     nonpass_status_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_NONPASS_STATUS_ORIGIN_POLICY,
+    prefixed_ontology_drift_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY,
     exclusion_origin_policy: str = COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_POLICY,
 ) -> tuple[dict[str, int], int, int]:
     counts = {
@@ -514,6 +537,7 @@ def _component_validator_observation_reason_counts(
             parse_status_origin_policy,
             nonzero_rc_origin_policy,
             nonpass_status_origin_policy,
+            prefixed_ontology_drift_origin_policy,
             exclusion_origin_policy,
         )
         if category == "not_applicable":
@@ -957,6 +981,11 @@ def main() -> int:
         if bundle_doc
         else ""
     )
+    component_validator_observation_reason_prefixed_ontology_drift_origin_policy = (
+        component_validator_observation_reason_prefixed_ontology_drift_origin_policy_from_doc(bundle_doc)
+        if bundle_doc
+        else ""
+    )
     component_validator_observation_reason_classifier_precedence_policy = (
         component_validator_observation_reason_classifier_precedence_policy_from_doc(bundle_doc)
         if bundle_doc
@@ -1152,6 +1181,14 @@ def main() -> int:
             == COMPONENT_VALIDATOR_OBSERVATION_REASON_NONPASS_STATUS_ORIGIN_POLICY
         )
         else COMPONENT_VALIDATOR_OBSERVATION_REASON_NONPASS_STATUS_ORIGIN_POLICY
+    )
+    effective_component_validator_observation_reason_prefixed_ontology_drift_origin_policy = (
+        component_validator_observation_reason_prefixed_ontology_drift_origin_policy
+        if (
+            component_validator_observation_reason_prefixed_ontology_drift_origin_policy
+            == COMPONENT_VALIDATOR_OBSERVATION_REASON_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY
+        )
+        else COMPONENT_VALIDATOR_OBSERVATION_REASON_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY
     )
     effective_component_validator_observation_reason_classifier_precedence_policy = (
         component_validator_observation_reason_classifier_precedence_policy
@@ -1674,6 +1711,14 @@ def main() -> int:
         ):
             stale_reasons.append(
                 "root_corpus_law_bundle_component_validator_observation_reason_nonpass_status_origin_policy_invalid"
+            )
+            error_code = ERR_REGISTRY
+        if (
+            component_validator_observation_reason_prefixed_ontology_drift_origin_policy
+            != COMPONENT_VALIDATOR_OBSERVATION_REASON_PREFIXED_ONTOLOGY_DRIFT_ORIGIN_POLICY
+        ):
+            stale_reasons.append(
+                "root_corpus_law_bundle_component_validator_observation_reason_prefixed_ontology_drift_origin_policy_invalid"
             )
             error_code = ERR_REGISTRY
         if (
@@ -2408,6 +2453,7 @@ def main() -> int:
         effective_component_validator_observation_reason_parse_status_origin_policy,
         effective_component_validator_observation_reason_nonzero_rc_origin_policy,
         effective_component_validator_observation_reason_nonpass_status_origin_policy,
+        effective_component_validator_observation_reason_prefixed_ontology_drift_origin_policy,
         effective_component_validator_observation_reason_exclusion_origin_policy,
     )
     component_validator_observation_reason_partition_total_count = (
@@ -2714,6 +2760,9 @@ def main() -> int:
         ),
         "component_validator_observation_reason_nonpass_status_origin_policy": (
             component_validator_observation_reason_nonpass_status_origin_policy
+        ),
+        "component_validator_observation_reason_prefixed_ontology_drift_origin_policy": (
+            component_validator_observation_reason_prefixed_ontology_drift_origin_policy
         ),
         "component_validator_observation_reason_classifier_precedence_policy": (
             component_validator_observation_reason_classifier_precedence_policy
