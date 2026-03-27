@@ -31,6 +31,13 @@ from create_identity_pack import (
     REENTRY_BRIEF_VALIDATOR_ID,
     REENTRY_CONSUMPTION_VALIDATOR_ID,
 )
+from capability_activation_policy_common import (
+    CAPABILITY_ACTIVATION_ENV_AUTH_ERROR_CODE,
+    CAPABILITY_ACTIVATION_ENV_AUTH_FALLBACK_POLICY,
+    capability_env_auth_fallback_eligible,
+    normalize_capability_activation_policy,
+    replace_capability_activation_policy,
+)
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
 from resolve_identity_context import (
     collect_protocol_evidence,
@@ -4478,7 +4485,9 @@ def main() -> int:
                 "[WARN] protocol version alignment preflight reported stale execution report; "
                 "continuing update to refresh report freshness in-run"
             )
-        effective_capability_activation_policy = str(args.capability_activation_policy or "strict-union").strip().lower()
+        effective_capability_activation_policy = normalize_capability_activation_policy(
+            args.capability_activation_policy
+        )
         capability_preflight_cmd = [
             "python3",
             "scripts/validate_identity_capability_activation.py",
@@ -4495,26 +4504,28 @@ def main() -> int:
         cap_payload = _parse_json_payload(out_cap) or {}
         cap_status = str(cap_payload.get("capability_activation_status", "")).strip().upper()
         cap_error_code = str(cap_payload.get("capability_activation_error_code", "")).strip()
-        strict_cap_env_blocked = (
-            effective_capability_activation_policy == "strict-union"
-            and cap_error_code == "IP-CAP-003"
-            and (rc_cap != 0 or cap_status == "BLOCKED")
+        strict_cap_env_blocked = capability_env_auth_fallback_eligible(
+            requested_policy=effective_capability_activation_policy,
+            error_code=cap_error_code,
+            status=cap_status,
+            rc=rc_cap,
         )
         if strict_cap_env_blocked:
             print(
                 "[WARN] capability activation strict-union blocked by env/auth boundary (IP-CAP-003); "
                 "retrying with route-any-ready fallback"
             )
-            fallback_cmd = capability_preflight_cmd.copy()
-            policy_idx = fallback_cmd.index("--activation-policy")
-            fallback_cmd[policy_idx + 1] = "route-any-ready"
+            fallback_cmd = replace_capability_activation_policy(
+                capability_preflight_cmd,
+                CAPABILITY_ACTIVATION_ENV_AUTH_FALLBACK_POLICY,
+            )
             rc_cap, out_cap_fb, _ = _run_capture(fallback_cmd)
             if rc_cap == 0:
-                effective_capability_activation_policy = "route-any-ready"
+                effective_capability_activation_policy = CAPABILITY_ACTIVATION_ENV_AUTH_FALLBACK_POLICY
                 if not phase_transition_reason:
                     phase_transition_reason = "capability_env_auth_fallback"
                 if not phase_transition_error_code:
-                    phase_transition_error_code = "IP-CAP-003"
+                    phase_transition_error_code = CAPABILITY_ACTIVATION_ENV_AUTH_ERROR_CODE
         if rc_cap != 0:
             print("[FAIL] capability activation preflight failed; update blocked")
             return rc_cap
