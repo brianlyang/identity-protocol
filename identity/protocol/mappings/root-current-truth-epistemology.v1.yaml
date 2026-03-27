@@ -27,6 +27,28 @@ contract_required_markers:
   - '## Epistemic-proof limits'
   - '## Non-compliant epistemic collapses'
   - 'The identity protocol must justify present-fact claims from canonical sources and governed evidence paths rather than from narration, guesswork, historical accident, implicit habit, compatibility residue, or derived summary.'
+  - 'Current-truth epistemology law must also remain machine-readable as separate commitment, differentiation, epistemic-proof, commitment-proof-alignment, epistemic-limit, and collapse row families rather than one narrative justification claim.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Current-truth epistemology row-family completeness must stay explicit'
+      - "Required commitment, differentiation, epistemic-proof, commitment-proof-\nalignment, epistemic-limit, and collapse families must remain explicit as\nseparate machine-readable row families."
+      - 'The machine world must not finalize current-truth epistemology while required row identity drift remains known only internally.'
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root current-truth epistemology completeness discipline'
+      - 'Current-truth epistemology law is not a soft prose bundle.'
+      - '1. required commitment, differentiation, epistemic-proof, commitment-proof-alignment, epistemic-limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root current-truth epistemology completeness boundary'
+      - '1. Current-truth epistemology law must remain machine-readable as separate commitment, differentiation, epistemic-proof, commitment-proof-alignment, epistemic-limit, and collapse row families.'
+      - '4. Protocol legality must not finalize current-truth epistemology while missing or unexpected row identities remain known only inside validator logic.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime current-truth epistemology consumption boundary'
+      - '1. Runtime consumes current-truth epistemology law as separate commitment, differentiation, epistemic-proof, commitment-proof-alignment, epistemic-limit, and collapse row families rather than as undifferentiated epistemic prose.'
+      - '4. Runtime must not finalize current-truth epistemology while missing or unexpected row identities remain known only inside validator machinery.'
 required_commitment_rows:
   - order: 1
     commitment_id: canonical_source_before_narration

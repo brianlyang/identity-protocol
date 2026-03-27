@@ -6,6 +6,11 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
+from root_contract_anchor_checks_common import (
+    evaluate_root_doc_anchor_checks,
+    root_doc_anchor_checks_from_doc,
+    validate_expected_root_doc_anchor_checks,
+)
 from root_corpus_authority_common import authority_anchor_checks_from_doc, entry_authority_projections_from_doc, load_root_corpus_authority
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, reading_order_rows_from_doc
@@ -205,7 +210,28 @@ EXPECTED_AUTHORITY_MARKERS = (
     "Current-turn epistemic legality must still resolve from machine-consumed enforcement surfaces",
 )
 EXPECTED_ROUTING_MARKERS = EXPECTED_AUTHORITY_MARKERS
-EXPECTED_README_MARKER = "`CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md`"
+EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
+    "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "### Current-truth epistemology row-family completeness must stay explicit",
+        "Required commitment, differentiation, epistemic-proof, commitment-proof-\nalignment, epistemic-limit, and collapse families must remain explicit as\nseparate machine-readable row families.",
+        "The machine world must not finalize current-truth epistemology while required row identity drift remains known only internally.",
+    ),
+    "identity/protocol/README.md": (
+        "## Root current-truth epistemology completeness discipline",
+        "Current-truth epistemology law is not a soft prose bundle.",
+        "1. required commitment, differentiation, epistemic-proof, commitment-proof-alignment, epistemic-limit, and collapse rows must remain explicit as separate machine-readable families;",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL.md": (
+        "## Root current-truth epistemology completeness boundary",
+        "1. Current-truth epistemology law must remain machine-readable as separate commitment, differentiation, epistemic-proof, commitment-proof-alignment, epistemic-limit, and collapse row families.",
+        "4. Protocol legality must not finalize current-truth epistemology while missing or unexpected row identities remain known only inside validator logic.",
+    ),
+    "identity/protocol/IDENTITY_RUNTIME.md": (
+        "## Runtime current-truth epistemology consumption boundary",
+        "1. Runtime consumes current-truth epistemology law as separate commitment, differentiation, epistemic-proof, commitment-proof-alignment, epistemic-limit, and collapse row families rather than as undifferentiated epistemic prose.",
+        "4. Runtime must not finalize current-truth epistemology while missing or unexpected row identities remain known only inside validator machinery.",
+    ),
+}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -290,6 +316,7 @@ def main() -> int:
     epistemology_violations: list[dict[str, Any]] = []
     integration_violations: list[dict[str, Any]] = []
     contract_marker_violations: list[dict[str, Any]] = []
+    root_doc_anchor_violations: list[dict[str, Any]] = []
     row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
 
@@ -319,6 +346,7 @@ def main() -> int:
     commitment_proof_alignment_rows = commitment_proof_alignment_rows_from_doc(epistemology_doc) if epistemology_doc else ()
     epistemic_limit_rows = epistemic_limit_rows_from_doc(epistemology_doc) if epistemology_doc else ()
     collapse_rows = collapse_rows_from_doc(epistemology_doc) if epistemology_doc else ()
+    root_doc_anchor_checks = root_doc_anchor_checks_from_doc(epistemology_doc) if epistemology_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     authority_anchors = authority_anchor_checks_from_doc(authority_doc) if authority_doc else ()
@@ -359,6 +387,16 @@ def main() -> int:
                 error_code = ERR_REGISTRY
         if not epistemology_doc.get("contract_required_markers"):
             stale_reasons.append("root_current_truth_epistemology_contract_required_markers_missing")
+            error_code = ERR_REGISTRY
+        anchor_reason_count_before = len(stale_reasons)
+        stale_reasons.extend(
+            validate_expected_root_doc_anchor_checks(
+                root_doc_anchor_checks,
+                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+                stale_reason_prefix="root_current_truth_epistemology",
+            )
+        )
+        if len(stale_reasons) > anchor_reason_count_before:
             error_code = ERR_REGISTRY
 
         for field in ("contract_file", "philosophy_anchor_file", "validator_script", "probe_script", "common_script"):
@@ -573,19 +611,13 @@ def main() -> int:
                     )
                 previous_proof_order = proof_order
 
-        readme_path = repo_root / "identity/protocol/README.md"
-        if not readme_path.exists():
-            integration_violations.append({"field": "README", "reason": "root_readme_missing"})
-        else:
-            readme_text = readme_path.read_text(encoding="utf-8", errors="ignore")
-            if EXPECTED_README_MARKER not in readme_text:
-                integration_violations.append(
-                    {
-                        "field": "README",
-                        "reason": "root_readme_missing_contract_reference",
-                        "marker": EXPECTED_README_MARKER,
-                    }
-                )
+        root_doc_anchor_violations.extend(
+            evaluate_root_doc_anchor_checks(
+                repo_root,
+                root_doc_anchor_checks,
+                field_name="root_doc_anchor_checks",
+            )
+        )
 
         registry_entry_map = {entry.rel_path: entry for entry in registry_entries}
         registry_entry = registry_entry_map.get(contract_file)
@@ -719,13 +751,13 @@ def main() -> int:
 
     if not error_code and structure_violations:
         error_code = ERR_STRUCTURE
-    if not error_code and (epistemology_violations or integration_violations or contract_marker_violations):
+    if not error_code and (epistemology_violations or integration_violations or contract_marker_violations or root_doc_anchor_violations):
         error_code = ERR_EPISTEMOLOGY
 
     stale_reasons.extend(f"structural_violation:{row['field']}:{row['reason']}" for row in structure_violations)
     stale_reasons.extend(
         f"current_truth_epistemology_violation:{row.get('field', 'contract_file')}:{row['reason']}"
-        for row in epistemology_violations + integration_violations + contract_marker_violations
+        for row in epistemology_violations + integration_violations + contract_marker_violations + root_doc_anchor_violations
     )
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
@@ -741,6 +773,7 @@ def main() -> int:
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
+    root_doc_anchor_status = STATUS_PASS_REQUIRED if not root_doc_anchor_violations else STATUS_FAIL_REQUIRED
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_EPISTEMOLOGY),
@@ -757,6 +790,8 @@ def main() -> int:
         "commitment_proof_alignment_count": len(commitment_proof_alignment_rows),
         "epistemic_limit_count": len(epistemic_limit_rows),
         "collapse_count": len(collapse_rows),
+        "root_doc_anchor_check_count": len(root_doc_anchor_checks),
+        "root_doc_anchor_status": root_doc_anchor_status,
         "current_truth_row_family_count": len(row_family_projection_rows),
         "current_truth_row_coverage_status": current_truth_row_coverage_status,
         "current_truth_row_identity_projection_status": current_truth_row_identity_projection_status,
@@ -782,6 +817,7 @@ def main() -> int:
         "epistemology_violations": epistemology_violations,
         "integration_violations": integration_violations,
         "contract_marker_violations": contract_marker_violations,
+        "root_doc_anchor_violations": root_doc_anchor_violations,
         "stale_reasons": stale_reasons,
     }
     _emit(payload, json_only=args.json_only)

@@ -83,6 +83,8 @@ So this file freezes current-truth epistemology law, while runtime adjudication 
 
 The identity protocol must justify present-fact claims from canonical sources and governed evidence paths rather than from narration, guesswork, historical accident, implicit habit, compatibility residue, or derived summary.
 
+Current-truth epistemology law must also remain machine-readable as separate commitment, differentiation, epistemic-proof, commitment-proof-alignment, epistemic-limit, and collapse row families rather than one narrative justification claim.
+
 No machine claim may be treated as present truth unless its justification path preserves source canonicality, identity-context resolution, current-turn admissibility, provenance, and terminal machine-consumed boundaries.
 
 ## Five epistemic commitments
