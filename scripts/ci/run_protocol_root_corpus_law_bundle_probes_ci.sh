@@ -1056,6 +1056,58 @@ assert payload["registry_direct_stale_reason_source_total_count"] == payload["di
 assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
 PY
 
+REGISTRY_DIRECT_STALE_REASON_SOURCE_INCOMPLETE_REPO="${TMP_ROOT}/registry-direct-stale-reason-source-incomplete-repo"
+mirror_repo "${REGISTRY_DIRECT_STALE_REASON_SOURCE_INCOMPLETE_REPO}"
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_SOURCE_INCOMPLETE_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+needle = "    direct_stale_reason_origin_counts, registry_direct_stale_reason_unknown_count = (\n"
+replacement = (
+    "    direct_stale_reason_origin_counts, registry_direct_stale_reason_unknown_count = (\n"
+)
+if needle not in text:
+    raise SystemExit("expected direct stale reason classification block not found for source completeness probe")
+needle2 = "    registry_direct_stale_reason_source_total_count = (\n"
+replacement2 = (
+    "    stale_reasons.append(\"future_local_reason_without_counted_source\")\n"
+    "    registry_direct_stale_reason_source_total_count = (\n"
+)
+if needle2 not in text:
+    raise SystemExit("expected direct stale reason source total block not found for source completeness probe")
+path.write_text(text.replace(needle2, replacement2, 1), encoding="utf-8")
+PY
+
+REGISTRY_DIRECT_STALE_REASON_SOURCE_INCOMPLETE_JSON="${TMP_ROOT}/registry-direct-stale-reason-source-incomplete.json"
+if python3 "${REGISTRY_DIRECT_STALE_REASON_SOURCE_INCOMPLETE_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_DIRECT_STALE_REASON_SOURCE_INCOMPLETE_REPO}" \
+  --json-only >"${REGISTRY_DIRECT_STALE_REASON_SOURCE_INCOMPLETE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry direct stale-reason source completeness case"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_SOURCE_INCOMPLETE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["derived_failure_class"] == "registry", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_status"] == "FAIL_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "FAIL_REQUIRED", payload
+assert payload["registry_direct_stale_reason_unknown_count"] >= 1, payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert "root_corpus_law_bundle_registry_direct_stale_reason_source_incomplete" in payload["stale_reasons"], payload
+assert "root_corpus_law_bundle_registry_direct_stale_reason_partition_incomplete" in payload["stale_reasons"], payload
+assert "future_local_reason_without_counted_source" in payload["stale_reasons"], payload
+PY
+
 REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY_REPO="${TMP_ROOT}/registry-direct-stale-reason-partition-policy-drift-repo"
 mirror_repo "${REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY_REPO}"
 python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"

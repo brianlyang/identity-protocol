@@ -490,6 +490,10 @@ already present before violation projection.
 Projected structure, bundle, and anchor stale reasons must not be
 reinterpreted as direct stale-reason source.
 
+Root-law bundle rows must also keep machine-readable source completeness
+explicit; direct-stale source total must remain congruent with local
+stale-reason total rather than being left implicit.
+
 Root-law bundle rows must also keep registry direct-stale-reason
 partition policy explicit; each local stale reason present before
 violation projection classifies exactly once as alias, document,

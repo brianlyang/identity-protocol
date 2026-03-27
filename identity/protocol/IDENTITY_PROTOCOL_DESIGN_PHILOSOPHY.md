@@ -772,6 +772,10 @@ violation projection.
 Projected structure, bundle, and anchor stale reasons do not become
 substitute direct stale-reason source.
 
+Direct-stale source total and local stale-reason total must therefore
+stay congruent under machine-readable source completeness rather than
+being left implicit.
+
 Bundle registry direct-stale-reason partition policy must stay explicit
 too.
 

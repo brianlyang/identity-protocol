@@ -435,6 +435,10 @@ present before violation projection.
 Runtime must not reinterpret projected structure, bundle, or anchor stale
 reasons as substitute direct stale-reason source.
 
+Runtime must also keep machine-readable direct-stale source completeness
+explicit; runtime direct-stale source total must remain congruent with
+local stale-reason total rather than being left implicit.
+
 Runtime must also keep registry direct-stale-reason partition policy
 explicit; each local stale reason present before violation projection
 classifies exactly once as alias, document, contract-row, required-surface,
