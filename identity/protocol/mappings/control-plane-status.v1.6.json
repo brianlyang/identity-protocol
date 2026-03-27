@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-27T12:51:32Z",
-  "git_head_short": "dc4eeb4",
+  "generated_at_utc": "2026-03-27T13:33:36Z",
+  "git_head_short": "f843405",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -429,8 +429,8 @@
         "budget_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_alias_error": "",
-        "current_last_updated_utc": "2026-03-27T12:50:55Z",
-        "live_last_updated_utc": "2026-03-27T12:50:58Z",
+        "current_last_updated_utc": "2026-03-27T13:32:51Z",
+        "live_last_updated_utc": "2026-03-27T13:32:56Z",
         "mismatch_count": 0,
         "mismatches": [],
         "observed": {
@@ -1551,10 +1551,10 @@
         ],
         "pack_scan_globs": [],
         "active_pack_identity_ids": [],
-        "repo_scan_file_count": 587,
+        "repo_scan_file_count": 588,
         "active_pack_scan_file_count": 0,
         "extra_scan_file_count": 0,
-        "scan_file_count": 587,
+        "scan_file_count": 588,
         "scan_files": [
           ".github/workflows/_identity-required-gates.yml",
           ".github/workflows/identity-protocol-ci.yml",
@@ -1576,6 +1576,7 @@
           "scripts/check_identity_communication_transport_closure.py",
           "scripts/check_unique_entry_contract_migration_closure.py",
           "scripts/check_version_baseline_migration_closure.py",
+          "scripts/ci/probe_repo_mirror_common.sh",
           "scripts/ci/run_active_execution_report_pointer_locality_probes_ci.sh",
           "scripts/ci/run_active_runtime_pack_closure_convergence_probes_ci.sh",
           "scripts/ci/run_agent_relay_final_answer_builder_probes_ci.sh",
@@ -3184,6 +3185,13 @@
         "mapping_active_file": "identity/protocol/mappings/root-constitutional-spine.v1.yaml",
         "spine_entry_count": 4,
         "spine_bridge_count": 5,
+        "constitutional_spine_row_family_count": 2,
+        "constitutional_spine_row_coverage_status": "PASS_REQUIRED",
+        "constitutional_spine_row_identity_projection_status": "PASS_REQUIRED",
+        "constitutional_entry_row_coverage_status": "PASS_REQUIRED",
+        "constitutional_entry_row_identity_projection_status": "PASS_REQUIRED",
+        "spine_bridge_row_coverage_status": "PASS_REQUIRED",
+        "spine_bridge_row_identity_projection_status": "PASS_REQUIRED",
         "spine_rel_paths": [
           "identity/protocol/README.md",
           "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
@@ -3196,6 +3204,54 @@
           "philosophy_to_protocol_machine_authority_split",
           "philosophy_to_runtime_machine_authority_split",
           "protocol_to_runtime_root_bundle_consumption"
+        ],
+        "row_family_projection_rows": [
+          {
+            "family_id": "constitutional_entry_rows",
+            "member_id_key": "rel_path",
+            "expected_count": 4,
+            "actual_count": 4,
+            "expected_ids": [
+              "identity/protocol/IDENTITY_PROTOCOL.md",
+              "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
+              "identity/protocol/IDENTITY_RUNTIME.md",
+              "identity/protocol/README.md"
+            ],
+            "actual_ids": [
+              "identity/protocol/IDENTITY_PROTOCOL.md",
+              "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
+              "identity/protocol/IDENTITY_RUNTIME.md",
+              "identity/protocol/README.md"
+            ],
+            "missing_ids": [],
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
+          },
+          {
+            "family_id": "spine_bridge_rows",
+            "member_id_key": "bridge_id",
+            "expected_count": 5,
+            "actual_count": 5,
+            "expected_ids": [
+              "philosophy_to_protocol_constitution",
+              "philosophy_to_protocol_machine_authority_split",
+              "philosophy_to_runtime_constitution",
+              "philosophy_to_runtime_machine_authority_split",
+              "protocol_to_runtime_root_bundle_consumption"
+            ],
+            "actual_ids": [
+              "philosophy_to_protocol_constitution",
+              "philosophy_to_protocol_machine_authority_split",
+              "philosophy_to_runtime_constitution",
+              "philosophy_to_runtime_machine_authority_split",
+              "protocol_to_runtime_root_bundle_consumption"
+            ],
+            "missing_ids": [],
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
+          }
         ],
         "structure_violations": [],
         "projection_violations": [],
