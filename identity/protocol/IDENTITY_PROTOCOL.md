@@ -501,6 +501,12 @@ preempts document, document preempts required-surface, required-surface
 preempts contract-row, and otherwise origin remains unknown.
 
 Root-law bundle rows must also keep registry direct-stale-reason
+residual-unknown policy explicit; only local stale reasons that remain
+non-alias, non-document, non-required-surface, and non-contract-row
+after alias, document, required-surface, and contract-row resolution
+may remain unknown.
+
+Root-law bundle rows must also keep registry direct-stale-reason
 unclassified policy explicit; unclassified direct stale-reason origin
 must remain fail-closed.
 

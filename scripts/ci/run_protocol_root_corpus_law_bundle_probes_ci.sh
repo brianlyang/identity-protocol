@@ -95,6 +95,7 @@ assert payload["registry_direct_stale_reason_contract_row_origin_policy"] == "ro
 assert payload["registry_direct_stale_reason_source_policy"] == "local_stale_reasons_only_before_violation_projection", payload
 assert payload["registry_direct_stale_reason_partition_policy"] == "local_stale_reasons_partitioned_into_alias_document_contract_row_required_surface_or_unknown_exactly_once_before_violation_projection", payload
 assert payload["registry_direct_stale_reason_origin_classifier_precedence_policy"] == "alias_preempts_document_preempts_required_surface_preempts_contract_row_else_unknown", payload
+assert payload["registry_direct_stale_reason_residual_unknown_policy"] == "only_nonalias_nondocument_nonrequired_surface_noncontract_row_local_stale_reasons_after_alias_document_required_surface_and_contract_row_resolution_before_violation_projection_remain_unknown", payload
 assert payload["registry_direct_stale_reason_unclassified_policy"] == "fail_closed", payload
 assert payload["component_validator_observation_reason_admission_policy"] == "parse_status_nonzero_rc_or_nonpass_only_before_bundle_violation_projection", payload
 assert payload["component_validator_observation_reason_parse_status_origin_policy"] == "validator_output_missing_invalid_json_not_json_object_status_key_missing_status_literal_not_string_only_before_nonzero_rc_nonpass_status_exclusion_and_bundle_violation_projection", payload
@@ -1123,6 +1124,41 @@ assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED",
 assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
 PY
 
+REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY_REPO="${TMP_ROOT}/registry-direct-stale-reason-residual-unknown-policy-drift-repo"
+mirror_repo "${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY_REPO}"
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["registry_direct_stale_reason_residual_unknown_policy"] = "any_unmatched_local_stale_reason_may_fall_through_to_unknown"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY_JSON="${TMP_ROOT}/registry-direct-stale-reason-residual-unknown-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY_REPO}" \
+  --json-only >"${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry direct stale-reason residual unknown policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert "root_corpus_law_bundle_registry_direct_stale_reason_residual_unknown_policy_invalid" in payload["stale_reasons"], payload
+assert payload["registry_direct_stale_reason_residual_unknown_policy"] == "any_unmatched_local_stale_reason_may_fall_through_to_unknown", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_unknown_count"] == 0, payload
+PY
+
 REGISTRY_DIRECT_STALE_REASON_UNCLASSIFIED_POLICY_REPO="${TMP_ROOT}/registry-direct-stale-reason-unclassified-policy-drift-repo"
 mirror_repo "${REGISTRY_DIRECT_STALE_REASON_UNCLASSIFIED_POLICY_REPO}"
 python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_UNCLASSIFIED_POLICY_REPO}/identity/protocol/mappings/root-corpus-law-bundle.v1.yaml"
@@ -1312,6 +1348,52 @@ assert payload["registry_direct_stale_reason_source_total_count"] == payload["di
 assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
 assert payload["direct_stale_reason_count_before_violation_projection"] >= 1, payload
 assert "root_corpus_law_bundle_anchor_checks_missing" in payload["stale_reasons"], payload
+PY
+
+REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_OBSERVATION_REPO="${TMP_ROOT}/registry-direct-stale-reason-residual-unknown-observation-repo"
+mirror_repo "${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_OBSERVATION_REPO}"
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_OBSERVATION_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+needle = "    direct_stale_reason_origin_counts, registry_direct_stale_reason_unknown_count = (\n"
+replacement = (
+    "    stale_reasons.append(\"future_local_reason_without_admitted_origin\")\n\n"
+    "    direct_stale_reason_origin_counts, registry_direct_stale_reason_unknown_count = (\n"
+)
+if needle not in text:
+    raise SystemExit("expected direct stale reason classification block not found")
+path.write_text(text.replace(needle, replacement, 1), encoding="utf-8")
+PY
+
+REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_OBSERVATION_JSON="${TMP_ROOT}/registry-direct-stale-reason-residual-unknown-observation.json"
+if python3 "${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_OBSERVATION_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_OBSERVATION_REPO}" \
+  --json-only >"${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_OBSERVATION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed registry direct stale-reason residual unknown observation case"
+  exit 1
+fi
+
+python3 - <<'PY' "${REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_OBSERVATION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["derived_failure_class"] == "registry", payload
+assert payload["registry_direct_stale_reason_origin_status"] == "FAIL_REQUIRED", payload
+assert payload["registry_direct_stale_reason_source_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_partition_status"] == "PASS_REQUIRED", payload
+assert payload["registry_direct_stale_reason_residual_unknown_policy"] == "only_nonalias_nondocument_nonrequired_surface_noncontract_row_local_stale_reasons_after_alias_document_required_surface_and_contract_row_resolution_before_violation_projection_remain_unknown", payload
+assert payload["registry_direct_stale_reason_unknown_count"] >= 1, payload
+assert payload["registry_direct_stale_reason_source_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert payload["registry_direct_stale_reason_partition_total_count"] == payload["direct_stale_reason_count_before_violation_projection"], payload
+assert "root_corpus_law_bundle_registry_direct_stale_reason_origin_unclassified" in payload["stale_reasons"], payload
+assert "future_local_reason_without_admitted_origin" in payload["stale_reasons"], payload
 PY
 
 COMPONENT_VALIDATOR_OBSERVATION_REASON_POLICY_REPO="${TMP_ROOT}/component-validator-observation-reason-policy-drift-repo"

@@ -100,6 +100,7 @@ from root_corpus_law_bundle_common import (
     registry_direct_stale_reason_required_surface_origin_policy_from_doc,
     registry_direct_stale_reason_contract_row_origin_policy_from_doc,
     registry_direct_stale_reason_origin_classifier_precedence_policy_from_doc,
+    registry_direct_stale_reason_residual_unknown_policy_from_doc,
     registry_direct_stale_reason_partition_policy_from_doc,
     registry_direct_stale_reason_source_policy_from_doc,
     registry_direct_stale_reason_unclassified_policy_from_doc,
@@ -185,6 +186,9 @@ REGISTRY_DIRECT_STALE_REASON_PARTITION_POLICY = (
 )
 REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY = (
     "alias_preempts_document_preempts_required_surface_preempts_contract_row_else_unknown"
+)
+REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY = (
+    "only_nonalias_nondocument_nonrequired_surface_noncontract_row_local_stale_reasons_after_alias_document_required_surface_and_contract_row_resolution_before_violation_projection_remain_unknown"
 )
 REGISTRY_DIRECT_STALE_REASON_UNCLASSIFIED_POLICY = "fail_closed"
 COMPONENT_VALIDATOR_OBSERVATION_REASON_ADMISSION_POLICY = (
@@ -346,6 +350,7 @@ def _classify_direct_stale_reason_origin(
     document_origin_policy: str = REGISTRY_DIRECT_STALE_REASON_DOCUMENT_ORIGIN_POLICY,
     required_surface_origin_policy: str = REGISTRY_DIRECT_STALE_REASON_REQUIRED_SURFACE_ORIGIN_POLICY,
     contract_row_origin_policy: str = REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY,
+    residual_unknown_policy: str = REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY,
 ) -> str:
     if precedence_policy != REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY:
         precedence_policy = REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY
@@ -363,6 +368,8 @@ def _classify_direct_stale_reason_origin(
         != REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY
     ):
         contract_row_origin_policy = REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY
+    if residual_unknown_policy != REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY:
+        residual_unknown_policy = REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY
     if (
         alias_origin_policy == REGISTRY_DIRECT_STALE_REASON_ALIAS_ORIGIN_POLICY
         and "_alias_error:" in reason
@@ -393,6 +400,8 @@ def _classify_direct_stale_reason_origin(
         )
     ):
         return "contract_row"
+    if residual_unknown_policy == REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY:
+        return "unknown"
     return "unknown"
 
 
@@ -403,6 +412,7 @@ def _direct_stale_reason_origin_counts(
     document_origin_policy: str = REGISTRY_DIRECT_STALE_REASON_DOCUMENT_ORIGIN_POLICY,
     required_surface_origin_policy: str = REGISTRY_DIRECT_STALE_REASON_REQUIRED_SURFACE_ORIGIN_POLICY,
     contract_row_origin_policy: str = REGISTRY_DIRECT_STALE_REASON_CONTRACT_ROW_ORIGIN_POLICY,
+    residual_unknown_policy: str = REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY,
 ) -> tuple[dict[str, int], int]:
     counts = {
         "alias": 0,
@@ -419,6 +429,7 @@ def _direct_stale_reason_origin_counts(
             document_origin_policy,
             required_surface_origin_policy,
             contract_row_origin_policy,
+            residual_unknown_policy,
         )
         if origin == "unknown":
             unknown_count += 1
@@ -977,6 +988,11 @@ def main() -> int:
     registry_direct_stale_reason_origin_classifier_precedence_policy = (
         registry_direct_stale_reason_origin_classifier_precedence_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
+    registry_direct_stale_reason_residual_unknown_policy = (
+        registry_direct_stale_reason_residual_unknown_policy_from_doc(bundle_doc)
+        if bundle_doc
+        else ""
+    )
     registry_direct_stale_reason_unclassified_policy = (
         registry_direct_stale_reason_unclassified_policy_from_doc(bundle_doc) if bundle_doc else ""
     )
@@ -1163,6 +1179,14 @@ def main() -> int:
             == REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY
         )
         else REGISTRY_DIRECT_STALE_REASON_ORIGIN_CLASSIFIER_PRECEDENCE_POLICY
+    )
+    effective_registry_direct_stale_reason_residual_unknown_policy = (
+        registry_direct_stale_reason_residual_unknown_policy
+        if (
+            registry_direct_stale_reason_residual_unknown_policy
+            == REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY
+        )
+        else REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY
     )
     effective_registry_direct_stale_reason_unclassified_policy = (
         registry_direct_stale_reason_unclassified_policy
@@ -1703,6 +1727,14 @@ def main() -> int:
         ):
             stale_reasons.append(
                 "root_corpus_law_bundle_registry_direct_stale_reason_origin_classifier_precedence_policy_invalid"
+            )
+            error_code = ERR_REGISTRY
+        if (
+            registry_direct_stale_reason_residual_unknown_policy
+            != REGISTRY_DIRECT_STALE_REASON_RESIDUAL_UNKNOWN_POLICY
+        ):
+            stale_reasons.append(
+                "root_corpus_law_bundle_registry_direct_stale_reason_residual_unknown_policy_invalid"
             )
             error_code = ERR_REGISTRY
         if (
@@ -2557,6 +2589,7 @@ def main() -> int:
             effective_registry_direct_stale_reason_document_origin_policy,
             effective_registry_direct_stale_reason_required_surface_origin_policy,
             effective_registry_direct_stale_reason_contract_row_origin_policy,
+            effective_registry_direct_stale_reason_residual_unknown_policy,
         )
     )
     registry_direct_stale_reason_origin_status = (
@@ -2580,6 +2613,7 @@ def main() -> int:
             effective_registry_direct_stale_reason_document_origin_policy,
             effective_registry_direct_stale_reason_required_surface_origin_policy,
             effective_registry_direct_stale_reason_contract_row_origin_policy,
+            effective_registry_direct_stale_reason_residual_unknown_policy,
         )
     )
     registry_direct_stale_reason_source_total_count = (
@@ -2620,6 +2654,7 @@ def main() -> int:
                 effective_registry_direct_stale_reason_document_origin_policy,
                 effective_registry_direct_stale_reason_required_surface_origin_policy,
                 effective_registry_direct_stale_reason_contract_row_origin_policy,
+                effective_registry_direct_stale_reason_residual_unknown_policy,
             )
         )
         registry_direct_stale_reason_source_total_count = (
@@ -2641,6 +2676,7 @@ def main() -> int:
                 effective_registry_direct_stale_reason_document_origin_policy,
                 effective_registry_direct_stale_reason_required_surface_origin_policy,
                 effective_registry_direct_stale_reason_contract_row_origin_policy,
+                effective_registry_direct_stale_reason_residual_unknown_policy,
             )
         )
         registry_direct_stale_reason_source_total_count = (
@@ -2784,6 +2820,9 @@ def main() -> int:
         ),
         "registry_direct_stale_reason_origin_classifier_precedence_policy": (
             registry_direct_stale_reason_origin_classifier_precedence_policy
+        ),
+        "registry_direct_stale_reason_residual_unknown_policy": (
+            registry_direct_stale_reason_residual_unknown_policy
         ),
         "registry_direct_stale_reason_unclassified_policy": (
             registry_direct_stale_reason_unclassified_policy

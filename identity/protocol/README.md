@@ -801,6 +801,13 @@ classification preempts required-surface classification, required-surface
 classification preempts contract-row classification, and otherwise
 runtime origin remains unknown.
 
+Bundle registry direct-stale-reason residual-unknown policy must also
+stay explicit.
+
+Only local stale reasons that remain non-alias, non-document,
+non-required-surface, and non-contract-row after alias, document,
+required-surface, and contract-row resolution may remain unknown.
+
 Bundle registry direct-stale-reason unclassified policy must also stay
 explicit.
 

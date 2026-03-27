@@ -343,6 +343,10 @@ def registry_direct_stale_reason_origin_classifier_precedence_policy_from_doc(bu
     return _norm_str(bundle_doc.get("registry_direct_stale_reason_origin_classifier_precedence_policy"))
 
 
+def registry_direct_stale_reason_residual_unknown_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("registry_direct_stale_reason_residual_unknown_policy"))
+
+
 def registry_direct_stale_reason_unclassified_policy_from_doc(bundle_doc: Mapping[str, Any]) -> str:
     return _norm_str(bundle_doc.get("registry_direct_stale_reason_unclassified_policy"))
 
