@@ -31,6 +31,11 @@ assert payload["escalation_trigger_count"] == 4, payload
 assert payload["escalation_proof_count"] == 4, payload
 assert payload["escalation_limit_count"] == 5, payload
 assert payload["boundary_collapse_count"] == 5, payload
+assert payload["protocol_instance_row_family_count"] == 6, payload
+assert payload["protocol_instance_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["protocol_instance_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -66,10 +71,22 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_protocol_instance_responsibility_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RPIR-002", payload
+assert payload["protocol_instance_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["protocol_instance_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["reason"] == "missing_expected_rows" and "machine_truth_incompleteness_proof" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+proof_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_escalation_proof_rows"
+)
+assert proof_row["expected_count"] == 4, payload
+assert proof_row["actual_count"] == 3, payload
+assert proof_row["missing_ids"] == ["machine_truth_incompleteness_proof"], payload
+assert proof_row["unexpected_ids"] == [], payload
+assert proof_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert proof_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 RESP_REPO="${TMP_ROOT}/responsibility-drift-repo"
@@ -105,10 +122,78 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_protocol_instance_responsibility_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RPIR-002", payload
+assert payload["protocol_instance_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["protocol_instance_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["reason"] == "missing_expected_rows" and "operator_surface" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+responsibility_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_responsibility_rows"
+)
+assert responsibility_row["expected_count"] == 3, payload
+assert responsibility_row["actual_count"] == 2, payload
+assert responsibility_row["missing_ids"] == ["operator_surface"], payload
+assert responsibility_row["unexpected_ids"] == [], payload
+assert responsibility_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert responsibility_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+IDENTITY_REPO="${TMP_ROOT}/identity-drift-repo"
+mirror_repo "${IDENTITY_REPO}"
+python3 - <<'PY' "${IDENTITY_REPO}/identity/protocol/mappings/root-protocol-instance-responsibility.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["required_responsibility_rows"]:
+    if row.get("owner_id") == "operator_surface":
+        row["owner_id"] = "operator_surface_alias"
+        break
+else:
+    raise SystemExit("expected operator_surface row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+IDENTITY_JSON="${TMP_ROOT}/identity-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_protocol_instance_responsibility.py" \
+  --repo-root "${IDENTITY_REPO}" \
+  --json-only >"${IDENTITY_JSON}"; then
+  echo "[FAIL] root protocol-instance responsibility validator unexpectedly passed responsibility identity drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${IDENTITY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_protocol_instance_responsibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RPIR-002", payload
+assert payload["protocol_instance_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["protocol_instance_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["reason"] == "missing_expected_rows" and "operator_surface" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["reason"] == "extra_rows" and "operator_surface_alias" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
+responsibility_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_responsibility_rows"
+)
+assert responsibility_row["expected_count"] == 3, payload
+assert responsibility_row["actual_count"] == 3, payload
+assert responsibility_row["missing_ids"] == ["operator_surface"], payload
+assert responsibility_row["unexpected_ids"] == ["operator_surface_alias"], payload
+assert responsibility_row["coverage_status"] == "PASS_REQUIRED", payload
+assert responsibility_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 HEADING_REPO="${TMP_ROOT}/heading-drift-repo"

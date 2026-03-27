@@ -1240,6 +1240,30 @@ Missing or unexpected row identity must remain projected in fail-close machine
 output rather than being hidden behind row-count shorthand or summary-only
 verdict text.
 
+### Protocol-instance responsibility row-family completeness must stay explicit
+
+Protocol-instance responsibility law is not a soft prose summary that may hide
+its machine rows behind aggregate counts.
+
+Required layer, responsibility, escalation-trigger, escalation-proof,
+escalation-limit, and boundary-collapse families must remain explicit as
+separate machine-readable row families.
+
+Expected row-family total and emitted row-family total must therefore stay
+congruent under machine-readable coverage completeness rather than being left
+implicit.
+
+Expected row identity set and emitted row identity set for each family must
+also remain machine-readable rather than being collapsed into aggregate counts
+or generic structure failure.
+
+The machine world must not finalize protocol-instance responsibility legality
+while required row identity drift remains known only internally.
+
+Missing or unexpected row identity must remain projected in fail-close machine
+output rather than being hidden behind row-count shorthand or summary-only
+verdict text.
+
 ---
 
 ## 1. The identity protocol is machine law first, not a compatibility layer

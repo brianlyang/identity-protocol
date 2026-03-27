@@ -238,6 +238,14 @@ implicit.
 4. Protocol legality must not finalize operator answer-surface legality while missing or unexpected row identities remain known only inside validator logic.
 5. Fail-close operator answer-surface output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
 
+## Root protocol-instance responsibility completeness boundary
+
+1. Protocol-instance responsibility law must remain machine-readable as separate layer, responsibility, escalation-trigger, escalation-proof, escalation-limit, and boundary-collapse row families.
+2. Aggregate row-family counts are insufficient on their own; expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness.
+3. Expected row identity set and emitted row identity set for each protocol-instance responsibility family must also remain explicit; identity drift may not be collapsed into summary-only counts.
+4. Protocol legality must not finalize protocol-instance responsibility legality while missing or unexpected row identities remain known only inside validator logic.
+5. Fail-close protocol-instance responsibility output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+
 ## Root-law bundle boundary
 
 The protocol constitution depends on a governed root-law bundle across:
