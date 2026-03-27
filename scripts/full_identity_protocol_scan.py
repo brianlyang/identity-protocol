@@ -31,6 +31,7 @@ from full_scan_required_gate_bundle_projection_common import (
 from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gateway_wrapped_command
 from health_report_experience_writeback_projection_common import (
     HEALTH_REPORT_EXPERIENCE_WRITEBACK_CLOSURE_EXCLUDED_AREA,
+    build_health_report_experience_writeback_closure_summary_skeleton,
 )
 from projection_profile_exclusion_scope_common import build_projection_profile_exclusion_payload
 from protocol_infra_contract import (
@@ -1619,26 +1620,6 @@ def _build_projection_profile_host_visible_post_check_metrics(
     )
 
 
-def _build_summary_health_report_experience_writeback_closure() -> dict[str, Any]:
-    return {
-        "total_identities": 0,
-        "projection_pass": 0,
-        "projection_fail": 0,
-        "projection_skipped_not_required": 0,
-        "health_report_collection_fail": 0,
-        "health_report_contract_fail": 0,
-        "health_report_validation_fail": 0,
-        "selected_path_mismatch": 0,
-        "execution_report_ref_mismatch": 0,
-        "boundary_validation_mismatch": 0,
-        "projection_fail_identity_ids": [],
-        "projection_scope_excluded_identity_ids": [],
-        "projection_scope_classes": [],
-        "projection_scope_reasons": [],
-        "projection_stale_reasons": [],
-    }
-
-
 def _health_report_projection_is_scope_excluded(projection: dict[str, Any] | None) -> bool:
     if not isinstance(projection, dict) or not projection:
         return False
@@ -2206,7 +2187,7 @@ def main() -> int:
             "blocked_identity_ids": [],
         },
         "summary_health_report_experience_writeback_closure": (
-            _build_summary_health_report_experience_writeback_closure()
+            build_health_report_experience_writeback_closure_summary_skeleton()
         ),
         "summary_required_gate_bundle_projection": build_full_scan_required_gate_bundle_projection_summary_skeleton(),
         "summary_required_gate_bundle_shadow_projection": build_full_scan_required_gate_bundle_projection_summary_skeleton(),

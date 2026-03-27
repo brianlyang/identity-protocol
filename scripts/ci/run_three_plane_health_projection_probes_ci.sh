@@ -23,6 +23,7 @@ from health_report_experience_writeback_projection_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     STATUS_SKIPPED_NOT_REQUIRED,
+    build_health_report_experience_writeback_closure_summary_skeleton,
 )
 from report_three_plane_status import _build_three_plane_health_report_experience_writeback_closure
 from three_plane_projection_profile_common import resolve_three_plane_projection_profile
@@ -124,6 +125,17 @@ fail_projection = _build_three_plane_health_report_experience_writeback_closure(
 )
 assert fail_projection["projection_status"] == STATUS_FAIL_REQUIRED, fail_projection
 assert "health_report_boundary_validation_status_mismatch" in fail_projection["stale_reasons"], fail_projection
+
+summary_skeleton = build_health_report_experience_writeback_closure_summary_skeleton()
+assert summary_skeleton["total_identities"] == 0, summary_skeleton
+assert summary_skeleton["projection_pass"] == 0, summary_skeleton
+assert summary_skeleton["projection_fail"] == 0, summary_skeleton
+assert summary_skeleton["projection_skipped_not_required"] == 0, summary_skeleton
+assert summary_skeleton["projection_fail_identity_ids"] == [], summary_skeleton
+assert summary_skeleton["projection_scope_excluded_identity_ids"] == [], summary_skeleton
+assert summary_skeleton["projection_scope_classes"] == [], summary_skeleton
+assert summary_skeleton["projection_scope_reasons"] == [], summary_skeleton
+assert summary_skeleton["projection_stale_reasons"] == [], summary_skeleton
 
 print(
     json.dumps(

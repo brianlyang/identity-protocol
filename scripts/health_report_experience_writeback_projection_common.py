@@ -24,6 +24,26 @@ DEFAULT_HEALTH_REPORT_CONTRACT_SCRIPT = "scripts/validate_identity_health_contra
 HEALTH_REPORT_EXPERIENCE_WRITEBACK_CLOSURE_EXCLUDED_AREA = "health_report_experience_writeback_closure"
 
 
+def build_health_report_experience_writeback_closure_summary_skeleton() -> dict[str, Any]:
+    return {
+        "total_identities": 0,
+        "projection_pass": 0,
+        "projection_fail": 0,
+        "projection_skipped_not_required": 0,
+        "health_report_collection_fail": 0,
+        "health_report_contract_fail": 0,
+        "health_report_validation_fail": 0,
+        "selected_path_mismatch": 0,
+        "execution_report_ref_mismatch": 0,
+        "boundary_validation_mismatch": 0,
+        "projection_fail_identity_ids": [],
+        "projection_scope_excluded_identity_ids": [],
+        "projection_scope_classes": [],
+        "projection_scope_reasons": [],
+        "projection_stale_reasons": [],
+    }
+
+
 def default_health_report_dir() -> Path:
     return (runtime_temp_root() / "identity-health-reports").resolve()
 
