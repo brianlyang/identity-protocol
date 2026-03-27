@@ -189,6 +189,11 @@ assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_status
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_projection_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scope_class'] == 'bounded_targeted_subset_exclusion', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scope_reason'] == 'required_gate_bundle_out_of_scope_for_targeted_subset', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_actor_id'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_resolved_work_layer'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_resolved_source_layer'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_lock_state'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_run_id_binding'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_report_selected_path'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_report_selection_mode'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_report_authority_class'] == '', summary_targeted_subset_excluded
@@ -399,6 +404,11 @@ assert summary_release_projection['one_look']['identity_experience_writeback_rep
 assert summary_release_projection['one_look']['identity_experience_writeback_writeback_status'] == 'WRITTEN', summary_release_projection
 assert summary_release_projection['one_look']['required_gate_bundle_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['required_gate_bundle_projection_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_actor_id'] == 'assistant:probe', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_resolved_work_layer'] == 'instance', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_resolved_source_layer'] == 'project', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_lock_state'] == 'LOCK_MATCH', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_run_id_binding'] == 'probe-run-id', summary_release_projection
 assert summary_release_projection['one_look']['required_gate_bundle_report_selected_path'] == '/tmp/probe-report.json', summary_release_projection
 assert summary_release_projection['one_look']['required_gate_bundle_report_selection_mode'] == 'explicit_report_override', summary_release_projection
 assert summary_release_projection['one_look']['required_gate_bundle_report_authority_class'] == 'explicit_report_override', summary_release_projection

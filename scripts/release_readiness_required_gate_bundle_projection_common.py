@@ -6,6 +6,11 @@ from typing import Any
 STATUS_UNKNOWN = "UNKNOWN"
 
 RELEASE_READINESS_REQUIRED_GATE_BUNDLE_ONE_LOOK_PASSTHROUGH_FIELDS: tuple[tuple[str, str], ...] = (
+    ("actor_id", "required_gate_bundle_actor_id"),
+    ("resolved_work_layer", "required_gate_bundle_resolved_work_layer"),
+    ("resolved_source_layer", "required_gate_bundle_resolved_source_layer"),
+    ("lock_state", "required_gate_bundle_lock_state"),
+    ("run_id_binding", "required_gate_bundle_run_id_binding"),
     ("report_selected_path", "required_gate_bundle_report_selected_path"),
     ("report_selection_mode", "required_gate_bundle_report_selection_mode"),
     ("report_selected_authority_class", "required_gate_bundle_report_authority_class"),
