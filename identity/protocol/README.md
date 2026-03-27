@@ -403,6 +403,18 @@ Prompt-bootstrap law is not a soft prose bundle.
 
 ---
 
+## Root entry-surface legitimacy completeness discipline
+
+Entry-surface legitimacy law is not a soft prose bundle.
+
+1. required entry-class, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize entry-surface legitimacy truth while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
 ## Root identity-discovery completeness discipline
 
 Identity-discovery law is not a soft prose bundle.

@@ -30,6 +30,11 @@ assert payload["differentiation_count"] == 6, payload
 assert payload["entry_admission_proof_count"] == 5, payload
 assert payload["entry_admission_limit_count"] == 5, payload
 assert payload["collapse_count"] == 6, payload
+assert payload["entry_surface_row_family_count"] == 5, payload
+assert payload["entry_surface_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["entry_surface_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -65,10 +70,22 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_entry_surface_legitimacy_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-ESL-002", payload
+assert payload["entry_surface_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["entry_surface_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["reason"] == "missing_expected_rows" and "helper_support_demotion_entry_admission_proof" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+proof_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_entry_admission_proof_rows"
+)
+assert proof_row["expected_count"] == 5, payload
+assert proof_row["actual_count"] == 4, payload
+assert proof_row["missing_ids"] == ["helper_support_demotion_entry_admission_proof"], payload
+assert proof_row["unexpected_ids"] == [], payload
+assert proof_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert proof_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 ENTRY_REPO="${TMP_ROOT}/entry-drift-repo"
@@ -80,11 +97,12 @@ import yaml
 
 path = pathlib.Path(sys.argv[1])
 doc = yaml.safe_load(path.read_text(encoding="utf-8"))
-doc["required_entry_class_rows"] = [
-    row for row in doc["required_entry_class_rows"] if row.get("entry_class_id") != "governed_execution_entry_surface"
-]
-for idx, row in enumerate(doc["required_entry_class_rows"], start=1):
-    row["order"] = idx
+for row in doc["required_entry_class_rows"]:
+    if row.get("entry_class_id") == "governed_execution_entry_surface":
+        row["entry_class_id"] = "governed_execution_entry_surface_alias"
+        break
+else:
+    raise SystemExit("expected governed_execution_entry_surface row not found")
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
 
@@ -108,6 +126,22 @@ assert any(
     row["reason"] == "missing_expected_rows" and "governed_execution_entry_surface" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+assert any(
+    row["reason"] == "extra_rows" and "governed_execution_entry_surface_alias" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
+assert payload["entry_surface_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["entry_surface_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+entry_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_entry_class_rows"
+)
+assert entry_row["expected_count"] == 6, payload
+assert entry_row["actual_count"] == 6, payload
+assert entry_row["missing_ids"] == ["governed_execution_entry_surface"], payload
+assert entry_row["unexpected_ids"] == ["governed_execution_entry_surface_alias"], payload
+assert entry_row["coverage_status"] == "PASS_REQUIRED", payload
+assert entry_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 PHRASE_REPO="${TMP_ROOT}/phrase-drift-repo"
