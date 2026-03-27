@@ -64,6 +64,7 @@ from resolve_release_plane_cloud_evidence import (
 )
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
+from terminal_truth_boundary_projection_common import build_terminal_truth_boundary_projection_summary_skeleton
 
 LOCK_PROTOCOL_PREFIX = "SESSION_LANE_LOCK_PROTOCOL_"
 LOCK_EXIT_PREFIX = "SESSION_LANE_LOCK_EXIT_"
@@ -2176,16 +2177,7 @@ def main() -> int:
         "summary_fixture_or_demo": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
         "summary_non_active_or_non_runtime": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
         "summary_m2m": {"total_identities": 0, "pass": 0, "fail": 0},
-        "summary_terminal_truth_boundary": {
-            "total_identities": 0,
-            "projection_pass": 0,
-            "projection_fail": 0,
-            "not_applicable": 0,
-            "blocked_by_terminal_truth": 0,
-            "repair_green_terminal_truth_blocked": 0,
-            "repair_green_terminal_truth_clean": 0,
-            "blocked_identity_ids": [],
-        },
+        "summary_terminal_truth_boundary": build_terminal_truth_boundary_projection_summary_skeleton(),
         "summary_health_report_experience_writeback_closure": (
             build_health_report_experience_writeback_closure_summary_skeleton()
         ),

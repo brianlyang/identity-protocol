@@ -25,6 +25,19 @@ BOUNDARY_HEALTH_REPAIR_BLOCKED_TERMINAL_TRUTH_CLEAN = "repair_blocked_terminal_t
 BOUNDARY_HEALTH_PROJECTION_INCOMPLETE = "projection_incomplete"
 
 
+def build_terminal_truth_boundary_projection_summary_skeleton() -> dict[str, Any]:
+    return {
+        "total_identities": 0,
+        "projection_pass": 0,
+        "projection_fail": 0,
+        "not_applicable": 0,
+        "blocked_by_terminal_truth": 0,
+        "repair_green_terminal_truth_blocked": 0,
+        "repair_green_terminal_truth_clean": 0,
+        "blocked_identity_ids": [],
+    }
+
+
 def _clean_status(value: Any) -> str:
     return str(value or "").strip().upper()
 

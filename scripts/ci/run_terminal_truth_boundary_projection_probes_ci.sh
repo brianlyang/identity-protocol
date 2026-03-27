@@ -246,7 +246,10 @@ repo_root = Path.cwd()
 sys.path.insert(0, str((repo_root / "scripts").resolve()))
 
 import release_readiness_check as readiness
-from terminal_truth_boundary_projection_common import build_terminal_truth_boundary_projection_from_report
+from terminal_truth_boundary_projection_common import (
+    build_terminal_truth_boundary_projection_from_report,
+    build_terminal_truth_boundary_projection_summary_skeleton,
+)
 
 catalog_path = Path(sys.argv[1]).resolve()
 clean_report_path = Path(sys.argv[2]).resolve()
@@ -323,6 +326,16 @@ non_closeout_projection = build_terminal_truth_boundary_projection_from_report(
 )
 assert non_closeout_projection["terminal_truth_boundary_projection_status"] == "SKIPPED_NOT_REQUIRED", non_closeout_projection
 assert non_closeout_projection["admission_lane_projection"] == "NOT_APPLICABLE", non_closeout_projection
+
+summary_skeleton = build_terminal_truth_boundary_projection_summary_skeleton()
+assert summary_skeleton["total_identities"] == 0, summary_skeleton
+assert summary_skeleton["projection_pass"] == 0, summary_skeleton
+assert summary_skeleton["projection_fail"] == 0, summary_skeleton
+assert summary_skeleton["not_applicable"] == 0, summary_skeleton
+assert summary_skeleton["blocked_by_terminal_truth"] == 0, summary_skeleton
+assert summary_skeleton["repair_green_terminal_truth_blocked"] == 0, summary_skeleton
+assert summary_skeleton["repair_green_terminal_truth_clean"] == 0, summary_skeleton
+assert summary_skeleton["blocked_identity_ids"] == [], summary_skeleton
 
 summary = {
     "terminal_truth_boundary_projection": review_projection,
