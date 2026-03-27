@@ -63,6 +63,7 @@ from protocol_infra_contract import (
     VALIDATOR_RUN_ID_REQUIRED_SCRIPTS,
     VALIDATOR_SESSION_ID_REQUIRED_SCRIPTS,
 )
+from resolve_release_plane_cloud_evidence import resolve_release_plane_context
 from workspace_runtime_closure_command_common import (
     build_workspace_runtime_closure_checker_command,
     resolve_workspace_runtime_closure_checker_spec,
@@ -4049,27 +4050,19 @@ def main() -> int:
         explicit_run_head_sha = str(args.run_head_sha or "").strip()
         explicit_run_workflow_file_sha = str(args.run_workflow_file_sha or "").strip()
         update_checks_json = str(args.checks_json or "").strip()
-        github_run_id = str(os.environ.get("GITHUB_RUN_ID", "")).strip()
-        github_server_url = str(os.environ.get("GITHUB_SERVER_URL", "")).strip()
-        github_repository = str(os.environ.get("GITHUB_REPOSITORY", "")).strip()
-        github_run_url = (
-            f"{github_server_url}/{github_repository}/actions/runs/{github_run_id}"
-            if github_run_id and github_server_url and github_repository
-            else ""
+        release_context = resolve_release_plane_context(
+            explicit_target_branch=explicit_target_branch,
+            explicit_release_head_sha=explicit_release_head_sha,
+            explicit_required_gates_run_id=explicit_required_gates_run_id,
+            explicit_run_url=explicit_run_url,
+            explicit_workflow_file_sha=explicit_workflow_file_sha,
+            explicit_run_head_sha=explicit_run_head_sha,
+            explicit_run_workflow_file_sha=explicit_run_workflow_file_sha,
+            explicit_checks_json=update_checks_json,
+            default_target_branch="main",
+            default_release_head_sha="",
         )
-        release_plane_context_requested = any(
-            [
-                explicit_target_branch,
-                explicit_release_head_sha,
-                explicit_required_gates_run_id,
-                explicit_run_url,
-                explicit_workflow_file_sha,
-                explicit_run_head_sha,
-                explicit_run_workflow_file_sha,
-                update_checks_json,
-                github_run_url,
-            ]
-        )
+        release_plane_context_requested = bool(release_context.get("release_plane_context_requested"))
         update_target_branch = ""
         update_release_head_sha = ""
         update_required_gates_run_id = ""
@@ -4078,8 +4071,7 @@ def main() -> int:
         update_run_head_sha = ""
         update_run_workflow_file_sha = ""
         if release_plane_context_requested:
-            update_target_branch = explicit_target_branch or str(os.environ.get("GITHUB_REF_NAME", "main")).strip() or "main"
-            update_release_head_sha = explicit_release_head_sha
+            update_release_head_sha = str(release_context.get("release_head_sha", "")).strip()
             if not update_release_head_sha:
                 try:
                     p_head = subprocess.run(
@@ -4092,11 +4084,26 @@ def main() -> int:
                         update_release_head_sha = str(p_head.stdout or "").strip()
                 except Exception:
                     update_release_head_sha = ""
-            update_required_gates_run_id = explicit_required_gates_run_id or github_run_id or update_run_id
-            update_run_url = explicit_run_url or github_run_url
-            update_workflow_file_sha = explicit_workflow_file_sha or update_release_head_sha
-            update_run_head_sha = explicit_run_head_sha or update_release_head_sha
-            update_run_workflow_file_sha = explicit_run_workflow_file_sha or update_workflow_file_sha
+            if update_release_head_sha:
+                release_context = dict(release_context)
+                release_context["release_head_sha"] = update_release_head_sha
+                release_context["workflow_file_sha"] = str(
+                    release_context.get("workflow_file_sha", "") or update_release_head_sha
+                ).strip()
+                release_context["run_head_sha"] = str(
+                    release_context.get("run_head_sha", "") or update_release_head_sha
+                ).strip()
+                release_context["run_workflow_file_sha"] = str(
+                    release_context.get("run_workflow_file_sha", "")
+                    or release_context.get("workflow_file_sha", "")
+                    or update_release_head_sha
+                ).strip()
+            update_target_branch = str(release_context.get("target_branch", "")).strip()
+            update_required_gates_run_id = str(release_context.get("required_gates_run_id", "")).strip()
+            update_run_url = str(release_context.get("run_url", "")).strip()
+            update_workflow_file_sha = str(release_context.get("workflow_file_sha", "")).strip()
+            update_run_head_sha = str(release_context.get("run_head_sha", "")).strip()
+            update_run_workflow_file_sha = str(release_context.get("run_workflow_file_sha", "")).strip()
         pre_mutation_gate_ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         pre_mutation_reply_file = str(
             runtime_temp_file(
