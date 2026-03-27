@@ -244,7 +244,6 @@ from pathlib import Path
 
 pass_report_path = Path(sys.argv[1]).resolve()
 skip_report_path = Path(sys.argv[2]).resolve()
-explicit_execution_report = str(Path(sys.argv[3]).resolve())
 
 pass_doc = json.loads(pass_report_path.read_text(encoding="utf-8"))
 skip_doc = json.loads(skip_report_path.read_text(encoding="utf-8"))
@@ -256,10 +255,15 @@ assert isinstance(skip_check, dict), skip_doc
 
 pass_closure = pass_doc.get("experience_writeback_closure") or {}
 skip_closure = skip_doc.get("experience_writeback_closure") or {}
+pass_payload = pass_check.get("payload") or {}
+assert str(pass_doc.get("execution_report_ref", "")).strip(), pass_doc
 
 assert pass_closure.get("status") == "PASS", pass_closure
 assert pass_closure.get("validation_status") == "PASS_REQUIRED", pass_closure
-assert pass_closure.get("report_selected_path") == explicit_execution_report, pass_closure
+assert pass_closure.get("report_selected_path") == pass_doc.get("execution_report_ref"), (pass_closure, pass_doc)
+assert pass_closure.get("report_selection_mode") == pass_payload.get("report_selection_mode"), (pass_closure, pass_payload)
+assert pass_closure.get("report_selected_authority_class") == pass_payload.get("report_selected_authority_class"), (pass_closure, pass_payload)
+assert pass_closure.get("report_pointer_resolution_mode") == pass_payload.get("report_pointer_resolution_mode"), (pass_closure, pass_payload)
 assert str(pass_closure.get("report_run_id", "")).startswith("identity-upgrade-exec-probe-health-pass-"), pass_closure
 assert pass_closure.get("writeback_status") == "WRITTEN", pass_closure
 assert pass_closure.get("writeback_rule_id") == "rule-entry-health-pass", pass_closure
@@ -283,5 +287,34 @@ print(json.dumps({
     "skip_experience_writeback_validation_status": skip_closure.get("validation_status"),
 }, ensure_ascii=False))
 PY
+
+AUTHORITY_TAMPERED_REPORT_PATH="${OUT_DIR}/identity-health-${PASS_ID}-authority-tampered.json"
+python3 - <<'PY' "${PASS_REPORT_PATH}" "${AUTHORITY_TAMPERED_REPORT_PATH}"
+import json
+import sys
+from pathlib import Path
+
+src = Path(sys.argv[1]).resolve()
+dst = Path(sys.argv[2]).resolve()
+doc = json.loads(src.read_text(encoding="utf-8"))
+closure = doc.get("experience_writeback_closure") or {}
+closure["report_selected_authority_class"] = ""
+doc["experience_writeback_closure"] = closure
+for row in doc.get("checks", []) or []:
+    if str((row or {}).get("name", "")).strip() == "experience_writeback":
+        payload = row.get("payload") or {}
+        payload["report_selected_authority_class"] = ""
+        row["payload"] = payload
+        break
+dst.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+if python3 scripts/validate_identity_health_contract.py --identity-id "${PASS_ID}" --report "${AUTHORITY_TAMPERED_REPORT_PATH}" >/tmp/identity-health-authority-tampered.out 2>/tmp/identity-health-authority-tampered.err; then
+  echo "[FAIL] authority-tampered health report unexpectedly passed contract validation"
+  cat /tmp/identity-health-authority-tampered.out
+  cat /tmp/identity-health-authority-tampered.err
+  exit 1
+fi
+grep -q 'experience_writeback_closure authority projection incomplete for PASS_REQUIRED' /tmp/identity-health-authority-tampered.out
 
 echo "[PASS] identity health report probes passed"
