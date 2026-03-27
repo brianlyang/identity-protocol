@@ -154,6 +154,42 @@ def _build_cases(
     skill_fixture.write_text("# task14 fixture skill\n", encoding="utf-8")
 
     pin_receipt = tmp_root / "rq021_pin_receipt.json"
+    route_pin_observation_pack = tmp_root / "rq021_observation_identity"
+    route_pin_observation_pack.mkdir(parents=True, exist_ok=True)
+    _write_json(
+        route_pin_observation_pack / "CURRENT_TASK.json",
+        {
+            "route_workflow_version_pinning_contract_v1": {
+                "required": True,
+                "receipt_emitter": "scripts/emit_route_version_pin_receipt.py",
+                "validator": "scripts/validate_route_version_pinning.py",
+                "proof_receipt_path_pattern": "runtime/reports/**/*route-version-pin-receipt*.json",
+                "required_fields": [
+                    "route_endpoint",
+                    "workflow_id",
+                    "workflow_publish_version",
+                    "pin_proof_ref",
+                ],
+                "expected_bindings": [],
+                "fail_action": "block_merge_and_reenter_route_workflow_version_alignment",
+            }
+        },
+    )
+    route_pin_observation_catalog = tmp_root / "rq021_observation_catalog.yaml"
+    route_pin_observation_catalog.write_text(
+        yaml.safe_dump(
+            {
+                "identities": [
+                    {
+                        "id": "rq021-observation-fixture",
+                        "pack_path": str(route_pin_observation_pack.resolve()),
+                    }
+                ]
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
 
     _write_json(
         bundle_pos,
@@ -602,6 +638,42 @@ def _build_cases(
             expected_status=STATUS_FAIL_REQUIRED,
             expected_rc=1,
             expected_error_code="IP-PIN-003",
+        ),
+        ReplayCase(
+            case_id="rq021_observation_no_current_round_source_skips",
+            rq_id="ASB16-RQ-021",
+            cmd=[
+                python_bin,
+                str(scripts_dir / "validate_route_version_pinning.py"),
+                "--catalog",
+                str(route_pin_observation_catalog),
+                "--identity-id",
+                "rq021-observation-fixture",
+                "--operation",
+                "inspection",
+                "--json-only",
+            ],
+            status_key="pin_status",
+            expected_status=STATUS_SKIPPED_NOT_REQUIRED,
+            expected_rc=0,
+        ),
+        ReplayCase(
+            case_id="rq021_update_no_expected_binding_source_skips",
+            rq_id="ASB16-RQ-021",
+            cmd=[
+                python_bin,
+                str(scripts_dir / "validate_route_version_pinning.py"),
+                "--catalog",
+                str(route_pin_observation_catalog),
+                "--identity-id",
+                "rq021-observation-fixture",
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            status_key="pin_status",
+            expected_status=STATUS_SKIPPED_NOT_REQUIRED,
+            expected_rc=0,
         ),
         ReplayCase(
             case_id="rq022_positive",

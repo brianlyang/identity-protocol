@@ -231,6 +231,10 @@ def _extract_expected_binding(*, args: argparse.Namespace, contract: dict[str, A
     return {}, ""
 
 
+def _binding_available(binding: dict[str, str]) -> bool:
+    return any(_nonempty(v) for v in binding.values())
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate route/workflow publish-version pinning receipt (RQ-021).")
     ap.add_argument("--catalog", required=True)
@@ -279,7 +283,9 @@ def main() -> int:
         "expected_route_endpoint": "",
         "expected_workflow_id": "",
         "expected_workflow_publish_version": "",
+        "expected_binding_available": False,
         "expected_binding_source": "",
+        "current_round_source_available": False,
         "pin_status": STATUS_SKIPPED_NOT_REQUIRED,
         "pin_error_code": "",
         "error_code": "",
@@ -312,11 +318,22 @@ def main() -> int:
     payload["required_contract"] = required
     payload["auto_required_signal"] = auto_required
     payload["requiredization_current_round_linked"] = explicit_current_round_linked
+    payload["current_round_source_available"] = explicit_current_round_linked
 
     if not required and not auto_required:
         payload["stale_reasons"] = ["contract_not_required"]
         _emit(payload, json_only=args.json_only)
         return 0
+
+    expected_binding_probe, expected_binding_probe_source = _extract_expected_binding(
+        args=args,
+        contract=contract,
+        actual={},
+    )
+    expected_binding_available = _binding_available(expected_binding_probe)
+    payload["expected_binding_available"] = expected_binding_available
+    if expected_binding_probe_source:
+        payload["expected_binding_source"] = expected_binding_probe_source
 
     receipt_path = _select_receipt_path(explicit_receipt=args.receipt, identity_id=args.identity_id, pack_path=pack_path)
     payload["producer_readiness"] = receipt_path is not None
@@ -329,7 +346,16 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 0
     if receipt_path is None:
-        if not payload["requiredization_current_round_linked"] and args.operation in STRICT_OPERATIONS:
+        if not payload["requiredization_current_round_linked"] and args.operation in OBSERVATION_OPERATIONS:
+            payload["pin_status"] = STATUS_SKIPPED_NOT_REQUIRED
+            payload["stale_reasons"] = ["required_contract_not_applicable_no_current_round_evidence_source"]
+            _emit(payload, json_only=args.json_only)
+            return 0
+        if (
+            not payload["requiredization_current_round_linked"]
+            and args.operation in STRICT_OPERATIONS
+            and not expected_binding_available
+        ):
             payload["pin_status"] = STATUS_SKIPPED_NOT_REQUIRED
             payload["stale_reasons"] = ["required_contract_not_applicable_no_current_round_evidence_source"]
             _emit(payload, json_only=args.json_only)
@@ -374,9 +400,10 @@ def main() -> int:
     payload["expected_route_endpoint"] = expected.get("route_endpoint", "")
     payload["expected_workflow_id"] = expected.get("workflow_id", "")
     payload["expected_workflow_publish_version"] = expected.get("workflow_publish_version", "")
+    payload["expected_binding_available"] = _binding_available(expected)
     payload["expected_binding_source"] = expected_source
 
-    if not any(_nonempty(v) for v in expected.values()):
+    if not payload["expected_binding_available"]:
         payload["pin_status"] = STATUS_FAIL_REQUIRED
         payload["pin_error_code"] = ERR_EXPECTED_BINDING_MISSING
         payload["error_code"] = ERR_EXPECTED_BINDING_MISSING
