@@ -386,6 +386,7 @@ for row in seeded:
         "release_plane",
         "release_cloud_evidence_adapter",
         "required_gate_bundle_projection",
+        "health_report_experience_writeback_closure",
         "current_chat_surface_exclusion",
         "m2m_projection",
         "tuple_context_projection",
@@ -426,6 +427,14 @@ for row in seeded:
     assert tp_payload["required_gate_bundle_target_projection"]["scope_class"] == "bounded_projection_profile_exclusion", (
         identity_id,
         tp_payload["required_gate_bundle_target_projection"],
+    )
+    assert tp_payload["health_report_experience_writeback_closure"]["projection_status"] == "SKIPPED_NOT_REQUIRED", (
+        identity_id,
+        tp_payload["health_report_experience_writeback_closure"],
+    )
+    assert tp_payload["health_report_experience_writeback_closure"]["projection_excluded_area"] == "health_report_experience_writeback_closure", (
+        identity_id,
+        tp_payload["health_report_experience_writeback_closure"],
     )
     _assert_projection(f"three-plane:{identity_id}:top", tp_payload["terminal_truth_boundary_projection"], spec)
     instance_projection = (tp_payload.get("instance_plane_detail") or {}).get("terminal_truth_boundary_projection") or {}

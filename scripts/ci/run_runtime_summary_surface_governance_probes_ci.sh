@@ -72,6 +72,32 @@ if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$
 fi
 echo "[PASS] negative three-plane projection doc anchor probe fail-closed as expected"
 
+cp scripts/report_three_plane_status.py "$tmpdir/scripts/"
+cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
+
+mutate_probe_literal \
+  "$tmpdir/scripts/report_three_plane_status.py" \
+  '"health_report_experience_writeback_closure"'
+
+if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-three-plane-health-script.json; then
+  echo "[FAIL] negative three-plane health projection script drift probe unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] negative three-plane health projection script drift probe fail-closed as expected"
+
+cp scripts/report_three_plane_status.py "$tmpdir/scripts/"
+cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
+
+mutate_probe_literal \
+  "$tmpdir/docs/governance/identity-v1.6x-release-closure-governance.md" \
+  'scripts/ci/run_three_plane_health_projection_probes_ci.sh'
+
+if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-three-plane-health-doc.json; then
+  echo "[FAIL] negative three-plane health projection doc anchor probe unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] negative three-plane health projection doc anchor probe fail-closed as expected"
+
 cp scripts/release_readiness_check.py "$tmpdir/scripts/"
 cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
 

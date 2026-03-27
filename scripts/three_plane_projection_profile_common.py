@@ -49,6 +49,7 @@ THREE_PLANE_PROJECTION_PROFILES: dict[str, ThreePlaneProjectionProfile] = {
             "release_plane",
             "release_cloud_evidence_adapter",
             "required_gate_bundle_projection",
+            "health_report_experience_writeback_closure",
             "current_chat_surface_exclusion",
             "m2m_projection",
             "tuple_context_projection",

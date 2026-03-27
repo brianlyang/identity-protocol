@@ -13,6 +13,14 @@ from typing import Any
 
 from actor_session_common import load_actor_binding, resolve_actor_id
 from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gateway_wrapped_command
+from health_report_experience_writeback_projection_common import (
+    DEFAULT_HEALTH_REPORT_COLLECTION_SCRIPT,
+    DEFAULT_HEALTH_REPORT_CONTRACT_SCRIPT,
+    build_health_report_experience_writeback_closure_projection,
+    build_projection_profile_excluded_health_report_experience_writeback_closure,
+    default_health_report_dir,
+    resolve_identity_health_report_for_execution_report,
+)
 from protocol_infra_contract import (
     build_required_gate_bundle_cmd as build_required_gate_bundle_cmd_shared,
     CANONICAL_FINAL_EMIT_SCRIPT,
@@ -1011,6 +1019,37 @@ def _instance_execution_closed(
     return all_ok and writeback_status == "WRITTEN" and permission_state == "WRITEBACK_WRITTEN"
 
 
+def _build_three_plane_health_report_experience_writeback_closure(
+    *,
+    projection_profile: ThreePlaneProjectionProfile,
+    identity_id: str,
+    health_report_dir: str,
+    execution_report_path: Path | None,
+    boundary_experience_writeback_validation_status: str,
+    failed_scripts: list[str] | None = None,
+    first_failed_script: str = "",
+) -> dict[str, Any]:
+    if projection_profile.projection_only:
+        return build_projection_profile_excluded_health_report_experience_writeback_closure(
+            profile_id=projection_profile.profile_id,
+            execution_mode=projection_profile.execution_mode,
+            description=projection_profile.description,
+            owner_surface="semantic_tuple_three_plane",
+        )
+    return build_health_report_experience_writeback_closure_projection(
+        identity_id=identity_id,
+        health_report_dir=health_report_dir,
+        execution_report=str(execution_report_path or ""),
+        command_execution={
+            "failed_scripts": list(failed_scripts or []),
+            "first_failed_script": str(first_failed_script or "").strip(),
+        },
+        selected_check_mode="full",
+        selected_check_names=(),
+        boundary_experience_writeback_validation_status=boundary_experience_writeback_validation_status,
+    )
+
+
 def _instance_plane_status(
     args: argparse.Namespace,
     report_path: Path | None,
@@ -1144,6 +1183,15 @@ def _instance_plane_status(
                 description=active_projection_profile.description,
                 excluded_area="required_gate_bundle_projection",
                 owner_surface="semantic_tuple_three_plane_shadow",
+            )
+        )
+        detail["health_report_experience_writeback_closure"] = (
+            _build_three_plane_health_report_experience_writeback_closure(
+                projection_profile=active_projection_profile,
+                identity_id=args.identity_id,
+                health_report_dir=str(default_health_report_dir()),
+                execution_report_path=report_path,
+                boundary_experience_writeback_validation_status=STATUS_SKIPPED_NOT_REQUIRED,
             )
         )
         return PROJECTION_ONLY_PLANE_STATUS, detail
@@ -3864,6 +3912,94 @@ def _instance_plane_status(
     if rc_align != 0 or align_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    terminal_truth_boundary_projection = build_terminal_truth_boundary_projection_from_report(
+        report_doc=data if isinstance(data, dict) else {},
+        report_path=report_path,
+        catalog_path=Path(args.catalog).expanduser().resolve(),
+        repo_catalog_path=Path(args.repo_catalog).expanduser().resolve(),
+        identity_id=args.identity_id,
+        operation="three-plane",
+        work_layer=effective_work_layer,
+        source_layer=effective_source_layer,
+    )
+    health_report_dir_path = default_health_report_dir()
+    health_collect_failed_scripts: list[str] = []
+    health_first_failed_script = ""
+    health_collect_cmd = [
+        "python3",
+        DEFAULT_HEALTH_REPORT_COLLECTION_SCRIPT,
+        "--identity-id",
+        args.identity_id,
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--operation",
+        "three-plane",
+        "--execution-report",
+        str(report_path),
+        "--actor-id",
+        actor_id,
+        "--session-id",
+        session_id_value,
+        "--out-dir",
+        str(health_report_dir_path),
+    ]
+    if str(getattr(args, "scope", "") or "").strip():
+        health_collect_cmd.extend(["--scope", str(getattr(args, "scope", "")).strip()])
+    rc_health_collect, out_health_collect, err_health_collect = _run(health_collect_cmd)
+    health_report_path = resolve_identity_health_report_for_execution_report(
+        health_report_dir_path,
+        identity_id=args.identity_id,
+        execution_report=report_path,
+    )
+    if rc_health_collect != 0:
+        health_collect_failed_scripts.append(DEFAULT_HEALTH_REPORT_COLLECTION_SCRIPT)
+        health_first_failed_script = DEFAULT_HEALTH_REPORT_COLLECTION_SCRIPT
+    elif health_report_path is None:
+        health_collect_failed_scripts.append(DEFAULT_HEALTH_REPORT_COLLECTION_SCRIPT)
+        health_first_failed_script = DEFAULT_HEALTH_REPORT_COLLECTION_SCRIPT
+
+    rc_health_contract = 0
+    out_health_contract = ""
+    err_health_contract = ""
+    if health_report_path is not None:
+        rc_health_contract, out_health_contract, err_health_contract = _run(
+            [
+                "python3",
+                DEFAULT_HEALTH_REPORT_CONTRACT_SCRIPT,
+                "--identity-id",
+                args.identity_id,
+                "--report",
+                str(health_report_path),
+            ]
+        )
+        if rc_health_contract != 0:
+            health_collect_failed_scripts.append(DEFAULT_HEALTH_REPORT_CONTRACT_SCRIPT)
+            if not health_first_failed_script:
+                health_first_failed_script = DEFAULT_HEALTH_REPORT_CONTRACT_SCRIPT
+    else:
+        rc_health_contract, out_health_contract, err_health_contract = (
+            1,
+            "",
+            "health_report_not_found_for_execution_report",
+        )
+        health_collect_failed_scripts.append(DEFAULT_HEALTH_REPORT_CONTRACT_SCRIPT)
+        if not health_first_failed_script:
+            health_first_failed_script = DEFAULT_HEALTH_REPORT_CONTRACT_SCRIPT
+
+    health_report_projection = _build_three_plane_health_report_experience_writeback_closure(
+        projection_profile=active_projection_profile,
+        identity_id=args.identity_id,
+        health_report_dir=str(health_report_dir_path),
+        execution_report_path=report_path,
+        boundary_experience_writeback_validation_status=str(
+            terminal_truth_boundary_projection.get("experience_writeback_validation_status", "")
+        ).strip().upper(),
+        failed_scripts=health_collect_failed_scripts,
+        first_failed_script=health_first_failed_script,
+    )
+
     detail = {
         "report_path": str(report_path),
         "all_ok": all_ok,
@@ -3908,6 +4044,23 @@ def _instance_plane_status(
                 "task_history_contains_run_id"
             ),
             "stale_reasons": experience_writeback_payload.get("stale_reasons", []),
+        },
+        "health_report_experience_writeback_closure": {
+            **health_report_projection,
+            "collection_receipt": {
+                "script": DEFAULT_HEALTH_REPORT_COLLECTION_SCRIPT,
+                "rc": rc_health_collect,
+                "ok": rc_health_collect == 0,
+                "out": out_health_collect,
+                "err": err_health_collect,
+            },
+            "contract_receipt": {
+                "script": DEFAULT_HEALTH_REPORT_CONTRACT_SCRIPT,
+                "rc": rc_health_contract,
+                "ok": rc_health_contract == 0,
+                "out": out_health_contract,
+                "err": err_health_contract,
+            },
         },
         "required_contract_coverage": {
             "required_contract_total": coverage_payload.get("required_contract_total"),
@@ -5196,16 +5349,7 @@ def _instance_plane_status(
         "validators": validators,
     }
 
-    detail["terminal_truth_boundary_projection"] = build_terminal_truth_boundary_projection_from_report(
-        report_doc=data if isinstance(data, dict) else {},
-        report_path=report_path,
-        catalog_path=Path(args.catalog).expanduser().resolve(),
-        repo_catalog_path=Path(args.repo_catalog).expanduser().resolve(),
-        identity_id=args.identity_id,
-        operation="three-plane",
-        work_layer=effective_work_layer,
-        source_layer=effective_source_layer,
-    )
+    detail["terminal_truth_boundary_projection"] = terminal_truth_boundary_projection
 
     validators_all_ok = all(v.get("ok", False) for v in validators.values())
     if _instance_execution_closed(
@@ -5509,6 +5653,9 @@ def main() -> int:
         )
     payload["terminal_truth_boundary_projection"] = (
         instance_detail.get("terminal_truth_boundary_projection", {}) if isinstance(instance_detail, dict) else {}
+    )
+    payload["health_report_experience_writeback_closure"] = (
+        instance_detail.get("health_report_experience_writeback_closure", {}) if isinstance(instance_detail, dict) else {}
     )
 
     overall = PROJECTION_ONLY_RELEASE_DECISION if projection_profile.projection_only else "Conditional Go"

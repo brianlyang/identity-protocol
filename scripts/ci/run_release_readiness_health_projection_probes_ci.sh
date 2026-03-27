@@ -18,11 +18,13 @@ from pathlib import Path
 repo_root = Path.cwd().resolve()
 sys.path.insert(0, str((repo_root / "scripts").resolve()))
 
-from release_readiness_check import (
+from health_report_experience_writeback_projection_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     STATUS_SKIPPED_NOT_REQUIRED,
-    _build_health_report_experience_writeback_closure_projection,
+    build_health_report_experience_writeback_closure_projection,
+)
+from release_readiness_check import (
     _hydrate_one_look_projection,
 )
 
@@ -88,11 +90,16 @@ pass_summary = summary_template(
     first_failed="",
     boundary_status=STATUS_PASS_REQUIRED,
 )
-pass_projection = _build_health_report_experience_writeback_closure_projection(
-    pass_summary,
+pass_projection = build_health_report_experience_writeback_closure_projection(
     identity_id=identity_id,
     health_report_dir=str(pass_health_dir),
     execution_report=str(execution_report),
+    command_execution=pass_summary["command_execution"],
+    selected_check_mode=pass_summary["selected_check_mode"],
+    selected_check_names=pass_summary["selected_check_names"],
+    boundary_experience_writeback_validation_status=pass_summary["terminal_truth_boundary_projection"][
+        "experience_writeback_validation_status"
+    ],
 )
 assert pass_projection["projection_status"] == STATUS_PASS_REQUIRED, pass_projection
 assert pass_projection["health_report_collection_status"] == STATUS_PASS_REQUIRED, pass_projection
@@ -115,11 +122,16 @@ skip_summary = summary_template(
     first_failed="",
     boundary_status=STATUS_SKIPPED_NOT_REQUIRED,
 )
-skip_projection = _build_health_report_experience_writeback_closure_projection(
-    skip_summary,
+skip_projection = build_health_report_experience_writeback_closure_projection(
     identity_id=identity_id,
     health_report_dir=str((tmp_dir / "health-skip").resolve()),
     execution_report=str(execution_report),
+    command_execution=skip_summary["command_execution"],
+    selected_check_mode=skip_summary["selected_check_mode"],
+    selected_check_names=skip_summary["selected_check_names"],
+    boundary_experience_writeback_validation_status=skip_summary["terminal_truth_boundary_projection"][
+        "experience_writeback_validation_status"
+    ],
 )
 assert skip_projection["projection_status"] == STATUS_SKIPPED_NOT_REQUIRED, skip_projection
 assert "post_execution_health_projection_not_selected" in skip_projection["stale_reasons"], skip_projection
@@ -131,11 +143,16 @@ blocked_summary = summary_template(
     first_failed="scripts/validate_identity_protocol_version_alignment.py",
     boundary_status=STATUS_SKIPPED_NOT_REQUIRED,
 )
-blocked_projection = _build_health_report_experience_writeback_closure_projection(
-    blocked_summary,
+blocked_projection = build_health_report_experience_writeback_closure_projection(
     identity_id=identity_id,
     health_report_dir=str((tmp_dir / "health-blocked").resolve()),
     execution_report=str(execution_report),
+    command_execution=blocked_summary["command_execution"],
+    selected_check_mode=blocked_summary["selected_check_mode"],
+    selected_check_names=blocked_summary["selected_check_names"],
+    boundary_experience_writeback_validation_status=blocked_summary["terminal_truth_boundary_projection"][
+        "experience_writeback_validation_status"
+    ],
 )
 assert blocked_projection["projection_status"] == STATUS_SKIPPED_NOT_REQUIRED, blocked_projection
 assert blocked_projection["health_report_collection_status"] == STATUS_SKIPPED_NOT_REQUIRED, blocked_projection
@@ -172,11 +189,16 @@ fail_summary = summary_template(
     first_failed="",
     boundary_status=STATUS_PASS_REQUIRED,
 )
-fail_projection = _build_health_report_experience_writeback_closure_projection(
-    fail_summary,
+fail_projection = build_health_report_experience_writeback_closure_projection(
     identity_id=identity_id,
     health_report_dir=str(fail_health_dir),
     execution_report=str(execution_report),
+    command_execution=fail_summary["command_execution"],
+    selected_check_mode=fail_summary["selected_check_mode"],
+    selected_check_names=fail_summary["selected_check_names"],
+    boundary_experience_writeback_validation_status=fail_summary["terminal_truth_boundary_projection"][
+        "experience_writeback_validation_status"
+    ],
 )
 assert fail_projection["projection_status"] == STATUS_FAIL_REQUIRED, fail_projection
 assert "health_report_boundary_validation_status_mismatch" in fail_projection["stale_reasons"], fail_projection
