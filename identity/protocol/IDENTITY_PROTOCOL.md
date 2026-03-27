@@ -158,6 +158,14 @@ Projected violation-reason total must remain congruent with
 structure/completeness/anchor violation-row total rather than being left
 implicit.
 
+## Root machine-law primacy completeness boundary
+
+1. Machine-law primacy law must remain machine-readable as separate commitment, anchor, primacy-proof, primacy-limit, and collapse row families.
+2. Aggregate row-family counts are insufficient on their own; expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness.
+3. Expected row identity set and emitted row identity set for each machine-law primacy family must also remain explicit; identity drift may not be collapsed into summary-only counts.
+4. Protocol legality must not finalize machine-law primacy legality while missing or unexpected row identities remain known only inside validator logic.
+5. Fail-close machine-law primacy output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+
 ## Root prompt-bootstrap completeness boundary
 
 1. Prompt-bootstrap law must remain machine-readable as separate anchor, output-field, binding-field, proof, limit, and native-literal row families.

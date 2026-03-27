@@ -1003,6 +1003,29 @@ Explicit registry-declared surface-stem binding when a family borrows another ad
 Registry completeness must therefore fail-close rather than accepting
 descriptor surface sets that impersonate a different admitted family without explicit registry declaration.
 
+### Machine-law primacy row-family completeness must stay explicit
+
+Machine-law primacy law is not a soft prose summary that may hide its machine
+rows behind aggregate counts.
+
+Required commitment, anchor, primacy-proof, primacy-limit, and collapse
+families must remain explicit as separate machine-readable row families.
+
+Expected row-family total and emitted row-family total must therefore stay
+congruent under machine-readable coverage completeness rather than being left
+implicit.
+
+Expected row identity set and emitted row identity set for each family must
+also remain machine-readable rather than being collapsed into aggregate counts
+or generic structure failure.
+
+The machine world must not finalize machine-law primacy legality while
+required row identity drift remains known only internally.
+
+Missing or unexpected row identity must remain projected in fail-close machine
+output rather than being hidden behind row-count shorthand or summary-only
+verdict text.
+
 ### Prompt-bootstrap row-family completeness must stay explicit
 
 Prompt-bootstrap law is not a soft prose summary that may hide its machine

@@ -30,6 +30,11 @@ assert payload["anchor_count"] == 4, payload
 assert payload["primacy_proof_count"] == 5, payload
 assert payload["primacy_limit_count"] == 5, payload
 assert payload["collapse_count"] == 5, payload
+assert payload["machine_law_primacy_row_family_count"] == 5, payload
+assert payload["machine_law_primacy_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_law_primacy_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -65,10 +70,22 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_machine_law_primacy_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RMLP-002", payload
+assert payload["machine_law_primacy_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["machine_law_primacy_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["reason"] == "missing_expected_rows" and "runtime_adjudication_non_bypass_primacy_proof" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+proof_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_primacy_proof_rows"
+)
+assert proof_row["expected_count"] == 5, payload
+assert proof_row["actual_count"] == 4, payload
+assert proof_row["missing_ids"] == ["runtime_adjudication_non_bypass_primacy_proof"], payload
+assert proof_row["unexpected_ids"] == [], payload
+assert proof_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert proof_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 COMMITMENT_REPO="${TMP_ROOT}/commitment-drift-repo"
@@ -104,10 +121,78 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_machine_law_primacy_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RMLP-002", payload
+assert payload["machine_law_primacy_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["machine_law_primacy_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["reason"] == "missing_expected_rows" and "governed_convergence_before_downgrade" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+commitment_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_commitment_rows"
+)
+assert commitment_row["expected_count"] == 4, payload
+assert commitment_row["actual_count"] == 3, payload
+assert commitment_row["missing_ids"] == ["governed_convergence_before_downgrade"], payload
+assert commitment_row["unexpected_ids"] == [], payload
+assert commitment_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert commitment_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+IDENTITY_REPO="${TMP_ROOT}/identity-drift-repo"
+mirror_repo "${IDENTITY_REPO}"
+python3 - <<'PY' "${IDENTITY_REPO}/identity/protocol/mappings/root-machine-law-primacy.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["required_commitment_rows"]:
+    if row.get("commitment_id") == "governed_convergence_before_downgrade":
+        row["commitment_id"] = "governed_convergence_before_downgrade_alias"
+        break
+else:
+    raise SystemExit("expected governed_convergence_before_downgrade row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+IDENTITY_JSON="${TMP_ROOT}/identity-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_law_primacy.py" \
+  --repo-root "${IDENTITY_REPO}" \
+  --json-only >"${IDENTITY_JSON}"; then
+  echo "[FAIL] root machine-law primacy validator unexpectedly passed commitment identity drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${IDENTITY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_law_primacy_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMLP-002", payload
+assert payload["machine_law_primacy_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_law_primacy_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["reason"] == "missing_expected_rows" and "governed_convergence_before_downgrade" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["reason"] == "extra_rows" and "governed_convergence_before_downgrade_alias" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
+commitment_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_commitment_rows"
+)
+assert commitment_row["expected_count"] == 4, payload
+assert commitment_row["actual_count"] == 4, payload
+assert commitment_row["missing_ids"] == ["governed_convergence_before_downgrade"], payload
+assert commitment_row["unexpected_ids"] == ["governed_convergence_before_downgrade_alias"], payload
+assert commitment_row["coverage_status"] == "PASS_REQUIRED", payload
+assert commitment_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 HEADING_REPO="${TMP_ROOT}/heading-drift-repo"
