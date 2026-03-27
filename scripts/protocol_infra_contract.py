@@ -195,6 +195,10 @@ GATEWAY_WRAPPER_WORKBOOK_PROBE_TIMEOUT_SECONDS = 600
 GATEWAY_WRAPPER_WORKBOOK_PROBE_REQUIRED_SCRIPTS: tuple[str, ...] = (
     "scripts/ci/run_workbook_control_plane_probes_ci.sh",
 )
+GATEWAY_WRAPPER_CONTINUITY_PROBE_TIMEOUT_SECONDS = 120
+GATEWAY_WRAPPER_CONTINUITY_PROBE_REQUIRED_SCRIPTS: tuple[str, ...] = (
+    "scripts/ci/run_identity_context_continuity_probes_ci.sh",
+)
 GATEWAY_WRAPPER_CONTROL_PLANE_SURFACE_MATERIALIZATION_TIMEOUT_SECONDS = 180
 GATEWAY_WRAPPER_CONTROL_PLANE_SURFACE_MATERIALIZATION_REQUIRED_SCRIPTS: tuple[str, ...] = (
     "scripts/materialize_control_plane_surfaces.py",
@@ -228,6 +232,14 @@ GATEWAY_WRAPPER_TIMEOUT_PROFILE_REQUIREMENTS: tuple[tuple[str, int, str], ...] =
     *(
         (script_name, GATEWAY_WRAPPER_WORKBOOK_PROBE_TIMEOUT_SECONDS, "workbook_probe")
         for script_name in GATEWAY_WRAPPER_WORKBOOK_PROBE_REQUIRED_SCRIPTS
+    ),
+    *(
+        (
+            script_name,
+            GATEWAY_WRAPPER_CONTINUITY_PROBE_TIMEOUT_SECONDS,
+            "continuity_probe",
+        )
+        for script_name in GATEWAY_WRAPPER_CONTINUITY_PROBE_REQUIRED_SCRIPTS
     ),
     *(
         (
@@ -299,6 +311,14 @@ GATEWAY_WRAPPER_TIMEOUT_PROFILE_SECONDS: tuple[tuple[str, int], ...] = (
     # on real contract drift instead of the gateway's timeout envelope.
     ("scripts/validate_issue_register_consistency.py", GATEWAY_WRAPPER_WORKBOOK_CONTROL_TIMEOUT_SECONDS),
     ("scripts/ci/run_workbook_control_plane_probes_ci.sh", GATEWAY_WRAPPER_WORKBOOK_PROBE_TIMEOUT_SECONDS),
+    # Context-continuity probes synthesize multiple pack fixtures, replay
+    # validator/bundle/reentry lanes, and exercise repair-backed receipt-family
+    # closure in one governed CI surface. Direct runtime is already close to the
+    # generic passthrough ceiling; under release-readiness gateway resolution it
+    # can tip past 30 seconds and false-red on wrapper timing alone. Keep it on
+    # its own continuity-probe profile so readiness reflects continuity law
+    # drift rather than gateway budget noise.
+    ("scripts/ci/run_identity_context_continuity_probes_ci.sh", GATEWAY_WRAPPER_CONTINUITY_PROBE_TIMEOUT_SECONDS),
     # Control-plane surface materialization now rerenders both budget and status
     # plus their sync validators in a single canonical sequence. Direct runtime
     # sits around 70 seconds on current repo scale, so release-readiness must
