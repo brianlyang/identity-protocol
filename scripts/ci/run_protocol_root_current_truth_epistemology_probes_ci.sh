@@ -31,6 +31,11 @@ assert payload["epistemic_proof_count"] == 5, payload
 assert payload["commitment_proof_alignment_count"] == 5, payload
 assert payload["epistemic_limit_count"] == 5, payload
 assert payload["collapse_count"] == 7, payload
+assert payload["current_truth_row_family_count"] == 6, payload
+assert payload["current_truth_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["current_truth_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert any(
     row["commitment_id"] == "fail_close_justification_before_operational_assertion"
     and row["proof_id"] == "fail_close_justification_proof"
@@ -71,10 +76,22 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_current_truth_epistemology_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-CTE-002", payload
+assert payload["current_truth_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["current_truth_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["reason"] == "missing_expected_rows" and "fail_close_justification_proof" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+proof_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_epistemic_proof_rows"
+)
+assert proof_row["expected_count"] == 5, payload
+assert proof_row["actual_count"] == 4, payload
+assert proof_row["missing_ids"] == ["fail_close_justification_proof"], payload
+assert proof_row["unexpected_ids"] == [], payload
+assert proof_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert proof_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 COMMITMENT_REPO="${TMP_ROOT}/commitment-drift-repo"
@@ -86,11 +103,12 @@ import yaml
 
 path = pathlib.Path(sys.argv[1])
 doc = yaml.safe_load(path.read_text(encoding="utf-8"))
-doc["required_commitment_rows"] = [
-    row for row in doc["required_commitment_rows"] if row.get("commitment_id") != "present_turn_authority_before_visible_recency"
-]
-for idx, row in enumerate(doc["required_commitment_rows"], start=1):
-    row["order"] = idx
+for row in doc["required_commitment_rows"]:
+    if row.get("commitment_id") == "present_turn_authority_before_visible_recency":
+        row["commitment_id"] = "present_turn_authority_before_visible_recency_alias"
+        break
+else:
+    raise SystemExit("expected present_turn_authority_before_visible_recency row not found")
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
 
@@ -98,7 +116,7 @@ COMMITMENT_JSON="${TMP_ROOT}/commitment-drift.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_current_truth_epistemology.py" \
   --repo-root "${COMMITMENT_REPO}" \
   --json-only >"${COMMITMENT_JSON}"; then
-  echo "[FAIL] root current-truth epistemology validator unexpectedly passed missing commitment row"
+  echo "[FAIL] root current-truth epistemology validator unexpectedly passed commitment identity drift"
   exit 1
 fi
 
@@ -114,6 +132,22 @@ assert any(
     row["reason"] == "missing_expected_rows" and "present_turn_authority_before_visible_recency" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+assert any(
+    row["reason"] == "extra_rows" and "present_turn_authority_before_visible_recency_alias" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
+assert payload["current_truth_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["current_truth_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+commitment_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_commitment_rows"
+)
+assert commitment_row["expected_count"] == 5, payload
+assert commitment_row["actual_count"] == 5, payload
+assert commitment_row["missing_ids"] == ["present_turn_authority_before_visible_recency"], payload
+assert commitment_row["unexpected_ids"] == ["present_turn_authority_before_visible_recency_alias"], payload
+assert commitment_row["coverage_status"] == "PASS_REQUIRED", payload
+assert commitment_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 ALIGNMENT_REPO="${TMP_ROOT}/alignment-drift-repo"
