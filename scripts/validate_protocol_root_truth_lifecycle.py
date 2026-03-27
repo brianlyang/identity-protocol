@@ -6,8 +6,14 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
+from root_contract_marker_checks_common import (
+    contract_required_markers_from_doc,
+    contract_text_marker_checks_from_rows,
+    evaluate_contract_text_marker_checks,
+    merge_contract_text_marker_checks,
+)
 from root_corpus_authority_common import authority_anchor_checks_from_doc, entry_authority_projections_from_doc, load_root_corpus_authority
-from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
+from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, reading_order_rows_from_doc
 from root_corpus_question_routing_common import (
     entry_question_projections_from_doc,
@@ -475,23 +481,33 @@ def main() -> int:
             truth_violations.append({"field": "contract_file", "reason": "contract_file_missing", "rel_path": contract_file})
         else:
             contract_text = contract_path.read_text(encoding="utf-8", errors="ignore")
-            required_markers = tuple(
-                str(item or "").strip() for item in truth_doc.get("contract_required_markers") if str(item or "").strip()
+            contract_marker_violations.extend(
+                evaluate_contract_text_marker_checks(
+                    contract_text,
+                    required_markers=contract_required_markers_from_doc(truth_doc),
+                    row_checks=merge_contract_text_marker_checks(
+                        contract_text_marker_checks_from_rows(
+                            lifecycle_rows,
+                            reason="lifecycle_heading_missing",
+                        ),
+                        contract_text_marker_checks_from_rows(
+                            memory_strata_rows,
+                            reason="memory_heading_missing",
+                        ),
+                        contract_text_marker_checks_from_rows(
+                            truth_lifecycle_proof_rows,
+                            reason="contract_phrase_missing",
+                            marker_attrs=("contract_heading", "proof_role"),
+                        ),
+                        contract_text_marker_checks_from_rows(
+                            differentiation_rows + truth_lifecycle_limit_rows + collapse_rows,
+                            reason="contract_phrase_missing",
+                            marker_attrs=("contract_phrase",),
+                        ),
+                    ),
+                    payload_base={"field": "contract_file"},
+                )
             )
-            for marker in find_missing_markers(contract_text, required_markers):
-                contract_marker_violations.append({"field": "contract_file", "reason": "required_marker_missing", "marker": marker})
-            for row in lifecycle_rows:
-                for marker in find_missing_markers(contract_text, (row.contract_heading,)):
-                    contract_marker_violations.append({"field": "contract_file", "reason": "lifecycle_heading_missing", "marker": marker})
-            for row in memory_strata_rows:
-                for marker in find_missing_markers(contract_text, (row.contract_heading,)):
-                    contract_marker_violations.append({"field": "contract_file", "reason": "memory_heading_missing", "marker": marker})
-            for row in truth_lifecycle_proof_rows:
-                for marker in find_missing_markers(contract_text, (row.contract_heading, row.proof_role)):
-                    contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
-            for row in differentiation_rows + truth_lifecycle_limit_rows + collapse_rows:
-                for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
-                    contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
 
         readme_path = repo_root / "identity/protocol/README.md"
         if not readme_path.exists():

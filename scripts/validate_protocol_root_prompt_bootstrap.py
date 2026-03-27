@@ -6,8 +6,14 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
+from root_contract_marker_checks_common import (
+    contract_required_markers_from_doc,
+    contract_text_marker_checks_from_rows,
+    evaluate_contract_text_marker_checks,
+    merge_contract_text_marker_checks,
+)
 from root_corpus_authority_common import authority_anchor_checks_from_doc, entry_authority_projections_from_doc, load_root_corpus_authority
-from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
+from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, reading_order_rows_from_doc
 from root_corpus_question_routing_common import (
     entry_question_projections_from_doc,
@@ -368,18 +374,29 @@ def main() -> int:
             prompt_violations.append({"field": "contract_file", "reason": "contract_file_missing", "rel_path": contract_file})
         else:
             contract_text = contract_path.read_text(encoding="utf-8", errors="ignore")
-            required_markers = tuple(str(item or "").strip() for item in prompt_doc.get("contract_required_markers") if str(item or "").strip())
-            for marker in find_missing_markers(contract_text, required_markers):
-                contract_marker_violations.append({"field": "contract_file", "reason": "required_marker_missing", "marker": marker})
-            for row in anchor_rows:
-                for marker in find_missing_markers(contract_text, (row.contract_heading,)):
-                    contract_marker_violations.append({"field": "contract_file", "reason": "anchor_heading_missing", "marker": marker})
-            for row in prompt_bootstrap_proof_rows:
-                for marker in find_missing_markers(contract_text, (row.contract_heading, row.proof_role)):
-                    contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
-            for row in output_field_rows + binding_field_rows + prompt_bootstrap_limit_rows + native_literal_rows:
-                for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
-                    contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
+            contract_marker_violations.extend(
+                evaluate_contract_text_marker_checks(
+                    contract_text,
+                    required_markers=contract_required_markers_from_doc(prompt_doc),
+                    row_checks=merge_contract_text_marker_checks(
+                        contract_text_marker_checks_from_rows(
+                            anchor_rows,
+                            reason="anchor_heading_missing",
+                        ),
+                        contract_text_marker_checks_from_rows(
+                            prompt_bootstrap_proof_rows,
+                            reason="contract_phrase_missing",
+                            marker_attrs=("contract_heading", "proof_role"),
+                        ),
+                        contract_text_marker_checks_from_rows(
+                            output_field_rows + binding_field_rows + prompt_bootstrap_limit_rows + native_literal_rows,
+                            reason="contract_phrase_missing",
+                            marker_attrs=("contract_phrase",),
+                        ),
+                    ),
+                    payload_base={"field": "contract_file"},
+                )
+            )
 
         readme_path = repo_root / "identity/protocol/README.md"
         if not readme_path.exists():
