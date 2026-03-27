@@ -174,11 +174,28 @@ def main() -> int:
                 require_active=True,
             )
             launcher_status = str(validator_payload.get("identity_codex_launcher_status", "")).strip().upper()
+            launcher_runtime_admissibility_projection_status = str(
+                validator_payload.get("launcher_runtime_admissibility_projection_status", "")
+            ).strip().upper()
+            launcher_runtime_admissibility_status = str(
+                validator_payload.get("launcher_runtime_admissibility_status", "")
+            ).strip().upper()
+            launcher_runtime_admissibility_reason = str(
+                validator_payload.get("launcher_runtime_admissibility_reason", "")
+            ).strip()
             metadata_status = str(metadata_payload.get("runtime_catalog_metadata_hygiene_status", "")).strip().upper()
             stale = validator_payload.get("stale_reasons")
             if not isinstance(stale, list):
                 stale = []
             stale = [str(item).strip() for item in stale if str(item).strip()]
+            projection_stale = validator_payload.get("projection_stale_reasons")
+            if not isinstance(projection_stale, list):
+                projection_stale = []
+            projection_stale = [str(item).strip() for item in projection_stale if str(item).strip()]
+            admissibility_stale = validator_payload.get("runtime_mode_guard_stale_reasons")
+            if not isinstance(admissibility_stale, list):
+                admissibility_stale = []
+            admissibility_stale = [str(item).strip() for item in admissibility_stale if str(item).strip()]
             metadata_rows = metadata_payload.get("checked_rows") if isinstance(metadata_payload, dict) else []
             metadata_row = metadata_rows[0] if isinstance(metadata_rows, list) and metadata_rows else {}
             metadata_stale = metadata_row.get("stale_reasons") if isinstance(metadata_row, dict) else []
@@ -201,6 +218,16 @@ def main() -> int:
                 "canonical_scope": str(row.get("canonical_scope", "")).strip(),
                 "validator_rc": validator_rc,
                 "launcher_status": launcher_status,
+                "launcher_runtime_admissibility_projection_status": launcher_runtime_admissibility_projection_status,
+                "launcher_runtime_admissibility_status": launcher_runtime_admissibility_status,
+                "launcher_runtime_admissibility_reason": launcher_runtime_admissibility_reason,
+                "launcher_runtime_admissibility_projection_stale_reasons": projection_stale,
+                "launcher_runtime_admissibility_stale_reasons": admissibility_stale,
+                "runtime_mode_guard_status": str(validator_payload.get("runtime_mode_guard_status", "")).strip().upper(),
+                "runtime_mode_guard_error_code": str(validator_payload.get("runtime_mode_guard_error_code", "")).strip(),
+                "runtime_mode_guard_binding_class": str(
+                    validator_payload.get("runtime_mode_guard_binding_class", "")
+                ).strip(),
                 "runtime_catalog_metadata_hygiene_status": metadata_status,
                 "runtime_catalog_metadata_hygiene_stale_reasons": metadata_stale,
                 "resolved_scope": str(metadata_row.get("resolved_scope", "")).strip() if isinstance(metadata_row, dict) else "",
@@ -210,6 +237,27 @@ def main() -> int:
                 "pack_assets_status": str(validator_payload.get("pack_assets_status", "")).strip().upper(),
                 "installed_launcher_status": str(validator_payload.get("installed_launcher_status", "")).strip().upper(),
                 "runtime_paths_status": str(validator_payload.get("runtime_paths_status", "")).strip().upper(),
+                "runtime_paths_bootstrap_status": str(
+                    validator_payload.get("runtime_paths_bootstrap_status", "")
+                ).strip().upper(),
+                "runtime_paths_bootstrap_stale_reasons": list(
+                    validator_payload.get("runtime_paths_bootstrap_stale_reasons") or []
+                ),
+                "runtime_paths_protocol_home_status": str(
+                    validator_payload.get("runtime_paths_protocol_home_status", "")
+                ).strip().upper(),
+                "shortcut_binding_status": str(
+                    validator_payload.get("shortcut_binding_status", "")
+                ).strip().upper(),
+                "shortcut_binding_stale_reasons": list(
+                    validator_payload.get("shortcut_binding_stale_reasons") or []
+                ),
+                "ambient_runtime_default_status": str(
+                    validator_payload.get("ambient_runtime_default_status", "")
+                ).strip().upper(),
+                "ambient_runtime_default_stale_reasons": list(
+                    validator_payload.get("ambient_runtime_default_stale_reasons") or []
+                ),
                 "launcher_config_identity_home": str(validator_payload.get("launcher_config_identity_home", "")).strip(),
                 "runtime_identity_home": str(validator_payload.get("runtime_identity_home", "")).strip(),
                 "runtime_paths_env": str(validator_payload.get("runtime_paths_env", "")).strip(),
@@ -246,6 +294,27 @@ def main() -> int:
             STATUS_PASS_REQUIRED
             if checked_rows and all(
                 str(row.get("runtime_catalog_metadata_hygiene_status", "")).strip().upper() == STATUS_PASS_REQUIRED
+                for row in checked_rows
+            )
+            else (
+                STATUS_SKIPPED_NOT_REQUIRED if not checked_rows else STATUS_FAIL_REQUIRED
+            )
+        ),
+        "launcher_runtime_admissibility_projection_status": (
+            STATUS_PASS_REQUIRED
+            if checked_rows and all(
+                str(row.get("launcher_runtime_admissibility_projection_status", "")).strip().upper()
+                == STATUS_PASS_REQUIRED
+                for row in checked_rows
+            )
+            else (
+                STATUS_SKIPPED_NOT_REQUIRED if not checked_rows else STATUS_FAIL_REQUIRED
+            )
+        ),
+        "launcher_runtime_admissibility_status": (
+            STATUS_PASS_REQUIRED
+            if checked_rows and all(
+                str(row.get("launcher_runtime_admissibility_status", "")).strip().upper() == STATUS_PASS_REQUIRED
                 for row in checked_rows
             )
             else (
