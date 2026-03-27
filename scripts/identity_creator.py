@@ -63,6 +63,10 @@ from protocol_infra_contract import (
     VALIDATOR_RUN_ID_REQUIRED_SCRIPTS,
     VALIDATOR_SESSION_ID_REQUIRED_SCRIPTS,
 )
+from repair_contract_backfill_status_profile_common import (
+    STATUS_PROFILE_STRICT_FULL,
+    STATUS_PROFILE_WORKSPACE_RUNTIME_CONVERGENCE,
+)
 from resolve_release_plane_cloud_evidence import resolve_release_plane_context
 from workspace_runtime_closure_command_common import (
     build_workspace_runtime_closure_checker_command,
@@ -301,6 +305,7 @@ def _run_contract_backfill_with_instance_script_rollout(
     catalog: str,
     work_layer: str = "instance",
     source_layer: str = "",
+    status_profile: str = STATUS_PROFILE_STRICT_FULL,
 ) -> int:
     rc = _run(
         [
@@ -310,6 +315,8 @@ def _run_contract_backfill_with_instance_script_rollout(
             str(catalog),
             "--identity-id",
             identity_id,
+            "--status-profile",
+            str(status_profile).strip() or STATUS_PROFILE_STRICT_FULL,
             "--apply",
             "--json-only",
         ]
@@ -321,6 +328,22 @@ def _run_contract_backfill_with_instance_script_rollout(
         catalog=catalog,
         work_layer=work_layer,
         source_layer=source_layer,
+    )
+
+
+def _run_workspace_runtime_convergence_backfill_with_instance_script_rollout(
+    *,
+    identity_id: str,
+    catalog: str,
+    work_layer: str = "instance",
+    source_layer: str = "",
+) -> int:
+    return _run_contract_backfill_with_instance_script_rollout(
+        identity_id=identity_id,
+        catalog=catalog,
+        work_layer=work_layer,
+        source_layer=source_layer,
+        status_profile=STATUS_PROFILE_WORKSPACE_RUNTIME_CONVERGENCE,
     )
 
 
@@ -686,7 +709,7 @@ def _run_broadcast_delivery_convergence_rollout(
     work_layer: str = "instance",
     source_layer: str = "",
 ) -> int:
-    rc = _run_contract_backfill_with_instance_script_rollout(
+    rc = _run_workspace_runtime_convergence_backfill_with_instance_script_rollout(
         identity_id=identity_id,
         catalog=catalog,
         work_layer=work_layer,
@@ -903,7 +926,7 @@ def _enforce_unique_entry_migration_closure(
         auto_repair=auto_repair,
         check_script="scripts/check_unique_entry_contract_migration_closure.py",
         closure_label="unique-entry",
-        repair_executor=lambda identity_id: _run_contract_backfill_with_instance_script_rollout(
+        repair_executor=lambda identity_id: _run_workspace_runtime_convergence_backfill_with_instance_script_rollout(
             identity_id=identity_id,
             catalog=str(catalog),
             work_layer="instance",
@@ -926,7 +949,7 @@ def _enforce_version_baseline_migration_closure(
         auto_repair=auto_repair,
         check_script="scripts/check_version_baseline_migration_closure.py",
         closure_label="version baseline",
-        repair_executor=lambda identity_id: _run_contract_backfill_with_instance_script_rollout(
+        repair_executor=lambda identity_id: _run_workspace_runtime_convergence_backfill_with_instance_script_rollout(
             identity_id=identity_id,
             catalog=str(catalog),
             work_layer="instance",
@@ -4617,7 +4640,7 @@ def main() -> int:
             and not pva_scaffold_ok
         )
         if rc_pva != 0 and scaffold_version_backfill_allowed:
-            rc_repair = _run_contract_backfill_with_instance_script_rollout(
+            rc_repair = _run_workspace_runtime_convergence_backfill_with_instance_script_rollout(
                 identity_id=args.identity_id,
                 catalog=args.catalog,
                 work_layer="instance",

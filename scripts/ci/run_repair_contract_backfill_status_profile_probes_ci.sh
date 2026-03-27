@@ -113,6 +113,77 @@ assert terminal_truth.get('report_selected_path') == expected_report_path, paylo
 print('repair_contract_backfill_launcher_workspace_convergence_profile_status=PASS_REQUIRED')
 PY
 
+WORKSPACE_RUNTIME_JSON="${TMP_ROOT}/workspace-runtime-convergence.json"
+(cd "${TMP_WORKSPACE_ROOT}" && \
+  env -u IDENTITY_HOME -u IDENTITY_CATALOG -u IDENTITY_PROTOCOL_HOME \
+    IDENTITY_PROTOCOL_HOME="${REPO_ROOT}" \
+    CODEX_HOME="${TMP_CODEX_HOME}" \
+    python3 "${REPO_ROOT}/scripts/repair_contract_backfill.py" \
+      --catalog .identity/catalog.local.yaml \
+      --identity-id "${PROFILE_IDENTITY_ID}" \
+      --status-profile workspace_runtime_convergence \
+      --apply \
+      --json-only) > "${WORKSPACE_RUNTIME_JSON}"
+
+python3 - "${WORKSPACE_RUNTIME_JSON}" "${PROFILE_IDENTITY_ID}" "${PROFILE_REPORT_PATH}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+expected_identity_id = str(sys.argv[2]).strip()
+expected_report_path = str(Path(sys.argv[3]).resolve())
+
+assert payload['identity_id'] == expected_identity_id, payload
+assert payload['contract_backfill_status'] == 'PASS_REQUIRED', payload
+assert payload['status_profile'] == 'workspace_runtime_convergence', payload
+assert payload['current_run_projection_enforcement_mode'] == 'observe_non_blocking', payload
+assert payload['current_run_projection_blocking_failures'] == [], payload
+observed = payload.get('current_run_projection_observation_failures') or []
+assert any(
+    item in observed
+    for item in ('current_run_terminal_truth_projection_failed', 'current_run_weak_live_projection_failed')
+), payload
+terminal_truth = payload.get('current_run_terminal_truth_projection_backfill') or {}
+assert terminal_truth.get('report_selected_path') == expected_report_path, payload
+print('repair_contract_backfill_workspace_runtime_convergence_profile_status=PASS_REQUIRED')
+PY
+
+PYTHONPATH="${REPO_ROOT}/scripts" python3 - <<'PY'
+import identity_creator as mod
+
+captured = {}
+
+def fake_run(cmd):
+    captured['cmd'] = cmd
+    return 0
+
+def fake_validators(**kwargs):
+    captured['validators'] = kwargs
+    return 0
+
+orig_run = mod._run
+orig_validators = mod._run_instance_script_contract_validators
+try:
+    mod._run = fake_run
+    mod._run_instance_script_contract_validators = fake_validators
+    rc = mod._run_workspace_runtime_convergence_backfill_with_instance_script_rollout(
+        identity_id='probe-identity',
+        catalog='/tmp/probe-catalog.local.yaml',
+        work_layer='instance',
+        source_layer='project',
+    )
+finally:
+    mod._run = orig_run
+    mod._run_instance_script_contract_validators = orig_validators
+
+assert rc == 0, rc
+cmd = captured['cmd']
+assert '--status-profile' in cmd, cmd
+assert cmd[cmd.index('--status-profile') + 1] == 'workspace_runtime_convergence', cmd
+print('identity_creator_workspace_runtime_convergence_backfill_command=PASS_REQUIRED')
+PY
+
 APPLY_JSON="${TMP_ROOT}/launcher-convergence-apply.json"
 python3 "${REPO_ROOT}/scripts/run_identity_codex_launcher_workspace_convergence.py" \
   --catalog "${TMP_CATALOG}" \

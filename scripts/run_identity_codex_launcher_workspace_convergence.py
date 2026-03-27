@@ -26,6 +26,9 @@ from identity_codex_launcher_common import (
     default_codex_home,
     resolve_catalog_path,
 )
+from repair_contract_backfill_status_profile_common import (
+    STATUS_PROFILE_LAUNCHER_WORKSPACE_CONVERGENCE,
+)
 
 ERR_AUTHORITY = "IP-ILAUNCH-CONV-001"
 ERR_PRECHECK = "IP-ILAUNCH-CONV-002"
@@ -215,7 +218,7 @@ def _apply_repair_for_identity(
         "--identity-id",
         identity_id,
         "--status-profile",
-        "launcher_workspace_convergence",
+        STATUS_PROFILE_LAUNCHER_WORKSPACE_CONVERGENCE,
         "--apply",
         "--json-only",
     ]

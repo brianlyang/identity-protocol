@@ -171,6 +171,15 @@ from identity_codex_launcher_common import (
     launcher_manifest_doc,
     launcher_readme_text,
 )
+from repair_contract_backfill_status_profile_common import (
+    CURRENT_RUN_PROJECTION_ENFORCEMENT_BLOCKING,
+    CURRENT_RUN_PROJECTION_ENFORCEMENT_OBSERVE_NON_BLOCKING,
+    STATUS_PROFILE_LAUNCHER_WORKSPACE_CONVERGENCE,
+    STATUS_PROFILE_STRICT_FULL,
+    repair_contract_backfill_status_profile_boundary_note,
+    repair_contract_backfill_status_profile_choices,
+    resolve_current_run_projection_enforcement_mode,
+)
 from response_stamp_common import normalize_response_stamp_profile
 from version_baseline_common import (
     apply_version_baseline_to_catalog_row,
@@ -182,10 +191,6 @@ from version_baseline_common import (
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
-STATUS_PROFILE_STRICT_FULL = "strict_full"
-STATUS_PROFILE_LAUNCHER_WORKSPACE_CONVERGENCE = "launcher_workspace_convergence"
-CURRENT_RUN_PROJECTION_ENFORCEMENT_BLOCKING = "blocking"
-CURRENT_RUN_PROJECTION_ENFORCEMENT_OBSERVE_NON_BLOCKING = "observe_non_blocking"
 ERR_LAUNCHER_WIRE_MISSING = "IP-ILAUNCH-003"
 ERR_LAUNCHER_WIRE_INVALID = "IP-ILAUNCH-004"
 
@@ -326,14 +331,6 @@ SKILL_SUPPLY_CHAIN_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     "skill_frontmatter_contract_v1": _skill_frontmatter_contract_skeleton(),
     "skill_sync_drift_guard_contract_v1": _skill_sync_drift_guard_contract_skeleton(),
 }
-
-
-def _resolve_current_run_projection_enforcement_mode(*, status_profile: str) -> str:
-    profile = str(status_profile or "").strip()
-    if profile == STATUS_PROFILE_LAUNCHER_WORKSPACE_CONVERGENCE:
-        return CURRENT_RUN_PROJECTION_ENFORCEMENT_OBSERVE_NON_BLOCKING
-    return CURRENT_RUN_PROJECTION_ENFORCEMENT_BLOCKING
-
 CAPABILITY_DRIVER_VALIDATOR_IDS: tuple[str, ...] = (
     "scripts/validate_identity_tool_installation.py",
     DIALOGUE_RETENTION_VALIDATOR_ID,
@@ -2498,18 +2495,19 @@ def main() -> int:
     )
     ap.add_argument(
         "--status-profile",
-        choices=[STATUS_PROFILE_STRICT_FULL, STATUS_PROFILE_LAUNCHER_WORKSPACE_CONVERGENCE],
+        choices=list(repair_contract_backfill_status_profile_choices()),
         default=STATUS_PROFILE_STRICT_FULL,
         help=(
             "strict_full preserves full fail-close semantics for current-run projection integrity failures; "
             "launcher_workspace_convergence keeps current-run projection integrity failures as observation-only "
-            "so launcher workspace adoption can close without claiming terminal-truth or live-linkage closure"
+            "for launcher adoption lanes; workspace_runtime_convergence applies the same observation-only rule "
+            "to shared workspace migration lanes such as pack/transport closure"
         ),
     )
     ap.add_argument("--apply", action="store_true", help="persist updates to CURRENT_TASK.json")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
-    current_run_projection_enforcement_mode = _resolve_current_run_projection_enforcement_mode(
+    current_run_projection_enforcement_mode = resolve_current_run_projection_enforcement_mode(
         status_profile=args.status_profile
     )
 
@@ -2582,10 +2580,7 @@ def main() -> int:
             "scope": args.scope,
             "status_profile": args.status_profile,
             "current_run_projection_enforcement_mode": current_run_projection_enforcement_mode,
-            "status_profile_boundary_note": (
-                "launcher_workspace_convergence may observe current-run weak-live / terminal-truth projection integrity failures "
-                "without letting them block launcher workspace adoption; strict_full keeps those integrity failures fail-closed"
-            ),
+            "status_profile_boundary_note": repair_contract_backfill_status_profile_boundary_note(),
             "contract_backfill_status": status,
             "error_code": error_code,
             "changed": changed,
@@ -2609,10 +2604,7 @@ def main() -> int:
             "task_path": str(task_path),
             "status_profile": args.status_profile,
             "current_run_projection_enforcement_mode": current_run_projection_enforcement_mode,
-            "status_profile_boundary_note": (
-                "launcher_workspace_convergence may observe current-run weak-live / terminal-truth projection integrity failures "
-                "without letting them block launcher workspace adoption; strict_full keeps those integrity failures fail-closed"
-            ),
+            "status_profile_boundary_note": repair_contract_backfill_status_profile_boundary_note(),
             "contract_backfill_status": STATUS_FAIL_REQUIRED,
             "error_code": "IP-CBKF-001",
             "changed": False,
@@ -3697,10 +3689,7 @@ def main() -> int:
         "scope": args.scope,
         "status_profile": args.status_profile,
         "current_run_projection_enforcement_mode": current_run_projection_enforcement_mode,
-        "status_profile_boundary_note": (
-            "launcher_workspace_convergence may observe current-run weak-live / terminal-truth projection integrity failures "
-            "without letting them block launcher workspace adoption; strict_full keeps those integrity failures fail-closed"
-        ),
+        "status_profile_boundary_note": repair_contract_backfill_status_profile_boundary_note(),
         "contract_backfill_status": status,
         "error_code": error_code,
         "changed": changed,

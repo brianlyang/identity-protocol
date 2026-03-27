@@ -7,10 +7,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from repair_contract_backfill_status_profile_common import (
+    CURRENT_RUN_PROJECTION_ENFORCEMENT_BLOCKING as ENFORCEMENT_BLOCKING,
+    STATUS_PROFILE_STRICT_FULL,
+)
+
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
-STATUS_PROFILE_STRICT_FULL = "strict_full"
-ENFORCEMENT_BLOCKING = "blocking"
 
 
 def _run_json_command(*, cmd: list[str], cwd: Path, env: dict[str, str]) -> tuple[int, dict[str, Any], str, str]:
