@@ -42,6 +42,14 @@ Runtime meaning:
 3. Runtime evidence can trigger strengthening; it becomes shared law only after governed refreezing through the proper root-law surfaces.
 4. Runtime may consume law-bearing root outputs and machine-consumed enforcement truth, but it must not recast its own transient execution state as generative source law.
 
+## Runtime constitutional-spine consumption boundary
+
+1. Runtime consumes constitutional spine law as separate constitutional-entry and spine-bridge row families rather than as undifferentiated narrative context.
+2. Runtime must keep expected row-family total and emitted row-family total congruent under machine-readable coverage completeness rather than relying on one aggregate spine count.
+3. Runtime must also keep expected entry rel-path identities and expected bridge ids explicit rather than collapsing them into generic structure failure or remembered document order.
+4. Runtime must not finalize constitutional-spine legality while missing or unexpected entry rel-paths or bridge ids remain known only inside validator machinery.
+5. Runtime fail-close output must preserve missing or unexpected entry rel-path and bridge-id projection rather than hiding drift behind count-only summaries.
+
 ## Runtime-to-root promotion boundary
 
 1. Runtime state, runtime reports, runtime evidence, and runtime receipts may expose defects or strengthening opportunities, but they do not directly promote themselves into protocol-root law.

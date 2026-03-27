@@ -370,6 +370,27 @@ component family's own disclosed validator, probe, shared-common, emitted
 status-key, or emitted error-code surfaces, the machine world is being asked
 to trust shadow bundle knowledge instead of the admitted family descriptor.
 
+### Constitutional spine row-family completeness must stay explicit
+
+The machine world must not treat the mere coexistence of philosophy,
+constitution, and runtime documents as if that alone proved a lawful
+constitutional spine.
+
+Constitutional-entry rows and spine-bridge rows must remain explicit as
+separate machine-law families.
+
+Expected row-family total and emitted row-family total must remain
+congruent under machine-readable coverage completeness rather than being
+collapsed into one aggregate spine count.
+
+Expected entry rel-path identity set and expected bridge-id identity set
+must also remain explicit rather than being inferred from generic
+structure failure.
+
+The machine world must not finalize constitutional-spine truth while
+missing or unexpected entry rel-paths or bridge ids remain known only
+inside validator logic.
+
 Descriptor concordance must also preserve descriptor-field mode.
 
 If a bundle row keeps the same descriptor name but silently changes whether a

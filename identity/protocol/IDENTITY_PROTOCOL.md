@@ -72,6 +72,15 @@ Status transitions are controlled by governance/review, not by script commit alo
 3. Governance evidence, review evidence, runtime evidence, or current-turn enforcement may expose incompleteness in constitutional law, but they do not become the semantic parent of that law merely by exposing the gap.
 4. Operational evidence may justify constitutional strengthening, but it becomes law only after governed refreezing at constitutional or contract layers.
 
+## Root constitutional-spine boundary
+
+1. The root constitutional spine is governed as separate constitutional-entry and spine-bridge row families rather than as one narrative claim.
+2. Constitutional-entry rows bind root index, bottom theory, protocol constitution, and runtime constitution as the lawful entry sequence of the root corpus.
+3. Spine-bridge rows bind lawful derivation and authority-split continuity between those entry surfaces.
+4. Protocol legality must keep expected row-family total and emitted row-family total congruent under machine-readable coverage completeness rather than relying on one aggregate spine count.
+5. Protocol legality must also keep expected entry rel-path identities and expected bridge ids explicit rather than collapsing them into generic structure failure.
+6. Protocol legality must not finalize constitutional-spine truth while missing or unexpected entry rel-paths or bridge ids remain known only inside validator machinery.
+
 ## Root-law promotion and re-entry boundary
 
 1. Outer governance/review/workbook/reference/evidence/runtime/receipt/implementation surfaces may motivate strengthening, but they do not directly promote themselves into protocol-root law.

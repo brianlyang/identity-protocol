@@ -36,8 +36,10 @@ EXPECTED_ENTRY_ROWS = {
         "required_markers": (
             "## Purpose",
             "## Root reading order",
+            "## Root constitutional-spine discipline",
             "## Authority layering",
             "## Source-order, reading-order, and adjudication-order",
+            "Constitutional-entry rows and spine-bridge rows must remain explicit as separate machine-governed families.",
         ),
     },
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": {
@@ -53,8 +55,10 @@ EXPECTED_ENTRY_ROWS = {
             "## One-line motherline",
             "### Machine-world reading rule",
             "### Constitutional derivation order",
+            "### Constitutional spine row-family completeness must stay explicit",
             "### Three orders must never be collapsed",
             "### Question class and answer surface must stay paired",
+            "Constitutional-entry rows and spine-bridge rows must remain explicit as",
         ),
     },
     "identity/protocol/IDENTITY_PROTOCOL.md": {
@@ -69,8 +73,10 @@ EXPECTED_ENTRY_ROWS = {
             "## Normative source map (current governed execution)",
             "## Foundational design philosophy boundary",
             "## Constitutional derivation discipline",
+            "## Root constitutional-spine boundary",
             "## Root-law promotion and re-entry boundary",
             "## Root-law bundle boundary",
+            "The root constitutional spine is governed as separate constitutional-entry and spine-bridge row families rather than as one narrative claim.",
         ),
     },
     "identity/protocol/IDENTITY_RUNTIME.md": {
@@ -85,8 +91,10 @@ EXPECTED_ENTRY_ROWS = {
             "## Integration objective",
             "## Foundational design philosophy anchor",
             "## Runtime derivation boundary",
+            "## Runtime constitutional-spine consumption boundary",
             "## Runtime-to-root promotion boundary",
             "## Runtime consumption of the root-law bundle",
+            "Runtime consumes constitutional spine law as separate constitutional-entry and spine-bridge row families rather than as undifferentiated narrative context.",
         ),
     },
 }

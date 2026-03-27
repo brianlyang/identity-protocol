@@ -180,6 +180,28 @@ Do not collapse these orders:
 
 ---
 
+## Root constitutional-spine discipline
+
+Root entry, bottom theory, protocol constitution, and runtime constitution do
+not form a lawful spine by rhetorical proximity alone.
+
+Constitutional-entry rows and spine-bridge rows must remain explicit as
+separate machine-governed families.
+
+Expected row-family total and emitted row-family total must remain congruent
+under machine-readable coverage completeness rather than collapsing into one
+aggregate spine count.
+
+Expected entry rel-path identity set and expected bridge-id identity set must
+also remain explicit rather than being inferred from generic structure failure
+or remembered ordering.
+
+Validator or runtime code must not finalize constitutional-spine truth while
+missing or unexpected entry rel-paths or bridge ids remain known only inside
+local machinery.
+
+---
+
 ## Root adjudication-surface discipline
 
 Current-turn legality must not flatten the machine surfaces that participate in adjudication.
