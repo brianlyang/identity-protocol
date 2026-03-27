@@ -16,6 +16,7 @@ mirror_repo() {
   cp "${ROOT}/scripts/root_corpus_question_routing_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/root_corpus_transition_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/root_corpus_gateway_admissibility_common.py" "${dst}/scripts/"
+  cp "${ROOT}/scripts/root_row_family_projection_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/validate_protocol_root_corpus_gateway_admissibility.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/registry_alias_control_plane_common.py" "${dst}/scripts/"
   cp "${ROOT}/scripts/repo_root_resolution_common.py" "${dst}/scripts/"
@@ -34,6 +35,11 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_gateway_admissibility_status"] == "PASS_REQUIRED", payload
+assert payload["gateway_admissibility_row_family_count"] == 3, payload
+assert payload["gateway_admissibility_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["gateway_admissibility_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert payload["current_turn_terminal_gateway"] == "machine_registry_directory", payload
 assert [row["gateway_class"] for row in payload["gateway_order"]] == [
     "constitution",
@@ -53,6 +59,112 @@ assert {row["gateway_class"]: row["effect_target_question_class"] for row in pay
     "root_contract": "frozen_domain_contract_law",
     "machine_registry_directory": "registry_resolution",
 }, payload
+PY
+
+MISSING_PROFILE_REPO="${TMP_ROOT}/missing-profile-repo"
+mirror_repo "${MISSING_PROFILE_REPO}"
+python3 - <<'PY' "${MISSING_PROFILE_REPO}/identity/protocol/mappings/root-corpus-gateway-admissibility.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["gateway_profiles"] = [
+    row for row in doc["gateway_profiles"]
+    if row.get("gateway_class") != "machine_registry_directory"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+MISSING_PROFILE_JSON="${TMP_ROOT}/missing-profile.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_gateway_admissibility.py" \
+  --repo-root "${MISSING_PROFILE_REPO}" \
+  --json-only >"${MISSING_PROFILE_JSON}"; then
+  echo "[FAIL] gateway admissibility validator unexpectedly passed after removing gateway profile row"
+  exit 1
+fi
+
+python3 - <<'PY' "${MISSING_PROFILE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_gateway_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RGA-002", payload
+assert payload["gateway_admissibility_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["gateway_admissibility_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["field"] == "gateway_profiles" and row["reason"] == "missing_gateway_classes" and "machine_registry_directory" in row.get("gateway_classes", [])
+    for row in payload["structure_violations"]
+), payload
+profile_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "gateway_profiles"
+)
+assert profile_row["expected_count"] == 4, payload
+assert profile_row["actual_count"] == 3, payload
+assert profile_row["missing_ids"] == ["machine_registry_directory"], payload
+assert profile_row["unexpected_ids"] == [], payload
+assert profile_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert profile_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+IDENTITY_DRIFT_REPO="${TMP_ROOT}/identity-drift-repo"
+mirror_repo "${IDENTITY_DRIFT_REPO}"
+python3 - <<'PY' "${IDENTITY_DRIFT_REPO}/identity/protocol/mappings/root-corpus-gateway-admissibility.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["gateway_profiles"]:
+    if row.get("gateway_class") == "machine_registry_directory":
+        row["gateway_class"] = "machine_registry_directory_alias"
+        break
+else:
+    raise SystemExit("expected machine_registry_directory row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+IDENTITY_DRIFT_JSON="${TMP_ROOT}/identity-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_gateway_admissibility.py" \
+  --repo-root "${IDENTITY_DRIFT_REPO}" \
+  --json-only >"${IDENTITY_DRIFT_JSON}"; then
+  echo "[FAIL] gateway admissibility validator unexpectedly passed gateway profile identity drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${IDENTITY_DRIFT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_gateway_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RGA-002", payload
+assert payload["gateway_admissibility_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["gateway_admissibility_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["field"] == "gateway_profiles" and row["reason"] == "missing_gateway_classes" and "machine_registry_directory" in row.get("gateway_classes", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "gateway_profiles" and row["reason"] == "extra_gateway_classes" and "machine_registry_directory_alias" in row.get("gateway_classes", [])
+    for row in payload["structure_violations"]
+), payload
+profile_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "gateway_profiles"
+)
+assert profile_row["expected_count"] == 4, payload
+assert profile_row["actual_count"] == 4, payload
+assert profile_row["missing_ids"] == ["machine_registry_directory"], payload
+assert profile_row["unexpected_ids"] == ["machine_registry_directory_alias"], payload
+assert profile_row["coverage_status"] == "PASS_REQUIRED", payload
+assert profile_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 INPUT_DRIFT_REPO="${TMP_ROOT}/input-drift-repo"

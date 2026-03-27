@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
+from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 from root_corpus_authority_common import authority_class_profiles_from_doc, load_root_corpus_authority
 from root_corpus_gateway_admissibility_common import (
     STATUS_FAIL_REQUIRED,
@@ -125,6 +126,7 @@ def main() -> int:
     structure_violations: list[dict[str, Any]] = []
     admissibility_violations: list[dict[str, Any]] = []
     anchor_violations: list[dict[str, Any]] = []
+    row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
 
     if admissibility_alias_error:
@@ -659,6 +661,47 @@ def main() -> int:
     status = STATUS_PASS_REQUIRED if violation_count == 0 else STATUS_FAIL_REQUIRED
     if status == STATUS_FAIL_REQUIRED and not error_code:
         error_code = ERR_STRUCTURE if structure_violations else ERR_ADMISSIBILITY
+    row_family_projection_rows = [
+        project_row_family(
+            family_id="gateway_order",
+            member_id_key="gateway_class",
+            actual_rows=gateway_order_rows,
+            expected_rows={gateway_class: {} for gateway_class in EXPECTED_GATEWAY_METADATA},
+            id_attr="gateway_class",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        project_row_family(
+            family_id="gateway_effect_targets",
+            member_id_key="gateway_class",
+            actual_rows=gateway_effect_targets,
+            expected_rows={gateway_class: {} for gateway_class in EXPECTED_GATEWAY_METADATA},
+            id_attr="gateway_class",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        project_row_family(
+            family_id="gateway_profiles",
+            member_id_key="gateway_class",
+            actual_rows=gateway_profiles,
+            expected_rows={gateway_class: {} for gateway_class in EXPECTED_GATEWAY_METADATA},
+            id_attr="gateway_class",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+    ]
+    gateway_admissibility_row_coverage_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="coverage_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
+    gateway_admissibility_row_identity_projection_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="identity_projection_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
 
     payload = {
         STATUS_KEY: status,
@@ -680,6 +723,10 @@ def main() -> int:
         "gateway_order_count": len(gateway_order_rows),
         "gateway_effect_target_count": len(gateway_effect_targets),
         "gateway_profile_count": len(gateway_profiles),
+        "gateway_admissibility_row_family_count": len(row_family_projection_rows),
+        "gateway_admissibility_row_coverage_status": gateway_admissibility_row_coverage_status,
+        "gateway_admissibility_row_identity_projection_status": gateway_admissibility_row_identity_projection_status,
+        "row_family_projection_rows": row_family_projection_rows,
         "current_turn_terminal_gateway": next(
             (row.gateway_class for row in gateway_profiles if row.current_turn_legality_terminal),
             "",

@@ -158,6 +158,14 @@ Projected violation-reason total must remain congruent with
 structure/completeness/anchor violation-row total rather than being left
 implicit.
 
+## Root gateway-admissibility completeness boundary
+
+1. Gateway-admissibility law must remain machine-readable as separate gateway-order, gateway-effect-target, and gateway-profile row families.
+2. Aggregate row-family counts are insufficient on their own; expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness.
+3. Expected row identity set and emitted row identity set for each gateway-admissibility family must also remain explicit; gateway identity drift may not be collapsed into summary-only counts.
+4. Protocol legality must not finalize gateway-admissibility legality while missing or unexpected gateway identities remain known only inside validator logic.
+5. Fail-close gateway-admissibility output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+
 ## Root derivation completeness boundary
 
 1. Derivation law must remain machine-readable as a separate derivation-class-profile row family.
