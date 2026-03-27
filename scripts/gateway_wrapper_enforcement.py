@@ -16,6 +16,10 @@ from final_emit_contract_common import (
     FINAL_EMIT_POLICY_MODE,
     FINAL_EMIT_SCHEMA_ID,
 )
+from gateway_timeout_profile_common import (
+    prepare_nested_gateway_timeout_env,
+    resolve_gateway_command_timeout_seconds,
+)
 from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
@@ -208,23 +212,12 @@ def _is_context_resolve_cmd(cmd: list[str]) -> bool:
 
 
 def _resolve_command_timeout_seconds(cmd: list[str], *, env: dict[str, str] | None = None) -> int:
-    env_map = env if isinstance(env, dict) else os.environ
-    default_timeout = int(GATEWAY_WRAPPER_SUBPROCESS_TIMEOUT_SECONDS_DEFAULT)
-    script_hint = _script_hint_from_cmd(cmd)
-    for script_name, timeout_value in GATEWAY_WRAPPER_TIMEOUT_PROFILE_SECONDS:
-        name_token = str(script_name or "").strip()
-        if not name_token:
-            continue
-        if script_hint.endswith(name_token):
-            default_timeout = _safe_positive_int(timeout_value, default_timeout)
-            break
-    env_token = str(env_map.get(DEFAULT_TIMEOUT_ENV, "")).strip()
-    if _is_context_resolve_cmd(cmd):
-        default_timeout = int(GATEWAY_CONTEXT_RESOLVE_TIMEOUT_SECONDS_DEFAULT)
-        context_token = str(env_map.get(CONTEXT_TIMEOUT_ENV, "")).strip()
-        if context_token:
-            env_token = context_token
-    return _safe_positive_int(env_token, default_timeout)
+    return resolve_gateway_command_timeout_seconds(
+        cmd,
+        env=env,
+        default_timeout_env=DEFAULT_TIMEOUT_ENV,
+        context_timeout_env=CONTEXT_TIMEOUT_ENV,
+    )
 
 
 def _prepare_nested_wrapper_timeout(
@@ -240,13 +233,13 @@ def _prepare_nested_wrapper_timeout(
     to the generic 30s budget and false-times-out under long-running update
     lanes.
     """
-    entry_timeout = _resolve_command_timeout_seconds(entry_cmd, env=child_env)
-    wrapper_timeout = _resolve_command_timeout_seconds(wrapper_cmd, env=child_env)
-    effective_timeout = max(entry_timeout, wrapper_timeout)
-    current_env_timeout = _safe_positive_int(child_env.get(DEFAULT_TIMEOUT_ENV), default=0)
-    if current_env_timeout < effective_timeout:
-        child_env[DEFAULT_TIMEOUT_ENV] = str(effective_timeout)
-    return effective_timeout
+    return prepare_nested_gateway_timeout_env(
+        entry_cmd=entry_cmd,
+        wrapper_cmd=wrapper_cmd,
+        child_env=child_env,
+        default_timeout_env=DEFAULT_TIMEOUT_ENV,
+        context_timeout_env=CONTEXT_TIMEOUT_ENV,
+    )
 
 
 def _timeout_reason(*, cmd: list[str], timeout_seconds: int, scope: str) -> str:

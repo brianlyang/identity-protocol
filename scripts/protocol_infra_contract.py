@@ -166,6 +166,22 @@ GATEWAY_WRAPPER_LONG_RUNNING_UPDATE_REQUIRED_SCRIPTS: tuple[str, ...] = (
     "scripts/identity_creator.py",
     "scripts/execute_identity_upgrade.py",
 )
+GATEWAY_WRAPPER_DIRECT_RUNTIME_OPERATION_TIMEOUT_PROFILE_SECONDS: tuple[tuple[str, int], ...] = (
+    # Pack-local ingress wrappers are runtime-owned surfaces. When they are
+    # invoked directly through governed host dispatch, the canonical repo script
+    # hint disappears and timeout selection must fall back to the routed
+    # operation semantics instead of the generic 30s passthrough budget. Keep
+    # strict no-trim operations on the long-running update profile so wrapper
+    # materialization does not false-red at the gateway boundary.
+    ("activate", GATEWAY_WRAPPER_LONG_RUNNING_UPDATE_TIMEOUT_SECONDS),
+    ("update", GATEWAY_WRAPPER_LONG_RUNNING_UPDATE_TIMEOUT_SECONDS),
+    ("mutation", GATEWAY_WRAPPER_LONG_RUNNING_UPDATE_TIMEOUT_SECONDS),
+    ("readiness", GATEWAY_WRAPPER_LONG_RUNNING_UPDATE_TIMEOUT_SECONDS),
+    ("e2e", GATEWAY_WRAPPER_LONG_RUNNING_UPDATE_TIMEOUT_SECONDS),
+    ("ci", GATEWAY_WRAPPER_LONG_RUNNING_UPDATE_TIMEOUT_SECONDS),
+    ("validate", GATEWAY_WRAPPER_LONG_RUNNING_UPDATE_TIMEOUT_SECONDS),
+    ("three-plane", GATEWAY_WRAPPER_LONG_RUNNING_UPDATE_TIMEOUT_SECONDS),
+)
 GATEWAY_WRAPPER_REPLAY_HEAVY_TIMEOUT_SECONDS = 900
 GATEWAY_WRAPPER_REPLAY_HEAVY_REQUIRED_SCRIPTS: tuple[str, ...] = (
     "scripts/validate_protocol_lane_isolated_historical_replay.py",
