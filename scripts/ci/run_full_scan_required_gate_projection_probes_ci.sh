@@ -26,6 +26,7 @@ from required_gate_bundle_projection_common import (
 )
 
 pass_projection = {
+    "bundle_status": "PASS_REQUIRED",
     "projection_status": "PASS_REQUIRED",
     "scope_class": "",
     "scope_reason": "",
@@ -49,6 +50,7 @@ pass_summary = build_full_scan_required_gate_bundle_three_plane_projection(
     pass_projection,
     prefix="required_gate_bundle",
 )
+assert pass_summary["required_gate_bundle_status"] == "PASS_REQUIRED", pass_summary
 assert pass_summary["required_gate_bundle_projection_status"] == "PASS_REQUIRED", pass_summary
 assert pass_summary["required_gate_bundle_actor_id"] == "assistant:codex", pass_summary
 assert pass_summary["required_gate_bundle_resolved_work_layer"] == "instance", pass_summary
@@ -66,6 +68,7 @@ shadow_summary = build_full_scan_required_gate_bundle_three_plane_projection(
     pass_projection,
     prefix="required_gate_bundle_shadow",
 )
+assert shadow_summary["required_gate_bundle_shadow_status"] == "PASS_REQUIRED", shadow_summary
 assert shadow_summary["required_gate_bundle_shadow_projection_status"] == "PASS_REQUIRED", shadow_summary
 assert shadow_summary["required_gate_bundle_shadow_actor_id"] == "assistant:codex", shadow_summary
 assert shadow_summary["required_gate_bundle_shadow_resolved_work_layer"] == "instance", shadow_summary
@@ -90,6 +93,7 @@ excluded_summary = build_full_scan_required_gate_bundle_three_plane_projection(
     excluded_projection,
     prefix="required_gate_bundle",
 )
+assert excluded_summary["required_gate_bundle_status"] == "SKIPPED_NOT_REQUIRED", excluded_summary
 assert excluded_summary["required_gate_bundle_projection_status"] == "SKIPPED_NOT_REQUIRED", excluded_summary
 assert excluded_summary["required_gate_bundle_scope_class"] == "bounded_projection_profile_exclusion", excluded_summary
 assert excluded_summary["required_gate_bundle_scope_reason"] == "projection_profile_out_of_scope", excluded_summary

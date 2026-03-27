@@ -622,6 +622,10 @@ for row in seeded:
         identity_id,
         three_plane_summary,
     )
+    assert three_plane_summary["required_gate_bundle_status"] == "SKIPPED_NOT_REQUIRED", (
+        identity_id,
+        three_plane_summary,
+    )
     assert three_plane_summary["required_gate_bundle_scope_class"] == "bounded_projection_profile_exclusion", (
         identity_id,
         three_plane_summary,
@@ -684,6 +688,10 @@ for row in seeded:
         shadow_projection,
     )
     assert three_plane_summary["required_gate_bundle_shadow_projection_status"] == "SKIPPED_NOT_REQUIRED", (
+        identity_id,
+        three_plane_summary,
+    )
+    assert three_plane_summary["required_gate_bundle_shadow_status"] == "SKIPPED_NOT_REQUIRED", (
         identity_id,
         three_plane_summary,
     )

@@ -22,6 +22,7 @@ FULL_SCAN_REQUIRED_GATE_BUNDLE_THREE_PLANE_PASSTHROUGH_FIELDS: tuple[tuple[str, 
 def full_scan_required_gate_bundle_three_plane_fields(prefix: str) -> tuple[str, ...]:
     field_prefix = str(prefix or "").strip()
     return (
+        f"{field_prefix}_status",
         f"{field_prefix}_projection_status",
         f"{field_prefix}_scope_class",
         f"{field_prefix}_scope_reason",
@@ -95,6 +96,7 @@ def build_full_scan_required_gate_bundle_three_plane_projection(
     source = projection if isinstance(projection, dict) else {}
     field_prefix = str(prefix or "").strip() or "required_gate_bundle"
     payload: dict[str, Any] = {
+        f"{field_prefix}_status": _clean_str(source.get("bundle_status")).upper() or STATUS_UNKNOWN,
         f"{field_prefix}_projection_status": _clean_str(source.get("projection_status")).upper() or STATUS_UNKNOWN,
         f"{field_prefix}_scope_class": _clean_str(source.get("scope_class")),
         f"{field_prefix}_scope_reason": _clean_str(source.get("scope_reason")),
