@@ -90,6 +90,8 @@ Cached snapshots, loose path guesses, and operator convenience notes may assist
 human understanding, but they must not silently replace governed discovery
 truth for the present turn.
 
+Deterministic discovery law must also remain machine-readable as separate section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse row families rather than one narrative discovery claim.
+
 ## Method: `identity/list`
 
 ### Request shape

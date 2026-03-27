@@ -6,10 +6,14 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
+from root_contract_anchor_checks_common import (
+    evaluate_root_doc_anchor_checks,
+    root_doc_anchor_checks_from_doc,
+    validate_expected_root_doc_anchor_checks,
+)
 from root_agent_handoff_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
-    anchor_checks_from_doc,
     anchor_rows_from_doc,
     collapse_rows_from_doc,
     handoff_limit_rows_from_doc,
@@ -199,12 +203,6 @@ def _contiguous_orders(values: list[int]) -> bool:
 def _entry_marker_missing(required_markers: tuple[str, ...], expected_markers: tuple[str, ...]) -> list[str]:
     marker_set = {str(item or "").strip() for item in required_markers if str(item or "").strip()}
     return [marker for marker in expected_markers if marker not in marker_set]
-
-
-def _anchor_check_marker_map(anchor_checks) -> dict[str, tuple[str, ...]]:
-    return {row.rel_path: tuple(row.required_markers) for row in anchor_checks}
-
-
 def _validate_rows(
     *,
     actual_rows,
@@ -303,7 +301,7 @@ def main() -> int:
     handoff_proof_rows = handoff_proof_rows_from_doc(handoff_doc) if handoff_doc else ()
     handoff_limit_rows = handoff_limit_rows_from_doc(handoff_doc) if handoff_doc else ()
     collapse_rows = collapse_rows_from_doc(handoff_doc) if handoff_doc else ()
-    root_doc_anchor_checks = anchor_checks_from_doc(handoff_doc) if handoff_doc else ()
+    root_doc_anchor_checks = root_doc_anchor_checks_from_doc(handoff_doc) if handoff_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     authority_anchors = authority_anchor_checks_from_doc(authority_doc) if authority_doc else ()
@@ -398,30 +396,15 @@ def main() -> int:
         if not handoff_doc.get("contract_required_markers"):
             stale_reasons.append("root_agent_handoff_contract_required_markers_missing")
             error_code = ERR_REGISTRY
-        if not root_doc_anchor_checks:
-            stale_reasons.append("root_agent_handoff_anchor_checks_missing")
-            error_code = ERR_REGISTRY
-
-        actual_anchor_checks = _anchor_check_marker_map(root_doc_anchor_checks)
-        missing_anchor_rel_paths = sorted(set(EXPECTED_ROOT_DOC_ANCHOR_CHECKS) - set(actual_anchor_checks))
-        extra_anchor_rel_paths = sorted(set(actual_anchor_checks) - set(EXPECTED_ROOT_DOC_ANCHOR_CHECKS))
-        if missing_anchor_rel_paths:
-            stale_reasons.append(
-                "root_agent_handoff_anchor_check_rel_paths_missing:" + ",".join(missing_anchor_rel_paths)
+        stale_reasons.extend(
+            validate_expected_root_doc_anchor_checks(
+                root_doc_anchor_checks,
+                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+                stale_reason_prefix="root_agent_handoff",
             )
+        )
+        if any(reason.startswith("root_agent_handoff_anchor_") for reason in stale_reasons):
             error_code = ERR_REGISTRY
-        if extra_anchor_rel_paths:
-            stale_reasons.append(
-                "root_agent_handoff_anchor_check_rel_paths_extra:" + ",".join(extra_anchor_rel_paths)
-            )
-            error_code = ERR_REGISTRY
-        for rel_path, expected_markers in EXPECTED_ROOT_DOC_ANCHOR_CHECKS.items():
-            actual_markers = actual_anchor_checks.get(rel_path)
-            if actual_markers is None:
-                continue
-            if tuple(actual_markers) != tuple(expected_markers):
-                stale_reasons.append(f"root_agent_handoff_anchor_check_markers_invalid:{rel_path}")
-                error_code = ERR_REGISTRY
 
         for field in ("contract_file", "philosophy_anchor_file", "validator_script", "probe_script", "common_script"):
             rel_path = str(handoff_doc.get(field) or "").strip()
@@ -505,27 +488,13 @@ def main() -> int:
             for row in payload_rows + anchor_rows + handoff_limit_rows + collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
-        for check in root_doc_anchor_checks:
-            path = (repo_root / check.rel_path).resolve()
-            if not path.exists() or not path.is_file():
-                root_doc_anchor_violations.append(
-                    {
-                        "field": "root_doc_anchor_checks",
-                        "rel_path": check.rel_path,
-                        "reason": "anchor_file_missing",
-                    }
-                )
-                continue
-            text = path.read_text(encoding="utf-8", errors="ignore")
-            for marker in find_missing_markers(text, check.required_markers):
-                root_doc_anchor_violations.append(
-                    {
-                        "field": "root_doc_anchor_checks",
-                        "rel_path": check.rel_path,
-                        "reason": "required_marker_missing",
-                        "marker": marker,
-                    }
-                )
+        root_doc_anchor_violations.extend(
+            evaluate_root_doc_anchor_checks(
+                repo_root,
+                root_doc_anchor_checks,
+                field_name="root_doc_anchor_checks",
+            )
+        )
 
         registry_entry_map = {entry.rel_path: entry for entry in registry_entries}
         registry_entry = registry_entry_map.get(contract_file)

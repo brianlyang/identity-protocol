@@ -26,6 +26,28 @@ contract_required_markers:
   - '## Discovery-proof discipline'
   - '## Discovery-proof limits'
   - '## Non-compliant discovery collapses'
+  - 'Deterministic discovery law must also remain machine-readable as separate section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse row families rather than one narrative discovery claim.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Identity-discovery row-family completeness must stay explicit'
+      - 'Required section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse families must remain explicit as separate machine-readable row families.'
+      - 'The machine world must not finalize identity-discovery legality while required row identity drift remains known only internally.'
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root identity-discovery completeness discipline'
+      - 'Identity-discovery law is not a soft prose bundle.'
+      - '1. required section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root identity-discovery completeness boundary'
+      - '1. Identity-discovery law must remain machine-readable as separate section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse row families.'
+      - '4. Protocol legality must not finalize identity-discovery truth while missing or unexpected row identities remain known only inside validator logic.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime identity-discovery consumption boundary'
+      - '1. Runtime consumes identity-discovery law as separate section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse row families rather than as undifferentiated discovery prose.'
+      - '4. Runtime must not finalize identity-discovery legality while missing or unexpected row identities remain known only inside validator machinery.'
 required_section_rows:
   - order: 1
     section_id: method_identity_list
