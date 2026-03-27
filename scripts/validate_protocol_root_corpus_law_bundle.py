@@ -11,7 +11,10 @@ from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
 from registry_alias_control_plane_common import resolve_current_yaml_alias
-from root_contract_anchor_checks_common import evaluate_root_doc_anchor_checks
+from root_contract_anchor_checks_common import (
+    evaluate_root_doc_anchor_checks,
+    validate_expected_root_doc_anchor_checks,
+)
 from root_corpus_governance_common import root_corpus_entries_from_registry
 from root_corpus_law_bundle_common import (
     STATUS_FAIL_REQUIRED,
@@ -322,6 +325,1021 @@ EXPECTED_COMPONENTS = {
         "error_codes": ("IP-RCP-001", "IP-RCP-002", "IP-RCP-003"),
     },
 }
+
+
+EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {'identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md': ('### Root-law bundle must stay explicit and jointly governed',
+                                                              '### Root-law bundle component-row completeness must stay explicit',
+                                                              'Required component-row and component-status-row families must remain '
+                                                              'explicit',
+                                                              'Constitutional spine, root admission/governance, source-order, authority,',
+                                                              'machine-registry completeness, and conflict precedence are not optional',
+                                                              'Weakening one slice while keeping the others green is a root-law coherence',
+                                                              'That joint governance also requires descriptor concordance across the '
+                                                              'bundle.',
+                                                              'Local waiver of descriptor concordance must remain forbidden inside the '
+                                                              'bundle.',
+                                                              'emitted status-key, or emitted error-code surfaces, the machine world is '
+                                                              'being asked',
+                                                              'to trust shadow bundle knowledge instead of the admitted family descriptor.',
+                                                              'Descriptor concordance must also preserve descriptor-field mode.',
+                                                              'validator-emitted status key, or a validator-emitted error-code family, the '
+                                                              'machine world is again being asked to',
+                                                              'trust shadow bundle semantics instead of the admitted family descriptor.',
+                                                              'Bundle descriptor law must also remain inherited from machine-registry',
+                                                              'machine-registry completeness field set or field-mode law for '
+                                                              'self-describing',
+                                                              'bundle schema instead of the admitted registry descriptor law.',
+                                                              'The bundle descriptor schema must also stay source-singular.',
+                                                              'not a substitute source chosen for local convenience.',
+                                                              'Local reauthoring of descriptor schema governance must remain forbidden '
+                                                              'inside the bundle.',
+                                                              'fail-close rather than locally reconstructing descriptor schema from shadow '
+                                                              'bundle knowledge.',
+                                                              'Bundle self-describing-family requirement law must also remain inherited '
+                                                              'from machine-registry completeness.',
+                                                              'The admitted requirement that root mapping families stay self-describing '
+                                                              'belongs to that source law rather than to local bundle restatement.',
+                                                              'If the admitted source does not disclose that self-describing-family '
+                                                              'requirement law, the machine world must fail-close rather than locally '
+                                                              'reconstructing self-describing-family legality from bundle convenience.',
+                                                              'Bundle descriptor binding must also remain inherited from machine-registry',
+                                                              'If the admitted source does not disclose that family-surface binding law, '
+                                                              'the machine world must fail-close rather than locally reconstructing '
+                                                              'descriptor-family binding legality from bundle convenience.',
+                                                              'Local redeclaration of family-surface binding governance must remain '
+                                                              'forbidden inside the bundle.',
+                                                              'explicit cross-family descriptor-stem binding, the bundle must inherit that',
+                                                              'declaration rather than reauthoring, omitting, or locally overriding it.',
+                                                              'Bundle descriptor surface-pattern law must also remain inherited from '
+                                                              'machine-registry completeness.',
+                                                              'inherit those patterns rather than locally redeclaring or loosening them.',
+                                                              'fail-close rather than guessing or locally reconstructing descriptor-stem '
+                                                              'capture law from bundle convention.',
+                                                              'Bundle descriptor repo-relative discipline must also remain inherited from '
+                                                              'machine-registry completeness.',
+                                                              'Repo-root-relative scope, parent-escape rejection, role-typed path law, and',
+                                                              'Local redeclaration of repo-relative discipline governance must remain '
+                                                              'forbidden inside the bundle.',
+                                                              'fail-close rather than locally reconstructing descriptor path legality from '
+                                                              'bundle convenience.',
+                                                              'Bundle current/version naming law must also remain inherited from '
+                                                              'machine-registry completeness.',
+                                                              'Root family prefix, current-entry suffix, active-version regex, and the',
+                                                              'Local redeclaration of current/version naming governance must remain '
+                                                              'forbidden inside the bundle.',
+                                                              'fail-close rather than locally reconstructing current/version mediation '
+                                                              'from bundle convention.',
+                                                              'Bundle registry-child admission law must also remain inherited from '
+                                                              'machine-registry completeness.',
+                                                              'canonical registry directory, the admitted registry-current entry, and the',
+                                                              'Local redeclaration of registry-child admission governance must remain '
+                                                              'forbidden inside the bundle.',
+                                                              'fail-close rather than locally reconstructing component admission from '
+                                                              'bundle convenience.',
+                                                              'Bundle component descriptors must remain current-entry mediated as well.',
+                                                              'version file for local convenience.',
+                                                              'fail-close rather than bypassing current mediation and binding directly to '
+                                                              'a version file.',
+                                                              'Bundle component validator verdict law must stay explicit as well.',
+                                                              'bound component validator must execute through its disclosed validator '
+                                                              'surface',
+                                                              'and emit `PASS_REQUIRED` through its disclosed status key for bundle '
+                                                              'legality to remain current.',
+                                                              'machine world must fail-close rather than treating descriptor concordance '
+                                                              'or',
+                                                              'file presence as sufficient root-law health.',
+                                                              'Bundle component validator execution-failure policy must remain fail-closed '
+                                                              'as well.',
+                                                              'emits invalid machine output, or omits its disclosed status key, the '
+                                                              'machine world must not invent a',
+                                                              'substitute verdict from bundle convenience.',
+                                                              'Bundle component validator returncode-observation contract must stay '
+                                                              'explicit too.',
+                                                              'The admitted returncode-observation contract is nonzero returncode observed '
+                                                              'without host exception overlay.',
+                                                              'The machine world must not let a host-language subprocess helper raise on '
+                                                              'nonzero exit, bypass the governed execution-failure policy, or convert host '
+                                                              'exception convenience into validator law.',
+                                                              'Bundle component validator machine-output contract must stay explicit too.',
+                                                              'machine world must consume a bound component validator through structured '
+                                                              "machine output carrying the validator's disclosed status key rather than",
+                                                              'scraping human-readable logs, prose, or incidental shell text.',
+                                                              'Bundle component validator invocation contract must stay explicit too.',
+                                                              'The admitted invocation contract is `python3 <validator_script> --repo-root '
+                                                              '<repo_root> --json-only`.',
+                                                              'machine world must not invent an alternate interpreter, drop repo-root '
+                                                              'binding, or drop compact machine-output mode for local convenience.',
+                                                              'Bundle component validator output-channel contract must stay explicit too.',
+                                                              'The admitted verdict-bearing machine-output channel is stdout only.',
+                                                              'stderr may carry incidental diagnostics, but it does not become an '
+                                                              'alternate status-bearing verdict channel and may not be scraped to replace '
+                                                              'missing stdout truth.',
+                                                              'Bundle component validator stderr-isolation contract must stay explicit '
+                                                              'too.',
+                                                              'The admitted stderr-isolation contract is stderr captured separate from '
+                                                              'stdout.',
+                                                              'machine world must not merge stderr into stdout, let diagnostic text '
+                                                              'cohabit the verdict-bearing stream, or treat a merged stream as if it were '
+                                                              'governed validator truth.',
+                                                              'Bundle component validator stdio text-decoding contract must stay explicit '
+                                                              'too.',
+                                                              'The admitted stdio text-decoding contract is utf-8 strict text decode with '
+                                                              'no locale overlay.',
+                                                              'machine world must not let ambient locale choose the decoder, substitute an '
+                                                              'alternate codec or replacement policy, or treat locale-shaped text coercion '
+                                                              'as if it were governed validator truth.',
+                                                              'Bundle component validator stdout-normalization contract must stay explicit '
+                                                              'too.',
+                                                              'The admitted stdout-normalization contract is outer-whitespace trim only '
+                                                              'before JSON decode.',
+                                                              'The machine world must not line-scrape, select a preferred line, trim inner '
+                                                              'content, or reconstruct JSON from mixed stdout.',
+                                                              'Bundle component validator stdout-presence contract must stay explicit too.',
+                                                              'The admitted stdout-presence contract is nonempty after outer-whitespace '
+                                                              'trim.',
+                                                              'The machine world must not treat empty or whitespace-only stdout as '
+                                                              'implicit success, an invented empty object, or an advisory no-op verdict '
+                                                              'surface.',
+                                                              'Bundle component validator stdout-framing contract must stay explicit too.',
+                                                              'The admitted stdout framing contract is a single JSON object occupying '
+                                                              'whole stdout.',
+                                                              'machine world must not line-scrape, trailer-strip, or extract a JSON '
+                                                              'fragment from mixed stdout preamble, trailer, or incidental shell text and '
+                                                              'then treat that fragment as governed validator truth.',
+                                                              'Bundle component validator status-key resolution contract must stay '
+                                                              'explicit too.',
+                                                              'The admitted status-key resolution contract is top-level direct member '
+                                                              'only.',
+                                                              'machine world must not search nested objects, alternate key spellings, '
+                                                              'alias fields, pointer paths, or other local convenience structures to '
+                                                              'reconstruct status truth when the disclosed status key is not present as a '
+                                                              'direct top-level member.',
+                                                              'Bundle component validator status-literal contract must stay explicit too.',
+                                                              'The admitted status-literal contract is exact canonical string literal.',
+                                                              'machine world must not trim whitespace, fold case, coerce non-string '
+                                                              'values, or map alternate literals onto the admitted status truth when the '
+                                                              'validator did not emit the exact canonical status token.',
+                                                              'Bundle component validator execution-input contract must stay explicit too.',
+                                                              'The admitted execution-input contract is devnull-backed noninteractive '
+                                                              'stdin.',
+                                                              'machine world must not let a bound validator inherit ambient stdin, block '
+                                                              'for operator keystrokes, or convert interactive prompt dialogue into '
+                                                              'governed validator execution truth.',
+                                                              'Bundle component validator verdict-admission timing contract must stay '
+                                                              'explicit too.',
+                                                              'The admitted verdict-admission timing contract is completed-process '
+                                                              'post-exit only.',
+                                                              'machine world must not stream partial stdout into verdict truth, parse a '
+                                                              'pre-exit fragment, or treat a background-launched validator as if its '
+                                                              'verdict had already been admitted.',
+                                                              'Bundle component validator execution-timeout contract must stay explicit '
+                                                              'too.',
+                                                              'The admitted execution-timeout contract is no local timeout overlay.',
+                                                              'machine world must not inject a bundle-local deadline, kill-after policy, '
+                                                              'or timeout overlay and then treat timeout-shaped termination as if it were '
+                                                              'governed validator law.',
+                                                              'Bundle component validator working-directory contract must stay explicit '
+                                                              'too.',
+                                                              'The admitted validator execution working directory is repo_root.',
+                                                              'machine world must not run a bound component validator from arbitrary cwd '
+                                                              'or ambient shell location and then treat that convenience execution context '
+                                                              'as if it were governed validator law.',
+                                                              'Bundle component validator execution-environment contract must stay '
+                                                              'explicit too.',
+                                                              'The admitted execution-environment contract is inherited parent-process '
+                                                              'environment with no local overlay.',
+                                                              'machine world must not inject a local env map, scrub inherited variables, '
+                                                              'or substitute a shadow environment overlay and then treat that altered '
+                                                              'execution context as if it were governed validator law.',
+                                                              'Bundle component validator execution-transport contract must stay explicit '
+                                                              'too.',
+                                                              'The admitted execution transport is local direct subprocess vector '
+                                                              'execution.',
+                                                              'machine world must not route bound component validator execution through a '
+                                                              'shell wrapper, remote hop, or other ambient transport layer and then treat '
+                                                              'that transport substitution as if it were governed validator law.',
+                                                              'Bundle component validator contract-drift execution policy must stay '
+                                                              'explicit too.',
+                                                              'The admitted policy is execute under canonical contract and fail-closed on '
+                                                              'drift.',
+                                                              'The machine world must not obey a drifted disclosed contract row during '
+                                                              'validator execution or treat drift-shaped execution as if it were governed '
+                                                              'validator law.',
+                                                              'Bundle component validator contract-surface projection policy must stay '
+                                                              'explicit too.',
+                                                              'The admitted policy is bundle summary discloses disclosed contract rows '
+                                                              'while component rows disclose effective canonical execution surface.',
+                                                              'The machine world must not collapse disclosed drift and effective execution '
+                                                              'into a single ambiguous surface or misreport one as the other.',
+                                                              'Bundle component validator observation-continuity policy must stay explicit '
+                                                              'too.',
+                                                              'The admitted policy is continue bound component observation under canonical '
+                                                              'surface before final fail-close.',
+                                                              'The machine world must not use fail-close drift as a pretext for blind '
+                                                              'short-circuit that suppresses bound component observation.',
+                                                              'Bundle component status-row coverage policy must stay explicit too.',
+                                                              'The admitted policy is every bound component emits one status row before '
+                                                              'final status.',
+                                                              'The machine world must not finalize root-law bundle truth on partial '
+                                                              'component-row coverage when bound component set remains known.',
+                                                              'Bundle violation-projection policy must stay explicit too.',
+                                                              'The admitted policy is all structure, bundle, and anchor violations are '
+                                                              'projected into stale reasons before final status.',
+                                                              'The machine world must not keep violation rows internally while emitting a '
+                                                              'final verdict surface that withholds their stale-reason projection.',
+                                                              'Bundle final-status derivation policy must stay explicit too.',
+                                                              'The admitted policy is `PASS_REQUIRED` if and only if stale reasons remain '
+                                                              'empty after violation projection; otherwise final status is '
+                                                              '`FAIL_REQUIRED`.',
+                                                              'The machine world must not derive a clean final verdict from pre-projection '
+                                                              'convenience, raw green component counts, or any alternate local verdict '
+                                                              'path.',
+                                                              'Bundle error-code precedence policy must stay explicit too.',
+                                                              'The admitted policy is registry-class failure preempts structure-class '
+                                                              'failure, structure-class failure preempts bundle-class failure, and '
+                                                              'pass-state emits empty error code.',
+                                                              'The machine world must not derive failure code from first local '
+                                                              'convenience, last mutation side effect, or any alternate precedence order.',
+                                                              'Bundle failure-classification policy must stay explicit too.',
+                                                              'The admitted policy is registry class derives from direct stale reasons '
+                                                              'present before violation projection, structure class derives from structure '
+                                                              'violations, bundle class derives from bundle and anchor violations, and '
+                                                              'otherwise failure class is pass.',
+                                                              'The machine world must not invent an anchor-only failure class, bypass '
+                                                              'direct stale reasons, or classify failure from local convenience surfaces.',
+                                                              'Bundle registry-class admission policy must stay explicit too.',
+                                                              'The admitted policy is only direct stale reasons already present before '
+                                                              'violation projection may admit registry failure class.',
+                                                              'Projected structure, bundle, and anchor stale reasons must not '
+                                                              'retroactively upgrade failure class to registry.',
+                                                              'Bundle registry direct-stale-reason origin policy must stay explicit too.',
+                                                              'The admitted origins are alias error, document invalidity, canonical '
+                                                              'contract-row invalidity, and required-surface absence, all before violation '
+                                                              'projection.',
+                                                              'Bundle registry direct-stale-reason alias origin policy must stay explicit '
+                                                              'too.',
+                                                              'The admitted alias direct stale reasons are rows containing the '
+                                                              '`_alias_error:` marker before document, required-surface, and contract-row '
+                                                              'classification.',
+                                                              'Bundle registry direct-stale-reason document origin policy must stay '
+                                                              'explicit too.',
+                                                              'The admitted document direct stale reasons are rows ending with '
+                                                              '`_empty_or_invalid` after alias exclusion and before required-surface and '
+                                                              'contract-row classification.',
+                                                              'Bundle registry direct-stale-reason required-surface origin policy must '
+                                                              'stay explicit too.',
+                                                              'The admitted required-surface direct stale reasons are '
+                                                              'required-component-descriptor-fields missing, surface-missing rows, '
+                                                              'anchor-checks missing, and components missing before violation projection.',
+                                                              'Bundle registry direct-stale-reason contract-row origin policy must stay '
+                                                              'explicit too.',
+                                                              'The admitted contract-row direct stale reasons are root-corpus-law-bundle '
+                                                              'prefixed rows and root-machine-registry-completeness prefixed rows that '
+                                                              'remain after alias, document, and required-surface classification.',
+                                                              'Bundle registry direct-stale-reason source policy must stay explicit too.',
+                                                              'The admitted source is local stale reasons already present before violation '
+                                                              'projection.',
+                                                              'Projected structure, bundle, and anchor stale reasons do not become '
+                                                              'substitute direct stale-reason source.',
+                                                              'Bundle registry direct-stale-reason partition policy must stay explicit '
+                                                              'too.',
+                                                              'Each local stale reason present before violation projection must classify '
+                                                              'exactly once as alias, document, contract-row, required-surface, or unknown '
+                                                              'ontology drift.',
+                                                              'Bundle registry direct-stale-reason origin-classifier precedence policy '
+                                                              'must stay explicit too.',
+                                                              'Alias classification preempts document classification, document '
+                                                              'classification preempts required-surface classification, required-surface '
+                                                              'classification preempts contract-row classification, and otherwise origin '
+                                                              'remains unknown.',
+                                                              'Bundle registry direct-stale-reason unclassified policy must stay explicit '
+                                                              'too.',
+                                                              'The admitted policy is fail-closed on unclassified direct stale-reason '
+                                                              'origin.',
+                                                              'The machine world must fail-close on unclassified direct stale-reason '
+                                                              'origin rather than silently expanding registry ontology.',
+                                                              'Bundle component-validator observation-reason policy must stay explicit '
+                                                              'too.',
+                                                              'The admitted observation reasons are parse/status failure, nonzero '
+                                                              'returncode after admitted parse/status resolution, and non-pass component '
+                                                              'status, all before bundle-violation projection.',
+                                                              'Bundle component-validator observation-reason classifier precedence policy '
+                                                              'must stay explicit too.',
+                                                              'Parse/status classification preempts nonzero returncode classification, '
+                                                              'nonzero returncode classification preempts non-pass component-status '
+                                                              'classification, non-pass component-status classification preempts explicit '
+                                                              'non-execution row exclusion, explicit non-execution row exclusion preempts '
+                                                              'prefixed observation-family ontology drift, and otherwise classification '
+                                                              'remains not-applicable.',
+                                                              'Bundle component-validator observation-reason exclusion-origin policy must '
+                                                              'stay explicit too.',
+                                                              'The admitted excluded non-observation rows are component-validator missing '
+                                                              'and component-status-row coverage incomplete, both before bundle-violation '
+                                                              'projection.',
+                                                              'Observation reasons and prefixed observation-family ontology drift must not '
+                                                              'be silently re-bucketed as excluded non-observation rows.',
+                                                              'Non-execution bundle rows must remain outside component-validator '
+                                                              'observation ontology rather than being silently re-bucketed as observation '
+                                                              'reasons.',
+                                                              'Bundle component-validator observation-reason source policy must stay '
+                                                              'explicit too.',
+                                                              'The admitted observation source is bundle-violation rows only, before '
+                                                              'violation projection.',
+                                                              'Direct stale reasons, structure violations, anchor violations, and '
+                                                              'projected stale-reason strings do not become substitute observation source.',
+                                                              'Bundle component-validator observation-reason partition policy must stay '
+                                                              'explicit too.',
+                                                              'Each bundle-violation row must classify exactly once as admitted '
+                                                              'observation reason, excluded non-observation row, or unknown ontology '
+                                                              'drift, all before violation projection.',
+                                                              'Bundle component-validator observation-reason unclassified policy must stay '
+                                                              'explicit too.',
+                                                              'The admitted policy is fail-closed on unclassified component-validator '
+                                                              'observation reason.',
+                                                              'The machine world must fail-close on unclassified component-validator '
+                                                              'observation reason rather than silently expanding bundle observation '
+                                                              'ontology.'),
+ 'identity/protocol/README.md': ('## Root law-bundle component-row completeness discipline',
+                                 '1. required component-row and component-status-row rows must remain explicit as separate '
+                                 'machine-readable row families;',
+                                 '## Root-law bundle discipline',
+                                 'Constitutional spine, root admission/governance, source-order, authority',
+                                 'gateway-admissibility, machine-registry completeness, and conflict precedence',
+                                 'No single slice is sufficient by itself; the machine world must preserve them as one governed root-law '
+                                 'bundle.',
+                                 'Bundle membership must also remain descriptor-concordant with the admitted component families it binds.',
+                                 'Local waiver of descriptor concordance must remain forbidden inside the bundle.',
+                                 "A bundle row may not silently drift from a component family's own disclosed validator, probe, "
+                                 'shared-common, emitted status-key, or emitted error-code surfaces.',
+                                 'Nor may the bundle silently drift descriptor-field mode:',
+                                 'validator-emitted error-code families must remain validator-emitted error-code families.',
+                                 'The bundle may not locally reauthor that descriptor schema either; the field',
+                                 'admitted machine-registry completeness law for self-describing mapping families.',
+                                 "The bundle's descriptor schema must remain source-singular as well.",
+                                 'fallback source for convenience.',
+                                 'Local reauthoring of descriptor schema governance must remain forbidden inside the bundle.',
+                                 'fail-close rather than locally reconstructing descriptor schema.',
+                                 'The bundle must also inherit machine-registry completeness self-describing-family requirement law.',
+                                 'The admitted requirement that root mapping families stay self-describing may not be silently redeclared, '
+                                 'weakened, or guessed inside the bundle.',
+                                 'If the admitted source does not disclose that self-describing-family requirement law, the machine world '
+                                 'must fail-close rather than locally reconstructing self-describing-family legality.',
+                                 'The bundle must also inherit machine-registry completeness family-surface',
+                                 'If the admitted source does not disclose that family-surface binding law, the machine world must '
+                                 'fail-close rather than locally reconstructing descriptor-family binding legality.',
+                                 'Local redeclaration of family-surface binding governance must remain forbidden inside the bundle.',
+                                 'explicitly declares a cross-family descriptor-stem binding, the bundle must',
+                                 'not locally override or suppress that binding.',
+                                 'The bundle must also inherit machine-registry completeness repo-relative',
+                                 'inherit those repo-relative path patterns rather than locally redeclaring,',
+                                 'fail-close rather than locally reconstructing descriptor-stem capture law.',
+                                 'The bundle must also inherit machine-registry completeness repo-relative',
+                                 'Repo-root-relative scope, parent-escape rejection, role-typed path law, and',
+                                 'Local redeclaration of repo-relative discipline governance must remain forbidden inside the bundle.',
+                                 'fail-close rather than locally reconstructing descriptor path legality.',
+                                 'The bundle must also inherit machine-registry completeness current/version',
+                                 'Root family prefix, current-entry suffix, active-version regex, and the',
+                                 'Local redeclaration of current/version naming governance must remain forbidden inside the bundle.',
+                                 'fail-close rather than locally reconstructing current/version mediation.',
+                                 'The bundle must also inherit machine-registry completeness registry-child',
+                                 'canonical registry directory, the admitted registry-current entry, and',
+                                 'Local redeclaration of registry-child admission governance must remain forbidden inside the bundle.',
+                                 'fail-close rather than locally reconstructing component admission.',
+                                 'Bundle component descriptors must also remain current-entry mediated.',
+                                 'version truth through those rows, not pin directly to version files.',
+                                 'fail-close rather than bypassing current mediation.',
+                                 'Bundle component legality must also remain validator-live.',
+                                 'Each bound component validator must execute through its disclosed validator',
+                                 'surface and emit `PASS_REQUIRED` through its disclosed status key.',
+                                 'Descriptor concordance and file presence are not enough if that validator',
+                                 'fails execution or emits a weaker verdict.',
+                                 'Bundle component validator execution-failure handling must also stay fail-closed.',
+                                 'emits invalid machine output, or omits its disclosed status key, runtime may not synthesize a',
+                                 'passing verdict from surrounding bundle metadata.',
+                                 'Bundle component validators must also keep returncode-observation contract explicit.',
+                                 'The admitted validator returncode-observation contract is nonzero returncode observed without host '
+                                 'exception overlay.',
+                                 'Runtime may not let a host-language subprocess helper raise on nonzero exit, bypass the governed '
+                                 'execution-failure policy, or convert host exception convenience into validator truth.',
+                                 'Bundle component validators must also remain machine-readable.',
+                                 'Runtime consumes them through structured machine output carrying the disclosed status key, not by '
+                                 'scraping prose, logs, or incidental terminal text.',
+                                 'Bundle component validators must also keep their invocation contract explicit.',
+                                 'Bundle legality invokes them as `python3 <validator_script> --repo-root <repo_root> --json-only`.',
+                                 'Runtime may not swap interpreter, omit repo-root binding, or omit compact machine-output mode.',
+                                 'Bundle component validators must also keep output-channel contract explicit.',
+                                 'The verdict-bearing machine-output channel is stdout only.',
+                                 'stderr diagnostics do not become an alternate status-bearing channel and may not replace missing stdout '
+                                 'truth.',
+                                 'Bundle component validators must also keep stderr-isolation contract explicit.',
+                                 'The admitted stderr channel remains separately captured from verdict-bearing stdout.',
+                                 'Runtime may not merge stderr into stdout or treat a mixed stream as admitted validator truth.',
+                                 'Bundle component validators must also keep stdio text-decoding contract explicit.',
+                                 'The admitted validator stdio text-decoding contract is utf-8 strict text decode with no locale overlay.',
+                                 'Runtime may not let ambient locale choose the decoder, substitute an alternate codec or replacement '
+                                 'policy, or treat locale-shaped text coercion as admitted validator truth.',
+                                 'Bundle component validators must also keep stdout-normalization contract explicit.',
+                                 'The admitted validator stdout-normalization contract is outer-whitespace trim only before JSON decode.',
+                                 'Runtime may not line-scrape, select a preferred line, trim inner content, or reconstruct JSON from mixed '
+                                 'stdout.',
+                                 'Bundle component validators must also keep stdout-presence contract explicit.',
+                                 'The admitted validator stdout-presence contract is nonempty after outer-whitespace trim.',
+                                 'Runtime may not treat empty or whitespace-only stdout as implicit success, an invented empty object, or '
+                                 'an advisory no-op verdict surface.',
+                                 'Bundle component validators must also keep stdout-framing contract explicit.',
+                                 'The verdict-bearing machine output occupies whole stdout as a single JSON object.',
+                                 'Runtime may not line-scrape, trailer-strip, or extract a JSON fragment from mixed stdout preamble, '
+                                 'trailer, or incidental shell text.',
+                                 'Bundle component validators must also keep status-key resolution contract explicit.',
+                                 'The disclosed status key is resolved only as a direct top-level member of the verdict-bearing JSON '
+                                 'object.',
+                                 'Runtime may not search nested objects, alias keys, pointer paths, or other local convenience structures '
+                                 'to recover missing status truth.',
+                                 'Bundle component validators must also keep status-literal contract explicit.',
+                                 'The disclosed status value is admitted only as the exact canonical string literal.',
+                                 'Runtime may not trim whitespace, fold case, coerce non-string values, or map alternate literals into '
+                                 'admitted status truth.',
+                                 'Bundle component validators must also keep execution-input contract explicit.',
+                                 'The admitted validator execution input is devnull-backed noninteractive stdin.',
+                                 'Runtime may not let bound validators inherit ambient stdin, wait for operator keystrokes, or convert '
+                                 'interactive prompt dialogue into validator truth.',
+                                 'Bundle component validators must also keep verdict-admission timing contract explicit.',
+                                 'The admitted validator verdict is consumed only after completed process exit.',
+                                 'Runtime may not stream partial stdout into verdict truth, parse pre-exit fragments, or treat '
+                                 'background-launched validators as already admitted.',
+                                 'Bundle component validators must also keep execution-timeout contract explicit.',
+                                 'The admitted validator execution-timeout contract is no local timeout overlay.',
+                                 'Runtime may not inject a bundle-local deadline, kill-after policy, or timeout overlay and then treat '
+                                 'timeout-shaped termination as admitted validator truth.',
+                                 'Bundle component validators must also keep working-directory contract explicit.',
+                                 'The admitted validator execution working directory is repo_root.',
+                                 'Runtime may not substitute arbitrary cwd or ambient shell location for that governed execution context.',
+                                 'Bundle component validators must also keep execution-environment contract explicit.',
+                                 'The admitted validator execution environment is the inherited parent-process environment with no local '
+                                 'overlay.',
+                                 'Runtime may not inject a local env map, scrub inherited variables, or substitute a shadow environment '
+                                 'overlay for that governed execution context.',
+                                 'Bundle component validators must also keep execution-transport contract explicit.',
+                                 'The admitted transport is local direct subprocess vector execution.',
+                                 'Runtime may not substitute shell mediation, remote hop, or other ambient transport for that governed '
+                                 'execution path.',
+                                 'Bundle component validators must also keep contract-drift execution policy explicit.',
+                                 'The admitted validator policy is execute under canonical contract and fail-closed on drift.',
+                                 'Runtime may not obey a drifted disclosed contract row during validator execution or treat drift-shaped '
+                                 'execution as admitted validator truth.',
+                                 'Bundle component validators must also keep contract-surface projection policy explicit.',
+                                 'The admitted validator surface split is disclosed bundle summary plus effective component execution '
+                                 'rows.',
+                                 'Runtime may not hide disclosed drift by rewriting summary to canonical values or project drifted '
+                                 'declared rows as applied execution truth.',
+                                 'Bundle component validators must also keep observation-continuity policy explicit.',
+                                 'The admitted runtime policy is continue bound component observation under canonical surface before final '
+                                 'fail-close.',
+                                 'Runtime may not use bundle drift as a reason to suppress otherwise bindable component observation before '
+                                 'final verdict.',
+                                 'Bundle component status-row coverage policy must also stay explicit.',
+                                 'The admitted runtime policy is every bound component emits one status row before final status.',
+                                 'Runtime may not finalize on partial component-row coverage when the bound component set is already '
+                                 'known.',
+                                 'Bundle violation-projection policy must also stay explicit.',
+                                 'The admitted runtime policy is all structure, bundle, and anchor violations are projected into stale '
+                                 'reasons before final status.',
+                                 'Runtime may not keep violation rows private while presenting a final verdict surface that withholds '
+                                 'their stale-reason projection.',
+                                 'Bundle final-status derivation policy must also stay explicit.',
+                                 'The admitted runtime policy is `PASS_REQUIRED` if and only if stale reasons remain empty after violation '
+                                 'projection; otherwise final status is `FAIL_REQUIRED`.',
+                                 'Runtime may not derive a clean final verdict from pre-projection convenience, raw green component '
+                                 'counts, or any alternate local verdict path.',
+                                 'Bundle error-code precedence policy must also stay explicit.',
+                                 'The admitted runtime policy is registry-class failure preempts structure-class failure, structure-class '
+                                 'failure preempts bundle-class failure, and pass-state emits empty error code.',
+                                 'Runtime may not derive failure code from first local convenience, last mutation side effect, or any '
+                                 'alternate precedence order.',
+                                 'Bundle failure-classification policy must also stay explicit.',
+                                 'The admitted runtime policy is registry class derives from direct stale reasons present before violation '
+                                 'projection, structure class derives from structure violations, bundle class derives from bundle and '
+                                 'anchor violations, and otherwise failure class is pass.',
+                                 'Runtime may not invent an anchor-only failure class, bypass direct stale reasons, or classify failure '
+                                 'from local convenience surfaces.',
+                                 'Bundle registry-class admission policy must also stay explicit.',
+                                 'The admitted runtime policy is only direct stale reasons already present before violation projection may '
+                                 'admit registry failure class.',
+                                 'Projected structure, bundle, and anchor stale reasons must not retroactively upgrade failure class to '
+                                 'registry.',
+                                 'Bundle registry direct-stale-reason origin policy must also stay explicit.',
+                                 'The admitted runtime origins are alias error, document invalidity, canonical contract-row invalidity, '
+                                 'and required-surface absence, all before violation projection.',
+                                 'Bundle registry direct-stale-reason alias origin policy must also stay explicit.',
+                                 'The admitted runtime alias direct stale reasons are rows containing the `_alias_error:` marker before '
+                                 'document, required-surface, and contract-row classification.',
+                                 'Bundle registry direct-stale-reason document origin policy must also stay explicit.',
+                                 'The admitted runtime document direct stale reasons are rows ending with `_empty_or_invalid` after alias '
+                                 'exclusion and before required-surface and contract-row classification.',
+                                 'Bundle registry direct-stale-reason required-surface origin policy must also stay explicit.',
+                                 'The admitted runtime required-surface direct stale reasons are required-component-descriptor-fields '
+                                 'missing, surface-missing rows, anchor-checks missing, and components missing before violation '
+                                 'projection.',
+                                 'Bundle registry direct-stale-reason contract-row origin policy must also stay explicit.',
+                                 'The admitted runtime contract-row direct stale reasons are root-corpus-law-bundle prefixed rows and '
+                                 'root-machine-registry-completeness prefixed rows that remain after alias, document, and required-surface '
+                                 'classification.',
+                                 'Bundle registry direct-stale-reason source policy must also stay explicit.',
+                                 'The admitted runtime source is local stale reasons already present before violation projection.',
+                                 'Projected structure, bundle, and anchor stale reasons do not become substitute direct stale-reason '
+                                 'source.',
+                                 'Bundle registry direct-stale-reason partition policy must also stay explicit.',
+                                 'Each local stale reason present before violation projection must classify exactly once as alias, '
+                                 'document, contract-row, required-surface, or unknown ontology drift.',
+                                 'Bundle registry direct-stale-reason origin-classifier precedence policy must also stay explicit.',
+                                 'Alias runtime classification preempts document classification, document classification preempts '
+                                 'required-surface classification, required-surface classification preempts contract-row classification, '
+                                 'and otherwise runtime origin remains unknown.',
+                                 'Bundle registry direct-stale-reason unclassified policy must also stay explicit.',
+                                 'The admitted runtime policy is fail-closed on unclassified direct stale-reason origin.',
+                                 'Runtime must fail-close on unclassified direct stale-reason origin rather than silently expanding '
+                                 'registry ontology.',
+                                 'Bundle component-validator observation-reason policy must also stay explicit.',
+                                 'The admitted runtime observation reasons are parse/status failure, nonzero returncode after admitted '
+                                 'parse/status resolution, and non-pass component status, all before bundle-violation projection.',
+                                 'Bundle component-validator observation-reason classifier precedence policy must also stay explicit.',
+                                 'Parse/status runtime classification preempts nonzero returncode classification, nonzero returncode '
+                                 'classification preempts non-pass component-status classification, non-pass component-status '
+                                 'classification preempts explicit non-execution row exclusion, explicit non-execution row exclusion '
+                                 'preempts prefixed observation-family ontology drift, and otherwise runtime classification remains '
+                                 'not-applicable.',
+                                 'Bundle component-validator observation-reason exclusion-origin policy must also stay explicit.',
+                                 'The admitted excluded runtime non-observation rows are component-validator missing and '
+                                 'component-status-row coverage incomplete, both before bundle-violation projection.',
+                                 'Runtime observation reasons and prefixed observation-family ontology drift must not be silently '
+                                 're-bucketed as excluded non-observation rows.',
+                                 'Non-execution bundle rows must remain outside component-validator observation ontology rather than being '
+                                 'silently re-bucketed as runtime observation reasons.',
+                                 'Bundle component-validator observation-reason source policy must also stay explicit.',
+                                 'The admitted runtime observation source is bundle-violation rows only, before violation projection.',
+                                 'Direct stale reasons, structure violations, anchor violations, and projected stale-reason strings do not '
+                                 'become substitute runtime observation source.',
+                                 'Bundle component-validator observation-reason partition policy must also stay explicit.',
+                                 'Each bundle-violation row must classify exactly once as admitted runtime observation reason, excluded '
+                                 'non-observation row, or unknown ontology drift, all before violation projection.',
+                                 'Bundle component-validator observation-reason unclassified policy must also stay explicit.',
+                                 'The admitted runtime policy is fail-closed on unclassified component-validator observation reason.',
+                                 'Runtime must fail-close on unclassified component-validator observation reason rather than silently '
+                                 'expanding bundle observation ontology.'),
+ 'identity/protocol/IDENTITY_PROTOCOL.md': ('## Root law-bundle component-row completeness boundary',
+                                            '1. Root-law bundle coherence must remain machine-readable as separate component-row and '
+                                            'component-status-row families.',
+                                            '## Root-law bundle boundary',
+                                            '1. constitutional spine;',
+                                            '9. machine-registry completeness;',
+                                            'Strengthening one slice must not silently weaken or bypass another; any',
+                                            'Root-law bundle rows must also remain descriptor-concordant with the active',
+                                            "component family's own disclosed validator/probe/common/status-key/error-code surfaces.",
+                                            'Local waiver of descriptor concordance must remain forbidden inside the bundle.',
+                                            'Root-law bundle rows must also preserve descriptor-field mode; a repo-relative',
+                                            'validator-emitted status-key/error-code fields may not be reinterpreted as ordinary path '
+                                            'strings.',
+                                            'The bundle must not locally reauthor the self-describing descriptor schema',
+                                            'descriptor-field modes must remain aligned with root machine-registry completeness law.',
+                                            "The bundle's descriptor schema must stay source-singular",
+                                            'no substitute source, and no fallback source.',
+                                            'Local reauthoring of descriptor schema governance must remain forbidden inside the bundle.',
+                                            'fail-close rather than locally reconstructing descriptor schema.',
+                                            'The bundle must also inherit machine-registry completeness self-describing-family requirement '
+                                            'law; the admitted requirement that law-bearing root mapping families stay self-describing may '
+                                            'not be silently redeclared, weakened, or guessed inside the bundle.',
+                                            'If the admitted source does not disclose that self-describing-family requirement law, '
+                                            'protocol legality must fail-close rather than locally reconstructing self-describing-family '
+                                            'legality.',
+                                            'The bundle must also inherit machine-registry completeness family-surface binding law',
+                                            'If the admitted source does not disclose that family-surface binding law, protocol legality '
+                                            'must fail-close rather than locally reconstructing descriptor-family binding legality.',
+                                            'Local redeclaration of family-surface binding governance must remain forbidden inside the '
+                                            'bundle.',
+                                            'explicit cross-family descriptor-stem bindings declared there may not be silently reauthored, '
+                                            'suppressed, or replaced by local bundle convenience.',
+                                            'The bundle must also inherit machine-registry completeness repo-relative',
+                                            'descriptor path-pattern law; descriptor-stem capture patterns for validator,',
+                                            'fail-close rather than locally reconstructing descriptor-surface pattern law.',
+                                            'The bundle must also inherit machine-registry completeness repo-relative',
+                                            'descriptor discipline law; repo-root-relative scope, parent-escape rejection,',
+                                            'Local redeclaration of repo-relative discipline governance must remain forbidden inside the '
+                                            'bundle.',
+                                            'protocol legality must fail-close rather than locally reconstructing descriptor-path legality '
+                                            'law.',
+                                            'The bundle must also inherit machine-registry completeness current/version',
+                                            'naming law; root family prefix, current-entry suffix, active-version regex,',
+                                            'Local redeclaration of current/version naming governance must remain forbidden inside the '
+                                            'bundle.',
+                                            'protocol legality must fail-close rather than locally reconstructing current/version '
+                                            'mediation law.',
+                                            'The bundle must also inherit machine-registry completeness registry-child',
+                                            'admission law; canonical registry directory, admitted registry-current entry,',
+                                            'Local redeclaration of registry-child admission governance must remain forbidden inside the '
+                                            'bundle.',
+                                            'protocol legality must fail-close rather than locally reconstructing component-admission law.',
+                                            'Bundle component descriptors must also stay current-entry mediated',
+                                            'not direct version-file pinning.',
+                                            'fail-close rather than bypassing current mediation.',
+                                            'Root-law bundle rows must also remain validator-live; each bound component',
+                                            'validator must execute through its disclosed validator surface and emit',
+                                            '`PASS_REQUIRED` through its disclosed status key.',
+                                            'Descriptor concordance or file presence may not override a non-passing',
+                                            'component validator verdict.',
+                                            'Root-law bundle rows must also keep component validator execution-failure policy fail-closed; '
+                                            'missing execution, nonzero exit, invalid machine output,',
+                                            'or missing disclosed status key may not be downgraded into advisory noise.',
+                                            'Root-law bundle rows must also keep component validator returncode-observation contract '
+                                            'explicit; nonzero returncode is observed without host exception overlay inside the bundle.',
+                                            'Local substitution of host-language exception raising for governed nonzero returncode '
+                                            'handling is forbidden inside the bundle.',
+                                            'Root-law bundle rows must also keep component validator machine-output contract explicit; '
+                                            'bundle legality consumes structured machine output carrying',
+                                            'the disclosed status key, not human-readable logs or incidental shell text.',
+                                            'Root-law bundle rows must also keep component validator invocation contract explicit; bundle '
+                                            'legality invokes the disclosed validator surface as `python3 <validator_script> --repo-root '
+                                            '<repo_root> --json-only`.',
+                                            'Local substitution of interpreter, repo-root binding, or compact machine-output mode is '
+                                            'forbidden inside the bundle.',
+                                            'Root-law bundle rows must also keep component validator output-channel contract explicit; the '
+                                            'disclosed validator verdict is consumed from stdout only.',
+                                            'stderr diagnostics must not be promoted into an alternate status-bearing verdict channel '
+                                            'inside the bundle.',
+                                            'Root-law bundle rows must also keep component validator stderr-isolation contract explicit; '
+                                            'stderr remains separately captured from verdict-bearing stdout.',
+                                            'Local merging of stderr into stdout or admission of a mixed stream is forbidden inside the '
+                                            'bundle.',
+                                            'Root-law bundle rows must also keep component validator stdout-normalization contract '
+                                            'explicit; only outer-whitespace trim may occur before JSON decode inside the bundle.',
+                                            'Local line selection, inner-content trimming, or JSON reconstruction from mixed stdout is '
+                                            'forbidden inside the bundle.',
+                                            'Root-law bundle rows must also keep component validator stdout-presence contract explicit; '
+                                            'bound component validator stdout must remain nonempty after outer-whitespace trim.',
+                                            'Local treatment of empty or whitespace-only stdout as implicit success, an invented empty '
+                                            'object, or advisory silence is forbidden inside the bundle.',
+                                            'Root-law bundle rows must also keep component validator stdout-framing contract explicit; '
+                                            'bound component validator verdict is consumed only when whole stdout is a single JSON object '
+                                            'carrying the disclosed status key.',
+                                            'Local extraction of a JSON fragment from mixed stdout preamble, trailer, or incidental shell '
+                                            'text is forbidden inside the bundle.',
+                                            'Root-law bundle rows must also keep component validator status-key resolution contract '
+                                            'explicit; the disclosed status key is resolved only as a direct top-level member of the '
+                                            'admitted verdict object.',
+                                            'Local search across nested objects, alias keys, pointer paths, or other convenience '
+                                            'structures is forbidden inside the bundle.',
+                                            'Root-law bundle rows must also keep component validator status-literal contract explicit; the '
+                                            'disclosed status value is admitted only as the exact canonical string literal.',
+                                            'Local trimming, case-folding, non-string coercion, or alternate-literal mapping is forbidden '
+                                            'inside the bundle.',
+                                            'Root-law bundle rows must also keep component validator execution-input contract explicit; '
+                                            'bound component validators execute with devnull-backed noninteractive stdin.',
+                                            'Local inheritance of ambient stdin or dependence on operator keystrokes is forbidden inside '
+                                            'the bundle.',
+                                            'Root-law bundle rows must also keep component validator verdict-admission timing contract '
+                                            'explicit; bound component validator verdict is admitted only after completed process exit.',
+                                            'Local streaming of partial stdout, pre-exit parsing, or background-process substitution is '
+                                            'forbidden inside the bundle.',
+                                            'Root-law bundle rows must also keep component validator execution-timeout contract explicit; '
+                                            'bound component validators execute with no local timeout overlay inside the bundle.',
+                                            'Local injection of deadlines, kill-after policies, or timeout overlays is forbidden inside '
+                                            'the bundle.',
+                                            'Root-law bundle rows must also keep component validator working-directory contract explicit; '
+                                            'bound component validators execute with repo_root as the governed working directory.',
+                                            'Local substitution of arbitrary cwd or ambient shell location is forbidden inside the bundle.',
+                                            'Root-law bundle rows must also keep component validator execution-environment contract '
+                                            'explicit; bound component validators execute with inherited parent-process environment and no '
+                                            'local overlay.',
+                                            'Local injection of env maps, scrubbing of inherited variables, or shadow environment overlay '
+                                            'is forbidden inside the bundle.',
+                                            'Root-law bundle rows must also keep component validator execution-transport contract '
+                                            'explicit; bound component validators execute through local direct subprocess vector '
+                                            'transport.',
+                                            'Local substitution of shell mediation, remote hop, or other ambient transport is forbidden '
+                                            'inside the bundle.',
+                                            'Root-law bundle rows must also keep component validator contract-drift execution policy '
+                                            'explicit; bound component validators execute under canonical contract and fail-closed on '
+                                            'drift.',
+                                            'Local obedience to a drifted disclosed contract row or admission of drift-shaped execution is '
+                                            'forbidden inside the bundle.',
+                                            'Root-law bundle rows must also keep component validator contract-surface projection policy '
+                                            'explicit; bundle summary discloses declared contract rows while component rows disclose '
+                                            'effective canonical execution surface.',
+                                            'Local collapse of disclosed drift and effective execution or projection of one as the other '
+                                            'is forbidden inside the bundle.',
+                                            'Root-law bundle rows must also keep component validator observation-continuity policy '
+                                            'explicit; once bound component surfaces resolve, component observation continues under '
+                                            'canonical surface before final fail-close.',
+                                            'Local short-circuit that suppresses bound component observation merely because a bundle '
+                                            'contract row drifted is forbidden inside the bundle.',
+                                            'Root-law bundle rows must also keep component status-row coverage policy explicit; every '
+                                            'bound component must emit one status row before final status.',
+                                            'Local finalization on partial component-row coverage is forbidden inside the bundle.',
+                                            'Root-law bundle rows must also keep violation-projection policy explicit; all structure, '
+                                            'bundle, and anchor violations must be projected into stale reasons before final status.',
+                                            'Local final verdict must not withhold stale-reason projection for known violation rows.',
+                                            'Root-law bundle rows must also keep final-status derivation policy explicit; final status is '
+                                            '`PASS_REQUIRED` if and only if stale reasons remain empty after violation projection; '
+                                            'otherwise final status is `FAIL_REQUIRED`.',
+                                            'Local verdict path must not bypass stale-reason-adjudicated final status.',
+                                            'Root-law bundle rows must also keep error-code precedence policy explicit; registry-class '
+                                            'failure preempts structure-class failure, structure-class failure preempts bundle-class '
+                                            'failure, and pass-state emits empty error code.',
+                                            'Local error-code derivation must not bypass precedence-adjudicated failure classification.',
+                                            'Root-law bundle rows must also keep failure-classification policy explicit; registry class '
+                                            'derives from direct stale reasons present before violation projection, structure class '
+                                            'derives from structure violations, bundle class derives from bundle and anchor violations, '
+                                            'and otherwise failure class is pass.',
+                                            'Local classification path must not invent an anchor-only failure class or bypass direct stale '
+                                            'reasons.',
+                                            'Root-law bundle rows must also keep registry-class admission policy explicit; only direct '
+                                            'stale reasons already present before violation projection may admit registry failure class.',
+                                            'Projected violation reasons must not be reclassified as registry failure basis.',
+                                            'Root-law bundle rows must also keep registry direct-stale-reason origin policy explicit; '
+                                            'admitted direct origins are alias error, document invalidity, canonical contract-row '
+                                            'invalidity, and required-surface absence before violation projection.',
+                                            'Root-law bundle rows must also keep registry direct-stale-reason alias origin policy '
+                                            'explicit; admitted alias direct reasons are rows containing the `_alias_error:` marker before '
+                                            'document, required-surface, and contract-row classification.',
+                                            'Root-law bundle rows must also keep registry direct-stale-reason document origin policy '
+                                            'explicit; admitted document direct reasons are rows ending with `_empty_or_invalid` after '
+                                            'alias exclusion and before required-surface and contract-row classification.',
+                                            'Root-law bundle rows must also keep registry direct-stale-reason required-surface origin '
+                                            'policy explicit; admitted required-surface direct reasons are '
+                                            'required-component-descriptor-fields missing, surface-missing rows, anchor-checks missing, '
+                                            'and components missing before violation projection.',
+                                            'Root-law bundle rows must also keep registry direct-stale-reason contract-row origin policy '
+                                            'explicit; admitted contract-row direct reasons are root-corpus-law-bundle prefixed rows and '
+                                            'root-machine-registry-completeness prefixed rows that remain after alias, document, and '
+                                            'required-surface classification.',
+                                            'Root-law bundle rows must also keep registry direct-stale-reason source policy explicit; '
+                                            'direct stale-reason source is local stale reasons already present before violation '
+                                            'projection.',
+                                            'Projected structure, bundle, and anchor stale reasons must not be reinterpreted as direct '
+                                            'stale-reason source.',
+                                            'Root-law bundle rows must also keep registry direct-stale-reason partition policy explicit; '
+                                            'each local stale reason present before violation projection classifies exactly once as alias, '
+                                            'document, contract-row, required-surface, or unknown ontology drift.',
+                                            'Root-law bundle rows must also keep registry direct-stale-reason origin-classifier precedence '
+                                            'policy explicit; alias classification preempts document, document preempts required-surface, '
+                                            'required-surface preempts contract-row, and otherwise origin remains unknown.',
+                                            'Root-law bundle rows must also keep registry direct-stale-reason unclassified policy '
+                                            'explicit; unclassified direct stale-reason origin must remain fail-closed.',
+                                            'Local direct stale-reason ontology must not silently expand beyond those admitted origins.',
+                                            'Root-law bundle rows must also keep component-validator observation-reason policy explicit; '
+                                            'admitted observation reasons are parse/status failure, nonzero returncode after admitted '
+                                            'parse/status resolution, and non-pass component status before bundle-violation projection.',
+                                            'Root-law bundle rows must also keep component-validator observation-reason classifier '
+                                            'precedence policy explicit; parse/status classification preempts nonzero returncode, nonzero '
+                                            'returncode preempts non-pass component status, non-pass component status preempts explicit '
+                                            'non-execution exclusion, explicit non-execution exclusion preempts prefixed '
+                                            'observation-family ontology drift, and otherwise classification remains not-applicable.',
+                                            'Root-law bundle rows must also keep component-validator observation-reason exclusion-origin '
+                                            'policy explicit; admitted excluded non-observation rows are component-validator missing and '
+                                            'component-status-row coverage incomplete before bundle-violation projection.',
+                                            'Local bundle law must not silently re-bucket admitted observation reasons or prefixed '
+                                            'observation-family ontology drift as excluded non-observation rows.',
+                                            'Local bundle law must keep non-execution bundle rows outside component-validator observation '
+                                            'ontology.',
+                                            'Root-law bundle rows must also keep component-validator observation-reason source policy '
+                                            'explicit; observation source is bundle-violation rows only before violation projection.',
+                                            'Direct stale reasons, structure violations, anchor violations, and projected stale-reason '
+                                            'strings must not be reinterpreted as observation source.',
+                                            'Root-law bundle rows must also keep component-validator observation-reason partition policy '
+                                            'explicit; each bundle-violation row classifies exactly once as admitted observation reason, '
+                                            'excluded non-observation row, or unknown ontology drift before violation projection.',
+                                            'Root-law bundle rows must also keep component-validator observation-reason unclassified '
+                                            'policy explicit; unclassified observation reason must remain fail-closed.',
+                                            'Local bundle observation ontology must not silently expand beyond those admitted '
+                                            'component-validator observation reasons.'),
+ 'identity/protocol/IDENTITY_RUNTIME.md': ('## Runtime law-bundle component-row consumption boundary',
+                                           '1. Runtime consumes root-law bundle coherence as separate component-row and '
+                                           'component-status-row families rather than as undifferentiated bundle prose.',
+                                           '## Runtime consumption of the root-law bundle',
+                                           'constitutional spine, admission/governance, ordering, authority, question-routing,',
+                                           'machine-registry completeness,',
+                                           'Runtime must not select the most convenient slice in isolation.',
+                                           'Runtime must also reject a root-law bundle row whose '
+                                           'validator/probe/common/status-key/error-code',
+                                           'surfaces drift from the active component descriptor it claims to bind.',
+                                           'Runtime must also reject local waiver of descriptor concordance inside the bundle.',
+                                           'Runtime must also reject a root-law bundle row whose descriptor-field mode',
+                                           'error-code family.',
+                                           'Runtime must also reject a root-law bundle whose descriptor schema diverges',
+                                           'descriptor-field mode map.',
+                                           'Runtime must also treat bundle descriptor schema as source-singular',
+                                           'no substitute source, and no fallback source.',
+                                           'Runtime must also reject local reauthoring of descriptor schema governance inside the bundle.',
+                                           'locally reconstructing descriptor schema.',
+                                           'Runtime must also reject a root-law bundle that redeclares or weakens machine-registry '
+                                           'completeness self-describing-family requirement law; the admitted requirement that law-bearing '
+                                           'root mapping families stay self-describing must be inherited from the admitted source '
+                                           'component.',
+                                           'If the admitted source does not disclose that self-describing-family requirement law, runtime '
+                                           'must fail-close rather than locally reconstructing self-describing-family legality law.',
+                                           'Runtime must also reject a root-law bundle that locally overrides or suppresses',
+                                           'If the admitted source does not disclose that family-surface binding law, runtime must '
+                                           'fail-close rather than locally reconstructing descriptor-family binding legality law.',
+                                           'Runtime must also reject local redeclaration of family-surface binding governance inside the '
+                                           'bundle.',
+                                           'explicit cross-family descriptor-stem bindings must be inherited from the admitted source '
+                                           'component rather than guessed.',
+                                           'Runtime must also reject a root-law bundle that redeclares or loosens',
+                                           'descriptor-stem capture patterns for validator/probe/shared-common surfaces',
+                                           'fail-close rather than locally reconstructing descriptor-surface pattern law.',
+                                           'Runtime must also reject a root-law bundle that redeclares or weakens',
+                                           'scope, parent-escape rejection, role-typed path classes, and cross-role',
+                                           'Runtime must also reject local redeclaration of repo-relative discipline governance inside the '
+                                           'bundle.',
+                                           'runtime must fail-close rather than locally reconstructing descriptor-path legality law.',
+                                           'Runtime must also reject a root-law bundle that redeclares or weakens',
+                                           'current-entry suffix, active-version regex, and current/version pair',
+                                           'Runtime must also reject local redeclaration of current/version naming governance inside the '
+                                           'bundle.',
+                                           'fail-close rather than locally reconstructing current/version mediation law.',
+                                           'Runtime must also reject a root-law bundle that redeclares or weakens',
+                                           'canonical registry directory, admitted registry-current entry, and registered child-set',
+                                           'Runtime must also reject local redeclaration of registry-child admission governance inside the '
+                                           'bundle.',
+                                           'runtime must fail-close rather than locally reconstructing component-admission law.',
+                                           'Runtime must also treat bundle component descriptors as current-entry mediated',
+                                           'not direct version-file pinning.',
+                                           'fail-close rather than bypassing current mediation.',
+                                           'Runtime must also require each bound component validator to execute through',
+                                           'its disclosed validator surface and emit `PASS_REQUIRED` through its',
+                                           'disclosed status key.',
+                                           'Runtime must fail-close on validator execution failure, nonzero exit, or any',
+                                           'emitted status other than `PASS_REQUIRED`.',
+                                           'Runtime must also keep validator execution-failure handling fail-closed;',
+                                           'invalid machine output, or omission of the disclosed status key may not be repaired by local '
+                                           'inference.',
+                                           'Runtime must also keep bound component validator returncode-observation contract explicit; '
+                                           'runtime observes nonzero returncode without host exception overlay.',
+                                           'Runtime must not let a host-language subprocess helper raise on nonzero exit, bypass the '
+                                           'governed execution-failure policy, or convert host exception convenience into admitted '
+                                           'validator truth.',
+                                           'Runtime must also require a structured machine-output contract for bound component validators; '
+                                           'runtime consumes the disclosed status key from machine',
+                                           'output rather than scraping logs or incidental shell text.',
+                                           'Runtime must also keep bound component validator invocation contract explicit; runtime invokes '
+                                           'the disclosed validator surface as `python3 <validator_script> --repo-root <repo_root> '
+                                           '--json-only`.',
+                                           'Runtime must not substitute a different interpreter, omit repo-root binding, or omit compact '
+                                           'machine-output mode.',
+                                           'Runtime must also keep bound component validator output-channel contract explicit; runtime '
+                                           'consumes the verdict-bearing machine output from stdout only.',
+                                           'Runtime must not elevate stderr diagnostics into an alternate status-bearing channel or use '
+                                           'them to replace missing stdout truth.',
+                                           'Runtime must also keep bound component validator stderr-isolation contract explicit; runtime '
+                                           'captures stderr separately from verdict-bearing stdout.',
+                                           'Runtime must not merge stderr into stdout or treat a mixed stream as admitted validator truth.',
+                                           'Runtime must also keep bound component validator stdio text-decoding contract explicit; '
+                                           'runtime executes bound component validators with utf-8 strict text decode and no locale '
+                                           'overlay.',
+                                           'Runtime must not let ambient locale choose the decoder, substitute an alternate codec or '
+                                           'replacement policy, or treat locale-shaped text coercion as admitted validator truth.',
+                                           'Runtime must also keep bound component validator stdout-normalization contract explicit; '
+                                           'runtime applies only outer-whitespace trim before JSON decode.',
+                                           'Runtime must not line-scrape, select a preferred line, trim inner content, or reconstruct JSON '
+                                           'from mixed stdout.',
+                                           'Runtime must also keep bound component validator stdout-presence contract explicit; runtime '
+                                           'requires nonempty stdout after outer-whitespace trim.',
+                                           'Runtime must not treat empty or whitespace-only stdout as implicit success, an invented empty '
+                                           'object, or an advisory no-op verdict surface.',
+                                           'Runtime must also keep bound component validator stdout-framing contract explicit; runtime '
+                                           'parses whole stdout as a single JSON object carrying the disclosed status key.',
+                                           'Runtime must not line-scrape, trailer-strip, or extract a JSON fragment from mixed stdout '
+                                           'preamble, trailer, or incidental shell text.',
+                                           'Runtime must also keep bound component validator status-key resolution contract explicit; '
+                                           'runtime resolves the disclosed status key only as a direct top-level member of the admitted '
+                                           'verdict object.',
+                                           'Runtime must not search nested objects, alias keys, pointer paths, or other local convenience '
+                                           'structures to reconstruct missing status truth.',
+                                           'Runtime must also keep bound component validator status-literal contract explicit; runtime '
+                                           'admits the disclosed status value only as the exact canonical string literal.',
+                                           'Runtime must not trim whitespace, fold case, coerce non-string values, or map alternate '
+                                           'literals into admitted status truth.',
+                                           'Runtime must also keep bound component validator execution-input contract explicit; runtime '
+                                           'executes bound component validators with devnull-backed noninteractive stdin.',
+                                           'Runtime must not let bound validators inherit ambient stdin, wait for operator keystrokes, or '
+                                           'convert interactive prompt dialogue into admitted validator execution truth.',
+                                           'Runtime must also keep bound component validator verdict-admission timing contract explicit; '
+                                           'runtime admits validator verdict only after completed process exit.',
+                                           'Runtime must not stream partial stdout into verdict truth, parse pre-exit fragments, or treat '
+                                           'background-launched validators as already admitted.',
+                                           'Runtime must also keep bound component validator execution-timeout contract explicit; runtime '
+                                           'executes bound component validators with no local timeout overlay inside the bundle.',
+                                           'Runtime must not inject a bundle-local deadline, kill-after policy, or timeout overlay and '
+                                           'then treat timeout-shaped termination as admitted validator truth.',
+                                           'Runtime must also keep bound component validator working-directory contract explicit; runtime '
+                                           'executes bound component validators with repo_root as the governed working directory.',
+                                           'Runtime must not substitute arbitrary cwd or ambient shell location for that governed '
+                                           'execution context.',
+                                           'Runtime must also keep bound component validator execution-environment contract explicit; '
+                                           'runtime executes bound component validators with inherited parent-process environment and no '
+                                           'local overlay.',
+                                           'Runtime must not inject a local env map, scrub inherited variables, or substitute a shadow '
+                                           'environment overlay for that governed execution context.',
+                                           'Runtime must also keep bound component validator execution-transport contract explicit; '
+                                           'runtime executes bound component validators through local direct subprocess vector transport.',
+                                           'Runtime must not substitute shell mediation, remote hop, or other ambient transport for that '
+                                           'governed execution path.',
+                                           'Runtime must also keep bound component validator contract-drift execution policy explicit; '
+                                           'runtime executes under canonical contract and fail-closed on drift.',
+                                           'Runtime must not obey a drifted disclosed contract row during validator execution or treat '
+                                           'drift-shaped execution as admitted validator truth.',
+                                           'Runtime must also keep bound component validator contract-surface projection policy explicit; '
+                                           'runtime preserves disclosed bundle summary and effective component execution rows as distinct '
+                                           'surfaces.',
+                                           'Runtime must not collapse those surfaces or conceal drift by overwriting one with the other.',
+                                           'Runtime must also keep bound component validator observation-continuity policy explicit; once '
+                                           'bound component surfaces resolve, runtime continues component observation under canonical '
+                                           'surface before final fail-close.',
+                                           'Runtime must not let bundle drift erase otherwise available component observation before '
+                                           'emitting final failure.',
+                                           'Runtime must also keep bound component status-row coverage policy explicit; every bound '
+                                           'component must emit one status row before final status.',
+                                           'Runtime must not emit final bundle truth with partial component-row coverage when bound '
+                                           'component set remains known.',
+                                           'Runtime must also keep bundle violation-projection policy explicit; all structure, bundle, and '
+                                           'anchor violations must be projected into stale reasons before final status.',
+                                           'Runtime must not emit final bundle truth while withholding stale-reason projection for already '
+                                           'discovered violation rows.',
+                                           'Runtime must also keep final-status derivation policy explicit; final status is '
+                                           '`PASS_REQUIRED` if and only if stale reasons remain empty after violation projection; '
+                                           'otherwise final status is `FAIL_REQUIRED`.',
+                                           'Runtime must not bypass stale-reason-adjudicated final status through any alternate local '
+                                           'verdict path.',
+                                           'Runtime must also keep error-code precedence policy explicit; registry-class failure preempts '
+                                           'structure-class failure, structure-class failure preempts bundle-class failure, and pass-state '
+                                           'emits empty error code.',
+                                           'Runtime must not derive failure code through any alternate local precedence path.',
+                                           'Runtime must also keep failure-classification policy explicit; registry class derives from '
+                                           'direct stale reasons present before violation projection, structure class derives from '
+                                           'structure violations, bundle class derives from bundle and anchor violations, and otherwise '
+                                           'failure class is pass.',
+                                           'Runtime must not invent an anchor-only failure class or bypass direct stale reasons through '
+                                           'local classification paths.',
+                                           'Runtime must also keep registry-class admission policy explicit; only direct stale reasons '
+                                           'already present before violation projection may admit registry failure class.',
+                                           'Projected structure, bundle, and anchor stale reasons must not retroactively upgrade failure '
+                                           'class to registry.',
+                                           'Runtime must also keep registry direct-stale-reason origin policy explicit; admitted direct '
+                                           'origins are alias error, document invalidity, canonical contract-row invalidity, and '
+                                           'required-surface absence before violation projection.',
+                                           'Runtime must also keep registry direct-stale-reason alias origin policy explicit; admitted '
+                                           'alias direct reasons are rows containing the `_alias_error:` marker before document, '
+                                           'required-surface, and contract-row classification.',
+                                           'Runtime must also keep registry direct-stale-reason document origin policy explicit; admitted '
+                                           'document direct reasons are rows ending with `_empty_or_invalid` after alias exclusion and '
+                                           'before required-surface and contract-row classification.',
+                                           'Runtime must also keep registry direct-stale-reason required-surface origin policy explicit; '
+                                           'admitted required-surface direct reasons are required-component-descriptor-fields missing, '
+                                           'surface-missing rows, anchor-checks missing, and components missing before violation '
+                                           'projection.',
+                                           'Runtime must also keep registry direct-stale-reason contract-row origin policy explicit; '
+                                           'admitted contract-row direct reasons are root-corpus-law-bundle prefixed rows and '
+                                           'root-machine-registry-completeness prefixed rows that remain after alias, document, and '
+                                           'required-surface classification.',
+                                           'Runtime must also keep registry direct-stale-reason source policy explicit; direct '
+                                           'stale-reason source is local stale reasons already present before violation projection.',
+                                           'Runtime must not reinterpret projected structure, bundle, or anchor stale reasons as '
+                                           'substitute direct stale-reason source.',
+                                           'Runtime must also keep registry direct-stale-reason partition policy explicit; each local '
+                                           'stale reason present before violation projection classifies exactly once as alias, document, '
+                                           'contract-row, required-surface, or unknown ontology drift.',
+                                           'Runtime must also keep registry direct-stale-reason origin-classifier precedence policy '
+                                           'explicit; alias classification preempts document, document preempts required-surface, '
+                                           'required-surface preempts contract-row, and otherwise origin remains unknown.',
+                                           'Runtime must also keep registry direct-stale-reason unclassified policy explicit; unclassified '
+                                           'direct stale-reason origin must remain fail-closed.',
+                                           'Runtime must fail-close on unclassified direct stale-reason origin rather than silently '
+                                           'expanding registry ontology.',
+                                           'Runtime must also keep component-validator observation-reason policy explicit; admitted '
+                                           'observation reasons are parse/status failure, nonzero returncode after admitted parse/status '
+                                           'resolution, and non-pass component status before bundle-violation projection.',
+                                           'Runtime must also keep component-validator observation-reason classifier precedence policy '
+                                           'explicit; parse/status classification preempts nonzero returncode, nonzero returncode preempts '
+                                           'non-pass component status, non-pass component status preempts explicit non-execution '
+                                           'exclusion, explicit non-execution exclusion preempts prefixed observation-family ontology '
+                                           'drift, and otherwise classification remains not-applicable.',
+                                           'Runtime must also keep component-validator observation-reason exclusion-origin policy '
+                                           'explicit; admitted excluded non-observation rows are component-validator missing and '
+                                           'component-status-row coverage incomplete before bundle-violation projection.',
+                                           'Runtime must not silently re-bucket admitted observation reasons or prefixed '
+                                           'observation-family ontology drift as excluded non-observation rows.',
+                                           'Runtime must keep non-execution bundle rows outside component-validator observation ontology '
+                                           'rather than re-bucketing descriptor, support, or coverage rows as runtime observation reasons.',
+                                           'Runtime must also keep component-validator observation-reason source policy explicit; runtime '
+                                           'observation source is bundle-violation rows only before violation projection.',
+                                           'Runtime must not reinterpret direct stale reasons, structure violations, anchor violations, or '
+                                           'projected stale-reason strings as substitute observation source.',
+                                           'Runtime must also keep component-validator observation-reason partition policy explicit; each '
+                                           'bundle-violation row classifies exactly once as admitted observation reason, excluded '
+                                           'non-observation row, or unknown ontology drift before violation projection.',
+                                           'Runtime must also keep component-validator observation-reason unclassified policy explicit; '
+                                           'unclassified observation reason must remain fail-closed.',
+                                           'Runtime must fail-close on unclassified component-validator observation reason rather than '
+                                           'silently expanding bundle observation ontology.')}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -2040,6 +3058,16 @@ def main() -> int:
         if not components:
             stale_reasons.append("root_corpus_law_bundle_components_missing")
             error_code = ERR_REGISTRY
+        anchor_reason_count_before = len(stale_reasons)
+        stale_reasons.extend(
+            validate_expected_root_doc_anchor_checks(
+                anchor_checks,
+                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+                stale_reason_prefix="root_corpus_law_bundle",
+            )
+        )
+        if len(stale_reasons) > anchor_reason_count_before:
+            error_code = ERR_REGISTRY
 
     if (
         bundle_doc
@@ -2556,6 +3584,7 @@ def main() -> int:
         ),
         STATUS_FAIL_REQUIRED,
     )
+    root_doc_anchor_status = STATUS_PASS_REQUIRED if not anchor_violations else STATUS_FAIL_REQUIRED
 
     (
         component_validator_observation_reason_counts,
@@ -2953,6 +3982,8 @@ def main() -> int:
         "derived_status_from_stale_reasons": derived_status_from_stale_reasons,
         "derived_failure_class": derived_failure_class,
         "derived_error_code_from_precedence": derived_error_code_from_precedence,
+        "root_doc_anchor_check_count": len(anchor_checks),
+        "root_doc_anchor_status": root_doc_anchor_status,
         "bundle_anchor_check_count": len(anchor_checks),
         "component_count": len(components),
         "component_status_row_count": len(component_status_rows),

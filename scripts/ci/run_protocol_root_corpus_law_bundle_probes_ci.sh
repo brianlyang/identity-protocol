@@ -26,6 +26,8 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "PASS_REQUIRED", payload
+assert payload["root_doc_anchor_check_count"] == 4, payload
+assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["component_count"] == 10, payload
 assert payload["machine_registry_completeness_current_file"] == "identity/protocol/mappings/root-machine-registry-completeness.current.yaml", payload
 assert payload["descriptor_schema_source_component_id"] == "root_machine_registry_completeness", payload
@@ -4205,6 +4207,7 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["rel_path"] == "identity/protocol/README.md" and row["reason"] == "required_marker_missing"
     for row in payload["anchor_violations"]
