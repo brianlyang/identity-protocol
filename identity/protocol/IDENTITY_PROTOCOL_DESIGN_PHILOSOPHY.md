@@ -692,6 +692,10 @@ projected into stale reasons before final status.
 The machine world must not keep violation rows internally while emitting a
 final verdict surface that withholds their stale-reason projection.
 
+Projected stale-reason total and violation-row total must therefore stay
+congruent under machine-readable projection completeness rather than being
+left implicit.
+
 Bundle final-status derivation policy must stay explicit too.
 
 The admitted policy is `PASS_REQUIRED` if and only if stale reasons remain

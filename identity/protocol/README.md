@@ -704,6 +704,10 @@ are projected into stale reasons before final status.
 Runtime may not keep violation rows private while presenting a final verdict
 surface that withholds their stale-reason projection.
 
+Projected stale-reason total and violation-row total must remain congruent
+under machine-readable projection completeness rather than being left
+implicit.
+
 Bundle final-status derivation policy must also stay explicit.
 
 The admitted runtime policy is `PASS_REQUIRED` if and only if stale reasons

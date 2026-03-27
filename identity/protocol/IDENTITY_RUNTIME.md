@@ -371,6 +371,10 @@ reasons before final status.
 Runtime must not emit final bundle truth while withholding stale-reason
 projection for already discovered violation rows.
 
+Runtime must also keep machine-readable projection completeness explicit;
+projected stale-reason total must remain congruent with violation-row total
+rather than being left implicit.
+
 Runtime must also keep final-status derivation policy explicit; final
 status is `PASS_REQUIRED` if and only if stale reasons remain empty after
 violation projection; otherwise final status is `FAIL_REQUIRED`.

@@ -189,6 +189,8 @@ assert payload["component_validator_observation_reason_partition_total_count"] =
 assert payload["registry_class_reason_count"] == 0, payload
 assert payload["registry_precedence_reason_count"] == 0, payload
 assert payload["projected_violation_reason_count"] == 0, payload
+assert payload["expected_projected_violation_reason_count"] == 0, payload
+assert payload["violation_projection_status"] == "PASS_REQUIRED", payload
 assert payload["stale_reason_count"] == 0, payload
 assert all(row["component_status"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
 assert all(
@@ -677,6 +679,49 @@ assert payload["error_code"] == "IP-RCLB-001", payload
 assert "root_corpus_law_bundle_violation_projection_policy_invalid" in payload["stale_reasons"], payload
 assert payload["violation_projection_policy"] == "local_violation_rows_may_remain_unprojected", payload
 assert payload["projected_violation_reason_count"] == 0, payload
+assert payload["expected_projected_violation_reason_count"] == 0, payload
+assert payload["violation_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+VIOLATION_PROJECTION_INCOMPLETE_REPO="${TMP_ROOT}/violation-projection-incomplete-repo"
+mirror_repo "${VIOLATION_PROJECTION_INCOMPLETE_REPO}"
+python3 - <<'PY' "${VIOLATION_PROJECTION_INCOMPLETE_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+needle = "    expected_projected_violation_reason_count = (\n        len(structure_violations) + len(bundle_violations) + len(anchor_violations)\n    )\n"
+replacement = (
+    "    expected_projected_violation_reason_count = (\n"
+    "        len(structure_violations) + len(bundle_violations) + len(anchor_violations)\n"
+    "    ) + 1\n"
+)
+if needle not in text:
+    raise SystemExit("expected violation projection count block not found")
+path.write_text(text.replace(needle, replacement, 1), encoding="utf-8")
+PY
+
+VIOLATION_PROJECTION_INCOMPLETE_JSON="${TMP_ROOT}/violation-projection-incomplete.json"
+if python3 "${VIOLATION_PROJECTION_INCOMPLETE_REPO}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${VIOLATION_PROJECTION_INCOMPLETE_REPO}" \
+  --json-only >"${VIOLATION_PROJECTION_INCOMPLETE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed violation projection completeness case"
+  exit 1
+fi
+
+python3 - <<'PY' "${VIOLATION_PROJECTION_INCOMPLETE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["derived_failure_class"] == "bundle", payload
+assert payload["violation_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["projected_violation_reason_count"] + 1 == payload["expected_projected_violation_reason_count"], payload
+assert "root_corpus_law_bundle_violation_projection_incomplete" in payload["stale_reasons"], payload
 PY
 
 FINAL_STATUS_DERIVATION_POLICY_REPO="${TMP_ROOT}/final-status-derivation-policy-drift-repo"

@@ -2710,6 +2710,9 @@ def main() -> int:
         effective_violation_projection_policy == VIOLATION_PROJECTION_POLICY
         and projected_violation_reason_count != expected_projected_violation_reason_count
     )
+    violation_projection_status = (
+        STATUS_FAIL_REQUIRED if violation_projection_incomplete else STATUS_PASS_REQUIRED
+    )
 
     stale_reasons.extend(structure_violation_stale_reasons)
     stale_reasons.extend(bundle_violation_stale_reasons)
@@ -2930,6 +2933,10 @@ def main() -> int:
         "registry_class_reason_count": registry_precedence_reason_count,
         "registry_precedence_reason_count": registry_precedence_reason_count,
         "projected_violation_reason_count": projected_violation_reason_count,
+        "expected_projected_violation_reason_count": (
+            expected_projected_violation_reason_count
+        ),
+        "violation_projection_status": violation_projection_status,
         "stale_reason_count": len(stale_reasons),
         "component_ids": [row.component_id for row in sorted_components],
         "required_component_descriptor_fields": list(required_component_descriptor_fields),
