@@ -158,6 +158,14 @@ Projected violation-reason total must remain congruent with
 structure/completeness/anchor violation-row total rather than being left
 implicit.
 
+## Root conflict-precedence completeness boundary
+
+1. Conflict-precedence law must remain machine-readable as separate precedence-profile and gateway-authorship-projection row families.
+2. Aggregate row-family counts are insufficient on their own; expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness.
+3. Expected row identity set and emitted row identity set for each conflict-precedence family must also remain explicit; conflict-class or gateway identity drift may not be collapsed into summary-only counts.
+4. Protocol legality must not finalize conflict-precedence legality while missing or unexpected conflict-class or gateway identities remain known only inside validator logic.
+5. Fail-close conflict-precedence output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+
 ## Root ordering completeness boundary
 
 1. Ordering law must remain machine-readable as separate source-order, reading-order, adjudication-order, and adjudication-surface-profile row families.

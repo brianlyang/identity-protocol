@@ -35,6 +35,11 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_precedence_status"] == "PASS_REQUIRED", payload
+assert payload["precedence_row_family_count"] == 2, payload
+assert payload["precedence_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["precedence_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert any(
     row["conflict_class"] == "current_turn_legality_conflict"
     and row["resolution_mode"] == "machine_enforcement_terminal"
@@ -46,6 +51,124 @@ assert {row["gateway_class"]: row["preserved_question_class"] for row in payload
     "root_contract": "frozen_domain_contract_law",
     "machine_registry_directory": "registry_resolution",
 }, payload
+PY
+
+MISSING_PROFILE_REPO="${TMP_ROOT}/missing-profile-repo"
+mirror_repo "${MISSING_PROFILE_REPO}"
+python3 - <<'PY' "${MISSING_PROFILE_REPO}/identity/protocol/mappings/root-corpus-precedence.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["precedence_profiles"] = [
+    row for row in doc["precedence_profiles"]
+    if row.get("conflict_class") != "demotion_status_conflict"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+MISSING_PROFILE_JSON="${TMP_ROOT}/missing-profile.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_precedence.py" \
+  --repo-root "${MISSING_PROFILE_REPO}" \
+  --json-only >"${MISSING_PROFILE_JSON}"; then
+  echo "[FAIL] precedence validator unexpectedly passed after removing precedence profile row"
+  exit 1
+fi
+
+python3 - <<'PY' "${MISSING_PROFILE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_precedence_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCP-002", payload
+assert payload["precedence_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["precedence_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["field"] == "precedence_profiles" and row["reason"] == "missing_conflict_classes" and "demotion_status_conflict" in row.get("conflict_classes", [])
+    for row in payload["structure_violations"]
+), payload
+profile_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "precedence_profiles"
+)
+gateway_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "gateway_authorship_projection"
+)
+assert profile_row["expected_count"] == 4, payload
+assert profile_row["actual_count"] == 3, payload
+assert profile_row["missing_ids"] == ["demotion_status_conflict"], payload
+assert profile_row["unexpected_ids"] == [], payload
+assert profile_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert profile_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert gateway_row["coverage_status"] == "PASS_REQUIRED", payload
+assert gateway_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+IDENTITY_REPO="${TMP_ROOT}/identity-drift-repo"
+mirror_repo "${IDENTITY_REPO}"
+python3 - <<'PY' "${IDENTITY_REPO}/identity/protocol/mappings/root-corpus-precedence.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["precedence_profiles"]:
+    if row.get("conflict_class") == "demotion_status_conflict":
+        row["conflict_class"] = "demotion_status_conflict_alias"
+        break
+else:
+    raise SystemExit("expected demotion_status_conflict row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+IDENTITY_JSON="${TMP_ROOT}/identity-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_precedence.py" \
+  --repo-root "${IDENTITY_REPO}" \
+  --json-only >"${IDENTITY_JSON}"; then
+  echo "[FAIL] precedence validator unexpectedly passed precedence-profile identity drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${IDENTITY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_precedence_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCP-002", payload
+assert payload["precedence_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["precedence_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["field"] == "precedence_profiles" and row["reason"] == "missing_conflict_classes" and "demotion_status_conflict" in row.get("conflict_classes", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "precedence_profiles" and row["reason"] == "extra_conflict_classes" and "demotion_status_conflict_alias" in row.get("conflict_classes", [])
+    for row in payload["structure_violations"]
+), payload
+profile_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "precedence_profiles"
+)
+gateway_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "gateway_authorship_projection"
+)
+assert profile_row["expected_count"] == 4, payload
+assert profile_row["actual_count"] == 4, payload
+assert profile_row["missing_ids"] == ["demotion_status_conflict"], payload
+assert profile_row["unexpected_ids"] == ["demotion_status_conflict_alias"], payload
+assert profile_row["coverage_status"] == "PASS_REQUIRED", payload
+assert profile_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert gateway_row["coverage_status"] == "PASS_REQUIRED", payload
+assert gateway_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 LEGality_DRIFT_REPO="${TMP_ROOT}/legality-drift-repo"

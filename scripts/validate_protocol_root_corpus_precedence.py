@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
+from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 from root_corpus_authority_common import load_root_corpus_authority
 from root_corpus_gateway_admissibility_common import (
     gateway_effect_targets_from_doc,
@@ -85,6 +86,7 @@ def main() -> int:
     structure_violations: list[dict[str, Any]] = []
     precedence_violations: list[dict[str, Any]] = []
     anchor_violations: list[dict[str, Any]] = []
+    row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
 
     sources = [
@@ -420,6 +422,39 @@ def main() -> int:
     if status == STATUS_FAIL_REQUIRED and not error_code:
         error_code = ERR_STRUCTURE if structure_violations else ERR_PRECEDENCE
 
+    row_family_projection_rows = [
+        project_row_family(
+            family_id="precedence_profiles",
+            member_id_key="conflict_class",
+            actual_rows=precedence_profiles,
+            expected_rows=EXPECTED_PROFILES,
+            id_attr="conflict_class",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        project_row_family(
+            family_id="gateway_authorship_projection",
+            member_id_key="gateway_class",
+            actual_rows=gateway_authorship_projections,
+            expected_rows={gateway_class: {} for gateway_class in gateway_effect_target_map},
+            id_attr="gateway_class",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+    ]
+    precedence_row_coverage_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="coverage_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
+    precedence_row_identity_projection_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="identity_projection_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
+
     payload = {
         STATUS_KEY: status,
         "error_code": error_code,
@@ -441,6 +476,10 @@ def main() -> int:
         "precedence_anchor_check_count": len(anchor_checks),
         "gateway_authorship_projection_count": len(gateway_authorship_projections),
         "precedence_profile_count": len(precedence_profiles),
+        "precedence_row_family_count": len(row_family_projection_rows),
+        "precedence_row_coverage_status": precedence_row_coverage_status,
+        "precedence_row_identity_projection_status": precedence_row_identity_projection_status,
+        "row_family_projection_rows": row_family_projection_rows,
         "gateway_authorship_projection": [
             {
                 "gateway_class": row.gateway_class,
