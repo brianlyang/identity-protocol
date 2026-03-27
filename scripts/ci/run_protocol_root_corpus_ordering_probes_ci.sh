@@ -32,6 +32,11 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_ordering_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_row_family_count"] == 4, payload
+assert payload["ordering_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert payload["reading_order"][0]["rel_path"] == "identity/protocol/README.md", payload
 assert payload["source_order"][0]["corpus_class"] == "bottom_theory", payload
 assert payload["adjudication_order"][0]["machine_surface"] == "mappings", payload
@@ -136,7 +141,105 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_ordering_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCO-003", payload
+assert payload["ordering_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["ordering_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any("coverage_violation:source_order:missing_source_classes" == reason for reason in payload["stale_reasons"]), payload
+source_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "source_order"
+)
+reading_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "reading_order"
+)
+adjudication_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "adjudication_order"
+)
+profile_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "adjudication_surface_profiles"
+)
+assert source_row["expected_count"] == 7, payload
+assert source_row["actual_count"] == 6, payload
+assert source_row["missing_ids"] == ["root_contract"], payload
+assert source_row["unexpected_ids"] == [], payload
+assert source_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert source_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert reading_row["coverage_status"] == "PASS_REQUIRED", payload
+assert reading_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert adjudication_row["coverage_status"] == "PASS_REQUIRED", payload
+assert adjudication_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert profile_row["coverage_status"] == "PASS_REQUIRED", payload
+assert profile_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+IDENTITY_REPO="${TMP_ROOT}/identity-drift-repo"
+mirror_repo "${IDENTITY_REPO}"
+python3 - <<'PY' "${IDENTITY_REPO}/identity/protocol/mappings/root-corpus-ordering.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["source_order"]:
+    if row.get("corpus_class") == "root_contract":
+        row["corpus_class"] = "root_contract_alias"
+        break
+else:
+    raise SystemExit("expected root_contract row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+IDENTITY_JSON="${TMP_ROOT}/identity-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_ordering.py" \
+  --repo-root "${IDENTITY_REPO}" \
+  --json-only >"${IDENTITY_JSON}"; then
+  echo "[FAIL] root corpus ordering validator unexpectedly passed source-order identity drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${IDENTITY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_ordering_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCO-003", payload
+assert payload["ordering_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["ordering_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any("coverage_violation:source_order:missing_source_classes" == reason for reason in payload["stale_reasons"]), payload
+assert any("coverage_violation:source_order:extra_source_classes" == reason for reason in payload["stale_reasons"]), payload
+source_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "source_order"
+)
+reading_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "reading_order"
+)
+adjudication_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "adjudication_order"
+)
+profile_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "adjudication_surface_profiles"
+)
+assert source_row["expected_count"] == 7, payload
+assert source_row["actual_count"] == 7, payload
+assert source_row["missing_ids"] == ["root_contract"], payload
+assert source_row["unexpected_ids"] == ["root_contract_alias"], payload
+assert source_row["coverage_status"] == "PASS_REQUIRED", payload
+assert source_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert reading_row["coverage_status"] == "PASS_REQUIRED", payload
+assert reading_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert adjudication_row["coverage_status"] == "PASS_REQUIRED", payload
+assert adjudication_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert profile_row["coverage_status"] == "PASS_REQUIRED", payload
+assert profile_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 ADJUDICATION_REPO="${TMP_ROOT}/adjudication-order-drift-repo"

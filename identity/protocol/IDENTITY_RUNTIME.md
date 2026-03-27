@@ -114,6 +114,14 @@ Projected violation-reason total must remain congruent with
 structure/completeness/anchor violation-row total rather than being left
 implicit.
 
+## Runtime ordering consumption boundary
+
+1. Runtime consumes ordering law as separate source-order, reading-order, adjudication-order, and adjudication-surface-profile row families rather than as undifferentiated ordering prose.
+2. Runtime must keep expected row-family total and emitted row-family total congruent under machine-readable coverage completeness rather than relying on aggregate green shorthand.
+3. Runtime must also keep expected row identity set and emitted row identity set for each ordering family explicit rather than collapsing source, entry, or adjudication-surface identity drift into summary-only counts.
+4. Runtime must not finalize ordering legality while missing or unexpected source, entry, or adjudication-surface identities remain known only inside validator machinery.
+5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
+
 ## Runtime question-routing consumption boundary
 
 1. Runtime consumes question-routing law as separate question-class-profile, root-entry-question-projection, and gateway-question-projection row families rather than as undifferentiated routing prose.

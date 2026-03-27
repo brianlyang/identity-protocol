@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
+from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 from root_corpus_governance_common import (
     find_missing_markers,
     load_root_corpus_registry,
@@ -87,6 +88,7 @@ def main() -> int:
     structure_violations: list[dict[str, Any]] = []
     coverage_violations: list[dict[str, Any]] = []
     anchor_violations: list[dict[str, Any]] = []
+    row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
 
     if ordering_alias_error:
@@ -468,6 +470,57 @@ def main() -> int:
     stale_reasons.extend(f"coverage_violation:{row['field']}:{row['reason']}" for row in anchor_violations)
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
+    expected_adjudication_surfaces = tuple(EXPECTED_ADJUDICATION_SURFACE_PROFILES)
+    row_family_projection_rows = [
+        project_row_family(
+            family_id="source_order",
+            member_id_key="corpus_class",
+            actual_rows=source_rows,
+            expected_rows={corpus_class: {} for corpus_class in expected_source_classes},
+            id_attr="corpus_class",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        project_row_family(
+            family_id="reading_order",
+            member_id_key="rel_path",
+            actual_rows=reading_rows,
+            expected_rows={rel_path: {} for rel_path in registry_paths},
+            id_attr="rel_path",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        project_row_family(
+            family_id="adjudication_order",
+            member_id_key="machine_surface",
+            actual_rows=adjudication_rows,
+            expected_rows={surface: {} for surface in expected_adjudication_surfaces},
+            id_attr="machine_surface",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+        project_row_family(
+            family_id="adjudication_surface_profiles",
+            member_id_key="machine_surface",
+            actual_rows=adjudication_surface_profiles,
+            expected_rows={surface: {} for surface in expected_adjudication_surfaces},
+            id_attr="machine_surface",
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
+    ]
+    ordering_row_coverage_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="coverage_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
+    ordering_row_identity_projection_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="identity_projection_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_COVERAGE),
@@ -483,6 +536,10 @@ def main() -> int:
         "root_index_entry": root_index_entry,
         "registry_class_ids": registry_classes,
         "expected_source_classes": expected_source_classes,
+        "ordering_row_family_count": len(row_family_projection_rows),
+        "ordering_row_coverage_status": ordering_row_coverage_status,
+        "ordering_row_identity_projection_status": ordering_row_identity_projection_status,
+        "row_family_projection_rows": row_family_projection_rows,
         "source_order": [
             {
                 "order": row.order,

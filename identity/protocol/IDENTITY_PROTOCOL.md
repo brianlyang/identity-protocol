@@ -158,6 +158,14 @@ Projected violation-reason total must remain congruent with
 structure/completeness/anchor violation-row total rather than being left
 implicit.
 
+## Root ordering completeness boundary
+
+1. Ordering law must remain machine-readable as separate source-order, reading-order, adjudication-order, and adjudication-surface-profile row families.
+2. Aggregate row-family counts are insufficient on their own; expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness.
+3. Expected row identity set and emitted row identity set for each ordering family must also remain explicit; source, entry, or adjudication-surface identity drift may not be collapsed into summary-only counts.
+4. Protocol legality must not finalize ordering legality while missing or unexpected source, entry, or adjudication-surface identities remain known only inside validator logic.
+5. Fail-close ordering output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+
 ## Root question-routing completeness boundary
 
 1. Question-routing law must remain machine-readable as separate question-class-profile, root-entry-question-projection, and gateway-question-projection row families.
