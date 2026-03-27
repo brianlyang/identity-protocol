@@ -37,7 +37,7 @@ from root_machine_registry_completeness_common import (
     required_descriptor_fields_from_doc,
     require_self_describing_families,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 
 STATUS_KEY = "protocol_root_machine_registry_completeness_status"
 ERR_REGISTRY = "IP-RMRC-001"
@@ -832,18 +832,6 @@ def main() -> int:
             fail_status=STATUS_FAIL_REQUIRED,
         ),
     ]
-    machine_registry_completeness_row_coverage_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="coverage_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
-    machine_registry_completeness_row_identity_projection_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="identity_projection_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
     payload = {
         STATUS_KEY: status,
         "completeness_family": str(completeness_doc.get("completeness_family") or ""),
@@ -864,8 +852,6 @@ def main() -> int:
         "family_count": len(family_status_rows),
         "registered_complete_family_count": len(registered_complete_family_ids),
         "registered_complete_family_ids": registered_complete_family_ids,
-        "root_doc_anchor_check_count": len(anchor_checks),
-        "root_doc_anchor_status": root_doc_anchor_status,
         "family_status_row_count": len(family_status_rows),
         "expected_family_status_row_count": expected_family_status_row_count,
         "family_status_row_coverage_status": family_status_row_coverage_status,
@@ -877,12 +863,13 @@ def main() -> int:
         "family_status_row_identity_projection_status": (
             family_status_row_identity_projection_status
         ),
-        "machine_registry_completeness_row_family_count": len(row_family_projection_rows),
-        "machine_registry_completeness_row_coverage_status": (
-            machine_registry_completeness_row_coverage_status
-        ),
-        "machine_registry_completeness_row_identity_projection_status": (
-            machine_registry_completeness_row_identity_projection_status
+        **project_root_contract_support_projection(
+            prefix="machine_registry_completeness",
+            row_family_projection_rows=row_family_projection_rows,
+            anchor_checks=anchor_checks,
+            anchor_violations=anchor_violations,
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
         ),
         "structure_violation_count": len(structure_violations),
         "completeness_violation_count": len(completeness_violations),

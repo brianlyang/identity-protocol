@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
-from root_row_family_projection_common import aggregate_row_family_status, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 from root_corpus_governance_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -255,18 +255,6 @@ def main() -> int:
             fail_status=STATUS_FAIL_REQUIRED,
         ),
     ]
-    governance_row_coverage_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="coverage_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
-    governance_row_identity_projection_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="identity_projection_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_CONTENT),
@@ -280,9 +268,12 @@ def main() -> int:
         "law_bearing_entry_count": sum(1 for entry in entries if entry.law_bearing),
         "validated_file_count": sum(1 for entry in entries if entry.entry_kind == "file"),
         "validated_directory_count": sum(1 for entry in entries if entry.entry_kind == "directory"),
-        "governance_row_family_count": len(row_family_projection_rows),
-        "governance_row_coverage_status": governance_row_coverage_status,
-        "governance_row_identity_projection_status": governance_row_identity_projection_status,
+        **project_root_contract_support_projection(
+            prefix="governance",
+            row_family_projection_rows=row_family_projection_rows,
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
         "row_family_projection_rows": row_family_projection_rows,
         "corpus_class_profile_ids": sorted(class_profiles.keys()),
         "corpus_class_profile_count": len(class_profiles),

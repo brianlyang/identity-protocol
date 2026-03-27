@@ -37,7 +37,7 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 
 STATUS_KEY = "protocol_root_agent_handoff_status"
 ERR_REGISTRY = "IP-RAH-001"
@@ -359,14 +359,6 @@ def main() -> int:
             id_attr="row_id",
         ),
     ]
-    agent_handoff_row_coverage_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="coverage_status",
-    )
-    agent_handoff_row_identity_projection_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="identity_projection_status",
-    )
     row_family_projection_by_id = {row["family_id"]: row for row in row_family_projection_rows}
 
     if not stale_reasons:
@@ -554,7 +546,6 @@ def main() -> int:
             if row.get("marker")
         }
     )
-    root_doc_anchor_status = STATUS_PASS_REQUIRED if not root_doc_anchor_violations else STATUS_FAIL_REQUIRED
 
     payload = {
         STATUS_KEY: status,
@@ -576,11 +567,14 @@ def main() -> int:
         "handoff_proof_count": len(handoff_proof_rows),
         "handoff_limit_count": len(handoff_limit_rows),
         "collapse_count": len(collapse_rows),
-        "root_doc_anchor_check_count": len(root_doc_anchor_checks),
-        "root_doc_anchor_status": root_doc_anchor_status,
-        "agent_handoff_row_family_count": len(row_family_projection_rows),
-        "agent_handoff_row_coverage_status": agent_handoff_row_coverage_status,
-        "agent_handoff_row_identity_projection_status": agent_handoff_row_identity_projection_status,
+        **project_root_contract_support_projection(
+            prefix="agent_handoff",
+            row_family_projection_rows=row_family_projection_rows,
+            anchor_checks=root_doc_anchor_checks,
+            anchor_violations=root_doc_anchor_violations,
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
         "role_row_coverage_status": row_family_projection_by_id["role_rows"]["coverage_status"],
         "role_row_identity_projection_status": row_family_projection_by_id["role_rows"]["identity_projection_status"],
         "payload_row_coverage_status": row_family_projection_by_id["payload_rows"]["coverage_status"],

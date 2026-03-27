@@ -15,7 +15,7 @@ from root_design_question_closure_common import (
     load_root_design_question_closure,
     question_closure_rows_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 from root_stream_design_admissibility_common import load_root_stream_design_admissibility, required_question_rows_from_doc
 
 STATUS_KEY = "protocol_root_design_question_closure_status"
@@ -402,18 +402,6 @@ def main() -> int:
             fail_status=STATUS_FAIL_REQUIRED,
         ),
     ]
-    design_question_closure_row_coverage_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="coverage_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
-    design_question_closure_row_identity_projection_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="identity_projection_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
 
     payload = {
         STATUS_KEY: status,
@@ -422,9 +410,12 @@ def main() -> int:
         "mapping_entry_file": str(closure_entry_path.relative_to(repo_root)),
         "mapping_active_file": str(closure_active_path.relative_to(repo_root)),
         "question_closure_count": len(closure_rows),
-        "design_question_closure_row_family_count": len(row_family_projection_rows),
-        "design_question_closure_row_coverage_status": design_question_closure_row_coverage_status,
-        "design_question_closure_row_identity_projection_status": design_question_closure_row_identity_projection_status,
+        **project_root_contract_support_projection(
+            prefix="design_question_closure",
+            row_family_projection_rows=row_family_projection_rows,
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
         "row_family_projection_rows": row_family_projection_rows,
         "question_ids": [row.question_id for row in sorted(closure_rows, key=lambda item: item.order)],
         "question_status_rows": question_status_rows,

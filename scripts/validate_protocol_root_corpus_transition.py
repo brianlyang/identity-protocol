@@ -14,7 +14,7 @@ from root_contract_anchor_checks_common import (
 from root_corpus_derivation_common import derivation_class_profiles_from_doc, load_root_corpus_derivation
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_question_routing_common import adjudication_redirect_from_doc, load_root_corpus_question_routing
-from root_row_family_projection_common import aggregate_row_family_status, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 from root_corpus_transition_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -581,19 +581,6 @@ def main() -> int:
             fail_status=STATUS_FAIL_REQUIRED,
         ),
     ]
-    transition_row_coverage_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="coverage_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
-    transition_row_identity_projection_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="identity_projection_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
-    root_doc_anchor_status = STATUS_PASS_REQUIRED if not anchor_violations else STATUS_FAIL_REQUIRED
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_TRANSITION),
@@ -606,15 +593,18 @@ def main() -> int:
         "question_routing_entry_path": str(question_routing_entry_path),
         "question_routing_active_path": str(question_routing_active_path),
         "root_dir": str(transition_doc.get("root_dir") or ""),
-        "root_doc_anchor_check_count": len(anchor_checks),
-        "root_doc_anchor_status": root_doc_anchor_status,
         "transition_anchor_check_count": len(anchor_checks),
         "surface_class_profile_count": len(surface_profiles),
         "direct_root_target_edge_count": len(direct_root_target_edges),
         "strengthening_gateway_edge_count": len(strengthening_gateway_edges),
-        "transition_row_family_count": len(row_family_projection_rows),
-        "transition_row_coverage_status": transition_row_coverage_status,
-        "transition_row_identity_projection_status": transition_row_identity_projection_status,
+        **project_root_contract_support_projection(
+            prefix="transition",
+            row_family_projection_rows=row_family_projection_rows,
+            anchor_checks=anchor_checks,
+            anchor_violations=anchor_violations,
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
         "row_family_projection_rows": row_family_projection_rows,
         "current_turn_allowed_root_surface": EXPECTED_CURRENT_TURN_ROOT_CLASS,
         "surface_class_profiles": [

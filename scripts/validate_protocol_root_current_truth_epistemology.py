@@ -26,7 +26,7 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 from root_current_truth_epistemology_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -662,19 +662,6 @@ def main() -> int:
     )
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
-    current_truth_row_coverage_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="coverage_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
-    current_truth_row_identity_projection_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="identity_projection_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
-    root_doc_anchor_status = STATUS_PASS_REQUIRED if not root_doc_anchor_violations else STATUS_FAIL_REQUIRED
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_EPISTEMOLOGY),
@@ -691,11 +678,14 @@ def main() -> int:
         "commitment_proof_alignment_count": len(commitment_proof_alignment_rows),
         "epistemic_limit_count": len(epistemic_limit_rows),
         "collapse_count": len(collapse_rows),
-        "root_doc_anchor_check_count": len(root_doc_anchor_checks),
-        "root_doc_anchor_status": root_doc_anchor_status,
-        "current_truth_row_family_count": len(row_family_projection_rows),
-        "current_truth_row_coverage_status": current_truth_row_coverage_status,
-        "current_truth_row_identity_projection_status": current_truth_row_identity_projection_status,
+        **project_root_contract_support_projection(
+            prefix="current_truth",
+            row_family_projection_rows=row_family_projection_rows,
+            anchor_checks=root_doc_anchor_checks,
+            anchor_violations=root_doc_anchor_violations,
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
         "row_family_projection_rows": row_family_projection_rows,
         "commitment_ids": [row.commitment_id for row in sorted(commitment_rows, key=lambda item: item.order)],
         "differentiation_ids": [row.row_id for row in sorted(differentiation_rows, key=lambda item: item.order)],

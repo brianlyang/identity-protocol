@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Iterable
 
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -50,3 +50,56 @@ def aggregate_row_family_status(
         if any(row.get(status_key) == fail_status for row in row_family_projection_rows)
         else pass_status
     )
+
+
+def project_row_family_summary(
+    *,
+    prefix: str,
+    row_family_projection_rows: list[dict[str, Any]],
+    pass_status: str = STATUS_PASS_REQUIRED,
+    fail_status: str = STATUS_FAIL_REQUIRED,
+) -> dict[str, Any]:
+    return {
+        f"{prefix}_row_family_count": len(row_family_projection_rows),
+        f"{prefix}_row_coverage_status": aggregate_row_family_status(
+            row_family_projection_rows,
+            status_key="coverage_status",
+            pass_status=pass_status,
+            fail_status=fail_status,
+        ),
+        f"{prefix}_row_identity_projection_status": aggregate_row_family_status(
+            row_family_projection_rows,
+            status_key="identity_projection_status",
+            pass_status=pass_status,
+            fail_status=fail_status,
+        ),
+    }
+
+
+def project_root_contract_support_projection(
+    *,
+    prefix: str,
+    row_family_projection_rows: list[dict[str, Any]],
+    anchor_checks: Iterable[Any] | None = None,
+    anchor_violations: Iterable[dict[str, Any]] | None = None,
+    pass_status: str = STATUS_PASS_REQUIRED,
+    fail_status: str = STATUS_FAIL_REQUIRED,
+) -> dict[str, Any]:
+    payload = project_row_family_summary(
+        prefix=prefix,
+        row_family_projection_rows=row_family_projection_rows,
+        pass_status=pass_status,
+        fail_status=fail_status,
+    )
+    if anchor_checks is not None and anchor_violations is not None:
+        anchor_checks_tuple = tuple(anchor_checks)
+        anchor_violation_rows = tuple(anchor_violations)
+        payload.update(
+            {
+                "root_doc_anchor_check_count": len(anchor_checks_tuple),
+                "root_doc_anchor_status": (
+                    pass_status if not anchor_violation_rows else fail_status
+                ),
+            }
+        )
+    return payload

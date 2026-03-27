@@ -11,7 +11,7 @@ from root_contract_anchor_checks_common import (
     evaluate_root_doc_anchor_checks,
     validate_expected_root_doc_anchor_checks,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 from root_corpus_authority_common import authority_class_profiles_from_doc, load_root_corpus_authority
 from root_corpus_gateway_admissibility_common import (
     STATUS_FAIL_REQUIRED,
@@ -734,19 +734,6 @@ def main() -> int:
             fail_status=STATUS_FAIL_REQUIRED,
         ),
     ]
-    gateway_admissibility_row_coverage_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="coverage_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
-    gateway_admissibility_row_identity_projection_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="identity_projection_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
-    root_doc_anchor_status = STATUS_PASS_REQUIRED if not anchor_violations else STATUS_FAIL_REQUIRED
 
     payload = {
         STATUS_KEY: status,
@@ -764,15 +751,18 @@ def main() -> int:
         "question_routing_entry_path": str(question_routing_entry_path),
         "question_routing_active_path": str(question_routing_active_path),
         "root_dir": str(admissibility_doc.get("root_dir") or ""),
-        "root_doc_anchor_check_count": len(anchor_checks),
-        "root_doc_anchor_status": root_doc_anchor_status,
         "gateway_anchor_check_count": len(anchor_checks),
         "gateway_order_count": len(gateway_order_rows),
         "gateway_effect_target_count": len(gateway_effect_targets),
         "gateway_profile_count": len(gateway_profiles),
-        "gateway_admissibility_row_family_count": len(row_family_projection_rows),
-        "gateway_admissibility_row_coverage_status": gateway_admissibility_row_coverage_status,
-        "gateway_admissibility_row_identity_projection_status": gateway_admissibility_row_identity_projection_status,
+        **project_root_contract_support_projection(
+            prefix="gateway_admissibility",
+            row_family_projection_rows=row_family_projection_rows,
+            anchor_checks=anchor_checks,
+            anchor_violations=anchor_violations,
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
         "row_family_projection_rows": row_family_projection_rows,
         "current_turn_terminal_gateway": next(
             (row.gateway_class for row in gateway_profiles if row.current_turn_legality_terminal),

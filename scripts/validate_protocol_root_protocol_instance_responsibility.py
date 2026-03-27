@@ -26,7 +26,7 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 from root_protocol_instance_responsibility_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -556,19 +556,6 @@ def main() -> int:
     )
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
-    protocol_instance_row_coverage_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="coverage_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
-    protocol_instance_row_identity_projection_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="identity_projection_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
-    root_doc_anchor_status = STATUS_PASS_REQUIRED if not root_doc_anchor_violations else STATUS_FAIL_REQUIRED
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_RESPONSIBILITY),
@@ -585,11 +572,14 @@ def main() -> int:
         "escalation_proof_count": len(escalation_proof_rows),
         "escalation_limit_count": len(escalation_limit_rows),
         "boundary_collapse_count": len(boundary_collapse_rows),
-        "root_doc_anchor_check_count": len(root_doc_anchor_checks),
-        "root_doc_anchor_status": root_doc_anchor_status,
-        "protocol_instance_row_family_count": len(row_family_projection_rows),
-        "protocol_instance_row_coverage_status": protocol_instance_row_coverage_status,
-        "protocol_instance_row_identity_projection_status": protocol_instance_row_identity_projection_status,
+        **project_root_contract_support_projection(
+            prefix="protocol_instance",
+            row_family_projection_rows=row_family_projection_rows,
+            anchor_checks=root_doc_anchor_checks,
+            anchor_violations=root_doc_anchor_violations,
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
         "row_family_projection_rows": row_family_projection_rows,
         "layer_ids": [row.layer_id for row in sorted(layer_rows, key=lambda item: item.order)],
         "owner_ids": [row.owner_id for row in sorted(owner_rows, key=lambda item: item.order)],

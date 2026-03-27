@@ -10,7 +10,7 @@ from root_contract_anchor_checks_common import (
     evaluate_root_doc_anchor_checks,
     validate_expected_root_doc_anchor_checks,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 from root_corpus_authority_common import load_root_corpus_authority
 from root_corpus_gateway_admissibility_common import (
     gateway_effect_targets_from_doc,
@@ -480,19 +480,6 @@ def main() -> int:
             fail_status=STATUS_FAIL_REQUIRED,
         ),
     ]
-    precedence_row_coverage_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="coverage_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
-    precedence_row_identity_projection_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="identity_projection_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
-    root_doc_anchor_status = STATUS_PASS_REQUIRED if not anchor_violations else STATUS_FAIL_REQUIRED
 
     payload = {
         STATUS_KEY: status,
@@ -512,14 +499,17 @@ def main() -> int:
         "gateway_admissibility_entry_path": str(gateway_entry_path),
         "gateway_admissibility_active_path": str(gateway_active_path),
         "root_dir": str(precedence_doc.get("root_dir") or ""),
-        "root_doc_anchor_check_count": len(anchor_checks),
-        "root_doc_anchor_status": root_doc_anchor_status,
         "precedence_anchor_check_count": len(anchor_checks),
         "gateway_authorship_projection_count": len(gateway_authorship_projections),
         "precedence_profile_count": len(precedence_profiles),
-        "precedence_row_family_count": len(row_family_projection_rows),
-        "precedence_row_coverage_status": precedence_row_coverage_status,
-        "precedence_row_identity_projection_status": precedence_row_identity_projection_status,
+        **project_root_contract_support_projection(
+            prefix="precedence",
+            row_family_projection_rows=row_family_projection_rows,
+            anchor_checks=anchor_checks,
+            anchor_violations=anchor_violations,
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
         "row_family_projection_rows": row_family_projection_rows,
         "gateway_authorship_projection": [
             {

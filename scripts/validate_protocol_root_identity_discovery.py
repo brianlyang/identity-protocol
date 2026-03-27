@@ -26,7 +26,7 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 from root_identity_discovery_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -660,19 +660,6 @@ def main() -> int:
         else STATUS_FAIL_REQUIRED
     )
     rc = 0 if status == STATUS_PASS_REQUIRED else 1
-    identity_discovery_row_coverage_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="coverage_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
-    identity_discovery_row_identity_projection_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="identity_projection_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
-    root_doc_anchor_status = STATUS_PASS_REQUIRED if not root_doc_anchor_violations else STATUS_FAIL_REQUIRED
     summary_markers = sorted(
         {
             row.get("marker", "")
@@ -705,11 +692,14 @@ def main() -> int:
         "discovery_proof_count": len(discovery_proof_rows),
         "discovery_limit_count": len(discovery_limit_rows),
         "collapse_count": len(collapse_rows),
-        "root_doc_anchor_check_count": len(root_doc_anchor_checks),
-        "root_doc_anchor_status": root_doc_anchor_status,
-        "identity_discovery_row_family_count": len(row_family_projection_rows),
-        "identity_discovery_row_coverage_status": identity_discovery_row_coverage_status,
-        "identity_discovery_row_identity_projection_status": identity_discovery_row_identity_projection_status,
+        **project_root_contract_support_projection(
+            prefix="identity_discovery",
+            row_family_projection_rows=row_family_projection_rows,
+            anchor_checks=root_doc_anchor_checks,
+            anchor_violations=root_doc_anchor_violations,
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
         "row_family_projection_rows": row_family_projection_rows,
         "section_ids": [row.section_id for row in sorted(section_rows, key=lambda item: item.order)],
         "request_field_ids": [row.row_id for row in sorted(request_field_rows, key=lambda item: item.order)],

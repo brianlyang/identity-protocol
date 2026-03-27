@@ -26,7 +26,7 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 from root_prompt_bootstrap_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -475,19 +475,6 @@ def main() -> int:
     status = STATUS_PASS_REQUIRED if not any((stale_reasons, structure_violations, prompt_violations, integration_violations, contract_marker_violations, root_doc_anchor_violations)) else STATUS_FAIL_REQUIRED
     rc = 0 if status == STATUS_PASS_REQUIRED else 1
     summary_markers = sorted({row.get("marker", "") for row in prompt_violations + integration_violations + contract_marker_violations + root_doc_anchor_violations if row.get("marker")})
-    prompt_bootstrap_row_coverage_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="coverage_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
-    prompt_bootstrap_row_identity_projection_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="identity_projection_status",
-        pass_status=STATUS_PASS_REQUIRED,
-        fail_status=STATUS_FAIL_REQUIRED,
-    )
-    root_doc_anchor_status = STATUS_PASS_REQUIRED if not root_doc_anchor_violations else STATUS_FAIL_REQUIRED
 
     payload = {
         STATUS_KEY: status,
@@ -509,11 +496,14 @@ def main() -> int:
         "prompt_bootstrap_proof_count": len(prompt_bootstrap_proof_rows),
         "prompt_bootstrap_limit_count": len(prompt_bootstrap_limit_rows),
         "native_literal_count": len(native_literal_rows),
-        "root_doc_anchor_check_count": len(root_doc_anchor_checks),
-        "root_doc_anchor_status": root_doc_anchor_status,
-        "prompt_bootstrap_row_family_count": len(row_family_projection_rows),
-        "prompt_bootstrap_row_coverage_status": prompt_bootstrap_row_coverage_status,
-        "prompt_bootstrap_row_identity_projection_status": prompt_bootstrap_row_identity_projection_status,
+        **project_root_contract_support_projection(
+            prefix="prompt_bootstrap",
+            row_family_projection_rows=row_family_projection_rows,
+            anchor_checks=root_doc_anchor_checks,
+            anchor_violations=root_doc_anchor_violations,
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
         "row_family_projection_rows": row_family_projection_rows,
         "anchor_ids": [row.anchor_id for row in anchor_rows],
         "output_field_ids": [row.row_id for row in output_field_rows],

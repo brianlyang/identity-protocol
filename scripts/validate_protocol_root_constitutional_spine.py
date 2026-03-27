@@ -17,7 +17,7 @@ from root_corpus_authority_common import entry_authority_projections_from_doc, l
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, reading_order_rows_from_doc
 from root_corpus_question_routing_common import entry_question_projections_from_doc, load_root_corpus_question_routing
-from root_row_family_projection_common import aggregate_row_family_status, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 
 STATUS_KEY = "protocol_root_constitutional_spine_status"
 ERR_REGISTRY = "IP-RCS-001"
@@ -336,14 +336,6 @@ def main() -> int:
             id_attr="bridge_id",
         ),
     ]
-    constitutional_spine_row_coverage_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="coverage_status",
-    )
-    constitutional_spine_row_identity_projection_status = aggregate_row_family_status(
-        row_family_projection_rows,
-        status_key="identity_projection_status",
-    )
     row_family_projection_by_id = {row["family_id"]: row for row in row_family_projection_rows}
 
     if not stale_reasons:
@@ -606,9 +598,12 @@ def main() -> int:
         "mapping_active_file": str(spine_active_path.relative_to(repo_root)),
         "spine_entry_count": len(entry_rows),
         "spine_bridge_count": len(bridge_rows),
-        "constitutional_spine_row_family_count": len(row_family_projection_rows),
-        "constitutional_spine_row_coverage_status": constitutional_spine_row_coverage_status,
-        "constitutional_spine_row_identity_projection_status": constitutional_spine_row_identity_projection_status,
+        **project_root_contract_support_projection(
+            prefix="constitutional_spine",
+            row_family_projection_rows=row_family_projection_rows,
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
+        ),
         "constitutional_entry_row_coverage_status": row_family_projection_by_id["constitutional_entry_rows"][
             "coverage_status"
         ],
