@@ -166,6 +166,14 @@ implicit.
 4. Protocol legality must not finalize prompt-bootstrap truth while missing or unexpected row identities remain known only inside validator logic.
 5. Fail-close prompt-bootstrap output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
 
+## Root identity-discovery completeness boundary
+
+1. Identity-discovery law must remain machine-readable as separate section, request-field, response-field, precedence, activation, error-field, implementation, proof, limit, and collapse row families.
+2. Aggregate row-family counts are insufficient on their own; expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness.
+3. Expected row identity set and emitted row identity set for each identity-discovery family must also remain explicit; identity drift may not be collapsed into summary-only counts.
+4. Protocol legality must not finalize identity-discovery truth while missing or unexpected row identities remain known only inside validator logic.
+5. Fail-close identity-discovery output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+
 ## Root-law bundle boundary
 
 The protocol constitution depends on a governed root-law bundle across:

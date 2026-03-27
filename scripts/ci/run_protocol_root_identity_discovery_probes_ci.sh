@@ -35,6 +35,11 @@ assert payload["implementation_count"] == 4, payload
 assert payload["discovery_proof_count"] == 6, payload
 assert payload["discovery_limit_count"] == 6, payload
 assert payload["collapse_count"] == 5, payload
+assert payload["identity_discovery_row_family_count"] == 10, payload
+assert payload["identity_discovery_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["identity_discovery_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -71,10 +76,22 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_identity_discovery_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RID-002", payload
+assert payload["identity_discovery_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["identity_discovery_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["reason"] == "missing_expected_rows" and "implementation_compliance_proof" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+proof_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_discovery_proof_rows"
+)
+assert proof_row["expected_count"] == 6, payload
+assert proof_row["actual_count"] == 5, payload
+assert proof_row["missing_ids"] == ["implementation_compliance_proof"], payload
+assert proof_row["unexpected_ids"] == [], payload
+assert proof_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert proof_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 REQUEST_REPO="${TMP_ROOT}/request-drift-repo"
@@ -86,12 +103,12 @@ import yaml
 
 path = pathlib.Path(sys.argv[1])
 doc = yaml.safe_load(path.read_text(encoding="utf-8"))
-doc["required_request_field_rows"] = [
-    row for row in doc["required_request_field_rows"]
-    if row.get("request_field_id") != "forceReload"
-]
-for idx, row in enumerate(doc["required_request_field_rows"], start=1):
-    row["order"] = idx
+for row in doc["required_request_field_rows"]:
+    if row.get("request_field_id") == "forceReload":
+        row["request_field_id"] = "forceReloadAlias"
+        break
+else:
+    raise SystemExit("expected forceReload request field row not found")
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
 
@@ -115,6 +132,22 @@ assert any(
     row["reason"] == "missing_expected_rows" and "forceReload" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+assert any(
+    row["reason"] == "extra_rows" and "forceReloadAlias" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
+assert payload["identity_discovery_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["identity_discovery_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+request_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_request_field_rows"
+)
+assert request_row["expected_count"] == 5, payload
+assert request_row["actual_count"] == 5, payload
+assert request_row["missing_ids"] == ["forceReload"], payload
+assert request_row["unexpected_ids"] == ["forceReloadAlias"], payload
+assert request_row["coverage_status"] == "PASS_REQUIRED", payload
+assert request_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 HEADING_REPO="${TMP_ROOT}/heading-drift-repo"

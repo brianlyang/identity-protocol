@@ -215,6 +215,36 @@ def _entry_marker_missing(required_markers: tuple[str, ...], expected_markers: t
     return [marker for marker in expected_markers if marker not in marker_set]
 
 
+def _project_row_family(
+    *,
+    family_id: str,
+    member_id_key: str,
+    actual_rows,
+    expected_rows: dict[str, dict[str, Any]],
+    id_attr: str,
+) -> dict[str, Any]:
+    actual_ids = sorted(str(getattr(row, id_attr)) for row in actual_rows)
+    expected_ids = sorted(str(row_id) for row_id in expected_rows)
+    missing_ids = sorted(set(expected_ids) - set(actual_ids))
+    unexpected_ids = sorted(set(actual_ids) - set(expected_ids))
+    coverage_status = STATUS_FAIL_REQUIRED if len(actual_rows) != len(expected_ids) else STATUS_PASS_REQUIRED
+    identity_projection_status = (
+        STATUS_FAIL_REQUIRED if missing_ids or unexpected_ids else STATUS_PASS_REQUIRED
+    )
+    return {
+        "family_id": family_id,
+        "member_id_key": member_id_key,
+        "expected_count": len(expected_ids),
+        "actual_count": len(actual_rows),
+        "expected_ids": expected_ids,
+        "actual_ids": actual_ids,
+        "missing_ids": missing_ids,
+        "unexpected_ids": unexpected_ids,
+        "coverage_status": coverage_status,
+        "identity_projection_status": identity_projection_status,
+    }
+
+
 def _validate_rows(
     *,
     actual_rows,
@@ -284,6 +314,7 @@ def main() -> int:
     discovery_violations: list[dict[str, Any]] = []
     integration_violations: list[dict[str, Any]] = []
     contract_marker_violations: list[dict[str, Any]] = []
+    row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
 
     if discovery_alias_error:
@@ -369,6 +400,79 @@ def main() -> int:
                 error_code = ERR_REGISTRY
 
     if not stale_reasons:
+        row_family_projection_rows = [
+            _project_row_family(
+                family_id="required_section_rows",
+                member_id_key="section_id",
+                actual_rows=section_rows,
+                expected_rows=EXPECTED_SECTION_ROWS,
+                id_attr="section_id",
+            ),
+            _project_row_family(
+                family_id="required_request_field_rows",
+                member_id_key="request_field_id",
+                actual_rows=request_field_rows,
+                expected_rows=EXPECTED_REQUEST_FIELD_ROWS,
+                id_attr="row_id",
+            ),
+            _project_row_family(
+                family_id="required_response_field_rows",
+                member_id_key="response_field_id",
+                actual_rows=response_field_rows,
+                expected_rows=EXPECTED_RESPONSE_FIELD_ROWS,
+                id_attr="row_id",
+            ),
+            _project_row_family(
+                family_id="required_precedence_rows",
+                member_id_key="precedence_id",
+                actual_rows=precedence_rows,
+                expected_rows=EXPECTED_PRECEDENCE_ROWS,
+                id_attr="row_id",
+            ),
+            _project_row_family(
+                family_id="required_activation_rows",
+                member_id_key="activation_id",
+                actual_rows=activation_rows,
+                expected_rows=EXPECTED_ACTIVATION_ROWS,
+                id_attr="row_id",
+            ),
+            _project_row_family(
+                family_id="required_error_field_rows",
+                member_id_key="error_field_id",
+                actual_rows=error_field_rows,
+                expected_rows=EXPECTED_ERROR_FIELD_ROWS,
+                id_attr="row_id",
+            ),
+            _project_row_family(
+                family_id="required_implementation_rows",
+                member_id_key="implementation_id",
+                actual_rows=implementation_rows,
+                expected_rows=EXPECTED_IMPLEMENTATION_ROWS,
+                id_attr="row_id",
+            ),
+            _project_row_family(
+                family_id="required_discovery_proof_rows",
+                member_id_key="proof_id",
+                actual_rows=discovery_proof_rows,
+                expected_rows=EXPECTED_DISCOVERY_PROOF_ROWS,
+                id_attr="proof_id",
+            ),
+            _project_row_family(
+                family_id="required_discovery_limit_rows",
+                member_id_key="limit_id",
+                actual_rows=discovery_limit_rows,
+                expected_rows=EXPECTED_DISCOVERY_LIMIT_ROWS,
+                id_attr="row_id",
+            ),
+            _project_row_family(
+                family_id="required_collapse_rows",
+                member_id_key="collapse_id",
+                actual_rows=collapse_rows,
+                expected_rows=EXPECTED_COLLAPSE_ROWS,
+                id_attr="row_id",
+            ),
+        ]
+
         _validate_rows(
             actual_rows=section_rows,
             expected_rows=EXPECTED_SECTION_ROWS,
@@ -658,6 +762,16 @@ def main() -> int:
         else STATUS_FAIL_REQUIRED
     )
     rc = 0 if status == STATUS_PASS_REQUIRED else 1
+    identity_discovery_row_coverage_status = (
+        STATUS_FAIL_REQUIRED
+        if any(row["coverage_status"] == STATUS_FAIL_REQUIRED for row in row_family_projection_rows)
+        else STATUS_PASS_REQUIRED
+    )
+    identity_discovery_row_identity_projection_status = (
+        STATUS_FAIL_REQUIRED
+        if any(row["identity_projection_status"] == STATUS_FAIL_REQUIRED for row in row_family_projection_rows)
+        else STATUS_PASS_REQUIRED
+    )
     summary_markers = sorted(
         {
             row.get("marker", "")
@@ -690,8 +804,20 @@ def main() -> int:
         "discovery_proof_count": len(discovery_proof_rows),
         "discovery_limit_count": len(discovery_limit_rows),
         "collapse_count": len(collapse_rows),
+        "identity_discovery_row_family_count": len(row_family_projection_rows),
+        "identity_discovery_row_coverage_status": identity_discovery_row_coverage_status,
+        "identity_discovery_row_identity_projection_status": identity_discovery_row_identity_projection_status,
+        "row_family_projection_rows": row_family_projection_rows,
+        "section_ids": [row.section_id for row in sorted(section_rows, key=lambda item: item.order)],
+        "request_field_ids": [row.row_id for row in sorted(request_field_rows, key=lambda item: item.order)],
+        "response_field_ids": [row.row_id for row in sorted(response_field_rows, key=lambda item: item.order)],
+        "precedence_ids": [row.row_id for row in sorted(precedence_rows, key=lambda item: item.order)],
+        "activation_ids": [row.row_id for row in sorted(activation_rows, key=lambda item: item.order)],
+        "error_field_ids": [row.row_id for row in sorted(error_field_rows, key=lambda item: item.order)],
+        "implementation_ids": [row.row_id for row in sorted(implementation_rows, key=lambda item: item.order)],
         "discovery_proof_ids": [row.proof_id for row in sorted(discovery_proof_rows, key=lambda item: item.order)],
         "discovery_limit_ids": [row.row_id for row in sorted(discovery_limit_rows, key=lambda item: item.order)],
+        "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
         "stale_reasons": stale_reasons,
         "structure_violations": structure_violations,
         "discovery_violations": discovery_violations,
