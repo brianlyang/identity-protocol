@@ -19,6 +19,7 @@ from root_contract_marker_checks_common import (
 )
 from root_contract_integration_checks_common import evaluate_root_contract_integration
 from root_contract_verdict_common import project_root_contract_support_verdict
+from root_contract_row_validation_common import validate_contract_rows
 from root_corpus_authority_common import authority_anchor_checks_from_doc, entry_authority_projections_from_doc, load_root_corpus_authority
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import (
@@ -298,60 +299,6 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2))
 
 
-def _contiguous_orders(values: list[int]) -> bool:
-    return values == list(range(1, len(values) + 1))
-
-
-
-def _validate_rows(
-    *,
-    actual_rows,
-    expected_rows: dict[str, dict[str, Any]],
-    structure_violations: list[dict[str, Any]],
-    admissibility_violations: list[dict[str, Any]],
-    field_name: str,
-    id_attr: str,
-    compare_fields: tuple[str, ...],
-) -> None:
-    actual_map = {getattr(row, id_attr): row for row in actual_rows}
-    orders = [row.order for row in actual_rows]
-    if len(actual_map) != len(actual_rows):
-        structure_violations.append({"field": field_name, "reason": f"duplicate_{id_attr}"})
-    if len(set(orders)) != len(orders) or not _contiguous_orders(sorted(orders)):
-        structure_violations.append({"field": field_name, "reason": f"{field_name}_order_non_contiguous"})
-    missing_ids = sorted(set(expected_rows) - set(actual_map))
-    extra_ids = sorted(set(actual_map) - set(expected_rows))
-    if missing_ids:
-        structure_violations.append({"field": field_name, "reason": "missing_expected_rows", "row_ids": missing_ids})
-    if extra_ids:
-        structure_violations.append({"field": field_name, "reason": "extra_rows", "row_ids": extra_ids})
-    for row_id, expected in expected_rows.items():
-        row = actual_map.get(row_id)
-        if row is None:
-            continue
-        if row.order != expected["order"]:
-            admissibility_violations.append(
-                {
-                    "field": field_name,
-                    "row_id": row_id,
-                    "reason": "order_mismatch",
-                    "expected": expected["order"],
-                    "actual": row.order,
-                }
-            )
-        for compare_field in compare_fields:
-            actual_value = getattr(row, compare_field)
-            expected_value = expected[compare_field]
-            if actual_value != expected_value:
-                admissibility_violations.append(
-                    {
-                        "field": field_name,
-                        "row_id": row_id,
-                        "reason": f"{compare_field}_mismatch",
-                        "expected": expected_value,
-                        "actual": actual_value,
-                    }
-                )
 
 
 def main() -> int:
@@ -531,7 +478,7 @@ def main() -> int:
             ),
         ]
 
-        _validate_rows(
+        validate_contract_rows(
             actual_rows=evidence_class_rows,
             expected_rows=EXPECTED_EVIDENCE_CLASS_ROWS,
             structure_violations=structure_violations,
@@ -540,7 +487,7 @@ def main() -> int:
             id_attr="evidence_class_id",
             compare_fields=("contract_heading", "evidence_role"),
         )
-        _validate_rows(
+        validate_contract_rows(
             actual_rows=differentiation_rows,
             expected_rows=EXPECTED_DIFFERENTIATION_ROWS,
             structure_violations=structure_violations,
@@ -549,7 +496,7 @@ def main() -> int:
             id_attr="row_id",
             compare_fields=("contract_phrase",),
         )
-        _validate_rows(
+        validate_contract_rows(
             actual_rows=adjudication_phase_alignment_rows,
             expected_rows=EXPECTED_ADJUDICATION_PHASE_ALIGNMENT_ROWS,
             structure_violations=structure_violations,
@@ -558,7 +505,7 @@ def main() -> int:
             id_attr="machine_surface",
             compare_fields=("evidence_class_id", "proof_id", "surface_role"),
         )
-        _validate_rows(
+        validate_contract_rows(
             actual_rows=decision_evidence_proof_rows,
             expected_rows=EXPECTED_DECISION_EVIDENCE_PROOF_ROWS,
             structure_violations=structure_violations,
@@ -567,7 +514,7 @@ def main() -> int:
             id_attr="proof_id",
             compare_fields=("contract_heading", "proof_role"),
         )
-        _validate_rows(
+        validate_contract_rows(
             actual_rows=evidence_class_proof_alignment_rows,
             expected_rows=EXPECTED_EVIDENCE_CLASS_PROOF_ALIGNMENT_ROWS,
             structure_violations=structure_violations,
@@ -576,7 +523,7 @@ def main() -> int:
             id_attr="evidence_class_id",
             compare_fields=("proof_id", "alignment_role"),
         )
-        _validate_rows(
+        validate_contract_rows(
             actual_rows=decision_evidence_limit_rows,
             expected_rows=EXPECTED_DECISION_EVIDENCE_LIMIT_ROWS,
             structure_violations=structure_violations,
@@ -585,7 +532,7 @@ def main() -> int:
             id_attr="row_id",
             compare_fields=("contract_phrase",),
         )
-        _validate_rows(
+        validate_contract_rows(
             actual_rows=collapse_rows,
             expected_rows=EXPECTED_COLLAPSE_ROWS,
             structure_violations=structure_violations,
