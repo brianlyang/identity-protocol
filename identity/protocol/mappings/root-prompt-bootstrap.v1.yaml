@@ -18,12 +18,36 @@ question_routing_current_file: identity/protocol/mappings/root-corpus-question-r
 contract_required_markers:
   - 'this file remains the authoritative root-domain contract for prompt bootstrap behavior'
   - '## Contract anchors'
+  - Prompt-bootstrap law must also remain machine-readable as separate anchor,
+    output-field, binding-field, proof, limit, and native-literal row families
+    rather than one narrative prompt claim.
   - '## Base protocol capability absorption matrix (full set)'
   - '## Prompt-bootstrap proof discipline'
   - '## Prompt-bootstrap proof limits'
   - '## Continuous iteration protocol (mandatory)'
   - '## Four-track evidence binding (T1/T2/T3/T4)'
   - '## Acceptance command baseline'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Prompt-bootstrap row-family completeness must stay explicit'
+      - 'Required anchor, output-field, binding-field, proof, limit, and native-literal families must remain explicit as separate machine-readable row families.'
+      - 'The machine world must not finalize prompt-bootstrap legality while required row identity drift remains known only internally.'
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root prompt-bootstrap completeness discipline'
+      - 'Prompt-bootstrap law is not a soft prose bundle.'
+      - '1. required anchor, output-field, binding-field, proof, limit, and native-literal rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root prompt-bootstrap completeness boundary'
+      - '1. Prompt-bootstrap law must remain machine-readable as separate anchor, output-field, binding-field, proof, limit, and native-literal row families.'
+      - '4. Protocol legality must not finalize prompt-bootstrap truth while missing or unexpected row identities remain known only inside validator logic.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime prompt-bootstrap consumption boundary'
+      - '1. Runtime consumes prompt-bootstrap law as separate anchor, output-field, binding-field, proof, limit, and native-literal row families rather than as undifferentiated prompt prose.'
+      - '4. Runtime must not finalize prompt-bootstrap legality while missing or unexpected row identities remain known only inside validator machinery.'
 required_anchor_rows:
   - order: 1
     anchor_id: rq_014_prompt_bootstrap_capability_contract_v1

@@ -97,6 +97,10 @@ Derived output target:
 
 ## Contract anchors
 
+Prompt-bootstrap law must also remain machine-readable as separate anchor,
+output-field, binding-field, proof, limit, and native-literal row families
+rather than one narrative prompt claim.
+
 ### rq_014_prompt_bootstrap_capability_contract_v1
 
 Required bootstrap capability set:

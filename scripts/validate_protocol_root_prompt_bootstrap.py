@@ -6,6 +6,11 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
+from root_contract_anchor_checks_common import (
+    evaluate_root_doc_anchor_checks,
+    root_doc_anchor_checks_from_doc,
+    validate_expected_root_doc_anchor_checks,
+)
 from root_contract_marker_checks_common import (
     contract_required_markers_from_doc,
     contract_text_marker_checks_from_rows,
@@ -154,7 +159,28 @@ EXPECTED_AUTHORITY_MARKERS = (
     "Current-turn prompt legality must still resolve from machine-consumed enforcement surfaces",
 )
 EXPECTED_ROUTING_MARKERS = EXPECTED_AUTHORITY_MARKERS
-EXPECTED_README_MARKER = "`IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`"
+EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
+    "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "### Prompt-bootstrap row-family completeness must stay explicit",
+        "Required anchor, output-field, binding-field, proof, limit, and native-literal families must remain explicit as separate machine-readable row families.",
+        "The machine world must not finalize prompt-bootstrap legality while required row identity drift remains known only internally.",
+    ),
+    "identity/protocol/README.md": (
+        "## Root prompt-bootstrap completeness discipline",
+        "Prompt-bootstrap law is not a soft prose bundle.",
+        "1. required anchor, output-field, binding-field, proof, limit, and native-literal rows must remain explicit as separate machine-readable families;",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL.md": (
+        "## Root prompt-bootstrap completeness boundary",
+        "1. Prompt-bootstrap law must remain machine-readable as separate anchor, output-field, binding-field, proof, limit, and native-literal row families.",
+        "4. Protocol legality must not finalize prompt-bootstrap truth while missing or unexpected row identities remain known only inside validator logic.",
+    ),
+    "identity/protocol/IDENTITY_RUNTIME.md": (
+        "## Runtime prompt-bootstrap consumption boundary",
+        "1. Runtime consumes prompt-bootstrap law as separate anchor, output-field, binding-field, proof, limit, and native-literal row families rather than as undifferentiated prompt prose.",
+        "4. Runtime must not finalize prompt-bootstrap legality while missing or unexpected row identities remain known only inside validator machinery.",
+    ),
+}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -223,6 +249,7 @@ def main() -> int:
     prompt_violations: list[dict[str, Any]] = []
     integration_violations: list[dict[str, Any]] = []
     contract_marker_violations: list[dict[str, Any]] = []
+    root_doc_anchor_violations: list[dict[str, Any]] = []
     row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
 
@@ -252,6 +279,7 @@ def main() -> int:
     prompt_bootstrap_proof_rows = prompt_bootstrap_proof_rows_from_doc(prompt_doc) if prompt_doc else ()
     prompt_bootstrap_limit_rows = prompt_bootstrap_limit_rows_from_doc(prompt_doc) if prompt_doc else ()
     native_literal_rows = native_literal_rows_from_doc(prompt_doc) if prompt_doc else ()
+    root_doc_anchor_checks = root_doc_anchor_checks_from_doc(prompt_doc) if prompt_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     authority_anchors = authority_anchor_checks_from_doc(authority_doc) if authority_doc else ()
@@ -292,6 +320,16 @@ def main() -> int:
                 error_code = ERR_REGISTRY
         if not prompt_doc.get("contract_required_markers"):
             stale_reasons.append("root_prompt_bootstrap_contract_required_markers_missing")
+            error_code = ERR_REGISTRY
+        anchor_reason_count_before = len(stale_reasons)
+        stale_reasons.extend(
+            validate_expected_root_doc_anchor_checks(
+                root_doc_anchor_checks,
+                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+                stale_reason_prefix="root_prompt_bootstrap",
+            )
+        )
+        if len(stale_reasons) > anchor_reason_count_before:
             error_code = ERR_REGISTRY
 
         for field in ("contract_file", "philosophy_anchor_file", "validator_script", "probe_script", "common_script"):
@@ -399,13 +437,13 @@ def main() -> int:
                 )
             )
 
-        readme_path = repo_root / "identity/protocol/README.md"
-        if not readme_path.exists():
-            integration_violations.append({"field": "README", "reason": "root_readme_missing"})
-        else:
-            readme_text = readme_path.read_text(encoding="utf-8", errors="ignore")
-            if EXPECTED_README_MARKER not in readme_text:
-                integration_violations.append({"field": "README", "reason": "root_readme_missing_contract_reference", "marker": EXPECTED_README_MARKER})
+        root_doc_anchor_violations.extend(
+            evaluate_root_doc_anchor_checks(
+                repo_root,
+                root_doc_anchor_checks,
+                field_name="root_doc_anchor_checks",
+            )
+        )
 
         integration_violations.extend(
             evaluate_root_contract_integration(
@@ -431,12 +469,12 @@ def main() -> int:
 
     if not error_code and structure_violations:
         error_code = ERR_STRUCTURE
-    if not error_code and (prompt_violations or integration_violations or contract_marker_violations):
+    if not error_code and (prompt_violations or integration_violations or contract_marker_violations or root_doc_anchor_violations):
         error_code = ERR_PROMPT
 
-    status = STATUS_PASS_REQUIRED if not any((stale_reasons, structure_violations, prompt_violations, integration_violations, contract_marker_violations)) else STATUS_FAIL_REQUIRED
+    status = STATUS_PASS_REQUIRED if not any((stale_reasons, structure_violations, prompt_violations, integration_violations, contract_marker_violations, root_doc_anchor_violations)) else STATUS_FAIL_REQUIRED
     rc = 0 if status == STATUS_PASS_REQUIRED else 1
-    summary_markers = sorted({row.get("marker", "") for row in prompt_violations + integration_violations + contract_marker_violations if row.get("marker")})
+    summary_markers = sorted({row.get("marker", "") for row in prompt_violations + integration_violations + contract_marker_violations + root_doc_anchor_violations if row.get("marker")})
     prompt_bootstrap_row_coverage_status = aggregate_row_family_status(
         row_family_projection_rows,
         status_key="coverage_status",
@@ -449,6 +487,7 @@ def main() -> int:
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
+    root_doc_anchor_status = STATUS_PASS_REQUIRED if not root_doc_anchor_violations else STATUS_FAIL_REQUIRED
 
     payload = {
         STATUS_KEY: status,
@@ -470,6 +509,8 @@ def main() -> int:
         "prompt_bootstrap_proof_count": len(prompt_bootstrap_proof_rows),
         "prompt_bootstrap_limit_count": len(prompt_bootstrap_limit_rows),
         "native_literal_count": len(native_literal_rows),
+        "root_doc_anchor_check_count": len(root_doc_anchor_checks),
+        "root_doc_anchor_status": root_doc_anchor_status,
         "prompt_bootstrap_row_family_count": len(row_family_projection_rows),
         "prompt_bootstrap_row_coverage_status": prompt_bootstrap_row_coverage_status,
         "prompt_bootstrap_row_identity_projection_status": prompt_bootstrap_row_identity_projection_status,
@@ -485,6 +526,7 @@ def main() -> int:
         "prompt_violations": prompt_violations,
         "integration_violations": integration_violations,
         "contract_marker_violations": contract_marker_violations,
+        "root_doc_anchor_violations": root_doc_anchor_violations,
         "summary_markers": summary_markers,
     }
     _emit(payload, json_only=args.json_only)
