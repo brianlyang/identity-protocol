@@ -131,6 +131,10 @@ Judgement role: `escalation_boundary_awareness`.
 
 The protocol must keep instance self-judgement tied to machine-verifiable anchors rather than self-description alone.
 
+Identity-instance self-judgement law must also remain machine-readable as
+separate question, anchor, self-judgement-proof, self-judgement-limit, and
+collapse row families rather than one narrative self-description claim.
+
 At minimum, self-judgement must remain anchored to:
 
 1. resolved identity context rather than narrative self-claim;

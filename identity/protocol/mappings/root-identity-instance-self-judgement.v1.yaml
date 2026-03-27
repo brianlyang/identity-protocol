@@ -18,10 +18,35 @@ question_routing_current_file: identity/protocol/mappings/root-corpus-question-r
 contract_required_markers:
   - '## Four self-judgement questions'
   - '## Required self-judgement anchors'
+  - Identity-instance self-judgement law must also remain machine-readable as
+    separate question, anchor, self-judgement-proof,
+    self-judgement-limit, and collapse row families rather than one narrative
+    self-description claim.
   - '## Self-judgement proof discipline'
   - '## Self-judgement proof limits'
   - '## Non-compliant self-judgement collapses'
   - 'An identity instance must not act as if it were a free narrative persona.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Identity-instance self-judgement row-family completeness must stay explicit'
+      - "Required question, anchor, self-judgement-proof, self-judgement-limit, and\ncollapse families must remain explicit as separate machine-readable row\nfamilies."
+      - 'The machine world must not finalize identity-instance self-judgement legality while required row identity drift remains known only internally.'
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root identity-instance self-judgement completeness discipline'
+      - 'Identity-instance self-judgement law is not a soft prose bundle.'
+      - '1. required question, anchor, self-judgement-proof, self-judgement-limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root identity-instance self-judgement completeness boundary'
+      - '1. Identity-instance self-judgement law must remain machine-readable as separate question, anchor, self-judgement-proof, self-judgement-limit, and collapse row families.'
+      - '4. Protocol legality must not finalize identity-instance self-judgement legality while missing or unexpected row identities remain known only inside validator logic.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime identity-instance self-judgement consumption boundary'
+      - '1. Runtime consumes identity-instance self-judgement law as separate question, anchor, self-judgement-proof, self-judgement-limit, and collapse row families rather than as undifferentiated self-description prose.'
+      - '4. Runtime must not finalize identity-instance self-judgement legality while missing or unexpected row identities remain known only inside validator machinery.'
 required_question_rows:
   - order: 1
     question_id: who_i_am

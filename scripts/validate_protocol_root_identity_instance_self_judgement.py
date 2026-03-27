@@ -6,6 +6,11 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
+from root_contract_anchor_checks_common import (
+    evaluate_root_doc_anchor_checks,
+    root_doc_anchor_checks_from_doc,
+    validate_expected_root_doc_anchor_checks,
+)
 from root_contract_marker_checks_common import (
     contract_required_markers_from_doc,
     contract_text_marker_checks_from_rows,
@@ -161,7 +166,28 @@ EXPECTED_AUTHORITY_MARKERS = (
     "Current-turn self-judgement legality must still resolve from machine-consumed enforcement surfaces",
 )
 EXPECTED_ROUTING_MARKERS = EXPECTED_AUTHORITY_MARKERS
-EXPECTED_README_MARKER = "`IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md`"
+EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
+    "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "### Identity-instance self-judgement row-family completeness must stay explicit",
+        "Required question, anchor, self-judgement-proof, self-judgement-limit, and\ncollapse families must remain explicit as separate machine-readable row\nfamilies.",
+        "The machine world must not finalize identity-instance self-judgement legality while required row identity drift remains known only internally.",
+    ),
+    "identity/protocol/README.md": (
+        "## Root identity-instance self-judgement completeness discipline",
+        "Identity-instance self-judgement law is not a soft prose bundle.",
+        "1. required question, anchor, self-judgement-proof, self-judgement-limit, and collapse rows must remain explicit as separate machine-readable families;",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL.md": (
+        "## Root identity-instance self-judgement completeness boundary",
+        "1. Identity-instance self-judgement law must remain machine-readable as separate question, anchor, self-judgement-proof, self-judgement-limit, and collapse row families.",
+        "4. Protocol legality must not finalize identity-instance self-judgement legality while missing or unexpected row identities remain known only inside validator logic.",
+    ),
+    "identity/protocol/IDENTITY_RUNTIME.md": (
+        "## Runtime identity-instance self-judgement consumption boundary",
+        "1. Runtime consumes identity-instance self-judgement law as separate question, anchor, self-judgement-proof, self-judgement-limit, and collapse row families rather than as undifferentiated self-description prose.",
+        "4. Runtime must not finalize identity-instance self-judgement legality while missing or unexpected row identities remain known only inside validator machinery.",
+    ),
+}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -246,6 +272,7 @@ def main() -> int:
     judgement_violations: list[dict[str, Any]] = []
     integration_violations: list[dict[str, Any]] = []
     contract_marker_violations: list[dict[str, Any]] = []
+    root_doc_anchor_violations: list[dict[str, Any]] = []
     row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
 
@@ -274,6 +301,7 @@ def main() -> int:
     self_judgement_proof_rows = self_judgement_proof_rows_from_doc(self_doc) if self_doc else ()
     self_judgement_limit_rows = self_judgement_limit_rows_from_doc(self_doc) if self_doc else ()
     collapse_rows = collapse_rows_from_doc(self_doc) if self_doc else ()
+    root_doc_anchor_checks = root_doc_anchor_checks_from_doc(self_doc) if self_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     authority_anchors = authority_anchor_checks_from_doc(authority_doc) if authority_doc else ()
@@ -313,6 +341,16 @@ def main() -> int:
                 error_code = ERR_REGISTRY
         if not self_doc.get("contract_required_markers"):
             stale_reasons.append("root_identity_instance_self_judgement_contract_required_markers_missing")
+            error_code = ERR_REGISTRY
+        anchor_reason_count_before = len(stale_reasons)
+        stale_reasons.extend(
+            validate_expected_root_doc_anchor_checks(
+                root_doc_anchor_checks,
+                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+                stale_reason_prefix="root_identity_instance_self_judgement",
+            )
+        )
+        if len(stale_reasons) > anchor_reason_count_before:
             error_code = ERR_REGISTRY
 
         for field in ("contract_file", "philosophy_anchor_file", "validator_script", "probe_script", "common_script"):
@@ -445,19 +483,13 @@ def main() -> int:
                 )
             )
 
-        readme_path = repo_root / "identity/protocol/README.md"
-        if not readme_path.exists():
-            integration_violations.append({"field": "README", "reason": "root_readme_missing"})
-        else:
-            readme_text = readme_path.read_text(encoding="utf-8", errors="ignore")
-            if EXPECTED_README_MARKER not in readme_text:
-                integration_violations.append(
-                    {
-                        "field": "README",
-                        "reason": "root_readme_missing_contract_reference",
-                        "marker": EXPECTED_README_MARKER,
-                    }
-                )
+        root_doc_anchor_violations.extend(
+            evaluate_root_doc_anchor_checks(
+                repo_root,
+                root_doc_anchor_checks,
+                field_name="root_doc_anchor_checks",
+            )
+        )
 
         registry_entry_map = {entry.rel_path: entry for entry in registry_entries}
         registry_entry = registry_entry_map.get(contract_file)
@@ -591,13 +623,13 @@ def main() -> int:
 
     if not error_code and structure_violations:
         error_code = ERR_STRUCTURE
-    if not error_code and (judgement_violations or integration_violations or contract_marker_violations):
+    if not error_code and (judgement_violations or integration_violations or contract_marker_violations or root_doc_anchor_violations):
         error_code = ERR_JUDGEMENT
 
     stale_reasons.extend(f"structure_violation:{row['field']}:{row['reason']}" for row in structure_violations)
     stale_reasons.extend(
         f"self_judgement_violation:{row.get('field', 'contract_file')}:{row['reason']}"
-        for row in judgement_violations + integration_violations + contract_marker_violations
+        for row in judgement_violations + integration_violations + contract_marker_violations + root_doc_anchor_violations
     )
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
@@ -613,6 +645,7 @@ def main() -> int:
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
     )
+    root_doc_anchor_status = STATUS_PASS_REQUIRED if not root_doc_anchor_violations else STATUS_FAIL_REQUIRED
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_JUDGEMENT),
@@ -628,6 +661,8 @@ def main() -> int:
         "self_judgement_proof_count": len(self_judgement_proof_rows),
         "self_judgement_limit_count": len(self_judgement_limit_rows),
         "collapse_count": len(collapse_rows),
+        "root_doc_anchor_check_count": len(root_doc_anchor_checks),
+        "root_doc_anchor_status": root_doc_anchor_status,
         "self_judgement_row_family_count": len(row_family_projection_rows),
         "self_judgement_row_coverage_status": self_judgement_row_coverage_status,
         "self_judgement_row_identity_projection_status": self_judgement_row_identity_projection_status,
@@ -641,6 +676,7 @@ def main() -> int:
         "judgement_violations": judgement_violations,
         "integration_violations": integration_violations,
         "contract_marker_violations": contract_marker_violations,
+        "root_doc_anchor_violations": root_doc_anchor_violations,
         "stale_reasons": stale_reasons,
     }
     _emit(payload, json_only=args.json_only)
