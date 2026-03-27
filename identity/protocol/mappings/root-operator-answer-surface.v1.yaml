@@ -22,6 +22,11 @@ contract_required_markers:
   law.
 - '## Operator answer-surface law'
 - '## Four answer-surface strata'
+- Operator answer-surface law must also remain machine-readable as separate
+  surface, support-memory, support-limit, answer-claim-alignment,
+  answer-claim-epistemic-alignment, answer-surface-proof,
+  answer-surface-limit, boundary, and collapse row families rather than one
+  narrative answer claim.
 - '## Compression boundary'
 - '## Non-compliant answer-surface collapses'
 - The protocol must not confuse support material, machine terminals, or internal artifacts
@@ -39,6 +44,28 @@ contract_required_markers:
   proof.
 - '## Answer-surface proof discipline'
 - '## Answer-surface proof limits'
+anchor_checks:
+- rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+  required_markers:
+  - '### Operator answer-surface row-family completeness must stay explicit'
+  - "Required surface, support-memory, support-limit, answer-claim-alignment,\nanswer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit,\nboundary, and collapse families must remain explicit as separate\nmachine-readable row families."
+  - The machine world must not finalize operator answer-surface legality while
+    required row identity drift remains known only internally.
+- rel_path: identity/protocol/README.md
+  required_markers:
+  - '## Root operator answer-surface completeness discipline'
+  - Operator answer-surface law is not a soft prose bundle.
+  - '1. required surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse rows must remain explicit as separate machine-readable families;'
+- rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+  required_markers:
+  - '## Root operator answer-surface completeness boundary'
+  - '1. Operator answer-surface law must remain machine-readable as separate surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse row families.'
+  - '4. Protocol legality must not finalize operator answer-surface legality while missing or unexpected row identities remain known only inside validator logic.'
+- rel_path: identity/protocol/IDENTITY_RUNTIME.md
+  required_markers:
+  - '## Runtime operator answer-surface consumption boundary'
+  - '1. Runtime consumes operator answer-surface law as separate surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse row families rather than as undifferentiated answer prose.'
+  - '4. Runtime must not finalize operator answer-surface legality while missing or unexpected row identities remain known only inside validator machinery.'
 required_surface_rows:
 - order: 1
   surface_id: operator_entry

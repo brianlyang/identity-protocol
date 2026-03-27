@@ -98,6 +98,12 @@ law-grounded answer claim, a discovery claim, an admissibility claim, a
 live-bound status claim, and a realized-effect claim do not share one generic
 backing layer.
 
+Operator answer-surface law must also remain machine-readable as separate
+surface, support-memory, support-limit, answer-claim-alignment,
+answer-claim-epistemic-alignment, answer-surface-proof,
+answer-surface-limit, boundary, and collapse row families rather than one
+narrative answer claim.
+
 ## Four answer-surface strata
 
 ### 1. Operator entry surface

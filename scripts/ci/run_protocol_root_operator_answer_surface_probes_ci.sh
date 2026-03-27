@@ -35,6 +35,8 @@ assert payload["answer_surface_proof_count"] == 5, payload
 assert payload["answer_surface_limit_count"] == 6, payload
 assert payload["boundary_count"] == 4, payload
 assert payload["collapse_count"] == 7, payload
+assert payload["root_doc_anchor_check_count"] == 4, payload
+assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["operator_answer_row_family_count"] == 9, payload
 assert payload["operator_answer_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["operator_answer_row_identity_projection_status"] == "PASS_REQUIRED", payload
@@ -231,6 +233,45 @@ assert any(
     row["reason"] == "realized_effect_claim_not_closure_backed"
     and row["claim_id"] == "realized_effect_answer_claim"
     for row in payload["integration_violations"]
+), payload
+PY
+
+DOC_ANCHOR_REPO="${TMP_ROOT}/doc-anchor-drift-repo"
+mirror_repo "${DOC_ANCHOR_REPO}"
+python3 - <<'PY' "${DOC_ANCHOR_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "## Root operator answer-surface completeness discipline"
+new = "## Root operator answer-surface discipline"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+DOC_ANCHOR_JSON="${TMP_ROOT}/doc-anchor-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_operator_answer_surface.py" \
+  --repo-root "${DOC_ANCHOR_REPO}" \
+  --json-only >"${DOC_ANCHOR_JSON}"; then
+  echo "[FAIL] root operator answer-surface validator unexpectedly passed root-doc anchor drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${DOC_ANCHOR_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_operator_answer_surface_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-ROAS-003", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["rel_path"] == "identity/protocol/README.md"
+    and row["reason"] == "required_marker_missing"
+    and row["marker"] == "## Root operator answer-surface completeness discipline"
+    for row in payload["root_doc_anchor_violations"]
 ), payload
 PY
 
