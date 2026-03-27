@@ -30,6 +30,11 @@ assert payload["object_count"] == 17, payload
 assert payload["ontology_proof_count"] == 5, payload
 assert payload["ontology_limit_count"] == 5, payload
 assert payload["collapse_count"] == 6, payload
+assert payload["machine_world_ontology_row_family_count"] == 5, payload
+assert payload["machine_world_ontology_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_world_ontology_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -65,10 +70,22 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_machine_world_ontology_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RMWO-002", payload
+assert payload["machine_world_ontology_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["machine_world_ontology_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["reason"] == "missing_expected_rows" and "memory_family_non_collapse_proof" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+proof_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_ontology_proof_rows"
+)
+assert proof_row["expected_count"] == 5, payload
+assert proof_row["actual_count"] == 4, payload
+assert proof_row["missing_ids"] == ["memory_family_non_collapse_proof"], payload
+assert proof_row["unexpected_ids"] == [], payload
+assert proof_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert proof_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 STRATUM_REPO="${TMP_ROOT}/stratum-drift-repo"
@@ -104,10 +121,78 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_machine_world_ontology_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RMWO-002", payload
+assert payload["machine_world_ontology_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["machine_world_ontology_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["reason"] == "missing_expected_rows" and "feedback_gate_verdict_objects" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+stratum_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_strata_rows"
+)
+assert stratum_row["expected_count"] == 4, payload
+assert stratum_row["actual_count"] == 3, payload
+assert stratum_row["missing_ids"] == ["feedback_gate_verdict_objects"], payload
+assert stratum_row["unexpected_ids"] == [], payload
+assert stratum_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert stratum_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+IDENTITY_REPO="${TMP_ROOT}/identity-drift-repo"
+mirror_repo "${IDENTITY_REPO}"
+python3 - <<'PY' "${IDENTITY_REPO}/identity/protocol/mappings/root-machine-world-ontology.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding='utf-8'))
+for row in doc["required_strata_rows"]:
+    if row.get("stratum_id") == "feedback_gate_verdict_objects":
+        row["stratum_id"] = "feedback_gate_verdict_objects_alias"
+        break
+else:
+    raise SystemExit("expected feedback_gate_verdict_objects row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding='utf-8')
+PY
+
+IDENTITY_JSON="${TMP_ROOT}/identity-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_world_ontology.py" \
+  --repo-root "${IDENTITY_REPO}" \
+  --json-only >"${IDENTITY_JSON}"; then
+  echo "[FAIL] root machine-world ontology validator unexpectedly passed stratum identity drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${IDENTITY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_world_ontology_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMWO-002", payload
+assert payload["machine_world_ontology_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["machine_world_ontology_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["reason"] == "missing_expected_rows" and "feedback_gate_verdict_objects" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["reason"] == "extra_rows" and "feedback_gate_verdict_objects_alias" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
+stratum_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_strata_rows"
+)
+assert stratum_row["expected_count"] == 4, payload
+assert stratum_row["actual_count"] == 4, payload
+assert stratum_row["missing_ids"] == ["feedback_gate_verdict_objects"], payload
+assert stratum_row["unexpected_ids"] == ["feedback_gate_verdict_objects_alias"], payload
+assert stratum_row["coverage_status"] == "PASS_REQUIRED", payload
+assert stratum_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 HEADING_REPO="${TMP_ROOT}/heading-drift-repo"
