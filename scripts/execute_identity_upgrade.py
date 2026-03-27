@@ -35,6 +35,7 @@ from protocol_infra_contract import (
     MULTIMODAL_RUNTIME_STAGE_RECEIPT_DIR as INFRA_MULTIMODAL_RUNTIME_STAGE_RECEIPT_DIR,
     MULTIMODAL_RUNTIME_STAGE_RECEIPT_PREFIX as INFRA_MULTIMODAL_RUNTIME_STAGE_RECEIPT_PREFIX,
     MULTIMODAL_RUNTIME_STAGE_RECEIPT_SOURCE as INFRA_MULTIMODAL_RUNTIME_STAGE_RECEIPT_SOURCE,
+    VALIDATOR_IDENTITY_SCOPE_EXEMPT_SCRIPTS,
     validator_requires_actor_id,
     validator_requires_run_id,
     validator_requires_session_id,
@@ -1073,6 +1074,8 @@ def _build_validator_cmd(
     if check.endswith("validate_identity_self_upgrade_enforcement.py"):
         base, head = _resolve_git_range()
         return ["python3", check, "--identity-id", identity_id, "--base", base, "--head", head]
+    if script_path in VALIDATOR_IDENTITY_SCOPE_EXEMPT_SCRIPTS:
+        return cmd
     if check.endswith("validate_identity_manifest.py") or check.endswith("compile_identity_runtime.py"):
         return cmd
     # most validators are identity scoped
