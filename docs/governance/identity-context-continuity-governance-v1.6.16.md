@@ -296,8 +296,8 @@ Minimum additional requirements:
    - `startup_reentry_readiness_status`
    - `live_reentry_consumption_proof_status`
 11. Launcher integration is now frozen on that protocol-owned bundle:
-   - inherited `v1.6.14` launcher exec/startup consumes the bundle rather than re-deriving continuity interpretation ad hoc inside launcher code or instance chat logic;
-   - when the bundle recommends `consume_governed_reentry_brief`, launcher exec/startup must invoke the canonical pack-local `post-recover` guard path and verify that governed runtime receipt proof is present before handing off to Codex.
+   - inherited `v1.6.14` launcher-owned prelaunch preparation consumes the bundle rather than re-deriving continuity interpretation ad hoc inside launcher code or instance chat logic;
+   - when the bundle recommends `consume_governed_reentry_brief`, launcher-owned prelaunch preparation must invoke the canonical pack-local `post-recover` guard path and verify that governed runtime receipt proof is present before any downstream Codex delegation.
 12. The canonical instance-visible reentry answer bundle for this stream is:
    - `scripts/render_identity_context_reentry_answers.py`
 13. That answer bundle exists so an identity instance can answer direct user questions such as “open a new window and migrate me” or “clear now and then rejoin with memory recovery” without manually inventing recovery payloads.
@@ -336,14 +336,14 @@ Minimum additional requirements:
 3. The required `v1.6.13` topology-path and `v1.6.8` path-registration work for the canonical continuity runtime families is now landed in shared pack-lifecycle surfaces, so pilot adoption is no longer blocked on path discipline alone.
 4. The first live pilot adoption is now frozen as `base-repo-closure-orchestrator`, proven through shared backfill/materialization plus real `tick` -> `pre-migrate` -> `post-recover` runtime evidence under its own pack root.
 5. Launcher-owned startup consumption is now also replayed on a second real runtime identity in the same workspace:
-   - `base-repo-audit-expert-v3` reproduces `pre-migrate -> launcher exec/startup -> reentry-consumption-receipt` through the inherited `v1.6.14` entry surface, using runtime-local catalog truth and the governed `post-recover` bridge rather than a manual continuity-side helper;
+   - `base-repo-audit-expert-v3` reproduces `pre-migrate -> launcher prepare-only prelaunch materialization -> reentry-consumption-receipt` through the inherited `v1.6.14` entry surface, using runtime-local catalog truth and the governed `post-recover` bridge rather than a manual continuity-side helper;
    - immediately after `pre-migrate`, the continuity bundle holds `startup_reentry_readiness_status=PASS_REQUIRED` while `receipt_family_observation_status=FAIL_REQUIRED`, proving that live-consumption proof is not being pre-credited;
-   - after launcher exec/startup, the same bundle returns `live_reentry_consumption_proof_status=PASS_REQUIRED` plus `receipt_family_observation_status=PASS_REQUIRED`, proving the bridge now closes on more than one live identity without pack-specific hardcoding.
+   - after launcher-owned prelaunch materialization, the same bundle returns `live_reentry_consumption_proof_status=PASS_REQUIRED` plus `receipt_family_observation_status=PASS_REQUIRED`, proving the bridge now closes on more than one live identity without pack-specific hardcoding or downstream-Codex coupling.
 6. The remaining landing order from this checkpoint forward is:
    - more real workspace pilots through the same shared materialization path and the same launcher-owned startup-consumer bridge
    - stricter readiness promotion only after live proof breadth is no longer single-workspace
 7. Launcher-side positive proof remains insufficient if it proves only that a brief file exists; it must prove that governed startup consumption emitted governed runtime evidence.
-8. The launcher-owned startup-consumer bridge is now machine-proven through the launcher probe lane, including real `pre-migrate -> launcher exec/startup -> reentry-consumption-receipt` proof in an isolated runtime, and the same bridge now has same-workspace replay on both `base-repo-closure-orchestrator` and `base-repo-audit-expert-v3`.
+8. The launcher-owned startup-consumer bridge is now machine-proven through the launcher probe lane, including real `pre-migrate -> launcher prepare-only prelaunch materialization -> reentry-consumption-receipt` proof in an isolated runtime, and the same bridge now has same-workspace replay on both `base-repo-closure-orchestrator` and `base-repo-audit-expert-v3`.
 9. This landing order is frozen so teams do not skip directly from shared wiring to fleet-rollout claims.
 
 ### 2.13 Evidence interpretation discipline (frozen)

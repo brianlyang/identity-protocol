@@ -320,6 +320,7 @@ def _cmd_exec(args: argparse.Namespace) -> int:
             explicit_config=args.config,
             explicit_base_instructions_file=args.base_instructions_file,
             dry_run=bool(args.dry_run),
+            prepare_only=bool(getattr(args, "prepare_only", False)),
         )
     except Exception as exc:
         _emit(
@@ -355,7 +356,7 @@ def _cmd_exec(args: argparse.Namespace) -> int:
             "projection_stale_reasons": list(admissibility_projection.get("stale_reasons") or []),
         }
     )
-    if args.dry_run:
+    if args.dry_run or bool(getattr(args, "prepare_only", False)):
         _emit(payload, json_only=args.json_only)
         return 0
     return 0
@@ -735,6 +736,11 @@ def main() -> int:
     p_exec.add_argument("--config", default="")
     p_exec.add_argument("--base-instructions-file", default="")
     p_exec.add_argument("--dry-run", action="store_true")
+    p_exec.add_argument(
+        "--prepare-only",
+        action="store_true",
+        help="materialize launcher-owned continuity/bootstrap proof without delegating to the downstream codex binary",
+    )
     p_exec.add_argument("--json-only", action="store_true")
     p_exec.add_argument("codex_args", nargs=argparse.REMAINDER)
     p_exec.set_defaults(func=_cmd_exec)

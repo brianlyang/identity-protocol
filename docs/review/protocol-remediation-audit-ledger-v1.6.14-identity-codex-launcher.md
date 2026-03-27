@@ -134,10 +134,11 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
 19. Installed launchers land only under `${CODEX_HOME}/bin/`.
 20. Workspace `scripts/codex_native_chat/` remains compatibility bridge only until protocol-owned launcher assets land.
 21. Launcher ownership of `model_instructions_file` and `project_doc_fallback_filenames` injection remains explicit and fail-close.
-22. Launcher ownership now also includes the first governed `v1.6.16` startup-consumer bridge:
-    - launcher exec/startup must consume the protocol-owned continuity bundle rather than re-derive continuity semantics;
-    - when the bundle recommends `consume_governed_reentry_brief`, launcher exec/startup must call the canonical pack-local `run_identity_context_continuity_guard.sh post-recover --json-only` producer path before handing off to Codex;
-    - when startup readiness is already green but receipt-family proof is only recoverably stale (`migration_handoff` missing or joinable lineage drift), launcher exec/startup must repair via the canonical `run_identity_context_continuity_guard.sh pre-migrate --json-only` producer path before running `post-recover`, which closes the short-command resume gap without adding a second operator command family;
+22. Launcher ownership now also includes the first governed `v1.6.16` startup-consumer bridge, refined so launcher-owned preparation stays distinct from downstream Codex execution:
+    - launcher-owned prelaunch preparation must consume the protocol-owned continuity bundle rather than re-derive continuity semantics;
+    - when the bundle recommends `consume_governed_reentry_brief`, launcher-owned prelaunch preparation must call the canonical pack-local `run_identity_context_continuity_guard.sh post-recover --json-only` producer path before any downstream Codex delegation;
+    - when startup readiness is already green but receipt-family proof is only recoverably stale (`migration_handoff` missing or joinable lineage drift), that same launcher-owned prelaunch preparation must repair via the canonical `run_identity_context_continuity_guard.sh pre-migrate --json-only` producer path before running `post-recover`, which closes the short-command resume gap without adding a second operator command family;
+    - launcher may expose a governed `prepare-only` execution mode that materializes continuity/bootstrap proof and returns structured launcher payload without claiming downstream Codex execution;
     - audit must fail any implementation that claims launcher-owned continuity startup consumption without the governed runtime `instance_reentry_consumption_receipt`.
 
 ## 5) Audit verdict rules (frozen)
@@ -161,7 +162,7 @@ Scope: protocol review ledger for identity-bound Codex launcher/install/startup 
    - canonical installed `identity-codex` and `id-<identity-id>` shims,
    - protocol-owned command-bundle output from `identity-codex commands --identity-id <identity-id>` and `id-<identity-id> commands`,
    - launcher probe lane `scripts/ci/run_identity_codex_launcher_probes_ci.sh`,
-   - launcher-owned continuity bind proof inside that same launcher probe lane, proving `pre-migrate -> launcher exec/startup -> reentry-consumption-receipt` through the protocol-owned launcher path rather than through ad hoc manual post-recover calls,
+   - launcher-owned continuity bind proof inside that same launcher probe lane, proving `pre-migrate -> launcher prepare-only prelaunch materialization -> reentry-consumption-receipt` through the protocol-owned launcher path rather than through ad hoc manual post-recover calls or accidental downstream-Codex coupling,
    - convergence-entry probe lane `scripts/ci/run_identity_codex_launcher_convergence_probes_ci.sh`,
    - status-profile boundary probe lane `scripts/ci/run_repair_contract_backfill_status_profile_probes_ci.sh`,
    - active-runtime launcher migration closure checker `scripts/check_identity_codex_launcher_migration_closure.py`,

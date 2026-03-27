@@ -1385,6 +1385,7 @@ def exec_identity_codex(
     explicit_config: str = "",
     explicit_base_instructions_file: str = "",
     dry_run: bool = False,
+    prepare_only: bool = False,
 ) -> dict[str, Any]:
     if has_forbidden_runtime_override(codex_args):
         raise RuntimeError(
@@ -1467,8 +1468,15 @@ def exec_identity_codex(
         "launcher_reentry_binding": launcher_reentry_binding,
         "command": cmd,
         "command_string": " ".join(shlex.quote(part) for part in cmd),
+        "launcher_prepare_only": bool(prepare_only),
+        "downstream_exec_status": (
+            STATUS_SKIPPED_NOT_REQUIRED if prepare_only else STATUS_PASS_REQUIRED
+        ),
+        "downstream_exec_action": (
+            "skipped_prepare_only" if prepare_only else "delegated_to_codex_binary"
+        ),
     }
-    if dry_run:
+    if dry_run or prepare_only:
         return result
     os.execvpe(cmd[0], cmd, env)
     raise RuntimeError("os.execvpe returned unexpectedly")

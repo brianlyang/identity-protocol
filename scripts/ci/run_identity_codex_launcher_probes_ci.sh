@@ -964,6 +964,8 @@ IDENTITY_CATALOG="${PROBE_REPAIR_CATALOG_PATH}" \
   --identity-id "${IDENTITY_ID}" \
   --catalog "${PROBE_REPAIR_CATALOG_PATH}" \
   --session-id "${SESSION_ID}" \
+  --prepare-only \
+  --json-only \
   -- \
   --version > "${PROBE_REPAIR_EXEC_STDOUT}"
 
@@ -978,14 +980,22 @@ import sys
 from pathlib import Path
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-stdout = Path(sys.argv[2]).read_text(encoding="utf-8").strip()
+prepare = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
 assert payload["identity_context_continuity_bundle_status"] == "PASS_REQUIRED", payload
 assert payload["startup_reentry_readiness_status"] == "PASS_REQUIRED", payload
 assert payload["live_reentry_consumption_proof_status"] == "PASS_REQUIRED", payload
 assert payload["receipt_family_observation_status"] == "PASS_REQUIRED", payload
-assert stdout, "launcher repair exec did not produce codex output"
+assert prepare["status"] == "PASS_REQUIRED", prepare
+assert prepare["launcher_prepare_only"] is True, prepare
+assert prepare["downstream_exec_status"] == "SKIPPED_NOT_REQUIRED", prepare
+assert prepare["downstream_exec_action"] == "skipped_prepare_only", prepare
+assert prepare["launcher_reentry_binding"]["launcher_reentry_binding_status"] == "PASS_REQUIRED", prepare
+assert prepare["launcher_reentry_binding"]["bind_action"] == "post_recover_applied", prepare
+assert any("model_instructions_file" in part for part in (prepare.get("command") or [])), prepare
+assert any("project_doc_fallback_filenames" in part for part in (prepare.get("command") or [])), prepare
 print("launcher_exec_continuity_repair_status=PASS_REQUIRED")
 PY
+
 
 echo "[RUN] render continuity bundle before launcher exec (expect startup ready; receipt/live proof may already be green on hydrated source packs)"
 python3 "${REPO_ROOT}/scripts/render_identity_context_continuity_bundle.py" \
@@ -1007,7 +1017,7 @@ assert payload["live_reentry_consumption_proof_status"] in {"FAIL_REQUIRED", "PA
 print("launcher_exec_continuity_preflight_status=PASS_REQUIRED")
 PY
 
-echo "[RUN] actual launcher exec consumes governed reentry brief before codex startup"
+echo "[RUN] actual launcher prelaunch materialization consumes governed reentry brief before downstream codex startup"
 CODEX_HOME="${PROBE_EXEC_CODEX_HOME}" \
 IDENTITY_PROTOCOL_HOME="${REPO_ROOT}" \
 IDENTITY_CATALOG="${PROBE_CATALOG_PATH}" \
@@ -1015,10 +1025,12 @@ IDENTITY_CATALOG="${PROBE_CATALOG_PATH}" \
   --identity-id "${IDENTITY_ID}" \
   --catalog "${PROBE_CATALOG_PATH}" \
   --session-id "${SESSION_ID}" \
+  --prepare-only \
+  --json-only \
   -- \
   --version > "${PROBE_EXEC_STDOUT}"
 
-echo "[RUN] render continuity bundle after launcher exec (expect live proof green)"
+echo "[RUN] render continuity bundle after launcher prelaunch materialization (expect live proof green)"
 python3 "${REPO_ROOT}/scripts/render_identity_context_continuity_bundle.py" \
   --identity-id "${IDENTITY_ID}" \
   --catalog "${PROBE_CATALOG_PATH}" \
@@ -1030,15 +1042,25 @@ import sys
 from pathlib import Path
 
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-stdout = Path(sys.argv[2]).read_text(encoding="utf-8").strip()
+prepare = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
 assert payload["identity_context_continuity_bundle_status"] == "PASS_REQUIRED", payload
 assert payload["recommended_launcher_bind_mode"] == "consume_governed_reentry_brief", payload
 assert payload["startup_reentry_readiness_status"] == "PASS_REQUIRED", payload
 assert payload["live_reentry_consumption_proof_status"] == "PASS_REQUIRED", payload
 assert payload["receipt_family_observation_status"] == "PASS_REQUIRED", payload
-assert stdout, "launcher exec did not produce codex output"
+assert prepare["status"] == "PASS_REQUIRED", prepare
+assert prepare["launcher_prepare_only"] is True, prepare
+assert prepare["downstream_exec_status"] == "SKIPPED_NOT_REQUIRED", prepare
+assert prepare["downstream_exec_action"] == "skipped_prepare_only", prepare
+assert prepare["launcher_reentry_binding"]["launcher_reentry_binding_status"] == "PASS_REQUIRED", prepare
+assert prepare["launcher_reentry_binding"]["bind_action"] == "post_recover_applied", prepare
+assert prepare["launcher_reentry_binding"]["live_reentry_consumption_proof_status_after"] == "PASS_REQUIRED", prepare
+assert prepare["launcher_reentry_binding"]["receipt_family_observation_status_after"] == "PASS_REQUIRED", prepare
+assert any("model_instructions_file" in part for part in (prepare.get("command") or [])), prepare
+assert any("project_doc_fallback_filenames" in part for part in (prepare.get("command") or [])), prepare
 print("launcher_exec_continuity_binding_status=PASS_REQUIRED")
 PY
+
 
 echo "[RUN] ${BIN_DIR}/identity-codex forbidden override negative probe"
 if "${BIN_DIR}/identity-codex" \
