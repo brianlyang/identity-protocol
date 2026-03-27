@@ -23,6 +23,21 @@ def canonical_blocker_types_list() -> list[str]:
     return list(CANONICAL_BLOCKER_TYPES)
 
 
+def compatibility_overlay_allowed_for_task(
+    task: dict[str, Any],
+    *,
+    identity_row: dict[str, Any] | None = None,
+) -> bool:
+    row = identity_row if isinstance(identity_row, dict) else {}
+    profile = str(row.get("profile", "")).strip().lower()
+    runtime_mode = str(row.get("runtime_mode", "")).strip().lower()
+    if profile == "fixture" or runtime_mode == "demo_only":
+        return True
+    scaffold_profile = str(task.get("scaffold_profile", "")).strip().lower()
+    scaffold_generation_mode = str(task.get("scaffold_generation_mode", "")).strip().lower()
+    return scaffold_profile == "legacy-commerce-overlay" or scaffold_generation_mode == "explicit_opt_in"
+
+
 def build_blocker_alias_map(
     *raw_maps: Any,
     include_default_legacy_aliases: bool = False,
@@ -93,6 +108,8 @@ def normalize_task_blocker_surfaces(
     *,
     sync_human_collab_blockers_if_present: bool = True,
     include_default_legacy_aliases: bool = True,
+    prune_disallowed_legacy_alias_bridge: bool = False,
+    identity_row: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     taxonomy = task.get("blocker_taxonomy_contract")
     collab = task.get("collaboration_trigger_contract")
@@ -130,6 +147,18 @@ def normalize_task_blocker_surfaces(
     }
     if not applicable:
         return report
+
+    compatibility_overlay_allowed = compatibility_overlay_allowed_for_task(task, identity_row=identity_row)
+    report["compatibility_overlay_allowed"] = compatibility_overlay_allowed
+    report["legacy_alias_bridge_pruned"] = []
+
+    if prune_disallowed_legacy_alias_bridge and not compatibility_overlay_allowed:
+        if isinstance(taxonomy, dict) and "legacy_alias_bridge" in taxonomy:
+            taxonomy.pop("legacy_alias_bridge", None)
+            report["legacy_alias_bridge_pruned"].append("blocker_taxonomy_contract.legacy_alias_bridge")
+        if isinstance(collab, dict) and "legacy_alias_bridge" in collab:
+            collab.pop("legacy_alias_bridge", None)
+            report["legacy_alias_bridge_pruned"].append("collaboration_trigger_contract.legacy_alias_bridge")
 
     def _normalize_surface(
         node: Any,
