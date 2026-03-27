@@ -594,6 +594,18 @@ Identity-discovery law is not a soft prose bundle.
 
 ---
 
+## Root agent-handoff completeness discipline
+
+`AGENT_HANDOFF_CONTRACT.md` freezes governed handoff law as root-domain contract law rather than informal collaboration guidance.
+
+1. required role, payload, anchor, handoff-proof, handoff-limit, and collapse rows must remain explicit as separate machine-readable families;
+2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+4. runtime or validator code must not finalize agent-handoff legality while missing or unexpected row identities remain known only internally;
+5. fail-close machine output must preserve missing/unexpected role, payload, anchor, proof, limit, and collapse row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
+
+---
+
 ## Root error-terminality completeness discipline
 
 Error-terminality law is not a soft prose bundle.

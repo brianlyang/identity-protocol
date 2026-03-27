@@ -24,6 +24,28 @@ contract_required_markers:
   - '## Handoff-proof limits'
   - '## Non-compliant handoff collapses'
   - 'This file remains the authoritative root-domain contract for governed agent-handoff law.'
+  - 'Governed handoff law must also remain machine-readable as separate role, payload, anchor, handoff-proof, handoff-limit, and collapse row families rather than one narrative coordination claim.'
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Agent-handoff row-family completeness must stay explicit'
+      - 'Required role, payload, anchor, handoff-proof, handoff-limit, and collapse families must remain explicit as separate machine-readable row families.'
+      - 'The machine world must not finalize handoff legality while required role, payload, anchor, proof, limit, or collapse identity drift remains known only internally.'
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root agent-handoff completeness discipline'
+      - '`AGENT_HANDOFF_CONTRACT.md` freezes governed handoff law as root-domain contract law rather than informal collaboration guidance.'
+      - '1. required role, payload, anchor, handoff-proof, handoff-limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root agent-handoff completeness boundary'
+      - '1. Agent-handoff law must remain machine-readable as separate role, payload, anchor, handoff-proof, handoff-limit, and collapse row families.'
+      - '4. Protocol legality must not finalize agent-handoff legality while missing or unexpected handoff row identities remain known only inside validator logic.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime agent-handoff consumption boundary'
+      - '1. Runtime consumes agent-handoff law as separate role, payload, anchor, handoff-proof, handoff-limit, and collapse row families rather than as undifferentiated collaboration prose.'
+      - '4. Runtime must not finalize agent-handoff legality while missing or unexpected handoff row identities remain known only inside validator machinery.'
 required_role_rows:
   - order: 1
     role_id: master_orchestrator

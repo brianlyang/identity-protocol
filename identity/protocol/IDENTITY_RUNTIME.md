@@ -242,6 +242,14 @@ implicit.
 4. Runtime must not finalize identity-discovery legality while missing or unexpected row identities remain known only inside validator machinery.
 5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
 
+## Runtime agent-handoff consumption boundary
+
+1. Runtime consumes agent-handoff law as separate role, payload, anchor, handoff-proof, handoff-limit, and collapse row families rather than as undifferentiated collaboration prose.
+2. Runtime must keep expected row-family total and emitted row-family total congruent under machine-readable coverage completeness rather than relying on aggregate green shorthand.
+3. Runtime must also keep expected row identity set and emitted row identity set for each agent-handoff family explicit rather than collapsing role, payload, anchor, proof, limit, or collapse drift into summary-only counts.
+4. Runtime must not finalize agent-handoff legality while missing or unexpected handoff row identities remain known only inside validator machinery.
+5. Runtime fail-close output must preserve missing/unexpected role, payload, anchor, proof, limit, and collapse row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
+
 ## Runtime error-terminality consumption boundary
 
 1. Runtime consumes error-terminality law as separate error-class, differentiation, proof, limit, and collapse row families rather than as undifferentiated terminality prose.

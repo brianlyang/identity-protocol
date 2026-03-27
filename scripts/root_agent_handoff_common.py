@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -37,8 +37,20 @@ class HandoffProofRow:
     proof_role: str
 
 
+@dataclass(frozen=True)
+class AnchorCheck:
+    rel_path: str
+    required_markers: tuple[str, ...] = field(default_factory=tuple)
+
+
 def _norm_str(value: Any) -> str:
     return str(value or "").strip().replace("\\", "/")
+
+
+def _as_str_tuple(value: Any) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        return ()
+    return tuple(token for token in (str(item or "").strip() for item in value) if token)
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -57,6 +69,22 @@ def load_root_agent_handoff(repo_root: Path) -> tuple[dict[str, Any], Path, Path
     if not active_path.exists():
         return {}, entry_path, active_path, "active_agent_handoff_mapping_missing"
     return _load_yaml(active_path), entry_path, active_path, ""
+
+
+def anchor_checks_from_doc(doc: Mapping[str, Any]) -> tuple[AnchorCheck, ...]:
+    rows = doc.get("anchor_checks")
+    if not isinstance(rows, list):
+        return ()
+    out: list[AnchorCheck] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        rel_path = _norm_str(row.get("rel_path"))
+        required_markers = _as_str_tuple(row.get("required_markers"))
+        if not rel_path or not required_markers:
+            continue
+        out.append(AnchorCheck(rel_path=rel_path, required_markers=required_markers))
+    return tuple(out)
 
 
 def role_rows_from_doc(doc: Mapping[str, Any]) -> tuple[RoleRow, ...]:

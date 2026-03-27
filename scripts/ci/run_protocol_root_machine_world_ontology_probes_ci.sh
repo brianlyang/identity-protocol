@@ -6,11 +6,12 @@ ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/protocol-root-machine-world-ontology-ci.XXXXXX")"
 trap 'rm -rf "${TMP_ROOT}"' EXIT
 
+# shellcheck source=./probe_repo_mirror_common.sh
+source "${SCRIPT_DIR}/probe_repo_mirror_common.sh"
+
 mirror_repo() {
   local dst="$1"
-  mkdir -p "${dst}"
-  cp -R "${ROOT}/identity" "${dst}/"
-  cp -R "${ROOT}/scripts" "${dst}/"
+  probe_mirror_repo "${ROOT}" "${dst}"
 }
 
 PASS_JSON="${TMP_ROOT}/pass.json"

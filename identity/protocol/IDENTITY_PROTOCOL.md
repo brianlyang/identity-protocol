@@ -288,6 +288,14 @@ implicit.
 4. Protocol legality must not finalize identity-discovery truth while missing or unexpected row identities remain known only inside validator logic.
 5. Fail-close identity-discovery output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
 
+## Root agent-handoff completeness boundary
+
+1. Agent-handoff law must remain machine-readable as separate role, payload, anchor, handoff-proof, handoff-limit, and collapse row families.
+2. Aggregate row-family counts are insufficient on their own; expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness.
+3. Expected row identity set and emitted row identity set for each agent-handoff family must also remain explicit; role, payload, anchor, proof, limit, or collapse drift may not be collapsed into summary-only counts.
+4. Protocol legality must not finalize agent-handoff legality while missing or unexpected handoff row identities remain known only inside validator logic.
+5. Fail-close agent-handoff output must preserve missing/unexpected role, payload, anchor, proof, limit, and collapse row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+
 ## Root error-terminality completeness boundary
 
 1. Error-terminality law must remain machine-readable as separate error-class, differentiation, proof, limit, and collapse row families.

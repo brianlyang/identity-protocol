@@ -9,6 +9,7 @@ from repo_root_resolution_common import resolve_repo_root
 from root_agent_handoff_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
+    anchor_checks_from_doc,
     anchor_rows_from_doc,
     collapse_rows_from_doc,
     handoff_limit_rows_from_doc,
@@ -163,7 +164,28 @@ EXPECTED_AUTHORITY_MARKERS = (
     "Current-turn handoff legality must still resolve from machine-consumed enforcement surfaces",
 )
 EXPECTED_ROUTING_MARKERS = EXPECTED_AUTHORITY_MARKERS
-EXPECTED_README_MARKER = "`AGENT_HANDOFF_CONTRACT.md`"
+EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
+    "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "### Agent-handoff row-family completeness must stay explicit",
+        "Required role, payload, anchor, handoff-proof, handoff-limit, and collapse families must remain explicit as separate machine-readable row families.",
+        "The machine world must not finalize handoff legality while required role, payload, anchor, proof, limit, or collapse identity drift remains known only internally.",
+    ),
+    "identity/protocol/README.md": (
+        "## Root agent-handoff completeness discipline",
+        "`AGENT_HANDOFF_CONTRACT.md` freezes governed handoff law as root-domain contract law rather than informal collaboration guidance.",
+        "1. required role, payload, anchor, handoff-proof, handoff-limit, and collapse rows must remain explicit as separate machine-readable families;",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL.md": (
+        "## Root agent-handoff completeness boundary",
+        "1. Agent-handoff law must remain machine-readable as separate role, payload, anchor, handoff-proof, handoff-limit, and collapse row families.",
+        "4. Protocol legality must not finalize agent-handoff legality while missing or unexpected handoff row identities remain known only inside validator logic.",
+    ),
+    "identity/protocol/IDENTITY_RUNTIME.md": (
+        "## Runtime agent-handoff consumption boundary",
+        "1. Runtime consumes agent-handoff law as separate role, payload, anchor, handoff-proof, handoff-limit, and collapse row families rather than as undifferentiated collaboration prose.",
+        "4. Runtime must not finalize agent-handoff legality while missing or unexpected handoff row identities remain known only inside validator machinery.",
+    ),
+}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -177,6 +199,10 @@ def _contiguous_orders(values: list[int]) -> bool:
 def _entry_marker_missing(required_markers: tuple[str, ...], expected_markers: tuple[str, ...]) -> list[str]:
     marker_set = {str(item or "").strip() for item in required_markers if str(item or "").strip()}
     return [marker for marker in expected_markers if marker not in marker_set]
+
+
+def _anchor_check_marker_map(anchor_checks) -> dict[str, tuple[str, ...]]:
+    return {row.rel_path: tuple(row.required_markers) for row in anchor_checks}
 
 
 def _validate_rows(
@@ -248,6 +274,7 @@ def main() -> int:
     handoff_violations: list[dict[str, Any]] = []
     integration_violations: list[dict[str, Any]] = []
     contract_marker_violations: list[dict[str, Any]] = []
+    root_doc_anchor_violations: list[dict[str, Any]] = []
     error_code = ""
 
     if handoff_alias_error:
@@ -276,6 +303,7 @@ def main() -> int:
     handoff_proof_rows = handoff_proof_rows_from_doc(handoff_doc) if handoff_doc else ()
     handoff_limit_rows = handoff_limit_rows_from_doc(handoff_doc) if handoff_doc else ()
     collapse_rows = collapse_rows_from_doc(handoff_doc) if handoff_doc else ()
+    root_doc_anchor_checks = anchor_checks_from_doc(handoff_doc) if handoff_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     authority_anchors = authority_anchor_checks_from_doc(authority_doc) if authority_doc else ()
@@ -370,6 +398,30 @@ def main() -> int:
         if not handoff_doc.get("contract_required_markers"):
             stale_reasons.append("root_agent_handoff_contract_required_markers_missing")
             error_code = ERR_REGISTRY
+        if not root_doc_anchor_checks:
+            stale_reasons.append("root_agent_handoff_anchor_checks_missing")
+            error_code = ERR_REGISTRY
+
+        actual_anchor_checks = _anchor_check_marker_map(root_doc_anchor_checks)
+        missing_anchor_rel_paths = sorted(set(EXPECTED_ROOT_DOC_ANCHOR_CHECKS) - set(actual_anchor_checks))
+        extra_anchor_rel_paths = sorted(set(actual_anchor_checks) - set(EXPECTED_ROOT_DOC_ANCHOR_CHECKS))
+        if missing_anchor_rel_paths:
+            stale_reasons.append(
+                "root_agent_handoff_anchor_check_rel_paths_missing:" + ",".join(missing_anchor_rel_paths)
+            )
+            error_code = ERR_REGISTRY
+        if extra_anchor_rel_paths:
+            stale_reasons.append(
+                "root_agent_handoff_anchor_check_rel_paths_extra:" + ",".join(extra_anchor_rel_paths)
+            )
+            error_code = ERR_REGISTRY
+        for rel_path, expected_markers in EXPECTED_ROOT_DOC_ANCHOR_CHECKS.items():
+            actual_markers = actual_anchor_checks.get(rel_path)
+            if actual_markers is None:
+                continue
+            if tuple(actual_markers) != tuple(expected_markers):
+                stale_reasons.append(f"root_agent_handoff_anchor_check_markers_invalid:{rel_path}")
+                error_code = ERR_REGISTRY
 
         for field in ("contract_file", "philosophy_anchor_file", "validator_script", "probe_script", "common_script"):
             rel_path = str(handoff_doc.get(field) or "").strip()
@@ -453,18 +505,25 @@ def main() -> int:
             for row in payload_rows + anchor_rows + handoff_limit_rows + collapse_rows:
                 for marker in find_missing_markers(contract_text, (row.contract_phrase,)):
                     contract_marker_violations.append({"field": "contract_file", "reason": "contract_phrase_missing", "marker": marker})
-
-        readme_path = repo_root / "identity/protocol/README.md"
-        if not readme_path.exists():
-            integration_violations.append({"field": "README", "reason": "root_readme_missing"})
-        else:
-            readme_text = readme_path.read_text(encoding="utf-8", errors="ignore")
-            if EXPECTED_README_MARKER not in readme_text:
-                integration_violations.append(
+        for check in root_doc_anchor_checks:
+            path = (repo_root / check.rel_path).resolve()
+            if not path.exists() or not path.is_file():
+                root_doc_anchor_violations.append(
                     {
-                        "field": "README",
-                        "reason": "root_readme_missing_contract_reference",
-                        "marker": EXPECTED_README_MARKER,
+                        "field": "root_doc_anchor_checks",
+                        "rel_path": check.rel_path,
+                        "reason": "anchor_file_missing",
+                    }
+                )
+                continue
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            for marker in find_missing_markers(text, check.required_markers):
+                root_doc_anchor_violations.append(
+                    {
+                        "field": "root_doc_anchor_checks",
+                        "rel_path": check.rel_path,
+                        "reason": "required_marker_missing",
+                        "marker": marker,
                     }
                 )
 
@@ -609,22 +668,32 @@ def main() -> int:
 
     if not error_code and structure_violations:
         error_code = ERR_STRUCTURE
-    if not error_code and (handoff_violations or integration_violations or contract_marker_violations):
+    if not error_code and (handoff_violations or integration_violations or contract_marker_violations or root_doc_anchor_violations):
         error_code = ERR_HANDOFF
 
     status = (
         STATUS_PASS_REQUIRED
-        if not any((stale_reasons, structure_violations, handoff_violations, integration_violations, contract_marker_violations))
+        if not any(
+            (
+                stale_reasons,
+                structure_violations,
+                handoff_violations,
+                integration_violations,
+                contract_marker_violations,
+                root_doc_anchor_violations,
+            )
+        )
         else STATUS_FAIL_REQUIRED
     )
     rc = 0 if status == STATUS_PASS_REQUIRED else 1
     summary_markers = sorted(
         {
             row.get("marker", "")
-            for row in handoff_violations + integration_violations + contract_marker_violations
+            for row in handoff_violations + integration_violations + contract_marker_violations + root_doc_anchor_violations
             if row.get("marker")
         }
     )
+    root_doc_anchor_status = STATUS_PASS_REQUIRED if not root_doc_anchor_violations else STATUS_FAIL_REQUIRED
 
     payload = {
         STATUS_KEY: status,
@@ -646,6 +715,8 @@ def main() -> int:
         "handoff_proof_count": len(handoff_proof_rows),
         "handoff_limit_count": len(handoff_limit_rows),
         "collapse_count": len(collapse_rows),
+        "root_doc_anchor_check_count": len(root_doc_anchor_checks),
+        "root_doc_anchor_status": root_doc_anchor_status,
         "agent_handoff_row_family_count": len(row_family_projection_rows),
         "agent_handoff_row_coverage_status": agent_handoff_row_coverage_status,
         "agent_handoff_row_identity_projection_status": agent_handoff_row_identity_projection_status,
@@ -683,6 +754,7 @@ def main() -> int:
         "handoff_violations": handoff_violations,
         "integration_violations": integration_violations,
         "contract_marker_violations": contract_marker_violations,
+        "root_doc_anchor_violations": root_doc_anchor_violations,
         "summary_markers": summary_markers,
     }
     _emit(payload, json_only=args.json_only)

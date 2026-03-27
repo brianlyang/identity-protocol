@@ -6,11 +6,12 @@ ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/protocol-root-agent-handoff-ci.XXXXXX")"
 trap 'rm -rf "${TMP_ROOT}"' EXIT
 
+# shellcheck source=./probe_repo_mirror_common.sh
+source "${SCRIPT_DIR}/probe_repo_mirror_common.sh"
+
 mirror_repo() {
   local dst="$1"
-  mkdir -p "${dst}"
-  cp -R "${ROOT}/identity" "${dst}/"
-  cp -R "${ROOT}/scripts" "${dst}/"
+  probe_mirror_repo "${ROOT}" "${dst}"
 }
 
 PASS_JSON="${TMP_ROOT}/pass.json"
@@ -31,6 +32,8 @@ assert payload["anchor_count"] == 5, payload
 assert payload["handoff_proof_count"] == 5, payload
 assert payload["handoff_limit_count"] == 5, payload
 assert payload["collapse_count"] == 5, payload
+assert payload["root_doc_anchor_check_count"] == 4, payload
+assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["agent_handoff_row_family_count"] == 6, payload
 assert payload["agent_handoff_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["agent_handoff_row_identity_projection_status"] == "PASS_REQUIRED", payload
@@ -253,6 +256,45 @@ assert payload["error_code"] == "IP-RAH-003", payload
 assert any(
     row["field"] == "root_corpus_question_routing" and row["reason"] == "routing_projection_question_classes_mismatch"
     for row in payload["integration_violations"]
+), payload
+PY
+
+DOC_ANCHOR_REPO="${TMP_ROOT}/doc-anchor-drift-repo"
+mirror_repo "${DOC_ANCHOR_REPO}"
+python3 - <<'PY' "${DOC_ANCHOR_REPO}/identity/protocol/IDENTITY_PROTOCOL.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "## Root agent-handoff completeness boundary"
+new = "## Root agent-handoff boundary"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+DOC_ANCHOR_JSON="${TMP_ROOT}/doc-anchor-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_agent_handoff.py" \
+  --repo-root "${DOC_ANCHOR_REPO}" \
+  --json-only >"${DOC_ANCHOR_JSON}"; then
+  echo "[FAIL] root agent-handoff validator unexpectedly passed root-doc anchor drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${DOC_ANCHOR_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_agent_handoff_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RAH-003", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["rel_path"] == "identity/protocol/IDENTITY_PROTOCOL.md"
+    and row["reason"] == "required_marker_missing"
+    and row["marker"] == "## Root agent-handoff completeness boundary"
+    for row in payload["root_doc_anchor_violations"]
 ), payload
 PY
 

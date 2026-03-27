@@ -93,6 +93,8 @@ from narrative goodwill, memory, or local convenience.
 Sample or self-test material may strengthen validator confidence, but it must
 not silently replace current-run production handoff proof.
 
+Governed handoff law must also remain machine-readable as separate role, payload, anchor, handoff-proof, handoff-limit, and collapse row families rather than one narrative coordination claim.
+
 ## Two governed handoff roles
 
 ### 1. Master orchestration role
