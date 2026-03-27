@@ -8,6 +8,9 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from protocol_feedback_sidecar_projection_common import (
+    build_protocol_feedback_sidecar_passthrough_projection,
+)
 from runtime_temp_path_common import runtime_temp_dir
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
@@ -62,25 +65,7 @@ def _parse_json_payload(raw: str) -> dict[str, Any]:
 
 
 def _passthrough_digest(payload: dict[str, Any]) -> str:
-    stable = {
-        "sidecar_contract_status": payload.get("sidecar_contract_status"),
-        "sidecar_error_code": payload.get("sidecar_error_code"),
-        "required_contract": payload.get("required_contract"),
-        "auto_required_signal": payload.get("auto_required_signal"),
-        "escalation_required": payload.get("escalation_required"),
-        "escalation_decision": payload.get("escalation_decision"),
-        "blocking_error_codes": payload.get("blocking_error_codes", []),
-        "track_a": {
-            "split_status": ((payload.get("track_a") or {}).get("split_status") if isinstance(payload.get("track_a"), dict) else None),
-            "split_error_code": ((payload.get("track_a") or {}).get("split_error_code") if isinstance(payload.get("track_a"), dict) else None),
-            "split_receipt_path": ((payload.get("track_a") or {}).get("split_receipt_path") if isinstance(payload.get("track_a"), dict) else None),
-        },
-        "track_b": {
-            "semantic_routing_status": ((payload.get("track_b") or {}).get("semantic_routing_status") if isinstance(payload.get("track_b"), dict) else None),
-            "vendor_namespace_status": ((payload.get("track_b") or {}).get("vendor_namespace_status") if isinstance(payload.get("track_b"), dict) else None),
-            "protocol_feedback_reply_channel_status": ((payload.get("track_b") or {}).get("protocol_feedback_reply_channel_status") if isinstance(payload.get("track_b"), dict) else None),
-        },
-    }
+    stable = build_protocol_feedback_sidecar_passthrough_projection(payload)
     return hashlib.sha256(json.dumps(stable, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
 
 

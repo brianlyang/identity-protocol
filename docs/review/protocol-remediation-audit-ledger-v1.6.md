@@ -322,6 +322,7 @@ Acceptance target:
 
 1. sidecar root/tmp parity pass.
 2. sidecar `track_b.semantic_*` and `track_b.vendor_namespace_*` equivalent to direct validators with identical args.
+3. parity hash must consume the authority-visible `track_a` aggregate/writeback/post-execution/post-experience-writeback projection (`*_selected_path`, `*_selection_mode`, `*_selected_authority_class`, `*_pointer_resolution_mode`, `*_pointer_path`) plus `track_a_stale_reasons`, so root/tmp parity cannot false-green on a split-only digest once sidecar aggregation strengthens.
 
 ### FIX16-007 - release-plane cloud evidence contract (`ASB16-RQ-006`)
 

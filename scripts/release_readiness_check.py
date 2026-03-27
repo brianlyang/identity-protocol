@@ -130,6 +130,8 @@ POST_CLOSURE_GOVERNANCE_SCRIPTS = [
     ["bash", "scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh"],
     ["bash", "scripts/ci/run_contract_bootstrap_emitter_probes_ci.sh"],
     ["bash", "scripts/ci/run_post_execution_report_repair_probes_ci.sh"],
+    ["bash", "scripts/ci/run_protocol_feedback_sidecar_contract_probes_ci.sh"],
+    ["bash", "scripts/ci/run_sidecar_cwd_parity_probes_ci.sh"],
     ["bash", "scripts/ci/run_execution_report_selection_convergence_probes_ci.sh"],
     ["bash", "scripts/ci/run_active_execution_report_pointer_locality_probes_ci.sh"],
     ["bash", "scripts/ci/run_strict_live_active_pointer_locality_probes_ci.sh"],
