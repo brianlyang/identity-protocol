@@ -31,6 +31,23 @@ assert payload["anchor_count"] == 5, payload
 assert payload["handoff_proof_count"] == 5, payload
 assert payload["handoff_limit_count"] == 5, payload
 assert payload["collapse_count"] == 5, payload
+assert payload["agent_handoff_row_family_count"] == 6, payload
+assert payload["agent_handoff_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["agent_handoff_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["role_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["payload_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["anchor_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["handoff_proof_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["handoff_limit_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["collapse_row_coverage_status"] == "PASS_REQUIRED", payload
+assert [row["family_id"] for row in payload["row_family_projection_rows"]] == [
+    "role_rows",
+    "payload_rows",
+    "anchor_rows",
+    "handoff_proof_rows",
+    "handoff_limit_rows",
+    "collapse_rows",
+], payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -66,9 +83,18 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_agent_handoff_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RAH-002", payload
+assert payload["agent_handoff_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["agent_handoff_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["handoff_proof_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["handoff_proof_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["reason"] == "missing_expected_rows" and "validation_track_separation_proof" in row.get("row_ids", [])
     for row in payload["structure_violations"]
+), payload
+assert any(
+    row["family_id"] == "handoff_proof_rows"
+    and "validation_track_separation_proof" in row["missing_ids"]
+    for row in payload["row_family_projection_rows"]
 ), payload
 PY
 
@@ -103,9 +129,18 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_agent_handoff_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RAH-002", payload
+assert payload["agent_handoff_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["agent_handoff_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["role_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["role_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["reason"] == "missing_expected_rows" and "delegated_sub_agent_execution" in row.get("row_ids", [])
     for row in payload["structure_violations"]
+), payload
+assert any(
+    row["family_id"] == "role_rows"
+    and "delegated_sub_agent_execution" in row["missing_ids"]
+    for row in payload["row_family_projection_rows"]
 ), payload
 PY
 

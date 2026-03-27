@@ -25,6 +25,7 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
+from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 
 STATUS_KEY = "protocol_root_agent_handoff_status"
 ERR_REGISTRY = "IP-RAH-001"
@@ -281,6 +282,59 @@ def main() -> int:
     authority_projections = entry_authority_projections_from_doc(authority_doc) if authority_doc else ()
     routing_anchors = question_routing_anchor_checks_from_doc(routing_doc) if routing_doc else ()
     routing_projections = entry_question_projections_from_doc(routing_doc) if routing_doc else ()
+    row_family_projection_rows = [
+        project_row_family(
+            family_id="role_rows",
+            member_id_key="role_id",
+            actual_rows=role_rows,
+            expected_rows=EXPECTED_ROLE_ROWS,
+            id_attr="role_id",
+        ),
+        project_row_family(
+            family_id="payload_rows",
+            member_id_key="payload_field_id",
+            actual_rows=payload_rows,
+            expected_rows=EXPECTED_PAYLOAD_ROWS,
+            id_attr="row_id",
+        ),
+        project_row_family(
+            family_id="anchor_rows",
+            member_id_key="anchor_id",
+            actual_rows=anchor_rows,
+            expected_rows=EXPECTED_ANCHOR_ROWS,
+            id_attr="row_id",
+        ),
+        project_row_family(
+            family_id="handoff_proof_rows",
+            member_id_key="proof_id",
+            actual_rows=handoff_proof_rows,
+            expected_rows=EXPECTED_HANDOFF_PROOF_ROWS,
+            id_attr="proof_id",
+        ),
+        project_row_family(
+            family_id="handoff_limit_rows",
+            member_id_key="limit_id",
+            actual_rows=handoff_limit_rows,
+            expected_rows=EXPECTED_HANDOFF_LIMIT_ROWS,
+            id_attr="row_id",
+        ),
+        project_row_family(
+            family_id="collapse_rows",
+            member_id_key="collapse_id",
+            actual_rows=collapse_rows,
+            expected_rows=EXPECTED_COLLAPSE_ROWS,
+            id_attr="row_id",
+        ),
+    ]
+    agent_handoff_row_coverage_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="coverage_status",
+    )
+    agent_handoff_row_identity_projection_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="identity_projection_status",
+    )
+    row_family_projection_by_id = {row["family_id"]: row for row in row_family_projection_rows}
 
     if not stale_reasons:
         expected_scalar_fields = {
@@ -592,8 +646,38 @@ def main() -> int:
         "handoff_proof_count": len(handoff_proof_rows),
         "handoff_limit_count": len(handoff_limit_rows),
         "collapse_count": len(collapse_rows),
+        "agent_handoff_row_family_count": len(row_family_projection_rows),
+        "agent_handoff_row_coverage_status": agent_handoff_row_coverage_status,
+        "agent_handoff_row_identity_projection_status": agent_handoff_row_identity_projection_status,
+        "role_row_coverage_status": row_family_projection_by_id["role_rows"]["coverage_status"],
+        "role_row_identity_projection_status": row_family_projection_by_id["role_rows"]["identity_projection_status"],
+        "payload_row_coverage_status": row_family_projection_by_id["payload_rows"]["coverage_status"],
+        "payload_row_identity_projection_status": row_family_projection_by_id["payload_rows"][
+            "identity_projection_status"
+        ],
+        "anchor_row_coverage_status": row_family_projection_by_id["anchor_rows"]["coverage_status"],
+        "anchor_row_identity_projection_status": row_family_projection_by_id["anchor_rows"][
+            "identity_projection_status"
+        ],
+        "handoff_proof_row_coverage_status": row_family_projection_by_id["handoff_proof_rows"][
+            "coverage_status"
+        ],
+        "handoff_proof_row_identity_projection_status": row_family_projection_by_id["handoff_proof_rows"][
+            "identity_projection_status"
+        ],
+        "handoff_limit_row_coverage_status": row_family_projection_by_id["handoff_limit_rows"][
+            "coverage_status"
+        ],
+        "handoff_limit_row_identity_projection_status": row_family_projection_by_id["handoff_limit_rows"][
+            "identity_projection_status"
+        ],
+        "collapse_row_coverage_status": row_family_projection_by_id["collapse_rows"]["coverage_status"],
+        "collapse_row_identity_projection_status": row_family_projection_by_id["collapse_rows"][
+            "identity_projection_status"
+        ],
         "handoff_proof_ids": [row.proof_id for row in sorted(handoff_proof_rows, key=lambda item: item.order)],
         "handoff_limit_ids": [row.row_id for row in sorted(handoff_limit_rows, key=lambda item: item.order)],
+        "row_family_projection_rows": row_family_projection_rows,
         "stale_reasons": stale_reasons,
         "structure_violations": structure_violations,
         "handoff_violations": handoff_violations,

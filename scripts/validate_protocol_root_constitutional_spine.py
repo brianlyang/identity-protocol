@@ -17,6 +17,7 @@ from root_corpus_authority_common import entry_authority_projections_from_doc, l
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, reading_order_rows_from_doc
 from root_corpus_question_routing_common import entry_question_projections_from_doc, load_root_corpus_question_routing
+from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 
 STATUS_KEY = "protocol_root_constitutional_spine_status"
 ERR_REGISTRY = "IP-RCS-001"
@@ -311,6 +312,31 @@ def main() -> int:
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     authority_rows = entry_authority_projections_from_doc(authority_doc) if authority_doc else ()
     question_rows = entry_question_projections_from_doc(routing_doc) if routing_doc else ()
+    row_family_projection_rows = [
+        project_row_family(
+            family_id="constitutional_entry_rows",
+            member_id_key="rel_path",
+            actual_rows=entry_rows,
+            expected_rows=EXPECTED_ENTRY_ROWS,
+            id_attr="rel_path",
+        ),
+        project_row_family(
+            family_id="spine_bridge_rows",
+            member_id_key="bridge_id",
+            actual_rows=bridge_rows,
+            expected_rows=EXPECTED_BRIDGE_ROWS,
+            id_attr="bridge_id",
+        ),
+    ]
+    constitutional_spine_row_coverage_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="coverage_status",
+    )
+    constitutional_spine_row_identity_projection_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="identity_projection_status",
+    )
+    row_family_projection_by_id = {row["family_id"]: row for row in row_family_projection_rows}
 
     if not stale_reasons:
         expected_fields = {
@@ -572,8 +598,22 @@ def main() -> int:
         "mapping_active_file": str(spine_active_path.relative_to(repo_root)),
         "spine_entry_count": len(entry_rows),
         "spine_bridge_count": len(bridge_rows),
+        "constitutional_spine_row_family_count": len(row_family_projection_rows),
+        "constitutional_spine_row_coverage_status": constitutional_spine_row_coverage_status,
+        "constitutional_spine_row_identity_projection_status": constitutional_spine_row_identity_projection_status,
+        "constitutional_entry_row_coverage_status": row_family_projection_by_id["constitutional_entry_rows"][
+            "coverage_status"
+        ],
+        "constitutional_entry_row_identity_projection_status": row_family_projection_by_id[
+            "constitutional_entry_rows"
+        ]["identity_projection_status"],
+        "spine_bridge_row_coverage_status": row_family_projection_by_id["spine_bridge_rows"]["coverage_status"],
+        "spine_bridge_row_identity_projection_status": row_family_projection_by_id["spine_bridge_rows"][
+            "identity_projection_status"
+        ],
         "spine_rel_paths": [row.rel_path for row in sorted(entry_rows, key=lambda item: item.order)],
         "spine_bridge_ids": [row.bridge_id for row in sorted(bridge_rows, key=lambda item: item.order)],
+        "row_family_projection_rows": row_family_projection_rows,
         "structure_violations": structure_violations,
         "projection_violations": projection_violations,
         "bridge_violations": bridge_violations,
