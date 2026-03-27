@@ -14,6 +14,7 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
+from root_row_family_projection_common import aggregate_row_family_status, project_row_family
 from root_success_path_state_admissibility_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -299,6 +300,7 @@ def main() -> int:
     admissibility_violations: list[dict[str, Any]] = []
     integration_violations: list[dict[str, Any]] = []
     contract_marker_violations: list[dict[str, Any]] = []
+    row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
 
     if state_alias_error:
@@ -376,6 +378,63 @@ def main() -> int:
                 error_code = ERR_REGISTRY
 
     if not stale_reasons:
+        row_family_projection_rows = [
+            project_row_family(
+                family_id="required_state_class_rows",
+                member_id_key="state_class_id",
+                actual_rows=state_class_rows,
+                expected_rows=EXPECTED_STATE_CLASS_ROWS,
+                id_attr="state_class_id",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+            project_row_family(
+                family_id="required_differentiation_rows",
+                member_id_key="differentiation_id",
+                actual_rows=differentiation_rows,
+                expected_rows=EXPECTED_DIFFERENTIATION_ROWS,
+                id_attr="row_id",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+            project_row_family(
+                family_id="required_state_admission_proof_rows",
+                member_id_key="proof_id",
+                actual_rows=state_admission_proof_rows,
+                expected_rows=EXPECTED_STATE_ADMISSION_PROOF_ROWS,
+                id_attr="proof_id",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+            project_row_family(
+                family_id="required_state_class_proof_alignment_rows",
+                member_id_key="state_class_id",
+                actual_rows=state_class_proof_alignment_rows,
+                expected_rows=EXPECTED_STATE_CLASS_PROOF_ALIGNMENT_ROWS,
+                id_attr="state_class_id",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+            project_row_family(
+                family_id="required_state_admission_limit_rows",
+                member_id_key="limit_id",
+                actual_rows=state_admission_limit_rows,
+                expected_rows=EXPECTED_STATE_ADMISSION_LIMIT_ROWS,
+                id_attr="row_id",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+            project_row_family(
+                family_id="required_collapse_rows",
+                member_id_key="collapse_id",
+                actual_rows=collapse_rows,
+                expected_rows=EXPECTED_COLLAPSE_ROWS,
+                id_attr="row_id",
+                pass_status=STATUS_PASS_REQUIRED,
+                fail_status=STATUS_FAIL_REQUIRED,
+            ),
+        ]
+
         _validate_rows(
             actual_rows=state_class_rows,
             expected_rows=EXPECTED_STATE_CLASS_ROWS,
@@ -669,6 +728,18 @@ def main() -> int:
     )
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
+    success_path_state_row_coverage_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="coverage_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
+    success_path_state_row_identity_projection_status = aggregate_row_family_status(
+        row_family_projection_rows,
+        status_key="identity_projection_status",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_STATE_ADMISSIBILITY),
@@ -685,6 +756,10 @@ def main() -> int:
         "state_class_proof_alignment_count": len(state_class_proof_alignment_rows),
         "state_admission_limit_count": len(state_admission_limit_rows),
         "collapse_count": len(collapse_rows),
+        "success_path_state_row_family_count": len(row_family_projection_rows),
+        "success_path_state_row_coverage_status": success_path_state_row_coverage_status,
+        "success_path_state_row_identity_projection_status": success_path_state_row_identity_projection_status,
+        "row_family_projection_rows": row_family_projection_rows,
         "state_class_ids": [row.state_class_id for row in sorted(state_class_rows, key=lambda item: item.order)],
         "differentiation_ids": [row.row_id for row in sorted(differentiation_rows, key=lambda item: item.order)],
         "state_admission_proof_ids": [row.proof_id for row in sorted(state_admission_proof_rows, key=lambda item: item.order)],

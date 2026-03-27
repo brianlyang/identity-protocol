@@ -31,6 +31,11 @@ assert payload["state_admission_proof_count"] == 5, payload
 assert payload["state_class_proof_alignment_count"] == 6, payload
 assert payload["state_admission_limit_count"] == 5, payload
 assert payload["collapse_count"] == 7, payload
+assert payload["success_path_state_row_family_count"] == 6, payload
+assert payload["success_path_state_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["success_path_state_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert any(
     row["state_class_id"] == "governed_recovery_only_state"
     and row["proof_id"] == "non_entry_recovery_classification_state_admission_proof"
@@ -71,10 +76,22 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_success_path_state_admissibility_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-SPSA-002", payload
+assert payload["success_path_state_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["success_path_state_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert any(
     row["reason"] == "missing_expected_rows" and "support_quarantine_confinement_state_admission_proof" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+proof_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_state_admission_proof_rows"
+)
+assert proof_row["expected_count"] == 5, payload
+assert proof_row["actual_count"] == 4, payload
+assert proof_row["missing_ids"] == ["support_quarantine_confinement_state_admission_proof"], payload
+assert proof_row["unexpected_ids"] == [], payload
+assert proof_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert proof_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 STATE_REPO="${TMP_ROOT}/state-drift-repo"
@@ -86,11 +103,12 @@ import yaml
 
 path = pathlib.Path(sys.argv[1])
 doc = yaml.safe_load(path.read_text(encoding="utf-8"))
-doc["required_state_class_rows"] = [
-    row for row in doc["required_state_class_rows"] if row.get("state_class_id") != "bound_active_success_path_state"
-]
-for idx, row in enumerate(doc["required_state_class_rows"], start=1):
-    row["order"] = idx
+for row in doc["required_state_class_rows"]:
+    if row.get("state_class_id") == "bound_active_success_path_state":
+        row["state_class_id"] = "bound_active_success_path_state_alias"
+        break
+else:
+    raise SystemExit("expected bound_active_success_path_state row not found")
 path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
 PY
 
@@ -98,7 +116,7 @@ STATE_JSON="${TMP_ROOT}/state-drift.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_success_path_state_admissibility.py" \
   --repo-root "${STATE_REPO}" \
   --json-only >"${STATE_JSON}"; then
-  echo "[FAIL] root success-path state admissibility validator unexpectedly passed missing state-class row"
+  echo "[FAIL] root success-path state admissibility validator unexpectedly passed state-class identity drift"
   exit 1
 fi
 
@@ -114,6 +132,22 @@ assert any(
     row["reason"] == "missing_expected_rows" and "bound_active_success_path_state" in row.get("row_ids", [])
     for row in payload["structure_violations"]
 ), payload
+assert any(
+    row["reason"] == "extra_rows" and "bound_active_success_path_state_alias" in row.get("row_ids", [])
+    for row in payload["structure_violations"]
+), payload
+assert payload["success_path_state_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["success_path_state_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+state_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "required_state_class_rows"
+)
+assert state_row["expected_count"] == 6, payload
+assert state_row["actual_count"] == 6, payload
+assert state_row["missing_ids"] == ["bound_active_success_path_state"], payload
+assert state_row["unexpected_ids"] == ["bound_active_success_path_state_alias"], payload
+assert state_row["coverage_status"] == "PASS_REQUIRED", payload
+assert state_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 ALIGNMENT_REPO="${TMP_ROOT}/alignment-drift-repo"
