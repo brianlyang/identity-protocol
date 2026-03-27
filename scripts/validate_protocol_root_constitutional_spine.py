@@ -6,6 +6,11 @@ import json
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
+from root_contract_anchor_checks_common import (
+    evaluate_root_doc_anchor_checks,
+    root_doc_anchor_checks_from_doc,
+    validate_expected_root_doc_anchor_checks,
+)
 from root_constitutional_spine_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -158,6 +163,28 @@ EXPECTED_MAPPINGS_CHILDREN = (
     "root-constitutional-spine.current.yaml",
     "root-constitutional-spine.v1.yaml",
 )
+EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
+    "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "### Constitutional spine row-family completeness must stay explicit",
+        "Constitutional-entry rows and spine-bridge rows must remain explicit as separate machine-law families.",
+        "The machine world must not finalize constitutional-spine truth while missing or unexpected entry rel-paths or bridge ids remain known only inside validator logic.",
+    ),
+    "identity/protocol/README.md": (
+        "## Root constitutional-spine discipline",
+        "Constitutional-entry rows and spine-bridge rows must remain explicit as separate machine-governed families.",
+        "Validator or runtime code must not finalize constitutional-spine truth while missing or unexpected entry rel-paths or bridge ids remain known only inside local machinery.",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL.md": (
+        "## Root constitutional-spine boundary",
+        "1. The root constitutional spine is governed as separate constitutional-entry and spine-bridge row families rather than as one narrative claim.",
+        "6. Protocol legality must not finalize constitutional-spine truth while missing or unexpected entry rel-paths or bridge ids remain known only inside validator machinery.",
+    ),
+    "identity/protocol/IDENTITY_RUNTIME.md": (
+        "## Runtime constitutional-spine consumption boundary",
+        "1. Runtime consumes constitutional spine law as separate constitutional-entry and spine-bridge row families rather than as undifferentiated narrative context.",
+        "4. Runtime must not finalize constitutional-spine legality while missing or unexpected entry rel-paths or bridge ids remain known only inside validator machinery.",
+    ),
+}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -291,6 +318,7 @@ def main() -> int:
     structure_violations: list[dict[str, Any]] = []
     projection_violations: list[dict[str, Any]] = []
     bridge_violations: list[dict[str, Any]] = []
+    root_doc_anchor_violations: list[dict[str, Any]] = []
     error_code = ""
 
     for prefix, alias_error, empty_reason in (
@@ -316,6 +344,7 @@ def main() -> int:
 
     entry_rows = constitutional_entry_rows_from_doc(spine_doc) if spine_doc else ()
     bridge_rows = bridge_rows_from_doc(spine_doc) if spine_doc else ()
+    root_doc_anchor_checks = root_doc_anchor_checks_from_doc(spine_doc) if spine_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     authority_rows = entry_authority_projections_from_doc(authority_doc) if authority_doc else ()
@@ -373,6 +402,16 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if not bridge_rows:
             stale_reasons.append("root_constitutional_spine_bridge_rows_missing")
+            error_code = ERR_REGISTRY
+        anchor_reason_count_before = len(stale_reasons)
+        stale_reasons.extend(
+            validate_expected_root_doc_anchor_checks(
+                root_doc_anchor_checks,
+                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+                stale_reason_prefix="root_constitutional_spine",
+            )
+        )
+        if len(stale_reasons) > anchor_reason_count_before:
             error_code = ERR_REGISTRY
 
     if not stale_reasons:
@@ -583,11 +622,19 @@ def main() -> int:
                     }
                 )
 
-        if projection_violations or bridge_violations:
+        root_doc_anchor_violations.extend(
+            evaluate_root_doc_anchor_checks(
+                repo_root,
+                root_doc_anchor_checks,
+                field_name="root_doc_anchor_checks",
+            )
+        )
+
+        if projection_violations or bridge_violations or root_doc_anchor_violations:
             error_code = ERR_SPINE
 
     status = STATUS_PASS_REQUIRED
-    if stale_reasons or structure_violations or projection_violations or bridge_violations:
+    if stale_reasons or structure_violations or projection_violations or bridge_violations or root_doc_anchor_violations:
         status = STATUS_FAIL_REQUIRED
 
     payload = {
@@ -598,6 +645,8 @@ def main() -> int:
         "mapping_active_file": str(spine_active_path.relative_to(repo_root)),
         "spine_entry_count": len(entry_rows),
         "spine_bridge_count": len(bridge_rows),
+        "root_doc_anchor_check_count": len(root_doc_anchor_checks),
+        "root_doc_anchor_status": STATUS_PASS_REQUIRED if not root_doc_anchor_violations else STATUS_FAIL_REQUIRED,
         **project_root_contract_support_projection(
             prefix="constitutional_spine",
             row_family_projection_rows=row_family_projection_rows,
@@ -620,6 +669,7 @@ def main() -> int:
         "structure_violations": structure_violations,
         "projection_violations": projection_violations,
         "bridge_violations": bridge_violations,
+        "root_doc_anchor_violations": root_doc_anchor_violations,
         "stale_reasons": stale_reasons,
         "error_code": error_code,
     }
