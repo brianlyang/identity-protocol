@@ -18,6 +18,7 @@ from root_contract_marker_checks_common import (
     merge_contract_text_marker_checks,
 )
 from root_contract_integration_checks_common import evaluate_root_contract_integration
+from root_contract_verdict_common import project_root_contract_support_verdict
 from root_corpus_authority_common import authority_anchor_checks_from_doc, entry_authority_projections_from_doc, load_root_corpus_authority
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, reading_order_rows_from_doc
@@ -258,10 +259,6 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
 def _contiguous_orders(values: list[int]) -> bool:
     return values == list(range(1, len(values) + 1))
 
-
-def _entry_marker_missing(required_markers: tuple[str, ...], expected_markers: tuple[str, ...]) -> list[str]:
-    marker_set = {str(item or "").strip() for item in required_markers if str(item or "").strip()}
-    return [marker for marker in expected_markers if marker not in marker_set]
 
 
 def _validate_rows(
@@ -649,18 +646,20 @@ def main() -> int:
             )
         )
 
-    if not error_code and structure_violations:
-        error_code = ERR_STRUCTURE
-    if not error_code and (admissibility_violations or integration_violations or contract_marker_violations or root_doc_anchor_violations):
-        error_code = ERR_STATE_ADMISSIBILITY
-
-    stale_reasons.extend(f"structure_violation:{row['field']}:{row['reason']}" for row in structure_violations)
-    stale_reasons.extend(
-        f"success_path_state_admissibility_violation:{row.get('field', 'contract_file')}:{row['reason']}"
-        for row in admissibility_violations + integration_violations + contract_marker_violations + root_doc_anchor_violations
+    support_violations = admissibility_violations + integration_violations + contract_marker_violations + root_doc_anchor_violations
+    verdict = project_root_contract_support_verdict(
+        stale_reasons=stale_reasons,
+        error_code=error_code,
+        structure_violations=structure_violations,
+        support_violations=support_violations,
+        structure_error_code=ERR_STRUCTURE,
+        support_error_code=ERR_STATE_ADMISSIBILITY,
+        support_reason_prefix="success_path_state_admissibility_violation",
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
     )
-
-    status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
+    error_code = str(verdict["error_code"])
+    status = str(verdict["status"])
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_STATE_ADMISSIBILITY),
