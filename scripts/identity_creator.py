@@ -218,6 +218,31 @@ def _default_operation_run_token(identity_id: str, operation: str) -> str:
     return f"{operation_token}-{identity_id}-{ts}"
 
 
+def _resolve_update_execution_identity_run(
+    *,
+    identity_id: str,
+    explicit_run_id: str,
+) -> tuple[str, str]:
+    """
+    Resolve the semantic execution run id and a distinct orchestration temp token.
+
+    The execution run id is the current-round identity update truth anchor and must
+    stay stable across update -> execute_identity_upgrade -> readiness/three-plane
+    replay. Temporary pre-mutation artifacts may use a separate orchestration token
+    so repeated replays of the same explicit run id do not collide at the temp-file
+    layer.
+    """
+
+    generated_run_id = _default_operation_run_token(identity_id, "identity-upgrade-exec")
+    execution_run_id = str(explicit_run_id or "").strip() or generated_run_id
+    orchestration_run_token = (
+        f"{execution_run_id}-orchestration-{int(datetime.now(timezone.utc).timestamp())}"
+        if str(explicit_run_id or "").strip()
+        else execution_run_id
+    )
+    return execution_run_id, orchestration_run_token
+
+
 def _run_instance_script_contract_validators(
     *,
     identity_id: str,
@@ -4004,8 +4029,10 @@ def main() -> int:
         )
         if rc != 0:
             return rc
-        creator_run_id = f"identity-upgrade-exec-{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
-        update_run_id = str(args.run_id or "").strip() or creator_run_id
+        update_run_id, orchestration_run_token = _resolve_update_execution_identity_run(
+            identity_id=args.identity_id,
+            explicit_run_id=str(args.run_id or "").strip(),
+        )
         explicit_target_branch = str(args.target_branch or "").strip()
         explicit_release_head_sha = str(args.release_head_sha or "").strip()
         explicit_required_gates_run_id = str(args.required_gates_run_id or "").strip()
@@ -4068,8 +4095,8 @@ def main() -> int:
                 channel="pre-mutation",
                 operation="update",
                 identity_id=args.identity_id,
-                run_token=creator_run_id,
-                stem=f"identity-pre-mutation-reply-{args.identity_id}-{creator_run_id}",
+                run_token=orchestration_run_token,
+                stem=f"identity-pre-mutation-reply-{args.identity_id}-{orchestration_run_token}",
                 ext="txt",
             )
         )
@@ -4078,8 +4105,8 @@ def main() -> int:
                 channel="pre-mutation",
                 operation="update",
                 identity_id=args.identity_id,
-                run_token=creator_run_id,
-                stem=f"identity-pre-mutation-send-time-blocker-{args.identity_id}-{creator_run_id}",
+                run_token=orchestration_run_token,
+                stem=f"identity-pre-mutation-send-time-blocker-{args.identity_id}-{orchestration_run_token}",
                 ext="json",
             )
         )
@@ -4124,8 +4151,8 @@ def main() -> int:
         resolved_pack_path = Path(str(resolved.get("resolved_pack_path", "")).strip()).expanduser().resolve()
         out_dir_path = Path(args.out_dir).expanduser().resolve()
         default_planned_files = [
-            str((out_dir_path / f"{creator_run_id}-patch-plan.json").resolve()),
-            str((out_dir_path / f"{creator_run_id}.json").resolve()),
+            str((out_dir_path / f"{update_run_id}-patch-plan.json").resolve()),
+            str((out_dir_path / f"{update_run_id}.json").resolve()),
             str((resolved_pack_path / "RULEBOOK.jsonl").resolve()),
             str((resolved_pack_path / "TASK_HISTORY.md").resolve()),
             str((resolved_pack_path / "runtime" / "state" / "prompt_contract.json").resolve()),
@@ -4146,8 +4173,8 @@ def main() -> int:
                 channel="pre-mutation-gate",
                 operation="update",
                 identity_id=args.identity_id,
-                run_token=creator_run_id,
-                stem=f"identity-pre-mutation-gate-update-{args.identity_id}-{creator_run_id}",
+                run_token=orchestration_run_token,
+                stem=f"identity-pre-mutation-gate-update-{args.identity_id}-{orchestration_run_token}",
                 ext="json",
             )
         )
@@ -4156,7 +4183,8 @@ def main() -> int:
             {
                 "identity_id": args.identity_id,
                 "operation": "update",
-                "run_id": creator_run_id,
+                "run_id": update_run_id,
+                "orchestration_run_token": orchestration_run_token,
                 "header_first_gate_status": header_first_gate_status,
                 "scaffold_consent_gate_status": scaffold_consent_gate_status,
                 "mutation_plan_disclosed": mutation_plan_disclosed,
@@ -5007,7 +5035,7 @@ def main() -> int:
             "--actor-id",
             actor_id_update,
             "--run-id",
-            creator_run_id,
+            update_run_id,
             "--resolved-scope",
             str(resolved.get("resolved_scope", "")),
             "--resolved-pack-path",
