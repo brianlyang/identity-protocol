@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-27T13:33:36Z",
-  "git_head_short": "f843405",
+  "generated_at_utc": "2026-03-27T14:30:11Z",
+  "git_head_short": "4061120",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -301,7 +301,7 @@
           "error_codes": 706,
           "error_code_families": 247,
           "error_code_metric_scope": "tracked_python_scripts_canonical_tokens_only",
-          "tracked_python_script_count": 471,
+          "tracked_python_script_count": 472,
           "ignored_partial_error_code_tokens": [
             "IP-ACTOR-",
             "IP-ASB-",
@@ -429,8 +429,8 @@
         "budget_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_alias_error": "",
-        "current_last_updated_utc": "2026-03-27T13:32:51Z",
-        "live_last_updated_utc": "2026-03-27T13:32:56Z",
+        "current_last_updated_utc": "2026-03-27T14:29:31Z",
+        "live_last_updated_utc": "2026-03-27T14:29:35Z",
         "mismatch_count": 0,
         "mismatches": [],
         "observed": {
@@ -691,7 +691,7 @@
           "error_codes": 706,
           "error_code_families": 247,
           "error_code_metric_scope": "tracked_python_scripts_canonical_tokens_only",
-          "tracked_python_script_count": 471,
+          "tracked_python_script_count": 472,
           "ignored_partial_error_code_tokens": [
             "IP-ACTOR-",
             "IP-ASB-",
@@ -1551,10 +1551,10 @@
         ],
         "pack_scan_globs": [],
         "active_pack_identity_ids": [],
-        "repo_scan_file_count": 588,
+        "repo_scan_file_count": 589,
         "active_pack_scan_file_count": 0,
         "extra_scan_file_count": 0,
-        "scan_file_count": 588,
+        "scan_file_count": 589,
         "scan_files": [
           ".github/workflows/_identity-required-gates.yml",
           ".github/workflows/identity-protocol-ci.yml",
@@ -1823,6 +1823,7 @@
           "scripts/root_agent_handoff_common.py",
           "scripts/root_artifact_family_admissibility_common.py",
           "scripts/root_constitutional_spine_common.py",
+          "scripts/root_contract_anchor_checks_common.py",
           "scripts/root_corpus_authority_common.py",
           "scripts/root_corpus_derivation_common.py",
           "scripts/root_corpus_gateway_admissibility_common.py",
