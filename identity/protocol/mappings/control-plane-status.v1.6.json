@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-27T07:43:38Z",
-  "git_head_short": "60c85cf",
+  "generated_at_utc": "2026-03-27T08:19:27Z",
+  "git_head_short": "d4dc6fd",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -301,7 +301,7 @@
           "error_codes": 706,
           "error_code_families": 247,
           "error_code_metric_scope": "tracked_python_scripts_canonical_tokens_only",
-          "tracked_python_script_count": 468,
+          "tracked_python_script_count": 469,
           "ignored_partial_error_code_tokens": [
             "IP-ACTOR-",
             "IP-ASB-",
@@ -429,8 +429,8 @@
         "budget_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_alias_error": "",
-        "current_last_updated_utc": "2026-03-27T07:42:42Z",
-        "live_last_updated_utc": "2026-03-27T07:42:47Z",
+        "current_last_updated_utc": "2026-03-27T08:18:43Z",
+        "live_last_updated_utc": "2026-03-27T08:18:47Z",
         "mismatch_count": 0,
         "mismatches": [],
         "observed": {
@@ -691,7 +691,7 @@
           "error_codes": 706,
           "error_code_families": 247,
           "error_code_metric_scope": "tracked_python_scripts_canonical_tokens_only",
-          "tracked_python_script_count": 468,
+          "tracked_python_script_count": 469,
           "ignored_partial_error_code_tokens": [
             "IP-ACTOR-",
             "IP-ASB-",
@@ -1537,10 +1537,10 @@
         ],
         "pack_scan_globs": [],
         "active_pack_identity_ids": [],
-        "repo_scan_file_count": 582,
+        "repo_scan_file_count": 583,
         "active_pack_scan_file_count": 0,
         "extra_scan_file_count": 0,
-        "scan_file_count": 582,
+        "scan_file_count": 583,
         "scan_files": [
           ".github/workflows/_identity-required-gates.yml",
           ".github/workflows/identity-protocol-ci.yml",
@@ -1760,6 +1760,7 @@
           "scripts/release_readiness_check.py",
           "scripts/release_readiness_governance_probe_projection_common.py",
           "scripts/release_readiness_repo_global_closure_projection_common.py",
+          "scripts/release_readiness_required_gate_bundle_projection_common.py",
           "scripts/release_readiness_required_gate_bundle_scope_common.py",
           "scripts/release_readiness_runtime_closure_convergence_common.py",
           "scripts/release_readiness_selected_check_scope_common.py",
