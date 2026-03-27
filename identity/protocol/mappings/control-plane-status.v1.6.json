@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-27T14:30:11Z",
-  "git_head_short": "4061120",
+  "generated_at_utc": "2026-03-27T14:37:23Z",
+  "git_head_short": "64f83ca",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -429,8 +429,8 @@
         "budget_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_alias_error": "",
-        "current_last_updated_utc": "2026-03-27T14:29:31Z",
-        "live_last_updated_utc": "2026-03-27T14:29:35Z",
+        "current_last_updated_utc": "2026-03-27T14:36:43Z",
+        "live_last_updated_utc": "2026-03-27T14:36:47Z",
         "mismatch_count": 0,
         "mismatches": [],
         "observed": {
