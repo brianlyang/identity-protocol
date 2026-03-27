@@ -86,6 +86,8 @@ So this file freezes admissibility law, while runtime adjudication determines wh
 
 No protocol stream, shared strengthening, owner split, or runtime extension may enter governed implementation unless the five required design questions below are answered at protocol-law grade.
 
+Stream-design admissibility law must also remain machine-readable as separate question, admissibility-proof, admissibility-limit, outcome-class, and projection-surface row families rather than one narrative admissibility claim.
+
 If a proposal cannot answer them, it remains one of the following:
 
 1. a local technique;
