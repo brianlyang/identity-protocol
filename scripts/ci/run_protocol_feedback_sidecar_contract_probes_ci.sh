@@ -10,7 +10,7 @@ trap 'rm -rf "${TMP_DIR}"' EXIT
 
 CATALOG_PATH="${TMP_DIR}/catalog.local.yaml"
 PACK_PATH="${TMP_DIR}/sidecar-probe-identity"
-REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-sidecar-probe-identity-123456.json"
+REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-sidecar-probe-identity-primary.json"
 REPORT_ALT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-sidecar-probe-identity-alt.json"
 mkdir -p "${PACK_PATH}/runtime/reports"
 printf '{}\n' > "${CATALOG_PATH}"

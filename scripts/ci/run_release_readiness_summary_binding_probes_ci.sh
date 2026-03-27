@@ -714,13 +714,18 @@ assert repo_global_projection['missing_selected_check_names'] == [], repo_global
 assert repo_global_projection['selected_check_dependency_mode'] == 'report_independent_targeted_subset', repo_global_projection
 assert repo_global_projection['execution_report_required'] is False, repo_global_projection
 
+probe_report_run_token = 'identity-upgrade-exec-probe-summary-binding'
+probe_execution_report = (
+    f'../.identity/probe/runtime/reports/{probe_report_run_token}.json'
+)
+
 report_derived_token = readiness._derive_bundle_run_token(
     required_gates_run_id='',
-    execution_report='../.identity/probe/runtime/reports/identity-upgrade-exec-probe-1774424750.json',
+    execution_report=probe_execution_report,
     session_id='run:probe-session',
     identity_id='probe-identity',
 )
-assert report_derived_token == 'identity-upgrade-exec-probe-1774424750', report_derived_token
+assert report_derived_token == probe_report_run_token, report_derived_token
 session_fallback_token = readiness._derive_bundle_run_token(
     required_gates_run_id='',
     execution_report='',

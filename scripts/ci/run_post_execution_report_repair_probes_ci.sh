@@ -11,7 +11,7 @@ trap 'rm -rf "${TMP_DIR}"' EXIT
 IDENTITY_ID="postexec-probe-identity"
 PACK_PATH="${TMP_DIR}/${IDENTITY_ID}"
 CATALOG_PATH="${TMP_DIR}/catalog.local.yaml"
-REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-${IDENTITY_ID}-123456.json"
+REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-${IDENTITY_ID}-baseline-clean.json"
 REVIEW_REQUIRED_REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-${IDENTITY_ID}-review-required.json"
 UPGRADE_CLOSED_REPORT_PATH="${PACK_PATH}/runtime/reports/identity-upgrade-exec-${IDENTITY_ID}-upgrade-closed.json"
 NON_CLOSEOUT_REPORT_PATH="${PACK_PATH}/runtime/reports/${IDENTITY_ID}-active-run.json"
@@ -96,7 +96,7 @@ pack_path.joinpath("CURRENT_TASK.json").write_text(
 )
 
 report_doc = {
-    "run_id": f"identity-upgrade-exec-{identity_id}-123456",
+    "run_id": report_path.stem,
     "identity_id": identity_id,
     "generated_at": "2026-03-25T00:00:00Z",
     "mode": "safe-auto",
