@@ -152,6 +152,23 @@ invariants:
       surfaces:
         - scripts
         - .github/workflows
+  root_constitutional_spine_alias:
+    current_file: identity/protocol/mappings/root-constitutional-spine.current.yaml
+    required_fields:
+      - spine_family
+      - spine_version
+      - root_dir
+      - registry_current_file
+      - ordering_current_file
+      - authority_current_file
+      - question_routing_current_file
+      - required_constitutional_entry_rows
+      - required_spine_bridge_rows
+    forbid_versioned_reference:
+      regex: root-constitutional-spine\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
   root_corpus_question_routing_alias:
     current_file: identity/protocol/mappings/root-corpus-question-routing.current.yaml
     required_fields:
@@ -213,6 +230,26 @@ invariants:
       - gateway_profiles
     forbid_versioned_reference:
       regex: root-corpus-gateway-admissibility\\.v[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  root_machine_registry_completeness_alias:
+    current_file: identity/protocol/mappings/root-machine-registry-completeness.current.yaml
+    required_fields:
+      - completeness_family
+      - completeness_version
+      - registry_directory_rel_path
+      - registry_current_file
+      - validator_script
+      - probe_script
+      - common_script
+      - status_key
+      - required_descriptor_fields
+      - required_descriptor_field_modes
+      - required_repo_rel_path_patterns
+      - anchor_checks
+    forbid_versioned_reference:
+      regex: root-machine-registry-completeness\\.v[0-9]+\\.yaml
       surfaces:
         - scripts
         - .github/workflows

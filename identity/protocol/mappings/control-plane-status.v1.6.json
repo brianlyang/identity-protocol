@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-27T12:13:56Z",
-  "git_head_short": "a93bc38",
+  "generated_at_utc": "2026-03-27T12:42:35Z",
+  "git_head_short": "292b952",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -429,8 +429,8 @@
         "budget_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_alias_error": "",
-        "current_last_updated_utc": "2026-03-27T12:13:20Z",
-        "live_last_updated_utc": "2026-03-27T12:13:24Z",
+        "current_last_updated_utc": "2026-03-27T12:41:54Z",
+        "live_last_updated_utc": "2026-03-27T12:41:59Z",
         "mismatch_count": 0,
         "mismatches": [],
         "observed": {
@@ -850,6 +850,13 @@
         "root_corpus_authority_active_file": "identity/protocol/mappings/root-corpus-authority.v1.yaml",
         "root_corpus_authority_parse_ok": true,
         "root_corpus_authority_violation_count": 0,
+        "root_constitutional_spine_alias_enabled": true,
+        "root_constitutional_spine_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-constitutional-spine.current.yaml",
+        "root_constitutional_spine_current_configured_file": "identity/protocol/mappings/root-constitutional-spine.current.yaml",
+        "root_constitutional_spine_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-constitutional-spine.v1.yaml",
+        "root_constitutional_spine_active_file": "identity/protocol/mappings/root-constitutional-spine.v1.yaml",
+        "root_constitutional_spine_parse_ok": true,
+        "root_constitutional_spine_violation_count": 0,
         "root_corpus_derivation_alias_enabled": true,
         "root_corpus_derivation_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-derivation.current.yaml",
         "root_corpus_derivation_current_configured_file": "identity/protocol/mappings/root-corpus-derivation.current.yaml",
@@ -871,6 +878,13 @@
         "root_corpus_gateway_admissibility_active_file": "identity/protocol/mappings/root-corpus-gateway-admissibility.v1.yaml",
         "root_corpus_gateway_admissibility_parse_ok": true,
         "root_corpus_gateway_admissibility_violation_count": 0,
+        "root_machine_registry_completeness_alias_enabled": true,
+        "root_machine_registry_completeness_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-machine-registry-completeness.current.yaml",
+        "root_machine_registry_completeness_current_configured_file": "identity/protocol/mappings/root-machine-registry-completeness.current.yaml",
+        "root_machine_registry_completeness_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-machine-registry-completeness.v1.yaml",
+        "root_machine_registry_completeness_active_file": "identity/protocol/mappings/root-machine-registry-completeness.v1.yaml",
+        "root_machine_registry_completeness_parse_ok": true,
+        "root_machine_registry_completeness_violation_count": 0,
         "root_corpus_precedence_alias_enabled": true,
         "root_corpus_precedence_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-precedence.current.yaml",
         "root_corpus_precedence_current_configured_file": "identity/protocol/mappings/root-corpus-precedence.current.yaml",
@@ -3151,6 +3165,46 @@
       }
     },
     {
+      "name": "protocol_root_constitutional_spine",
+      "command": [
+        "python3",
+        "scripts/validate_protocol_root_constitutional_spine.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "payload": {
+        "protocol_root_constitutional_spine_status": "PASS_REQUIRED",
+        "spine_family": "protocol_root_constitutional_spine",
+        "spine_version": "v1",
+        "mapping_entry_file": "identity/protocol/mappings/root-constitutional-spine.current.yaml",
+        "mapping_active_file": "identity/protocol/mappings/root-constitutional-spine.v1.yaml",
+        "spine_entry_count": 4,
+        "spine_bridge_count": 5,
+        "spine_rel_paths": [
+          "identity/protocol/README.md",
+          "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
+          "identity/protocol/IDENTITY_PROTOCOL.md",
+          "identity/protocol/IDENTITY_RUNTIME.md"
+        ],
+        "spine_bridge_ids": [
+          "philosophy_to_protocol_constitution",
+          "philosophy_to_runtime_constitution",
+          "philosophy_to_protocol_machine_authority_split",
+          "philosophy_to_runtime_machine_authority_split",
+          "protocol_to_runtime_root_bundle_consumption"
+        ],
+        "structure_violations": [],
+        "projection_violations": [],
+        "bridge_violations": [],
+        "stale_reasons": [],
+        "error_code": ""
+      }
+    },
+    {
       "name": "protocol_root_corpus_derivation",
       "command": [
         "python3",
@@ -4266,6 +4320,2714 @@
         "admissibility_violations": [],
         "anchor_violations": [],
         "stale_reasons": []
+      }
+    },
+    {
+      "name": "protocol_root_machine_registry_completeness",
+      "command": [
+        "python3",
+        "scripts/validate_protocol_root_machine_registry_completeness.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "payload": {
+        "protocol_root_machine_registry_completeness_status": "PASS_REQUIRED",
+        "completeness_family": "protocol_root_machine_registry_completeness",
+        "completeness_version": "v1",
+        "mapping_entry_file": "identity/protocol/mappings/root-machine-registry-completeness.current.yaml",
+        "mapping_active_file": "identity/protocol/mappings/root-machine-registry-completeness.v1.yaml",
+        "registry_entry_file": "identity/protocol/mappings/root-corpus-registry.current.yaml",
+        "registry_active_file": "identity/protocol/mappings/root-corpus-registry.v1.yaml",
+        "required_descriptor_fields": [
+          "validator_script",
+          "probe_script",
+          "common_script",
+          "status_key",
+          "error_codes"
+        ],
+        "required_descriptor_field_modes": {
+          "validator_script": "repo_rel_path",
+          "probe_script": "repo_rel_path",
+          "common_script": "repo_rel_path",
+          "status_key": "validator_status_key",
+          "error_codes": "validator_error_code_list"
+        },
+        "repo_rel_path_scope_policy": "repo_root_relative_only",
+        "repo_rel_path_escape_policy": "fail_closed",
+        "repo_rel_path_role_typing_policy": "root_protocol_surface_patterns_required",
+        "repo_rel_path_surface_stem_policy": "cross_role_stem_coherent",
+        "family_surface_stem_binding_policy": "family_id_surface_stem_congruent_or_explicit_override",
+        "family_surface_stem_overrides": {
+          "root-corpus-registry": "root_corpus_governance"
+        },
+        "required_repo_rel_path_patterns": {
+          "validator_script": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+          "probe_script": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+          "common_script": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$"
+        },
+        "family_count": 28,
+        "family_status_row_count": 28,
+        "expected_family_status_row_count": 28,
+        "family_status_row_coverage_status": "PASS_REQUIRED",
+        "discovered_family_count": 28,
+        "discovered_family_ids": [
+          "root-agent-handoff",
+          "root-artifact-family-admissibility",
+          "root-constitutional-spine",
+          "root-corpus-authority",
+          "root-corpus-derivation",
+          "root-corpus-gateway-admissibility",
+          "root-corpus-law-bundle",
+          "root-corpus-ordering",
+          "root-corpus-precedence",
+          "root-corpus-question-routing",
+          "root-corpus-registry",
+          "root-corpus-transition",
+          "root-current-truth-epistemology",
+          "root-decision-evidence-admissibility",
+          "root-design-question-closure",
+          "root-entry-surface-legitimacy",
+          "root-error-terminality",
+          "root-identity-discovery",
+          "root-identity-instance-self-judgement",
+          "root-machine-law-primacy",
+          "root-machine-registry-completeness",
+          "root-machine-world-ontology",
+          "root-operator-answer-surface",
+          "root-prompt-bootstrap",
+          "root-protocol-instance-responsibility",
+          "root-stream-design-admissibility",
+          "root-success-path-state-admissibility",
+          "root-truth-lifecycle"
+        ],
+        "family_status_row_ids": [
+          "root-agent-handoff",
+          "root-artifact-family-admissibility",
+          "root-constitutional-spine",
+          "root-corpus-authority",
+          "root-corpus-derivation",
+          "root-corpus-gateway-admissibility",
+          "root-corpus-law-bundle",
+          "root-corpus-ordering",
+          "root-corpus-precedence",
+          "root-corpus-question-routing",
+          "root-corpus-registry",
+          "root-corpus-transition",
+          "root-current-truth-epistemology",
+          "root-decision-evidence-admissibility",
+          "root-design-question-closure",
+          "root-entry-surface-legitimacy",
+          "root-error-terminality",
+          "root-identity-discovery",
+          "root-identity-instance-self-judgement",
+          "root-machine-law-primacy",
+          "root-machine-registry-completeness",
+          "root-machine-world-ontology",
+          "root-operator-answer-surface",
+          "root-prompt-bootstrap",
+          "root-protocol-instance-responsibility",
+          "root-stream-design-admissibility",
+          "root-success-path-state-admissibility",
+          "root-truth-lifecycle"
+        ],
+        "missing_family_status_row_ids": [],
+        "unexpected_family_status_row_ids": [],
+        "family_status_row_identity_projection_status": "PASS_REQUIRED",
+        "structure_violation_count": 0,
+        "completeness_violation_count": 0,
+        "anchor_violation_count": 0,
+        "projected_violation_reason_count": 0,
+        "expected_projected_violation_reason_count": 0,
+        "violation_projection_status": "PASS_REQUIRED",
+        "family_ids": [
+          "root-agent-handoff",
+          "root-artifact-family-admissibility",
+          "root-constitutional-spine",
+          "root-corpus-authority",
+          "root-corpus-derivation",
+          "root-corpus-gateway-admissibility",
+          "root-corpus-law-bundle",
+          "root-corpus-ordering",
+          "root-corpus-precedence",
+          "root-corpus-question-routing",
+          "root-corpus-registry",
+          "root-corpus-transition",
+          "root-current-truth-epistemology",
+          "root-decision-evidence-admissibility",
+          "root-design-question-closure",
+          "root-entry-surface-legitimacy",
+          "root-error-terminality",
+          "root-identity-discovery",
+          "root-identity-instance-self-judgement",
+          "root-machine-law-primacy",
+          "root-machine-registry-completeness",
+          "root-machine-world-ontology",
+          "root-operator-answer-surface",
+          "root-prompt-bootstrap",
+          "root-protocol-instance-responsibility",
+          "root-stream-design-admissibility",
+          "root-success-path-state-admissibility",
+          "root-truth-lifecycle"
+        ],
+        "family_status_rows": [
+          {
+            "family_id": "root-agent-handoff",
+            "current_file": "root-agent-handoff.current.yaml",
+            "version_files": [
+              "root-agent-handoff.v1.yaml"
+            ],
+            "active_file": "root-agent-handoff.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_agent_handoff",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_agent_handoff.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_agent_handoff.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_agent_handoff",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_agent_handoff_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_agent_handoff_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_agent_handoff",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_agent_handoff_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_agent_handoff_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_agent_handoff",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_agent_handoff_status",
+                "expected_value": "protocol_root_agent_handoff_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RAH-001",
+                  "IP-RAH-002",
+                  "IP-RAH-003"
+                ],
+                "expected_values": [
+                  "IP-RAH-001",
+                  "IP-RAH-002",
+                  "IP-RAH-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-artifact-family-admissibility",
+            "current_file": "root-artifact-family-admissibility.current.yaml",
+            "version_files": [
+              "root-artifact-family-admissibility.v1.yaml"
+            ],
+            "active_file": "root-artifact-family-admissibility.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_artifact_family_admissibility",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_artifact_family_admissibility.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_artifact_family_admissibility.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_artifact_family_admissibility",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_artifact_family_admissibility_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_artifact_family_admissibility_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_artifact_family_admissibility",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_artifact_family_admissibility_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_artifact_family_admissibility_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_artifact_family_admissibility",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_artifact_family_admissibility_status",
+                "expected_value": "protocol_root_artifact_family_admissibility_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-AFA-001",
+                  "IP-AFA-002",
+                  "IP-AFA-003"
+                ],
+                "expected_values": [
+                  "IP-AFA-001",
+                  "IP-AFA-002",
+                  "IP-AFA-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-constitutional-spine",
+            "current_file": "root-constitutional-spine.current.yaml",
+            "version_files": [
+              "root-constitutional-spine.v1.yaml"
+            ],
+            "active_file": "root-constitutional-spine.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_constitutional_spine",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_constitutional_spine.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_constitutional_spine.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_constitutional_spine",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_constitutional_spine_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_constitutional_spine_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_constitutional_spine",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_constitutional_spine_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_constitutional_spine_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_constitutional_spine",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_constitutional_spine_status",
+                "expected_value": "protocol_root_constitutional_spine_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RCS-001",
+                  "IP-RCS-002",
+                  "IP-RCS-003"
+                ],
+                "expected_values": [
+                  "IP-RCS-001",
+                  "IP-RCS-002",
+                  "IP-RCS-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-corpus-authority",
+            "current_file": "root-corpus-authority.current.yaml",
+            "version_files": [
+              "root-corpus-authority.v1.yaml"
+            ],
+            "active_file": "root-corpus-authority.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_corpus_authority",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_corpus_authority.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_corpus_authority.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_authority",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_corpus_authority_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_corpus_authority_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_authority",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_corpus_authority_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_corpus_authority_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_authority",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_corpus_authority_status",
+                "expected_value": "protocol_root_corpus_authority_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RCA-001",
+                  "IP-RCA-002",
+                  "IP-RCA-003"
+                ],
+                "expected_values": [
+                  "IP-RCA-001",
+                  "IP-RCA-002",
+                  "IP-RCA-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-corpus-derivation",
+            "current_file": "root-corpus-derivation.current.yaml",
+            "version_files": [
+              "root-corpus-derivation.v1.yaml"
+            ],
+            "active_file": "root-corpus-derivation.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_corpus_derivation",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_corpus_derivation.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_corpus_derivation.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_derivation",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_corpus_derivation_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_corpus_derivation_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_derivation",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_corpus_derivation_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_corpus_derivation_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_derivation",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_corpus_derivation_status",
+                "expected_value": "protocol_root_corpus_derivation_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RCD-001",
+                  "IP-RCD-002",
+                  "IP-RCD-003"
+                ],
+                "expected_values": [
+                  "IP-RCD-001",
+                  "IP-RCD-002",
+                  "IP-RCD-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-corpus-gateway-admissibility",
+            "current_file": "root-corpus-gateway-admissibility.current.yaml",
+            "version_files": [
+              "root-corpus-gateway-admissibility.v1.yaml"
+            ],
+            "active_file": "root-corpus-gateway-admissibility.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_corpus_gateway_admissibility",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_corpus_gateway_admissibility.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_corpus_gateway_admissibility.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_gateway_admissibility",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_corpus_gateway_admissibility_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_corpus_gateway_admissibility_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_gateway_admissibility",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_corpus_gateway_admissibility_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_corpus_gateway_admissibility_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_gateway_admissibility",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_corpus_gateway_admissibility_status",
+                "expected_value": "protocol_root_corpus_gateway_admissibility_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RGA-001",
+                  "IP-RGA-002",
+                  "IP-RGA-003"
+                ],
+                "expected_values": [
+                  "IP-RGA-001",
+                  "IP-RGA-002",
+                  "IP-RGA-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-corpus-law-bundle",
+            "current_file": "root-corpus-law-bundle.current.yaml",
+            "version_files": [
+              "root-corpus-law-bundle.v1.yaml"
+            ],
+            "active_file": "root-corpus-law-bundle.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_corpus_law_bundle",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_corpus_law_bundle.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_corpus_law_bundle.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_law_bundle",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_corpus_law_bundle_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_corpus_law_bundle_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_law_bundle",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_corpus_law_bundle_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_corpus_law_bundle_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_law_bundle",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_corpus_law_bundle_status",
+                "expected_value": "protocol_root_corpus_law_bundle_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RCLB-001",
+                  "IP-RCLB-002",
+                  "IP-RCLB-003"
+                ],
+                "expected_values": [
+                  "IP-RCLB-001",
+                  "IP-RCLB-002",
+                  "IP-RCLB-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-corpus-ordering",
+            "current_file": "root-corpus-ordering.current.yaml",
+            "version_files": [
+              "root-corpus-ordering.v1.yaml"
+            ],
+            "active_file": "root-corpus-ordering.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_corpus_ordering",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_corpus_ordering.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_corpus_ordering.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_ordering",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_corpus_ordering_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_corpus_ordering_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_ordering",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_corpus_ordering_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_corpus_ordering_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_ordering",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_corpus_ordering_status",
+                "expected_value": "protocol_root_corpus_ordering_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RCO-001",
+                  "IP-RCO-002",
+                  "IP-RCO-003"
+                ],
+                "expected_values": [
+                  "IP-RCO-001",
+                  "IP-RCO-002",
+                  "IP-RCO-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-corpus-precedence",
+            "current_file": "root-corpus-precedence.current.yaml",
+            "version_files": [
+              "root-corpus-precedence.v1.yaml"
+            ],
+            "active_file": "root-corpus-precedence.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_corpus_precedence",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_corpus_precedence.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_corpus_precedence.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_precedence",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_corpus_precedence_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_corpus_precedence_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_precedence",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_corpus_precedence_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_corpus_precedence_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_precedence",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_corpus_precedence_status",
+                "expected_value": "protocol_root_corpus_precedence_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RCP-001",
+                  "IP-RCP-002",
+                  "IP-RCP-003"
+                ],
+                "expected_values": [
+                  "IP-RCP-001",
+                  "IP-RCP-002",
+                  "IP-RCP-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-corpus-question-routing",
+            "current_file": "root-corpus-question-routing.current.yaml",
+            "version_files": [
+              "root-corpus-question-routing.v1.yaml"
+            ],
+            "active_file": "root-corpus-question-routing.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_corpus_question_routing",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_corpus_question_routing.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_corpus_question_routing.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_question_routing",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_corpus_question_routing_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_corpus_question_routing_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_question_routing",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_corpus_question_routing_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_corpus_question_routing_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_question_routing",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_corpus_question_routing_status",
+                "expected_value": "protocol_root_corpus_question_routing_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RCQR-001",
+                  "IP-RCQR-002",
+                  "IP-RCQR-003"
+                ],
+                "expected_values": [
+                  "IP-RCQR-001",
+                  "IP-RCQR-002",
+                  "IP-RCQR-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-corpus-registry",
+            "current_file": "root-corpus-registry.current.yaml",
+            "version_files": [
+              "root-corpus-registry.v1.yaml"
+            ],
+            "active_file": "root-corpus-registry.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_corpus_governance",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "explicit_override",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_corpus_governance.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_corpus_governance.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_governance",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_corpus_governance_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_corpus_governance_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_governance",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_corpus_governance_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_corpus_governance_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_governance",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_corpus_governance_status",
+                "expected_value": "protocol_root_corpus_governance_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RCG-001",
+                  "IP-RCG-002",
+                  "IP-RCG-003"
+                ],
+                "expected_values": [
+                  "IP-RCG-001",
+                  "IP-RCG-002",
+                  "IP-RCG-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-corpus-transition",
+            "current_file": "root-corpus-transition.current.yaml",
+            "version_files": [
+              "root-corpus-transition.v1.yaml"
+            ],
+            "active_file": "root-corpus-transition.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_corpus_transition",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_corpus_transition.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_corpus_transition.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_transition",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_corpus_transition_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_corpus_transition_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_transition",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_corpus_transition_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_corpus_transition_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_corpus_transition",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_corpus_transition_status",
+                "expected_value": "protocol_root_corpus_transition_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RCT-001",
+                  "IP-RCT-002",
+                  "IP-RCT-003"
+                ],
+                "expected_values": [
+                  "IP-RCT-001",
+                  "IP-RCT-002",
+                  "IP-RCT-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-current-truth-epistemology",
+            "current_file": "root-current-truth-epistemology.current.yaml",
+            "version_files": [
+              "root-current-truth-epistemology.v1.yaml"
+            ],
+            "active_file": "root-current-truth-epistemology.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_current_truth_epistemology",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_current_truth_epistemology.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_current_truth_epistemology.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_current_truth_epistemology",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_current_truth_epistemology_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_current_truth_epistemology_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_current_truth_epistemology",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_current_truth_epistemology_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_current_truth_epistemology_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_current_truth_epistemology",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_current_truth_epistemology_status",
+                "expected_value": "protocol_root_current_truth_epistemology_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-CTE-001",
+                  "IP-CTE-002",
+                  "IP-CTE-003"
+                ],
+                "expected_values": [
+                  "IP-CTE-001",
+                  "IP-CTE-002",
+                  "IP-CTE-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-decision-evidence-admissibility",
+            "current_file": "root-decision-evidence-admissibility.current.yaml",
+            "version_files": [
+              "root-decision-evidence-admissibility.v1.yaml"
+            ],
+            "active_file": "root-decision-evidence-admissibility.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_decision_evidence_admissibility",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_decision_evidence_admissibility.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_decision_evidence_admissibility.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_decision_evidence_admissibility",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_decision_evidence_admissibility_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_decision_evidence_admissibility_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_decision_evidence_admissibility",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_decision_evidence_admissibility_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_decision_evidence_admissibility_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_decision_evidence_admissibility",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_decision_evidence_admissibility_status",
+                "expected_value": "protocol_root_decision_evidence_admissibility_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-DEA-001",
+                  "IP-DEA-002",
+                  "IP-DEA-003"
+                ],
+                "expected_values": [
+                  "IP-DEA-001",
+                  "IP-DEA-002",
+                  "IP-DEA-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-design-question-closure",
+            "current_file": "root-design-question-closure.current.yaml",
+            "version_files": [
+              "root-design-question-closure.v1.yaml"
+            ],
+            "active_file": "root-design-question-closure.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_design_question_closure",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_design_question_closure.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_design_question_closure.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_design_question_closure",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_design_question_closure_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_design_question_closure_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_design_question_closure",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_design_question_closure_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_design_question_closure_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_design_question_closure",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_design_question_closure_status",
+                "expected_value": "protocol_root_design_question_closure_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RDQC-001",
+                  "IP-RDQC-002",
+                  "IP-RDQC-003"
+                ],
+                "expected_values": [
+                  "IP-RDQC-001",
+                  "IP-RDQC-002",
+                  "IP-RDQC-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-entry-surface-legitimacy",
+            "current_file": "root-entry-surface-legitimacy.current.yaml",
+            "version_files": [
+              "root-entry-surface-legitimacy.v1.yaml"
+            ],
+            "active_file": "root-entry-surface-legitimacy.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_entry_surface_legitimacy",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_entry_surface_legitimacy.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_entry_surface_legitimacy.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_entry_surface_legitimacy",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_entry_surface_legitimacy_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_entry_surface_legitimacy_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_entry_surface_legitimacy",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_entry_surface_legitimacy_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_entry_surface_legitimacy_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_entry_surface_legitimacy",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_entry_surface_legitimacy_status",
+                "expected_value": "protocol_root_entry_surface_legitimacy_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-ESL-001",
+                  "IP-ESL-002",
+                  "IP-ESL-003"
+                ],
+                "expected_values": [
+                  "IP-ESL-001",
+                  "IP-ESL-002",
+                  "IP-ESL-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-error-terminality",
+            "current_file": "root-error-terminality.current.yaml",
+            "version_files": [
+              "root-error-terminality.v1.yaml"
+            ],
+            "active_file": "root-error-terminality.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_error_terminality",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_error_terminality.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_error_terminality.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_error_terminality",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_error_terminality_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_error_terminality_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_error_terminality",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_error_terminality_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_error_terminality_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_error_terminality",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_error_terminality_status",
+                "expected_value": "protocol_root_error_terminality_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-ERT-001",
+                  "IP-ERT-002",
+                  "IP-ERT-003"
+                ],
+                "expected_values": [
+                  "IP-ERT-001",
+                  "IP-ERT-002",
+                  "IP-ERT-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-identity-discovery",
+            "current_file": "root-identity-discovery.current.yaml",
+            "version_files": [
+              "root-identity-discovery.v1.yaml"
+            ],
+            "active_file": "root-identity-discovery.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_identity_discovery",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_identity_discovery.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_identity_discovery.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_identity_discovery",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_identity_discovery_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_identity_discovery_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_identity_discovery",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_identity_discovery_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_identity_discovery_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_identity_discovery",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_identity_discovery_status",
+                "expected_value": "protocol_root_identity_discovery_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RID-001",
+                  "IP-RID-002",
+                  "IP-RID-003"
+                ],
+                "expected_values": [
+                  "IP-RID-001",
+                  "IP-RID-002",
+                  "IP-RID-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-identity-instance-self-judgement",
+            "current_file": "root-identity-instance-self-judgement.current.yaml",
+            "version_files": [
+              "root-identity-instance-self-judgement.v1.yaml"
+            ],
+            "active_file": "root-identity-instance-self-judgement.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_identity_instance_self_judgement",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_identity_instance_self_judgement.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_identity_instance_self_judgement.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_identity_instance_self_judgement",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_identity_instance_self_judgement_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_identity_instance_self_judgement_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_identity_instance_self_judgement",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_identity_instance_self_judgement_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_identity_instance_self_judgement_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_identity_instance_self_judgement",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_identity_instance_self_judgement_status",
+                "expected_value": "protocol_root_identity_instance_self_judgement_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RIISJ-001",
+                  "IP-RIISJ-002",
+                  "IP-RIISJ-003"
+                ],
+                "expected_values": [
+                  "IP-RIISJ-001",
+                  "IP-RIISJ-002",
+                  "IP-RIISJ-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-machine-law-primacy",
+            "current_file": "root-machine-law-primacy.current.yaml",
+            "version_files": [
+              "root-machine-law-primacy.v1.yaml"
+            ],
+            "active_file": "root-machine-law-primacy.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_machine_law_primacy",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_machine_law_primacy.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_machine_law_primacy.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_machine_law_primacy",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_machine_law_primacy_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_machine_law_primacy_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_machine_law_primacy",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_machine_law_primacy_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_machine_law_primacy_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_machine_law_primacy",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_machine_law_primacy_status",
+                "expected_value": "protocol_root_machine_law_primacy_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RMLP-001",
+                  "IP-RMLP-002",
+                  "IP-RMLP-003"
+                ],
+                "expected_values": [
+                  "IP-RMLP-001",
+                  "IP-RMLP-002",
+                  "IP-RMLP-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-machine-registry-completeness",
+            "current_file": "root-machine-registry-completeness.current.yaml",
+            "version_files": [
+              "root-machine-registry-completeness.v1.yaml"
+            ],
+            "active_file": "root-machine-registry-completeness.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_machine_registry_completeness",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_machine_registry_completeness.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_machine_registry_completeness.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_machine_registry_completeness",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_machine_registry_completeness_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_machine_registry_completeness_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_machine_registry_completeness",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_machine_registry_completeness_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_machine_registry_completeness_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_machine_registry_completeness",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_machine_registry_completeness_status",
+                "expected_value": "protocol_root_machine_registry_completeness_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RMRC-001",
+                  "IP-RMRC-002",
+                  "IP-RMRC-003"
+                ],
+                "expected_values": [
+                  "IP-RMRC-001",
+                  "IP-RMRC-002",
+                  "IP-RMRC-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-machine-world-ontology",
+            "current_file": "root-machine-world-ontology.current.yaml",
+            "version_files": [
+              "root-machine-world-ontology.v1.yaml"
+            ],
+            "active_file": "root-machine-world-ontology.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_machine_world_ontology",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_machine_world_ontology.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_machine_world_ontology.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_machine_world_ontology",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_machine_world_ontology_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_machine_world_ontology_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_machine_world_ontology",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_machine_world_ontology_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_machine_world_ontology_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_machine_world_ontology",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_machine_world_ontology_status",
+                "expected_value": "protocol_root_machine_world_ontology_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RMWO-001",
+                  "IP-RMWO-002",
+                  "IP-RMWO-003"
+                ],
+                "expected_values": [
+                  "IP-RMWO-001",
+                  "IP-RMWO-002",
+                  "IP-RMWO-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-operator-answer-surface",
+            "current_file": "root-operator-answer-surface.current.yaml",
+            "version_files": [
+              "root-operator-answer-surface.v1.yaml"
+            ],
+            "active_file": "root-operator-answer-surface.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_operator_answer_surface",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_operator_answer_surface.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_operator_answer_surface.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_operator_answer_surface",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_operator_answer_surface_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_operator_answer_surface_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_operator_answer_surface",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_operator_answer_surface_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_operator_answer_surface_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_operator_answer_surface",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_operator_answer_surface_status",
+                "expected_value": "protocol_root_operator_answer_surface_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-ROAS-001",
+                  "IP-ROAS-002",
+                  "IP-ROAS-003"
+                ],
+                "expected_values": [
+                  "IP-ROAS-001",
+                  "IP-ROAS-002",
+                  "IP-ROAS-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-prompt-bootstrap",
+            "current_file": "root-prompt-bootstrap.current.yaml",
+            "version_files": [
+              "root-prompt-bootstrap.v1.yaml"
+            ],
+            "active_file": "root-prompt-bootstrap.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_prompt_bootstrap",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_prompt_bootstrap.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_prompt_bootstrap.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_prompt_bootstrap",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_prompt_bootstrap_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_prompt_bootstrap_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_prompt_bootstrap",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_prompt_bootstrap_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_prompt_bootstrap_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_prompt_bootstrap",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_prompt_bootstrap_status",
+                "expected_value": "protocol_root_prompt_bootstrap_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RPB-001",
+                  "IP-RPB-002",
+                  "IP-RPB-003"
+                ],
+                "expected_values": [
+                  "IP-RPB-001",
+                  "IP-RPB-002",
+                  "IP-RPB-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-protocol-instance-responsibility",
+            "current_file": "root-protocol-instance-responsibility.current.yaml",
+            "version_files": [
+              "root-protocol-instance-responsibility.v1.yaml"
+            ],
+            "active_file": "root-protocol-instance-responsibility.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_protocol_instance_responsibility",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_protocol_instance_responsibility.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_protocol_instance_responsibility.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_protocol_instance_responsibility",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_protocol_instance_responsibility_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_protocol_instance_responsibility_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_protocol_instance_responsibility",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_protocol_instance_responsibility_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_protocol_instance_responsibility_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_protocol_instance_responsibility",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_protocol_instance_responsibility_status",
+                "expected_value": "protocol_root_protocol_instance_responsibility_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RPIR-001",
+                  "IP-RPIR-002",
+                  "IP-RPIR-003"
+                ],
+                "expected_values": [
+                  "IP-RPIR-001",
+                  "IP-RPIR-002",
+                  "IP-RPIR-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-stream-design-admissibility",
+            "current_file": "root-stream-design-admissibility.current.yaml",
+            "version_files": [
+              "root-stream-design-admissibility.v1.yaml"
+            ],
+            "active_file": "root-stream-design-admissibility.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_stream_design_admissibility",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_stream_design_admissibility.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_stream_design_admissibility.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_stream_design_admissibility",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_stream_design_admissibility_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_stream_design_admissibility_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_stream_design_admissibility",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_stream_design_admissibility_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_stream_design_admissibility_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_stream_design_admissibility",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_stream_design_admissibility_status",
+                "expected_value": "protocol_root_stream_design_admissibility_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RSDA-001",
+                  "IP-RSDA-002",
+                  "IP-RSDA-003"
+                ],
+                "expected_values": [
+                  "IP-RSDA-001",
+                  "IP-RSDA-002",
+                  "IP-RSDA-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-success-path-state-admissibility",
+            "current_file": "root-success-path-state-admissibility.current.yaml",
+            "version_files": [
+              "root-success-path-state-admissibility.v1.yaml"
+            ],
+            "active_file": "root-success-path-state-admissibility.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_success_path_state_admissibility",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_success_path_state_admissibility.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_success_path_state_admissibility.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_success_path_state_admissibility",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_success_path_state_admissibility_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_success_path_state_admissibility_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_success_path_state_admissibility",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_success_path_state_admissibility_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_success_path_state_admissibility_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_success_path_state_admissibility",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_success_path_state_admissibility_status",
+                "expected_value": "protocol_root_success_path_state_admissibility_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-SPSA-001",
+                  "IP-SPSA-002",
+                  "IP-SPSA-003"
+                ],
+                "expected_values": [
+                  "IP-SPSA-001",
+                  "IP-SPSA-002",
+                  "IP-SPSA-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          },
+          {
+            "family_id": "root-truth-lifecycle",
+            "current_file": "root-truth-lifecycle.current.yaml",
+            "version_files": [
+              "root-truth-lifecycle.v1.yaml"
+            ],
+            "active_file": "root-truth-lifecycle.v1.yaml",
+            "alias_error": "",
+            "expected_family_surface_stem": "root_truth_lifecycle",
+            "expected_family_surface_stem_error": "",
+            "expected_family_surface_stem_source": "family_id_default",
+            "self_describing_required": true,
+            "required_descriptor_fields": [
+              "validator_script",
+              "probe_script",
+              "common_script",
+              "status_key",
+              "error_codes"
+            ],
+            "required_descriptor_field_modes": {
+              "validator_script": "repo_rel_path",
+              "probe_script": "repo_rel_path",
+              "common_script": "repo_rel_path",
+              "status_key": "validator_status_key",
+              "error_codes": "validator_error_code_list"
+            },
+            "descriptor_field_rows": [
+              {
+                "field": "validator_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/validate_protocol_root_truth_lifecycle.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_truth_lifecycle.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_truth_lifecycle",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "probe_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/ci/run_protocol_root_truth_lifecycle_probes_ci.sh",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/ci/run_protocol_root_truth_lifecycle_probes_ci.sh",
+                "support_error": "",
+                "expected_pattern": "^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\\.sh$",
+                "pattern_match": true,
+                "surface_stem": "root_truth_lifecycle",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "common_script",
+                "mode": "repo_rel_path",
+                "value": "scripts/root_truth_lifecycle_common.py",
+                "resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/root_truth_lifecycle_common.py",
+                "support_error": "",
+                "expected_pattern": "^scripts/(?P<surface_stem>root_[a-z0-9_]+)_common\\.py$",
+                "pattern_match": true,
+                "surface_stem": "root_truth_lifecycle",
+                "surface_stem_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "status_key",
+                "mode": "validator_status_key",
+                "value": "protocol_root_truth_lifecycle_status",
+                "expected_value": "protocol_root_truth_lifecycle_status",
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "field": "error_codes",
+                "mode": "validator_error_code_list",
+                "values": [
+                  "IP-RTLC-001",
+                  "IP-RTLC-002",
+                  "IP-RTLC-003"
+                ],
+                "expected_values": [
+                  "IP-RTLC-001",
+                  "IP-RTLC-002",
+                  "IP-RTLC-003"
+                ],
+                "support_error": "",
+                "status": "PASS_REQUIRED"
+              }
+            ],
+            "family_status": "PASS_REQUIRED",
+            "family_violations": []
+          }
+        ],
+        "structure_violations": [],
+        "completeness_violations": [],
+        "anchor_violations": [],
+        "stale_reasons": [],
+        "error_code": ""
       }
     },
     {
@@ -5393,10 +8155,10 @@
     }
   ],
   "summary": {
-    "check_count": 27,
+    "check_count": 29,
     "fail_count": 0,
     "warn_count": 0,
-    "pass_count": 27
+    "pass_count": 29
   },
   "surface_governance": {
     "runtime_summary_surface_governance_status": "PASS_REQUIRED",

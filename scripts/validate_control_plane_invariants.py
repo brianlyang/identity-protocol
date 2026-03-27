@@ -34,9 +34,13 @@ CONTROL_PLANE_STATUS_CURRENT_DEFAULT_REL = "identity/protocol/mappings/control-p
 ROOT_CORPUS_REGISTRY_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-registry.current.yaml"
 ROOT_CORPUS_ORDERING_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-ordering.current.yaml"
 ROOT_CORPUS_AUTHORITY_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-authority.current.yaml"
+ROOT_CONSTITUTIONAL_SPINE_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-constitutional-spine.current.yaml"
 ROOT_CORPUS_DERIVATION_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-derivation.current.yaml"
 ROOT_CORPUS_TRANSITION_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-transition.current.yaml"
 ROOT_CORPUS_GATEWAY_ADMISSIBILITY_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-gateway-admissibility.current.yaml"
+ROOT_MACHINE_REGISTRY_COMPLETENESS_CURRENT_DEFAULT_REL = (
+    "identity/protocol/mappings/root-machine-registry-completeness.current.yaml"
+)
 ROOT_CORPUS_PRECEDENCE_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-precedence.current.yaml"
 ROOT_CORPUS_QUESTION_ROUTING_CURRENT_DEFAULT_REL = "identity/protocol/mappings/root-corpus-question-routing.current.yaml"
 GOVERNED_SUBDOMAIN_DOC_CONTROL_REGISTRY_CURRENT_DEFAULT_REL = "identity/protocol/mappings/governed-subdomain-doc-control.current.yaml"
@@ -488,6 +492,10 @@ def main() -> int:
         default=ROOT_CORPUS_AUTHORITY_CURRENT_DEFAULT_REL,
     )
     parser.add_argument(
+        "--root-constitutional-spine-current-file",
+        default=ROOT_CONSTITUTIONAL_SPINE_CURRENT_DEFAULT_REL,
+    )
+    parser.add_argument(
         "--root-corpus-derivation-current-file",
         default=ROOT_CORPUS_DERIVATION_CURRENT_DEFAULT_REL,
     )
@@ -498,6 +506,10 @@ def main() -> int:
     parser.add_argument(
         "--root-corpus-gateway-admissibility-current-file",
         default=ROOT_CORPUS_GATEWAY_ADMISSIBILITY_CURRENT_DEFAULT_REL,
+    )
+    parser.add_argument(
+        "--root-machine-registry-completeness-current-file",
+        default=ROOT_MACHINE_REGISTRY_COMPLETENESS_CURRENT_DEFAULT_REL,
     )
     parser.add_argument(
         "--root-corpus-precedence-current-file",
@@ -602,6 +614,15 @@ def main() -> int:
     root_corpus_authority_alias_enabled = False
     root_corpus_authority_parse_ok = False
     root_corpus_authority_violation_count = 0
+    root_constitutional_spine_current_configured_file = str(args.root_constitutional_spine_current_file)
+    root_constitutional_spine_current_path = (
+        repo_root / root_constitutional_spine_current_configured_file
+    ).resolve()
+    root_constitutional_spine_current_resolved_path = root_constitutional_spine_current_path
+    root_constitutional_spine_active_file = ""
+    root_constitutional_spine_alias_enabled = False
+    root_constitutional_spine_parse_ok = False
+    root_constitutional_spine_violation_count = 0
     root_corpus_derivation_current_configured_file = str(args.root_corpus_derivation_current_file)
     root_corpus_derivation_current_path = (repo_root / root_corpus_derivation_current_configured_file).resolve()
     root_corpus_derivation_current_resolved_path = root_corpus_derivation_current_path
@@ -625,6 +646,19 @@ def main() -> int:
     root_corpus_gateway_admissibility_alias_enabled = False
     root_corpus_gateway_admissibility_parse_ok = False
     root_corpus_gateway_admissibility_violation_count = 0
+    root_machine_registry_completeness_current_configured_file = str(
+        args.root_machine_registry_completeness_current_file
+    )
+    root_machine_registry_completeness_current_path = (
+        repo_root / root_machine_registry_completeness_current_configured_file
+    ).resolve()
+    root_machine_registry_completeness_current_resolved_path = (
+        root_machine_registry_completeness_current_path
+    )
+    root_machine_registry_completeness_active_file = ""
+    root_machine_registry_completeness_alias_enabled = False
+    root_machine_registry_completeness_parse_ok = False
+    root_machine_registry_completeness_violation_count = 0
     root_corpus_precedence_current_configured_file = str(args.root_corpus_precedence_current_file)
     root_corpus_precedence_current_path = (repo_root / root_corpus_precedence_current_configured_file).resolve()
     root_corpus_precedence_current_resolved_path = root_corpus_precedence_current_path
@@ -1242,6 +1276,51 @@ def main() -> int:
         for row in root_authority_violations:
             violations.append(row)
 
+        root_constitutional_spine_alias_cfg = (
+            (invariants.get("root_constitutional_spine_alias") or {}) if isinstance(invariants, dict) else {}
+        )
+        (
+            root_constitutional_spine_state,
+            root_constitutional_spine_violations,
+            root_constitutional_spine_alias_violation_count,
+        ) = _validate_mapping_alias_contract(
+            repo_root=repo_root,
+            alias_field="root_constitutional_spine_alias",
+            alias_cfg=(
+                root_constitutional_spine_alias_cfg
+                if isinstance(root_constitutional_spine_alias_cfg, dict)
+                else {}
+            ),
+            configured_current_file=root_constitutional_spine_current_configured_file,
+            expected_active_prefix="identity/protocol/mappings/root-constitutional-spine.v",
+        )
+        root_constitutional_spine_alias_enabled = bool(
+            root_constitutional_spine_state.get("alias_enabled", False)
+        )
+        root_constitutional_spine_current_configured_file = str(
+            root_constitutional_spine_state.get("current_configured_file", "")
+        )
+        root_constitutional_spine_current_path = Path(
+            root_constitutional_spine_state.get(
+                "current_path", root_constitutional_spine_current_path
+            )
+        )
+        root_constitutional_spine_current_resolved_path = Path(
+            root_constitutional_spine_state.get(
+                "current_resolved_path",
+                root_constitutional_spine_current_resolved_path,
+            )
+        )
+        root_constitutional_spine_active_file = str(
+            root_constitutional_spine_state.get("active_file", "")
+        )
+        root_constitutional_spine_parse_ok = bool(
+            root_constitutional_spine_state.get("parse_ok", False)
+        )
+        root_constitutional_spine_violation_count = root_constitutional_spine_alias_violation_count
+        for row in root_constitutional_spine_violations:
+            violations.append(row)
+
         root_corpus_derivation_alias_cfg = (
             (invariants.get("root_corpus_derivation_alias") or {}) if isinstance(invariants, dict) else {}
         )
@@ -1345,6 +1424,55 @@ def main() -> int:
         )
         root_corpus_gateway_admissibility_violation_count = root_gateway_admissibility_violation_count
         for row in root_gateway_admissibility_violations:
+            violations.append(row)
+
+        root_machine_registry_completeness_alias_cfg = (
+            (invariants.get("root_machine_registry_completeness_alias") or {})
+            if isinstance(invariants, dict)
+            else {}
+        )
+        (
+            root_machine_registry_completeness_state,
+            root_machine_registry_completeness_violations,
+            root_machine_registry_completeness_alias_violation_count,
+        ) = _validate_mapping_alias_contract(
+            repo_root=repo_root,
+            alias_field="root_machine_registry_completeness_alias",
+            alias_cfg=(
+                root_machine_registry_completeness_alias_cfg
+                if isinstance(root_machine_registry_completeness_alias_cfg, dict)
+                else {}
+            ),
+            configured_current_file=root_machine_registry_completeness_current_configured_file,
+            expected_active_prefix="identity/protocol/mappings/root-machine-registry-completeness.v",
+        )
+        root_machine_registry_completeness_alias_enabled = bool(
+            root_machine_registry_completeness_state.get("alias_enabled", False)
+        )
+        root_machine_registry_completeness_current_configured_file = str(
+            root_machine_registry_completeness_state.get("current_configured_file", "")
+        )
+        root_machine_registry_completeness_current_path = Path(
+            root_machine_registry_completeness_state.get(
+                "current_path", root_machine_registry_completeness_current_path
+            )
+        )
+        root_machine_registry_completeness_current_resolved_path = Path(
+            root_machine_registry_completeness_state.get(
+                "current_resolved_path",
+                root_machine_registry_completeness_current_resolved_path,
+            )
+        )
+        root_machine_registry_completeness_active_file = str(
+            root_machine_registry_completeness_state.get("active_file", "")
+        )
+        root_machine_registry_completeness_parse_ok = bool(
+            root_machine_registry_completeness_state.get("parse_ok", False)
+        )
+        root_machine_registry_completeness_violation_count = (
+            root_machine_registry_completeness_alias_violation_count
+        )
+        for row in root_machine_registry_completeness_violations:
             violations.append(row)
 
         root_corpus_precedence_alias_cfg = (
@@ -2713,6 +2841,15 @@ def main() -> int:
         "root_corpus_authority_active_file": root_corpus_authority_active_file,
         "root_corpus_authority_parse_ok": root_corpus_authority_parse_ok,
         "root_corpus_authority_violation_count": root_corpus_authority_violation_count,
+        "root_constitutional_spine_alias_enabled": root_constitutional_spine_alias_enabled,
+        "root_constitutional_spine_current_file": str(root_constitutional_spine_current_path),
+        "root_constitutional_spine_current_configured_file": root_constitutional_spine_current_configured_file,
+        "root_constitutional_spine_current_resolved_file": str(
+            root_constitutional_spine_current_resolved_path
+        ),
+        "root_constitutional_spine_active_file": root_constitutional_spine_active_file,
+        "root_constitutional_spine_parse_ok": root_constitutional_spine_parse_ok,
+        "root_constitutional_spine_violation_count": root_constitutional_spine_violation_count,
         "root_corpus_derivation_alias_enabled": root_corpus_derivation_alias_enabled,
         "root_corpus_derivation_current_file": str(root_corpus_derivation_current_path),
         "root_corpus_derivation_current_configured_file": root_corpus_derivation_current_configured_file,
@@ -2736,6 +2873,21 @@ def main() -> int:
         "root_corpus_gateway_admissibility_active_file": root_corpus_gateway_admissibility_active_file,
         "root_corpus_gateway_admissibility_parse_ok": root_corpus_gateway_admissibility_parse_ok,
         "root_corpus_gateway_admissibility_violation_count": root_corpus_gateway_admissibility_violation_count,
+        "root_machine_registry_completeness_alias_enabled": root_machine_registry_completeness_alias_enabled,
+        "root_machine_registry_completeness_current_file": str(
+            root_machine_registry_completeness_current_path
+        ),
+        "root_machine_registry_completeness_current_configured_file": (
+            root_machine_registry_completeness_current_configured_file
+        ),
+        "root_machine_registry_completeness_current_resolved_file": str(
+            root_machine_registry_completeness_current_resolved_path
+        ),
+        "root_machine_registry_completeness_active_file": root_machine_registry_completeness_active_file,
+        "root_machine_registry_completeness_parse_ok": root_machine_registry_completeness_parse_ok,
+        "root_machine_registry_completeness_violation_count": (
+            root_machine_registry_completeness_violation_count
+        ),
         "root_corpus_precedence_alias_enabled": root_corpus_precedence_alias_enabled,
         "root_corpus_precedence_current_file": str(root_corpus_precedence_current_path),
         "root_corpus_precedence_current_configured_file": root_corpus_precedence_current_configured_file,

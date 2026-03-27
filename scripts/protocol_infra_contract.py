@@ -289,9 +289,11 @@ GATEWAY_WRAPPER_TIMEOUT_PROFILE_SECONDS: tuple[tuple[str, int], ...] = (
     ("scripts/ci/run_protocol_root_corpus_governance_probes_ci.sh", 300),
     ("scripts/ci/run_protocol_root_corpus_ordering_probes_ci.sh", 300),
     ("scripts/ci/run_protocol_root_corpus_authority_probes_ci.sh", 300),
+    ("scripts/ci/run_protocol_root_constitutional_spine_probes_ci.sh", 300),
     ("scripts/ci/run_protocol_root_corpus_derivation_probes_ci.sh", 300),
     ("scripts/ci/run_protocol_root_corpus_transition_probes_ci.sh", 300),
     ("scripts/ci/run_protocol_root_corpus_gateway_admissibility_probes_ci.sh", 300),
+    ("scripts/ci/run_protocol_root_machine_registry_completeness_probes_ci.sh", 300),
     ("scripts/ci/run_protocol_root_corpus_precedence_probes_ci.sh", 300),
     ("scripts/ci/run_protocol_root_corpus_question_routing_probes_ci.sh", 300),
     (

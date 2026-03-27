@@ -88,6 +88,11 @@ BASE_CHECKS: tuple[CheckSpec, ...] = (
         status_key="protocol_root_corpus_authority_status",
     ),
     CheckSpec(
+        name="protocol_root_constitutional_spine",
+        command=("python3", "scripts/validate_protocol_root_constitutional_spine.py", "--json-only"),
+        status_key="protocol_root_constitutional_spine_status",
+    ),
+    CheckSpec(
         name="protocol_root_corpus_derivation",
         command=("python3", "scripts/validate_protocol_root_corpus_derivation.py", "--json-only"),
         status_key="protocol_root_corpus_derivation_status",
@@ -101,6 +106,11 @@ BASE_CHECKS: tuple[CheckSpec, ...] = (
         name="protocol_root_corpus_gateway_admissibility",
         command=("python3", "scripts/validate_protocol_root_corpus_gateway_admissibility.py", "--json-only"),
         status_key="protocol_root_corpus_gateway_admissibility_status",
+    ),
+    CheckSpec(
+        name="protocol_root_machine_registry_completeness",
+        command=("python3", "scripts/validate_protocol_root_machine_registry_completeness.py", "--json-only"),
+        status_key="protocol_root_machine_registry_completeness_status",
     ),
     CheckSpec(
         name="protocol_root_corpus_precedence",
