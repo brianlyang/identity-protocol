@@ -210,6 +210,25 @@ def _derive_run_id_from_session_id(session_id: str) -> str:
     return token
 
 
+def _resolve_cli_catalog_path(catalog_input: str) -> Path:
+    return Path(str(catalog_input or "").strip()).expanduser().resolve()
+
+
+def _resolve_cli_repo_catalog_path(repo_catalog_input: str) -> Path:
+    repo_catalog_arg = Path(str(repo_catalog_input or "").strip()).expanduser()
+    if repo_catalog_arg.is_absolute():
+        return repo_catalog_arg.resolve()
+    return (PROTOCOL_ROOT / repo_catalog_arg).resolve()
+
+
+def _canonicalize_three_plane_cli_paths(args: argparse.Namespace) -> tuple[Path, Path]:
+    catalog_path = _resolve_cli_catalog_path(args.catalog)
+    repo_catalog_path = _resolve_cli_repo_catalog_path(args.repo_catalog)
+    args.catalog = str(catalog_path)
+    args.repo_catalog = str(repo_catalog_path)
+    return catalog_path, repo_catalog_path
+
+
 def _extract_error_code_from_validator(entry: dict[str, Any]) -> str:
     payload = _parse_json_payload(str(entry.get("out", ""))) or {}
     for key in VALIDATOR_ERROR_CODE_KEYS:
@@ -5452,12 +5471,7 @@ def main() -> int:
     if not args.catalog:
         print("[FAIL] --catalog is required (or export IDENTITY_CATALOG first).")
         return 2
-    catalog_path = Path(args.catalog).expanduser().resolve()
-    repo_catalog_arg = Path(args.repo_catalog).expanduser()
-    if repo_catalog_arg.is_absolute():
-        repo_catalog_path = repo_catalog_arg.resolve()
-    else:
-        repo_catalog_path = (PROTOCOL_ROOT / repo_catalog_arg).resolve()
+    catalog_path, repo_catalog_path = _canonicalize_three_plane_cli_paths(args)
     if not catalog_path.exists():
         print(f"[FAIL] catalog not found: {catalog_path}")
         return 2
@@ -5467,7 +5481,6 @@ def main() -> int:
             f"{repo_catalog_path} (hint: pass explicit --repo-catalog <absolute-path>)"
         )
         return 2
-    args.repo_catalog = str(repo_catalog_path)
     actor_id_input = str(args.actor_id or "").strip()
     if not actor_id_input:
         print(
