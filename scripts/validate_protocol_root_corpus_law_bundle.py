@@ -37,6 +37,8 @@ from root_corpus_law_bundle_common import (
     component_validator_execution_failure_policy_from_doc,
     component_validator_returncode_observation_contract_from_doc,
     component_validator_output_contract_from_doc,
+    component_validator_root_doc_anchor_contract_from_doc,
+    component_validator_row_projection_contract_from_doc,
     component_validator_invocation_contract_from_doc,
     component_validator_output_channel_contract_from_doc,
     component_validator_stderr_isolation_contract_from_doc,
@@ -134,6 +136,12 @@ ERR_STRUCTURE = "IP-RCLB-002"
 ERR_BUNDLE = "IP-RCLB-003"
 COMPONENT_VALIDATOR_RETURNCODE_OBSERVATION_CONTRACT = "nonzero_returncode_observed_without_host_exception_overlay"
 COMPONENT_VALIDATOR_INVOCATION_CONTRACT = "python3_repo_root_json_only"
+COMPONENT_VALIDATOR_ROOT_DOC_ANCHOR_CONTRACT = (
+    "root_doc_anchor_status_pass_required_with_positive_anchor_check_count"
+)
+COMPONENT_VALIDATOR_ROW_PROJECTION_CONTRACT = (
+    "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
+)
 COMPONENT_VALIDATOR_OUTPUT_CHANNEL_CONTRACT = "stdout_only"
 COMPONENT_VALIDATOR_STDERR_ISOLATION_CONTRACT = "stderr_captured_separate_from_stdout"
 COMPONENT_VALIDATOR_STDIO_TEXT_DECODING_CONTRACT = "utf8_strict_text_decode_no_locale_overlay"
@@ -1684,6 +1692,45 @@ def _normalize_component_validator_stdout(
     return text.strip()
 
 
+def _evaluate_component_validator_root_doc_anchor_contract(
+    payload: dict[str, Any],
+    contract: str,
+) -> str:
+    if contract != COMPONENT_VALIDATOR_ROOT_DOC_ANCHOR_CONTRACT:
+        return ""
+    status = str(payload.get("root_doc_anchor_status") or "")
+    if status != STATUS_PASS_REQUIRED:
+        return "component_validator_root_doc_anchor_status_not_pass_required"
+    count = payload.get("root_doc_anchor_check_count")
+    if not isinstance(count, int) or count <= 0:
+        return "component_validator_root_doc_anchor_check_count_invalid"
+    return ""
+
+
+def _evaluate_component_validator_row_projection_contract(
+    payload: dict[str, Any],
+    contract: str,
+) -> list[str]:
+    if contract != COMPONENT_VALIDATOR_ROW_PROJECTION_CONTRACT:
+        return []
+    violations: list[str] = []
+    rows = payload.get("row_family_projection_rows")
+    if not isinstance(rows, list) or not rows or not all(isinstance(row, dict) for row in rows):
+        violations.append("component_validator_row_family_projection_rows_missing_or_invalid")
+        return violations
+    coverage_keys = [key for key in payload if key.endswith("_row_coverage_status")]
+    identity_keys = [key for key in payload if key.endswith("_row_identity_projection_status")]
+    if not coverage_keys:
+        violations.append("component_validator_row_coverage_status_missing")
+    elif any(str(payload.get(key) or "") != STATUS_PASS_REQUIRED for key in coverage_keys):
+        violations.append("component_validator_row_coverage_status_not_pass_required")
+    if not identity_keys:
+        violations.append("component_validator_row_identity_projection_status_missing")
+    elif any(str(payload.get(key) or "") != STATUS_PASS_REQUIRED for key in identity_keys):
+        violations.append("component_validator_row_identity_projection_status_not_pass_required")
+    return violations
+
+
 def _resolve_component_validator_status(
     payload: dict[str, Any],
     status_key: str,
@@ -1916,6 +1963,12 @@ def main() -> int:
     component_validator_output_contract = (
         component_validator_output_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_validator_root_doc_anchor_contract = (
+        component_validator_root_doc_anchor_contract_from_doc(bundle_doc) if bundle_doc else ""
+    )
+    component_validator_row_projection_contract = (
+        component_validator_row_projection_contract_from_doc(bundle_doc) if bundle_doc else ""
+    )
     component_validator_invocation_contract = (
         component_validator_invocation_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
@@ -2107,6 +2160,16 @@ def main() -> int:
         component_validator_output_contract
         if component_validator_output_contract == COMPONENT_VALIDATOR_OUTPUT_CONTRACT
         else COMPONENT_VALIDATOR_OUTPUT_CONTRACT
+    )
+    effective_component_validator_root_doc_anchor_contract = (
+        component_validator_root_doc_anchor_contract
+        if component_validator_root_doc_anchor_contract == COMPONENT_VALIDATOR_ROOT_DOC_ANCHOR_CONTRACT
+        else COMPONENT_VALIDATOR_ROOT_DOC_ANCHOR_CONTRACT
+    )
+    effective_component_validator_row_projection_contract = (
+        component_validator_row_projection_contract
+        if component_validator_row_projection_contract == COMPONENT_VALIDATOR_ROW_PROJECTION_CONTRACT
+        else COMPONENT_VALIDATOR_ROW_PROJECTION_CONTRACT
     )
     effective_component_validator_contract_drift_execution_policy = (
         component_validator_contract_drift_execution_policy
@@ -2620,6 +2683,12 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_validator_output_contract != COMPONENT_VALIDATOR_OUTPUT_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_output_contract_invalid")
+            error_code = ERR_REGISTRY
+        if component_validator_root_doc_anchor_contract != COMPONENT_VALIDATOR_ROOT_DOC_ANCHOR_CONTRACT:
+            stale_reasons.append("root_corpus_law_bundle_component_validator_root_doc_anchor_contract_invalid")
+            error_code = ERR_REGISTRY
+        if component_validator_row_projection_contract != COMPONENT_VALIDATOR_ROW_PROJECTION_CONTRACT:
+            stale_reasons.append("root_corpus_law_bundle_component_validator_row_projection_contract_invalid")
             error_code = ERR_REGISTRY
         if component_validator_invocation_contract != COMPONENT_VALIDATOR_INVOCATION_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_invocation_contract_invalid")
@@ -3338,6 +3407,23 @@ def main() -> int:
                 effective_component_validator_execution_transport_contract,
             )
             component_status = str(payload.get(row.status_key) or "")
+            component_root_doc_anchor_status = str(payload.get("root_doc_anchor_status") or "")
+            component_root_doc_anchor_check_count = payload.get("root_doc_anchor_check_count")
+            component_row_family_projection_rows = payload.get("row_family_projection_rows")
+            component_row_coverage_keys = sorted(
+                key for key in payload if key.endswith("_row_coverage_status")
+            )
+            component_row_identity_keys = sorted(
+                key for key in payload if key.endswith("_row_identity_projection_status")
+            )
+            anchor_contract_violation = _evaluate_component_validator_root_doc_anchor_contract(
+                payload,
+                effective_component_validator_root_doc_anchor_contract,
+            )
+            row_projection_contract_violations = _evaluate_component_validator_row_projection_contract(
+                payload,
+                effective_component_validator_row_projection_contract,
+            )
             descriptor_field_rows: list[dict[str, str]] = []
             component_status_rows.append(
                 {
@@ -3351,6 +3437,8 @@ def main() -> int:
                     "validator_execution_failure_policy": effective_component_validator_execution_failure_policy,
                     "validator_returncode_observation_contract": effective_component_validator_returncode_observation_contract,
                     "validator_output_contract": effective_component_validator_output_contract,
+                    "validator_root_doc_anchor_contract": effective_component_validator_root_doc_anchor_contract,
+                    "validator_row_projection_contract": effective_component_validator_row_projection_contract,
                     "validator_invocation_contract": effective_component_validator_invocation_contract,
                     "validator_output_channel_contract": effective_component_validator_output_channel_contract,
                     "validator_stderr_isolation_contract": effective_component_validator_stderr_isolation_contract,
@@ -3372,6 +3460,15 @@ def main() -> int:
                     ),
                     "validator_rc": rc,
                     "component_status": component_status,
+                    "root_doc_anchor_status": component_root_doc_anchor_status,
+                    "root_doc_anchor_check_count": component_root_doc_anchor_check_count,
+                    "row_family_projection_row_count": (
+                        len(component_row_family_projection_rows)
+                        if isinstance(component_row_family_projection_rows, list)
+                        else 0
+                    ),
+                    "row_coverage_status_keys": component_row_coverage_keys,
+                    "row_identity_projection_status_keys": component_row_identity_keys,
                     "error_codes": list(row.error_codes),
                     "validator_error": run_error,
                     "descriptor_concordance_required": descriptor_concordance_required,
@@ -3387,6 +3484,21 @@ def main() -> int:
                     "descriptor_field_rows": descriptor_field_rows,
                 }
             )
+            if not run_error:
+                if anchor_contract_violation:
+                    bundle_violations.append(
+                        {
+                            "component_id": row.component_id,
+                            "reason": anchor_contract_violation,
+                        }
+                    )
+                for projection_violation in row_projection_contract_violations:
+                    bundle_violations.append(
+                        {
+                            "component_id": row.component_id,
+                            "reason": projection_violation,
+                        }
+                    )
             if run_error:
                 bundle_violations.append(
                     {
@@ -3878,6 +3990,8 @@ def main() -> int:
         "component_validator_execution_failure_policy": component_validator_execution_failure_policy,
         "component_validator_returncode_observation_contract": component_validator_returncode_observation_contract,
         "component_validator_output_contract": component_validator_output_contract,
+        "component_validator_root_doc_anchor_contract": component_validator_root_doc_anchor_contract,
+        "component_validator_row_projection_contract": component_validator_row_projection_contract,
         "component_validator_invocation_contract": component_validator_invocation_contract,
         "component_validator_output_channel_contract": component_validator_output_channel_contract,
         "component_validator_stderr_isolation_contract": component_validator_stderr_isolation_contract,

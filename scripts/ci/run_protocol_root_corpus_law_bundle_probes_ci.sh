@@ -14,6 +14,44 @@ mirror_repo() {
   probe_mirror_repo "${ROOT}" "${dst}"
 }
 
+write_minimal_root_precedence_validator() {
+  local target_path="$1"
+  local component_status="$2"
+  local exit_code="${3:-0}"
+  python3 - <<'PY' "${target_path}" "${component_status}" "${exit_code}"
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+component_status = sys.argv[2]
+exit_code = int(sys.argv[3])
+payload = {
+    "protocol_root_corpus_precedence_status": component_status,
+    "root_doc_anchor_status": "PASS_REQUIRED",
+    "root_doc_anchor_check_count": 4,
+    "precedence_row_coverage_status": "PASS_REQUIRED",
+    "precedence_row_identity_projection_status": "PASS_REQUIRED",
+    "row_family_projection_rows": [
+        {
+            "family_id": "precedence_profiles",
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED",
+        }
+    ],
+}
+script_lines = [
+    "#!/usr/bin/env python3",
+    "import json",
+    f"payload = {json.dumps(payload, ensure_ascii=False)}",
+    "print(json.dumps(payload))",
+]
+if exit_code:
+    script_lines.append(f"raise SystemExit({exit_code})")
+path.write_text("\n".join(script_lines) + "\n", encoding="utf-8")
+PY
+}
+
 PASS_JSON="${TMP_ROOT}/pass.json"
 python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
   --repo-root "${ROOT}" \
@@ -66,6 +104,8 @@ assert payload["component_validator_status_requirement"] == "PASS_REQUIRED", pay
 assert payload["component_validator_execution_failure_policy"] == "fail_closed", payload
 assert payload["component_validator_returncode_observation_contract"] == "nonzero_returncode_observed_without_host_exception_overlay", payload
 assert payload["component_validator_output_contract"] == "json_object_with_disclosed_status_key", payload
+assert payload["component_validator_root_doc_anchor_contract"] == "root_doc_anchor_status_pass_required_with_positive_anchor_check_count", payload
+assert payload["component_validator_row_projection_contract"] == "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses", payload
 assert payload["component_validator_invocation_contract"] == "python3_repo_root_json_only", payload
 assert payload["component_validator_output_channel_contract"] == "stdout_only", payload
 assert payload["component_validator_stderr_isolation_contract"] == "stderr_captured_separate_from_stdout", payload
@@ -210,6 +250,13 @@ assert payload["expected_projected_violation_reason_count"] == 0, payload
 assert payload["violation_projection_status"] == "PASS_REQUIRED", payload
 assert payload["stale_reason_count"] == 0, payload
 assert all(row["component_status"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
+assert all(row["root_doc_anchor_status"] == "PASS_REQUIRED" for row in payload["component_status_rows"]), payload
+assert all(isinstance(row["root_doc_anchor_check_count"], int) and row["root_doc_anchor_check_count"] > 0 for row in payload["component_status_rows"]), payload
+assert all(row["row_family_projection_row_count"] > 0 for row in payload["component_status_rows"]), payload
+assert all(row["row_coverage_status_keys"] for row in payload["component_status_rows"]), payload
+assert all(row["row_identity_projection_status_keys"] for row in payload["component_status_rows"]), payload
+assert all(row["validator_root_doc_anchor_contract"] == "root_doc_anchor_status_pass_required_with_positive_anchor_check_count" for row in payload["component_status_rows"]), payload
+assert all(row["validator_row_projection_contract"] == "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses" for row in payload["component_status_rows"]), payload
 assert all(
     row["validator_status_requirement"] == "PASS_REQUIRED"
     for row in payload["component_status_rows"]
@@ -2053,13 +2100,11 @@ import pathlib
 import sys
 
 path = pathlib.Path(sys.argv[1])
-path.write_text(
-    "#!/usr/bin/env python3\n"
-    "import json\n"
-    "print(json.dumps({'protocol_root_corpus_precedence_status': 'PASS_REQUIRED'}))\n"
-    "raise SystemExit(9)\n",
-    encoding="utf-8",
-)
+text = path.read_text(encoding="utf-8")
+old = "if __name__ == \"__main__\":\n    raise SystemExit(main())\n"
+new = "if __name__ == \"__main__\":\n    _exit_code = main()\n    raise SystemExit(9 if _exit_code == 0 else _exit_code)\n"
+assert old in text, text[-4000:]
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
 PY
 
 COMPONENT_VALIDATOR_NONZERO_RC_OBSERVATION_JSON="${TMP_ROOT}/component-validator-nonzero-rc-observation.json"
@@ -2091,18 +2136,9 @@ PY
 
 COMPONENT_VALIDATOR_NONPASS_STATUS_OBSERVATION_REPO="${TMP_ROOT}/component-validator-nonpass-status-observation-repo"
 mirror_repo "${COMPONENT_VALIDATOR_NONPASS_STATUS_OBSERVATION_REPO}"
-python3 - <<'PY' "${COMPONENT_VALIDATOR_NONPASS_STATUS_OBSERVATION_REPO}/scripts/validate_protocol_root_corpus_precedence.py"
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-path.write_text(
-    "#!/usr/bin/env python3\n"
-    "import json\n"
-    "print(json.dumps({'protocol_root_corpus_precedence_status': 'FAIL_REQUIRED'}))\n",
-    encoding="utf-8",
-)
-PY
+write_minimal_root_precedence_validator \
+  "${COMPONENT_VALIDATOR_NONPASS_STATUS_OBSERVATION_REPO}/scripts/validate_protocol_root_corpus_precedence.py" \
+  "FAIL_REQUIRED"
 
 COMPONENT_VALIDATOR_NONPASS_STATUS_OBSERVATION_JSON="${TMP_ROOT}/component-validator-nonpass-status-observation.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
@@ -3112,7 +3148,9 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["component_validator_observation_reason_status"] == "FAIL_REQUIRED", payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_unclassified" in payload["stale_reasons"], payload
 assert any(
     row["component_id"] == "root_corpus_ordering"
     and row["reason"] == "component_current_file_not_admitted_by_inherited_registry_child_set"
@@ -4292,6 +4330,86 @@ assert any(
     row["component_id"] == "root_corpus_ordering"
     and row["reason"] == "component_descriptor_concordance_failure"
     and row.get("descriptor_field") == "error_codes"
+    for row in payload["bundle_violations"]
+), payload
+PY
+
+COMPONENT_ANCHOR_REPO="${TMP_ROOT}/component-anchor-contract-repo"
+mirror_repo "${COMPONENT_ANCHOR_REPO}"
+python3 - <<'PY' "${COMPONENT_ANCHOR_REPO}/scripts/validate_protocol_root_corpus_authority.py"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = '    _emit(payload, json_only=args.json_only)'
+new = '    payload["root_doc_anchor_status_alias"] = payload.pop("root_doc_anchor_status", "")\n    _emit(payload, json_only=args.json_only)'
+assert old in text, text[-4000:]
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+COMPONENT_ANCHOR_JSON="${TMP_ROOT}/component-anchor-contract.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_ANCHOR_REPO}" \
+  --json-only >"${COMPONENT_ANCHOR_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component anchor contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_ANCHOR_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["component_validator_observation_reason_status"] == "FAIL_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 1, payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_unclassified" in payload["stale_reasons"], payload
+assert any(
+    row["component_id"] == "root_corpus_authority"
+    and row["reason"] == "component_validator_root_doc_anchor_status_not_pass_required"
+    for row in payload["bundle_violations"]
+), payload
+PY
+
+COMPONENT_PROJECTION_REPO="${TMP_ROOT}/component-row-projection-contract-repo"
+mirror_repo "${COMPONENT_PROJECTION_REPO}"
+python3 - <<'PY' "${COMPONENT_PROJECTION_REPO}/scripts/validate_protocol_root_corpus_ordering.py"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = '"row_family_projection_rows": row_family_projection_rows,'
+new = '"row_family_projection_rows_alias": row_family_projection_rows,'
+assert old in text, text[:5000]
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+COMPONENT_PROJECTION_JSON="${TMP_ROOT}/component-row-projection-contract.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_PROJECTION_REPO}" \
+  --json-only >"${COMPONENT_PROJECTION_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component row-projection contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_PROJECTION_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-001", payload
+assert payload["component_validator_observation_reason_status"] == "FAIL_REQUIRED", payload
+assert payload["component_validator_observation_reason_unknown_count"] == 1, payload
+assert "root_corpus_law_bundle_component_validator_observation_reason_unclassified" in payload["stale_reasons"], payload
+assert any(
+    row["component_id"] == "root_corpus_ordering"
+    and row["reason"] == "component_validator_row_family_projection_rows_missing_or_invalid"
     for row in payload["bundle_violations"]
 ), payload
 PY
