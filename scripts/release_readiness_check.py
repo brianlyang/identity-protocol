@@ -46,7 +46,7 @@ from protocol_infra_contract import (
     VALIDATOR_ACTOR_ID_REQUIRED_SCRIPTS,
     VALIDATOR_SESSION_ID_REQUIRED_SCRIPTS,
 )
-from primary_execution_report_common import latest_primary_execution_report_from_roots, prompt_file_sha
+from primary_execution_report_common import latest_prompt_bound_primary_execution_report_from_roots
 from release_cloud_evidence_projection_common import (
     build_release_cloud_evidence_adapter_projection,
     build_release_plane_cloud_evidence_summary_projection,
@@ -320,6 +320,8 @@ STRUCTURED_SUMMARY_CAPTURE_SPECS: dict[str, dict[str, tuple[str, ...]]] = {
             "root_validator_count",
             "primitive_violation_count",
             "primitive_violation_file_count",
+            "primitive_adoption_row_count",
+            "row_family_projection_assignment_violation_count",
             "scan_error_count",
             "stale_reasons",
         ),
@@ -3761,15 +3763,10 @@ def main() -> int:
             roots.append(upgrade_reports_runtime_root)
             if os.environ.get("IDENTITY_HOME", "").strip():
                 roots.append(Path(os.environ["IDENTITY_HOME"]).expanduser().resolve())
-            prompt_sha = ""
-            if pack_path is not None:
-                prompt_path = pack_path / "IDENTITY_PROMPT.md"
-                if prompt_path.exists():
-                    prompt_sha = prompt_file_sha(prompt_path)
-            selected_report = latest_primary_execution_report_from_roots(
+            selected_report = latest_prompt_bound_primary_execution_report_from_roots(
                 roots,
                 identity_id,
-                preferred_prompt_sha=prompt_sha,
+                explicit_pack_root=pack_path,
             )
             if selected_report is None:
                 print(
