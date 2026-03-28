@@ -19,7 +19,7 @@ from root_contract_marker_checks_common import (
 )
 from root_contract_integration_checks_common import evaluate_root_contract_integration
 from root_contract_verdict_common import project_root_contract_support_verdict
-from root_contract_row_validation_common import validate_contract_rows
+from root_contract_row_validation_common import validate_contract_row_batches
 from root_corpus_authority_common import authority_anchor_checks_from_doc, entry_authority_projections_from_doc, load_root_corpus_authority
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, reading_order_rows_from_doc
@@ -28,7 +28,7 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_identity_discovery_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -360,168 +360,157 @@ def main() -> int:
                 error_code = ERR_REGISTRY
 
     if not stale_reasons:
-        row_family_projection_rows = [
-            project_row_family(
-                family_id="required_section_rows",
-                member_id_key="section_id",
-                actual_rows=section_rows,
-                expected_rows=EXPECTED_SECTION_ROWS,
-                id_attr="section_id",
+        row_family_projection_rows = project_row_families(
+            families=(
+                {
+                    "family_id": "required_section_rows",
+                    "member_id_key": "section_id",
+                    "actual_rows": section_rows,
+                    "expected_rows": EXPECTED_SECTION_ROWS,
+                    "id_attr": "section_id",
+                },
+                {
+                    "family_id": "required_request_field_rows",
+                    "member_id_key": "request_field_id",
+                    "actual_rows": request_field_rows,
+                    "expected_rows": EXPECTED_REQUEST_FIELD_ROWS,
+                    "id_attr": "row_id",
+                },
+                {
+                    "family_id": "required_response_field_rows",
+                    "member_id_key": "response_field_id",
+                    "actual_rows": response_field_rows,
+                    "expected_rows": EXPECTED_RESPONSE_FIELD_ROWS,
+                    "id_attr": "row_id",
+                },
+                {
+                    "family_id": "required_precedence_rows",
+                    "member_id_key": "precedence_id",
+                    "actual_rows": precedence_rows,
+                    "expected_rows": EXPECTED_PRECEDENCE_ROWS,
+                    "id_attr": "row_id",
+                },
+                {
+                    "family_id": "required_activation_rows",
+                    "member_id_key": "activation_id",
+                    "actual_rows": activation_rows,
+                    "expected_rows": EXPECTED_ACTIVATION_ROWS,
+                    "id_attr": "row_id",
+                },
+                {
+                    "family_id": "required_error_field_rows",
+                    "member_id_key": "error_field_id",
+                    "actual_rows": error_field_rows,
+                    "expected_rows": EXPECTED_ERROR_FIELD_ROWS,
+                    "id_attr": "row_id",
+                },
+                {
+                    "family_id": "required_implementation_rows",
+                    "member_id_key": "implementation_id",
+                    "actual_rows": implementation_rows,
+                    "expected_rows": EXPECTED_IMPLEMENTATION_ROWS,
+                    "id_attr": "row_id",
+                },
+                {
+                    "family_id": "required_discovery_proof_rows",
+                    "member_id_key": "proof_id",
+                    "actual_rows": discovery_proof_rows,
+                    "expected_rows": EXPECTED_DISCOVERY_PROOF_ROWS,
+                    "id_attr": "proof_id",
+                },
+                {
+                    "family_id": "required_discovery_limit_rows",
+                    "member_id_key": "limit_id",
+                    "actual_rows": discovery_limit_rows,
+                    "expected_rows": EXPECTED_DISCOVERY_LIMIT_ROWS,
+                    "id_attr": "row_id",
+                },
+                {
+                    "family_id": "required_collapse_rows",
+                    "member_id_key": "collapse_id",
+                    "actual_rows": collapse_rows,
+                    "expected_rows": EXPECTED_COLLAPSE_ROWS,
+                    "id_attr": "row_id",
+                },
             ),
-            project_row_family(
-                family_id="required_request_field_rows",
-                member_id_key="request_field_id",
-                actual_rows=request_field_rows,
-                expected_rows=EXPECTED_REQUEST_FIELD_ROWS,
-                id_attr="row_id",
-            ),
-            project_row_family(
-                family_id="required_response_field_rows",
-                member_id_key="response_field_id",
-                actual_rows=response_field_rows,
-                expected_rows=EXPECTED_RESPONSE_FIELD_ROWS,
-                id_attr="row_id",
-            ),
-            project_row_family(
-                family_id="required_precedence_rows",
-                member_id_key="precedence_id",
-                actual_rows=precedence_rows,
-                expected_rows=EXPECTED_PRECEDENCE_ROWS,
-                id_attr="row_id",
-            ),
-            project_row_family(
-                family_id="required_activation_rows",
-                member_id_key="activation_id",
-                actual_rows=activation_rows,
-                expected_rows=EXPECTED_ACTIVATION_ROWS,
-                id_attr="row_id",
-            ),
-            project_row_family(
-                family_id="required_error_field_rows",
-                member_id_key="error_field_id",
-                actual_rows=error_field_rows,
-                expected_rows=EXPECTED_ERROR_FIELD_ROWS,
-                id_attr="row_id",
-            ),
-            project_row_family(
-                family_id="required_implementation_rows",
-                member_id_key="implementation_id",
-                actual_rows=implementation_rows,
-                expected_rows=EXPECTED_IMPLEMENTATION_ROWS,
-                id_attr="row_id",
-            ),
-            project_row_family(
-                family_id="required_discovery_proof_rows",
-                member_id_key="proof_id",
-                actual_rows=discovery_proof_rows,
-                expected_rows=EXPECTED_DISCOVERY_PROOF_ROWS,
-                id_attr="proof_id",
-            ),
-            project_row_family(
-                family_id="required_discovery_limit_rows",
-                member_id_key="limit_id",
-                actual_rows=discovery_limit_rows,
-                expected_rows=EXPECTED_DISCOVERY_LIMIT_ROWS,
-                id_attr="row_id",
-            ),
-            project_row_family(
-                family_id="required_collapse_rows",
-                member_id_key="collapse_id",
-                actual_rows=collapse_rows,
-                expected_rows=EXPECTED_COLLAPSE_ROWS,
-                id_attr="row_id",
-            ),
-        ]
-
-        validate_contract_rows(
-            actual_rows=section_rows,
-            expected_rows=EXPECTED_SECTION_ROWS,
-            structure_violations=structure_violations,
-            discovery_violations=discovery_violations,
-            field_name="required_section_rows",
-            id_attr="section_id",
-            compare_fields=("contract_heading",),
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
         )
-        validate_contract_rows(
-            actual_rows=request_field_rows,
-            expected_rows=EXPECTED_REQUEST_FIELD_ROWS,
+        validate_contract_row_batches(
+            batches=(
+                {
+                    "actual_rows": section_rows,
+                    "expected_rows": EXPECTED_SECTION_ROWS,
+                    "field_name": "required_section_rows",
+                    "id_attr": "section_id",
+                    "compare_fields": ("contract_heading",),
+                },
+                {
+                    "actual_rows": request_field_rows,
+                    "expected_rows": EXPECTED_REQUEST_FIELD_ROWS,
+                    "field_name": "required_request_field_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": response_field_rows,
+                    "expected_rows": EXPECTED_RESPONSE_FIELD_ROWS,
+                    "field_name": "required_response_field_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": precedence_rows,
+                    "expected_rows": EXPECTED_PRECEDENCE_ROWS,
+                    "field_name": "required_precedence_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": activation_rows,
+                    "expected_rows": EXPECTED_ACTIVATION_ROWS,
+                    "field_name": "required_activation_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": error_field_rows,
+                    "expected_rows": EXPECTED_ERROR_FIELD_ROWS,
+                    "field_name": "required_error_field_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": implementation_rows,
+                    "expected_rows": EXPECTED_IMPLEMENTATION_ROWS,
+                    "field_name": "required_implementation_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": discovery_proof_rows,
+                    "expected_rows": EXPECTED_DISCOVERY_PROOF_ROWS,
+                    "field_name": "required_discovery_proof_rows",
+                    "id_attr": "proof_id",
+                    "compare_fields": ("contract_heading", "proof_role"),
+                },
+                {
+                    "actual_rows": discovery_limit_rows,
+                    "expected_rows": EXPECTED_DISCOVERY_LIMIT_ROWS,
+                    "field_name": "required_discovery_limit_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": collapse_rows,
+                    "expected_rows": EXPECTED_COLLAPSE_ROWS,
+                    "field_name": "required_collapse_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+            ),
             structure_violations=structure_violations,
             discovery_violations=discovery_violations,
-            field_name="required_request_field_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
-        )
-        validate_contract_rows(
-            actual_rows=response_field_rows,
-            expected_rows=EXPECTED_RESPONSE_FIELD_ROWS,
-            structure_violations=structure_violations,
-            discovery_violations=discovery_violations,
-            field_name="required_response_field_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
-        )
-        validate_contract_rows(
-            actual_rows=precedence_rows,
-            expected_rows=EXPECTED_PRECEDENCE_ROWS,
-            structure_violations=structure_violations,
-            discovery_violations=discovery_violations,
-            field_name="required_precedence_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
-        )
-        validate_contract_rows(
-            actual_rows=activation_rows,
-            expected_rows=EXPECTED_ACTIVATION_ROWS,
-            structure_violations=structure_violations,
-            discovery_violations=discovery_violations,
-            field_name="required_activation_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
-        )
-        validate_contract_rows(
-            actual_rows=error_field_rows,
-            expected_rows=EXPECTED_ERROR_FIELD_ROWS,
-            structure_violations=structure_violations,
-            discovery_violations=discovery_violations,
-            field_name="required_error_field_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
-        )
-        validate_contract_rows(
-            actual_rows=implementation_rows,
-            expected_rows=EXPECTED_IMPLEMENTATION_ROWS,
-            structure_violations=structure_violations,
-            discovery_violations=discovery_violations,
-            field_name="required_implementation_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
-        )
-        validate_contract_rows(
-            actual_rows=discovery_proof_rows,
-            expected_rows=EXPECTED_DISCOVERY_PROOF_ROWS,
-            structure_violations=structure_violations,
-            discovery_violations=discovery_violations,
-            field_name="required_discovery_proof_rows",
-            id_attr="proof_id",
-            compare_fields=("contract_heading", "proof_role"),
-        )
-        validate_contract_rows(
-            actual_rows=discovery_limit_rows,
-            expected_rows=EXPECTED_DISCOVERY_LIMIT_ROWS,
-            structure_violations=structure_violations,
-            discovery_violations=discovery_violations,
-            field_name="required_discovery_limit_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
-        )
-        validate_contract_rows(
-            actual_rows=collapse_rows,
-            expected_rows=EXPECTED_COLLAPSE_ROWS,
-            structure_violations=structure_violations,
-            discovery_violations=discovery_violations,
-            field_name="required_collapse_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
         )
 
         contract_file = str(discovery_doc.get("contract_file") or "").strip()
