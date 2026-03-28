@@ -12,6 +12,7 @@ from root_contract_anchor_checks_common import (
     validate_expected_root_doc_anchor_checks,
 )
 from root_contract_integration_checks_common import append_membership_delta_violations
+from root_contract_row_validation_common import validate_contract_rows
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_corpus_authority_common import load_root_corpus_authority
 from root_corpus_gateway_admissibility_common import (
@@ -24,10 +25,12 @@ from root_corpus_ordering_common import load_root_corpus_ordering, source_order_
 from root_corpus_precedence_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
+    conflict_handling_rules_from_doc,
     gateway_authorship_projections_from_doc,
     load_root_corpus_precedence,
     precedence_anchor_checks_from_doc,
     precedence_profiles_from_doc,
+    readme_conflict_handling_rule_surface,
 )
 from root_corpus_question_routing_common import (
     adjudication_redirect_from_doc,
@@ -59,9 +62,25 @@ EXPECTED_PROFILES = {
         "resolution_mode": "governed_reclassification_required",
     },
 }
+EXPECTED_CONFLICT_HANDLING_RULES = {
+    "do not use local convenience or historical familiarity to override protocol law;": {
+        "order": 1,
+    },
+    "do not use philosophy text to override a concrete contract row or runtime truth source;": {
+        "order": 2,
+    },
+    "do use philosophy text to interpret why a contract should be strengthened, split, or fail-closed;": {
+        "order": 3,
+    },
+    "do use machine-consumed sources to determine current-turn truth, validation status, and active-runtime legality.": {
+        "order": 4,
+    },
+}
 EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/README.md": (
         "## Root conflict-precedence discipline",
+        "## Conflict-handling rule",
+        "These conflict-handling rules must remain bound to canonical conflict-handling rows rather than drifting into convenience-only advice.",
         "semantic-meaning conflict resolves by source order, not by convenience, recency, or current checker vividness;",
         "current-turn legality conflict resolves at machine-consumed enforcement terminals, not at philosophy prose, README text, or frozen contract prose alone;",
         "gateway-authorship conflict resolves by gateway effect scope, preserved target question class, preserved answer mode, and source order, not by the identity of the incoming motivating surface;",
@@ -71,6 +90,7 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "semantic-origin conflict resolves by source order;",
         "current-turn legality conflict resolves by machine-consumed terminal enforcement;",
         "gateway-authorship conflict resolves by gateway effect scope, preserved target question class, preserved answer mode, and source order;",
+        "README conflict-handling rules about apparent cross-layer disagreement must therefore stay bound to canonical conflict-handling rows rather than remaining local convenience advice.",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
         "## Root conflict-precedence boundary",
@@ -139,6 +159,8 @@ def main() -> int:
 
     anchor_checks = precedence_anchor_checks_from_doc(precedence_doc) if precedence_doc else ()
     gateway_authorship_projections = gateway_authorship_projections_from_doc(precedence_doc) if precedence_doc else ()
+    conflict_handling_rules = conflict_handling_rules_from_doc(precedence_doc) if precedence_doc else ()
+    conflict_handling_rule_surface = readme_conflict_handling_rule_surface(repo_root)
     precedence_profiles = precedence_profiles_from_doc(precedence_doc) if precedence_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     source_order_rows = source_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -188,6 +210,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if not gateway_authorship_projections:
             stale_reasons.append("root_corpus_precedence_gateway_authorship_projection_missing")
+            error_code = ERR_REGISTRY
+        if not conflict_handling_rules:
+            stale_reasons.append("root_corpus_precedence_conflict_handling_rules_missing")
             error_code = ERR_REGISTRY
         if not precedence_profiles:
             stale_reasons.append("root_corpus_precedence_profiles_missing")
@@ -283,6 +308,45 @@ def main() -> int:
             extra_reason="extra_gateway_classes",
             duplicate_reason="duplicate_gateway_class",
             actual_total_count=len(gateway_authorship_projections),
+        )
+        for reason in conflict_handling_rule_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "conflict_handling_rule_surface",
+                    "reason": reason,
+                }
+            )
+        validate_contract_rows(
+            actual_rows=conflict_handling_rules,
+            expected_rows=EXPECTED_CONFLICT_HANDLING_RULES,
+            structure_violations=structure_violations,
+            support_violations=precedence_violations,
+            field_name="conflict_handling_rules",
+            id_attr="rule_text",
+            compare_fields=(),
+            duplicate_reason="duplicate_conflict_handling_rule",
+            non_contiguous_reason="conflict_handling_rule_order_non_contiguous",
+            missing_reason="missing_conflict_handling_rules",
+            extra_reason="extra_conflict_handling_rules",
+            missing_ids_key="rule_texts",
+            extra_ids_key="rule_texts",
+            violation_id_key="rule_text",
+        )
+        validate_contract_rows(
+            actual_rows=conflict_handling_rule_surface.rows,
+            expected_rows=EXPECTED_CONFLICT_HANDLING_RULES,
+            structure_violations=structure_violations,
+            support_violations=precedence_violations,
+            field_name="conflict_handling_rule_surface",
+            id_attr="rule_text",
+            compare_fields=(),
+            duplicate_reason="duplicate_conflict_handling_rule_surface_text",
+            non_contiguous_reason="conflict_handling_rule_surface_order_non_contiguous",
+            missing_reason="missing_conflict_handling_rule_surface_rows",
+            extra_reason="extra_conflict_handling_rule_surface_rows",
+            missing_ids_key="rule_texts",
+            extra_ids_key="rule_texts",
+            violation_id_key="rule_text",
         )
 
         for row in precedence_profiles:
@@ -468,6 +532,20 @@ def main() -> int:
                 },
                 "id_attr": "gateway_class",
             },
+            {
+                "family_id": "conflict_handling_rules",
+                "member_id_key": "rule_text",
+                "actual_rows": conflict_handling_rules,
+                "expected_rows": EXPECTED_CONFLICT_HANDLING_RULES,
+                "id_attr": "rule_text",
+            },
+            {
+                "family_id": "conflict_handling_rule_surface",
+                "member_id_key": "rule_text",
+                "actual_rows": conflict_handling_rule_surface.rows,
+                "expected_rows": EXPECTED_CONFLICT_HANDLING_RULES,
+                "id_attr": "rule_text",
+            },
         ),
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
@@ -493,6 +571,7 @@ def main() -> int:
         "root_dir": str(precedence_doc.get("root_dir") or ""),
         "precedence_anchor_check_count": len(anchor_checks),
         "gateway_authorship_projection_count": len(gateway_authorship_projections),
+        "conflict_handling_rule_count": len(conflict_handling_rules),
         "precedence_profile_count": len(precedence_profiles),
         **project_root_contract_support_projection(
             prefix="precedence",
@@ -512,6 +591,25 @@ def main() -> int:
             }
             for row in sorted(gateway_authorship_projections, key=lambda item: item.gateway_class)
         ],
+        "conflict_handling_rules": [
+            {
+                "order": row.order,
+                "rule_text": row.rule_text,
+            }
+            for row in sorted(conflict_handling_rules, key=lambda item: item.order)
+        ],
+        "conflict_handling_rule_surface": {
+            "rel_path": conflict_handling_rule_surface.rel_path,
+            "entry_count": len(conflict_handling_rule_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "rule_text": row.rule_text,
+                }
+                for row in conflict_handling_rule_surface.rows
+            ],
+            "extraction_violations": list(conflict_handling_rule_surface.extraction_violations),
+        },
         "precedence_profiles": [
             {
                 "conflict_class": row.conflict_class,

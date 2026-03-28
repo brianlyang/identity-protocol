@@ -38,16 +38,20 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_precedence_status"] == "PASS_REQUIRED", payload
 assert payload["root_doc_anchor_check_count"] == 4, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
-assert payload["precedence_row_family_count"] == 2, payload
+assert payload["precedence_row_family_count"] == 4, payload
 assert payload["precedence_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["precedence_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert payload["conflict_handling_rule_count"] == 4, payload
+assert payload["conflict_handling_rule_surface"]["entry_count"] == 4, payload
 assert any(
     row["conflict_class"] == "current_turn_legality_conflict"
     and row["resolution_mode"] == "machine_enforcement_terminal"
     for row in payload["precedence_profiles"]
 ), payload
+assert any(row["family_id"] == "conflict_handling_rules" for row in payload["row_family_projection_rows"]), payload
+assert any(row["family_id"] == "conflict_handling_rule_surface" for row in payload["row_family_projection_rows"]), payload
 assert {row["gateway_class"]: row["preserved_question_class"] for row in payload["gateway_authorship_projection"]} == {
     "constitution": "frozen_protocol_law",
     "runtime_constitution": "frozen_runtime_law",
@@ -112,6 +116,56 @@ assert gateway_row["coverage_status"] == "PASS_REQUIRED", payload
 assert gateway_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
+RULE_REPO="${TMP_ROOT}/missing-rule-repo"
+mirror_repo "${RULE_REPO}"
+python3 - <<'PY' "${RULE_REPO}/identity/protocol/mappings/root-corpus-precedence.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["conflict_handling_rules"] = [
+    row for row in doc["conflict_handling_rules"]
+    if row.get("rule_text") != "do use machine-consumed sources to determine current-turn truth, validation status, and active-runtime legality."
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+RULE_JSON="${TMP_ROOT}/missing-rule.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_precedence.py" \
+  --repo-root "${RULE_REPO}" \
+  --json-only >"${RULE_JSON}"; then
+  echo "[FAIL] precedence validator unexpectedly passed after removing conflict-handling rule row"
+  exit 1
+fi
+
+python3 - <<'PY' "${RULE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_precedence_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCP-002", payload
+assert any(
+    row["field"] == "conflict_handling_rules"
+    and row["reason"] == "missing_conflict_handling_rules"
+    and "do use machine-consumed sources to determine current-turn truth, validation status, and active-runtime legality." in row.get("rule_texts", [])
+    for row in payload["structure_violations"]
+), payload
+rule_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "conflict_handling_rules"
+)
+assert rule_row["expected_count"] == 4, payload
+assert rule_row["actual_count"] == 3, payload
+assert rule_row["missing_ids"] == ["do use machine-consumed sources to determine current-turn truth, validation status, and active-runtime legality."], payload
+assert rule_row["unexpected_ids"] == [], payload
+assert rule_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert rule_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
 IDENTITY_REPO="${TMP_ROOT}/identity-drift-repo"
 mirror_repo "${IDENTITY_REPO}"
 python3 - <<'PY' "${IDENTITY_REPO}/identity/protocol/mappings/root-corpus-precedence.v1.yaml"
@@ -172,6 +226,58 @@ assert profile_row["coverage_status"] == "PASS_REQUIRED", payload
 assert profile_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 assert gateway_row["coverage_status"] == "PASS_REQUIRED", payload
 assert gateway_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+RULE_SURFACE_REPO="${TMP_ROOT}/rule-surface-repo"
+mirror_repo "${RULE_SURFACE_REPO}"
+python3 - <<'PY' "${RULE_SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "2. do not use philosophy text to override a concrete contract row or runtime truth source;"
+new = "2. do not use philosophy text to override a concrete contract row or ontology truth source;"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+RULE_SURFACE_JSON="${TMP_ROOT}/rule-surface.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_precedence.py" \
+  --repo-root "${RULE_SURFACE_REPO}" \
+  --json-only >"${RULE_SURFACE_JSON}"; then
+  echo "[FAIL] precedence validator unexpectedly passed conflict-handling surface drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${RULE_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_precedence_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCP-002", payload
+assert any(
+    row["field"] == "conflict_handling_rule_surface"
+    and row["reason"] == "missing_conflict_handling_rule_surface_rows"
+    and "do not use philosophy text to override a concrete contract row or runtime truth source;" in row.get("rule_texts", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "conflict_handling_rule_surface"
+    and row["reason"] == "extra_conflict_handling_rule_surface_rows"
+    and "do not use philosophy text to override a concrete contract row or ontology truth source;" in row.get("rule_texts", [])
+    for row in payload["structure_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "conflict_handling_rule_surface"
+)
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert "do not use philosophy text to override a concrete contract row or runtime truth source;" in surface_row["missing_ids"], payload
+assert "do not use philosophy text to override a concrete contract row or ontology truth source;" in surface_row["unexpected_ids"], payload
 PY
 
 LEGality_DRIFT_REPO="${TMP_ROOT}/legality-drift-repo"

@@ -1317,6 +1317,8 @@ reason rather than silently expanding bundle observation ontology.
 
 If two layers seem to disagree, resolve them with the following discipline:
 
+These conflict-handling rules must remain bound to canonical conflict-handling rows rather than drifting into convenience-only advice.
+
 1. do not use local convenience or historical familiarity to override protocol law;
 2. do not use philosophy text to override a concrete contract row or runtime truth source;
 3. do use philosophy text to interpret why a contract should be strengthened, split, or fail-closed;

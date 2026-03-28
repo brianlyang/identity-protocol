@@ -22,6 +22,9 @@ precedence_anchor_checks:
 - rel_path: identity/protocol/README.md
   required_markers:
   - '## Root conflict-precedence discipline'
+  - '## Conflict-handling rule'
+  - These conflict-handling rules must remain bound to canonical conflict-handling
+    rows rather than drifting into convenience-only advice.
   - semantic-meaning conflict resolves by source order, not by convenience, recency,
     or current checker vividness;
   - current-turn legality conflict resolves at machine-consumed enforcement terminals,
@@ -36,6 +39,9 @@ precedence_anchor_checks:
   - current-turn legality conflict resolves by machine-consumed terminal enforcement;
   - gateway-authorship conflict resolves by gateway effect scope, preserved target
     question class, preserved answer mode, and source order;
+  - README conflict-handling rules about apparent cross-layer disagreement must
+    therefore stay bound to canonical conflict-handling rows rather than remaining
+    local convenience advice.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root conflict-precedence boundary'
@@ -69,6 +75,19 @@ gateway_authorship_projection:
   preserved_effect_target_class: machine_registry_directory
   preserved_question_class: registry_resolution
   preserved_answer_mode: machine_registry_answer
+conflict_handling_rules:
+- order: 1
+  rule_text: do not use local convenience or historical familiarity to override
+    protocol law;
+- order: 2
+  rule_text: do not use philosophy text to override a concrete contract row or
+    runtime truth source;
+- order: 3
+  rule_text: do use philosophy text to interpret why a contract should be strengthened,
+    split, or fail-closed;
+- order: 4
+  rule_text: do use machine-consumed sources to determine current-turn truth,
+    validation status, and active-runtime legality.
 precedence_profiles:
 - conflict_class: semantic_meaning_conflict
   conflict_scope: source_order_meaning

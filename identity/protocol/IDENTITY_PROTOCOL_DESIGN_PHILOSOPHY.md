@@ -294,6 +294,10 @@ So the protocol must reject the following confusions:
 - treating gateway admission as if it transferred authorship to an incoming motivating surface;
 - treating reused demoted support as if reuse itself were a lawful reinstatement event.
 
+README conflict-handling rules about apparent cross-layer disagreement must
+therefore stay bound to canonical conflict-handling rows rather than
+remaining local convenience advice.
+
 ### Question class and answer surface must stay paired
 
 Different layers of the root corpus answer different classes of questions, and

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
@@ -13,6 +14,11 @@ from root_contract_anchor_checks_common import RootDocAnchorCheck, root_doc_anch
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ROOT_CORPUS_PRECEDENCE_CURRENT = "identity/protocol/mappings/root-corpus-precedence.current.yaml"
+ROOT_PROTOCOL_README_REL_PATH = "identity/protocol/README.md"
+CONFLICT_HANDLING_RULE_SECTION_MARKER = "## Conflict-handling rule"
+ORDERED_ITEM_RE = re.compile(r"^\s*(\d+)\.\s+(.*\S)\s*$")
+HEADING_RE = re.compile(r"^##\s+")
+HORIZONTAL_RULE_RE = re.compile(r"^-{3,}$")
 
 
 PrecedenceAnchorCheck = RootDocAnchorCheck
@@ -35,6 +41,25 @@ class GatewayAuthorshipProjection:
     preserved_effect_target_class: str
     preserved_question_class: str
     preserved_answer_mode: str
+
+
+@dataclass(frozen=True)
+class ConflictHandlingRule:
+    order: int
+    rule_text: str
+
+
+@dataclass(frozen=True)
+class ConflictHandlingRuleSurfaceRow:
+    order: int
+    rule_text: str
+
+
+@dataclass(frozen=True)
+class ConflictHandlingRuleSurface:
+    rel_path: str
+    rows: tuple[ConflictHandlingRuleSurfaceRow, ...]
+    extraction_violations: tuple[str, ...]
 
 
 def _norm_str(value: Any) -> str:
@@ -123,3 +148,72 @@ def gateway_authorship_projections_from_doc(precedence_doc: Mapping[str, Any]) -
             )
         )
     return tuple(out)
+
+
+def conflict_handling_rules_from_doc(precedence_doc: Mapping[str, Any]) -> tuple[ConflictHandlingRule, ...]:
+    rows = precedence_doc.get("conflict_handling_rules")
+    if not isinstance(rows, list):
+        return ()
+    out: list[ConflictHandlingRule] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        rule_text = str(row.get("rule_text") or "").strip()
+        if order <= 0 or not rule_text:
+            continue
+        out.append(
+            ConflictHandlingRule(
+                order=order,
+                rule_text=rule_text,
+            )
+        )
+    return tuple(out)
+
+
+def readme_conflict_handling_rule_surface(repo_root: Path) -> ConflictHandlingRuleSurface:
+    path = (repo_root / ROOT_PROTOCOL_README_REL_PATH).resolve()
+    if not path.exists() or not path.is_file():
+        return ConflictHandlingRuleSurface(
+            rel_path=ROOT_PROTOCOL_README_REL_PATH,
+            rows=(),
+            extraction_violations=("target_missing",),
+        )
+
+    lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    section_found = False
+    rows: list[ConflictHandlingRuleSurfaceRow] = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == CONFLICT_HANDLING_RULE_SECTION_MARKER:
+            section_found = True
+            continue
+        if not section_found:
+            continue
+        if HEADING_RE.match(stripped) or HORIZONTAL_RULE_RE.match(stripped):
+            break
+        match = ORDERED_ITEM_RE.match(stripped)
+        if not match:
+            continue
+        rows.append(
+            ConflictHandlingRuleSurfaceRow(
+                order=int(match.group(1)),
+                rule_text=match.group(2).strip(),
+            )
+        )
+
+    violations: list[str] = []
+    if not section_found:
+        violations.append("section_marker_missing")
+    elif not rows:
+        violations.append("rule_rows_missing")
+
+    return ConflictHandlingRuleSurface(
+        rel_path=ROOT_PROTOCOL_README_REL_PATH,
+        rows=tuple(rows),
+        extraction_violations=tuple(violations),
+    )
