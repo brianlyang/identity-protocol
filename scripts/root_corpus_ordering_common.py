@@ -31,6 +31,13 @@ class ReadingOrderRow:
 
 
 @dataclass(frozen=True)
+class ProtocolBoundaryRootContractProjectionRow:
+    order: int
+    rel_path: str
+    projection_label: str
+
+
+@dataclass(frozen=True)
 class AdjudicationOrderRow:
     order: int
     machine_surface: str
@@ -131,6 +138,34 @@ def reading_order_rows_from_doc(ordering_doc: Mapping[str, Any]) -> tuple[Readin
                 order=order,
                 rel_path=rel_path,
                 entry_role=entry_role,
+            )
+        )
+    return tuple(out)
+
+
+def protocol_boundary_root_contract_projection_rows_from_doc(
+    ordering_doc: Mapping[str, Any],
+) -> tuple[ProtocolBoundaryRootContractProjectionRow, ...]:
+    rows = ordering_doc.get("protocol_boundary_root_contract_projections")
+    if not isinstance(rows, list):
+        return ()
+    out: list[ProtocolBoundaryRootContractProjectionRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        rel_path = _norm_str(row.get("rel_path"))
+        projection_label = str(row.get("projection_label") or "").strip()
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not rel_path or not projection_label:
+            continue
+        out.append(
+            ProtocolBoundaryRootContractProjectionRow(
+                order=order,
+                rel_path=rel_path,
+                projection_label=projection_label,
             )
         )
     return tuple(out)

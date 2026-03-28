@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
@@ -15,9 +16,11 @@ from root_contract_row_validation_common import contiguous_orders
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_corpus_contract_list_sync_common import (
     PROTOCOL_BOUNDARY_ROOT_CONTRACT_INDEX_SURFACE_ID,
+    PROTOCOL_BOUNDARY_ROOT_CONTRACT_PROJECTION_SURFACE_ID,
     README_ROOT_CONTRACT_INDEX_SURFACE_ID,
     canonical_root_contract_rel_paths,
     manual_root_contract_index_surfaces,
+    protocol_boundary_root_contract_projection_surface,
 )
 from root_corpus_governance_common import (
     load_root_corpus_registry,
@@ -30,6 +33,7 @@ from root_corpus_ordering_common import (
     adjudication_surface_profiles_from_doc,
     load_root_corpus_ordering,
     ordering_anchor_checks_from_doc,
+    protocol_boundary_root_contract_projection_rows_from_doc,
     reading_order_rows_from_doc,
     source_order_rows_from_doc,
 )
@@ -94,7 +98,7 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "probes fail-close hidden drift instead of softening legality expectations;",
         "runtime state binds live truth only after prior legality phases remain satisfied;",
         "receipts close the adjudicated verdict and do not replace the earlier legality phases they report.",
-        "The manual root-contract enumeration carried by this constitution is an explanatory projection and must remain congruent with the admitted `reading_order` root-contract sequence rather than becoming an independently authored alternate root index.",
+        "The manual root-contract enumeration carried by this constitution is an explanatory projection and must remain congruent with the admitted `reading_order` root-contract sequence and admitted root-contract projection labels rather than becoming an independently authored alternate root index or relabeling domain law.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "## Runtime adjudication-surface consumption boundary",
@@ -110,6 +114,9 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2))
 
+
+def _norm_projection_label(value: str) -> str:
+    return re.sub(r"\s+", " ", str(value or "")).strip().casefold()
 
 
 def main() -> int:
@@ -163,11 +170,15 @@ def main() -> int:
 
     source_rows = source_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
+    protocol_boundary_projection_rows = (
+        protocol_boundary_root_contract_projection_rows_from_doc(ordering_doc) if ordering_doc else ()
+    )
     adjudication_rows = adjudication_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     adjudication_surface_profiles = adjudication_surface_profiles_from_doc(ordering_doc) if ordering_doc else ()
     ordering_anchor_checks = ordering_anchor_checks_from_doc(ordering_doc) if ordering_doc else ()
     manual_root_contract_surfaces = manual_root_contract_index_surfaces(repo_root)
     manual_root_contract_surface_map = {surface.surface_id: surface for surface in manual_root_contract_surfaces}
+    protocol_boundary_projection_surface = protocol_boundary_root_contract_projection_surface(repo_root)
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     adjudication_redirect = adjudication_redirect_from_doc(question_routing_doc) if question_routing_doc else adjudication_redirect_from_doc({})
     precedence_profiles = precedence_profiles_from_doc(precedence_doc) if precedence_doc else ()
@@ -214,6 +225,9 @@ def main() -> int:
         if not reading_rows:
             stale_reasons.append("root_corpus_ordering_reading_order_missing")
             error_code = ERR_REGISTRY
+        if not protocol_boundary_projection_rows:
+            stale_reasons.append("root_corpus_ordering_protocol_boundary_root_contract_projections_missing")
+            error_code = ERR_REGISTRY
         if not adjudication_rows:
             stale_reasons.append("root_corpus_ordering_adjudication_order_missing")
             error_code = ERR_REGISTRY
@@ -246,15 +260,21 @@ def main() -> int:
     source_classes = [row.corpus_class for row in source_rows]
     reading_orders = [row.order for row in reading_rows]
     reading_paths = [row.rel_path for row in reading_rows]
+    protocol_boundary_projection_orders = [row.order for row in protocol_boundary_projection_rows]
+    protocol_boundary_projection_paths = [row.rel_path for row in protocol_boundary_projection_rows]
     adjudication_orders = [row.order for row in adjudication_rows]
     adjudication_surfaces = [row.machine_surface for row in adjudication_rows]
     adjudication_surface_profile_map = {row.machine_surface: row for row in adjudication_surface_profiles}
     adjudication_phase_orders = [row.phase_order for row in adjudication_surface_profiles]
     sorted_source_rows = sorted(source_rows, key=lambda item: item.order)
     sorted_reading_rows = sorted(reading_rows, key=lambda item: item.order)
+    sorted_protocol_boundary_projection_rows = sorted(protocol_boundary_projection_rows, key=lambda item: item.order)
     sorted_adjudication_rows = sorted(adjudication_rows, key=lambda item: item.order)
     sorted_adjudication_surface_profiles = sorted(adjudication_surface_profiles, key=lambda item: item.phase_order)
     canonical_root_contract_entry_paths = canonical_root_contract_rel_paths(sorted_reading_rows)
+    protocol_boundary_projection_label_map = {
+        row.rel_path: row.projection_label for row in sorted_protocol_boundary_projection_rows
+    }
     root_index_entry = str(ordering_doc.get("root_index_entry") or "").strip()
     precedence_profile_map = {row.conflict_class: row for row in precedence_profiles}
     precedence_legality_profile = precedence_profile_map.get(CURRENT_TURN_LEGALITY_CONFLICT)
@@ -266,6 +286,15 @@ def main() -> int:
             structure_violations.append({"field": "source_order", "reason": "root_index_must_not_be_generative_source"})
         if len(set(reading_orders)) != len(reading_orders) or not contiguous_orders(sorted(reading_orders)):
             structure_violations.append({"field": "reading_order", "reason": "reading_order_non_contiguous"})
+        if len(set(protocol_boundary_projection_orders)) != len(protocol_boundary_projection_orders) or not contiguous_orders(
+            sorted(protocol_boundary_projection_orders)
+        ):
+            structure_violations.append(
+                {
+                    "field": "protocol_boundary_root_contract_projections",
+                    "reason": "protocol_boundary_root_contract_projection_order_non_contiguous",
+                }
+            )
         if len(set(adjudication_orders)) != len(adjudication_orders) or not contiguous_orders(sorted(adjudication_orders)):
             structure_violations.append({"field": "adjudication_order", "reason": "adjudication_order_non_contiguous"})
         if len(set(adjudication_surfaces)) != len(adjudication_surfaces):
@@ -331,6 +360,38 @@ def main() -> int:
             duplicate_reason="reading_order_duplicate_rel_path",
             actual_total_count=len(reading_paths),
         )
+        append_membership_delta_violations(
+            coverage_violations,
+            field_name="protocol_boundary_root_contract_projections",
+            expected_ids=canonical_root_contract_entry_paths,
+            actual_ids=protocol_boundary_projection_paths,
+            payload_key="rel_paths",
+            missing_reason="missing_protocol_boundary_root_contract_projection_entries",
+            extra_reason="extra_protocol_boundary_root_contract_projection_entries",
+            duplicate_reason="protocol_boundary_root_contract_projection_duplicate_rel_path",
+            actual_total_count=len(protocol_boundary_projection_paths),
+        )
+        if (
+            protocol_boundary_projection_paths
+            and tuple(protocol_boundary_projection_paths) != canonical_root_contract_entry_paths
+        ):
+            coverage_violations.append(
+                {
+                    "field": "protocol_boundary_root_contract_projections",
+                    "reason": "protocol_boundary_root_contract_projection_order_mismatch",
+                    "expected": list(canonical_root_contract_entry_paths),
+                    "actual": list(protocol_boundary_projection_paths),
+                }
+            )
+        for row in sorted_protocol_boundary_projection_rows:
+            if not row.projection_label:
+                coverage_violations.append(
+                    {
+                        "field": "protocol_boundary_root_contract_projections",
+                        "reason": "protocol_boundary_root_contract_projection_label_missing",
+                        "rel_path": row.rel_path,
+                    }
+                )
 
         redirect_surfaces = tuple(adjudication_redirect.terminal_machine_surfaces)
         ordering_adjudication_surfaces = tuple(row.machine_surface for row in sorted_adjudication_rows)
@@ -507,6 +568,45 @@ def main() -> int:
                     }
                 )
 
+        actual_projection_rel_paths = [row.rel_path for row in protocol_boundary_projection_surface.rows]
+        for reason in protocol_boundary_projection_surface.extraction_violations:
+            coverage_violations.append(
+                {
+                    "field": protocol_boundary_projection_surface.surface_id,
+                    "reason": f"manual_root_contract_projection_surface_{reason}",
+                    "rel_path": protocol_boundary_projection_surface.rel_path,
+                }
+            )
+        append_membership_delta_violations(
+            coverage_violations,
+            field_name=protocol_boundary_projection_surface.surface_id,
+            expected_ids=canonical_root_contract_entry_paths,
+            actual_ids=actual_projection_rel_paths,
+            payload_key="rel_paths",
+            missing_reason="missing_manual_root_contract_projection_entries",
+            extra_reason="extra_manual_root_contract_projection_entries",
+            duplicate_reason="manual_root_contract_projection_duplicate_rel_path",
+            actual_total_count=len(actual_projection_rel_paths),
+        )
+        actual_projection_label_map = {
+            row.rel_path: row.projection_label for row in protocol_boundary_projection_surface.rows
+        }
+        for rel_path in canonical_root_contract_entry_paths:
+            expected_label = protocol_boundary_projection_label_map.get(rel_path, "")
+            actual_label = actual_projection_label_map.get(rel_path, "")
+            if not expected_label or not actual_label:
+                continue
+            if _norm_projection_label(actual_label) != _norm_projection_label(expected_label):
+                coverage_violations.append(
+                    {
+                        "field": protocol_boundary_projection_surface.surface_id,
+                        "reason": "manual_root_contract_projection_label_mismatch",
+                        "rel_path": rel_path,
+                        "expected": expected_label,
+                        "actual": actual_label,
+                    }
+                )
+
         anchor_violations.extend(
             evaluate_root_doc_anchor_checks(
                 repo_root,
@@ -561,6 +661,20 @@ def main() -> int:
                 "actual_rows": manual_root_contract_surface_map.get(PROTOCOL_BOUNDARY_ROOT_CONTRACT_INDEX_SURFACE_ID).rows
                 if manual_root_contract_surface_map.get(PROTOCOL_BOUNDARY_ROOT_CONTRACT_INDEX_SURFACE_ID)
                 else (),
+                "expected_rows": {rel_path: {} for rel_path in canonical_root_contract_entry_paths},
+                "id_attr": "rel_path",
+            },
+            {
+                "family_id": "protocol_boundary_root_contract_projections",
+                "member_id_key": "rel_path",
+                "actual_rows": protocol_boundary_projection_rows,
+                "expected_rows": {rel_path: {} for rel_path in canonical_root_contract_entry_paths},
+                "id_attr": "rel_path",
+            },
+            {
+                "family_id": PROTOCOL_BOUNDARY_ROOT_CONTRACT_PROJECTION_SURFACE_ID,
+                "member_id_key": "rel_path",
+                "actual_rows": protocol_boundary_projection_surface.rows,
                 "expected_rows": {rel_path: {} for rel_path in canonical_root_contract_entry_paths},
                 "id_attr": "rel_path",
             },
@@ -642,6 +756,28 @@ def main() -> int:
             }
             for surface in manual_root_contract_surfaces
         ],
+        "protocol_boundary_root_contract_projections": [
+            {
+                "order": row.order,
+                "rel_path": row.rel_path,
+                "projection_label": row.projection_label,
+            }
+            for row in sorted_protocol_boundary_projection_rows
+        ],
+        "protocol_boundary_root_contract_projection_surface": {
+            "surface_id": protocol_boundary_projection_surface.surface_id,
+            "rel_path": protocol_boundary_projection_surface.rel_path,
+            "entry_count": len(protocol_boundary_projection_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "rel_path": row.rel_path,
+                    "projection_label": row.projection_label,
+                }
+                for row in protocol_boundary_projection_surface.rows
+            ],
+            "extraction_violations": list(protocol_boundary_projection_surface.extraction_violations),
+        },
         "adjudication_order": [
             {
                 "order": row.order,

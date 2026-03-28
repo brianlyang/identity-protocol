@@ -36,7 +36,7 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_ordering_status"] == "PASS_REQUIRED", payload
 assert payload["root_doc_anchor_check_count"] == 4, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
-assert payload["ordering_row_family_count"] == 6, payload
+assert payload["ordering_row_family_count"] == 8, payload
 assert payload["ordering_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["ordering_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
@@ -49,11 +49,16 @@ assert payload["canonical_root_contract_entry_paths"][-1] == "identity/protocol/
 assert len(payload["manual_root_contract_index_surfaces"]) == 2, payload
 assert all(surface["entry_count"] == payload["canonical_root_contract_entry_count"] for surface in payload["manual_root_contract_index_surfaces"]), payload
 assert all(surface["extraction_violations"] == [] for surface in payload["manual_root_contract_index_surfaces"]), payload
+assert len(payload["protocol_boundary_root_contract_projections"]) == payload["canonical_root_contract_entry_count"], payload
+assert payload["protocol_boundary_root_contract_projection_surface"]["entry_count"] == payload["canonical_root_contract_entry_count"], payload
+assert payload["protocol_boundary_root_contract_projection_surface"]["extraction_violations"] == [], payload
 assert {row["family_id"] for row in payload["row_family_projection_rows"]} == {
     "source_order",
     "reading_order",
     "readme_root_contract_index",
     "protocol_boundary_root_contract_index",
+    "protocol_boundary_root_contract_projections",
+    "protocol_boundary_root_contract_projection_surface",
     "adjudication_order",
     "adjudication_surface_profiles",
 }, payload
@@ -178,6 +183,14 @@ protocol_row = next(
     row for row in payload["row_family_projection_rows"]
     if row["family_id"] == "protocol_boundary_root_contract_index"
 )
+protocol_projection_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "protocol_boundary_root_contract_projections"
+)
+protocol_projection_surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "protocol_boundary_root_contract_projection_surface"
+)
 adjudication_row = next(
     row for row in payload["row_family_projection_rows"]
     if row["family_id"] == "adjudication_order"
@@ -198,6 +211,10 @@ assert readme_row["coverage_status"] == "PASS_REQUIRED", payload
 assert readme_row["identity_projection_status"] == "PASS_REQUIRED", payload
 assert protocol_row["coverage_status"] == "PASS_REQUIRED", payload
 assert protocol_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert protocol_projection_row["coverage_status"] == "PASS_REQUIRED", payload
+assert protocol_projection_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert protocol_projection_surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert protocol_projection_surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
 assert adjudication_row["coverage_status"] == "PASS_REQUIRED", payload
 assert adjudication_row["identity_projection_status"] == "PASS_REQUIRED", payload
 assert profile_row["coverage_status"] == "PASS_REQUIRED", payload
@@ -258,6 +275,14 @@ protocol_row = next(
     row for row in payload["row_family_projection_rows"]
     if row["family_id"] == "protocol_boundary_root_contract_index"
 )
+protocol_projection_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "protocol_boundary_root_contract_projections"
+)
+protocol_projection_surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "protocol_boundary_root_contract_projection_surface"
+)
 adjudication_row = next(
     row for row in payload["row_family_projection_rows"]
     if row["family_id"] == "adjudication_order"
@@ -278,6 +303,10 @@ assert readme_row["coverage_status"] == "PASS_REQUIRED", payload
 assert readme_row["identity_projection_status"] == "PASS_REQUIRED", payload
 assert protocol_row["coverage_status"] == "PASS_REQUIRED", payload
 assert protocol_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert protocol_projection_row["coverage_status"] == "PASS_REQUIRED", payload
+assert protocol_projection_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert protocol_projection_surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert protocol_projection_surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
 assert adjudication_row["coverage_status"] == "PASS_REQUIRED", payload
 assert adjudication_row["identity_projection_status"] == "PASS_REQUIRED", payload
 assert profile_row["coverage_status"] == "PASS_REQUIRED", payload
@@ -369,6 +398,54 @@ assert protocol_row["missing_ids"] == ["identity/protocol/AGENT_HANDOFF_CONTRACT
 assert protocol_row["unexpected_ids"] == [], payload
 assert protocol_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert protocol_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+PROTOCOL_LABEL_REPO="${TMP_ROOT}/protocol-boundary-label-drift-repo"
+mirror_repo "${PROTOCOL_LABEL_REPO}"
+python3 - <<'PY' "${PROTOCOL_LABEL_REPO}/identity/protocol/IDENTITY_PROTOCOL.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "13. The root-domain artifact-family admissibility law for which governed families may accept which artifacts, which artifacts remain merely compatible, and which must redirect or stay demoted is frozen separately in `identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md`.\n"
+new = "13. The root-domain artifact-family admissibility law for which governed families may accept which artifacts, which artifacts remain merely compatible, and which must stay informal is frozen separately in `identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md`.\n"
+assert old in text, text[:5000]
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+PROTOCOL_LABEL_JSON="${TMP_ROOT}/protocol-boundary-label-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_ordering.py" \
+  --repo-root "${PROTOCOL_LABEL_REPO}" \
+  --json-only >"${PROTOCOL_LABEL_JSON}"; then
+  echo "[FAIL] root corpus ordering validator unexpectedly passed protocol boundary projection label drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${PROTOCOL_LABEL_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_ordering_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCO-003", payload
+assert any(
+    "coverage_violation:protocol_boundary_root_contract_projection_surface:manual_root_contract_projection_label_mismatch" == reason
+    for reason in payload["stale_reasons"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "protocol_boundary_root_contract_projection_surface"
+)
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert any(
+    row["field"] == "protocol_boundary_root_contract_projection_surface"
+    and row["reason"] == "manual_root_contract_projection_label_mismatch"
+    and row["rel_path"] == "identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md"
+    for row in payload["coverage_violations"]
+), payload
 PY
 
 ADJUDICATION_REPO="${TMP_ROOT}/adjudication-order-drift-repo"

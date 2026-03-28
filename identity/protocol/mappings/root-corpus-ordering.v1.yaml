@@ -55,7 +55,8 @@ ordering_anchor_checks:
     phases they report.
   - The manual root-contract enumeration carried by this constitution is an explanatory
     projection and must remain congruent with the admitted `reading_order` root-contract
-    sequence rather than becoming an independently authored alternate root index.
+    sequence and admitted root-contract projection labels rather than becoming
+    an independently authored alternate root index or relabeling domain law.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime adjudication-surface consumption boundary'
@@ -171,6 +172,55 @@ reading_order:
 - order: 24
   rel_path: identity/protocol/fixtures
   entry_role: demoted_support_entry
+protocol_boundary_root_contract_projections:
+- order: 1
+  rel_path: identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md
+  projection_label: The root-domain machine-law primacy and compatibility-shelter boundary
+- order: 2
+  rel_path: identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md
+  projection_label: The root-domain machine-world ontology law for what objects may exist and how they remain semantically separate
+- order: 3
+  rel_path: identity/protocol/CURRENT_TRUTH_EPISTEMOLOGY_CONTRACT.md
+  projection_label: The root-domain current-truth epistemology law for how a machine justifies believing present fact
+- order: 4
+  rel_path: identity/protocol/DECISION_EVIDENCE_ADMISSIBILITY_CONTRACT.md
+  projection_label: The root-domain decision-evidence admissibility law for what may motivate, support, or terminally justify a machine decision
+- order: 5
+  rel_path: identity/protocol/SUCCESS_PATH_STATE_ADMISSIBILITY_CONTRACT.md
+  projection_label: The root-domain success-path state admissibility law for which state classes may enter active execution, stay optional, or redirect into governed recovery
+- order: 6
+  rel_path: identity/protocol/ENTRY_SURFACE_LEGITIMACY_CONTRACT.md
+  projection_label: The root-domain entry-surface legitimacy law for which entry surfaces are lawful, which may drive active execution, and which must remain helper-only, recovery-only, or demoted
+- order: 7
+  rel_path: identity/protocol/ERROR_TERMINALITY_CONTRACT.md
+  projection_label: The root-domain error terminality law for which errors must fail-close, redirect into governed recovery, or remain explicitly non-blocking
+- order: 8
+  rel_path: identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md
+  projection_label: The root-domain artifact-family admissibility law for which governed families may accept which artifacts, which artifacts remain merely compatible, and which must redirect or stay demoted
+- order: 9
+  rel_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md
+  projection_label: The root-domain prompt-bootstrap law for lawful identity prompt activation and bootstrap discipline
+- order: 10
+  rel_path: identity/protocol/IDENTITY_DISCOVERY.md
+  projection_label: The root-domain identity-discovery law for how lawful identity surfaces are discovered and bound
+- order: 11
+  rel_path: identity/protocol/AGENT_HANDOFF_CONTRACT.md
+  projection_label: The root-domain agent-handoff law for lawful cross-agent responsibility transfer and closure
+- order: 12
+  rel_path: identity/protocol/IDENTITY_INSTANCE_SELF_JUDGEMENT_CONTRACT.md
+  projection_label: The root-domain instance self-judgement law for who I am, what I can do, how I do it, and when I must not decide alone
+- order: 13
+  rel_path: identity/protocol/PROTOCOL_INSTANCE_RESPONSIBILITY_CONTRACT.md
+  projection_label: The root-domain responsibility and escalation boundary between protocol law and instance adaptation
+- order: 14
+  rel_path: identity/protocol/STREAM_DESIGN_ADMISSIBILITY_CONTRACT.md
+  projection_label: The root-domain admissibility law for new protocol streams and shared strengthenings
+- order: 15
+  rel_path: identity/protocol/TRUTH_LIFECYCLE_CONTRACT.md
+  projection_label: The root-domain truth lifecycle law for existence, discoverability, admissibility, run-binding, and next-hop consumption
+- order: 16
+  rel_path: identity/protocol/OPERATOR_ANSWER_SURFACE_CONTRACT.md
+  projection_label: The root-domain operator answer-surface and law-preserving compression boundary
 adjudication_order:
 - order: 1
   machine_surface: mappings

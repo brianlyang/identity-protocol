@@ -50,6 +50,7 @@ When entering `identity/protocol/`, read in this order:
    - `TRUTH_LIFECYCLE_CONTRACT.md`
    - `OPERATOR_ANSWER_SURFACE_CONTRACT.md`
    - this manual root-contract index is explanatory only and must remain congruent with the admitted `reading_order` root-contract sequence rather than becoming an independently authored alternate order.
+   - explanatory root-contract summaries rendered elsewhere in the root corpus must remain congruent with admitted root-contract projection labels rather than relabeling domain law.
    - these freeze concrete contract law for their specific domains.
 5. **machine-consumed registries and mappings**
    - `mappings/`

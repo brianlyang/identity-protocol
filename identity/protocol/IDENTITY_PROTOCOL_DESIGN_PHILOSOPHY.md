@@ -164,6 +164,7 @@ Confusing them leads to characteristic protocol errors:
 - if adjudication-order is mistaken for source-order, current checker behavior is falsely promoted into bottom theory;
 - if reading-order is mistaken for source-order, a directory index is falsely treated as generative law;
 - if source-order is mistaken for adjudication-order, philosophy text is incorrectly used as if it were a direct runtime verdict surface.
+- if explanatory root-contract projection labels drift from admitted contract identity, root docs start relabeling domain law instead of preserving disciplined entry.
 
 ### Adjudication surfaces are phase-governed, not interchangeable
 
