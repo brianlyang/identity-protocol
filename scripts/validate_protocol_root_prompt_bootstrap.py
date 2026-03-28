@@ -37,8 +37,10 @@ from root_prompt_bootstrap_common import (
     load_root_prompt_bootstrap,
     native_literal_rows_from_doc,
     output_field_rows_from_doc,
+    prompt_bootstrap_completeness_rows_from_doc,
     prompt_bootstrap_limit_rows_from_doc,
     prompt_bootstrap_proof_rows_from_doc,
+    readme_prompt_bootstrap_completeness_surface,
 )
 
 STATUS_KEY = "protocol_root_prompt_bootstrap_status"
@@ -147,6 +149,28 @@ EXPECTED_PROMPT_BOOTSTRAP_LIMIT_ROWS = {
         "contract_phrase": "hard-guard-literal preservation proof is not proof that current-turn prompt legality may bypass runtime adjudication.",
     },
 }
+EXPECTED_PROMPT_BOOTSTRAP_COMPLETENESS_ROWS = {
+    "explicit_prompt_bootstrap_row_families": {
+        "order": 1,
+        "contract_phrase": "required anchor, output-field, binding-field, proof, limit, and native-literal rows must remain explicit as separate machine-readable families;",
+    },
+    "congruent_prompt_bootstrap_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_prompt_bootstrap_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_prompt_bootstrap_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize prompt-bootstrap truth while missing or unexpected row identities remain known only internally;",
+    },
+    "fail_close_preserves_prompt_bootstrap_identity_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
+    },
+}
 EXPECTED_REGISTRY_MARKERS = (
     "this file remains the authoritative root-domain contract for prompt bootstrap behavior",
     "## Contract anchors",
@@ -166,21 +190,25 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "### Prompt-bootstrap row-family completeness must stay explicit",
         "Required anchor, output-field, binding-field, proof, limit, and native-literal families must remain explicit as separate machine-readable row families.",
         "The machine world must not finalize prompt-bootstrap legality while required row identity drift remains known only internally.",
+        "README root prompt-bootstrap completeness discipline must therefore stay\ncongruent with admitted prompt-bootstrap-completeness rows rather than\nbecoming a freehand completeness summary.",
     ),
     "identity/protocol/README.md": (
         "## Root prompt-bootstrap completeness discipline",
         "Prompt-bootstrap law is not a soft prose bundle.",
+        "These prompt-bootstrap-completeness rules must remain bound to canonical prompt-bootstrap-completeness rows rather than drifting into soft summary prose.",
         "1. required anchor, output-field, binding-field, proof, limit, and native-literal rows must remain explicit as separate machine-readable families;",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
         "## Root prompt-bootstrap completeness boundary",
         "1. Prompt-bootstrap law must remain machine-readable as separate anchor, output-field, binding-field, proof, limit, and native-literal row families.",
         "4. Protocol legality must not finalize prompt-bootstrap truth while missing or unexpected row identities remain known only inside validator logic.",
+        "6. README root prompt-bootstrap completeness discipline rendered at protocol root must remain congruent with admitted prompt-bootstrap-completeness rows rather than silently authoring an alternate completeness summary.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "## Runtime prompt-bootstrap consumption boundary",
         "1. Runtime consumes prompt-bootstrap law as separate anchor, output-field, binding-field, proof, limit, and native-literal row families rather than as undifferentiated prompt prose.",
         "4. Runtime must not finalize prompt-bootstrap legality while missing or unexpected row identities remain known only inside validator machinery.",
+        "6. Runtime consumes README root prompt-bootstrap completeness discipline as a governed completeness projection bound to admitted prompt-bootstrap-completeness rows rather than as a freehand completeness summary.",
     ),
 }
 
@@ -239,6 +267,8 @@ def main() -> int:
     prompt_bootstrap_proof_rows = prompt_bootstrap_proof_rows_from_doc(prompt_doc) if prompt_doc else ()
     prompt_bootstrap_limit_rows = prompt_bootstrap_limit_rows_from_doc(prompt_doc) if prompt_doc else ()
     native_literal_rows = native_literal_rows_from_doc(prompt_doc) if prompt_doc else ()
+    prompt_bootstrap_completeness_rows = prompt_bootstrap_completeness_rows_from_doc(prompt_doc) if prompt_doc else ()
+    prompt_bootstrap_completeness_surface = readme_prompt_bootstrap_completeness_surface(repo_root)
     root_doc_anchor_checks = root_doc_anchor_checks_from_doc(prompt_doc) if prompt_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -278,6 +308,9 @@ def main() -> int:
             if not rows:
                 stale_reasons.append(f"root_prompt_bootstrap_{field}_missing")
                 error_code = ERR_REGISTRY
+        if not prompt_bootstrap_completeness_rows:
+            stale_reasons.append("root_prompt_bootstrap_completeness_rows_missing")
+            error_code = ERR_REGISTRY
         if not prompt_doc.get("contract_required_markers"):
             stale_reasons.append("root_prompt_bootstrap_contract_required_markers_missing")
             error_code = ERR_REGISTRY
@@ -343,6 +376,25 @@ def main() -> int:
                     "expected_rows": EXPECTED_NATIVE_LITERAL_ROWS,
                     "id_attr": "row_id",
                 },
+                {
+                    "family_id": "prompt_bootstrap_completeness_rows",
+                    "member_id_key": "completeness_id",
+                    "actual_rows": prompt_bootstrap_completeness_rows,
+                    "expected_rows": {
+                        completeness_id: {} for completeness_id in EXPECTED_PROMPT_BOOTSTRAP_COMPLETENESS_ROWS
+                    },
+                    "id_attr": "completeness_id",
+                },
+                {
+                    "family_id": "prompt_bootstrap_completeness_surface",
+                    "member_id_key": "contract_phrase",
+                    "actual_rows": prompt_bootstrap_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {}
+                        for row in EXPECTED_PROMPT_BOOTSTRAP_COMPLETENESS_ROWS.values()
+                    },
+                    "id_attr": "contract_phrase",
+                },
             ),
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
@@ -392,10 +444,85 @@ def main() -> int:
                     "id_attr": "row_id",
                     "compare_fields": ("contract_phrase",),
                 },
+                {
+                    "actual_rows": prompt_bootstrap_completeness_rows,
+                    "expected_rows": EXPECTED_PROMPT_BOOTSTRAP_COMPLETENESS_ROWS,
+                    "field_name": "prompt_bootstrap_completeness_rows",
+                    "id_attr": "completeness_id",
+                    "compare_fields": ("contract_phrase",),
+                    "duplicate_reason": "duplicate_prompt_bootstrap_completeness_id",
+                    "non_contiguous_reason": "prompt_bootstrap_completeness_row_order_non_contiguous",
+                    "missing_reason": "missing_prompt_bootstrap_completeness_rows",
+                    "extra_reason": "extra_prompt_bootstrap_completeness_rows",
+                    "missing_ids_key": "completeness_ids",
+                    "extra_ids_key": "completeness_ids",
+                    "violation_id_key": "completeness_id",
+                    "order_reason": "prompt_bootstrap_completeness_row_order_mismatch",
+                },
+                {
+                    "actual_rows": prompt_bootstrap_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {"order": int(row["order"])}
+                        for row in EXPECTED_PROMPT_BOOTSTRAP_COMPLETENESS_ROWS.values()
+                    },
+                    "field_name": "prompt_bootstrap_completeness_surface",
+                    "id_attr": "contract_phrase",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_prompt_bootstrap_completeness_surface_phrase",
+                    "non_contiguous_reason": "prompt_bootstrap_completeness_surface_order_non_contiguous",
+                    "missing_reason": "missing_prompt_bootstrap_completeness_surface_rows",
+                    "extra_reason": "extra_prompt_bootstrap_completeness_surface_rows",
+                    "missing_ids_key": "contract_phrases",
+                    "extra_ids_key": "contract_phrases",
+                    "violation_id_key": "contract_phrase",
+                    "order_reason": "prompt_bootstrap_completeness_surface_order_mismatch",
+                },
             ),
             structure_violations=structure_violations,
             prompt_violations=prompt_violations,
         )
+
+        expected_prompt_bootstrap_completeness_phrases = [
+            row["contract_phrase"] for row in EXPECTED_PROMPT_BOOTSTRAP_COMPLETENESS_ROWS.values()
+        ]
+        actual_prompt_bootstrap_completeness_phrases = [
+            row.contract_phrase for row in prompt_bootstrap_completeness_surface.rows
+        ]
+        expected_prompt_bootstrap_completeness_orders = [
+            int(row["order"]) for row in EXPECTED_PROMPT_BOOTSTRAP_COMPLETENESS_ROWS.values()
+        ]
+        actual_prompt_bootstrap_completeness_orders = [
+            row.order for row in prompt_bootstrap_completeness_surface.rows
+        ]
+        for reason in prompt_bootstrap_completeness_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "prompt_bootstrap_completeness_surface",
+                    "reason": f"prompt_bootstrap_completeness_surface_{reason}",
+                }
+            )
+        if actual_prompt_bootstrap_completeness_phrases and tuple(
+            actual_prompt_bootstrap_completeness_phrases
+        ) != tuple(expected_prompt_bootstrap_completeness_phrases):
+            prompt_violations.append(
+                {
+                    "field": "prompt_bootstrap_completeness_surface",
+                    "reason": "prompt_bootstrap_completeness_surface_phrase_order_mismatch",
+                    "expected": expected_prompt_bootstrap_completeness_phrases,
+                    "actual": actual_prompt_bootstrap_completeness_phrases,
+                }
+            )
+        if actual_prompt_bootstrap_completeness_orders and tuple(
+            actual_prompt_bootstrap_completeness_orders
+        ) != tuple(expected_prompt_bootstrap_completeness_orders):
+            prompt_violations.append(
+                {
+                    "field": "prompt_bootstrap_completeness_surface",
+                    "reason": "prompt_bootstrap_completeness_surface_order_mismatch",
+                    "expected": expected_prompt_bootstrap_completeness_orders,
+                    "actual": actual_prompt_bootstrap_completeness_orders,
+                }
+            )
 
         contract_file = str(prompt_doc.get("contract_file") or "").strip()
         contract_path = (repo_root / contract_file).resolve()
@@ -500,6 +627,7 @@ def main() -> int:
         "prompt_bootstrap_proof_count": len(prompt_bootstrap_proof_rows),
         "prompt_bootstrap_limit_count": len(prompt_bootstrap_limit_rows),
         "native_literal_count": len(native_literal_rows),
+        "prompt_bootstrap_completeness_row_count": len(prompt_bootstrap_completeness_rows),
         **project_root_contract_support_projection(
             prefix="prompt_bootstrap",
             row_family_projection_rows=row_family_projection_rows,
@@ -515,6 +643,26 @@ def main() -> int:
         "prompt_bootstrap_proof_ids": [row.proof_id for row in prompt_bootstrap_proof_rows],
         "prompt_bootstrap_limit_ids": [row.row_id for row in prompt_bootstrap_limit_rows],
         "native_literal_ids": [row.row_id for row in native_literal_rows],
+        "prompt_bootstrap_completeness_rows": [
+            {
+                "order": row.order,
+                "completeness_id": row.completeness_id,
+                "contract_phrase": row.contract_phrase,
+            }
+            for row in sorted(prompt_bootstrap_completeness_rows, key=lambda item: item.order)
+        ],
+        "prompt_bootstrap_completeness_surface": {
+            "rel_path": prompt_bootstrap_completeness_surface.rel_path,
+            "entry_count": len(prompt_bootstrap_completeness_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "contract_phrase": row.contract_phrase,
+                }
+                for row in prompt_bootstrap_completeness_surface.rows
+            ],
+            "extraction_violations": list(prompt_bootstrap_completeness_surface.extraction_violations),
+        },
         "stale_reasons": stale_reasons,
         "structure_violations": structure_violations,
         "prompt_violations": prompt_violations,

@@ -1412,6 +1412,10 @@ rows behind aggregate counts.
 Required anchor, output-field, binding-field, proof, limit, and native-literal
 families must remain explicit as separate machine-readable row families.
 
+README root prompt-bootstrap completeness discipline must therefore stay
+congruent with admitted prompt-bootstrap-completeness rows rather than
+becoming a freehand completeness summary.
+
 Expected row-family total and emitted row-family total must therefore stay
 congruent under machine-readable coverage completeness rather than being left
 implicit.

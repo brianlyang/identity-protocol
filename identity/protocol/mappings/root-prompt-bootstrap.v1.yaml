@@ -36,21 +36,25 @@ anchor_checks:
       - '### Prompt-bootstrap row-family completeness must stay explicit'
       - 'Required anchor, output-field, binding-field, proof, limit, and native-literal families must remain explicit as separate machine-readable row families.'
       - 'The machine world must not finalize prompt-bootstrap legality while required row identity drift remains known only internally.'
+      - "README root prompt-bootstrap completeness discipline must therefore stay\ncongruent with admitted prompt-bootstrap-completeness rows rather than\nbecoming a freehand completeness summary."
   - rel_path: identity/protocol/README.md
     required_markers:
       - '## Root prompt-bootstrap completeness discipline'
       - 'Prompt-bootstrap law is not a soft prose bundle.'
+      - 'These prompt-bootstrap-completeness rules must remain bound to canonical prompt-bootstrap-completeness rows rather than drifting into soft summary prose.'
       - '1. required anchor, output-field, binding-field, proof, limit, and native-literal rows must remain explicit as separate machine-readable families;'
   - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
     required_markers:
       - '## Root prompt-bootstrap completeness boundary'
       - '1. Prompt-bootstrap law must remain machine-readable as separate anchor, output-field, binding-field, proof, limit, and native-literal row families.'
       - '4. Protocol legality must not finalize prompt-bootstrap truth while missing or unexpected row identities remain known only inside validator logic.'
+      - '6. README root prompt-bootstrap completeness discipline rendered at protocol root must remain congruent with admitted prompt-bootstrap-completeness rows rather than silently authoring an alternate completeness summary.'
   - rel_path: identity/protocol/IDENTITY_RUNTIME.md
     required_markers:
       - '## Runtime prompt-bootstrap consumption boundary'
       - '1. Runtime consumes prompt-bootstrap law as separate anchor, output-field, binding-field, proof, limit, and native-literal row families rather than as undifferentiated prompt prose.'
       - '4. Runtime must not finalize prompt-bootstrap legality while missing or unexpected row identities remain known only inside validator machinery.'
+      - '6. Runtime consumes README root prompt-bootstrap completeness discipline as a governed completeness projection bound to admitted prompt-bootstrap-completeness rows rather than as a freehand completeness summary.'
 required_anchor_rows:
   - order: 1
     anchor_id: rq_014_prompt_bootstrap_capability_contract_v1
@@ -170,3 +174,19 @@ required_native_literal_rows:
   - order: 9
     native_literal_id: compatibility_pointer_diagnostic_only
     contract_phrase: 'compatibility pointer diagnostics stay on `Machine-Verification` and remain diagnostic-only'
+prompt_bootstrap_completeness_rows:
+  - order: 1
+    completeness_id: explicit_prompt_bootstrap_row_families
+    contract_phrase: 'required anchor, output-field, binding-field, proof, limit, and native-literal rows must remain explicit as separate machine-readable families;'
+  - order: 2
+    completeness_id: congruent_prompt_bootstrap_row_family_totals
+    contract_phrase: 'expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;'
+  - order: 3
+    completeness_id: explicit_prompt_bootstrap_row_identity_sets
+    contract_phrase: 'expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;'
+  - order: 4
+    completeness_id: hidden_prompt_bootstrap_identity_drift_forbidden
+    contract_phrase: 'runtime or validator code must not finalize prompt-bootstrap truth while missing or unexpected row identities remain known only internally;'
+  - order: 5
+    completeness_id: fail_close_preserves_prompt_bootstrap_identity_projection
+    contract_phrase: 'fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.'
