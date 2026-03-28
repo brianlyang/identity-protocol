@@ -11,7 +11,7 @@ from root_contract_anchor_checks_common import (
     evaluate_root_doc_anchor_checks,
     root_doc_anchor_checks_from_doc,
 )
-from root_contract_row_validation_common import validate_contract_rows
+from root_contract_row_validation_common import validate_contract_row_batches
 from root_contract_marker_checks_common import (
     contract_required_markers_from_doc,
     contract_text_marker_checks_from_rows,
@@ -28,7 +28,7 @@ from root_corpus_question_routing_common import (
     load_root_corpus_question_routing,
     question_routing_anchor_checks_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_protocol_instance_responsibility_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -315,115 +315,101 @@ def main() -> int:
                 error_code = ERR_REGISTRY
 
     if not stale_reasons:
-        row_family_projection_rows = [
-            project_row_family(
-                family_id="required_layer_rows",
-                member_id_key="layer_id",
-                actual_rows=layer_rows,
-                expected_rows=EXPECTED_LAYER_ROWS,
-                id_attr="layer_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
+        row_family_projection_rows = project_row_families(
+            families=(
+                {
+                    "family_id": "required_layer_rows",
+                    "member_id_key": "layer_id",
+                    "actual_rows": layer_rows,
+                    "expected_rows": EXPECTED_LAYER_ROWS,
+                    "id_attr": "layer_id",
+                },
+                {
+                    "family_id": "required_responsibility_rows",
+                    "member_id_key": "owner_id",
+                    "actual_rows": owner_rows,
+                    "expected_rows": EXPECTED_RESPONSIBILITY_ROWS,
+                    "id_attr": "owner_id",
+                },
+                {
+                    "family_id": "required_escalation_rows",
+                    "member_id_key": "trigger_id",
+                    "actual_rows": escalation_rows,
+                    "expected_rows": EXPECTED_ESCALATION_ROWS,
+                    "id_attr": "row_id",
+                },
+                {
+                    "family_id": "required_escalation_proof_rows",
+                    "member_id_key": "proof_id",
+                    "actual_rows": escalation_proof_rows,
+                    "expected_rows": EXPECTED_ESCALATION_PROOF_ROWS,
+                    "id_attr": "proof_id",
+                },
+                {
+                    "family_id": "required_escalation_limit_rows",
+                    "member_id_key": "limit_id",
+                    "actual_rows": escalation_limit_rows,
+                    "expected_rows": EXPECTED_ESCALATION_LIMIT_ROWS,
+                    "id_attr": "row_id",
+                },
+                {
+                    "family_id": "required_boundary_collapse_rows",
+                    "member_id_key": "collapse_id",
+                    "actual_rows": boundary_collapse_rows,
+                    "expected_rows": EXPECTED_BOUNDARY_COLLAPSES,
+                    "id_attr": "row_id",
+                },
             ),
-            project_row_family(
-                family_id="required_responsibility_rows",
-                member_id_key="owner_id",
-                actual_rows=owner_rows,
-                expected_rows=EXPECTED_RESPONSIBILITY_ROWS,
-                id_attr="owner_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-            project_row_family(
-                family_id="required_escalation_rows",
-                member_id_key="trigger_id",
-                actual_rows=escalation_rows,
-                expected_rows=EXPECTED_ESCALATION_ROWS,
-                id_attr="row_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-            project_row_family(
-                family_id="required_escalation_proof_rows",
-                member_id_key="proof_id",
-                actual_rows=escalation_proof_rows,
-                expected_rows=EXPECTED_ESCALATION_PROOF_ROWS,
-                id_attr="proof_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-            project_row_family(
-                family_id="required_escalation_limit_rows",
-                member_id_key="limit_id",
-                actual_rows=escalation_limit_rows,
-                expected_rows=EXPECTED_ESCALATION_LIMIT_ROWS,
-                id_attr="row_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-            project_row_family(
-                family_id="required_boundary_collapse_rows",
-                member_id_key="collapse_id",
-                actual_rows=boundary_collapse_rows,
-                expected_rows=EXPECTED_BOUNDARY_COLLAPSES,
-                id_attr="row_id",
-                pass_status=STATUS_PASS_REQUIRED,
-                fail_status=STATUS_FAIL_REQUIRED,
-            ),
-        ]
-        validate_contract_rows(
-            actual_rows=layer_rows,
-            expected_rows=EXPECTED_LAYER_ROWS,
-            structure_violations=structure_violations,
-            responsibility_violations=responsibility_violations,
-            field_name="required_layer_rows",
-            id_attr="layer_id",
-            compare_fields=("contract_heading", "layer_role"),
+            pass_status=STATUS_PASS_REQUIRED,
+            fail_status=STATUS_FAIL_REQUIRED,
         )
-        validate_contract_rows(
-            actual_rows=owner_rows,
-            expected_rows=EXPECTED_RESPONSIBILITY_ROWS,
+        validate_contract_row_batches(
+            batches=(
+                {
+                    "actual_rows": layer_rows,
+                    "expected_rows": EXPECTED_LAYER_ROWS,
+                    "field_name": "required_layer_rows",
+                    "id_attr": "layer_id",
+                    "compare_fields": ("contract_heading", "layer_role"),
+                },
+                {
+                    "actual_rows": owner_rows,
+                    "expected_rows": EXPECTED_RESPONSIBILITY_ROWS,
+                    "field_name": "required_responsibility_rows",
+                    "id_attr": "owner_id",
+                    "compare_fields": ("contract_heading", "responsibility_role"),
+                },
+                {
+                    "actual_rows": escalation_rows,
+                    "expected_rows": EXPECTED_ESCALATION_ROWS,
+                    "field_name": "required_escalation_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": escalation_proof_rows,
+                    "expected_rows": EXPECTED_ESCALATION_PROOF_ROWS,
+                    "field_name": "required_escalation_proof_rows",
+                    "id_attr": "proof_id",
+                    "compare_fields": ("contract_heading", "proof_role"),
+                },
+                {
+                    "actual_rows": escalation_limit_rows,
+                    "expected_rows": EXPECTED_ESCALATION_LIMIT_ROWS,
+                    "field_name": "required_escalation_limit_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": boundary_collapse_rows,
+                    "expected_rows": EXPECTED_BOUNDARY_COLLAPSES,
+                    "field_name": "required_boundary_collapse_rows",
+                    "id_attr": "row_id",
+                    "compare_fields": ("contract_phrase",),
+                },
+            ),
             structure_violations=structure_violations,
             responsibility_violations=responsibility_violations,
-            field_name="required_responsibility_rows",
-            id_attr="owner_id",
-            compare_fields=("contract_heading", "responsibility_role"),
-        )
-        validate_contract_rows(
-            actual_rows=escalation_rows,
-            expected_rows=EXPECTED_ESCALATION_ROWS,
-            structure_violations=structure_violations,
-            responsibility_violations=responsibility_violations,
-            field_name="required_escalation_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
-        )
-        validate_contract_rows(
-            actual_rows=escalation_proof_rows,
-            expected_rows=EXPECTED_ESCALATION_PROOF_ROWS,
-            structure_violations=structure_violations,
-            responsibility_violations=responsibility_violations,
-            field_name="required_escalation_proof_rows",
-            id_attr="proof_id",
-            compare_fields=("contract_heading", "proof_role"),
-        )
-        validate_contract_rows(
-            actual_rows=escalation_limit_rows,
-            expected_rows=EXPECTED_ESCALATION_LIMIT_ROWS,
-            structure_violations=structure_violations,
-            responsibility_violations=responsibility_violations,
-            field_name="required_escalation_limit_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
-        )
-        validate_contract_rows(
-            actual_rows=boundary_collapse_rows,
-            expected_rows=EXPECTED_BOUNDARY_COLLAPSES,
-            structure_violations=structure_violations,
-            responsibility_violations=responsibility_violations,
-            field_name="required_boundary_collapse_rows",
-            id_attr="row_id",
-            compare_fields=("contract_phrase",),
         )
 
         contract_file = str(responsibility_doc.get("contract_file") or "").strip()
