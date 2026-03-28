@@ -733,6 +733,7 @@ This root operator answer-surface discipline must remain bound to canonical answ
 ## Root operator answer-surface completeness discipline
 
 Operator answer-surface law is not a soft prose bundle.
+These operator-answer-surface-completeness rules must remain bound to canonical operator-answer-surface-completeness rows rather than drifting into soft summary prose.
 
 1. required surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse rows must remain explicit as separate machine-readable families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;

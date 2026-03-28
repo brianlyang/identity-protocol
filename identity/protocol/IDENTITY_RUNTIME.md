@@ -325,6 +325,7 @@ implicit.
 4. Runtime must not finalize operator answer-surface legality while missing or unexpected row identities remain known only inside validator machinery.
 5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
 6. Runtime consumes README root operator answer-surface discipline as a governed stage projection bound to admitted answer-surface-stage rows rather than as a freehand delivery ladder.
+7. Runtime consumes README root operator answer-surface completeness discipline as a governed completeness projection bound to admitted operator-answer-surface-completeness rows rather than as a freehand completeness summary.
 
 ## Runtime protocol-instance responsibility consumption boundary
 

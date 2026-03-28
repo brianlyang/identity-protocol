@@ -375,6 +375,7 @@ implicit.
 4. Protocol legality must not finalize operator answer-surface legality while missing or unexpected row identities remain known only inside validator logic.
 5. Fail-close operator answer-surface output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
 6. README root operator answer-surface discipline rendered at protocol root must remain congruent with admitted answer-surface-stage rows rather than silently authoring an alternate delivery ladder.
+7. README root operator answer-surface completeness discipline rendered at protocol root must remain congruent with admitted operator-answer-surface-completeness rows rather than silently authoring an alternate completeness summary.
 
 ## Root protocol-instance responsibility completeness boundary
 

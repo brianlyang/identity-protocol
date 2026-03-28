@@ -55,6 +55,7 @@ anchor_checks:
   - README root operator answer-surface discipline must therefore stay congruent
     with admitted answer-surface-stage rows rather than becoming a freehand
     delivery ladder.
+  - "README root operator answer-surface completeness discipline must therefore stay\ncongruent with admitted operator-answer-surface-completeness rows rather than\nbecoming a freehand completeness summary."
   - The machine world must not finalize operator answer-surface legality while
     required row identity drift remains known only internally.
 - rel_path: identity/protocol/README.md
@@ -66,6 +67,7 @@ anchor_checks:
   - '`current_turn_legality_terminal`'
   - '## Root operator answer-surface completeness discipline'
   - Operator answer-surface law is not a soft prose bundle.
+  - 'These operator-answer-surface-completeness rules must remain bound to canonical operator-answer-surface-completeness rows rather than drifting into soft summary prose.'
   - '1. required surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse rows must remain explicit as separate machine-readable families;'
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
@@ -75,6 +77,7 @@ anchor_checks:
   - README root operator answer-surface discipline rendered at protocol root must
     remain congruent with admitted answer-surface-stage rows rather than silently
     authoring an alternate delivery ladder.
+  - '7. README root operator answer-surface completeness discipline rendered at protocol root must remain congruent with admitted operator-answer-surface-completeness rows rather than silently authoring an alternate completeness summary.'
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime operator answer-surface consumption boundary'
@@ -83,6 +86,7 @@ anchor_checks:
   - Runtime consumes README root operator answer-surface discipline as a governed
     stage projection bound to admitted answer-surface-stage rows rather than as
     a freehand delivery ladder.
+  - '7. Runtime consumes README root operator answer-surface completeness discipline as a governed completeness projection bound to admitted operator-answer-surface-completeness rows rather than as a freehand completeness summary.'
 required_surface_rows:
 - order: 1
   surface_id: operator_entry
@@ -303,3 +307,19 @@ required_collapse_rows:
   contract_phrase: law-grounded, canonical-source, admissibility, live-bound,
     and realized-effect answer claims are treated as if one current-truth proof
     stratum were sufficient for all of them.
+operator_answer_surface_completeness_rows:
+- order: 1
+  completeness_id: explicit_operator_answer_surface_row_families
+  contract_phrase: required surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse rows must remain explicit as separate machine-readable families;
+- order: 2
+  completeness_id: congruent_operator_answer_surface_row_family_totals
+  contract_phrase: expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+- order: 3
+  completeness_id: explicit_operator_answer_surface_row_identity_sets
+  contract_phrase: expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+- order: 4
+  completeness_id: hidden_operator_answer_surface_identity_drift_forbidden
+  contract_phrase: runtime or validator code must not finalize operator answer-surface legality while missing or unexpected row identities remain known only internally;
+- order: 5
+  completeness_id: fail_close_preserves_operator_answer_surface_identity_projection
+  contract_phrase: fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.

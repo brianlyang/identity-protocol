@@ -45,6 +45,11 @@ RELEASE_CLOSURE_ROOT_GROUNDING_LANE_SPECS: tuple[
         probe_rel="scripts/ci/run_protocol_root_machine_world_ontology_probes_ci.sh",
     ),
     ReleaseClosureRootGroundingLaneSpec(
+        lane_id="protocol_root_truth_lifecycle",
+        validator_rel="scripts/validate_protocol_root_truth_lifecycle.py",
+        probe_rel="scripts/ci/run_protocol_root_truth_lifecycle_probes_ci.sh",
+    ),
+    ReleaseClosureRootGroundingLaneSpec(
         lane_id="protocol_root_current_truth_epistemology",
         validator_rel="scripts/validate_protocol_root_current_truth_epistemology.py",
         probe_rel="scripts/ci/run_protocol_root_current_truth_epistemology_probes_ci.sh",

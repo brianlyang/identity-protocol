@@ -7,9 +7,9 @@ from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
 from root_contract_anchor_checks_common import (
+    append_expected_root_doc_anchor_stale_reasons,
     evaluate_root_doc_anchor_checks,
     root_doc_anchor_checks_from_doc,
-    validate_expected_root_doc_anchor_checks,
 )
 from root_contract_marker_checks_common import (
     contract_required_markers_from_doc,
@@ -44,7 +44,9 @@ from root_operator_answer_surface_common import (
     answer_claim_alignment_rows_from_doc,
     answer_claim_epistemic_alignment_rows_from_doc,
     answer_surface_proof_rows_from_doc,
+    operator_answer_surface_completeness_rows_from_doc,
     readme_answer_surface_stage_surface,
+    readme_operator_answer_surface_completeness_surface,
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     boundary_rows_from_doc,
@@ -325,6 +327,28 @@ EXPECTED_COLLAPSE_ROWS = {
         "contract_phrase": "law-grounded, canonical-source, admissibility, live-bound, and realized-effect answer claims are treated as if one current-truth proof stratum were sufficient for all of them.",
     },
 }
+EXPECTED_OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROWS = {
+    "explicit_operator_answer_surface_row_families": {
+        "order": 1,
+        "contract_phrase": "required surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse rows must remain explicit as separate machine-readable families;",
+    },
+    "congruent_operator_answer_surface_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_operator_answer_surface_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_operator_answer_surface_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize operator answer-surface legality while missing or unexpected row identities remain known only internally;",
+    },
+    "fail_close_preserves_operator_answer_surface_identity_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
+    },
+}
 EXPECTED_REGISTRY_MARKERS = (
     "this file remains the authoritative root-domain contract for operator answer-surface law",
     "## Operator answer-surface law",
@@ -348,6 +372,7 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "### Operator answer-surface row-family completeness must stay explicit",
         "Required surface, support-memory, support-limit, answer-claim-alignment,\nanswer-surface-stage, answer-surface-stage-surface,\nanswer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit,\nboundary, and collapse families must remain explicit as separate\nmachine-readable row families.",
         "README root operator answer-surface discipline must therefore stay congruent with admitted answer-surface-stage rows rather than becoming a freehand delivery ladder.",
+        "README root operator answer-surface completeness discipline must therefore stay\ncongruent with admitted operator-answer-surface-completeness rows rather than\nbecoming a freehand completeness summary.",
         "The machine world must not finalize operator answer-surface legality while required row identity drift remains known only internally.",
     ),
     "identity/protocol/README.md": (
@@ -357,6 +382,7 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "`current_turn_legality_terminal`",
         "## Root operator answer-surface completeness discipline",
         "Operator answer-surface law is not a soft prose bundle.",
+        "These operator-answer-surface-completeness rules must remain bound to canonical operator-answer-surface-completeness rows rather than drifting into soft summary prose.",
         "1. required surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse rows must remain explicit as separate machine-readable families;",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
@@ -364,12 +390,14 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "1. Operator answer-surface law must remain machine-readable as separate surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse row families.",
         "4. Protocol legality must not finalize operator answer-surface legality while missing or unexpected row identities remain known only inside validator logic.",
         "README root operator answer-surface discipline rendered at protocol root must remain congruent with admitted answer-surface-stage rows rather than silently authoring an alternate delivery ladder.",
+        "7. README root operator answer-surface completeness discipline rendered at protocol root must remain congruent with admitted operator-answer-surface-completeness rows rather than silently authoring an alternate completeness summary.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "## Runtime operator answer-surface consumption boundary",
         "1. Runtime consumes operator answer-surface law as separate surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse row families rather than as undifferentiated answer prose.",
         "4. Runtime must not finalize operator answer-surface legality while missing or unexpected row identities remain known only inside validator machinery.",
         "Runtime consumes README root operator answer-surface discipline as a governed stage projection bound to admitted answer-surface-stage rows rather than as a freehand delivery ladder.",
+        "7. Runtime consumes README root operator answer-surface completeness discipline as a governed completeness projection bound to admitted operator-answer-surface-completeness rows rather than as a freehand completeness summary.",
     ),
 }
 
@@ -440,6 +468,9 @@ def main() -> int:
     answer_surface_limit_rows = answer_surface_limit_rows_from_doc(answer_doc) if answer_doc else ()
     boundary_rows = boundary_rows_from_doc(answer_doc) if answer_doc else ()
     collapse_rows = collapse_rows_from_doc(answer_doc) if answer_doc else ()
+    operator_answer_surface_completeness_rows = (
+        operator_answer_surface_completeness_rows_from_doc(answer_doc) if answer_doc else ()
+    )
     root_doc_anchor_checks = root_doc_anchor_checks_from_doc(answer_doc) if answer_doc else ()
     current_truth_epistemic_proof_rows = epistemic_proof_rows_from_doc(current_truth_doc) if current_truth_doc else ()
     decision_evidence_proof_rows = decision_evidence_proof_rows_from_doc(decision_evidence_doc) if decision_evidence_doc else ()
@@ -450,6 +481,7 @@ def main() -> int:
     routing_anchors = question_routing_anchor_checks_from_doc(routing_doc) if routing_doc else ()
     routing_projections = entry_question_projections_from_doc(routing_doc) if routing_doc else ()
     answer_surface_stage_surface = readme_answer_surface_stage_surface(repo_root)
+    operator_answer_surface_completeness_surface = readme_operator_answer_surface_completeness_surface(repo_root)
 
     if not stale_reasons:
         expected_scalar_fields = {
@@ -488,6 +520,9 @@ def main() -> int:
             if not rows:
                 stale_reasons.append(f"root_operator_answer_surface_{field}_missing")
                 error_code = ERR_REGISTRY
+        if not operator_answer_surface_completeness_rows:
+            stale_reasons.append("root_operator_answer_surface_completeness_rows_missing")
+            error_code = ERR_REGISTRY
         if not current_truth_epistemic_proof_rows:
             stale_reasons.append("root_operator_answer_surface_dependency_current_truth_epistemic_proof_rows_missing")
             error_code = ERR_REGISTRY
@@ -497,15 +532,12 @@ def main() -> int:
         if not answer_doc.get("contract_required_markers"):
             stale_reasons.append("root_operator_answer_surface_contract_required_markers_missing")
             error_code = ERR_REGISTRY
-        anchor_reason_count_before = len(stale_reasons)
-        stale_reasons.extend(
-            validate_expected_root_doc_anchor_checks(
-                root_doc_anchor_checks,
-                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
-                stale_reason_prefix="root_operator_answer_surface",
-            )
-        )
-        if len(stale_reasons) > anchor_reason_count_before:
+        if append_expected_root_doc_anchor_stale_reasons(
+            stale_reasons,
+            root_doc_anchor_checks,
+            EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+            stale_reason_prefix="root_operator_answer_surface",
+        ):
             error_code = ERR_REGISTRY
 
         for field in ("contract_file", "philosophy_anchor_file", "validator_script", "probe_script", "common_script"):
@@ -594,6 +626,26 @@ def main() -> int:
                     "expected_rows": EXPECTED_COLLAPSE_ROWS,
                     "id_attr": "row_id",
                 },
+                {
+                    "family_id": "operator_answer_surface_completeness_rows",
+                    "member_id_key": "completeness_id",
+                    "actual_rows": operator_answer_surface_completeness_rows,
+                    "expected_rows": {
+                        completeness_id: {}
+                        for completeness_id in EXPECTED_OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROWS
+                    },
+                    "id_attr": "completeness_id",
+                },
+                {
+                    "family_id": "operator_answer_surface_completeness_surface",
+                    "member_id_key": "contract_phrase",
+                    "actual_rows": operator_answer_surface_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {}
+                        for row in EXPECTED_OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROWS.values()
+                    },
+                    "id_attr": "contract_phrase",
+                },
             ),
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
@@ -670,6 +722,39 @@ def main() -> int:
                     "field_name": "required_collapse_rows",
                     "id_attr": "row_id",
                     "compare_fields": ("contract_phrase",),
+                },
+                {
+                    "actual_rows": operator_answer_surface_completeness_rows,
+                    "expected_rows": EXPECTED_OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROWS,
+                    "field_name": "operator_answer_surface_completeness_rows",
+                    "id_attr": "completeness_id",
+                    "compare_fields": ("contract_phrase",),
+                    "duplicate_reason": "duplicate_operator_answer_surface_completeness_id",
+                    "non_contiguous_reason": "operator_answer_surface_completeness_row_order_non_contiguous",
+                    "missing_reason": "missing_operator_answer_surface_completeness_rows",
+                    "extra_reason": "extra_operator_answer_surface_completeness_rows",
+                    "missing_ids_key": "completeness_ids",
+                    "extra_ids_key": "completeness_ids",
+                    "violation_id_key": "completeness_id",
+                    "order_reason": "operator_answer_surface_completeness_row_order_mismatch",
+                },
+                {
+                    "actual_rows": operator_answer_surface_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {"order": int(row["order"])}
+                        for row in EXPECTED_OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROWS.values()
+                    },
+                    "field_name": "operator_answer_surface_completeness_surface",
+                    "id_attr": "contract_phrase",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_operator_answer_surface_completeness_surface_phrase",
+                    "non_contiguous_reason": "operator_answer_surface_completeness_surface_order_non_contiguous",
+                    "missing_reason": "missing_operator_answer_surface_completeness_surface_rows",
+                    "extra_reason": "extra_operator_answer_surface_completeness_surface_rows",
+                    "missing_ids_key": "contract_phrases",
+                    "extra_ids_key": "contract_phrases",
+                    "violation_id_key": "contract_phrase",
+                    "order_reason": "operator_answer_surface_completeness_surface_order_mismatch",
                 },
             ),
             structure_violations=structure_violations,
@@ -825,6 +910,48 @@ def main() -> int:
                             "marker": marker,
                         }
                     )
+
+        expected_operator_answer_surface_completeness_phrases = [
+            row["contract_phrase"] for row in EXPECTED_OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROWS.values()
+        ]
+        actual_operator_answer_surface_completeness_phrases = [
+            row.contract_phrase for row in operator_answer_surface_completeness_surface.rows
+        ]
+        expected_operator_answer_surface_completeness_orders = [
+            int(row["order"]) for row in EXPECTED_OPERATOR_ANSWER_SURFACE_COMPLETENESS_ROWS.values()
+        ]
+        actual_operator_answer_surface_completeness_orders = [
+            row.order for row in operator_answer_surface_completeness_surface.rows
+        ]
+        for reason in operator_answer_surface_completeness_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "operator_answer_surface_completeness_surface",
+                    "reason": f"operator_answer_surface_completeness_surface_{reason}",
+                }
+            )
+        if actual_operator_answer_surface_completeness_phrases and tuple(
+            actual_operator_answer_surface_completeness_phrases
+        ) != tuple(expected_operator_answer_surface_completeness_phrases):
+            answer_violations.append(
+                {
+                    "field": "operator_answer_surface_completeness_surface",
+                    "reason": "operator_answer_surface_completeness_surface_phrase_order_mismatch",
+                    "expected": expected_operator_answer_surface_completeness_phrases,
+                    "actual": actual_operator_answer_surface_completeness_phrases,
+                }
+            )
+        if actual_operator_answer_surface_completeness_orders and tuple(
+            actual_operator_answer_surface_completeness_orders
+        ) != tuple(expected_operator_answer_surface_completeness_orders):
+            answer_violations.append(
+                {
+                    "field": "operator_answer_surface_completeness_surface",
+                    "reason": "operator_answer_surface_completeness_surface_order_mismatch",
+                    "expected": expected_operator_answer_surface_completeness_orders,
+                    "actual": actual_operator_answer_surface_completeness_orders,
+                }
+            )
 
         contract_file = str(answer_doc.get("contract_file") or "").strip()
         contract_path = (repo_root / contract_file).resolve()
@@ -1056,6 +1183,7 @@ def main() -> int:
         "answer_surface_limit_count": len(answer_surface_limit_rows),
         "boundary_count": len(boundary_rows),
         "collapse_count": len(collapse_rows),
+        "operator_answer_surface_completeness_row_count": len(operator_answer_surface_completeness_rows),
         **project_root_contract_support_projection(
             prefix="operator_answer",
             row_family_projection_rows=row_family_projection_rows,
@@ -1077,6 +1205,14 @@ def main() -> int:
         "answer_surface_limit_ids": [row.row_id for row in sorted(answer_surface_limit_rows, key=lambda item: item.order)],
         "boundary_ids": [row.row_id for row in sorted(boundary_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
+        "operator_answer_surface_completeness_rows": [
+            {
+                "order": row.order,
+                "completeness_id": row.completeness_id,
+                "contract_phrase": row.contract_phrase,
+            }
+            for row in sorted(operator_answer_surface_completeness_rows, key=lambda item: item.order)
+        ],
         "answer_claim_alignment_rows": [
             {
                 "order": row.order,
@@ -1108,6 +1244,18 @@ def main() -> int:
                 for row in answer_surface_stage_surface.rows
             ],
             "extraction_violations": list(answer_surface_stage_surface.extraction_violations),
+        },
+        "operator_answer_surface_completeness_surface": {
+            "rel_path": operator_answer_surface_completeness_surface.rel_path,
+            "entry_count": len(operator_answer_surface_completeness_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "contract_phrase": row.contract_phrase,
+                }
+                for row in operator_answer_surface_completeness_surface.rows
+            ],
+            "extraction_violations": list(operator_answer_surface_completeness_surface.extraction_violations),
         },
         "answer_claim_epistemic_alignment_rows": [
             {

@@ -15,7 +15,9 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ROOT_OPERATOR_ANSWER_SURFACE_CURRENT = "identity/protocol/mappings/root-operator-answer-surface.current.yaml"
 ROOT_PROTOCOL_README_REL_PATH = "identity/protocol/README.md"
 ANSWER_SURFACE_DISCIPLINE_SECTION_MARKER = "## Root operator answer-surface discipline"
+OPERATOR_ANSWER_SURFACE_COMPLETENESS_SECTION_MARKER = "## Root operator answer-surface completeness discipline"
 ORDERED_BOLD_ITEM_RE = re.compile(r"^\s*(\d+)\.\s+\*\*(.*?)\*\*")
+ORDERED_ITEM_RE = re.compile(r"^\s*(\d+)\.\s+(.*\S)\s*$")
 HEADING_RE = re.compile(r"^##\s+")
 HORIZONTAL_RULE_RE = re.compile(r"^-{3,}$")
 
@@ -88,6 +90,26 @@ class AnswerClaimEpistemicAlignmentRow:
     claim_id: str
     current_truth_proof_id: str
     claim_epistemic_role: str
+
+
+@dataclass(frozen=True)
+class OperatorAnswerSurfaceCompletenessRow:
+    order: int
+    completeness_id: str
+    contract_phrase: str
+
+
+@dataclass(frozen=True)
+class OperatorAnswerSurfaceCompletenessSurfaceRow:
+    order: int
+    contract_phrase: str
+
+
+@dataclass(frozen=True)
+class OperatorAnswerSurfaceCompletenessSurface:
+    rel_path: str
+    rows: tuple[OperatorAnswerSurfaceCompletenessSurfaceRow, ...]
+    extraction_violations: tuple[str, ...]
 
 
 def _norm_str(value: Any) -> str:
@@ -253,6 +275,53 @@ def readme_answer_surface_stage_surface(repo_root: Path) -> AnswerSurfaceStageSu
     )
 
 
+def readme_operator_answer_surface_completeness_surface(
+    repo_root: Path,
+) -> OperatorAnswerSurfaceCompletenessSurface:
+    path = (repo_root / ROOT_PROTOCOL_README_REL_PATH).resolve()
+    if not path.exists() or not path.is_file():
+        return OperatorAnswerSurfaceCompletenessSurface(
+            rel_path=ROOT_PROTOCOL_README_REL_PATH,
+            rows=(),
+            extraction_violations=("target_missing",),
+        )
+
+    lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    section_found = False
+    rows: list[OperatorAnswerSurfaceCompletenessSurfaceRow] = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == OPERATOR_ANSWER_SURFACE_COMPLETENESS_SECTION_MARKER:
+            section_found = True
+            continue
+        if not section_found:
+            continue
+        if HEADING_RE.match(stripped) or HORIZONTAL_RULE_RE.match(stripped):
+            break
+        match = ORDERED_ITEM_RE.match(stripped)
+        if not match:
+            continue
+        rows.append(
+            OperatorAnswerSurfaceCompletenessSurfaceRow(
+                order=int(match.group(1)),
+                contract_phrase=match.group(2).strip(),
+            )
+        )
+
+    extraction_violations: list[str] = []
+    if not section_found:
+        extraction_violations.append("section_missing")
+    if section_found and not rows:
+        extraction_violations.append("ordered_items_missing")
+
+    return OperatorAnswerSurfaceCompletenessSurface(
+        rel_path=ROOT_PROTOCOL_README_REL_PATH,
+        rows=tuple(rows),
+        extraction_violations=tuple(extraction_violations),
+    )
+
+
 def support_memory_rows_from_doc(doc: Mapping[str, Any]) -> tuple[SupportMemoryRow, ...]:
     rows = doc.get("required_support_memory_rows")
     if not isinstance(rows, list):
@@ -403,3 +472,31 @@ def boundary_rows_from_doc(doc: Mapping[str, Any]) -> tuple[PhraseRow, ...]:
 
 def collapse_rows_from_doc(doc: Mapping[str, Any]) -> tuple[PhraseRow, ...]:
     return _phrase_rows_from_field(doc, "required_collapse_rows", row_key="collapse_id")
+
+
+def operator_answer_surface_completeness_rows_from_doc(
+    doc: Mapping[str, Any],
+) -> tuple[OperatorAnswerSurfaceCompletenessRow, ...]:
+    rows = doc.get("operator_answer_surface_completeness_rows")
+    if not isinstance(rows, list):
+        return ()
+    out: list[OperatorAnswerSurfaceCompletenessRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        completeness_id = _norm_str(row.get("completeness_id"))
+        contract_phrase = str(row.get("contract_phrase") or "").strip()
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not completeness_id or not contract_phrase:
+            continue
+        out.append(
+            OperatorAnswerSurfaceCompletenessRow(
+                order=order,
+                completeness_id=completeness_id,
+                contract_phrase=contract_phrase,
+            )
+        )
+    return tuple(out)
