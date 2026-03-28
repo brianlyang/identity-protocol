@@ -228,7 +228,7 @@ COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_POLICY = (
     "parse_status_preempts_nonzero_rc_preempts_nonpass_status_preempts_explicit_non_execution_exclusion_preempts_prefixed_observation_family_ontology_drift_else_not_applicable"
 )
 COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_POLICY = (
-    "component_validator_missing_or_component_status_row_coverage_incomplete_only_before_bundle_violation_projection"
+    "component_validator_missing_or_component_status_row_coverage_incomplete_or_component_validator_contract_surface_reasons_only_before_bundle_violation_projection"
 )
 COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY = (
     "non_execution_bundle_rows_remain_outside_observation_reason_ontology"
@@ -241,6 +241,17 @@ COMPONENT_VALIDATOR_OBSERVATION_REASON_PARTITION_POLICY = (
 )
 COMPONENT_VALIDATOR_OBSERVATION_REASON_UNCLASSIFIED_POLICY = "fail_closed"
 COMPONENT_VALIDATOR_OUTPUT_CONTRACT = "json_object_with_disclosed_status_key"
+COMPONENT_VALIDATOR_OBSERVATION_EXCLUDED_REASONS = {
+    "component_status_row_coverage_incomplete",
+    "component_validator_missing",
+    "component_validator_root_doc_anchor_status_not_pass_required",
+    "component_validator_root_doc_anchor_check_count_invalid",
+    "component_validator_row_family_projection_rows_missing_or_invalid",
+    "component_validator_row_coverage_status_missing",
+    "component_validator_row_coverage_status_not_pass_required",
+    "component_validator_row_identity_projection_status_missing",
+    "component_validator_row_identity_projection_status_not_pass_required",
+}
 
 EXPECTED_COMPONENTS = {
     "root_corpus_governance": {
@@ -642,9 +653,10 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {'identity/protocol/IDENTITY_PROTOCOL_DESIGN_P
                                                               'remains not-applicable.',
                                                               'Bundle component-validator observation-reason exclusion-origin policy must '
                                                               'stay explicit too.',
-                                                              'The admitted excluded non-observation rows are component-validator missing '
-                                                              'and component-status-row coverage incomplete, both before bundle-violation '
-                                                              'projection.',
+                                                              'The admitted excluded non-observation rows are component-validator missing, '
+                                                              'component-status-row coverage incomplete, and component-validator '
+                                                              'contract-surface reasons (root-doc-anchor and row-projection contract-family '
+                                                              'rows), all before bundle-violation projection.',
                                                               'Observation reasons and prefixed observation-family ontology drift must not '
                                                               'be silently re-bucketed as excluded non-observation rows.',
                                                               'Non-execution bundle rows must remain outside component-validator '
@@ -878,8 +890,10 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {'identity/protocol/IDENTITY_PROTOCOL_DESIGN_P
                                  'preempts prefixed observation-family ontology drift, and otherwise runtime classification remains '
                                  'not-applicable.',
                                  'Bundle component-validator observation-reason exclusion-origin policy must also stay explicit.',
-                                 'The admitted excluded runtime non-observation rows are component-validator missing and '
-                                 'component-status-row coverage incomplete, both before bundle-violation projection.',
+                                 'The admitted excluded runtime non-observation rows are component-validator missing, '
+                                 'component-status-row coverage incomplete, and component-validator contract-surface reasons '
+                                 '(root-doc-anchor and row-projection contract-family rows), all before bundle-violation '
+                                 'projection.',
                                  'Runtime observation reasons and prefixed observation-family ontology drift must not be silently '
                                  're-bucketed as excluded non-observation rows.',
                                  'Non-execution bundle rows must remain outside component-validator observation ontology rather than being '
@@ -1103,8 +1117,10 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {'identity/protocol/IDENTITY_PROTOCOL_DESIGN_P
                                             'non-execution exclusion, explicit non-execution exclusion preempts prefixed '
                                             'observation-family ontology drift, and otherwise classification remains not-applicable.',
                                             'Root-law bundle rows must also keep component-validator observation-reason exclusion-origin '
-                                            'policy explicit; admitted excluded non-observation rows are component-validator missing and '
-                                            'component-status-row coverage incomplete before bundle-violation projection.',
+                                            'policy explicit; admitted excluded non-observation rows are component-validator missing, '
+                                            'component-status-row coverage incomplete, and component-validator contract-surface reasons '
+                                            '(root-doc-anchor and row-projection contract-family rows) before bundle-violation '
+                                            'projection.',
                                             'Local bundle law must not silently re-bucket admitted observation reasons or prefixed '
                                             'observation-family ontology drift as excluded non-observation rows.',
                                             'Local bundle law must keep non-execution bundle rows outside component-validator observation '
@@ -1332,8 +1348,10 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {'identity/protocol/IDENTITY_PROTOCOL_DESIGN_P
                                            'exclusion, explicit non-execution exclusion preempts prefixed observation-family ontology '
                                            'drift, and otherwise classification remains not-applicable.',
                                            'Runtime must also keep component-validator observation-reason exclusion-origin policy '
-                                           'explicit; admitted excluded non-observation rows are component-validator missing and '
-                                           'component-status-row coverage incomplete before bundle-violation projection.',
+                                           'explicit; admitted excluded non-observation rows are component-validator missing, '
+                                           'component-status-row coverage incomplete, and component-validator contract-surface reasons '
+                                           '(root-doc-anchor and row-projection contract-family rows) before bundle-violation '
+                                           'projection.',
                                            'Runtime must not silently re-bucket admitted observation reasons or prefixed '
                                            'observation-family ontology drift as excluded non-observation rows.',
                                            'Runtime must keep non-execution bundle rows outside component-validator observation ontology '
@@ -1535,10 +1553,11 @@ def _classify_component_validator_observation_reason(
         and reason == "component_status_not_pass_required"
     ):
         return "nonpass_status"
-    if exclusion_origin_policy == COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_POLICY and reason in {
-        "component_status_row_coverage_incomplete",
-        "component_validator_missing",
-    }:
+    if (
+        exclusion_origin_policy
+        == COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_POLICY
+        and reason in COMPONENT_VALIDATOR_OBSERVATION_EXCLUDED_REASONS
+    ):
         return "not_applicable"
     if (
         prefixed_ontology_drift_origin_policy

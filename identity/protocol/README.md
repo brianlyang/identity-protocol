@@ -1252,8 +1252,10 @@ Bundle component-validator observation-reason exclusion-origin policy
 must also stay explicit.
 
 The admitted excluded runtime non-observation rows are
-component-validator missing and component-status-row coverage
-incomplete, both before bundle-violation projection.
+component-validator missing, component-status-row coverage
+incomplete, and component-validator contract-surface reasons
+(root-doc-anchor and row-projection contract-family rows), all before
+bundle-violation projection.
 
 Runtime observation reasons and prefixed observation-family ontology
 drift must not be silently re-bucketed as excluded non-observation

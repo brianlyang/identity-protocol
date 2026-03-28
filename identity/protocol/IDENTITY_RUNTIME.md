@@ -758,8 +758,10 @@ not-applicable.
 
 Runtime must also keep component-validator observation-reason
 exclusion-origin policy explicit; admitted excluded non-observation
-rows are component-validator missing and component-status-row coverage
-incomplete before bundle-violation projection.
+rows are component-validator missing, component-status-row coverage
+incomplete, and component-validator contract-surface reasons
+(root-doc-anchor and row-projection contract-family rows) before
+bundle-violation projection.
 
 Runtime must not silently re-bucket admitted observation reasons or
 prefixed observation-family ontology drift as excluded non-observation

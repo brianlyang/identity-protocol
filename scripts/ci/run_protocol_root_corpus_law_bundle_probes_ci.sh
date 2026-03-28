@@ -147,7 +147,7 @@ assert payload["component_validator_observation_reason_nonpass_status_origin_pol
 assert payload["component_validator_observation_reason_prefixed_ontology_drift_origin_policy"] == "validator_output_validator_status_component_status_component_validator_prefixed_rows_only_after_admitted_parse_status_nonzero_rc_nonpass_status_and_exclusion_origin_resolution_before_not_applicable", payload
 assert payload["component_validator_observation_reason_residual_not_applicable_policy"] == "only_nonprefixed_nonadmitted_nonexcluded_rows_after_parse_status_nonzero_rc_nonpass_status_exclusion_origin_and_prefixed_ontology_drift_resolution_remain_not_applicable", payload
 assert payload["component_validator_observation_reason_classifier_precedence_policy"] == "parse_status_preempts_nonzero_rc_preempts_nonpass_status_preempts_explicit_non_execution_exclusion_preempts_prefixed_observation_family_ontology_drift_else_not_applicable", payload
-assert payload["component_validator_observation_reason_exclusion_origin_policy"] == "component_validator_missing_or_component_status_row_coverage_incomplete_only_before_bundle_violation_projection", payload
+assert payload["component_validator_observation_reason_exclusion_origin_policy"] == "component_validator_missing_or_component_status_row_coverage_incomplete_or_component_validator_contract_surface_reasons_only_before_bundle_violation_projection", payload
 assert payload["component_validator_observation_reason_exclusion_policy"] == "non_execution_bundle_rows_remain_outside_observation_reason_ontology", payload
 assert payload["component_validator_observation_reason_source_policy"] == "bundle_violation_rows_only_before_violation_projection", payload
 assert payload["component_validator_observation_reason_partition_policy"] == "bundle_violation_rows_partitioned_into_admitted_excluded_or_unknown_exactly_once_before_violation_projection", payload
@@ -3148,12 +3148,34 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RCLB-001", payload
-assert payload["component_validator_observation_reason_status"] == "FAIL_REQUIRED", payload
-assert "root_corpus_law_bundle_component_validator_observation_reason_unclassified" in payload["stale_reasons"], payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["derived_failure_class"] == "bundle", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_counts"] == {
+    "parse_status": 0,
+    "nonzero_rc": 1,
+    "nonpass_status": 0,
+}, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 3, payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
 assert any(
     row["component_id"] == "root_corpus_ordering"
     and row["reason"] == "component_current_file_not_admitted_by_inherited_registry_child_set"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "component_validator_row_coverage_status_not_pass_required"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "component_validator_row_identity_projection_status_not_pass_required"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["component_id"] == "root_machine_registry_completeness"
+    and row["reason"] == "component_validator_nonzero_rc"
     for row in payload["bundle_violations"]
 ), payload
 PY
@@ -4363,15 +4385,22 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RCLB-001", payload
-assert payload["component_validator_observation_reason_status"] == "FAIL_REQUIRED", payload
-assert payload["component_validator_observation_reason_unknown_count"] == 1, payload
-assert "root_corpus_law_bundle_component_validator_observation_reason_unclassified" in payload["stale_reasons"], payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["derived_failure_class"] == "bundle", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_counts"] == {
+    "parse_status": 0,
+    "nonzero_rc": 0,
+    "nonpass_status": 0,
+}, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 1, payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
 assert any(
     row["component_id"] == "root_corpus_authority"
     and row["reason"] == "component_validator_root_doc_anchor_status_not_pass_required"
     for row in payload["bundle_violations"]
 ), payload
+assert "bundle_violation:root_corpus_authority:component_validator_root_doc_anchor_status_not_pass_required" in payload["stale_reasons"], payload
 PY
 
 COMPONENT_PROJECTION_REPO="${TMP_ROOT}/component-row-projection-contract-repo"
@@ -4403,15 +4432,22 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RCLB-001", payload
-assert payload["component_validator_observation_reason_status"] == "FAIL_REQUIRED", payload
-assert payload["component_validator_observation_reason_unknown_count"] == 1, payload
-assert "root_corpus_law_bundle_component_validator_observation_reason_unclassified" in payload["stale_reasons"], payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["derived_failure_class"] == "bundle", payload
+assert payload["component_validator_observation_reason_status"] == "PASS_REQUIRED", payload
+assert payload["component_validator_observation_reason_counts"] == {
+    "parse_status": 0,
+    "nonzero_rc": 0,
+    "nonpass_status": 0,
+}, payload
+assert payload["component_validator_observation_reason_non_applicable_count"] == 1, payload
+assert payload["component_validator_observation_reason_unknown_count"] == 0, payload
 assert any(
     row["component_id"] == "root_corpus_ordering"
     and row["reason"] == "component_validator_row_family_projection_rows_missing_or_invalid"
     for row in payload["bundle_violations"]
 ), payload
+assert "bundle_violation:root_corpus_ordering:component_validator_row_family_projection_rows_missing_or_invalid" in payload["stale_reasons"], payload
 PY
 
 echo "[PASS] protocol root-corpus law bundle probes passed"
