@@ -346,6 +346,9 @@ def _seed_identity(spec: dict[str, object]) -> dict[str, str]:
         "report_path": str(report_path),
         "run_id": str(spec["run_id"]),
         "case_name": str(spec["case_name"]),
+        "repair_before_release_readiness": "true"
+        if bool(spec.get("repair_before_release_readiness", False))
+        else "false",
     }
 
 
@@ -379,6 +382,7 @@ identity_specs = (
         "terminal_state_class": "review_pending",
         "negative_feedback_class": "review_required",
         "upgrade_required": False,
+        "repair_before_release_readiness": True,
     },
 )
 
@@ -405,6 +409,49 @@ env["IDENTITY_CATALOG"] = str(catalog_path)
 
 
 def _run_release_readiness(row: dict[str, str]) -> tuple[int, dict[str, object], dict[str, object]]:
+    if row.get("repair_before_release_readiness") == "true":
+        repair_proc = subprocess.run(
+            [
+                "python3",
+                "scripts/repair_identity_post_execution_mandatory.py",
+                "--catalog",
+                str(catalog_path),
+                "--repo-catalog",
+                str(catalog_path),
+                "--identity-id",
+                row["identity_id"],
+                "--report",
+                row["report_path"],
+                "--apply",
+                "--json-only",
+            ],
+            cwd=str(repo_root),
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        if repair_proc.returncode != 0:
+            raise AssertionError(
+                f"repair_failed case={row['case_name']} rc={repair_proc.returncode}\nSTDOUT:\n{repair_proc.stdout}\nSTDERR:\n{repair_proc.stderr}"
+            )
+        repair_payload = json.loads(repair_proc.stdout)
+        if repair_payload.get("post_execution_report_repair_status") != STATUS_PASS_REQUIRED:
+            raise AssertionError(
+                f"repair_status_not_green case={row['case_name']} payload={repair_payload}"
+            )
+        if repair_payload.get("repair_blocking_status") != STATUS_PASS_REQUIRED:
+            raise AssertionError(
+                f"repair_blocking_not_green case={row['case_name']} payload={repair_payload}"
+            )
+        if repair_payload.get("post_execution_validation_status_after") != STATUS_PASS_REQUIRED:
+            raise AssertionError(
+                f"repair_postexec_not_green case={row['case_name']} payload={repair_payload}"
+            )
+        if repair_payload.get("writeback_continuity_status_after") != STATUS_PASS_REQUIRED:
+            raise AssertionError(
+                f"repair_writeback_not_green case={row['case_name']} payload={repair_payload}"
+            )
+
     summary_path = (e2e_root / f"summary-{row['identity_id']}.json").resolve()
     proc = subprocess.run(
         [
