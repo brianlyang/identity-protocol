@@ -1536,6 +1536,10 @@ Expected row identity set and emitted row identity set for each family must
 also remain machine-readable rather than being collapsed into aggregate counts
 or generic structure failure.
 
+README root truth-lifecycle completeness discipline must therefore stay
+congruent with admitted truth-lifecycle-completeness rows rather than becoming
+a freehand completeness summary.
+
 The machine world must not finalize truth-lifecycle legality while required
 row identity drift remains known only internally.
 

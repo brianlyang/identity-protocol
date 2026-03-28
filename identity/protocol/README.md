@@ -653,6 +653,7 @@ Error-terminality law is not a soft prose bundle.
 ## Root truth-lifecycle completeness discipline
 
 Truth-lifecycle law is not a soft prose bundle.
+These truth-lifecycle-completeness rules must remain bound to canonical truth-lifecycle-completeness rows rather than drifting into soft summary prose.
 
 1. required lifecycle-stage, memory-strata, differentiation, proof, limit, and collapse rows must remain explicit as separate machine-readable families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
