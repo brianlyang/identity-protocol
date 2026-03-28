@@ -1596,9 +1596,14 @@ Operator answer-surface law is not a soft prose summary that may hide its
 machine rows behind aggregate counts.
 
 Required surface, support-memory, support-limit, answer-claim-alignment,
+answer-surface-stage, answer-surface-stage-surface,
 answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit,
 boundary, and collapse families must remain explicit as separate
 machine-readable row families.
+
+README root operator answer-surface discipline must therefore stay congruent
+with admitted answer-surface-stage rows rather than becoming a freehand
+delivery ladder.
 
 Expected row-family total and emitted row-family total must therefore stay
 congruent under machine-readable coverage completeness rather than being left

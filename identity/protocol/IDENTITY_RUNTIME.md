@@ -306,11 +306,12 @@ implicit.
 
 ## Runtime operator answer-surface consumption boundary
 
-1. Runtime consumes operator answer-surface law as separate surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse row families rather than as undifferentiated answer prose.
+1. Runtime consumes operator answer-surface law as separate surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse row families rather than as undifferentiated answer prose.
 2. Runtime must keep expected row-family total and emitted row-family total congruent under machine-readable coverage completeness rather than relying on aggregate green shorthand.
 3. Runtime must also keep expected row identity set and emitted row identity set for each operator answer-surface family explicit rather than collapsing identity drift into summary-only counts.
 4. Runtime must not finalize operator answer-surface legality while missing or unexpected row identities remain known only inside validator machinery.
 5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
+6. Runtime consumes README root operator answer-surface discipline as a governed stage projection bound to admitted answer-surface-stage rows rather than as a freehand delivery ladder.
 
 ## Runtime protocol-instance responsibility consumption boundary
 

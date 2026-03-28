@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -12,6 +13,11 @@ from registry_alias_control_plane_common import resolve_current_yaml_alias
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ROOT_OPERATOR_ANSWER_SURFACE_CURRENT = "identity/protocol/mappings/root-operator-answer-surface.current.yaml"
+ROOT_PROTOCOL_README_REL_PATH = "identity/protocol/README.md"
+ANSWER_SURFACE_DISCIPLINE_SECTION_MARKER = "## Root operator answer-surface discipline"
+ORDERED_BOLD_ITEM_RE = re.compile(r"^\s*(\d+)\.\s+\*\*(.*?)\*\*")
+HEADING_RE = re.compile(r"^##\s+")
+HORIZONTAL_RULE_RE = re.compile(r"^-{3,}$")
 
 
 @dataclass(frozen=True)
@@ -20,6 +26,28 @@ class SurfaceRow:
     surface_id: str
     contract_heading: str
     surface_role: str
+
+
+@dataclass(frozen=True)
+class AnswerSurfaceStageRow:
+    order: int
+    stage_label: str
+    bound_surface_ids: tuple[str, ...] = field(default_factory=tuple)
+    required_markers: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class AnswerSurfaceStageSurfaceRow:
+    order: int
+    stage_label: str
+    body_lines: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class AnswerSurfaceStageSurface:
+    rel_path: str
+    rows: tuple[AnswerSurfaceStageSurfaceRow, ...]
+    extraction_violations: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -66,6 +94,12 @@ def _norm_str(value: Any) -> str:
     return str(value or "").strip().replace("\\", "/")
 
 
+def _as_str_tuple(value: Any) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        return ()
+    return tuple(token for token in (str(item or "").strip() for item in value) if token)
+
+
 def _load_yaml(path: Path) -> dict[str, Any]:
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -110,6 +144,113 @@ def surface_rows_from_doc(doc: Mapping[str, Any]) -> tuple[SurfaceRow, ...]:
             )
         )
     return tuple(out)
+
+
+def answer_surface_stage_rows_from_doc(doc: Mapping[str, Any]) -> tuple[AnswerSurfaceStageRow, ...]:
+    rows = doc.get("answer_surface_stage_rows")
+    if not isinstance(rows, list):
+        return ()
+    out: list[AnswerSurfaceStageRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        stage_label = str(row.get("stage_label") or "").strip()
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not stage_label:
+            continue
+        out.append(
+            AnswerSurfaceStageRow(
+                order=order,
+                stage_label=stage_label,
+                bound_surface_ids=_as_str_tuple(row.get("bound_surface_ids")),
+                required_markers=_as_str_tuple(row.get("required_markers")),
+            )
+        )
+    return tuple(out)
+
+
+def _readme_ordered_bold_section_rows(
+    repo_root: Path,
+    *,
+    section_marker: str,
+) -> tuple[tuple[tuple[int, str, tuple[str, ...]], ...], tuple[str, ...]]:
+    path = (repo_root / ROOT_PROTOCOL_README_REL_PATH).resolve()
+    if not path.exists() or not path.is_file():
+        return (), ("target_missing",)
+
+    lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    section_found = False
+    rows: list[tuple[int, str, tuple[str, ...]]] = []
+    current_order = 0
+    current_label = ""
+    current_body_lines: list[str] = []
+
+    def flush_current() -> None:
+        nonlocal current_order, current_label, current_body_lines
+        if current_order <= 0 or not current_label:
+            return
+        rows.append((current_order, current_label, tuple(line for line in current_body_lines if line)))
+        current_order = 0
+        current_label = ""
+        current_body_lines = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == section_marker:
+            section_found = True
+            continue
+        if not section_found:
+            continue
+        if HEADING_RE.match(stripped) or HORIZONTAL_RULE_RE.match(stripped):
+            break
+        match = ORDERED_BOLD_ITEM_RE.match(stripped)
+        if match:
+            flush_current()
+            current_order = int(match.group(1))
+            current_label = match.group(2).strip()
+            continue
+        if current_order <= 0:
+            continue
+        if stripped.startswith("- "):
+            current_body_lines.append(stripped[2:].strip())
+        elif stripped and line.startswith((" ", "\t")):
+            current_body_lines.append(stripped)
+        elif stripped:
+            flush_current()
+            break
+    flush_current()
+
+    violations: list[str] = []
+    if not section_found:
+        violations.append("section_marker_missing")
+    elif not rows:
+        violations.append("stage_rows_missing")
+    elif any(not row[2] for row in rows):
+        violations.append("stage_body_missing")
+
+    return tuple(rows), tuple(violations)
+
+
+def readme_answer_surface_stage_surface(repo_root: Path) -> AnswerSurfaceStageSurface:
+    rows_data, violations = _readme_ordered_bold_section_rows(
+        repo_root,
+        section_marker=ANSWER_SURFACE_DISCIPLINE_SECTION_MARKER,
+    )
+    return AnswerSurfaceStageSurface(
+        rel_path=ROOT_PROTOCOL_README_REL_PATH,
+        rows=tuple(
+            AnswerSurfaceStageSurfaceRow(
+                order=order,
+                stage_label=stage_label,
+                body_lines=body_lines,
+            )
+            for order, stage_label, body_lines in rows_data
+        ),
+        extraction_violations=violations,
+    )
 
 
 def support_memory_rows_from_doc(doc: Mapping[str, Any]) -> tuple[SupportMemoryRow, ...]:

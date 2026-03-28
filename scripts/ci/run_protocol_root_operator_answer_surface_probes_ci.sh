@@ -21,6 +21,7 @@ import sys
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_operator_answer_surface_status"] == "PASS_REQUIRED", payload
 assert payload["surface_count"] == 4, payload
+assert payload["answer_surface_stage_count"] == 4, payload
 assert payload["support_memory_count"] == 5, payload
 assert payload["support_limit_count"] == 5, payload
 assert payload["answer_claim_alignment_count"] == 5, payload
@@ -31,11 +32,20 @@ assert payload["boundary_count"] == 4, payload
 assert payload["collapse_count"] == 7, payload
 assert payload["root_doc_anchor_check_count"] == 4, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
-assert payload["operator_answer_row_family_count"] == 9, payload
+assert payload["operator_answer_row_family_count"] == 11, payload
 assert payload["operator_answer_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["operator_answer_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
+assert payload["answer_surface_stage_surface"]["entry_count"] == 4, payload
+assert any(
+    row["family_id"] == "answer_surface_stage_rows"
+    for row in payload["row_family_projection_rows"]
+), payload
+assert any(
+    row["family_id"] == "answer_surface_stage_surface"
+    for row in payload["row_family_projection_rows"]
+), payload
 assert any(
     row["claim_id"] == "realized_effect_answer_claim"
     and row["decision_evidence_proof_id"] == "adjudicated_verdict_closure_decision_evidence_proof"
@@ -46,6 +56,99 @@ assert any(
     and row["current_truth_proof_id"] == "provenance_preserving_derivation_proof"
     for row in payload["answer_claim_epistemic_alignment_rows"]
 ), payload
+PY
+
+STAGE_REPO="${TMP_ROOT}/stage-drift-repo"
+mirror_repo "${STAGE_REPO}"
+python3 - <<'PY' "${STAGE_REPO}/identity/protocol/mappings/root-operator-answer-surface.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["answer_surface_stage_rows"] = [
+    row for row in doc["answer_surface_stage_rows"]
+    if row.get("stage_label") != "supporting machine-truth surface"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+STAGE_JSON="${TMP_ROOT}/stage-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_operator_answer_surface.py" \
+  --repo-root "${STAGE_REPO}" \
+  --json-only >"${STAGE_JSON}"; then
+  echo "[FAIL] root operator answer-surface validator unexpectedly passed missing answer-surface stage row"
+  exit 1
+fi
+
+python3 - <<'PY' "${STAGE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_operator_answer_surface_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-ROAS-002", payload
+assert any(
+    row["reason"] == "missing_answer_surface_stage_rows"
+    and "supporting machine-truth surface" in row.get("stage_labels", [])
+    for row in payload["structure_violations"]
+), payload
+stage_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "answer_surface_stage_rows"
+)
+assert stage_row["expected_count"] == 4, payload
+assert stage_row["actual_count"] == 3, payload
+assert stage_row["missing_ids"] == ["supporting machine-truth surface"], payload
+assert stage_row["unexpected_ids"] == [], payload
+assert stage_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert stage_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+SURFACE_REPO="${TMP_ROOT}/stage-surface-drift-repo"
+mirror_repo "${SURFACE_REPO}"
+python3 - <<'PY' "${SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "2. **stable instance answer surface**"
+new = "2. **stable instance output surface**"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+SURFACE_JSON="${TMP_ROOT}/stage-surface-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_operator_answer_surface.py" \
+  --repo-root "${SURFACE_REPO}" \
+  --json-only >"${SURFACE_JSON}"; then
+  echo "[FAIL] root operator answer-surface validator unexpectedly passed answer-surface README drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_operator_answer_surface_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-ROAS-002", payload
+assert any(
+    row["reason"] == "answer_surface_stage_surface_order_mismatch"
+    for row in payload["answer_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "answer_surface_stage_surface"
+)
+assert "stable instance answer surface" in surface_row["missing_ids"], payload
+assert "stable instance output surface" in surface_row["unexpected_ids"], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"

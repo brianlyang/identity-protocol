@@ -357,11 +357,12 @@ implicit.
 
 ## Root operator answer-surface completeness boundary
 
-1. Operator answer-surface law must remain machine-readable as separate surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse row families.
+1. Operator answer-surface law must remain machine-readable as separate surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse row families.
 2. Aggregate row-family counts are insufficient on their own; expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness.
 3. Expected row identity set and emitted row identity set for each operator answer-surface family must also remain explicit; identity drift may not be collapsed into summary-only counts.
 4. Protocol legality must not finalize operator answer-surface legality while missing or unexpected row identities remain known only inside validator logic.
 5. Fail-close operator answer-surface output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+6. README root operator answer-surface discipline rendered at protocol root must remain congruent with admitted answer-surface-stage rows rather than silently authoring an alternate delivery ladder.
 
 ## Root protocol-instance responsibility completeness boundary
 

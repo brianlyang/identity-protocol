@@ -18,6 +18,7 @@ from root_contract_marker_checks_common import (
     merge_contract_text_marker_checks,
 )
 from root_contract_integration_checks_common import evaluate_root_contract_integration
+from root_contract_integration_checks_common import append_membership_delta_violations
 from root_contract_verdict_common import project_root_contract_support_verdict
 from root_contract_row_validation_common import validate_contract_row_batches
 from root_corpus_authority_common import authority_anchor_checks_from_doc, entry_authority_projections_from_doc, load_root_corpus_authority
@@ -39,9 +40,11 @@ from root_decision_evidence_admissibility_common import (
 )
 from root_operator_answer_surface_common import (
     answer_surface_limit_rows_from_doc,
+    answer_surface_stage_rows_from_doc,
     answer_claim_alignment_rows_from_doc,
     answer_claim_epistemic_alignment_rows_from_doc,
     answer_surface_proof_rows_from_doc,
+    readme_answer_surface_stage_surface,
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     boundary_rows_from_doc,
@@ -77,6 +80,40 @@ EXPECTED_SURFACE_ROWS = {
         "order": 4,
         "contract_heading": "### 4. Terminal machine-enforcement surface",
         "surface_role": "current_turn_legality_terminal",
+    },
+}
+EXPECTED_ANSWER_SURFACE_STAGE_ROWS = {
+    "operator entry surface": {
+        "order": 1,
+        "bound_surface_ids": ("operator_entry",),
+        "required_markers": (
+            "`natural_language_collaboration_entry`",
+            "natural-language collaboration entry.",
+        ),
+    },
+    "stable instance answer surface": {
+        "order": 2,
+        "bound_surface_ids": ("stable_instance_answer",),
+        "required_markers": (
+            "`law_compressed_operator_answer`",
+            "law-compressed operator answer.",
+        ),
+    },
+    "supporting machine-truth surface": {
+        "order": 3,
+        "bound_surface_ids": ("supporting_machine_truth",),
+        "required_markers": (
+            "`supporting_machine_truth_surface`",
+            "supporting machine-truth surface that may back the answer without replacing it.",
+        ),
+    },
+    "terminal machine-enforcement surface": {
+        "order": 4,
+        "bound_surface_ids": ("terminal_machine_enforcement",),
+        "required_markers": (
+            "`current_turn_legality_terminal`",
+            "current-turn legality terminal that constrains the answer without becoming answer prose itself.",
+        ),
     },
 }
 EXPECTED_SUPPORT_MEMORY_ROWS = {
@@ -309,23 +346,30 @@ EXPECTED_ROUTING_MARKERS = EXPECTED_AUTHORITY_MARKERS
 EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
         "### Operator answer-surface row-family completeness must stay explicit",
-        "Required surface, support-memory, support-limit, answer-claim-alignment,\nanswer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit,\nboundary, and collapse families must remain explicit as separate\nmachine-readable row families.",
+        "Required surface, support-memory, support-limit, answer-claim-alignment,\nanswer-surface-stage, answer-surface-stage-surface,\nanswer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit,\nboundary, and collapse families must remain explicit as separate\nmachine-readable row families.",
+        "README root operator answer-surface discipline must therefore stay congruent with admitted answer-surface-stage rows rather than becoming a freehand delivery ladder.",
         "The machine world must not finalize operator answer-surface legality while required row identity drift remains known only internally.",
     ),
     "identity/protocol/README.md": (
+        "## Root operator answer-surface discipline",
+        "This root operator answer-surface discipline must remain bound to canonical answer-surface-stage rows rather than becoming a freehand delivery ladder.",
+        "`natural_language_collaboration_entry`",
+        "`current_turn_legality_terminal`",
         "## Root operator answer-surface completeness discipline",
         "Operator answer-surface law is not a soft prose bundle.",
-        "1. required surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse rows must remain explicit as separate machine-readable families;",
+        "1. required surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse rows must remain explicit as separate machine-readable families;",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
         "## Root operator answer-surface completeness boundary",
-        "1. Operator answer-surface law must remain machine-readable as separate surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse row families.",
+        "1. Operator answer-surface law must remain machine-readable as separate surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse row families.",
         "4. Protocol legality must not finalize operator answer-surface legality while missing or unexpected row identities remain known only inside validator logic.",
+        "README root operator answer-surface discipline rendered at protocol root must remain congruent with admitted answer-surface-stage rows rather than silently authoring an alternate delivery ladder.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "## Runtime operator answer-surface consumption boundary",
-        "1. Runtime consumes operator answer-surface law as separate surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse row families rather than as undifferentiated answer prose.",
+        "1. Runtime consumes operator answer-surface law as separate surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse row families rather than as undifferentiated answer prose.",
         "4. Runtime must not finalize operator answer-surface legality while missing or unexpected row identities remain known only inside validator machinery.",
+        "Runtime consumes README root operator answer-surface discipline as a governed stage projection bound to admitted answer-surface-stage rows rather than as a freehand delivery ladder.",
     ),
 }
 
@@ -387,6 +431,7 @@ def main() -> int:
             error_code = ERR_REGISTRY
 
     surface_rows = surface_rows_from_doc(answer_doc) if answer_doc else ()
+    answer_surface_stage_rows = answer_surface_stage_rows_from_doc(answer_doc) if answer_doc else ()
     support_memory_rows = support_memory_rows_from_doc(answer_doc) if answer_doc else ()
     support_limit_rows = support_limit_rows_from_doc(answer_doc) if answer_doc else ()
     answer_claim_alignment_rows = answer_claim_alignment_rows_from_doc(answer_doc) if answer_doc else ()
@@ -404,6 +449,7 @@ def main() -> int:
     authority_projections = entry_authority_projections_from_doc(authority_doc) if authority_doc else ()
     routing_anchors = question_routing_anchor_checks_from_doc(routing_doc) if routing_doc else ()
     routing_projections = entry_question_projections_from_doc(routing_doc) if routing_doc else ()
+    answer_surface_stage_surface = readme_answer_surface_stage_surface(repo_root)
 
     if not stale_reasons:
         expected_scalar_fields = {
@@ -429,6 +475,7 @@ def main() -> int:
 
         for field, rows in (
             ("required_surface_rows", surface_rows),
+            ("answer_surface_stage_rows", answer_surface_stage_rows),
             ("required_support_memory_rows", support_memory_rows),
             ("required_support_limit_rows", support_limit_rows),
             ("required_answer_claim_alignment_rows", answer_claim_alignment_rows),
@@ -476,6 +523,20 @@ def main() -> int:
                     "actual_rows": surface_rows,
                     "expected_rows": EXPECTED_SURFACE_ROWS,
                     "id_attr": "surface_id",
+                },
+                {
+                    "family_id": "answer_surface_stage_rows",
+                    "member_id_key": "stage_label",
+                    "actual_rows": answer_surface_stage_rows,
+                    "expected_rows": EXPECTED_ANSWER_SURFACE_STAGE_ROWS,
+                    "id_attr": "stage_label",
+                },
+                {
+                    "family_id": "answer_surface_stage_surface",
+                    "member_id_key": "stage_label",
+                    "actual_rows": answer_surface_stage_surface.rows,
+                    "expected_rows": EXPECTED_ANSWER_SURFACE_STAGE_ROWS,
+                    "id_attr": "stage_label",
                 },
                 {
                     "family_id": "required_support_memory_rows",
@@ -548,6 +609,13 @@ def main() -> int:
                     "compare_fields": ("contract_heading", "surface_role"),
                 },
                 {
+                    "actual_rows": answer_surface_stage_rows,
+                    "expected_rows": EXPECTED_ANSWER_SURFACE_STAGE_ROWS,
+                    "field_name": "answer_surface_stage_rows",
+                    "id_attr": "stage_label",
+                    "compare_fields": ("bound_surface_ids", "required_markers"),
+                },
+                {
                     "actual_rows": support_memory_rows,
                     "expected_rows": EXPECTED_SUPPORT_MEMORY_ROWS,
                     "field_name": "required_support_memory_rows",
@@ -607,6 +675,156 @@ def main() -> int:
             structure_violations=structure_violations,
             answer_violations=answer_violations,
         )
+
+        surface_row_map = {row.surface_id: row for row in surface_rows}
+        answer_surface_stage_map = {row.stage_label: row for row in answer_surface_stage_rows}
+        answer_surface_stage_surface_map = {row.stage_label: row for row in answer_surface_stage_surface.rows}
+
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="answer_surface_stage_rows",
+            expected_ids=EXPECTED_ANSWER_SURFACE_STAGE_ROWS,
+            actual_ids=answer_surface_stage_map,
+            payload_key="stage_labels",
+            missing_reason="missing_answer_surface_stage_rows",
+            extra_reason="extra_answer_surface_stage_rows",
+            duplicate_reason="duplicate_answer_surface_stage_row",
+            actual_total_count=len(answer_surface_stage_rows),
+        )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="answer_surface_stage_surface",
+            expected_ids=EXPECTED_ANSWER_SURFACE_STAGE_ROWS,
+            actual_ids=answer_surface_stage_surface_map,
+            payload_key="stage_labels",
+            missing_reason="missing_answer_surface_stage_surface_rows",
+            extra_reason="extra_answer_surface_stage_surface_rows",
+            duplicate_reason="duplicate_answer_surface_stage_surface_row",
+            actual_total_count=len(answer_surface_stage_surface.rows),
+        )
+
+        stage_orders = [row.order for row in answer_surface_stage_rows]
+        stage_labels = [row.stage_label for row in answer_surface_stage_rows]
+        stage_surface_orders = [row.order for row in answer_surface_stage_surface.rows]
+        stage_surface_labels = [row.stage_label for row in answer_surface_stage_surface.rows]
+        expected_stage_labels = list(EXPECTED_ANSWER_SURFACE_STAGE_ROWS.keys())
+        expected_stage_orders = [
+            int(stage["order"]) for stage in EXPECTED_ANSWER_SURFACE_STAGE_ROWS.values()
+        ]
+        if len(set(stage_orders)) != len(stage_orders) or sorted(stage_orders) != list(range(1, len(stage_orders) + 1)):
+            structure_violations.append({"field": "answer_surface_stage_rows", "reason": "stage_order_non_contiguous"})
+        if len(set(stage_labels)) != len(stage_labels):
+            structure_violations.append({"field": "answer_surface_stage_rows", "reason": "duplicate_stage_label"})
+        if stage_surface_orders and (
+            len(set(stage_surface_orders)) != len(stage_surface_orders)
+            or sorted(stage_surface_orders) != list(range(1, len(stage_surface_orders) + 1))
+        ):
+            structure_violations.append(
+                {"field": "answer_surface_stage_surface", "reason": "stage_order_non_contiguous"}
+            )
+        if stage_surface_labels and tuple(stage_surface_labels) != tuple(expected_stage_labels):
+            answer_violations.append(
+                {
+                    "field": "answer_surface_stage_surface",
+                    "reason": "answer_surface_stage_surface_order_mismatch",
+                    "expected": expected_stage_labels,
+                    "actual": stage_surface_labels,
+                }
+            )
+        if stage_surface_orders and tuple(stage_surface_orders) != tuple(expected_stage_orders):
+            answer_violations.append(
+                {
+                    "field": "answer_surface_stage_surface",
+                    "reason": "answer_surface_stage_surface_stage_order_mismatch",
+                    "expected": expected_stage_orders,
+                    "actual": stage_surface_orders,
+                }
+            )
+
+        for stage_label, expected in EXPECTED_ANSWER_SURFACE_STAGE_ROWS.items():
+            stage_row = answer_surface_stage_map.get(stage_label)
+            if stage_row is None:
+                continue
+            if stage_row.order != int(expected["order"]):
+                answer_violations.append(
+                    {
+                        "field": "answer_surface_stage_rows",
+                        "reason": "stage_order_mismatch",
+                        "stage_label": stage_label,
+                        "expected": int(expected["order"]),
+                        "actual": stage_row.order,
+                    }
+                )
+            if tuple(stage_row.bound_surface_ids) != tuple(expected["bound_surface_ids"]):
+                answer_violations.append(
+                    {
+                        "field": "answer_surface_stage_rows",
+                        "reason": "bound_surface_ids_mismatch",
+                        "stage_label": stage_label,
+                        "expected": list(expected["bound_surface_ids"]),
+                        "actual": list(stage_row.bound_surface_ids),
+                    }
+                )
+            if tuple(stage_row.required_markers) != tuple(expected["required_markers"]):
+                answer_violations.append(
+                    {
+                        "field": "answer_surface_stage_rows",
+                        "reason": "required_markers_mismatch",
+                        "stage_label": stage_label,
+                        "expected": list(expected["required_markers"]),
+                        "actual": list(stage_row.required_markers),
+                    }
+                )
+            derived_surface_orders = sorted(
+                surface_row_map[surface_id].order
+                for surface_id in stage_row.bound_surface_ids
+                if surface_id in surface_row_map
+            )
+            missing_surface_ids = sorted(
+                surface_id for surface_id in stage_row.bound_surface_ids if surface_id not in surface_row_map
+            )
+            if missing_surface_ids:
+                integration_violations.append(
+                    {
+                        "field": "root_operator_answer_surface",
+                        "reason": "answer_surface_stage_missing_surface_rows",
+                        "stage_label": stage_label,
+                        "surface_ids": missing_surface_ids,
+                    }
+                )
+            if derived_surface_orders and derived_surface_orders != [stage_row.order]:
+                integration_violations.append(
+                    {
+                        "field": "root_operator_answer_surface",
+                        "reason": "answer_surface_stage_order_not_aligned_with_surface_rows",
+                        "stage_label": stage_label,
+                        "stage_order": stage_row.order,
+                        "surface_orders": derived_surface_orders,
+                    }
+                )
+
+        for reason in answer_surface_stage_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "answer_surface_stage_surface",
+                    "reason": f"answer_surface_stage_surface_{reason}",
+                }
+            )
+        for stage_label, expected in EXPECTED_ANSWER_SURFACE_STAGE_ROWS.items():
+            surface_row = answer_surface_stage_surface_map.get(stage_label)
+            if surface_row is None:
+                continue
+            surface_text = "\n".join(surface_row.body_lines)
+            for marker in expected["required_markers"]:
+                if marker not in surface_text:
+                    answer_violations.append(
+                        {
+                            "field": "answer_surface_stage_surface",
+                            "reason": "required_marker_missing",
+                            "stage_label": stage_label,
+                            "marker": marker,
+                        }
+                    )
 
         contract_file = str(answer_doc.get("contract_file") or "").strip()
         contract_path = (repo_root / contract_file).resolve()
@@ -829,6 +1047,7 @@ def main() -> int:
         "routing_entry_path": str(routing_entry_path),
         "contract_file": str(answer_doc.get("contract_file") or ""),
         "surface_count": len(surface_rows),
+        "answer_surface_stage_count": len(answer_surface_stage_rows),
         "support_memory_count": len(support_memory_rows),
         "support_limit_count": len(support_limit_rows),
         "answer_claim_alignment_count": len(answer_claim_alignment_rows),
@@ -847,6 +1066,7 @@ def main() -> int:
         ),
         "row_family_projection_rows": row_family_projection_rows,
         "surface_ids": [row.surface_id for row in sorted(surface_rows, key=lambda item: item.order)],
+        "answer_surface_stage_labels": [row.stage_label for row in sorted(answer_surface_stage_rows, key=lambda item: item.order)],
         "support_memory_ids": [row.support_id for row in sorted(support_memory_rows, key=lambda item: item.order)],
         "support_limit_ids": [row.row_id for row in sorted(support_limit_rows, key=lambda item: item.order)],
         "answer_claim_alignment_ids": [row.claim_id for row in sorted(answer_claim_alignment_rows, key=lambda item: item.order)],
@@ -867,6 +1087,28 @@ def main() -> int:
             }
             for row in sorted(answer_claim_alignment_rows, key=lambda item: item.order)
         ],
+        "answer_surface_stage_rows": [
+            {
+                "order": row.order,
+                "stage_label": row.stage_label,
+                "bound_surface_ids": list(row.bound_surface_ids),
+                "required_markers": list(row.required_markers),
+            }
+            for row in sorted(answer_surface_stage_rows, key=lambda item: item.order)
+        ],
+        "answer_surface_stage_surface": {
+            "rel_path": answer_surface_stage_surface.rel_path,
+            "entry_count": len(answer_surface_stage_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "stage_label": row.stage_label,
+                    "body_lines": list(row.body_lines),
+                }
+                for row in answer_surface_stage_surface.rows
+            ],
+            "extraction_violations": list(answer_surface_stage_surface.extraction_violations),
+        },
         "answer_claim_epistemic_alignment_rows": [
             {
                 "order": row.order,

@@ -51,24 +51,38 @@ anchor_checks:
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
   required_markers:
   - '### Operator answer-surface row-family completeness must stay explicit'
-  - "Required surface, support-memory, support-limit, answer-claim-alignment,\nanswer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit,\nboundary, and collapse families must remain explicit as separate\nmachine-readable row families."
+  - "Required surface, support-memory, support-limit, answer-claim-alignment,\nanswer-surface-stage, answer-surface-stage-surface,\nanswer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit,\nboundary, and collapse families must remain explicit as separate\nmachine-readable row families."
+  - README root operator answer-surface discipline must therefore stay congruent
+    with admitted answer-surface-stage rows rather than becoming a freehand
+    delivery ladder.
   - The machine world must not finalize operator answer-surface legality while
     required row identity drift remains known only internally.
 - rel_path: identity/protocol/README.md
   required_markers:
+  - '## Root operator answer-surface discipline'
+  - This root operator answer-surface discipline must remain bound to canonical
+    answer-surface-stage rows rather than becoming a freehand delivery ladder.
+  - '`natural_language_collaboration_entry`'
+  - '`current_turn_legality_terminal`'
   - '## Root operator answer-surface completeness discipline'
   - Operator answer-surface law is not a soft prose bundle.
-  - '1. required surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse rows must remain explicit as separate machine-readable families;'
+  - '1. required surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse rows must remain explicit as separate machine-readable families;'
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root operator answer-surface completeness boundary'
-  - '1. Operator answer-surface law must remain machine-readable as separate surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse row families.'
+  - '1. Operator answer-surface law must remain machine-readable as separate surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse row families.'
   - '4. Protocol legality must not finalize operator answer-surface legality while missing or unexpected row identities remain known only inside validator logic.'
+  - README root operator answer-surface discipline rendered at protocol root must
+    remain congruent with admitted answer-surface-stage rows rather than silently
+    authoring an alternate delivery ladder.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime operator answer-surface consumption boundary'
-  - '1. Runtime consumes operator answer-surface law as separate surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse row families rather than as undifferentiated answer prose.'
+  - '1. Runtime consumes operator answer-surface law as separate surface, answer-surface-stage, answer-surface-stage-surface, support-memory, support-limit, answer-claim-alignment, answer-claim-epistemic-alignment, answer-surface-proof, answer-surface-limit, boundary, and collapse row families rather than as undifferentiated answer prose.'
   - '4. Runtime must not finalize operator answer-surface legality while missing or unexpected row identities remain known only inside validator machinery.'
+  - Runtime consumes README root operator answer-surface discipline as a governed
+    stage projection bound to admitted answer-surface-stage rows rather than as
+    a freehand delivery ladder.
 required_surface_rows:
 - order: 1
   surface_id: operator_entry
@@ -86,6 +100,37 @@ required_surface_rows:
   surface_id: terminal_machine_enforcement
   contract_heading: '### 4. Terminal machine-enforcement surface'
   surface_role: current_turn_legality_terminal
+answer_surface_stage_rows:
+- order: 1
+  stage_label: operator entry surface
+  bound_surface_ids:
+  - operator_entry
+  required_markers:
+  - '`natural_language_collaboration_entry`'
+  - natural-language collaboration entry.
+- order: 2
+  stage_label: stable instance answer surface
+  bound_surface_ids:
+  - stable_instance_answer
+  required_markers:
+  - '`law_compressed_operator_answer`'
+  - law-compressed operator answer.
+- order: 3
+  stage_label: supporting machine-truth surface
+  bound_surface_ids:
+  - supporting_machine_truth
+  required_markers:
+  - '`supporting_machine_truth_surface`'
+  - supporting machine-truth surface that may back the answer without replacing
+    it.
+- order: 4
+  stage_label: terminal machine-enforcement surface
+  bound_surface_ids:
+  - terminal_machine_enforcement
+  required_markers:
+  - '`current_turn_legality_terminal`'
+  - current-turn legality terminal that constrains the answer without becoming
+    answer prose itself.
 required_support_memory_rows:
 - order: 1
   support_id: law_memory_support
