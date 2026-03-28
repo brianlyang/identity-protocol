@@ -232,6 +232,11 @@ import json
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path('scripts').resolve()))
+from release_readiness_active_runtime_closure_projection_common import (
+    apply_release_readiness_active_runtime_closure_one_look,
+)
+
 clean = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
 clean_auto = json.loads(Path(sys.argv[2]).read_text(encoding='utf-8'))
 review = json.loads(Path(sys.argv[3]).read_text(encoding='utf-8'))
@@ -240,6 +245,27 @@ placeholder = json.loads(Path(sys.argv[5]).read_text(encoding='utf-8'))
 conflict = json.loads(Path(sys.argv[6]).read_text(encoding='utf-8'))
 alias_conflict = json.loads(Path(sys.argv[7]).read_text(encoding='utf-8'))
 clean_report_path = str(Path(sys.argv[8]).resolve())
+
+
+def build_terminal_truth_one_look(payload: dict) -> dict:
+    summary = {
+        'identity_terminal_truth_cleanliness': {
+            'status': payload.get('identity_terminal_truth_cleanliness_status', ''),
+            'execution_closure_status': payload.get('execution_closure_status', ''),
+            'canonical_publishable_result_status': payload.get('canonical_publishable_result_status', ''),
+            'terminal_truth_class': payload.get('terminal_truth_class', ''),
+            'terminal_state_machine_status': payload.get('terminal_state_machine_status', ''),
+            'terminal_state_class': payload.get('terminal_state_class', ''),
+            'negative_feedback_class': payload.get('negative_feedback_class', ''),
+            'loopback_required': payload.get('loopback_required', False),
+            'publishable': payload.get('publishable', False),
+            'next_state_after_veto': payload.get('next_state_after_veto', ''),
+            'terminal_clean_alias_surface_status': payload.get('terminal_clean_alias_surface_status', ''),
+        }
+    }
+    one_look = {}
+    apply_release_readiness_active_runtime_closure_one_look(summary, one_look)
+    return one_look
 
 if clean.get('identity_terminal_truth_cleanliness_status') != 'PASS_REQUIRED':
     raise SystemExit('clean fixture top-level status must PASS_REQUIRED')
@@ -269,6 +295,22 @@ if clean_auto.get('report_selected_authority_class') != 'active_execution_pointe
 if clean_auto.get('report_pointer_resolution_mode') != 'pointer_candidate_root_report':
     raise SystemExit('clean auto-selection fixture pointer resolution mode must be pointer_candidate_root_report')
 
+clean_one_look = build_terminal_truth_one_look(clean)
+if clean_one_look.get('identity_terminal_truth_state_machine_status') != 'PASS_REQUIRED':
+    raise SystemExit('clean fixture one-look terminal_state_machine_status must be PASS_REQUIRED')
+if clean_one_look.get('identity_terminal_truth_state_class') != 'completed_clean':
+    raise SystemExit('clean fixture one-look terminal_state_class must be completed_clean')
+if clean_one_look.get('identity_terminal_truth_negative_feedback_class') != 'none':
+    raise SystemExit('clean fixture one-look negative_feedback_class must be none')
+if clean_one_look.get('identity_terminal_truth_loopback_required') is not False:
+    raise SystemExit('clean fixture one-look loopback_required must be false')
+if clean_one_look.get('identity_terminal_truth_publishable') is not True:
+    raise SystemExit('clean fixture one-look publishable must be true')
+if clean_one_look.get('identity_terminal_truth_next_state_after_veto') != '':
+    raise SystemExit('clean fixture one-look next_state_after_veto must stay empty')
+if clean_one_look.get('identity_terminal_truth_alias_surface_status') != 'PASS_REQUIRED':
+    raise SystemExit('clean fixture one-look alias surface status must be PASS_REQUIRED')
+
 if review.get('execution_closure_status') != 'PASS_REQUIRED':
     raise SystemExit('review-required fixture must preserve execution closure status')
 if review.get('report_selection_mode') != 'explicit_report_override':
@@ -285,6 +327,22 @@ if review.get('terminal_state_machine_status') != 'PASS_REQUIRED' or review.get(
     raise SystemExit('review-required fixture terminal state machine must classify as review_pending')
 if review.get('requires_review') is not True or review.get('requires_human') is not True:
     raise SystemExit('review-required fixture must require review and human participation')
+
+review_one_look = build_terminal_truth_one_look(review)
+if review_one_look.get('identity_terminal_truth_state_machine_status') != 'PASS_REQUIRED':
+    raise SystemExit('review-required fixture one-look terminal_state_machine_status must be PASS_REQUIRED')
+if review_one_look.get('identity_terminal_truth_state_class') != 'review_pending':
+    raise SystemExit('review-required fixture one-look terminal_state_class must be review_pending')
+if review_one_look.get('identity_terminal_truth_negative_feedback_class') != 'review_required':
+    raise SystemExit('review-required fixture one-look negative_feedback_class must be review_required')
+if review_one_look.get('identity_terminal_truth_loopback_required') is not False:
+    raise SystemExit('review-required fixture one-look loopback_required must stay false')
+if review_one_look.get('identity_terminal_truth_publishable') is not False:
+    raise SystemExit('review-required fixture one-look publishable must be false')
+if review_one_look.get('identity_terminal_truth_next_state_after_veto') != 'review_pending':
+    raise SystemExit('review-required fixture one-look next_state_after_veto must be review_pending')
+if review_one_look.get('identity_terminal_truth_alias_surface_status') != 'PASS_REQUIRED':
+    raise SystemExit('review-required fixture one-look alias surface status must be PASS_REQUIRED')
 
 if degraded.get('execution_closure_status') != 'FAIL_REQUIRED':
     raise SystemExit('degraded fixture must fail execution closure status')
@@ -304,6 +362,22 @@ if degraded.get('terminal_state_machine_status') != 'PASS_REQUIRED' or degraded.
     raise SystemExit('degraded fixture terminal state machine must classify as revalidation_pending')
 if degraded.get('revalidation_required') is not True:
     raise SystemExit('degraded fixture must require revalidation')
+
+degraded_one_look = build_terminal_truth_one_look(degraded)
+if degraded_one_look.get('identity_terminal_truth_state_machine_status') != 'PASS_REQUIRED':
+    raise SystemExit('degraded fixture one-look terminal_state_machine_status must be PASS_REQUIRED')
+if degraded_one_look.get('identity_terminal_truth_state_class') != 'revalidation_pending':
+    raise SystemExit('degraded fixture one-look terminal_state_class must be revalidation_pending')
+if degraded_one_look.get('identity_terminal_truth_negative_feedback_class') != 'degraded_execution':
+    raise SystemExit('degraded fixture one-look negative_feedback_class must be degraded_execution')
+if degraded_one_look.get('identity_terminal_truth_loopback_required') is not True:
+    raise SystemExit('degraded fixture one-look loopback_required must be true')
+if degraded_one_look.get('identity_terminal_truth_publishable') is not False:
+    raise SystemExit('degraded fixture one-look publishable must be false')
+if degraded_one_look.get('identity_terminal_truth_next_state_after_veto') != 'revalidation_pending':
+    raise SystemExit('degraded fixture one-look next_state_after_veto must be revalidation_pending')
+if degraded_one_look.get('identity_terminal_truth_alias_surface_status') != 'PASS_REQUIRED':
+    raise SystemExit('degraded fixture one-look alias surface status must be PASS_REQUIRED')
 
 if placeholder.get('negative_feedback_class') != 'placeholder_result':
     raise SystemExit('placeholder fixture negative_feedback_class must be placeholder_result')
@@ -327,6 +401,12 @@ if 'report_terminal_clean_alias_claimed_while_not_clean' not in set(alias_confli
     raise SystemExit('alias-conflict fixture must expose clean-terminal alias drift blocker')
 if alias_conflict.get('instance_adoption_terminal_truth_probe_status') != 'FAIL_REQUIRED':
     raise SystemExit('alias-conflict fixture must fail instance adoption terminal-truth probe status')
+
+alias_one_look = build_terminal_truth_one_look(alias_conflict)
+if alias_one_look.get('identity_terminal_truth_alias_surface_status') != 'FAIL_REQUIRED':
+    raise SystemExit('alias-conflict fixture one-look alias surface status must be FAIL_REQUIRED')
+if alias_one_look.get('identity_terminal_truth_publishable') is not False:
+    raise SystemExit('alias-conflict fixture one-look publishable must be false')
 PY
 
 echo "[PASS] terminal truth cleanliness probes passed"
