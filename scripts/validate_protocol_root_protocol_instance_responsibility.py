@@ -11,6 +11,7 @@ from root_contract_anchor_checks_common import (
     root_doc_anchor_checks_from_doc,
     validate_expected_root_doc_anchor_checks,
 )
+from root_contract_row_validation_common import contiguous_orders
 from root_contract_marker_checks_common import (
     contract_required_markers_from_doc,
     contract_text_marker_checks_from_rows,
@@ -209,9 +210,6 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2))
 
 
-def _contiguous_orders(values: list[int]) -> bool:
-    return values == list(range(1, len(values) + 1))
-
 
 
 def _validate_exact_rows(
@@ -228,7 +226,7 @@ def _validate_exact_rows(
     orders = [row.order for row in actual_rows]
     if len(actual_map) != len(actual_rows):
         structure_violations.append({"field": field_name, "reason": f"duplicate_{id_attr}"})
-    if len(set(orders)) != len(orders) or not _contiguous_orders(sorted(orders)):
+    if len(set(orders)) != len(orders) or not contiguous_orders(sorted(orders)):
         structure_violations.append({"field": field_name, "reason": f"{field_name}_order_non_contiguous"})
     missing_ids = sorted(set(expected_rows) - set(actual_map))
     extra_ids = sorted(set(actual_map) - set(expected_rows))

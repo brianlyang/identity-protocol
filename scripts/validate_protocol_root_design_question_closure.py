@@ -13,6 +13,7 @@ from root_contract_anchor_checks_common import (
     root_doc_anchor_checks_from_doc,
     validate_expected_root_doc_anchor_checks,
 )
+from root_contract_row_validation_common import contiguous_orders
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
 from root_design_question_closure_common import (
     STATUS_FAIL_REQUIRED,
@@ -137,9 +138,6 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2))
 
 
-def _contiguous_orders(values: list[int]) -> bool:
-    return values == list(range(1, len(values) + 1))
-
 
 def _status_rows(question_status_rows: list[dict[str, Any]]) -> tuple[SimpleNamespace, ...]:
     return tuple(
@@ -240,7 +238,7 @@ def main() -> int:
         orders = [row.order for row in closure_rows]
         if len(row_map) != len(closure_rows):
             structure_violations.append({"field": "required_question_closure_rows", "reason": "duplicate_question_id"})
-        if len(set(orders)) != len(orders) or not _contiguous_orders(sorted(orders)):
+        if len(set(orders)) != len(orders) or not contiguous_orders(sorted(orders)):
             structure_violations.append({"field": "required_question_closure_rows", "reason": "question_order_non_contiguous"})
 
         missing = sorted(set(EXPECTED_QUESTION_CLOSURE_ROWS) - set(row_map))

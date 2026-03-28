@@ -12,6 +12,7 @@ from root_contract_anchor_checks_common import (
     root_doc_anchor_checks_from_doc,
     validate_expected_root_doc_anchor_checks,
 )
+from root_contract_row_validation_common import contiguous_orders
 from root_contract_marker_checks_common import (
     contract_required_markers_from_doc,
     contract_text_marker_checks_from_rows,
@@ -175,9 +176,6 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2))
 
-
-def _contiguous_orders(values: list[int]) -> bool:
-    return values == list(range(1, len(values) + 1))
 
 
 
@@ -357,11 +355,11 @@ def main() -> int:
             structure_violations.append({"field": "required_admissibility_proof_rows", "reason": "duplicate_proof_id"})
         if len(limit_map) != len(limit_rows):
             structure_violations.append({"field": "required_admissibility_limit_rows", "reason": "duplicate_limit_id"})
-        if len(set(question_orders)) != len(question_orders) or not _contiguous_orders(sorted(question_orders)):
+        if len(set(question_orders)) != len(question_orders) or not contiguous_orders(sorted(question_orders)):
             structure_violations.append({"field": "required_question_rows", "reason": "question_order_non_contiguous"})
-        if len(set(proof_orders)) != len(proof_orders) or not _contiguous_orders(sorted(proof_orders)):
+        if len(set(proof_orders)) != len(proof_orders) or not contiguous_orders(sorted(proof_orders)):
             structure_violations.append({"field": "required_admissibility_proof_rows", "reason": "proof_order_non_contiguous"})
-        if len(set(limit_orders)) != len(limit_orders) or not _contiguous_orders(sorted(limit_orders)):
+        if len(set(limit_orders)) != len(limit_orders) or not contiguous_orders(sorted(limit_orders)):
             structure_violations.append({"field": "required_admissibility_limit_rows", "reason": "limit_order_non_contiguous"})
         missing_questions = sorted(set(EXPECTED_QUESTION_ROWS) - set(question_map))
         extra_questions = sorted(set(question_map) - set(EXPECTED_QUESTION_ROWS))
@@ -488,7 +486,7 @@ def main() -> int:
                     }
                 )
 
-        if len(set(outcome_orders)) != len(outcome_orders) or not _contiguous_orders(sorted(outcome_orders)):
+        if len(set(outcome_orders)) != len(outcome_orders) or not contiguous_orders(sorted(outcome_orders)):
             structure_violations.append({"field": "admissibility_outcome_rows", "reason": "outcome_order_non_contiguous"})
         actual_outcomes = tuple(row.outcome_class for row in sorted(outcome_rows, key=lambda item: item.order))
         if actual_outcomes != EXPECTED_OUTCOME_CLASSES:

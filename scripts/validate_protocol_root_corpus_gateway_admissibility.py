@@ -11,6 +11,7 @@ from root_contract_anchor_checks_common import (
     evaluate_root_doc_anchor_checks,
     validate_expected_root_doc_anchor_checks,
 )
+from root_contract_row_validation_common import contiguous_orders
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 from root_corpus_authority_common import authority_class_profiles_from_doc, load_root_corpus_authority
 from root_corpus_gateway_admissibility_common import (
@@ -119,9 +120,6 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2))
 
-
-def _contiguous_orders(values: list[int]) -> bool:
-    return values == list(range(1, len(values) + 1))
 
 
 def _build_expected_gateway_inputs(transition_profiles: tuple[Any, ...]) -> tuple[dict[str, tuple[str, ...]], list[str]]:
@@ -309,7 +307,7 @@ def main() -> int:
             structure_violations.append({"field": "gateway_order", "reason": "duplicate_gateway_class"})
         if len(gateway_effect_target_map) != len(gateway_effect_targets):
             structure_violations.append({"field": "gateway_effect_targets", "reason": "duplicate_gateway_class"})
-        if len(set(gateway_order_values)) != len(gateway_order_values) or not _contiguous_orders(sorted(gateway_order_values)):
+        if len(set(gateway_order_values)) != len(gateway_order_values) or not contiguous_orders(sorted(gateway_order_values)):
             structure_violations.append({"field": "gateway_order", "reason": "gateway_order_non_contiguous"})
         anchor_rel_paths = [row.rel_path for row in anchor_checks]
         if len(set(anchor_rel_paths)) != len(anchor_rel_paths):

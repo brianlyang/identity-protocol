@@ -10,6 +10,7 @@ from root_contract_anchor_checks_common import (
     evaluate_root_doc_anchor_checks,
     validate_expected_root_doc_anchor_checks,
 )
+from root_contract_row_validation_common import contiguous_orders
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 from root_corpus_governance_common import (
     load_root_corpus_registry,
@@ -100,9 +101,6 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2))
 
-
-def _contiguous_orders(values: list[int]) -> bool:
-    return values == list(range(1, len(values) + 1))
 
 
 def main() -> int:
@@ -250,23 +248,23 @@ def main() -> int:
     precedence_legality_profile = precedence_profile_map.get(CURRENT_TURN_LEGALITY_CONFLICT)
 
     if not stale_reasons:
-        if len(set(source_orders)) != len(source_orders) or not _contiguous_orders(sorted(source_orders)):
+        if len(set(source_orders)) != len(source_orders) or not contiguous_orders(sorted(source_orders)):
             structure_violations.append({"field": "source_order", "reason": "source_order_non_contiguous"})
         if len(set(source_classes)) != len(source_classes):
             structure_violations.append({"field": "source_order", "reason": "source_order_duplicate_corpus_class"})
         if "root_index" in source_classes:
             structure_violations.append({"field": "source_order", "reason": "root_index_must_not_be_generative_source"})
-        if len(set(reading_orders)) != len(reading_orders) or not _contiguous_orders(sorted(reading_orders)):
+        if len(set(reading_orders)) != len(reading_orders) or not contiguous_orders(sorted(reading_orders)):
             structure_violations.append({"field": "reading_order", "reason": "reading_order_non_contiguous"})
         if len(set(reading_paths)) != len(reading_paths):
             structure_violations.append({"field": "reading_order", "reason": "reading_order_duplicate_rel_path"})
-        if len(set(adjudication_orders)) != len(adjudication_orders) or not _contiguous_orders(sorted(adjudication_orders)):
+        if len(set(adjudication_orders)) != len(adjudication_orders) or not contiguous_orders(sorted(adjudication_orders)):
             structure_violations.append({"field": "adjudication_order", "reason": "adjudication_order_non_contiguous"})
         if len(set(adjudication_surfaces)) != len(adjudication_surfaces):
             structure_violations.append({"field": "adjudication_order", "reason": "adjudication_order_duplicate_machine_surface"})
         if len(adjudication_surface_profile_map) != len(adjudication_surface_profiles):
             structure_violations.append({"field": "adjudication_surface_profiles", "reason": "duplicate_machine_surface"})
-        if len(set(adjudication_phase_orders)) != len(adjudication_phase_orders) or not _contiguous_orders(sorted(adjudication_phase_orders)):
+        if len(set(adjudication_phase_orders)) != len(adjudication_phase_orders) or not contiguous_orders(sorted(adjudication_phase_orders)):
             structure_violations.append({"field": "adjudication_surface_profiles", "reason": "phase_order_non_contiguous"})
         if (
             not sorted_reading_rows

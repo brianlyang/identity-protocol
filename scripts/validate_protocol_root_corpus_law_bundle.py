@@ -15,6 +15,7 @@ from root_contract_anchor_checks_common import (
     evaluate_root_doc_anchor_checks,
     validate_expected_root_doc_anchor_checks,
 )
+from root_contract_row_validation_common import contiguous_orders
 from root_corpus_governance_common import root_corpus_entries_from_registry
 from root_corpus_law_bundle_common import (
     STATUS_FAIL_REQUIRED,
@@ -1353,9 +1354,6 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {'identity/protocol/IDENTITY_PROTOCOL_DESIGN_P
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2))
 
-
-def _contiguous_orders(values: list[int]) -> bool:
-    return values == list(range(1, len(values) + 1))
 
 
 def _descriptor_value(value: Any) -> Any:
@@ -3146,7 +3144,7 @@ def main() -> int:
     ):
         if len(component_map) != len(components):
             structure_violations.append({"field": "component_rows", "reason": "duplicate_component_id"})
-        if len(set(component_orders)) != len(component_orders) or not _contiguous_orders(sorted(component_orders)):
+        if len(set(component_orders)) != len(component_orders) or not contiguous_orders(sorted(component_orders)):
             structure_violations.append({"field": "component_rows", "reason": "component_order_non_contiguous"})
 
         source_component = component_map.get(descriptor_schema_source_component_id)

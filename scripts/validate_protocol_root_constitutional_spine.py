@@ -11,6 +11,7 @@ from root_contract_anchor_checks_common import (
     root_doc_anchor_checks_from_doc,
     validate_expected_root_doc_anchor_checks,
 )
+from root_contract_row_validation_common import contiguous_orders
 from root_constitutional_spine_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -191,16 +192,13 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2))
 
 
-def _contiguous_orders(values: list[int]) -> bool:
-    return values == list(range(1, len(values) + 1))
-
 
 def _validate_entry_rows(entry_rows, structure_violations: list[dict[str, Any]]) -> None:
     entry_map = {row.rel_path: row for row in entry_rows}
     orders = [row.order for row in entry_rows]
     if len(entry_map) != len(entry_rows):
         structure_violations.append({"field": "required_constitutional_entry_rows", "reason": "duplicate_rel_path"})
-    if len(set(orders)) != len(orders) or not _contiguous_orders(sorted(orders)):
+    if len(set(orders)) != len(orders) or not contiguous_orders(sorted(orders)):
         structure_violations.append({"field": "required_constitutional_entry_rows", "reason": "entry_order_non_contiguous"})
 
     missing = sorted(set(EXPECTED_ENTRY_ROWS) - set(entry_map))
@@ -254,7 +252,7 @@ def _validate_bridge_rows(bridge_rows, structure_violations: list[dict[str, Any]
     orders = [row.order for row in bridge_rows]
     if len(bridge_map) != len(bridge_rows):
         structure_violations.append({"field": "required_spine_bridge_rows", "reason": "duplicate_bridge_id"})
-    if len(set(orders)) != len(orders) or not _contiguous_orders(sorted(orders)):
+    if len(set(orders)) != len(orders) or not contiguous_orders(sorted(orders)):
         structure_violations.append({"field": "required_spine_bridge_rows", "reason": "bridge_order_non_contiguous"})
 
     missing = sorted(set(EXPECTED_BRIDGE_ROWS) - set(bridge_map))
