@@ -553,6 +553,7 @@ These design-question-closure-completeness rules must remain bound to canonical 
 ## Root machine-law primacy completeness discipline
 
 Machine-law primacy law is not a soft prose bundle.
+These machine-law-primacy-completeness rules must remain bound to canonical machine-law-primacy-completeness rows rather than drifting into soft summary prose.
 
 1. required commitment, anchor, primacy-proof, primacy-limit, and collapse rows must remain explicit as separate machine-readable families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;

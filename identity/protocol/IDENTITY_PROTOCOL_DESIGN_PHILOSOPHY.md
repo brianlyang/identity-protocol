@@ -1349,6 +1349,10 @@ Missing or unexpected row identity must remain projected in fail-close machine
 output rather than being hidden behind row-count shorthand or summary-only
 verdict text.
 
+README root machine-law primacy completeness discipline must therefore stay
+congruent with admitted machine-law-primacy-completeness rows rather than
+becoming a freehand completeness summary.
+
 ### Stream-design admissibility row-family completeness must stay explicit
 
 Stream-design admissibility law is not a soft prose summary that may hide its

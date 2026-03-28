@@ -33,21 +33,45 @@ anchor_checks:
       - '### Machine-law primacy row-family completeness must stay explicit'
       - 'Required commitment, anchor, primacy-proof, primacy-limit, and collapse families must remain explicit as separate machine-readable row families.'
       - 'The machine world must not finalize machine-law primacy legality while required row identity drift remains known only internally.'
+      - README root machine-law primacy completeness discipline must therefore stay
+        congruent with admitted machine-law-primacy-completeness rows rather
+        than becoming a freehand completeness summary.
   - rel_path: identity/protocol/README.md
     required_markers:
       - '## Root machine-law primacy completeness discipline'
       - 'Machine-law primacy law is not a soft prose bundle.'
+      - These machine-law-primacy-completeness rules must remain bound to canonical
+        machine-law-primacy-completeness rows rather than drifting into soft
+        summary prose.
       - '1. required commitment, anchor, primacy-proof, primacy-limit, and collapse rows must remain explicit as separate machine-readable families;'
   - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
     required_markers:
       - '## Root machine-law primacy completeness boundary'
       - '1. Machine-law primacy law must remain machine-readable as separate commitment, anchor, primacy-proof, primacy-limit, and collapse row families.'
       - '4. Protocol legality must not finalize machine-law primacy legality while missing or unexpected row identities remain known only inside validator logic.'
+      - '6. README root machine-law primacy completeness discipline rendered at protocol root must remain congruent with admitted machine-law-primacy-completeness rows rather than silently authoring an alternate completeness summary.'
   - rel_path: identity/protocol/IDENTITY_RUNTIME.md
     required_markers:
       - '## Runtime machine-law primacy consumption boundary'
       - '1. Runtime consumes machine-law primacy law as separate commitment, anchor, primacy-proof, primacy-limit, and collapse row families rather than as undifferentiated anti-compatibility prose.'
       - '4. Runtime must not finalize machine-law primacy legality while missing or unexpected row identities remain known only inside validator machinery.'
+      - '6. Runtime consumes README root machine-law primacy completeness discipline as a governed completeness projection bound to admitted machine-law-primacy-completeness rows rather than as a freehand completeness summary.'
+machine_law_primacy_completeness_rows:
+  - order: 1
+    completeness_id: explicit_machine_law_primacy_row_families
+    contract_phrase: 'required commitment, anchor, primacy-proof, primacy-limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - order: 2
+    completeness_id: congruent_machine_law_primacy_row_family_totals
+    contract_phrase: 'expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;'
+  - order: 3
+    completeness_id: explicit_machine_law_primacy_row_identity_sets
+    contract_phrase: 'expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;'
+  - order: 4
+    completeness_id: hidden_machine_law_primacy_identity_drift_forbidden
+    contract_phrase: 'runtime or validator code must not finalize machine-law primacy legality while missing or unexpected row identities remain known only internally;'
+  - order: 5
+    completeness_id: fail_close_preserves_machine_law_primacy_identity_projection
+    contract_phrase: 'fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.'
 required_commitment_rows:
   - order: 1
     commitment_id: law_before_compatibility_shelter
