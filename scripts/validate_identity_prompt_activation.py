@@ -6,7 +6,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from primary_execution_report_common import latest_primary_execution_report_from_roots
+from primary_execution_report_common import latest_prompt_bound_primary_execution_report_from_roots
 from runtime_temp_path_common import runtime_temp_root
 
 from resolve_identity_context import resolve_identity
@@ -20,8 +20,12 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def _latest(identity_id: str, report_dir: Path) -> Path | None:
-    return latest_primary_execution_report_from_roots([report_dir], identity_id)
+def _latest(identity_id: str, report_dir: Path, *, pack_root: Path | None = None) -> Path | None:
+    return latest_prompt_bound_primary_execution_report_from_roots(
+        [report_dir],
+        identity_id,
+        explicit_pack_root=pack_root,
+    )
 
 
 def main() -> int:
@@ -34,8 +38,21 @@ def main() -> int:
     ap.add_argument("--scope", default="")
     args = ap.parse_args()
 
+    ctx = resolve_identity(
+        args.identity_id,
+        Path(args.repo_catalog).expanduser().resolve(),
+        Path(args.catalog).expanduser().resolve(),
+        preferred_scope=str(args.scope or ""),
+        allow_conflict=True,
+    )
+    resolved_pack_root = Path(
+        str(ctx.get("resolved_pack_path") or ctx.get("pack_path") or "")
+    ).expanduser().resolve()
+
     report_path = Path(args.report).expanduser().resolve() if args.report else _latest(
-        args.identity_id, Path(args.report_dir).expanduser().resolve()
+        args.identity_id,
+        Path(args.report_dir).expanduser().resolve(),
+        pack_root=resolved_pack_root,
     )
     if report_path is None or not report_path.exists():
         print(f"[FAIL] execution report not found for identity={args.identity_id}")
@@ -75,14 +92,7 @@ def main() -> int:
         print(f"[FAIL] prompt bytes mismatch report={b} disk={disk_b}")
         return 1
 
-    ctx = resolve_identity(
-        args.identity_id,
-        Path(args.repo_catalog).expanduser().resolve(),
-        Path(args.catalog).expanduser().resolve(),
-        preferred_scope=str(args.scope or ""),
-        allow_conflict=True,
-    )
-    resolved_path = Path(str(ctx.get("resolved_pack_path") or ctx.get("pack_path") or "")).expanduser().resolve() / "IDENTITY_PROMPT.md"
+    resolved_path = resolved_pack_root / "IDENTITY_PROMPT.md"
     if resolved_path != prompt_path:
         print(f"[FAIL] prompt path not aligned with resolved pack path: report={prompt_path} resolved={resolved_path}")
         return 1

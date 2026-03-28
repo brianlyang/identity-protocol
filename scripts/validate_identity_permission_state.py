@@ -5,7 +5,7 @@ import argparse
 import json
 from pathlib import Path
 
-from primary_execution_report_common import latest_primary_execution_report_from_roots
+from primary_execution_report_common import latest_prompt_bound_primary_execution_report_from_roots
 from runtime_temp_path_common import runtime_temp_root
 
 ALLOWED_STATES = {
@@ -62,7 +62,7 @@ def _writeback_code_matches(writeback_status: str, code: str) -> bool:
 
 
 def _latest(identity_id: str, report_dir: Path) -> Path | None:
-    return latest_primary_execution_report_from_roots([report_dir], identity_id)
+    return latest_prompt_bound_primary_execution_report_from_roots([report_dir], identity_id)
 
 
 def main() -> int:

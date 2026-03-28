@@ -140,6 +140,15 @@ def _scan_report_selected_path(payload: dict[str, object], identity_id: str) -> 
     return str(freshness.get("report_selected_path", "")).strip()
 
 
+def _selected_report_path_from_ok_stdout(stdout: str, prefix: str) -> str:
+    token = str(prefix or "").strip()
+    for line in str(stdout or "").splitlines():
+        stripped = line.strip()
+        if stripped.startswith(token):
+            return stripped.removeprefix(token).strip()
+    return ""
+
+
 tmp_root = Path(sys.argv[1]).resolve()
 repo_root = Path(sys.argv[2]).resolve()
 workspace_root = (tmp_root / "workspace").resolve()
@@ -347,43 +356,37 @@ locator_payload = _run_json(
     ],
     cwd=repo_root,
 )
-prompt_activation_stdout = _run_ok(
-    [
-        sys.executable,
-        str(repo_root / "scripts" / "validate_identity_prompt_activation.py"),
-        "--identity-id",
-        identity_id,
-        "--catalog",
-        str(local_catalog),
-        "--repo-catalog",
-        str(repo_catalog),
-        "--report-dir",
-        str((pack_root / "runtime" / "reports").resolve()),
-    ],
-    cwd=repo_root,
-)
-prompt_lifecycle_stdout = _run_ok(
-    [
-        sys.executable,
-        str(repo_root / "scripts" / "validate_identity_prompt_lifecycle.py"),
-        "--identity-id",
-        identity_id,
-        "--report-dir",
-        str((pack_root / "runtime" / "reports").resolve()),
-    ],
-    cwd=repo_root,
-)
-permission_stdout = _run_ok(
-    [
-        sys.executable,
-        str(repo_root / "scripts" / "validate_identity_permission_state.py"),
-        "--identity-id",
-        identity_id,
-        "--report-dir",
-        str((pack_root / "runtime" / "reports").resolve()),
-    ],
-    cwd=repo_root,
-)
+prompt_activation_cmd = [
+    sys.executable,
+    str(repo_root / "scripts" / "validate_identity_prompt_activation.py"),
+    "--identity-id",
+    identity_id,
+    "--catalog",
+    str(local_catalog),
+    "--repo-catalog",
+    str(repo_catalog),
+    "--report-dir",
+    str((pack_root / "runtime" / "reports").resolve()),
+]
+prompt_activation_stdout = _run_ok(prompt_activation_cmd, cwd=repo_root)
+prompt_lifecycle_cmd = [
+    sys.executable,
+    str(repo_root / "scripts" / "validate_identity_prompt_lifecycle.py"),
+    "--identity-id",
+    identity_id,
+    "--report-dir",
+    str((pack_root / "runtime" / "reports").resolve()),
+]
+prompt_lifecycle_stdout = _run_ok(prompt_lifecycle_cmd, cwd=repo_root)
+permission_cmd = [
+    sys.executable,
+    str(repo_root / "scripts" / "validate_identity_permission_state.py"),
+    "--identity-id",
+    identity_id,
+    "--report-dir",
+    str((pack_root / "runtime" / "reports").resolve()),
+]
+permission_stdout = _run_ok(permission_cmd, cwd=repo_root)
 experience_payload = _run_json(
     [
         sys.executable,
@@ -502,6 +505,9 @@ repair_postexec_rc, repair_postexec_payload = _run_json_with_rc(
     ],
     cwd=repo_root,
 )
+prompt_activation_after_stdout = _run_ok(prompt_activation_cmd, cwd=repo_root)
+prompt_lifecycle_after_stdout = _run_ok(prompt_lifecycle_cmd, cwd=repo_root)
+permission_after_stdout = _run_ok(permission_cmd, cwd=repo_root)
 
 selected_freshness = str(freshness_payload.get("report_selected_path", "")).strip()
 selected_baseline = str(baseline_payload.get("report_selected_path", "")).strip()
@@ -515,6 +521,18 @@ selected_scan_after = _scan_report_selected_path(scan_after_payload, identity_id
 selected_pack_locator_after = str(pack_locator_after_payload.get("selected_report_path", "")).strip()
 selected_repair_prompt = str(repair_prompt_payload.get("report_selected_path", "")).strip()
 selected_repair_postexec = str(repair_postexec_payload.get("report_selected_path", "")).strip()
+selected_prompt_activation_after = _selected_report_path_from_ok_stdout(
+    prompt_activation_after_stdout,
+    "[OK] identity prompt activation validated:",
+)
+selected_prompt_lifecycle_after = _selected_report_path_from_ok_stdout(
+    prompt_lifecycle_after_stdout,
+    "[OK] prompt lifecycle validated:",
+)
+selected_permission_after = _selected_report_path_from_ok_stdout(
+    permission_after_stdout,
+    "[OK] permission state validated:",
+)
 expected = str(report_path)
 
 assert selected_freshness == expected, {
@@ -574,6 +592,24 @@ assert selected_pack_locator_after == expected, {
     "expected": expected,
     "payload": pack_locator_after_payload,
 }
+assert selected_prompt_activation_after == expected, {
+    "case": "prompt_activation_preserves_prompt_sha_preference",
+    "selected": selected_prompt_activation_after,
+    "expected": expected,
+    "stdout": prompt_activation_after_stdout,
+}
+assert selected_prompt_lifecycle_after == expected, {
+    "case": "prompt_lifecycle_preserves_prompt_sha_preference",
+    "selected": selected_prompt_lifecycle_after,
+    "expected": expected,
+    "stdout": prompt_lifecycle_after_stdout,
+}
+assert selected_permission_after == expected, {
+    "case": "permission_state_preserves_prompt_sha_preference",
+    "selected": selected_permission_after,
+    "expected": expected,
+    "stdout": permission_after_stdout,
+}
 assert preferred_selected == report_path, {
     "case": "shared_primitive_prefers_prompt_matching_report",
     "selected": str(preferred_selected) if preferred_selected is not None else "",
@@ -603,7 +639,7 @@ assert repair_postexec_rc in {0, 1}, {
 assert "[OK] identity prompt activation validated:" in prompt_activation_stdout, prompt_activation_stdout
 assert "[OK] prompt lifecycle validated:" in prompt_lifecycle_stdout, prompt_lifecycle_stdout
 assert "[OK] permission state validated:" in permission_stdout, permission_stdout
-assert selected_freshness == selected_baseline == selected_run_id == selected_locator == selected_experience == selected_three_plane == selected_three_plane_after == selected_scan == selected_scan_after == selected_pack_locator_after == selected_repair_prompt == selected_repair_postexec, {
+assert selected_freshness == selected_baseline == selected_run_id == selected_locator == selected_experience == selected_three_plane == selected_three_plane_after == selected_scan == selected_scan_after == selected_pack_locator_after == selected_prompt_activation_after == selected_prompt_lifecycle_after == selected_permission_after == selected_repair_prompt == selected_repair_postexec, {
     "case": "selection_convergence",
     "freshness": selected_freshness,
     "baseline": selected_baseline,
@@ -615,6 +651,9 @@ assert selected_freshness == selected_baseline == selected_run_id == selected_lo
     "full_scan": selected_scan,
     "full_scan_after": selected_scan_after,
     "pack_locator_after": selected_pack_locator_after,
+    "prompt_activation_after": selected_prompt_activation_after,
+    "prompt_lifecycle_after": selected_prompt_lifecycle_after,
+    "permission_after": selected_permission_after,
     "repair_prompt_runtime_state": selected_repair_prompt,
     "repair_post_execution_mandatory": selected_repair_postexec,
 }
@@ -638,6 +677,9 @@ print(
             "full_scan_selected_report": expected,
             "full_scan_prompt_sha_selected_report": selected_scan_after,
             "pack_root_locator_selected_report": selected_pack_locator_after,
+            "prompt_activation_prompt_sha_selected_report": selected_prompt_activation_after,
+            "prompt_lifecycle_prompt_sha_selected_report": selected_prompt_lifecycle_after,
+            "permission_state_prompt_sha_selected_report": selected_permission_after,
             "repair_prompt_runtime_state_selected_report": selected_repair_prompt,
             "repair_prompt_runtime_state_rc": repair_prompt_rc,
             "repair_post_execution_mandatory_selected_report": selected_repair_postexec,

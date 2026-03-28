@@ -59,6 +59,42 @@ def report_prompt_sha(path: Path) -> str:
     ).strip()
 
 
+def infer_pack_root_from_report_root(report_root: Path | None) -> Path | None:
+    if not isinstance(report_root, Path):
+        return None
+    resolved = report_root.expanduser().resolve()
+    if resolved.name == "reports" and resolved.parent.name == "runtime":
+        return resolved.parent.parent.resolve()
+    if resolved.name == "runtime":
+        return resolved.parent.resolve()
+    return None
+
+
+def preferred_prompt_sha_from_pack_root(pack_root: Path | None) -> str:
+    if not isinstance(pack_root, Path):
+        return ""
+    return prompt_file_sha((pack_root.expanduser().resolve() / "IDENTITY_PROMPT.md").resolve())
+
+
+def preferred_prompt_sha_from_report_roots(
+    report_roots: Iterable[Path],
+    *,
+    explicit_pack_root: Path | None = None,
+) -> str:
+    candidate_pack_roots: list[Path] = []
+    if isinstance(explicit_pack_root, Path):
+        candidate_pack_roots.append(explicit_pack_root.expanduser().resolve())
+    for root in dedupe_resolved_paths(report_roots):
+        inferred = infer_pack_root_from_report_root(root)
+        if inferred is not None:
+            candidate_pack_roots.append(inferred)
+    for pack_root in dedupe_resolved_paths(candidate_pack_roots):
+        prompt_sha = preferred_prompt_sha_from_pack_root(pack_root)
+        if prompt_sha:
+            return prompt_sha
+    return ""
+
+
 def report_glob_pattern(identity_id: str) -> str:
     normalized_identity = str(identity_id or "").strip()
     if normalized_identity in {"", "*"}:
@@ -148,5 +184,23 @@ def latest_primary_execution_report_from_roots(
         key=lambda path: (
             1 if report_prompt_sha(path) == prompt_sha else 0,
             report_mtime(path),
+        ),
+    )
+
+
+def latest_prompt_bound_primary_execution_report_from_roots(
+    report_roots: Iterable[Path],
+    identity_id: str,
+    *,
+    include_generic_upgrade_json: bool = False,
+    explicit_pack_root: Path | None = None,
+) -> Path | None:
+    return latest_primary_execution_report_from_roots(
+        report_roots,
+        identity_id,
+        include_generic_upgrade_json=include_generic_upgrade_json,
+        preferred_prompt_sha=preferred_prompt_sha_from_report_roots(
+            report_roots,
+            explicit_pack_root=explicit_pack_root,
         ),
     )

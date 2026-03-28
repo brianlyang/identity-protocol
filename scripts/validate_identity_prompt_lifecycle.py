@@ -7,12 +7,12 @@ import json
 from pathlib import Path
 from typing import Iterable
 
-from primary_execution_report_common import latest_primary_execution_report_from_roots
+from primary_execution_report_common import latest_prompt_bound_primary_execution_report_from_roots
 from runtime_temp_path_common import runtime_temp_root
 
 
 def _latest(identity_id: str, report_dir: Path) -> Path | None:
-    return latest_primary_execution_report_from_roots([report_dir], identity_id)
+    return latest_prompt_bound_primary_execution_report_from_roots([report_dir], identity_id)
 
 
 def _sha256(path: Path) -> str:

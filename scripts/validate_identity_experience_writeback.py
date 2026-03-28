@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from primary_execution_report_common import latest_primary_execution_report_from_roots
+from primary_execution_report_common import latest_prompt_bound_primary_execution_report_from_roots
 from resolve_identity_context import (
     default_local_catalog_path,
     merged_catalog,
@@ -71,9 +71,13 @@ def _resolve_pack(identity_id: str, repo_catalog_path: Path, local_catalog_path:
     raise FileNotFoundError(f"identity pack not found: {identity_id}")
 
 
-def _latest_runtime_temp_report(identity_id: str) -> Path | None:
+def _latest_runtime_temp_report(identity_id: str, *, pack_root: Path | None = None) -> Path | None:
     report_dir = (runtime_temp_root() / "identity-upgrade-reports").resolve()
-    return latest_primary_execution_report_from_roots([report_dir], identity_id)
+    return latest_prompt_bound_primary_execution_report_from_roots(
+        [report_dir],
+        identity_id,
+        explicit_pack_root=pack_root,
+    )
 
 
 def _resolve_report_selection(identity_id: str, pack_root: Path, explicit_report: str) -> dict[str, Any]:
@@ -88,7 +92,7 @@ def _resolve_report_selection(identity_id: str, pack_root: Path, explicit_report
     )
     selected_report = resolution.selected_report
     if selected_report is None and not str(explicit_report or "").strip():
-        temp_report = _latest_runtime_temp_report(identity_id)
+        temp_report = _latest_runtime_temp_report(identity_id, pack_root=pack_root)
         if temp_report is not None:
             report_dir = (runtime_temp_root() / "identity-upgrade-reports").resolve()
             payload.update(
