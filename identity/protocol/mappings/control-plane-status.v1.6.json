@@ -9020,6 +9020,985 @@
         "primitive_violation_file_count": 0,
         "primitive_violation_reason_counts": {},
         "primitive_class_violation_counts": {},
+        "primitive_adoption_rows": [
+          {
+            "rel_path": "scripts/validate_protocol_root_agent_handoff.py",
+            "lineno": 264,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_agent_handoff.py",
+            "lineno": 365,
+            "module": "root_contract_row_validation_common",
+            "primitive_name": "validate_contract_row_batches",
+            "primitive_class": "contract_row_validation",
+            "binding": "validate_contract_row_batches",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_artifact_family_admissibility.py",
+            "lineno": 339,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_artifact_family_admissibility.py",
+            "lineno": 381,
+            "module": "root_contract_row_validation_common",
+            "primitive_name": "validate_contract_row_batches",
+            "primitive_class": "contract_row_validation",
+            "binding": "validate_contract_row_batches",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_constitutional_spine.py",
+            "lineno": 350,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_authority.py",
+            "lineno": 479,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_derivation.py",
+            "lineno": 477,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_gateway_admissibility.py",
+            "lineno": 695,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_governance.py",
+            "lineno": 275,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_law_bundle.py",
+            "lineno": 3673,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_ordering.py",
+            "lineno": 491,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_precedence.py",
+            "lineno": 453,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_question_routing.py",
+            "lineno": 652,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_transition.py",
+            "lineno": 552,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_current_truth_epistemology.py",
+            "lineno": 360,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_current_truth_epistemology.py",
+            "lineno": 409,
+            "module": "root_contract_row_validation_common",
+            "primitive_name": "validate_contract_row_batches",
+            "primitive_class": "contract_row_validation",
+            "binding": "validate_contract_row_batches",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_decision_evidence_admissibility.py",
+            "lineno": 415,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_decision_evidence_admissibility.py",
+            "lineno": 471,
+            "module": "root_contract_row_validation_common",
+            "primitive_name": "validate_contract_row_batches",
+            "primitive_class": "contract_row_validation",
+            "binding": "validate_contract_row_batches",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_design_question_closure.py",
+            "lineno": 418,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_design_question_closure.py",
+            "lineno": 234,
+            "module": "root_contract_row_validation_common",
+            "primitive_name": "validate_contract_row_batches",
+            "primitive_class": "contract_row_validation",
+            "binding": "validate_contract_row_batches",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_entry_surface_legitimacy.py",
+            "lineno": 330,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_entry_surface_legitimacy.py",
+            "lineno": 372,
+            "module": "root_contract_row_validation_common",
+            "primitive_name": "validate_contract_row_batches",
+            "primitive_class": "contract_row_validation",
+            "binding": "validate_contract_row_batches",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_error_terminality.py",
+            "lineno": 361,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_error_terminality.py",
+            "lineno": 403,
+            "module": "root_contract_row_validation_common",
+            "primitive_name": "validate_contract_row_batches",
+            "primitive_class": "contract_row_validation",
+            "binding": "validate_contract_row_batches",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_identity_discovery.py",
+            "lineno": 363,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_identity_discovery.py",
+            "lineno": 439,
+            "module": "root_contract_row_validation_common",
+            "primitive_name": "validate_contract_row_batches",
+            "primitive_class": "contract_row_validation",
+            "binding": "validate_contract_row_batches",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_identity_instance_self_judgement.py",
+            "lineno": 308,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_identity_instance_self_judgement.py",
+            "lineno": 349,
+            "module": "root_contract_row_validation_common",
+            "primitive_name": "validate_contract_row_batches",
+            "primitive_class": "contract_row_validation",
+            "binding": "validate_contract_row_batches",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_machine_law_primacy.py",
+            "lineno": 308,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_machine_law_primacy.py",
+            "lineno": 349,
+            "module": "root_contract_row_validation_common",
+            "primitive_name": "validate_contract_row_batches",
+            "primitive_class": "contract_row_validation",
+            "binding": "validate_contract_row_batches",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_machine_registry_completeness.py",
+            "lineno": 963,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_machine_world_ontology.py",
+            "lineno": 364,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_machine_world_ontology.py",
+            "lineno": 405,
+            "module": "root_contract_row_validation_common",
+            "primitive_name": "validate_contract_row_batches",
+            "primitive_class": "contract_row_validation",
+            "binding": "validate_contract_row_batches",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_operator_answer_surface.py",
+            "lineno": 471,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_operator_answer_surface.py",
+            "lineno": 541,
+            "module": "root_contract_row_validation_common",
+            "primitive_name": "validate_contract_row_batches",
+            "primitive_class": "contract_row_validation",
+            "binding": "validate_contract_row_batches",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_prompt_bootstrap.py",
+            "lineno": 302,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_prompt_bootstrap.py",
+            "lineno": 351,
+            "module": "root_contract_row_validation_common",
+            "primitive_name": "validate_contract_row_batches",
+            "primitive_class": "contract_row_validation",
+            "binding": "validate_contract_row_batches",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_protocol_instance_responsibility.py",
+            "lineno": 318,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_protocol_instance_responsibility.py",
+            "lineno": 366,
+            "module": "root_contract_row_validation_common",
+            "primitive_name": "validate_contract_row_batches",
+            "primitive_class": "contract_row_validation",
+            "binding": "validate_contract_row_batches",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_stream_design_admissibility.py",
+            "lineno": 295,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_stream_design_admissibility.py",
+            "lineno": 337,
+            "module": "root_contract_row_validation_common",
+            "primitive_name": "validate_contract_row_batches",
+            "primitive_class": "contract_row_validation",
+            "binding": "validate_contract_row_batches",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_success_path_state_admissibility.py",
+            "lineno": 370,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_success_path_state_admissibility.py",
+            "lineno": 419,
+            "module": "root_contract_row_validation_common",
+            "primitive_name": "validate_contract_row_batches",
+            "primitive_class": "contract_row_validation",
+            "binding": "validate_contract_row_batches",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_truth_lifecycle.py",
+            "lineno": 349,
+            "module": "root_row_family_projection_common",
+            "primitive_name": "project_row_families",
+            "primitive_class": "row_family_projection",
+            "binding": "project_row_families",
+            "call_mode": "direct_name_binding"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_truth_lifecycle.py",
+            "lineno": 398,
+            "module": "root_contract_row_validation_common",
+            "primitive_name": "validate_contract_row_batches",
+            "primitive_class": "contract_row_validation",
+            "binding": "validate_contract_row_batches",
+            "call_mode": "direct_name_binding"
+          }
+        ],
+        "primitive_adoption_row_count": 45,
+        "primitive_adoption_file_count": 28,
+        "primitive_adoption_class_counts": {
+          "row_family_projection": 28,
+          "contract_row_validation": 17
+        },
+        "row_family_projection_assignment_rows": [
+          {
+            "rel_path": "scripts/validate_protocol_root_agent_handoff.py",
+            "lineno": 264,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_artifact_family_admissibility.py",
+            "lineno": 252,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_artifact_family_admissibility.py",
+            "lineno": 339,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_constitutional_spine.py",
+            "lineno": 350,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_authority.py",
+            "lineno": 186,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_authority.py",
+            "lineno": 479,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_derivation.py",
+            "lineno": 152,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_derivation.py",
+            "lineno": 477,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_gateway_admissibility.py",
+            "lineno": 168,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_gateway_admissibility.py",
+            "lineno": 695,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_governance.py",
+            "lineno": 79,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_governance.py",
+            "lineno": 275,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_law_bundle.py",
+            "lineno": 3673,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_ordering.py",
+            "lineno": 127,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_ordering.py",
+            "lineno": 491,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_precedence.py",
+            "lineno": 120,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_precedence.py",
+            "lineno": 453,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_question_routing.py",
+            "lineno": 225,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_question_routing.py",
+            "lineno": 652,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_transition.py",
+            "lineno": 206,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_corpus_transition.py",
+            "lineno": 552,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_current_truth_epistemology.py",
+            "lineno": 271,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_current_truth_epistemology.py",
+            "lineno": 360,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_decision_evidence_admissibility.py",
+            "lineno": 323,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_decision_evidence_admissibility.py",
+            "lineno": 415,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_design_question_closure.py",
+            "lineno": 181,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_design_question_closure.py",
+            "lineno": 418,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_entry_surface_legitimacy.py",
+            "lineno": 243,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_entry_surface_legitimacy.py",
+            "lineno": 330,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_error_terminality.py",
+            "lineno": 274,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_error_terminality.py",
+            "lineno": 361,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_identity_discovery.py",
+            "lineno": 266,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_identity_discovery.py",
+            "lineno": 363,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_identity_instance_self_judgement.py",
+            "lineno": 221,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_identity_instance_self_judgement.py",
+            "lineno": 308,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_machine_law_primacy.py",
+            "lineno": 221,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_machine_law_primacy.py",
+            "lineno": 308,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_machine_registry_completeness.py",
+            "lineno": 164,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_machine_registry_completeness.py",
+            "lineno": 963,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_machine_world_ontology.py",
+            "lineno": 277,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_machine_world_ontology.py",
+            "lineno": 364,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_operator_answer_surface.py",
+            "lineno": 364,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_operator_answer_surface.py",
+            "lineno": 471,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_prompt_bootstrap.py",
+            "lineno": 213,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_prompt_bootstrap.py",
+            "lineno": 302,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_protocol_instance_responsibility.py",
+            "lineno": 232,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_protocol_instance_responsibility.py",
+            "lineno": 318,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_stream_design_admissibility.py",
+            "lineno": 205,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_stream_design_admissibility.py",
+            "lineno": 295,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_success_path_state_admissibility.py",
+            "lineno": 281,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_success_path_state_admissibility.py",
+            "lineno": 370,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_truth_lifecycle.py",
+            "lineno": 260,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "initializer_empty_list",
+            "binding": "List",
+            "assignment_role": "prebinding_placeholder",
+            "violation": false
+          },
+          {
+            "rel_path": "scripts/validate_protocol_root_truth_lifecycle.py",
+            "lineno": 349,
+            "target": "row_family_projection_rows",
+            "assignment_mode": "shared_primitive_call",
+            "binding": "project_row_families",
+            "assignment_role": "effective_assignment",
+            "violation": false,
+            "primitive_class": "row_family_projection",
+            "primitive_name": "project_row_families",
+            "module": "root_row_family_projection_common"
+          }
+        ],
+        "row_family_projection_assignment_count": 53,
+        "row_family_projection_assignment_violation_rows": [],
+        "row_family_projection_assignment_violation_count": 0,
         "stale_reasons": []
       }
     },

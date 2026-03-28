@@ -56,9 +56,15 @@ def main() -> int:
             f"primitive_binding_violation:{rel_path}:{primitive_name}:{reason}"
         )
     if int(payload.get("row_family_projection_assignment_violation_count", 0) or 0) > 0:
-        for row in payload.get("row_family_projection_assignment_rows") or []:
+        violation_rows = payload.get("row_family_projection_assignment_violation_rows")
+        if not isinstance(violation_rows, list):
+            violation_rows = payload.get("row_family_projection_assignment_rows") or []
+        for row in violation_rows:
             assignment_mode = str(row.get("assignment_mode") or "").strip()
-            if assignment_mode in {"shared_primitive_call", "initializer_empty_list"}:
+            if not bool(row.get("violation")) and assignment_mode in {
+                "shared_primitive_call",
+                "initializer_empty_list",
+            }:
                 continue
             rel_path = str(row.get("rel_path") or "").strip()
             binding = str(row.get("binding") or "").strip()
