@@ -9,6 +9,9 @@ from typing import Any
 from full_scan_required_gate_bundle_projection_common import (
     FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS,
 )
+from release_closure_continuation_marker_common import (
+    RELEASE_CLOSURE_SUMMARY_CONTINUATION_MARKERS,
+)
 from release_closure_doc_common import (
     RELEASE_CLOSURE_DOC_REL_PATHS,
     collect_release_closure_issue_horizon_targets,
@@ -28,12 +31,6 @@ from release_closure_narrative_marker_common import (
 from repo_root_resolution_common import resolve_protocol_repo_root
 from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
-)
-from release_readiness_governance_probe_projection_common import (
-    RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
-)
-from release_readiness_required_gate_bundle_projection_common import (
-    RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_SURFACE_CONSTRAINTS,
 )
 from release_readiness_repo_global_closure_projection_common import (
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_CHECKED_IDENTITY_COUNT_FIELDS,
@@ -84,23 +81,6 @@ REQUIRED_RELEASE_READINESS_HEALTH_PROJECTION_MARKERS = (
 REQUIRED_FULL_SCAN_REQUIRED_GATE_PROJECTION_MARKERS = (
     "scripts/ci/run_full_scan_required_gate_projection_probes_ci.sh",
     *FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS,
-)
-REQUIRED_RELEASE_READINESS_LIFECYCLE_MARKERS = (
-    "summary_lifecycle_status=IN_PROGRESS",
-    "summary_checkpoint_kind=checkpoint",
-    "summary_lifecycle_status=FINALIZED",
-    "summary_checkpoint_kind=final",
-    "stable prewrite snapshot",
-    "resume_capture_mode=stable_prewrite_snapshot",
-    "same_path_as_summary_out",
-    "scripts/run_release_readiness_continuation.py",
-    "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh",
-    "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh",
-    "scripts/ci/run_release_readiness_continuation_probes_ci.sh",
-    "scripts/ci/run_release_plane_context_resolution_probes_ci.sh",
-    *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_SURFACE_CONSTRAINTS,
-    *RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
-    "caller cwd",
 )
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -221,7 +201,7 @@ def main() -> int:
     for marker in REQUIRED_FULL_SCAN_REQUIRED_GATE_PROJECTION_MARKERS:
         if marker not in summary_text:
             stale_reasons.append(f"summary_doc_missing_full_scan_required_gate_projection_marker:{marker}")
-    for marker in REQUIRED_RELEASE_READINESS_LIFECYCLE_MARKERS:
+    for marker in RELEASE_CLOSURE_SUMMARY_CONTINUATION_MARKERS:
         if marker not in summary_text:
             stale_reasons.append(f"summary_doc_missing_release_readiness_lifecycle_marker:{marker}")
     for marker in RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS:

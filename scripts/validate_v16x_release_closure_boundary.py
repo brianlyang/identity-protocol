@@ -13,6 +13,9 @@ from release_closure_doc_common import (
     parse_release_closure_issue_register,
     resolve_release_closure_doc_paths,
 )
+from release_closure_continuation_marker_common import (
+    RELEASE_CLOSURE_BOUNDARY_CONTINUATION_MARKERS,
+)
 from release_closure_foundational_marker_common import (
     collect_release_closure_closure_class_stale_reasons,
     collect_release_closure_philosophy_order_stale_reasons,
@@ -25,13 +28,9 @@ from repo_root_resolution_common import resolve_protocol_repo_root
 from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
 )
-from release_readiness_governance_probe_projection_common import (
-    RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
-)
 from release_readiness_repo_global_closure_projection_common import (
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_CHECKED_IDENTITY_COUNT_FIELDS,
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OWNER_LANES,
-    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER,
 )
 from release_readiness_runtime_closure_convergence_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CONVERGENCE_MARKERS,
@@ -46,19 +45,6 @@ REQUIRED_OUTER_SURFACE_E2E_BOUNDARY_MARKERS = (
     "scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh",
     "terminal_truth_boundary_projection",
     "summary_terminal_truth_boundary",
-)
-REQUIRED_RELEASE_READINESS_CONTINUATION_MARKERS = (
-    "summary_lifecycle_status=IN_PROGRESS",
-    "summary_checkpoint_kind=checkpoint",
-    "stable prewrite snapshot",
-    "scripts/run_release_readiness_continuation.py",
-    "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh",
-    "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh",
-    "scripts/ci/run_release_readiness_continuation_probes_ci.sh",
-    "scripts/ci/run_release_plane_context_resolution_probes_ci.sh",
-    *RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
-    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER,
-    "caller cwd",
 )
 REQUIRED_REPO_GLOBAL_CLOSURE_OWNER_LANE_MARKERS = RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OWNER_LANES
 REQUIRED_REPO_GLOBAL_CLOSURE_PROOF_STRENGTH_MARKERS = (
@@ -147,7 +133,7 @@ def main() -> int:
         for marker in REQUIRED_OUTER_SURFACE_E2E_BOUNDARY_MARKERS:
             if marker not in text:
                 stale_reasons.append(f"{label}_missing_outer_surface_e2e_marker:{marker}")
-        for marker in REQUIRED_RELEASE_READINESS_CONTINUATION_MARKERS:
+        for marker in RELEASE_CLOSURE_BOUNDARY_CONTINUATION_MARKERS:
             if marker not in text:
                 stale_reasons.append(f"{label}_missing_release_readiness_continuation_marker:{marker}")
         for marker in RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS:

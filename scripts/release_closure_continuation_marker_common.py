@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+from release_readiness_governance_probe_projection_common import (
+    RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
+)
+from release_readiness_repo_global_closure_projection_common import (
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER,
+)
+from release_readiness_required_gate_bundle_projection_common import (
+    RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_SURFACE_CONSTRAINTS,
+)
+
+
+RELEASE_CLOSURE_CONTINUATION_BASE_MARKERS: tuple[str, ...] = (
+    "summary_lifecycle_status=IN_PROGRESS",
+    "summary_checkpoint_kind=checkpoint",
+    "stable prewrite snapshot",
+    "scripts/run_release_readiness_continuation.py",
+    "scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh",
+    "scripts/ci/run_release_readiness_summary_binding_probes_ci.sh",
+    "scripts/ci/run_release_readiness_continuation_probes_ci.sh",
+    "scripts/ci/run_release_plane_context_resolution_probes_ci.sh",
+    *RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
+    "caller cwd",
+)
+
+RELEASE_CLOSURE_SUMMARY_CONTINUATION_MARKERS: tuple[str, ...] = (
+    *RELEASE_CLOSURE_CONTINUATION_BASE_MARKERS[:2],
+    "summary_lifecycle_status=FINALIZED",
+    "summary_checkpoint_kind=final",
+    *RELEASE_CLOSURE_CONTINUATION_BASE_MARKERS[2:3],
+    "resume_capture_mode=stable_prewrite_snapshot",
+    "same_path_as_summary_out",
+    *RELEASE_CLOSURE_CONTINUATION_BASE_MARKERS[3:-1],
+    *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_SURFACE_CONSTRAINTS,
+    RELEASE_CLOSURE_CONTINUATION_BASE_MARKERS[-1],
+)
+
+RELEASE_CLOSURE_BOUNDARY_CONTINUATION_MARKERS: tuple[str, ...] = (
+    *RELEASE_CLOSURE_CONTINUATION_BASE_MARKERS[:-1],
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER,
+    RELEASE_CLOSURE_CONTINUATION_BASE_MARKERS[-1],
+)
+
