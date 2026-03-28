@@ -30,6 +30,11 @@ RELEASE_CLOSURE_ROOT_GROUNDING_LANE_SPECS: tuple[
         probe_rel="scripts/ci/run_protocol_root_design_question_closure_probes_ci.sh",
     ),
     ReleaseClosureRootGroundingLaneSpec(
+        lane_id="protocol_root_stream_design_admissibility",
+        validator_rel="scripts/validate_protocol_root_stream_design_admissibility.py",
+        probe_rel="scripts/ci/run_protocol_root_stream_design_admissibility_probes_ci.sh",
+    ),
+    ReleaseClosureRootGroundingLaneSpec(
         lane_id="protocol_root_machine_law_primacy",
         validator_rel="scripts/validate_protocol_root_machine_law_primacy.py",
         probe_rel="scripts/ci/run_protocol_root_machine_law_primacy_probes_ci.sh",

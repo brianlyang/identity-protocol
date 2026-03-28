@@ -41,6 +41,21 @@ release_closure_root_grounding_order_marker="$(
     "release_closure_root_grounding_common" \
     "RELEASE_CLOSURE_ROOT_GROUNDING_ORDER_MARKER"
 )"
+release_closure_root_grounding_lane_marker="$(
+  resolve_python_module_expression \
+    "release_closure_root_grounding_common" \
+    "next(marker for marker in RELEASE_CLOSURE_ROOT_GROUNDING_LANE_MARKERS if marker.endswith('protocol_root_stream_design_admissibility'))"
+)"
+release_closure_root_grounding_validator_path="$(
+  resolve_python_module_expression \
+    "release_closure_root_grounding_common" \
+    "next(spec.validator_rel for spec in RELEASE_CLOSURE_ROOT_GROUNDING_LANE_SPECS if spec.lane_id == 'protocol_root_stream_design_admissibility')"
+)"
+release_closure_root_grounding_probe_path="$(
+  resolve_python_module_expression \
+    "release_closure_root_grounding_common" \
+    "next(spec.probe_rel for spec in RELEASE_CLOSURE_ROOT_GROUNDING_LANE_SPECS if spec.lane_id == 'protocol_root_stream_design_admissibility')"
+)"
 terminal_truth_bridge_surface_marker="$(
   resolve_python_module_expression \
     "release_readiness_terminal_truth_bridge_common" \
@@ -76,7 +91,7 @@ python3 "${REPO_ROOT}/scripts/probe_shadow_fixture_common.py" \
   --copy-file docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md \
   --json-only > /dev/null
 
-python3 - <<'PY' "${SHADOW_ROOT}/docs/governance/identity-v1.6x-release-closure-governance.md" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${terminal_truth_bridge_probe_marker}" "${active_runtime_terminal_truth_class_marker}" "${post_closure_adjudication_order_marker}" "${release_closure_root_grounding_order_marker}"
+python3 - <<'PY' "${SHADOW_ROOT}/docs/governance/identity-v1.6x-release-closure-governance.md" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${terminal_truth_bridge_probe_marker}" "${active_runtime_terminal_truth_class_marker}" "${post_closure_adjudication_order_marker}" "${release_closure_root_grounding_order_marker}" "${release_closure_root_grounding_lane_marker}" "${release_closure_root_grounding_validator_path}" "${release_closure_root_grounding_probe_path}"
 from pathlib import Path
 import sys
 
@@ -91,6 +106,9 @@ terminal_truth_bridge_probe_marker = sys.argv[8]
 active_runtime_terminal_truth_class_marker = sys.argv[9]
 post_closure_adjudication_order_marker = sys.argv[10]
 release_closure_root_grounding_order_marker = sys.argv[11]
+release_closure_root_grounding_lane_marker = sys.argv[12]
+release_closure_root_grounding_validator_path = sys.argv[13]
+release_closure_root_grounding_probe_path = sys.argv[14]
 text = path.read_text(encoding="utf-8")
 text = text.replace("`ISSUE-001` through `ISSUE-039`", "`ISSUE-001` through `ISSUE-038`")
 text = text.replace("`v1.6.21`", "`v1.6.20`")
@@ -126,6 +144,21 @@ text = text.replace(
     "release_closure_root_grounding_order=protocol_root_corpus_precedence|protocol_root_current_truth_epistemology",
 )
 text = text.replace(
+    release_closure_root_grounding_lane_marker,
+    "release_closure_root_grounding_lane=protocol_root_current_truth_epistemology",
+    1,
+)
+text = text.replace(
+    release_closure_root_grounding_validator_path,
+    "scripts/validate_protocol_root_current_truth_epistemology.py",
+    1,
+)
+text = text.replace(
+    release_closure_root_grounding_probe_path,
+    "scripts/ci/run_protocol_root_current_truth_epistemology_probes_ci.sh",
+    1,
+)
+text = text.replace(
     active_runtime_projection_marker,
     "active_runtime_projection=one_look.identity_codex_launcher_status",
 )
@@ -142,7 +175,7 @@ if python3 "${REPO_ROOT}/scripts/validate_v16x_release_closure_boundary.py" --re
   exit 1
 fi
 
-python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${terminal_truth_bridge_probe_marker}" "${active_runtime_terminal_truth_class_marker}" "${post_closure_adjudication_order_marker}" "${release_closure_root_grounding_order_marker}"
+python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${terminal_truth_bridge_probe_marker}" "${active_runtime_terminal_truth_class_marker}" "${post_closure_adjudication_order_marker}" "${release_closure_root_grounding_order_marker}" "${release_closure_root_grounding_lane_marker}" "${release_closure_root_grounding_validator_path}" "${release_closure_root_grounding_probe_path}"
 import json
 import sys
 from pathlib import Path
@@ -220,6 +253,27 @@ expected_root_grounding_reason = (
 if expected_root_grounding_reason not in reasons:
     raise SystemExit(
         "negative release-closure boundary must detect release-closure root grounding drift"
+    )
+expected_root_grounding_lane_reason = (
+    f"governance_doc_missing_release_closure_root_grounding_marker:{sys.argv[13]}"
+)
+if expected_root_grounding_lane_reason not in reasons:
+    raise SystemExit(
+        "negative release-closure boundary must detect release-closure root grounding lane drift"
+    )
+expected_root_grounding_validator_reason = (
+    f"governance_doc_missing_release_closure_root_grounding_marker:{sys.argv[14]}"
+)
+if expected_root_grounding_validator_reason not in reasons:
+    raise SystemExit(
+        "negative release-closure boundary must detect release-closure root grounding validator drift"
+    )
+expected_root_grounding_probe_reason = (
+    f"governance_doc_missing_release_closure_root_grounding_marker:{sys.argv[15]}"
+)
+if expected_root_grounding_probe_reason not in reasons:
+    raise SystemExit(
+        "negative release-closure boundary must detect release-closure root grounding probe drift"
     )
 PY
 
