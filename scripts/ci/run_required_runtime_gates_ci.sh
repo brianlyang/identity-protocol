@@ -241,7 +241,7 @@ for ID in ${IDS}; do
     echo "[INFO] fixture identity ${ID}: skipping mutation/update report validation chain in required-gates (inspection-only lane)."
   else
     PR_BASE_SHA="${BASE_SHA}" PR_HEAD_SHA="${HEAD_SHA}" CI=true python3 scripts/identity_creator.py update --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --mode review-required --out-dir "${UPGRADE_REPORT_ROOT}" --expected-work-layer instance
-    UPGRADE_REPORT="$(find "${UPGRADE_REPORT_ROOT}" -maxdepth 1 -type f -name "identity-upgrade-exec-${ID}-*.json" -printf '%T@ %p\n' | sort -nr | head -n 1 | cut -d' ' -f2-)"
+    UPGRADE_REPORT="$(python3 scripts/resolve_latest_identity_upgrade_report.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --search-root "${UPGRADE_REPORT_ROOT}" --print-path-only)"
     if [ -z "${UPGRADE_REPORT}" ]; then
       echo "[FAIL] missing identity upgrade report for ${ID}"
       exit 1

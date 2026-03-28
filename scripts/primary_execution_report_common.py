@@ -47,16 +47,67 @@ def prompt_file_sha(path: Path | None) -> str:
 
 
 def report_prompt_sha(path: Path) -> str:
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return ""
-    if not isinstance(payload, dict):
+    payload = load_execution_report_payload(path)
+    if not payload:
         return ""
     return str(
         payload.get("identity_prompt_sha256", "")
         or payload.get("prompt_policy_hash", "")
     ).strip()
+
+
+def load_execution_report_payload(path: Path) -> dict[str, object]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    return payload
+
+
+def report_pack_root(path: Path) -> Path | None:
+    payload = load_execution_report_payload(path)
+    if not payload:
+        return None
+    pack_raw = str(
+        payload.get("resolved_pack_path", "")
+        or payload.get("pack_path", "")
+        or ""
+    ).strip()
+    if pack_raw:
+        return Path(pack_raw).expanduser().resolve()
+    prompt_raw = str(payload.get("identity_prompt_path", "") or "").strip()
+    if not prompt_raw:
+        return None
+    prompt_path = Path(prompt_raw).expanduser().resolve()
+    return prompt_path.parent
+
+
+def report_run_id(path: Path) -> str:
+    payload = load_execution_report_payload(path)
+    run_id = str(payload.get("run_id", "") or "").strip()
+    if run_id:
+        return run_id
+    if is_primary_execution_report(path) and path.name.startswith(IDENTITY_UPGRADE_EXEC_PREFIX):
+        return path.stem
+    return ""
+
+
+def report_logical_identity_key(path: Path) -> str:
+    payload = load_execution_report_payload(path)
+    pack_root = report_pack_root(path)
+    catalog_raw = str(payload.get("catalog_path", "") or "").strip()
+    logical_identity = {
+        "identity_id": str(payload.get("identity_id", "") or "").strip(),
+        "run_id": report_run_id(path),
+        "catalog_path": str(Path(catalog_raw).expanduser().resolve()) if catalog_raw else "",
+        "resolved_pack_path": str(pack_root) if isinstance(pack_root, Path) else "",
+        "identity_prompt_sha256": report_prompt_sha(path),
+    }
+    if not any(logical_identity.values()):
+        logical_identity["fallback_path"] = path.expanduser().resolve().as_posix()
+    return json.dumps(logical_identity, ensure_ascii=False, sort_keys=True)
 
 
 def infer_pack_root_from_report_root(report_root: Path | None) -> Path | None:
@@ -168,6 +219,7 @@ def latest_primary_execution_report_from_roots(
     *,
     include_generic_upgrade_json: bool = False,
     preferred_prompt_sha: str = "",
+    preferred_pack_root: Path | None = None,
 ) -> Path | None:
     rows = collect_primary_execution_reports_from_roots(
         report_roots,
@@ -177,15 +229,27 @@ def latest_primary_execution_report_from_roots(
     if not rows:
         return None
     prompt_sha = str(preferred_prompt_sha or "").strip()
-    if not prompt_sha:
-        return rows[-1]
-    return max(
-        rows,
-        key=lambda path: (
-            1 if report_prompt_sha(path) == prompt_sha else 0,
-            report_mtime(path),
-        ),
+    preferred_pack_root_resolved = (
+        preferred_pack_root.expanduser().resolve()
+        if isinstance(preferred_pack_root, Path)
+        else None
     )
+    if not prompt_sha and preferred_pack_root_resolved is None:
+        return rows[-1]
+    candidate_rows = rows
+    if prompt_sha:
+        prompt_rows = [path for path in rows if report_prompt_sha(path) == prompt_sha]
+        if prompt_rows:
+            candidate_rows = prompt_rows
+    if preferred_pack_root_resolved is not None:
+        pack_rows = [
+            path
+            for path in candidate_rows
+            if report_pack_root(path) == preferred_pack_root_resolved
+        ]
+        if pack_rows:
+            candidate_rows = pack_rows
+    return candidate_rows[-1]
 
 
 def latest_prompt_bound_primary_execution_report_from_roots(
@@ -203,4 +267,5 @@ def latest_prompt_bound_primary_execution_report_from_roots(
             report_roots,
             explicit_pack_root=explicit_pack_root,
         ),
+        preferred_pack_root=explicit_pack_root,
     )

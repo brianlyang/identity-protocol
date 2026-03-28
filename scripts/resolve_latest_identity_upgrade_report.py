@@ -14,6 +14,7 @@ from tool_vendor_governance_common import (
     IDENTITY_UPGRADE_REPORT_POINTER_RESOLUTION_MODE_EXPLICIT_REPORT_OVERRIDE_MISSING,
     IDENTITY_UPGRADE_REPORT_SELECTION_MODE_EXPLICIT_REPORT_OVERRIDE,
     IDENTITY_UPGRADE_REPORT_SELECTION_MODE_NONE,
+    resolve_pack_and_task,
     resolve_identity_upgrade_report_selection,
 )
 
@@ -35,6 +36,7 @@ def _emit(payload: dict[str, Any], *, print_path_only: bool, json_only: bool) ->
 def main() -> int:
     ap = argparse.ArgumentParser(description="Resolve the latest primary identity upgrade execution report.")
     ap.add_argument("--identity-id", required=True)
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--pack-root", default="")
     ap.add_argument("--search-root", action="append", default=[])
     ap.add_argument("--explicit-report", default="")
@@ -43,18 +45,27 @@ def main() -> int:
     args = ap.parse_args()
 
     explicit_report = str(args.explicit_report or "").strip()
+    catalog_path = str(args.catalog or "").strip()
     pack_root = str(args.pack_root or "").strip()
     search_roots = [
         Path(item).expanduser().resolve()
         for item in (args.search_root or [])
         if str(item or "").strip()
     ]
+    resolved_pack_root: Path | None = None
+    if pack_root:
+        resolved_pack_root = Path(pack_root).expanduser().resolve()
+    elif catalog_path:
+        resolved_pack_root, _ = resolve_pack_and_task(
+            Path(catalog_path).expanduser().resolve(),
+            args.identity_id,
+        )
 
     payload: dict[str, Any]
-    if pack_root:
+    if resolved_pack_root is not None and not search_roots:
         resolution = resolve_identity_upgrade_report_selection(
             args.identity_id,
-            Path(pack_root).expanduser().resolve(),
+            resolved_pack_root,
             explicit_report=explicit_report,
         )
         payload = {
@@ -83,6 +94,7 @@ def main() -> int:
         selected = latest_prompt_bound_primary_execution_report_from_roots(
             search_roots,
             args.identity_id,
+            explicit_pack_root=resolved_pack_root,
         )
         payload = {
             "selected_report_path": str(selected) if selected is not None else "",

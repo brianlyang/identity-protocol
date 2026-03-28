@@ -21,7 +21,10 @@ from pathlib import Path
 
 from actor_session_common import actor_session_path, write_actor_binding_store
 from execution_report_selection_common import collect_reports
-from primary_execution_report_common import latest_primary_execution_report_from_roots
+from primary_execution_report_common import (
+    latest_primary_execution_report_from_roots,
+    report_logical_identity_key,
+)
 
 
 def _run_json(cmd: list[str], *, cwd: Path) -> dict[str, object]:
@@ -149,6 +152,16 @@ def _selected_report_path_from_ok_stdout(stdout: str, prefix: str) -> str:
     return ""
 
 
+def _logical_identity_key_from_path(path_text: str) -> str:
+    token = str(path_text or "").strip()
+    if not token:
+        return ""
+    path = Path(token).expanduser().resolve()
+    if not path.exists() or not path.is_file():
+        return ""
+    return report_logical_identity_key(path)
+
+
 tmp_root = Path(sys.argv[1]).resolve()
 repo_root = Path(sys.argv[2]).resolve()
 workspace_root = (tmp_root / "workspace").resolve()
@@ -166,10 +179,19 @@ prompt_path = (pack_root / "IDENTITY_PROMPT.md").resolve()
 task_path = (pack_root / "CURRENT_TASK.json").resolve()
 report_path = (pack_root / "runtime" / "reports" / report_name).resolve()
 alternate_report_path = (pack_root / "runtime" / "reports" / f"identity-upgrade-exec-{identity_id}-101.json").resolve()
+detached_search_root = (workspace_root / "detached-upgrade-reports").resolve()
+detached_report_path = (detached_search_root / report_name).resolve()
+detached_alternate_report_path = (detached_search_root / f"identity-upgrade-exec-{identity_id}-101.json").resolve()
+detached_foreign_prompt_match_path = (
+    detached_search_root / f"identity-upgrade-exec-{identity_id}-102.json"
+).resolve()
 derivative_receipt_path = (
     pack_root / "runtime" / "reports" / "postexec" / f"{run_id}-postexec-receipt.json"
 ).resolve()
 foreign_upgrade_path = (workspace_root / "resource" / "reports" / "foreign-upgrade-history.json").resolve()
+foreign_pack_root = (workspace_root / ".identity" / f"{identity_id}-foreign-pack").resolve()
+foreign_prompt_path = (foreign_pack_root / "IDENTITY_PROMPT.md").resolve()
+foreign_catalog_path = (workspace_root / ".identity" / "foreign-catalog.local.yaml").resolve()
 
 prompt_path.parent.mkdir(parents=True, exist_ok=True)
 prompt_path.write_text("# Probe Identity\n", encoding="utf-8")
@@ -193,6 +215,7 @@ _write_json(global_catalog, {"identities": []})
 os.environ["PROJECT_ROOT"] = str(workspace_root)
 os.environ["CODEX_HOME"] = str(workspace_root)
 os.environ["IDENTITY_HOME"] = str((workspace_root / ".identity").resolve())
+os.environ["IDENTITY_RUNTIME_TMP_ROOT"] = str((workspace_root / ".tmp").resolve())
 os.environ["IDENTITY_PROTOCOL_HOME"] = str(repo_root)
 os.environ["IDENTITY_CATALOG"] = str(local_catalog)
 os.environ["IDENTITY_SCOPE"] = "USER"
@@ -290,12 +313,35 @@ _write_json(
         "resolved_pack_path": str((workspace_root / ".identity" / "foreign-identity").resolve()),
     },
 )
+_write_json(detached_report_path, report_payload)
+_write_json(
+    detached_alternate_report_path,
+    {
+        **report_payload,
+        "run_id": f"identity-upgrade-exec-{identity_id}-101",
+        "identity_prompt_sha256": "mismatched-prompt-sha",
+        "prompt_policy_hash": "mismatched-prompt-sha",
+    },
+)
+_write_json(
+    detached_foreign_prompt_match_path,
+    {
+        **report_payload,
+        "run_id": f"identity-upgrade-exec-{identity_id}-102",
+        "catalog_path": str(foreign_catalog_path),
+        "resolved_pack_path": str(foreign_pack_root),
+        "identity_prompt_path": str(foreign_prompt_path),
+    },
+)
 
 os.utime(prompt_path, (100.0, 100.0))
 os.utime(task_path, (100.0, 100.0))
 os.utime(report_path, (200.0, 200.0))
 os.utime(derivative_receipt_path, (300.0, 300.0))
 os.utime(foreign_upgrade_path, (400.0, 400.0))
+os.utime(detached_report_path, (200.0, 200.0))
+os.utime(detached_alternate_report_path, (250.0, 250.0))
+os.utime(detached_foreign_prompt_match_path, (275.0, 275.0))
 
 collected = collect_reports(pack_root, identity_id, include_generic_upgrade_json=True)
 assert derivative_receipt_path not in collected, {
@@ -493,6 +539,32 @@ pack_locator_after_payload = _run_json(
     ],
     cwd=repo_root,
 )
+detached_locator_without_catalog_payload = _run_json(
+    [
+        sys.executable,
+        str(repo_root / "scripts" / "resolve_latest_identity_upgrade_report.py"),
+        "--identity-id",
+        identity_id,
+        "--search-root",
+        str(detached_search_root),
+        "--json-only",
+    ],
+    cwd=repo_root,
+)
+catalog_detached_locator_after_payload = _run_json(
+    [
+        sys.executable,
+        str(repo_root / "scripts" / "resolve_latest_identity_upgrade_report.py"),
+        "--identity-id",
+        identity_id,
+        "--catalog",
+        str(local_catalog),
+        "--search-root",
+        str(detached_search_root),
+        "--json-only",
+    ],
+    cwd=repo_root,
+)
 repair_prompt_rc, repair_prompt_payload = _run_json_with_rc(
     [
         sys.executable,
@@ -550,6 +622,8 @@ selected_scan = _scan_report_selected_path(scan_payload, identity_id)
 selected_scan_after = _scan_report_selected_path(scan_after_payload, identity_id)
 selected_search_root_locator_after = str(search_root_locator_after_payload.get("selected_report_path", "")).strip()
 selected_pack_locator_after = str(pack_locator_after_payload.get("selected_report_path", "")).strip()
+selected_detached_locator_without_catalog = str(detached_locator_without_catalog_payload.get("selected_report_path", "")).strip()
+selected_catalog_detached_locator_after = str(catalog_detached_locator_after_payload.get("selected_report_path", "")).strip()
 selected_repair_prompt = str(repair_prompt_payload.get("report_selected_path", "")).strip()
 selected_repair_postexec = str(repair_postexec_payload.get("report_selected_path", "")).strip()
 selected_prompt_activation_after = _selected_report_path_from_ok_stdout(
@@ -566,6 +640,10 @@ selected_permission_after = _selected_report_path_from_ok_stdout(
 )
 selected_mode_promotion = str(mode_promotion_payload.get("report_selected_path", "")).strip()
 expected = str(report_path)
+expected_detached = str(detached_report_path)
+expected_detached_unanchored = str(detached_foreign_prompt_match_path)
+expected_logical_identity_key = report_logical_identity_key(report_path)
+selected_catalog_detached_logical_identity_key = _logical_identity_key_from_path(selected_catalog_detached_locator_after)
 
 assert selected_freshness == expected, {
     "case": "freshness_selects_primary_execution_report",
@@ -637,6 +715,32 @@ assert selected_pack_locator_after == expected, {
     "selected": selected_pack_locator_after,
     "expected": expected,
     "payload": pack_locator_after_payload,
+}
+assert selected_detached_locator_without_catalog == expected_detached_unanchored, {
+    "case": "detached_search_root_without_catalog_degrades_to_mtime_surface",
+    "selected": selected_detached_locator_without_catalog,
+    "expected": expected_detached_unanchored,
+    "payload": detached_locator_without_catalog_payload,
+}
+assert selected_catalog_detached_locator_after == expected_detached, {
+    "case": "catalog_anchored_detached_search_root_prefers_matching_pack_projection",
+    "selected": selected_catalog_detached_locator_after,
+    "expected": expected_detached,
+    "payload": catalog_detached_locator_after_payload,
+}
+assert selected_catalog_detached_logical_identity_key == expected_logical_identity_key, {
+    "case": "catalog_anchored_detached_search_root_preserves_logical_report_identity",
+    "selected": selected_catalog_detached_logical_identity_key,
+    "expected": expected_logical_identity_key,
+    "payload": catalog_detached_locator_after_payload,
+}
+assert str(catalog_detached_locator_after_payload.get("selection_mode", "")).strip() == "search_root_latest_primary_execution_report", {
+    "case": "catalog_anchored_detached_search_root_projects_prompt_bound_selection_mode",
+    "payload": catalog_detached_locator_after_payload,
+}
+assert str(catalog_detached_locator_after_payload.get("selected_report_authority_class", "")).strip() == "search_root_latest_primary_execution_report", {
+    "case": "catalog_anchored_detached_search_root_projects_prompt_bound_authority_class",
+    "payload": catalog_detached_locator_after_payload,
 }
 assert selected_prompt_activation_after == expected, {
     "case": "prompt_activation_preserves_prompt_sha_preference",
@@ -736,6 +840,10 @@ print(
             "full_scan_prompt_sha_selected_report": selected_scan_after,
             "search_root_locator_prompt_sha_selected_report": selected_search_root_locator_after,
             "pack_root_locator_selected_report": selected_pack_locator_after,
+            "detached_search_root_unanchored_selected_report": selected_detached_locator_without_catalog,
+            "catalog_anchored_detached_search_root_selected_report": selected_catalog_detached_locator_after,
+            "catalog_anchored_detached_search_root_logical_identity_key": selected_catalog_detached_logical_identity_key,
+            "expected_logical_identity_key": expected_logical_identity_key,
             "prompt_activation_prompt_sha_selected_report": selected_prompt_activation_after,
             "prompt_lifecycle_prompt_sha_selected_report": selected_prompt_lifecycle_after,
             "permission_state_prompt_sha_selected_report": selected_permission_after,

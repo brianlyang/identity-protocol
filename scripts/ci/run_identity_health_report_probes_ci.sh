@@ -271,6 +271,14 @@ assert pass_closure.get("writeback_rule_id") == "rule-entry-health-pass", pass_c
 assert int(pass_closure.get("rulebook_match_count", 0)) == 1, pass_closure
 assert bool(pass_closure.get("task_history_contains_run_id")) is True, pass_closure
 assert pass_check.get("status") == "PASS", pass_check
+pass_plan = pass_doc.get("self_upgrade_plan") or {}
+pass_commands = list(pass_plan.get("commands") or [])
+assert any(
+    "resolve_latest_identity_upgrade_report.py" in cmd
+    and "--catalog " in cmd
+    and "--search-root " in cmd
+    for cmd in pass_commands
+), pass_commands
 
 assert skip_closure.get("status") == "PASS", skip_closure
 assert skip_closure.get("validation_status") == "SKIPPED_NOT_REQUIRED", skip_closure

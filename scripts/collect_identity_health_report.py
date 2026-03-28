@@ -330,10 +330,12 @@ def _build_self_upgrade_plan(
     catalog_path = str(Path(catalog).expanduser().resolve())
     identity_home = str(Path(catalog_path).parent)
     codex_home = str(Path(identity_home).parent)
+    quoted_catalog_path = shlex.quote(catalog_path)
     quoted_upgrade_report_dir = shlex.quote(upgrade_report_dir)
     latest_expr = (
         '$(python3 "$IDENTITY_PROTOCOL_HOME"/scripts/resolve_latest_identity_upgrade_report.py '
         f"--identity-id {identity_id} "
+        f"--catalog {quoted_catalog_path} "
         f"--search-root {quoted_upgrade_report_dir} "
         "--print-path-only)"
     )
