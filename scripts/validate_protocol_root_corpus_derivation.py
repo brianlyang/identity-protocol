@@ -11,6 +11,7 @@ from root_contract_anchor_checks_common import (
     evaluate_root_doc_anchor_checks,
     validate_expected_root_doc_anchor_checks,
 )
+from root_contract_integration_checks_common import append_membership_delta_violations
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 from root_corpus_authority_common import authority_class_profiles_from_doc, load_root_corpus_authority
 from root_corpus_derivation_common import (
@@ -255,8 +256,6 @@ def main() -> int:
     authority_profile_map = {row.corpus_class: row for row in authority_profiles}
     source_rank_by_class = {row.corpus_class: row.order for row in source_rows}
     if not stale_reasons:
-        if len(class_profile_map) != len(class_profiles):
-            structure_violations.append({"field": "derivation_class_profiles", "reason": "duplicate_corpus_class"})
         append_root_doc_anchor_registry_structure_violations(
             structure_violations,
             anchor_checks,
@@ -268,16 +267,17 @@ def main() -> int:
             require_law_bearing=True,
         )
 
-        missing_class_profiles = sorted(set(registry_classes) - set(class_profile_map))
-        extra_class_profiles = sorted(set(class_profile_map) - set(registry_classes))
-        if missing_class_profiles:
-            structure_violations.append(
-                {"field": "derivation_class_profiles", "reason": "missing_registry_classes", "corpus_classes": missing_class_profiles}
-            )
-        if extra_class_profiles:
-            structure_violations.append(
-                {"field": "derivation_class_profiles", "reason": "extra_unregistered_classes", "corpus_classes": extra_class_profiles}
-            )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="derivation_class_profiles",
+            expected_ids=registry_classes,
+            actual_ids=class_profile_map,
+            payload_key="corpus_classes",
+            missing_reason="missing_registry_classes",
+            extra_reason="extra_unregistered_classes",
+            duplicate_reason="duplicate_corpus_class",
+            actual_total_count=len(class_profiles),
+        )
 
         expected_forbidden_root_classes = sorted(set(registry_classes) - {EXPECTED_CURRENT_TURN_ALLOWED_CLASS})
         actual_forbidden_root_classes = sorted(set(adjudication_redirect.forbidden_root_corpus_classes))

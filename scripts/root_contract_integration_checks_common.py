@@ -16,6 +16,35 @@ def missing_expected_markers(
     return [marker for marker in expected_markers if _norm_str(marker) and _norm_str(marker) not in marker_set]
 
 
+def append_membership_delta_violations(
+    violations: list[dict[str, Any]],
+    *,
+    field_name: str,
+    expected_ids: Iterable[Any],
+    actual_ids: Iterable[Any],
+    payload_key: str,
+    missing_reason: str,
+    extra_reason: str,
+    duplicate_reason: str | None = None,
+    actual_total_count: int | None = None,
+) -> tuple[str, ...]:
+    expected_tuple = tuple(_norm_str(item) for item in expected_ids if _norm_str(item))
+    actual_tuple = tuple(_norm_str(item) for item in actual_ids if _norm_str(item))
+    expected_set = set(expected_tuple)
+    actual_set = set(actual_tuple)
+
+    if duplicate_reason and actual_total_count is not None and len(actual_set) != actual_total_count:
+        violations.append({"field": field_name, "reason": duplicate_reason})
+
+    missing_ids = sorted(expected_set - actual_set)
+    extra_ids = sorted(actual_set - expected_set)
+    if missing_ids:
+        violations.append({"field": field_name, "reason": missing_reason, payload_key: missing_ids})
+    if extra_ids:
+        violations.append({"field": field_name, "reason": extra_reason, payload_key: extra_ids})
+    return actual_tuple
+
+
 def evaluate_root_contract_integration(
     *,
     contract_file: str,

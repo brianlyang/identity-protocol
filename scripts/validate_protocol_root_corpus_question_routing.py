@@ -11,6 +11,7 @@ from root_contract_anchor_checks_common import (
     evaluate_root_doc_anchor_checks,
     validate_expected_root_doc_anchor_checks,
 )
+from root_contract_integration_checks_common import append_membership_delta_violations
 from root_corpus_authority_common import entry_authority_projections_from_doc, load_root_corpus_authority
 from root_corpus_gateway_admissibility_common import gateway_effect_targets_from_doc, load_root_corpus_gateway_admissibility
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
@@ -344,12 +345,6 @@ def main() -> int:
     reading_paths = [row.rel_path for row in sorted(reading_rows, key=lambda item: item.order)]
 
     if not stale_reasons:
-        if len(question_profile_map) != len(question_profiles):
-            structure_violations.append({"field": "question_class_profiles", "reason": "duplicate_question_class"})
-        if len(entry_projection_map) != len(entry_projections):
-            structure_violations.append({"field": "entry_question_projection", "reason": "duplicate_rel_path"})
-        if len(gateway_question_projection_map) != len(gateway_question_projections):
-            structure_violations.append({"field": "gateway_question_projection", "reason": "duplicate_gateway_class"})
         append_root_doc_anchor_registry_structure_violations(
             structure_violations,
             anchor_checks,
@@ -361,45 +356,39 @@ def main() -> int:
             require_law_bearing=True,
         )
 
-        missing_question_profiles = sorted(set(EXPECTED_QUESTION_RULES) - set(question_profile_map))
-        extra_question_profiles = sorted(set(question_profile_map) - set(EXPECTED_QUESTION_RULES))
-        if missing_question_profiles:
-            structure_violations.append(
-                {"field": "question_class_profiles", "reason": "missing_expected_question_classes", "question_classes": missing_question_profiles}
-            )
-        if extra_question_profiles:
-            structure_violations.append(
-                {"field": "question_class_profiles", "reason": "extra_question_classes", "question_classes": extra_question_profiles}
-            )
-
-        missing_entry_projections = sorted(set(registry_paths) - set(entry_projection_map))
-        extra_entry_projections = sorted(set(entry_projection_map) - set(registry_paths))
-        if missing_entry_projections:
-            structure_violations.append(
-                {"field": "entry_question_projection", "reason": "missing_registered_entries", "rel_paths": missing_entry_projections}
-            )
-        if extra_entry_projections:
-            structure_violations.append(
-                {"field": "entry_question_projection", "reason": "extra_unregistered_entries", "rel_paths": extra_entry_projections}
-            )
-        missing_gateway_question_projections = sorted(set(gateway_effect_target_map) - set(gateway_question_projection_map))
-        extra_gateway_question_projections = sorted(set(gateway_question_projection_map) - set(gateway_effect_target_map))
-        if missing_gateway_question_projections:
-            structure_violations.append(
-                {
-                    "field": "gateway_question_projection",
-                    "reason": "missing_gateway_classes",
-                    "gateway_classes": missing_gateway_question_projections,
-                }
-            )
-        if extra_gateway_question_projections:
-            structure_violations.append(
-                {
-                    "field": "gateway_question_projection",
-                    "reason": "extra_gateway_classes",
-                    "gateway_classes": extra_gateway_question_projections,
-                }
-            )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="question_class_profiles",
+            expected_ids=EXPECTED_QUESTION_RULES,
+            actual_ids=question_profile_map,
+            payload_key="question_classes",
+            missing_reason="missing_expected_question_classes",
+            extra_reason="extra_question_classes",
+            duplicate_reason="duplicate_question_class",
+            actual_total_count=len(question_profiles),
+        )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="entry_question_projection",
+            expected_ids=registry_paths,
+            actual_ids=entry_projection_map,
+            payload_key="rel_paths",
+            missing_reason="missing_registered_entries",
+            extra_reason="extra_unregistered_entries",
+            duplicate_reason="duplicate_rel_path",
+            actual_total_count=len(entry_projections),
+        )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="gateway_question_projection",
+            expected_ids=gateway_effect_target_map,
+            actual_ids=gateway_question_projection_map,
+            payload_key="gateway_classes",
+            missing_reason="missing_gateway_classes",
+            extra_reason="extra_gateway_classes",
+            duplicate_reason="duplicate_gateway_class",
+            actual_total_count=len(gateway_question_projections),
+        )
 
         for row in question_profiles:
             if row.answer_mode not in ALLOWED_ANSWER_MODES:

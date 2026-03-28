@@ -10,6 +10,7 @@ from root_contract_anchor_checks_common import (
     evaluate_root_doc_anchor_checks,
     validate_expected_root_doc_anchor_checks,
 )
+from root_contract_integration_checks_common import append_membership_delta_violations
 from root_contract_row_validation_common import contiguous_orders
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 from root_corpus_governance_common import (
@@ -250,20 +251,14 @@ def main() -> int:
     if not stale_reasons:
         if len(set(source_orders)) != len(source_orders) or not contiguous_orders(sorted(source_orders)):
             structure_violations.append({"field": "source_order", "reason": "source_order_non_contiguous"})
-        if len(set(source_classes)) != len(source_classes):
-            structure_violations.append({"field": "source_order", "reason": "source_order_duplicate_corpus_class"})
         if "root_index" in source_classes:
             structure_violations.append({"field": "source_order", "reason": "root_index_must_not_be_generative_source"})
         if len(set(reading_orders)) != len(reading_orders) or not contiguous_orders(sorted(reading_orders)):
             structure_violations.append({"field": "reading_order", "reason": "reading_order_non_contiguous"})
-        if len(set(reading_paths)) != len(reading_paths):
-            structure_violations.append({"field": "reading_order", "reason": "reading_order_duplicate_rel_path"})
         if len(set(adjudication_orders)) != len(adjudication_orders) or not contiguous_orders(sorted(adjudication_orders)):
             structure_violations.append({"field": "adjudication_order", "reason": "adjudication_order_non_contiguous"})
         if len(set(adjudication_surfaces)) != len(adjudication_surfaces):
             structure_violations.append({"field": "adjudication_order", "reason": "adjudication_order_duplicate_machine_surface"})
-        if len(adjudication_surface_profile_map) != len(adjudication_surface_profiles):
-            structure_violations.append({"field": "adjudication_surface_profiles", "reason": "duplicate_machine_surface"})
         if len(set(adjudication_phase_orders)) != len(adjudication_phase_orders) or not contiguous_orders(sorted(adjudication_phase_orders)):
             structure_violations.append({"field": "adjudication_surface_profiles", "reason": "phase_order_non_contiguous"})
         if (
@@ -288,16 +283,17 @@ def main() -> int:
                 }
             )
 
-        missing_source_classes = sorted(set(expected_source_classes) - set(source_classes))
-        extra_source_classes = sorted(set(source_classes) - set(expected_source_classes))
-        if missing_source_classes:
-            coverage_violations.append(
-                {"field": "source_order", "reason": "missing_source_classes", "corpus_classes": missing_source_classes}
-            )
-        if extra_source_classes:
-            coverage_violations.append(
-                {"field": "source_order", "reason": "extra_source_classes", "corpus_classes": extra_source_classes}
-            )
+        append_membership_delta_violations(
+            coverage_violations,
+            field_name="source_order",
+            expected_ids=expected_source_classes,
+            actual_ids=source_classes,
+            payload_key="corpus_classes",
+            missing_reason="missing_source_classes",
+            extra_reason="extra_source_classes",
+            duplicate_reason="source_order_duplicate_corpus_class",
+            actual_total_count=len(source_classes),
+        )
         for row in sorted_source_rows:
             expected_law_bearing = registry_class_law_bearing.get(row.corpus_class)
             if expected_law_bearing is None:
@@ -313,24 +309,17 @@ def main() -> int:
                     }
                 )
 
-        missing_reading_entries = sorted(set(registry_paths) - set(reading_paths))
-        extra_reading_entries = sorted(set(reading_paths) - set(registry_paths))
-        if missing_reading_entries:
-            coverage_violations.append(
-                {
-                    "field": "reading_order",
-                    "reason": "missing_registered_entries",
-                    "rel_paths": missing_reading_entries,
-                }
-            )
-        if extra_reading_entries:
-            coverage_violations.append(
-                {
-                    "field": "reading_order",
-                    "reason": "extra_unregistered_entries",
-                    "rel_paths": extra_reading_entries,
-                }
-            )
+        append_membership_delta_violations(
+            coverage_violations,
+            field_name="reading_order",
+            expected_ids=registry_paths,
+            actual_ids=reading_paths,
+            payload_key="rel_paths",
+            missing_reason="missing_registered_entries",
+            extra_reason="extra_unregistered_entries",
+            duplicate_reason="reading_order_duplicate_rel_path",
+            actual_total_count=len(reading_paths),
+        )
 
         redirect_surfaces = tuple(adjudication_redirect.terminal_machine_surfaces)
         ordering_adjudication_surfaces = tuple(row.machine_surface for row in sorted_adjudication_rows)
@@ -371,24 +360,17 @@ def main() -> int:
                     "actual": list(ordering_adjudication_surfaces),
                 }
             )
-        missing_surface_profiles = sorted(set(expected_adjudication_surfaces) - set(adjudication_surface_profile_map))
-        extra_surface_profiles = sorted(set(adjudication_surface_profile_map) - set(expected_adjudication_surfaces))
-        if missing_surface_profiles:
-            coverage_violations.append(
-                {
-                    "field": "adjudication_surface_profiles",
-                    "reason": "missing_machine_surfaces",
-                    "machine_surfaces": missing_surface_profiles,
-                }
-            )
-        if extra_surface_profiles:
-            coverage_violations.append(
-                {
-                    "field": "adjudication_surface_profiles",
-                    "reason": "extra_machine_surfaces",
-                    "machine_surfaces": extra_surface_profiles,
-                }
-            )
+        append_membership_delta_violations(
+            coverage_violations,
+            field_name="adjudication_surface_profiles",
+            expected_ids=expected_adjudication_surfaces,
+            actual_ids=adjudication_surface_profile_map,
+            payload_key="machine_surfaces",
+            missing_reason="missing_machine_surfaces",
+            extra_reason="extra_machine_surfaces",
+            duplicate_reason="duplicate_machine_surface",
+            actual_total_count=len(adjudication_surface_profiles),
+        )
         for row in sorted_adjudication_surface_profiles:
             expected = EXPECTED_ADJUDICATION_SURFACE_PROFILES.get(row.machine_surface)
             if expected is None:

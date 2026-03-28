@@ -11,6 +11,7 @@ from root_contract_anchor_checks_common import (
     evaluate_root_doc_anchor_checks,
     validate_expected_root_doc_anchor_checks,
 )
+from root_contract_integration_checks_common import append_membership_delta_violations
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 from root_corpus_authority_common import load_root_corpus_authority
 from root_corpus_gateway_admissibility_common import (
@@ -255,44 +256,34 @@ def main() -> int:
     }
 
     if not stale_reasons:
-        if len(profile_map) != len(precedence_profiles):
-            structure_violations.append({"field": "precedence_profiles", "reason": "duplicate_conflict_class"})
-        if len(gateway_authorship_projection_map) != len(gateway_authorship_projections):
-            structure_violations.append({"field": "gateway_authorship_projection", "reason": "duplicate_gateway_class"})
         append_root_doc_anchor_registry_structure_violations(
             structure_violations,
             anchor_checks,
             field_name="precedence_anchor_checks",
             registry_paths=registry_paths,
         )
-        missing_profiles = sorted(set(EXPECTED_PROFILES) - set(profile_map))
-        extra_profiles = sorted(set(profile_map) - set(EXPECTED_PROFILES))
-        if missing_profiles:
-            structure_violations.append(
-                {"field": "precedence_profiles", "reason": "missing_conflict_classes", "conflict_classes": missing_profiles}
-            )
-        if extra_profiles:
-            structure_violations.append(
-                {"field": "precedence_profiles", "reason": "extra_conflict_classes", "conflict_classes": extra_profiles}
-            )
-        missing_gateway_projection_classes = sorted(set(gateway_effect_target_map) - set(gateway_authorship_projection_map))
-        extra_gateway_projection_classes = sorted(set(gateway_authorship_projection_map) - set(gateway_effect_target_map))
-        if missing_gateway_projection_classes:
-            structure_violations.append(
-                {
-                    "field": "gateway_authorship_projection",
-                    "reason": "missing_gateway_classes",
-                    "gateway_classes": missing_gateway_projection_classes,
-                }
-            )
-        if extra_gateway_projection_classes:
-            structure_violations.append(
-                {
-                    "field": "gateway_authorship_projection",
-                    "reason": "extra_gateway_classes",
-                    "gateway_classes": extra_gateway_projection_classes,
-                }
-            )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="precedence_profiles",
+            expected_ids=EXPECTED_PROFILES,
+            actual_ids=profile_map,
+            payload_key="conflict_classes",
+            missing_reason="missing_conflict_classes",
+            extra_reason="extra_conflict_classes",
+            duplicate_reason="duplicate_conflict_class",
+            actual_total_count=len(precedence_profiles),
+        )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="gateway_authorship_projection",
+            expected_ids=gateway_effect_target_map,
+            actual_ids=gateway_authorship_projection_map,
+            payload_key="gateway_classes",
+            missing_reason="missing_gateway_classes",
+            extra_reason="extra_gateway_classes",
+            duplicate_reason="duplicate_gateway_class",
+            actual_total_count=len(gateway_authorship_projections),
+        )
 
         for row in precedence_profiles:
             expected_meta = EXPECTED_PROFILES.get(row.conflict_class)

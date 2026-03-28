@@ -12,6 +12,7 @@ from root_contract_anchor_checks_common import (
     root_doc_anchor_checks_from_doc,
     validate_expected_root_doc_anchor_checks,
 )
+from root_contract_integration_checks_common import append_membership_delta_violations
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 from root_corpus_governance_common import (
     STATUS_FAIL_REQUIRED,
@@ -154,45 +155,39 @@ def main() -> int:
     actual_paths = collect_protocol_root_top_level_entries(repo_root, root_dir_rel) if root_dir.exists() else []
 
     if not stale_reasons:
-        if len(registered_paths) != len(entries):
-            structure_violations.append({"field": "registered_top_level_entries", "reason": "duplicate_rel_path"})
-        if len(set(raw_profile_ids)) != len(raw_profile_ids):
-            structure_violations.append({"field": "corpus_class_profiles", "reason": "duplicate_corpus_class"})
-        if len(set(raw_forbidden_ids)) != len(raw_forbidden_ids):
-            structure_violations.append({"field": "forbidden_content_classes", "reason": "duplicate_class_id"})
-
-        extras = sorted(set(actual_paths) - set(registered_paths))
-        missing = sorted(set(registered_paths) - set(actual_paths))
-        if extras:
-            structure_violations.append(
-                {"field": "registered_top_level_entries", "reason": "extra_root_entries", "rel_paths": extras}
-            )
-        if missing:
-            structure_violations.append(
-                {"field": "registered_top_level_entries", "reason": "missing_root_entries", "rel_paths": missing}
-            )
-
-        missing_profile_ids = sorted(set(expected_profile_ids) - set(class_profiles))
-        extra_profile_ids = sorted(set(class_profiles) - set(expected_profile_ids))
-        if missing_profile_ids:
-            structure_violations.append(
-                {"field": "corpus_class_profiles", "reason": "missing_expected_corpus_classes", "corpus_classes": missing_profile_ids}
-            )
-        if extra_profile_ids:
-            structure_violations.append(
-                {"field": "corpus_class_profiles", "reason": "extra_unreferenced_corpus_classes", "corpus_classes": extra_profile_ids}
-            )
-
-        missing_forbidden_ids = sorted(set(expected_forbidden_ids) - set(content_classes))
-        extra_forbidden_ids = sorted(set(content_classes) - set(expected_forbidden_ids))
-        if missing_forbidden_ids:
-            structure_violations.append(
-                {"field": "forbidden_content_classes", "reason": "missing_expected_class_ids", "class_ids": missing_forbidden_ids}
-            )
-        if extra_forbidden_ids:
-            structure_violations.append(
-                {"field": "forbidden_content_classes", "reason": "extra_unreferenced_class_ids", "class_ids": extra_forbidden_ids}
-            )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="registered_top_level_entries",
+            expected_ids=registered_paths,
+            actual_ids=actual_paths,
+            payload_key="rel_paths",
+            missing_reason="missing_root_entries",
+            extra_reason="extra_root_entries",
+            duplicate_reason="duplicate_rel_path",
+            actual_total_count=len(actual_paths),
+        )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="corpus_class_profiles",
+            expected_ids=expected_profile_ids,
+            actual_ids=class_profiles,
+            payload_key="corpus_classes",
+            missing_reason="missing_expected_corpus_classes",
+            extra_reason="extra_unreferenced_corpus_classes",
+            duplicate_reason="duplicate_corpus_class",
+            actual_total_count=len(raw_profile_ids),
+        )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="forbidden_content_classes",
+            expected_ids=expected_forbidden_ids,
+            actual_ids=content_classes,
+            payload_key="class_ids",
+            missing_reason="missing_expected_class_ids",
+            extra_reason="extra_unreferenced_class_ids",
+            duplicate_reason="duplicate_class_id",
+            actual_total_count=len(raw_forbidden_ids),
+        )
 
     if not stale_reasons:
         for entry in entries:

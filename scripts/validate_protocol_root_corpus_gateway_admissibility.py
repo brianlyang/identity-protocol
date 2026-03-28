@@ -12,6 +12,7 @@ from root_contract_anchor_checks_common import (
     evaluate_root_doc_anchor_checks,
     validate_expected_root_doc_anchor_checks,
 )
+from root_contract_integration_checks_common import append_membership_delta_violations
 from root_contract_row_validation_common import contiguous_orders
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 from root_corpus_authority_common import authority_class_profiles_from_doc, load_root_corpus_authority
@@ -302,12 +303,6 @@ def main() -> int:
     actual_gateway_order = tuple(row.gateway_class for row in sorted_gateway_order_rows)
 
     if not stale_reasons:
-        if len(gateway_profile_map) != len(gateway_profiles):
-            structure_violations.append({"field": "gateway_profiles", "reason": "duplicate_gateway_class"})
-        if len(gateway_order_map) != len(gateway_order_rows):
-            structure_violations.append({"field": "gateway_order", "reason": "duplicate_gateway_class"})
-        if len(gateway_effect_target_map) != len(gateway_effect_targets):
-            structure_violations.append({"field": "gateway_effect_targets", "reason": "duplicate_gateway_class"})
         if len(set(gateway_order_values)) != len(gateway_order_values) or not contiguous_orders(sorted(gateway_order_values)):
             structure_violations.append({"field": "gateway_order", "reason": "gateway_order_non_contiguous"})
         append_root_doc_anchor_registry_structure_violations(
@@ -317,44 +312,39 @@ def main() -> int:
             registry_paths=registry_paths,
         )
         expected_gateway_classes = sorted(EXPECTED_GATEWAY_METADATA)
-        missing_gateway_classes = sorted(set(expected_gateway_classes) - set(gateway_profile_map))
-        extra_gateway_classes = sorted(set(gateway_profile_map) - set(expected_gateway_classes))
-        if missing_gateway_classes:
-            structure_violations.append(
-                {"field": "gateway_profiles", "reason": "missing_gateway_classes", "gateway_classes": missing_gateway_classes}
-            )
-        if extra_gateway_classes:
-            structure_violations.append(
-                {"field": "gateway_profiles", "reason": "extra_gateway_classes", "gateway_classes": extra_gateway_classes}
-            )
-        missing_gateway_order_classes = sorted(set(expected_gateway_classes) - set(gateway_order_map))
-        extra_gateway_order_classes = sorted(set(gateway_order_map) - set(expected_gateway_classes))
-        missing_gateway_effect_target_classes = sorted(set(expected_gateway_classes) - set(gateway_effect_target_map))
-        extra_gateway_effect_target_classes = sorted(set(gateway_effect_target_map) - set(expected_gateway_classes))
-        if missing_gateway_order_classes:
-            structure_violations.append(
-                {"field": "gateway_order", "reason": "missing_gateway_classes", "gateway_classes": missing_gateway_order_classes}
-            )
-        if extra_gateway_order_classes:
-            structure_violations.append(
-                {"field": "gateway_order", "reason": "extra_gateway_classes", "gateway_classes": extra_gateway_order_classes}
-            )
-        if missing_gateway_effect_target_classes:
-            structure_violations.append(
-                {
-                    "field": "gateway_effect_targets",
-                    "reason": "missing_gateway_classes",
-                    "gateway_classes": missing_gateway_effect_target_classes,
-                }
-            )
-        if extra_gateway_effect_target_classes:
-            structure_violations.append(
-                {
-                    "field": "gateway_effect_targets",
-                    "reason": "extra_gateway_classes",
-                    "gateway_classes": extra_gateway_effect_target_classes,
-                }
-            )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="gateway_profiles",
+            expected_ids=expected_gateway_classes,
+            actual_ids=gateway_profile_map,
+            payload_key="gateway_classes",
+            missing_reason="missing_gateway_classes",
+            extra_reason="extra_gateway_classes",
+            duplicate_reason="duplicate_gateway_class",
+            actual_total_count=len(gateway_profiles),
+        )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="gateway_order",
+            expected_ids=expected_gateway_classes,
+            actual_ids=gateway_order_map,
+            payload_key="gateway_classes",
+            missing_reason="missing_gateway_classes",
+            extra_reason="extra_gateway_classes",
+            duplicate_reason="duplicate_gateway_class",
+            actual_total_count=len(gateway_order_rows),
+        )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="gateway_effect_targets",
+            expected_ids=expected_gateway_classes,
+            actual_ids=gateway_effect_target_map,
+            payload_key="gateway_classes",
+            missing_reason="missing_gateway_classes",
+            extra_reason="extra_gateway_classes",
+            duplicate_reason="duplicate_gateway_class",
+            actual_total_count=len(gateway_effect_targets),
+        )
         if unknown_transition_gateways:
             structure_violations.append(
                 {

@@ -11,6 +11,7 @@ from root_contract_anchor_checks_common import (
     evaluate_root_doc_anchor_checks,
     validate_expected_root_doc_anchor_checks,
 )
+from root_contract_integration_checks_common import append_membership_delta_violations
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 from root_corpus_authority_common import (
     STATUS_FAIL_REQUIRED,
@@ -274,10 +275,6 @@ def main() -> int:
     root_index_entry = str(ordering_doc.get("root_index_entry") or "").strip() if ordering_doc else ""
 
     if not stale_reasons:
-        if len(class_profile_map) != len(class_profiles):
-            structure_violations.append({"field": "authority_class_profiles", "reason": "duplicate_corpus_class"})
-        if len(entry_projection_map) != len(entry_projections):
-            structure_violations.append({"field": "entry_authority_projection", "reason": "duplicate_rel_path"})
         append_root_doc_anchor_registry_structure_violations(
             structure_violations,
             anchor_checks,
@@ -289,27 +286,28 @@ def main() -> int:
             require_law_bearing=True,
         )
 
-        missing_class_profiles = sorted(set(registry_classes) - set(class_profile_map))
-        extra_class_profiles = sorted(set(class_profile_map) - set(registry_classes))
-        if missing_class_profiles:
-            structure_violations.append(
-                {"field": "authority_class_profiles", "reason": "missing_registry_classes", "corpus_classes": missing_class_profiles}
-            )
-        if extra_class_profiles:
-            structure_violations.append(
-                {"field": "authority_class_profiles", "reason": "extra_unregistered_classes", "corpus_classes": extra_class_profiles}
-            )
-
-        missing_entry_projections = sorted(set(registry_paths) - set(entry_projection_map))
-        extra_entry_projections = sorted(set(entry_projection_map) - set(registry_paths))
-        if missing_entry_projections:
-            structure_violations.append(
-                {"field": "entry_authority_projection", "reason": "missing_registered_entries", "rel_paths": missing_entry_projections}
-            )
-        if extra_entry_projections:
-            structure_violations.append(
-                {"field": "entry_authority_projection", "reason": "extra_unregistered_entries", "rel_paths": extra_entry_projections}
-            )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="authority_class_profiles",
+            expected_ids=registry_classes,
+            actual_ids=class_profile_map,
+            payload_key="corpus_classes",
+            missing_reason="missing_registry_classes",
+            extra_reason="extra_unregistered_classes",
+            duplicate_reason="duplicate_corpus_class",
+            actual_total_count=len(class_profiles),
+        )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="entry_authority_projection",
+            expected_ids=registry_paths,
+            actual_ids=entry_projection_map,
+            payload_key="rel_paths",
+            missing_reason="missing_registered_entries",
+            extra_reason="extra_unregistered_entries",
+            duplicate_reason="duplicate_rel_path",
+            actual_total_count=len(entry_projections),
+        )
         for row in class_profiles:
             if row.authority_mode not in ALLOWED_AUTHORITY_MODES:
                 structure_violations.append(

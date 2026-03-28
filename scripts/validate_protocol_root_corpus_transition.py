@@ -12,6 +12,7 @@ from root_contract_anchor_checks_common import (
     evaluate_root_doc_anchor_checks,
     validate_expected_root_doc_anchor_checks,
 )
+from root_contract_integration_checks_common import append_membership_delta_violations
 from root_corpus_derivation_common import derivation_class_profiles_from_doc, load_root_corpus_derivation
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_question_routing_common import adjudication_redirect_from_doc, load_root_corpus_question_routing
@@ -331,8 +332,6 @@ def main() -> int:
     }
 
     if not stale_reasons:
-        if len(surface_profile_map) != len(surface_profiles):
-            structure_violations.append({"field": "surface_class_profiles", "reason": "duplicate_surface_class"})
         append_root_doc_anchor_registry_structure_violations(
             structure_violations,
             anchor_checks,
@@ -340,16 +339,17 @@ def main() -> int:
             registry_paths={entry.rel_path for entry in registry_entries},
         )
 
-        missing_surface_classes = sorted(set(expected_surface_classes) - set(surface_profile_map))
-        extra_surface_classes = sorted(set(surface_profile_map) - set(expected_surface_classes))
-        if missing_surface_classes:
-            structure_violations.append(
-                {"field": "surface_class_profiles", "reason": "missing_expected_surface_classes", "surface_classes": missing_surface_classes}
-            )
-        if extra_surface_classes:
-            structure_violations.append(
-                {"field": "surface_class_profiles", "reason": "extra_surface_classes", "surface_classes": extra_surface_classes}
-            )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="surface_class_profiles",
+            expected_ids=expected_surface_classes,
+            actual_ids=surface_profile_map,
+            payload_key="surface_classes",
+            missing_reason="missing_expected_surface_classes",
+            extra_reason="extra_surface_classes",
+            duplicate_reason="duplicate_surface_class",
+            actual_total_count=len(surface_profiles),
+        )
 
         for row in surface_profiles:
             expected = ROOT_TRANSITION_EXPECTATIONS.get(row.surface_class, OUTER_SURFACE_EXPECTATIONS.get(row.surface_class))
