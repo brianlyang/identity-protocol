@@ -34,7 +34,7 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_governance_status"] == "PASS_REQUIRED", payload
 assert payload["root_doc_anchor_check_count"] == 4, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
-assert payload["governance_row_family_count"] == 3, payload
+assert payload["governance_row_family_count"] == 5, payload
 assert payload["governance_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["governance_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
@@ -42,6 +42,10 @@ assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in paylo
 assert payload["registered_top_level_count"] == payload["actual_top_level_count"], payload
 assert "root_contract" in payload["corpus_class_profile_ids"], payload
 assert "business_domain_example" in payload["forbidden_content_class_ids"], payload
+assert payload["root_index_class_projection_count"] == 6, payload
+assert payload["root_index_class_projection_surface"]["entry_count"] == 6, payload
+assert any(row["family_id"] == "root_index_class_projections" for row in payload["row_family_projection_rows"]), payload
+assert any(row["family_id"] == "root_index_class_projection_surface" for row in payload["row_family_projection_rows"]), payload
 PY
 
 PROFILE_REPO="${TMP_ROOT}/missing-profile-repo"
@@ -92,6 +96,54 @@ assert profile_row["missing_ids"] == ["root_contract"], payload
 assert profile_row["unexpected_ids"] == [], payload
 assert profile_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert profile_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+PROJECTION_BINDING_REPO="${TMP_ROOT}/projection-binding-repo"
+mirror_repo "${PROJECTION_BINDING_REPO}"
+python3 - <<'PY' "${PROJECTION_BINDING_REPO}/identity/protocol/mappings/root-corpus-registry.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["root_index_class_projections"]:
+    if row.get("projection_label") == "governed subdomain protocol extensions":
+        row["bound_corpus_classes"] = []
+        break
+else:
+    raise SystemExit("expected governed subdomain protocol extensions row not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+PROJECTION_BINDING_JSON="${TMP_ROOT}/projection-binding.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" \
+  --repo-root "${PROJECTION_BINDING_REPO}" \
+  --json-only >"${PROJECTION_BINDING_JSON}"; then
+  echo "[FAIL] root corpus governance validator unexpectedly passed after removing projection bound corpus classes"
+  exit 1
+fi
+
+python3 - <<'PY' "${PROJECTION_BINDING_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_governance_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCG-002", payload
+assert any(
+    row["field"] == "root_index_class_projections"
+    and row["reason"] == "bound_corpus_classes_missing"
+    and row.get("projection_label") == "governed subdomain protocol extensions"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "root_index_class_projections"
+    and row["reason"] == "missing_expected_bound_corpus_classes"
+    and "governed_subdomain_extension" in row.get("corpus_classes", [])
+    for row in payload["structure_violations"]
+), payload
 PY
 
 FORBIDDEN_REPO="${TMP_ROOT}/forbidden-class-identity-repo"
@@ -150,6 +202,58 @@ assert forbidden_row["coverage_status"] == "PASS_REQUIRED", payload
 assert forbidden_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
+SURFACE_LABEL_REPO="${TMP_ROOT}/surface-label-repo"
+mirror_repo "${SURFACE_LABEL_REPO}"
+python3 - <<'PY' "${SURFACE_LABEL_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "2. **constitutions**"
+new = "2. **constitutional files**"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+SURFACE_LABEL_JSON="${TMP_ROOT}/surface-label.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" \
+  --repo-root "${SURFACE_LABEL_REPO}" \
+  --json-only >"${SURFACE_LABEL_JSON}"; then
+  echo "[FAIL] root corpus governance validator unexpectedly passed after root-index surface label drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SURFACE_LABEL_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_governance_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCG-002", payload
+assert any(
+    row["field"] == "root_index_class_projection_surface"
+    and row["reason"] == "missing_root_index_projection_labels"
+    and "constitutions" in row.get("projection_labels", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "root_index_class_projection_surface"
+    and row["reason"] == "extra_root_index_projection_labels"
+    and "constitutional files" in row.get("projection_labels", [])
+    for row in payload["structure_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "root_index_class_projection_surface"
+)
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert "constitutions" in surface_row["missing_ids"], payload
+assert "constitutional files" in surface_row["unexpected_ids"], payload
+PY
+
 MARKER_REPO="${TMP_ROOT}/missing-marker-repo"
 mirror_repo "${MARKER_REPO}"
 python3 - <<'PY' "${MARKER_REPO}/identity/protocol/README.md"
@@ -181,45 +285,6 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_governance_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RCG-002", payload
 assert any("README.md:required_marker_missing" in reason for reason in payload["stale_reasons"]), payload
-PY
-
-DOC_ANCHOR_REPO="${TMP_ROOT}/doc-anchor-drift-repo"
-mirror_repo "${DOC_ANCHOR_REPO}"
-python3 - <<'PY' "${DOC_ANCHOR_REPO}/identity/protocol/README.md"
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-text = path.read_text(encoding="utf-8")
-old = "## Root governance completeness discipline"
-new = "## Root governance completeness lane"
-assert old in text, text
-path.write_text(text.replace(old, new, 1), encoding="utf-8")
-PY
-
-DOC_ANCHOR_JSON="${TMP_ROOT}/doc-anchor-drift.json"
-if python3 "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" \
-  --repo-root "${DOC_ANCHOR_REPO}" \
-  --json-only >"${DOC_ANCHOR_JSON}"; then
-  echo "[FAIL] root corpus governance validator unexpectedly passed root-doc anchor drift"
-  exit 1
-fi
-
-python3 - <<'PY' "${DOC_ANCHOR_JSON}"
-import json
-import pathlib
-import sys
-
-payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert payload["protocol_root_corpus_governance_status"] == "FAIL_REQUIRED", payload
-assert payload["error_code"] == "IP-RCG-002", payload
-assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
-assert any(
-    row["rel_path"] == "identity/protocol/README.md"
-    and row["reason"] == "required_marker_missing"
-    and row["marker"] == "## Root governance completeness discipline"
-    for row in payload["root_doc_anchor_violations"]
-), payload
 PY
 
 EXTRA_REPO="${TMP_ROOT}/extra-entry-repo"

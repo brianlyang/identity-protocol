@@ -13,6 +13,7 @@ from root_contract_anchor_checks_common import (
     validate_expected_root_doc_anchor_checks,
 )
 from root_contract_integration_checks_common import append_membership_delta_violations
+from root_contract_row_validation_common import contiguous_orders
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_corpus_governance_common import (
     STATUS_FAIL_REQUIRED,
@@ -24,6 +25,8 @@ from root_corpus_governance_common import (
     load_root_corpus_registry,
     merge_forbidden_content_classes,
     merge_required_markers,
+    readme_root_index_class_projection_surface,
+    root_index_class_projections_from_registry,
     root_corpus_entries_from_registry,
     scan_forbidden_content,
 )
@@ -36,23 +39,23 @@ ALLOWED_ENTRY_KINDS = {"file", "directory"}
 EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
         "### Governance row-family completeness must stay explicit",
-        "Required registered-top-level-entry, corpus-class-profile, and forbidden-content-class families must remain explicit as separate machine-readable row families.",
-        "The machine world must not finalize governance legality while required rel-path, corpus-class, or forbidden-content-class identity drift remains known only internally.",
+        "Required registered-top-level-entry, corpus-class-profile, root-index-class-projection, and forbidden-content-class families must remain explicit as separate machine-readable row families.",
+        "The machine world must not finalize governance legality while required rel-path, corpus-class, root-index-class-projection, or forbidden-content-class identity drift remains known only internally.",
     ),
     "identity/protocol/README.md": (
         "## Root governance completeness discipline",
         "Governance law is not a soft prose bundle.",
-        "1. required registered-top-level-entry, corpus-class-profile, and forbidden-content-class rows must remain explicit as separate machine-readable row families;",
+        "1. required registered-top-level-entry, corpus-class-profile, root-index-class-projection, and forbidden-content-class rows must remain explicit as separate machine-readable row families;",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
         "## Root governance completeness boundary",
-        "1. Governance law must remain machine-readable as separate registered-top-level-entry, corpus-class-profile, and forbidden-content-class row families.",
-        "4. Protocol legality must not finalize governance legality while missing or unexpected rel-path, corpus-class, or forbidden-content-class identities remain known only inside validator logic.",
+        "1. Governance law must remain machine-readable as separate registered-top-level-entry, corpus-class-profile, root-index-class-projection, and forbidden-content-class row families.",
+        "4. Protocol legality must not finalize governance legality while missing or unexpected rel-path, corpus-class, root-index-class-projection, or forbidden-content-class identities remain known only inside validator logic.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "## Runtime governance consumption boundary",
-        "1. Runtime consumes governance law as separate registered-top-level-entry, corpus-class-profile, and forbidden-content-class row families rather than as undifferentiated governance prose.",
-        "4. Runtime must not finalize governance legality while missing or unexpected rel-path, corpus-class, or forbidden-content-class identities remain known only inside validator machinery.",
+        "1. Runtime consumes governance law as separate registered-top-level-entry, corpus-class-profile, root-index-class-projection, and forbidden-content-class row families rather than as undifferentiated governance prose.",
+        "4. Runtime must not finalize governance legality while missing or unexpected rel-path, corpus-class, root-index-class-projection, or forbidden-content-class identities remain known only inside validator machinery.",
     ),
 }
 
@@ -90,9 +93,12 @@ def main() -> int:
     entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     content_classes = forbidden_classes_from_registry(registry_doc) if registry_doc else {}
     class_profiles = corpus_class_profiles_from_registry(registry_doc) if registry_doc else {}
+    root_index_class_projections = root_index_class_projections_from_registry(registry_doc) if registry_doc else ()
     root_doc_anchor_checks = root_doc_anchor_checks_from_doc(registry_doc) if registry_doc else ()
+    root_index_class_projection_surface = readme_root_index_class_projection_surface(repo_root)
     raw_forbidden_rows = registry_doc.get("forbidden_content_classes") if registry_doc else []
     raw_profile_rows = registry_doc.get("corpus_class_profiles") if registry_doc else []
+    raw_root_index_projection_rows = registry_doc.get("root_index_class_projections") if registry_doc else []
     raw_forbidden_ids = [
         str(row.get("class_id") or "").strip()
         for row in raw_forbidden_rows
@@ -103,7 +109,13 @@ def main() -> int:
         for row in raw_profile_rows
         if isinstance(row, dict) and str(row.get("corpus_class") or "").strip()
     ]
+    raw_root_index_projection_labels = [
+        str(row.get("projection_label") or "").strip()
+        for row in raw_root_index_projection_rows
+        if isinstance(row, dict) and str(row.get("projection_label") or "").strip()
+    ]
     expected_profile_ids = sorted({entry.corpus_class for entry in entries if entry.law_bearing and entry.entry_kind == "file"})
+    expected_root_index_bound_corpus_classes = sorted({entry.corpus_class for entry in entries if entry.corpus_class != "root_index"})
     expected_forbidden_ids = sorted(
         {class_id for entry in entries for class_id in entry.forbidden_content_classes}
         | {class_id for profile in class_profiles.values() for class_id in profile.forbidden_content_classes}
@@ -121,6 +133,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if not class_profiles:
             stale_reasons.append("root_corpus_class_profiles_missing")
+            error_code = ERR_REGISTRY
+        if not root_index_class_projections:
+            stale_reasons.append("root_index_class_projections_missing")
             error_code = ERR_REGISTRY
         for key in ("validator_script", "probe_script", "common_script"):
             rel_path = str(registry_doc.get(key) or "").strip()
@@ -155,6 +170,47 @@ def main() -> int:
     actual_paths = collect_protocol_root_top_level_entries(repo_root, root_dir_rel) if root_dir.exists() else []
 
     if not stale_reasons:
+        projection_orders = [row.order for row in root_index_class_projections]
+        projection_labels = [row.projection_label for row in root_index_class_projections]
+        bound_projection_corpus_classes = [
+            corpus_class
+            for row in root_index_class_projections
+            for corpus_class in row.bound_corpus_classes
+        ]
+        surface_orders = [row.order for row in root_index_class_projection_surface.rows]
+        surface_labels = [row.projection_label for row in root_index_class_projection_surface.rows]
+        if len(set(projection_orders)) != len(projection_orders) or not contiguous_orders(sorted(projection_orders)):
+            structure_violations.append(
+                {"field": "root_index_class_projections", "reason": "projection_order_non_contiguous"}
+            )
+        if len(set(projection_labels)) != len(projection_labels):
+            structure_violations.append(
+                {"field": "root_index_class_projections", "reason": "duplicate_projection_label"}
+            )
+        for row in root_index_class_projections:
+            if not row.bound_corpus_classes:
+                structure_violations.append(
+                    {
+                        "field": "root_index_class_projections",
+                        "reason": "bound_corpus_classes_missing",
+                        "projection_label": row.projection_label,
+                    }
+                )
+            if not row.required_markers:
+                structure_violations.append(
+                    {
+                        "field": "root_index_class_projections",
+                        "reason": "required_markers_missing",
+                        "projection_label": row.projection_label,
+                    }
+                )
+        if surface_orders and (
+            len(set(surface_orders)) != len(surface_orders)
+            or not contiguous_orders(sorted(surface_orders))
+        ):
+            structure_violations.append(
+                {"field": "root_index_class_projection_surface", "reason": "projection_order_non_contiguous"}
+            )
         append_membership_delta_violations(
             structure_violations,
             field_name="registered_top_level_entries",
@@ -177,6 +233,46 @@ def main() -> int:
             duplicate_reason="duplicate_corpus_class",
             actual_total_count=len(raw_profile_ids),
         )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="root_index_class_projections",
+            expected_ids=expected_root_index_bound_corpus_classes,
+            actual_ids=bound_projection_corpus_classes,
+            payload_key="corpus_classes",
+            missing_reason="missing_expected_bound_corpus_classes",
+            extra_reason="extra_unexpected_bound_corpus_classes",
+            duplicate_reason="duplicate_bound_corpus_class",
+            actual_total_count=len(bound_projection_corpus_classes),
+        )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="root_index_class_projection_surface",
+            expected_ids=projection_labels,
+            actual_ids=surface_labels,
+            payload_key="projection_labels",
+            missing_reason="missing_root_index_projection_labels",
+            extra_reason="extra_root_index_projection_labels",
+            duplicate_reason="duplicate_root_index_projection_label",
+            actual_total_count=len(surface_labels),
+        )
+        if surface_labels and tuple(surface_labels) != tuple(projection_labels):
+            structure_violations.append(
+                {
+                    "field": "root_index_class_projection_surface",
+                    "reason": "projection_label_order_mismatch",
+                    "expected": projection_labels,
+                    "actual": surface_labels,
+                }
+            )
+        if surface_orders and tuple(surface_orders) != tuple(projection_orders):
+            structure_violations.append(
+                {
+                    "field": "root_index_class_projection_surface",
+                    "reason": "projection_order_mismatch",
+                    "expected": projection_orders,
+                    "actual": surface_orders,
+                }
+            )
         append_membership_delta_violations(
             structure_violations,
             field_name="forbidden_content_classes",
@@ -238,6 +334,31 @@ def main() -> int:
                             }
                         )
 
+        for reason in root_index_class_projection_surface.extraction_violations:
+            file_violations.append(
+                {
+                    "rel_path": root_index_class_projection_surface.rel_path,
+                    "reason": f"root_index_class_projection_surface_{reason}",
+                }
+            )
+        surface_row_map = {
+            row.projection_label: row for row in root_index_class_projection_surface.rows
+        }
+        for row in root_index_class_projections:
+            surface_row = surface_row_map.get(row.projection_label)
+            if surface_row is None:
+                continue
+            surface_text = "\n".join(surface_row.body_lines)
+            for marker in find_missing_markers(surface_text, row.required_markers):
+                file_violations.append(
+                    {
+                        "rel_path": root_index_class_projection_surface.rel_path,
+                        "reason": "root_index_class_projection_marker_missing",
+                        "projection_label": row.projection_label,
+                        "marker": marker,
+                    }
+                )
+
         root_doc_anchor_violations.extend(
             evaluate_root_doc_anchor_checks(
                 repo_root,
@@ -256,7 +377,17 @@ def main() -> int:
         for item in structure_violations
     )
     stale_reasons.extend(
-        f"file_violation:{item['rel_path']}:{item['reason']}:{item.get('marker', '')}".rstrip(":")
+        ":".join(
+            token
+            for token in (
+                "file_violation",
+                item["rel_path"],
+                item["reason"],
+                item.get("projection_label", ""),
+                item.get("marker", ""),
+            )
+            if token
+        )
         for item in file_violations
     )
     stale_reasons.extend(
@@ -287,6 +418,20 @@ def main() -> int:
                 "actual_rows": [SimpleNamespace(corpus_class=corpus_class) for corpus_class in sorted(class_profiles.keys())],
                 "expected_rows": {corpus_class: {} for corpus_class in expected_profile_ids},
                 "id_attr": "corpus_class",
+            },
+            {
+                "family_id": "root_index_class_projections",
+                "member_id_key": "projection_label",
+                "actual_rows": [SimpleNamespace(projection_label=row.projection_label) for row in root_index_class_projections],
+                "expected_rows": {row.projection_label: {} for row in root_index_class_projections},
+                "id_attr": "projection_label",
+            },
+            {
+                "family_id": "root_index_class_projection_surface",
+                "member_id_key": "projection_label",
+                "actual_rows": [SimpleNamespace(projection_label=row.projection_label) for row in root_index_class_projection_surface.rows],
+                "expected_rows": {row.projection_label: {} for row in root_index_class_projections},
+                "id_attr": "projection_label",
             },
             {
                 "family_id": "forbidden_content_classes",
@@ -323,6 +468,29 @@ def main() -> int:
         "row_family_projection_rows": row_family_projection_rows,
         "corpus_class_profile_ids": sorted(class_profiles.keys()),
         "corpus_class_profile_count": len(class_profiles),
+        "root_index_class_projections": [
+            {
+                "order": row.order,
+                "projection_label": row.projection_label,
+                "bound_corpus_classes": list(row.bound_corpus_classes),
+                "required_markers": list(row.required_markers),
+            }
+            for row in sorted(root_index_class_projections, key=lambda item: item.order)
+        ],
+        "root_index_class_projection_count": len(root_index_class_projections),
+        "root_index_class_projection_surface": {
+            "rel_path": root_index_class_projection_surface.rel_path,
+            "entry_count": len(root_index_class_projection_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "projection_label": row.projection_label,
+                    "body_lines": list(row.body_lines),
+                }
+                for row in root_index_class_projection_surface.rows
+            ],
+            "extraction_violations": list(root_index_class_projection_surface.extraction_violations),
+        },
         "forbidden_content_class_ids": sorted(content_classes.keys()),
         "structure_violations": structure_violations,
         "file_violations": file_violations,

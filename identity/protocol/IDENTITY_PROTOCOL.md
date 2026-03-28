@@ -176,10 +176,10 @@ implicit.
 
 ## Root governance completeness boundary
 
-1. Governance law must remain machine-readable as separate registered-top-level-entry, corpus-class-profile, and forbidden-content-class row families.
+1. Governance law must remain machine-readable as separate registered-top-level-entry, corpus-class-profile, root-index-class-projection, and forbidden-content-class row families.
 2. Aggregate row-family counts are insufficient on their own; expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness.
-3. Expected row identity set and emitted row identity set for each governance family must also remain explicit; rel-path, corpus-class, or forbidden-content-class identity drift may not be collapsed into summary-only counts.
-4. Protocol legality must not finalize governance legality while missing or unexpected rel-path, corpus-class, or forbidden-content-class identities remain known only inside validator logic.
+3. Expected row identity set and emitted row identity set for each governance family must also remain explicit; rel-path, corpus-class, root-index-class-projection, or forbidden-content-class identity drift may not be collapsed into summary-only counts.
+4. Protocol legality must not finalize governance legality while missing or unexpected rel-path, corpus-class, root-index-class-projection, or forbidden-content-class identities remain known only inside validator logic.
 5. Fail-close governance output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
 
 ## Root gateway-admissibility completeness boundary

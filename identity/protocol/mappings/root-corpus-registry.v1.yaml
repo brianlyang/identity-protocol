@@ -17,27 +17,27 @@ anchor_checks:
   - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
     required_markers:
       - '### Governance row-family completeness must stay explicit'
-      - Required registered-top-level-entry, corpus-class-profile, and
-        forbidden-content-class families must remain explicit as separate
-        machine-readable row families.
+      - Required registered-top-level-entry, corpus-class-profile,
+        root-index-class-projection, and forbidden-content-class families must
+        remain explicit as separate machine-readable row families.
       - The machine world must not finalize governance legality while required
-        rel-path, corpus-class, or forbidden-content-class identity drift
-        remains known only internally.
+        rel-path, corpus-class, root-index-class-projection, or
+        forbidden-content-class identity drift remains known only internally.
   - rel_path: identity/protocol/README.md
     required_markers:
       - '## Root governance completeness discipline'
       - Governance law is not a soft prose bundle.
-      - '1. required registered-top-level-entry, corpus-class-profile, and forbidden-content-class rows must remain explicit as separate machine-readable row families;'
+      - '1. required registered-top-level-entry, corpus-class-profile, root-index-class-projection, and forbidden-content-class rows must remain explicit as separate machine-readable row families;'
   - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
     required_markers:
       - '## Root governance completeness boundary'
-      - '1. Governance law must remain machine-readable as separate registered-top-level-entry, corpus-class-profile, and forbidden-content-class row families.'
-      - '4. Protocol legality must not finalize governance legality while missing or unexpected rel-path, corpus-class, or forbidden-content-class identities remain known only inside validator logic.'
+      - '1. Governance law must remain machine-readable as separate registered-top-level-entry, corpus-class-profile, root-index-class-projection, and forbidden-content-class row families.'
+      - '4. Protocol legality must not finalize governance legality while missing or unexpected rel-path, corpus-class, root-index-class-projection, or forbidden-content-class identities remain known only inside validator logic.'
   - rel_path: identity/protocol/IDENTITY_RUNTIME.md
     required_markers:
       - '## Runtime governance consumption boundary'
-      - '1. Runtime consumes governance law as separate registered-top-level-entry, corpus-class-profile, and forbidden-content-class row families rather than as undifferentiated governance prose.'
-      - '4. Runtime must not finalize governance legality while missing or unexpected rel-path, corpus-class, or forbidden-content-class identities remain known only inside validator machinery.'
+      - '1. Runtime consumes governance law as separate registered-top-level-entry, corpus-class-profile, root-index-class-projection, and forbidden-content-class row families rather than as undifferentiated governance prose.'
+      - '4. Runtime must not finalize governance legality while missing or unexpected rel-path, corpus-class, root-index-class-projection, or forbidden-content-class identities remain known only inside validator machinery.'
 forbidden_content_classes:
   - class_id: workbook_issue_projection
     description: Workbook issue rows or issue-register projection markers must not enter protocol-root law-bearing files.
@@ -95,6 +95,53 @@ corpus_class_profiles:
       - '## Constitutional inheritance and authority boundary'
       - '## Machine-world audience'
       - '## Runtime adjudication boundary'
+root_index_class_projections:
+  - order: 1
+    projection_label: bottom theory / interpretive source
+    bound_corpus_classes:
+      - bottom_theory
+    required_markers:
+      - 'IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md'
+  - order: 2
+    projection_label: constitutions
+    bound_corpus_classes:
+      - constitution
+      - runtime_constitution
+    required_markers:
+      - 'IDENTITY_PROTOCOL.md'
+      - 'IDENTITY_RUNTIME.md'
+  - order: 3
+    projection_label: root contract law
+    bound_corpus_classes:
+      - root_contract
+    required_markers:
+      - machine-law primacy, machine-world ontology, current-truth epistemology,
+        decision-evidence admissibility, success-path state admissibility,
+        entry-surface legitimacy, error terminality, artifact-family
+        admissibility, prompt bootstrap, discovery, handoff, instance
+        self-judgement, protocol-instance responsibility, stream-design
+        admissibility, truth lifecycle, operator answer surface, and other
+        root-domain contracts
+  - order: 4
+    projection_label: machine-consumed registries and mappings
+    bound_corpus_classes:
+      - machine_registry_directory
+    required_markers:
+      - canonical bindings, term registries, stream registries, scope matrices,
+        and related SSOT rows
+  - order: 5
+    projection_label: governed subdomain protocol extensions
+    bound_corpus_classes:
+      - governed_subdomain_extension
+    required_markers:
+      - 'broadcast/'
+      - 'plugins/'
+  - order: 6
+    projection_label: clearly demoted support material
+    bound_corpus_classes:
+      - demoted_support_directory
+    required_markers:
+      - only when it is explicit that the material is not active-runtime truth
 registered_top_level_entries:
   - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
     entry_kind: file

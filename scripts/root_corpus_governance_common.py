@@ -13,6 +13,11 @@ from registry_alias_control_plane_common import resolve_current_yaml_alias
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ROOT_CORPUS_REGISTRY_CURRENT = "identity/protocol/mappings/root-corpus-registry.current.yaml"
+ROOT_PROTOCOL_README_REL_PATH = "identity/protocol/README.md"
+ROOT_INDEX_CLASS_SECTION_MARKER = "## What belongs at protocol root"
+ORDERED_BOLD_ITEM_RE = re.compile(r"^\s*(\d+)\.\s+\*\*(.*?)\*\*")
+HEADING_RE = re.compile(r"^##\s+")
+HORIZONTAL_RULE_RE = re.compile(r"^-{3,}$")
 
 
 @dataclass(frozen=True)
@@ -38,6 +43,28 @@ class CorpusClassProfile:
     corpus_class: str
     required_markers: tuple[str, ...] = field(default_factory=tuple)
     forbidden_content_classes: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class RootIndexClassProjection:
+    order: int
+    projection_label: str
+    bound_corpus_classes: tuple[str, ...] = field(default_factory=tuple)
+    required_markers: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class RootIndexClassProjectionSurfaceRow:
+    order: int
+    projection_label: str
+    body_lines: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class RootIndexClassProjectionSurface:
+    rel_path: str
+    rows: tuple[RootIndexClassProjectionSurfaceRow, ...]
+    extraction_violations: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -79,6 +106,11 @@ def _iter_forbidden_class_rows(registry_doc: Mapping[str, Any]) -> list[Mapping[
 
 def _iter_corpus_class_profile_rows(registry_doc: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     raw = registry_doc.get("corpus_class_profiles")
+    return raw if isinstance(raw, list) else []
+
+
+def _iter_root_index_class_projection_rows(registry_doc: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    raw = registry_doc.get("root_index_class_projections")
     return raw if isinstance(raw, list) else []
 
 
@@ -124,6 +156,31 @@ def corpus_class_profiles_from_registry(registry_doc: Mapping[str, Any]) -> dict
             forbidden_content_classes=_as_str_tuple(row.get("forbidden_content_classes")),
         )
     return profiles
+
+
+def root_index_class_projections_from_registry(
+    registry_doc: Mapping[str, Any],
+) -> tuple[RootIndexClassProjection, ...]:
+    projections: list[RootIndexClassProjection] = []
+    for row in _iter_root_index_class_projection_rows(registry_doc):
+        if not isinstance(row, dict):
+            continue
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        projection_label = str(row.get("projection_label") or "").strip()
+        if order <= 0 or not projection_label:
+            continue
+        projections.append(
+            RootIndexClassProjection(
+                order=order,
+                projection_label=projection_label,
+                bound_corpus_classes=_as_str_tuple(row.get("bound_corpus_classes")),
+                required_markers=_as_str_tuple(row.get("required_markers")),
+            )
+        )
+    return tuple(projections)
 
 
 def root_corpus_entries_from_registry(registry_doc: Mapping[str, Any]) -> tuple[RootCorpusEntry, ...]:
@@ -189,6 +246,78 @@ def collect_protocol_root_top_level_entries(repo_root: Path, root_dir_rel: str) 
             continue
         entries.append(_norm_path(str(Path(root_dir_rel) / child.name)))
     return entries
+
+
+def readme_root_index_class_projection_surface(repo_root: Path) -> RootIndexClassProjectionSurface:
+    path = (repo_root / ROOT_PROTOCOL_README_REL_PATH).resolve()
+    if not path.exists() or not path.is_file():
+        return RootIndexClassProjectionSurface(
+            rel_path=ROOT_PROTOCOL_README_REL_PATH,
+            rows=(),
+            extraction_violations=("target_missing",),
+        )
+
+    lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    section_found = False
+    rows: list[RootIndexClassProjectionSurfaceRow] = []
+    current_order = 0
+    current_label = ""
+    current_body_lines: list[str] = []
+
+    def flush_current() -> None:
+        nonlocal current_order, current_label, current_body_lines
+        if current_order <= 0 or not current_label:
+            return
+        rows.append(
+            RootIndexClassProjectionSurfaceRow(
+                order=current_order,
+                projection_label=current_label,
+                body_lines=tuple(line for line in current_body_lines if line),
+            )
+        )
+        current_order = 0
+        current_label = ""
+        current_body_lines = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == ROOT_INDEX_CLASS_SECTION_MARKER:
+            section_found = True
+            continue
+        if not section_found:
+            continue
+        if HEADING_RE.match(stripped) or HORIZONTAL_RULE_RE.match(stripped):
+            break
+        match = ORDERED_BOLD_ITEM_RE.match(stripped)
+        if match:
+            flush_current()
+            current_order = int(match.group(1))
+            current_label = match.group(2).strip()
+            continue
+        if current_order <= 0:
+            continue
+        if stripped.startswith("- "):
+            current_body_lines.append(stripped[2:].strip())
+        elif stripped and line.startswith((" ", "\t")):
+            current_body_lines.append(stripped)
+        elif stripped:
+            flush_current()
+            break
+    flush_current()
+
+    violations: list[str] = []
+    if not section_found:
+        violations.append("section_marker_missing")
+    elif not rows:
+        violations.append("projection_rows_missing")
+    elif any(not row.body_lines for row in rows):
+        violations.append("projection_body_missing")
+
+    return RootIndexClassProjectionSurface(
+        rel_path=ROOT_PROTOCOL_README_REL_PATH,
+        rows=tuple(rows),
+        extraction_violations=tuple(violations),
+    )
 
 
 def _normalize_whitespace(text: str) -> str:
