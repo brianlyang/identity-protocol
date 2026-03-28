@@ -6,7 +6,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from tool_vendor_governance_common import ACTIVE_EXECUTION_POINTER_REL, candidate_upgrade_report_roots
+from tool_vendor_governance_common import (
+    ACTIVE_EXECUTION_POINTER_REL,
+    candidate_upgrade_report_roots,
+    resolve_pack_and_task,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -52,6 +56,20 @@ CANONICAL_STRICT_LIVE_PROJECTION_FIELDS: tuple[str, ...] = (
     "selected_report_age_seconds",
     "stale_reasons",
 )
+STRICT_LIVE_EVIDENCE_CONTRACT_KEYS: tuple[str, ...] = (
+    "capability_arbitration_contract",
+    "experience_feedback_contract",
+    "knowledge_acquisition_contract",
+    "trigger_regression_contract",
+)
+STRICT_LIVE_CANONICAL_STRING_FIELDS: tuple[str, ...] = (
+    "sample_report_path_pattern",
+    "live_report_path_pattern",
+    "positive_rulebook_path",
+    "negative_rulebook_path",
+    "feedback_log_path_pattern",
+)
+STRICT_LIVE_EXTERNAL_PATH_REJECTED_DIRNAME = "__strict_live_external_path_rejected__"
 
 
 def clean_string(value: Any) -> str:
@@ -138,6 +156,189 @@ def merge_strict_live_contract_defaults(
             projection_fields.append(token)
     merged[STRICT_LIVE_PROJECTION_FIELDS_FIELD] = projection_fields
     return merged
+
+
+def resolve_strict_live_pack_task(catalog_path: Path, identity_id: str) -> tuple[Path, Path]:
+    return resolve_pack_and_task(Path(catalog_path).expanduser().resolve(), identity_id)
+
+
+def _normalize_pack_scoped_contract_token(token: str, *, identity_id: str) -> str:
+    normalized = clean_string(token).replace("\\", "/")
+    if not normalized:
+        return ""
+    for prefix, replacement in (
+        (f"identity/runtime/local/{identity_id}/", "runtime/"),
+        ("identity/runtime/", "runtime/"),
+        (f"identity/packs/{identity_id}/", ""),
+        (f"identity/{identity_id}/", ""),
+    ):
+        if normalized.startswith(prefix):
+            tail = normalized[len(prefix) :].lstrip("/")
+            if tail:
+                return f"{replacement}{tail}" if replacement else tail
+            return replacement.rstrip("/") or "."
+    return normalized
+
+
+def canonicalize_pack_scoped_contract_path(
+    value: Any,
+    *,
+    pack_root: Path,
+    identity_id: str,
+) -> Any:
+    if not isinstance(value, str):
+        return value
+    normalized = _normalize_pack_scoped_contract_token(value, identity_id=identity_id)
+    if not normalized:
+        return ""
+    candidate = Path(normalized).expanduser()
+    if not candidate.is_absolute():
+        return normalized
+    resolved_pack_root = pack_root.expanduser().resolve()
+    resolved_candidate = candidate.resolve()
+    try:
+        rel = resolved_candidate.relative_to(resolved_pack_root).as_posix()
+        return rel or "."
+    except Exception:
+        return resolved_candidate.as_posix()
+
+
+def _strict_live_external_path_placeholder(pack_root: Path, raw_token: str) -> Path:
+    leaf = Path(clean_string(raw_token) or "external-path").name or "external-path"
+    return (pack_root.expanduser().resolve() / STRICT_LIVE_EXTERNAL_PATH_REJECTED_DIRNAME / leaf).resolve()
+
+
+def canonicalize_strict_live_contract_paths(
+    contract_doc: dict[str, Any],
+    *,
+    pack_root: Path,
+    identity_id: str,
+) -> dict[str, Any]:
+    merged = _clone_json(contract_doc if isinstance(contract_doc, dict) else {})
+    for field in STRICT_LIVE_CANONICAL_STRING_FIELDS:
+        if field in merged:
+            merged[field] = canonicalize_pack_scoped_contract_path(
+                merged.get(field),
+                pack_root=pack_root,
+                identity_id=identity_id,
+            )
+    safe_auto_patch_surface = merged.get("safe_auto_patch_surface")
+    if isinstance(safe_auto_patch_surface, dict):
+        allowlist = safe_auto_patch_surface.get("allowlist")
+        if isinstance(allowlist, list):
+            canonical_allowlist: list[str] = []
+            seen: set[str] = set()
+            for item in allowlist:
+                token = clean_string(
+                    canonicalize_pack_scoped_contract_path(
+                        item,
+                        pack_root=pack_root,
+                        identity_id=identity_id,
+                    )
+                )
+                if not token or token in seen:
+                    continue
+                seen.add(token)
+                canonical_allowlist.append(token)
+            safe_auto_patch_surface["allowlist"] = canonical_allowlist
+    return merged
+
+
+def canonicalize_task_strict_live_evidence_contracts(
+    task_doc: dict[str, Any],
+    *,
+    pack_root: Path,
+    identity_id: str,
+) -> dict[str, Any]:
+    merged = _clone_json(task_doc if isinstance(task_doc, dict) else {})
+    for contract_key in STRICT_LIVE_EVIDENCE_CONTRACT_KEYS:
+        node = merged.get(contract_key)
+        if isinstance(node, dict):
+            merged[contract_key] = canonicalize_strict_live_contract_paths(
+                node,
+                pack_root=pack_root,
+                identity_id=identity_id,
+            )
+    return merged
+
+
+def resolve_strict_live_contract_path(
+    raw_path: str,
+    *,
+    pack_root: Path,
+    identity_id: str,
+) -> Path:
+    token = clean_string(
+        canonicalize_pack_scoped_contract_path(
+            raw_path,
+            pack_root=pack_root,
+            identity_id=identity_id,
+        )
+    )
+    if not token:
+        return Path()
+    candidate = Path(token).expanduser()
+    if candidate.is_absolute():
+        return candidate.resolve() if _path_within(candidate, pack_root) else _strict_live_external_path_placeholder(pack_root, token)
+    return (pack_root.expanduser().resolve() / token).resolve()
+
+
+def resolve_strict_live_glob_paths(
+    pattern: str,
+    *,
+    pack_root: Path,
+    identity_id: str,
+) -> list[Path]:
+    token = clean_string(
+        canonicalize_pack_scoped_contract_path(
+            pattern,
+            pack_root=pack_root,
+            identity_id=identity_id,
+        )
+    )
+    if not token:
+        return []
+    candidate = Path(token).expanduser()
+    if candidate.is_absolute():
+        if not _path_within(candidate, pack_root):
+            return []
+        matched = sorted(candidate.parent.glob(candidate.name))
+    else:
+        matched = sorted(pack_root.expanduser().resolve().glob(token))
+    rows: list[Path] = []
+    for item in matched:
+        resolved = item.resolve()
+        if resolved.exists() and resolved not in rows:
+            rows.append(resolved)
+    return rows
+
+
+def apply_strict_live_required_gate(
+    payload: dict[str, Any],
+    *,
+    contract_doc: dict[str, Any],
+    status_field: str,
+    strict_live_error_code: str,
+) -> dict[str, Any]:
+    merged_payload = _clone_json(payload if isinstance(payload, dict) else {})
+    merged_contract = merge_strict_live_contract_defaults(contract_doc if isinstance(contract_doc, dict) else {})
+    semantic_status = clean_string(
+        merged_payload.get("semantic_contract_status") or merged_payload.get(status_field)
+    ).upper() or STATUS_FAIL_REQUIRED
+    strict_live_proof_status = clean_string(merged_payload.get("strict_live_proof_status")).upper() or STATUS_FAIL_REQUIRED
+    stale_reasons = [clean_string(item) for item in (merged_payload.get("stale_reasons") or []) if clean_string(item)]
+    if (
+        merged_contract.get(STRICT_LIVE_CURRENT_RUN_REQUIRED_FIELD) is True
+        and semantic_status == STATUS_PASS_REQUIRED
+        and strict_live_proof_status != STATUS_PASS_REQUIRED
+    ):
+        merged_payload[status_field] = STATUS_FAIL_REQUIRED
+        if not clean_string(merged_payload.get("error_code")):
+            merged_payload["error_code"] = clean_string(strict_live_error_code)
+        if "strict_live_current_run_required_but_unproven" not in stale_reasons:
+            stale_reasons.append("strict_live_current_run_required_but_unproven")
+    merged_payload["stale_reasons"] = sorted(set(stale_reasons))
+    return merged_payload
 
 
 def _load_json(path: Path) -> dict[str, Any] | None:
@@ -410,25 +611,11 @@ def _resolve_glob_candidates(pack_root: Path, pattern: str) -> list[Path]:
     if not raw:
         return []
     normalized = raw.replace("<identity-id>", pack_root.name)
-    candidates: list[str] = [normalized]
-    if normalized.startswith("identity/runtime/"):
-        candidates.insert(0, f"runtime/{normalized[len('identity/runtime/'):]}")
-    rows: list[Path] = []
-    for candidate_pattern in candidates:
-        p = Path(candidate_pattern).expanduser()
-        if p.is_absolute():
-            parent = p.parent if str(p.parent) != "." else p
-            matched = sorted(parent.glob(p.name))
-        else:
-            matched = sorted(pack_root.glob(candidate_pattern))
-        if matched:
-            for item in matched:
-                resolved = item.resolve()
-                if resolved.exists() and resolved not in rows:
-                    rows.append(resolved)
-            if rows:
-                return rows
-    return rows
+    return resolve_strict_live_glob_paths(
+        normalized,
+        pack_root=pack_root,
+        identity_id=pack_root.name,
+    )
 
 
 def _derive_live_report_path_pattern(contract_doc: dict[str, Any]) -> str:
@@ -469,7 +656,11 @@ def resolve_preferred_strict_live_report(
             "live_candidate_selected_path": "",
         }
 
-    merged_contract = merge_strict_live_contract_defaults(contract_doc)
+    merged_contract = canonicalize_strict_live_contract_paths(
+        merge_strict_live_contract_defaults(contract_doc),
+        pack_root=pack_root,
+        identity_id=pack_root.name,
+    )
     if merged_contract.get(STRICT_LIVE_PREFER_CURRENT_RUN_LIVE_REPORT_FIELD) is not True:
         return {
             "selected_report_path": fallback,
@@ -539,7 +730,11 @@ def derive_strict_live_evidence_projection(
     selected_report_path: Path | None,
     report_doc: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    merged_contract = merge_strict_live_contract_defaults(contract_doc)
+    merged_contract = canonicalize_strict_live_contract_paths(
+        merge_strict_live_contract_defaults(contract_doc),
+        pack_root=pack_root,
+        identity_id=pack_root.name,
+    )
     active_context = resolve_active_execution_context(pack_root)
     stale_reasons: list[str] = []
     if not active_context.get("pointer_path"):

@@ -156,7 +156,10 @@ from terminal_truth_cleanliness_common import (
     project_terminal_truth_fields,
     terminal_truth_cleanliness_contract_skeleton,
 )
-from strict_live_evidence_resolution_common import merge_strict_live_contract_defaults
+from strict_live_evidence_resolution_common import (
+    canonicalize_strict_live_contract_paths,
+    merge_strict_live_contract_defaults,
+)
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 from identity_codex_launcher_common import (
     IDENTITY_CODEX_LAUNCHER_CONTRACT_ID,
@@ -1723,13 +1726,22 @@ STRICT_LIVE_EVIDENCE_CONTRACT_KEYS: tuple[str, ...] = (
 )
 
 
-def _normalize_strict_live_evidence_contracts(task: dict[str, Any]) -> list[str]:
+def _normalize_strict_live_evidence_contracts(
+    task: dict[str, Any],
+    *,
+    pack_root: Path,
+    identity_id: str,
+) -> list[str]:
     restored_contract_keys: list[str] = []
     for key in STRICT_LIVE_EVIDENCE_CONTRACT_KEYS:
         node = task.get(key)
         if not isinstance(node, dict):
             continue
-        merged = merge_strict_live_contract_defaults(node)
+        merged = canonicalize_strict_live_contract_paths(
+            merge_strict_live_contract_defaults(node),
+            pack_root=pack_root,
+            identity_id=identity_id,
+        )
         if merged != node:
             task[key] = merged
             restored_contract_keys.append(key)
@@ -2681,7 +2693,11 @@ def main() -> int:
         restored_terminal_truth_cleanliness_contract_keys,
         restored_terminal_truth_cleanliness_validator_keys,
     ) = _normalize_terminal_truth_cleanliness_contracts(updated)
-    restored_strict_live_evidence_contract_keys = _normalize_strict_live_evidence_contracts(updated)
+    restored_strict_live_evidence_contract_keys = _normalize_strict_live_evidence_contracts(
+        updated,
+        pack_root=pack_path,
+        identity_id=args.identity_id,
+    )
     updated["response_stamp_profile"] = normalize_response_stamp_profile(updated.get("response_stamp_profile"))
     restored_skill_supply_chain_contract_keys = _normalize_skill_supply_chain_contracts(updated, args.identity_id)
     restored_capability_driver_validator_paths = _normalize_capability_driver_validators(updated)

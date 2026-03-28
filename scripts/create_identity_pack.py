@@ -180,7 +180,10 @@ from terminal_truth_cleanliness_common import (
 from prompt_live_driver_binding_common import (
     merge_prompt_live_driver_binding_contract_defaults as _merge_prompt_live_driver_binding_contract_defaults,
 )
-from strict_live_evidence_resolution_common import merge_strict_live_contract_defaults
+from strict_live_evidence_resolution_common import (
+    canonicalize_task_strict_live_evidence_contracts,
+    merge_strict_live_contract_defaults,
+)
 from response_stamp_common import default_response_stamp_profile, normalize_response_stamp_profile
 from native_chat_headstamp_common import (
     DEFAULT_NATIVE_CHAT_PROMPT_HARD_GUARD_TEMPLATE_REF,
@@ -7725,6 +7728,11 @@ def main() -> int:
     current_task = _ensure_identity_codex_launcher_contract(current_task, identity_id)
     current_task = _rewrite_identity_pack_root(current_task, identity_id, pack_dir)
     current_task = _rewrite_runtime_root(current_task, runtime_root)
+    current_task = canonicalize_task_strict_live_evidence_contracts(
+        current_task,
+        pack_root=pack_dir,
+        identity_id=identity_id,
+    )
     gateway_artifacts = materialize_protocol_host_gateway_artifacts(
         task=current_task,
         identity_id=identity_id,
