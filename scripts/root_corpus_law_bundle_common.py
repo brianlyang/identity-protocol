@@ -221,6 +221,10 @@ def component_validator_row_projection_contract_from_doc(bundle_doc: Mapping[str
     return _norm_str(bundle_doc.get("component_validator_row_projection_contract"))
 
 
+def component_probe_shadow_bootstrap_contract_from_doc(bundle_doc: Mapping[str, Any]) -> str:
+    return _norm_str(bundle_doc.get("component_probe_shadow_bootstrap_contract"))
+
+
 def component_validator_invocation_contract_from_doc(bundle_doc: Mapping[str, Any]) -> str:
     return _norm_str(bundle_doc.get("component_validator_invocation_contract"))
 

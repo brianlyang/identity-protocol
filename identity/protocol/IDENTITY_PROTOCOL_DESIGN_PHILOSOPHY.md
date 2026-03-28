@@ -540,6 +540,14 @@ The machine world must consume a bound component validator through structured
 machine output carrying the validator's disclosed status key rather than
 scraping human-readable logs, prose, or incidental shell text.
 
+Bundle component probe shadow-bootstrap contract must stay explicit too.
+
+The admitted probe shadow-bootstrap contract is
+`probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings`.
+
+The machine world must not suppress bootstrap/mirror probe law or reconstruct
+it from shell convention.
+
 Bundle component validator invocation contract must stay explicit too.
 
 The admitted invocation contract is `python3 <validator_script> --repo-root
@@ -903,10 +911,9 @@ Bundle component-validator observation-reason exclusion-origin policy
 must stay explicit too.
 
 The admitted excluded non-observation rows are component-validator
-missing, component-status-row coverage incomplete, and
-component-validator contract-surface reasons (root-doc-anchor and
-row-projection contract-family rows), all before bundle-violation
-projection.
+missing, component-status-row coverage incomplete, component-validator
+contract-surface reasons, and component-probe surface-contract
+reasons, all before bundle-violation projection.
 
 Observation reasons and prefixed observation-family ontology drift must
 not be silently re-bucketed as excluded non-observation rows.

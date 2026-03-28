@@ -40,6 +40,7 @@ from root_corpus_law_bundle_common import (
     component_validator_output_contract_from_doc,
     component_validator_root_doc_anchor_contract_from_doc,
     component_validator_row_projection_contract_from_doc,
+    component_probe_shadow_bootstrap_contract_from_doc,
     component_validator_invocation_contract_from_doc,
     component_validator_output_channel_contract_from_doc,
     component_validator_stderr_isolation_contract_from_doc,
@@ -228,7 +229,7 @@ COMPONENT_VALIDATOR_OBSERVATION_REASON_CLASSIFIER_PRECEDENCE_POLICY = (
     "parse_status_preempts_nonzero_rc_preempts_nonpass_status_preempts_explicit_non_execution_exclusion_preempts_prefixed_observation_family_ontology_drift_else_not_applicable"
 )
 COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_ORIGIN_POLICY = (
-    "component_validator_missing_or_component_status_row_coverage_incomplete_or_component_validator_contract_surface_reasons_only_before_bundle_violation_projection"
+    "component_validator_missing_or_component_status_row_coverage_incomplete_or_component_validator_contract_surface_or_component_probe_surface_contract_reasons_only_before_bundle_violation_projection"
 )
 COMPONENT_VALIDATOR_OBSERVATION_REASON_EXCLUSION_POLICY = (
     "non_execution_bundle_rows_remain_outside_observation_reason_ontology"
@@ -241,6 +242,9 @@ COMPONENT_VALIDATOR_OBSERVATION_REASON_PARTITION_POLICY = (
 )
 COMPONENT_VALIDATOR_OBSERVATION_REASON_UNCLASSIFIED_POLICY = "fail_closed"
 COMPONENT_VALIDATOR_OUTPUT_CONTRACT = "json_object_with_disclosed_status_key"
+COMPONENT_PROBE_SHADOW_BOOTSTRAP_CONTRACT = (
+    "probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings"
+)
 COMPONENT_VALIDATOR_OBSERVATION_EXCLUDED_REASONS = {
     "component_status_row_coverage_incomplete",
     "component_validator_missing",
@@ -251,6 +255,8 @@ COMPONENT_VALIDATOR_OBSERVATION_EXCLUDED_REASONS = {
     "component_validator_row_coverage_status_not_pass_required",
     "component_validator_row_identity_projection_status_missing",
     "component_validator_row_identity_projection_status_not_pass_required",
+    "component_probe_shadow_bootstrap_contract_missing",
+    "component_probe_shadow_bootstrap_contract_not_inherited",
 }
 
 EXPECTED_COMPONENTS = {
@@ -444,6 +450,11 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {'identity/protocol/IDENTITY_PROTOCOL_DESIGN_P
                                                               'machine world must consume a bound component validator through structured '
                                                               "machine output carrying the validator's disclosed status key rather than",
                                                               'scraping human-readable logs, prose, or incidental shell text.',
+                                                              'Bundle component probe shadow-bootstrap contract must stay explicit too.',
+                                                              'The admitted probe shadow-bootstrap contract is '
+                                                              '`probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings`.',
+                                                              'machine world must not suppress bootstrap/mirror probe law or reconstruct '
+                                                              'it from shell convention.',
                                                               'Bundle component validator invocation contract must stay explicit too.',
                                                               'The admitted invocation contract is `python3 <validator_script> --repo-root '
                                                               '<repo_root> --json-only`.',
@@ -654,9 +665,8 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {'identity/protocol/IDENTITY_PROTOCOL_DESIGN_P
                                                               'Bundle component-validator observation-reason exclusion-origin policy must '
                                                               'stay explicit too.',
                                                               'The admitted excluded non-observation rows are component-validator missing, '
-                                                              'component-status-row coverage incomplete, and component-validator '
-                                                              'contract-surface reasons (root-doc-anchor and row-projection contract-family '
-                                                              'rows), all before bundle-violation projection.',
+                                                              'component-status-row coverage incomplete, component-validator contract-surface reasons, and '
+                                                              'component-probe surface-contract reasons, all before bundle-violation projection.',
                                                               'Observation reasons and prefixed observation-family ontology drift must not '
                                                               'be silently re-bucketed as excluded non-observation rows.',
                                                               'Non-execution bundle rows must remain outside component-validator '
@@ -745,6 +755,10 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {'identity/protocol/IDENTITY_PROTOCOL_DESIGN_P
                                  'Bundle component validators must also remain machine-readable.',
                                  'Runtime consumes them through structured machine output carrying the disclosed status key, not by '
                                  'scraping prose, logs, or incidental terminal text.',
+                                 'Bundle component descriptors must also keep probe shadow-bootstrap contract explicit.',
+                                 'The admitted component probe shadow-bootstrap contract is '
+                                 '`probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings`.',
+                                 'Runtime may not suppress bootstrap/mirror probe law or reconstruct it from shell convention.',
                                  'Bundle component validators must also keep their invocation contract explicit.',
                                  'Bundle legality invokes them as `python3 <validator_script> --repo-root <repo_root> --json-only`.',
                                  'Runtime may not swap interpreter, omit repo-root binding, or omit compact machine-output mode.',
@@ -891,9 +905,8 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {'identity/protocol/IDENTITY_PROTOCOL_DESIGN_P
                                  'not-applicable.',
                                  'Bundle component-validator observation-reason exclusion-origin policy must also stay explicit.',
                                  'The admitted excluded runtime non-observation rows are component-validator missing, '
-                                 'component-status-row coverage incomplete, and component-validator contract-surface reasons '
-                                 '(root-doc-anchor and row-projection contract-family rows), all before bundle-violation '
-                                 'projection.',
+                                 'component-status-row coverage incomplete, component-validator contract-surface reasons, and '
+                                 'component-probe surface-contract reasons, all before bundle-violation projection.',
                                  'Runtime observation reasons and prefixed observation-family ontology drift must not be silently '
                                  're-bucketed as excluded non-observation rows.',
                                  'Non-execution bundle rows must remain outside component-validator observation ontology rather than being '
@@ -918,6 +931,9 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {'identity/protocol/IDENTITY_PROTOCOL_DESIGN_P
                                             'Strengthening one slice must not silently weaken or bypass another; any',
                                             'Root-law bundle rows must also remain descriptor-concordant with the active',
                                             "component family's own disclosed validator/probe/common/status-key/error-code surfaces.",
+                                            "Root-law bundle rows must also preserve each bound component family's disclosed probe "
+                                            'shadow-bootstrap contract; bundle metadata may not suppress bootstrap/mirror binding law '
+                                            'or demote it into shell convention.',
                                             'Local waiver of descriptor concordance must remain forbidden inside the bundle.',
                                             'Root-law bundle rows must also preserve descriptor-field mode; a repo-relative',
                                             'validator-emitted status-key/error-code fields may not be reinterpreted as ordinary path '
@@ -1118,9 +1134,8 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {'identity/protocol/IDENTITY_PROTOCOL_DESIGN_P
                                             'observation-family ontology drift, and otherwise classification remains not-applicable.',
                                             'Root-law bundle rows must also keep component-validator observation-reason exclusion-origin '
                                             'policy explicit; admitted excluded non-observation rows are component-validator missing, '
-                                            'component-status-row coverage incomplete, and component-validator contract-surface reasons '
-                                            '(root-doc-anchor and row-projection contract-family rows) before bundle-violation '
-                                            'projection.',
+                                            'component-status-row coverage incomplete, component-validator contract-surface reasons, '
+                                            'and component-probe surface-contract reasons before bundle-violation projection.',
                                             'Local bundle law must not silently re-bucket admitted observation reasons or prefixed '
                                             'observation-family ontology drift as excluded non-observation rows.',
                                             'Local bundle law must keep non-execution bundle rows outside component-validator observation '
@@ -1146,6 +1161,9 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {'identity/protocol/IDENTITY_PROTOCOL_DESIGN_P
                                            'Runtime must also reject a root-law bundle row whose '
                                            'validator/probe/common/status-key/error-code',
                                            'surfaces drift from the active component descriptor it claims to bind.',
+                                           'Runtime must also reject a root-law bundle row whose bound component suppresses or weakens '
+                                           'its disclosed probe shadow-bootstrap contract; bootstrap/mirror probe law may not be '
+                                           'reconstructed from shell convention.',
                                            'Runtime must also reject local waiver of descriptor concordance inside the bundle.',
                                            'Runtime must also reject a root-law bundle row whose descriptor-field mode',
                                            'error-code family.',
@@ -1349,9 +1367,8 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {'identity/protocol/IDENTITY_PROTOCOL_DESIGN_P
                                            'drift, and otherwise classification remains not-applicable.',
                                            'Runtime must also keep component-validator observation-reason exclusion-origin policy '
                                            'explicit; admitted excluded non-observation rows are component-validator missing, '
-                                           'component-status-row coverage incomplete, and component-validator contract-surface reasons '
-                                           '(root-doc-anchor and row-projection contract-family rows) before bundle-violation '
-                                           'projection.',
+                                           'component-status-row coverage incomplete, component-validator contract-surface reasons, and '
+                                           'component-probe surface-contract reasons before bundle-violation projection.',
                                            'Runtime must not silently re-bucket admitted observation reasons or prefixed '
                                            'observation-family ontology drift as excluded non-observation rows.',
                                            'Runtime must keep non-execution bundle rows outside component-validator observation ontology '
@@ -1748,6 +1765,20 @@ def _evaluate_component_validator_row_projection_contract(
     return violations
 
 
+def _evaluate_component_probe_shadow_bootstrap_contract(
+    active_doc: dict[str, Any],
+    contract: str,
+) -> tuple[str, str]:
+    actual_contract = str(active_doc.get("probe_shadow_bootstrap_contract") or "").strip()
+    if contract != COMPONENT_PROBE_SHADOW_BOOTSTRAP_CONTRACT:
+        return actual_contract, ""
+    if not actual_contract:
+        return actual_contract, "component_probe_shadow_bootstrap_contract_missing"
+    if actual_contract != contract:
+        return actual_contract, "component_probe_shadow_bootstrap_contract_not_inherited"
+    return actual_contract, ""
+
+
 def _resolve_component_validator_status(
     payload: dict[str, Any],
     status_key: str,
@@ -1986,6 +2017,9 @@ def main() -> int:
     component_validator_row_projection_contract = (
         component_validator_row_projection_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
+    component_probe_shadow_bootstrap_contract = (
+        component_probe_shadow_bootstrap_contract_from_doc(bundle_doc) if bundle_doc else ""
+    )
     component_validator_invocation_contract = (
         component_validator_invocation_contract_from_doc(bundle_doc) if bundle_doc else ""
     )
@@ -2187,6 +2221,11 @@ def main() -> int:
         component_validator_row_projection_contract
         if component_validator_row_projection_contract == COMPONENT_VALIDATOR_ROW_PROJECTION_CONTRACT
         else COMPONENT_VALIDATOR_ROW_PROJECTION_CONTRACT
+    )
+    effective_component_probe_shadow_bootstrap_contract = (
+        component_probe_shadow_bootstrap_contract
+        if component_probe_shadow_bootstrap_contract == COMPONENT_PROBE_SHADOW_BOOTSTRAP_CONTRACT
+        else COMPONENT_PROBE_SHADOW_BOOTSTRAP_CONTRACT
     )
     effective_component_validator_contract_drift_execution_policy = (
         component_validator_contract_drift_execution_policy
@@ -2706,6 +2745,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if component_validator_row_projection_contract != COMPONENT_VALIDATOR_ROW_PROJECTION_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_row_projection_contract_invalid")
+            error_code = ERR_REGISTRY
+        if component_probe_shadow_bootstrap_contract != COMPONENT_PROBE_SHADOW_BOOTSTRAP_CONTRACT:
+            stale_reasons.append("root_corpus_law_bundle_component_probe_shadow_bootstrap_contract_invalid")
             error_code = ERR_REGISTRY
         if component_validator_invocation_contract != COMPONENT_VALIDATOR_INVOCATION_CONTRACT:
             stale_reasons.append("root_corpus_law_bundle_component_validator_invocation_contract_invalid")
@@ -3307,6 +3349,9 @@ def main() -> int:
                     )
 
             current_path = (repo_root / row.current_file).resolve()
+            active_path = Path()
+            alias_error = ""
+            active_doc: dict[str, Any] = {}
             if not current_path.exists():
                 bundle_violations.append({"component_id": row.component_id, "reason": "component_current_file_missing"})
             else:
@@ -3345,6 +3390,15 @@ def main() -> int:
                                 "reason": "component_active_file_not_admitted_by_inherited_registry_child_set",
                                 "active_rel_path": active_rel_path,
                                 "source_registry_directory_rel_path": source_registry_directory_rel_path,
+                            }
+                        )
+                    active_doc = load_mapping_descriptor(active_path)
+                    if not active_doc:
+                        bundle_violations.append(
+                            {
+                                "component_id": row.component_id,
+                                "reason": "component_active_descriptor_invalid",
+                                "active_path": str(active_path),
                             }
                         )
 
@@ -3441,6 +3495,13 @@ def main() -> int:
                 payload,
                 effective_component_validator_row_projection_contract,
             )
+            (
+                component_active_probe_shadow_bootstrap_contract,
+                probe_shadow_bootstrap_contract_violation,
+            ) = _evaluate_component_probe_shadow_bootstrap_contract(
+                active_doc,
+                effective_component_probe_shadow_bootstrap_contract,
+            )
             descriptor_field_rows: list[dict[str, str]] = []
             component_status_rows.append(
                 {
@@ -3456,6 +3517,14 @@ def main() -> int:
                     "validator_output_contract": effective_component_validator_output_contract,
                     "validator_root_doc_anchor_contract": effective_component_validator_root_doc_anchor_contract,
                     "validator_row_projection_contract": effective_component_validator_row_projection_contract,
+                    "probe_shadow_bootstrap_contract": effective_component_probe_shadow_bootstrap_contract,
+                    "active_probe_shadow_bootstrap_contract": component_active_probe_shadow_bootstrap_contract,
+                    "probe_shadow_bootstrap_contract_status": (
+                        STATUS_PASS_REQUIRED
+                        if component_active_probe_shadow_bootstrap_contract
+                        == effective_component_probe_shadow_bootstrap_contract
+                        else STATUS_FAIL_REQUIRED
+                    ),
                     "validator_invocation_contract": effective_component_validator_invocation_contract,
                     "validator_output_channel_contract": effective_component_validator_output_channel_contract,
                     "validator_stderr_isolation_contract": effective_component_validator_stderr_isolation_contract,
@@ -3514,6 +3583,19 @@ def main() -> int:
                         {
                             "component_id": row.component_id,
                             "reason": projection_violation,
+                        }
+                    )
+                if probe_shadow_bootstrap_contract_violation and active_doc:
+                    bundle_violations.append(
+                        {
+                            "component_id": row.component_id,
+                            "reason": probe_shadow_bootstrap_contract_violation,
+                            "expected_probe_shadow_bootstrap_contract": (
+                                effective_component_probe_shadow_bootstrap_contract
+                            ),
+                            "actual_probe_shadow_bootstrap_contract": (
+                                component_active_probe_shadow_bootstrap_contract
+                            ),
                         }
                     )
             if run_error:
@@ -3594,18 +3676,8 @@ def main() -> int:
                     )
 
             if descriptor_concordance_required and current_path.exists():
-                active_path, _active_file, alias_error = resolve_current_yaml_alias(repo_root, row.current_file)
                 if not alias_error and active_path.exists():
-                    active_doc = load_mapping_descriptor(active_path)
-                    if not active_doc:
-                        bundle_violations.append(
-                            {
-                                "component_id": row.component_id,
-                                "reason": "component_active_descriptor_invalid",
-                                "active_path": str(active_path),
-                            }
-                        )
-                    else:
+                    if active_doc:
                         for descriptor_field in required_component_descriptor_fields:
                             bundle_value = _descriptor_value(getattr(row, descriptor_field))
                             active_value = _descriptor_value(active_doc.get(descriptor_field))
@@ -4013,6 +4085,7 @@ def main() -> int:
         "component_validator_output_contract": component_validator_output_contract,
         "component_validator_root_doc_anchor_contract": component_validator_root_doc_anchor_contract,
         "component_validator_row_projection_contract": component_validator_row_projection_contract,
+        "component_probe_shadow_bootstrap_contract": component_probe_shadow_bootstrap_contract,
         "component_validator_invocation_contract": component_validator_invocation_contract,
         "component_validator_output_channel_contract": component_validator_output_channel_contract,
         "component_validator_stderr_isolation_contract": component_validator_stderr_isolation_contract,

@@ -896,6 +896,15 @@ Bundle component validators must also remain machine-readable.
 Runtime consumes them through structured machine output carrying the disclosed
 status key, not by scraping prose, logs, or incidental terminal text.
 
+Bundle component descriptors must also keep probe shadow-bootstrap contract
+explicit.
+
+The admitted component probe shadow-bootstrap contract is
+`probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings`.
+
+Runtime may not suppress bootstrap/mirror probe law or reconstruct it from
+shell convention.
+
 Bundle component validators must also keep their invocation contract explicit.
 
 Bundle legality invokes them as `python3 <validator_script> --repo-root
@@ -1255,8 +1264,8 @@ must also stay explicit.
 
 The admitted excluded runtime non-observation rows are
 component-validator missing, component-status-row coverage
-incomplete, and component-validator contract-surface reasons
-(root-doc-anchor and row-projection contract-family rows), all before
+incomplete, component-validator contract-surface reasons, and
+component-probe surface-contract reasons, all before
 bundle-violation projection.
 
 Runtime observation reasons and prefixed observation-family ontology

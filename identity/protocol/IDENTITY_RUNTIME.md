@@ -349,6 +349,10 @@ Runtime must not select the most convenient slice in isolation.
 Runtime must also reject a root-law bundle row whose validator/probe/common/status-key/error-code
 surfaces drift from the active component descriptor it claims to bind.
 
+Runtime must also reject a root-law bundle row whose bound component suppresses
+or weakens its disclosed probe shadow-bootstrap contract; bootstrap/mirror
+probe law may not be reconstructed from shell convention.
+
 Runtime must also reject local waiver of descriptor concordance inside the
 bundle.
 
@@ -760,9 +764,9 @@ not-applicable.
 Runtime must also keep component-validator observation-reason
 exclusion-origin policy explicit; admitted excluded non-observation
 rows are component-validator missing, component-status-row coverage
-incomplete, and component-validator contract-surface reasons
-(root-doc-anchor and row-projection contract-family rows) before
-bundle-violation projection.
+incomplete, component-validator contract-surface reasons, and
+component-probe surface-contract reasons before bundle-violation
+projection.
 
 Runtime must not silently re-bucket admitted observation reasons or
 prefixed observation-family ontology drift as excluded non-observation

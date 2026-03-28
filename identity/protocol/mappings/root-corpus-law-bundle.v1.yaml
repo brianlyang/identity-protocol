@@ -53,6 +53,7 @@ component_validator_returncode_observation_contract: nonzero_returncode_observed
 component_validator_output_contract: json_object_with_disclosed_status_key
 component_validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
 component_validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+component_probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
 component_validator_invocation_contract: python3_repo_root_json_only
 component_validator_output_channel_contract: stdout_only
 component_validator_stderr_isolation_contract: stderr_captured_separate_from_stdout
@@ -94,7 +95,7 @@ component_validator_observation_reason_nonpass_status_origin_policy: component_s
 component_validator_observation_reason_prefixed_ontology_drift_origin_policy: validator_output_validator_status_component_status_component_validator_prefixed_rows_only_after_admitted_parse_status_nonzero_rc_nonpass_status_and_exclusion_origin_resolution_before_not_applicable
 component_validator_observation_reason_residual_not_applicable_policy: only_nonprefixed_nonadmitted_nonexcluded_rows_after_parse_status_nonzero_rc_nonpass_status_exclusion_origin_and_prefixed_ontology_drift_resolution_remain_not_applicable
 component_validator_observation_reason_classifier_precedence_policy: parse_status_preempts_nonzero_rc_preempts_nonpass_status_preempts_explicit_non_execution_exclusion_preempts_prefixed_observation_family_ontology_drift_else_not_applicable
-component_validator_observation_reason_exclusion_origin_policy: component_validator_missing_or_component_status_row_coverage_incomplete_or_component_validator_contract_surface_reasons_only_before_bundle_violation_projection
+component_validator_observation_reason_exclusion_origin_policy: component_validator_missing_or_component_status_row_coverage_incomplete_or_component_validator_contract_surface_or_component_probe_surface_contract_reasons_only_before_bundle_violation_projection
 component_validator_observation_reason_exclusion_policy: non_execution_bundle_rows_remain_outside_observation_reason_ontology
 component_validator_observation_reason_source_policy: bundle_violation_rows_only_before_violation_projection
 component_validator_observation_reason_partition_policy: bundle_violation_rows_partitioned_into_admitted_excluded_or_unknown_exactly_once_before_violation_projection
@@ -203,6 +204,11 @@ bundle_anchor_checks:
   - machine world must consume a bound component validator through structured
     machine output carrying the validator's disclosed status key rather than
   - scraping human-readable logs, prose, or incidental shell text.
+  - Bundle component probe shadow-bootstrap contract must stay explicit too.
+  - The admitted probe shadow-bootstrap contract is
+    `probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings`.
+  - machine world must not suppress bootstrap/mirror probe law or reconstruct
+    it from shell convention.
   - Bundle component validator invocation contract must stay explicit too.
   - The admitted invocation contract is `python3 <validator_script> --repo-root
     <repo_root> --json-only`.
@@ -410,10 +416,9 @@ bundle_anchor_checks:
   - Bundle component-validator observation-reason exclusion-origin policy
     must stay explicit too.
   - The admitted excluded non-observation rows are component-validator
-    missing, component-status-row coverage incomplete, and
-    component-validator contract-surface reasons (root-doc-anchor and
-    row-projection contract-family rows), all before bundle-violation
-    projection.
+    missing, component-status-row coverage incomplete, component-validator
+    contract-surface reasons, and component-probe surface-contract reasons,
+    all before bundle-violation projection.
   - Observation reasons and prefixed observation-family ontology drift
     must not be silently re-bucketed as excluded non-observation rows.
   - Non-execution bundle rows must remain outside component-validator
@@ -524,6 +529,12 @@ bundle_anchor_checks:
   - Bundle component validators must also remain machine-readable.
   - Runtime consumes them through structured machine output carrying the disclosed
     status key, not by scraping prose, logs, or incidental terminal text.
+  - Bundle component descriptors must also keep probe shadow-bootstrap contract
+    explicit.
+  - The admitted component probe shadow-bootstrap contract is
+    `probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings`.
+  - Runtime may not suppress bootstrap/mirror probe law or reconstruct it from
+    shell convention.
   - Bundle component validators must also keep their invocation contract explicit.
   - Bundle legality invokes them as `python3 <validator_script> --repo-root
     <repo_root> --json-only`.
@@ -726,9 +737,9 @@ bundle_anchor_checks:
     must also stay explicit.
   - The admitted excluded runtime non-observation rows are
     component-validator missing, component-status-row coverage
-    incomplete, and component-validator contract-surface reasons
-    (root-doc-anchor and row-projection contract-family rows), all
-    before bundle-violation projection.
+    incomplete, component-validator contract-surface reasons, and
+    component-probe surface-contract reasons, all before
+    bundle-violation projection.
   - Runtime observation reasons and prefixed observation-family ontology
     drift must not be silently re-bucketed as excluded non-observation
     rows.
@@ -764,6 +775,9 @@ bundle_anchor_checks:
   - Root-law bundle rows must also remain descriptor-concordant with the active
   - component family's own disclosed validator/probe/common/status-key/error-code
     surfaces.
+  - Root-law bundle rows must also preserve each bound component family's
+    disclosed probe shadow-bootstrap contract; bundle metadata may not suppress
+    bootstrap/mirror binding law or demote it into shell convention.
   - Local waiver of descriptor concordance must remain forbidden inside the
     bundle.
   - Root-law bundle rows must also preserve descriptor-field mode; a repo-relative
@@ -1007,9 +1021,9 @@ bundle_anchor_checks:
   - Root-law bundle rows must also keep component-validator observation-reason
     exclusion-origin policy explicit; admitted excluded non-observation rows
     are component-validator missing, component-status-row coverage
-    incomplete, and component-validator contract-surface reasons
-    (root-doc-anchor and row-projection contract-family rows) before
-    bundle-violation projection.
+    incomplete, component-validator contract-surface reasons, and
+    component-probe surface-contract reasons before bundle-violation
+    projection.
   - Local bundle law must not silently re-bucket admitted observation
     reasons or prefixed observation-family ontology drift as excluded
     non-observation rows.
@@ -1040,6 +1054,9 @@ bundle_anchor_checks:
   - Runtime must not select the most convenient slice in isolation.
   - Runtime must also reject a root-law bundle row whose validator/probe/common/status-key/error-code
   - surfaces drift from the active component descriptor it claims to bind.
+  - Runtime must also reject a root-law bundle row whose bound component
+    suppresses or weakens its disclosed probe shadow-bootstrap contract;
+    bootstrap/mirror probe law may not be reconstructed from shell convention.
   - Runtime must also reject local waiver of descriptor concordance inside the
     bundle.
   - Runtime must also reject a root-law bundle row whose descriptor-field mode
@@ -1285,9 +1302,9 @@ bundle_anchor_checks:
   - Runtime must also keep component-validator observation-reason
     exclusion-origin policy explicit; admitted excluded non-observation
     rows are component-validator missing, component-status-row coverage
-    incomplete, and component-validator contract-surface reasons
-    (root-doc-anchor and row-projection contract-family rows) before
-    bundle-violation projection.
+    incomplete, component-validator contract-surface reasons, and
+    component-probe surface-contract reasons before bundle-violation
+    projection.
   - Runtime must not silently re-bucket admitted observation reasons or
     prefixed observation-family ontology drift as excluded non-observation
     rows.

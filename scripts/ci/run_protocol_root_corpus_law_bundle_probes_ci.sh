@@ -100,6 +100,7 @@ assert payload["component_validator_returncode_observation_contract"] == "nonzer
 assert payload["component_validator_output_contract"] == "json_object_with_disclosed_status_key", payload
 assert payload["component_validator_root_doc_anchor_contract"] == "root_doc_anchor_status_pass_required_with_positive_anchor_check_count", payload
 assert payload["component_validator_row_projection_contract"] == "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses", payload
+assert payload["component_probe_shadow_bootstrap_contract"] == "probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings", payload
 assert payload["component_validator_invocation_contract"] == "python3_repo_root_json_only", payload
 assert payload["component_validator_output_channel_contract"] == "stdout_only", payload
 assert payload["component_validator_stderr_isolation_contract"] == "stderr_captured_separate_from_stdout", payload
@@ -141,7 +142,7 @@ assert payload["component_validator_observation_reason_nonpass_status_origin_pol
 assert payload["component_validator_observation_reason_prefixed_ontology_drift_origin_policy"] == "validator_output_validator_status_component_status_component_validator_prefixed_rows_only_after_admitted_parse_status_nonzero_rc_nonpass_status_and_exclusion_origin_resolution_before_not_applicable", payload
 assert payload["component_validator_observation_reason_residual_not_applicable_policy"] == "only_nonprefixed_nonadmitted_nonexcluded_rows_after_parse_status_nonzero_rc_nonpass_status_exclusion_origin_and_prefixed_ontology_drift_resolution_remain_not_applicable", payload
 assert payload["component_validator_observation_reason_classifier_precedence_policy"] == "parse_status_preempts_nonzero_rc_preempts_nonpass_status_preempts_explicit_non_execution_exclusion_preempts_prefixed_observation_family_ontology_drift_else_not_applicable", payload
-assert payload["component_validator_observation_reason_exclusion_origin_policy"] == "component_validator_missing_or_component_status_row_coverage_incomplete_or_component_validator_contract_surface_reasons_only_before_bundle_violation_projection", payload
+assert payload["component_validator_observation_reason_exclusion_origin_policy"] == "component_validator_missing_or_component_status_row_coverage_incomplete_or_component_validator_contract_surface_or_component_probe_surface_contract_reasons_only_before_bundle_violation_projection", payload
 assert payload["component_validator_observation_reason_exclusion_policy"] == "non_execution_bundle_rows_remain_outside_observation_reason_ontology", payload
 assert payload["component_validator_observation_reason_source_policy"] == "bundle_violation_rows_only_before_violation_projection", payload
 assert payload["component_validator_observation_reason_partition_policy"] == "bundle_violation_rows_partitioned_into_admitted_excluded_or_unknown_exactly_once_before_violation_projection", payload
@@ -251,6 +252,18 @@ assert all(row["row_coverage_status_keys"] for row in payload["component_status_
 assert all(row["row_identity_projection_status_keys"] for row in payload["component_status_rows"]), payload
 assert all(row["validator_root_doc_anchor_contract"] == "root_doc_anchor_status_pass_required_with_positive_anchor_check_count" for row in payload["component_status_rows"]), payload
 assert all(row["validator_row_projection_contract"] == "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses" for row in payload["component_status_rows"]), payload
+assert all(
+    row["probe_shadow_bootstrap_contract"] == "probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    row["active_probe_shadow_bootstrap_contract"] == "probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings"
+    for row in payload["component_status_rows"]
+), payload
+assert all(
+    row["probe_shadow_bootstrap_contract_status"] == "PASS_REQUIRED"
+    for row in payload["component_status_rows"]
+), payload
 assert all(
     row["validator_status_requirement"] == "PASS_REQUIRED"
     for row in payload["component_status_rows"]
@@ -4103,6 +4116,51 @@ assert any(
     and row.get("descriptor_field") == "status_key"
     for row in payload["bundle_violations"]
 ), payload
+PY
+
+COMPONENT_PROBE_SURFACE_REPO="${TMP_ROOT}/component-probe-surface-contract-repo"
+mirror_repo "${COMPONENT_PROBE_SURFACE_REPO}"
+python3 - <<'PY' "${COMPONENT_PROBE_SURFACE_REPO}/identity/protocol/mappings/root-corpus-ordering.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["probe_shadow_bootstrap_contract"] = "advisory_only"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPONENT_PROBE_SURFACE_JSON="${TMP_ROOT}/component-probe-surface-contract.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_law_bundle.py" \
+  --repo-root "${COMPONENT_PROBE_SURFACE_REPO}" \
+  --json-only >"${COMPONENT_PROBE_SURFACE_JSON}"; then
+  echo "[FAIL] root-corpus law bundle validator unexpectedly passed component probe shadow-bootstrap contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPONENT_PROBE_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_law_bundle_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCLB-003", payload
+assert payload["derived_failure_class"] == "bundle", payload
+assert any(
+    row["component_id"] == "root_corpus_ordering"
+    and row["reason"] == "component_probe_shadow_bootstrap_contract_not_inherited"
+    and row.get("actual_probe_shadow_bootstrap_contract") == "advisory_only"
+    for row in payload["bundle_violations"]
+), payload
+assert any(
+    row["component_id"] == "root_corpus_ordering"
+    and row["probe_shadow_bootstrap_contract_status"] == "FAIL_REQUIRED"
+    and row["active_probe_shadow_bootstrap_contract"] == "advisory_only"
+    for row in payload["component_status_rows"]
+), payload
+assert "bundle_violation:root_corpus_ordering:component_probe_shadow_bootstrap_contract_not_inherited" in payload["stale_reasons"], payload
 PY
 
 COMPONENT_REPO="${TMP_ROOT}/component-drift-repo"
