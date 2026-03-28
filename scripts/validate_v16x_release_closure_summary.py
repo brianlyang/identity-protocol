@@ -37,6 +37,9 @@ from release_closure_narrative_marker_common import (
 from release_closure_governance_probe_projection_common import (
     collect_release_closure_governance_probe_projection_stale_reasons,
 )
+from release_closure_repo_global_projection_common import (
+    collect_release_closure_repo_global_projection_stale_reasons,
+)
 from release_closure_root_grounding_common import (
     RELEASE_CLOSURE_ROOT_GROUNDING_SURFACE_CONSTRAINTS,
 )
@@ -233,6 +236,12 @@ def main() -> int:
     )
     stale_reasons.extend(
         collect_release_closure_governance_probe_projection_stale_reasons(
+            summary_text,
+            label="summary_doc",
+        )
+    )
+    stale_reasons.extend(
+        collect_release_closure_repo_global_projection_stale_reasons(
             summary_text,
             label="summary_doc",
         )

@@ -136,7 +136,11 @@ text = text.replace("repair success != clean terminal truth", "repair success me
 text = text.replace("summary_terminal_truth_boundary", "summary boundary aggregate")
 text = text.replace("one_look.health_report_experience_writeback_projection_status", "one_look.health_projection_status")
 text = text.replace(repo_global_dynamic_one_look_marker, "one_look.repo_global_drift_marker")
-text = text.replace(repo_global_projection_marker, "repo_global_projection=one_look.executable_surface_runtime_literal_lock_status|one_look.repo_global_drift_marker")
+text = text.replace(
+    repo_global_projection_marker,
+    "repo_global_closure_projection=one_look.executable_surface_runtime_literal_lock_status|one_look.repo_global_drift_marker",
+    1,
+)
 text = text.replace(repo_global_checked_count_marker, "one_look.repo_global_checked_identity_count")
 text = text.replace(repo_global_topology_probe_marker, "scripts/ci/run_repo_global_closure_topology_probes_ci.sh")
 text = text.replace("one_look.required_gate_bundle_report_selection_mode", "one_look.required_gate_bundle_selection_mode")
@@ -229,9 +233,10 @@ if "summary_doc_missing_release_readiness_health_projection_marker:one_look.heal
 expected_repo_global_one_look_reason = f"summary_doc_missing_outer_surface_e2e_marker:{sys.argv[3]}"
 if expected_repo_global_one_look_reason not in reasons:
     raise SystemExit("negative release-closure summary must detect shared repo-global one-look projection drift")
-expected_repo_global_projection_reason = f"summary_doc_missing_outer_surface_e2e_marker:{sys.argv[4]}"
-if expected_repo_global_projection_reason not in reasons:
-    raise SystemExit("negative release-closure summary must detect repo-global closure projection literal drift")
+if "summary_doc_repo_global_closure_projection_line_not_canonical" not in reasons:
+    raise SystemExit(
+        "negative release-closure summary must detect repo-global closure projection line drift"
+    )
 expected_repo_global_checked_count_reason = f"summary_doc_missing_outer_surface_e2e_marker:{sys.argv[5]}"
 if expected_repo_global_checked_count_reason not in reasons:
     raise SystemExit("negative release-closure summary must detect repo-global proof-strength companion drift")
