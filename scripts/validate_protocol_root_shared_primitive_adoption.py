@@ -25,7 +25,7 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Validate root validators remain bound to shared batch/projection primitives."
+            "Validate root validator/probe surfaces remain bound to shared primitives."
         )
     )
     parser.add_argument("--repo-root", default="")
@@ -44,16 +44,28 @@ def main() -> int:
 
     if int(payload.get("root_validator_count", 0) or 0) <= 0:
         payload["stale_reasons"].append("root_validator_files_missing")
+    if int(payload.get("root_probe_count", 0) or 0) <= 0:
+        payload["stale_reasons"].append("root_probe_files_missing")
     for row in payload.get("scan_errors") or []:
         rel_path = str(row.get("rel_path") or "").strip()
         reason = str(row.get("reason") or "").strip() or "unknown"
         payload["stale_reasons"].append(f"scan_error:{rel_path}:{reason}")
+    for row in payload.get("root_probe_scan_errors") or []:
+        rel_path = str(row.get("rel_path") or "").strip()
+        reason = str(row.get("reason") or "").strip() or "unknown"
+        payload["stale_reasons"].append(f"root_probe_scan_error:{rel_path}:{reason}")
     for row in payload.get("primitive_binding_violations") or []:
         rel_path = str(row.get("rel_path") or "").strip()
         primitive_name = str(row.get("primitive_name") or "").strip()
         reason = str(row.get("reason") or "").strip() or "unknown"
         payload["stale_reasons"].append(
             f"primitive_binding_violation:{rel_path}:{primitive_name}:{reason}"
+        )
+    for row in payload.get("root_probe_shadow_violation_rows") or []:
+        rel_path = str(row.get("rel_path") or "").strip()
+        reason = str(row.get("reason") or "").strip() or "unknown"
+        payload["stale_reasons"].append(
+            f"root_probe_shadow_violation:{rel_path}:{reason}"
         )
     if int(payload.get("row_family_projection_assignment_violation_count", 0) or 0) > 0:
         violation_rows = payload.get("row_family_projection_assignment_violation_rows")
@@ -76,6 +88,7 @@ def main() -> int:
         payload["error_code"] = (
             ERR_BINDING
             if payload.get("primitive_binding_violations")
+            or payload.get("root_probe_shadow_violation_rows")
             or int(payload.get("row_family_projection_assignment_violation_count", 0) or 0)
             > 0
             else ERR_SCAN

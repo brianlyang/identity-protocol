@@ -2,12 +2,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/protocol-root-gateway-admissibility-ci.XXXXXX")"
-trap 'rm -rf "${TMP_ROOT}"' EXIT
 
-# shellcheck source=./probe_repo_mirror_common.sh
-source "${SCRIPT_DIR}/probe_repo_mirror_common.sh"
+# shellcheck source=./protocol_root_probe_shadow_common.sh
+source "${SCRIPT_DIR}/protocol_root_probe_shadow_common.sh"
+protocol_root_probe_bootstrap "${SCRIPT_DIR}" "protocol-root-gateway-admissibility-ci"
 
 PROBE_REL_PATHS=(
   "scripts/root_corpus_governance_common.py"
@@ -23,10 +21,7 @@ PROBE_REL_PATHS=(
   "scripts/ci/run_protocol_root_corpus_gateway_admissibility_probes_ci.sh"
 )
 
-mirror_repo() {
-  local dst="$1"
-  probe_mirror_repo_with_relpaths "${ROOT}" "${dst}" "${PROBE_REL_PATHS[@]}"
-}
+protocol_root_probe_define_relpath_mirror "${PROBE_REL_PATHS[@]}"
 
 
 PASS_JSON="${TMP_ROOT}/pass.json"

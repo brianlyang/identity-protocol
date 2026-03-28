@@ -2,27 +2,26 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/protocol-root-shared-primitive-adoption-ci.XXXXXX")"
-trap 'rm -rf "${TMP_ROOT}"' EXIT
 
-# shellcheck source=./probe_repo_mirror_common.sh
-source "${SCRIPT_DIR}/probe_repo_mirror_common.sh"
+# shellcheck source=./protocol_root_probe_shadow_common.sh
+source "${SCRIPT_DIR}/protocol_root_probe_shadow_common.sh"
+protocol_root_probe_bootstrap "${SCRIPT_DIR}" "protocol-root-shared-primitive-adoption-ci"
 
 PROBE_REL_PATHS=(
   "scripts/repo_root_resolution_common.py"
   "scripts/root_shared_primitive_adoption_common.py"
   "scripts/validate_protocol_root_shared_primitive_adoption.py"
+  "scripts/ci/protocol_root_probe_shadow_common.sh"
   "scripts/ci/run_protocol_root_shared_primitive_adoption_probes_ci.sh"
 )
 while IFS= read -r rel_path; do
   PROBE_REL_PATHS+=("${rel_path}")
 done < <(cd "${ROOT}" && printf '%s\n' scripts/validate_protocol_root_*.py)
+while IFS= read -r rel_path; do
+  PROBE_REL_PATHS+=("${rel_path}")
+done < <(cd "${ROOT}" && printf '%s\n' scripts/ci/run_protocol_root_*_probes_ci.sh)
 
-mirror_repo() {
-  local dst="$1"
-  probe_mirror_repo_with_relpaths "${ROOT}" "${dst}" "${PROBE_REL_PATHS[@]}"
-}
+protocol_root_probe_define_relpath_mirror "${PROBE_REL_PATHS[@]}"
 
 PASS_JSON="${TMP_ROOT}/pass.json"
 python3 "${ROOT}/scripts/validate_protocol_root_shared_primitive_adoption.py" \
@@ -41,6 +40,10 @@ assert payload["primitive_violation_count"] == 0, payload
 assert payload["scan_error_count"] == 0, payload
 assert payload["primitive_adoption_row_count"] > 0, payload
 assert payload["row_family_projection_assignment_violation_count"] == 0, payload
+assert payload["root_probe_count"] > 0, payload
+assert payload["root_probe_shadow_adoption_row_count"] == payload["root_probe_count"], payload
+assert payload["root_probe_shadow_violation_count"] == 0, payload
+assert payload["root_probe_scan_error_count"] == 0, payload
 PY
 
 PROJECTION_DRIFT_REPO="${TMP_ROOT}/projection-drift-repo"
@@ -208,6 +211,49 @@ assert any(
     and row["assignment_mode"] == "initializer_empty_list"
     and row["violation"] is True
     for row in payload["row_family_projection_assignment_rows"]
+), payload
+PY
+
+PROBE_SHADOW_DRIFT_REPO="${TMP_ROOT}/probe-shadow-drift-repo"
+mirror_repo "${PROBE_SHADOW_DRIFT_REPO}"
+python3 - <<'PY' "${PROBE_SHADOW_DRIFT_REPO}/scripts/ci/run_protocol_root_identity_discovery_probes_ci.sh"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = '# shellcheck source=./protocol_root_probe_shadow_common.sh\nsource "${SCRIPT_DIR}/protocol_root_probe_shadow_common.sh"\nprotocol_root_probe_bootstrap "${SCRIPT_DIR}" "protocol-root-identity-discovery-ci"\nprotocol_root_probe_define_full_mirror\n'
+new = '# shellcheck source=./probe_repo_mirror_common.sh\nsource "${SCRIPT_DIR}/probe_repo_mirror_common.sh"\nROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"\nTMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/protocol-root-identity-discovery-ci.XXXXXX")"\ntrap \'rm -rf "${TMP_ROOT}"\' EXIT\n\nmirror_repo() {\n  local dst="$1"\n  probe_mirror_repo "${ROOT}" "${dst}"\n}\n'
+assert old in text, text[:5000]
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+PROBE_SHADOW_DRIFT_JSON="${TMP_ROOT}/probe-shadow-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_shared_primitive_adoption.py" \
+  --repo-root "${PROBE_SHADOW_DRIFT_REPO}" \
+  --json-only >"${PROBE_SHADOW_DRIFT_JSON}"; then
+  echo "[FAIL] root shared-primitive adoption validator unexpectedly passed probe shadow bootstrap regression drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${PROBE_SHADOW_DRIFT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_shared_primitive_adoption_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RSPA-002", payload
+assert payload["root_probe_shadow_violation_count"] >= 1, payload
+assert any(
+    row["rel_path"] == "scripts/ci/run_protocol_root_identity_discovery_probes_ci.sh"
+    and row["reason"] == "forbidden_direct_probe_repo_mirror_source"
+    for row in payload["root_probe_shadow_violation_rows"]
+), payload
+assert any(
+    row["rel_path"] == "scripts/ci/run_protocol_root_identity_discovery_probes_ci.sh"
+    and row["reason"] == "forbidden_manual_mirror_repo_definition"
+    for row in payload["root_probe_shadow_violation_rows"]
 ), payload
 PY
 

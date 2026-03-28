@@ -2,17 +2,11 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/protocol-root-machine-world-ontology-ci.XXXXXX")"
-trap 'rm -rf "${TMP_ROOT}"' EXIT
 
-# shellcheck source=./probe_repo_mirror_common.sh
-source "${SCRIPT_DIR}/probe_repo_mirror_common.sh"
-
-mirror_repo() {
-  local dst="$1"
-  probe_mirror_repo "${ROOT}" "${dst}"
-}
+# shellcheck source=./protocol_root_probe_shadow_common.sh
+source "${SCRIPT_DIR}/protocol_root_probe_shadow_common.sh"
+protocol_root_probe_bootstrap "${SCRIPT_DIR}" "protocol-root-machine-world-ontology-ci"
+protocol_root_probe_define_full_mirror
 
 PASS_JSON="${TMP_ROOT}/pass.json"
 python3 "${ROOT}/scripts/validate_protocol_root_machine_world_ontology.py" \

@@ -2,12 +2,16 @@
 from __future__ import annotations
 
 import ast
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 
 ROOT_VALIDATOR_GLOB = "scripts/validate_protocol_root_*.py"
+ROOT_PROBE_GLOB = "scripts/ci/run_protocol_root_*_probes_ci.sh"
+ROOT_PROBE_SHADOW_COMMON = "protocol_root_probe_shadow_common.sh"
+LEGACY_PROBE_MIRROR_COMMON = "probe_repo_mirror_common.sh"
 
 
 @dataclass(frozen=True)
@@ -64,6 +68,10 @@ PLACEHOLDER_ASSIGNMENT_MODES = frozenset({"initializer_empty_list"})
 
 def root_validator_paths(repo_root: Path) -> tuple[Path, ...]:
     return tuple(sorted((repo_root / "scripts").glob("validate_protocol_root_*.py")))
+
+
+def root_probe_paths(repo_root: Path) -> tuple[Path, ...]:
+    return tuple(sorted((repo_root / "scripts" / "ci").glob("run_protocol_root_*_probes_ci.sh")))
 
 
 def _rel_path(repo_root: Path, path: Path) -> str:
@@ -381,12 +389,129 @@ def _scan_root_validator_file(
     )
 
 
+_PROBE_MANUAL_MIRROR_RE = re.compile(r"^\s*mirror_repo\(\)\s*\{", re.MULTILINE)
+_PROBE_SHADOW_SOURCE_RE = re.compile(
+    rf'^\s*source\s+"\$\{{SCRIPT_DIR\}}/{re.escape(ROOT_PROBE_SHADOW_COMMON)}"\s*$',
+    re.MULTILINE,
+)
+_PROBE_LEGACY_SOURCE_RE = re.compile(
+    rf"^\s*source\s+.*{re.escape(LEGACY_PROBE_MIRROR_COMMON)}.*$",
+    re.MULTILINE,
+)
+_PROBE_BOOTSTRAP_RE = re.compile(
+    r'^\s*protocol_root_probe_bootstrap\s+"\$\{SCRIPT_DIR\}"\s+"(?P<prefix>[^"]+)"\s*$',
+    re.MULTILINE,
+)
+_PROBE_FULL_MIRROR_RE = re.compile(
+    r"^\s*protocol_root_probe_define_full_mirror\s*$",
+    re.MULTILINE,
+)
+_PROBE_RELPATH_MIRROR_RE = re.compile(
+    r'^\s*protocol_root_probe_define_relpath_mirror\s+"\$\{PROBE_REL_PATHS\[@\]\}"\s*$',
+    re.MULTILINE,
+)
+
+
+def _scan_root_probe_file(
+    repo_root: Path,
+    path: Path,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any] | None]:
+    rel_path = _rel_path(repo_root, path)
+    try:
+        text = path.read_text(encoding="utf-8")
+    except Exception as exc:
+        return [], [{"rel_path": rel_path, "reason": "read_failed", "detail": str(exc)}], None
+
+    shadow_source_present = _PROBE_SHADOW_SOURCE_RE.search(text) is not None
+    legacy_source_present = _PROBE_LEGACY_SOURCE_RE.search(text) is not None
+    bootstrap_match = _PROBE_BOOTSTRAP_RE.search(text)
+    full_mirror_present = _PROBE_FULL_MIRROR_RE.search(text) is not None
+    relpath_mirror_present = _PROBE_RELPATH_MIRROR_RE.search(text) is not None
+    manual_mirror_present = _PROBE_MANUAL_MIRROR_RE.search(text) is not None
+
+    if full_mirror_present and relpath_mirror_present:
+        mirror_binding_mode = "multiple_bindings"
+    elif full_mirror_present:
+        mirror_binding_mode = "full_mirror"
+    elif relpath_mirror_present:
+        mirror_binding_mode = "relpath_mirror"
+    else:
+        mirror_binding_mode = "missing"
+
+    row: dict[str, Any] = {
+        "rel_path": rel_path,
+        "shadow_common_source_present": shadow_source_present,
+        "legacy_probe_repo_mirror_source_present": legacy_source_present,
+        "bootstrap_present": bootstrap_match is not None,
+        "bootstrap_prefix": (
+            str(bootstrap_match.group("prefix")).strip()
+            if bootstrap_match is not None
+            else ""
+        ),
+        "mirror_binding_mode": mirror_binding_mode,
+        "manual_mirror_repo_definition_present": manual_mirror_present,
+        "status": "PASS_REQUIRED",
+    }
+
+    violations: list[dict[str, Any]] = []
+    if not shadow_source_present:
+        violations.append(
+            {
+                "rel_path": rel_path,
+                "reason": "missing_protocol_root_probe_shadow_common_source",
+            }
+        )
+    if legacy_source_present:
+        violations.append(
+            {
+                "rel_path": rel_path,
+                "reason": "forbidden_direct_probe_repo_mirror_source",
+            }
+        )
+    if bootstrap_match is None:
+        violations.append(
+            {
+                "rel_path": rel_path,
+                "reason": "missing_protocol_root_probe_bootstrap_call",
+            }
+        )
+    if mirror_binding_mode == "missing":
+        violations.append(
+            {
+                "rel_path": rel_path,
+                "reason": "missing_protocol_root_probe_mirror_binding",
+            }
+        )
+    elif mirror_binding_mode == "multiple_bindings":
+        violations.append(
+            {
+                "rel_path": rel_path,
+                "reason": "multiple_protocol_root_probe_mirror_bindings",
+            }
+        )
+    if manual_mirror_present:
+        violations.append(
+            {
+                "rel_path": rel_path,
+                "reason": "forbidden_manual_mirror_repo_definition",
+            }
+        )
+
+    if violations:
+        row["status"] = "FAIL_REQUIRED"
+    return violations, [], row
+
+
 def scan_root_validator_shared_primitive_adoption(repo_root: Path) -> dict[str, Any]:
     validator_paths = root_validator_paths(repo_root)
+    probe_paths = root_probe_paths(repo_root)
     violations: list[dict[str, Any]] = []
     scan_errors: list[dict[str, Any]] = []
     primitive_adoption_rows: list[dict[str, Any]] = []
     row_family_projection_assignment_rows: list[dict[str, Any]] = []
+    root_probe_shadow_violation_rows: list[dict[str, Any]] = []
+    root_probe_scan_errors: list[dict[str, Any]] = []
+    root_probe_shadow_adoption_rows: list[dict[str, Any]] = []
     for path in validator_paths:
         (
             file_violations,
@@ -400,6 +525,12 @@ def scan_root_validator_shared_primitive_adoption(repo_root: Path) -> dict[str, 
         row_family_projection_assignment_rows.extend(
             file_row_family_projection_assignment_rows
         )
+    for path in probe_paths:
+        file_violations, file_errors, file_row = _scan_root_probe_file(repo_root, path)
+        root_probe_shadow_violation_rows.extend(file_violations)
+        root_probe_scan_errors.extend(file_errors)
+        if file_row is not None:
+            root_probe_shadow_adoption_rows.append(file_row)
 
     primitive_class_counts: dict[str, int] = {}
     reason_counts: dict[str, int] = {}
@@ -416,6 +547,13 @@ def scan_root_validator_shared_primitive_adoption(repo_root: Path) -> dict[str, 
         primitive_class = str(row.get("primitive_class") or "").strip() or "unknown"
         adoption_class_counts[primitive_class] = (
             adoption_class_counts.get(primitive_class, 0) + 1
+        )
+
+    root_probe_shadow_reason_counts: dict[str, int] = {}
+    for row in root_probe_shadow_violation_rows:
+        reason = str(row.get("reason") or "").strip() or "unknown"
+        root_probe_shadow_reason_counts[reason] = (
+            root_probe_shadow_reason_counts.get(reason, 0) + 1
         )
 
     row_family_projection_assignment_violation_rows = [
@@ -460,4 +598,20 @@ def scan_root_validator_shared_primitive_adoption(repo_root: Path) -> dict[str, 
         "row_family_projection_assignment_violation_count": len(
             row_family_projection_assignment_violation_rows
         ),
+        "root_probe_count": len(probe_paths),
+        "scanned_root_probe_files": [_rel_path(repo_root, path) for path in probe_paths],
+        "root_probe_shadow_adoption_rows": root_probe_shadow_adoption_rows,
+        "root_probe_shadow_adoption_row_count": len(root_probe_shadow_adoption_rows),
+        "root_probe_shadow_violation_rows": root_probe_shadow_violation_rows,
+        "root_probe_shadow_violation_count": len(root_probe_shadow_violation_rows),
+        "root_probe_shadow_violation_file_count": len(
+            {
+                str(row.get("rel_path") or "")
+                for row in root_probe_shadow_violation_rows
+                if str(row.get("rel_path") or "").strip()
+            }
+        ),
+        "root_probe_shadow_violation_reason_counts": root_probe_shadow_reason_counts,
+        "root_probe_scan_errors": root_probe_scan_errors,
+        "root_probe_scan_error_count": len(root_probe_scan_errors),
     }
