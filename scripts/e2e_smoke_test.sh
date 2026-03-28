@@ -770,43 +770,26 @@ for ID in $IDS; do
   set +e
   CI=true python3 scripts/identity_creator.py update --catalog "$CATALOG_PATH" --identity-id "$ID" --mode review-required --actor-id "$SESSION_ACTOR_ID" --run-id "${REQUIRED_GATES_RUN_ID:-$E2E_RUN_TOKEN}" --session-id "$TARGET_SESSION_ID"
   UPDATE_RC=$?
+  SEARCH_ROOT_ARGS=()
+  if [ -n "${UPGRADE_REPORT_ROOT_A:-}" ]; then
+    SEARCH_ROOT_ARGS+=(--search-root "$UPGRADE_REPORT_ROOT_A")
+  fi
+  if [ -n "${UPGRADE_REPORT_ROOT_B:-}" ]; then
+    SEARCH_ROOT_ARGS+=(--search-root "$UPGRADE_REPORT_ROOT_B")
+  fi
+  if [ -n "${IDENTITY_HOME:-}" ]; then
+    SEARCH_ROOT_ARGS+=(--search-root "${IDENTITY_HOME}")
+  fi
+  UPGRADE_REPORT="$(
+    python3 scripts/resolve_latest_identity_upgrade_report.py \
+      --identity-id "$ID" \
+      --catalog "$CATALOG_PATH" \
+      "${SEARCH_ROOT_ARGS[@]}" \
+      --print-path-only
+  )"
+  RESOLVE_REPORT_RC=$?
   set -e
-  UPGRADE_REPORT=$(python3 - "$ID" "$CATALOG_PATH" "${IDENTITY_HOME:-}" "$UPGRADE_REPORT_ROOT_A" "$UPGRADE_REPORT_ROOT_B" <<'PY'
-import glob,os,sys
-from pathlib import Path
-import yaml
-
-identity_id=sys.argv[1]
-catalog_path=Path(sys.argv[2]).expanduser().resolve()
-identity_home=sys.argv[3].strip()
-
-roots=[]
-if catalog_path.exists():
-    try:
-        doc=yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
-        rows=[x for x in (doc.get("identities") or []) if isinstance(x, dict)]
-        row=next((x for x in rows if str(x.get("id","")).strip()==identity_id), None)
-        if row:
-            pack=Path(str((row or {}).get("pack_path","")).strip()).expanduser().resolve()
-            if pack.exists():
-                roots.append(str(pack / "runtime" / "reports"))
-                roots.append(str(pack / "runtime"))
-    except Exception:
-        pass
-roots.extend([sys.argv[4], sys.argv[5]])
-if identity_home:
-    roots.append(identity_home)
-cands=[]
-for r in roots:
-    cands.extend(glob.glob(os.path.join(r,"**",f"identity-upgrade-exec-{identity_id}-*.json"),recursive=True))
-cands=[p for p in cands if not p.endswith("-patch-plan.json")]
-if not cands:
-    sys.exit(1)
-cands.sort(key=lambda p: os.path.getmtime(p))
-print(cands[-1])
-PY
-)
-  if [ -z "${UPGRADE_REPORT:-}" ] || [ ! -f "$UPGRADE_REPORT" ]; then
+  if [ "${RESOLVE_REPORT_RC}" -ne 0 ] || [ -z "${UPGRADE_REPORT:-}" ] || [ ! -f "$UPGRADE_REPORT" ]; then
     echo "[FAIL] unable to locate latest upgrade report for $ID"
     exit 1
   fi
