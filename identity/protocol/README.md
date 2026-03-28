@@ -527,11 +527,12 @@ These ordering-completeness rules must remain bound to canonical ordering-comple
 ## Root question-routing completeness discipline
 
 Question-routing law is not a soft prose bundle.
+These question-routing-completeness rules must remain bound to canonical question-routing-completeness rows rather than drifting into soft summary prose.
 
-1. required question-class-profile, root-entry-question-projection, and gateway-question-projection rows must remain explicit as separate machine-readable row families;
+1. required question-class-profile, root-entry-question-projection, root-question-discipline-stage, root-question-discipline-stage-surface, entry-summary-stage, entry-summary-stage-surface, and gateway-question-projection rows must remain explicit as separate machine-readable row families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
 3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
-4. runtime or validator code must not finalize question-routing legality while missing or unexpected question-class or route identities remain known only internally;
+4. runtime or validator code must not finalize question-routing legality while missing or unexpected question-class, root-question-discipline-stage, entry-summary-stage, or route identities remain known only internally;
 5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
 
 ---
@@ -1394,6 +1395,7 @@ When root protocol files are authored or updated, the following guardrails must 
 ## Machine-world entry summary
 
 If a machine-governed participant enters `identity/protocol/` and needs the minimum correct path:
+This minimum-correct-path summary must remain bound to canonical entry-summary-stage rows rather than becoming oral navigation advice.
 
 1. **bottom theory first**
    - read `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md` to understand the bottom theory.

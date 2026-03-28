@@ -23,11 +23,24 @@ question_routing_anchor_checks:
   - '## Root question-routing discipline'
   - This question-routing discipline must remain bound to canonical root-question-discipline
     stage rows rather than becoming a freehand alternate question ladder.
+  - '## Root question-routing completeness discipline'
+  - These question-routing-completeness rules must remain bound to canonical
+    question-routing-completeness rows rather than drifting into soft summary
+    prose.
+  - required question-class-profile, root-entry-question-projection, root-question-discipline-stage,
+    root-question-discipline-stage-surface, entry-summary-stage, entry-summary-stage-surface,
+    and gateway-question-projection rows must remain explicit as separate machine-readable
+    row families;
+  - runtime or validator code must not finalize question-routing legality while
+    missing or unexpected question-class, root-question-discipline-stage, entry-summary-stage,
+    or route identities remain known only internally;
   - gateway-mediated refreezing or projection keeps the question class governed
     by the gateway target layer.
   - current-turn legality question must never terminate in philosophy text, README
     text, or frozen contract prose alone.
   - '## Machine-world entry summary'
+  - This minimum-correct-path summary must remain bound to canonical entry-summary-stage
+    rows rather than becoming oral navigation advice.
   - That is the canonical reading order for this directory.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
   required_markers:
@@ -46,6 +59,12 @@ question_routing_anchor_checks:
   - The machine world must not finalize question-routing legality while required
     question-class, root-question-discipline-stage, entry-summary-stage, or route
     identity drift remains known only internally.
+  - '### Question-routing row-family completeness must stay explicit'
+  - README machine-world entry summary must therefore stay congruent with admitted
+    entry-summary-stage rows rather than becoming oral navigation advice.
+  - README root question-routing completeness discipline must therefore stay
+    congruent with admitted question-routing-completeness rows rather than becoming
+    a freehand completeness summary.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
   - '## Root question-routing completeness boundary'
@@ -56,6 +75,12 @@ question_routing_anchor_checks:
   - README root question-routing discipline rendered at protocol root must remain
     congruent with admitted root-question-discipline-stage rows rather than silently
     authoring an alternate question ladder.
+  - README machine-world entry summary rendered at protocol root must remain congruent
+    with admitted entry-summary-stage rows rather than silently authoring an alternate
+    minimum-correct path.
+  - README root question-routing completeness discipline rendered at protocol root
+    must remain congruent with admitted question-routing-completeness rows rather
+    than silently authoring an alternate completeness summary.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
   - '## Runtime question-routing consumption boundary'
@@ -66,6 +91,11 @@ question_routing_anchor_checks:
   - Runtime consumes README root question-routing discipline as a governed stage
     projection bound to admitted root-question-discipline-stage rows rather than
     as a freehand alternate question ladder.
+  - Runtime consumes README machine-world entry summary as a governed stage projection
+    bound to admitted entry-summary-stage rows rather than as oral navigation advice.
+  - Runtime consumes README root question-routing completeness discipline as a
+    governed completeness projection bound to admitted question-routing-completeness
+    rows rather than as a freehand completeness summary.
 - rel_path: identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md
   required_markers:
   - '## Runtime adjudication boundary'
@@ -303,6 +333,33 @@ entry_summary_stages:
   required_markers:
   - read mappings, validators, probes, runtime state, and receipts for the final
     machine-consumed verdict.
+question_routing_completeness_rows:
+- order: 1
+  completeness_id: explicit_question_routing_row_families
+  contract_phrase: required question-class-profile, root-entry-question-projection,
+    root-question-discipline-stage, root-question-discipline-stage-surface, entry-summary-stage,
+    entry-summary-stage-surface, and gateway-question-projection rows must remain
+    explicit as separate machine-readable row families;
+- order: 2
+  completeness_id: congruent_question_routing_row_family_totals
+  contract_phrase: expected row-family total and emitted row-family total must
+    remain congruent under machine-readable coverage completeness rather than being
+    left implicit;
+- order: 3
+  completeness_id: explicit_question_routing_row_identity_sets
+  contract_phrase: expected row identity set and emitted row identity set for
+    each family must also remain machine-readable rather than being collapsed into
+    aggregate counts;
+- order: 4
+  completeness_id: hidden_question_routing_identity_drift_forbidden
+  contract_phrase: runtime or validator code must not finalize question-routing
+    legality while missing or unexpected question-class, root-question-discipline-stage,
+    entry-summary-stage, or route identities remain known only internally;
+- order: 5
+  completeness_id: fail_close_preserves_question_routing_identity_projection
+  contract_phrase: fail-close machine output must preserve missing/unexpected row
+    identity projection rather than hiding drift behind row-count shorthand or
+    generic structure failure.
 entry_question_projection:
 - rel_path: identity/protocol/README.md
   question_classes:

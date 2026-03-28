@@ -37,7 +37,7 @@ assert payload["protocol_root_corpus_question_routing_status"] == "PASS_REQUIRED
 assert payload["root_doc_anchor_check_count"] == 20, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["adjudication_redirect"]["question_class"] == "current_turn_legality", payload
-assert payload["question_routing_row_family_count"] == 7, payload
+assert payload["question_routing_row_family_count"] == 9, payload
 assert payload["question_routing_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["question_routing_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
@@ -50,16 +50,70 @@ assert payload["root_question_discipline_stage_count"] == 8, payload
 assert payload["root_question_discipline_stage_surface"]["entry_count"] == 8, payload
 assert payload["entry_summary_stage_count"] == 4, payload
 assert payload["entry_summary_stage_surface"]["entry_count"] == 4, payload
+assert payload["question_routing_completeness_row_count"] == 5, payload
+assert payload["question_routing_completeness_surface"]["entry_count"] == 5, payload
 assert any(row["family_id"] == "root_question_discipline_stages" for row in payload["row_family_projection_rows"]), payload
 assert any(row["family_id"] == "root_question_discipline_stage_surface" for row in payload["row_family_projection_rows"]), payload
 assert any(row["family_id"] == "entry_summary_stages" for row in payload["row_family_projection_rows"]), payload
 assert any(row["family_id"] == "entry_summary_stage_surface" for row in payload["row_family_projection_rows"]), payload
+assert any(row["family_id"] == "question_routing_completeness_rows" for row in payload["row_family_projection_rows"]), payload
+assert any(row["family_id"] == "question_routing_completeness_surface" for row in payload["row_family_projection_rows"]), payload
 assert {row["gateway_class"]: row["question_class"] for row in payload["gateway_question_projection"]} == {
     "constitution": "frozen_protocol_law",
     "runtime_constitution": "frozen_runtime_law",
     "root_contract": "frozen_domain_contract_law",
     "machine_registry_directory": "registry_resolution",
 }, payload
+PY
+
+COMPLETENESS_ROW_REPO="${TMP_ROOT}/question-routing-completeness-row-missing-repo"
+mirror_repo "${COMPLETENESS_ROW_REPO}"
+python3 - <<'PY' "${COMPLETENESS_ROW_REPO}/identity/protocol/mappings/root-corpus-question-routing.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["question_routing_completeness_rows"] = [
+    row for row in doc["question_routing_completeness_rows"]
+    if row.get("completeness_id") != "explicit_question_routing_row_families"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPLETENESS_ROW_JSON="${TMP_ROOT}/question-routing-completeness-row-missing.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_question_routing.py" \
+  --repo-root "${COMPLETENESS_ROW_REPO}" \
+  --json-only >"${COMPLETENESS_ROW_JSON}"; then
+  echo "[FAIL] root corpus question-routing validator unexpectedly passed missing question-routing completeness row"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_ROW_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_question_routing_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCQR-002", payload
+assert any(
+    row["field"] == "question_routing_completeness_rows"
+    and row["reason"] == "missing_question_routing_completeness_rows"
+    and "explicit_question_routing_row_families" in row.get("completeness_ids", [])
+    for row in payload["structure_violations"]
+), payload
+completeness_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "question_routing_completeness_rows"
+)
+assert completeness_row["expected_count"] == 5, payload
+assert completeness_row["actual_count"] == 4, payload
+assert completeness_row["missing_ids"] == ["explicit_question_routing_row_families"], payload
+assert completeness_row["unexpected_ids"] == [], payload
+assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 ROOT_QUESTION_STAGE_REPO="${TMP_ROOT}/root-question-stage-missing-repo"
@@ -325,6 +379,51 @@ surface_row = next(
 )
 assert "constitutions next" in surface_row["missing_ids"], payload
 assert "constitutional files next" in surface_row["unexpected_ids"], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/question-routing-completeness-surface-drift-repo"
+mirror_repo "${COMPLETENESS_SURFACE_REPO}"
+python3 - <<'PY' "${COMPLETENESS_SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "4. runtime or validator code must not finalize question-routing legality while missing or unexpected question-class, root-question-discipline-stage, entry-summary-stage, or route identities remain known only internally;"
+new = "4. runtime or validator code must not finalize question-routing legality while missing or unexpected question-class, root-question-discipline-stage, or route identities remain known only internally;"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+COMPLETENESS_SURFACE_JSON="${TMP_ROOT}/question-routing-completeness-surface-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_question_routing.py" \
+  --repo-root "${COMPLETENESS_SURFACE_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_JSON}"; then
+  echo "[FAIL] root corpus question-routing validator unexpectedly passed question-routing completeness surface drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+expected_phrase = "runtime or validator code must not finalize question-routing legality while missing or unexpected question-class, root-question-discipline-stage, entry-summary-stage, or route identities remain known only internally;"
+assert payload["protocol_root_corpus_question_routing_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCQR-002", payload
+assert any(
+    "routing_violation:question_routing_completeness_surface:question_routing_completeness_surface_phrase_order_mismatch" == reason
+    for reason in payload["stale_reasons"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "question_routing_completeness_surface"
+)
+assert expected_phrase in surface_row["missing_ids"], payload
+assert "runtime or validator code must not finalize question-routing legality while missing or unexpected question-class, root-question-discipline-stage, or route identities remain known only internally;" in surface_row["unexpected_ids"], payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY

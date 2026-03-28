@@ -195,6 +195,8 @@ implicit.
 4. Runtime must not finalize question-routing legality while missing or unexpected question-class, root-question-discipline-stage, entry-summary-stage, or route identities remain known only inside validator machinery.
 5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
 6. Runtime consumes README root question-routing discipline as a governed stage projection bound to admitted root-question-discipline-stage rows rather than as a freehand alternate question ladder.
+7. Runtime consumes README machine-world entry summary as a governed stage projection bound to admitted entry-summary-stage rows rather than as oral navigation advice.
+8. Runtime consumes README root question-routing completeness discipline as a governed completeness projection bound to admitted question-routing-completeness rows rather than as a freehand completeness summary.
 
 ## Runtime design-question closure consumption boundary
 

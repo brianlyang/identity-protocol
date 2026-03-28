@@ -1289,12 +1289,15 @@ or generic structure failure.
 Minimum-correct-path summary prose at protocol root must therefore stay bound
 to admitted question-class and machine-surface identity rather than remaining
 oral navigation advice.
+README machine-world entry summary must therefore stay congruent with admitted entry-summary-stage rows rather than becoming oral navigation advice.
 
 The machine world must not finalize question-routing legality while required question-class, root-question-discipline-stage, entry-summary-stage, or route identity drift remains known only internally.
 
 Missing or unexpected row identity must remain projected in fail-close machine
 output rather than being hidden behind row-count shorthand or summary-only
 verdict text.
+
+README root question-routing completeness discipline must therefore stay congruent with admitted question-routing-completeness rows rather than becoming a freehand completeness summary.
 
 ### Design-question closure row-family completeness must stay explicit
 

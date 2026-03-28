@@ -245,6 +245,8 @@ implicit.
 4. Protocol legality must not finalize question-routing legality while missing or unexpected question-class, root-question-discipline-stage, entry-summary-stage, or route identities remain known only inside validator logic.
 5. Fail-close question-routing output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
 6. README root question-routing discipline rendered at protocol root must remain congruent with admitted root-question-discipline-stage rows rather than silently authoring an alternate question ladder.
+7. README machine-world entry summary rendered at protocol root must remain congruent with admitted entry-summary-stage rows rather than silently authoring an alternate minimum-correct path.
+8. README root question-routing completeness discipline rendered at protocol root must remain congruent with admitted question-routing-completeness rows rather than silently authoring an alternate completeness summary.
 
 ## Root design-question closure completeness boundary
 

@@ -16,7 +16,9 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ROOT_CORPUS_QUESTION_ROUTING_CURRENT = "identity/protocol/mappings/root-corpus-question-routing.current.yaml"
 ROOT_PROTOCOL_README_REL_PATH = "identity/protocol/README.md"
 ROOT_QUESTION_DISCIPLINE_SECTION_MARKER = "## Root question-routing discipline"
+QUESTION_ROUTING_COMPLETENESS_SECTION_MARKER = "## Root question-routing completeness discipline"
 ENTRY_SUMMARY_SECTION_MARKER = "## Machine-world entry summary"
+ORDERED_ITEM_RE = re.compile(r"^\s*(\d+)\.\s+(.*\S)\s*$")
 ORDERED_BOLD_ITEM_RE = re.compile(r"^\s*(\d+)\.\s+\*\*(.*?)\*\*")
 HEADING_RE = re.compile(r"^##\s+")
 HORIZONTAL_RULE_RE = re.compile(r"^-{3,}$")
@@ -93,6 +95,26 @@ class EntrySummarySurfaceRow:
 class EntrySummarySurface:
     rel_path: str
     rows: tuple[EntrySummarySurfaceRow, ...]
+    extraction_violations: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class QuestionRoutingCompletenessRow:
+    order: int
+    completeness_id: str
+    contract_phrase: str
+
+
+@dataclass(frozen=True)
+class QuestionRoutingCompletenessSurfaceRow:
+    order: int
+    contract_phrase: str
+
+
+@dataclass(frozen=True)
+class QuestionRoutingCompletenessSurface:
+    rel_path: str
+    rows: tuple[QuestionRoutingCompletenessSurfaceRow, ...]
     extraction_violations: tuple[str, ...]
 
 
@@ -266,6 +288,34 @@ def root_question_discipline_stages_from_doc(
     return tuple(out)
 
 
+def question_routing_completeness_rows_from_doc(
+    routing_doc: Mapping[str, Any],
+) -> tuple[QuestionRoutingCompletenessRow, ...]:
+    rows = routing_doc.get("question_routing_completeness_rows")
+    if not isinstance(rows, list):
+        return ()
+    out: list[QuestionRoutingCompletenessRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        completeness_id = _norm_str(row.get("completeness_id"))
+        contract_phrase = str(row.get("contract_phrase") or "").strip()
+        if order <= 0 or not completeness_id or not contract_phrase:
+            continue
+        out.append(
+            QuestionRoutingCompletenessRow(
+                order=order,
+                completeness_id=completeness_id,
+                contract_phrase=contract_phrase,
+            )
+        )
+    return tuple(out)
+
+
 def _readme_ordered_bold_section_rows(
     repo_root: Path,
     *,
@@ -369,6 +419,51 @@ def readme_entry_summary_surface(repo_root: Path) -> EntrySummarySurface:
             for order, stage_label, body_lines in rows_data
         ),
         extraction_violations=violations,
+    )
+
+
+def readme_question_routing_completeness_surface(repo_root: Path) -> QuestionRoutingCompletenessSurface:
+    path = (repo_root / ROOT_PROTOCOL_README_REL_PATH).resolve()
+    if not path.exists() or not path.is_file():
+        return QuestionRoutingCompletenessSurface(
+            rel_path=ROOT_PROTOCOL_README_REL_PATH,
+            rows=(),
+            extraction_violations=("target_missing",),
+        )
+
+    lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    section_found = False
+    rows: list[QuestionRoutingCompletenessSurfaceRow] = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == QUESTION_ROUTING_COMPLETENESS_SECTION_MARKER:
+            section_found = True
+            continue
+        if not section_found:
+            continue
+        if HEADING_RE.match(stripped) or HORIZONTAL_RULE_RE.match(stripped):
+            break
+        match = ORDERED_ITEM_RE.match(stripped)
+        if not match:
+            continue
+        rows.append(
+            QuestionRoutingCompletenessSurfaceRow(
+                order=int(match.group(1)),
+                contract_phrase=match.group(2).strip(),
+            )
+        )
+
+    violations: list[str] = []
+    if not section_found:
+        violations.append("section_marker_missing")
+    elif not rows:
+        violations.append("completeness_rows_missing")
+
+    return QuestionRoutingCompletenessSurface(
+        rel_path=ROOT_PROTOCOL_README_REL_PATH,
+        rows=tuple(rows),
+        extraction_violations=tuple(violations),
     )
 
 

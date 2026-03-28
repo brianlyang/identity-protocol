@@ -12,6 +12,7 @@ from root_contract_anchor_checks_common import (
     validate_expected_root_doc_anchor_checks,
 )
 from root_contract_integration_checks_common import append_membership_delta_violations
+from root_contract_row_validation_common import validate_contract_row_batches
 from root_corpus_authority_common import entry_authority_projections_from_doc, load_root_corpus_authority
 from root_corpus_gateway_admissibility_common import gateway_effect_targets_from_doc, load_root_corpus_gateway_admissibility
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
@@ -24,8 +25,10 @@ from root_corpus_question_routing_common import (
     entry_question_projections_from_doc,
     gateway_question_projections_from_doc,
     load_root_corpus_question_routing,
+    question_routing_completeness_rows_from_doc,
     question_class_profiles_from_doc,
     question_routing_anchor_checks_from_doc,
+    readme_question_routing_completeness_surface,
     readme_root_question_discipline_surface,
     readme_entry_summary_surface,
     root_question_discipline_stages_from_doc,
@@ -152,6 +155,28 @@ EXPECTED_ENTRY_SUMMARY_STAGES = {
         "terminal_machine_surfaces": EXPECTED_TERMINAL_MACHINE_SURFACES,
     },
 }
+EXPECTED_QUESTION_ROUTING_COMPLETENESS_ROWS = {
+    "explicit_question_routing_row_families": {
+        "order": 1,
+        "contract_phrase": "required question-class-profile, root-entry-question-projection, root-question-discipline-stage, root-question-discipline-stage-surface, entry-summary-stage, entry-summary-stage-surface, and gateway-question-projection rows must remain explicit as separate machine-readable row families;",
+    },
+    "congruent_question_routing_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_question_routing_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_question_routing_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize question-routing legality while missing or unexpected question-class, root-question-discipline-stage, entry-summary-stage, or route identities remain known only internally;",
+    },
+    "fail_close_preserves_question_routing_identity_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
+    },
+}
 EXPECTED_ROOT_QUESTION_DISCIPLINE_STAGES = {
     "generative why-question": {
         "order": 1,
@@ -259,9 +284,14 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/README.md": (
         "## Root question-routing discipline",
         "This question-routing discipline must remain bound to canonical root-question-discipline stage rows rather than becoming a freehand alternate question ladder.",
+        "## Root question-routing completeness discipline",
+        "These question-routing-completeness rules must remain bound to canonical question-routing-completeness rows rather than drifting into soft summary prose.",
+        "required question-class-profile, root-entry-question-projection, root-question-discipline-stage, root-question-discipline-stage-surface, entry-summary-stage, entry-summary-stage-surface, and gateway-question-projection rows must remain explicit as separate machine-readable row families;",
+        "runtime or validator code must not finalize question-routing legality while missing or unexpected question-class, root-question-discipline-stage, entry-summary-stage, or route identities remain known only internally;",
         "gateway-mediated refreezing or projection keeps the question class governed by the gateway target layer.",
         "current-turn legality question must never terminate in philosophy text, README text, or frozen contract prose alone.",
         "## Machine-world entry summary",
+        "This minimum-correct-path summary must remain bound to canonical entry-summary-stage rows rather than becoming oral navigation advice.",
         "That is the canonical reading order for this directory.",
     ),
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
@@ -271,16 +301,23 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "README root question-routing discipline must therefore stay congruent with admitted root-question-discipline-stage rows rather than becoming a freehand alternate question ladder.",
         "Required question-class-profile, root-entry-question-projection, root-question-discipline-stage, root-question-discipline-stage-surface, entry-summary-stage, entry-summary-stage-surface, and gateway-question-projection families must remain explicit as separate machine-readable row families.",
         "The machine world must not finalize question-routing legality while required question-class, root-question-discipline-stage, entry-summary-stage, or route identity drift remains known only internally.",
+        "### Question-routing row-family completeness must stay explicit",
+        "README machine-world entry summary must therefore stay congruent with admitted entry-summary-stage rows rather than becoming oral navigation advice.",
+        "README root question-routing completeness discipline must therefore stay congruent with admitted question-routing-completeness rows rather than becoming a freehand completeness summary.",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
         "## Root question-routing completeness boundary",
         "Question-routing law must remain machine-readable as separate question-class-profile, root-entry-question-projection, root-question-discipline-stage, root-question-discipline-stage-surface, entry-summary-stage, entry-summary-stage-surface, and gateway-question-projection row families.",
         "README root question-routing discipline rendered at protocol root must remain congruent with admitted root-question-discipline-stage rows rather than silently authoring an alternate question ladder.",
+        "README machine-world entry summary rendered at protocol root must remain congruent with admitted entry-summary-stage rows rather than silently authoring an alternate minimum-correct path.",
+        "README root question-routing completeness discipline rendered at protocol root must remain congruent with admitted question-routing-completeness rows rather than silently authoring an alternate completeness summary.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "## Runtime question-routing consumption boundary",
         "Runtime consumes question-routing law as separate question-class-profile, root-entry-question-projection, root-question-discipline-stage, root-question-discipline-stage-surface, entry-summary-stage, entry-summary-stage-surface, and gateway-question-projection row families rather than as undifferentiated routing prose.",
         "Runtime consumes README root question-routing discipline as a governed stage projection bound to admitted root-question-discipline-stage rows rather than as a freehand alternate question ladder.",
+        "Runtime consumes README machine-world entry summary as a governed stage projection bound to admitted entry-summary-stage rows rather than as oral navigation advice.",
+        "Runtime consumes README root question-routing completeness discipline as a governed completeness projection bound to admitted question-routing-completeness rows rather than as a freehand completeness summary.",
     ),
     "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md": (
         "## Runtime adjudication boundary",
@@ -411,15 +448,23 @@ def main() -> int:
     question_profiles = question_class_profiles_from_doc(routing_doc) if routing_doc else ()
     root_question_discipline_stages = root_question_discipline_stages_from_doc(routing_doc) if routing_doc else ()
     entry_summary_stages = entry_summary_stages_from_doc(routing_doc) if routing_doc else ()
+    question_routing_completeness_rows = (
+        question_routing_completeness_rows_from_doc(routing_doc) if routing_doc else ()
+    )
     entry_projections = entry_question_projections_from_doc(routing_doc) if routing_doc else ()
     gateway_question_projections = gateway_question_projections_from_doc(routing_doc) if routing_doc else ()
     adjudication_redirect = adjudication_redirect_from_doc(routing_doc) if routing_doc else adjudication_redirect_from_doc({})
     root_question_discipline_surface = readme_root_question_discipline_surface(repo_root)
     entry_summary_surface = readme_entry_summary_surface(repo_root)
+    question_routing_completeness_surface = readme_question_routing_completeness_surface(repo_root)
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     authority_entry_projections = entry_authority_projections_from_doc(authority_doc) if authority_doc else ()
     gateway_effect_targets = gateway_effect_targets_from_doc(gateway_doc) if gateway_doc else ()
+    sorted_question_routing_completeness_rows = sorted(
+        question_routing_completeness_rows,
+        key=lambda item: item.order,
+    )
 
     if not stale_reasons:
         if str(routing_doc.get("routing_family") or "").strip() != "protocol_root_corpus_question_routing":
@@ -468,6 +513,9 @@ def main() -> int:
             error_code = ERR_REGISTRY
         if not entry_summary_stages:
             stale_reasons.append("root_corpus_question_routing_entry_summary_stages_missing")
+            error_code = ERR_REGISTRY
+        if not question_routing_completeness_rows:
+            stale_reasons.append("root_corpus_question_routing_completeness_rows_missing")
             error_code = ERR_REGISTRY
         if not entry_projections:
             stale_reasons.append("root_corpus_question_routing_entry_projection_missing")
@@ -645,6 +693,12 @@ def main() -> int:
         expected_root_question_stage_labels = list(EXPECTED_ROOT_QUESTION_DISCIPLINE_STAGES.keys())
         expected_root_question_stage_orders = [
             int(stage["order"]) for stage in EXPECTED_ROOT_QUESTION_DISCIPLINE_STAGES.values()
+        ]
+        question_routing_completeness_surface_orders = [
+            row.order for row in question_routing_completeness_surface.rows
+        ]
+        question_routing_completeness_surface_phrases = [
+            row.contract_phrase for row in question_routing_completeness_surface.rows
         ]
         if len(set(root_question_stage_orders)) != len(root_question_stage_orders) or sorted(
             root_question_stage_orders
@@ -1141,6 +1195,80 @@ def main() -> int:
                     "actual": list(terminal_surface_stage.terminal_machine_surfaces),
                 }
             )
+        for reason in question_routing_completeness_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "question_routing_completeness_surface",
+                    "reason": f"question_routing_completeness_surface_{reason}",
+                }
+            )
+        validate_contract_row_batches(
+            batches=(
+                {
+                    "actual_rows": question_routing_completeness_rows,
+                    "expected_rows": EXPECTED_QUESTION_ROUTING_COMPLETENESS_ROWS,
+                    "field_name": "question_routing_completeness_rows",
+                    "id_attr": "completeness_id",
+                    "compare_fields": ("contract_phrase",),
+                    "duplicate_reason": "duplicate_question_routing_completeness_id",
+                    "non_contiguous_reason": "question_routing_completeness_row_order_non_contiguous",
+                    "missing_reason": "missing_question_routing_completeness_rows",
+                    "extra_reason": "extra_question_routing_completeness_rows",
+                    "missing_ids_key": "completeness_ids",
+                    "extra_ids_key": "completeness_ids",
+                    "violation_id_key": "completeness_id",
+                    "order_reason": "question_routing_completeness_row_order_mismatch",
+                },
+                {
+                    "actual_rows": question_routing_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {"order": int(row["order"])}
+                        for row in EXPECTED_QUESTION_ROUTING_COMPLETENESS_ROWS.values()
+                    },
+                    "field_name": "question_routing_completeness_surface",
+                    "id_attr": "contract_phrase",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_question_routing_completeness_surface_phrase",
+                    "non_contiguous_reason": "question_routing_completeness_surface_order_non_contiguous",
+                    "missing_reason": "missing_question_routing_completeness_surface_rows",
+                    "extra_reason": "extra_question_routing_completeness_surface_rows",
+                    "missing_ids_key": "contract_phrases",
+                    "extra_ids_key": "contract_phrases",
+                    "violation_id_key": "contract_phrase",
+                    "order_reason": "question_routing_completeness_surface_order_mismatch",
+                },
+            ),
+            structure_violations=structure_violations,
+            support_violations=routing_violations,
+        )
+        expected_question_routing_completeness_phrases = [
+            row["contract_phrase"] for row in EXPECTED_QUESTION_ROUTING_COMPLETENESS_ROWS.values()
+        ]
+        expected_question_routing_completeness_orders = [
+            int(row["order"]) for row in EXPECTED_QUESTION_ROUTING_COMPLETENESS_ROWS.values()
+        ]
+        if question_routing_completeness_surface_phrases and tuple(
+            question_routing_completeness_surface_phrases
+        ) != tuple(expected_question_routing_completeness_phrases):
+            routing_violations.append(
+                {
+                    "field": "question_routing_completeness_surface",
+                    "reason": "question_routing_completeness_surface_phrase_order_mismatch",
+                    "expected": expected_question_routing_completeness_phrases,
+                    "actual": question_routing_completeness_surface_phrases,
+                }
+            )
+        if question_routing_completeness_surface_orders and tuple(
+            question_routing_completeness_surface_orders
+        ) != tuple(expected_question_routing_completeness_orders):
+            routing_violations.append(
+                {
+                    "field": "question_routing_completeness_surface",
+                    "reason": "question_routing_completeness_surface_order_mismatch",
+                    "expected": expected_question_routing_completeness_orders,
+                    "actual": question_routing_completeness_surface_orders,
+                }
+            )
 
         anchor_violations.extend(
             evaluate_root_doc_anchor_checks(
@@ -1209,6 +1337,24 @@ def main() -> int:
                 "id_attr": "stage_label",
             },
             {
+                "family_id": "question_routing_completeness_rows",
+                "member_id_key": "completeness_id",
+                "actual_rows": question_routing_completeness_rows,
+                "expected_rows": {
+                    completeness_id: {} for completeness_id in EXPECTED_QUESTION_ROUTING_COMPLETENESS_ROWS
+                },
+                "id_attr": "completeness_id",
+            },
+            {
+                "family_id": "question_routing_completeness_surface",
+                "member_id_key": "contract_phrase",
+                "actual_rows": question_routing_completeness_surface.rows,
+                "expected_rows": {
+                    row["contract_phrase"]: {} for row in EXPECTED_QUESTION_ROUTING_COMPLETENESS_ROWS.values()
+                },
+                "id_attr": "contract_phrase",
+            },
+            {
                 "family_id": "gateway_question_projection",
                 "member_id_key": "gateway_class",
                 "actual_rows": gateway_question_projections,
@@ -1236,6 +1382,7 @@ def main() -> int:
         "question_class_profile_count": len(question_profiles),
         "root_question_discipline_stage_count": len(root_question_discipline_stages),
         "entry_summary_stage_count": len(entry_summary_stages),
+        "question_routing_completeness_row_count": len(question_routing_completeness_rows),
         "entry_question_projection_count": len(entry_projections),
         "gateway_question_projection_count": len(gateway_question_projections),
         **project_root_contract_support_projection(
@@ -1284,6 +1431,14 @@ def main() -> int:
             }
             for row in sorted(entry_summary_stages, key=lambda item: item.order)
         ],
+        "question_routing_completeness_rows": [
+            {
+                "order": row.order,
+                "completeness_id": row.completeness_id,
+                "contract_phrase": row.contract_phrase,
+            }
+            for row in sorted_question_routing_completeness_rows
+        ],
         "gateway_question_projection": [
             {
                 "gateway_class": row.gateway_class,
@@ -1320,6 +1475,18 @@ def main() -> int:
                 for row in entry_summary_surface.rows
             ],
             "extraction_violations": list(entry_summary_surface.extraction_violations),
+        },
+        "question_routing_completeness_surface": {
+            "rel_path": question_routing_completeness_surface.rel_path,
+            "entry_count": len(question_routing_completeness_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "contract_phrase": row.contract_phrase,
+                }
+                for row in question_routing_completeness_surface.rows
+            ],
+            "extraction_violations": list(question_routing_completeness_surface.extraction_violations),
         },
         "adjudication_redirect": {
             "question_class": adjudication_redirect.question_class,
