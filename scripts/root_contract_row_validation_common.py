@@ -42,6 +42,14 @@ def validate_contract_rows(
     field_name: str,
     id_attr: str,
     compare_fields: tuple[str, ...],
+    duplicate_reason: str | None = None,
+    non_contiguous_reason: str | None = None,
+    missing_reason: str = "missing_expected_rows",
+    extra_reason: str = "extra_rows",
+    missing_ids_key: str = "row_ids",
+    extra_ids_key: str = "row_ids",
+    violation_id_key: str = "row_id",
+    order_reason: str = "order_mismatch",
     **kwargs: Any,
 ) -> None:
     support_violations = _resolve_support_violations(
@@ -52,18 +60,32 @@ def validate_contract_rows(
     actual_rows = tuple(actual_rows)
     actual_map = {getattr(row, id_attr): row for row in actual_rows}
     orders = [int(getattr(row, "order")) for row in actual_rows]
+    duplicate_reason = duplicate_reason or f"duplicate_{id_attr}"
+    non_contiguous_reason = non_contiguous_reason or f"{field_name}_order_non_contiguous"
 
     if len(actual_map) != len(actual_rows):
-        structure_violations.append({"field": field_name, "reason": f"duplicate_{id_attr}"})
+        structure_violations.append({"field": field_name, "reason": duplicate_reason})
     if len(set(orders)) != len(orders) or not contiguous_orders(sorted(orders)):
-        structure_violations.append({"field": field_name, "reason": f"{field_name}_order_non_contiguous"})
+        structure_violations.append({"field": field_name, "reason": non_contiguous_reason})
 
     missing_ids = sorted(set(expected_rows) - set(actual_map))
     extra_ids = sorted(set(actual_map) - set(expected_rows))
     if missing_ids:
-        structure_violations.append({"field": field_name, "reason": "missing_expected_rows", "row_ids": missing_ids})
+        structure_violations.append(
+            {
+                "field": field_name,
+                "reason": missing_reason,
+                missing_ids_key: missing_ids,
+            }
+        )
     if extra_ids:
-        structure_violations.append({"field": field_name, "reason": "extra_rows", "row_ids": extra_ids})
+        structure_violations.append(
+            {
+                "field": field_name,
+                "reason": extra_reason,
+                extra_ids_key: extra_ids,
+            }
+        )
 
     for row_id, expected in expected_rows.items():
         row = actual_map.get(row_id)
@@ -73,8 +95,8 @@ def validate_contract_rows(
             support_violations.append(
                 {
                     "field": field_name,
-                    "row_id": row_id,
-                    "reason": "order_mismatch",
+                    violation_id_key: row_id,
+                    "reason": order_reason,
                     "expected": expected["order"],
                     "actual": row.order,
                 }
@@ -86,7 +108,7 @@ def validate_contract_rows(
                 support_violations.append(
                     {
                         "field": field_name,
-                        "row_id": row_id,
+                        violation_id_key: row_id,
                         "reason": f"{compare_field}_mismatch",
                         "expected": expected_value,
                         "actual": actual_value,

@@ -12,7 +12,7 @@ from root_contract_anchor_checks_common import (
     root_doc_anchor_checks_from_doc,
     validate_expected_root_doc_anchor_checks,
 )
-from root_contract_row_validation_common import contiguous_orders
+from root_contract_row_validation_common import contiguous_orders, validate_contract_rows
 from root_contract_marker_checks_common import (
     contract_required_markers_from_doc,
     contract_text_marker_checks_from_rows,
@@ -342,149 +342,52 @@ def main() -> int:
                 fail_status=STATUS_FAIL_REQUIRED,
             ),
         ]
-        question_orders = [row.order for row in question_rows]
-        proof_orders = [row.order for row in proof_rows]
-        limit_orders = [row.order for row in limit_rows]
         outcome_orders = [row.order for row in outcome_rows]
-        question_map = {row.question_id: row for row in question_rows}
-        proof_map = {row.proof_id: row for row in proof_rows}
-        limit_map = {row.row_id: row for row in limit_rows}
-        if len(question_map) != len(question_rows):
-            structure_violations.append({"field": "required_question_rows", "reason": "duplicate_question_id"})
-        if len(proof_map) != len(proof_rows):
-            structure_violations.append({"field": "required_admissibility_proof_rows", "reason": "duplicate_proof_id"})
-        if len(limit_map) != len(limit_rows):
-            structure_violations.append({"field": "required_admissibility_limit_rows", "reason": "duplicate_limit_id"})
-        if len(set(question_orders)) != len(question_orders) or not contiguous_orders(sorted(question_orders)):
-            structure_violations.append({"field": "required_question_rows", "reason": "question_order_non_contiguous"})
-        if len(set(proof_orders)) != len(proof_orders) or not contiguous_orders(sorted(proof_orders)):
-            structure_violations.append({"field": "required_admissibility_proof_rows", "reason": "proof_order_non_contiguous"})
-        if len(set(limit_orders)) != len(limit_orders) or not contiguous_orders(sorted(limit_orders)):
-            structure_violations.append({"field": "required_admissibility_limit_rows", "reason": "limit_order_non_contiguous"})
-        missing_questions = sorted(set(EXPECTED_QUESTION_ROWS) - set(question_map))
-        extra_questions = sorted(set(question_map) - set(EXPECTED_QUESTION_ROWS))
-        missing_proofs = sorted(set(EXPECTED_ADMISSIBILITY_PROOF_ROWS) - set(proof_map))
-        extra_proofs = sorted(set(proof_map) - set(EXPECTED_ADMISSIBILITY_PROOF_ROWS))
-        missing_limits = sorted(set(EXPECTED_ADMISSIBILITY_LIMIT_ROWS) - set(limit_map))
-        extra_limits = sorted(set(limit_map) - set(EXPECTED_ADMISSIBILITY_LIMIT_ROWS))
-        if missing_questions:
-            structure_violations.append(
-                {"field": "required_question_rows", "reason": "missing_expected_questions", "question_ids": missing_questions}
-            )
-        if extra_questions:
-            structure_violations.append(
-                {"field": "required_question_rows", "reason": "extra_questions", "question_ids": extra_questions}
-            )
-        if missing_proofs:
-            structure_violations.append(
-                {"field": "required_admissibility_proof_rows", "reason": "missing_expected_rows", "proof_ids": missing_proofs}
-            )
-        if extra_proofs:
-            structure_violations.append(
-                {"field": "required_admissibility_proof_rows", "reason": "extra_rows", "proof_ids": extra_proofs}
-            )
-        if missing_limits:
-            structure_violations.append(
-                {"field": "required_admissibility_limit_rows", "reason": "missing_expected_rows", "limit_ids": missing_limits}
-            )
-        if extra_limits:
-            structure_violations.append(
-                {"field": "required_admissibility_limit_rows", "reason": "extra_rows", "limit_ids": extra_limits}
-            )
-        for row in question_rows:
-            expected = EXPECTED_QUESTION_ROWS.get(row.question_id)
-            if expected is None:
-                continue
-            if row.order != expected["order"]:
-                admissibility_violations.append(
-                    {
-                        "field": "required_question_rows",
-                        "question_id": row.question_id,
-                        "reason": "question_order_mismatch",
-                        "expected": expected["order"],
-                        "actual": row.order,
-                    }
-                )
-            if row.contract_heading != expected["contract_heading"]:
-                admissibility_violations.append(
-                    {
-                        "field": "required_question_rows",
-                        "question_id": row.question_id,
-                        "reason": "contract_heading_mismatch",
-                        "expected": expected["contract_heading"],
-                        "actual": row.contract_heading,
-                    }
-                )
-            if row.normative_focus != expected["normative_focus"]:
-                admissibility_violations.append(
-                    {
-                        "field": "required_question_rows",
-                        "question_id": row.question_id,
-                        "reason": "normative_focus_mismatch",
-                        "expected": expected["normative_focus"],
-                        "actual": row.normative_focus,
-                    }
-                )
-
-        for row in proof_rows:
-            expected = EXPECTED_ADMISSIBILITY_PROOF_ROWS.get(row.proof_id)
-            if expected is None:
-                continue
-            if row.order != expected["order"]:
-                admissibility_violations.append(
-                    {
-                        "field": "required_admissibility_proof_rows",
-                        "proof_id": row.proof_id,
-                        "reason": "proof_order_mismatch",
-                        "expected": expected["order"],
-                        "actual": row.order,
-                    }
-                )
-            if row.contract_heading != expected["contract_heading"]:
-                admissibility_violations.append(
-                    {
-                        "field": "required_admissibility_proof_rows",
-                        "proof_id": row.proof_id,
-                        "reason": "contract_heading_mismatch",
-                        "expected": expected["contract_heading"],
-                        "actual": row.contract_heading,
-                    }
-                )
-            if row.proof_role != expected["proof_role"]:
-                admissibility_violations.append(
-                    {
-                        "field": "required_admissibility_proof_rows",
-                        "proof_id": row.proof_id,
-                        "reason": "proof_role_mismatch",
-                        "expected": expected["proof_role"],
-                        "actual": row.proof_role,
-                    }
-                )
-
-        for row in limit_rows:
-            expected = EXPECTED_ADMISSIBILITY_LIMIT_ROWS.get(row.row_id)
-            if expected is None:
-                continue
-            if row.order != expected["order"]:
-                admissibility_violations.append(
-                    {
-                        "field": "required_admissibility_limit_rows",
-                        "limit_id": row.row_id,
-                        "reason": "limit_order_mismatch",
-                        "expected": expected["order"],
-                        "actual": row.order,
-                    }
-                )
-            if row.contract_phrase != expected["contract_phrase"]:
-                admissibility_violations.append(
-                    {
-                        "field": "required_admissibility_limit_rows",
-                        "limit_id": row.row_id,
-                        "reason": "contract_phrase_mismatch",
-                        "expected": expected["contract_phrase"],
-                        "actual": row.contract_phrase,
-                    }
-                )
+        validate_contract_rows(
+            actual_rows=question_rows,
+            expected_rows=EXPECTED_QUESTION_ROWS,
+            structure_violations=structure_violations,
+            admissibility_violations=admissibility_violations,
+            field_name="required_question_rows",
+            id_attr="question_id",
+            compare_fields=("contract_heading", "normative_focus"),
+            non_contiguous_reason="question_order_non_contiguous",
+            missing_reason="missing_expected_questions",
+            extra_reason="extra_questions",
+            missing_ids_key="question_ids",
+            extra_ids_key="question_ids",
+            violation_id_key="question_id",
+            order_reason="question_order_mismatch",
+        )
+        validate_contract_rows(
+            actual_rows=proof_rows,
+            expected_rows=EXPECTED_ADMISSIBILITY_PROOF_ROWS,
+            structure_violations=structure_violations,
+            admissibility_violations=admissibility_violations,
+            field_name="required_admissibility_proof_rows",
+            id_attr="proof_id",
+            compare_fields=("contract_heading", "proof_role"),
+            non_contiguous_reason="proof_order_non_contiguous",
+            missing_ids_key="proof_ids",
+            extra_ids_key="proof_ids",
+            violation_id_key="proof_id",
+            order_reason="proof_order_mismatch",
+        )
+        validate_contract_rows(
+            actual_rows=limit_rows,
+            expected_rows=EXPECTED_ADMISSIBILITY_LIMIT_ROWS,
+            structure_violations=structure_violations,
+            admissibility_violations=admissibility_violations,
+            field_name="required_admissibility_limit_rows",
+            id_attr="row_id",
+            compare_fields=("contract_phrase",),
+            duplicate_reason="duplicate_limit_id",
+            non_contiguous_reason="limit_order_non_contiguous",
+            missing_ids_key="limit_ids",
+            extra_ids_key="limit_ids",
+            violation_id_key="limit_id",
+            order_reason="limit_order_mismatch",
+        )
 
         if len(set(outcome_orders)) != len(outcome_orders) or not contiguous_orders(sorted(outcome_orders)):
             structure_violations.append({"field": "admissibility_outcome_rows", "reason": "outcome_order_non_contiguous"})

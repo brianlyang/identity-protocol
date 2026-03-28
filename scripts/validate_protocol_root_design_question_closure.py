@@ -13,7 +13,7 @@ from root_contract_anchor_checks_common import (
     root_doc_anchor_checks_from_doc,
     validate_expected_root_doc_anchor_checks,
 )
-from root_contract_row_validation_common import contiguous_orders
+from root_contract_row_validation_common import validate_contract_rows
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
 from root_design_question_closure_common import (
     STATUS_FAIL_REQUIRED,
@@ -234,26 +234,14 @@ def main() -> int:
             error_code = ERR_REGISTRY
 
     if not stale_reasons:
-        row_map = {row.question_id: row for row in closure_rows}
-        orders = [row.order for row in closure_rows]
-        if len(row_map) != len(closure_rows):
-            structure_violations.append({"field": "required_question_closure_rows", "reason": "duplicate_question_id"})
-        if len(set(orders)) != len(orders) or not contiguous_orders(sorted(orders)):
-            structure_violations.append({"field": "required_question_closure_rows", "reason": "question_order_non_contiguous"})
-
-        missing = sorted(set(EXPECTED_QUESTION_CLOSURE_ROWS) - set(row_map))
-        extra = sorted(set(row_map) - set(EXPECTED_QUESTION_CLOSURE_ROWS))
-        if missing:
-            structure_violations.append({"field": "required_question_closure_rows", "reason": "missing_expected_rows", "row_ids": missing})
-        if extra:
-            structure_violations.append({"field": "required_question_closure_rows", "reason": "unexpected_rows", "row_ids": extra})
-
-        for question_id, expected in EXPECTED_QUESTION_CLOSURE_ROWS.items():
-            row = row_map.get(question_id)
-            if row is None:
-                continue
-            for field in (
-                "order",
+        validate_contract_rows(
+            actual_rows=closure_rows,
+            expected_rows=EXPECTED_QUESTION_CLOSURE_ROWS,
+            structure_violations=structure_violations,
+            support_violations=structure_violations,
+            field_name="required_question_closure_rows",
+            id_attr="question_id",
+            compare_fields=(
                 "philosophy_marker",
                 "admissibility_question_id",
                 "admissibility_normative_focus",
@@ -262,17 +250,16 @@ def main() -> int:
                 "target_validator_script",
                 "target_status_key",
                 "target_contract_file",
-            ):
-                if getattr(row, field) != expected[field]:
-                    structure_violations.append(
-                        {
-                            "field": "required_question_closure_rows",
-                            "reason": f"{field}_mismatch",
-                            "row_id": question_id,
-                            "expected": expected[field],
-                            "actual": getattr(row, field),
-                        }
-                    )
+            ),
+            non_contiguous_reason="question_order_non_contiguous",
+            extra_reason="unexpected_rows",
+        )
+
+        row_map = {row.question_id: row for row in closure_rows}
+        for question_id, expected in EXPECTED_QUESTION_CLOSURE_ROWS.items():
+            row = row_map.get(question_id)
+            if row is None:
+                continue
             if tuple(row.target_required_markers) != expected["target_required_markers"]:
                 structure_violations.append(
                     {
