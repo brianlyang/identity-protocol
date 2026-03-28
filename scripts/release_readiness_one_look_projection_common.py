@@ -18,6 +18,9 @@ from release_readiness_repo_global_closure_projection_common import (
 from release_readiness_required_gate_bundle_projection_common import (
     apply_release_readiness_required_gate_bundle_one_look,
 )
+from terminal_truth_boundary_projection_common import (
+    apply_release_readiness_terminal_truth_boundary_one_look,
+)
 
 
 STATUS_UNKNOWN = "UNKNOWN"
@@ -53,14 +56,6 @@ RELEASE_READINESS_ONE_LOOK_CORE_FIELDS: tuple[str, ...] = (
     "resolve_identity_context_local_catalog_closure_status",
     "failclose_plugin_projection_status",
     "full_scan_target_regression_status",
-    "terminal_truth_boundary_projection_status",
-    "repair_lane_status",
-    "experience_writeback_validation_status",
-    "terminal_truth_observation_status",
-    "admission_lane_projection",
-    "repair_success_not_clean_terminal_truth",
-    "terminal_truth_class",
-    "terminal_state_class",
 )
 
 
@@ -101,8 +96,6 @@ def build_release_readiness_one_look_core_projection(summary: dict[str, Any]) ->
     )
     plugin_projection = summary_payload.get("failclose_plugin_projection") or {}
     full_scan = summary_payload.get("full_scan_target_regression") or {}
-    terminal_truth_boundary = summary_payload.get("terminal_truth_boundary_projection") or {}
-
     return {
         "required_contract_coverage_status": _clean_str(coverage.get("status")).upper() or STATUS_UNKNOWN,
         "failed_required_contract_count": _safe_int(coverage.get("failed_required_contract_count")),
@@ -167,31 +160,12 @@ def build_release_readiness_one_look_core_projection(summary: dict[str, Any]) ->
         or STATUS_UNKNOWN,
         "failclose_plugin_projection_status": _clean_str(plugin_projection.get("status")).upper() or STATUS_UNKNOWN,
         "full_scan_target_regression_status": _clean_str(full_scan.get("status")).upper() or STATUS_UNKNOWN,
-        "terminal_truth_boundary_projection_status": _clean_str(
-            terminal_truth_boundary.get("terminal_truth_boundary_projection_status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "repair_lane_status": _clean_str(terminal_truth_boundary.get("repair_lane_status")).upper()
-        or STATUS_UNKNOWN,
-        "experience_writeback_validation_status": _clean_str(
-            terminal_truth_boundary.get("experience_writeback_validation_status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "terminal_truth_observation_status": _clean_str(
-            terminal_truth_boundary.get("terminal_truth_observation_status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "admission_lane_projection": _clean_str(terminal_truth_boundary.get("admission_lane_projection")),
-        "repair_success_not_clean_terminal_truth": bool(
-            terminal_truth_boundary.get("repair_success_not_clean_terminal_truth")
-        ),
-        "terminal_truth_class": _clean_str(terminal_truth_boundary.get("terminal_truth_class")),
-        "terminal_state_class": _clean_str(terminal_truth_boundary.get("terminal_state_class")),
     }
 
 
 def build_release_readiness_one_look_projection(summary: dict[str, Any]) -> dict[str, Any]:
     one_look = build_release_readiness_one_look_core_projection(summary)
+    apply_release_readiness_terminal_truth_boundary_one_look(summary, one_look)
     apply_release_readiness_health_report_experience_writeback_one_look(summary, one_look)
     apply_release_readiness_required_gate_bundle_one_look(summary, one_look)
     apply_release_readiness_repo_global_closure_one_look(summary, one_look)

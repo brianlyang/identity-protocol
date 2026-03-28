@@ -36,6 +36,9 @@ from release_readiness_runtime_closure_convergence_common import (
     RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS,
     RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_COMMAND_CONVERGENCE_MARKERS,
 )
+from terminal_truth_boundary_projection_common import (
+    RELEASE_READINESS_TERMINAL_TRUTH_BOUNDARY_SURFACE_CONSTRAINTS,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 
@@ -169,6 +172,7 @@ SURFACE_PROFILES: dict[str, GovernedRuntimeSummarySurfaceProfile] = {
             "continuation_inner_resolution_anchor=protocol_owned_repo_root_not_caller_cwd",
             "continuation_forbidden_forward_flags=--summary-out,--resume-from-summary,--max-command-sequence-checks",
             *RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_TERMINAL_TRUTH_BOUNDARY_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS,

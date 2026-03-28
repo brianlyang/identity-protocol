@@ -247,6 +247,7 @@ sys.path.insert(0, str((repo_root / "scripts").resolve()))
 
 import release_readiness_check as readiness
 from terminal_truth_boundary_projection_common import (
+    build_release_readiness_terminal_truth_boundary_one_look_projection,
     build_terminal_truth_boundary_projection_from_report,
     build_terminal_truth_boundary_projection_summary_skeleton,
 )
@@ -342,13 +343,11 @@ summary = {
 }
 readiness._hydrate_one_look_projection(summary)
 one_look = summary["one_look"]
-assert one_look["terminal_truth_boundary_projection_status"] == "PASS_REQUIRED", one_look
-assert one_look["repair_lane_status"] == "PASS_REQUIRED", one_look
-assert one_look["experience_writeback_validation_status"] == "SKIPPED_NOT_REQUIRED", one_look
-assert one_look["terminal_truth_observation_status"] == "FAIL_REQUIRED", one_look
-assert one_look["admission_lane_projection"] == "BLOCKED_BY_TERMINAL_TRUTH", one_look
-assert one_look["repair_success_not_clean_terminal_truth"] is True, one_look
-assert one_look["terminal_truth_class"] == "review_required_execution_closure", one_look
+expected_one_look = build_release_readiness_terminal_truth_boundary_one_look_projection(
+    review_projection
+)
+for field_name, expected_value in expected_one_look.items():
+    assert one_look[field_name] == expected_value, (field_name, one_look)
 
 print(json.dumps({
     "terminal_truth_boundary_projection_probe_status": "PASS_REQUIRED",

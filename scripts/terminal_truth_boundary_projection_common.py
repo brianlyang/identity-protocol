@@ -23,6 +23,30 @@ BOUNDARY_HEALTH_REPAIR_GREEN_TERMINAL_TRUTH_CLEAN = "repair_green_terminal_truth
 BOUNDARY_HEALTH_REPAIR_BLOCKED_TERMINAL_TRUTH_BLOCKED = "repair_blocked_terminal_truth_blocked"
 BOUNDARY_HEALTH_REPAIR_BLOCKED_TERMINAL_TRUTH_CLEAN = "repair_blocked_terminal_truth_clean"
 BOUNDARY_HEALTH_PROJECTION_INCOMPLETE = "projection_incomplete"
+RELEASE_READINESS_TERMINAL_TRUTH_BOUNDARY_ONE_LOOK_FIELDS: tuple[str, ...] = (
+    "terminal_truth_boundary_projection_status",
+    "repair_lane_status",
+    "experience_writeback_validation_status",
+    "terminal_truth_observation_status",
+    "admission_lane_projection",
+    "repair_success_not_clean_terminal_truth",
+    "terminal_truth_class",
+    "terminal_state_class",
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BOUNDARY_PROJECTION_MARKER = (
+    "release_readiness_terminal_truth_boundary_projection="
+    + "|".join(
+        f"one_look.{field}"
+        for field in RELEASE_READINESS_TERMINAL_TRUTH_BOUNDARY_ONE_LOOK_FIELDS
+    )
+)
+RELEASE_READINESS_TERMINAL_TRUTH_BOUNDARY_SURFACE_CONSTRAINTS: tuple[str, ...] = (
+    RELEASE_READINESS_TERMINAL_TRUTH_BOUNDARY_PROJECTION_MARKER,
+    *(
+        f"one_look.{field}"
+        for field in RELEASE_READINESS_TERMINAL_TRUTH_BOUNDARY_ONE_LOOK_FIELDS
+    ),
+)
 
 
 def build_terminal_truth_boundary_projection_summary_skeleton() -> dict[str, Any]:
@@ -222,6 +246,46 @@ def build_terminal_truth_boundary_projection_from_enrichment(
         ),
         "stale_reasons": stale_reasons,
     }
+
+
+def build_release_readiness_terminal_truth_boundary_one_look_projection(
+    projection: dict[str, Any] | None,
+) -> dict[str, Any]:
+    source = projection if isinstance(projection, dict) else {}
+    return {
+        "terminal_truth_boundary_projection_status": _clean_status(
+            source.get("terminal_truth_boundary_projection_status")
+        )
+        or STATUS_UNKNOWN,
+        "repair_lane_status": _clean_status(source.get("repair_lane_status")) or STATUS_UNKNOWN,
+        "experience_writeback_validation_status": _clean_status(
+            source.get("experience_writeback_validation_status")
+        )
+        or STATUS_UNKNOWN,
+        "terminal_truth_observation_status": _clean_status(
+            source.get("terminal_truth_observation_status")
+        )
+        or STATUS_UNKNOWN,
+        "admission_lane_projection": _clean_string(source.get("admission_lane_projection")),
+        "repair_success_not_clean_terminal_truth": bool(
+            source.get("repair_success_not_clean_terminal_truth")
+        ),
+        "terminal_truth_class": _clean_string(source.get("terminal_truth_class")),
+        "terminal_state_class": _clean_string(source.get("terminal_state_class")),
+    }
+
+
+def apply_release_readiness_terminal_truth_boundary_one_look(
+    summary: dict[str, Any],
+    one_look: dict[str, Any],
+) -> None:
+    if not isinstance(one_look, dict):
+        return
+    summary_payload = summary if isinstance(summary, dict) else {}
+    projection = summary_payload.get("terminal_truth_boundary_projection") or {}
+    one_look.update(
+        build_release_readiness_terminal_truth_boundary_one_look_projection(projection)
+    )
 
 
 def build_terminal_truth_boundary_projection_from_report(

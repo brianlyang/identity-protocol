@@ -30,6 +30,9 @@ sys.path.insert(0, str((repo_root / "scripts").resolve()))
 from actor_session_common import actor_session_path, normalize_actor_binding_store, write_actor_binding_store
 from blocker_taxonomy_common import BLOCKER_ALIAS_MAP_VERSION, CANONICAL_BLOCKER_TYPES
 from create_identity_pack import _collaboration_trigger_contract_skeleton
+from terminal_truth_boundary_projection_common import (
+    build_release_readiness_terminal_truth_boundary_one_look_projection,
+)
 from terminal_truth_cleanliness_common import terminal_truth_cleanliness_contract_skeleton
 
 actor_id = "assistant:codex"
@@ -467,23 +470,11 @@ for row in seeded:
         spec,
     )
     one_look = readiness_payload.get("one_look") or {}
-    assert one_look["terminal_truth_boundary_projection_status"] == "PASS_REQUIRED", (identity_id, one_look)
-    assert one_look["repair_lane_status"] == "PASS_REQUIRED", (identity_id, one_look)
-    assert one_look["experience_writeback_validation_status"] == spec["experience_writeback_validation_status"], (
-        identity_id,
-        one_look,
+    expected_one_look = build_release_readiness_terminal_truth_boundary_one_look_projection(
+        readiness_payload["terminal_truth_boundary_projection"]
     )
-    assert one_look["terminal_truth_observation_status"] == spec["terminal_truth_observation_status"], (
-        identity_id,
-        one_look,
-    )
-    assert one_look["admission_lane_projection"] == spec["admission_lane_projection"], (identity_id, one_look)
-    assert one_look["repair_success_not_clean_terminal_truth"] is spec["repair_success_not_clean_terminal_truth"], (
-        identity_id,
-        one_look,
-    )
-    assert one_look["terminal_truth_class"] == spec["terminal_truth_class"], (identity_id, one_look)
-    assert one_look["terminal_state_class"] == spec["terminal_state_class"], (identity_id, one_look)
+    for field_name, expected_value in expected_one_look.items():
+        assert one_look[field_name] == expected_value, (identity_id, field_name, one_look)
 
 full_scan_out = (tmp_root / "full-identity-protocol-scan.json").resolve()
 _run(
