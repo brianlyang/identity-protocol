@@ -691,6 +691,7 @@ These current-truth-epistemology-completeness rules must remain bound to canonic
 ## Root success-path state admissibility completeness discipline
 
 Success-path state admissibility law is not a soft prose bundle.
+These success-path-state-admissibility-completeness rules must remain bound to canonical success-path-state-admissibility-completeness rows rather than drifting into soft summary prose.
 
 1. required state-class, differentiation, proof, state-class-proof-alignment, limit, and collapse rows must remain explicit as separate machine-readable families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;

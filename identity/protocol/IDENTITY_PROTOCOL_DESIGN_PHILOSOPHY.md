@@ -1607,6 +1607,11 @@ Required state-class, differentiation, proof, state-class-proof-alignment,
 limit, and collapse families must remain explicit as separate machine-readable
 row families.
 
+README root success-path state admissibility completeness discipline must
+therefore stay congruent with admitted
+success-path-state-admissibility-completeness rows rather than becoming a
+freehand completeness summary.
+
 Expected row-family total and emitted row-family total must therefore stay
 congruent under machine-readable coverage completeness rather than being left
 implicit.

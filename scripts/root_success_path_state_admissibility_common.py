@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
@@ -12,6 +13,11 @@ from registry_alias_control_plane_common import resolve_current_yaml_alias
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ROOT_SUCCESS_PATH_STATE_ADMISSIBILITY_CURRENT = "identity/protocol/mappings/root-success-path-state-admissibility.current.yaml"
+ROOT_PROTOCOL_README_REL_PATH = "identity/protocol/README.md"
+SUCCESS_PATH_STATE_ADMISSIBILITY_COMPLETENESS_SECTION_MARKER = "## Root success-path state admissibility completeness discipline"
+ORDERED_ITEM_RE = re.compile(r"^\s*(\d+)\.\s+(.*\S)\s*$")
+HEADING_RE = re.compile(r"^##\s+")
+HORIZONTAL_RULE_RE = re.compile(r"^-{3,}$")
 
 
 @dataclass(frozen=True)
@@ -43,6 +49,26 @@ class StateClassProofAlignmentRow:
     state_class_id: str
     proof_id: str
     alignment_role: str
+
+
+@dataclass(frozen=True)
+class SuccessPathStateAdmissibilityCompletenessRow:
+    order: int
+    completeness_id: str
+    contract_phrase: str
+
+
+@dataclass(frozen=True)
+class SuccessPathStateAdmissibilityCompletenessSurfaceRow:
+    order: int
+    contract_phrase: str
+
+
+@dataclass(frozen=True)
+class SuccessPathStateAdmissibilityCompletenessSurface:
+    rel_path: str
+    rows: tuple[SuccessPathStateAdmissibilityCompletenessSurfaceRow, ...]
+    extraction_violations: tuple[str, ...]
 
 
 def _norm_str(value: Any) -> str:
@@ -181,3 +207,78 @@ def state_admission_limit_rows_from_doc(doc: Mapping[str, Any]) -> tuple[PhraseR
 
 def collapse_rows_from_doc(doc: Mapping[str, Any]) -> tuple[PhraseRow, ...]:
     return _phrase_rows_from_field(doc, "required_collapse_rows", row_key="collapse_id")
+
+
+def success_path_state_admissibility_completeness_rows_from_doc(
+    doc: Mapping[str, Any],
+) -> tuple[SuccessPathStateAdmissibilityCompletenessRow, ...]:
+    rows = doc.get("success_path_state_admissibility_completeness_rows")
+    if not isinstance(rows, list):
+        return ()
+    out: list[SuccessPathStateAdmissibilityCompletenessRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        completeness_id = _norm_str(row.get("completeness_id"))
+        contract_phrase = str(row.get("contract_phrase") or "").strip()
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not completeness_id or not contract_phrase:
+            continue
+        out.append(
+            SuccessPathStateAdmissibilityCompletenessRow(
+                order=order,
+                completeness_id=completeness_id,
+                contract_phrase=contract_phrase,
+            )
+        )
+    return tuple(out)
+
+
+def readme_success_path_state_admissibility_completeness_surface(
+    repo_root: Path,
+) -> SuccessPathStateAdmissibilityCompletenessSurface:
+    path = (repo_root / ROOT_PROTOCOL_README_REL_PATH).resolve()
+    if not path.exists() or not path.is_file():
+        return SuccessPathStateAdmissibilityCompletenessSurface(
+            rel_path=ROOT_PROTOCOL_README_REL_PATH,
+            rows=(),
+            extraction_violations=("target_missing",),
+        )
+
+    lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    section_found = False
+    rows: list[SuccessPathStateAdmissibilityCompletenessSurfaceRow] = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == SUCCESS_PATH_STATE_ADMISSIBILITY_COMPLETENESS_SECTION_MARKER:
+            section_found = True
+            continue
+        if not section_found:
+            continue
+        if HEADING_RE.match(stripped) or HORIZONTAL_RULE_RE.match(stripped):
+            break
+        match = ORDERED_ITEM_RE.match(stripped)
+        if not match:
+            continue
+        rows.append(
+            SuccessPathStateAdmissibilityCompletenessSurfaceRow(
+                order=int(match.group(1)),
+                contract_phrase=match.group(2).strip(),
+            )
+        )
+
+    extraction_violations: list[str] = []
+    if not section_found:
+        extraction_violations.append("section_missing")
+    if section_found and not rows:
+        extraction_violations.append("ordered_items_missing")
+
+    return SuccessPathStateAdmissibilityCompletenessSurface(
+        rel_path=ROOT_PROTOCOL_README_REL_PATH,
+        rows=tuple(rows),
+        extraction_violations=tuple(extraction_violations),
+    )

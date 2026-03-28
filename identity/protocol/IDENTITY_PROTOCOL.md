@@ -358,6 +358,7 @@ implicit.
 3. Expected row identity set and emitted row identity set for each success-path state admissibility family must also remain explicit; identity drift may not be collapsed into summary-only counts.
 4. Protocol legality must not finalize success-path state admissibility while missing or unexpected row identities remain known only inside validator logic.
 5. Fail-close success-path state admissibility output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
+6. README root success-path state admissibility completeness discipline rendered at protocol root must remain congruent with admitted success-path-state-admissibility-completeness rows rather than silently authoring an alternate completeness summary.
 
 ## Root decision-evidence admissibility completeness boundary
 

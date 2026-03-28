@@ -7,9 +7,9 @@ from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
 from root_contract_anchor_checks_common import (
+    append_expected_root_doc_anchor_stale_reasons,
     evaluate_root_doc_anchor_checks,
     root_doc_anchor_checks_from_doc,
-    validate_expected_root_doc_anchor_checks,
 )
 from root_contract_marker_checks_common import (
     contract_required_markers_from_doc,
@@ -35,10 +35,12 @@ from root_success_path_state_admissibility_common import (
     collapse_rows_from_doc,
     differentiation_rows_from_doc,
     load_root_success_path_state_admissibility,
+    readme_success_path_state_admissibility_completeness_surface,
     state_admission_limit_rows_from_doc,
     state_admission_proof_rows_from_doc,
     state_class_rows_from_doc,
     state_class_proof_alignment_rows_from_doc,
+    success_path_state_admissibility_completeness_rows_from_doc,
 )
 
 STATUS_KEY = "protocol_root_success_path_state_admissibility_status"
@@ -215,6 +217,28 @@ EXPECTED_COLLAPSE_ROWS = {
         "contract_phrase": "frozen-definition, admissible-current-turn, bound-active, optional-non-entry, governed-recovery, and demoted-support state classes are treated as if one state-admission proof stratum were sufficient for all of them.",
     },
 }
+EXPECTED_SUCCESS_PATH_STATE_ADMISSIBILITY_COMPLETENESS_ROWS = {
+    "explicit_success_path_state_admissibility_row_families": {
+        "order": 1,
+        "contract_phrase": "required state-class, differentiation, proof, state-class-proof-alignment, limit, and collapse rows must remain explicit as separate machine-readable families;",
+    },
+    "congruent_success_path_state_admissibility_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_success_path_state_admissibility_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_success_path_state_admissibility_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize success-path state admissibility while missing or unexpected row identities remain known only internally;",
+    },
+    "fail_close_preserves_success_path_state_admissibility_identity_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
+    },
+}
 EXPECTED_REGISTRY_MARKERS = (
     "this file remains the authoritative root-domain contract for success-path state admissibility law",
     "## Success-path state admissibility law",
@@ -233,22 +257,26 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
         "### Success-path state admissibility row-family completeness must stay explicit",
         "Required state-class, differentiation, proof, state-class-proof-alignment,\nlimit, and collapse families must remain explicit as separate machine-readable\nrow families.",
+        "README root success-path state admissibility completeness discipline must\ntherefore stay congruent with admitted\nsuccess-path-state-admissibility-completeness rows rather than becoming a\nfreehand completeness summary.",
         "The machine world must not finalize success-path state admissibility while required row identity drift remains known only internally.",
     ),
     "identity/protocol/README.md": (
         "## Root success-path state admissibility completeness discipline",
         "Success-path state admissibility law is not a soft prose bundle.",
+        "These success-path-state-admissibility-completeness rules must remain bound to canonical success-path-state-admissibility-completeness rows rather than drifting into soft summary prose.",
         "1. required state-class, differentiation, proof, state-class-proof-alignment, limit, and collapse rows must remain explicit as separate machine-readable families;",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
         "## Root success-path state admissibility completeness boundary",
         "1. Success-path state admissibility law must remain machine-readable as separate state-class, differentiation, proof, state-class-proof-alignment, limit, and collapse row families.",
         "4. Protocol legality must not finalize success-path state admissibility while missing or unexpected row identities remain known only inside validator logic.",
+        "6. README root success-path state admissibility completeness discipline rendered at protocol root must remain congruent with admitted success-path-state-admissibility-completeness rows rather than silently authoring an alternate completeness summary.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "## Runtime success-path state admissibility consumption boundary",
         "1. Runtime consumes success-path state admissibility law as separate state-class, differentiation, proof, state-class-proof-alignment, limit, and collapse row families rather than as undifferentiated state-admission prose.",
         "4. Runtime must not finalize success-path state admissibility while missing or unexpected row identities remain known only inside validator machinery.",
+        "6. Runtime consumes README root success-path state admissibility completeness discipline as a governed completeness projection bound to admitted success-path-state-admissibility-completeness rows rather than as a freehand completeness summary.",
     ),
 }
 
@@ -307,7 +335,13 @@ def main() -> int:
     state_class_proof_alignment_rows = state_class_proof_alignment_rows_from_doc(state_doc) if state_doc else ()
     state_admission_limit_rows = state_admission_limit_rows_from_doc(state_doc) if state_doc else ()
     collapse_rows = collapse_rows_from_doc(state_doc) if state_doc else ()
+    success_path_state_admissibility_completeness_rows = (
+        success_path_state_admissibility_completeness_rows_from_doc(state_doc) if state_doc else ()
+    )
     root_doc_anchor_checks = root_doc_anchor_checks_from_doc(state_doc) if state_doc else ()
+    success_path_state_admissibility_completeness_surface = (
+        readme_success_path_state_admissibility_completeness_surface(repo_root)
+    )
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     authority_anchors = authority_anchor_checks_from_doc(authority_doc) if authority_doc else ()
@@ -346,18 +380,18 @@ def main() -> int:
             if not rows:
                 stale_reasons.append(f"root_success_path_state_admissibility_{field}_missing")
                 error_code = ERR_REGISTRY
+        if not success_path_state_admissibility_completeness_rows:
+            stale_reasons.append("root_success_path_state_admissibility_completeness_rows_missing")
+            error_code = ERR_REGISTRY
         if not state_doc.get("contract_required_markers"):
             stale_reasons.append("root_success_path_state_admissibility_contract_required_markers_missing")
             error_code = ERR_REGISTRY
-        anchor_reason_count_before = len(stale_reasons)
-        stale_reasons.extend(
-            validate_expected_root_doc_anchor_checks(
-                root_doc_anchor_checks,
-                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
-                stale_reason_prefix="root_success_path_state_admissibility",
-            )
-        )
-        if len(stale_reasons) > anchor_reason_count_before:
+        if append_expected_root_doc_anchor_stale_reasons(
+            stale_reasons,
+            root_doc_anchor_checks,
+            EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+            stale_reason_prefix="root_success_path_state_admissibility",
+        ):
             error_code = ERR_REGISTRY
 
         for field in ("contract_file", "philosophy_anchor_file", "validator_script", "probe_script", "common_script"):
@@ -411,6 +445,26 @@ def main() -> int:
                     "expected_rows": EXPECTED_COLLAPSE_ROWS,
                     "id_attr": "row_id",
                 },
+                {
+                    "family_id": "success_path_state_admissibility_completeness_rows",
+                    "member_id_key": "completeness_id",
+                    "actual_rows": success_path_state_admissibility_completeness_rows,
+                    "expected_rows": {
+                        completeness_id: {}
+                        for completeness_id in EXPECTED_SUCCESS_PATH_STATE_ADMISSIBILITY_COMPLETENESS_ROWS
+                    },
+                    "id_attr": "completeness_id",
+                },
+                {
+                    "family_id": "success_path_state_admissibility_completeness_surface",
+                    "member_id_key": "contract_phrase",
+                    "actual_rows": success_path_state_admissibility_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {}
+                        for row in EXPECTED_SUCCESS_PATH_STATE_ADMISSIBILITY_COMPLETENESS_ROWS.values()
+                    },
+                    "id_attr": "contract_phrase",
+                },
             ),
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
@@ -460,10 +514,85 @@ def main() -> int:
                     "id_attr": "row_id",
                     "compare_fields": ("contract_phrase",),
                 },
+                {
+                    "actual_rows": success_path_state_admissibility_completeness_rows,
+                    "expected_rows": EXPECTED_SUCCESS_PATH_STATE_ADMISSIBILITY_COMPLETENESS_ROWS,
+                    "field_name": "success_path_state_admissibility_completeness_rows",
+                    "id_attr": "completeness_id",
+                    "compare_fields": ("contract_phrase",),
+                    "duplicate_reason": "duplicate_success_path_state_admissibility_completeness_id",
+                    "non_contiguous_reason": "success_path_state_admissibility_completeness_row_order_non_contiguous",
+                    "missing_reason": "missing_success_path_state_admissibility_completeness_rows",
+                    "extra_reason": "extra_success_path_state_admissibility_completeness_rows",
+                    "missing_ids_key": "completeness_ids",
+                    "extra_ids_key": "completeness_ids",
+                    "violation_id_key": "completeness_id",
+                    "order_reason": "success_path_state_admissibility_completeness_row_order_mismatch",
+                },
+                {
+                    "actual_rows": success_path_state_admissibility_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {"order": int(row["order"])}
+                        for row in EXPECTED_SUCCESS_PATH_STATE_ADMISSIBILITY_COMPLETENESS_ROWS.values()
+                    },
+                    "field_name": "success_path_state_admissibility_completeness_surface",
+                    "id_attr": "contract_phrase",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_success_path_state_admissibility_completeness_surface_phrase",
+                    "non_contiguous_reason": "success_path_state_admissibility_completeness_surface_order_non_contiguous",
+                    "missing_reason": "missing_success_path_state_admissibility_completeness_surface_rows",
+                    "extra_reason": "extra_success_path_state_admissibility_completeness_surface_rows",
+                    "missing_ids_key": "contract_phrases",
+                    "extra_ids_key": "contract_phrases",
+                    "violation_id_key": "contract_phrase",
+                    "order_reason": "success_path_state_admissibility_completeness_surface_order_mismatch",
+                },
             ),
             structure_violations=structure_violations,
             admissibility_violations=admissibility_violations,
         )
+
+        expected_success_path_state_admissibility_completeness_phrases = [
+            row["contract_phrase"] for row in EXPECTED_SUCCESS_PATH_STATE_ADMISSIBILITY_COMPLETENESS_ROWS.values()
+        ]
+        actual_success_path_state_admissibility_completeness_phrases = [
+            row.contract_phrase for row in success_path_state_admissibility_completeness_surface.rows
+        ]
+        expected_success_path_state_admissibility_completeness_orders = [
+            int(row["order"]) for row in EXPECTED_SUCCESS_PATH_STATE_ADMISSIBILITY_COMPLETENESS_ROWS.values()
+        ]
+        actual_success_path_state_admissibility_completeness_orders = [
+            row.order for row in success_path_state_admissibility_completeness_surface.rows
+        ]
+        for reason in success_path_state_admissibility_completeness_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "success_path_state_admissibility_completeness_surface",
+                    "reason": f"success_path_state_admissibility_completeness_surface_{reason}",
+                }
+            )
+        if actual_success_path_state_admissibility_completeness_phrases and tuple(
+            actual_success_path_state_admissibility_completeness_phrases
+        ) != tuple(expected_success_path_state_admissibility_completeness_phrases):
+            admissibility_violations.append(
+                {
+                    "field": "success_path_state_admissibility_completeness_surface",
+                    "reason": "success_path_state_admissibility_completeness_surface_phrase_order_mismatch",
+                    "expected": expected_success_path_state_admissibility_completeness_phrases,
+                    "actual": actual_success_path_state_admissibility_completeness_phrases,
+                }
+            )
+        if actual_success_path_state_admissibility_completeness_orders and tuple(
+            actual_success_path_state_admissibility_completeness_orders
+        ) != tuple(expected_success_path_state_admissibility_completeness_orders):
+            admissibility_violations.append(
+                {
+                    "field": "success_path_state_admissibility_completeness_surface",
+                    "reason": "success_path_state_admissibility_completeness_surface_order_mismatch",
+                    "expected": expected_success_path_state_admissibility_completeness_orders,
+                    "actual": actual_success_path_state_admissibility_completeness_orders,
+                }
+            )
 
         contract_file = str(state_doc.get("contract_file") or "").strip()
         contract_path = (repo_root / contract_file).resolve()
@@ -611,6 +740,9 @@ def main() -> int:
         "state_class_proof_alignment_count": len(state_class_proof_alignment_rows),
         "state_admission_limit_count": len(state_admission_limit_rows),
         "collapse_count": len(collapse_rows),
+        "success_path_state_admissibility_completeness_row_count": len(
+            success_path_state_admissibility_completeness_rows
+        ),
         **project_root_contract_support_projection(
             prefix="success_path_state",
             row_family_projection_rows=row_family_projection_rows,
@@ -628,6 +760,26 @@ def main() -> int:
         ],
         "state_admission_limit_ids": [row.row_id for row in sorted(state_admission_limit_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
+        "success_path_state_admissibility_completeness_rows": [
+            {
+                "order": row.order,
+                "completeness_id": row.completeness_id,
+                "contract_phrase": row.contract_phrase,
+            }
+            for row in sorted(success_path_state_admissibility_completeness_rows, key=lambda item: item.order)
+        ],
+        "success_path_state_admissibility_completeness_surface": {
+            "rel_path": success_path_state_admissibility_completeness_surface.rel_path,
+            "entry_count": len(success_path_state_admissibility_completeness_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "contract_phrase": row.contract_phrase,
+                }
+                for row in success_path_state_admissibility_completeness_surface.rows
+            ],
+            "extraction_violations": list(success_path_state_admissibility_completeness_surface.extraction_violations),
+        },
         "state_class_proof_alignment_rows": [
             {
                 "order": row.order,
