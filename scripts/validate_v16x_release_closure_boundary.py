@@ -24,12 +24,12 @@ from release_closure_foundational_marker_common import (
 from release_closure_narrative_marker_common import (
     collect_release_closure_narrative_stale_reasons,
 )
+from release_closure_governance_probe_projection_common import (
+    collect_release_closure_governance_probe_projection_stale_reasons,
+)
 from repo_root_resolution_common import resolve_protocol_repo_root
 from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
-)
-from release_readiness_governance_probe_projection_common import (
-    RELEASE_READINESS_GOVERNANCE_PROBE_PROJECTION_MARKER,
 )
 from release_readiness_post_closure_adjudication_common import (
     RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_SURFACE_CONSTRAINTS,
@@ -59,22 +59,6 @@ REQUIRED_REPO_GLOBAL_CLOSURE_BOUNDARY_MARKERS = (
 )
 
 
-def _collect_governance_probe_projection_line_stale_reasons(
-    text: str,
-    *,
-    label: str,
-) -> list[str]:
-    projection_lines = [
-        line.strip()
-        for line in text.splitlines()
-        if "governance_probe_projection=" in line
-    ]
-    if any(
-        RELEASE_READINESS_GOVERNANCE_PROBE_PROJECTION_MARKER not in line
-        for line in projection_lines
-    ):
-        return [f"{label}_governance_probe_projection_line_not_canonical"]
-    return []
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=None if json_only else 2))
@@ -180,7 +164,9 @@ def main() -> int:
             if marker not in text:
                 stale_reasons.append(f"{label}_missing_repo_global_closure_boundary_marker:{marker}")
         stale_reasons.extend(
-            _collect_governance_probe_projection_line_stale_reasons(text, label=label)
+            collect_release_closure_governance_probe_projection_stale_reasons(
+                text, label=label
+            )
         )
         stale_reasons.extend(collect_release_closure_narrative_stale_reasons(text, label=label))
         for marker in RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS:

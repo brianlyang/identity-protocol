@@ -34,6 +34,9 @@ from release_closure_foundational_marker_common import (
 from release_closure_narrative_marker_common import (
     collect_release_closure_narrative_stale_reasons,
 )
+from release_closure_governance_probe_projection_common import (
+    collect_release_closure_governance_probe_projection_stale_reasons,
+)
 from repo_root_resolution_common import resolve_protocol_repo_root
 from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
@@ -218,6 +221,12 @@ def main() -> int:
         stale_reasons.append("summary_doc_missing_release_tag_boundary")
     stale_reasons.extend(
         collect_release_closure_terminal_truth_split_stale_reasons(
+            summary_text,
+            label="summary_doc",
+        )
+    )
+    stale_reasons.extend(
+        collect_release_closure_governance_probe_projection_stale_reasons(
             summary_text,
             label="summary_doc",
         )
