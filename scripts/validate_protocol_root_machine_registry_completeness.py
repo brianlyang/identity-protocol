@@ -32,6 +32,8 @@ from root_machine_registry_completeness_common import (
     repo_rel_path_surface_stem_policy_from_doc,
     repo_rel_path_scope_policy_from_doc,
     resolve_repo_relative_surface,
+    required_probe_surface_contract_fields_from_doc,
+    required_probe_surface_contract_values_from_doc,
     required_repo_rel_path_patterns_from_doc,
     required_descriptor_field_modes_from_doc,
     required_descriptor_fields_from_doc,
@@ -57,6 +59,12 @@ REQUIRED_VALIDATOR_SURFACE_CONTRACT_VALUES = {
         "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
     ),
 }
+REQUIRED_PROBE_SURFACE_CONTRACT_FIELDS = ("probe_shadow_bootstrap_contract",)
+REQUIRED_PROBE_SURFACE_CONTRACT_VALUES = {
+    "probe_shadow_bootstrap_contract": (
+        "probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings"
+    ),
+}
 
 EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
@@ -69,6 +77,7 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "A lawful root mapping family must therefore disclose the validator, probe,",
         "shared-common, emitted status-key, and emitted error-code surfaces that govern it.",
         "validator root-doc-anchor and row-projection contract surfaces",
+        "probe shadow-bootstrap contract surfaces as machine-readable surface rows rather than hidden probe shell folklore.",
         "machine-readable surface rows rather than hidden validator folklore.",
         "Those repo-relative path surfaces must remain repo-root relative and",
         "Absolute-path capture or parent-escape capture would let local filesystem accident impersonate governed protocol law.",
@@ -89,6 +98,7 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "if a root mapping family exists on disk but is absent from that admitted child set, registry completeness has failed and current-turn consumption must fail-close.",
         "4. an admitted root mapping family must disclose its validator, probe, shared-common, emitted status-key, and emitted error-code enforcement surfaces to the machine world;",
         "5. an admitted root mapping family must also disclose its validator root-doc-anchor and row-projection contract surfaces as machine-readable surface rows;",
+        "5a. an admitted root mapping family must also disclose its probe shadow-bootstrap contract surfaces as machine-readable surface rows;",
         "Hidden enforcement knowledge does not satisfy registry completeness.",
         "Repo-relative descriptor surfaces must also stay repo-root relative and",
         "if they exist locally.",
@@ -104,6 +114,7 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "Registry-completeness drift is a root-law failure, not a convenience-layer warning.",
         "5. Registry admission without discoverable validator/probe/common/status-key/error-code surfaces is still incomplete.",
         "5a. Registry admission without discoverable validator root-doc-anchor and row-projection contract surfaces is still incomplete.",
+        "5b. Registry admission without discoverable probe shadow-bootstrap contract surfaces is still incomplete.",
         "6. Repo-relative descriptor surfaces disclosed by an admitted family must remain repo-root relative and repo-contained; absolute-path or parent-escape capture is non-compliant.",
         "7. Repo-relative descriptor surfaces disclosed by an admitted family must also stay role-typed; validator, probe, and shared-common path classes are not interchangeable.",
         "8. Role-typed repo-relative descriptor surfaces disclosed by an admitted family must also stay cross-role coherent; validator/probe/common may not silently bind to different root surface stems.",
@@ -117,6 +128,7 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "Runtime must fail-close on registry-completeness drift rather than loading the most convenient on-disk mapping.",
         "5. Runtime must discover validator/probe/common/status-key/error-code surfaces from admitted mapping-family descriptors rather than hidden local knowledge.",
         "5a. Runtime must also discover validator root-doc-anchor and row-projection contract surfaces from admitted mapping-family descriptors rather than hidden local knowledge.",
+        "5b. Runtime must also discover probe shadow-bootstrap contract surfaces from admitted mapping-family descriptors rather than hidden local probe convention.",
         "6. Runtime must reject descriptor paths that are absolute or escape repo root; repo-relative descriptor surfaces must stay repo-root relative and repo-contained.",
         "7. Runtime must also reject role-swapped descriptor paths; validator, probe, and shared-common surfaces must stay role-typed rather than merely repo-local.",
         "8. Runtime must also reject cross-role incoherent descriptor sets; validator/probe/common surfaces for one admitted family must converge on one root surface stem.",
@@ -160,6 +172,11 @@ def main() -> int:
     unexpected_validator_surface_contract_row_ids: list[str] = []
     validator_surface_contract_row_coverage_incomplete = False
     validator_surface_contract_row_identity_projection_incomplete = False
+    probe_surface_contract_row_ids: list[str] = []
+    missing_probe_surface_contract_row_ids: list[str] = []
+    unexpected_probe_surface_contract_row_ids: list[str] = []
+    probe_surface_contract_row_coverage_incomplete = False
+    probe_surface_contract_row_identity_projection_incomplete = False
     registered_complete_family_ids: list[str] = []
     row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
@@ -192,6 +209,16 @@ def main() -> int:
     )
     required_validator_surface_contract_values = (
         required_validator_surface_contract_values_from_doc(completeness_doc)
+        if completeness_doc
+        else {}
+    )
+    required_probe_surface_contract_fields = (
+        required_probe_surface_contract_fields_from_doc(completeness_doc)
+        if completeness_doc
+        else ()
+    )
+    required_probe_surface_contract_values = (
+        required_probe_surface_contract_values_from_doc(completeness_doc)
         if completeness_doc
         else {}
     )
@@ -267,6 +294,16 @@ def main() -> int:
         if required_validator_surface_contract_values != REQUIRED_VALIDATOR_SURFACE_CONTRACT_VALUES:
             stale_reasons.append(
                 "root_machine_registry_completeness_required_validator_surface_contract_values_invalid"
+            )
+            error_code = ERR_REGISTRY
+        if required_probe_surface_contract_fields != REQUIRED_PROBE_SURFACE_CONTRACT_FIELDS:
+            stale_reasons.append(
+                "root_machine_registry_completeness_required_probe_surface_contract_fields_invalid"
+            )
+            error_code = ERR_REGISTRY
+        if required_probe_surface_contract_values != REQUIRED_PROBE_SURFACE_CONTRACT_VALUES:
+            stale_reasons.append(
+                "root_machine_registry_completeness_required_probe_surface_contract_values_invalid"
             )
             error_code = ERR_REGISTRY
         if required_repo_rel_path_patterns != {
@@ -391,6 +428,7 @@ def main() -> int:
                 alias_error = ""
                 descriptor_field_rows: list[dict[str, Any]] = []
                 validator_surface_contract_rows: list[dict[str, Any]] = []
+                probe_surface_contract_rows: list[dict[str, Any]] = []
                 descriptor_surface_stems: dict[str, str] = {}
                 default_family_surface_stem, expected_family_surface_stem_error = default_surface_stem_from_family_id(
                     family_id
@@ -756,6 +794,54 @@ def main() -> int:
                                             }
                                         )
 
+                                for contract_field in required_probe_surface_contract_fields:
+                                    expected_contract_value = required_probe_surface_contract_values.get(
+                                        contract_field, ""
+                                    )
+                                    actual_contract_value = str(active_doc.get(contract_field) or "").strip()
+                                    contract_row_id = f"{family_id}:{contract_field}"
+                                    contract_row_status = (
+                                        STATUS_PASS_REQUIRED
+                                        if actual_contract_value
+                                        and actual_contract_value == expected_contract_value
+                                        else STATUS_FAIL_REQUIRED
+                                    )
+                                    probe_surface_contract_rows.append(
+                                        {
+                                            "contract_row_id": contract_row_id,
+                                            "contract_field": contract_field,
+                                            "value": actual_contract_value,
+                                            "expected_value": expected_contract_value,
+                                            "status": contract_row_status,
+                                        }
+                                    )
+                                    probe_surface_contract_row_ids.append(contract_row_id)
+                                    if not actual_contract_value:
+                                        family_violations.append("probe_surface_contract_field_missing")
+                                        completeness_violations.append(
+                                            {
+                                                "field": "root_mapping_family",
+                                                "reason": "probe_surface_contract_field_missing",
+                                                "family_id": family_id,
+                                                "active_file": active_file,
+                                                "contract_field": contract_field,
+                                                "expected_value": expected_contract_value,
+                                            }
+                                        )
+                                    elif actual_contract_value != expected_contract_value:
+                                        family_violations.append("probe_surface_contract_value_mismatch")
+                                        completeness_violations.append(
+                                            {
+                                                "field": "root_mapping_family",
+                                                "reason": "probe_surface_contract_value_mismatch",
+                                                "family_id": family_id,
+                                                "active_file": active_file,
+                                                "contract_field": contract_field,
+                                                "actual_value": actual_contract_value,
+                                                "expected_value": expected_contract_value,
+                                            }
+                                        )
+
                 unique_surface_stems = sorted(set(descriptor_surface_stems.values()))
                 if len(unique_surface_stems) > 1:
                     family_violations.append("descriptor_surface_stem_mismatch")
@@ -814,8 +900,15 @@ def main() -> int:
                         "required_validator_surface_contract_values": dict(
                             required_validator_surface_contract_values
                         ),
+                        "required_probe_surface_contract_fields": list(
+                            required_probe_surface_contract_fields
+                        ),
+                        "required_probe_surface_contract_values": dict(
+                            required_probe_surface_contract_values
+                        ),
                         "descriptor_field_rows": descriptor_field_rows,
                         "validator_surface_contract_rows": validator_surface_contract_rows,
+                        "probe_surface_contract_rows": probe_surface_contract_rows,
                         "family_status": STATUS_PASS_REQUIRED if not family_violations else STATUS_FAIL_REQUIRED,
                         "family_violations": family_violations,
                     }
@@ -894,6 +987,48 @@ def main() -> int:
                         "unexpected_contract_row_ids": unexpected_validator_surface_contract_row_ids,
                     }
                 )
+            expected_family_probe_surface_contract_row_count = (
+                len(discovered_family_ids) * len(required_probe_surface_contract_fields)
+            )
+            probe_surface_contract_row_coverage_incomplete = (
+                len(probe_surface_contract_row_ids)
+                != expected_family_probe_surface_contract_row_count
+            )
+            if probe_surface_contract_row_coverage_incomplete:
+                completeness_violations.append(
+                    {
+                        "field": "root_mapping_family",
+                        "reason": "family_probe_surface_contract_row_coverage_incomplete",
+                        "expected_count": expected_family_probe_surface_contract_row_count,
+                        "actual_count": len(probe_surface_contract_row_ids),
+                    }
+                )
+            expected_probe_surface_contract_row_ids = sorted(
+                f"{family_id}:{contract_field}"
+                for family_id in discovered_family_ids
+                for contract_field in required_probe_surface_contract_fields
+            )
+            missing_probe_surface_contract_row_ids = sorted(
+                set(expected_probe_surface_contract_row_ids)
+                - set(probe_surface_contract_row_ids)
+            )
+            unexpected_probe_surface_contract_row_ids = sorted(
+                set(probe_surface_contract_row_ids)
+                - set(expected_probe_surface_contract_row_ids)
+            )
+            probe_surface_contract_row_identity_projection_incomplete = bool(
+                missing_probe_surface_contract_row_ids
+                or unexpected_probe_surface_contract_row_ids
+            )
+            if probe_surface_contract_row_identity_projection_incomplete:
+                completeness_violations.append(
+                    {
+                        "field": "root_mapping_family",
+                        "reason": "family_probe_surface_contract_row_identity_projection_incomplete",
+                        "missing_contract_row_ids": missing_probe_surface_contract_row_ids,
+                        "unexpected_contract_row_ids": unexpected_probe_surface_contract_row_ids,
+                    }
+                )
 
         anchor_violations.extend(
             evaluate_root_doc_anchor_checks(
@@ -957,6 +1092,16 @@ def main() -> int:
         if validator_surface_contract_row_identity_projection_incomplete
         else STATUS_PASS_REQUIRED
     )
+    probe_surface_contract_row_coverage_status = (
+        STATUS_FAIL_REQUIRED
+        if probe_surface_contract_row_coverage_incomplete
+        else STATUS_PASS_REQUIRED
+    )
+    probe_surface_contract_row_identity_projection_status = (
+        STATUS_FAIL_REQUIRED
+        if probe_surface_contract_row_identity_projection_incomplete
+        else STATUS_PASS_REQUIRED
+    )
     root_doc_anchor_status = (
         STATUS_FAIL_REQUIRED if anchor_violations else STATUS_PASS_REQUIRED
     )
@@ -1000,6 +1145,20 @@ def main() -> int:
                 },
                 "id_attr": "contract_row_id",
             },
+            {
+                "family_id": "family_probe_surface_contract_rows",
+                "member_id_key": "contract_row_id",
+                "actual_rows": [
+                    SimpleNamespace(contract_row_id=contract_row_id)
+                    for contract_row_id in probe_surface_contract_row_ids
+                ],
+                "expected_rows": {
+                    f"{family_id}:{contract_field}": {}
+                    for family_id in discovered_family_ids
+                    for contract_field in required_probe_surface_contract_fields
+                },
+                "id_attr": "contract_row_id",
+            },
         ),
         pass_status=STATUS_PASS_REQUIRED,
         fail_status=STATUS_FAIL_REQUIRED,
@@ -1019,6 +1178,12 @@ def main() -> int:
         ),
         "required_validator_surface_contract_values": dict(
             required_validator_surface_contract_values
+        ),
+        "required_probe_surface_contract_fields": list(
+            required_probe_surface_contract_fields
+        ),
+        "required_probe_surface_contract_values": dict(
+            required_probe_surface_contract_values
         ),
         "repo_rel_path_scope_policy": repo_rel_path_scope_policy,
         "repo_rel_path_escape_policy": repo_rel_path_escape_policy,
@@ -1057,6 +1222,23 @@ def main() -> int:
         ),
         "validator_surface_contract_row_identity_projection_status": (
             validator_surface_contract_row_identity_projection_status
+        ),
+        "probe_surface_contract_row_count": len(probe_surface_contract_row_ids),
+        "expected_family_probe_surface_contract_row_count": (
+            len(discovered_family_ids) * len(required_probe_surface_contract_fields)
+        ),
+        "probe_surface_contract_row_ids": probe_surface_contract_row_ids,
+        "missing_probe_surface_contract_row_ids": (
+            missing_probe_surface_contract_row_ids
+        ),
+        "unexpected_probe_surface_contract_row_ids": (
+            unexpected_probe_surface_contract_row_ids
+        ),
+        "probe_surface_contract_row_coverage_status": (
+            probe_surface_contract_row_coverage_status
+        ),
+        "probe_surface_contract_row_identity_projection_status": (
+            probe_surface_contract_row_identity_projection_status
         ),
         **project_root_contract_support_projection(
             prefix="machine_registry_completeness",

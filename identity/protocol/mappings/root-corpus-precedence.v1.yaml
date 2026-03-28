@@ -17,6 +17,7 @@ error_codes:
 - IP-RCP-003
 validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
 validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
 precedence_anchor_checks:
 - rel_path: identity/protocol/README.md
   required_markers:

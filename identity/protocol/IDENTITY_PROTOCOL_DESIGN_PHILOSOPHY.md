@@ -973,6 +973,10 @@ A lawful root mapping family must therefore also disclose its validator
 root-doc-anchor and row-projection contract surfaces as machine-readable
 surface rows rather than hidden validator folklore.
 
+A lawful root mapping family must therefore also disclose its probe
+shadow-bootstrap contract surfaces as machine-readable surface rows
+rather than hidden probe shell folklore.
+
 Registered-complete root-mapping-family total and family-status-row total
 must therefore stay congruent under machine-readable coverage
 completeness rather than being left implicit.

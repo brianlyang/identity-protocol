@@ -43,6 +43,12 @@ assert payload["required_validator_surface_contract_values"] == {
     "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
     "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
 }, payload
+assert payload["required_probe_surface_contract_fields"] == [
+    "probe_shadow_bootstrap_contract",
+], payload
+assert payload["required_probe_surface_contract_values"] == {
+    "probe_shadow_bootstrap_contract": "probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings",
+}, payload
 assert payload["family_count"] == payload["family_status_row_count"], payload
 assert payload["registered_complete_family_count"] == payload["discovered_family_count"], payload
 assert payload["discovered_family_count"] == payload["family_status_row_count"], payload
@@ -54,7 +60,11 @@ assert payload["validator_surface_contract_row_count"] == payload["family_count"
 assert payload["expected_family_validator_surface_contract_row_count"] == payload["family_count"] * 2, payload
 assert payload["validator_surface_contract_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["validator_surface_contract_row_identity_projection_status"] == "PASS_REQUIRED", payload
-assert payload["machine_registry_completeness_row_family_count"] == 3, payload
+assert payload["probe_surface_contract_row_count"] == payload["family_count"], payload
+assert payload["expected_family_probe_surface_contract_row_count"] == payload["family_count"], payload
+assert payload["probe_surface_contract_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["probe_surface_contract_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["machine_registry_completeness_row_family_count"] == 4, payload
 assert payload["machine_registry_completeness_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["machine_registry_completeness_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["family_ids"] == payload["family_status_row_ids"] == payload["discovered_family_ids"], payload
@@ -64,6 +74,8 @@ assert payload["unexpected_family_status_row_ids"] == [], payload
 assert payload["family_status_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["missing_validator_surface_contract_row_ids"] == [], payload
 assert payload["unexpected_validator_surface_contract_row_ids"] == [], payload
+assert payload["missing_probe_surface_contract_row_ids"] == [], payload
+assert payload["unexpected_probe_surface_contract_row_ids"] == [], payload
 assert payload["structure_violation_count"] == 0, payload
 assert payload["completeness_violation_count"] == 0, payload
 assert payload["anchor_violation_count"] == 0, payload
@@ -81,6 +93,14 @@ assert all(
 ), payload
 assert all(
     len(row.get("validator_surface_contract_rows", [])) == 2
+    for row in payload["family_status_rows"]
+), payload
+assert all(
+    all(cell["status"] == "PASS_REQUIRED" for cell in row.get("probe_surface_contract_rows", []))
+    for row in payload["family_status_rows"]
+), payload
+assert all(
+    len(row.get("probe_surface_contract_rows", [])) == 1
     for row in payload["family_status_rows"]
 ), payload
 assert all(
@@ -110,6 +130,7 @@ assert {row["family_id"] for row in payload["row_family_projection_rows"]} == {
     "registered_complete_root_mapping_families",
     "family_status_rows",
     "family_validator_surface_contract_rows",
+    "family_probe_surface_contract_rows",
 }, payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
@@ -124,6 +145,10 @@ status_row = next(
 contract_row = next(
     row for row in payload["row_family_projection_rows"]
     if row["family_id"] == "family_validator_surface_contract_rows"
+)
+probe_contract_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "family_probe_surface_contract_rows"
 )
 assert registered_row["expected_count"] == payload["registered_complete_family_count"], payload
 assert registered_row["actual_count"] == payload["discovered_family_count"], payload
@@ -143,6 +168,12 @@ assert contract_row["missing_ids"] == [], payload
 assert contract_row["unexpected_ids"] == [], payload
 assert contract_row["coverage_status"] == "PASS_REQUIRED", payload
 assert contract_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert probe_contract_row["expected_count"] == payload["expected_family_probe_surface_contract_row_count"], payload
+assert probe_contract_row["actual_count"] == payload["probe_surface_contract_row_count"], payload
+assert probe_contract_row["missing_ids"] == [], payload
+assert probe_contract_row["unexpected_ids"] == [], payload
+assert probe_contract_row["coverage_status"] == "PASS_REQUIRED", payload
+assert probe_contract_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 SOURCE_POLICY_REPO="${TMP_ROOT}/source-policy-drift-repo"
@@ -175,6 +206,38 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
 assert payload["error_code"] == "IP-RMRC-001", payload
 assert "root_machine_registry_completeness_required_validator_surface_contract_fields_invalid" in payload["stale_reasons"], payload
+PY
+
+PROBE_POLICY_REPO="${TMP_ROOT}/probe-policy-drift-repo"
+mirror_repo "${PROBE_POLICY_REPO}"
+python3 - <<'PY' "${PROBE_POLICY_REPO}/identity/protocol/mappings/root-machine-registry-completeness.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["required_probe_surface_contract_fields"] = []
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+PROBE_POLICY_JSON="${TMP_ROOT}/probe-policy-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${PROBE_POLICY_REPO}" \
+  --json-only >"${PROBE_POLICY_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed source probe-surface policy drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${PROBE_POLICY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-001", payload
+assert "root_machine_registry_completeness_required_probe_surface_contract_fields_invalid" in payload["stale_reasons"], payload
 PY
 
 VALIDATOR_SURFACE_FIELD_REPO="${TMP_ROOT}/validator-surface-field-drift-repo"
@@ -223,6 +286,52 @@ assert any(
 ), payload
 PY
 
+PROBE_SURFACE_FIELD_REPO="${TMP_ROOT}/probe-surface-field-drift-repo"
+mirror_repo "${PROBE_SURFACE_FIELD_REPO}"
+python3 - <<'PY' "${PROBE_SURFACE_FIELD_REPO}/identity/protocol/mappings/root-corpus-authority.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc.pop("probe_shadow_bootstrap_contract", None)
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+PROBE_SURFACE_FIELD_JSON="${TMP_ROOT}/probe-surface-field-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${PROBE_SURFACE_FIELD_REPO}" \
+  --json-only >"${PROBE_SURFACE_FIELD_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed missing probe-surface contract field drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${PROBE_SURFACE_FIELD_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert any(
+    row["reason"] == "probe_surface_contract_field_missing"
+    and row.get("family_id") == "root-corpus-authority"
+    and row.get("contract_field") == "probe_shadow_bootstrap_contract"
+    for row in payload["completeness_violations"]
+), payload
+assert any(
+    row.get("family_id") == "root-corpus-authority"
+    and any(
+        cell.get("contract_field") == "probe_shadow_bootstrap_contract"
+        and cell.get("status") == "FAIL_REQUIRED"
+        for cell in row.get("probe_surface_contract_rows", [])
+    )
+    for row in payload["family_status_rows"]
+), payload
+PY
+
 VALIDATOR_SURFACE_VALUE_REPO="${TMP_ROOT}/validator-surface-value-drift-repo"
 mirror_repo "${VALIDATOR_SURFACE_VALUE_REPO}"
 python3 - <<'PY' "${VALIDATOR_SURFACE_VALUE_REPO}/identity/protocol/mappings/root-corpus-ordering.v1.yaml"
@@ -256,6 +365,44 @@ assert any(
     row["reason"] == "validator_surface_contract_value_mismatch"
     and row.get("family_id") == "root-corpus-ordering"
     and row.get("contract_field") == "validator_row_projection_contract"
+    and row.get("actual_value") == "advisory_only"
+    for row in payload["completeness_violations"]
+), payload
+PY
+
+PROBE_SURFACE_VALUE_REPO="${TMP_ROOT}/probe-surface-value-drift-repo"
+mirror_repo "${PROBE_SURFACE_VALUE_REPO}"
+python3 - <<'PY' "${PROBE_SURFACE_VALUE_REPO}/identity/protocol/mappings/root-corpus-ordering.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["probe_shadow_bootstrap_contract"] = "advisory_only"
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+PROBE_SURFACE_VALUE_JSON="${TMP_ROOT}/probe-surface-value-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_machine_registry_completeness.py" \
+  --repo-root "${PROBE_SURFACE_VALUE_REPO}" \
+  --json-only >"${PROBE_SURFACE_VALUE_JSON}"; then
+  echo "[FAIL] machine-registry completeness validator unexpectedly passed probe-surface contract value drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${PROBE_SURFACE_VALUE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_machine_registry_completeness_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RMRC-003", payload
+assert any(
+    row["reason"] == "probe_surface_contract_value_mismatch"
+    and row.get("family_id") == "root-corpus-ordering"
+    and row.get("contract_field") == "probe_shadow_bootstrap_contract"
     and row.get("actual_value") == "advisory_only"
     for row in payload["completeness_violations"]
 ), payload
@@ -812,6 +959,8 @@ assert any(
 ), payload
 assert payload["validator_surface_contract_row_coverage_status"] == "FAIL_REQUIRED", payload
 assert payload["validator_surface_contract_row_identity_projection_status"] == "FAIL_REQUIRED", payload
+assert payload["probe_surface_contract_row_coverage_status"] == "FAIL_REQUIRED", payload
+assert payload["probe_surface_contract_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 assert payload["machine_registry_completeness_row_coverage_status"] == "FAIL_REQUIRED", payload
 assert payload["machine_registry_completeness_row_identity_projection_status"] == "FAIL_REQUIRED", payload
 registered_row = next(
@@ -825,6 +974,10 @@ status_row = next(
 contract_row = next(
     row for row in payload["row_family_projection_rows"]
     if row["family_id"] == "family_validator_surface_contract_rows"
+)
+probe_contract_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "family_probe_surface_contract_rows"
 )
 assert registered_row["expected_count"] == registered_row["actual_count"], payload
 assert registered_row["missing_ids"] == ["root-corpus-law-bundle"], payload
@@ -842,6 +995,14 @@ assert contract_row["missing_ids"] == [
 assert contract_row["unexpected_ids"] == [], payload
 assert contract_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert contract_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert probe_contract_row["expected_count"] == payload["expected_family_probe_surface_contract_row_count"], payload
+assert probe_contract_row["actual_count"] == payload["probe_surface_contract_row_count"], payload
+assert probe_contract_row["missing_ids"] == [
+    "root-shadow-lane:probe_shadow_bootstrap_contract",
+], payload
+assert probe_contract_row["unexpected_ids"] == [], payload
+assert probe_contract_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert probe_contract_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 FAMILY_ROW_COVERAGE_REPO="${TMP_ROOT}/family-row-coverage-repo"

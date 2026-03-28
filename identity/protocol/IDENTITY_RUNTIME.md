@@ -97,6 +97,7 @@ Runtime meaning:
 4. Runtime discovery of an unregistered root mapping family may motivate governed strengthening, but it does not self-promote that family into canonical status.
 5. Runtime must discover validator/probe/common/status-key/error-code surfaces from admitted mapping-family descriptors rather than hidden local knowledge.
 5a. Runtime must also discover validator root-doc-anchor and row-projection contract surfaces from admitted mapping-family descriptors rather than hidden local knowledge.
+5b. Runtime must also discover probe shadow-bootstrap contract surfaces from admitted mapping-family descriptors rather than hidden local probe convention.
 6. Runtime must reject descriptor paths that are absolute or escape repo root; repo-relative descriptor surfaces must stay repo-root relative and repo-contained.
 7. Runtime must also reject role-swapped descriptor paths; validator, probe, and shared-common surfaces must stay role-typed rather than merely repo-local.
 8. Runtime must also reject cross-role incoherent descriptor sets; validator/probe/common surfaces for one admitted family must converge on one root surface stem.

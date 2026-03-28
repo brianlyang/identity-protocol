@@ -13,6 +13,7 @@ error_codes:
 - IP-RMRC-003
 validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
 validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
 root_family_prefix: root-
 current_suffix: .current.yaml
 version_regex: ^root-[a-z0-9-]+\.v[0-9]+\.yaml$
@@ -43,6 +44,10 @@ required_validator_surface_contract_fields:
 required_validator_surface_contract_values:
   validator_root_doc_anchor_contract: root_doc_anchor_status_pass_required_with_positive_anchor_check_count
   validator_row_projection_contract: nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses
+required_probe_surface_contract_fields:
+- probe_shadow_bootstrap_contract
+required_probe_surface_contract_values:
+  probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required_with_bootstrap_and_mirror_bindings
 required_repo_rel_path_patterns:
   validator_script: ^scripts/validate_protocol_(?P<surface_stem>root_[a-z0-9_]+)\.py$
   probe_script: ^scripts/ci/run_protocol_(?P<surface_stem>root_[a-z0-9_]+)_probes_ci\.sh$
@@ -61,6 +66,8 @@ anchor_checks:
   - shared-common, emitted status-key, and emitted error-code surfaces that govern
     it.
   - validator root-doc-anchor and row-projection contract surfaces
+  - probe shadow-bootstrap contract surfaces as machine-readable surface rows rather
+    than hidden probe shell folklore.
   - machine-readable surface rows rather than hidden validator folklore.
   - Those repo-relative path surfaces must remain repo-root relative and
   - Absolute-path capture or parent-escape capture would let local filesystem
@@ -91,6 +98,8 @@ anchor_checks:
     world;
   - 5. an admitted root mapping family must also disclose its validator root-doc-anchor
     and row-projection contract surfaces as machine-readable surface rows;
+  - 5a. an admitted root mapping family must also disclose its probe shadow-bootstrap
+    contract surfaces as machine-readable surface rows;
   - Hidden enforcement knowledge does not satisfy registry completeness.
   - Repo-relative descriptor surfaces must also stay repo-root relative and
   - if they exist locally.
@@ -117,6 +126,8 @@ anchor_checks:
     still incomplete.
   - 5a. Registry admission without discoverable validator root-doc-anchor and row-projection
     contract surfaces is still incomplete.
+  - 5b. Registry admission without discoverable probe shadow-bootstrap contract
+    surfaces is still incomplete.
   - 6. Repo-relative descriptor surfaces disclosed by an admitted family must remain
     repo-root relative and repo-contained; absolute-path or parent-escape capture
     is non-compliant.
@@ -145,6 +156,8 @@ anchor_checks:
   - 5a. Runtime must also discover validator root-doc-anchor and row-projection
     contract surfaces from admitted mapping-family descriptors rather than hidden
     local knowledge.
+  - 5b. Runtime must also discover probe shadow-bootstrap contract surfaces from
+    admitted mapping-family descriptors rather than hidden local probe convention.
   - 6. Runtime must reject descriptor paths that are absolute or escape repo root;
     repo-relative descriptor surfaces must stay repo-root relative and repo-contained.
   - 7. Runtime must also reject role-swapped descriptor paths; validator, probe,

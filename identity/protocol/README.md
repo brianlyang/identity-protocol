@@ -372,6 +372,7 @@ Current-turn legality must instead resolve from machine-consumed enforcement sur
 3. if a root mapping family exists on disk but is absent from that admitted child set, registry completeness has failed and current-turn consumption must fail-close.
 4. an admitted root mapping family must disclose its validator, probe, shared-common, emitted status-key, and emitted error-code enforcement surfaces to the machine world;
 5. an admitted root mapping family must also disclose its validator root-doc-anchor and row-projection contract surfaces as machine-readable surface rows;
+5a. an admitted root mapping family must also disclose its probe shadow-bootstrap contract surfaces as machine-readable surface rows;
 
 Registered-complete root-mapping-family total and family-status-row total
 must also remain congruent under machine-readable coverage completeness
