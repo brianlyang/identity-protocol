@@ -216,6 +216,27 @@ def main() -> int:
     live_norm = _canonicalize(live_doc)
 
     if current_doc:
+        if current_norm.get("summary") != live_norm.get("summary"):
+            mismatches.append(
+                {
+                    "field": "summary",
+                    "reason": "summary_drift",
+                }
+            )
+        if current_norm.get("promotion_block_reasons") != live_norm.get("promotion_block_reasons"):
+            mismatches.append(
+                {
+                    "field": "promotion_block_reasons",
+                    "reason": "promotion_block_reasons_drift",
+                }
+            )
+        if current_norm.get("selected_check_names") != live_norm.get("selected_check_names"):
+            mismatches.append(
+                {
+                    "field": "selected_check_names",
+                    "reason": "selected_check_scope_drift",
+                }
+            )
         if current_norm.get("control_plane_status") != live_norm.get("control_plane_status"):
             mismatches.append(
                 {

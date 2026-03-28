@@ -15,6 +15,8 @@ POSITIVE_STATUS_SYNC_JSON="${TMP_ROOT}/positive-status-sync.json"
 DIRECT_RENDER_JSON="${TMP_ROOT}/direct-render.json"
 DIRECT_RENDER_SYNC_JSON="${TMP_ROOT}/direct-render-sync.json"
 INCOMPLETE_STATUS_JSON="${TMP_ROOT}/incomplete-status.json"
+STATUS_SCOPE_DRIFT_JSON="${TMP_ROOT}/status-scope-drift.json"
+STATUS_SUMMARY_DRIFT_JSON="${TMP_ROOT}/status-summary-drift.json"
 
 mkdir -p "${SHADOW_ROOT}"
 
@@ -264,6 +266,81 @@ from pathlib import Path
 payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 if str(payload.get("control_plane_status_sync_status", "")).strip().upper() != "PASS_REQUIRED":
     raise SystemExit("direct_partial_render_full_status_sync_not_green")
+PY
+
+python3 - <<'PY' "${SHADOW_ROOT}/identity/protocol/mappings/control-plane-status.v1.6.json"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+payload["selected_check_names"] = ["control_plane_budget"]
+path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+if python3 "${SHADOW_ROOT}/scripts/validate_control_plane_status_sync.py" \
+  --repo-root "${SHADOW_ROOT}" \
+  --json-only > "${STATUS_SCOPE_DRIFT_JSON}"; then
+  echo "[FAIL] control-plane status sync unexpectedly passed selected-check scope drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${STATUS_SCOPE_DRIFT_JSON}"
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+if str(payload.get("control_plane_status_sync_status", "")).strip().upper() != "FAIL_REQUIRED":
+    raise SystemExit("selected_check_scope_drift_should_fail_status_sync")
+if not any(
+    str(row.get("field", "")).strip() == "selected_check_names"
+    and str(row.get("reason", "")).strip() == "selected_check_scope_drift"
+    for row in (payload.get("mismatches") or [])
+):
+    raise SystemExit("selected_check_scope_drift_mismatch_missing")
+PY
+
+python3 "${SHADOW_ROOT}/scripts/render_control_plane_status.py" \
+  --repo-root "${SHADOW_ROOT}" \
+  --write \
+  --json-only > /dev/null
+
+python3 - <<'PY' "${SHADOW_ROOT}/identity/protocol/mappings/control-plane-status.v1.6.json"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+payload = json.loads(path.read_text(encoding="utf-8"))
+summary = payload.get("summary") or {}
+summary["pass_count"] = int(summary.get("pass_count", 0) or 0) + 1
+payload["summary"] = summary
+path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+if python3 "${SHADOW_ROOT}/scripts/validate_control_plane_status_sync.py" \
+  --repo-root "${SHADOW_ROOT}" \
+  --json-only > "${STATUS_SUMMARY_DRIFT_JSON}"; then
+  echo "[FAIL] control-plane status sync unexpectedly passed summary drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${STATUS_SUMMARY_DRIFT_JSON}"
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+if str(payload.get("control_plane_status_sync_status", "")).strip().upper() != "FAIL_REQUIRED":
+    raise SystemExit("summary_drift_should_fail_status_sync")
+if not any(
+    str(row.get("field", "")).strip() == "summary"
+    and str(row.get("reason", "")).strip() == "summary_drift"
+    for row in (payload.get("mismatches") or [])
+):
+    raise SystemExit("summary_drift_mismatch_missing")
 PY
 
 python3 - <<'PY' "${SHADOW_ROOT}/identity/protocol/mappings/control-plane-status.v1.6.json"
