@@ -7,9 +7,9 @@ from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
 from root_contract_anchor_checks_common import (
+    append_expected_root_doc_anchor_stale_reasons,
     evaluate_root_doc_anchor_checks,
     root_doc_anchor_checks_from_doc,
-    validate_expected_root_doc_anchor_checks,
 )
 from root_contract_marker_checks_common import (
     contract_required_markers_from_doc,
@@ -38,6 +38,7 @@ from root_decision_evidence_admissibility_common import (
     STATUS_PASS_REQUIRED,
     adjudication_phase_alignment_rows_from_doc,
     collapse_rows_from_doc,
+    decision_evidence_admissibility_completeness_rows_from_doc,
     decision_evidence_limit_rows_from_doc,
     decision_evidence_proof_rows_from_doc,
     differentiation_rows_from_doc,
@@ -45,6 +46,7 @@ from root_decision_evidence_admissibility_common import (
     evidence_class_rows_from_doc,
     evaluate_ordering_adjudication_phase_alignment,
     load_root_decision_evidence_admissibility,
+    readme_decision_evidence_admissibility_completeness_surface,
 )
 
 STATUS_KEY = "protocol_root_decision_evidence_admissibility_status"
@@ -256,6 +258,28 @@ EXPECTED_COLLAPSE_ROWS = {
         "contract_phrase": "frozen-law, registry, validator-verdict, bound-runtime, adjudicated-closure, and demoted-support evidence classes are treated as if one decision-evidence proof stratum were sufficient for all of them.",
     },
 }
+EXPECTED_DECISION_EVIDENCE_ADMISSIBILITY_COMPLETENESS_ROWS = {
+    "explicit_decision_evidence_admissibility_row_families": {
+        "order": 1,
+        "contract_phrase": "required evidence-class, differentiation, adjudication-phase-alignment, decision-evidence-proof, evidence-class-proof-alignment, limit, and collapse rows must remain explicit as separate machine-readable families;",
+    },
+    "congruent_decision_evidence_admissibility_row_family_totals": {
+        "order": 2,
+        "contract_phrase": "expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;",
+    },
+    "explicit_decision_evidence_admissibility_row_identity_sets": {
+        "order": 3,
+        "contract_phrase": "expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;",
+    },
+    "hidden_decision_evidence_admissibility_identity_drift_forbidden": {
+        "order": 4,
+        "contract_phrase": "runtime or validator code must not finalize decision-evidence admissibility while missing or unexpected row identities remain known only internally;",
+    },
+    "fail_close_preserves_decision_evidence_admissibility_identity_projection": {
+        "order": 5,
+        "contract_phrase": "fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.",
+    },
+}
 EXPECTED_REGISTRY_MARKERS = (
     "this file remains the authoritative root-domain contract for decision-evidence admissibility law",
     "## Decision-evidence admissibility law",
@@ -275,22 +299,26 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
         "### Decision-evidence admissibility row-family completeness must stay explicit",
         "Required evidence-class, differentiation, adjudication-phase-alignment,\ndecision-evidence-proof, evidence-class-proof-alignment, limit, and collapse\nfamilies must remain explicit as separate machine-readable row families.",
+        "README root decision-evidence admissibility completeness discipline must\ntherefore stay congruent with admitted\ndecision-evidence-admissibility-completeness rows rather than becoming a\nfreehand completeness summary.",
         "The machine world must not finalize decision-evidence admissibility while required row identity drift remains known only internally.",
     ),
     "identity/protocol/README.md": (
         "## Root decision-evidence admissibility completeness discipline",
         "Decision-evidence admissibility law is not a soft prose bundle.",
+        "These decision-evidence-admissibility-completeness rules must remain bound to canonical decision-evidence-admissibility-completeness rows rather than drifting into soft summary prose.",
         "1. required evidence-class, differentiation, adjudication-phase-alignment, decision-evidence-proof, evidence-class-proof-alignment, limit, and collapse rows must remain explicit as separate machine-readable families;",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
         "## Root decision-evidence admissibility completeness boundary",
         "1. Decision-evidence admissibility law must remain machine-readable as separate evidence-class, differentiation, adjudication-phase-alignment, decision-evidence-proof, evidence-class-proof-alignment, limit, and collapse row families.",
         "4. Protocol legality must not finalize decision-evidence admissibility while missing or unexpected row identities remain known only inside validator logic.",
+        "6. README root decision-evidence admissibility completeness discipline rendered at protocol root must remain congruent with admitted decision-evidence-admissibility-completeness rows rather than silently authoring an alternate completeness summary.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "## Runtime decision-evidence admissibility consumption boundary",
         "1. Runtime consumes decision-evidence admissibility law as separate evidence-class, differentiation, adjudication-phase-alignment, decision-evidence-proof, evidence-class-proof-alignment, limit, and collapse row families rather than as undifferentiated decision-evidence prose.",
         "4. Runtime must not finalize decision-evidence admissibility while missing or unexpected row identities remain known only inside validator machinery.",
+        "6. Runtime consumes README root decision-evidence admissibility completeness discipline as a governed completeness projection bound to admitted decision-evidence-admissibility-completeness rows rather than as a freehand completeness summary.",
     ),
 }
 
@@ -350,7 +378,13 @@ def main() -> int:
     evidence_class_proof_alignment_rows = evidence_class_proof_alignment_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     decision_evidence_limit_rows = decision_evidence_limit_rows_from_doc(admissibility_doc) if admissibility_doc else ()
     collapse_rows = collapse_rows_from_doc(admissibility_doc) if admissibility_doc else ()
+    decision_evidence_admissibility_completeness_rows = (
+        decision_evidence_admissibility_completeness_rows_from_doc(admissibility_doc) if admissibility_doc else ()
+    )
     root_doc_anchor_checks = root_doc_anchor_checks_from_doc(admissibility_doc) if admissibility_doc else ()
+    decision_evidence_admissibility_completeness_surface = (
+        readme_decision_evidence_admissibility_completeness_surface(repo_root)
+    )
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     adjudication_surface_profiles = adjudication_surface_profiles_from_doc(ordering_doc) if ordering_doc else ()
@@ -391,18 +425,18 @@ def main() -> int:
             if not rows:
                 stale_reasons.append(f"root_decision_evidence_admissibility_{field}_missing")
                 error_code = ERR_REGISTRY
+        if not decision_evidence_admissibility_completeness_rows:
+            stale_reasons.append("root_decision_evidence_admissibility_completeness_rows_missing")
+            error_code = ERR_REGISTRY
         if not admissibility_doc.get("contract_required_markers"):
             stale_reasons.append("root_decision_evidence_admissibility_contract_required_markers_missing")
             error_code = ERR_REGISTRY
-        anchor_reason_count_before = len(stale_reasons)
-        stale_reasons.extend(
-            validate_expected_root_doc_anchor_checks(
-                root_doc_anchor_checks,
-                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
-                stale_reason_prefix="root_decision_evidence_admissibility",
-            )
-        )
-        if len(stale_reasons) > anchor_reason_count_before:
+        if append_expected_root_doc_anchor_stale_reasons(
+            stale_reasons,
+            root_doc_anchor_checks,
+            EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+            stale_reason_prefix="root_decision_evidence_admissibility",
+        ):
             error_code = ERR_REGISTRY
 
         for field in ("contract_file", "philosophy_anchor_file", "validator_script", "probe_script", "common_script"):
@@ -463,6 +497,26 @@ def main() -> int:
                     "expected_rows": EXPECTED_COLLAPSE_ROWS,
                     "id_attr": "row_id",
                 },
+                {
+                    "family_id": "decision_evidence_admissibility_completeness_rows",
+                    "member_id_key": "completeness_id",
+                    "actual_rows": decision_evidence_admissibility_completeness_rows,
+                    "expected_rows": {
+                        completeness_id: {}
+                        for completeness_id in EXPECTED_DECISION_EVIDENCE_ADMISSIBILITY_COMPLETENESS_ROWS
+                    },
+                    "id_attr": "completeness_id",
+                },
+                {
+                    "family_id": "decision_evidence_admissibility_completeness_surface",
+                    "member_id_key": "contract_phrase",
+                    "actual_rows": decision_evidence_admissibility_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {}
+                        for row in EXPECTED_DECISION_EVIDENCE_ADMISSIBILITY_COMPLETENESS_ROWS.values()
+                    },
+                    "id_attr": "contract_phrase",
+                },
             ),
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
@@ -519,10 +573,85 @@ def main() -> int:
                     "id_attr": "row_id",
                     "compare_fields": ("contract_phrase",),
                 },
+                {
+                    "actual_rows": decision_evidence_admissibility_completeness_rows,
+                    "expected_rows": EXPECTED_DECISION_EVIDENCE_ADMISSIBILITY_COMPLETENESS_ROWS,
+                    "field_name": "decision_evidence_admissibility_completeness_rows",
+                    "id_attr": "completeness_id",
+                    "compare_fields": ("contract_phrase",),
+                    "duplicate_reason": "duplicate_decision_evidence_admissibility_completeness_id",
+                    "non_contiguous_reason": "decision_evidence_admissibility_completeness_row_order_non_contiguous",
+                    "missing_reason": "missing_decision_evidence_admissibility_completeness_rows",
+                    "extra_reason": "extra_decision_evidence_admissibility_completeness_rows",
+                    "missing_ids_key": "completeness_ids",
+                    "extra_ids_key": "completeness_ids",
+                    "violation_id_key": "completeness_id",
+                    "order_reason": "decision_evidence_admissibility_completeness_row_order_mismatch",
+                },
+                {
+                    "actual_rows": decision_evidence_admissibility_completeness_surface.rows,
+                    "expected_rows": {
+                        row["contract_phrase"]: {"order": int(row["order"])}
+                        for row in EXPECTED_DECISION_EVIDENCE_ADMISSIBILITY_COMPLETENESS_ROWS.values()
+                    },
+                    "field_name": "decision_evidence_admissibility_completeness_surface",
+                    "id_attr": "contract_phrase",
+                    "compare_fields": (),
+                    "duplicate_reason": "duplicate_decision_evidence_admissibility_completeness_surface_phrase",
+                    "non_contiguous_reason": "decision_evidence_admissibility_completeness_surface_order_non_contiguous",
+                    "missing_reason": "missing_decision_evidence_admissibility_completeness_surface_rows",
+                    "extra_reason": "extra_decision_evidence_admissibility_completeness_surface_rows",
+                    "missing_ids_key": "contract_phrases",
+                    "extra_ids_key": "contract_phrases",
+                    "violation_id_key": "contract_phrase",
+                    "order_reason": "decision_evidence_admissibility_completeness_surface_order_mismatch",
+                },
             ),
             structure_violations=structure_violations,
             admissibility_violations=admissibility_violations,
         )
+
+        expected_decision_evidence_admissibility_completeness_phrases = [
+            row["contract_phrase"] for row in EXPECTED_DECISION_EVIDENCE_ADMISSIBILITY_COMPLETENESS_ROWS.values()
+        ]
+        actual_decision_evidence_admissibility_completeness_phrases = [
+            row.contract_phrase for row in decision_evidence_admissibility_completeness_surface.rows
+        ]
+        expected_decision_evidence_admissibility_completeness_orders = [
+            int(row["order"]) for row in EXPECTED_DECISION_EVIDENCE_ADMISSIBILITY_COMPLETENESS_ROWS.values()
+        ]
+        actual_decision_evidence_admissibility_completeness_orders = [
+            row.order for row in decision_evidence_admissibility_completeness_surface.rows
+        ]
+        for reason in decision_evidence_admissibility_completeness_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "decision_evidence_admissibility_completeness_surface",
+                    "reason": f"decision_evidence_admissibility_completeness_surface_{reason}",
+                }
+            )
+        if actual_decision_evidence_admissibility_completeness_phrases and tuple(
+            actual_decision_evidence_admissibility_completeness_phrases
+        ) != tuple(expected_decision_evidence_admissibility_completeness_phrases):
+            admissibility_violations.append(
+                {
+                    "field": "decision_evidence_admissibility_completeness_surface",
+                    "reason": "decision_evidence_admissibility_completeness_surface_phrase_order_mismatch",
+                    "expected": expected_decision_evidence_admissibility_completeness_phrases,
+                    "actual": actual_decision_evidence_admissibility_completeness_phrases,
+                }
+            )
+        if actual_decision_evidence_admissibility_completeness_orders and tuple(
+            actual_decision_evidence_admissibility_completeness_orders
+        ) != tuple(expected_decision_evidence_admissibility_completeness_orders):
+            admissibility_violations.append(
+                {
+                    "field": "decision_evidence_admissibility_completeness_surface",
+                    "reason": "decision_evidence_admissibility_completeness_surface_order_mismatch",
+                    "expected": expected_decision_evidence_admissibility_completeness_orders,
+                    "actual": actual_decision_evidence_admissibility_completeness_orders,
+                }
+            )
 
         contract_file = str(admissibility_doc.get("contract_file") or "").strip()
         contract_path = (repo_root / contract_file).resolve()
@@ -679,6 +808,9 @@ def main() -> int:
         "evidence_class_proof_alignment_count": len(evidence_class_proof_alignment_rows),
         "decision_evidence_limit_count": len(decision_evidence_limit_rows),
         "collapse_count": len(collapse_rows),
+        "decision_evidence_admissibility_completeness_row_count": len(
+            decision_evidence_admissibility_completeness_rows
+        ),
         **project_root_contract_support_projection(
             prefix="decision_evidence",
             row_family_projection_rows=row_family_projection_rows,
@@ -697,6 +829,26 @@ def main() -> int:
         ],
         "decision_evidence_limit_ids": [row.row_id for row in sorted(decision_evidence_limit_rows, key=lambda item: item.order)],
         "collapse_ids": [row.row_id for row in sorted(collapse_rows, key=lambda item: item.order)],
+        "decision_evidence_admissibility_completeness_rows": [
+            {
+                "order": row.order,
+                "completeness_id": row.completeness_id,
+                "contract_phrase": row.contract_phrase,
+            }
+            for row in sorted(decision_evidence_admissibility_completeness_rows, key=lambda item: item.order)
+        ],
+        "decision_evidence_admissibility_completeness_surface": {
+            "rel_path": decision_evidence_admissibility_completeness_surface.rel_path,
+            "entry_count": len(decision_evidence_admissibility_completeness_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "contract_phrase": row.contract_phrase,
+                }
+                for row in decision_evidence_admissibility_completeness_surface.rows
+            ],
+            "extraction_violations": list(decision_evidence_admissibility_completeness_surface.extraction_violations),
+        },
         "adjudication_phase_alignment_rows": [
             {
                 "order": row.order,

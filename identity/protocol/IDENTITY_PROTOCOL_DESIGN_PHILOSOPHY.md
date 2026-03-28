@@ -1631,6 +1631,11 @@ Required evidence-class, differentiation, adjudication-phase-alignment,
 decision-evidence-proof, evidence-class-proof-alignment, limit, and collapse
 families must remain explicit as separate machine-readable row families.
 
+README root decision-evidence admissibility completeness discipline must
+therefore stay congruent with admitted
+decision-evidence-admissibility-completeness rows rather than becoming a
+freehand completeness summary.
+
 Expected row-family total and emitted row-family total must therefore stay
 congruent under machine-readable coverage completeness rather than being left
 implicit.

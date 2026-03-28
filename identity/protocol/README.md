@@ -703,6 +703,7 @@ Success-path state admissibility law is not a soft prose bundle.
 ## Root decision-evidence admissibility completeness discipline
 
 Decision-evidence admissibility law is not a soft prose bundle.
+These decision-evidence-admissibility-completeness rules must remain bound to canonical decision-evidence-admissibility-completeness rows rather than drifting into soft summary prose.
 
 1. required evidence-class, differentiation, adjudication-phase-alignment, decision-evidence-proof, evidence-class-proof-alignment, limit, and collapse rows must remain explicit as separate machine-readable families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;

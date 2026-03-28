@@ -27,19 +27,80 @@ assert payload["decision_evidence_proof_count"] == 6, payload
 assert payload["evidence_class_proof_alignment_count"] == 6, payload
 assert payload["decision_evidence_limit_count"] == 7, payload
 assert payload["collapse_count"] == 8, payload
+assert payload["decision_evidence_admissibility_completeness_row_count"] == 5, payload
 assert payload["root_doc_anchor_check_count"] == 4, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
-assert payload["decision_evidence_row_family_count"] == 7, payload
+assert payload["decision_evidence_row_family_count"] == 9, payload
 assert payload["decision_evidence_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["decision_evidence_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert payload["adjudication_phase_alignment_surfaces"] == ["runtime_state", "receipts"], payload
+assert payload["decision_evidence_admissibility_completeness_surface"]["entry_count"] == 5, payload
+assert payload["decision_evidence_admissibility_completeness_surface"]["extraction_violations"] == [], payload
+assert any(
+    row["family_id"] == "decision_evidence_admissibility_completeness_rows"
+    for row in payload["row_family_projection_rows"]
+), payload
+assert any(
+    row["family_id"] == "decision_evidence_admissibility_completeness_surface"
+    for row in payload["row_family_projection_rows"]
+), payload
 assert any(
     row["evidence_class_id"] == "adjudicated_verdict_closure_evidence"
     and row["proof_id"] == "adjudicated_verdict_closure_decision_evidence_proof"
     for row in payload["evidence_class_proof_alignment_rows"]
 ), payload
+PY
+
+COMPLETENESS_ROW_REPO="${TMP_ROOT}/missing-completeness-row-repo"
+mirror_repo "${COMPLETENESS_ROW_REPO}"
+python3 - <<'PY' "${COMPLETENESS_ROW_REPO}/identity/protocol/mappings/root-decision-evidence-admissibility.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["decision_evidence_admissibility_completeness_rows"] = [
+    row for row in doc["decision_evidence_admissibility_completeness_rows"]
+    if row.get("completeness_id") != "explicit_decision_evidence_admissibility_row_families"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPLETENESS_ROW_JSON="${TMP_ROOT}/missing-completeness-row.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_decision_evidence_admissibility.py" \
+  --repo-root "${COMPLETENESS_ROW_REPO}" \
+  --json-only >"${COMPLETENESS_ROW_JSON}"; then
+  echo "[FAIL] root decision-evidence admissibility validator unexpectedly passed missing completeness row"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_ROW_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_decision_evidence_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-DEA-002", payload
+assert any(
+    row["field"] == "decision_evidence_admissibility_completeness_rows"
+    and row["reason"] == "missing_decision_evidence_admissibility_completeness_rows"
+    and "explicit_decision_evidence_admissibility_row_families" in row.get("completeness_ids", [])
+    for row in payload["structure_violations"]
+), payload
+completeness_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "decision_evidence_admissibility_completeness_rows"
+)
+assert completeness_row["expected_count"] == 5, payload
+assert completeness_row["actual_count"] == 4, payload
+assert completeness_row["missing_ids"] == ["explicit_decision_evidence_admissibility_row_families"], payload
+assert completeness_row["unexpected_ids"] == [], payload
+assert completeness_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert completeness_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 PROOF_REPO="${TMP_ROOT}/proof-drift-repo"
@@ -271,8 +332,8 @@ import sys
 
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8")
-old = "## Root decision-evidence admissibility completeness discipline"
-new = "## Root decision-evidence admissibility discipline"
+old = "These decision-evidence-admissibility-completeness rules must remain bound to canonical decision-evidence-admissibility-completeness rows rather than drifting into soft summary prose."
+new = "These decision-evidence-admissibility-completeness rules may drift into summary-only prose."
 assert old in text, text
 path.write_text(text.replace(old, new, 1), encoding="utf-8")
 PY
@@ -301,7 +362,7 @@ assert any(
 assert any(
     row["rel_path"] == "identity/protocol/README.md"
     and row["reason"] == "required_marker_missing"
-    and row["marker"] == "## Root decision-evidence admissibility completeness discipline"
+    and row["marker"] == "These decision-evidence-admissibility-completeness rules must remain bound to canonical decision-evidence-admissibility-completeness rows rather than drifting into soft summary prose."
     for row in payload["root_doc_anchor_violations"]
 ), payload
 PY
@@ -380,6 +441,67 @@ assert any(
     row["field"] == "root_corpus_ordering" and row["reason"] == "ordering_adjudication_surface_role_mismatch"
     for row in payload["integration_violations"]
 ), payload
+PY
+
+COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/completeness-surface-drift-repo"
+mirror_repo "${COMPLETENESS_SURFACE_REPO}"
+python3 - <<'PY' "${COMPLETENESS_SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "4. runtime or validator code must not finalize decision-evidence admissibility while missing or unexpected row identities remain known only internally;"
+new = "4. runtime or validator code may finalize decision-evidence admissibility from aggregate summaries alone;"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+COMPLETENESS_SURFACE_JSON="${TMP_ROOT}/completeness-surface-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_decision_evidence_admissibility.py" \
+  --repo-root "${COMPLETENESS_SURFACE_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_JSON}"; then
+  echo "[FAIL] root decision-evidence admissibility validator unexpectedly passed completeness surface drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_decision_evidence_admissibility_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-DEA-002", payload
+assert any(
+    row["field"] == "decision_evidence_admissibility_completeness_surface"
+    and row["reason"] == "decision_evidence_admissibility_completeness_surface_phrase_order_mismatch"
+    for row in payload["admissibility_violations"]
+), payload
+assert any(
+    row["field"] == "decision_evidence_admissibility_completeness_surface"
+    and row["reason"] == "missing_decision_evidence_admissibility_completeness_surface_rows"
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "decision_evidence_admissibility_completeness_surface"
+    and row["reason"] == "extra_decision_evidence_admissibility_completeness_surface_rows"
+    for row in payload["structure_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "decision_evidence_admissibility_completeness_surface"
+)
+assert surface_row["expected_count"] == 5, payload
+assert surface_row["actual_count"] == 5, payload
+assert surface_row["missing_ids"] == [
+    "runtime or validator code must not finalize decision-evidence admissibility while missing or unexpected row identities remain known only internally;"
+], payload
+assert surface_row["unexpected_ids"] == [
+    "runtime or validator code may finalize decision-evidence admissibility from aggregate summaries alone;"
+], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 echo "[PASS] protocol root decision-evidence admissibility probes passed"
