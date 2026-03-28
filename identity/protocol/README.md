@@ -579,6 +579,7 @@ These machine-world-ontology-completeness rules must remain bound to canonical m
 ## Root stream-design admissibility completeness discipline
 
 Stream-design admissibility law is not a soft prose bundle.
+These stream-design-admissibility-completeness rules must remain bound to canonical stream-design-admissibility-completeness rows rather than drifting into soft summary prose.
 
 1. required question, admissibility-proof, admissibility-limit, outcome-class, and projection-surface rows must remain explicit as separate machine-readable families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;

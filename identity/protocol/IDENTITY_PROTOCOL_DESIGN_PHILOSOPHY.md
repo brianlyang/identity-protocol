@@ -1362,6 +1362,10 @@ Required question, admissibility-proof, admissibility-limit, outcome-class,
 and projection-surface families must remain explicit as separate
 machine-readable row families.
 
+README root stream-design admissibility completeness discipline must therefore
+stay congruent with admitted stream-design-admissibility-completeness rows
+rather than becoming a freehand completeness summary.
+
 Expected row-family total and emitted row-family total must therefore stay
 congruent under machine-readable coverage completeness rather than being left
 implicit.
