@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from primary_execution_report_common import latest_primary_execution_report_from_roots
 from resolve_identity_context import (
     default_local_catalog_path,
     merged_catalog,
@@ -72,17 +73,7 @@ def _resolve_pack(identity_id: str, repo_catalog_path: Path, local_catalog_path:
 
 def _latest_runtime_temp_report(identity_id: str) -> Path | None:
     report_dir = (runtime_temp_root() / "identity-upgrade-reports").resolve()
-    if not report_dir.exists():
-        return None
-    rows = sorted(
-        [
-            p
-            for p in report_dir.glob(f"identity-upgrade-exec-{identity_id}-*.json")
-            if p.is_file() and not p.name.endswith("-patch-plan.json")
-        ],
-        key=lambda p: p.stat().st_mtime,
-    )
-    return rows[-1].resolve() if rows else None
+    return latest_primary_execution_report_from_roots([report_dir], identity_id)
 
 
 def _resolve_report_selection(identity_id: str, pack_root: Path, explicit_report: str) -> dict[str, Any]:

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 from typing import Iterable
 
@@ -31,6 +33,30 @@ def report_mtime(path: Path) -> float:
         return path.stat().st_mtime
     except OSError:
         return 0.0
+
+
+def prompt_file_sha(path: Path | None) -> str:
+    if not isinstance(path, Path):
+        return ""
+    try:
+        digest = hashlib.sha256()
+        digest.update(path.read_bytes())
+        return digest.hexdigest()
+    except Exception:
+        return ""
+
+
+def report_prompt_sha(path: Path) -> str:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return ""
+    if not isinstance(payload, dict):
+        return ""
+    return str(
+        payload.get("identity_prompt_sha256", "")
+        or payload.get("prompt_policy_hash", "")
+    ).strip()
 
 
 def report_glob_pattern(identity_id: str) -> str:
@@ -105,10 +131,22 @@ def latest_primary_execution_report_from_roots(
     identity_id: str,
     *,
     include_generic_upgrade_json: bool = False,
+    preferred_prompt_sha: str = "",
 ) -> Path | None:
     rows = collect_primary_execution_reports_from_roots(
         report_roots,
         identity_id,
         include_generic_upgrade_json=include_generic_upgrade_json,
     )
-    return rows[-1] if rows else None
+    if not rows:
+        return None
+    prompt_sha = str(preferred_prompt_sha or "").strip()
+    if not prompt_sha:
+        return rows[-1]
+    return max(
+        rows,
+        key=lambda path: (
+            1 if report_prompt_sha(path) == prompt_sha else 0,
+            report_mtime(path),
+        ),
+    )

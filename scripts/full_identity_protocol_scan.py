@@ -33,6 +33,7 @@ from health_report_experience_writeback_projection_common import (
     HEALTH_REPORT_EXPERIENCE_WRITEBACK_CLOSURE_EXCLUDED_AREA,
     build_health_report_experience_writeback_closure_summary_skeleton,
 )
+from primary_execution_report_common import latest_primary_execution_report_from_roots, prompt_file_sha
 from projection_profile_exclusion_scope_common import build_projection_profile_exclusion_payload
 from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
@@ -1133,18 +1134,12 @@ def _build_host_visible_post_check_metrics(
     }
 
 
-def _latest_runtime_report(identity_id: str, report_dir: Path) -> Path | None:
-    if not report_dir.exists():
-        return None
-    rows = [
-        p
-        for p in report_dir.glob(f"identity-upgrade-exec-{identity_id}-*.json")
-        if not p.name.endswith("-patch-plan.json")
-    ]
-    if not rows:
-        return None
-    rows.sort(key=lambda p: p.stat().st_mtime)
-    return rows[-1]
+def _latest_runtime_report(identity_id: str, report_dir: Path, *, preferred_prompt_sha: str = "") -> Path | None:
+    return latest_primary_execution_report_from_roots(
+        [report_dir],
+        identity_id,
+        preferred_prompt_sha=preferred_prompt_sha,
+    )
 
 
 def _within(path: Path, root: Path) -> bool:
@@ -4450,7 +4445,11 @@ def main() -> int:
                     "--report-dir",
                     runtime_report_dir,
                 ]
-                latest_report = _latest_runtime_report(iid, runtime_report_dir_path)
+                latest_report = _latest_runtime_report(
+                    iid,
+                    runtime_report_dir_path,
+                    preferred_prompt_sha=prompt_file_sha(runtime_pack_root / "IDENTITY_PROMPT.md"),
+                )
                 if latest_report:
                     cap_report_cmd = [
                         "python3",

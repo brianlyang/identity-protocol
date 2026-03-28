@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import glob
-import hashlib
 import json
 import os
 import subprocess
@@ -48,6 +46,7 @@ from protocol_infra_contract import (
     VALIDATOR_ACTOR_ID_REQUIRED_SCRIPTS,
     VALIDATOR_SESSION_ID_REQUIRED_SCRIPTS,
 )
+from primary_execution_report_common import latest_primary_execution_report_from_roots, prompt_file_sha
 from release_cloud_evidence_projection_common import (
     build_release_cloud_evidence_adapter_projection,
     build_release_plane_cloud_evidence_summary_projection,
@@ -1016,14 +1015,6 @@ def _apply_bundle_passthrough_from_report(
         _replace_flag_value(cmd, "--final-emit-schema-status", final_emit_schema_status)
         if selected_report:
             _replace_flag_value(cmd, "--report-selected-path", selected_report)
-
-
-def _sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
-            h.update(chunk)
-    return h.hexdigest()
 
 
 def _resolve_actor_session_id(
@@ -3756,42 +3747,23 @@ def main() -> int:
             roots.append(upgrade_reports_runtime_root)
             if os.environ.get("IDENTITY_HOME", "").strip():
                 roots.append(Path(os.environ["IDENTITY_HOME"]).expanduser().resolve())
-            candidates: list[Path] = []
-            for root in roots:
-                if not root.exists():
-                    continue
-                for p in glob.glob(str(root / "**" / f"identity-upgrade-exec-{identity_id}-*.json"), recursive=True):
-                    pp = Path(p)
-                    if pp.name.endswith("-patch-plan.json"):
-                        continue
-                    candidates.append(pp)
             prompt_sha = ""
             if pack_path is not None:
                 prompt_path = pack_path / "IDENTITY_PROMPT.md"
                 if prompt_path.exists():
-                    try:
-                        prompt_sha = _sha256(prompt_path)
-                    except Exception:
-                        prompt_sha = ""
-
-            def _candidate_key(path: Path) -> tuple[int, float]:
-                if not prompt_sha:
-                    return (0, path.stat().st_mtime)
-                try:
-                    data = json.loads(path.read_text(encoding="utf-8"))
-                    report_sha = str(data.get("identity_prompt_sha256", "")).strip()
-                except Exception:
-                    report_sha = ""
-                return (1 if report_sha and report_sha == prompt_sha else 0, path.stat().st_mtime)
-
-            candidates = sorted(candidates, key=_candidate_key)
-            if not candidates:
+                    prompt_sha = prompt_file_sha(prompt_path)
+            selected_report = latest_primary_execution_report_from_roots(
+                roots,
+                identity_id,
+                preferred_prompt_sha=prompt_sha,
+            )
+            if selected_report is None:
                 print(
                     "[FAIL] writeback validation requires execution report, but auto-generation produced none: "
                     f"searched_roots={','.join(str(r) for r in roots)} pattern=identity-upgrade-exec-{identity_id}-*.json"
                 )
                 return finish(2)
-            execution_report = str(candidates[-1])
+            execution_report = str(selected_report)
             print(f"[INFO] auto-generated execution report: {execution_report}")
         summary_payload["execution_report_resolution_status"] = STATUS_PASS_REQUIRED
     elif execution_report_required:
