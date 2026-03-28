@@ -10,6 +10,31 @@ error_codes:
 - IP-RCG-001
 - IP-RCG-002
 - IP-RCG-003
+anchor_checks:
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+    required_markers:
+      - '### Governance row-family completeness must stay explicit'
+      - Required registered-top-level-entry, corpus-class-profile, and
+        forbidden-content-class families must remain explicit as separate
+        machine-readable row families.
+      - The machine world must not finalize governance legality while required
+        rel-path, corpus-class, or forbidden-content-class identity drift
+        remains known only internally.
+  - rel_path: identity/protocol/README.md
+    required_markers:
+      - '## Root governance completeness discipline'
+      - Governance law is not a soft prose bundle.
+      - '1. required registered-top-level-entry, corpus-class-profile, and forbidden-content-class rows must remain explicit as separate machine-readable row families;'
+  - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
+    required_markers:
+      - '## Root governance completeness boundary'
+      - '1. Governance law must remain machine-readable as separate registered-top-level-entry, corpus-class-profile, and forbidden-content-class row families.'
+      - '4. Protocol legality must not finalize governance legality while missing or unexpected rel-path, corpus-class, or forbidden-content-class identities remain known only inside validator logic.'
+  - rel_path: identity/protocol/IDENTITY_RUNTIME.md
+    required_markers:
+      - '## Runtime governance consumption boundary'
+      - '1. Runtime consumes governance law as separate registered-top-level-entry, corpus-class-profile, and forbidden-content-class row families rather than as undifferentiated governance prose.'
+      - '4. Runtime must not finalize governance legality while missing or unexpected rel-path, corpus-class, or forbidden-content-class identities remain known only inside validator machinery.'
 forbidden_content_classes:
   - class_id: workbook_issue_projection
     description: Workbook issue rows or issue-register projection markers must not enter protocol-root law-bearing files.

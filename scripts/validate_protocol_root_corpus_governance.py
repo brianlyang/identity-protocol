@@ -7,6 +7,11 @@ from types import SimpleNamespace
 from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
+from root_contract_anchor_checks_common import (
+    evaluate_root_doc_anchor_checks,
+    root_doc_anchor_checks_from_doc,
+    validate_expected_root_doc_anchor_checks,
+)
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
 from root_corpus_governance_common import (
     STATUS_FAIL_REQUIRED,
@@ -27,6 +32,28 @@ ERR_REGISTRY = "IP-RCG-001"
 ERR_STRUCTURE = "IP-RCG-002"
 ERR_CONTENT = "IP-RCG-003"
 ALLOWED_ENTRY_KINDS = {"file", "directory"}
+EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
+    "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "### Governance row-family completeness must stay explicit",
+        "Required registered-top-level-entry, corpus-class-profile, and forbidden-content-class families must remain explicit as separate machine-readable row families.",
+        "The machine world must not finalize governance legality while required rel-path, corpus-class, or forbidden-content-class identity drift remains known only internally.",
+    ),
+    "identity/protocol/README.md": (
+        "## Root governance completeness discipline",
+        "Governance law is not a soft prose bundle.",
+        "1. required registered-top-level-entry, corpus-class-profile, and forbidden-content-class rows must remain explicit as separate machine-readable row families;",
+    ),
+    "identity/protocol/IDENTITY_PROTOCOL.md": (
+        "## Root governance completeness boundary",
+        "1. Governance law must remain machine-readable as separate registered-top-level-entry, corpus-class-profile, and forbidden-content-class row families.",
+        "4. Protocol legality must not finalize governance legality while missing or unexpected rel-path, corpus-class, or forbidden-content-class identities remain known only inside validator logic.",
+    ),
+    "identity/protocol/IDENTITY_RUNTIME.md": (
+        "## Runtime governance consumption boundary",
+        "1. Runtime consumes governance law as separate registered-top-level-entry, corpus-class-profile, and forbidden-content-class row families rather than as undifferentiated governance prose.",
+        "4. Runtime must not finalize governance legality while missing or unexpected rel-path, corpus-class, or forbidden-content-class identities remain known only inside validator machinery.",
+    ),
+}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -47,6 +74,7 @@ def main() -> int:
     file_violations: list[dict[str, Any]] = []
     directory_violations: list[dict[str, Any]] = []
     forbidden_hits: list[dict[str, Any]] = []
+    root_doc_anchor_violations: list[dict[str, Any]] = []
     row_family_projection_rows: list[dict[str, Any]] = []
     error_code = ""
 
@@ -61,6 +89,7 @@ def main() -> int:
     entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     content_classes = forbidden_classes_from_registry(registry_doc) if registry_doc else {}
     class_profiles = corpus_class_profiles_from_registry(registry_doc) if registry_doc else {}
+    root_doc_anchor_checks = root_doc_anchor_checks_from_doc(registry_doc) if registry_doc else ()
     raw_forbidden_rows = registry_doc.get("forbidden_content_classes") if registry_doc else []
     raw_profile_rows = registry_doc.get("corpus_class_profiles") if registry_doc else []
     raw_forbidden_ids = [
@@ -105,6 +134,16 @@ def main() -> int:
             if not content_class.patterns:
                 stale_reasons.append(f"root_corpus_forbidden_class_missing_patterns:{class_id}")
                 error_code = ERR_REGISTRY
+        anchor_reason_count_before = len(stale_reasons)
+        stale_reasons.extend(
+            validate_expected_root_doc_anchor_checks(
+                root_doc_anchor_checks,
+                EXPECTED_ROOT_DOC_ANCHOR_CHECKS,
+                stale_reason_prefix="root_corpus_governance",
+            )
+        )
+        if len(stale_reasons) > anchor_reason_count_before:
+            error_code = ERR_REGISTRY
 
     root_dir = (repo_root / root_dir_rel).resolve()
     if not stale_reasons and (not root_dir.exists() or not root_dir.is_dir()):
@@ -204,7 +243,15 @@ def main() -> int:
                             }
                         )
 
-    if not error_code and (structure_violations or file_violations or directory_violations):
+        root_doc_anchor_violations.extend(
+            evaluate_root_doc_anchor_checks(
+                repo_root,
+                root_doc_anchor_checks,
+                field_name="root_doc_anchor_checks",
+            )
+        )
+
+    if not error_code and (structure_violations or file_violations or directory_violations or root_doc_anchor_violations):
         error_code = ERR_STRUCTURE
     if not error_code and forbidden_hits:
         error_code = ERR_CONTENT
@@ -225,7 +272,11 @@ def main() -> int:
         f"forbidden_content:{item['rel_path']}:{item['class_id']}:{item['line_no']}" for item in forbidden_hits
     )
 
-    status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
+    status = (
+        STATUS_PASS_REQUIRED
+        if not (stale_reasons or root_doc_anchor_violations)
+        else STATUS_FAIL_REQUIRED
+    )
     row_family_projection_rows = [
         project_row_family(
             family_id="registered_top_level_entries",
@@ -271,6 +322,8 @@ def main() -> int:
         **project_root_contract_support_projection(
             prefix="governance",
             row_family_projection_rows=row_family_projection_rows,
+            anchor_checks=root_doc_anchor_checks,
+            anchor_violations=root_doc_anchor_violations,
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
         ),
@@ -282,6 +335,7 @@ def main() -> int:
         "file_violations": file_violations,
         "directory_violations": directory_violations,
         "forbidden_content_hits": forbidden_hits,
+        "root_doc_anchor_violations": root_doc_anchor_violations,
         "stale_reasons": stale_reasons,
     }
     _emit(payload, json_only=args.json_only)

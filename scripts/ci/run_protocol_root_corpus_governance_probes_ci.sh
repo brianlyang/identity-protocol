@@ -10,6 +10,7 @@ trap 'rm -rf "${TMP_ROOT}"' EXIT
 source "${SCRIPT_DIR}/probe_repo_mirror_common.sh"
 
 PROBE_REL_PATHS=(
+  "scripts/root_contract_anchor_checks_common.py"
   "scripts/root_corpus_governance_common.py"
   "scripts/root_row_family_projection_common.py"
   "scripts/validate_protocol_root_corpus_governance.py"
@@ -36,6 +37,8 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_governance_status"] == "PASS_REQUIRED", payload
+assert payload["root_doc_anchor_check_count"] == 4, payload
+assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["governance_row_family_count"] == 3, payload
 assert payload["governance_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["governance_row_identity_projection_status"] == "PASS_REQUIRED", payload
@@ -185,6 +188,45 @@ assert payload["error_code"] == "IP-RCG-002", payload
 assert any("README.md:required_marker_missing" in reason for reason in payload["stale_reasons"]), payload
 PY
 
+DOC_ANCHOR_REPO="${TMP_ROOT}/doc-anchor-drift-repo"
+mirror_repo "${DOC_ANCHOR_REPO}"
+python3 - <<'PY' "${DOC_ANCHOR_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "## Root governance completeness discipline"
+new = "## Root governance completeness lane"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+DOC_ANCHOR_JSON="${TMP_ROOT}/doc-anchor-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" \
+  --repo-root "${DOC_ANCHOR_REPO}" \
+  --json-only >"${DOC_ANCHOR_JSON}"; then
+  echo "[FAIL] root corpus governance validator unexpectedly passed root-doc anchor drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${DOC_ANCHOR_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_governance_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCG-002", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["rel_path"] == "identity/protocol/README.md"
+    and row["reason"] == "required_marker_missing"
+    and row["marker"] == "## Root governance completeness discipline"
+    for row in payload["root_doc_anchor_violations"]
+), payload
+PY
+
 EXTRA_REPO="${TMP_ROOT}/extra-entry-repo"
 mirror_repo "${EXTRA_REPO}"
 printf 'temporary closure note\n' > "${EXTRA_REPO}/identity/protocol/TEMP_CLOSURE_NOTE.md"
@@ -304,6 +346,45 @@ assert payload["error_code"] == "IP-RCG-002", payload
 assert any(
     "IDENTITY_DISCOVERY.md:required_marker_missing:## Runtime adjudication boundary" in reason
     for reason in payload["stale_reasons"]
+), payload
+PY
+
+DOC_ANCHOR_REPO="${TMP_ROOT}/doc-anchor-drift-repo"
+mirror_repo "${DOC_ANCHOR_REPO}"
+python3 - <<'PY' "${DOC_ANCHOR_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "## Root governance completeness discipline"
+new = "## Root governance completeness"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+DOC_ANCHOR_JSON="${TMP_ROOT}/doc-anchor-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" \
+  --repo-root "${DOC_ANCHOR_REPO}" \
+  --json-only >"${DOC_ANCHOR_JSON}"; then
+  echo "[FAIL] root corpus governance validator unexpectedly passed root-doc anchor drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${DOC_ANCHOR_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_governance_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCG-002", payload
+assert payload["root_doc_anchor_status"] == "FAIL_REQUIRED", payload
+assert any(
+    row["rel_path"] == "identity/protocol/README.md"
+    and row["reason"] == "required_marker_missing"
+    and row["marker"] == "## Root governance completeness discipline"
+    for row in payload["root_doc_anchor_violations"]
 ), payload
 PY
 
