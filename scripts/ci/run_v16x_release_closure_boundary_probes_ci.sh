@@ -41,6 +41,11 @@ terminal_truth_bridge_case_marker="$(
     "release_readiness_terminal_truth_bridge_common" \
     "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_MARKERS[1]"
 )"
+terminal_truth_bridge_probe_marker="$(
+  resolve_python_module_expression \
+    "release_readiness_governance_probe_projection_common" \
+    "'one_look.' + RELEASE_READINESS_GOVERNANCE_PROBE_ONE_LOOK_FIELDS[6]"
+)"
 active_runtime_terminal_truth_class_marker="$(
   resolve_python_module_expression \
     "release_readiness_active_runtime_closure_projection_common" \
@@ -61,7 +66,7 @@ python3 "${REPO_ROOT}/scripts/probe_shadow_fixture_common.py" \
   --copy-file docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md \
   --json-only > /dev/null
 
-python3 - <<'PY' "${SHADOW_ROOT}/docs/governance/identity-v1.6x-release-closure-governance.md" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${active_runtime_terminal_truth_class_marker}"
+python3 - <<'PY' "${SHADOW_ROOT}/docs/governance/identity-v1.6x-release-closure-governance.md" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${terminal_truth_bridge_probe_marker}" "${active_runtime_terminal_truth_class_marker}"
 from pathlib import Path
 import sys
 
@@ -72,7 +77,8 @@ repo_global_topology_probe_marker = sys.argv[4]
 active_runtime_projection_marker = sys.argv[5]
 terminal_truth_bridge_surface_marker = sys.argv[6]
 terminal_truth_bridge_case_marker = sys.argv[7]
-active_runtime_terminal_truth_class_marker = sys.argv[8]
+terminal_truth_bridge_probe_marker = sys.argv[8]
+active_runtime_terminal_truth_class_marker = sys.argv[9]
 text = path.read_text(encoding="utf-8")
 text = text.replace("`ISSUE-001` through `ISSUE-039`", "`ISSUE-001` through `ISSUE-038`")
 text = text.replace("`v1.6.21`", "`v1.6.20`")
@@ -98,6 +104,7 @@ text = text.replace(
     "terminal_truth_bridge_surface=one_look.identity_terminal_truth_cleanliness_status",
 )
 text = text.replace(terminal_truth_bridge_case_marker, "terminal_truth_bridge_case=review_required_execution")
+text = text.replace(f"{terminal_truth_bridge_probe_marker}|", "")
 text = text.replace(
     active_runtime_projection_marker,
     "active_runtime_projection=one_look.identity_codex_launcher_status",
@@ -115,7 +122,7 @@ if python3 "${REPO_ROOT}/scripts/validate_v16x_release_closure_boundary.py" --re
   exit 1
 fi
 
-python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${active_runtime_terminal_truth_class_marker}"
+python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${terminal_truth_bridge_probe_marker}" "${active_runtime_terminal_truth_class_marker}"
 import json
 import sys
 from pathlib import Path
@@ -123,8 +130,13 @@ from pathlib import Path
 positive = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
 negative = json.loads(Path(sys.argv[2]).read_text(encoding='utf-8'))
 repo_global_projection_marker = sys.argv[3]
-active_runtime_projection_marker = sys.argv[4]
-active_runtime_terminal_truth_class_marker = sys.argv[5]
+repo_global_checked_count_marker = sys.argv[4]
+repo_global_topology_probe_marker = sys.argv[5]
+active_runtime_projection_marker = sys.argv[6]
+terminal_truth_bridge_surface_marker = sys.argv[7]
+terminal_truth_bridge_case_marker = sys.argv[8]
+terminal_truth_bridge_probe_marker = sys.argv[9]
+active_runtime_terminal_truth_class_marker = sys.argv[10]
 
 if positive.get("v16x_release_closure_boundary_status") != "PASS_REQUIRED":
     raise SystemExit("positive release-closure boundary status must PASS_REQUIRED")
@@ -153,24 +165,26 @@ if "governance_doc_missing_workspace_runtime_closure_command_convergence_marker:
 expected_repo_global_reason = f"governance_doc_missing_repo_global_closure_boundary_marker:{repo_global_projection_marker}"
 if expected_repo_global_reason not in reasons:
     raise SystemExit("negative release-closure boundary must detect repo-global closure projection drift")
-expected_repo_global_checked_count_reason = f"governance_doc_missing_repo_global_closure_boundary_marker:{sys.argv[4]}"
+expected_repo_global_checked_count_reason = f"governance_doc_missing_repo_global_closure_boundary_marker:{repo_global_checked_count_marker}"
 if expected_repo_global_checked_count_reason not in reasons:
     raise SystemExit("negative release-closure boundary must detect repo-global proof-strength companion drift")
-expected_repo_global_topology_reason = f"governance_doc_missing_repo_global_closure_boundary_marker:{sys.argv[5]}"
+expected_repo_global_topology_reason = f"governance_doc_missing_repo_global_closure_boundary_marker:{repo_global_topology_probe_marker}"
 if expected_repo_global_topology_reason not in reasons:
     raise SystemExit("negative release-closure boundary must detect repo-global topology-proof lane drift")
 if "governance_doc_stale_issue_horizon:ISSUE-038" not in reasons:
     raise SystemExit("negative release-closure boundary must detect stale issue-horizon drift")
-expected_active_runtime_projection_reason = f"governance_doc_missing_active_runtime_closure_projection_marker:{sys.argv[6]}"
+expected_active_runtime_projection_reason = f"governance_doc_missing_active_runtime_closure_projection_marker:{active_runtime_projection_marker}"
 if expected_active_runtime_projection_reason not in reasons:
     raise SystemExit("negative release-closure boundary must detect active-runtime closure projection drift")
-expected_terminal_truth_bridge_surface_reason = f"governance_doc_missing_terminal_truth_bridge_marker:{sys.argv[7]}"
+expected_terminal_truth_bridge_surface_reason = f"governance_doc_missing_terminal_truth_bridge_marker:{terminal_truth_bridge_surface_marker}"
 if expected_terminal_truth_bridge_surface_reason not in reasons:
     raise SystemExit("negative release-closure boundary must detect terminal-truth bridge surface drift")
-expected_terminal_truth_bridge_case_reason = f"governance_doc_missing_terminal_truth_bridge_marker:{sys.argv[8]}"
+expected_terminal_truth_bridge_case_reason = f"governance_doc_missing_terminal_truth_bridge_marker:{terminal_truth_bridge_case_marker}"
 if expected_terminal_truth_bridge_case_reason not in reasons:
     raise SystemExit("negative release-closure boundary must detect terminal-truth bridge case drift")
-expected_active_runtime_detail_reason = f"governance_doc_missing_active_runtime_closure_projection_marker:{sys.argv[9]}"
+if "governance_doc_governance_probe_projection_line_not_canonical" not in reasons:
+    raise SystemExit("negative release-closure boundary must detect governance-probe projection line drift")
+expected_active_runtime_detail_reason = f"governance_doc_missing_active_runtime_closure_projection_marker:{active_runtime_terminal_truth_class_marker}"
 if expected_active_runtime_detail_reason not in reasons:
     raise SystemExit("negative release-closure boundary must detect active-runtime companion detail drift")
 PY
