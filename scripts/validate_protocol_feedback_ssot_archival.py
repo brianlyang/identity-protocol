@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from protocol_feedback_contract_common import DEFAULT_ACTIVITY_DIRS, resolve_feedback_contract_path
+from protocol_feedback_contract_common import DEFAULT_ACTIVITY_DIRS, resolve_feedback_contract_path, resolve_feedback_root
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -99,8 +99,7 @@ def main() -> int:
     required = contract_required(contract) if contract else False
     auto_required_signal = False
 
-    feedback_root = Path(args.feedback_root).expanduser() if args.feedback_root.strip() else (pack_path / "runtime" / "protocol-feedback")
-    feedback_root = feedback_root.resolve()
+    feedback_root = resolve_feedback_root(pack_path, args.feedback_root)
 
     outbox_rel = str(contract.get("outbox_dir", "outbox-to-protocol")).strip() or "outbox-to-protocol"
     outbox_dir = resolve_feedback_contract_path(pack_path, feedback_root, outbox_rel, default_leaf="outbox-to-protocol")

@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from protocol_feedback_contract_common import ensure_index_linkage, rel_to_feedback_root
+from protocol_feedback_contract_common import ensure_index_linkage, normalize_feedback_path_under_root, rel_to_feedback_root
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -39,6 +39,14 @@ def write_json(path: Path, payload: dict[str, Any]) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return path
+
+
+def _path_under(root: Path, candidate: Path) -> bool:
+    try:
+        candidate.resolve().relative_to(root.resolve())
+        return True
+    except Exception:
+        return False
 
 
 def ensure_markdown_title(*, title: str, body: str) -> str:
@@ -142,6 +150,22 @@ def materialize_feedback_channel_artifacts(
         summary_name = f"INBOX_SUMMARY_{token}_{slug_token}.json"
     else:
         raise ValueError(f"unsupported feedback lane: {normalized_lane}")
+
+    expected_leaf = "outbox-to-protocol" if normalized_lane == "outbox" else "inbox-from-protocol"
+    channel_dir = normalize_feedback_path_under_root(
+        feedback_root,
+        channel_dir,
+        default_leaf=expected_leaf,
+    )
+    index_path = normalize_feedback_path_under_root(
+        feedback_root,
+        index_path,
+        default_leaf="evidence-index/INDEX.md",
+    )
+    if not _path_under(feedback_root, channel_dir):
+        raise ValueError(f"channel_dir_not_under_feedback_root:{channel_dir}")
+    if not _path_under(feedback_root, index_path):
+        raise ValueError(f"index_path_not_under_feedback_root:{index_path}")
 
     batch_path = (channel_dir / batch_name).resolve()
     receipt_path = (channel_dir / receipt_name).resolve()

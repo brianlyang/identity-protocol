@@ -8,6 +8,7 @@ from typing import Any
 
 PROTOCOL_FEEDBACK_ROOT_REL = Path("runtime/protocol-feedback")
 PROTOCOL_FEEDBACK_ROOT = PROTOCOL_FEEDBACK_ROOT_REL.as_posix()
+PROTOCOL_FEEDBACK_ROOT_PARTS = PROTOCOL_FEEDBACK_ROOT_REL.parts
 
 CANONICAL_REQUIRED_DIRS = (
     "outbox-to-protocol",
@@ -65,25 +66,82 @@ def write_json(path: Path, payload: dict[str, Any]) -> Path:
     return path
 
 
+def _extract_feedback_relative_parts(path_value: str) -> tuple[str, ...] | None:
+    token = str(path_value or "").strip()
+    if not token:
+        return ()
+    path = Path(token).expanduser()
+    parts = tuple(part for part in path.parts if part and part not in {".", "/"})
+    if not parts:
+        return ()
+    last_idx = -1
+    root_size = len(PROTOCOL_FEEDBACK_ROOT_PARTS)
+    for idx in range(len(parts) - root_size + 1):
+        if tuple(parts[idx : idx + root_size]) == PROTOCOL_FEEDBACK_ROOT_PARTS:
+            last_idx = idx
+    if last_idx < 0:
+        return None
+    suffix = tuple(parts[last_idx + root_size :])
+    while len(suffix) >= root_size and tuple(suffix[:root_size]) == PROTOCOL_FEEDBACK_ROOT_PARTS:
+        suffix = tuple(suffix[root_size:])
+    return suffix
+
+
+def extract_feedback_relative_suffix(path_value: str) -> str | None:
+    suffix_parts = _extract_feedback_relative_parts(path_value)
+    if suffix_parts is None:
+        return None
+    if not suffix_parts:
+        return ""
+    return Path(*suffix_parts).as_posix()
+
+
+def normalize_feedback_path_under_root(feedback_root: Path, path_value: str | Path, *, default_leaf: str = "") -> Path:
+    token = str(path_value or "").strip()
+    if not token:
+        if str(default_leaf or "").strip():
+            return (feedback_root / str(default_leaf).strip()).resolve()
+        return feedback_root.resolve()
+    suffix = extract_feedback_relative_suffix(token)
+    if suffix is not None:
+        if suffix:
+            return (feedback_root / suffix).resolve()
+        return feedback_root.resolve()
+    path = Path(token).expanduser()
+    if path.is_absolute():
+        return path.resolve()
+    return (feedback_root / path).resolve()
+
+
 def resolve_feedback_root(pack_path: Path, feedback_root: str = "") -> Path:
-    if str(feedback_root or "").strip():
-        return Path(feedback_root).expanduser().resolve()
+    token = str(feedback_root or "").strip()
+    if token:
+        path = Path(token).expanduser()
+        if path.is_absolute():
+            return path.resolve()
+        suffix = extract_feedback_relative_suffix(token)
+        if suffix is not None:
+            if suffix:
+                return (pack_path / PROTOCOL_FEEDBACK_ROOT_REL / suffix).resolve()
+            return (pack_path / PROTOCOL_FEEDBACK_ROOT_REL).resolve()
+        return (pack_path / path).resolve()
     return (pack_path / PROTOCOL_FEEDBACK_ROOT_REL).resolve()
 
 
 def resolve_feedback_contract_path(pack_path: Path, feedback_root: Path, path_value: str, *, default_leaf: str = "") -> Path:
     token = str(path_value or "").strip()
     if not token:
-        if str(default_leaf or "").strip():
-            return (feedback_root / str(default_leaf).strip()).resolve()
-        return feedback_root.resolve()
+        return normalize_feedback_path_under_root(feedback_root, "", default_leaf=default_leaf)
+    suffix = extract_feedback_relative_suffix(token)
+    if suffix is not None:
+        return normalize_feedback_path_under_root(feedback_root, suffix, default_leaf=default_leaf)
     path = Path(token).expanduser()
     if path.is_absolute():
         return path.resolve()
     as_posix = path.as_posix()
     if as_posix == PROTOCOL_FEEDBACK_ROOT or as_posix.startswith(f"{PROTOCOL_FEEDBACK_ROOT}/"):
         return (pack_path / path).resolve()
-    return (feedback_root / path).resolve()
+    return normalize_feedback_path_under_root(feedback_root, path, default_leaf=default_leaf)
 
 
 def canonical_dirs(feedback_root: Path) -> dict[str, Path]:

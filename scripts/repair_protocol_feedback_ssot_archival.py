@@ -13,7 +13,13 @@ from protocol_feedback_archival_common import (
     render_protocol_feedback_ssot_archival_bootstrap_body,
     utc_now_z,
 )
-from protocol_feedback_contract_common import DEFAULT_ACTIVITY_DIRS, ensure_index_linkage, rel_to_feedback_root, resolve_feedback_contract_path
+from protocol_feedback_contract_common import (
+    DEFAULT_ACTIVITY_DIRS,
+    ensure_index_linkage,
+    rel_to_feedback_root,
+    resolve_feedback_contract_path,
+    resolve_feedback_root,
+)
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -196,8 +202,7 @@ def main() -> int:
     contract = _select_contract(task)
     required = contract_required(contract) if contract else False
 
-    feedback_root = Path(args.feedback_root).expanduser() if str(args.feedback_root or "").strip() else (pack_path / "runtime" / "protocol-feedback")
-    feedback_root = feedback_root.resolve()
+    feedback_root = resolve_feedback_root(pack_path, args.feedback_root)
     outbox_rel = str(contract.get("outbox_dir", "outbox-to-protocol")).strip() or "outbox-to-protocol"
     outbox_dir = resolve_feedback_contract_path(pack_path, feedback_root, outbox_rel, default_leaf="outbox-to-protocol")
     batch_pattern = str(contract.get("feedback_batch_pattern", "FEEDBACK_BATCH_*.md")).strip() or "FEEDBACK_BATCH_*.md"
