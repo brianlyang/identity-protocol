@@ -137,6 +137,7 @@ Interpretive consequence:
 8. `ASB16-RQ-006` release-plane cloud evidence must also self-describe its acquisition boundary:
    - materialized external evidence (`checks_json`, `jobs_json`, `gh-runs-json`) is the canonical local replay surface;
    - protocol consumers remain the semantic aggregation authority;
+   - governed release-readiness one-look output must keep that acquisition boundary machine-visible as `release_cloud_evidence_projection=one_look.release_plane_cloud_evidence_status|one_look.release_plane_required_checks_status|one_look.release_cloud_evidence_adapter_status|one_look.release_cloud_evidence_adapter_source_kind|one_look.release_cloud_evidence_adapter_local_dev_canonical`, rather than flattening adapter provenance into an unlabeled pass/fail bit;
    - shell/API live fetch paths are acquisition mechanisms only and must not be overclaimed as stronger semantic truth than the materialized evidence they produce.
 9. The canonical sequenced refresh lane for release-boundary control-plane artifacts is `python3 scripts/materialize_control_plane_surfaces.py --write --json-only`; release-readiness may dry-run the same machine action for health projection, but that projection must not replace the direct control-plane validators or the current canonical files themselves.
 10. The release-readiness summary lifecycle is itself governed rather than ad hoc:

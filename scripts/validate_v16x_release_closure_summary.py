@@ -12,6 +12,9 @@ from full_scan_required_gate_bundle_projection_common import (
 from health_report_experience_writeback_projection_common import (
     RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_ONE_LOOK_FIELDS,
 )
+from release_cloud_evidence_projection_common import (
+    RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_SURFACE_CONSTRAINTS,
+)
 from release_closure_continuation_marker_common import (
     RELEASE_CLOSURE_SUMMARY_CONTINUATION_MARKERS,
 )
@@ -67,6 +70,9 @@ REQUIRED_RELEASE_READINESS_HEALTH_PROJECTION_MARKERS = (
         f"one_look.{field}"
         for field in RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_ONE_LOOK_FIELDS
     ),
+)
+REQUIRED_RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_MARKERS = (
+    *RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_SURFACE_CONSTRAINTS,
 )
 REQUIRED_FULL_SCAN_REQUIRED_GATE_PROJECTION_MARKERS = (
     "scripts/ci/run_full_scan_required_gate_projection_probes_ci.sh",
@@ -187,6 +193,11 @@ def main() -> int:
         if marker not in summary_text:
             stale_reasons.append(
                 f"summary_doc_missing_release_readiness_health_projection_marker:{marker}"
+            )
+    for marker in REQUIRED_RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_MARKERS:
+        if marker not in summary_text:
+            stale_reasons.append(
+                f"summary_doc_missing_release_readiness_release_cloud_evidence_marker:{marker}"
             )
     for marker in REQUIRED_FULL_SCAN_REQUIRED_GATE_PROJECTION_MARKERS:
         if marker not in summary_text:

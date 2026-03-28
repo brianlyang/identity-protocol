@@ -156,6 +156,39 @@ cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/go
 
 mutate_probe_literal \
   "$tmpdir/scripts/release_readiness_one_look_projection_common.py" \
+  'apply_release_readiness_release_cloud_evidence_one_look(summary, one_look)'
+
+if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-release-cloud-evidence-one-look-script.json; then
+  echo "[FAIL] negative release-cloud-evidence one-look script drift probe unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] negative release-cloud-evidence one-look script drift probe fail-closed as expected"
+
+cp scripts/release_readiness_check.py "$tmpdir/scripts/"
+cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
+
+release_cloud_evidence_projection_marker="$(
+  resolve_python_module_constant \
+    "release_cloud_evidence_projection_common" \
+    "RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_PROJECTION_MARKER"
+)"
+
+mutate_probe_literal \
+  "$tmpdir/docs/governance/identity-v1.6x-release-closure-governance.md" \
+  "$release_cloud_evidence_projection_marker"
+
+if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-release-cloud-evidence-doc.json; then
+  echo "[FAIL] negative release-cloud-evidence doc anchor probe unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] negative release-cloud-evidence doc anchor probe fail-closed as expected"
+
+cp scripts/release_readiness_check.py "$tmpdir/scripts/"
+cp scripts/release_readiness_one_look_projection_common.py "$tmpdir/scripts/"
+cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
+
+mutate_probe_literal \
+  "$tmpdir/scripts/release_readiness_one_look_projection_common.py" \
   'apply_release_readiness_terminal_truth_boundary_one_look(summary, one_look)'
 
 if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-terminal-truth-one-look-script.json; then

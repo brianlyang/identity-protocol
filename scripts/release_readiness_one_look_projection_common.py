@@ -6,6 +6,9 @@ from typing import Any
 from health_report_experience_writeback_projection_common import (
     apply_release_readiness_health_report_experience_writeback_one_look,
 )
+from release_cloud_evidence_projection_common import (
+    apply_release_readiness_release_cloud_evidence_one_look,
+)
 from release_readiness_active_runtime_closure_projection_common import (
     apply_release_readiness_active_runtime_closure_one_look,
 )
@@ -38,11 +41,6 @@ RELEASE_READINESS_ONE_LOOK_CORE_FIELDS: tuple[str, ...] = (
     "selected_check_scope_excluded_summary_keys",
     "required_gate_recurrence_status",
     "required_gate_tuple_parity_status",
-    "release_plane_cloud_evidence_status",
-    "release_plane_required_checks_status",
-    "release_cloud_evidence_adapter_status",
-    "release_cloud_evidence_adapter_source_kind",
-    "release_cloud_evidence_adapter_local_dev_canonical",
     "control_plane_budget_status",
     "control_plane_budget_sync_status",
     "control_plane_status_sync_status",
@@ -82,10 +80,6 @@ def build_release_readiness_one_look_core_projection(summary: dict[str, Any]) ->
     selected_check_scope_projection = summary_payload.get("selected_check_scope_projection") or {}
     recurrence = summary_payload.get("required_gate_recurrence") or {}
     tuple_parity = summary_payload.get("required_gate_tuple_parity") or {}
-    release_plane = summary_payload.get("release_plane_cloud_evidence") or {}
-    release_adapter = summary_payload.get("release_cloud_evidence_adapter") or {}
-    if not release_adapter and isinstance(release_plane, dict):
-        release_adapter = release_plane.get("adapter") or {}
     control_plane_budget = summary_payload.get("control_plane_budget") or {}
     control_plane_budget_sync = summary_payload.get("control_plane_budget_sync") or {}
     control_plane_status_sync = summary_payload.get("control_plane_status_sync") or {}
@@ -116,19 +110,6 @@ def build_release_readiness_one_look_core_projection(summary: dict[str, Any]) ->
         ),
         "required_gate_recurrence_status": _clean_str(recurrence.get("status")).upper() or STATUS_UNKNOWN,
         "required_gate_tuple_parity_status": _clean_str(tuple_parity.get("status")).upper() or STATUS_UNKNOWN,
-        "release_plane_cloud_evidence_status": _clean_str(release_plane.get("status")).upper() or STATUS_UNKNOWN,
-        "release_plane_required_checks_status": _clean_str(
-            (release_plane.get("conditions") or {}).get("required_checks_status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "release_cloud_evidence_adapter_status": _clean_str(
-            (release_adapter or {}).get("release_cloud_evidence_adapter_status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "release_cloud_evidence_adapter_source_kind": _clean_str((release_adapter or {}).get("adapter_source_kind")),
-        "release_cloud_evidence_adapter_local_dev_canonical": bool(
-            (release_adapter or {}).get("adapter_local_dev_canonical")
-        ),
         "control_plane_budget_status": _clean_str(control_plane_budget.get("status")).upper() or STATUS_UNKNOWN,
         "control_plane_budget_sync_status": _clean_str(control_plane_budget_sync.get("status")).upper()
         or STATUS_UNKNOWN,
@@ -165,6 +146,7 @@ def build_release_readiness_one_look_core_projection(summary: dict[str, Any]) ->
 
 def build_release_readiness_one_look_projection(summary: dict[str, Any]) -> dict[str, Any]:
     one_look = build_release_readiness_one_look_core_projection(summary)
+    apply_release_readiness_release_cloud_evidence_one_look(summary, one_look)
     apply_release_readiness_terminal_truth_boundary_one_look(summary, one_look)
     apply_release_readiness_health_report_experience_writeback_one_look(summary, one_look)
     apply_release_readiness_required_gate_bundle_one_look(summary, one_look)

@@ -127,6 +127,7 @@ When a new topic appears, audit must classify it in this order:
 8. Audit additionally requires `ASB16-RQ-006` release-plane cloud evidence surfaces to declare their acquisition boundary explicitly:
    - materialized GH/check payloads are the canonical local replay input;
    - protocol-owned consumers remain the semantic aggregation authority;
+   - governed release-readiness one-look output must keep that acquisition boundary machine-visible as `release_cloud_evidence_projection=one_look.release_plane_cloud_evidence_status|one_look.release_plane_required_checks_status|one_look.release_cloud_evidence_adapter_status|one_look.release_cloud_evidence_adapter_source_kind|one_look.release_cloud_evidence_adapter_local_dev_canonical`, rather than flattening adapter provenance into an unlabeled pass/fail bit;
    - shell/API live fetch paths are transport helpers and must not be mistaken for stronger semantic authority than the materialized evidence they yield.
 9. Audit also requires the control-plane refresh lane itself to stay machine-owned: `scripts/materialize_control_plane_surfaces.py` is the canonical sequenced budget/status materializer, and any release-readiness projection of that lane must remain derived rather than replacing direct validator receipts.
 10. Audit now also requires governed release-readiness summary lifecycle semantics:

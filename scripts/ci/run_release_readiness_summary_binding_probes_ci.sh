@@ -21,6 +21,9 @@ from governed_runtime_summary_checkpoint_common import (
     derive_governed_runtime_summary_resume_projection,
 )
 from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
+from release_cloud_evidence_projection_common import (
+    build_release_readiness_release_cloud_evidence_one_look_projection,
+)
 from release_readiness_governance_probe_projection_common import (
     RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
 )
@@ -353,6 +356,12 @@ expected_release_projection_one_look = build_release_readiness_one_look_projecti
     summary_release_projection
 )
 assert summary_release_projection['one_look'] == expected_release_projection_one_look, summary_release_projection
+expected_release_cloud_one_look = build_release_readiness_release_cloud_evidence_one_look_projection(
+    summary_release_projection['release_plane_cloud_evidence'],
+    summary_release_projection['release_cloud_evidence_adapter'],
+)
+for field_name, expected_value in expected_release_cloud_one_look.items():
+    assert summary_release_projection['one_look'][field_name] == expected_value, summary_release_projection
 assert summary_release_projection['one_look']['release_plane_required_checks_status'] == 'PASS', summary_release_projection
 assert summary_release_projection['one_look']['control_plane_materialized_promotion_ready'] is True, summary_release_projection
 assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_status'] == 'FAIL_REQUIRED', summary_release_projection

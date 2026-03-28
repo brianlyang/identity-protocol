@@ -42,6 +42,29 @@ def _clean_int(value: Any) -> int:
         return 0
 
 
+RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_ONE_LOOK_FIELDS: tuple[str, ...] = (
+    "release_plane_cloud_evidence_status",
+    "release_plane_required_checks_status",
+    "release_cloud_evidence_adapter_status",
+    "release_cloud_evidence_adapter_source_kind",
+    "release_cloud_evidence_adapter_local_dev_canonical",
+)
+RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_PROJECTION_MARKER = (
+    "release_cloud_evidence_projection="
+    + "|".join(
+        f"one_look.{field}"
+        for field in RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_ONE_LOOK_FIELDS
+    )
+)
+RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_SURFACE_CONSTRAINTS: tuple[str, ...] = (
+    RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_PROJECTION_MARKER,
+    *(
+        f"one_look.{field}"
+        for field in RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_ONE_LOOK_FIELDS
+    ),
+)
+
+
 def build_release_cloud_evidence_adapter_projection(
     adapter_payload: Mapping[str, Any] | dict[str, Any] | None,
 ) -> dict[str, Any]:
@@ -117,3 +140,53 @@ def build_release_plane_cloud_evidence_summary_projection(
         "stale_reasons": _clean_list(payload.get("stale_reasons")),
         "adapter": build_release_cloud_evidence_adapter_projection(payload),
     }
+
+
+def build_release_readiness_release_cloud_evidence_one_look_projection(
+    release_plane_payload: Mapping[str, Any] | dict[str, Any] | None,
+    release_adapter_payload: Mapping[str, Any] | dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    release_plane = _as_mapping(release_plane_payload)
+    release_adapter = _as_mapping(release_adapter_payload)
+    if not release_adapter and isinstance(release_plane.get("adapter"), Mapping):
+        release_adapter = _as_mapping(release_plane.get("adapter"))
+
+    conditions = release_plane.get("conditions")
+    if not isinstance(conditions, Mapping):
+        conditions = {}
+
+    return {
+        "release_plane_cloud_evidence_status": _clean_str(release_plane.get("status")).upper()
+        or "UNKNOWN",
+        "release_plane_required_checks_status": _clean_str(
+            conditions.get("required_checks_status")
+        ).upper()
+        or "UNKNOWN",
+        "release_cloud_evidence_adapter_status": _clean_str(
+            release_adapter.get("release_cloud_evidence_adapter_status")
+        ).upper()
+        or "UNKNOWN",
+        "release_cloud_evidence_adapter_source_kind": _clean_str(
+            release_adapter.get("adapter_source_kind")
+        ),
+        "release_cloud_evidence_adapter_local_dev_canonical": _clean_bool(
+            release_adapter.get("adapter_local_dev_canonical")
+        ),
+    }
+
+
+def apply_release_readiness_release_cloud_evidence_one_look(
+    summary: dict[str, Any],
+    one_look: dict[str, Any],
+) -> None:
+    if not isinstance(one_look, dict):
+        return
+    summary_payload = summary if isinstance(summary, dict) else {}
+    release_plane = summary_payload.get("release_plane_cloud_evidence") or {}
+    release_adapter = summary_payload.get("release_cloud_evidence_adapter") or {}
+    one_look.update(
+        build_release_readiness_release_cloud_evidence_one_look_projection(
+            release_plane,
+            release_adapter,
+        )
+    )
