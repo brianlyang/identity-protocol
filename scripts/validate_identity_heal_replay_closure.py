@@ -158,8 +158,20 @@ def main() -> int:
                 error_code = error_code or ERR_REF_MISMATCH
             if (
                 health_projection.get("validation_status") == "PASS_REQUIRED"
+                and health_execution_report_ref
+                and not bool(
+                    health_projection.get("report_logical_identity_key_matches_execution_report")
+                )
+            ):
+                stale_reasons.append(
+                    "health_report_experience_writeback_logical_identity_execution_report_ref_mismatch"
+                )
+                error_code = error_code or ERR_REF_MISMATCH
+            if (
+                health_projection.get("validation_status") == "PASS_REQUIRED"
                 and (
-                    not _clean_str(health_projection.get("report_selection_mode"))
+                    not _clean_str(health_projection.get("report_logical_identity_key"))
+                    or not _clean_str(health_projection.get("report_selection_mode"))
                     or not _clean_str(health_projection.get("report_selected_authority_class"))
                     or not _clean_str(health_projection.get("report_pointer_resolution_mode"))
                 )
@@ -187,7 +199,8 @@ def main() -> int:
         if (
             post_projection.get("validation_status") == "PASS_REQUIRED"
             and (
-                not _clean_str(post_projection.get("report_selection_mode"))
+                not _clean_str(post_projection.get("report_logical_identity_key"))
+                or not _clean_str(post_projection.get("report_selection_mode"))
                 or not _clean_str(post_projection.get("report_selected_authority_class"))
                 or not _clean_str(post_projection.get("report_pointer_resolution_mode"))
             )
@@ -225,8 +238,14 @@ def main() -> int:
         "health_report_experience_writeback_report_selected_path": health_projection.get(
             "report_selected_path", ""
         ),
+        "health_report_experience_writeback_report_logical_identity_key": health_projection.get(
+            "report_logical_identity_key", ""
+        ),
         "health_report_experience_writeback_selected_path_matches_execution_report_ref": bool(
             health_projection.get("report_selected_path_matches_execution_report")
+        ),
+        "health_report_experience_writeback_logical_identity_matches_execution_report_ref": bool(
+            health_projection.get("report_logical_identity_key_matches_execution_report")
         ),
         "health_report_experience_writeback_report_selection_mode": health_projection.get(
             "report_selection_mode", ""
@@ -247,6 +266,9 @@ def main() -> int:
         "post_validate_experience_writeback_validation_status": post_projection.get("validation_status", ""),
         "post_validate_experience_writeback_report_selected_path": post_projection.get(
             "report_selected_path", ""
+        ),
+        "post_validate_experience_writeback_report_logical_identity_key": post_projection.get(
+            "report_logical_identity_key", ""
         ),
         "post_validate_experience_writeback_report_selection_mode": post_projection.get(
             "report_selection_mode", ""

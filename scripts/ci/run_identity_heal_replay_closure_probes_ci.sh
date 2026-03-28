@@ -28,6 +28,10 @@ import json
 import sys
 from pathlib import Path
 
+repo_root = Path.cwd().resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+from primary_execution_report_common import report_logical_identity_key
+
 (
     pass_health_report,
     pass_post_report,
@@ -56,6 +60,19 @@ base_closure = {
     "stale_reasons": [],
 }
 
+write_json(
+    pass_post_report,
+    {
+        "identity_id": "probe-heal-replay",
+        "overall_status": "PASS",
+        "experience_writeback_closure": dict(base_closure),
+        "actor_binding_integrity": {"status": "PASS"},
+        "actor_lease_freshness": {"status": "PASS"},
+        "implicit_switch_guard": {"status": "PASS"},
+        "pointer_drift_guard": {"status": "PASS"},
+    },
+)
+base_closure["report_logical_identity_key"] = report_logical_identity_key(pass_post_report)
 write_json(
     pass_health_report,
     {
@@ -93,6 +110,7 @@ write_json(
             "status": "FAIL",
             "validation_status": "FAIL_REQUIRED",
             "report_selected_path": str(fail_post_report),
+            "report_logical_identity_key": report_logical_identity_key(fail_post_report),
             "report_selection_mode": "explicit_report",
             "report_selected_authority_class": "explicit_report_argument",
             "report_pointer_resolution_mode": "explicit_report",
@@ -107,6 +125,11 @@ write_json(
         "pointer_drift_guard": {"status": "PASS"},
     },
 )
+fail_post_doc = json.loads(fail_post_report.read_text(encoding="utf-8"))
+fail_post_doc["experience_writeback_closure"]["report_logical_identity_key"] = report_logical_identity_key(
+    fail_post_report
+)
+write_json(fail_post_report, fail_post_doc)
 
 write_json(
     pass_heal_report,
@@ -151,6 +174,8 @@ assert payload["health_report_experience_writeback_closure_status"] == "PASS", p
 assert payload["health_report_experience_writeback_validation_status"] == "PASS_REQUIRED", payload
 assert payload["health_report_execution_report_ref"] == payload["health_report_experience_writeback_report_selected_path"], payload
 assert payload["health_report_experience_writeback_selected_path_matches_execution_report_ref"] is True, payload
+assert payload["health_report_experience_writeback_logical_identity_matches_execution_report_ref"] is True, payload
+assert str(payload["health_report_experience_writeback_report_logical_identity_key"]).strip(), payload
 assert payload["health_report_experience_writeback_report_selection_mode"] == "explicit_report", payload
 assert payload["health_report_experience_writeback_report_selected_authority_class"] == "explicit_report_argument", payload
 assert payload["health_report_experience_writeback_report_pointer_resolution_mode"] == "explicit_report", payload
@@ -159,6 +184,7 @@ assert payload["health_report_experience_writeback_writeback_rule_id"] == "rule-
 assert payload["post_validate_experience_writeback_closure_status"] == "PASS", payload
 assert payload["post_validate_experience_writeback_validation_status"] == "PASS_REQUIRED", payload
 assert payload["post_validate_experience_writeback_report_selected_path"] == payload["health_report_execution_report_ref"], payload
+assert payload["post_validate_experience_writeback_report_logical_identity_key"] == payload["health_report_experience_writeback_report_logical_identity_key"], payload
 assert payload["post_validate_experience_writeback_report_selection_mode"] == "explicit_report", payload
 assert payload["post_validate_experience_writeback_report_selected_authority_class"] == "explicit_report_argument", payload
 assert payload["post_validate_experience_writeback_report_pointer_resolution_mode"] == "explicit_report", payload
@@ -236,6 +262,7 @@ write_json(
             "status": "PASS",
             "validation_status": "PASS_REQUIRED",
             "report_selected_path": str(pass_post_report),
+            "report_logical_identity_key": "",
             "report_run_id": "probe-heal-replay-run-pass",
             "writeback_status": "WRITTEN",
             "writeback_rule_id": "rule-entry-heal-replay-pass",

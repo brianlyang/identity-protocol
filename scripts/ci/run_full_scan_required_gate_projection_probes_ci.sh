@@ -44,6 +44,7 @@ pass_projection = {
     "lock_state": "LOCK_MATCH",
     "run_id_binding": "run:full-scan-required-gate-probe",
     "report_selected_path": "/tmp/full-scan-required-gate-probe.json",
+    "report_logical_identity_key": '{"identity_id":"probe-identity","run_id":"run:full-scan-required-gate-probe","catalog_path":"/tmp/catalog.local.yaml","resolved_pack_path":"/tmp/.identity/probe-identity","identity_prompt_sha256":"prompt-sha"}',
     "report_selection_mode": "explicit_report_override",
     "report_selected_authority_class": "explicit_report_override",
     "report_pointer_resolution_mode": "explicit_report_override",
@@ -61,6 +62,7 @@ assert pass_summary["required_gate_bundle_resolved_source_layer"] == "project", 
 assert pass_summary["required_gate_bundle_lock_state"] == "LOCK_MATCH", pass_summary
 assert pass_summary["required_gate_bundle_run_id_binding"] == "run:full-scan-required-gate-probe", pass_summary
 assert pass_summary["required_gate_bundle_report_selected_path"] == "/tmp/full-scan-required-gate-probe.json", pass_summary
+assert pass_summary["required_gate_bundle_report_logical_identity_key"] == pass_projection["report_logical_identity_key"], pass_summary
 assert pass_summary["required_gate_bundle_report_selection_mode"] == "explicit_report_override", pass_summary
 assert pass_summary["required_gate_bundle_report_authority_class"] == "explicit_report_override", pass_summary
 assert pass_summary["required_gate_bundle_report_pointer_resolution_mode"] == "explicit_report_override", pass_summary
@@ -78,6 +80,7 @@ assert shadow_summary["required_gate_bundle_shadow_resolved_work_layer"] == "ins
 assert shadow_summary["required_gate_bundle_shadow_resolved_source_layer"] == "project", shadow_summary
 assert shadow_summary["required_gate_bundle_shadow_lock_state"] == "LOCK_MATCH", shadow_summary
 assert shadow_summary["required_gate_bundle_shadow_run_id_binding"] == "run:full-scan-required-gate-probe", shadow_summary
+assert shadow_summary["required_gate_bundle_shadow_report_logical_identity_key"] == pass_projection["report_logical_identity_key"], shadow_summary
 assert shadow_summary["required_gate_bundle_shadow_report_selection_mode"] == "explicit_report_override", shadow_summary
 assert shadow_summary["required_gate_bundle_shadow_report_authority_class"] == "explicit_report_override", shadow_summary
 assert shadow_summary["required_gate_bundle_shadow_missing_mapping_requirements"] == [
@@ -121,6 +124,7 @@ assert excluded_summary["required_gate_bundle_resolved_source_layer"] == "", exc
 assert excluded_summary["required_gate_bundle_lock_state"] == "", excluded_summary
 assert excluded_summary["required_gate_bundle_run_id_binding"] == "", excluded_summary
 assert excluded_summary["required_gate_bundle_report_selected_path"] == "", excluded_summary
+assert excluded_summary["required_gate_bundle_report_logical_identity_key"] == "", excluded_summary
 assert excluded_summary["required_gate_bundle_report_selection_mode"] == "", excluded_summary
 assert excluded_summary["required_gate_bundle_report_authority_class"] == "", excluded_summary
 assert excluded_summary["required_gate_bundle_report_pointer_resolution_mode"] == "", excluded_summary

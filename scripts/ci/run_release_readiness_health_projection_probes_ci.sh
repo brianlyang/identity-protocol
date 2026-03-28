@@ -24,6 +24,7 @@ from health_report_experience_writeback_projection_common import (
     STATUS_SKIPPED_NOT_REQUIRED,
     build_health_report_experience_writeback_closure_projection,
 )
+from primary_execution_report_common import report_logical_identity_key
 from release_readiness_check import (
     _hydrate_one_look_projection,
 )
@@ -71,6 +72,7 @@ write_json(
             "status": "PASS",
             "validation_status": STATUS_PASS_REQUIRED,
             "report_selected_path": str(execution_report),
+            "report_logical_identity_key": report_logical_identity_key(execution_report),
             "report_selection_mode": "explicit_report",
             "report_selected_authority_class": "explicit_report_argument",
             "report_pointer_resolution_mode": "explicit_report",
@@ -106,6 +108,7 @@ assert pass_projection["health_report_collection_status"] == STATUS_PASS_REQUIRE
 assert pass_projection["health_report_contract_status"] == STATUS_PASS_REQUIRED, pass_projection
 assert pass_projection["execution_report_ref_matches"] is True, pass_projection
 assert pass_projection["report_selected_path_matches_execution_report"] is True, pass_projection
+assert pass_projection["report_logical_identity_key_matches_execution_report"] is True, pass_projection
 assert pass_projection["validation_status"] == STATUS_PASS_REQUIRED, pass_projection
 pass_summary["health_report_experience_writeback_closure"] = pass_projection
 _hydrate_one_look_projection(pass_summary)
@@ -170,6 +173,7 @@ write_json(
             "status": "PASS",
             "validation_status": STATUS_FAIL_REQUIRED,
             "report_selected_path": str(execution_report),
+            "report_logical_identity_key": report_logical_identity_key(execution_report),
             "report_selection_mode": "explicit_report",
             "report_selected_authority_class": "explicit_report_argument",
             "report_pointer_resolution_mode": "explicit_report",

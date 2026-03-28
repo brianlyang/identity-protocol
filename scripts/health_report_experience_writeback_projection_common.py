@@ -136,6 +136,8 @@ def _base_projection(*, boundary_experience_writeback_validation_status: str) ->
         "validation_status": "",
         "report_selected_path": "",
         "report_selected_path_matches_execution_report": False,
+        "report_logical_identity_key": "",
+        "report_logical_identity_key_matches_execution_report": False,
         "report_selection_mode": "",
         "report_selected_authority_class": "",
         "report_pointer_resolution_mode": "",
@@ -286,6 +288,12 @@ def build_health_report_experience_writeback_closure_projection(
     projection["report_selected_path_matches_execution_report"] = bool(
         closure_projection.get("report_selected_path_matches_execution_report")
     )
+    projection["report_logical_identity_key"] = _clean_str(
+        closure_projection.get("report_logical_identity_key")
+    )
+    projection["report_logical_identity_key_matches_execution_report"] = bool(
+        closure_projection.get("report_logical_identity_key_matches_execution_report")
+    )
     projection["report_selection_mode"] = _clean_str(closure_projection.get("report_selection_mode"))
     projection["report_selected_authority_class"] = _clean_str(
         closure_projection.get("report_selected_authority_class")
@@ -317,6 +325,18 @@ def build_health_report_experience_writeback_closure_projection(
     if projection["validation_status"] == STATUS_PASS_REQUIRED and not projection["report_selected_path_matches_execution_report"]:
         projection["projection_status"] = STATUS_FAIL_REQUIRED
         projection["stale_reasons"].append("health_report_selected_path_execution_report_mismatch")
+    if (
+        projection["validation_status"] == STATUS_PASS_REQUIRED
+        and not projection["report_logical_identity_key"]
+    ):
+        projection["projection_status"] = STATUS_FAIL_REQUIRED
+        projection["stale_reasons"].append("health_report_logical_identity_key_missing")
+    if (
+        projection["validation_status"] == STATUS_PASS_REQUIRED
+        and not projection["report_logical_identity_key_matches_execution_report"]
+    ):
+        projection["projection_status"] = STATUS_FAIL_REQUIRED
+        projection["stale_reasons"].append("health_report_logical_identity_execution_report_mismatch")
 
     boundary_status = projection["boundary_experience_writeback_validation_status"]
     if (
@@ -355,6 +375,8 @@ def build_projection_profile_excluded_health_report_experience_writeback_closure
             "validation_status": STATUS_SKIPPED_NOT_REQUIRED,
             "report_selected_path": "",
             "report_selected_path_matches_execution_report": False,
+            "report_logical_identity_key": "",
+            "report_logical_identity_key_matches_execution_report": False,
             "report_selection_mode": "",
             "report_selected_authority_class": "",
             "report_pointer_resolution_mode": "",

@@ -12,8 +12,9 @@ POSITIVE_A="${TMP_DIR}/positive-validate.json"
 POSITIVE_B="${TMP_DIR}/positive-three-plane.json"
 NEGATIVE_AUTHORITY="${TMP_DIR}/negative-authority.json"
 NEGATIVE_POINTER="${TMP_DIR}/negative-pointer.json"
+NEGATIVE_LOGICAL_KEY="${TMP_DIR}/negative-logical-key.json"
 
-python3 - <<'PY' "${POSITIVE_A}" "${POSITIVE_B}" "${NEGATIVE_AUTHORITY}" "${NEGATIVE_POINTER}"
+python3 - <<'PY' "${POSITIVE_A}" "${POSITIVE_B}" "${NEGATIVE_AUTHORITY}" "${NEGATIVE_POINTER}" "${NEGATIVE_LOGICAL_KEY}"
 from __future__ import annotations
 
 import json
@@ -25,6 +26,7 @@ positive_a = Path(sys.argv[1]).resolve()
 positive_b = Path(sys.argv[2]).resolve()
 negative_authority = Path(sys.argv[3]).resolve()
 negative_pointer = Path(sys.argv[4]).resolve()
+negative_logical_key = Path(sys.argv[5]).resolve()
 
 base_receipt = {
     "run_id_binding": "probe-run",
@@ -34,6 +36,7 @@ base_receipt = {
     "resolved_source_layer": "project",
     "lock_state": "LOCK_MATCH",
     "report_selected_path": "/tmp/probe-report.json",
+    "report_logical_identity_key": '{"identity_id":"probe-identity","run_id":"probe-run","catalog_path":"/tmp/catalog.local.yaml","resolved_pack_path":"/tmp/.identity/probe-identity","identity_prompt_sha256":"prompt-sha"}',
     "report_selection_mode": "explicit_report_override",
     "report_selected_authority_class": "explicit_report_override",
     "report_pointer_resolution_mode": "explicit_report_override",
@@ -66,12 +69,17 @@ pointer_mismatch_receipt = {
     **three_plane_receipt,
     "report_pointer_resolution_mode": "pointer_candidate_root_report",
 }
+logical_key_mismatch_receipt = {
+    **three_plane_receipt,
+    "report_logical_identity_key": '{"identity_id":"probe-identity","run_id":"probe-run-foreign","catalog_path":"/tmp/foreign-catalog.local.yaml","resolved_pack_path":"/tmp/.identity/probe-identity-foreign","identity_prompt_sha256":"prompt-sha"}',
+}
 
 for path, payload in (
     (positive_a, validate_receipt),
     (positive_b, three_plane_receipt),
     (negative_authority, authority_mismatch_receipt),
     (negative_pointer, pointer_mismatch_receipt),
+    (negative_logical_key, logical_key_mismatch_receipt),
 ):
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -93,6 +101,7 @@ def run_case(*receipts: Path) -> tuple[int, dict]:
 rc, payload = run_case(positive_a, positive_b)
 assert rc == 0, payload
 assert payload["required_gate_tuple_parity_status"] == "PASS_REQUIRED", payload
+assert "report_logical_identity_key" in payload["tuple_fields"], payload
 assert "report_selected_authority_class" in payload["tuple_fields"], payload
 assert "report_pointer_resolution_mode" in payload["tuple_fields"], payload
 
@@ -106,9 +115,15 @@ assert rc == 1, payload
 assert payload["required_gate_tuple_parity_status"] == "FAIL_REQUIRED", payload
 assert "report_pointer_resolution_mode" in payload["mismatches"], payload
 
+rc, payload = run_case(positive_a, negative_logical_key)
+assert rc == 1, payload
+assert payload["required_gate_tuple_parity_status"] == "FAIL_REQUIRED", payload
+assert "report_logical_identity_key" in payload["mismatches"], payload
+
 print(json.dumps(
     {
         "required_gate_tuple_parity_probe_status": "PASS_REQUIRED",
+        "logical_identity_mismatch_field": "report_logical_identity_key",
         "authority_mismatch_field": "report_selected_authority_class",
         "pointer_mismatch_field": "report_pointer_resolution_mode",
     },

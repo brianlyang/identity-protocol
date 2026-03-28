@@ -491,6 +491,7 @@ def main() -> int:
     writeback_projection = build_report_selection_authority_projection(
         wb_payload,
         selected_path_key="report_selected_path",
+        logical_identity_key_key="report_logical_identity_key",
         selection_mode_key="report_selection_mode",
         selected_authority_class_key="report_selected_authority_class",
         pointer_resolution_mode_key="report_pointer_resolution_mode",
@@ -500,6 +501,7 @@ def main() -> int:
     post_projection = build_report_selection_authority_projection(
         post_payload,
         selected_path_key="report_selected_path",
+        logical_identity_key_key="report_logical_identity_key",
         selection_mode_key="report_selection_mode",
         selected_authority_class_key="report_selected_authority_class",
         pointer_resolution_mode_key="report_pointer_resolution_mode",
@@ -509,6 +511,7 @@ def main() -> int:
     post_experience_projection = build_report_selection_authority_projection(
         post_payload,
         selected_path_key="experience_writeback_report_selected_path",
+        logical_identity_key_key="experience_writeback_report_logical_identity_key",
         selection_mode_key="experience_writeback_report_selection_mode",
         selected_authority_class_key="experience_writeback_report_selected_authority_class",
         pointer_resolution_mode_key="experience_writeback_report_pointer_resolution_mode",
@@ -528,17 +531,20 @@ def main() -> int:
         "writeback_required_contract": wb_payload.get("required_contract"),
         "post_execution_required_contract": post_payload.get("required_contract"),
         "report_selected_path": aggregate_projection.get("selected_path", ""),
+        "report_logical_identity_key": aggregate_projection.get("logical_identity_key", ""),
         "report_selection_mode": aggregate_projection.get("selection_mode", ""),
         "report_selected_authority_class": aggregate_projection.get("selected_authority_class", ""),
         "report_pointer_resolution_mode": aggregate_projection.get("pointer_resolution_mode", ""),
         "report_pointer_path": aggregate_projection.get("pointer_path", ""),
         "report_projection_source": aggregate_projection.get("projection_source", ""),
         "writeback_report_selected_path": writeback_projection.get("selected_path", ""),
+        "writeback_report_logical_identity_key": writeback_projection.get("logical_identity_key", ""),
         "writeback_report_selection_mode": writeback_projection.get("selection_mode", ""),
         "writeback_report_selected_authority_class": writeback_projection.get("selected_authority_class", ""),
         "writeback_report_pointer_resolution_mode": writeback_projection.get("pointer_resolution_mode", ""),
         "writeback_report_pointer_path": writeback_projection.get("pointer_path", ""),
         "post_execution_report_selected_path": post_projection.get("selected_path", ""),
+        "post_execution_report_logical_identity_key": post_projection.get("logical_identity_key", ""),
         "post_execution_report_selection_mode": post_projection.get("selection_mode", ""),
         "post_execution_report_selected_authority_class": post_projection.get("selected_authority_class", ""),
         "post_execution_report_pointer_resolution_mode": post_projection.get("pointer_resolution_mode", ""),
@@ -551,6 +557,9 @@ def main() -> int:
         ),
         "post_execution_experience_writeback_report_selected_path": post_experience_projection.get(
             "selected_path", ""
+        ),
+        "post_execution_experience_writeback_report_logical_identity_key": post_experience_projection.get(
+            "logical_identity_key", ""
         ),
         "post_execution_experience_writeback_report_selection_mode": post_experience_projection.get(
             "selection_mode", ""
@@ -595,12 +604,14 @@ def main() -> int:
             collect_report_selection_authority_projection_stale_reasons(
                 wb_payload,
                 selected_path_key="report_selected_path",
+                logical_identity_key_key="report_logical_identity_key",
                 selection_mode_key="report_selection_mode",
                 selected_authority_class_key="report_selected_authority_class",
                 pointer_resolution_mode_key="report_pointer_resolution_mode",
                 require_selected_path=True,
                 selected_path_reason="track_a_writeback_report_selected_path_missing",
                 authority_reason="track_a_writeback_authority_projection_missing",
+                logical_identity_reason="track_a_writeback_report_logical_identity_missing_or_mismatch",
             )
         )
     if str(post_result.get("status", "")).strip().upper() == STATUS_PASS_REQUIRED:
@@ -608,12 +619,14 @@ def main() -> int:
             collect_report_selection_authority_projection_stale_reasons(
                 post_payload,
                 selected_path_key="report_selected_path",
+                logical_identity_key_key="report_logical_identity_key",
                 selection_mode_key="report_selection_mode",
                 selected_authority_class_key="report_selected_authority_class",
                 pointer_resolution_mode_key="report_pointer_resolution_mode",
                 require_selected_path=True,
                 selected_path_reason="track_a_post_execution_report_selected_path_missing",
                 authority_reason="track_a_post_execution_authority_projection_missing",
+                logical_identity_reason="track_a_post_execution_report_logical_identity_missing_or_mismatch",
             )
         )
     if (
@@ -624,6 +637,16 @@ def main() -> int:
         and writeback_projection.get("selected_path") != post_projection.get("selected_path")
     ):
         track_a_stale_reasons.append("track_a_writeback_post_execution_selected_path_mismatch")
+    if (
+        str(wb_result.get("status", "")).strip().upper() == STATUS_PASS_REQUIRED
+        and str(post_result.get("status", "")).strip().upper() == STATUS_PASS_REQUIRED
+        and writeback_projection.get("logical_identity_key")
+        and post_projection.get("logical_identity_key")
+        and writeback_projection.get("logical_identity_key") != post_projection.get("logical_identity_key")
+    ):
+        track_a_stale_reasons.append(
+            "track_a_writeback_post_execution_logical_identity_mismatch"
+        )
 
     aggregate_projection_payload = payload["track_a"]
     aggregate_selected_path_reason = (
@@ -640,12 +663,14 @@ def main() -> int:
         collect_report_selection_authority_projection_stale_reasons(
             aggregate_projection_payload,
             selected_path_key="report_selected_path",
+            logical_identity_key_key="report_logical_identity_key",
             selection_mode_key="report_selection_mode",
             selected_authority_class_key="report_selected_authority_class",
             pointer_resolution_mode_key="report_pointer_resolution_mode",
             require_selected_path=True,
             selected_path_reason=aggregate_selected_path_reason,
             authority_reason=aggregate_authority_reason,
+            logical_identity_reason="track_a_aggregate_report_logical_identity_missing_or_mismatch",
         )
     )
 
@@ -657,12 +682,14 @@ def main() -> int:
             collect_report_selection_authority_projection_stale_reasons(
                 post_payload,
                 selected_path_key="experience_writeback_report_selected_path",
+                logical_identity_key_key="experience_writeback_report_logical_identity_key",
                 selection_mode_key="experience_writeback_report_selection_mode",
                 selected_authority_class_key="experience_writeback_report_selected_authority_class",
                 pointer_resolution_mode_key="experience_writeback_report_pointer_resolution_mode",
                 require_selected_path=True,
                 selected_path_reason="track_a_post_execution_experience_writeback_report_selected_path_missing",
                 authority_reason="track_a_post_execution_experience_writeback_authority_projection_missing",
+                logical_identity_reason="track_a_post_execution_experience_writeback_report_logical_identity_missing_or_mismatch",
             )
         )
         if (
@@ -672,6 +699,15 @@ def main() -> int:
         ):
             track_a_stale_reasons.append(
                 "track_a_post_execution_experience_writeback_selected_path_mismatch"
+            )
+        if (
+            post_projection.get("logical_identity_key")
+            and post_experience_projection.get("logical_identity_key")
+            and post_projection.get("logical_identity_key")
+            != post_experience_projection.get("logical_identity_key")
+        ):
+            track_a_stale_reasons.append(
+                "track_a_post_execution_experience_writeback_logical_identity_mismatch"
             )
 
     payload["track_a"]["track_a_stale_reasons"] = track_a_stale_reasons

@@ -6,7 +6,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from primary_execution_report_common import latest_prompt_bound_primary_execution_report_from_roots
+from primary_execution_report_common import (
+    latest_prompt_bound_primary_execution_report_from_roots,
+    report_logical_identity_key,
+)
 from resolve_identity_context import (
     default_local_catalog_path,
     merged_catalog,
@@ -98,6 +101,7 @@ def _resolve_report_selection(identity_id: str, pack_root: Path, explicit_report
             payload.update(
                 {
                     "report_selected_path": str(temp_report),
+                    "report_logical_identity_key": report_logical_identity_key(temp_report),
                     "report_selection_mode": RUNTIME_TEMP_SELECTION_MODE,
                     "report_selected_authority_class": RUNTIME_TEMP_AUTHORITY_CLASS,
                     "report_pointer_resolution_mode": RUNTIME_TEMP_POINTER_RESOLUTION_MODE,
@@ -184,6 +188,7 @@ def main() -> int:
         "local_catalog_path": "",
         "resolved_pack_path": "",
         "report_selected_path": "",
+        "report_logical_identity_key": "",
         "report_selection_mode": "",
         "report_selected_authority_class": "",
         "report_pointer_resolution_mode": "",

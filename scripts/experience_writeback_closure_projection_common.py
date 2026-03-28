@@ -4,6 +4,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from primary_execution_report_common import report_logical_identity_key
+
 
 def clean_str(value: Any) -> str:
     return str(value or "").strip()
@@ -40,14 +42,25 @@ def build_experience_writeback_closure_projection(
     execution_report_token = clean_str(execution_report)
     if execution_report_token:
         execution_report_token = str(Path(execution_report_token).expanduser().resolve())
+    execution_report_logical_identity_key = ""
+    if execution_report_token:
+        execution_report_logical_identity_key = report_logical_identity_key(
+            Path(execution_report_token)
+        )
 
     report_selected_path = clean_str(closure.get("report_selected_path"))
+    report_logical_identity_key_value = clean_str(closure.get("report_logical_identity_key"))
     return {
         "status": clean_str(closure.get("status")).upper(),
         "validation_status": clean_str(closure.get("validation_status")).upper(),
         "report_selected_path": report_selected_path,
         "report_selected_path_matches_execution_report": bool(
             execution_report_token and report_selected_path == execution_report_token
+        ),
+        "report_logical_identity_key": report_logical_identity_key_value,
+        "report_logical_identity_key_matches_execution_report": bool(
+            execution_report_logical_identity_key
+            and report_logical_identity_key_value == execution_report_logical_identity_key
         ),
         "report_selection_mode": clean_str(closure.get("report_selection_mode")),
         "report_selected_authority_class": clean_str(

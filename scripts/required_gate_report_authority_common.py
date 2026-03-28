@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from primary_execution_report_common import report_logical_identity_key
 from tool_vendor_governance_common import (
     build_identity_upgrade_report_selection_projection,
     resolve_identity_upgrade_report_selection,
@@ -10,6 +11,7 @@ from tool_vendor_governance_common import (
 
 REQUIRED_GATE_REPORT_AUTHORITY_FIELDS: tuple[str, ...] = (
     "report_selected_path",
+    "report_logical_identity_key",
     "report_selection_mode",
     "report_selected_authority_class",
     "report_pointer_resolution_mode",
@@ -43,4 +45,8 @@ def build_required_gate_report_authority_projection(
     )
     for field in REQUIRED_GATE_REPORT_AUTHORITY_FIELDS:
         projection[field] = str(selection_projection.get(field, "") or "").strip()
+    if resolution.selected_report is not None:
+        projection["report_logical_identity_key"] = report_logical_identity_key(
+            resolution.selected_report
+        )
     return projection

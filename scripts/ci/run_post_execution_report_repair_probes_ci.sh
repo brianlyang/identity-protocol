@@ -295,6 +295,7 @@ assert apply_payload["capability_activation_missing_fields_after"] == [], apply_
 assert postexec_payload["post_execution_mandatory_status"] == "PASS_REQUIRED", postexec_payload
 assert terminal_payload["identity_terminal_truth_cleanliness_status"] == "PASS_REQUIRED", terminal_payload
 assert postexec_payload["report_selected_path"] == str(Path(sys.argv[4]).resolve()), postexec_payload
+assert str(postexec_payload["report_logical_identity_key"]).strip(), postexec_payload
 assert postexec_payload["report_selection_mode"] == "explicit_report_override", postexec_payload
 assert postexec_payload["report_selected_authority_class"] == "explicit_report_override", postexec_payload
 assert postexec_payload["report_pointer_resolution_mode"] == "explicit_report_override", postexec_payload
@@ -377,6 +378,7 @@ assert apply_payload["publishable_after"] is False, apply_payload
 assert apply_payload["canonical_result_eligible_after"] is False, apply_payload
 assert postexec_payload["post_execution_mandatory_status"] == "PASS_REQUIRED", postexec_payload
 assert postexec_payload["report_selected_path"] == str(Path(sys.argv[4]).resolve()), postexec_payload
+assert str(postexec_payload["report_logical_identity_key"]).strip(), postexec_payload
 assert terminal_payload["identity_terminal_truth_cleanliness_status"] == "FAIL_REQUIRED", terminal_payload
 assert postexec_payload["report_selection_mode"] == "explicit_report_override", postexec_payload
 assert postexec_payload["report_selected_authority_class"] == "explicit_report_override", postexec_payload
@@ -423,11 +425,13 @@ assert apply_payload["post_execution_report_repair_status"] == "PASS_REQUIRED", 
 assert apply_payload["report_updated"] is True, apply_payload
 assert postexec_payload["post_execution_mandatory_status"] == "PASS_REQUIRED", postexec_payload
 assert postexec_payload["report_selected_path"] == report_path, postexec_payload
+assert str(postexec_payload["report_logical_identity_key"]).strip(), postexec_payload
 assert postexec_payload["report_selection_mode"] == "explicit_report_override", postexec_payload
 assert postexec_payload["report_selected_authority_class"] == "explicit_report_override", postexec_payload
 assert postexec_payload["report_pointer_resolution_mode"] == "explicit_report_override", postexec_payload
 assert postexec_payload["experience_writeback_validation_status"] == "PASS_REQUIRED", postexec_payload
 assert postexec_payload["experience_writeback_report_selected_path"] == report_path, postexec_payload
+assert str(postexec_payload["experience_writeback_report_logical_identity_key"]).strip(), postexec_payload
 assert postexec_payload["experience_writeback_report_selection_mode"] == "explicit_report_override", postexec_payload
 assert postexec_payload["experience_writeback_report_selected_authority_class"] == "explicit_report_override", postexec_payload
 assert postexec_payload["experience_writeback_report_pointer_resolution_mode"] == "explicit_report_override", postexec_payload

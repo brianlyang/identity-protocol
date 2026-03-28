@@ -12,6 +12,7 @@ RELEASE_READINESS_REQUIRED_GATE_BUNDLE_ONE_LOOK_PASSTHROUGH_FIELDS: tuple[tuple[
     ("lock_state", "{prefix}_lock_state"),
     ("run_id_binding", "{prefix}_run_id_binding"),
     ("report_selected_path", "{prefix}_report_selected_path"),
+    ("report_logical_identity_key", "{prefix}_report_logical_identity_key"),
     ("report_selection_mode", "{prefix}_report_selection_mode"),
     ("report_selected_authority_class", "{prefix}_report_authority_class"),
     ("report_pointer_resolution_mode", "{prefix}_report_pointer_resolution_mode"),

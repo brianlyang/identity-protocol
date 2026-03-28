@@ -70,6 +70,10 @@ def build_required_gate_bundle_target_projection(
     bundle_payload: dict[str, Any],
     contract_mapping: str = DEFAULT_CONTRACT_BINDING_ENTRY,
 ) -> dict[str, Any]:
+    report_authority_projection = {
+        field: str(bundle_payload.get(field, "") or "").strip()
+        for field in REQUIRED_GATE_REPORT_AUTHORITY_FIELDS
+    }
     projection: dict[str, Any] = {
         "projection_status": STATUS_PASS_REQUIRED,
         "error_code": str(bundle_payload.get("error_code", "") or "").strip(),
@@ -83,15 +87,7 @@ def build_required_gate_bundle_target_projection(
         "resolved_source_layer": str(bundle_payload.get("resolved_source_layer", "") or "").strip(),
         "lock_state": str(bundle_payload.get("lock_state", "") or "").strip(),
         "run_id_binding": str(bundle_payload.get("run_id_binding", "") or "").strip(),
-        "report_selected_path": str(bundle_payload.get("report_selected_path", "") or "").strip(),
-        "report_selection_mode": str(bundle_payload.get("report_selection_mode", "") or "").strip(),
-        "report_selected_authority_class": str(
-            bundle_payload.get("report_selected_authority_class", "") or ""
-        ).strip(),
-        "report_pointer_resolution_mode": str(
-            bundle_payload.get("report_pointer_resolution_mode", "") or ""
-        ).strip(),
-        "report_pointer_path": str(bundle_payload.get("report_pointer_path", "") or "").strip(),
+        **report_authority_projection,
         "contract_mapping_entry": "",
         "contract_mapping": "",
         "contract_mapping_active_file": "",

@@ -129,6 +129,7 @@ def main() -> int:
         return 1
     projection_field_pairs = (
         ("report_selected_path", "report_selected_path"),
+        ("report_logical_identity_key", "report_logical_identity_key"),
         ("report_selection_mode", "report_selection_mode"),
         ("report_selected_authority_class", "report_selected_authority_class"),
         ("report_pointer_resolution_mode", "report_pointer_resolution_mode"),
@@ -174,8 +175,16 @@ def main() -> int:
         return 1
     if (
         validation_status == "PASS_REQUIRED"
+        and execution_report_ref
+        and not bool(closure_projection.get("report_logical_identity_key_matches_execution_report"))
+    ):
+        print("[FAIL] experience_writeback_closure logical identity must match execution_report_ref for PASS_REQUIRED")
+        return 1
+    if (
+        validation_status == "PASS_REQUIRED"
         and (
-            not _clean_str(closure_projection.get("report_selection_mode"))
+            not _clean_str(closure_projection.get("report_logical_identity_key"))
+            or not _clean_str(closure_projection.get("report_selection_mode"))
             or not _clean_str(closure_projection.get("report_selected_authority_class"))
             or not _clean_str(closure_projection.get("report_pointer_resolution_mode"))
         )

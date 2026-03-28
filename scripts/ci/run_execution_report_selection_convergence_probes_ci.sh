@@ -656,6 +656,18 @@ cross_workflow_payload = _run_json(
     ],
     cwd=repo_root,
 )
+required_contract_coverage_payload = _run_json(
+    [
+        sys.executable,
+        str(repo_root / "scripts" / "validate_required_contract_coverage.py"),
+        "--catalog",
+        str(local_catalog),
+        "--identity-id",
+        identity_id,
+        "--json-only",
+    ],
+    cwd=repo_root,
+)
 
 selected_freshness = str(freshness_payload.get("report_selected_path", "")).strip()
 selected_baseline = str(baseline_payload.get("report_selected_path", "")).strip()
@@ -687,6 +699,23 @@ selected_permission_after = _selected_report_path_from_ok_stdout(
 selected_mode_promotion = str(mode_promotion_payload.get("report_selected_path", "")).strip()
 selected_base_repo_write_boundary = str(base_repo_write_boundary_payload.get("report_selected_path", "")).strip()
 selected_cross_workflow_evidence = str(cross_workflow_payload.get("evidence_ref", "")).strip()
+required_contract_coverage_rows = required_contract_coverage_payload.get("contracts") or []
+if not isinstance(required_contract_coverage_rows, list):
+    required_contract_coverage_rows = []
+base_repo_write_boundary_row = next(
+    (
+        row for row in required_contract_coverage_rows
+        if isinstance(row, dict) and str(row.get("name", "")).strip() == "base_repo_write_boundary"
+    ),
+    {},
+)
+cross_workflow_schema_row = next(
+    (
+        row for row in required_contract_coverage_rows
+        if isinstance(row, dict) and str(row.get("name", "")).strip() == "cross_workflow_schema"
+    ),
+    {},
+)
 expected = str(report_path)
 expected_detached = str(detached_report_path)
 expected_detached_unanchored = str(detached_foreign_prompt_match_path)
@@ -824,6 +853,19 @@ assert str(base_repo_write_boundary_payload.get("base_repo_write_boundary_status
     "case": "base_repo_write_boundary_contract_pattern_returns_machine_pass_status",
     "payload": base_repo_write_boundary_payload,
 }
+assert str(base_repo_write_boundary_payload.get("report_selection_mode", "")).strip() == "pattern_primary_execution_report_family_prompt_bound", {
+    "case": "base_repo_write_boundary_contract_pattern_projects_selection_mode",
+    "payload": base_repo_write_boundary_payload,
+}
+assert str(base_repo_write_boundary_payload.get("report_selected_authority_class", "")).strip() == "pattern_primary_execution_report_family_prompt_bound", {
+    "case": "base_repo_write_boundary_contract_pattern_projects_authority_class",
+    "payload": base_repo_write_boundary_payload,
+}
+assert str(base_repo_write_boundary_payload.get("report_logical_identity_key", "")).strip() == expected_logical_identity_key, {
+    "case": "base_repo_write_boundary_contract_pattern_projects_logical_identity_key",
+    "payload": base_repo_write_boundary_payload,
+    "expected": expected_logical_identity_key,
+}
 assert selected_cross_workflow_evidence == expected, {
     "case": "cross_workflow_contract_pattern_preserves_prompt_sha_preference",
     "selected": selected_cross_workflow_evidence,
@@ -833,6 +875,63 @@ assert selected_cross_workflow_evidence == expected, {
 assert str(cross_workflow_payload.get("cross_workflow_evidence_normalization_status", "")).strip() == "PASS_REQUIRED", {
     "case": "cross_workflow_contract_pattern_returns_machine_pass_status",
     "payload": cross_workflow_payload,
+}
+assert str(cross_workflow_payload.get("evidence_selection_mode", "")).strip() == "pattern_primary_execution_report_family_prompt_bound", {
+    "case": "cross_workflow_contract_pattern_projects_selection_mode",
+    "payload": cross_workflow_payload,
+}
+assert str(cross_workflow_payload.get("evidence_selected_authority_class", "")).strip() == "pattern_primary_execution_report_family_prompt_bound", {
+    "case": "cross_workflow_contract_pattern_projects_authority_class",
+    "payload": cross_workflow_payload,
+}
+assert str(cross_workflow_payload.get("evidence_logical_identity_key", "")).strip() == expected_logical_identity_key, {
+    "case": "cross_workflow_contract_pattern_projects_logical_identity_key",
+    "payload": cross_workflow_payload,
+    "expected": expected_logical_identity_key,
+}
+assert isinstance(base_repo_write_boundary_row, dict) and base_repo_write_boundary_row, {
+    "case": "required_contract_coverage_projects_base_repo_write_boundary_row",
+    "payload": required_contract_coverage_payload,
+}
+assert str(base_repo_write_boundary_row.get("evidence_ref", "")).strip() == expected, {
+    "case": "required_contract_coverage_projects_base_repo_write_boundary_evidence_ref",
+    "row": base_repo_write_boundary_row,
+    "expected": expected,
+}
+assert str(base_repo_write_boundary_row.get("evidence_selection_mode", "")).strip() == "pattern_primary_execution_report_family_prompt_bound", {
+    "case": "required_contract_coverage_projects_base_repo_write_boundary_selection_mode",
+    "row": base_repo_write_boundary_row,
+}
+assert str(base_repo_write_boundary_row.get("evidence_selected_authority_class", "")).strip() == "pattern_primary_execution_report_family_prompt_bound", {
+    "case": "required_contract_coverage_projects_base_repo_write_boundary_authority_class",
+    "row": base_repo_write_boundary_row,
+}
+assert str(base_repo_write_boundary_row.get("evidence_logical_identity_key", "")).strip() == expected_logical_identity_key, {
+    "case": "required_contract_coverage_projects_base_repo_write_boundary_logical_identity_key",
+    "row": base_repo_write_boundary_row,
+    "expected": expected_logical_identity_key,
+}
+assert isinstance(cross_workflow_schema_row, dict) and cross_workflow_schema_row, {
+    "case": "required_contract_coverage_projects_cross_workflow_schema_row",
+    "payload": required_contract_coverage_payload,
+}
+assert str(cross_workflow_schema_row.get("evidence_ref", "")).strip() == expected, {
+    "case": "required_contract_coverage_projects_cross_workflow_schema_evidence_ref",
+    "row": cross_workflow_schema_row,
+    "expected": expected,
+}
+assert str(cross_workflow_schema_row.get("evidence_selection_mode", "")).strip() == "pattern_primary_execution_report_family_prompt_bound", {
+    "case": "required_contract_coverage_projects_cross_workflow_schema_selection_mode",
+    "row": cross_workflow_schema_row,
+}
+assert str(cross_workflow_schema_row.get("evidence_selected_authority_class", "")).strip() == "pattern_primary_execution_report_family_prompt_bound", {
+    "case": "required_contract_coverage_projects_cross_workflow_schema_authority_class",
+    "row": cross_workflow_schema_row,
+}
+assert str(cross_workflow_schema_row.get("evidence_logical_identity_key", "")).strip() == expected_logical_identity_key, {
+    "case": "required_contract_coverage_projects_cross_workflow_schema_logical_identity_key",
+    "row": cross_workflow_schema_row,
+    "expected": expected_logical_identity_key,
 }
 assert str(mode_promotion_payload.get("mode_promotion_arbitration_status", "")).strip() == "PASS_REQUIRED", {
     "case": "mode_promotion_arbitration_returns_machine_pass_status",

@@ -56,6 +56,7 @@ from release_cloud_evidence_projection_common import (
     build_release_cloud_evidence_adapter_projection,
 )
 from required_contract_coverage_projection_common import build_required_contract_coverage_projection
+from required_gate_report_authority_common import REQUIRED_GATE_REPORT_AUTHORITY_FIELDS
 from required_gate_bundle_projection_common import (
     required_gate_bundle_target_projection_is_scope_excluded,
 )
@@ -118,6 +119,40 @@ BASELINE_CHECK_NAMES: set[str] = {
     "protocol_baseline_freshness",
     "protocol_version_alignment",
 }
+REQUIRED_GATE_BUNDLE_RUNNER_CAPTURE_FIELDS: tuple[str, ...] = (
+    "bundle_contract_id",
+    "bundle_key",
+    "bundle_status",
+    "error_code",
+    "identity_id",
+    "catalog_path",
+    "operation",
+    "contract_mapping",
+    "mapping_errors",
+    "missing_targets",
+    "surface_label",
+    "actor_id",
+    "resolved_work_layer",
+    "resolved_source_layer",
+    "lock_state",
+    "run_id_binding",
+    *REQUIRED_GATE_REPORT_AUTHORITY_FIELDS,
+    "gate_profile",
+    "gate_profile_mode",
+    "gate_profile_file",
+    "gate_profile_resolved_file",
+    "gate_profile_requirement_count",
+    "gate_profile_requirement_keys",
+    "required_contract",
+    "failed_required_contract_count",
+    "row_contract_error_count",
+    "send_time_gate_status",
+    "outlet_bypass_detected",
+    "final_emit_contract_status",
+    "final_emit_policy_mode",
+    "final_emit_schema_status",
+    "results",
+)
 PROTOCOL_FEEDBACK_OBS_CHECK_NAMES: set[str] = {
     "protocol_feedback_sidecar",
     "protocol_feedback_reply_channel",
@@ -4996,88 +5031,14 @@ def main() -> int:
                             check_payload[k] = coupling_doc.get(k)
                 if name == "required_gate_bundle_runner":
                     bundle_doc = _parse_json_safely(r.stdout) or {}
-                    for k in (
-                        "bundle_contract_id",
-                        "bundle_key",
-                        "bundle_status",
-                        "error_code",
-                        "identity_id",
-                        "catalog_path",
-                        "operation",
-                        "contract_mapping",
-                        "mapping_errors",
-                        "missing_targets",
-                        "surface_label",
-                        "actor_id",
-                        "resolved_work_layer",
-                        "resolved_source_layer",
-                        "lock_state",
-                        "run_id_binding",
-                        "report_selected_path",
-                        "report_selection_mode",
-                        "report_selected_authority_class",
-                        "report_pointer_resolution_mode",
-                        "report_pointer_path",
-                        "gate_profile",
-                        "gate_profile_mode",
-                        "gate_profile_file",
-                        "gate_profile_resolved_file",
-                        "gate_profile_requirement_count",
-                        "gate_profile_requirement_keys",
-                        "required_contract",
-                        "failed_required_contract_count",
-                        "row_contract_error_count",
-                        "send_time_gate_status",
-                        "outlet_bypass_detected",
-                        "final_emit_contract_status",
-                        "final_emit_policy_mode",
-                        "final_emit_schema_status",
-                        "results",
-                    ):
+                    for k in REQUIRED_GATE_BUNDLE_RUNNER_CAPTURE_FIELDS:
                         if k in bundle_doc:
                             check_payload[k] = bundle_doc.get(k)
                     if "bundle_status" in bundle_doc:
                         check_payload["required_gate_bundle_runner_status"] = bundle_doc.get("bundle_status")
                 if name == "required_gate_bundle_runner_shadow":
                     bundle_shadow_doc = _parse_json_safely(r.stdout) or {}
-                    for k in (
-                        "bundle_contract_id",
-                        "bundle_key",
-                        "bundle_status",
-                        "error_code",
-                        "identity_id",
-                        "catalog_path",
-                        "operation",
-                        "contract_mapping",
-                        "mapping_errors",
-                        "missing_targets",
-                        "surface_label",
-                        "actor_id",
-                        "resolved_work_layer",
-                        "resolved_source_layer",
-                        "lock_state",
-                        "run_id_binding",
-                        "report_selected_path",
-                        "report_selection_mode",
-                        "report_selected_authority_class",
-                        "report_pointer_resolution_mode",
-                        "report_pointer_path",
-                        "gate_profile",
-                        "gate_profile_mode",
-                        "gate_profile_file",
-                        "gate_profile_resolved_file",
-                        "gate_profile_requirement_count",
-                        "gate_profile_requirement_keys",
-                        "required_contract",
-                        "failed_required_contract_count",
-                        "row_contract_error_count",
-                        "send_time_gate_status",
-                        "outlet_bypass_detected",
-                        "final_emit_contract_status",
-                        "final_emit_policy_mode",
-                        "final_emit_schema_status",
-                        "results",
-                    ):
+                    for k in REQUIRED_GATE_BUNDLE_RUNNER_CAPTURE_FIELDS:
                         if k in bundle_shadow_doc:
                             check_payload[k] = bundle_shadow_doc.get(k)
                     if "bundle_status" in bundle_shadow_doc:

@@ -28,12 +28,15 @@ from unittest.mock import patch
 repo_root = Path.cwd()
 sys.path.insert(0, str((repo_root / "scripts").resolve()))
 
+from primary_execution_report_common import report_logical_identity_key
 import validate_protocol_feedback_sidecar_contract as target
 
 catalog_path = Path(sys.argv[1]).resolve()
 pack_path = Path(sys.argv[2]).resolve()
 report_path = str(Path(sys.argv[3]).resolve())
 report_alt_path = str(Path(sys.argv[4]).resolve())
+report_logical_identity = report_logical_identity_key(Path(report_path))
+report_alt_logical_identity = report_logical_identity_key(Path(report_alt_path))
 task_path = (pack_path / "CURRENT_TASK.json").resolve()
 task_path.write_text("{}", encoding="utf-8")
 
@@ -147,6 +150,7 @@ positive_case = {
         {
             "required_contract": True,
             "report_selected_path": report_path,
+            "report_logical_identity_key": report_logical_identity,
             "report_selection_mode": "explicit_report_override",
             "report_selected_authority_class": "explicit_report_override",
             "report_pointer_resolution_mode": "explicit_report_override",
@@ -162,6 +166,7 @@ positive_case = {
         {
             "required_contract": True,
             "report_selected_path": report_path,
+            "report_logical_identity_key": report_logical_identity,
             "report_selection_mode": "explicit_report_override",
             "report_selected_authority_class": "explicit_report_override",
             "report_pointer_resolution_mode": "explicit_report_override",
@@ -169,6 +174,7 @@ positive_case = {
             "experience_writeback_validation_status": "PASS_REQUIRED",
             "experience_writeback_error_code": "",
             "experience_writeback_report_selected_path": report_path,
+            "experience_writeback_report_logical_identity_key": report_logical_identity,
             "experience_writeback_report_selection_mode": "explicit_report_override",
             "experience_writeback_report_selected_authority_class": "explicit_report_override",
             "experience_writeback_report_pointer_resolution_mode": "explicit_report_override",
@@ -197,18 +203,21 @@ experience_mismatch_case["post_execution"][1]["experience_writeback_report_selec
 
 path_mismatch_case = json.loads(json.dumps(positive_case))
 path_mismatch_case["post_execution"][1]["report_selected_path"] = report_alt_path
+path_mismatch_case["post_execution"][1]["report_logical_identity_key"] = report_alt_logical_identity
 
 rc, payload = run_case(positive_case)
 assert rc == 0, payload
 assert payload["sidecar_contract_status"] == "PASS_REQUIRED", payload
 assert payload["sidecar_error_code"] == "", payload
 assert payload["track_a"]["report_selected_path"] == report_path, payload
+assert payload["track_a"]["report_logical_identity_key"] == report_logical_identity, payload
 assert payload["track_a"]["report_selection_mode"] == "explicit_report_override", payload
 assert payload["track_a"]["report_selected_authority_class"] == "explicit_report_override", payload
 assert payload["track_a"]["report_pointer_resolution_mode"] == "explicit_report_override", payload
 assert payload["track_a"]["report_projection_source"] == "post_execution_mandatory", payload
 assert payload["track_a"]["post_execution_experience_writeback_validation_status"] == "PASS_REQUIRED", payload
 assert payload["track_a"]["post_execution_experience_writeback_report_selected_path"] == report_path, payload
+assert payload["track_a"]["post_execution_experience_writeback_report_logical_identity_key"] == report_logical_identity, payload
 assert payload["track_a"]["post_execution_experience_writeback_report_selection_mode"] == "explicit_report_override", payload
 assert payload["track_a"]["track_a_stale_reasons"] == [], payload
 
@@ -230,6 +239,15 @@ assert payload["sidecar_contract_status"] == "FAIL_REQUIRED", payload
 assert payload["sidecar_error_code"] == "IP-SID-006", payload
 assert "track_a_writeback_post_execution_selected_path_mismatch" in payload["stale_reasons"], payload
 
+logical_mismatch_case = json.loads(json.dumps(positive_case))
+logical_mismatch_case["post_execution"][1]["report_logical_identity_key"] = report_alt_logical_identity
+
+rc, payload = run_case(logical_mismatch_case)
+assert rc == 1, payload
+assert payload["sidecar_contract_status"] == "FAIL_REQUIRED", payload
+assert payload["sidecar_error_code"] == "IP-SID-006", payload
+assert "track_a_writeback_post_execution_logical_identity_mismatch" in payload["stale_reasons"], payload
+
 print(json.dumps(
     {
         "protocol_feedback_sidecar_contract_probe_status": "PASS_REQUIRED",
@@ -237,6 +255,7 @@ print(json.dumps(
         "missing_authority_error_code": "IP-SID-005",
         "experience_mismatch_error_code": "IP-SID-006",
         "path_mismatch_error_code": "IP-SID-006",
+        "logical_mismatch_error_code": "IP-SID-006",
     },
     ensure_ascii=False,
 ))

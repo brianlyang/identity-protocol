@@ -181,6 +181,7 @@ def main() -> int:
         "post_execution_mandatory_status": STATUS_SKIPPED_NOT_REQUIRED,
         "error_code": "",
         "report_selected_path": "",
+        "report_logical_identity_key": "",
         "report_selection_mode": "",
         "report_selected_authority_class": "",
         "report_pointer_resolution_mode": "",
@@ -188,6 +189,7 @@ def main() -> int:
         "experience_writeback_validation_status": "",
         "experience_writeback_error_code": "",
         "experience_writeback_report_selected_path": "",
+        "experience_writeback_report_logical_identity_key": "",
         "experience_writeback_report_selection_mode": "",
         "experience_writeback_report_selected_authority_class": "",
         "experience_writeback_report_pointer_resolution_mode": "",
@@ -284,12 +286,14 @@ def main() -> int:
     stale_reasons = collect_report_selection_authority_projection_stale_reasons(
         payload,
         selected_path_key="report_selected_path",
+        logical_identity_key_key="report_logical_identity_key",
         selection_mode_key="report_selection_mode",
         selected_authority_class_key="report_selected_authority_class",
         pointer_resolution_mode_key="report_pointer_resolution_mode",
         expected_selected_path=report_path,
         selected_path_reason="report_selected_path_projection_mismatch",
         authority_reason="report_authority_projection_missing",
+        logical_identity_reason="report_logical_identity_projection_missing_or_mismatch",
     )
     if missing_fields:
         stale_reasons.append("mandatory_report_fields_missing")
@@ -350,6 +354,9 @@ def main() -> int:
                 "experience_writeback_report_selected_path": ew_payload.get(
                     "report_selected_path", ""
                 ),
+                "experience_writeback_report_logical_identity_key": ew_payload.get(
+                    "report_logical_identity_key", ""
+                ),
                 "experience_writeback_report_selection_mode": ew_payload.get(
                     "report_selection_mode", ""
                 ),
@@ -372,12 +379,14 @@ def main() -> int:
                 collect_report_selection_authority_projection_stale_reasons(
                     payload,
                     selected_path_key="experience_writeback_report_selected_path",
+                    logical_identity_key_key="experience_writeback_report_logical_identity_key",
                     selection_mode_key="experience_writeback_report_selection_mode",
                     selected_authority_class_key="experience_writeback_report_selected_authority_class",
                     pointer_resolution_mode_key="experience_writeback_report_pointer_resolution_mode",
                     expected_selected_path=report_path,
                     selected_path_reason="experience_writeback_report_selected_path_projection_mismatch",
                     authority_reason="experience_writeback_authority_projection_missing",
+                    logical_identity_reason="experience_writeback_report_logical_identity_projection_missing_or_mismatch",
                 )
             )
         if rc_ew != 0 or ew_status != STATUS_PASS_REQUIRED:

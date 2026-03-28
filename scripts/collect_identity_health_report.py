@@ -796,6 +796,9 @@ def main() -> int:
             experience_writeback_payload.get("experience_writeback_validation_status", "")
         ).strip().upper(),
         "report_selected_path": str(experience_writeback_payload.get("report_selected_path", "")).strip(),
+        "report_logical_identity_key": str(
+            experience_writeback_payload.get("report_logical_identity_key", "")
+        ).strip(),
         "report_selection_mode": str(experience_writeback_payload.get("report_selection_mode", "")).strip(),
         "report_selected_authority_class": str(
             experience_writeback_payload.get("report_selected_authority_class", "")

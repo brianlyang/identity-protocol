@@ -56,6 +56,7 @@ base_payload = {
     'lock_state': 'LOCK_MATCH',
     'run_id_binding': 'probe-run-id',
     'report_selected_path': '/tmp/probe-report.json',
+    'report_logical_identity_key': '{"identity_id":"probe-identity","run_id":"probe-run-id","catalog_path":"/tmp/catalog.local.yaml","resolved_pack_path":"/tmp/.identity/probe-identity","identity_prompt_sha256":"prompt-sha"}',
     'report_selection_mode': 'explicit_report_override',
     'report_selected_authority_class': 'explicit_report_override',
     'report_pointer_resolution_mode': 'explicit_report_override',
@@ -104,6 +105,7 @@ assert summary_targeted_subset_excluded['required_gate_bundle']['projection_stal
 assert summary_targeted_subset_excluded['required_gate_bundle']['scope_class'] == 'bounded_targeted_subset_exclusion', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['required_gate_bundle']['scope_reason'] == 'required_gate_bundle_out_of_scope_for_targeted_subset', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['required_gate_bundle']['report_selected_path'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['required_gate_bundle']['report_logical_identity_key'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['required_gate_bundle']['report_selection_mode'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['required_gate_bundle']['report_selected_authority_class'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['required_gate_bundle']['report_pointer_resolution_mode'] == '', summary_targeted_subset_excluded
@@ -200,6 +202,7 @@ assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_resolv
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_lock_state'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_run_id_binding'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_report_selected_path'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_report_logical_identity_key'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_report_selection_mode'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_report_authority_class'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_report_pointer_resolution_mode'] == '', summary_targeted_subset_excluded
@@ -214,6 +217,7 @@ assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_p
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_lock_state'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_run_id_binding'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_report_selected_path'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_report_logical_identity_key'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_report_selection_mode'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_report_authority_class'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_bundle_scan_probe_report_pointer_resolution_mode'] == '', summary_targeted_subset_excluded
@@ -232,6 +236,7 @@ readiness._hydrate_required_gate_bundle_summary(
 )
 assert summary_observed['required_gate_bundle']['bundle_status'] == 'PASS_REQUIRED', summary_observed
 assert summary_observed['required_gate_bundle']['projection_status'] == 'PASS_REQUIRED', summary_observed
+assert summary_observed['required_gate_bundle']['report_logical_identity_key'] == base_payload['report_logical_identity_key'], summary_observed
 assert summary_observed['required_gate_bundle']['report_selection_mode'] == 'explicit_report_override', summary_observed
 assert summary_observed['required_gate_bundle']['report_selected_authority_class'] == 'explicit_report_override', summary_observed
 assert summary_observed['required_gate_bundle']['report_pointer_resolution_mode'] == 'explicit_report_override', summary_observed
@@ -436,6 +441,7 @@ assert summary_release_projection['one_look']['required_gate_bundle_resolved_sou
 assert summary_release_projection['one_look']['required_gate_bundle_lock_state'] == 'LOCK_MATCH', summary_release_projection
 assert summary_release_projection['one_look']['required_gate_bundle_run_id_binding'] == 'probe-run-id', summary_release_projection
 assert summary_release_projection['one_look']['required_gate_bundle_report_selected_path'] == '/tmp/probe-report.json', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_report_logical_identity_key'] == base_payload['report_logical_identity_key'], summary_release_projection
 assert summary_release_projection['one_look']['required_gate_bundle_report_selection_mode'] == 'explicit_report_override', summary_release_projection
 assert summary_release_projection['one_look']['required_gate_bundle_report_authority_class'] == 'explicit_report_override', summary_release_projection
 assert summary_release_projection['one_look']['required_gate_bundle_report_pointer_resolution_mode'] == 'explicit_report_override', summary_release_projection
@@ -448,6 +454,7 @@ assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_r
 assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_lock_state'] == 'LOCK_MATCH', summary_release_projection
 assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_run_id_binding'] == 'probe-run-id-scan', summary_release_projection
 assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_report_selected_path'] == '/tmp/probe-report.json', summary_release_projection
+assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_report_logical_identity_key'] == base_payload['report_logical_identity_key'], summary_release_projection
 assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_report_selection_mode'] == 'explicit_report_override', summary_release_projection
 assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_report_authority_class'] == 'explicit_report_override', summary_release_projection
 assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_report_pointer_resolution_mode'] == 'explicit_report_override', summary_release_projection

@@ -262,6 +262,8 @@ resolved_execution_report_ref = str(Path(str(pass_doc.get("execution_report_ref"
 assert pass_closure.get("status") == "PASS", pass_closure
 assert pass_closure.get("validation_status") == "PASS_REQUIRED", pass_closure
 assert pass_closure.get("report_selected_path") == resolved_execution_report_ref, (pass_closure, pass_doc)
+assert str(pass_closure.get("report_logical_identity_key", "")).strip(), pass_closure
+assert pass_closure.get("report_logical_identity_key") == pass_payload.get("report_logical_identity_key"), (pass_closure, pass_payload)
 assert pass_closure.get("report_selection_mode") == pass_payload.get("report_selection_mode"), (pass_closure, pass_payload)
 assert pass_closure.get("report_selected_authority_class") == pass_payload.get("report_selected_authority_class"), (pass_closure, pass_payload)
 assert pass_closure.get("report_pointer_resolution_mode") == pass_payload.get("report_pointer_resolution_mode"), (pass_closure, pass_payload)
@@ -325,5 +327,34 @@ if python3 scripts/validate_identity_health_contract.py --identity-id "${PASS_ID
   exit 1
 fi
 grep -q 'experience_writeback_closure authority projection incomplete for PASS_REQUIRED' /tmp/identity-health-authority-tampered.out
+
+LOGICAL_TAMPERED_REPORT_PATH="${OUT_DIR}/identity-health-${PASS_ID}-logical-tampered.json"
+python3 - <<'PY' "${PASS_REPORT_PATH}" "${LOGICAL_TAMPERED_REPORT_PATH}"
+import json
+import sys
+from pathlib import Path
+
+src = Path(sys.argv[1]).resolve()
+dst = Path(sys.argv[2]).resolve()
+doc = json.loads(src.read_text(encoding="utf-8"))
+closure = doc.get("experience_writeback_closure") or {}
+closure["report_logical_identity_key"] = ""
+doc["experience_writeback_closure"] = closure
+for row in doc.get("checks", []) or []:
+    if str((row or {}).get("name", "")).strip() == "experience_writeback":
+        payload = row.get("payload") or {}
+        payload["report_logical_identity_key"] = ""
+        row["payload"] = payload
+        break
+dst.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+if python3 scripts/validate_identity_health_contract.py --identity-id "${PASS_ID}" --report "${LOGICAL_TAMPERED_REPORT_PATH}" >/tmp/identity-health-logical-tampered.out 2>/tmp/identity-health-logical-tampered.err; then
+  echo "[FAIL] logical-identity-tampered health report unexpectedly passed contract validation"
+  cat /tmp/identity-health-logical-tampered.out
+  cat /tmp/identity-health-logical-tampered.err
+  exit 1
+fi
+grep -q 'experience_writeback_closure logical identity must match execution_report_ref for PASS_REQUIRED' /tmp/identity-health-logical-tampered.out
 
 echo "[PASS] identity health report probes passed"

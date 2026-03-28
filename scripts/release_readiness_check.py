@@ -78,6 +78,7 @@ from release_readiness_selected_check_scope_common import (
 )
 from required_contract_coverage_projection_common import build_required_contract_coverage_projection
 from required_gate_bundle_projection_common import build_required_gate_bundle_target_projection
+from required_gate_report_authority_common import REQUIRED_GATE_REPORT_AUTHORITY_FIELDS
 from resolve_release_plane_cloud_evidence import resolve_release_plane_runtime_inputs
 from response_stamp_common import (
     DEFAULT_WORK_LAYER,
@@ -1526,7 +1527,7 @@ def _hydrate_required_gate_bundle_summary(
             "resolved_work_layer": "",
             "resolved_source_layer": "",
             "lock_state": "",
-            "report_selected_path": "",
+            **{field: "" for field in REQUIRED_GATE_REPORT_AUTHORITY_FIELDS},
             "total_targets": 0,
             "required_target_count": 0,
             "failed_required_target_count": 0,
@@ -1566,11 +1567,7 @@ def _hydrate_required_gate_bundle_summary(
             "resolved_work_layer": _clean_str(payload.get("resolved_work_layer")),
             "resolved_source_layer": _clean_str(payload.get("resolved_source_layer")),
             "lock_state": _clean_str(payload.get("lock_state")),
-            "report_selected_path": _clean_str(payload.get("report_selected_path")),
-            "report_selection_mode": _clean_str(payload.get("report_selection_mode")),
-            "report_selected_authority_class": _clean_str(payload.get("report_selected_authority_class")),
-            "report_pointer_resolution_mode": _clean_str(payload.get("report_pointer_resolution_mode")),
-            "report_pointer_path": _clean_str(payload.get("report_pointer_path")),
+            **{field: _clean_str(payload.get(field)) for field in REQUIRED_GATE_REPORT_AUTHORITY_FIELDS},
             "total_targets": _safe_int(projection.get("total_targets")),
             "required_target_count": _safe_int(projection.get("required_target_count")),
             "failed_required_target_count": _safe_int(projection.get("failed_required_target_count")),

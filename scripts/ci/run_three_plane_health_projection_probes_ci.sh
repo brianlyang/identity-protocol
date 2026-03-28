@@ -25,6 +25,7 @@ from health_report_experience_writeback_projection_common import (
     STATUS_SKIPPED_NOT_REQUIRED,
     build_health_report_experience_writeback_closure_summary_skeleton,
 )
+from primary_execution_report_common import report_logical_identity_key
 from report_three_plane_status import _build_three_plane_health_report_experience_writeback_closure
 from three_plane_projection_profile_common import resolve_three_plane_projection_profile
 
@@ -49,6 +50,7 @@ write_json(
             "status": "PASS",
             "validation_status": STATUS_PASS_REQUIRED,
             "report_selected_path": str(execution_report),
+            "report_logical_identity_key": report_logical_identity_key(execution_report),
             "report_selection_mode": "explicit_report",
             "report_selected_authority_class": "explicit_report_argument",
             "report_pointer_resolution_mode": "explicit_report",
@@ -75,6 +77,7 @@ assert pass_projection["projection_status"] == STATUS_PASS_REQUIRED, pass_projec
 assert pass_projection["health_report_collection_status"] == STATUS_PASS_REQUIRED, pass_projection
 assert pass_projection["health_report_contract_status"] == STATUS_PASS_REQUIRED, pass_projection
 assert pass_projection["report_selected_path_matches_execution_report"] is True, pass_projection
+assert pass_projection["report_logical_identity_key_matches_execution_report"] is True, pass_projection
 assert pass_projection["validation_status"] == STATUS_PASS_REQUIRED, pass_projection
 
 projection_only = _build_three_plane_health_report_experience_writeback_closure(
@@ -101,6 +104,7 @@ write_json(
             "status": "PASS",
             "validation_status": STATUS_FAIL_REQUIRED,
             "report_selected_path": str(execution_report),
+            "report_logical_identity_key": report_logical_identity_key(execution_report),
             "report_selection_mode": "explicit_report",
             "report_selected_authority_class": "explicit_report_argument",
             "report_pointer_resolution_mode": "explicit_report",

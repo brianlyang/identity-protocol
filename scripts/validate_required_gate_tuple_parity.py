@@ -37,6 +37,7 @@ FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "resolved_source_layer": ("resolved_source_layer", "source_layer"),
     "lock_state": ("lock_state", "context_lock_state"),
     "report_selected_path": ("report_selected_path",),
+    "report_logical_identity_key": ("report_logical_identity_key",),
     "report_selection_mode": ("report_selection_mode",),
     "report_selected_authority_class": ("report_selected_authority_class",),
     "report_pointer_resolution_mode": ("report_pointer_resolution_mode",),
