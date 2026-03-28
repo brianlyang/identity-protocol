@@ -18,26 +18,31 @@ anchor_checks:
     required_markers:
       - '### Governance row-family completeness must stay explicit'
       - Required registered-top-level-entry, corpus-class-profile,
-        root-index-class-projection, and forbidden-content-class families must
-        remain explicit as separate machine-readable row families.
+        root-index-class-projection, root-maintenance-guardrail, and
+        forbidden-content-class families must remain explicit as separate
+        machine-readable row families.
+      - README maintenance guardrails about how protocol root is authored and
+        kept law-bearing must therefore stay bound to canonical guardrail rows
+        rather than remaining reviewer-memory advice.
       - The machine world must not finalize governance legality while required
-        rel-path, corpus-class, root-index-class-projection, or
-        forbidden-content-class identity drift remains known only internally.
+        rel-path, corpus-class, root-index-class-projection,
+        root-maintenance-guardrail, or forbidden-content-class identity drift
+        remains known only internally.
   - rel_path: identity/protocol/README.md
     required_markers:
       - '## Root governance completeness discipline'
       - Governance law is not a soft prose bundle.
-      - '1. required registered-top-level-entry, corpus-class-profile, root-index-class-projection, and forbidden-content-class rows must remain explicit as separate machine-readable row families;'
+      - '1. required registered-top-level-entry, corpus-class-profile, root-index-class-projection, root-maintenance-guardrail, and forbidden-content-class rows must remain explicit as separate machine-readable row families;'
   - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
     required_markers:
       - '## Root governance completeness boundary'
-      - '1. Governance law must remain machine-readable as separate registered-top-level-entry, corpus-class-profile, root-index-class-projection, and forbidden-content-class row families.'
-      - '4. Protocol legality must not finalize governance legality while missing or unexpected rel-path, corpus-class, root-index-class-projection, or forbidden-content-class identities remain known only inside validator logic.'
+      - '1. Governance law must remain machine-readable as separate registered-top-level-entry, corpus-class-profile, root-index-class-projection, root-maintenance-guardrail, and forbidden-content-class row families.'
+      - '4. Protocol legality must not finalize governance legality while missing or unexpected rel-path, corpus-class, root-index-class-projection, root-maintenance-guardrail, or forbidden-content-class identities remain known only inside validator logic.'
   - rel_path: identity/protocol/IDENTITY_RUNTIME.md
     required_markers:
       - '## Runtime governance consumption boundary'
-      - '1. Runtime consumes governance law as separate registered-top-level-entry, corpus-class-profile, root-index-class-projection, and forbidden-content-class row families rather than as undifferentiated governance prose.'
-      - '4. Runtime must not finalize governance legality while missing or unexpected rel-path, corpus-class, root-index-class-projection, or forbidden-content-class identities remain known only inside validator machinery.'
+      - '1. Runtime consumes governance law as separate registered-top-level-entry, corpus-class-profile, root-index-class-projection, root-maintenance-guardrail, and forbidden-content-class row families rather than as undifferentiated governance prose.'
+      - '4. Runtime must not finalize governance legality while missing or unexpected rel-path, corpus-class, root-index-class-projection, root-maintenance-guardrail, or forbidden-content-class identities remain known only inside validator machinery.'
 forbidden_content_classes:
   - class_id: workbook_issue_projection
     description: Workbook issue rows or issue-register projection markers must not enter protocol-root law-bearing files.
@@ -142,6 +147,48 @@ root_index_class_projections:
       - demoted_support_directory
     required_markers:
       - only when it is explicit that the material is not active-runtime truth
+root_maintenance_guardrails:
+  - order: 1
+    guardrail_label: stream/version is manifestation, not origin
+    required_markers:
+      - stream or release labels mark governed freeze history;
+      - they do not become the philosophical source of protocol existence;
+      - no root contract should be written as if a stream label were prior to
+        bottom theory.
+  - order: 2
+    guardrail_label: machine verdict is adjudication, not philosophy source
+    required_markers:
+      - validators, probes, mappings, runtime state, and receipts determine
+        current machine verdict;
+      - they do not retroactively define the meaning of design philosophy;
+      - philosophy explains why law has the shape it has, while
+        machine-consumed surfaces decide current-turn legality.
+  - order: 3
+    guardrail_label: root contracts must preserve layer clarity
+    required_markers:
+      - each root contract should state what bottom-theory commitments it
+        inherits;
+      - each root contract should also state which concrete law it freezes;
+      - no root contract should blur philosophical grounding, contract
+        freezing, and runtime-source authority into one layer.
+  - order: 4
+    guardrail_label: root corpus admission must stay law-bearing
+    required_markers:
+      - the root directory should accept only bottom theory, constitutions, root
+        contracts, machine-consumed registries/mappings, governed subdomain
+        protocol packs, and clearly demoted support material;
+      - stream-local commentary, workbook material, business strategy, or
+        workspace residue must not be promoted into protocol-root law-bearing
+        position.
+  - order: 5
+    guardrail_label: root-corpus admission must be machine-governed
+    required_markers:
+      - law-bearing admission, classification, and exclusion at
+        `identity/protocol/` should be mirrored in protocol-owned registry /
+        validator / probe surfaces rather than left to reviewer taste or oral
+        memory;
+      - if root purity depends only on human recollection, the root corpus has
+        already started to drift away from machine law.
 registered_top_level_entries:
   - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
     entry_kind: file

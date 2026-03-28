@@ -1049,8 +1049,9 @@ Governance law is not a soft prose summary that may hide its machine rows
 behind aggregate counts.
 
 Required registered-top-level-entry, corpus-class-profile,
-root-index-class-projection, and forbidden-content-class families must
-remain explicit as separate machine-readable row families.
+root-index-class-projection, root-maintenance-guardrail, and
+forbidden-content-class families must remain explicit as separate
+machine-readable row families.
 
 Expected row-family total and emitted row-family total must therefore stay
 congruent under machine-readable coverage completeness rather than being left
@@ -1064,9 +1065,14 @@ README class-summary projections about what belongs at protocol root must
 therefore stay bound to admitted corpus-class identity rather than becoming
 freehand category prose.
 
+README maintenance guardrails about how protocol root is authored and kept
+law-bearing must therefore stay bound to canonical guardrail rows rather than
+remaining reviewer-memory advice.
+
 The machine world must not finalize governance legality while required
-rel-path, corpus-class, root-index-class-projection, or
-forbidden-content-class identity drift remains known only internally.
+rel-path, corpus-class, root-index-class-projection,
+root-maintenance-guardrail, or forbidden-content-class identity drift remains
+known only internally.
 
 Missing or unexpected row identity must remain projected in fail-close machine
 output rather than being hidden behind row-count shorthand or summary-only

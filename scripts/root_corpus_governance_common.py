@@ -15,6 +15,7 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ROOT_CORPUS_REGISTRY_CURRENT = "identity/protocol/mappings/root-corpus-registry.current.yaml"
 ROOT_PROTOCOL_README_REL_PATH = "identity/protocol/README.md"
 ROOT_INDEX_CLASS_SECTION_MARKER = "## What belongs at protocol root"
+ROOT_MAINTENANCE_GUARDRAILS_SECTION_MARKER = "## Root maintenance guardrails"
 ORDERED_BOLD_ITEM_RE = re.compile(r"^\s*(\d+)\.\s+\*\*(.*?)\*\*")
 HEADING_RE = re.compile(r"^##\s+")
 HORIZONTAL_RULE_RE = re.compile(r"^-{3,}$")
@@ -68,6 +69,27 @@ class RootIndexClassProjectionSurface:
 
 
 @dataclass(frozen=True)
+class RootMaintenanceGuardrail:
+    order: int
+    guardrail_label: str
+    required_markers: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class RootMaintenanceGuardrailSurfaceRow:
+    order: int
+    guardrail_label: str
+    body_lines: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class RootMaintenanceGuardrailSurface:
+    rel_path: str
+    rows: tuple[RootMaintenanceGuardrailSurfaceRow, ...]
+    extraction_violations: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class ForbiddenHit:
     class_id: str
     pattern: str
@@ -111,6 +133,11 @@ def _iter_corpus_class_profile_rows(registry_doc: Mapping[str, Any]) -> list[Map
 
 def _iter_root_index_class_projection_rows(registry_doc: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     raw = registry_doc.get("root_index_class_projections")
+    return raw if isinstance(raw, list) else []
+
+
+def _iter_root_maintenance_guardrail_rows(registry_doc: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    raw = registry_doc.get("root_maintenance_guardrails")
     return raw if isinstance(raw, list) else []
 
 
@@ -183,6 +210,30 @@ def root_index_class_projections_from_registry(
     return tuple(projections)
 
 
+def root_maintenance_guardrails_from_registry(
+    registry_doc: Mapping[str, Any],
+) -> tuple[RootMaintenanceGuardrail, ...]:
+    guardrails: list[RootMaintenanceGuardrail] = []
+    for row in _iter_root_maintenance_guardrail_rows(registry_doc):
+        if not isinstance(row, dict):
+            continue
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        guardrail_label = str(row.get("guardrail_label") or "").strip()
+        if order <= 0 or not guardrail_label:
+            continue
+        guardrails.append(
+            RootMaintenanceGuardrail(
+                order=order,
+                guardrail_label=guardrail_label,
+                required_markers=_as_str_tuple(row.get("required_markers")),
+            )
+        )
+    return tuple(guardrails)
+
+
 def root_corpus_entries_from_registry(registry_doc: Mapping[str, Any]) -> tuple[RootCorpusEntry, ...]:
     rows = registry_doc.get("registered_top_level_entries")
     if not isinstance(rows, list):
@@ -248,10 +299,30 @@ def collect_protocol_root_top_level_entries(repo_root: Path, root_dir_rel: str) 
     return entries
 
 
-def readme_root_index_class_projection_surface(repo_root: Path) -> RootIndexClassProjectionSurface:
+@dataclass(frozen=True)
+class _OrderedBoldSurfaceRow:
+    order: int
+    label: str
+    body_lines: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class _OrderedBoldSurface:
+    rel_path: str
+    rows: tuple[_OrderedBoldSurfaceRow, ...]
+    extraction_violations: tuple[str, ...]
+
+
+def _readme_ordered_bold_surface(
+    repo_root: Path,
+    *,
+    section_marker: str,
+    missing_rows_reason: str,
+    missing_body_reason: str,
+) -> _OrderedBoldSurface:
     path = (repo_root / ROOT_PROTOCOL_README_REL_PATH).resolve()
     if not path.exists() or not path.is_file():
-        return RootIndexClassProjectionSurface(
+        return _OrderedBoldSurface(
             rel_path=ROOT_PROTOCOL_README_REL_PATH,
             rows=(),
             extraction_violations=("target_missing",),
@@ -269,9 +340,9 @@ def readme_root_index_class_projection_surface(repo_root: Path) -> RootIndexClas
         if current_order <= 0 or not current_label:
             return
         rows.append(
-            RootIndexClassProjectionSurfaceRow(
+            _OrderedBoldSurfaceRow(
                 order=current_order,
-                projection_label=current_label,
+                label=current_label,
                 body_lines=tuple(line for line in current_body_lines if line),
             )
         )
@@ -281,7 +352,7 @@ def readme_root_index_class_projection_surface(repo_root: Path) -> RootIndexClas
 
     for line in lines:
         stripped = line.strip()
-        if stripped == ROOT_INDEX_CLASS_SECTION_MARKER:
+        if stripped == section_marker:
             section_found = True
             continue
         if not section_found:
@@ -309,14 +380,56 @@ def readme_root_index_class_projection_surface(repo_root: Path) -> RootIndexClas
     if not section_found:
         violations.append("section_marker_missing")
     elif not rows:
-        violations.append("projection_rows_missing")
+        violations.append(missing_rows_reason)
     elif any(not row.body_lines for row in rows):
-        violations.append("projection_body_missing")
+        violations.append(missing_body_reason)
 
-    return RootIndexClassProjectionSurface(
+    return _OrderedBoldSurface(
         rel_path=ROOT_PROTOCOL_README_REL_PATH,
         rows=tuple(rows),
         extraction_violations=tuple(violations),
+    )
+
+
+def readme_root_index_class_projection_surface(repo_root: Path) -> RootIndexClassProjectionSurface:
+    surface = _readme_ordered_bold_surface(
+        repo_root,
+        section_marker=ROOT_INDEX_CLASS_SECTION_MARKER,
+        missing_rows_reason="projection_rows_missing",
+        missing_body_reason="projection_body_missing",
+    )
+    return RootIndexClassProjectionSurface(
+        rel_path=surface.rel_path,
+        rows=tuple(
+            RootIndexClassProjectionSurfaceRow(
+                order=row.order,
+                projection_label=row.label,
+                body_lines=row.body_lines,
+            )
+            for row in surface.rows
+        ),
+        extraction_violations=surface.extraction_violations,
+    )
+
+
+def readme_root_maintenance_guardrail_surface(repo_root: Path) -> RootMaintenanceGuardrailSurface:
+    surface = _readme_ordered_bold_surface(
+        repo_root,
+        section_marker=ROOT_MAINTENANCE_GUARDRAILS_SECTION_MARKER,
+        missing_rows_reason="guardrail_rows_missing",
+        missing_body_reason="guardrail_body_missing",
+    )
+    return RootMaintenanceGuardrailSurface(
+        rel_path=surface.rel_path,
+        rows=tuple(
+            RootMaintenanceGuardrailSurfaceRow(
+                order=row.order,
+                guardrail_label=row.label,
+                body_lines=row.body_lines,
+            )
+            for row in surface.rows
+        ),
+        extraction_violations=surface.extraction_violations,
     )
 
 
