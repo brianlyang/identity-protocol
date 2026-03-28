@@ -16,7 +16,7 @@ from root_contract_integration_checks_common import append_membership_delta_viol
 from root_corpus_derivation_common import derivation_class_profiles_from_doc, load_root_corpus_derivation
 from root_corpus_governance_common import load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_question_routing_common import adjudication_redirect_from_doc, load_root_corpus_question_routing
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_corpus_transition_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -549,35 +549,33 @@ def main() -> int:
     stale_reasons.extend(f"anchor_violation:{row['rel_path']}:{row['reason']}" for row in anchor_violations)
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
-    row_family_projection_rows = [
-        project_row_family(
-            family_id="surface_class_profiles",
-            member_id_key="surface_class",
-            actual_rows=[SimpleNamespace(surface_class=row.surface_class) for row in sorted_profiles],
-            expected_rows={surface_class: {} for surface_class in expected_surface_classes},
-            id_attr="surface_class",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
+    row_family_projection_rows = project_row_families(
+        families=(
+            {
+                "family_id": "surface_class_profiles",
+                "member_id_key": "surface_class",
+                "actual_rows": [SimpleNamespace(surface_class=row.surface_class) for row in sorted_profiles],
+                "expected_rows": {surface_class: {} for surface_class in expected_surface_classes},
+                "id_attr": "surface_class",
+            },
+            {
+                "family_id": "direct_root_target_edges",
+                "member_id_key": "edge_id",
+                "actual_rows": direct_root_target_edges,
+                "expected_rows": expected_direct_root_target_edges,
+                "id_attr": "edge_id",
+            },
+            {
+                "family_id": "strengthening_gateway_edges",
+                "member_id_key": "edge_id",
+                "actual_rows": strengthening_gateway_edges,
+                "expected_rows": expected_strengthening_gateway_edges,
+                "id_attr": "edge_id",
+            },
         ),
-        project_row_family(
-            family_id="direct_root_target_edges",
-            member_id_key="edge_id",
-            actual_rows=direct_root_target_edges,
-            expected_rows=expected_direct_root_target_edges,
-            id_attr="edge_id",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
-        ),
-        project_row_family(
-            family_id="strengthening_gateway_edges",
-            member_id_key="edge_id",
-            actual_rows=strengthening_gateway_edges,
-            expected_rows=expected_strengthening_gateway_edges,
-            id_attr="edge_id",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
-        ),
-    ]
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_TRANSITION),

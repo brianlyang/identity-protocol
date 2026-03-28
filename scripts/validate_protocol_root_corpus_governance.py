@@ -13,7 +13,7 @@ from root_contract_anchor_checks_common import (
     validate_expected_root_doc_anchor_checks,
 )
 from root_contract_integration_checks_common import append_membership_delta_violations
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_corpus_governance_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
@@ -272,35 +272,33 @@ def main() -> int:
         if not (stale_reasons or root_doc_anchor_violations)
         else STATUS_FAIL_REQUIRED
     )
-    row_family_projection_rows = [
-        project_row_family(
-            family_id="registered_top_level_entries",
-            member_id_key="rel_path",
-            actual_rows=[SimpleNamespace(rel_path=rel_path) for rel_path in actual_paths],
-            expected_rows={rel_path: {} for rel_path in registered_paths},
-            id_attr="rel_path",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
+    row_family_projection_rows = project_row_families(
+        families=(
+            {
+                "family_id": "registered_top_level_entries",
+                "member_id_key": "rel_path",
+                "actual_rows": [SimpleNamespace(rel_path=rel_path) for rel_path in actual_paths],
+                "expected_rows": {rel_path: {} for rel_path in registered_paths},
+                "id_attr": "rel_path",
+            },
+            {
+                "family_id": "corpus_class_profiles",
+                "member_id_key": "corpus_class",
+                "actual_rows": [SimpleNamespace(corpus_class=corpus_class) for corpus_class in sorted(class_profiles.keys())],
+                "expected_rows": {corpus_class: {} for corpus_class in expected_profile_ids},
+                "id_attr": "corpus_class",
+            },
+            {
+                "family_id": "forbidden_content_classes",
+                "member_id_key": "class_id",
+                "actual_rows": [SimpleNamespace(class_id=class_id) for class_id in sorted(content_classes.keys())],
+                "expected_rows": {class_id: {} for class_id in expected_forbidden_ids},
+                "id_attr": "class_id",
+            },
         ),
-        project_row_family(
-            family_id="corpus_class_profiles",
-            member_id_key="corpus_class",
-            actual_rows=[SimpleNamespace(corpus_class=corpus_class) for corpus_class in sorted(class_profiles.keys())],
-            expected_rows={corpus_class: {} for corpus_class in expected_profile_ids},
-            id_attr="corpus_class",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
-        ),
-        project_row_family(
-            family_id="forbidden_content_classes",
-            member_id_key="class_id",
-            actual_rows=[SimpleNamespace(class_id=class_id) for class_id in sorted(content_classes.keys())],
-            expected_rows={class_id: {} for class_id in expected_forbidden_ids},
-            id_attr="class_id",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
-        ),
-    ]
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_CONTENT),

@@ -12,7 +12,7 @@ from root_contract_anchor_checks_common import (
 )
 from root_contract_integration_checks_common import append_membership_delta_violations
 from root_contract_row_validation_common import contiguous_orders
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_corpus_governance_common import (
     load_root_corpus_registry,
     root_corpus_entries_from_registry,
@@ -488,44 +488,40 @@ def main() -> int:
 
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
     expected_adjudication_surfaces = tuple(EXPECTED_ADJUDICATION_SURFACE_PROFILES)
-    row_family_projection_rows = [
-        project_row_family(
-            family_id="source_order",
-            member_id_key="corpus_class",
-            actual_rows=source_rows,
-            expected_rows={corpus_class: {} for corpus_class in expected_source_classes},
-            id_attr="corpus_class",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
+    row_family_projection_rows = project_row_families(
+        families=(
+            {
+                "family_id": "source_order",
+                "member_id_key": "corpus_class",
+                "actual_rows": source_rows,
+                "expected_rows": {corpus_class: {} for corpus_class in expected_source_classes},
+                "id_attr": "corpus_class",
+            },
+            {
+                "family_id": "reading_order",
+                "member_id_key": "rel_path",
+                "actual_rows": reading_rows,
+                "expected_rows": {rel_path: {} for rel_path in registry_paths},
+                "id_attr": "rel_path",
+            },
+            {
+                "family_id": "adjudication_order",
+                "member_id_key": "machine_surface",
+                "actual_rows": adjudication_rows,
+                "expected_rows": {surface: {} for surface in expected_adjudication_surfaces},
+                "id_attr": "machine_surface",
+            },
+            {
+                "family_id": "adjudication_surface_profiles",
+                "member_id_key": "machine_surface",
+                "actual_rows": adjudication_surface_profiles,
+                "expected_rows": {surface: {} for surface in expected_adjudication_surfaces},
+                "id_attr": "machine_surface",
+            },
         ),
-        project_row_family(
-            family_id="reading_order",
-            member_id_key="rel_path",
-            actual_rows=reading_rows,
-            expected_rows={rel_path: {} for rel_path in registry_paths},
-            id_attr="rel_path",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
-        ),
-        project_row_family(
-            family_id="adjudication_order",
-            member_id_key="machine_surface",
-            actual_rows=adjudication_rows,
-            expected_rows={surface: {} for surface in expected_adjudication_surfaces},
-            id_attr="machine_surface",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
-        ),
-        project_row_family(
-            family_id="adjudication_surface_profiles",
-            member_id_key="machine_surface",
-            actual_rows=adjudication_surface_profiles,
-            expected_rows={surface: {} for surface in expected_adjudication_surfaces},
-            id_attr="machine_surface",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
-        ),
-    ]
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_COVERAGE),

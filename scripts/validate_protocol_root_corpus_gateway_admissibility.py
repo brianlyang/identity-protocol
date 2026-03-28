@@ -14,7 +14,7 @@ from root_contract_anchor_checks_common import (
 )
 from root_contract_integration_checks_common import append_membership_delta_violations
 from root_contract_row_validation_common import contiguous_orders
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_corpus_authority_common import authority_class_profiles_from_doc, load_root_corpus_authority
 from root_corpus_gateway_admissibility_common import (
     STATUS_FAIL_REQUIRED,
@@ -692,35 +692,33 @@ def main() -> int:
     status = STATUS_PASS_REQUIRED if violation_count == 0 else STATUS_FAIL_REQUIRED
     if status == STATUS_FAIL_REQUIRED and not error_code:
         error_code = ERR_STRUCTURE if structure_violations else ERR_ADMISSIBILITY
-    row_family_projection_rows = [
-        project_row_family(
-            family_id="gateway_order",
-            member_id_key="gateway_class",
-            actual_rows=gateway_order_rows,
-            expected_rows={gateway_class: {} for gateway_class in EXPECTED_GATEWAY_METADATA},
-            id_attr="gateway_class",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
+    row_family_projection_rows = project_row_families(
+        families=(
+            {
+                "family_id": "gateway_order",
+                "member_id_key": "gateway_class",
+                "actual_rows": gateway_order_rows,
+                "expected_rows": {gateway_class: {} for gateway_class in EXPECTED_GATEWAY_METADATA},
+                "id_attr": "gateway_class",
+            },
+            {
+                "family_id": "gateway_effect_targets",
+                "member_id_key": "gateway_class",
+                "actual_rows": gateway_effect_targets,
+                "expected_rows": {gateway_class: {} for gateway_class in EXPECTED_GATEWAY_METADATA},
+                "id_attr": "gateway_class",
+            },
+            {
+                "family_id": "gateway_profiles",
+                "member_id_key": "gateway_class",
+                "actual_rows": gateway_profiles,
+                "expected_rows": {gateway_class: {} for gateway_class in EXPECTED_GATEWAY_METADATA},
+                "id_attr": "gateway_class",
+            },
         ),
-        project_row_family(
-            family_id="gateway_effect_targets",
-            member_id_key="gateway_class",
-            actual_rows=gateway_effect_targets,
-            expected_rows={gateway_class: {} for gateway_class in EXPECTED_GATEWAY_METADATA},
-            id_attr="gateway_class",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
-        ),
-        project_row_family(
-            family_id="gateway_profiles",
-            member_id_key="gateway_class",
-            actual_rows=gateway_profiles,
-            expected_rows={gateway_class: {} for gateway_class in EXPECTED_GATEWAY_METADATA},
-            id_attr="gateway_class",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
-        ),
-    ]
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
 
     payload = {
         STATUS_KEY: status,
