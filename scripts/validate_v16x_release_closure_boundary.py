@@ -30,11 +30,17 @@ from release_closure_narrative_marker_common import (
 from release_closure_governance_probe_projection_common import (
     collect_release_closure_governance_probe_projection_stale_reasons,
 )
+from release_closure_post_closure_adjudication_order_common import (
+    collect_release_closure_post_closure_adjudication_order_stale_reasons,
+)
 from release_closure_repo_global_projection_common import (
     collect_release_closure_repo_global_projection_stale_reasons,
 )
 from release_closure_root_grounding_common import (
     RELEASE_CLOSURE_ROOT_GROUNDING_SURFACE_CONSTRAINTS,
+)
+from release_closure_terminal_truth_bridge_surface_common import (
+    collect_release_closure_terminal_truth_bridge_surface_stale_reasons,
 )
 from repo_root_resolution_common import resolve_protocol_repo_root
 from release_readiness_active_runtime_closure_projection_common import (
@@ -187,6 +193,16 @@ def main() -> int:
         )
         stale_reasons.extend(
             collect_release_closure_active_runtime_projection_stale_reasons(
+                text, label=label
+            )
+        )
+        stale_reasons.extend(
+            collect_release_closure_terminal_truth_bridge_surface_stale_reasons(
+                text, label=label
+            )
+        )
+        stale_reasons.extend(
+            collect_release_closure_post_closure_adjudication_order_stale_reasons(
                 text, label=label
             )
         )

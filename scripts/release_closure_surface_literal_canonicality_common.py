@@ -2,19 +2,19 @@
 from __future__ import annotations
 
 
-def collect_release_closure_projection_line_stale_reasons(
+def collect_release_closure_surface_literal_stale_reasons(
     text: str,
     *,
     label: str,
-    projection_key: str,
+    literal_key: str,
     canonical_marker: str,
     stale_reason_suffix: str,
 ) -> list[str]:
-    projection_lines = [
+    literal_lines = [
         line.strip()
         for line in text.splitlines()
-        if f"{projection_key}=" in line
+        if f"{literal_key}=" in line
     ]
-    if any(canonical_marker not in line for line in projection_lines):
+    if any(canonical_marker not in line for line in literal_lines):
         return [f"{label}_{stale_reason_suffix}"]
     return []
