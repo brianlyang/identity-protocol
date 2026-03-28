@@ -200,9 +200,11 @@ Interpretive consequence:
 19. primary execution report selection must also converge on one shared primitive rather than drifting by validator family.
     - `execution_report_selection_common.py` is the shared owner for primary execution report selection across `validate_execution_report_freshness.py`, `validate_identity_protocol_baseline_freshness.py`, and `validate_run_id_report_selection.py`;
     - those consumers must resolve the same primary execution report under the same candidate roots instead of each re-inventing report collection, tuple filtering, or run-id matching;
+    - path-local post-execution consumers and shell/runtime operator surfaces must consume the same primitive rather than respelling `ls -t` or directory-glob fallbacks; `primary_execution_report_common.py` and `scripts/resolve_latest_identity_upgrade_report.py` therefore remain the bounded shared owners for prompt/permission validators plus shell/runtime selection call sites;
     - derivative report artifacts must remain demoted support material rather than promotion candidates for current-round primary selection.
 20. `scripts/ci/run_execution_report_selection_convergence_probes_ci.sh` is the additive machine-law freeze for the convergence rule above.
     - It must prove that `validate_execution_report_freshness.py`, `validate_identity_protocol_baseline_freshness.py`, and `validate_run_id_report_selection.py` converge on the same primary execution report under a shared runtime fixture.
+    - It must also prove that path-local prompt/permission validators plus `scripts/resolve_latest_identity_upgrade_report.py` inherit that same primary-selection result under the same fixture rather than widening selection semantics.
     - It must also prove that derivative report artifacts such as `-patch-plan.json`, `postexec/`, and `-receipt.json` stay outside the primary execution report selection lane.
 21. transport fleet closure must likewise remain shared rather than checker-local.
     - `runtime_fleet_closure_common.py` is the shared owner for `check_identity_broadcast_migration_closure.py` and `check_identity_communication_transport_closure.py`;

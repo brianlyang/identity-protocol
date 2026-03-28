@@ -5,6 +5,8 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+
+from primary_execution_report_common import latest_primary_execution_report_from_roots
 from runtime_temp_path_common import runtime_temp_root
 
 from resolve_identity_context import resolve_identity
@@ -19,9 +21,7 @@ def _sha256(path: Path) -> str:
 
 
 def _latest(identity_id: str, report_dir: Path) -> Path | None:
-    rows = sorted(report_dir.glob(f"identity-upgrade-exec-{identity_id}-*.json"), key=lambda p: p.stat().st_mtime)
-    rows = [p for p in rows if not p.name.endswith("-patch-plan.json")]
-    return rows[-1] if rows else None
+    return latest_primary_execution_report_from_roots([report_dir], identity_id)
 
 
 def main() -> int:
@@ -106,4 +106,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

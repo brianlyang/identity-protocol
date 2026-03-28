@@ -46,7 +46,10 @@ PY
 IDENTITY_ID="${IDENTITY_ID:-base-repo-closure-orchestrator}"
 CATALOG_PATH="${WORKSPACE_ROOT}/.identity/catalog.local.yaml"
 REPORT_GLOB="${WORKSPACE_ROOT}/.identity/${IDENTITY_ID}/runtime/reports/identity-upgrade-exec-${IDENTITY_ID}-*.json"
-LATEST_REPORT="$(ls -t ${REPORT_GLOB} 2>/dev/null | grep -v -- '-patch-plan\.json$' | head -n 1 || true)"
+LATEST_REPORT="$(python3 scripts/resolve_latest_identity_upgrade_report.py \
+  --identity-id "${IDENTITY_ID}" \
+  --search-root "${WORKSPACE_ROOT}/.identity/${IDENTITY_ID}/runtime/reports" \
+  --print-path-only)"
 
 if [[ ! -f "${CATALOG_PATH}" ]]; then
   echo "[FAIL] expected project-local catalog missing: ${CATALOG_PATH}"
@@ -54,6 +57,7 @@ if [[ ! -f "${CATALOG_PATH}" ]]; then
 fi
 if [[ -z "${LATEST_REPORT}" || ! -f "${LATEST_REPORT}" ]]; then
   echo "[FAIL] expected latest execution report missing for ${IDENTITY_ID}"
+  echo "       search pattern hint: ${REPORT_GLOB}"
   exit 1
 fi
 

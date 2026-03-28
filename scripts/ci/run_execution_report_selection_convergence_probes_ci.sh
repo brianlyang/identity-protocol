@@ -39,6 +39,20 @@ def _run_json(cmd: list[str], *, cwd: Path) -> dict[str, object]:
         raise AssertionError({"cmd": cmd, "stdout": proc.stdout, "stderr": proc.stderr, "error": str(exc)})
 
 
+def _run_ok(cmd: list[str], *, cwd: Path) -> str:
+    proc = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True, check=False)
+    if proc.returncode != 0:
+        raise AssertionError(
+            {
+                "cmd": cmd,
+                "returncode": proc.returncode,
+                "stdout": proc.stdout,
+                "stderr": proc.stderr,
+            }
+        )
+    return proc.stdout.strip()
+
+
 def _write_json(path: Path, payload: dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -100,11 +114,40 @@ report_payload = {
     "resolved_pack_path": str(pack_root),
     "identity_prompt_path": str(prompt_path),
     "identity_prompt_sha256": _sha256(prompt_path),
+    "identity_prompt_bytes": int(prompt_path.stat().st_size),
+    "identity_prompt_activated_at": "2026-03-28T00:00:00Z",
+    "identity_prompt_source_layer": "project",
+    "identity_prompt_scope": "USER",
+    "identity_prompt_status": "ACTIVATED",
+    "upgrade_required": False,
+    "prompt_change_required": False,
+    "prompt_change_applied": False,
+    "identity_prompt_hash_before": _sha256(prompt_path),
+    "identity_prompt_hash_after": _sha256(prompt_path),
+    "identity_prompt_change_note": "no_prompt_change_required",
+    "prompt_policy_hash": _sha256(prompt_path),
+    "runtime_state_artifact_path": "runtime/state/prompt-runtime-state.json",
+    "runtime_state_artifact_hash": "",
+    "prompt_runtime_state_binding_status": "PASS_REQUIRED",
+    "prompt_runtime_state_externalization_status": "PASS_REQUIRED",
+    "permission_state": "WRITEBACK_WRITTEN",
+    "permission_error_code": "",
+    "writeback_status": "WRITTEN",
+    "writeback_precheck": {"all_writable": True},
     "protocol_root": str(repo_root),
     "protocol_commit_sha": head_sha,
     "protocol_head_sha_at_run_start": head_sha,
     "baseline_reference_mode": "run_pinned",
 }
+runtime_state_path = (pack_root / "runtime" / "state" / "prompt-runtime-state.json").resolve()
+_write_json(
+    runtime_state_path,
+    {
+        "prompt_policy_hash": report_payload["prompt_policy_hash"],
+        "prompt_state": "externalized",
+    },
+)
+report_payload["runtime_state_artifact_hash"] = _sha256(runtime_state_path)
 _write_json(report_path, report_payload)
 _write_json(
     derivative_receipt_path,
@@ -178,10 +221,60 @@ run_id_payload = _run_json(
     ],
     cwd=repo_root,
 )
+locator_payload = _run_json(
+    [
+        sys.executable,
+        str(repo_root / "scripts" / "resolve_latest_identity_upgrade_report.py"),
+        "--identity-id",
+        identity_id,
+        "--search-root",
+        str((pack_root / "runtime" / "reports").resolve()),
+        "--json-only",
+    ],
+    cwd=repo_root,
+)
+prompt_activation_stdout = _run_ok(
+    [
+        sys.executable,
+        str(repo_root / "scripts" / "validate_identity_prompt_activation.py"),
+        "--identity-id",
+        identity_id,
+        "--catalog",
+        str(local_catalog),
+        "--repo-catalog",
+        str(repo_catalog),
+        "--report-dir",
+        str((pack_root / "runtime" / "reports").resolve()),
+    ],
+    cwd=repo_root,
+)
+prompt_lifecycle_stdout = _run_ok(
+    [
+        sys.executable,
+        str(repo_root / "scripts" / "validate_identity_prompt_lifecycle.py"),
+        "--identity-id",
+        identity_id,
+        "--report-dir",
+        str((pack_root / "runtime" / "reports").resolve()),
+    ],
+    cwd=repo_root,
+)
+permission_stdout = _run_ok(
+    [
+        sys.executable,
+        str(repo_root / "scripts" / "validate_identity_permission_state.py"),
+        "--identity-id",
+        identity_id,
+        "--report-dir",
+        str((pack_root / "runtime" / "reports").resolve()),
+    ],
+    cwd=repo_root,
+)
 
 selected_freshness = str(freshness_payload.get("report_selected_path", "")).strip()
 selected_baseline = str(baseline_payload.get("report_selected_path", "")).strip()
 selected_run_id = str(run_id_payload.get("report_selected_path", "")).strip()
+selected_locator = str(locator_payload.get("selected_report_path", "")).strip()
 expected = str(report_path)
 
 assert selected_freshness == expected, {
@@ -199,11 +292,21 @@ assert selected_run_id == expected, {
     "selected": selected_run_id,
     "expected": expected,
 }
-assert selected_freshness == selected_baseline == selected_run_id, {
+assert selected_locator == expected, {
+    "case": "locator_selects_primary_execution_report",
+    "selected": selected_locator,
+    "expected": expected,
+    "payload": locator_payload,
+}
+assert "[OK] identity prompt activation validated:" in prompt_activation_stdout, prompt_activation_stdout
+assert "[OK] prompt lifecycle validated:" in prompt_lifecycle_stdout, prompt_lifecycle_stdout
+assert "[OK] permission state validated:" in permission_stdout, permission_stdout
+assert selected_freshness == selected_baseline == selected_run_id == selected_locator, {
     "case": "selection_convergence",
     "freshness": selected_freshness,
     "baseline": selected_baseline,
     "run_id": selected_run_id,
+    "locator": selected_locator,
 }
 
 print(
@@ -215,6 +318,10 @@ print(
             "freshness_status": freshness_payload.get("freshness_status", ""),
             "baseline_status": baseline_payload.get("baseline_status", ""),
             "run_id_selection_strategy": run_id_payload.get("selection_strategy", ""),
+            "primary_report_locator_selection_mode": locator_payload.get("selection_mode", ""),
+            "prompt_activation_selected_report": expected,
+            "prompt_lifecycle_selected_report": expected,
+            "permission_state_selected_report": expected,
         },
         ensure_ascii=False,
     )

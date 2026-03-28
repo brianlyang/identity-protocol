@@ -4,6 +4,8 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+
+from primary_execution_report_common import latest_primary_execution_report_from_roots
 from runtime_temp_path_common import runtime_temp_root
 
 ALLOWED_STATES = {
@@ -60,8 +62,7 @@ def _writeback_code_matches(writeback_status: str, code: str) -> bool:
 
 
 def _latest(identity_id: str, report_dir: Path) -> Path | None:
-    rows = sorted(report_dir.glob(f"identity-upgrade-exec-{identity_id}-*.json"), key=lambda p: p.stat().st_mtime)
-    return rows[-1] if rows else None
+    return latest_primary_execution_report_from_roots([report_dir], identity_id)
 
 
 def main() -> int:

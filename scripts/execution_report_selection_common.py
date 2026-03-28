@@ -6,21 +6,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from primary_execution_report_common import (
+    IDENTITY_UPGRADE_EXEC_PREFIX,
+    collect_primary_execution_reports_from_roots,
+    dedupe_resolved_paths,
+    is_derivative_execution_report as _is_derivative_execution_report,
+    is_primary_execution_report,
+    report_mtime as _report_mtime,
+)
 from runtime_temp_path_common import runtime_temp_root
 from tool_vendor_governance_common import candidate_upgrade_report_roots, load_json
-
-IDENTITY_UPGRADE_EXEC_PREFIX = "identity-upgrade-exec-"
-DERIVATIVE_REPORT_SUFFIXES: tuple[str, ...] = (
-    "-patch-plan.json",
-    "-postexec-receipt.json",
-    "-receipt.json",
-)
-DERIVATIVE_REPORT_PATH_TOKENS: tuple[str, ...] = (
-    "/runtime/protocol-feedback/",
-    "/archive/",
-    "/archives/",
-    "/runtime/reports/postexec/",
-)
 
 
 @dataclass(frozen=True)
@@ -55,11 +50,7 @@ def stable_runtime_slug(value: str, *, default: str = "runtime") -> str:
 
 
 def _dedupe_paths(rows: list[Path]) -> list[Path]:
-    dedup: dict[str, Path] = {}
-    for row in rows:
-        resolved = row.expanduser().resolve()
-        dedup[resolved.as_posix()] = resolved
-    return list(dedup.values())
+    return dedupe_resolved_paths(rows)
 
 
 def _report_mtime(path: Path) -> float:
@@ -70,34 +61,7 @@ def _report_mtime(path: Path) -> float:
 
 
 def _is_derivative_execution_report(path: Path) -> bool:
-    lower_name = path.name.lower()
-    if any(lower_name.endswith(suffix) for suffix in DERIVATIVE_REPORT_SUFFIXES):
-        return True
-    path_text = path.expanduser().resolve().as_posix().lower()
-    return any(token in path_text for token in DERIVATIVE_REPORT_PATH_TOKENS)
-
-
-def is_primary_execution_report(
-    path: Path,
-    *,
-    identity_id: str = "",
-    include_generic_upgrade_json: bool = False,
-) -> bool:
-    if not path.is_file():
-        return False
-    lower_name = path.name.lower()
-    if not lower_name.endswith(".json"):
-        return False
-    if _is_derivative_execution_report(path):
-        return False
-    normalized_identity = str(identity_id or "").strip()
-    if lower_name.startswith(IDENTITY_UPGRADE_EXEC_PREFIX):
-        if normalized_identity in {"", "*"}:
-            return True
-        return f"{IDENTITY_UPGRADE_EXEC_PREFIX}{normalized_identity.lower()}-" in lower_name
-    if not include_generic_upgrade_json:
-        return False
-    return "upgrade" in lower_name
+    return _is_derivative_execution_report(path)
 
 
 def fallback_report_roots() -> list[Path]:
@@ -137,35 +101,15 @@ def collect_reports(
     include_fallback_roots: bool = False,
     include_generic_upgrade_json: bool = False,
 ) -> list[Path]:
-    rows: list[Path] = []
-    generic_rows: list[Path] = []
-    normalized_identity = str(identity_id or "").strip()
-    if normalized_identity in {"", "*"}:
-        pattern = f"**/{IDENTITY_UPGRADE_EXEC_PREFIX}*.json"
-    else:
-        pattern = f"**/{IDENTITY_UPGRADE_EXEC_PREFIX}{normalized_identity}-*.json"
-    for root in candidate_report_roots(
-        pack_path,
-        include_runtime_dir=True,
-        include_fallback_roots=include_fallback_roots,
-    ):
-        if not root.exists():
-            continue
-        for p in root.glob(pattern):
-            resolved = p.resolve()
-            if is_primary_execution_report(resolved, identity_id=identity_id):
-                rows.append(resolved)
-        if not include_generic_upgrade_json or rows:
-            continue
-        for p in root.glob("**/*.json"):
-            resolved = p.resolve()
-            if is_primary_execution_report(
-                resolved,
-                include_generic_upgrade_json=True,
-            ):
-                generic_rows.append(resolved)
-    selected_rows = rows if rows else generic_rows
-    return sorted(_dedupe_paths(selected_rows), key=_report_mtime)
+    return collect_primary_execution_reports_from_roots(
+        candidate_report_roots(
+            pack_path,
+            include_runtime_dir=True,
+            include_fallback_roots=include_fallback_roots,
+        ),
+        identity_id,
+        include_generic_upgrade_json=include_generic_upgrade_json,
+    )
 
 
 def report_run_id(path: Path, report_doc: dict[str, Any] | None = None) -> str:

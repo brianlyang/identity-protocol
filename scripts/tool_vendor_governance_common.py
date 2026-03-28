@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from primary_execution_report_common import latest_primary_execution_report_from_roots
 
 ACTIVE_EXECUTION_POINTER_REL = Path("runtime/state/active_execution_report.json")
 TOOL_VENDOR_GOVERNANCE_REPORT_DIR_REL = Path("runtime/reports/tool-vendor-governance")
@@ -339,28 +340,10 @@ def _read_active_execution_report_pointer(pack_root: Path, identity_id: str) -> 
 
 
 def _discover_latest_identity_upgrade_report(identity_id: str, pack_root: Path) -> Path | None:
-    rows: list[Path] = []
-    normalized = str(identity_id or "").strip()
-    if normalized in {"", "*"}:
-        pattern = "**/identity-upgrade-exec-*.json"
-    else:
-        pattern = f"**/identity-upgrade-exec-{normalized}-*.json"
-    for root in _candidate_upgrade_report_roots(pack_root):
-        if not root.exists():
-            continue
-        rows.extend(
-            p
-            for p in root.glob(pattern)
-            if p.is_file()
-            and not p.name.endswith("-patch-plan.json")
-            and "/runtime/protocol-feedback/" not in p.as_posix()
-            and "/archive/" not in p.as_posix()
-            and "/archives/" not in p.as_posix()
-        )
-    if not rows:
-        return None
-    rows.sort(key=lambda p: p.stat().st_mtime)
-    return rows[-1]
+    return latest_primary_execution_report_from_roots(
+        _candidate_upgrade_report_roots(pack_root),
+        identity_id,
+    )
 
 
 def resolve_latest_identity_upgrade_report(

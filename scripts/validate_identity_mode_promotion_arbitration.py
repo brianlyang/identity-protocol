@@ -7,6 +7,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from primary_execution_report_common import latest_primary_execution_report_from_roots
+
 HIGH_IMPACT = {"CURRENT_TASK.json", "IDENTITY_PROMPT.md", "RULEBOOK.jsonl"}
 
 
@@ -24,11 +26,7 @@ def _changed(base: str, head: str) -> list[str]:
 
 def _latest_report(identity_id: str) -> Path | None:
     p = Path("identity/runtime/reports")
-    if not p.exists():
-        return None
-    rows = sorted(p.glob(f"identity-upgrade-exec-{identity_id}-*.json"), key=lambda x: x.stat().st_mtime)
-    rows = [x for x in rows if not x.name.endswith("-patch-plan.json")]
-    return rows[-1] if rows else None
+    return latest_primary_execution_report_from_roots([p], identity_id)
 
 
 def _load(path: Path) -> dict[str, Any]:

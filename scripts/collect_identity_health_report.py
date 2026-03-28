@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shlex
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -329,7 +330,13 @@ def _build_self_upgrade_plan(
     catalog_path = str(Path(catalog).expanduser().resolve())
     identity_home = str(Path(catalog_path).parent)
     codex_home = str(Path(identity_home).parent)
-    latest_expr = f"$(ls -t {upgrade_report_dir}/identity-upgrade-exec-{identity_id}-*.json 2>/dev/null | head -n 1)"
+    quoted_upgrade_report_dir = shlex.quote(upgrade_report_dir)
+    latest_expr = (
+        '$(python3 "$IDENTITY_PROTOCOL_HOME"/scripts/resolve_latest_identity_upgrade_report.py '
+        f"--identity-id {identity_id} "
+        f"--search-root {quoted_upgrade_report_dir} "
+        "--print-path-only)"
+    )
 
     commands = [
         f"export IDENTITY_CATALOG={catalog_path}",
