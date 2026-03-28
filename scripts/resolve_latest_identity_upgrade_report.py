@@ -17,7 +17,7 @@ from tool_vendor_governance_common import (
     resolve_identity_upgrade_report_selection,
 )
 
-SEARCH_ROOT_SELECTION_MODE = "search_root_latest_report"
+SEARCH_ROOT_SELECTION_MODE = "search_root_latest_primary_execution_report"
 SEARCH_ROOT_AUTHORITY_CLASS = "search_root_latest_primary_execution_report"
 SEARCH_ROOT_POINTER_RESOLUTION_MODE = "search_roots_primary_execution_report"
 

@@ -605,6 +605,14 @@ assert selected_search_root_locator_after == expected, {
     "expected": expected,
     "payload": search_root_locator_after_payload,
 }
+assert str(search_root_locator_after_payload.get("selection_mode", "")).strip() == "search_root_latest_primary_execution_report", {
+    "case": "search_root_locator_projects_prompt_bound_selection_mode",
+    "payload": search_root_locator_after_payload,
+}
+assert str(search_root_locator_after_payload.get("selected_report_authority_class", "")).strip() == "search_root_latest_primary_execution_report", {
+    "case": "search_root_locator_projects_prompt_bound_authority_class",
+    "payload": search_root_locator_after_payload,
+}
 assert selected_pack_locator_after == expected, {
     "case": "pack_root_locator_preserves_prompt_sha_preference",
     "selected": selected_pack_locator_after,
