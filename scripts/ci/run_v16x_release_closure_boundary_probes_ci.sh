@@ -5,10 +5,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 TMP_ROOT="$(mktemp -d)"
 trap 'rm -rf "${TMP_ROOT}"' EXIT
+export PROBE_FIXTURE_REPO_ROOT="${REPO_ROOT}"
+source "${REPO_ROOT}/scripts/probe_fixture_shell_common.sh"
 
 POSITIVE_JSON="${TMP_ROOT}/positive.json"
 NEGATIVE_JSON="${TMP_ROOT}/negative.json"
 SHADOW_ROOT="${TMP_ROOT}/shadow-repo"
+repo_global_projection_marker="$(
+  resolve_python_module_expression \
+    "release_readiness_repo_global_closure_projection_common" \
+    "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER"
+)"
 
 printf '[RUN] positive release-closure boundary validation\n'
 python3 "${REPO_ROOT}/scripts/validate_v16x_release_closure_boundary.py" --repo-root "${REPO_ROOT}" --json-only > "${POSITIVE_JSON}"
@@ -24,11 +31,12 @@ python3 "${REPO_ROOT}/scripts/probe_shadow_fixture_common.py" \
   --copy-file docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md \
   --json-only > /dev/null
 
-python3 - <<'PY' "${SHADOW_ROOT}/docs/governance/identity-v1.6x-release-closure-governance.md"
+python3 - <<'PY' "${SHADOW_ROOT}/docs/governance/identity-v1.6x-release-closure-governance.md" "${repo_global_projection_marker}"
 from pathlib import Path
 import sys
 
 path = Path(sys.argv[1]).resolve()
+repo_global_projection_marker = sys.argv[2]
 text = path.read_text(encoding="utf-8")
 text = text.replace("`ISSUE-001` through `ISSUE-039`", "`ISSUE-001` through `ISSUE-038`")
 text = text.replace("`v1.6.21`", "`v1.6.20`")
@@ -38,8 +46,8 @@ text = text.replace("stable prewrite snapshot", "stable resume snapshot")
 text = text.replace("caller cwd", "caller working directory")
 text = text.replace("scripts/run_workspace_runtime_closure_checks.py", "scripts/run_workspace_runtime_pack_checks.py")
 text = text.replace(
-    "repo_global_closure_projection=one_look.executable_surface_runtime_literal_lock_status|one_look.required_gate_surface_drift_status|one_look.runtime_file_boundary_governance_status|one_look.issue_register_consistency_status|one_look.protocol_broadcast_doc_control_status|one_look.protocol_governed_subdomain_doc_control_registry_status|one_look.identity_codex_launcher_migration_closure_status|one_look.identity_broadcast_migration_closure_status|one_look.identity_communication_transport_closure_status|one_look.unique_entry_contract_migration_closure_status|one_look.version_baseline_migration_closure_status",
-    "repo_global_projection=one_look.executable_surface_runtime_literal_lock_status|one_look.required_gate_surface_drift_status|one_look.runtime_file_boundary_governance_status|one_look.issue_register_consistency_status|one_look.protocol_broadcast_doc_control_status|one_look.protocol_governed_subdomain_doc_control_registry_status|one_look.identity_codex_launcher_migration_closure_status|one_look.identity_broadcast_migration_closure_status|one_look.identity_communication_transport_closure_status|one_look.unique_entry_contract_migration_closure_status|one_look.version_baseline_migration_closure_status",
+    repo_global_projection_marker,
+    "repo_global_projection=one_look.executable_surface_runtime_literal_lock_status|one_look.repo_global_drift_marker",
 )
 text = text.replace(
     "active_runtime_closure_projection=one_look.identity_codex_launcher_status",
@@ -58,13 +66,14 @@ if python3 "${REPO_ROOT}/scripts/validate_v16x_release_closure_boundary.py" --re
   exit 1
 fi
 
-python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}"
+python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}" "${repo_global_projection_marker}"
 import json
 import sys
 from pathlib import Path
 
 positive = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
 negative = json.loads(Path(sys.argv[2]).read_text(encoding='utf-8'))
+repo_global_projection_marker = sys.argv[3]
 
 if positive.get("v16x_release_closure_boundary_status") != "PASS_REQUIRED":
     raise SystemExit("positive release-closure boundary status must PASS_REQUIRED")
@@ -90,7 +99,8 @@ if "governance_doc_missing_release_readiness_continuation_marker:caller cwd" not
     raise SystemExit("negative release-closure boundary must detect continuation cwd-anchor drift")
 if "governance_doc_missing_workspace_runtime_closure_command_convergence_marker:scripts/run_workspace_runtime_closure_checks.py" not in reasons:
     raise SystemExit("negative release-closure boundary must detect workspace-runtime closure runner drift")
-if "governance_doc_missing_repo_global_closure_boundary_marker:repo_global_closure_projection=one_look.executable_surface_runtime_literal_lock_status|one_look.required_gate_surface_drift_status|one_look.runtime_file_boundary_governance_status|one_look.issue_register_consistency_status|one_look.protocol_broadcast_doc_control_status|one_look.protocol_governed_subdomain_doc_control_registry_status|one_look.identity_codex_launcher_migration_closure_status|one_look.identity_broadcast_migration_closure_status|one_look.identity_communication_transport_closure_status|one_look.unique_entry_contract_migration_closure_status|one_look.version_baseline_migration_closure_status" not in reasons:
+expected_repo_global_reason = f"governance_doc_missing_repo_global_closure_boundary_marker:{repo_global_projection_marker}"
+if expected_repo_global_reason not in reasons:
     raise SystemExit("negative release-closure boundary must detect repo-global closure projection drift")
 if "governance_doc_stale_issue_horizon:ISSUE-038" not in reasons:
     raise SystemExit("negative release-closure boundary must detect stale issue-horizon drift")

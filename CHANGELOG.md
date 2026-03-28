@@ -76,6 +76,19 @@
     governed summary validation must absorb the shared repo-global one-look
     bundle rather than relying on a locally maintained partial field list.
 
+- **shared repo-global probe literal hardening**:
+  - `scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh` now resolves
+    the bounded repo-global projection literal from
+    `scripts/release_readiness_repo_global_closure_projection_common.py`
+    instead of mutating a probe-local hardcoded string.
+  - `scripts/ci/run_runtime_summary_surface_governance_probes_ci.sh` now
+    resolves repo-global one-look doc markers from the same shared module
+    rather than hardcoding specific repo-global field names inside the probe.
+  - release-closure governance/review docs now freeze the stronger rule that
+    repo-global probe literals themselves must be shared-module driven, so
+    newly appended repo-global one-look lanes fail-close automatically in the
+    probe layer instead of waiting for manual probe literal refresh.
+
 - **nested gateway wrapper timeout budget propagation**:
   - hardened `scripts/gateway_wrapper_enforcement.py` so pack-local nested
     ingress/session wrapper subprocesses inherit the stronger timeout profile of
