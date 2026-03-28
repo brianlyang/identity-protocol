@@ -54,6 +54,11 @@ RELEASE_CLOSURE_ROOT_GROUNDING_LANE_SPECS: tuple[
         validator_rel="scripts/validate_protocol_root_current_truth_epistemology.py",
         probe_rel="scripts/ci/run_protocol_root_current_truth_epistemology_probes_ci.sh",
     ),
+    ReleaseClosureRootGroundingLaneSpec(
+        lane_id="protocol_root_operator_answer_surface",
+        validator_rel="scripts/validate_protocol_root_operator_answer_surface.py",
+        probe_rel="scripts/ci/run_protocol_root_operator_answer_surface_probes_ci.sh",
+    ),
 )
 
 RELEASE_CLOSURE_ROOT_GROUNDING_ORDER: tuple[str, ...] = tuple(
