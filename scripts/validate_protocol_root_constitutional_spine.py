@@ -645,11 +645,11 @@ def main() -> int:
         "mapping_active_file": str(spine_active_path.relative_to(repo_root)),
         "spine_entry_count": len(entry_rows),
         "spine_bridge_count": len(bridge_rows),
-        "root_doc_anchor_check_count": len(root_doc_anchor_checks),
-        "root_doc_anchor_status": STATUS_PASS_REQUIRED if not root_doc_anchor_violations else STATUS_FAIL_REQUIRED,
         **project_root_contract_support_projection(
             prefix="constitutional_spine",
             row_family_projection_rows=row_family_projection_rows,
+            anchor_checks=root_doc_anchor_checks,
+            anchor_violations=root_doc_anchor_violations,
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
         ),

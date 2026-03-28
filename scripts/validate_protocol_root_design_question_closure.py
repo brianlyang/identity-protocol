@@ -457,11 +457,11 @@ def main() -> int:
         "mapping_entry_file": str(closure_entry_path.relative_to(repo_root)),
         "mapping_active_file": str(closure_active_path.relative_to(repo_root)),
         "question_closure_count": len(closure_rows),
-        "root_doc_anchor_check_count": len(root_doc_anchor_checks),
-        "root_doc_anchor_status": STATUS_PASS_REQUIRED if not root_doc_anchor_violations else STATUS_FAIL_REQUIRED,
         **project_root_contract_support_projection(
             prefix="design_question_closure",
             row_family_projection_rows=row_family_projection_rows,
+            anchor_checks=root_doc_anchor_checks,
+            anchor_violations=root_doc_anchor_violations,
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
         ),

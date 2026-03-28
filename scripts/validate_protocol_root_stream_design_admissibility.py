@@ -579,7 +579,6 @@ def main() -> int:
     )
     error_code = str(verdict["error_code"])
     status = str(verdict["status"])
-    root_doc_anchor_status = STATUS_PASS_REQUIRED if not root_doc_anchor_violations else STATUS_FAIL_REQUIRED
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_ADMISSIBILITY),
@@ -595,11 +594,11 @@ def main() -> int:
         "limit_count": len(limit_rows),
         "outcome_count": len(outcome_rows),
         "projection_surface_count": len(projection_surfaces),
-        "root_doc_anchor_check_count": len(root_doc_anchor_checks),
-        "root_doc_anchor_status": root_doc_anchor_status,
         **project_root_contract_support_projection(
             prefix="stream_design",
             row_family_projection_rows=row_family_projection_rows,
+            anchor_checks=root_doc_anchor_checks,
+            anchor_violations=root_doc_anchor_violations,
             pass_status=STATUS_PASS_REQUIRED,
             fail_status=STATUS_FAIL_REQUIRED,
         ),
