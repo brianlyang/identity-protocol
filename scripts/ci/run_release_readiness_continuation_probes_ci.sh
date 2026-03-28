@@ -18,6 +18,9 @@ import sys
 from pathlib import Path
 
 from governed_runtime_summary_surface_common import build_governed_runtime_summary_surface_payload
+from release_readiness_foundational_projection_common import (
+    RELEASE_READINESS_FOUNDATIONAL_SURFACE_CONSTRAINTS,
+)
 from release_readiness_governance_probe_projection_common import (
     RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
 )
@@ -36,6 +39,7 @@ constraints = tuple(surface.get("operational_constraints") or [])
 missing = [
     marker
     for marker in (
+        *RELEASE_READINESS_FOUNDATIONAL_SURFACE_CONSTRAINTS,
         *RELEASE_READINESS_SUPPORT_PREFLIGHT_SURFACE_CONSTRAINTS,
         *RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
         *RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,

@@ -45,6 +45,9 @@ from release_readiness_repo_global_closure_projection_common import (
 from release_readiness_selected_check_scope_common import (
     RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
 )
+from release_readiness_foundational_projection_common import (
+    RELEASE_READINESS_FOUNDATIONAL_SURFACE_CONSTRAINTS,
+)
 from release_readiness_support_preflight_projection_common import (
     RELEASE_READINESS_SUPPORT_PREFLIGHT_SURFACE_CONSTRAINTS,
 )
@@ -82,6 +85,9 @@ REQUIRED_RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_MARKERS = (
 )
 REQUIRED_RELEASE_READINESS_SELECTED_CHECK_SCOPE_MARKERS = (
     *RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
+)
+REQUIRED_RELEASE_READINESS_FOUNDATIONAL_MARKERS = (
+    *RELEASE_READINESS_FOUNDATIONAL_SURFACE_CONSTRAINTS,
 )
 REQUIRED_RELEASE_READINESS_SUPPORT_PREFLIGHT_MARKERS = (
     *RELEASE_READINESS_SUPPORT_PREFLIGHT_SURFACE_CONSTRAINTS,
@@ -215,6 +221,11 @@ def main() -> int:
         if marker not in summary_text:
             stale_reasons.append(
                 f"summary_doc_missing_release_readiness_selected_check_scope_marker:{marker}"
+            )
+    for marker in REQUIRED_RELEASE_READINESS_FOUNDATIONAL_MARKERS:
+        if marker not in summary_text:
+            stale_reasons.append(
+                f"summary_doc_missing_release_readiness_foundational_marker:{marker}"
             )
     for marker in REQUIRED_RELEASE_READINESS_SUPPORT_PREFLIGHT_MARKERS:
         if marker not in summary_text:

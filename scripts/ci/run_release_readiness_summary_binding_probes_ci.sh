@@ -24,6 +24,10 @@ from governed_runtime_summary_surface_common import build_governed_runtime_summa
 from release_cloud_evidence_projection_common import (
     build_release_readiness_release_cloud_evidence_one_look_projection,
 )
+from release_readiness_foundational_projection_common import (
+    build_release_readiness_foundational_one_look_projection,
+    RELEASE_READINESS_FOUNDATIONAL_SURFACE_CONSTRAINTS,
+)
 from release_readiness_governance_probe_projection_common import (
     RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
 )
@@ -35,6 +39,7 @@ from release_readiness_selected_check_scope_common import (
 )
 from release_readiness_support_preflight_projection_common import (
     build_release_readiness_support_preflight_one_look_projection,
+    RELEASE_READINESS_SUPPORT_PREFLIGHT_SURFACE_CONSTRAINTS,
 )
 from release_readiness_repo_global_closure_projection_common import (
     RELEASE_READINESS_REPO_GLOBAL_ACTIVE_RUNTIME_SUMMARY_KEYS,
@@ -154,6 +159,11 @@ expected_targeted_subset_one_look = build_release_readiness_one_look_projection(
     summary_targeted_subset_excluded
 )
 assert summary_targeted_subset_excluded['one_look'] == expected_targeted_subset_one_look, summary_targeted_subset_excluded
+expected_foundational_one_look = build_release_readiness_foundational_one_look_projection(
+    summary_targeted_subset_excluded
+)
+for field_name, expected_value in expected_foundational_one_look.items():
+    assert summary_targeted_subset_excluded['one_look'][field_name] == expected_value, summary_targeted_subset_excluded
 expected_support_preflight_one_look = build_release_readiness_support_preflight_one_look_projection(
     summary_targeted_subset_excluded
 )
@@ -372,6 +382,11 @@ expected_release_projection_one_look = build_release_readiness_one_look_projecti
     summary_release_projection
 )
 assert summary_release_projection['one_look'] == expected_release_projection_one_look, summary_release_projection
+expected_release_foundational_one_look = build_release_readiness_foundational_one_look_projection(
+    summary_release_projection
+)
+for field_name, expected_value in expected_release_foundational_one_look.items():
+    assert summary_release_projection['one_look'][field_name] == expected_value, summary_release_projection
 expected_release_support_preflight_one_look = build_release_readiness_support_preflight_one_look_projection(
     summary_release_projection
 )
@@ -418,6 +433,10 @@ checkpoint_summary['surface_governance'] = build_governed_runtime_summary_surfac
     'release_readiness_summary'
 )
 for marker in RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS:
+    assert marker in checkpoint_summary['surface_governance']['operational_constraints'], checkpoint_summary
+for marker in RELEASE_READINESS_FOUNDATIONAL_SURFACE_CONSTRAINTS:
+    assert marker in checkpoint_summary['surface_governance']['operational_constraints'], checkpoint_summary
+for marker in RELEASE_READINESS_SUPPORT_PREFLIGHT_SURFACE_CONSTRAINTS:
     assert marker in checkpoint_summary['surface_governance']['operational_constraints'], checkpoint_summary
 for marker in RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS:
     assert marker in checkpoint_summary['surface_governance']['operational_constraints'], checkpoint_summary

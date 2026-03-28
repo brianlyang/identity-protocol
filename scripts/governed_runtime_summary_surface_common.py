@@ -16,6 +16,9 @@ from health_report_experience_writeback_projection_common import (
 from release_cloud_evidence_projection_common import (
     RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_SURFACE_CONSTRAINTS,
 )
+from release_readiness_foundational_projection_common import (
+    RELEASE_READINESS_FOUNDATIONAL_SURFACE_CONSTRAINTS,
+)
 from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
 )
@@ -177,6 +180,7 @@ SURFACE_PROFILES: dict[str, GovernedRuntimeSummarySurfaceProfile] = {
             "continuation_surface=scripts/run_release_readiness_continuation.py",
             "continuation_inner_resolution_anchor=protocol_owned_repo_root_not_caller_cwd",
             "continuation_forbidden_forward_flags=--summary-out,--resume-from-summary,--max-command-sequence-checks",
+            *RELEASE_READINESS_FOUNDATIONAL_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_SUPPORT_PREFLIGHT_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_SURFACE_CONSTRAINTS,
