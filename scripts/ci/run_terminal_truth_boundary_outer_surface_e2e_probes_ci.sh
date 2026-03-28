@@ -551,6 +551,17 @@ assert required_gate_shadow_summary["projection_scope_reasons"] == ["projection_
 assert required_gate_shadow_summary["rows_without_projected_report_fields"] == [], required_gate_shadow_summary
 assert required_gate_shadow_summary["missing_mapping_requirements"] == [], required_gate_shadow_summary
 assert required_gate_shadow_summary["projection_stale_reasons"] == [], required_gate_shadow_summary
+required_gate_scan_probe_summary = full_scan_payload.get("summary_required_gate_bundle_scan_probe_projection") or {}
+assert required_gate_scan_probe_summary["identities_with_projection"] == 2, required_gate_scan_probe_summary
+assert required_gate_scan_probe_summary["projection_fail"] == 0, required_gate_scan_probe_summary
+assert required_gate_scan_probe_summary["projection_skipped_not_required"] == 2, required_gate_scan_probe_summary
+assert required_gate_scan_probe_summary["projection_fail_identity_ids"] == [], required_gate_scan_probe_summary
+assert required_gate_scan_probe_summary["projection_scope_excluded_identity_ids"] == [row["identity_id"] for row in seeded], required_gate_scan_probe_summary
+assert required_gate_scan_probe_summary["projection_scope_classes"] == ["bounded_projection_profile_exclusion"], required_gate_scan_probe_summary
+assert required_gate_scan_probe_summary["projection_scope_reasons"] == ["projection_profile_out_of_scope"], required_gate_scan_probe_summary
+assert required_gate_scan_probe_summary["rows_without_projected_report_fields"] == [], required_gate_scan_probe_summary
+assert required_gate_scan_probe_summary["missing_mapping_requirements"] == [], required_gate_scan_probe_summary
+assert required_gate_scan_probe_summary["projection_stale_reasons"] == [], required_gate_scan_probe_summary
 health_summary = full_scan_payload.get("summary_health_report_experience_writeback_closure") or {}
 assert health_summary["total_identities"] == 2, health_summary
 assert health_summary["projection_pass"] == 0, health_summary

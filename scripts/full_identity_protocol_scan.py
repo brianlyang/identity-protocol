@@ -58,6 +58,8 @@ from release_cloud_evidence_projection_common import (
 from required_contract_coverage_projection_common import build_required_contract_coverage_projection
 from required_gate_report_authority_common import REQUIRED_GATE_REPORT_AUTHORITY_FIELDS
 from required_gate_bundle_projection_common import (
+    build_projection_profile_excluded_required_gate_bundle_target_projection,
+    build_required_gate_bundle_target_projection,
     required_gate_bundle_target_projection_is_scope_excluded,
 )
 from resolve_release_plane_cloud_evidence import resolve_release_plane_runtime_inputs
@@ -446,6 +448,26 @@ def _parse_json_safely(raw: str) -> dict[str, Any] | None:
                 continue
             return parsed
     return None
+
+
+def _build_required_gate_scan_probe_projection(
+    *,
+    repo_root: Path,
+    check_payload: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if not isinstance(check_payload, dict):
+        return {}
+    bundle_payload = (
+        check_payload
+        if isinstance(check_payload.get("results"), list)
+        else _parse_json_safely(str(check_payload.get("tail", "") or "").strip())
+    )
+    if not isinstance(bundle_payload, dict) or not bundle_payload:
+        return {}
+    return build_required_gate_bundle_target_projection(
+        repo_root=repo_root,
+        bundle_payload=bundle_payload,
+    )
 
 
 def _extract_capability_signal(raw: str) -> tuple[str, str]:
@@ -1882,6 +1904,36 @@ def _apply_three_plane_projection(
             required_gate_shadow_projection,
             summary_key="summary_required_gate_bundle_shadow_projection",
         )
+    required_gate_scan_probe_projection = _build_required_gate_scan_probe_projection(
+        repo_root=repo_root,
+        check_payload=item.get("checks", {}).get("required_gate_bundle_runner"),
+    )
+    if not required_gate_scan_probe_projection and three_plane_projection_profile_id:
+        active_projection_profile = resolve_full_identity_protocol_scan_projection_profile(
+            three_plane_projection_profile_id
+        )
+        if active_projection_profile.projection_only:
+            required_gate_scan_probe_projection = (
+                build_projection_profile_excluded_required_gate_bundle_target_projection(
+                    profile_id=active_projection_profile.profile_id,
+                    execution_mode=active_projection_profile.execution_mode,
+                    description=active_projection_profile.description,
+                    excluded_area="required_gate_bundle_projection",
+                    owner_surface="full_identity_protocol_scan_summary",
+                )
+            )
+    if isinstance(required_gate_scan_probe_projection, dict) and required_gate_scan_probe_projection:
+        item["three_plane_required_gate_bundle_scan_probe_projection"] = required_gate_scan_probe_projection
+        apply_full_scan_required_gate_bundle_three_plane_projection(
+            item["three_plane"],
+            required_gate_scan_probe_projection,
+            prefix="required_gate_bundle_scan_probe",
+        )
+        record_required_gate_projection(
+            identity_id,
+            required_gate_scan_probe_projection,
+            summary_key="summary_required_gate_bundle_scan_probe_projection",
+        )
     if current_chat_surface_projection:
         item["current_chat_surface_projection"] = current_chat_surface_projection
         item["current_chat_surface_explanatory_exclusion_status"] = current_chat_surface_projection.get(
@@ -2203,6 +2255,7 @@ def main() -> int:
         ),
         "summary_required_gate_bundle_projection": build_full_scan_required_gate_bundle_projection_summary_skeleton(),
         "summary_required_gate_bundle_shadow_projection": build_full_scan_required_gate_bundle_projection_summary_skeleton(),
+        "summary_required_gate_bundle_scan_probe_projection": build_full_scan_required_gate_bundle_projection_summary_skeleton(),
         "summary_tuple_context": {
             "total_identities": 0,
             "tuple_context_only_failures": 0,

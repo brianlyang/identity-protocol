@@ -87,6 +87,24 @@ assert shadow_summary["required_gate_bundle_shadow_missing_mapping_requirements"
     "rq_missing_projection_mapping"
 ], shadow_summary
 
+scan_probe_summary = build_full_scan_required_gate_bundle_three_plane_projection(
+    pass_projection,
+    prefix="required_gate_bundle_scan_probe",
+)
+assert scan_probe_summary["required_gate_bundle_scan_probe_status"] == "PASS_REQUIRED", scan_probe_summary
+assert scan_probe_summary["required_gate_bundle_scan_probe_projection_status"] == "PASS_REQUIRED", scan_probe_summary
+assert scan_probe_summary["required_gate_bundle_scan_probe_actor_id"] == "assistant:codex", scan_probe_summary
+assert scan_probe_summary["required_gate_bundle_scan_probe_resolved_work_layer"] == "instance", scan_probe_summary
+assert scan_probe_summary["required_gate_bundle_scan_probe_resolved_source_layer"] == "project", scan_probe_summary
+assert scan_probe_summary["required_gate_bundle_scan_probe_lock_state"] == "LOCK_MATCH", scan_probe_summary
+assert scan_probe_summary["required_gate_bundle_scan_probe_run_id_binding"] == "run:full-scan-required-gate-probe", scan_probe_summary
+assert scan_probe_summary["required_gate_bundle_scan_probe_report_logical_identity_key"] == pass_projection["report_logical_identity_key"], scan_probe_summary
+assert scan_probe_summary["required_gate_bundle_scan_probe_report_selection_mode"] == "explicit_report_override", scan_probe_summary
+assert scan_probe_summary["required_gate_bundle_scan_probe_report_authority_class"] == "explicit_report_override", scan_probe_summary
+assert scan_probe_summary["required_gate_bundle_scan_probe_missing_mapping_requirements"] == [
+    "rq_missing_projection_mapping"
+], scan_probe_summary
+
 summary_skeleton = build_full_scan_required_gate_bundle_projection_summary_skeleton()
 assert summary_skeleton["identities_with_projection"] == 0, summary_skeleton
 assert summary_skeleton["projection_pass"] == 0, summary_skeleton
@@ -131,12 +149,34 @@ assert excluded_summary["required_gate_bundle_report_pointer_resolution_mode"] =
 assert excluded_summary["required_gate_bundle_report_pointer_path"] == "", excluded_summary
 assert excluded_summary["required_gate_bundle_missing_mapping_requirements"] == [], excluded_summary
 
+excluded_scan_probe_summary = build_full_scan_required_gate_bundle_three_plane_projection(
+    excluded_projection,
+    prefix="required_gate_bundle_scan_probe",
+)
+assert excluded_scan_probe_summary["required_gate_bundle_scan_probe_status"] == "SKIPPED_NOT_REQUIRED", excluded_scan_probe_summary
+assert excluded_scan_probe_summary["required_gate_bundle_scan_probe_projection_status"] == "SKIPPED_NOT_REQUIRED", excluded_scan_probe_summary
+assert excluded_scan_probe_summary["required_gate_bundle_scan_probe_scope_class"] == "bounded_projection_profile_exclusion", excluded_scan_probe_summary
+assert excluded_scan_probe_summary["required_gate_bundle_scan_probe_scope_reason"] == "projection_profile_out_of_scope", excluded_scan_probe_summary
+assert excluded_scan_probe_summary["required_gate_bundle_scan_probe_actor_id"] == "", excluded_scan_probe_summary
+assert excluded_scan_probe_summary["required_gate_bundle_scan_probe_resolved_work_layer"] == "", excluded_scan_probe_summary
+assert excluded_scan_probe_summary["required_gate_bundle_scan_probe_resolved_source_layer"] == "", excluded_scan_probe_summary
+assert excluded_scan_probe_summary["required_gate_bundle_scan_probe_lock_state"] == "", excluded_scan_probe_summary
+assert excluded_scan_probe_summary["required_gate_bundle_scan_probe_run_id_binding"] == "", excluded_scan_probe_summary
+assert excluded_scan_probe_summary["required_gate_bundle_scan_probe_report_selected_path"] == "", excluded_scan_probe_summary
+assert excluded_scan_probe_summary["required_gate_bundle_scan_probe_report_logical_identity_key"] == "", excluded_scan_probe_summary
+assert excluded_scan_probe_summary["required_gate_bundle_scan_probe_report_selection_mode"] == "", excluded_scan_probe_summary
+assert excluded_scan_probe_summary["required_gate_bundle_scan_probe_report_authority_class"] == "", excluded_scan_probe_summary
+assert excluded_scan_probe_summary["required_gate_bundle_scan_probe_report_pointer_resolution_mode"] == "", excluded_scan_probe_summary
+assert excluded_scan_probe_summary["required_gate_bundle_scan_probe_report_pointer_path"] == "", excluded_scan_probe_summary
+assert excluded_scan_probe_summary["required_gate_bundle_scan_probe_missing_mapping_requirements"] == [], excluded_scan_probe_summary
+
 print(
     json.dumps(
         {
             "full_scan_required_gate_projection_probe_status": "PASS_REQUIRED",
             "pass_projection_status": pass_summary["required_gate_bundle_projection_status"],
             "excluded_projection_status": excluded_summary["required_gate_bundle_projection_status"],
+            "scan_probe_projection_status": scan_probe_summary["required_gate_bundle_scan_probe_projection_status"],
             "excluded_scope_class": excluded_summary["required_gate_bundle_scope_class"],
         },
         ensure_ascii=False,
