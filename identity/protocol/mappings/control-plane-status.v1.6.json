@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-27T14:37:23Z",
-  "git_head_short": "64f83ca",
+  "generated_at_utc": "2026-03-28T04:22:41Z",
+  "git_head_short": "93d4d37",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -23,14 +23,14 @@
         "scripts/validate_control_plane_budget.py",
         "--json-only"
       ],
-      "rc": 0,
-      "status": "PASS_REQUIRED",
-      "error_code": "",
+      "rc": 1,
+      "status": "FAIL_REQUIRED",
+      "error_code": "IP-CP-BUDGET-001",
       "stdout_tail": [],
       "stderr_tail": [],
       "payload": {
-        "control_plane_budget_status": "PASS_REQUIRED",
-        "error_code": "",
+        "control_plane_budget_status": "FAIL_REQUIRED",
+        "error_code": "IP-CP-BUDGET-001",
         "budget_file_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.current.yaml",
         "budget_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
@@ -297,11 +297,13 @@
             "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_workspace_runtime_closure_command_surface.py",
             "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_writeback_continuity.py"
           ],
-          "untracked_validator_scripts": [],
-          "error_codes": 706,
-          "error_code_families": 247,
+          "untracked_validator_scripts": [
+            "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_shared_primitive_adoption.py"
+          ],
+          "error_codes": 716,
+          "error_code_families": 248,
           "error_code_metric_scope": "tracked_python_scripts_canonical_tokens_only",
-          "tracked_python_script_count": 472,
+          "tracked_python_script_count": 486,
           "ignored_partial_error_code_tokens": [
             "IP-ACTOR-",
             "IP-ASB-",
@@ -328,7 +330,7 @@
           "missing_mapping_rows": [],
           "strict_direct_validate_calls": {
             "scripts/identity_creator.py": 89,
-            "scripts/release_readiness_check.py": 139,
+            "scripts/release_readiness_check.py": 140,
             "scripts/report_three_plane_status.py": 80,
             "scripts/full_identity_protocol_scan.py": 88,
             "scripts/e2e_smoke_test.sh": 116,
@@ -400,13 +402,87 @@
           "mode": "no_rebound",
           "enforce_mode": "fail_required",
           "ceiling_count": 5,
-          "violations": []
+          "violations": [
+            {
+              "field": "error_codes",
+              "observed": 716,
+              "ceiling": 706,
+              "reason": "convergence_rebound_detected"
+            },
+            {
+              "field": "error_code_families",
+              "observed": 248,
+              "ceiling": 247,
+              "reason": "convergence_rebound_detected"
+            },
+            {
+              "field": "strict_direct_validate_calls",
+              "surface": "scripts/release_readiness_check.py",
+              "observed": 140,
+              "ceiling": 139,
+              "reason": "convergence_rebound_detected"
+            }
+          ]
         },
-        "warn_violation_count": 0,
-        "warn_violations": [],
-        "fail_violation_count": 0,
-        "fail_violations": [],
-        "stale_reasons": []
+        "warn_violation_count": 3,
+        "warn_violations": [
+          {
+            "field": "error_codes",
+            "observed": 716,
+            "budget_warn": 706,
+            "reason": "error_code_count_warn"
+          },
+          {
+            "field": "error_code_families",
+            "observed": 248,
+            "budget_warn": 247,
+            "reason": "error_code_family_count_warn"
+          },
+          {
+            "field": "strict_direct_validate_calls",
+            "surface": "scripts/release_readiness_check.py",
+            "observed": 140,
+            "budget_warn": 139,
+            "reason": "strict_surface_direct_calls_warn"
+          }
+        ],
+        "fail_violation_count": 4,
+        "fail_violations": [
+          {
+            "field": "error_codes",
+            "observed": 716,
+            "budget_fail": 709,
+            "reason": "error_code_count_exceeded"
+          },
+          {
+            "field": "error_codes",
+            "observed": 716,
+            "ceiling": 706,
+            "reason": "convergence_rebound_detected"
+          },
+          {
+            "field": "error_code_families",
+            "observed": 248,
+            "ceiling": 247,
+            "reason": "convergence_rebound_detected"
+          },
+          {
+            "field": "strict_direct_validate_calls",
+            "surface": "scripts/release_readiness_check.py",
+            "observed": 140,
+            "ceiling": 139,
+            "reason": "convergence_rebound_detected"
+          }
+        ],
+        "stale_reasons": [
+          "error_code_count_warn",
+          "error_code_family_count_warn",
+          "strict_surface_direct_calls_warn",
+          "error_code_count_exceeded",
+          "convergence_rebound_detected",
+          "convergence_rebound_detected",
+          "convergence_rebound_detected"
+        ]
       }
     },
     {
@@ -416,23 +492,78 @@
         "scripts/validate_control_plane_budget_sync.py",
         "--json-only"
       ],
-      "rc": 0,
-      "status": "PASS_REQUIRED",
-      "error_code": "",
+      "rc": 1,
+      "status": "FAIL_REQUIRED",
+      "error_code": "IP-CP-BUDGET-002",
       "stdout_tail": [],
       "stderr_tail": [],
       "payload": {
-        "control_plane_budget_sync_status": "PASS_REQUIRED",
-        "error_code": "",
+        "control_plane_budget_sync_status": "FAIL_REQUIRED",
+        "error_code": "IP-CP-BUDGET-002",
         "repo_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
         "budget_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.current.yaml",
         "budget_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
         "budget_file_alias_error": "",
         "current_last_updated_utc": "2026-03-27T14:36:43Z",
-        "live_last_updated_utc": "2026-03-27T14:36:47Z",
-        "mismatch_count": 0,
-        "mismatches": [],
+        "live_last_updated_utc": "2026-03-28T04:21:57Z",
+        "mismatch_count": 9,
+        "mismatches": [
+          {
+            "field": "budgets.direct_validate_calls.scripts/release_readiness_check.py.fail",
+            "expected": 145,
+            "actual": 144,
+            "reason": "value_drift"
+          },
+          {
+            "field": "budgets.direct_validate_calls.scripts/release_readiness_check.py.warn",
+            "expected": 140,
+            "actual": 139,
+            "reason": "value_drift"
+          },
+          {
+            "field": "budgets.error_code_families.fail",
+            "expected": 254,
+            "actual": 253,
+            "reason": "value_drift"
+          },
+          {
+            "field": "budgets.error_code_families.warn",
+            "expected": 248,
+            "actual": 247,
+            "reason": "value_drift"
+          },
+          {
+            "field": "budgets.error_codes.fail",
+            "expected": 719,
+            "actual": 709,
+            "reason": "value_drift"
+          },
+          {
+            "field": "budgets.error_codes.warn",
+            "expected": 716,
+            "actual": 706,
+            "reason": "value_drift"
+          },
+          {
+            "field": "convergence_guard.ceilings.direct_validate_calls.scripts/release_readiness_check.py",
+            "expected": 140,
+            "actual": 139,
+            "reason": "value_drift"
+          },
+          {
+            "field": "convergence_guard.ceilings.error_code_families",
+            "expected": 248,
+            "actual": 247,
+            "reason": "value_drift"
+          },
+          {
+            "field": "convergence_guard.ceilings.error_codes",
+            "expected": 716,
+            "actual": 706,
+            "reason": "value_drift"
+          }
+        ],
         "observed": {
           "validator_scripts": 249,
           "validator_metric_scope": "tracked_validate_scripts_only",
@@ -687,11 +818,13 @@
             "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_workspace_runtime_closure_command_surface.py",
             "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_writeback_continuity.py"
           ],
-          "untracked_validator_scripts": [],
-          "error_codes": 706,
-          "error_code_families": 247,
+          "untracked_validator_scripts": [
+            "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_root_shared_primitive_adoption.py"
+          ],
+          "error_codes": 716,
+          "error_code_families": 248,
           "error_code_metric_scope": "tracked_python_scripts_canonical_tokens_only",
-          "tracked_python_script_count": 472,
+          "tracked_python_script_count": 486,
           "ignored_partial_error_code_tokens": [
             "IP-ACTOR-",
             "IP-ASB-",
@@ -716,7 +849,7 @@
           "mapping_rows_missing_in_bundle": 0,
           "strict_direct_validate_calls": {
             "scripts/identity_creator.py": 89,
-            "scripts/release_readiness_check.py": 139,
+            "scripts/release_readiness_check.py": 140,
             "scripts/report_three_plane_status.py": 80,
             "scripts/full_identity_protocol_scan.py": 88,
             "scripts/e2e_smoke_test.sh": 116,
@@ -1551,10 +1684,10 @@
         ],
         "pack_scan_globs": [],
         "active_pack_identity_ids": [],
-        "repo_scan_file_count": 589,
+        "repo_scan_file_count": 610,
         "active_pack_scan_file_count": 0,
         "extra_scan_file_count": 0,
-        "scan_file_count": 589,
+        "scan_file_count": 610,
         "scan_files": [
           ".github/workflows/_identity-required-gates.yml",
           ".github/workflows/identity-protocol-ci.yml",
@@ -1621,7 +1754,9 @@
           "scripts/ci/run_post_execution_report_repair_probes_ci.sh",
           "scripts/ci/run_privilege_escalation_write_probes_ci.sh",
           "scripts/ci/run_protocol_broadcast_doc_control_probes_ci.sh",
+          "scripts/ci/run_protocol_feedback_path_residue_probes_ci.sh",
           "scripts/ci/run_protocol_feedback_sidecar_contract_probes_ci.sh",
+          "scripts/ci/run_protocol_feedback_ssot_archival_probes_ci.sh",
           "scripts/ci/run_protocol_governed_subdomain_doc_control_registry_probes_ci.sh",
           "scripts/ci/run_protocol_lane_audit_summary_probes_ci.sh",
           "scripts/ci/run_protocol_root_agent_handoff_probes_ci.sh",
@@ -1649,6 +1784,7 @@
           "scripts/ci/run_protocol_root_operator_answer_surface_probes_ci.sh",
           "scripts/ci/run_protocol_root_prompt_bootstrap_probes_ci.sh",
           "scripts/ci/run_protocol_root_protocol_instance_responsibility_probes_ci.sh",
+          "scripts/ci/run_protocol_root_shared_primitive_adoption_probes_ci.sh",
           "scripts/ci/run_protocol_root_stream_design_admissibility_probes_ci.sh",
           "scripts/ci/run_protocol_root_success_path_state_admissibility_probes_ci.sh",
           "scripts/ci/run_protocol_root_truth_lifecycle_probes_ci.sh",
@@ -1668,9 +1804,11 @@
           "scripts/ci/run_sidecar_cwd_parity_probes_ci.sh",
           "scripts/ci/run_skill_supply_chain_probes_ci.sh",
           "scripts/ci/run_strict_live_active_pointer_locality_probes_ci.sh",
+          "scripts/ci/run_strict_live_contract_resolution_probes_ci.sh",
           "scripts/ci/run_terminal_truth_boundary_outer_surface_e2e_probes_ci.sh",
           "scripts/ci/run_terminal_truth_boundary_projection_probes_ci.sh",
           "scripts/ci/run_terminal_truth_cleanliness_probes_ci.sh",
+          "scripts/ci/run_three_plane_context_resolution_probes_ci.sh",
           "scripts/ci/run_three_plane_health_projection_probes_ci.sh",
           "scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh",
           "scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh",
@@ -1759,11 +1897,13 @@
           "scripts/post_execution_report_repair_common.py",
           "scripts/preflight_identity_runtime_sync.sh",
           "scripts/preflight_protocol_audit_env.sh",
+          "scripts/primary_execution_report_common.py",
           "scripts/probe_fixture_literal_mutation.py",
           "scripts/probe_fixture_shell_common.sh",
           "scripts/probe_gateway_timeout_guard.py",
           "scripts/projection_profile_exclusion_scope_common.py",
           "scripts/prompt_live_driver_binding_common.py",
+          "scripts/protocol_feedback_archival_common.py",
           "scripts/protocol_feedback_contract_common.py",
           "scripts/protocol_feedback_lane_common.py",
           "scripts/protocol_feedback_sidecar_projection_common.py",
@@ -1773,6 +1913,10 @@
           "scripts/refresh_identity_codex_launcher_evidence_truth_sync.py",
           "scripts/refresh_identity_session_status.py",
           "scripts/registry_alias_control_plane_common.py",
+          "scripts/release_closure_continuation_marker_common.py",
+          "scripts/release_closure_doc_common.py",
+          "scripts/release_closure_foundational_marker_common.py",
+          "scripts/release_closure_narrative_marker_common.py",
           "scripts/release_cloud_evidence_projection_common.py",
           "scripts/release_readiness_active_runtime_closure_projection_common.py",
           "scripts/release_readiness_check.py",
@@ -1805,6 +1949,8 @@
           "scripts/repair_identity_post_execution_mandatory.py",
           "scripts/repair_identity_prompt_runtime_state.py",
           "scripts/repair_identity_replay_evidence.py",
+          "scripts/repair_protocol_feedback_path_residue.py",
+          "scripts/repair_protocol_feedback_ssot_archival.py",
           "scripts/repair_protocol_feedback_ssot_index.py",
           "scripts/repair_rulebook_schema_backfill.py",
           "scripts/repair_runtime_catalog_metadata_hygiene.py",
@@ -1817,6 +1963,7 @@
           "scripts/required_gate_report_authority_common.py",
           "scripts/resolve_identity_context.py",
           "scripts/resolve_identity_context_probe_common.py",
+          "scripts/resolve_latest_identity_upgrade_report.py",
           "scripts/resolve_release_plane_cloud_evidence.py",
           "scripts/resolve_runtime_authoritative_identity.py",
           "scripts/response_stamp_common.py",
@@ -1824,6 +1971,11 @@
           "scripts/root_artifact_family_admissibility_common.py",
           "scripts/root_constitutional_spine_common.py",
           "scripts/root_contract_anchor_checks_common.py",
+          "scripts/root_contract_integration_checks_common.py",
+          "scripts/root_contract_marker_checks_common.py",
+          "scripts/root_contract_readme_reference_common.py",
+          "scripts/root_contract_row_validation_common.py",
+          "scripts/root_contract_verdict_common.py",
           "scripts/root_corpus_authority_common.py",
           "scripts/root_corpus_derivation_common.py",
           "scripts/root_corpus_gateway_admissibility_common.py",
@@ -1847,6 +1999,7 @@
           "scripts/root_prompt_bootstrap_common.py",
           "scripts/root_protocol_instance_responsibility_common.py",
           "scripts/root_row_family_projection_common.py",
+          "scripts/root_shared_primitive_adoption_common.py",
           "scripts/root_stream_design_admissibility_common.py",
           "scripts/root_success_path_state_admissibility_common.py",
           "scripts/root_truth_lifecycle_common.py",
@@ -2079,6 +2232,7 @@
           "scripts/validate_protocol_root_operator_answer_surface.py",
           "scripts/validate_protocol_root_prompt_bootstrap.py",
           "scripts/validate_protocol_root_protocol_instance_responsibility.py",
+          "scripts/validate_protocol_root_shared_primitive_adoption.py",
           "scripts/validate_protocol_root_stream_design_admissibility.py",
           "scripts/validate_protocol_root_success_path_state_admissibility.py",
           "scripts/validate_protocol_root_truth_lifecycle.py",
@@ -2249,6 +2403,8 @@
         "governance_row_family_count": 3,
         "governance_row_coverage_status": "PASS_REQUIRED",
         "governance_row_identity_projection_status": "PASS_REQUIRED",
+        "root_doc_anchor_check_count": 4,
+        "root_doc_anchor_status": "PASS_REQUIRED",
         "row_family_projection_rows": [
           {
             "family_id": "registered_top_level_entries",
@@ -2374,6 +2530,7 @@
         "file_violations": [],
         "directory_violations": [],
         "forbidden_content_hits": [],
+        "root_doc_anchor_violations": [],
         "stale_reasons": []
       }
     },
@@ -2424,6 +2581,8 @@
         "ordering_row_family_count": 4,
         "ordering_row_coverage_status": "PASS_REQUIRED",
         "ordering_row_identity_projection_status": "PASS_REQUIRED",
+        "root_doc_anchor_check_count": 4,
+        "root_doc_anchor_status": "PASS_REQUIRED",
         "row_family_projection_rows": [
           {
             "family_id": "source_order",
@@ -2862,6 +3021,8 @@
         "authority_row_family_count": 2,
         "authority_row_coverage_status": "PASS_REQUIRED",
         "authority_row_identity_projection_status": "PASS_REQUIRED",
+        "root_doc_anchor_check_count": 18,
+        "root_doc_anchor_status": "PASS_REQUIRED",
         "row_family_projection_rows": [
           {
             "family_id": "authority_class_profiles",
@@ -3189,6 +3350,8 @@
         "constitutional_spine_row_family_count": 2,
         "constitutional_spine_row_coverage_status": "PASS_REQUIRED",
         "constitutional_spine_row_identity_projection_status": "PASS_REQUIRED",
+        "root_doc_anchor_check_count": 4,
+        "root_doc_anchor_status": "PASS_REQUIRED",
         "constitutional_entry_row_coverage_status": "PASS_REQUIRED",
         "constitutional_entry_row_identity_projection_status": "PASS_REQUIRED",
         "spine_bridge_row_coverage_status": "PASS_REQUIRED",
@@ -3257,6 +3420,7 @@
         "structure_violations": [],
         "projection_violations": [],
         "bridge_violations": [],
+        "root_doc_anchor_violations": [],
         "stale_reasons": [],
         "error_code": ""
       }
@@ -3287,11 +3451,11 @@
         "question_routing_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.current.yaml",
         "question_routing_active_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/root-corpus-question-routing.v1.yaml",
         "root_dir": "identity/protocol",
-        "derivation_anchor_check_count": 4,
-        "derivation_class_profile_count": 8,
         "derivation_row_family_count": 1,
         "derivation_row_coverage_status": "PASS_REQUIRED",
         "derivation_row_identity_projection_status": "PASS_REQUIRED",
+        "root_doc_anchor_check_count": 4,
+        "root_doc_anchor_status": "PASS_REQUIRED",
         "row_family_projection_rows": [
           {
             "family_id": "derivation_class_profiles",
@@ -3456,6 +3620,8 @@
         "transition_row_family_count": 3,
         "transition_row_coverage_status": "PASS_REQUIRED",
         "transition_row_identity_projection_status": "PASS_REQUIRED",
+        "root_doc_anchor_check_count": 4,
+        "root_doc_anchor_status": "PASS_REQUIRED",
         "row_family_projection_rows": [
           {
             "family_id": "surface_class_profiles",
@@ -4118,6 +4284,8 @@
         "gateway_admissibility_row_family_count": 3,
         "gateway_admissibility_row_coverage_status": "PASS_REQUIRED",
         "gateway_admissibility_row_identity_projection_status": "PASS_REQUIRED",
+        "root_doc_anchor_check_count": 4,
+        "root_doc_anchor_status": "PASS_REQUIRED",
         "row_family_projection_rows": [
           {
             "family_id": "gateway_order",
@@ -4413,6 +4581,14 @@
           "status_key": "validator_status_key",
           "error_codes": "validator_error_code_list"
         },
+        "required_validator_surface_contract_fields": [
+          "validator_root_doc_anchor_contract",
+          "validator_row_projection_contract"
+        ],
+        "required_validator_surface_contract_values": {
+          "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+          "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
+        },
         "repo_rel_path_scope_policy": "repo_root_relative_only",
         "repo_rel_path_escape_policy": "fail_closed",
         "repo_rel_path_role_typing_policy": "root_protocol_surface_patterns_required",
@@ -4525,9 +4701,75 @@
         "missing_family_status_row_ids": [],
         "unexpected_family_status_row_ids": [],
         "family_status_row_identity_projection_status": "PASS_REQUIRED",
-        "machine_registry_completeness_row_family_count": 2,
+        "validator_surface_contract_row_count": 56,
+        "expected_family_validator_surface_contract_row_count": 56,
+        "validator_surface_contract_row_ids": [
+          "root-agent-handoff:validator_root_doc_anchor_contract",
+          "root-agent-handoff:validator_row_projection_contract",
+          "root-artifact-family-admissibility:validator_root_doc_anchor_contract",
+          "root-artifact-family-admissibility:validator_row_projection_contract",
+          "root-constitutional-spine:validator_root_doc_anchor_contract",
+          "root-constitutional-spine:validator_row_projection_contract",
+          "root-corpus-authority:validator_root_doc_anchor_contract",
+          "root-corpus-authority:validator_row_projection_contract",
+          "root-corpus-derivation:validator_root_doc_anchor_contract",
+          "root-corpus-derivation:validator_row_projection_contract",
+          "root-corpus-gateway-admissibility:validator_root_doc_anchor_contract",
+          "root-corpus-gateway-admissibility:validator_row_projection_contract",
+          "root-corpus-law-bundle:validator_root_doc_anchor_contract",
+          "root-corpus-law-bundle:validator_row_projection_contract",
+          "root-corpus-ordering:validator_root_doc_anchor_contract",
+          "root-corpus-ordering:validator_row_projection_contract",
+          "root-corpus-precedence:validator_root_doc_anchor_contract",
+          "root-corpus-precedence:validator_row_projection_contract",
+          "root-corpus-question-routing:validator_root_doc_anchor_contract",
+          "root-corpus-question-routing:validator_row_projection_contract",
+          "root-corpus-registry:validator_root_doc_anchor_contract",
+          "root-corpus-registry:validator_row_projection_contract",
+          "root-corpus-transition:validator_root_doc_anchor_contract",
+          "root-corpus-transition:validator_row_projection_contract",
+          "root-current-truth-epistemology:validator_root_doc_anchor_contract",
+          "root-current-truth-epistemology:validator_row_projection_contract",
+          "root-decision-evidence-admissibility:validator_root_doc_anchor_contract",
+          "root-decision-evidence-admissibility:validator_row_projection_contract",
+          "root-design-question-closure:validator_root_doc_anchor_contract",
+          "root-design-question-closure:validator_row_projection_contract",
+          "root-entry-surface-legitimacy:validator_root_doc_anchor_contract",
+          "root-entry-surface-legitimacy:validator_row_projection_contract",
+          "root-error-terminality:validator_root_doc_anchor_contract",
+          "root-error-terminality:validator_row_projection_contract",
+          "root-identity-discovery:validator_root_doc_anchor_contract",
+          "root-identity-discovery:validator_row_projection_contract",
+          "root-identity-instance-self-judgement:validator_root_doc_anchor_contract",
+          "root-identity-instance-self-judgement:validator_row_projection_contract",
+          "root-machine-law-primacy:validator_root_doc_anchor_contract",
+          "root-machine-law-primacy:validator_row_projection_contract",
+          "root-machine-registry-completeness:validator_root_doc_anchor_contract",
+          "root-machine-registry-completeness:validator_row_projection_contract",
+          "root-machine-world-ontology:validator_root_doc_anchor_contract",
+          "root-machine-world-ontology:validator_row_projection_contract",
+          "root-operator-answer-surface:validator_root_doc_anchor_contract",
+          "root-operator-answer-surface:validator_row_projection_contract",
+          "root-prompt-bootstrap:validator_root_doc_anchor_contract",
+          "root-prompt-bootstrap:validator_row_projection_contract",
+          "root-protocol-instance-responsibility:validator_root_doc_anchor_contract",
+          "root-protocol-instance-responsibility:validator_row_projection_contract",
+          "root-stream-design-admissibility:validator_root_doc_anchor_contract",
+          "root-stream-design-admissibility:validator_row_projection_contract",
+          "root-success-path-state-admissibility:validator_root_doc_anchor_contract",
+          "root-success-path-state-admissibility:validator_row_projection_contract",
+          "root-truth-lifecycle:validator_root_doc_anchor_contract",
+          "root-truth-lifecycle:validator_row_projection_contract"
+        ],
+        "missing_validator_surface_contract_row_ids": [],
+        "unexpected_validator_surface_contract_row_ids": [],
+        "validator_surface_contract_row_coverage_status": "PASS_REQUIRED",
+        "validator_surface_contract_row_identity_projection_status": "PASS_REQUIRED",
+        "machine_registry_completeness_row_family_count": 3,
         "machine_registry_completeness_row_coverage_status": "PASS_REQUIRED",
         "machine_registry_completeness_row_identity_projection_status": "PASS_REQUIRED",
+        "root_doc_anchor_check_count": 4,
+        "root_doc_anchor_status": "PASS_REQUIRED",
         "structure_violation_count": 0,
         "completeness_violation_count": 0,
         "anchor_violation_count": 0,
@@ -4704,6 +4946,132 @@
             "unexpected_ids": [],
             "coverage_status": "PASS_REQUIRED",
             "identity_projection_status": "PASS_REQUIRED"
+          },
+          {
+            "family_id": "family_validator_surface_contract_rows",
+            "member_id_key": "contract_row_id",
+            "expected_count": 56,
+            "actual_count": 56,
+            "expected_ids": [
+              "root-agent-handoff:validator_root_doc_anchor_contract",
+              "root-agent-handoff:validator_row_projection_contract",
+              "root-artifact-family-admissibility:validator_root_doc_anchor_contract",
+              "root-artifact-family-admissibility:validator_row_projection_contract",
+              "root-constitutional-spine:validator_root_doc_anchor_contract",
+              "root-constitutional-spine:validator_row_projection_contract",
+              "root-corpus-authority:validator_root_doc_anchor_contract",
+              "root-corpus-authority:validator_row_projection_contract",
+              "root-corpus-derivation:validator_root_doc_anchor_contract",
+              "root-corpus-derivation:validator_row_projection_contract",
+              "root-corpus-gateway-admissibility:validator_root_doc_anchor_contract",
+              "root-corpus-gateway-admissibility:validator_row_projection_contract",
+              "root-corpus-law-bundle:validator_root_doc_anchor_contract",
+              "root-corpus-law-bundle:validator_row_projection_contract",
+              "root-corpus-ordering:validator_root_doc_anchor_contract",
+              "root-corpus-ordering:validator_row_projection_contract",
+              "root-corpus-precedence:validator_root_doc_anchor_contract",
+              "root-corpus-precedence:validator_row_projection_contract",
+              "root-corpus-question-routing:validator_root_doc_anchor_contract",
+              "root-corpus-question-routing:validator_row_projection_contract",
+              "root-corpus-registry:validator_root_doc_anchor_contract",
+              "root-corpus-registry:validator_row_projection_contract",
+              "root-corpus-transition:validator_root_doc_anchor_contract",
+              "root-corpus-transition:validator_row_projection_contract",
+              "root-current-truth-epistemology:validator_root_doc_anchor_contract",
+              "root-current-truth-epistemology:validator_row_projection_contract",
+              "root-decision-evidence-admissibility:validator_root_doc_anchor_contract",
+              "root-decision-evidence-admissibility:validator_row_projection_contract",
+              "root-design-question-closure:validator_root_doc_anchor_contract",
+              "root-design-question-closure:validator_row_projection_contract",
+              "root-entry-surface-legitimacy:validator_root_doc_anchor_contract",
+              "root-entry-surface-legitimacy:validator_row_projection_contract",
+              "root-error-terminality:validator_root_doc_anchor_contract",
+              "root-error-terminality:validator_row_projection_contract",
+              "root-identity-discovery:validator_root_doc_anchor_contract",
+              "root-identity-discovery:validator_row_projection_contract",
+              "root-identity-instance-self-judgement:validator_root_doc_anchor_contract",
+              "root-identity-instance-self-judgement:validator_row_projection_contract",
+              "root-machine-law-primacy:validator_root_doc_anchor_contract",
+              "root-machine-law-primacy:validator_row_projection_contract",
+              "root-machine-registry-completeness:validator_root_doc_anchor_contract",
+              "root-machine-registry-completeness:validator_row_projection_contract",
+              "root-machine-world-ontology:validator_root_doc_anchor_contract",
+              "root-machine-world-ontology:validator_row_projection_contract",
+              "root-operator-answer-surface:validator_root_doc_anchor_contract",
+              "root-operator-answer-surface:validator_row_projection_contract",
+              "root-prompt-bootstrap:validator_root_doc_anchor_contract",
+              "root-prompt-bootstrap:validator_row_projection_contract",
+              "root-protocol-instance-responsibility:validator_root_doc_anchor_contract",
+              "root-protocol-instance-responsibility:validator_row_projection_contract",
+              "root-stream-design-admissibility:validator_root_doc_anchor_contract",
+              "root-stream-design-admissibility:validator_row_projection_contract",
+              "root-success-path-state-admissibility:validator_root_doc_anchor_contract",
+              "root-success-path-state-admissibility:validator_row_projection_contract",
+              "root-truth-lifecycle:validator_root_doc_anchor_contract",
+              "root-truth-lifecycle:validator_row_projection_contract"
+            ],
+            "actual_ids": [
+              "root-agent-handoff:validator_root_doc_anchor_contract",
+              "root-agent-handoff:validator_row_projection_contract",
+              "root-artifact-family-admissibility:validator_root_doc_anchor_contract",
+              "root-artifact-family-admissibility:validator_row_projection_contract",
+              "root-constitutional-spine:validator_root_doc_anchor_contract",
+              "root-constitutional-spine:validator_row_projection_contract",
+              "root-corpus-authority:validator_root_doc_anchor_contract",
+              "root-corpus-authority:validator_row_projection_contract",
+              "root-corpus-derivation:validator_root_doc_anchor_contract",
+              "root-corpus-derivation:validator_row_projection_contract",
+              "root-corpus-gateway-admissibility:validator_root_doc_anchor_contract",
+              "root-corpus-gateway-admissibility:validator_row_projection_contract",
+              "root-corpus-law-bundle:validator_root_doc_anchor_contract",
+              "root-corpus-law-bundle:validator_row_projection_contract",
+              "root-corpus-ordering:validator_root_doc_anchor_contract",
+              "root-corpus-ordering:validator_row_projection_contract",
+              "root-corpus-precedence:validator_root_doc_anchor_contract",
+              "root-corpus-precedence:validator_row_projection_contract",
+              "root-corpus-question-routing:validator_root_doc_anchor_contract",
+              "root-corpus-question-routing:validator_row_projection_contract",
+              "root-corpus-registry:validator_root_doc_anchor_contract",
+              "root-corpus-registry:validator_row_projection_contract",
+              "root-corpus-transition:validator_root_doc_anchor_contract",
+              "root-corpus-transition:validator_row_projection_contract",
+              "root-current-truth-epistemology:validator_root_doc_anchor_contract",
+              "root-current-truth-epistemology:validator_row_projection_contract",
+              "root-decision-evidence-admissibility:validator_root_doc_anchor_contract",
+              "root-decision-evidence-admissibility:validator_row_projection_contract",
+              "root-design-question-closure:validator_root_doc_anchor_contract",
+              "root-design-question-closure:validator_row_projection_contract",
+              "root-entry-surface-legitimacy:validator_root_doc_anchor_contract",
+              "root-entry-surface-legitimacy:validator_row_projection_contract",
+              "root-error-terminality:validator_root_doc_anchor_contract",
+              "root-error-terminality:validator_row_projection_contract",
+              "root-identity-discovery:validator_root_doc_anchor_contract",
+              "root-identity-discovery:validator_row_projection_contract",
+              "root-identity-instance-self-judgement:validator_root_doc_anchor_contract",
+              "root-identity-instance-self-judgement:validator_row_projection_contract",
+              "root-machine-law-primacy:validator_root_doc_anchor_contract",
+              "root-machine-law-primacy:validator_row_projection_contract",
+              "root-machine-registry-completeness:validator_root_doc_anchor_contract",
+              "root-machine-registry-completeness:validator_row_projection_contract",
+              "root-machine-world-ontology:validator_root_doc_anchor_contract",
+              "root-machine-world-ontology:validator_row_projection_contract",
+              "root-operator-answer-surface:validator_root_doc_anchor_contract",
+              "root-operator-answer-surface:validator_row_projection_contract",
+              "root-prompt-bootstrap:validator_root_doc_anchor_contract",
+              "root-prompt-bootstrap:validator_row_projection_contract",
+              "root-protocol-instance-responsibility:validator_root_doc_anchor_contract",
+              "root-protocol-instance-responsibility:validator_row_projection_contract",
+              "root-stream-design-admissibility:validator_root_doc_anchor_contract",
+              "root-stream-design-admissibility:validator_row_projection_contract",
+              "root-success-path-state-admissibility:validator_root_doc_anchor_contract",
+              "root-success-path-state-admissibility:validator_row_projection_contract",
+              "root-truth-lifecycle:validator_root_doc_anchor_contract",
+              "root-truth-lifecycle:validator_row_projection_contract"
+            ],
+            "missing_ids": [],
+            "unexpected_ids": [],
+            "coverage_status": "PASS_REQUIRED",
+            "identity_projection_status": "PASS_REQUIRED"
           }
         ],
         "family_status_rows": [
@@ -4732,6 +5100,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -4795,6 +5171,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-agent-handoff:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-agent-handoff:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -4823,6 +5215,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -4886,6 +5286,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-artifact-family-admissibility:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-artifact-family-admissibility:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -4914,6 +5330,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -4977,6 +5401,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-constitutional-spine:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-constitutional-spine:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -5005,6 +5445,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -5068,6 +5516,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-corpus-authority:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-corpus-authority:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -5096,6 +5560,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -5159,6 +5631,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-corpus-derivation:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-corpus-derivation:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -5187,6 +5675,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -5250,6 +5746,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-corpus-gateway-admissibility:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-corpus-gateway-admissibility:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -5278,6 +5790,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -5341,6 +5861,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-corpus-law-bundle:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-corpus-law-bundle:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -5369,6 +5905,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -5432,6 +5976,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-corpus-ordering:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-corpus-ordering:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -5460,6 +6020,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -5523,6 +6091,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-corpus-precedence:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-corpus-precedence:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -5551,6 +6135,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -5614,6 +6206,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-corpus-question-routing:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-corpus-question-routing:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -5642,6 +6250,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -5705,6 +6321,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-corpus-registry:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-corpus-registry:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -5733,6 +6365,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -5796,6 +6436,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-corpus-transition:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-corpus-transition:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -5824,6 +6480,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -5887,6 +6551,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-current-truth-epistemology:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-current-truth-epistemology:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -5915,6 +6595,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -5978,6 +6666,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-decision-evidence-admissibility:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-decision-evidence-admissibility:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -6006,6 +6710,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -6069,6 +6781,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-design-question-closure:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-design-question-closure:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -6097,6 +6825,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -6160,6 +6896,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-entry-surface-legitimacy:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-entry-surface-legitimacy:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -6188,6 +6940,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -6251,6 +7011,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-error-terminality:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-error-terminality:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -6279,6 +7055,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -6342,6 +7126,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-identity-discovery:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-identity-discovery:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -6370,6 +7170,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -6433,6 +7241,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-identity-instance-self-judgement:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-identity-instance-self-judgement:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -6461,6 +7285,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -6524,6 +7356,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-machine-law-primacy:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-machine-law-primacy:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -6552,6 +7400,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -6615,6 +7471,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-machine-registry-completeness:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-machine-registry-completeness:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -6643,6 +7515,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -6706,6 +7586,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-machine-world-ontology:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-machine-world-ontology:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -6734,6 +7630,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -6797,6 +7701,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-operator-answer-surface:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-operator-answer-surface:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -6825,6 +7745,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -6888,6 +7816,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-prompt-bootstrap:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-prompt-bootstrap:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -6916,6 +7860,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -6979,6 +7931,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-protocol-instance-responsibility:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-protocol-instance-responsibility:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -7007,6 +7975,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -7070,6 +8046,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-stream-design-admissibility:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-stream-design-admissibility:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -7098,6 +8090,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -7161,6 +8161,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-success-path-state-admissibility:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-success-path-state-admissibility:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           },
@@ -7189,6 +8205,14 @@
               "common_script": "repo_rel_path",
               "status_key": "validator_status_key",
               "error_codes": "validator_error_code_list"
+            },
+            "required_validator_surface_contract_fields": [
+              "validator_root_doc_anchor_contract",
+              "validator_row_projection_contract"
+            ],
+            "required_validator_surface_contract_values": {
+              "validator_root_doc_anchor_contract": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+              "validator_row_projection_contract": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses"
             },
             "descriptor_field_rows": [
               {
@@ -7252,6 +8276,22 @@
                 "status": "PASS_REQUIRED"
               }
             ],
+            "validator_surface_contract_rows": [
+              {
+                "contract_row_id": "root-truth-lifecycle:validator_root_doc_anchor_contract",
+                "contract_field": "validator_root_doc_anchor_contract",
+                "value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "expected_value": "root_doc_anchor_status_pass_required_with_positive_anchor_check_count",
+                "status": "PASS_REQUIRED"
+              },
+              {
+                "contract_row_id": "root-truth-lifecycle:validator_row_projection_contract",
+                "contract_field": "validator_row_projection_contract",
+                "value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "expected_value": "nonempty_row_family_projection_rows_with_pass_required_coverage_and_identity_statuses",
+                "status": "PASS_REQUIRED"
+              }
+            ],
             "family_status": "PASS_REQUIRED",
             "family_violations": []
           }
@@ -7299,6 +8339,8 @@
         "precedence_row_family_count": 2,
         "precedence_row_coverage_status": "PASS_REQUIRED",
         "precedence_row_identity_projection_status": "PASS_REQUIRED",
+        "root_doc_anchor_check_count": 4,
+        "root_doc_anchor_status": "PASS_REQUIRED",
         "row_family_projection_rows": [
           {
             "family_id": "precedence_profiles",
@@ -7542,6 +8584,8 @@
         "question_routing_row_family_count": 3,
         "question_routing_row_coverage_status": "PASS_REQUIRED",
         "question_routing_row_identity_projection_status": "PASS_REQUIRED",
+        "root_doc_anchor_check_count": 18,
+        "root_doc_anchor_status": "PASS_REQUIRED",
         "row_family_projection_rows": [
           {
             "family_id": "question_class_profiles",
@@ -7918,6 +8962,64 @@
         "structure_violations": [],
         "routing_violations": [],
         "anchor_violations": [],
+        "stale_reasons": []
+      }
+    },
+    {
+      "name": "protocol_root_shared_primitive_adoption",
+      "command": [
+        "python3",
+        "scripts/validate_protocol_root_shared_primitive_adoption.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "payload": {
+        "protocol_root_shared_primitive_adoption_status": "PASS_REQUIRED",
+        "error_code": "",
+        "repo_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+        "root_validator_count": 29,
+        "scanned_validator_files": [
+          "scripts/validate_protocol_root_agent_handoff.py",
+          "scripts/validate_protocol_root_artifact_family_admissibility.py",
+          "scripts/validate_protocol_root_constitutional_spine.py",
+          "scripts/validate_protocol_root_corpus_authority.py",
+          "scripts/validate_protocol_root_corpus_derivation.py",
+          "scripts/validate_protocol_root_corpus_gateway_admissibility.py",
+          "scripts/validate_protocol_root_corpus_governance.py",
+          "scripts/validate_protocol_root_corpus_law_bundle.py",
+          "scripts/validate_protocol_root_corpus_ordering.py",
+          "scripts/validate_protocol_root_corpus_precedence.py",
+          "scripts/validate_protocol_root_corpus_question_routing.py",
+          "scripts/validate_protocol_root_corpus_transition.py",
+          "scripts/validate_protocol_root_current_truth_epistemology.py",
+          "scripts/validate_protocol_root_decision_evidence_admissibility.py",
+          "scripts/validate_protocol_root_design_question_closure.py",
+          "scripts/validate_protocol_root_entry_surface_legitimacy.py",
+          "scripts/validate_protocol_root_error_terminality.py",
+          "scripts/validate_protocol_root_identity_discovery.py",
+          "scripts/validate_protocol_root_identity_instance_self_judgement.py",
+          "scripts/validate_protocol_root_machine_law_primacy.py",
+          "scripts/validate_protocol_root_machine_registry_completeness.py",
+          "scripts/validate_protocol_root_machine_world_ontology.py",
+          "scripts/validate_protocol_root_operator_answer_surface.py",
+          "scripts/validate_protocol_root_prompt_bootstrap.py",
+          "scripts/validate_protocol_root_protocol_instance_responsibility.py",
+          "scripts/validate_protocol_root_shared_primitive_adoption.py",
+          "scripts/validate_protocol_root_stream_design_admissibility.py",
+          "scripts/validate_protocol_root_success_path_state_admissibility.py",
+          "scripts/validate_protocol_root_truth_lifecycle.py"
+        ],
+        "primitive_binding_violations": [],
+        "scan_errors": [],
+        "primitive_violation_count": 0,
+        "scan_error_count": 0,
+        "primitive_violation_file_count": 0,
+        "primitive_violation_reason_counts": {},
+        "primitive_class_violation_counts": {},
         "stale_reasons": []
       }
     },
@@ -8388,10 +9490,10 @@
     }
   ],
   "summary": {
-    "check_count": 29,
-    "fail_count": 0,
+    "check_count": 30,
+    "fail_count": 2,
     "warn_count": 0,
-    "pass_count": 29
+    "pass_count": 28
   },
   "surface_governance": {
     "runtime_summary_surface_governance_status": "PASS_REQUIRED",
@@ -8431,8 +9533,15 @@
     "operator_interpretation_rule": "Treat the control-plane status artifact as a bounded machine-generated control-plane snapshot derived from underlying validators and current mappings; it is suitable for visibility and sync checks, but must not be promoted into standalone semantic authority.",
     "operational_constraints": []
   },
-  "control_plane_status": "PASS_REQUIRED",
-  "promotion_ready": true,
-  "promotion_block_reasons": [],
-  "selected_check_names": []
+  "control_plane_status": "FAIL_REQUIRED",
+  "promotion_ready": false,
+  "promotion_block_reasons": [
+    "control_plane_budget:FAIL_REQUIRED",
+    "control_plane_budget_sync:FAIL_REQUIRED"
+  ],
+  "selected_check_names": [],
+  "status_file_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.current.yaml",
+  "status_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.v1.6.json",
+  "status_file_active_file": "identity/protocol/mappings/control-plane-status.v1.6.json",
+  "status_file_alias_error": ""
 }

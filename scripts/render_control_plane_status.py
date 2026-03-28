@@ -123,6 +123,11 @@ BASE_CHECKS: tuple[CheckSpec, ...] = (
         status_key="protocol_root_corpus_question_routing_status",
     ),
     CheckSpec(
+        name="protocol_root_shared_primitive_adoption",
+        command=("python3", "scripts/validate_protocol_root_shared_primitive_adoption.py", "--json-only"),
+        status_key="protocol_root_shared_primitive_adoption_status",
+    ),
+    CheckSpec(
         name="protocol_broadcast_doc_control",
         command=("python3", "scripts/validate_protocol_broadcast_doc_control.py", "--json-only"),
         status_key="protocol_broadcast_doc_control_status",
