@@ -31,6 +31,11 @@ release_cloud_evidence_projection_marker="$(
     "release_cloud_evidence_projection_common" \
     "RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_PROJECTION_MARKER"
 )"
+selected_check_scope_projection_marker="$(
+  resolve_python_module_expression \
+    "release_readiness_selected_check_scope_common" \
+    "RELEASE_READINESS_SELECTED_CHECK_SCOPE_ONE_LOOK_PROJECTION_MARKER"
+)"
 active_runtime_terminal_truth_class_marker="$(
   resolve_python_module_expression \
     "release_readiness_active_runtime_closure_projection_common" \
@@ -53,7 +58,7 @@ python3 "${REPO_ROOT}/scripts/probe_shadow_fixture_common.py" \
   --copy-file docs/release/identity-v1.6x-release-closure-summary.md \
   --json-only > /dev/null
 
-python3 - <<'PY' "${SHADOW_ROOT}/docs/release/identity-v1.6x-release-closure-summary.md" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${active_runtime_terminal_truth_class_marker}"
+python3 - <<'PY' "${SHADOW_ROOT}/docs/release/identity-v1.6x-release-closure-summary.md" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${selected_check_scope_projection_marker}" "${active_runtime_terminal_truth_class_marker}"
 from pathlib import Path
 import sys
 
@@ -62,7 +67,8 @@ repo_global_dynamic_one_look_marker = sys.argv[2]
 repo_global_projection_marker = sys.argv[3]
 active_runtime_projection_marker = sys.argv[4]
 release_cloud_evidence_projection_marker = sys.argv[5]
-active_runtime_terminal_truth_class_marker = sys.argv[6]
+selected_check_scope_projection_marker = sys.argv[6]
+active_runtime_terminal_truth_class_marker = sys.argv[7]
 text = path.read_text(encoding="utf-8")
 text = text.replace("`v1.6.21`", "`v1.6.20`")
 text = text.replace("fleet-scope closure matrix", "fleet matrix")
@@ -81,6 +87,10 @@ text = text.replace(
     "release_cloud_evidence_projection=one_look.release_plane_cloud_evidence_status",
 )
 text = text.replace(
+    selected_check_scope_projection_marker,
+    "release_readiness_selected_check_scope_projection=one_look.selected_check_scope_projection_status",
+)
+text = text.replace(
     active_runtime_projection_marker,
     "active_runtime_projection=one_look.identity_codex_launcher_status",
 )
@@ -97,7 +107,7 @@ if python3 "${REPO_ROOT}/scripts/validate_v16x_release_closure_summary.py" --rep
   exit 1
 fi
 
-python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${active_runtime_terminal_truth_class_marker}"
+python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${selected_check_scope_projection_marker}" "${active_runtime_terminal_truth_class_marker}"
 import json
 import sys
 from pathlib import Path
@@ -147,7 +157,10 @@ if expected_active_runtime_projection_reason not in reasons:
 expected_release_cloud_evidence_reason = f"summary_doc_missing_release_readiness_release_cloud_evidence_marker:{sys.argv[6]}"
 if expected_release_cloud_evidence_reason not in reasons:
     raise SystemExit("negative release-closure summary must detect release-cloud evidence projection drift")
-expected_active_runtime_detail_reason = f"summary_doc_missing_active_runtime_closure_projection_marker:{sys.argv[7]}"
+expected_selected_check_scope_reason = f"summary_doc_missing_release_readiness_selected_check_scope_marker:{sys.argv[7]}"
+if expected_selected_check_scope_reason not in reasons:
+    raise SystemExit("negative release-closure summary must detect selected-check scope one-look drift")
+expected_active_runtime_detail_reason = f"summary_doc_missing_active_runtime_closure_projection_marker:{sys.argv[8]}"
 if expected_active_runtime_detail_reason not in reasons:
     raise SystemExit("negative release-closure summary must detect active-runtime companion detail drift")
 PY

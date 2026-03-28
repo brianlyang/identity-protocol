@@ -10,6 +10,20 @@ STATUS_UNKNOWN = "UNKNOWN"
 
 SELECTED_CHECK_SCOPE_CLASS_TARGETED_SUBSET = "bounded_targeted_subset_exclusion"
 SELECTED_CHECK_SCOPE_REASON_TARGETED_SUBSET = "selected_check_out_of_scope_for_targeted_subset"
+RELEASE_READINESS_SELECTED_CHECK_SCOPE_ONE_LOOK_FIELDS: tuple[str, ...] = (
+    "selected_check_scope_projection_status",
+    "selected_check_scope_class",
+    "selected_check_scope_reason",
+    "selected_check_scope_excluded_summary_key_count",
+    "selected_check_scope_excluded_summary_keys",
+)
+RELEASE_READINESS_SELECTED_CHECK_SCOPE_ONE_LOOK_PROJECTION_MARKER = (
+    "release_readiness_selected_check_scope_projection="
+    + "|".join(
+        f"one_look.{field}"
+        for field in RELEASE_READINESS_SELECTED_CHECK_SCOPE_ONE_LOOK_FIELDS
+    )
+)
 
 RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS: tuple[str, ...] = (
     "targeted_subset_selected_check_scope="
@@ -17,6 +31,11 @@ RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS: tuple[str, ...] = (
     "selected_check_scope_class=bounded_targeted_subset_exclusion|"
     "selected_check_scope_reason=selected_check_out_of_scope_for_targeted_subset|"
     "selected_check_scope_excluded_summary_key_count",
+    RELEASE_READINESS_SELECTED_CHECK_SCOPE_ONE_LOOK_PROJECTION_MARKER,
+    *(
+        f"one_look.{field}"
+        for field in RELEASE_READINESS_SELECTED_CHECK_SCOPE_ONE_LOOK_FIELDS
+    ),
 )
 
 
@@ -47,11 +66,51 @@ def _default_keep_field_value(field_name: str) -> Any:
     return None
 
 
+def _safe_int(value: Any) -> int:
+    try:
+        return int(value)
+    except Exception:
+        return 0
+
+
 def selected_check_scope_projection_is_targeted_subset(summary: dict[str, Any]) -> bool:
     if not isinstance(summary, dict):
         return False
     selected_check_mode = _clean_str(summary.get("selected_check_mode")).lower()
     return selected_check_mode == "targeted_subset"
+
+
+def build_release_readiness_selected_check_scope_one_look_projection(
+    projection: dict[str, Any] | None,
+) -> dict[str, Any]:
+    source = projection if isinstance(projection, dict) else {}
+    return {
+        "selected_check_scope_projection_status": _clean_str(
+            source.get("status")
+        ).upper()
+        or STATUS_UNKNOWN,
+        "selected_check_scope_class": _clean_str(source.get("scope_class")),
+        "selected_check_scope_reason": _clean_str(source.get("scope_reason")),
+        "selected_check_scope_excluded_summary_key_count": _safe_int(
+            source.get("excluded_summary_key_count")
+        ),
+        "selected_check_scope_excluded_summary_keys": _clean_list(
+            source.get("excluded_summary_keys")
+        ),
+    }
+
+
+def apply_release_readiness_selected_check_scope_one_look(
+    summary: dict[str, Any],
+    one_look: dict[str, Any],
+) -> None:
+    if not isinstance(one_look, dict):
+        return
+    summary_payload = summary if isinstance(summary, dict) else {}
+    projection = summary_payload.get("selected_check_scope_projection") or {}
+    one_look.update(
+        build_release_readiness_selected_check_scope_one_look_projection(projection)
+    )
 
 
 def build_scope_excluded_selected_check_summary(

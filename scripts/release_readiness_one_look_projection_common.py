@@ -21,6 +21,9 @@ from release_readiness_repo_global_closure_projection_common import (
 from release_readiness_required_gate_bundle_projection_common import (
     apply_release_readiness_required_gate_bundle_one_look,
 )
+from release_readiness_selected_check_scope_common import (
+    apply_release_readiness_selected_check_scope_one_look,
+)
 from terminal_truth_boundary_projection_common import (
     apply_release_readiness_terminal_truth_boundary_one_look,
 )
@@ -34,11 +37,6 @@ RELEASE_READINESS_ONE_LOOK_CORE_FIELDS: tuple[str, ...] = (
     "failed_required_contracts",
     "failed_optional_contract_count",
     "failed_optional_contracts",
-    "selected_check_scope_projection_status",
-    "selected_check_scope_class",
-    "selected_check_scope_reason",
-    "selected_check_scope_excluded_summary_key_count",
-    "selected_check_scope_excluded_summary_keys",
     "required_gate_recurrence_status",
     "required_gate_tuple_parity_status",
     "control_plane_budget_status",
@@ -77,7 +75,6 @@ def _safe_int(value: Any) -> int:
 def build_release_readiness_one_look_core_projection(summary: dict[str, Any]) -> dict[str, Any]:
     summary_payload = summary if isinstance(summary, dict) else {}
     coverage = summary_payload.get("required_contract_coverage") or {}
-    selected_check_scope_projection = summary_payload.get("selected_check_scope_projection") or {}
     recurrence = summary_payload.get("required_gate_recurrence") or {}
     tuple_parity = summary_payload.get("required_gate_tuple_parity") or {}
     control_plane_budget = summary_payload.get("control_plane_budget") or {}
@@ -96,18 +93,6 @@ def build_release_readiness_one_look_core_projection(summary: dict[str, Any]) ->
         "failed_required_contracts": _clean_list(coverage.get("failed_required_contracts")),
         "failed_optional_contract_count": _safe_int(coverage.get("failed_optional_contract_count")),
         "failed_optional_contracts": _clean_list(coverage.get("failed_optional_contracts")),
-        "selected_check_scope_projection_status": _clean_str(
-            selected_check_scope_projection.get("status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "selected_check_scope_class": _clean_str(selected_check_scope_projection.get("scope_class")),
-        "selected_check_scope_reason": _clean_str(selected_check_scope_projection.get("scope_reason")),
-        "selected_check_scope_excluded_summary_key_count": _safe_int(
-            selected_check_scope_projection.get("excluded_summary_key_count")
-        ),
-        "selected_check_scope_excluded_summary_keys": _clean_list(
-            selected_check_scope_projection.get("excluded_summary_keys")
-        ),
         "required_gate_recurrence_status": _clean_str(recurrence.get("status")).upper() or STATUS_UNKNOWN,
         "required_gate_tuple_parity_status": _clean_str(tuple_parity.get("status")).upper() or STATUS_UNKNOWN,
         "control_plane_budget_status": _clean_str(control_plane_budget.get("status")).upper() or STATUS_UNKNOWN,
@@ -146,6 +131,7 @@ def build_release_readiness_one_look_core_projection(summary: dict[str, Any]) ->
 
 def build_release_readiness_one_look_projection(summary: dict[str, Any]) -> dict[str, Any]:
     one_look = build_release_readiness_one_look_core_projection(summary)
+    apply_release_readiness_selected_check_scope_one_look(summary, one_look)
     apply_release_readiness_release_cloud_evidence_one_look(summary, one_look)
     apply_release_readiness_terminal_truth_boundary_one_look(summary, one_look)
     apply_release_readiness_health_report_experience_writeback_one_look(summary, one_look)

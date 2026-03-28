@@ -30,6 +30,9 @@ from release_readiness_governance_probe_projection_common import (
 from release_readiness_one_look_projection_common import (
     build_release_readiness_one_look_projection,
 )
+from release_readiness_selected_check_scope_common import (
+    build_release_readiness_selected_check_scope_one_look_projection,
+)
 from release_readiness_repo_global_closure_projection_common import (
     RELEASE_READINESS_REPO_GLOBAL_ACTIVE_RUNTIME_SUMMARY_KEYS,
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
@@ -148,6 +151,11 @@ expected_targeted_subset_one_look = build_release_readiness_one_look_projection(
     summary_targeted_subset_excluded
 )
 assert summary_targeted_subset_excluded['one_look'] == expected_targeted_subset_one_look, summary_targeted_subset_excluded
+expected_selected_check_scope_one_look = build_release_readiness_selected_check_scope_one_look_projection(
+    summary_targeted_subset_excluded['selected_check_scope_projection']
+)
+for field_name, expected_value in expected_selected_check_scope_one_look.items():
+    assert summary_targeted_subset_excluded['one_look'][field_name] == expected_value, summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['selected_check_scope_projection_status'] == 'PASS_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['release_cloud_evidence_adapter_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['identity_experience_writeback_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded

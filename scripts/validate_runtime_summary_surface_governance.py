@@ -94,6 +94,7 @@ SCRIPT_BINDINGS: tuple[ScriptBindingSpec, ...] = (
         surface_id="release_readiness_summary",
         required_tokens=(
             "build_release_readiness_one_look_core_projection(",
+            "apply_release_readiness_selected_check_scope_one_look(",
             "apply_release_readiness_release_cloud_evidence_one_look(",
             "apply_release_readiness_terminal_truth_boundary_one_look(",
             "apply_release_readiness_health_report_experience_writeback_one_look(",

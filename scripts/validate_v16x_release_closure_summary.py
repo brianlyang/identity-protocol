@@ -42,6 +42,9 @@ from release_readiness_repo_global_closure_projection_common import (
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OUTER_SURFACE_E2E_MARKERS,
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER,
 )
+from release_readiness_selected_check_scope_common import (
+    RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
+)
 from release_readiness_runtime_closure_convergence_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CONVERGENCE_MARKERS,
     RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS,
@@ -73,6 +76,9 @@ REQUIRED_RELEASE_READINESS_HEALTH_PROJECTION_MARKERS = (
 )
 REQUIRED_RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_MARKERS = (
     *RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_SURFACE_CONSTRAINTS,
+)
+REQUIRED_RELEASE_READINESS_SELECTED_CHECK_SCOPE_MARKERS = (
+    *RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
 )
 REQUIRED_FULL_SCAN_REQUIRED_GATE_PROJECTION_MARKERS = (
     "scripts/ci/run_full_scan_required_gate_projection_probes_ci.sh",
@@ -198,6 +204,11 @@ def main() -> int:
         if marker not in summary_text:
             stale_reasons.append(
                 f"summary_doc_missing_release_readiness_release_cloud_evidence_marker:{marker}"
+            )
+    for marker in REQUIRED_RELEASE_READINESS_SELECTED_CHECK_SCOPE_MARKERS:
+        if marker not in summary_text:
+            stale_reasons.append(
+                f"summary_doc_missing_release_readiness_selected_check_scope_marker:{marker}"
             )
     for marker in REQUIRED_FULL_SCAN_REQUIRED_GATE_PROJECTION_MARKERS:
         if marker not in summary_text:
