@@ -12,6 +12,7 @@ ROOT_VALIDATOR_GLOB = "scripts/validate_protocol_root_*.py"
 ROOT_PROBE_GLOB = "scripts/ci/run_protocol_root_*_probes_ci.sh"
 ROOT_PROBE_SHADOW_COMMON = "protocol_root_probe_shadow_common.sh"
 LEGACY_PROBE_MIRROR_COMMON = "probe_repo_mirror_common.sh"
+ROOT_PROBE_SHADOW_COMMON_RELPATH = f"scripts/ci/{ROOT_PROBE_SHADOW_COMMON}"
 
 
 @dataclass(frozen=True)
@@ -72,6 +73,10 @@ def root_validator_paths(repo_root: Path) -> tuple[Path, ...]:
 
 def root_probe_paths(repo_root: Path) -> tuple[Path, ...]:
     return tuple(sorted((repo_root / "scripts" / "ci").glob("run_protocol_root_*_probes_ci.sh")))
+
+
+def root_probe_shadow_common_path(repo_root: Path) -> Path:
+    return repo_root / ROOT_PROBE_SHADOW_COMMON_RELPATH
 
 
 def _rel_path(repo_root: Path, path: Path) -> str:
@@ -411,6 +416,131 @@ _PROBE_RELPATH_MIRROR_RE = re.compile(
     re.MULTILINE,
 )
 
+_ROOT_PROBE_SHADOW_FUNCTION_BODY_TEMPLATE = r"^\s*{name}\(\)\s*\{{(?P<body>.*?)^\}}"
+
+
+def _extract_shell_function_body(text: str, function_name: str) -> str:
+    match = re.search(
+        _ROOT_PROBE_SHADOW_FUNCTION_BODY_TEMPLATE.format(name=re.escape(function_name)),
+        text,
+        re.MULTILINE | re.DOTALL,
+    )
+    if match is None:
+        return ""
+    return str(match.group("body") or "")
+
+
+def _scan_root_probe_shadow_common_contract(
+    repo_root: Path,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    rel_path = ROOT_PROBE_SHADOW_COMMON_RELPATH
+    path = root_probe_shadow_common_path(repo_root)
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        rows = [
+            {
+                "rel_path": rel_path,
+                "contract_id": contract_id,
+                "status": "FAIL_REQUIRED",
+                "reason": "root_probe_shadow_common_missing",
+            }
+            for contract_id in (
+                "bootstrap_function_defined",
+                "bootstrap_legacy_mirror_source_binding",
+                "full_mirror_function_defined",
+                "full_mirror_probe_repo_binding",
+                "relpath_mirror_function_defined",
+                "relpath_mirror_probe_repo_binding",
+            )
+        ]
+        violations = [
+            {
+                "rel_path": rel_path,
+                "reason": "root_probe_shadow_common_missing",
+            }
+        ]
+        return violations, [], rows
+    except Exception as exc:
+        return [], [{"rel_path": rel_path, "reason": "read_failed", "detail": str(exc)}], []
+
+    contracts = (
+        (
+            "protocol_root_probe_bootstrap",
+            "bootstrap_function_defined",
+            "",
+            "function_defined",
+        ),
+        (
+            "protocol_root_probe_bootstrap",
+            "bootstrap_legacy_mirror_source_binding",
+            'source "${script_dir}/probe_repo_mirror_common.sh"',
+            "binding_required",
+        ),
+        (
+            "protocol_root_probe_define_full_mirror",
+            "full_mirror_function_defined",
+            "",
+            "function_defined",
+        ),
+        (
+            "protocol_root_probe_define_full_mirror",
+            "full_mirror_probe_repo_binding",
+            'probe_mirror_repo "${ROOT}" "${dst}"',
+            "binding_required",
+        ),
+        (
+            "protocol_root_probe_define_relpath_mirror",
+            "relpath_mirror_function_defined",
+            "",
+            "function_defined",
+        ),
+        (
+            "protocol_root_probe_define_relpath_mirror",
+            "relpath_mirror_probe_repo_binding",
+            'probe_mirror_repo_with_relpaths "${ROOT}" "${dst}" "${PROTOCOL_ROOT_PROBE_REL_PATHS[@]}"',
+            "binding_required",
+        ),
+    )
+
+    violations: list[dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
+    cached_bodies: dict[str, str] = {}
+    for function_name, contract_id, required_literal, contract_mode in contracts:
+        body = cached_bodies.get(function_name)
+        if body is None:
+            body = _extract_shell_function_body(text, function_name)
+            cached_bodies[function_name] = body
+
+        row: dict[str, Any] = {
+            "rel_path": rel_path,
+            "function_name": function_name,
+            "contract_id": contract_id,
+            "contract_mode": contract_mode,
+            "required_literal": required_literal,
+            "status": "PASS_REQUIRED",
+            "reason": "",
+        }
+        if not body:
+            row["status"] = "FAIL_REQUIRED"
+            row["reason"] = "root_probe_shadow_common_function_missing"
+        elif required_literal and required_literal not in body:
+            row["status"] = "FAIL_REQUIRED"
+            row["reason"] = "root_probe_shadow_common_binding_missing"
+
+        if row["status"] != "PASS_REQUIRED":
+            violations.append(
+                {
+                    "rel_path": rel_path,
+                    "function_name": function_name,
+                    "contract_id": contract_id,
+                    "reason": row["reason"],
+                }
+            )
+        rows.append(row)
+
+    return violations, [], rows
+
 
 def _scan_root_probe_file(
     repo_root: Path,
@@ -512,6 +642,11 @@ def scan_root_validator_shared_primitive_adoption(repo_root: Path) -> dict[str, 
     root_probe_shadow_violation_rows: list[dict[str, Any]] = []
     root_probe_scan_errors: list[dict[str, Any]] = []
     root_probe_shadow_adoption_rows: list[dict[str, Any]] = []
+    (
+        root_probe_shadow_common_violation_rows,
+        root_probe_shadow_common_scan_errors,
+        root_probe_shadow_common_contract_rows,
+    ) = _scan_root_probe_shadow_common_contract(repo_root)
     for path in validator_paths:
         (
             file_violations,
@@ -554,6 +689,13 @@ def scan_root_validator_shared_primitive_adoption(repo_root: Path) -> dict[str, 
         reason = str(row.get("reason") or "").strip() or "unknown"
         root_probe_shadow_reason_counts[reason] = (
             root_probe_shadow_reason_counts.get(reason, 0) + 1
+        )
+
+    root_probe_shadow_common_reason_counts: dict[str, int] = {}
+    for row in root_probe_shadow_common_violation_rows:
+        reason = str(row.get("reason") or "").strip() or "unknown"
+        root_probe_shadow_common_reason_counts[reason] = (
+            root_probe_shadow_common_reason_counts.get(reason, 0) + 1
         )
 
     row_family_projection_assignment_violation_rows = [
@@ -614,4 +756,28 @@ def scan_root_validator_shared_primitive_adoption(repo_root: Path) -> dict[str, 
         "root_probe_shadow_violation_reason_counts": root_probe_shadow_reason_counts,
         "root_probe_scan_errors": root_probe_scan_errors,
         "root_probe_scan_error_count": len(root_probe_scan_errors),
+        "root_probe_shadow_common_rel_path": ROOT_PROBE_SHADOW_COMMON_RELPATH,
+        "root_probe_shadow_common_contract_rows": root_probe_shadow_common_contract_rows,
+        "root_probe_shadow_common_contract_row_count": len(
+            root_probe_shadow_common_contract_rows
+        ),
+        "root_probe_shadow_common_violation_rows": (
+            root_probe_shadow_common_violation_rows
+        ),
+        "root_probe_shadow_common_violation_count": len(
+            root_probe_shadow_common_violation_rows
+        ),
+        "root_probe_shadow_common_violation_reason_counts": (
+            root_probe_shadow_common_reason_counts
+        ),
+        "root_probe_shadow_common_scan_errors": root_probe_shadow_common_scan_errors,
+        "root_probe_shadow_common_scan_error_count": len(
+            root_probe_shadow_common_scan_errors
+        ),
+        "root_probe_shadow_common_contract_status": (
+            "PASS_REQUIRED"
+            if not root_probe_shadow_common_violation_rows
+            and not root_probe_shadow_common_scan_errors
+            else "FAIL_REQUIRED"
+        ),
     }

@@ -54,6 +54,12 @@ def main() -> int:
         rel_path = str(row.get("rel_path") or "").strip()
         reason = str(row.get("reason") or "").strip() or "unknown"
         payload["stale_reasons"].append(f"root_probe_scan_error:{rel_path}:{reason}")
+    for row in payload.get("root_probe_shadow_common_scan_errors") or []:
+        rel_path = str(row.get("rel_path") or "").strip()
+        reason = str(row.get("reason") or "").strip() or "unknown"
+        payload["stale_reasons"].append(
+            f"root_probe_shadow_common_scan_error:{rel_path}:{reason}"
+        )
     for row in payload.get("primitive_binding_violations") or []:
         rel_path = str(row.get("rel_path") or "").strip()
         primitive_name = str(row.get("primitive_name") or "").strip()
@@ -66,6 +72,13 @@ def main() -> int:
         reason = str(row.get("reason") or "").strip() or "unknown"
         payload["stale_reasons"].append(
             f"root_probe_shadow_violation:{rel_path}:{reason}"
+        )
+    for row in payload.get("root_probe_shadow_common_violation_rows") or []:
+        rel_path = str(row.get("rel_path") or "").strip()
+        contract_id = str(row.get("contract_id") or "").strip()
+        reason = str(row.get("reason") or "").strip() or "unknown"
+        payload["stale_reasons"].append(
+            f"root_probe_shadow_common_violation:{rel_path}:{contract_id}:{reason}"
         )
     if int(payload.get("row_family_projection_assignment_violation_count", 0) or 0) > 0:
         violation_rows = payload.get("row_family_projection_assignment_violation_rows")
@@ -89,6 +102,7 @@ def main() -> int:
             ERR_BINDING
             if payload.get("primitive_binding_violations")
             or payload.get("root_probe_shadow_violation_rows")
+            or payload.get("root_probe_shadow_common_violation_rows")
             or int(payload.get("row_family_projection_assignment_violation_count", 0) or 0)
             > 0
             else ERR_SCAN

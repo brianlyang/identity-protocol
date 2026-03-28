@@ -44,6 +44,10 @@ assert payload["root_probe_count"] > 0, payload
 assert payload["root_probe_shadow_adoption_row_count"] == payload["root_probe_count"], payload
 assert payload["root_probe_shadow_violation_count"] == 0, payload
 assert payload["root_probe_scan_error_count"] == 0, payload
+assert payload["root_probe_shadow_common_contract_status"] == "PASS_REQUIRED", payload
+assert payload["root_probe_shadow_common_contract_row_count"] == 6, payload
+assert payload["root_probe_shadow_common_violation_count"] == 0, payload
+assert payload["root_probe_shadow_common_scan_error_count"] == 0, payload
 PY
 
 PROJECTION_DRIFT_REPO="${TMP_ROOT}/projection-drift-repo"
@@ -254,6 +258,45 @@ assert any(
     row["rel_path"] == "scripts/ci/run_protocol_root_identity_discovery_probes_ci.sh"
     and row["reason"] == "forbidden_manual_mirror_repo_definition"
     for row in payload["root_probe_shadow_violation_rows"]
+), payload
+PY
+
+SHADOW_COMMON_DRIFT_REPO="${TMP_ROOT}/probe-shadow-common-drift-repo"
+mirror_repo "${SHADOW_COMMON_DRIFT_REPO}"
+python3 - <<'PY' "${SHADOW_COMMON_DRIFT_REPO}/scripts/ci/protocol_root_probe_shadow_common.sh"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = 'probe_mirror_repo_with_relpaths "${ROOT}" "${dst}" "${PROTOCOL_ROOT_PROBE_REL_PATHS[@]}"'
+new = 'probe_mirror_relpaths_only "${ROOT}" "${dst}" "${PROTOCOL_ROOT_PROBE_REL_PATHS[@]}"'
+assert old in text, text[:5000]
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+SHADOW_COMMON_DRIFT_JSON="${TMP_ROOT}/probe-shadow-common-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_shared_primitive_adoption.py" \
+  --repo-root "${SHADOW_COMMON_DRIFT_REPO}" \
+  --json-only >"${SHADOW_COMMON_DRIFT_JSON}"; then
+  echo "[FAIL] root shared-primitive adoption validator unexpectedly passed probe shadow common contract drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SHADOW_COMMON_DRIFT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_shared_primitive_adoption_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RSPA-002", payload
+assert payload["root_probe_shadow_common_contract_status"] == "FAIL_REQUIRED", payload
+assert payload["root_probe_shadow_common_violation_count"] >= 1, payload
+assert any(
+    row["contract_id"] == "relpath_mirror_probe_repo_binding"
+    and row["reason"] == "root_probe_shadow_common_binding_missing"
+    for row in payload["root_probe_shadow_common_violation_rows"]
 ), payload
 PY
 
