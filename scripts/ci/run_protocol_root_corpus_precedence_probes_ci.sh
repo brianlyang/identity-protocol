@@ -38,13 +38,20 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_precedence_status"] == "PASS_REQUIRED", payload
 assert payload["root_doc_anchor_check_count"] == 4, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
-assert payload["precedence_row_family_count"] == 4, payload
+assert payload["precedence_row_family_count"] == 6, payload
 assert payload["precedence_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["precedence_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert all(row["identity_projection_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
 assert payload["conflict_handling_rule_count"] == 4, payload
 assert payload["conflict_handling_rule_surface"]["entry_count"] == 4, payload
+assert payload["conflict_precedence_completeness_row_count"] == 5, payload
+assert payload["conflict_precedence_completeness_rows"][0]["completeness_id"] == "explicit_conflict_precedence_row_families", payload
+assert payload["conflict_precedence_completeness_rows"][-1]["completeness_id"] == "fail_close_preserves_conflict_precedence_identity_projection", payload
+assert payload["conflict_precedence_completeness_surface"]["entry_count"] == 5, payload
+assert payload["conflict_precedence_completeness_surface"]["entries"][0]["contract_phrase"].startswith("required precedence-profile"), payload
+assert payload["conflict_precedence_completeness_surface"]["entries"][-1]["contract_phrase"].startswith("fail-close machine output must preserve"), payload
+assert payload["conflict_precedence_completeness_surface"]["extraction_violations"] == [], payload
 assert any(
     row["conflict_class"] == "current_turn_legality_conflict"
     and row["resolution_mode"] == "machine_enforcement_terminal"
@@ -52,12 +59,124 @@ assert any(
 ), payload
 assert any(row["family_id"] == "conflict_handling_rules" for row in payload["row_family_projection_rows"]), payload
 assert any(row["family_id"] == "conflict_handling_rule_surface" for row in payload["row_family_projection_rows"]), payload
+assert any(row["family_id"] == "conflict_precedence_completeness_rows" for row in payload["row_family_projection_rows"]), payload
+assert any(row["family_id"] == "conflict_precedence_completeness_surface" for row in payload["row_family_projection_rows"]), payload
 assert {row["gateway_class"]: row["preserved_question_class"] for row in payload["gateway_authorship_projection"]} == {
     "constitution": "frozen_protocol_law",
     "runtime_constitution": "frozen_runtime_law",
     "root_contract": "frozen_domain_contract_law",
     "machine_registry_directory": "registry_resolution",
 }, payload
+PY
+
+COMPLETENESS_REPO="${TMP_ROOT}/missing-completeness-row-repo"
+mirror_repo "${COMPLETENESS_REPO}"
+python3 - <<'PY' "${COMPLETENESS_REPO}/identity/protocol/mappings/root-corpus-precedence.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["conflict_precedence_completeness_rows"] = [
+    row for row in doc["conflict_precedence_completeness_rows"]
+    if row.get("completeness_id") != "hidden_conflict_precedence_identity_drift_forbidden"
+]
+for idx, row in enumerate(doc["conflict_precedence_completeness_rows"], start=1):
+    row["order"] = idx
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+COMPLETENESS_JSON="${TMP_ROOT}/missing-completeness-row.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_precedence.py" \
+  --repo-root "${COMPLETENESS_REPO}" \
+  --json-only >"${COMPLETENESS_JSON}"; then
+  echo "[FAIL] precedence validator unexpectedly passed after removing conflict-precedence completeness row"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_precedence_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCP-002", payload
+assert any(
+    row["field"] == "conflict_precedence_completeness_rows"
+    and row["reason"] == "missing_conflict_precedence_completeness_rows"
+    and "hidden_conflict_precedence_identity_drift_forbidden" in row.get("completeness_ids", [])
+    for row in payload["structure_violations"]
+), payload
+row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "conflict_precedence_completeness_rows"
+)
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "conflict_precedence_completeness_surface"
+)
+assert row["expected_count"] == 5, payload
+assert row["actual_count"] == 4, payload
+assert row["missing_ids"] == ["hidden_conflict_precedence_identity_drift_forbidden"], payload
+assert row["unexpected_ids"] == [], payload
+assert row["coverage_status"] == "FAIL_REQUIRED", payload
+assert row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+COMPLETENESS_SURFACE_REPO="${TMP_ROOT}/completeness-surface-drift-repo"
+mirror_repo "${COMPLETENESS_SURFACE_REPO}"
+python3 - <<'PY' "${COMPLETENESS_SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "1. required precedence-profile, gateway-authorship-projection, conflict-handling-rule, and conflict-handling-rule-surface rows must remain explicit as separate machine-readable row families;"
+new = "1. required precedence-profile, gateway-authorship-projection, conflict-handling-rule, and conflict-handling guidance rows must remain explicit as separate machine-readable row families;"
+assert old in text, text[:3000]
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+COMPLETENESS_SURFACE_JSON="${TMP_ROOT}/completeness-surface-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_precedence.py" \
+  --repo-root "${COMPLETENESS_SURFACE_REPO}" \
+  --json-only >"${COMPLETENESS_SURFACE_JSON}"; then
+  echo "[FAIL] precedence validator unexpectedly passed conflict-precedence completeness surface drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${COMPLETENESS_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_precedence_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCP-002", payload
+assert any(
+    row["field"] == "conflict_precedence_completeness_surface"
+    and row["reason"] == "missing_conflict_precedence_completeness_surface_rows"
+    and "required precedence-profile, gateway-authorship-projection, conflict-handling-rule, and conflict-handling-rule-surface rows must remain explicit as separate machine-readable row families;" in row.get("contract_phrases", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "conflict_precedence_completeness_surface"
+    and row["reason"] == "extra_conflict_precedence_completeness_surface_rows"
+    and "required precedence-profile, gateway-authorship-projection, conflict-handling-rule, and conflict-handling guidance rows must remain explicit as separate machine-readable row families;" in row.get("contract_phrases", [])
+    for row in payload["structure_violations"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "conflict_precedence_completeness_surface"
+)
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert "required precedence-profile, gateway-authorship-projection, conflict-handling-rule, and conflict-handling-rule-surface rows must remain explicit as separate machine-readable row families;" in surface_row["missing_ids"], payload
+assert "required precedence-profile, gateway-authorship-projection, conflict-handling-rule, and conflict-handling guidance rows must remain explicit as separate machine-readable row families;" in surface_row["unexpected_ids"], payload
 PY
 
 MISSING_PROFILE_REPO="${TMP_ROOT}/missing-profile-repo"

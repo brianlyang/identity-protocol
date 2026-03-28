@@ -169,11 +169,12 @@ implicit.
 
 ## Runtime conflict-precedence consumption boundary
 
-1. Runtime consumes conflict-precedence law as separate precedence-profile and gateway-authorship-projection row families rather than as undifferentiated precedence prose.
+1. Runtime consumes conflict-precedence law as separate precedence-profile, gateway-authorship-projection, conflict-handling-rule, and conflict-handling-rule-surface row families rather than as undifferentiated precedence prose.
 2. Runtime must keep expected row-family total and emitted row-family total congruent under machine-readable coverage completeness rather than relying on aggregate green shorthand.
-3. Runtime must also keep expected row identity set and emitted row identity set for each conflict-precedence family explicit rather than collapsing conflict-class or gateway identity drift into summary-only counts.
-4. Runtime must not finalize conflict-precedence legality while missing or unexpected conflict-class or gateway identities remain known only inside validator machinery.
+3. Runtime must also keep expected row identity set and emitted row identity set for each conflict-precedence family explicit rather than collapsing conflict-class, gateway, or conflict-handling-rule identity drift into summary-only counts.
+4. Runtime must not finalize conflict-precedence legality while missing or unexpected conflict-class, gateway, or conflict-handling-rule identities remain known only inside validator machinery.
 5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
+6. Runtime consumes README root conflict-precedence completeness discipline as a governed completeness projection bound to admitted conflict-precedence-completeness rows rather than as a freehand completeness summary.
 
 ## Runtime ordering consumption boundary
 

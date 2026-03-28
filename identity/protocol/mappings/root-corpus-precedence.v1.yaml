@@ -21,6 +21,16 @@ probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required
 precedence_anchor_checks:
 - rel_path: identity/protocol/README.md
   required_markers:
+  - '## Root conflict-precedence completeness discipline'
+  - These conflict-precedence-completeness rules must remain bound to canonical
+    conflict-precedence-completeness rows rather than drifting into soft summary
+    prose.
+  - required precedence-profile, gateway-authorship-projection, conflict-handling-rule,
+    and conflict-handling-rule-surface rows must remain explicit as separate machine-readable
+    row families;
+  - runtime or validator code must not finalize conflict-precedence legality while
+    missing or unexpected conflict-class, gateway, or conflict-handling-rule identities
+    remain known only internally;
   - '## Root conflict-precedence discipline'
   - '## Conflict-handling rule'
   - These conflict-handling rules must remain bound to canonical conflict-handling
@@ -34,6 +44,10 @@ precedence_anchor_checks:
     of the incoming motivating surface;
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
   required_markers:
+  - '### Conflict-precedence row-family completeness must stay explicit'
+  - README root conflict-precedence completeness discipline must therefore stay
+    congruent with admitted conflict-precedence-completeness rows rather than
+    becoming a freehand completeness summary.
   - '### Conflict precedence must preserve both origin and terminality'
   - semantic-origin conflict resolves by source order;
   - current-turn legality conflict resolves by machine-consumed terminal enforcement;
@@ -44,6 +58,10 @@ precedence_anchor_checks:
     local convenience advice.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
   required_markers:
+  - '## Root conflict-precedence completeness boundary'
+  - README root conflict-precedence completeness discipline rendered at protocol
+    root must remain congruent with admitted conflict-precedence-completeness
+    rows rather than silently authoring an alternate completeness summary.
   - '## Root conflict-precedence boundary'
   - 'Semantic-meaning conflict resolves by source-order law:'
   - Current-turn legality conflict resolves by machine-consumed enforcement terminals,
@@ -53,6 +71,10 @@ precedence_anchor_checks:
     motivating surface identity.
 - rel_path: identity/protocol/IDENTITY_RUNTIME.md
   required_markers:
+  - '## Runtime conflict-precedence consumption boundary'
+  - Runtime consumes README root conflict-precedence completeness discipline as
+    a governed completeness projection bound to admitted conflict-precedence-completeness
+    rows rather than as a freehand completeness summary.
   - '## Runtime conflict-precedence boundary'
   - Runtime current-turn legality still resolves at machine-consumed enforcement terminals
     rather than philosophy prose or frozen contract prose alone.
@@ -88,6 +110,22 @@ conflict_handling_rules:
 - order: 4
   rule_text: do use machine-consumed sources to determine current-turn truth,
     validation status, and active-runtime legality.
+conflict_precedence_completeness_rows:
+- order: 1
+  completeness_id: explicit_conflict_precedence_row_families
+  contract_phrase: required precedence-profile, gateway-authorship-projection, conflict-handling-rule, and conflict-handling-rule-surface rows must remain explicit as separate machine-readable row families;
+- order: 2
+  completeness_id: congruent_conflict_precedence_row_family_totals
+  contract_phrase: expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
+- order: 3
+  completeness_id: explicit_conflict_precedence_row_identity_sets
+  contract_phrase: expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
+- order: 4
+  completeness_id: hidden_conflict_precedence_identity_drift_forbidden
+  contract_phrase: runtime or validator code must not finalize conflict-precedence legality while missing or unexpected conflict-class, gateway, or conflict-handling-rule identities remain known only internally;
+- order: 5
+  completeness_id: fail_close_preserves_conflict_precedence_identity_projection
+  contract_phrase: fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
 precedence_profiles:
 - conflict_class: semantic_meaning_conflict
   conflict_scope: source_order_meaning

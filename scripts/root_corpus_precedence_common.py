@@ -16,6 +16,7 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ROOT_CORPUS_PRECEDENCE_CURRENT = "identity/protocol/mappings/root-corpus-precedence.current.yaml"
 ROOT_PROTOCOL_README_REL_PATH = "identity/protocol/README.md"
 CONFLICT_HANDLING_RULE_SECTION_MARKER = "## Conflict-handling rule"
+CONFLICT_PRECEDENCE_COMPLETENESS_SECTION_MARKER = "## Root conflict-precedence completeness discipline"
 ORDERED_ITEM_RE = re.compile(r"^\s*(\d+)\.\s+(.*\S)\s*$")
 HEADING_RE = re.compile(r"^##\s+")
 HORIZONTAL_RULE_RE = re.compile(r"^-{3,}$")
@@ -59,6 +60,26 @@ class ConflictHandlingRuleSurfaceRow:
 class ConflictHandlingRuleSurface:
     rel_path: str
     rows: tuple[ConflictHandlingRuleSurfaceRow, ...]
+    extraction_violations: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class ConflictPrecedenceCompletenessRow:
+    order: int
+    completeness_id: str
+    contract_phrase: str
+
+
+@dataclass(frozen=True)
+class ConflictPrecedenceCompletenessSurfaceRow:
+    order: int
+    contract_phrase: str
+
+
+@dataclass(frozen=True)
+class ConflictPrecedenceCompletenessSurface:
+    rel_path: str
+    rows: tuple[ConflictPrecedenceCompletenessSurfaceRow, ...]
     extraction_violations: tuple[str, ...]
 
 
@@ -174,6 +195,34 @@ def conflict_handling_rules_from_doc(precedence_doc: Mapping[str, Any]) -> tuple
     return tuple(out)
 
 
+def conflict_precedence_completeness_rows_from_doc(
+    precedence_doc: Mapping[str, Any],
+) -> tuple[ConflictPrecedenceCompletenessRow, ...]:
+    rows = precedence_doc.get("conflict_precedence_completeness_rows")
+    if not isinstance(rows, list):
+        return ()
+    out: list[ConflictPrecedenceCompletenessRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        completeness_id = _norm_str(row.get("completeness_id"))
+        contract_phrase = str(row.get("contract_phrase") or "").strip()
+        if order <= 0 or not completeness_id or not contract_phrase:
+            continue
+        out.append(
+            ConflictPrecedenceCompletenessRow(
+                order=order,
+                completeness_id=completeness_id,
+                contract_phrase=contract_phrase,
+            )
+        )
+    return tuple(out)
+
+
 def readme_conflict_handling_rule_surface(repo_root: Path) -> ConflictHandlingRuleSurface:
     path = (repo_root / ROOT_PROTOCOL_README_REL_PATH).resolve()
     if not path.exists() or not path.is_file():
@@ -213,6 +262,51 @@ def readme_conflict_handling_rule_surface(repo_root: Path) -> ConflictHandlingRu
         violations.append("rule_rows_missing")
 
     return ConflictHandlingRuleSurface(
+        rel_path=ROOT_PROTOCOL_README_REL_PATH,
+        rows=tuple(rows),
+        extraction_violations=tuple(violations),
+    )
+
+
+def readme_conflict_precedence_completeness_surface(repo_root: Path) -> ConflictPrecedenceCompletenessSurface:
+    path = (repo_root / ROOT_PROTOCOL_README_REL_PATH).resolve()
+    if not path.exists() or not path.is_file():
+        return ConflictPrecedenceCompletenessSurface(
+            rel_path=ROOT_PROTOCOL_README_REL_PATH,
+            rows=(),
+            extraction_violations=("target_missing",),
+        )
+
+    lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    section_found = False
+    rows: list[ConflictPrecedenceCompletenessSurfaceRow] = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == CONFLICT_PRECEDENCE_COMPLETENESS_SECTION_MARKER:
+            section_found = True
+            continue
+        if not section_found:
+            continue
+        if HEADING_RE.match(stripped) or HORIZONTAL_RULE_RE.match(stripped):
+            break
+        match = ORDERED_ITEM_RE.match(stripped)
+        if not match:
+            continue
+        rows.append(
+            ConflictPrecedenceCompletenessSurfaceRow(
+                order=int(match.group(1)),
+                contract_phrase=match.group(2).strip(),
+            )
+        )
+
+    violations: list[str] = []
+    if not section_found:
+        violations.append("section_marker_missing")
+    elif not rows:
+        violations.append("completeness_rows_missing")
+
+    return ConflictPrecedenceCompletenessSurface(
         rel_path=ROOT_PROTOCOL_README_REL_PATH,
         rows=tuple(rows),
         extraction_violations=tuple(violations),

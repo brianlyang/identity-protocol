@@ -1208,6 +1208,9 @@ rows behind aggregate counts.
 Required precedence-profile and gateway-authorship-projection families must
 remain explicit as separate machine-readable row families.
 
+Required conflict-handling-rule and conflict-handling-rule-surface families
+must also remain explicit rather than being left as README-only advisory prose.
+
 Expected row-family total and emitted row-family total must therefore stay
 congruent under machine-readable coverage completeness rather than being left
 implicit.
@@ -1217,12 +1220,16 @@ also remain machine-readable rather than being collapsed into aggregate counts
 or generic structure failure.
 
 The machine world must not finalize conflict-precedence legality while
-required conflict-class or gateway identity drift remains known only
-internally.
+required conflict-class, gateway, or conflict-handling-rule identity drift
+remains known only internally.
 
 Missing or unexpected row identity must remain projected in fail-close machine
 output rather than being hidden behind row-count shorthand or summary-only
 verdict text.
+
+README root conflict-precedence completeness discipline must therefore stay
+congruent with admitted conflict-precedence-completeness rows rather than
+becoming a freehand completeness summary.
 
 ### Ordering row-family completeness must stay explicit
 

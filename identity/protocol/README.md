@@ -501,11 +501,12 @@ Authority law is not a soft prose bundle.
 ## Root conflict-precedence completeness discipline
 
 Conflict-precedence law is not a soft prose bundle.
+These conflict-precedence-completeness rules must remain bound to canonical conflict-precedence-completeness rows rather than drifting into soft summary prose.
 
-1. required precedence-profile and gateway-authorship-projection rows must remain explicit as separate machine-readable row families;
+1. required precedence-profile, gateway-authorship-projection, conflict-handling-rule, and conflict-handling-rule-surface rows must remain explicit as separate machine-readable row families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
 3. expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;
-4. runtime or validator code must not finalize conflict-precedence legality while missing or unexpected conflict-class or gateway identities remain known only internally;
+4. runtime or validator code must not finalize conflict-precedence legality while missing or unexpected conflict-class, gateway, or conflict-handling-rule identities remain known only internally;
 5. fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.
 
 ---
