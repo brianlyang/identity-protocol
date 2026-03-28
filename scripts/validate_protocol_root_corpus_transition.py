@@ -8,6 +8,7 @@ from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
 from root_contract_anchor_checks_common import (
+    append_root_doc_anchor_registry_structure_violations,
     evaluate_root_doc_anchor_checks,
     validate_expected_root_doc_anchor_checks,
 )
@@ -291,7 +292,6 @@ def main() -> int:
     registry_class_law_bearing = {entry.corpus_class: entry.law_bearing for entry in registry_entries}
     registry_classes = sorted({entry.corpus_class for entry in registry_entries})
     derivation_upstream_map = {row.corpus_class: set(row.allowed_upstream_classes) for row in derivation_profiles}
-    anchor_rel_paths = [row.rel_path for row in anchor_checks]
     surface_profile_map = {row.surface_class: row for row in surface_profiles}
     expected_surface_classes = EXPECTED_SURFACE_CLASSES
     sorted_profiles = sorted(surface_profiles, key=lambda item: item.surface_class)
@@ -333,8 +333,12 @@ def main() -> int:
     if not stale_reasons:
         if len(surface_profile_map) != len(surface_profiles):
             structure_violations.append({"field": "surface_class_profiles", "reason": "duplicate_surface_class"})
-        if len(set(anchor_rel_paths)) != len(anchor_rel_paths):
-            structure_violations.append({"field": "transition_anchor_checks", "reason": "duplicate_rel_path"})
+        append_root_doc_anchor_registry_structure_violations(
+            structure_violations,
+            anchor_checks,
+            field_name="transition_anchor_checks",
+            registry_paths={entry.rel_path for entry in registry_entries},
+        )
 
         missing_surface_classes = sorted(set(expected_surface_classes) - set(surface_profile_map))
         extra_surface_classes = sorted(set(surface_profile_map) - set(expected_surface_classes))
@@ -345,13 +349,6 @@ def main() -> int:
         if extra_surface_classes:
             structure_violations.append(
                 {"field": "surface_class_profiles", "reason": "extra_surface_classes", "surface_classes": extra_surface_classes}
-            )
-
-        registry_paths = {entry.rel_path for entry in registry_entries}
-        missing_anchor_entries = sorted(set(anchor_rel_paths) - registry_paths)
-        if missing_anchor_entries:
-            structure_violations.append(
-                {"field": "transition_anchor_checks", "reason": "unregistered_anchor_entries", "rel_paths": missing_anchor_entries}
             )
 
         for row in surface_profiles:

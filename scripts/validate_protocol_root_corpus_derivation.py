@@ -7,6 +7,7 @@ from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
 from root_contract_anchor_checks_common import (
+    append_root_doc_anchor_registry_structure_violations,
     evaluate_root_doc_anchor_checks,
     validate_expected_root_doc_anchor_checks,
 )
@@ -253,13 +254,19 @@ def main() -> int:
     class_profile_map = {row.corpus_class: row for row in class_profiles}
     authority_profile_map = {row.corpus_class: row for row in authority_profiles}
     source_rank_by_class = {row.corpus_class: row.order for row in source_rows}
-    anchor_rel_paths = [row.rel_path for row in anchor_checks]
-
     if not stale_reasons:
         if len(class_profile_map) != len(class_profiles):
             structure_violations.append({"field": "derivation_class_profiles", "reason": "duplicate_corpus_class"})
-        if len(set(anchor_rel_paths)) != len(anchor_rel_paths):
-            structure_violations.append({"field": "derivation_anchor_checks", "reason": "duplicate_rel_path"})
+        append_root_doc_anchor_registry_structure_violations(
+            structure_violations,
+            anchor_checks,
+            field_name="derivation_anchor_checks",
+            registry_paths=registry_paths,
+            registry_entry_kind_map=registry_entry_kind_map,
+            registry_entry_law_bearing_map=registry_entry_law_bearing_map,
+            require_file_entry=True,
+            require_law_bearing=True,
+        )
 
         missing_class_profiles = sorted(set(registry_classes) - set(class_profile_map))
         extra_class_profiles = sorted(set(class_profile_map) - set(registry_classes))
@@ -271,33 +278,6 @@ def main() -> int:
             structure_violations.append(
                 {"field": "derivation_class_profiles", "reason": "extra_unregistered_classes", "corpus_classes": extra_class_profiles}
             )
-
-        missing_anchor_entries = sorted(set(anchor_rel_paths) - set(registry_paths))
-        if missing_anchor_entries:
-            structure_violations.append(
-                {"field": "derivation_anchor_checks", "reason": "unregistered_anchor_entries", "rel_paths": missing_anchor_entries}
-            )
-        for rel_path in anchor_rel_paths:
-            entry_kind = registry_entry_kind_map.get(rel_path)
-            if entry_kind is None:
-                continue
-            if entry_kind != "file":
-                structure_violations.append(
-                    {
-                        "field": "derivation_anchor_checks",
-                        "reason": "anchor_must_target_file_entry",
-                        "rel_path": rel_path,
-                        "entry_kind": entry_kind,
-                    }
-                )
-            if not bool(registry_entry_law_bearing_map.get(rel_path, False)):
-                structure_violations.append(
-                    {
-                        "field": "derivation_anchor_checks",
-                        "reason": "anchor_must_target_law_bearing_entry",
-                        "rel_path": rel_path,
-                    }
-                )
 
         expected_forbidden_root_classes = sorted(set(registry_classes) - {EXPECTED_CURRENT_TURN_ALLOWED_CLASS})
         actual_forbidden_root_classes = sorted(set(adjudication_redirect.forbidden_root_corpus_classes))

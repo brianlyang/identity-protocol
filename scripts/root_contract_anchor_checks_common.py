@@ -51,6 +51,12 @@ def root_doc_anchor_check_marker_map(
     return {row.rel_path: tuple(row.required_markers) for row in anchor_checks}
 
 
+def root_doc_anchor_rel_paths(
+    anchor_checks: Iterable[RootDocAnchorCheck],
+) -> tuple[str, ...]:
+    return tuple(row.rel_path for row in anchor_checks)
+
+
 def validate_expected_root_doc_anchor_checks(
     anchor_checks: Iterable[RootDocAnchorCheck],
     expected_anchor_checks: Mapping[str, tuple[str, ...]],
@@ -97,6 +103,67 @@ def append_expected_root_doc_anchor_stale_reasons(
         return False
     stale_reasons.extend(reasons)
     return True
+
+
+def append_root_doc_anchor_registry_structure_violations(
+    structure_violations: list[dict[str, Any]],
+    anchor_checks: Iterable[RootDocAnchorCheck],
+    *,
+    field_name: str,
+    registry_paths: Iterable[str],
+    registry_entry_kind_map: Mapping[str, Any] | None = None,
+    registry_entry_law_bearing_map: Mapping[str, Any] | None = None,
+    duplicate_reason: str = "duplicate_rel_path",
+    unregistered_reason: str = "unregistered_anchor_entries",
+    require_file_entry: bool = False,
+    file_entry_reason: str = "anchor_must_target_file_entry",
+    require_law_bearing: bool = False,
+    law_bearing_reason: str = "anchor_must_target_law_bearing_entry",
+) -> tuple[str, ...]:
+    anchor_rel_paths = root_doc_anchor_rel_paths(anchor_checks)
+    registry_path_set = {_norm_str(rel_path) for rel_path in registry_paths if _norm_str(rel_path)}
+
+    if len(set(anchor_rel_paths)) != len(anchor_rel_paths):
+        structure_violations.append({"field": field_name, "reason": duplicate_reason})
+
+    missing_anchor_entries = sorted(set(anchor_rel_paths) - registry_path_set)
+    if missing_anchor_entries:
+        structure_violations.append(
+            {"field": field_name, "reason": unregistered_reason, "rel_paths": missing_anchor_entries}
+        )
+
+    if not require_file_entry and not require_law_bearing:
+        return anchor_rel_paths
+
+    kind_map = registry_entry_kind_map or {}
+    law_bearing_map = registry_entry_law_bearing_map or {}
+    for rel_path in anchor_rel_paths:
+        if require_file_entry:
+            entry_kind = kind_map.get(rel_path)
+            if entry_kind is None:
+                continue
+            if entry_kind != "file":
+                structure_violations.append(
+                    {
+                        "field": field_name,
+                        "reason": file_entry_reason,
+                        "rel_path": rel_path,
+                        "entry_kind": entry_kind,
+                    }
+                )
+        if require_law_bearing:
+            if rel_path not in law_bearing_map:
+                continue
+            if not bool(law_bearing_map.get(rel_path, False)):
+                structure_violations.append(
+                    {
+                        "field": field_name,
+                        "reason": law_bearing_reason,
+                        "rel_path": rel_path,
+                    }
+                )
+
+    return anchor_rel_paths
 
 
 def evaluate_root_doc_anchor_checks(

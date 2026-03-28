@@ -7,6 +7,7 @@ from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
 from root_contract_anchor_checks_common import (
+    append_root_doc_anchor_registry_structure_violations,
     evaluate_root_doc_anchor_checks,
     validate_expected_root_doc_anchor_checks,
 )
@@ -258,14 +259,12 @@ def main() -> int:
             structure_violations.append({"field": "precedence_profiles", "reason": "duplicate_conflict_class"})
         if len(gateway_authorship_projection_map) != len(gateway_authorship_projections):
             structure_violations.append({"field": "gateway_authorship_projection", "reason": "duplicate_gateway_class"})
-        anchor_rel_paths = [row.rel_path for row in anchor_checks]
-        if len(set(anchor_rel_paths)) != len(anchor_rel_paths):
-            structure_violations.append({"field": "precedence_anchor_checks", "reason": "duplicate_rel_path"})
-        missing_anchors = sorted(set(anchor_rel_paths) - registry_paths)
-        if missing_anchors:
-            structure_violations.append(
-                {"field": "precedence_anchor_checks", "reason": "unregistered_anchor_entries", "rel_paths": missing_anchors}
-            )
+        append_root_doc_anchor_registry_structure_violations(
+            structure_violations,
+            anchor_checks,
+            field_name="precedence_anchor_checks",
+            registry_paths=registry_paths,
+        )
         missing_profiles = sorted(set(EXPECTED_PROFILES) - set(profile_map))
         extra_profiles = sorted(set(profile_map) - set(EXPECTED_PROFILES))
         if missing_profiles:

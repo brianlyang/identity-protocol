@@ -7,6 +7,7 @@ from typing import Any
 
 from repo_root_resolution_common import resolve_repo_root
 from root_contract_anchor_checks_common import (
+    append_root_doc_anchor_registry_structure_violations,
     evaluate_root_doc_anchor_checks,
     validate_expected_root_doc_anchor_checks,
 )
@@ -339,7 +340,6 @@ def main() -> int:
     gateway_question_projection_map = {row.gateway_class: row for row in gateway_question_projections}
     gateway_effect_target_map = {row.gateway_class: row for row in gateway_effect_targets}
     authority_entry_map = {row.rel_path: row for row in authority_entry_projections}
-    anchor_rel_paths = [row.rel_path for row in anchor_checks]
     root_index_entry = str(ordering_doc.get("root_index_entry") or "").strip() if ordering_doc else ""
     reading_paths = [row.rel_path for row in sorted(reading_rows, key=lambda item: item.order)]
 
@@ -350,8 +350,16 @@ def main() -> int:
             structure_violations.append({"field": "entry_question_projection", "reason": "duplicate_rel_path"})
         if len(gateway_question_projection_map) != len(gateway_question_projections):
             structure_violations.append({"field": "gateway_question_projection", "reason": "duplicate_gateway_class"})
-        if len(set(anchor_rel_paths)) != len(anchor_rel_paths):
-            structure_violations.append({"field": "question_routing_anchor_checks", "reason": "duplicate_rel_path"})
+        append_root_doc_anchor_registry_structure_violations(
+            structure_violations,
+            anchor_checks,
+            field_name="question_routing_anchor_checks",
+            registry_paths=registry_paths,
+            registry_entry_kind_map=registry_entry_kind_map,
+            registry_entry_law_bearing_map=registry_entry_law_bearing_map,
+            require_file_entry=True,
+            require_law_bearing=True,
+        )
 
         missing_question_profiles = sorted(set(EXPECTED_QUESTION_RULES) - set(question_profile_map))
         extra_question_profiles = sorted(set(question_profile_map) - set(EXPECTED_QUESTION_RULES))
@@ -392,33 +400,6 @@ def main() -> int:
                     "gateway_classes": extra_gateway_question_projections,
                 }
             )
-
-        missing_anchor_entries = sorted(set(anchor_rel_paths) - set(registry_paths))
-        if missing_anchor_entries:
-            structure_violations.append(
-                {"field": "question_routing_anchor_checks", "reason": "unregistered_anchor_entries", "rel_paths": missing_anchor_entries}
-            )
-        for rel_path in anchor_rel_paths:
-            entry_kind = registry_entry_kind_map.get(rel_path)
-            if entry_kind is None:
-                continue
-            if entry_kind != "file":
-                structure_violations.append(
-                    {
-                        "field": "question_routing_anchor_checks",
-                        "reason": "anchor_must_target_file_entry",
-                        "rel_path": rel_path,
-                        "entry_kind": entry_kind,
-                    }
-                )
-            if not bool(registry_entry_law_bearing_map.get(rel_path, False)):
-                structure_violations.append(
-                    {
-                        "field": "question_routing_anchor_checks",
-                        "reason": "anchor_must_target_law_bearing_entry",
-                        "rel_path": rel_path,
-                    }
-                )
 
         for row in question_profiles:
             if row.answer_mode not in ALLOWED_ANSWER_MODES:
