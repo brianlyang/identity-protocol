@@ -48,6 +48,9 @@ from release_readiness_selected_check_scope_common import (
 from release_readiness_foundational_projection_common import (
     RELEASE_READINESS_FOUNDATIONAL_SURFACE_CONSTRAINTS,
 )
+from release_readiness_one_look_topology_common import (
+    RELEASE_READINESS_ONE_LOOK_TOPOLOGY_SURFACE_CONSTRAINTS,
+)
 from release_readiness_support_preflight_projection_common import (
     RELEASE_READINESS_SUPPORT_PREFLIGHT_SURFACE_CONSTRAINTS,
 )
@@ -88,6 +91,9 @@ REQUIRED_RELEASE_READINESS_SELECTED_CHECK_SCOPE_MARKERS = (
 )
 REQUIRED_RELEASE_READINESS_FOUNDATIONAL_MARKERS = (
     *RELEASE_READINESS_FOUNDATIONAL_SURFACE_CONSTRAINTS,
+)
+REQUIRED_RELEASE_READINESS_ONE_LOOK_TOPOLOGY_MARKERS = (
+    *RELEASE_READINESS_ONE_LOOK_TOPOLOGY_SURFACE_CONSTRAINTS,
 )
 REQUIRED_RELEASE_READINESS_SUPPORT_PREFLIGHT_MARKERS = (
     *RELEASE_READINESS_SUPPORT_PREFLIGHT_SURFACE_CONSTRAINTS,
@@ -226,6 +232,11 @@ def main() -> int:
         if marker not in summary_text:
             stale_reasons.append(
                 f"summary_doc_missing_release_readiness_foundational_marker:{marker}"
+            )
+    for marker in REQUIRED_RELEASE_READINESS_ONE_LOOK_TOPOLOGY_MARKERS:
+        if marker not in summary_text:
+            stale_reasons.append(
+                f"summary_doc_missing_release_readiness_one_look_topology_marker:{marker}"
             )
     for marker in REQUIRED_RELEASE_READINESS_SUPPORT_PREFLIGHT_MARKERS:
         if marker not in summary_text:

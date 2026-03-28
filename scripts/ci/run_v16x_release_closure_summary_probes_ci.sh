@@ -46,6 +46,11 @@ selected_check_scope_projection_marker="$(
     "release_readiness_selected_check_scope_common" \
     "RELEASE_READINESS_SELECTED_CHECK_SCOPE_ONE_LOOK_PROJECTION_MARKER"
 )"
+one_look_topology_marker="$(
+  resolve_python_module_expression \
+    "release_readiness_one_look_topology_common" \
+    "RELEASE_READINESS_ONE_LOOK_FAMILY_ORDER_MARKER"
+)"
 active_runtime_terminal_truth_class_marker="$(
   resolve_python_module_expression \
     "release_readiness_active_runtime_closure_projection_common" \
@@ -68,7 +73,7 @@ python3 "${REPO_ROOT}/scripts/probe_shadow_fixture_common.py" \
   --copy-file docs/release/identity-v1.6x-release-closure-summary.md \
   --json-only > /dev/null
 
-python3 - <<'PY' "${SHADOW_ROOT}/docs/release/identity-v1.6x-release-closure-summary.md" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${foundational_projection_marker}" "${support_preflight_projection_marker}" "${selected_check_scope_projection_marker}" "${active_runtime_terminal_truth_class_marker}"
+python3 - <<'PY' "${SHADOW_ROOT}/docs/release/identity-v1.6x-release-closure-summary.md" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${foundational_projection_marker}" "${support_preflight_projection_marker}" "${selected_check_scope_projection_marker}" "${one_look_topology_marker}" "${active_runtime_terminal_truth_class_marker}"
 from pathlib import Path
 import sys
 
@@ -80,7 +85,8 @@ release_cloud_evidence_projection_marker = sys.argv[5]
 foundational_projection_marker = sys.argv[6]
 support_preflight_projection_marker = sys.argv[7]
 selected_check_scope_projection_marker = sys.argv[8]
-active_runtime_terminal_truth_class_marker = sys.argv[9]
+one_look_topology_marker = sys.argv[9]
+active_runtime_terminal_truth_class_marker = sys.argv[10]
 text = path.read_text(encoding="utf-8")
 text = text.replace("`v1.6.21`", "`v1.6.20`")
 text = text.replace("fleet-scope closure matrix", "fleet matrix")
@@ -111,6 +117,10 @@ text = text.replace(
     "release_readiness_selected_check_scope_projection=one_look.selected_check_scope_projection_status",
 )
 text = text.replace(
+    one_look_topology_marker,
+    "release_readiness_one_look_family_order=foundational|governance_probe",
+)
+text = text.replace(
     active_runtime_projection_marker,
     "active_runtime_projection=one_look.identity_codex_launcher_status",
 )
@@ -127,7 +137,7 @@ if python3 "${REPO_ROOT}/scripts/validate_v16x_release_closure_summary.py" --rep
   exit 1
 fi
 
-python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${foundational_projection_marker}" "${support_preflight_projection_marker}" "${selected_check_scope_projection_marker}" "${active_runtime_terminal_truth_class_marker}"
+python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${foundational_projection_marker}" "${support_preflight_projection_marker}" "${selected_check_scope_projection_marker}" "${one_look_topology_marker}" "${active_runtime_terminal_truth_class_marker}"
 import json
 import sys
 from pathlib import Path
@@ -186,7 +196,10 @@ if expected_support_preflight_reason not in reasons:
 expected_selected_check_scope_reason = f"summary_doc_missing_release_readiness_selected_check_scope_marker:{sys.argv[9]}"
 if expected_selected_check_scope_reason not in reasons:
     raise SystemExit("negative release-closure summary must detect selected-check scope one-look drift")
-expected_active_runtime_detail_reason = f"summary_doc_missing_active_runtime_closure_projection_marker:{sys.argv[10]}"
+expected_one_look_topology_reason = f"summary_doc_missing_release_readiness_one_look_topology_marker:{sys.argv[10]}"
+if expected_one_look_topology_reason not in reasons:
+    raise SystemExit("negative release-closure summary must detect one-look topology drift")
+expected_active_runtime_detail_reason = f"summary_doc_missing_active_runtime_closure_projection_marker:{sys.argv[11]}"
 if expected_active_runtime_detail_reason not in reasons:
     raise SystemExit("negative release-closure summary must detect active-runtime companion detail drift")
 PY

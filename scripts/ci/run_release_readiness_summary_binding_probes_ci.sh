@@ -28,6 +28,9 @@ from release_readiness_foundational_projection_common import (
     build_release_readiness_foundational_one_look_projection,
     RELEASE_READINESS_FOUNDATIONAL_SURFACE_CONSTRAINTS,
 )
+from release_readiness_one_look_topology_common import (
+    RELEASE_READINESS_ONE_LOOK_TOPOLOGY_SURFACE_CONSTRAINTS,
+)
 from release_readiness_governance_probe_projection_common import (
     RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
 )
@@ -433,6 +436,8 @@ checkpoint_summary['surface_governance'] = build_governed_runtime_summary_surfac
     'release_readiness_summary'
 )
 for marker in RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS:
+    assert marker in checkpoint_summary['surface_governance']['operational_constraints'], checkpoint_summary
+for marker in RELEASE_READINESS_ONE_LOOK_TOPOLOGY_SURFACE_CONSTRAINTS:
     assert marker in checkpoint_summary['surface_governance']['operational_constraints'], checkpoint_summary
 for marker in RELEASE_READINESS_FOUNDATIONAL_SURFACE_CONSTRAINTS:
     assert marker in checkpoint_summary['surface_governance']['operational_constraints'], checkpoint_summary

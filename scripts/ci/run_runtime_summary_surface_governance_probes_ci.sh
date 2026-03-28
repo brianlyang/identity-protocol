@@ -18,6 +18,7 @@ trap 'rm -rf "$tmpdir"' EXIT
 mkdir -p "$tmpdir/scripts" "$tmpdir/docs/governance" "$tmpdir/docs/review" "$tmpdir/docs/release"
 cp scripts/release_readiness_check.py "$tmpdir/scripts/"
 cp scripts/release_readiness_one_look_projection_common.py "$tmpdir/scripts/"
+cp scripts/release_readiness_one_look_topology_common.py "$tmpdir/scripts/"
 cp scripts/report_three_plane_status.py "$tmpdir/scripts/"
 cp scripts/render_protocol_lane_audit_summary.py "$tmpdir/scripts/"
 cp scripts/full_identity_protocol_scan.py "$tmpdir/scripts/"
@@ -152,11 +153,48 @@ echo "[PASS] negative projection-profile exclusion doc probe fail-closed as expe
 
 cp scripts/release_readiness_check.py "$tmpdir/scripts/"
 cp scripts/release_readiness_one_look_projection_common.py "$tmpdir/scripts/"
+cp scripts/release_readiness_one_look_topology_common.py "$tmpdir/scripts/"
 cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
 
 mutate_probe_literal \
   "$tmpdir/scripts/release_readiness_one_look_projection_common.py" \
-  'apply_release_readiness_foundational_one_look(summary, one_look)'
+  'apply_release_readiness_one_look_families(summary, one_look)'
+
+if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-one-look-topology-script.json; then
+  echo "[FAIL] negative one-look topology script drift probe unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] negative one-look topology script drift probe fail-closed as expected"
+
+cp scripts/release_readiness_check.py "$tmpdir/scripts/"
+cp scripts/release_readiness_one_look_projection_common.py "$tmpdir/scripts/"
+cp scripts/release_readiness_one_look_topology_common.py "$tmpdir/scripts/"
+cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
+
+one_look_topology_marker="$(
+  resolve_python_module_constant \
+    "release_readiness_one_look_topology_common" \
+    "RELEASE_READINESS_ONE_LOOK_FAMILY_ORDER_MARKER"
+)"
+
+mutate_probe_literal \
+  "$tmpdir/docs/governance/identity-v1.6x-release-closure-governance.md" \
+  "$one_look_topology_marker"
+
+if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-one-look-topology-doc.json; then
+  echo "[FAIL] negative one-look topology doc probe unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] negative one-look topology doc probe fail-closed as expected"
+
+cp scripts/release_readiness_check.py "$tmpdir/scripts/"
+cp scripts/release_readiness_one_look_projection_common.py "$tmpdir/scripts/"
+cp scripts/release_readiness_one_look_topology_common.py "$tmpdir/scripts/"
+cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
+
+mutate_probe_literal \
+  "$tmpdir/scripts/release_readiness_one_look_topology_common.py" \
+  'apply_release_readiness_foundational_one_look'
 
 if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-foundational-one-look-script.json; then
   echo "[FAIL] negative foundational one-look script drift probe unexpectedly passed"
@@ -185,11 +223,12 @@ echo "[PASS] negative foundational one-look doc probe fail-closed as expected"
 
 cp scripts/release_readiness_check.py "$tmpdir/scripts/"
 cp scripts/release_readiness_one_look_projection_common.py "$tmpdir/scripts/"
+cp scripts/release_readiness_one_look_topology_common.py "$tmpdir/scripts/"
 cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
 
 mutate_probe_literal \
-  "$tmpdir/scripts/release_readiness_one_look_projection_common.py" \
-  'apply_release_readiness_support_preflight_one_look(summary, one_look)'
+  "$tmpdir/scripts/release_readiness_one_look_topology_common.py" \
+  'apply_release_readiness_support_preflight_one_look'
 
 if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-support-preflight-one-look-script.json; then
   echo "[FAIL] negative support-preflight one-look script drift probe unexpectedly passed"
@@ -218,11 +257,12 @@ echo "[PASS] negative support-preflight one-look doc probe fail-closed as expect
 
 cp scripts/release_readiness_check.py "$tmpdir/scripts/"
 cp scripts/release_readiness_one_look_projection_common.py "$tmpdir/scripts/"
+cp scripts/release_readiness_one_look_topology_common.py "$tmpdir/scripts/"
 cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
 
 mutate_probe_literal \
-  "$tmpdir/scripts/release_readiness_one_look_projection_common.py" \
-  'apply_release_readiness_selected_check_scope_one_look(summary, one_look)'
+  "$tmpdir/scripts/release_readiness_one_look_topology_common.py" \
+  'apply_release_readiness_selected_check_scope_one_look'
 
 if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-selected-check-one-look-script.json; then
   echo "[FAIL] negative selected-check one-look script drift probe unexpectedly passed"
@@ -251,11 +291,12 @@ echo "[PASS] negative selected-check one-look doc probe fail-closed as expected"
 
 cp scripts/release_readiness_check.py "$tmpdir/scripts/"
 cp scripts/release_readiness_one_look_projection_common.py "$tmpdir/scripts/"
+cp scripts/release_readiness_one_look_topology_common.py "$tmpdir/scripts/"
 cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
 
 mutate_probe_literal \
-  "$tmpdir/scripts/release_readiness_one_look_projection_common.py" \
-  'apply_release_readiness_release_cloud_evidence_one_look(summary, one_look)'
+  "$tmpdir/scripts/release_readiness_one_look_topology_common.py" \
+  'apply_release_readiness_release_cloud_evidence_one_look'
 
 if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-release-cloud-evidence-one-look-script.json; then
   echo "[FAIL] negative release-cloud-evidence one-look script drift probe unexpectedly passed"
@@ -284,11 +325,12 @@ echo "[PASS] negative release-cloud-evidence doc anchor probe fail-closed as exp
 
 cp scripts/release_readiness_check.py "$tmpdir/scripts/"
 cp scripts/release_readiness_one_look_projection_common.py "$tmpdir/scripts/"
+cp scripts/release_readiness_one_look_topology_common.py "$tmpdir/scripts/"
 cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
 
 mutate_probe_literal \
-  "$tmpdir/scripts/release_readiness_one_look_projection_common.py" \
-  'apply_release_readiness_terminal_truth_boundary_one_look(summary, one_look)'
+  "$tmpdir/scripts/release_readiness_one_look_topology_common.py" \
+  'apply_release_readiness_terminal_truth_boundary_one_look'
 
 if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-terminal-truth-one-look-script.json; then
   echo "[FAIL] negative terminal-truth one-look script drift probe unexpectedly passed"
@@ -298,11 +340,12 @@ echo "[PASS] negative terminal-truth one-look script drift probe fail-closed as 
 
 cp scripts/release_readiness_check.py "$tmpdir/scripts/"
 cp scripts/release_readiness_one_look_projection_common.py "$tmpdir/scripts/"
+cp scripts/release_readiness_one_look_topology_common.py "$tmpdir/scripts/"
 cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
 
 mutate_probe_literal \
-  "$tmpdir/scripts/release_readiness_one_look_projection_common.py" \
-  'apply_release_readiness_health_report_experience_writeback_one_look(summary, one_look)'
+  "$tmpdir/scripts/release_readiness_one_look_topology_common.py" \
+  'apply_release_readiness_health_report_experience_writeback_one_look'
 
 if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-health-writeback-one-look-script.json; then
   echo "[FAIL] negative health-writeback one-look script drift probe unexpectedly passed"
@@ -312,11 +355,12 @@ echo "[PASS] negative health-writeback one-look script drift probe fail-closed a
 
 cp scripts/release_readiness_check.py "$tmpdir/scripts/"
 cp scripts/release_readiness_one_look_projection_common.py "$tmpdir/scripts/"
+cp scripts/release_readiness_one_look_topology_common.py "$tmpdir/scripts/"
 cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
 
 mutate_probe_literal \
-  "$tmpdir/scripts/release_readiness_one_look_projection_common.py" \
-  'apply_release_readiness_repo_global_closure_one_look(summary, one_look)'
+  "$tmpdir/scripts/release_readiness_one_look_topology_common.py" \
+  'apply_release_readiness_repo_global_closure_one_look'
 
 if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-repo-global-script.json; then
   echo "[FAIL] negative repo-global projection script drift probe unexpectedly passed"
@@ -363,11 +407,12 @@ echo "[PASS] negative repo-global proof-strength doc anchor probe fail-closed as
 
 cp scripts/release_readiness_check.py "$tmpdir/scripts/"
 cp scripts/release_readiness_one_look_projection_common.py "$tmpdir/scripts/"
+cp scripts/release_readiness_one_look_topology_common.py "$tmpdir/scripts/"
 cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
 
 mutate_probe_literal \
-  "$tmpdir/scripts/release_readiness_one_look_projection_common.py" \
-  'apply_release_readiness_active_runtime_closure_one_look(summary, one_look)'
+  "$tmpdir/scripts/release_readiness_one_look_topology_common.py" \
+  'apply_release_readiness_active_runtime_closure_one_look'
 
 if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-active-runtime-script.json; then
   echo "[FAIL] negative active-runtime projection script drift probe unexpectedly passed"
@@ -393,6 +438,24 @@ if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$
 fi
 echo "[PASS] negative active-runtime projection doc anchor probe fail-closed as expected"
 
+cp scripts/release_readiness_check.py "$tmpdir/scripts/"
+cp scripts/release_readiness_one_look_projection_common.py "$tmpdir/scripts/"
+cp scripts/release_readiness_one_look_topology_common.py "$tmpdir/scripts/"
+cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
+
+mutate_probe_literal \
+  "$tmpdir/scripts/release_readiness_one_look_topology_common.py" \
+  'apply_release_readiness_governance_probe_one_look'
+
+if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-governance-probe-one-look-script.json; then
+  echo "[FAIL] negative governance-probe one-look script drift probe unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] negative governance-probe one-look script drift probe fail-closed as expected"
+
+cp scripts/release_readiness_check.py "$tmpdir/scripts/"
+cp scripts/release_readiness_one_look_projection_common.py "$tmpdir/scripts/"
+cp scripts/release_readiness_one_look_topology_common.py "$tmpdir/scripts/"
 cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
 
 repo_global_closure_owner_lane_marker="$(
@@ -445,11 +508,12 @@ echo "[PASS] negative required-gate bundle scope doc probe fail-closed as expect
 
 cp scripts/release_readiness_check.py "$tmpdir/scripts/"
 cp scripts/release_readiness_one_look_projection_common.py "$tmpdir/scripts/"
+cp scripts/release_readiness_one_look_topology_common.py "$tmpdir/scripts/"
 cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
 
 mutate_probe_literal \
-  "$tmpdir/scripts/release_readiness_one_look_projection_common.py" \
-  'apply_release_readiness_required_gate_bundle_one_look(summary, one_look)'
+  "$tmpdir/scripts/release_readiness_one_look_topology_common.py" \
+  'apply_release_readiness_required_gate_bundle_one_look'
 
 if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-required-gate-bundle-one-look-script.json; then
   echo "[FAIL] negative required-gate bundle one-look script probe unexpectedly passed"
