@@ -60,10 +60,19 @@ echo "[PASS] post-closure adjudication common drift fail-closed as expected"
 
 restore_shadow_file "${TMP_ROOT}" "scripts/release_readiness_check.py"
 # expected fail-close: post_closure_adjudication_command_slice_drift
-mutate_probe_literal \
-  "${TMP_ROOT}/scripts/release_readiness_check.py" \
-  '["bash", "scripts/ci/run_release_readiness_terminal_truth_bridge_probes_ci.sh"],' \
-  $'["bash", "scripts/ci/run_release_readiness_terminal_truth_bridge_probes_ci.sh"],\n    ["bash", "scripts/ci/run_three_plane_health_projection_probes_ci.sh"],'
+python3 - <<'PY' "${TMP_ROOT}/scripts/release_readiness_check.py"
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+needle = '    ["bash", "scripts/ci/run_release_readiness_terminal_truth_bridge_probes_ci.sh"],\n'
+insertion = needle + '    ["bash", "scripts/ci/run_three_plane_health_projection_probes_ci.sh"],\n'
+text = path.read_text(encoding="utf-8")
+if needle not in text:
+    raise SystemExit(f"needle not found in {path}")
+text = text.replace(needle, insertion, 1)
+path.write_text(text, encoding="utf-8")
+PY
 if run_shadow_validator "${TMP_ROOT}" /tmp/release-readiness-post-closure-adjudication-topology-negative-slice.json; then
   echo "[FAIL] post-closure adjudication command slice drift unexpectedly passed"
   exit 1
