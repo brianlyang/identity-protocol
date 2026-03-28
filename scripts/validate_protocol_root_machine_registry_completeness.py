@@ -39,7 +39,7 @@ from root_machine_registry_completeness_common import (
     required_validator_surface_contract_values_from_doc,
     require_self_describing_families,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 
 STATUS_KEY = "protocol_root_machine_registry_completeness_status"
 ERR_REGISTRY = "IP-RMRC-001"
@@ -960,46 +960,50 @@ def main() -> int:
     root_doc_anchor_status = (
         STATUS_FAIL_REQUIRED if anchor_violations else STATUS_PASS_REQUIRED
     )
-    row_family_projection_rows = [
-        project_row_family(
-            family_id="registered_complete_root_mapping_families",
-            member_id_key="family_id",
-            actual_rows=[
-                SimpleNamespace(family_id=family_id) for family_id in discovered_family_ids
-            ],
-            expected_rows={family_id: {} for family_id in registered_complete_family_ids},
-            id_attr="family_id",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
-        ),
-        project_row_family(
-            family_id="family_status_rows",
-            member_id_key="family_id",
-            actual_rows=[
-                SimpleNamespace(family_id=family_id) for family_id in family_status_row_ids
-            ],
-            expected_rows={family_id: {} for family_id in discovered_family_ids},
-            id_attr="family_id",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
-        ),
-        project_row_family(
-            family_id="family_validator_surface_contract_rows",
-            member_id_key="contract_row_id",
-            actual_rows=[
-                SimpleNamespace(contract_row_id=contract_row_id)
-                for contract_row_id in validator_surface_contract_row_ids
-            ],
-            expected_rows={
-                f"{family_id}:{contract_field}": {}
-                for family_id in discovered_family_ids
-                for contract_field in required_validator_surface_contract_fields
+    row_family_projection_rows = project_row_families(
+        families=(
+            {
+                "family_id": "registered_complete_root_mapping_families",
+                "member_id_key": "family_id",
+                "actual_rows": [
+                    SimpleNamespace(family_id=family_id)
+                    for family_id in discovered_family_ids
+                ],
+                "expected_rows": {
+                    family_id: {} for family_id in registered_complete_family_ids
+                },
+                "id_attr": "family_id",
             },
-            id_attr="contract_row_id",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
+            {
+                "family_id": "family_status_rows",
+                "member_id_key": "family_id",
+                "actual_rows": [
+                    SimpleNamespace(family_id=family_id)
+                    for family_id in family_status_row_ids
+                ],
+                "expected_rows": {
+                    family_id: {} for family_id in discovered_family_ids
+                },
+                "id_attr": "family_id",
+            },
+            {
+                "family_id": "family_validator_surface_contract_rows",
+                "member_id_key": "contract_row_id",
+                "actual_rows": [
+                    SimpleNamespace(contract_row_id=contract_row_id)
+                    for contract_row_id in validator_surface_contract_row_ids
+                ],
+                "expected_rows": {
+                    f"{family_id}:{contract_field}": {}
+                    for family_id in discovered_family_ids
+                    for contract_field in required_validator_surface_contract_fields
+                },
+                "id_attr": "contract_row_id",
+            },
         ),
-    ]
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
     payload = {
         STATUS_KEY: status,
         "completeness_family": str(completeness_doc.get("completeness_family") or ""),

@@ -12,7 +12,7 @@ from root_contract_anchor_checks_common import (
     validate_expected_root_doc_anchor_checks,
 )
 from root_contract_integration_checks_common import append_membership_delta_violations
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_corpus_authority_common import authority_class_profiles_from_doc, load_root_corpus_authority
 from root_corpus_derivation_common import (
     STATUS_FAIL_REQUIRED,
@@ -474,17 +474,21 @@ def main() -> int:
 
     sorted_profiles = sorted(class_profiles, key=lambda item: item.corpus_class)
     status = STATUS_PASS_REQUIRED if not stale_reasons else STATUS_FAIL_REQUIRED
-    row_family_projection_rows = [
-        project_row_family(
-            family_id="derivation_class_profiles",
-            member_id_key="corpus_class",
-            actual_rows=class_profiles,
-            expected_rows={corpus_class: {} for corpus_class in registry_classes},
-            id_attr="corpus_class",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
+    row_family_projection_rows = project_row_families(
+        families=(
+            {
+                "family_id": "derivation_class_profiles",
+                "member_id_key": "corpus_class",
+                "actual_rows": class_profiles,
+                "expected_rows": {
+                    corpus_class: {} for corpus_class in registry_classes
+                },
+                "id_attr": "corpus_class",
+            },
         ),
-    ]
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
     payload: dict[str, Any] = {
         STATUS_KEY: status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else (error_code or ERR_DERIVATION),

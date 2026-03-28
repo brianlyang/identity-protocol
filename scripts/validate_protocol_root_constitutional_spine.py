@@ -23,7 +23,7 @@ from root_corpus_authority_common import entry_authority_projections_from_doc, l
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
 from root_corpus_ordering_common import load_root_corpus_ordering, reading_order_rows_from_doc
 from root_corpus_question_routing_common import entry_question_projections_from_doc, load_root_corpus_question_routing
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 
 STATUS_KEY = "protocol_root_constitutional_spine_status"
 ERR_REGISTRY = "IP-RCS-001"
@@ -347,22 +347,24 @@ def main() -> int:
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     authority_rows = entry_authority_projections_from_doc(authority_doc) if authority_doc else ()
     question_rows = entry_question_projections_from_doc(routing_doc) if routing_doc else ()
-    row_family_projection_rows = [
-        project_row_family(
-            family_id="constitutional_entry_rows",
-            member_id_key="rel_path",
-            actual_rows=entry_rows,
-            expected_rows=EXPECTED_ENTRY_ROWS,
-            id_attr="rel_path",
-        ),
-        project_row_family(
-            family_id="spine_bridge_rows",
-            member_id_key="bridge_id",
-            actual_rows=bridge_rows,
-            expected_rows=EXPECTED_BRIDGE_ROWS,
-            id_attr="bridge_id",
-        ),
-    ]
+    row_family_projection_rows = project_row_families(
+        families=(
+            {
+                "family_id": "constitutional_entry_rows",
+                "member_id_key": "rel_path",
+                "actual_rows": entry_rows,
+                "expected_rows": EXPECTED_ENTRY_ROWS,
+                "id_attr": "rel_path",
+            },
+            {
+                "family_id": "spine_bridge_rows",
+                "member_id_key": "bridge_id",
+                "actual_rows": bridge_rows,
+                "expected_rows": EXPECTED_BRIDGE_ROWS,
+                "id_attr": "bridge_id",
+            },
+        )
+    )
     row_family_projection_by_id = {row["family_id"]: row for row in row_family_projection_rows}
 
     if not stale_reasons:

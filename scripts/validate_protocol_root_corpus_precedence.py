@@ -12,7 +12,7 @@ from root_contract_anchor_checks_common import (
     validate_expected_root_doc_anchor_checks,
 )
 from root_contract_integration_checks_common import append_membership_delta_violations
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_corpus_authority_common import load_root_corpus_authority
 from root_corpus_gateway_admissibility_common import (
     gateway_effect_targets_from_doc,
@@ -450,26 +450,28 @@ def main() -> int:
     if status == STATUS_FAIL_REQUIRED and not error_code:
         error_code = ERR_STRUCTURE if structure_violations else ERR_PRECEDENCE
 
-    row_family_projection_rows = [
-        project_row_family(
-            family_id="precedence_profiles",
-            member_id_key="conflict_class",
-            actual_rows=precedence_profiles,
-            expected_rows=EXPECTED_PROFILES,
-            id_attr="conflict_class",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
+    row_family_projection_rows = project_row_families(
+        families=(
+            {
+                "family_id": "precedence_profiles",
+                "member_id_key": "conflict_class",
+                "actual_rows": precedence_profiles,
+                "expected_rows": EXPECTED_PROFILES,
+                "id_attr": "conflict_class",
+            },
+            {
+                "family_id": "gateway_authorship_projection",
+                "member_id_key": "gateway_class",
+                "actual_rows": gateway_authorship_projections,
+                "expected_rows": {
+                    gateway_class: {} for gateway_class in gateway_effect_target_map
+                },
+                "id_attr": "gateway_class",
+            },
         ),
-        project_row_family(
-            family_id="gateway_authorship_projection",
-            member_id_key="gateway_class",
-            actual_rows=gateway_authorship_projections,
-            expected_rows={gateway_class: {} for gateway_class in gateway_effect_target_map},
-            id_attr="gateway_class",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
-        ),
-    ]
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
 
     payload = {
         STATUS_KEY: status,

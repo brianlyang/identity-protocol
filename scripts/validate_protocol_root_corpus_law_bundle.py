@@ -129,7 +129,7 @@ from root_machine_registry_completeness_common import (
     required_descriptor_field_modes_from_doc as registry_required_descriptor_field_modes_from_doc,
     required_descriptor_fields_from_doc as registry_required_descriptor_fields_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 
 STATUS_KEY = "protocol_root_corpus_law_bundle_status"
 ERR_REGISTRY = "IP-RCLB-001"
@@ -3670,29 +3670,33 @@ def main() -> int:
     component_status_row_coverage_status = (
         STATUS_FAIL_REQUIRED if component_status_row_coverage_incomplete else STATUS_PASS_REQUIRED
     )
-    row_family_projection_rows = [
-        project_row_family(
-            family_id="component_rows",
-            member_id_key="component_id",
-            actual_rows=sorted_components,
-            expected_rows={component_id: {} for component_id in EXPECTED_COMPONENTS},
-            id_attr="component_id",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
+    row_family_projection_rows = project_row_families(
+        families=(
+            {
+                "family_id": "component_rows",
+                "member_id_key": "component_id",
+                "actual_rows": sorted_components,
+                "expected_rows": {
+                    component_id: {} for component_id in EXPECTED_COMPONENTS
+                },
+                "id_attr": "component_id",
+            },
+            {
+                "family_id": "component_status_rows",
+                "member_id_key": "component_id",
+                "actual_rows": [
+                    SimpleNamespace(component_id=str(row.get("component_id") or ""))
+                    for row in component_status_rows
+                ],
+                "expected_rows": {
+                    component_id: {} for component_id in EXPECTED_COMPONENTS
+                },
+                "id_attr": "component_id",
+            },
         ),
-        project_row_family(
-            family_id="component_status_rows",
-            member_id_key="component_id",
-            actual_rows=[
-                SimpleNamespace(component_id=str(row.get("component_id") or ""))
-                for row in component_status_rows
-            ],
-            expected_rows={component_id: {} for component_id in EXPECTED_COMPONENTS},
-            id_attr="component_id",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
-        ),
-    ]
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
     component_status_row_identity_projection_status = next(
         (
             row["identity_projection_status"]
