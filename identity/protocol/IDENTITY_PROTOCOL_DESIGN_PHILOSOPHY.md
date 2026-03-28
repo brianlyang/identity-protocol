@@ -160,6 +160,10 @@ These three orders cooperate, but they do not replace each other:
 - reading-order explains disciplined entry;
 - adjudication-order explains current-turn decision.
 
+README source-order / reading-order / adjudication-order distinctions must
+therefore stay congruent with admitted order-plane-stage rows rather than
+becoming a freehand semantic triad.
+
 Confusing them leads to characteristic protocol errors:
 
 - if adjudication-order is mistaken for source-order, current checker behavior is falsely promoted into bottom theory;
@@ -1213,9 +1217,10 @@ Ordering law is not a soft prose summary that may hide its machine rows
 behind aggregate counts.
 
 Required source-order, reading-order, root-reading-order-stage,
-root-reading-order-stage-surface, explanatory root-contract
-index/projection, adjudication-order, and adjudication-surface-profile
-families must remain explicit as separate machine-readable row families.
+root-reading-order-stage-surface, order-plane-stage,
+order-plane-stage-surface, explanatory root-contract index/projection,
+adjudication-order, and adjudication-surface-profile families must
+remain explicit as separate machine-readable row families.
 
 Expected row-family total and emitted row-family total must therefore stay
 congruent under machine-readable coverage completeness rather than being left
@@ -1226,14 +1231,18 @@ also remain machine-readable rather than being collapsed into aggregate counts
 or generic structure failure.
 
 The machine world must not finalize ordering legality while required source,
-entry, root-reading-order-stage, manual-root-contract, or
-adjudication-surface identity drift remains known only internally.
+entry, root-reading-order-stage, order-plane-stage, manual-root-contract,
+or adjudication-surface identity drift remains known only internally.
 
 Missing or unexpected row identity must remain projected in fail-close machine
 output rather than being hidden behind row-count shorthand or summary-only
 verdict text.
 
 README root reading order must therefore stay congruent with admitted root-reading-order-stage rows rather than becoming a freehand alternate entry ladder.
+
+README source-order / reading-order / adjudication-order distinctions must
+therefore stay congruent with admitted order-plane-stage rows rather than
+becoming a freehand semantic triad.
 
 ### Question-routing row-family completeness must stay explicit
 

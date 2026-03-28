@@ -32,8 +32,10 @@ from root_corpus_ordering_common import (
     adjudication_order_rows_from_doc,
     adjudication_surface_profiles_from_doc,
     load_root_corpus_ordering,
+    order_plane_stages_from_doc,
     ordering_anchor_checks_from_doc,
     protocol_boundary_root_contract_projection_rows_from_doc,
+    readme_order_plane_surface,
     readme_root_reading_order_surface,
     reading_order_rows_from_doc,
     root_reading_order_stages_from_doc,
@@ -77,6 +79,7 @@ EXPECTED_ADJUDICATION_SURFACE_PROFILES = {
 }
 EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/README.md": (
+        "These order distinctions must remain bound to canonical order-plane stage rows rather than becoming a freehand semantic triad.",
         "This root reading order must remain bound to canonical root-reading-order stage rows rather than becoming a freehand alternate entry ladder.",
         "## Root adjudication-surface discipline",
         "mappings admit applicable machine law and registry truth for current-turn legality;",
@@ -88,6 +91,7 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     ),
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
         "README root reading order must therefore stay congruent with admitted root-reading-order-stage rows rather than becoming a freehand alternate entry ladder.",
+        "README source-order / reading-order / adjudication-order distinctions must therefore stay congruent with admitted order-plane-stage rows rather than becoming a freehand semantic triad.",
         "### Adjudication surfaces are phase-governed, not interchangeable",
         "mappings admit applicable law into the current-turn legality path;",
         "validators evaluate legality against admitted law rather than inventing new origin law;",
@@ -97,6 +101,7 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
         "README root reading order stages rendered at protocol root must remain congruent with admitted root-reading-order-stage rows rather than silently authoring an alternate entry ladder.",
+        "README source-order / reading-order / adjudication-order distinctions rendered at protocol root must remain congruent with admitted order-plane-stage rows rather than silently authoring an alternate semantic triad.",
         "## Root adjudication-surface boundary",
         "mappings admit machine-consumed law and registry truth into current-turn legality;",
         "validators evaluate legality against that admitted law rather than authoring new source law;",
@@ -107,6 +112,7 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
         "Runtime consumes README root reading order as a governed stage projection bound to admitted root-reading-order-stage rows rather than as a freehand alternate entry ladder.",
+        "Runtime consumes README source-order / reading-order / adjudication-order distinctions as a governed stage projection bound to admitted order-plane-stage rows rather than as a freehand semantic triad.",
         "## Runtime adjudication-surface consumption boundary",
         "Runtime consumes mappings as admissible law-resolution surfaces rather than as optional lookup hints.",
         "Runtime consumes validators as legality-evaluation surfaces rather than as replaceable commentary.",
@@ -222,6 +228,37 @@ EXPECTED_ROOT_READING_ORDER_STAGES = {
         ),
     },
 }
+EXPECTED_ORDER_PLANE_STAGES = {
+    "source-order / generative-order": {
+        "order": 1,
+        "bound_row_families": ("source_order",),
+        "required_markers": (
+            "`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`",
+            "`IDENTITY_PROTOCOL.md` / `IDENTITY_RUNTIME.md`",
+            "root contract files",
+            "machine-consumed enforcement surfaces",
+            "answers: where protocol law comes from.",
+        ),
+    },
+    "root reading-order": {
+        "order": 2,
+        "bound_row_families": ("root_reading_order_stages", "root_reading_order_stage_surface"),
+        "required_markers": (
+            "the entry sequence defined at the top of this file",
+            "the README entry ladder must remain congruent with admitted root-reading-order stage rows rather than becoming a freehand alternate order",
+            "answers: how to enter the root corpus without semantic confusion.",
+        ),
+    },
+    "adjudication-order": {
+        "order": 3,
+        "bound_row_families": ("adjudication_order", "adjudication_surface_profiles"),
+        "required_markers": (
+            "governance/review docs, mappings, validators, probes, runtime state, and receipts",
+            "the terminal machine chain stays explicit as mappings → validators → probes → runtime state → receipts",
+            "answers: how current-turn legality and machine verdict are determined.",
+        ),
+    },
+}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -284,6 +321,7 @@ def main() -> int:
     source_rows = source_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     root_reading_order_stages = root_reading_order_stages_from_doc(ordering_doc) if ordering_doc else ()
+    order_plane_stages = order_plane_stages_from_doc(ordering_doc) if ordering_doc else ()
     protocol_boundary_projection_rows = (
         protocol_boundary_root_contract_projection_rows_from_doc(ordering_doc) if ordering_doc else ()
     )
@@ -291,6 +329,7 @@ def main() -> int:
     adjudication_surface_profiles = adjudication_surface_profiles_from_doc(ordering_doc) if ordering_doc else ()
     ordering_anchor_checks = ordering_anchor_checks_from_doc(ordering_doc) if ordering_doc else ()
     root_reading_order_stage_surface = readme_root_reading_order_surface(repo_root)
+    order_plane_stage_surface = readme_order_plane_surface(repo_root)
     manual_root_contract_surfaces = manual_root_contract_index_surfaces(repo_root)
     manual_root_contract_surface_map = {surface.surface_id: surface for surface in manual_root_contract_surfaces}
     protocol_boundary_projection_surface = protocol_boundary_root_contract_projection_surface(repo_root)
@@ -343,6 +382,9 @@ def main() -> int:
         if not root_reading_order_stages:
             stale_reasons.append("root_corpus_ordering_root_reading_order_stages_missing")
             error_code = ERR_REGISTRY
+        if not order_plane_stages:
+            stale_reasons.append("root_corpus_ordering_order_plane_stages_missing")
+            error_code = ERR_REGISTRY
         if not protocol_boundary_projection_rows:
             stale_reasons.append("root_corpus_ordering_protocol_boundary_root_contract_projections_missing")
             error_code = ERR_REGISTRY
@@ -383,6 +425,11 @@ def main() -> int:
     root_reading_order_stage_surface_map = {row.stage_label: row for row in root_reading_order_stage_surface.rows}
     root_reading_order_stage_surface_orders = [row.order for row in root_reading_order_stage_surface.rows]
     root_reading_order_stage_surface_labels = [row.stage_label for row in root_reading_order_stage_surface.rows]
+    order_plane_stage_map = {row.stage_label: row for row in order_plane_stages}
+    order_plane_stage_orders = [row.order for row in order_plane_stages]
+    order_plane_stage_surface_map = {row.stage_label: row for row in order_plane_stage_surface.rows}
+    order_plane_stage_surface_orders = [row.order for row in order_plane_stage_surface.rows]
+    order_plane_stage_surface_labels = [row.stage_label for row in order_plane_stage_surface.rows]
     protocol_boundary_projection_orders = [row.order for row in protocol_boundary_projection_rows]
     protocol_boundary_projection_paths = [row.rel_path for row in protocol_boundary_projection_rows]
     adjudication_orders = [row.order for row in adjudication_rows]
@@ -432,6 +479,28 @@ def main() -> int:
             duplicate_reason="duplicate_root_reading_order_surface_stage",
             actual_total_count=len(root_reading_order_stage_surface.rows),
         )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="order_plane_stages",
+            expected_ids=EXPECTED_ORDER_PLANE_STAGES,
+            actual_ids=order_plane_stage_map,
+            payload_key="stage_labels",
+            missing_reason="missing_order_plane_stages",
+            extra_reason="extra_order_plane_stages",
+            duplicate_reason="duplicate_order_plane_stage",
+            actual_total_count=len(order_plane_stages),
+        )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="order_plane_stage_surface",
+            expected_ids=EXPECTED_ORDER_PLANE_STAGES,
+            actual_ids=order_plane_stage_surface_map,
+            payload_key="stage_labels",
+            missing_reason="missing_order_plane_surface_stages",
+            extra_reason="extra_order_plane_surface_stages",
+            duplicate_reason="duplicate_order_plane_surface_stage",
+            actual_total_count=len(order_plane_stage_surface.rows),
+        )
         if len(set(root_reading_order_stage_orders)) != len(root_reading_order_stage_orders) or not contiguous_orders(
             sorted(root_reading_order_stage_orders)
         ):
@@ -446,6 +515,16 @@ def main() -> int:
                     "field": "root_reading_order_stage_surface",
                     "reason": "root_reading_order_surface_stage_order_non_contiguous",
                 }
+            )
+        if len(set(order_plane_stage_orders)) != len(order_plane_stage_orders) or not contiguous_orders(
+            sorted(order_plane_stage_orders)
+        ):
+            structure_violations.append({"field": "order_plane_stages", "reason": "order_plane_stage_order_non_contiguous"})
+        if len(set(order_plane_stage_surface_orders)) != len(order_plane_stage_surface_orders) or not contiguous_orders(
+            sorted(order_plane_stage_surface_orders)
+        ):
+            structure_violations.append(
+                {"field": "order_plane_stage_surface", "reason": "order_plane_surface_stage_order_non_contiguous"}
             )
         if len(set(protocol_boundary_projection_orders)) != len(protocol_boundary_projection_orders) or not contiguous_orders(
             sorted(protocol_boundary_projection_orders)
@@ -525,6 +604,8 @@ def main() -> int:
         expected_root_reading_order_stage_orders = [
             int(stage["order"]) for stage in EXPECTED_ROOT_READING_ORDER_STAGES.values()
         ]
+        expected_order_plane_stage_labels = list(EXPECTED_ORDER_PLANE_STAGES.keys())
+        expected_order_plane_stage_orders = [int(stage["order"]) for stage in EXPECTED_ORDER_PLANE_STAGES.values()]
         if root_reading_order_stage_surface_labels and tuple(root_reading_order_stage_surface_labels) != tuple(
             expected_root_reading_order_stage_labels
         ):
@@ -545,6 +626,28 @@ def main() -> int:
                     "reason": "root_reading_order_surface_stage_order_mismatch",
                     "expected": expected_root_reading_order_stage_orders,
                     "actual": root_reading_order_stage_surface_orders,
+                }
+            )
+        if order_plane_stage_surface_labels and tuple(order_plane_stage_surface_labels) != tuple(
+            expected_order_plane_stage_labels
+        ):
+            coverage_violations.append(
+                {
+                    "field": "order_plane_stage_surface",
+                    "reason": "order_plane_surface_label_order_mismatch",
+                    "expected": expected_order_plane_stage_labels,
+                    "actual": order_plane_stage_surface_labels,
+                }
+            )
+        if order_plane_stage_surface_orders and tuple(order_plane_stage_surface_orders) != tuple(
+            expected_order_plane_stage_orders
+        ):
+            coverage_violations.append(
+                {
+                    "field": "order_plane_stage_surface",
+                    "reason": "order_plane_surface_stage_order_mismatch",
+                    "expected": expected_order_plane_stage_orders,
+                    "actual": order_plane_stage_surface_orders,
                 }
             )
         for stage_label, expected in EXPECTED_ROOT_READING_ORDER_STAGES.items():
@@ -598,6 +701,59 @@ def main() -> int:
                 {
                     "field": "root_reading_order_stage_surface",
                     "reason": f"root_reading_order_surface_{reason}",
+                }
+            )
+        for stage_label, expected in EXPECTED_ORDER_PLANE_STAGES.items():
+            stage_row = order_plane_stage_map.get(stage_label)
+            if stage_row is not None:
+                if stage_row.order != int(expected["order"]):
+                    coverage_violations.append(
+                        {
+                            "field": "order_plane_stages",
+                            "reason": "stage_order_mismatch",
+                            "stage_label": stage_label,
+                            "expected": int(expected["order"]),
+                            "actual": stage_row.order,
+                        }
+                    )
+                if tuple(stage_row.bound_row_families) != tuple(expected["bound_row_families"]):
+                    coverage_violations.append(
+                        {
+                            "field": "order_plane_stages",
+                            "reason": "bound_row_families_mismatch",
+                            "stage_label": stage_label,
+                            "expected": list(expected["bound_row_families"]),
+                            "actual": list(stage_row.bound_row_families),
+                        }
+                    )
+                if tuple(stage_row.required_markers) != tuple(expected["required_markers"]):
+                    coverage_violations.append(
+                        {
+                            "field": "order_plane_stages",
+                            "reason": "required_markers_mismatch",
+                            "stage_label": stage_label,
+                            "expected": list(expected["required_markers"]),
+                            "actual": list(stage_row.required_markers),
+                        }
+                    )
+            surface_row = order_plane_stage_surface_map.get(stage_label)
+            if surface_row is not None:
+                surface_text = "\n".join(surface_row.body_lines)
+                for marker in expected["required_markers"]:
+                    if marker not in surface_text:
+                        coverage_violations.append(
+                            {
+                                "field": "order_plane_stage_surface",
+                                "reason": "required_marker_missing",
+                                "stage_label": stage_label,
+                                "marker": marker,
+                            }
+                        )
+        for reason in order_plane_stage_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "order_plane_stage_surface",
+                    "reason": f"order_plane_surface_{reason}",
                 }
             )
         grouped_root_reading_order_rel_paths = tuple(
@@ -918,6 +1074,20 @@ def main() -> int:
                 "id_attr": "stage_label",
             },
             {
+                "family_id": "order_plane_stages",
+                "member_id_key": "stage_label",
+                "actual_rows": order_plane_stages,
+                "expected_rows": EXPECTED_ORDER_PLANE_STAGES,
+                "id_attr": "stage_label",
+            },
+            {
+                "family_id": "order_plane_stage_surface",
+                "member_id_key": "stage_label",
+                "actual_rows": order_plane_stage_surface.rows,
+                "expected_rows": EXPECTED_ORDER_PLANE_STAGES,
+                "id_attr": "stage_label",
+            },
+            {
                 "family_id": README_ROOT_CONTRACT_INDEX_SURFACE_ID,
                 "member_id_key": "rel_path",
                 "actual_rows": manual_root_contract_surface_map.get(README_ROOT_CONTRACT_INDEX_SURFACE_ID).rows
@@ -1010,6 +1180,7 @@ def main() -> int:
             for row in sorted_reading_rows
         ],
         "root_reading_order_stage_count": len(root_reading_order_stages),
+        "order_plane_stage_count": len(order_plane_stages),
         "root_reading_order_stages": [
             {
                 "order": row.order,
@@ -1031,6 +1202,28 @@ def main() -> int:
                 for row in root_reading_order_stage_surface.rows
             ],
             "extraction_violations": list(root_reading_order_stage_surface.extraction_violations),
+        },
+        "order_plane_stages": [
+            {
+                "order": row.order,
+                "stage_label": row.stage_label,
+                "bound_row_families": list(row.bound_row_families),
+                "required_markers": list(row.required_markers),
+            }
+            for row in sorted(order_plane_stages, key=lambda item: item.order)
+        ],
+        "order_plane_stage_surface": {
+            "rel_path": order_plane_stage_surface.rel_path,
+            "entry_count": len(order_plane_stage_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "stage_label": row.stage_label,
+                    "body_lines": list(row.body_lines),
+                }
+                for row in order_plane_stage_surface.rows
+            ],
+            "extraction_violations": list(order_plane_stage_surface.extraction_violations),
         },
         "canonical_root_contract_entry_count": len(canonical_root_contract_entry_paths),
         "canonical_root_contract_entry_paths": list(canonical_root_contract_entry_paths),

@@ -20,6 +20,8 @@ probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required
 ordering_anchor_checks:
 - rel_path: identity/protocol/README.md
   required_markers:
+  - These order distinctions must remain bound to canonical order-plane stage
+    rows rather than becoming a freehand semantic triad.
   - This root reading order must remain bound to canonical root-reading-order
     stage rows rather than becoming a freehand alternate entry ladder.
   - '## Root adjudication-surface discipline'
@@ -38,6 +40,9 @@ ordering_anchor_checks:
   required_markers:
   - README root reading order must therefore stay congruent with admitted root-reading-order-stage
     rows rather than becoming a freehand alternate entry ladder.
+  - README source-order / reading-order / adjudication-order distinctions must
+    therefore stay congruent with admitted order-plane-stage rows rather than
+    becoming a freehand semantic triad.
   - '### Adjudication surfaces are phase-governed, not interchangeable'
   - mappings admit applicable law into the current-turn legality path;
   - validators evaluate legality against admitted law rather than inventing new
@@ -52,6 +57,9 @@ ordering_anchor_checks:
   - README root reading order stages rendered at protocol root must remain congruent
     with admitted root-reading-order-stage rows rather than silently authoring
     an alternate entry ladder.
+  - README source-order / reading-order / adjudication-order distinctions rendered
+    at protocol root must remain congruent with admitted order-plane-stage rows
+    rather than silently authoring an alternate semantic triad.
   - '## Root adjudication-surface boundary'
   - mappings admit machine-consumed law and registry truth into current-turn legality;
   - validators evaluate legality against that admitted law rather than authoring
@@ -69,6 +77,9 @@ ordering_anchor_checks:
   - Runtime consumes README root reading order as a governed stage projection
     bound to admitted root-reading-order-stage rows rather than as a freehand
     alternate entry ladder.
+  - Runtime consumes README source-order / reading-order / adjudication-order
+    distinctions as a governed stage projection bound to admitted order-plane-stage
+    rows rather than as a freehand semantic triad.
   - '## Runtime adjudication-surface consumption boundary'
   - Runtime consumes mappings as admissible law-resolution surfaces rather than
     as optional lookup hints.
@@ -355,3 +366,35 @@ adjudication_surface_profiles:
   phase_order: 5
   surface_role: adjudicated_verdict_closure
   closure_terminal: true
+order_plane_stages:
+- order: 1
+  stage_label: source-order / generative-order
+  bound_row_families:
+  - source_order
+  required_markers:
+  - '`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`'
+  - '`IDENTITY_PROTOCOL.md` / `IDENTITY_RUNTIME.md`'
+  - root contract files
+  - machine-consumed enforcement surfaces
+  - 'answers: where protocol law comes from.'
+- order: 2
+  stage_label: root reading-order
+  bound_row_families:
+  - root_reading_order_stages
+  - root_reading_order_stage_surface
+  required_markers:
+  - the entry sequence defined at the top of this file
+  - the README entry ladder must remain congruent with admitted root-reading-order
+    stage rows rather than becoming a freehand alternate order
+  - 'answers: how to enter the root corpus without semantic confusion.'
+- order: 3
+  stage_label: adjudication-order
+  bound_row_families:
+  - adjudication_order
+  - adjudication_surface_profiles
+  required_markers:
+  - governance/review docs, mappings, validators, probes, runtime state, and
+    receipts
+  - the terminal machine chain stays explicit as mappings → validators → probes
+    → runtime state → receipts
+  - 'answers: how current-turn legality and machine verdict are determined.'

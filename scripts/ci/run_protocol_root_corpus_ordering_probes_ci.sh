@@ -54,7 +54,7 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_ordering_status"] == "PASS_REQUIRED", payload
 assert payload["root_doc_anchor_check_count"] == 4, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
-assert payload["ordering_row_family_count"] == 10, payload
+assert payload["ordering_row_family_count"] == 12, payload
 assert payload["ordering_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["ordering_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
@@ -67,6 +67,13 @@ assert payload["root_reading_order_stage_surface"]["entry_count"] == 7, payload
 assert payload["root_reading_order_stage_surface"]["entries"][0]["stage_label"] == "`IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`", payload
 assert payload["root_reading_order_stage_surface"]["entries"][-1]["stage_label"] == "non-runtime or support material", payload
 assert payload["root_reading_order_stage_surface"]["extraction_violations"] == [], payload
+assert payload["order_plane_stage_count"] == 3, payload
+assert payload["order_plane_stages"][0]["stage_label"] == "source-order / generative-order", payload
+assert payload["order_plane_stages"][-1]["stage_label"] == "adjudication-order", payload
+assert payload["order_plane_stage_surface"]["entry_count"] == 3, payload
+assert payload["order_plane_stage_surface"]["entries"][0]["stage_label"] == "source-order / generative-order", payload
+assert payload["order_plane_stage_surface"]["entries"][-1]["stage_label"] == "adjudication-order", payload
+assert payload["order_plane_stage_surface"]["extraction_violations"] == [], payload
 assert payload["source_order"][0]["corpus_class"] == "bottom_theory", payload
 assert payload["canonical_root_contract_entry_count"] == 16, payload
 assert payload["canonical_root_contract_entry_paths"][0] == "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md", payload
@@ -82,6 +89,8 @@ assert {row["family_id"] for row in payload["row_family_projection_rows"]} == {
     "reading_order",
     "root_reading_order_stages",
     "root_reading_order_stage_surface",
+    "order_plane_stages",
+    "order_plane_stage_surface",
     "readme_root_contract_index",
     "protocol_boundary_root_contract_index",
     "protocol_boundary_root_contract_projections",
@@ -94,6 +103,62 @@ assert payload["adjudication_order"][-1]["machine_surface"] == "receipts", paylo
 assert payload["adjudication_surface_profile_count"] == 5, payload
 assert payload["adjudication_surface_profiles"][0]["surface_role"] == "admissible_law_resolution", payload
 assert payload["adjudication_surface_profiles"][-1]["closure_terminal"] is True, payload
+PY
+
+ORDER_PLANE_REPO="${TMP_ROOT}/missing-order-plane-stage-repo"
+mirror_repo "${ORDER_PLANE_REPO}"
+python3 - <<'PY' "${ORDER_PLANE_REPO}/identity/protocol/mappings/root-corpus-ordering.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["order_plane_stages"] = [
+    row for row in doc["order_plane_stages"]
+    if row.get("stage_label") != "adjudication-order"
+]
+for idx, row in enumerate(doc["order_plane_stages"], start=1):
+    row["order"] = idx
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+ORDER_PLANE_JSON="${TMP_ROOT}/missing-order-plane-stage.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_ordering.py" \
+  --repo-root "${ORDER_PLANE_REPO}" \
+  --json-only >"${ORDER_PLANE_JSON}"; then
+  echo "[FAIL] root corpus ordering validator unexpectedly passed missing order-plane stage"
+  exit 1
+fi
+
+python3 - <<'PY' "${ORDER_PLANE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_ordering_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCO-002", payload
+assert any(
+    "structure_violation:order_plane_stages:missing_order_plane_stages" == reason
+    for reason in payload["stale_reasons"]
+), payload
+stage_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "order_plane_stages"
+)
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "order_plane_stage_surface"
+)
+assert stage_row["expected_count"] == 3, payload
+assert stage_row["actual_count"] == 2, payload
+assert stage_row["missing_ids"] == ["adjudication-order"], payload
+assert stage_row["unexpected_ids"] == [], payload
+assert stage_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert stage_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 STAGE_REPO="${TMP_ROOT}/missing-root-reading-stage-repo"
@@ -150,6 +215,60 @@ assert stage_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert stage_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+ORDER_PLANE_SURFACE_REPO="${TMP_ROOT}/order-plane-surface-drift-repo"
+mirror_repo "${ORDER_PLANE_SURFACE_REPO}"
+python3 - <<'PY' "${ORDER_PLANE_SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "3. **adjudication-order**"
+new = "3. **adjudication sequencing**"
+assert old in text, text[:4000]
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+ORDER_PLANE_SURFACE_JSON="${TMP_ROOT}/order-plane-surface-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_ordering.py" \
+  --repo-root "${ORDER_PLANE_SURFACE_REPO}" \
+  --json-only >"${ORDER_PLANE_SURFACE_JSON}"; then
+  echo "[FAIL] root corpus ordering validator unexpectedly passed order-plane surface label drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ORDER_PLANE_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_ordering_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCO-002", payload
+assert any(
+    "structure_violation:order_plane_stage_surface:missing_order_plane_surface_stages" == reason
+    for reason in payload["stale_reasons"]
+), payload
+assert any(
+    "structure_violation:order_plane_stage_surface:extra_order_plane_surface_stages" == reason
+    for reason in payload["stale_reasons"]
+), payload
+assert any(
+    "coverage_violation:order_plane_stage_surface:order_plane_surface_label_order_mismatch" == reason
+    for reason in payload["stale_reasons"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "order_plane_stage_surface"
+)
+assert surface_row["expected_count"] == 3, payload
+assert surface_row["actual_count"] == 3, payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert surface_row["missing_ids"] == ["adjudication-order"], payload
+assert surface_row["unexpected_ids"] == ["adjudication sequencing"], payload
 PY
 
 DUP_REPO="${TMP_ROOT}/duplicate-source-order-repo"

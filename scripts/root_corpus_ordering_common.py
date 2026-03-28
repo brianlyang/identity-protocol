@@ -16,6 +16,7 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ROOT_CORPUS_ORDERING_CURRENT = "identity/protocol/mappings/root-corpus-ordering.current.yaml"
 ROOT_PROTOCOL_README_REL_PATH = "identity/protocol/README.md"
 ROOT_READING_ORDER_SECTION_MARKER = "## Root reading order"
+ORDER_PLANE_SECTION_MARKER = "## Source-order, reading-order, and adjudication-order"
 ORDERED_BOLD_ITEM_RE = re.compile(r"^\s*(\d+)\.\s+\*\*(.*?)\*\*")
 HEADING_RE = re.compile(r"^##\s+")
 HORIZONTAL_RULE_RE = re.compile(r"^-{3,}$")
@@ -55,6 +56,28 @@ class RootReadingOrderStageSurfaceRow:
 class RootReadingOrderStageSurface:
     rel_path: str
     rows: tuple[RootReadingOrderStageSurfaceRow, ...]
+    extraction_violations: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class OrderPlaneStage:
+    order: int
+    stage_label: str
+    bound_row_families: tuple[str, ...] = field(default_factory=tuple)
+    required_markers: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class OrderPlaneStageSurfaceRow:
+    order: int
+    stage_label: str
+    body_lines: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class OrderPlaneStageSurface:
+    rel_path: str
+    rows: tuple[OrderPlaneStageSurfaceRow, ...]
     extraction_violations: tuple[str, ...]
 
 
@@ -203,6 +226,32 @@ def root_reading_order_stages_from_doc(ordering_doc: Mapping[str, Any]) -> tuple
     return tuple(out)
 
 
+def order_plane_stages_from_doc(ordering_doc: Mapping[str, Any]) -> tuple[OrderPlaneStage, ...]:
+    rows = ordering_doc.get("order_plane_stages")
+    if not isinstance(rows, list):
+        return ()
+    out: list[OrderPlaneStage] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        stage_label = str(row.get("stage_label") or "").strip()
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not stage_label:
+            continue
+        out.append(
+            OrderPlaneStage(
+                order=order,
+                stage_label=stage_label,
+                bound_row_families=_as_str_tuple(row.get("bound_row_families")),
+                required_markers=_as_str_tuple(row.get("required_markers")),
+            )
+        )
+    return tuple(out)
+
+
 def protocol_boundary_root_contract_projection_rows_from_doc(
     ordering_doc: Mapping[str, Any],
 ) -> tuple[ProtocolBoundaryRootContractProjectionRow, ...]:
@@ -277,18 +326,18 @@ def adjudication_surface_profiles_from_doc(ordering_doc: Mapping[str, Any]) -> t
     return tuple(out)
 
 
-def readme_root_reading_order_surface(repo_root: Path) -> RootReadingOrderStageSurface:
+def _extract_readme_ordered_bold_surface(
+    repo_root: Path,
+    *,
+    section_marker: str,
+) -> tuple[tuple[tuple[int, str, tuple[str, ...]], ...], tuple[str, ...]]:
     path = (repo_root / ROOT_PROTOCOL_README_REL_PATH).resolve()
     if not path.exists() or not path.is_file():
-        return RootReadingOrderStageSurface(
-            rel_path=ROOT_PROTOCOL_README_REL_PATH,
-            rows=(),
-            extraction_violations=("target_missing",),
-        )
+        return (), ("target_missing",)
 
     lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
     section_found = False
-    rows: list[RootReadingOrderStageSurfaceRow] = []
+    rows: list[tuple[int, str, tuple[str, ...]]] = []
     current_order = 0
     current_label = ""
     current_body_lines: list[str] = []
@@ -297,20 +346,14 @@ def readme_root_reading_order_surface(repo_root: Path) -> RootReadingOrderStageS
         nonlocal current_order, current_label, current_body_lines
         if current_order <= 0 or not current_label:
             return
-        rows.append(
-            RootReadingOrderStageSurfaceRow(
-                order=current_order,
-                stage_label=current_label,
-                body_lines=tuple(line for line in current_body_lines if line),
-            )
-        )
+        rows.append((current_order, current_label, tuple(line for line in current_body_lines if line)))
         current_order = 0
         current_label = ""
         current_body_lines = []
 
     for line in lines:
         stripped = line.strip()
-        if stripped == ROOT_READING_ORDER_SECTION_MARKER:
+        if stripped == section_marker:
             section_found = True
             continue
         if not section_found:
@@ -339,11 +382,37 @@ def readme_root_reading_order_surface(repo_root: Path) -> RootReadingOrderStageS
         violations.append("section_marker_missing")
     elif not rows:
         violations.append("stage_rows_missing")
-    elif any(not row.body_lines for row in rows):
+    elif any(not body_lines for _order, _label, body_lines in rows):
         violations.append("stage_body_missing")
 
+    return tuple(rows), tuple(violations)
+
+
+def readme_root_reading_order_surface(repo_root: Path) -> RootReadingOrderStageSurface:
+    rows, violations = _extract_readme_ordered_bold_surface(
+        repo_root,
+        section_marker=ROOT_READING_ORDER_SECTION_MARKER,
+    )
     return RootReadingOrderStageSurface(
         rel_path=ROOT_PROTOCOL_README_REL_PATH,
-        rows=tuple(rows),
-        extraction_violations=tuple(violations),
+        rows=tuple(
+            RootReadingOrderStageSurfaceRow(order=order, stage_label=stage_label, body_lines=body_lines)
+            for order, stage_label, body_lines in rows
+        ),
+        extraction_violations=violations,
+    )
+
+
+def readme_order_plane_surface(repo_root: Path) -> OrderPlaneStageSurface:
+    rows, violations = _extract_readme_ordered_bold_surface(
+        repo_root,
+        section_marker=ORDER_PLANE_SECTION_MARKER,
+    )
+    return OrderPlaneStageSurface(
+        rel_path=ROOT_PROTOCOL_README_REL_PATH,
+        rows=tuple(
+            OrderPlaneStageSurfaceRow(order=order, stage_label=stage_label, body_lines=body_lines)
+            for order, stage_label, body_lines in rows
+        ),
+        extraction_violations=violations,
     )

@@ -161,6 +161,7 @@ So the reading rule is:
 ## Source-order, reading-order, and adjudication-order
 
 These three orders must remain distinct for the machine world:
+These order distinctions must remain bound to canonical order-plane stage rows rather than becoming a freehand semantic triad.
 
 1. **source-order / generative-order**
    - `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md`
