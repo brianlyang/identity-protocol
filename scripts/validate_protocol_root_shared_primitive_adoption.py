@@ -55,10 +55,24 @@ def main() -> int:
         payload["stale_reasons"].append(
             f"primitive_binding_violation:{rel_path}:{primitive_name}:{reason}"
         )
+    if int(payload.get("row_family_projection_assignment_violation_count", 0) or 0) > 0:
+        for row in payload.get("row_family_projection_assignment_rows") or []:
+            assignment_mode = str(row.get("assignment_mode") or "").strip()
+            if assignment_mode in {"shared_primitive_call", "initializer_empty_list"}:
+                continue
+            rel_path = str(row.get("rel_path") or "").strip()
+            binding = str(row.get("binding") or "").strip()
+            payload["stale_reasons"].append(
+                f"row_family_projection_assignment_violation:{rel_path}:{assignment_mode}:{binding}"
+            )
 
     if payload["stale_reasons"]:
         payload["error_code"] = (
-            ERR_BINDING if payload.get("primitive_binding_violations") else ERR_SCAN
+            ERR_BINDING
+            if payload.get("primitive_binding_violations")
+            or int(payload.get("row_family_projection_assignment_violation_count", 0) or 0)
+            > 0
+            else ERR_SCAN
         )
     else:
         payload[STATUS_KEY] = STATUS_PASS_REQUIRED

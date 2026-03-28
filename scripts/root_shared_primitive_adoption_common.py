@@ -43,6 +43,22 @@ FORBIDDEN_PRIMITIVE_BY_NAME: dict[str, ForbiddenPrimitiveContract] = {
     contract.primitive_name: contract for contract in FORBIDDEN_PRIMITIVE_CONTRACTS
 }
 
+PREFERRED_PRIMITIVE_BY_MODULE: dict[str, dict[str, dict[str, str]]] = {}
+for _contract in FORBIDDEN_PRIMITIVE_CONTRACTS:
+    PREFERRED_PRIMITIVE_BY_MODULE.setdefault(_contract.module, {})[
+        _contract.preferred_primitive
+    ] = {
+        "module": _contract.module,
+        "primitive_name": _contract.preferred_primitive,
+        "primitive_class": _contract.primitive_class,
+    }
+
+PREFERRED_PRIMITIVE_BY_NAME: dict[str, dict[str, str]] = {
+    primitive_name: primitive_contract
+    for primitive_contracts in PREFERRED_PRIMITIVE_BY_MODULE.values()
+    for primitive_name, primitive_contract in primitive_contracts.items()
+}
+
 
 def root_validator_paths(repo_root: Path) -> tuple[Path, ...]:
     return tuple(sorted((repo_root / "scripts").glob("validate_protocol_root_*.py")))
@@ -53,6 +69,14 @@ def _rel_path(repo_root: Path, path: Path) -> str:
         return path.resolve().relative_to(repo_root.resolve()).as_posix()
     except Exception:
         return str(path.resolve())
+
+
+def _is_empty_list_initializer(node: ast.AST) -> bool:
+    if isinstance(node, ast.List):
+        return len(node.elts) == 0
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+        return node.func.id == "list" and len(node.args) == 0 and len(node.keywords) == 0
+    return False
 
 
 def _scan_root_validator_file(
@@ -77,17 +101,31 @@ def _scan_root_validator_file(
         ]
 
     direct_name_bindings: dict[str, ForbiddenPrimitiveContract] = {}
+    preferred_direct_bindings: dict[str, dict[str, str]] = {}
     module_aliases: dict[str, str] = {}
     violations: list[dict[str, Any]] = []
+    primitive_adoption_rows: list[dict[str, Any]] = []
+    row_family_projection_assignment_rows: list[dict[str, Any]] = []
 
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom):
             module_name = str(node.module or "").strip()
             forbidden_by_name = FORBIDDEN_PRIMITIVE_BY_MODULE.get(module_name, {})
+            preferred_by_name = PREFERRED_PRIMITIVE_BY_MODULE.get(module_name, {})
             if not forbidden_by_name:
+                for alias in node.names:
+                    primitive_contract = preferred_by_name.get(alias.name)
+                    if primitive_contract is None:
+                        continue
+                    local_name = str(alias.asname or alias.name)
+                    preferred_direct_bindings[local_name] = primitive_contract
                 continue
             for alias in node.names:
                 contract = forbidden_by_name.get(alias.name)
+                if contract is None and alias.name in preferred_by_name:
+                    local_name = str(alias.asname or alias.name)
+                    preferred_direct_bindings[local_name] = preferred_by_name[alias.name]
+                    continue
                 if contract is None:
                     continue
                 local_name = str(alias.asname or alias.name)
@@ -107,10 +145,30 @@ def _scan_root_validator_file(
         elif isinstance(node, ast.Import):
             for alias in node.names:
                 module_name = str(alias.name or "").strip()
-                if module_name not in FORBIDDEN_PRIMITIVE_BY_MODULE:
+                if (
+                    module_name not in FORBIDDEN_PRIMITIVE_BY_MODULE
+                    and module_name not in PREFERRED_PRIMITIVE_BY_MODULE
+                ):
                     continue
                 local_name = str(alias.asname or module_name.rsplit(".", 1)[-1])
                 module_aliases[local_name] = module_name
+
+    def _call_binding_details(func: ast.AST) -> tuple[dict[str, str] | None, str]:
+        if isinstance(func, ast.Name):
+            contract = preferred_direct_bindings.get(func.id)
+            if contract is not None:
+                return contract, func.id
+            contract = PREFERRED_PRIMITIVE_BY_NAME.get(func.id)
+            if contract is not None:
+                return contract, func.id
+            return None, func.id
+        if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
+            module_name = module_aliases.get(func.value.id)
+            if not module_name:
+                return None, f"{func.value.id}.{func.attr}"
+            contract = PREFERRED_PRIMITIVE_BY_MODULE.get(module_name, {}).get(func.attr)
+            return contract, f"{func.value.id}.{func.attr}"
+        return None, ast.dump(func, include_attributes=False)
 
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
@@ -149,34 +207,148 @@ def _scan_root_validator_file(
         elif isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
             module_name = module_aliases.get(func.value.id)
             if not module_name:
-                continue
-            contract = FORBIDDEN_PRIMITIVE_BY_MODULE.get(module_name, {}).get(func.attr)
-            if contract is None:
-                continue
-            violations.append(
+                _, binding = _call_binding_details(func)
+                primitive_contract = None
+            else:
+                contract = FORBIDDEN_PRIMITIVE_BY_MODULE.get(module_name, {}).get(func.attr)
+                if contract is not None:
+                    violations.append(
+                        {
+                            "rel_path": rel_path,
+                            "reason": "forbidden_module_attribute_call_binding",
+                            "lineno": int(getattr(node, "lineno", 0) or 0),
+                            "module": contract.module,
+                            "primitive_name": contract.primitive_name,
+                            "preferred_primitive": contract.preferred_primitive,
+                            "primitive_class": contract.primitive_class,
+                            "binding": f"{func.value.id}.{func.attr}",
+                        }
+                    )
+                primitive_contract, binding = _call_binding_details(func)
+            if primitive_contract is not None:
+                primitive_adoption_rows.append(
+                    {
+                        "rel_path": rel_path,
+                        "lineno": int(getattr(node, "lineno", 0) or 0),
+                        "module": primitive_contract["module"],
+                        "primitive_name": primitive_contract["primitive_name"],
+                        "primitive_class": primitive_contract["primitive_class"],
+                        "binding": binding,
+                        "call_mode": "module_attribute_binding",
+                    }
+                )
+            continue
+        primitive_contract, binding = _call_binding_details(func)
+        if primitive_contract is not None:
+            primitive_adoption_rows.append(
                 {
                     "rel_path": rel_path,
-                    "reason": "forbidden_module_attribute_call_binding",
                     "lineno": int(getattr(node, "lineno", 0) or 0),
-                    "module": contract.module,
-                    "primitive_name": contract.primitive_name,
-                    "preferred_primitive": contract.preferred_primitive,
-                    "primitive_class": contract.primitive_class,
-                    "binding": f"{func.value.id}.{func.attr}",
+                    "module": primitive_contract["module"],
+                    "primitive_name": primitive_contract["primitive_name"],
+                    "primitive_class": primitive_contract["primitive_class"],
+                    "binding": binding,
+                    "call_mode": "direct_name_binding",
                 }
             )
 
-    return violations, []
+    assignment_nodes = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.Assign, ast.AnnAssign))
+    ]
+    for node in assignment_nodes:
+        target_names: list[str] = []
+        if isinstance(node, ast.Assign):
+            target_names = [
+                target.id
+                for target in node.targets
+                if isinstance(target, ast.Name)
+            ]
+            value = node.value
+        else:
+            target_names = [node.target.id] if isinstance(node.target, ast.Name) else []
+            value = node.value
+        if "row_family_projection_rows" not in target_names or value is None:
+            continue
+
+        assignment_row: dict[str, Any] = {
+            "rel_path": rel_path,
+            "lineno": int(getattr(node, "lineno", 0) or 0),
+            "target": "row_family_projection_rows",
+            "assignment_mode": "",
+            "binding": "",
+        }
+        if _is_empty_list_initializer(value):
+            assignment_row["assignment_mode"] = "initializer_empty_list"
+            assignment_row["binding"] = type(value).__name__
+            row_family_projection_assignment_rows.append(assignment_row)
+            continue
+        if isinstance(value, ast.Call):
+            primitive_contract, binding = _call_binding_details(value.func)
+            assignment_row["binding"] = binding
+            if (
+                primitive_contract is not None
+                and primitive_contract["primitive_name"] == "project_row_families"
+            ):
+                assignment_row["assignment_mode"] = "shared_primitive_call"
+                assignment_row["primitive_class"] = primitive_contract["primitive_class"]
+                assignment_row["primitive_name"] = primitive_contract["primitive_name"]
+                assignment_row["module"] = primitive_contract["module"]
+            else:
+                assignment_row["assignment_mode"] = "non_shared_call"
+                violations.append(
+                    {
+                        "rel_path": rel_path,
+                        "reason": "row_family_projection_assignment_not_shared_call",
+                        "lineno": assignment_row["lineno"],
+                        "primitive_class": "row_family_projection",
+                        "preferred_primitive": "project_row_families",
+                        "binding": binding,
+                    }
+                )
+        else:
+            assignment_row["assignment_mode"] = f"non_call_{type(value).__name__}"
+            assignment_row["binding"] = type(value).__name__
+            violations.append(
+                {
+                    "rel_path": rel_path,
+                    "reason": "row_family_projection_assignment_not_call",
+                    "lineno": assignment_row["lineno"],
+                    "primitive_class": "row_family_projection",
+                    "preferred_primitive": "project_row_families",
+                    "binding": assignment_row["binding"],
+                }
+            )
+        row_family_projection_assignment_rows.append(assignment_row)
+
+    return (
+        violations,
+        [],
+        primitive_adoption_rows,
+        row_family_projection_assignment_rows,
+    )
 
 
 def scan_root_validator_shared_primitive_adoption(repo_root: Path) -> dict[str, Any]:
     validator_paths = root_validator_paths(repo_root)
     violations: list[dict[str, Any]] = []
     scan_errors: list[dict[str, Any]] = []
+    primitive_adoption_rows: list[dict[str, Any]] = []
+    row_family_projection_assignment_rows: list[dict[str, Any]] = []
     for path in validator_paths:
-        file_violations, file_errors = _scan_root_validator_file(repo_root, path)
+        (
+            file_violations,
+            file_errors,
+            file_primitive_adoption_rows,
+            file_row_family_projection_assignment_rows,
+        ) = _scan_root_validator_file(repo_root, path)
         violations.extend(file_violations)
         scan_errors.extend(file_errors)
+        primitive_adoption_rows.extend(file_primitive_adoption_rows)
+        row_family_projection_assignment_rows.extend(
+            file_row_family_projection_assignment_rows
+        )
 
     primitive_class_counts: dict[str, int] = {}
     reason_counts: dict[str, int] = {}
@@ -187,6 +359,20 @@ def scan_root_validator_shared_primitive_adoption(repo_root: Path) -> dict[str, 
         )
         reason = str(row.get("reason") or "").strip() or "unknown"
         reason_counts[reason] = reason_counts.get(reason, 0) + 1
+
+    adoption_class_counts: dict[str, int] = {}
+    for row in primitive_adoption_rows:
+        primitive_class = str(row.get("primitive_class") or "").strip() or "unknown"
+        adoption_class_counts[primitive_class] = (
+            adoption_class_counts.get(primitive_class, 0) + 1
+        )
+
+    row_family_projection_assignment_violation_count = sum(
+        1
+        for row in row_family_projection_assignment_rows
+        if str(row.get("assignment_mode") or "").strip()
+        not in {"shared_primitive_call", "initializer_empty_list"}
+    )
 
     return {
         "root_validator_count": len(validator_paths),
@@ -204,4 +390,21 @@ def scan_root_validator_shared_primitive_adoption(repo_root: Path) -> dict[str, 
         ),
         "primitive_violation_reason_counts": reason_counts,
         "primitive_class_violation_counts": primitive_class_counts,
+        "primitive_adoption_rows": primitive_adoption_rows,
+        "primitive_adoption_row_count": len(primitive_adoption_rows),
+        "primitive_adoption_file_count": len(
+            {
+                str(row.get("rel_path") or "")
+                for row in primitive_adoption_rows
+                if str(row.get("rel_path") or "").strip()
+            }
+        ),
+        "primitive_adoption_class_counts": adoption_class_counts,
+        "row_family_projection_assignment_rows": row_family_projection_assignment_rows,
+        "row_family_projection_assignment_count": len(
+            row_family_projection_assignment_rows
+        ),
+        "row_family_projection_assignment_violation_count": (
+            row_family_projection_assignment_violation_count
+        ),
     }

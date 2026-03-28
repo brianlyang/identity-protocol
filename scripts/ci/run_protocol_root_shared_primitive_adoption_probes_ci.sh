@@ -39,6 +39,8 @@ assert payload["protocol_root_shared_primitive_adoption_status"] == "PASS_REQUIR
 assert payload["root_validator_count"] > 0, payload
 assert payload["primitive_violation_count"] == 0, payload
 assert payload["scan_error_count"] == 0, payload
+assert payload["primitive_adoption_row_count"] > 0, payload
+assert payload["row_family_projection_assignment_violation_count"] == 0, payload
 PY
 
 PROJECTION_DRIFT_REPO="${TMP_ROOT}/projection-drift-repo"
@@ -122,6 +124,51 @@ assert any(
         "forbidden_direct_call_literal",
     )
     for row in payload["primitive_binding_violations"]
+), payload
+PY
+
+ASSIGNMENT_DRIFT_REPO="${TMP_ROOT}/assignment-drift-repo"
+mirror_repo "${ASSIGNMENT_DRIFT_REPO}"
+python3 - <<'PY' "${ASSIGNMENT_DRIFT_REPO}/scripts/validate_protocol_root_identity_discovery.py"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+import_line = (
+    "from root_row_family_projection_common import aggregate_row_family_status, "
+    "project_root_contract_support_projection, project_row_families\n"
+)
+helper = "def manual_projection_rows(*_args, **_kwargs):\n    return []\n\n"
+assert import_line in text, text[:5000]
+text = text.replace(import_line, import_line + helper, 1)
+old = "        row_family_projection_rows = project_row_families("
+new = "        row_family_projection_rows = manual_projection_rows("
+assert old in text, text[:5000]
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+ASSIGNMENT_DRIFT_JSON="${TMP_ROOT}/assignment-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_shared_primitive_adoption.py" \
+  --repo-root "${ASSIGNMENT_DRIFT_REPO}" \
+  --json-only >"${ASSIGNMENT_DRIFT_JSON}"; then
+  echo "[FAIL] root shared-primitive adoption validator unexpectedly passed assignment-shape drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${ASSIGNMENT_DRIFT_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_shared_primitive_adoption_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RSPA-002", payload
+assert payload["row_family_projection_assignment_violation_count"] >= 1, payload
+assert any(
+    row["assignment_mode"] == "non_shared_call"
+    and row["binding"] == "manual_projection_rows"
+    for row in payload["row_family_projection_assignment_rows"]
 ), payload
 PY
 
