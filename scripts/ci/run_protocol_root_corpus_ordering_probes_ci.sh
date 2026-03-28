@@ -6,6 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./protocol_root_probe_shadow_common.sh
 source "${SCRIPT_DIR}/protocol_root_probe_shadow_common.sh"
 protocol_root_probe_bootstrap "${SCRIPT_DIR}" "protocol-root-ordering-ci"
+export PROBE_FIXTURE_REPO_ROOT="${ROOT}"
+source "${ROOT}/scripts/probe_fixture_shell_common.sh"
 
 PROBE_REL_PATHS=(
   "scripts/root_corpus_contract_list_sync_common.py"
@@ -20,6 +22,22 @@ PROBE_REL_PATHS=(
 )
 
 protocol_root_probe_define_relpath_mirror "${PROBE_REL_PATHS[@]}"
+
+protocol_boundary_probe_target_rel_path="$(
+  resolve_python_module_expression \
+    "root_corpus_contract_list_sync_common" \
+    "current_protocol_boundary_root_contract_projection_probe_target()['rel_path']"
+)"
+protocol_boundary_probe_target_sentence="$(
+  resolve_python_module_expression \
+    "root_corpus_contract_list_sync_common" \
+    "current_protocol_boundary_root_contract_projection_probe_target()['sentence']"
+)"
+protocol_boundary_probe_target_drifted_sentence="$(
+  resolve_python_module_expression \
+    "root_corpus_contract_list_sync_common" \
+    "current_protocol_boundary_root_contract_projection_probe_target()['drifted_sentence']"
+)"
 
 
 PASS_JSON="${TMP_ROOT}/pass.json"
@@ -357,16 +375,9 @@ PY
 
 PROTOCOL_MANUAL_REPO="${TMP_ROOT}/protocol-manual-index-drift-repo"
 mirror_repo "${PROTOCOL_MANUAL_REPO}"
-python3 - <<'PY' "${PROTOCOL_MANUAL_REPO}/identity/protocol/IDENTITY_PROTOCOL.md"
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-text = path.read_text(encoding="utf-8")
-old = "16. The root-domain agent-handoff law for lawful cross-agent responsibility transfer and closure is frozen separately in `identity/protocol/AGENT_HANDOFF_CONTRACT.md`.\n"
-assert old in text, text[:4000]
-path.write_text(text.replace(old, "", 1), encoding="utf-8")
-PY
+mutate_probe_literal \
+  "${PROTOCOL_MANUAL_REPO}/identity/protocol/IDENTITY_PROTOCOL.md" \
+  "${protocol_boundary_probe_target_sentence}"
 
 PROTOCOL_MANUAL_JSON="${TMP_ROOT}/protocol-manual-index-drift.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_corpus_ordering.py" \
@@ -376,7 +387,7 @@ if python3 "${ROOT}/scripts/validate_protocol_root_corpus_ordering.py" \
   exit 1
 fi
 
-python3 - <<'PY' "${PROTOCOL_MANUAL_JSON}"
+python3 - <<'PY' "${PROTOCOL_MANUAL_JSON}" "${protocol_boundary_probe_target_rel_path}"
 import json
 import pathlib
 import sys
@@ -394,7 +405,7 @@ protocol_row = next(
 )
 assert protocol_row["expected_count"] == 16, payload
 assert protocol_row["actual_count"] == 15, payload
-assert protocol_row["missing_ids"] == ["identity/protocol/AGENT_HANDOFF_CONTRACT.md"], payload
+assert protocol_row["missing_ids"] == [sys.argv[2]], payload
 assert protocol_row["unexpected_ids"] == [], payload
 assert protocol_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert protocol_row["identity_projection_status"] == "FAIL_REQUIRED", payload
@@ -402,17 +413,10 @@ PY
 
 PROTOCOL_LABEL_REPO="${TMP_ROOT}/protocol-boundary-label-drift-repo"
 mirror_repo "${PROTOCOL_LABEL_REPO}"
-python3 - <<'PY' "${PROTOCOL_LABEL_REPO}/identity/protocol/IDENTITY_PROTOCOL.md"
-import pathlib
-import sys
-
-path = pathlib.Path(sys.argv[1])
-text = path.read_text(encoding="utf-8")
-old = "13. The root-domain artifact-family admissibility law for which governed families may accept which artifacts, which artifacts remain merely compatible, and which must redirect or stay demoted is frozen separately in `identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md`.\n"
-new = "13. The root-domain artifact-family admissibility law for which governed families may accept which artifacts, which artifacts remain merely compatible, and which must stay informal is frozen separately in `identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md`.\n"
-assert old in text, text[:5000]
-path.write_text(text.replace(old, new, 1), encoding="utf-8")
-PY
+mutate_probe_literal \
+  "${PROTOCOL_LABEL_REPO}/identity/protocol/IDENTITY_PROTOCOL.md" \
+  "${protocol_boundary_probe_target_sentence}" \
+  "${protocol_boundary_probe_target_drifted_sentence}"
 
 PROTOCOL_LABEL_JSON="${TMP_ROOT}/protocol-boundary-label-drift.json"
 if python3 "${ROOT}/scripts/validate_protocol_root_corpus_ordering.py" \
@@ -422,7 +426,7 @@ if python3 "${ROOT}/scripts/validate_protocol_root_corpus_ordering.py" \
   exit 1
 fi
 
-python3 - <<'PY' "${PROTOCOL_LABEL_JSON}"
+python3 - <<'PY' "${PROTOCOL_LABEL_JSON}" "${protocol_boundary_probe_target_rel_path}"
 import json
 import pathlib
 import sys
@@ -443,7 +447,7 @@ assert surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
 assert any(
     row["field"] == "protocol_boundary_root_contract_projection_surface"
     and row["reason"] == "manual_root_contract_projection_label_mismatch"
-    and row["rel_path"] == "identity/protocol/ARTIFACT_FAMILY_ADMISSIBILITY_CONTRACT.md"
+    and row["rel_path"] == sys.argv[2]
     for row in payload["coverage_violations"]
 ), payload
 PY

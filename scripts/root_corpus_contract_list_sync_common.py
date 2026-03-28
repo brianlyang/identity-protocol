@@ -5,6 +5,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from repo_root_resolution_common import resolve_protocol_repo_root
+
 ROOT_PROTOCOL_DIR = "identity/protocol"
 README_REL_PATH = f"{ROOT_PROTOCOL_DIR}/README.md"
 IDENTITY_PROTOCOL_REL_PATH = f"{ROOT_PROTOCOL_DIR}/IDENTITY_PROTOCOL.md"
@@ -17,7 +19,9 @@ PROTOCOL_BOUNDARY_SECTION_MARKER = "## Foundational design philosophy boundary"
 BACKTICK_TOKEN_RE = re.compile(r"`([^`]+)`")
 ORDERED_ITEM_RE = re.compile(r"^\d+\.\s+\*\*")
 HEADING_RE = re.compile(r"^##\s+")
-PROTOCOL_BOUNDARY_DESCRIPTOR_RE = re.compile(r"^\d+\.\s+(.*?)\s+is frozen separately in\s+")
+PROTOCOL_BOUNDARY_DESCRIPTOR_RE = re.compile(
+    r"^(?P<boundary_order>\d+)\.\s+(?P<descriptor>.*?)\s+is frozen separately in\s+"
+)
 
 
 @dataclass(frozen=True)
@@ -39,6 +43,7 @@ class ManualRootContractProjectionRow:
     order: int
     rel_path: str
     projection_label: str
+    boundary_order: int = 0
 
 
 @dataclass(frozen=True)
@@ -69,11 +74,16 @@ def _build_rows(rel_paths: list[str]) -> tuple[ManualRootContractIndexRow, ...]:
 
 
 def _build_projection_rows(
-    projection_items: list[tuple[str, str]],
+    projection_items: list[tuple[int, str, str]],
 ) -> tuple[ManualRootContractProjectionRow, ...]:
     return tuple(
-        ManualRootContractProjectionRow(order=index, rel_path=rel_path, projection_label=projection_label)
-        for index, (projection_label, rel_path) in enumerate(projection_items, start=1)
+        ManualRootContractProjectionRow(
+            order=index,
+            rel_path=rel_path,
+            projection_label=projection_label,
+            boundary_order=boundary_order,
+        )
+        for index, (boundary_order, projection_label, rel_path) in enumerate(projection_items, start=1)
         if rel_path
     )
 
@@ -93,9 +103,9 @@ def canonical_root_contract_rel_paths(reading_rows) -> tuple[str, ...]:
     )
 
 
-def _protocol_boundary_projection_items(lines: list[str]) -> list[tuple[str, str]]:
+def _protocol_boundary_projection_items(lines: list[str]) -> list[tuple[int, str, str]]:
     section_found = False
-    items: list[tuple[str, str]] = []
+    items: list[tuple[int, str, str]] = []
     for line in lines:
         stripped = line.strip()
         if stripped == PROTOCOL_BOUNDARY_SECTION_MARKER:
@@ -114,9 +124,15 @@ def _protocol_boundary_projection_items(lines: list[str]) -> list[tuple[str, str
         if not normalized:
             continue
         descriptor_match = PROTOCOL_BOUNDARY_DESCRIPTOR_RE.match(stripped)
-        descriptor = descriptor_match.group(1).strip() if descriptor_match else ""
-        items.append((descriptor, normalized))
+        boundary_order = int(descriptor_match.group("boundary_order")) if descriptor_match else 0
+        descriptor = descriptor_match.group("descriptor").strip() if descriptor_match else ""
+        items.append((boundary_order, descriptor, normalized))
     return items
+
+
+def manual_root_contract_projection_sentence(row: ManualRootContractProjectionRow) -> str:
+    prefix_order = int(row.boundary_order or row.order)
+    return f"{prefix_order}. {row.projection_label} is frozen separately in `{row.rel_path}`."
 
 
 def readme_root_contract_index_surface(repo_root: Path) -> ManualRootContractIndexSurface:
@@ -171,7 +187,7 @@ def protocol_boundary_root_contract_index_surface(repo_root: Path) -> ManualRoot
         )
 
     section_found = any(line.strip() == PROTOCOL_BOUNDARY_SECTION_MARKER for line in lines)
-    rel_paths = [rel_path for _descriptor, rel_path in _protocol_boundary_projection_items(lines)]
+    rel_paths = [rel_path for _boundary_order, _descriptor, rel_path in _protocol_boundary_projection_items(lines)]
 
     violations: list[str] = []
     if not section_found:
@@ -205,7 +221,7 @@ def protocol_boundary_root_contract_projection_surface(repo_root: Path) -> Manua
         violations.append("section_marker_missing")
     elif not projection_items:
         violations.append("projection_list_missing")
-    elif any(not descriptor for descriptor, _rel_path in projection_items):
+    elif any(not descriptor for _boundary_order, descriptor, _rel_path in projection_items):
         violations.append("projection_label_missing")
 
     return ManualRootContractProjectionSurface(
@@ -214,6 +230,36 @@ def protocol_boundary_root_contract_projection_surface(repo_root: Path) -> Manua
         rows=_build_projection_rows(projection_items),
         extraction_violations=tuple(violations),
     )
+
+
+def current_protocol_boundary_root_contract_projection_probe_target() -> dict[str, str]:
+    repo_root = resolve_protocol_repo_root("", start=__file__)
+    surface = protocol_boundary_root_contract_projection_surface(repo_root)
+    if not surface.rows:
+        return {
+            "rel_path": "",
+            "projection_label": "",
+            "sentence": "",
+            "drifted_projection_label": "",
+            "drifted_sentence": "",
+        }
+    target = surface.rows[-1]
+    drifted_projection_label = f"{target.projection_label} [probe drift]"
+    drifted_sentence = manual_root_contract_projection_sentence(
+        ManualRootContractProjectionRow(
+            order=target.order,
+            rel_path=target.rel_path,
+            projection_label=drifted_projection_label,
+            boundary_order=target.boundary_order,
+        )
+    )
+    return {
+        "rel_path": target.rel_path,
+        "projection_label": target.projection_label,
+        "sentence": manual_root_contract_projection_sentence(target),
+        "drifted_projection_label": drifted_projection_label,
+        "drifted_sentence": drifted_sentence,
+    }
 
 
 def manual_root_contract_index_surfaces(repo_root: Path) -> tuple[ManualRootContractIndexSurface, ...]:

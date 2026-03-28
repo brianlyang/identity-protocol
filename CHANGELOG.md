@@ -104,6 +104,18 @@
     summary/boundary validators and their paired probes must consume the shared
     active-runtime projection bundle rather than probe-local literal copies.
 
+- **root-corpus protocol-boundary probe target hardening**:
+  - `scripts/ci/run_protocol_root_corpus_ordering_probes_ci.sh` now resolves
+    its protocol-boundary negative-probe target sentence from
+    `scripts/root_corpus_contract_list_sync_common.py` instead of hardcoding
+    specific contract sentences inline.
+  - the same shared helper now emits both the canonical sentence and a bounded
+    drifted replacement sentence, so missing-entry and label-drift probes stay
+    aligned with the governed protocol-boundary projection surface even if the
+    target row shifts in canonical order.
+  - this keeps root-corpus ordering probes fail-close on projection-surface
+    drift without probe-local sentence copies tied to one contract path.
+
 - **nested gateway wrapper timeout budget propagation**:
   - hardened `scripts/gateway_wrapper_enforcement.py` so pack-local nested
     ingress/session wrapper subprocesses inherit the stronger timeout profile of
