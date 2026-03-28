@@ -3,6 +3,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from health_report_experience_writeback_projection_common import (
+    apply_release_readiness_health_report_experience_writeback_one_look,
+)
 from release_readiness_active_runtime_closure_projection_common import (
     apply_release_readiness_active_runtime_closure_one_look,
 )
@@ -53,10 +56,6 @@ RELEASE_READINESS_ONE_LOOK_CORE_FIELDS: tuple[str, ...] = (
     "terminal_truth_boundary_projection_status",
     "repair_lane_status",
     "experience_writeback_validation_status",
-    "health_report_experience_writeback_projection_status",
-    "health_report_contract_status",
-    "health_report_experience_writeback_validation_status",
-    "health_report_selected_path_matches_execution_report",
     "terminal_truth_observation_status",
     "admission_lane_projection",
     "repair_success_not_clean_terminal_truth",
@@ -103,7 +102,6 @@ def build_release_readiness_one_look_core_projection(summary: dict[str, Any]) ->
     plugin_projection = summary_payload.get("failclose_plugin_projection") or {}
     full_scan = summary_payload.get("full_scan_target_regression") or {}
     terminal_truth_boundary = summary_payload.get("terminal_truth_boundary_projection") or {}
-    health_report_writeback_closure = summary_payload.get("health_report_experience_writeback_closure") or {}
 
     return {
         "required_contract_coverage_status": _clean_str(coverage.get("status")).upper() or STATUS_UNKNOWN,
@@ -179,21 +177,6 @@ def build_release_readiness_one_look_core_projection(summary: dict[str, Any]) ->
             terminal_truth_boundary.get("experience_writeback_validation_status")
         ).upper()
         or STATUS_UNKNOWN,
-        "health_report_experience_writeback_projection_status": _clean_str(
-            health_report_writeback_closure.get("projection_status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "health_report_contract_status": _clean_str(
-            health_report_writeback_closure.get("health_report_contract_status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "health_report_experience_writeback_validation_status": _clean_str(
-            health_report_writeback_closure.get("validation_status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "health_report_selected_path_matches_execution_report": bool(
-            health_report_writeback_closure.get("report_selected_path_matches_execution_report")
-        ),
         "terminal_truth_observation_status": _clean_str(
             terminal_truth_boundary.get("terminal_truth_observation_status")
         ).upper()
@@ -209,6 +192,7 @@ def build_release_readiness_one_look_core_projection(summary: dict[str, Any]) ->
 
 def build_release_readiness_one_look_projection(summary: dict[str, Any]) -> dict[str, Any]:
     one_look = build_release_readiness_one_look_core_projection(summary)
+    apply_release_readiness_health_report_experience_writeback_one_look(summary, one_look)
     apply_release_readiness_required_gate_bundle_one_look(summary, one_look)
     apply_release_readiness_repo_global_closure_one_look(summary, one_look)
     apply_release_readiness_active_runtime_closure_one_look(summary, one_look)

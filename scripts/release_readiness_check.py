@@ -52,26 +52,21 @@ from release_cloud_evidence_projection_common import (
     build_release_plane_cloud_evidence_summary_projection,
 )
 from release_readiness_active_runtime_closure_projection_common import (
-    apply_release_readiness_active_runtime_closure_one_look,
     release_readiness_active_runtime_closure_capture_script_map,
     release_readiness_active_runtime_closure_structured_capture_specs,
     release_readiness_active_runtime_closure_summary_defaults,
 )
 from release_readiness_governance_probe_projection_common import (
-    apply_release_readiness_governance_probe_one_look,
     release_readiness_governance_probe_capture_script_map,
     release_readiness_governance_probe_structured_capture_specs,
     release_readiness_governance_probe_summary_defaults,
 )
-from release_readiness_required_gate_bundle_projection_common import (
-    apply_release_readiness_required_gate_bundle_one_look,
+from release_readiness_one_look_projection_common import (
+    build_release_readiness_one_look_projection,
 )
 from release_readiness_required_gate_bundle_scope_common import (
     build_scope_excluded_required_gate_bundle_summary,
     targeted_subset_excludes_required_gate_bundle,
-)
-from release_readiness_repo_global_closure_projection_common import (
-    apply_release_readiness_repo_global_closure_one_look,
 )
 from release_readiness_selected_check_scope_common import (
     materialize_targeted_subset_selected_check_scope_exclusions,
@@ -1598,128 +1593,7 @@ def _hydrate_required_gate_bundle_summary(
 
 
 def _hydrate_one_look_projection(summary: dict[str, Any]) -> None:
-    coverage = summary.get("required_contract_coverage") or {}
-    selected_check_scope_projection = summary.get("selected_check_scope_projection") or {}
-    recurrence = summary.get("required_gate_recurrence") or {}
-    tuple_parity = summary.get("required_gate_tuple_parity") or {}
-    release_plane = summary.get("release_plane_cloud_evidence") or {}
-    release_adapter = summary.get("release_cloud_evidence_adapter") or {}
-    if not release_adapter and isinstance(release_plane, dict):
-        release_adapter = release_plane.get("adapter") or {}
-    control_plane_budget = summary.get("control_plane_budget") or {}
-    control_plane_budget_sync = summary.get("control_plane_budget_sync") or {}
-    control_plane_status_sync = summary.get("control_plane_status_sync") or {}
-    control_plane_surface_materialization = summary.get("control_plane_surface_materialization") or {}
-    doc_command_surface_registry = summary.get("doc_command_surface_registry") or {}
-    resolve_identity_context_local_catalog_closure = summary.get("resolve_identity_context_local_catalog_closure") or {}
-    plugin_projection = summary.get("failclose_plugin_projection") or {}
-    full_scan = summary.get("full_scan_target_regression") or {}
-    terminal_truth_boundary = summary.get("terminal_truth_boundary_projection") or {}
-    health_report_writeback_closure = summary.get("health_report_experience_writeback_closure") or {}
-    summary["one_look"] = {
-        "required_contract_coverage_status": _clean_str(coverage.get("status")).upper() or STATUS_UNKNOWN,
-        "failed_required_contract_count": _safe_int(coverage.get("failed_required_contract_count")),
-        "failed_required_contracts": _clean_list(coverage.get("failed_required_contracts")),
-        "failed_optional_contract_count": _safe_int(coverage.get("failed_optional_contract_count")),
-        "failed_optional_contracts": _clean_list(coverage.get("failed_optional_contracts")),
-        "selected_check_scope_projection_status": _clean_str(
-            selected_check_scope_projection.get("status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "selected_check_scope_class": _clean_str(selected_check_scope_projection.get("scope_class")),
-        "selected_check_scope_reason": _clean_str(selected_check_scope_projection.get("scope_reason")),
-        "selected_check_scope_excluded_summary_key_count": _safe_int(
-            selected_check_scope_projection.get("excluded_summary_key_count")
-        ),
-        "selected_check_scope_excluded_summary_keys": _clean_list(
-            selected_check_scope_projection.get("excluded_summary_keys")
-        ),
-        "required_gate_recurrence_status": _clean_str(recurrence.get("status")).upper() or STATUS_UNKNOWN,
-        "required_gate_tuple_parity_status": _clean_str(tuple_parity.get("status")).upper() or STATUS_UNKNOWN,
-        "release_plane_cloud_evidence_status": _clean_str(release_plane.get("status")).upper() or STATUS_UNKNOWN,
-        "release_plane_required_checks_status": _clean_str(
-            (release_plane.get("conditions") or {}).get("required_checks_status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "release_cloud_evidence_adapter_status": _clean_str(
-            (release_adapter or {}).get("release_cloud_evidence_adapter_status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "release_cloud_evidence_adapter_source_kind": _clean_str((release_adapter or {}).get("adapter_source_kind")),
-        "release_cloud_evidence_adapter_local_dev_canonical": bool(
-            (release_adapter or {}).get("adapter_local_dev_canonical")
-        ),
-        "control_plane_budget_status": _clean_str(control_plane_budget.get("status")).upper() or STATUS_UNKNOWN,
-        "control_plane_budget_sync_status": _clean_str(control_plane_budget_sync.get("status")).upper()
-        or STATUS_UNKNOWN,
-        "control_plane_status_sync_status": _clean_str(control_plane_status_sync.get("status")).upper()
-        or STATUS_UNKNOWN,
-        "doc_command_surface_registry_status": _clean_str(
-            doc_command_surface_registry.get("status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "control_plane_live_status": _clean_str(control_plane_status_sync.get("live_control_plane_status")).upper()
-        or STATUS_UNKNOWN,
-        "control_plane_file_status": _clean_str(control_plane_status_sync.get("file_control_plane_status")).upper()
-        or STATUS_UNKNOWN,
-        "control_plane_sync_mismatch_count": _safe_int(control_plane_status_sync.get("mismatch_count")),
-        "control_plane_surface_materialization_status": _clean_str(
-            control_plane_surface_materialization.get("status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "control_plane_materialized_control_plane_status": _clean_str(
-            control_plane_surface_materialization.get("control_plane_status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "control_plane_materialized_promotion_ready": bool(
-            control_plane_surface_materialization.get("promotion_ready")
-        ),
-        "resolve_identity_context_local_catalog_closure_status": _clean_str(
-            resolve_identity_context_local_catalog_closure.get("status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "failclose_plugin_projection_status": _clean_str(plugin_projection.get("status")).upper() or STATUS_UNKNOWN,
-        "full_scan_target_regression_status": _clean_str(full_scan.get("status")).upper() or STATUS_UNKNOWN,
-        "terminal_truth_boundary_projection_status": _clean_str(
-            terminal_truth_boundary.get("terminal_truth_boundary_projection_status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "repair_lane_status": _clean_str(terminal_truth_boundary.get("repair_lane_status")).upper()
-        or STATUS_UNKNOWN,
-        "experience_writeback_validation_status": _clean_str(
-            terminal_truth_boundary.get("experience_writeback_validation_status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "health_report_experience_writeback_projection_status": _clean_str(
-            health_report_writeback_closure.get("projection_status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "health_report_contract_status": _clean_str(
-            health_report_writeback_closure.get("health_report_contract_status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "health_report_experience_writeback_validation_status": _clean_str(
-            health_report_writeback_closure.get("validation_status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "health_report_selected_path_matches_execution_report": bool(
-            health_report_writeback_closure.get("report_selected_path_matches_execution_report")
-        ),
-        "terminal_truth_observation_status": _clean_str(
-            terminal_truth_boundary.get("terminal_truth_observation_status")
-        ).upper()
-        or STATUS_UNKNOWN,
-        "admission_lane_projection": _clean_str(terminal_truth_boundary.get("admission_lane_projection")),
-        "repair_success_not_clean_terminal_truth": bool(
-            terminal_truth_boundary.get("repair_success_not_clean_terminal_truth")
-        ),
-        "terminal_truth_class": _clean_str(terminal_truth_boundary.get("terminal_truth_class")),
-        "terminal_state_class": _clean_str(terminal_truth_boundary.get("terminal_state_class")),
-    }
-    apply_release_readiness_required_gate_bundle_one_look(summary, summary["one_look"])
-    apply_release_readiness_repo_global_closure_one_look(summary, summary["one_look"])
-    apply_release_readiness_active_runtime_closure_one_look(summary, summary["one_look"])
-    apply_release_readiness_governance_probe_one_look(summary, summary["one_look"])
+    summary["one_look"] = build_release_readiness_one_look_projection(summary)
 
 
 def _finalize_release_readiness_summary(

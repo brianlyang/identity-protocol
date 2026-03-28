@@ -9,6 +9,9 @@ from typing import Any
 from full_scan_required_gate_bundle_projection_common import (
     FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS,
 )
+from health_report_experience_writeback_projection_common import (
+    RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_ONE_LOOK_FIELDS,
+)
 from release_closure_continuation_marker_common import (
     RELEASE_CLOSURE_SUMMARY_CONTINUATION_MARKERS,
 )
@@ -60,10 +63,10 @@ REQUIRED_OUTER_SURFACE_E2E_MARKERS = (
 REQUIRED_RELEASE_READINESS_HEALTH_PROJECTION_MARKERS = (
     "scripts/ci/run_release_readiness_health_projection_probes_ci.sh",
     "health_report_experience_writeback_closure",
-    "one_look.health_report_experience_writeback_projection_status",
-    "one_look.health_report_contract_status",
-    "one_look.health_report_experience_writeback_validation_status",
-    "one_look.health_report_selected_path_matches_execution_report",
+    *(
+        f"one_look.{field}"
+        for field in RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_ONE_LOOK_FIELDS
+    ),
 )
 REQUIRED_FULL_SCAN_REQUIRED_GATE_PROJECTION_MARKERS = (
     "scripts/ci/run_full_scan_required_gate_projection_probes_ci.sh",

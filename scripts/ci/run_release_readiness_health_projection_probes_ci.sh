@@ -22,6 +22,7 @@ from health_report_experience_writeback_projection_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     STATUS_SKIPPED_NOT_REQUIRED,
+    build_release_readiness_health_report_experience_writeback_one_look_projection,
     build_health_report_experience_writeback_closure_projection,
 )
 from primary_execution_report_common import report_logical_identity_key
@@ -113,10 +114,11 @@ assert pass_projection["validation_status"] == STATUS_PASS_REQUIRED, pass_projec
 pass_summary["health_report_experience_writeback_closure"] = pass_projection
 _hydrate_one_look_projection(pass_summary)
 pass_one_look = pass_summary["one_look"]
-assert pass_one_look["health_report_experience_writeback_projection_status"] == STATUS_PASS_REQUIRED, pass_one_look
-assert pass_one_look["health_report_contract_status"] == STATUS_PASS_REQUIRED, pass_one_look
-assert pass_one_look["health_report_experience_writeback_validation_status"] == STATUS_PASS_REQUIRED, pass_one_look
-assert pass_one_look["health_report_selected_path_matches_execution_report"] is True, pass_one_look
+expected_pass_one_look = build_release_readiness_health_report_experience_writeback_one_look_projection(
+    pass_projection
+)
+for field_name, expected_value in expected_pass_one_look.items():
+    assert pass_one_look[field_name] == expected_value, (field_name, pass_one_look)
 
 skip_summary = summary_template(
     mode="targeted_subset",

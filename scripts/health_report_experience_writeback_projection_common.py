@@ -22,6 +22,26 @@ STATUS_UNKNOWN = "UNKNOWN"
 DEFAULT_HEALTH_REPORT_COLLECTION_SCRIPT = "scripts/collect_identity_health_report.py"
 DEFAULT_HEALTH_REPORT_CONTRACT_SCRIPT = "scripts/validate_identity_health_contract.py"
 HEALTH_REPORT_EXPERIENCE_WRITEBACK_CLOSURE_EXCLUDED_AREA = "health_report_experience_writeback_closure"
+RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_ONE_LOOK_FIELDS: tuple[str, ...] = (
+    "health_report_experience_writeback_projection_status",
+    "health_report_contract_status",
+    "health_report_experience_writeback_validation_status",
+    "health_report_selected_path_matches_execution_report",
+)
+RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_PROJECTION_MARKER = (
+    "release_readiness_health_report_writeback_projection="
+    + "|".join(
+        f"one_look.{field}"
+        for field in RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_ONE_LOOK_FIELDS
+    )
+)
+RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_SURFACE_CONSTRAINTS: tuple[str, ...] = (
+    RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_PROJECTION_MARKER,
+    *(
+        f"one_look.{field}"
+        for field in RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_ONE_LOOK_FIELDS
+    ),
+)
 
 
 def build_health_report_experience_writeback_closure_summary_skeleton() -> dict[str, Any]:
@@ -349,6 +369,42 @@ def build_health_report_experience_writeback_closure_projection(
         projection["stale_reasons"].append("health_report_boundary_validation_status_mismatch")
 
     return projection
+
+
+def build_release_readiness_health_report_experience_writeback_one_look_projection(
+    projection: dict[str, Any] | None,
+) -> dict[str, Any]:
+    source = projection if isinstance(projection, dict) else {}
+    return {
+        "health_report_experience_writeback_projection_status": _clean_str(
+            source.get("projection_status")
+        ).upper()
+        or STATUS_UNKNOWN,
+        "health_report_contract_status": _clean_str(
+            source.get("health_report_contract_status")
+        ).upper()
+        or STATUS_UNKNOWN,
+        "health_report_experience_writeback_validation_status": _clean_str(
+            source.get("validation_status")
+        ).upper()
+        or STATUS_UNKNOWN,
+        "health_report_selected_path_matches_execution_report": bool(
+            source.get("report_selected_path_matches_execution_report")
+        ),
+    }
+
+
+def apply_release_readiness_health_report_experience_writeback_one_look(
+    summary: dict[str, Any],
+    one_look: dict[str, Any],
+) -> None:
+    if not isinstance(one_look, dict):
+        return
+    summary_payload = summary if isinstance(summary, dict) else {}
+    projection = summary_payload.get("health_report_experience_writeback_closure") or {}
+    one_look.update(
+        build_release_readiness_health_report_experience_writeback_one_look_projection(projection)
+    )
 
 
 def build_projection_profile_excluded_health_report_experience_writeback_closure(
