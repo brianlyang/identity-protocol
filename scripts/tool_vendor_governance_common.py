@@ -145,11 +145,37 @@ def derive_active_repo_root(*, catalog_path: Path, pack_path: Path, cwd: Path | 
     return cwd_resolved, "cwd_fallback"
 
 
+def _has_glob_magic(raw: str) -> bool:
+    token = str(raw or "").strip()
+    return any(ch in token for ch in ["*", "?", "["])
+
+
+def _pattern_targets_primary_execution_report_family(
+    pattern: str,
+    *,
+    identity_id: str,
+) -> bool:
+    normalized = str(pattern or "").strip().replace("\\", "/")
+    clean_identity_id = str(identity_id or "").strip()
+    if not normalized or not clean_identity_id or not _has_glob_magic(normalized):
+        return False
+    filename = Path(normalized).name
+    if not filename.endswith(".json") or filename.endswith("-patch-plan.json"):
+        return False
+    if not filename.startswith("identity-upgrade-exec-"):
+        return False
+    return (
+        filename.startswith(f"identity-upgrade-exec-{clean_identity_id}-")
+        or filename == "identity-upgrade-exec-*.json"
+    )
+
+
 def resolve_report_path(
     *,
     report: str,
     pattern: str,
     pack_root: Path,
+    identity_id: str = "",
 ) -> Path | None:
     if report.strip():
         p = Path(report.strip()).expanduser().resolve()
@@ -206,6 +232,54 @@ def resolve_report_path(
 
         candidates.append((Path.cwd().resolve(), normalized))
         return _dedupe_resolution_candidates(candidates)
+
+    def _search_root_for_pattern(base_root: Path, rel_pattern: str) -> Path | None:
+        normalized = str(rel_pattern or "").strip().replace("\\", "/")
+        if not normalized:
+            return None
+        segments = [segment for segment in normalized.split("/") if segment]
+        prefix_segments: list[str] = []
+        for segment in segments:
+            if _has_glob_magic(segment):
+                break
+            prefix_segments.append(segment)
+        candidate = base_root.expanduser().resolve()
+        if prefix_segments:
+            candidate = candidate.joinpath(*prefix_segments)
+        if candidate.suffix == ".json":
+            candidate = candidate.parent
+        return candidate.resolve()
+
+    clean_identity_id = str(identity_id or "").strip()
+    if _pattern_targets_primary_execution_report_family(raw, identity_id=clean_identity_id):
+        search_roots: list[Path] = []
+        seen_roots: set[str] = set()
+
+        def _push_search_root(candidate: Path | None) -> None:
+            if not isinstance(candidate, Path):
+                return
+            resolved = candidate.expanduser().resolve()
+            key = resolved.as_posix()
+            if key in seen_roots:
+                return
+            seen_roots.add(key)
+            search_roots.append(resolved)
+
+        if p.is_absolute():
+            _push_search_root(_search_root_for_pattern(Path("/"), p.as_posix().lstrip("/")))
+        else:
+            for base_root, rel_pattern in _relative_resolution_candidates(pack_root, raw):
+                _push_search_root(_search_root_for_pattern(base_root, rel_pattern))
+        if not search_roots:
+            for root in _candidate_upgrade_report_roots(pack_root):
+                _push_search_root(root)
+        selected = latest_prompt_bound_primary_execution_report_from_roots(
+            search_roots,
+            clean_identity_id,
+            explicit_pack_root=pack_root,
+        )
+        if selected is not None:
+            return selected
 
     if p.is_absolute():
         if has_magic:

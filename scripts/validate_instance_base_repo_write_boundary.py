@@ -249,9 +249,19 @@ def main() -> int:
     report_glob = str(args.report_glob or contract.get("report_glob") or f"runtime/reports/identity-upgrade-exec-{args.identity_id}-*.json").strip()
     report_path: Path | None = None
     if args.report.strip():
-        report_path = resolve_report_path(report=args.report, pattern=report_glob, pack_root=pack_path)
+        report_path = resolve_report_path(
+            report=args.report,
+            pattern=report_glob,
+            pack_root=pack_path,
+            identity_id=args.identity_id,
+        )
     elif not args.check_git_diff:
-        report_path = resolve_report_path(report="", pattern=report_glob, pack_root=pack_path)
+        report_path = resolve_report_path(
+            report="",
+            pattern=report_glob,
+            pack_root=pack_path,
+            identity_id=args.identity_id,
+        )
     if (not required) and report_path is not None:
         required = True
         auto_required_signal = True

@@ -209,7 +209,12 @@ def _resolve_evidence_path(*, explicit_evidence: str, pack_path: Path, identity_
         contract.get("source_pattern"),
     )
     if pattern:
-        p = resolve_report_path(report="", pattern=pattern, pack_root=pack_path)
+        p = resolve_report_path(
+            report="",
+            pattern=pattern,
+            pack_root=pack_path,
+            identity_id=identity_id,
+        )
         if p and p.exists() and p.is_file():
             return p.resolve()
 

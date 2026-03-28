@@ -126,7 +126,11 @@ def _run_json_validator(cmd: list[str], status_field: str) -> dict[str, Any]:
     }
 
 
-def _resolve_contract_paths(pack_root: Path, contract_doc: dict[str, Any]) -> list[Path]:
+def _resolve_contract_paths(
+    pack_root: Path,
+    identity_id: str,
+    contract_doc: dict[str, Any],
+) -> list[Path]:
     rows: list[Path] = []
     report_pattern = clean_string(contract_doc.get("report_path_pattern"))
     sample_pattern = clean_string(contract_doc.get("sample_report_path_pattern"))
@@ -134,7 +138,12 @@ def _resolve_contract_paths(pack_root: Path, contract_doc: dict[str, Any]) -> li
     for pattern in (report_pattern, sample_pattern, feedback_pattern):
         if not pattern:
             continue
-        selected = resolve_report_path(report="", pattern=pattern, pack_root=pack_root)
+        selected = resolve_report_path(
+            report="",
+            pattern=pattern,
+            pack_root=pack_root,
+            identity_id=identity_id,
+        )
         if selected is not None and selected.exists() and selected not in rows:
             rows.append(selected)
     for field in (
@@ -392,7 +401,7 @@ def _sample_family(
     selected_paths: list[Path] = []
     origins: list[str] = []
     for contract in contracts:
-        for path in _resolve_contract_paths(pack_root, contract):
+        for path in _resolve_contract_paths(pack_root, identity_id, contract):
             if path not in selected_paths:
                 selected_paths.append(path)
                 origins.append(_path_origin(path, pack_root=pack_root, current_run_pointer=current_run_pointer))

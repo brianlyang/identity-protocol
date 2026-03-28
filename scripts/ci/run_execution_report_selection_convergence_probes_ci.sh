@@ -195,7 +195,25 @@ foreign_catalog_path = (workspace_root / ".identity" / "foreign-catalog.local.ya
 
 prompt_path.parent.mkdir(parents=True, exist_ok=True)
 prompt_path.write_text("# Probe Identity\n", encoding="utf-8")
-task_path.write_text(json.dumps({"agent_identity": {"id": identity_id}}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+task_path.write_text(
+    json.dumps(
+        {
+            "agent_identity": {"id": identity_id},
+            "instance_base_repo_mutation_policy_v1": {
+                "required": False,
+                "report_glob": f"runtime/reports/identity-upgrade-exec-{identity_id}-*.json",
+            },
+            "cross_workflow_evidence_schema_contract_v1": {
+                "required": True,
+                "evidence_path_pattern": f"runtime/reports/identity-upgrade-exec-{identity_id}-*.json",
+            },
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+    + "\n",
+    encoding="utf-8",
+)
 
 catalog_payload = {
     "identities": [
@@ -258,6 +276,10 @@ report_payload = {
     "identity_id": identity_id,
     "catalog_path": str(local_catalog),
     "resolved_pack_path": str(pack_root),
+    "route_action": "route-approved",
+    "quality_meta_state": "governed-pass",
+    "dedup_state": "dedup-ok",
+    "schema_version": "v1",
     "protocol_mode": "mode_a_shared",
     "all_ok": True,
     "identity_prompt_path": str(prompt_path),
@@ -610,6 +632,30 @@ mode_promotion_payload = _run_json(
     ],
     cwd=repo_root,
 )
+base_repo_write_boundary_payload = _run_json(
+    [
+        sys.executable,
+        str(repo_root / "scripts" / "validate_instance_base_repo_write_boundary.py"),
+        "--catalog",
+        str(local_catalog),
+        "--identity-id",
+        identity_id,
+        "--json-only",
+    ],
+    cwd=repo_root,
+)
+cross_workflow_payload = _run_json(
+    [
+        sys.executable,
+        str(repo_root / "scripts" / "normalize_cross_workflow_evidence.py"),
+        "--catalog",
+        str(local_catalog),
+        "--identity-id",
+        identity_id,
+        "--json-only",
+    ],
+    cwd=repo_root,
+)
 
 selected_freshness = str(freshness_payload.get("report_selected_path", "")).strip()
 selected_baseline = str(baseline_payload.get("report_selected_path", "")).strip()
@@ -639,6 +685,8 @@ selected_permission_after = _selected_report_path_from_ok_stdout(
     "[OK] permission state validated:",
 )
 selected_mode_promotion = str(mode_promotion_payload.get("report_selected_path", "")).strip()
+selected_base_repo_write_boundary = str(base_repo_write_boundary_payload.get("report_selected_path", "")).strip()
+selected_cross_workflow_evidence = str(cross_workflow_payload.get("evidence_ref", "")).strip()
 expected = str(report_path)
 expected_detached = str(detached_report_path)
 expected_detached_unanchored = str(detached_foreign_prompt_match_path)
@@ -766,6 +814,26 @@ assert selected_mode_promotion == expected, {
     "expected": expected,
     "payload": mode_promotion_payload,
 }
+assert selected_base_repo_write_boundary == expected, {
+    "case": "base_repo_write_boundary_contract_pattern_preserves_prompt_sha_preference",
+    "selected": selected_base_repo_write_boundary,
+    "expected": expected,
+    "payload": base_repo_write_boundary_payload,
+}
+assert str(base_repo_write_boundary_payload.get("base_repo_write_boundary_status", "")).strip() == "PASS_REQUIRED", {
+    "case": "base_repo_write_boundary_contract_pattern_returns_machine_pass_status",
+    "payload": base_repo_write_boundary_payload,
+}
+assert selected_cross_workflow_evidence == expected, {
+    "case": "cross_workflow_contract_pattern_preserves_prompt_sha_preference",
+    "selected": selected_cross_workflow_evidence,
+    "expected": expected,
+    "payload": cross_workflow_payload,
+}
+assert str(cross_workflow_payload.get("cross_workflow_evidence_normalization_status", "")).strip() == "PASS_REQUIRED", {
+    "case": "cross_workflow_contract_pattern_returns_machine_pass_status",
+    "payload": cross_workflow_payload,
+}
 assert str(mode_promotion_payload.get("mode_promotion_arbitration_status", "")).strip() == "PASS_REQUIRED", {
     "case": "mode_promotion_arbitration_returns_machine_pass_status",
     "payload": mode_promotion_payload,
@@ -799,7 +867,7 @@ assert repair_postexec_rc in {0, 1}, {
 assert "[OK] identity prompt activation validated:" in prompt_activation_stdout, prompt_activation_stdout
 assert "[OK] prompt lifecycle validated:" in prompt_lifecycle_stdout, prompt_lifecycle_stdout
 assert "[OK] permission state validated:" in permission_stdout, permission_stdout
-assert selected_freshness == selected_baseline == selected_run_id == selected_locator == selected_experience == selected_three_plane == selected_three_plane_after == selected_scan == selected_scan_after == selected_search_root_locator_after == selected_pack_locator_after == selected_prompt_activation_after == selected_prompt_lifecycle_after == selected_permission_after == selected_mode_promotion == selected_repair_prompt == selected_repair_postexec, {
+assert selected_freshness == selected_baseline == selected_run_id == selected_locator == selected_experience == selected_three_plane == selected_three_plane_after == selected_scan == selected_scan_after == selected_search_root_locator_after == selected_pack_locator_after == selected_prompt_activation_after == selected_prompt_lifecycle_after == selected_permission_after == selected_mode_promotion == selected_base_repo_write_boundary == selected_cross_workflow_evidence == selected_repair_prompt == selected_repair_postexec, {
     "case": "selection_convergence",
     "freshness": selected_freshness,
     "baseline": selected_baseline,
@@ -816,6 +884,8 @@ assert selected_freshness == selected_baseline == selected_run_id == selected_lo
     "prompt_lifecycle_after": selected_prompt_lifecycle_after,
     "permission_after": selected_permission_after,
     "mode_promotion_after": selected_mode_promotion,
+    "base_repo_write_boundary": selected_base_repo_write_boundary,
+    "cross_workflow_evidence": selected_cross_workflow_evidence,
     "repair_prompt_runtime_state": selected_repair_prompt,
     "repair_post_execution_mandatory": selected_repair_postexec,
 }
@@ -848,7 +918,11 @@ print(
             "prompt_lifecycle_prompt_sha_selected_report": selected_prompt_lifecycle_after,
             "permission_state_prompt_sha_selected_report": selected_permission_after,
             "mode_promotion_prompt_sha_selected_report": selected_mode_promotion,
+            "base_repo_write_boundary_prompt_sha_selected_report": selected_base_repo_write_boundary,
+            "cross_workflow_contract_prompt_sha_selected_report": selected_cross_workflow_evidence,
             "mode_promotion_arbitration_status": mode_promotion_payload.get("mode_promotion_arbitration_status", ""),
+            "base_repo_write_boundary_status": base_repo_write_boundary_payload.get("base_repo_write_boundary_status", ""),
+            "cross_workflow_evidence_normalization_status": cross_workflow_payload.get("cross_workflow_evidence_normalization_status", ""),
             "repair_prompt_runtime_state_selected_report": selected_repair_prompt,
             "repair_prompt_runtime_state_rc": repair_prompt_rc,
             "repair_post_execution_mandatory_selected_report": selected_repair_postexec,

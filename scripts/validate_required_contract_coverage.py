@@ -1438,7 +1438,16 @@ def main() -> int:
         )
 
         report_pattern = str(contract.get("report_path_pattern", "")).strip()
-        evidence = resolve_report_path(report="", pattern=report_pattern, pack_root=pack_path) if report_pattern else None
+        evidence = (
+            resolve_report_path(
+                report="",
+                pattern=report_pattern,
+                pack_root=pack_path,
+                identity_id=args.identity_id,
+            )
+            if report_pattern
+            else None
+        )
         evidence_ref = str(evidence) if evidence else ""
 
         rc, out, err = _run_validator(
