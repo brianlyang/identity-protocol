@@ -18,6 +18,8 @@ from root_constitutional_spine_common import (
     bridge_rows_from_doc,
     constitutional_entry_rows_from_doc,
     load_root_constitutional_spine,
+    philosophy_primacy_rows_from_doc,
+    readme_philosophy_primacy_surface,
 )
 from root_corpus_authority_common import entry_authority_projections_from_doc, load_root_corpus_authority
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
@@ -42,9 +44,11 @@ EXPECTED_ENTRY_ROWS = {
         "required_markers": (
             "## Purpose",
             "## Root reading order",
+            "## Why philosophy comes first",
             "## Root constitutional-spine discipline",
             "## Authority layering",
             "## Source-order, reading-order, and adjudication-order",
+            "These philosophy-first rules must remain bound to canonical philosophy-primacy rows rather than drifting into motivational prose.",
             "Constitutional-entry rows and spine-bridge rows must remain explicit as separate machine-governed families.",
         ),
     },
@@ -61,9 +65,11 @@ EXPECTED_ENTRY_ROWS = {
             "## One-line motherline",
             "### Machine-world reading rule",
             "### Constitutional derivation order",
+            "### Philosophy-first discipline must stay explicit",
             "### Constitutional spine row-family completeness must stay explicit",
             "### Three orders must never be collapsed",
             "### Question class and answer surface must stay paired",
+            "README philosophy-first rules about why protocol law exists must therefore stay bound to canonical philosophy-primacy rows rather than remaining motivational prose.",
             "Constitutional-entry rows and spine-bridge rows must remain explicit as",
         ),
     },
@@ -78,6 +84,7 @@ EXPECTED_ENTRY_ROWS = {
         "required_markers": (
             "## Normative source map (current governed execution)",
             "## Foundational design philosophy boundary",
+            "Protocol consumes philosophy-first law as explicit philosophy-primacy rows and spine-bridge rows rather than as motivational context alone.",
             "## Constitutional derivation discipline",
             "## Root constitutional-spine boundary",
             "## Root-law promotion and re-entry boundary",
@@ -96,11 +103,82 @@ EXPECTED_ENTRY_ROWS = {
         "required_markers": (
             "## Integration objective",
             "## Foundational design philosophy anchor",
+            "Runtime consumes philosophy-first law as explicit philosophy-primacy rows and spine-bridge rows rather than as motivational context alone.",
             "## Runtime derivation boundary",
             "## Runtime constitutional-spine consumption boundary",
             "## Runtime-to-root promotion boundary",
             "## Runtime consumption of the root-law bundle",
             "Runtime consumes constitutional spine law as separate constitutional-entry and spine-bridge row families rather than as undifferentiated narrative context.",
+        ),
+    },
+}
+EXPECTED_PHILOSOPHY_PRIMACY_ROWS = {
+    "protocol and runtime are not self-originating law": {
+        "order": 1,
+        "bound_entry_paths": (
+            "identity/protocol/IDENTITY_PROTOCOL.md",
+            "identity/protocol/IDENTITY_RUNTIME.md",
+        ),
+        "bound_bridge_ids": (),
+        "bound_reading_roles": (
+            "protocol_constitution_entry",
+            "runtime_constitution_entry",
+        ),
+        "required_markers": (
+            "the protocol does not invent its own reason for being at the contract layer;",
+            "runtime integration does not create its own reason for being independently of protocol philosophy.",
+        ),
+    },
+    "bottom theory is formalized downstream": {
+        "order": 2,
+        "bound_entry_paths": (
+            "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
+            "identity/protocol/IDENTITY_PROTOCOL.md",
+            "identity/protocol/IDENTITY_RUNTIME.md",
+        ),
+        "bound_bridge_ids": (
+            "philosophy_to_protocol_constitution",
+            "philosophy_to_runtime_constitution",
+        ),
+        "bound_reading_roles": (
+            "bottom_theory_entry",
+            "protocol_constitution_entry",
+            "runtime_constitution_entry",
+        ),
+        "required_markers": (
+            "the protocol formalizes, freezes, and operationalizes the machine-world bottom theory defined there;",
+            "runtime inherits and operationalizes that bottom theory rather than declaring an independent semantic constitution.",
+        ),
+    },
+    "constitutions and contracts are downstream freezings": {
+        "order": 3,
+        "bound_entry_paths": (),
+        "bound_bridge_ids": (),
+        "bound_reading_roles": (
+            "protocol_constitution_entry",
+            "runtime_constitution_entry",
+            "root_contract_entry",
+        ),
+        "required_markers": (
+            "every root constitution or contract file in this directory should be interpreted as a more concrete freezing of those bottom-theory commitments.",
+        ),
+    },
+    "philosophical primacy is not runtime-source primacy": {
+        "order": 4,
+        "bound_entry_paths": (
+            "identity/protocol/README.md",
+            "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md",
+            "identity/protocol/IDENTITY_PROTOCOL.md",
+            "identity/protocol/IDENTITY_RUNTIME.md",
+        ),
+        "bound_bridge_ids": (
+            "philosophy_to_protocol_machine_authority_split",
+            "philosophy_to_runtime_machine_authority_split",
+        ),
+        "bound_reading_roles": (),
+        "required_markers": (
+            "Philosophical primacy, however, is not the same as runtime-source primacy.",
+            "philosophy-first law remains philosophically generative but not runtime-terminal.",
         ),
     },
 }
@@ -166,21 +244,27 @@ EXPECTED_MAPPINGS_CHILDREN = (
 )
 EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
+        "### Philosophy-first discipline must stay explicit",
+        "README philosophy-first rules about why protocol law exists must therefore stay bound to canonical philosophy-primacy rows rather than remaining motivational prose.",
         "### Constitutional spine row-family completeness must stay explicit",
         "Constitutional-entry rows and spine-bridge rows must remain explicit as separate machine-law families.",
         "The machine world must not finalize constitutional-spine truth while missing or unexpected entry rel-paths or bridge ids remain known only inside validator logic.",
     ),
     "identity/protocol/README.md": (
+        "## Why philosophy comes first",
+        "These philosophy-first rules must remain bound to canonical philosophy-primacy rows rather than drifting into motivational prose.",
         "## Root constitutional-spine discipline",
         "Constitutional-entry rows and spine-bridge rows must remain explicit as separate machine-governed families.",
         "Validator or runtime code must not finalize constitutional-spine truth while missing or unexpected entry rel-paths or bridge ids remain known only inside local machinery.",
     ),
     "identity/protocol/IDENTITY_PROTOCOL.md": (
+        "Protocol consumes philosophy-first law as explicit philosophy-primacy rows and spine-bridge rows rather than as motivational context alone.",
         "## Root constitutional-spine boundary",
         "1. The root constitutional spine is governed as separate constitutional-entry and spine-bridge row families rather than as one narrative claim.",
         "6. Protocol legality must not finalize constitutional-spine truth while missing or unexpected entry rel-paths or bridge ids remain known only inside validator machinery.",
     ),
     "identity/protocol/IDENTITY_RUNTIME.md": (
+        "Runtime consumes philosophy-first law as explicit philosophy-primacy rows and spine-bridge rows rather than as motivational context alone.",
         "## Runtime constitutional-spine consumption boundary",
         "1. Runtime consumes constitutional spine law as separate constitutional-entry and spine-bridge row families rather than as undifferentiated narrative context.",
         "4. Runtime must not finalize constitutional-spine legality while missing or unexpected entry rel-paths or bridge ids remain known only inside validator machinery.",
@@ -299,6 +383,46 @@ def _validate_bridge_rows(bridge_rows, structure_violations: list[dict[str, Any]
             )
 
 
+def _validate_philosophy_primacy_rows(philosophy_rows, structure_violations: list[dict[str, Any]]) -> None:
+    row_map = {row.primacy_label: row for row in philosophy_rows}
+    orders = [row.order for row in philosophy_rows]
+    if len(row_map) != len(philosophy_rows):
+        structure_violations.append({"field": "philosophy_primacy_rows", "reason": "duplicate_primacy_label"})
+    if len(set(orders)) != len(orders) or not contiguous_orders(sorted(orders)):
+        structure_violations.append({"field": "philosophy_primacy_rows", "reason": "primacy_order_non_contiguous"})
+
+    missing = sorted(set(EXPECTED_PHILOSOPHY_PRIMACY_ROWS) - set(row_map))
+    extra = sorted(set(row_map) - set(EXPECTED_PHILOSOPHY_PRIMACY_ROWS))
+    if missing:
+        structure_violations.append({"field": "philosophy_primacy_rows", "reason": "missing_expected_rows", "row_ids": missing})
+    if extra:
+        structure_violations.append({"field": "philosophy_primacy_rows", "reason": "unexpected_rows", "row_ids": extra})
+
+    for primacy_label, expected in EXPECTED_PHILOSOPHY_PRIMACY_ROWS.items():
+        row = row_map.get(primacy_label)
+        if row is None:
+            continue
+        if row.order != expected["order"]:
+            structure_violations.append(
+                {
+                    "field": "philosophy_primacy_rows",
+                    "reason": "order_mismatch",
+                    "row_id": primacy_label,
+                    "expected": expected["order"],
+                    "actual": row.order,
+                }
+            )
+        for field in ("bound_entry_paths", "bound_bridge_ids", "bound_reading_roles", "required_markers"):
+            if tuple(getattr(row, field)) != expected[field]:
+                structure_violations.append(
+                    {
+                        "field": "philosophy_primacy_rows",
+                        "reason": f"{field}_mismatch",
+                        "row_id": primacy_label,
+                    }
+                )
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate the protocol-root constitutional spine.")
     ap.add_argument("--repo-root", default="", help="optional protocol repo root override")
@@ -342,6 +466,8 @@ def main() -> int:
 
     entry_rows = constitutional_entry_rows_from_doc(spine_doc) if spine_doc else ()
     bridge_rows = bridge_rows_from_doc(spine_doc) if spine_doc else ()
+    philosophy_primacy_rows = philosophy_primacy_rows_from_doc(spine_doc) if spine_doc else ()
+    philosophy_primacy_surface = readme_philosophy_primacy_surface(repo_root)
     root_doc_anchor_checks = root_doc_anchor_checks_from_doc(spine_doc) if spine_doc else ()
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
@@ -362,6 +488,20 @@ def main() -> int:
                 "actual_rows": bridge_rows,
                 "expected_rows": EXPECTED_BRIDGE_ROWS,
                 "id_attr": "bridge_id",
+            },
+            {
+                "family_id": "philosophy_primacy_rows",
+                "member_id_key": "primacy_label",
+                "actual_rows": philosophy_primacy_rows,
+                "expected_rows": EXPECTED_PHILOSOPHY_PRIMACY_ROWS,
+                "id_attr": "primacy_label",
+            },
+            {
+                "family_id": "philosophy_primacy_surface",
+                "member_id_key": "primacy_label",
+                "actual_rows": philosophy_primacy_surface.rows,
+                "expected_rows": EXPECTED_PHILOSOPHY_PRIMACY_ROWS,
+                "id_attr": "primacy_label",
             },
         )
     )
@@ -403,6 +543,9 @@ def main() -> int:
         if not bridge_rows:
             stale_reasons.append("root_constitutional_spine_bridge_rows_missing")
             error_code = ERR_REGISTRY
+        if not philosophy_primacy_rows:
+            stale_reasons.append("root_constitutional_spine_philosophy_primacy_rows_missing")
+            error_code = ERR_REGISTRY
         anchor_reason_count_before = len(stale_reasons)
         stale_reasons.extend(
             validate_expected_root_doc_anchor_checks(
@@ -417,6 +560,7 @@ def main() -> int:
     if not stale_reasons:
         _validate_entry_rows(entry_rows, structure_violations)
         _validate_bridge_rows(bridge_rows, structure_violations)
+        _validate_philosophy_primacy_rows(philosophy_primacy_rows, structure_violations)
         if structure_violations:
             error_code = ERR_STRUCTURE
 
@@ -426,6 +570,8 @@ def main() -> int:
         authority_map = {row.rel_path: row for row in authority_rows}
         question_map = {row.rel_path: row for row in question_rows}
         entry_map = {row.rel_path: row for row in entry_rows}
+        bridge_map = {row.bridge_id: row for row in bridge_rows}
+        reading_roles = {row.entry_role for row in reading_rows}
 
         mappings_entry = registry_map.get("identity/protocol/mappings")
         if mappings_entry is None:
@@ -622,6 +768,90 @@ def main() -> int:
                     }
                 )
 
+        for reason in philosophy_primacy_surface.extraction_violations:
+            projection_violations.append(
+                {
+                    "field": "philosophy_primacy_surface",
+                    "reason": reason,
+                    "rel_path": philosophy_primacy_surface.rel_path,
+                }
+            )
+
+        surface_map = {row.primacy_label: row for row in philosophy_primacy_surface.rows}
+        surface_labels = [row.primacy_label for row in philosophy_primacy_surface.rows]
+        expected_labels = list(EXPECTED_PHILOSOPHY_PRIMACY_ROWS.keys())
+        if surface_labels and tuple(surface_labels) != tuple(expected_labels):
+            projection_violations.append(
+                {
+                    "field": "philosophy_primacy_surface",
+                    "reason": "primacy_label_order_mismatch",
+                    "expected": expected_labels,
+                    "actual": surface_labels,
+                }
+            )
+        surface_orders = [row.order for row in philosophy_primacy_surface.rows]
+        expected_orders = [expected["order"] for expected in EXPECTED_PHILOSOPHY_PRIMACY_ROWS.values()]
+        if surface_orders and tuple(surface_orders) != tuple(expected_orders):
+            projection_violations.append(
+                {
+                    "field": "philosophy_primacy_surface",
+                    "reason": "primacy_order_mismatch",
+                    "expected": expected_orders,
+                    "actual": surface_orders,
+                }
+            )
+
+        for row in philosophy_primacy_rows:
+            for rel_path in row.bound_entry_paths:
+                if rel_path not in entry_map:
+                    projection_violations.append(
+                        {
+                            "field": "philosophy_primacy_rows",
+                            "reason": "bound_entry_path_missing",
+                            "primacy_label": row.primacy_label,
+                            "rel_path": rel_path,
+                        }
+                    )
+            for bridge_id in row.bound_bridge_ids:
+                if bridge_id not in bridge_map:
+                    projection_violations.append(
+                        {
+                            "field": "philosophy_primacy_rows",
+                            "reason": "bound_bridge_id_missing",
+                            "primacy_label": row.primacy_label,
+                            "bridge_id": bridge_id,
+                        }
+                    )
+            for entry_role in row.bound_reading_roles:
+                if entry_role not in reading_roles:
+                    projection_violations.append(
+                        {
+                            "field": "philosophy_primacy_rows",
+                            "reason": "bound_reading_role_missing",
+                            "primacy_label": row.primacy_label,
+                            "entry_role": entry_role,
+                        }
+                    )
+            surface_row = surface_map.get(row.primacy_label)
+            if surface_row is None:
+                projection_violations.append(
+                    {
+                        "field": "philosophy_primacy_surface",
+                        "reason": "surface_row_missing",
+                        "primacy_label": row.primacy_label,
+                    }
+                )
+                continue
+            for marker in find_missing_markers("\n".join(surface_row.body_lines), tuple(row.required_markers)):
+                projection_violations.append(
+                    {
+                        "field": "philosophy_primacy_surface",
+                        "reason": "required_marker_missing",
+                        "primacy_label": row.primacy_label,
+                        "marker": marker,
+                    }
+                )
+
         root_doc_anchor_violations.extend(
             evaluate_root_doc_anchor_checks(
                 repo_root,
@@ -645,6 +875,7 @@ def main() -> int:
         "mapping_active_file": str(spine_active_path.relative_to(repo_root)),
         "spine_entry_count": len(entry_rows),
         "spine_bridge_count": len(bridge_rows),
+        "philosophy_primacy_count": len(philosophy_primacy_rows),
         **project_root_contract_support_projection(
             prefix="constitutional_spine",
             row_family_projection_rows=row_family_projection_rows,
@@ -663,8 +894,47 @@ def main() -> int:
         "spine_bridge_row_identity_projection_status": row_family_projection_by_id["spine_bridge_rows"][
             "identity_projection_status"
         ],
+        "philosophy_primacy_row_coverage_status": row_family_projection_by_id["philosophy_primacy_rows"][
+            "coverage_status"
+        ],
+        "philosophy_primacy_row_identity_projection_status": row_family_projection_by_id["philosophy_primacy_rows"][
+            "identity_projection_status"
+        ],
+        "philosophy_primacy_surface_coverage_status": row_family_projection_by_id["philosophy_primacy_surface"][
+            "coverage_status"
+        ],
+        "philosophy_primacy_surface_identity_projection_status": row_family_projection_by_id[
+            "philosophy_primacy_surface"
+        ]["identity_projection_status"],
         "spine_rel_paths": [row.rel_path for row in sorted(entry_rows, key=lambda item: item.order)],
         "spine_bridge_ids": [row.bridge_id for row in sorted(bridge_rows, key=lambda item: item.order)],
+        "philosophy_primacy_labels": [
+            row.primacy_label for row in sorted(philosophy_primacy_rows, key=lambda item: item.order)
+        ],
+        "philosophy_primacy_rows": [
+            {
+                "order": row.order,
+                "primacy_label": row.primacy_label,
+                "bound_entry_paths": list(row.bound_entry_paths),
+                "bound_bridge_ids": list(row.bound_bridge_ids),
+                "bound_reading_roles": list(row.bound_reading_roles),
+                "required_markers": list(row.required_markers),
+            }
+            for row in sorted(philosophy_primacy_rows, key=lambda item: item.order)
+        ],
+        "philosophy_primacy_surface": {
+            "rel_path": philosophy_primacy_surface.rel_path,
+            "entry_count": len(philosophy_primacy_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "primacy_label": row.primacy_label,
+                    "body_lines": list(row.body_lines),
+                }
+                for row in philosophy_primacy_surface.rows
+            ],
+            "extraction_violations": list(philosophy_primacy_surface.extraction_violations),
+        },
         "row_family_projection_rows": row_family_projection_rows,
         "structure_violations": structure_violations,
         "projection_violations": projection_violations,

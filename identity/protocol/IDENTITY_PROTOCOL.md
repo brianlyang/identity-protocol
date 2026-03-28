@@ -50,6 +50,7 @@ Status transitions are controlled by governance/review, not by script commit alo
 2. It explains why identity protocol is treated as a machine-law system, how protocol / instance / operator responsibilities split, and how new streams should be evaluated before implementation.
 3. This file operationalizes and freezes those bottom-theory commitments into protocol-law structure, governance execution, contract boundaries, and runtime-facing constitutions.
 4. The design philosophy document is therefore philosophically prior, but it is **not** a direct machine-consumed contract row, validator schema, or runtime success-path artifact sink.
+Protocol consumes philosophy-first law as explicit philosophy-primacy rows and spine-bridge rows rather than as motivational context alone.
 5. Machine-consumed truth remains frozen in governance/review docs, mappings, validators, probes, runtime state, and receipts; the design philosophy document explains why those laws exist and how they should be interpreted, but does not replace them.
 6. The root-domain machine-law primacy and compatibility-shelter boundary is frozen separately in `identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md`.
 7. The root-domain machine-world ontology law for what objects may exist and how they remain semantically separate is frozen separately in `identity/protocol/MACHINE_WORLD_ONTOLOGY_CONTRACT.md`.

@@ -27,6 +27,8 @@ Foundational-order rule:
 1. Runtime integration does not create its own reason for being independently of protocol philosophy.
 2. In philosophical order, runtime law exists because the bottom theory in `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md` first defines what identity runtime must preserve, resolve, prove, and refuse to downgrade.
 
+Runtime consumes philosophy-first law as explicit philosophy-primacy rows and spine-bridge rows rather than as motivational context alone.
+
 Runtime meaning:
 
 1. runtime is not a compatibility shelter for lagging residue;

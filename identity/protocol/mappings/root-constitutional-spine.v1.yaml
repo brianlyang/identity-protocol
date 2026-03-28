@@ -16,6 +16,10 @@ probe_shadow_bootstrap_contract: probe_shadow_common_contract_rows_pass_required
 anchor_checks:
   - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
     required_markers:
+      - '### Philosophy-first discipline must stay explicit'
+      - README philosophy-first rules about why protocol law exists must
+        therefore stay bound to canonical philosophy-primacy rows rather than
+        remaining motivational prose.
       - '### Constitutional spine row-family completeness must stay explicit'
       - Constitutional-entry rows and spine-bridge rows must remain explicit as
         separate machine-law families.
@@ -24,6 +28,9 @@ anchor_checks:
         inside validator logic.
   - rel_path: identity/protocol/README.md
     required_markers:
+      - '## Why philosophy comes first'
+      - These philosophy-first rules must remain bound to canonical
+        philosophy-primacy rows rather than drifting into motivational prose.
       - '## Root constitutional-spine discipline'
       - Constitutional-entry rows and spine-bridge rows must remain explicit as
         separate machine-governed families.
@@ -32,11 +39,15 @@ anchor_checks:
         only inside local machinery.
   - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
     required_markers:
+      - Protocol consumes philosophy-first law as explicit philosophy-primacy
+        rows and spine-bridge rows rather than as motivational context alone.
       - '## Root constitutional-spine boundary'
       - '1. The root constitutional spine is governed as separate constitutional-entry and spine-bridge row families rather than as one narrative claim.'
       - '6. Protocol legality must not finalize constitutional-spine truth while missing or unexpected entry rel-paths or bridge ids remain known only inside validator machinery.'
   - rel_path: identity/protocol/IDENTITY_RUNTIME.md
     required_markers:
+      - Runtime consumes philosophy-first law as explicit philosophy-primacy
+        rows and spine-bridge rows rather than as motivational context alone.
       - '## Runtime constitutional-spine consumption boundary'
       - '1. Runtime consumes constitutional spine law as separate constitutional-entry and spine-bridge row families rather than as undifferentiated narrative context.'
       - '4. Runtime must not finalize constitutional-spine legality while missing or unexpected entry rel-paths or bridge ids remain known only inside validator machinery.'
@@ -57,9 +68,12 @@ required_constitutional_entry_rows:
     required_markers:
       - '## Purpose'
       - '## Root reading order'
+      - '## Why philosophy comes first'
       - '## Root constitutional-spine discipline'
       - '## Authority layering'
       - '## Source-order, reading-order, and adjudication-order'
+      - These philosophy-first rules must remain bound to canonical
+        philosophy-primacy rows rather than drifting into motivational prose.
       - 'Constitutional-entry rows and spine-bridge rows must remain explicit as separate machine-governed families.'
   - order: 2
     rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
@@ -75,9 +89,13 @@ required_constitutional_entry_rows:
       - '## One-line motherline'
       - '### Machine-world reading rule'
       - '### Constitutional derivation order'
+      - '### Philosophy-first discipline must stay explicit'
       - '### Constitutional spine row-family completeness must stay explicit'
       - '### Three orders must never be collapsed'
       - '### Question class and answer surface must stay paired'
+      - README philosophy-first rules about why protocol law exists must
+        therefore stay bound to canonical philosophy-primacy rows rather than
+        remaining motivational prose.
       - 'Constitutional-entry rows and spine-bridge rows must remain explicit as'
   - order: 3
     rel_path: identity/protocol/IDENTITY_PROTOCOL.md
@@ -91,6 +109,8 @@ required_constitutional_entry_rows:
     required_markers:
       - '## Normative source map (current governed execution)'
       - '## Foundational design philosophy boundary'
+      - Protocol consumes philosophy-first law as explicit philosophy-primacy
+        rows and spine-bridge rows rather than as motivational context alone.
       - '## Constitutional derivation discipline'
       - '## Root constitutional-spine boundary'
       - '## Root-law promotion and re-entry boundary'
@@ -108,6 +128,8 @@ required_constitutional_entry_rows:
     required_markers:
       - '## Integration objective'
       - '## Foundational design philosophy anchor'
+      - Runtime consumes philosophy-first law as explicit philosophy-primacy
+        rows and spine-bridge rows rather than as motivational context alone.
       - '## Runtime derivation boundary'
       - '## Runtime constitutional-spine consumption boundary'
       - '## Runtime-to-root promotion boundary'
@@ -155,3 +177,59 @@ required_spine_bridge_rows:
     target_markers:
       - 'Runtime does not consume root law as isolated slogans.'
       - 'Runtime must consume the governed root-law bundle together:'
+philosophy_primacy_rows:
+  - order: 1
+    primacy_label: protocol and runtime are not self-originating law
+    bound_entry_paths:
+      - identity/protocol/IDENTITY_PROTOCOL.md
+      - identity/protocol/IDENTITY_RUNTIME.md
+    bound_reading_roles:
+      - protocol_constitution_entry
+      - runtime_constitution_entry
+    required_markers:
+      - the protocol does not invent its own reason for being at the contract layer;
+      - runtime integration does not create its own reason for being
+        independently of protocol philosophy.
+  - order: 2
+    primacy_label: bottom theory is formalized downstream
+    bound_entry_paths:
+      - identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+      - identity/protocol/IDENTITY_PROTOCOL.md
+      - identity/protocol/IDENTITY_RUNTIME.md
+    bound_bridge_ids:
+      - philosophy_to_protocol_constitution
+      - philosophy_to_runtime_constitution
+    bound_reading_roles:
+      - bottom_theory_entry
+      - protocol_constitution_entry
+      - runtime_constitution_entry
+    required_markers:
+      - the protocol formalizes, freezes, and operationalizes the machine-world
+        bottom theory defined there;
+      - runtime inherits and operationalizes that bottom theory rather than
+        declaring an independent semantic constitution.
+  - order: 3
+    primacy_label: constitutions and contracts are downstream freezings
+    bound_reading_roles:
+      - protocol_constitution_entry
+      - runtime_constitution_entry
+      - root_contract_entry
+    required_markers:
+      - every root constitution or contract file in this directory should be
+        interpreted as a more concrete freezing of those bottom-theory
+        commitments.
+  - order: 4
+    primacy_label: philosophical primacy is not runtime-source primacy
+    bound_entry_paths:
+      - identity/protocol/README.md
+      - identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
+      - identity/protocol/IDENTITY_PROTOCOL.md
+      - identity/protocol/IDENTITY_RUNTIME.md
+    bound_bridge_ids:
+      - philosophy_to_protocol_machine_authority_split
+      - philosophy_to_runtime_machine_authority_split
+    required_markers:
+      - Philosophical primacy, however, is not the same as runtime-source
+        primacy.
+      - philosophy-first law remains philosophically generative but not
+        runtime-terminal.

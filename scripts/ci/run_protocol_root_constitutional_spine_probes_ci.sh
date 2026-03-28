@@ -22,18 +22,25 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_constitutional_spine_status"] == "PASS_REQUIRED", payload
 assert payload["spine_entry_count"] == 4, payload
 assert payload["spine_bridge_count"] == 5, payload
+assert payload["philosophy_primacy_count"] == 4, payload
 assert payload["root_doc_anchor_check_count"] == 4, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
-assert payload["constitutional_spine_row_family_count"] == 2, payload
+assert payload["constitutional_spine_row_family_count"] == 4, payload
 assert payload["constitutional_spine_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["constitutional_spine_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["constitutional_entry_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["constitutional_entry_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert payload["spine_bridge_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["spine_bridge_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["philosophy_primacy_row_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["philosophy_primacy_row_identity_projection_status"] == "PASS_REQUIRED", payload
+assert payload["philosophy_primacy_surface_coverage_status"] == "PASS_REQUIRED", payload
+assert payload["philosophy_primacy_surface_identity_projection_status"] == "PASS_REQUIRED", payload
 assert [row["family_id"] for row in payload["row_family_projection_rows"]] == [
     "constitutional_entry_rows",
     "spine_bridge_rows",
+    "philosophy_primacy_rows",
+    "philosophy_primacy_surface",
 ], payload
 entry_row = next(
     row for row in payload["row_family_projection_rows"]
@@ -42,6 +49,14 @@ entry_row = next(
 bridge_row = next(
     row for row in payload["row_family_projection_rows"]
     if row["family_id"] == "spine_bridge_rows"
+)
+primacy_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "philosophy_primacy_rows"
+)
+primacy_surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "philosophy_primacy_surface"
 )
 assert entry_row["expected_count"] == payload["spine_entry_count"] == 4, payload
 assert entry_row["actual_count"] == payload["spine_entry_count"] == 4, payload
@@ -55,6 +70,18 @@ assert bridge_row["missing_ids"] == [], payload
 assert bridge_row["unexpected_ids"] == [], payload
 assert bridge_row["coverage_status"] == "PASS_REQUIRED", payload
 assert bridge_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert primacy_row["expected_count"] == payload["philosophy_primacy_count"] == 4, payload
+assert primacy_row["actual_count"] == payload["philosophy_primacy_count"] == 4, payload
+assert primacy_row["missing_ids"] == [], payload
+assert primacy_row["unexpected_ids"] == [], payload
+assert primacy_row["coverage_status"] == "PASS_REQUIRED", payload
+assert primacy_row["identity_projection_status"] == "PASS_REQUIRED", payload
+assert primacy_surface_row["expected_count"] == payload["philosophy_primacy_count"] == 4, payload
+assert primacy_surface_row["actual_count"] == payload["philosophy_primacy_count"] == 4, payload
+assert primacy_surface_row["missing_ids"] == [], payload
+assert primacy_surface_row["unexpected_ids"] == [], payload
+assert primacy_surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert primacy_surface_row["identity_projection_status"] == "PASS_REQUIRED", payload
 PY
 
 BRIDGE_REPO="${TMP_ROOT}/bridge-drift-repo"
@@ -405,6 +432,84 @@ assert any(
     and row["reason"] == "required_marker_missing"
     and row["marker"] == "## Root constitutional-spine discipline"
     for row in payload["root_doc_anchor_violations"]
+), payload
+PY
+
+PHILOSOPHY_ROW_REPO="${TMP_ROOT}/philosophy-row-drift-repo"
+mirror_repo "${PHILOSOPHY_ROW_REPO}"
+python3 - <<'PY' "${PHILOSOPHY_ROW_REPO}/identity/protocol/mappings/root-constitutional-spine.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["philosophy_primacy_rows"] = [
+    row for row in doc.get("philosophy_primacy_rows", [])
+    if row.get("primacy_label") != "philosophical primacy is not runtime-source primacy"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+PHILOSOPHY_ROW_JSON="${TMP_ROOT}/philosophy-row-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_constitutional_spine.py" \
+  --repo-root "${PHILOSOPHY_ROW_REPO}" \
+  --json-only >"${PHILOSOPHY_ROW_JSON}"; then
+  echo "[FAIL] root constitutional spine validator unexpectedly passed philosophy-primacy row drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${PHILOSOPHY_ROW_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_constitutional_spine_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCS-002", payload
+assert any(
+    row["field"] == "philosophy_primacy_rows"
+    and row["reason"] == "missing_expected_rows"
+    and "philosophical primacy is not runtime-source primacy" in row["row_ids"]
+    for row in payload["structure_violations"]
+), payload
+PY
+
+PHILOSOPHY_SURFACE_REPO="${TMP_ROOT}/philosophy-surface-drift-repo"
+mirror_repo "${PHILOSOPHY_SURFACE_REPO}"
+python3 - <<'PY' "${PHILOSOPHY_SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "4. **philosophical primacy is not runtime-source primacy**"
+new = "4. **philosophical primacy is not machine-truth primacy**"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+PHILOSOPHY_SURFACE_JSON="${TMP_ROOT}/philosophy-surface-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_constitutional_spine.py" \
+  --repo-root "${PHILOSOPHY_SURFACE_REPO}" \
+  --json-only >"${PHILOSOPHY_SURFACE_JSON}"; then
+  echo "[FAIL] root constitutional spine validator unexpectedly passed philosophy-primacy surface drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${PHILOSOPHY_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_constitutional_spine_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCS-003", payload
+assert any(
+    row["field"] == "philosophy_primacy_surface"
+    and row["reason"] == "surface_row_missing"
+    and row["primacy_label"] == "philosophical primacy is not runtime-source primacy"
+    for row in payload["projection_violations"]
 ), payload
 PY
 

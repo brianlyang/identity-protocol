@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
@@ -12,6 +13,11 @@ from registry_alias_control_plane_common import resolve_current_yaml_alias
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ROOT_CONSTITUTIONAL_SPINE_CURRENT = "identity/protocol/mappings/root-constitutional-spine.current.yaml"
+ROOT_PROTOCOL_README_REL_PATH = "identity/protocol/README.md"
+WHY_PHILOSOPHY_COMES_FIRST_SECTION_MARKER = "## Why philosophy comes first"
+ORDERED_BOLD_ITEM_RE = re.compile(r"^\s*(\d+)\.\s+\*\*(.*?)\*\*")
+HEADING_RE = re.compile(r"^##\s+")
+HORIZONTAL_RULE_RE = re.compile(r"^-{3,}$")
 
 
 @dataclass(frozen=True)
@@ -35,6 +41,30 @@ class BridgeRow:
     source_markers: tuple[str, ...] = field(default_factory=tuple)
     target_rel_path: str = ""
     target_markers: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class PhilosophyPrimacyRow:
+    order: int
+    primacy_label: str
+    bound_entry_paths: tuple[str, ...] = field(default_factory=tuple)
+    bound_bridge_ids: tuple[str, ...] = field(default_factory=tuple)
+    bound_reading_roles: tuple[str, ...] = field(default_factory=tuple)
+    required_markers: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class PhilosophyPrimacySurfaceRow:
+    order: int
+    primacy_label: str
+    body_lines: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class PhilosophyPrimacySurface:
+    rel_path: str
+    rows: tuple[PhilosophyPrimacySurfaceRow, ...]
+    extraction_violations: tuple[str, ...]
 
 
 def _norm_str(value: Any) -> str:
@@ -141,3 +171,112 @@ def bridge_rows_from_doc(doc: Mapping[str, Any]) -> tuple[BridgeRow, ...]:
             )
         )
     return tuple(out)
+
+
+def philosophy_primacy_rows_from_doc(doc: Mapping[str, Any]) -> tuple[PhilosophyPrimacyRow, ...]:
+    rows = doc.get("philosophy_primacy_rows")
+    if not isinstance(rows, list):
+        return ()
+    out: list[PhilosophyPrimacyRow] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        primacy_label = _norm_str(row.get("primacy_label"))
+        try:
+            order = int(row.get("order"))
+        except Exception:
+            continue
+        if order <= 0 or not primacy_label:
+            continue
+        out.append(
+            PhilosophyPrimacyRow(
+                order=order,
+                primacy_label=primacy_label,
+                bound_entry_paths=_as_str_tuple(row.get("bound_entry_paths")),
+                bound_bridge_ids=_as_str_tuple(row.get("bound_bridge_ids")),
+                bound_reading_roles=_as_str_tuple(row.get("bound_reading_roles")),
+                required_markers=_as_str_tuple(row.get("required_markers")),
+            )
+        )
+    return tuple(out)
+
+
+def _readme_ordered_bold_section_rows(
+    repo_root: Path,
+    *,
+    section_marker: str,
+) -> tuple[tuple[tuple[int, str, tuple[str, ...]], ...], tuple[str, ...]]:
+    path = (repo_root / ROOT_PROTOCOL_README_REL_PATH).resolve()
+    if not path.exists() or not path.is_file():
+        return (), ("target_missing",)
+
+    lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    section_found = False
+    rows: list[tuple[int, str, tuple[str, ...]]] = []
+    current_order = 0
+    current_label = ""
+    current_body_lines: list[str] = []
+
+    def flush_current() -> None:
+        nonlocal current_order, current_label, current_body_lines
+        if current_order <= 0 or not current_label:
+            return
+        rows.append((current_order, current_label, tuple(line for line in current_body_lines if line)))
+        current_order = 0
+        current_label = ""
+        current_body_lines = []
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == section_marker:
+            section_found = True
+            continue
+        if not section_found:
+            continue
+        if HEADING_RE.match(stripped) or HORIZONTAL_RULE_RE.match(stripped):
+            break
+        match = ORDERED_BOLD_ITEM_RE.match(stripped)
+        if match:
+            flush_current()
+            current_order = int(match.group(1))
+            current_label = match.group(2).strip()
+            continue
+        if current_order <= 0:
+            continue
+        if stripped.startswith("- "):
+            current_body_lines.append(stripped[2:].strip())
+        elif stripped and line.startswith((" ", "\t")):
+            current_body_lines.append(stripped)
+        elif stripped:
+            flush_current()
+            break
+    flush_current()
+
+    violations: list[str] = []
+    if not section_found:
+        violations.append("section_marker_missing")
+    elif not rows:
+        violations.append("stage_rows_missing")
+    elif any(not row[2] for row in rows):
+        violations.append("stage_body_missing")
+
+    return tuple(rows), tuple(violations)
+
+
+def readme_philosophy_primacy_surface(repo_root: Path) -> PhilosophyPrimacySurface:
+    rows_data, violations = _readme_ordered_bold_section_rows(
+        repo_root,
+        section_marker=WHY_PHILOSOPHY_COMES_FIRST_SECTION_MARKER,
+    )
+    return PhilosophyPrimacySurface(
+        rel_path=ROOT_PROTOCOL_README_REL_PATH,
+        rows=tuple(
+            PhilosophyPrimacySurfaceRow(
+                order=order,
+                primacy_label=primacy_label,
+                body_lines=body_lines,
+            )
+            for order, primacy_label, body_lines in rows_data
+        ),
+        extraction_violations=violations,
+    )

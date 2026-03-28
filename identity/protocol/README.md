@@ -117,14 +117,19 @@ instead:
 ## Why philosophy comes first
 
 In philosophical order, the identity protocol exists because `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md` exists first.
+These philosophy-first rules must remain bound to canonical philosophy-primacy rows rather than drifting into motivational prose.
 
-That means:
-
-1. the protocol does not invent its own reason for being at the contract layer;
-2. the protocol formalizes, freezes, and operationalizes the machine-world bottom theory defined there;
-3. every root constitution or contract file in this directory should be interpreted as a more concrete freezing of those bottom-theory commitments.
-
-Philosophical primacy, however, is not the same as runtime-source primacy.
+1. **protocol and runtime are not self-originating law**
+   - the protocol does not invent its own reason for being at the contract layer;
+   - runtime integration does not create its own reason for being independently of protocol philosophy.
+2. **bottom theory is formalized downstream**
+   - the protocol formalizes, freezes, and operationalizes the machine-world bottom theory defined there;
+   - runtime inherits and operationalizes that bottom theory rather than declaring an independent semantic constitution.
+3. **constitutions and contracts are downstream freezings**
+   - every root constitution or contract file in this directory should be interpreted as a more concrete freezing of those bottom-theory commitments.
+4. **philosophical primacy is not runtime-source primacy**
+   - Philosophical primacy, however, is not the same as runtime-source primacy.
+   - philosophy-first law remains philosophically generative but not runtime-terminal.
 
 ---
 

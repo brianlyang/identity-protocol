@@ -138,6 +138,17 @@ contract is incomplete or that a stream must be strengthened, but it does not
 become the semantic parent of the bottom theory that made law possible in the
 first place.
 
+### Philosophy-first discipline must stay explicit
+
+README philosophy-first rules about why protocol law exists must therefore stay
+bound to canonical philosophy-primacy rows rather than remaining motivational
+prose.
+
+Philosophy-first law remains generative: protocol and runtime do not author
+their own reason for being, downstream constitutions and contracts formalize
+bottom theory, and present-turn legality still resolves at machine-consumed
+terminals rather than inside bottom-theory prose.
+
 ### Three orders must never be collapsed
 
 For the machine world, at least three different orders must remain explicit:
