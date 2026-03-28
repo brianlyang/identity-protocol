@@ -11,7 +11,8 @@ source "${REPO_ROOT}/scripts/probe_fixture_shell_common.sh"
 POSITIVE_JSON="${TMP_ROOT}/positive.json"
 NEGATIVE_JSON="${TMP_ROOT}/negative.json"
 SHADOW_ROOT="${TMP_ROOT}/shadow-repo"
-SUMMARY_SHADOW_PATH="${SHADOW_ROOT}/docs/release/identity-v1.6x-release-closure-summary.md"
+GOVERNANCE_SHADOW_PATH="${SHADOW_ROOT}/docs/governance/identity-v1.6x-release-closure-governance.md"
+REVIEW_SHADOW_PATH="${SHADOW_ROOT}/docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md"
 
 projection_profile_exclusion_scope_marker="$(
   resolve_python_module_expression \
@@ -74,8 +75,8 @@ full_scan_required_gate_bundle_summary_marker="$(
     "FULL_SCAN_REQUIRED_GATE_BUNDLE_SUMMARY_MARKER"
 )"
 
-printf '[RUN] positive release-closure summary literal-bundle validation\n'
-python3 "${REPO_ROOT}/scripts/validate_v16x_release_closure_summary.py" --repo-root "${REPO_ROOT}" --json-only > "${POSITIVE_JSON}"
+printf '[RUN] positive release-closure boundary literal-bundle validation\n'
+python3 "${REPO_ROOT}/scripts/validate_v16x_release_closure_boundary.py" --repo-root "${REPO_ROOT}" --json-only > "${POSITIVE_JSON}"
 
 python3 "${REPO_ROOT}/scripts/probe_shadow_fixture_common.py" \
   --repo-root "${REPO_ROOT}" \
@@ -84,64 +85,63 @@ python3 "${REPO_ROOT}/scripts/probe_shadow_fixture_common.py" \
   --copy-file identity/protocol/IDENTITY_PROTOCOL.md \
   --copy-file identity/protocol/IDENTITY_RUNTIME.md \
   --copy-file docs/workbook/protocol-issue-register-v1.6.md \
-  --copy-file docs/workbook/protocol-deep-audit-workbook-v1.6.md \
   --copy-file docs/governance/identity-v1.6x-release-closure-governance.md \
   --copy-file docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md \
-  --copy-file docs/release/identity-v1.6x-release-closure-summary.md \
   --json-only > /dev/null
 
 mutate_probe_literal \
-  "${SUMMARY_SHADOW_PATH}" \
+  "${GOVERNANCE_SHADOW_PATH}" \
   "${projection_profile_exclusion_scope_marker}" \
   "projection_profile_exclusion_scope=projection_skip_status=SKIPPED_NOT_REQUIRED"
 mutate_probe_literal \
-  "${SUMMARY_SHADOW_PATH}" \
+  "${GOVERNANCE_SHADOW_PATH}" \
   "${release_cloud_evidence_projection_marker}" \
   "release_cloud_evidence_projection=one_look.release_plane_cloud_evidence_status"
 mutate_probe_literal \
-  "${SUMMARY_SHADOW_PATH}" \
+  "${GOVERNANCE_SHADOW_PATH}" \
   "${targeted_subset_required_gate_bundle_scope_marker}" \
   "targeted_subset_required_gate_bundle_scope=required_gate_bundle_status=SKIPPED_NOT_REQUIRED"
 mutate_probe_literal \
-  "${SUMMARY_SHADOW_PATH}" \
+  "${GOVERNANCE_SHADOW_PATH}" \
   "${targeted_subset_required_gate_bundle_scope_reason_marker}" \
   "targeted_subset_required_gate_bundle_scope_reason=required_gate_bundle_scope_reason=scope_reason_drifted"
 mutate_probe_literal \
-  "${SUMMARY_SHADOW_PATH}" \
+  "${GOVERNANCE_SHADOW_PATH}" \
   "${targeted_subset_selected_check_scope_marker}" \
   "targeted_subset_selected_check_scope=selected_check_scope_projection_status=PASS_REQUIRED"
 mutate_probe_literal \
-  "${SUMMARY_SHADOW_PATH}" \
+  "${GOVERNANCE_SHADOW_PATH}" \
   "${release_readiness_selected_check_scope_projection_marker}" \
   "release_readiness_selected_check_scope_projection=one_look.selected_check_scope_projection_status"
+
 mutate_probe_literal \
-  "${SUMMARY_SHADOW_PATH}" \
+  "${REVIEW_SHADOW_PATH}" \
   "${release_readiness_one_look_family_order_marker}" \
   "release_readiness_one_look_family_order=foundational|governance_probe"
 mutate_probe_literal \
-  "${SUMMARY_SHADOW_PATH}" \
+  "${REVIEW_SHADOW_PATH}" \
   "${release_readiness_foundational_projection_marker}" \
   "release_readiness_foundational_projection=one_look.required_contract_coverage_status"
 mutate_probe_literal \
-  "${SUMMARY_SHADOW_PATH}" \
+  "${REVIEW_SHADOW_PATH}" \
   "${release_readiness_support_preflight_projection_marker}" \
   "release_readiness_support_preflight_projection=one_look.control_plane_budget_status"
 mutate_probe_literal \
-  "${SUMMARY_SHADOW_PATH}" \
+  "${REVIEW_SHADOW_PATH}" \
   "${required_gate_bundle_projection_marker}" \
   "required_gate_bundle_projection=one_look.required_gate_bundle_status"
 mutate_probe_literal \
-  "${SUMMARY_SHADOW_PATH}" \
+  "${REVIEW_SHADOW_PATH}" \
   "${full_scan_required_gate_bundle_projection_marker}" \
   "full_scan_required_gate_bundle_projection=three_plane.required_gate_bundle_status"
 mutate_probe_literal \
-  "${SUMMARY_SHADOW_PATH}" \
+  "${REVIEW_SHADOW_PATH}" \
   "${full_scan_required_gate_bundle_summary_marker}" \
   "full_scan_required_gate_bundle_summary=summary_required_gate_bundle_projection.identities_with_projection"
 
-printf '[RUN] negative release-closure summary literal-bundle validation\n'
-if python3 "${REPO_ROOT}/scripts/validate_v16x_release_closure_summary.py" --repo-root "${SHADOW_ROOT}" --json-only > "${NEGATIVE_JSON}"; then
-  echo '[FAIL] negative release-closure summary literal-bundle probe must fail'
+printf '[RUN] negative release-closure boundary literal-bundle validation\n'
+if python3 "${REPO_ROOT}/scripts/validate_v16x_release_closure_boundary.py" --repo-root "${SHADOW_ROOT}" --json-only > "${NEGATIVE_JSON}"; then
+  echo '[FAIL] negative release-closure boundary literal-bundle probe must fail'
   exit 1
 fi
 
@@ -153,32 +153,32 @@ from pathlib import Path
 positive = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
 negative = json.loads(Path(sys.argv[2]).read_text(encoding='utf-8'))
 
-if positive.get("v16x_release_closure_summary_status") != "PASS_REQUIRED":
-    raise SystemExit("positive release-closure summary literal-bundle status must PASS_REQUIRED")
-if negative.get("v16x_release_closure_summary_status") != "FAIL_REQUIRED":
-    raise SystemExit("negative release-closure summary literal-bundle status must FAIL_REQUIRED")
+if positive.get("v16x_release_closure_boundary_status") != "PASS_REQUIRED":
+    raise SystemExit("positive release-closure boundary literal-bundle status must PASS_REQUIRED")
+if negative.get("v16x_release_closure_boundary_status") != "FAIL_REQUIRED":
+    raise SystemExit("negative release-closure boundary literal-bundle status must FAIL_REQUIRED")
 
 reasons = set(negative.get("stale_reasons") or [])
 expected_reasons = {
-    "summary_doc_projection_profile_exclusion_scope_line_not_canonical",
-    "summary_doc_release_cloud_evidence_projection_line_not_canonical",
-    "summary_doc_targeted_subset_required_gate_bundle_scope_line_not_canonical",
-    "summary_doc_targeted_subset_required_gate_bundle_scope_reason_line_not_canonical",
-    "summary_doc_targeted_subset_selected_check_scope_line_not_canonical",
-    "summary_doc_release_readiness_selected_check_scope_projection_line_not_canonical",
-    "summary_doc_release_readiness_one_look_family_order_line_not_canonical",
-    "summary_doc_release_readiness_foundational_projection_line_not_canonical",
-    "summary_doc_release_readiness_support_preflight_projection_line_not_canonical",
-    "summary_doc_required_gate_bundle_projection_line_not_canonical",
-    "summary_doc_full_scan_required_gate_bundle_projection_line_not_canonical",
-    "summary_doc_full_scan_required_gate_bundle_summary_line_not_canonical",
+    "governance_doc_projection_profile_exclusion_scope_line_not_canonical",
+    "governance_doc_release_cloud_evidence_projection_line_not_canonical",
+    "governance_doc_targeted_subset_required_gate_bundle_scope_line_not_canonical",
+    "governance_doc_targeted_subset_required_gate_bundle_scope_reason_line_not_canonical",
+    "governance_doc_targeted_subset_selected_check_scope_line_not_canonical",
+    "governance_doc_release_readiness_selected_check_scope_projection_line_not_canonical",
+    "review_doc_release_readiness_one_look_family_order_line_not_canonical",
+    "review_doc_release_readiness_foundational_projection_line_not_canonical",
+    "review_doc_release_readiness_support_preflight_projection_line_not_canonical",
+    "review_doc_required_gate_bundle_projection_line_not_canonical",
+    "review_doc_full_scan_required_gate_bundle_projection_line_not_canonical",
+    "review_doc_full_scan_required_gate_bundle_summary_line_not_canonical",
 }
 missing = sorted(expected_reasons - reasons)
 if missing:
     raise SystemExit(
-        "negative release-closure summary literal-bundle probe is missing expected stale reasons: "
+        "negative release-closure boundary literal-bundle probe is missing expected stale reasons: "
         + ", ".join(missing)
     )
 PY
 
-echo "[PASS] v1.6.x release closure summary literal-bundle canonicality probes passed"
+echo "[PASS] v1.6.x release closure boundary literal-bundle canonicality probes passed"

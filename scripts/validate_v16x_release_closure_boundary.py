@@ -39,6 +39,9 @@ from release_closure_repo_global_projection_common import (
 from release_closure_root_grounding_common import (
     RELEASE_CLOSURE_ROOT_GROUNDING_SURFACE_CONSTRAINTS,
 )
+from release_closure_bounded_projection_literal_bundle_common import (
+    collect_release_closure_bounded_projection_literal_bundle_stale_reasons,
+)
 from release_closure_terminal_truth_bridge_surface_common import (
     collect_release_closure_terminal_truth_bridge_surface_stale_reasons,
 )
@@ -204,6 +207,12 @@ def main() -> int:
         stale_reasons.extend(
             collect_release_closure_post_closure_adjudication_order_stale_reasons(
                 text, label=label
+            )
+        )
+        stale_reasons.extend(
+            collect_release_closure_bounded_projection_literal_bundle_stale_reasons(
+                text,
+                label=label,
             )
         )
         stale_reasons.extend(collect_release_closure_narrative_stale_reasons(text, label=label))
