@@ -118,6 +118,7 @@ assert 'identity_experience_writeback' in summary_targeted_subset_excluded['sele
 assert 'release_plane_cloud_evidence' in summary_targeted_subset_excluded['selected_check_scope_projection']['excluded_summary_keys'], summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['identity_codex_launcher']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['identity_experience_writeback']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['runtime_file_boundary_governance']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['required_gate_surface_drift']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['runtime_summary_surface_governance_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['required_gate_surface_drift_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
@@ -147,6 +148,7 @@ assert summary_targeted_subset_excluded['one_look']['identity_experience_writeba
 assert summary_targeted_subset_excluded['one_look']['identity_experience_writeback_report_selection_mode'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['identity_experience_writeback_report_authority_class'] == '', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['identity_experience_writeback_report_pointer_resolution_mode'] == '', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['one_look']['runtime_file_boundary_governance_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_surface_drift_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['required_gate_surface_drift_probe_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['one_look']['active_execution_report_pointer_locality_probe_status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
@@ -469,6 +471,7 @@ assert summary_release_projection['one_look']['control_plane_materialized_contro
 assert summary_release_projection['one_look']['control_plane_materialized_promotion_ready'] is True, summary_release_projection
 assert summary_release_projection['one_look']['executable_surface_runtime_literal_lock_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['executable_surface_runtime_literal_lock_violation_count'] == 0, summary_release_projection
+assert summary_release_projection['one_look']['runtime_file_boundary_governance_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['issue_register_consistency_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['protocol_broadcast_doc_control_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['protocol_governed_subdomain_doc_control_registry_status'] == 'PASS_REQUIRED', summary_release_projection

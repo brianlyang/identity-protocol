@@ -8,6 +8,7 @@ STATUS_UNKNOWN = "UNKNOWN"
 
 RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SUMMARY_BINDINGS: tuple[tuple[str, str], ...] = (
     ("required_gate_surface_drift", "required_gate_surface_drift_status"),
+    ("runtime_file_boundary_governance", "runtime_file_boundary_governance_status"),
     ("issue_register_consistency", "issue_register_consistency_status"),
     ("protocol_broadcast_doc_control", "protocol_broadcast_doc_control_status"),
     (
@@ -29,6 +30,7 @@ RELEASE_READINESS_REPO_GLOBAL_CLOSURE_ONE_LOOK_FIELDS: tuple[str, ...] = (
 RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OWNER_LANES: tuple[str, ...] = (
     "scripts/validate_executable_surface_runtime_literal_lock.py",
     "scripts/validate_required_gate_surface_drift.py",
+    "scripts/validate_runtime_file_boundary_governance.py",
     "scripts/validate_issue_register_consistency.py",
     "scripts/validate_protocol_broadcast_doc_control.py",
     "scripts/validate_protocol_governed_subdomain_doc_control_registry.py",

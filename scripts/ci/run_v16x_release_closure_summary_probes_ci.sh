@@ -37,6 +37,7 @@ text = text.replace("fleet-scope closure matrix", "fleet matrix")
 text = text.replace("repair success != clean terminal truth", "repair success means clean terminal truth")
 text = text.replace("summary_terminal_truth_boundary", "summary boundary aggregate")
 text = text.replace("one_look.health_report_experience_writeback_projection_status", "one_look.health_projection_status")
+text = text.replace("one_look.runtime_file_boundary_governance_status", "one_look.runtime_file_boundary_status")
 text = text.replace("one_look.required_gate_bundle_report_selection_mode", "one_look.required_gate_bundle_selection_mode")
 text = text.replace("three_plane.required_gate_bundle_report_selection_mode", "three_plane.required_gate_bundle_selection_mode")
 text = text.replace("resume_capture_mode=stable_prewrite_snapshot", "resume_capture_mode=resume_snapshot")
@@ -87,6 +88,8 @@ if "summary_doc_missing_outer_surface_e2e_marker:summary_terminal_truth_boundary
     raise SystemExit("negative release-closure summary must detect outer-surface e2e marker drift")
 if "summary_doc_missing_release_readiness_health_projection_marker:one_look.health_report_experience_writeback_projection_status" not in reasons:
     raise SystemExit("negative release-closure summary must detect release-readiness health projection drift")
+if "summary_doc_missing_outer_surface_e2e_marker:one_look.runtime_file_boundary_governance_status" not in reasons:
+    raise SystemExit("negative release-closure summary must detect runtime-shadow repo-global projection drift")
 if "summary_doc_missing_full_scan_required_gate_projection_marker:three_plane.required_gate_bundle_report_selection_mode" not in reasons:
     raise SystemExit("negative release-closure summary must detect full-scan required-gate projection drift")
 if "summary_doc_missing_release_readiness_lifecycle_marker:one_look.required_gate_bundle_report_selection_mode" not in reasons:

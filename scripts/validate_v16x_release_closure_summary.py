@@ -58,6 +58,7 @@ REQUIRED_OUTER_SURFACE_E2E_MARKERS = (
     "one_look.terminal_truth_boundary_projection_status",
     "scripts/validate_executable_surface_runtime_literal_lock.py",
     "one_look.executable_surface_runtime_literal_lock_status",
+    "one_look.runtime_file_boundary_governance_status",
     "one_look.issue_register_consistency_status",
     "one_look.protocol_broadcast_doc_control_status",
     "one_look.protocol_governed_subdomain_doc_control_registry_status",

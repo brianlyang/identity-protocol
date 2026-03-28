@@ -30,6 +30,21 @@
     - repo-root `.identity/` is shadow scratch only and must never become
       current-turn runtime authority or version-controlled evidence
 
+- **runtime-shadow repo-global closure projection hardening**:
+  - promoted the nested protocol-repo runtime-shadow boundary from validator-only
+    knowledge into the governed release-readiness one-look export surface.
+  - `scripts/release_readiness_check.py` now captures
+    `scripts/validate_runtime_file_boundary_governance.py` as structured
+    summary data and includes the runtime-shadow probe in post-closure replay.
+  - `scripts/release_readiness_repo_global_closure_projection_common.py` now
+    freezes `one_look.runtime_file_boundary_governance_status` inside the
+    repo-global closure projection marker and owner-lane set.
+  - release-summary governance/review/summary docs now freeze the same bounded
+    projection and keep `scripts/validate_runtime_file_boundary_governance.py`
+    visible as the direct owner lane behind the derived one-look field.
+  - release-summary/runtime-summary probes now fail-close if the new one-look
+    projection literal drifts out of the governed summary surface.
+
 - **nested gateway wrapper timeout budget propagation**:
   - hardened `scripts/gateway_wrapper_enforcement.py` so pack-local nested
     ingress/session wrapper subprocesses inherit the stronger timeout profile of

@@ -394,6 +394,18 @@ cp docs/release/identity-v1.6x-release-closure-summary.md "$tmpdir/docs/release/
 
 mutate_probe_literal \
   "$tmpdir/docs/release/identity-v1.6x-release-closure-summary.md" \
+  "one_look.runtime_file_boundary_governance_status"
+
+if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-runtime-shadow-repo-global-doc.json; then
+  echo "[FAIL] negative runtime-shadow repo-global projection doc probe unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] negative runtime-shadow repo-global projection doc probe fail-closed as expected"
+
+cp docs/release/identity-v1.6x-release-closure-summary.md "$tmpdir/docs/release/"
+
+mutate_probe_literal \
+  "$tmpdir/docs/release/identity-v1.6x-release-closure-summary.md" \
   "one_look.required_gate_surface_drift_probe_status"
 
 if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-required-gate-governance-probe-doc.json; then
