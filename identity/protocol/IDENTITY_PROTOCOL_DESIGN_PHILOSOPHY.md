@@ -1567,6 +1567,10 @@ Required commitment, differentiation, epistemic-proof, commitment-proof-
 alignment, epistemic-limit, and collapse families must remain explicit as
 separate machine-readable row families.
 
+README root current-truth epistemology completeness discipline must therefore
+stay congruent with admitted current-truth-epistemology-completeness rows
+rather than becoming a freehand completeness summary.
+
 Expected row-family total and emitted row-family total must therefore stay
 congruent under machine-readable coverage completeness rather than being left
 implicit.

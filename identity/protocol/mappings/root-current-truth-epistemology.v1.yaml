@@ -37,21 +37,25 @@ anchor_checks:
       - '### Current-truth epistemology row-family completeness must stay explicit'
       - "Required commitment, differentiation, epistemic-proof, commitment-proof-\nalignment, epistemic-limit, and collapse families must remain explicit as\nseparate machine-readable row families."
       - 'The machine world must not finalize current-truth epistemology while required row identity drift remains known only internally.'
+      - "README root current-truth epistemology completeness discipline must therefore\nstay congruent with admitted current-truth-epistemology-completeness rows\nrather than becoming a freehand completeness summary."
   - rel_path: identity/protocol/README.md
     required_markers:
       - '## Root current-truth epistemology completeness discipline'
       - 'Current-truth epistemology law is not a soft prose bundle.'
+      - 'These current-truth-epistemology-completeness rules must remain bound to canonical current-truth-epistemology-completeness rows rather than drifting into soft summary prose.'
       - '1. required commitment, differentiation, epistemic-proof, commitment-proof-alignment, epistemic-limit, and collapse rows must remain explicit as separate machine-readable families;'
   - rel_path: identity/protocol/IDENTITY_PROTOCOL.md
     required_markers:
       - '## Root current-truth epistemology completeness boundary'
       - '1. Current-truth epistemology law must remain machine-readable as separate commitment, differentiation, epistemic-proof, commitment-proof-alignment, epistemic-limit, and collapse row families.'
       - '4. Protocol legality must not finalize current-truth epistemology while missing or unexpected row identities remain known only inside validator logic.'
+      - '6. README root current-truth epistemology completeness discipline rendered at protocol root must remain congruent with admitted current-truth-epistemology-completeness rows rather than silently authoring an alternate completeness summary.'
   - rel_path: identity/protocol/IDENTITY_RUNTIME.md
     required_markers:
       - '## Runtime current-truth epistemology consumption boundary'
       - '1. Runtime consumes current-truth epistemology law as separate commitment, differentiation, epistemic-proof, commitment-proof-alignment, epistemic-limit, and collapse row families rather than as undifferentiated epistemic prose.'
       - '4. Runtime must not finalize current-truth epistemology while missing or unexpected row identities remain known only inside validator machinery.'
+      - '6. Runtime consumes README root current-truth epistemology completeness discipline as a governed completeness projection bound to admitted current-truth-epistemology-completeness rows rather than as a freehand completeness summary.'
 required_commitment_rows:
   - order: 1
     commitment_id: canonical_source_before_narration
@@ -172,3 +176,19 @@ required_collapse_rows:
   - order: 7
     collapse_id: epistemic_commitment_proof_flattening
     contract_phrase: 'canonical-source, governed-resolution, present-turn-authority, provenance-preserving-derivation, and fail-close commitments are treated as if one proof stratum were sufficient for all of them.'
+current_truth_epistemology_completeness_rows:
+  - order: 1
+    completeness_id: explicit_current_truth_epistemology_row_families
+    contract_phrase: 'required commitment, differentiation, epistemic-proof, commitment-proof-alignment, epistemic-limit, and collapse rows must remain explicit as separate machine-readable families;'
+  - order: 2
+    completeness_id: congruent_current_truth_epistemology_row_family_totals
+    contract_phrase: 'expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;'
+  - order: 3
+    completeness_id: explicit_current_truth_epistemology_row_identity_sets
+    contract_phrase: 'expected row identity set and emitted row identity set for each family must also remain machine-readable rather than being collapsed into aggregate counts;'
+  - order: 4
+    completeness_id: hidden_current_truth_epistemology_identity_drift_forbidden
+    contract_phrase: 'runtime or validator code must not finalize current-truth epistemology while missing or unexpected row identities remain known only internally;'
+  - order: 5
+    completeness_id: fail_close_preserves_current_truth_epistemology_identity_projection
+    contract_phrase: 'fail-close machine output must preserve missing/unexpected row identity projection rather than hiding drift behind row-count shorthand or generic structure failure.'

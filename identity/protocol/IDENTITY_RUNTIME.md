@@ -296,6 +296,7 @@ implicit.
 3. Runtime must also keep expected row identity set and emitted row identity set for each current-truth epistemology family explicit rather than collapsing identity drift into summary-only counts.
 4. Runtime must not finalize current-truth epistemology while missing or unexpected row identities remain known only inside validator machinery.
 5. Runtime fail-close output must preserve missing/unexpected row identity projection rather than hiding drift behind generic structure failure or count-only summaries.
+6. Runtime consumes README root current-truth epistemology completeness discipline as a governed completeness projection bound to admitted current-truth-epistemology-completeness rows rather than as a freehand completeness summary.
 
 ## Runtime success-path state admissibility consumption boundary
 

@@ -675,6 +675,7 @@ Artifact-family admissibility law is not a soft prose bundle.
 ## Root current-truth epistemology completeness discipline
 
 Current-truth epistemology law is not a soft prose bundle.
+These current-truth-epistemology-completeness rules must remain bound to canonical current-truth-epistemology-completeness rows rather than drifting into soft summary prose.
 
 1. required commitment, differentiation, epistemic-proof, commitment-proof-alignment, epistemic-limit, and collapse rows must remain explicit as separate machine-readable families;
 2. expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness rather than being left implicit;
