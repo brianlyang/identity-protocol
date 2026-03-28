@@ -142,7 +142,9 @@ assert summary_targeted_subset_excluded['runtime_file_boundary_governance']['sta
 assert summary_targeted_subset_excluded['required_gate_surface_drift']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['runtime_summary_surface_governance_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['release_readiness_one_look_topology_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['release_readiness_repo_global_closure_topology_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['release_readiness_active_runtime_closure_topology_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
+assert summary_targeted_subset_excluded['release_readiness_terminal_truth_bridge_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['release_readiness_governance_probe_topology_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['required_gate_surface_drift_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
 assert summary_targeted_subset_excluded['active_execution_report_pointer_locality_probe']['status'] == 'SKIPPED_NOT_REQUIRED', summary_targeted_subset_excluded
@@ -290,9 +292,23 @@ summary_release_projection = {
     'release_readiness_one_look_topology_probe': {
         'status': 'PASS_REQUIRED',
     },
+    'release_readiness_repo_global_closure_topology_probe': {
+        'status': 'PASS_REQUIRED',
+        'positive_validator_output': '/tmp/release-readiness-repo-global-closure-topology-positive.json',
+    },
     'release_readiness_active_runtime_closure_topology_probe': {
         'status': 'PASS_REQUIRED',
         'positive_validator_output': '/tmp/release-readiness-active-runtime-closure-topology-positive.json',
+    },
+    'release_readiness_terminal_truth_bridge_probe': {
+        'status': 'PASS_REQUIRED',
+        'positive_validator_output': '/tmp/release-readiness-terminal-truth-bridge-positive.json',
+        'bridge_case_count': 2,
+        'bridge_cases': ['clean_terminal_truth', 'review_required_execution_closure'],
+        'seeded_identity_ids': [
+            'release-readiness-terminal-truth-bridge-clean-e2e',
+            'release-readiness-terminal-truth-bridge-review-e2e',
+        ],
     },
     'release_readiness_governance_probe_topology_probe': {
         'status': 'PASS_REQUIRED',
@@ -420,7 +436,9 @@ assert summary_release_projection['one_look']['required_gate_bundle_scan_probe_s
 assert summary_release_projection['one_look']['active_execution_report_pointer_external_resolution_mode'] == 'external_pointer_report_rejected', summary_release_projection
 assert summary_release_projection['one_look']['execution_report_selection_convergence_candidate_count'] == 1, summary_release_projection
 assert summary_release_projection['one_look']['release_readiness_one_look_topology_probe_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['release_readiness_repo_global_closure_topology_probe_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['release_readiness_active_runtime_closure_topology_probe_status'] == 'PASS_REQUIRED', summary_release_projection
+assert summary_release_projection['one_look']['release_readiness_terminal_truth_bridge_probe_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['release_readiness_governance_probe_topology_probe_status'] == 'PASS_REQUIRED', summary_release_projection
 assert summary_release_projection['one_look']['release_readiness_summary_binding_probe_status'] == 'PASS_REQUIRED', summary_release_projection
 for summary_key, one_look_field in RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SUMMARY_BINDINGS:

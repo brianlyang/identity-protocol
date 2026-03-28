@@ -31,6 +31,9 @@ from release_readiness_active_runtime_closure_projection_common import (
 from release_readiness_repo_global_closure_projection_common import (
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
 )
+from release_readiness_terminal_truth_bridge_common import (
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS,
+)
 from release_readiness_runtime_closure_convergence_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CONVERGENCE_MARKERS,
     RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS,
@@ -138,6 +141,11 @@ def main() -> int:
             if marker not in text:
                 stale_reasons.append(
                     f"{label}_missing_active_runtime_closure_projection_marker:{marker}"
+                )
+        for marker in RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS:
+            if marker not in text:
+                stale_reasons.append(
+                    f"{label}_missing_terminal_truth_bridge_marker:{marker}"
                 )
         for marker in REQUIRED_REPO_GLOBAL_CLOSURE_BOUNDARY_MARKERS:
             if marker not in text:

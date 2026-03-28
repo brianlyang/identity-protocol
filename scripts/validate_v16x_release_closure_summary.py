@@ -51,6 +51,9 @@ from release_readiness_foundational_projection_common import (
 from release_readiness_one_look_topology_common import (
     RELEASE_READINESS_ONE_LOOK_TOPOLOGY_SURFACE_CONSTRAINTS,
 )
+from release_readiness_terminal_truth_bridge_common import (
+    RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS,
+)
 from release_readiness_support_preflight_projection_common import (
     RELEASE_READINESS_SUPPORT_PREFLIGHT_SURFACE_CONSTRAINTS,
 )
@@ -97,6 +100,9 @@ REQUIRED_RELEASE_READINESS_ONE_LOOK_TOPOLOGY_MARKERS = (
 )
 REQUIRED_RELEASE_READINESS_SUPPORT_PREFLIGHT_MARKERS = (
     *RELEASE_READINESS_SUPPORT_PREFLIGHT_SURFACE_CONSTRAINTS,
+)
+REQUIRED_RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_MARKERS = (
+    *RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_CONSTRAINTS,
 )
 REQUIRED_FULL_SCAN_REQUIRED_GATE_PROJECTION_MARKERS = (
     "scripts/ci/run_full_scan_required_gate_projection_probes_ci.sh",
@@ -242,6 +248,11 @@ def main() -> int:
         if marker not in summary_text:
             stale_reasons.append(
                 f"summary_doc_missing_release_readiness_support_preflight_marker:{marker}"
+            )
+    for marker in REQUIRED_RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_MARKERS:
+        if marker not in summary_text:
+            stale_reasons.append(
+                f"summary_doc_missing_release_readiness_terminal_truth_bridge_marker:{marker}"
             )
     for marker in REQUIRED_FULL_SCAN_REQUIRED_GATE_PROJECTION_MARKERS:
         if marker not in summary_text:

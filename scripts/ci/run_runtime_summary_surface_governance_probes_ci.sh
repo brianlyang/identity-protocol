@@ -477,6 +477,19 @@ echo "[PASS] negative repo-global owner-lane doc anchor probe fail-closed as exp
 cp scripts/release_readiness_check.py "$tmpdir/scripts/"
 cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
 
+mutate_probe_literal \
+  "$tmpdir/scripts/release_readiness_check.py" \
+  '**release_readiness_repo_global_closure_capture_script_map(),'
+
+if python3 scripts/validate_runtime_summary_surface_governance.py --repo-root "$tmpdir" --json-only >/tmp/runtime-summary-surface-governance-negative-repo-global-script.json; then
+  echo "[FAIL] negative repo-global shared capture script probe unexpectedly passed"
+  exit 1
+fi
+echo "[PASS] negative repo-global shared capture script probe fail-closed as expected"
+
+cp scripts/release_readiness_check.py "$tmpdir/scripts/"
+cp docs/governance/identity-v1.6x-release-closure-governance.md "$tmpdir/docs/governance/"
+
 required_gate_bundle_scope_marker="$(
   resolve_python_module_expression \
     "release_readiness_required_gate_bundle_scope_common" \

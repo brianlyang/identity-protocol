@@ -21,6 +21,16 @@ repo_global_projection_marker="$(
     "release_readiness_repo_global_closure_projection_common" \
     "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER"
 )"
+repo_global_checked_count_marker="$(
+  resolve_python_module_expression \
+    "release_readiness_repo_global_closure_projection_common" \
+    "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_CHECKED_IDENTITY_COUNT_FIELDS[0]"
+)"
+repo_global_topology_probe_marker="$(
+  resolve_python_module_expression \
+    "release_readiness_repo_global_closure_projection_common" \
+    "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_TOPOLOGY_PROOF_LANES[-1]"
+)"
 active_runtime_projection_marker="$(
   resolve_python_module_expression \
     "release_readiness_active_runtime_closure_projection_common" \
@@ -51,6 +61,16 @@ one_look_topology_marker="$(
     "release_readiness_one_look_topology_common" \
     "RELEASE_READINESS_ONE_LOOK_FAMILY_ORDER_MARKER"
 )"
+terminal_truth_bridge_surface_marker="$(
+  resolve_python_module_expression \
+    "release_readiness_terminal_truth_bridge_common" \
+    "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_SURFACE_MARKER"
+)"
+terminal_truth_bridge_case_marker="$(
+  resolve_python_module_expression \
+    "release_readiness_terminal_truth_bridge_common" \
+    "RELEASE_READINESS_TERMINAL_TRUTH_BRIDGE_CASE_MARKERS[1]"
+)"
 active_runtime_terminal_truth_class_marker="$(
   resolve_python_module_expression \
     "release_readiness_active_runtime_closure_projection_common" \
@@ -73,20 +93,24 @@ python3 "${REPO_ROOT}/scripts/probe_shadow_fixture_common.py" \
   --copy-file docs/release/identity-v1.6x-release-closure-summary.md \
   --json-only > /dev/null
 
-python3 - <<'PY' "${SHADOW_ROOT}/docs/release/identity-v1.6x-release-closure-summary.md" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${foundational_projection_marker}" "${support_preflight_projection_marker}" "${selected_check_scope_projection_marker}" "${one_look_topology_marker}" "${active_runtime_terminal_truth_class_marker}"
+python3 - <<'PY' "${SHADOW_ROOT}/docs/release/identity-v1.6x-release-closure-summary.md" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${foundational_projection_marker}" "${support_preflight_projection_marker}" "${selected_check_scope_projection_marker}" "${one_look_topology_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${active_runtime_terminal_truth_class_marker}"
 from pathlib import Path
 import sys
 
 path = Path(sys.argv[1]).resolve()
 repo_global_dynamic_one_look_marker = sys.argv[2]
 repo_global_projection_marker = sys.argv[3]
-active_runtime_projection_marker = sys.argv[4]
-release_cloud_evidence_projection_marker = sys.argv[5]
-foundational_projection_marker = sys.argv[6]
-support_preflight_projection_marker = sys.argv[7]
-selected_check_scope_projection_marker = sys.argv[8]
-one_look_topology_marker = sys.argv[9]
-active_runtime_terminal_truth_class_marker = sys.argv[10]
+repo_global_checked_count_marker = sys.argv[4]
+repo_global_topology_probe_marker = sys.argv[5]
+active_runtime_projection_marker = sys.argv[6]
+release_cloud_evidence_projection_marker = sys.argv[7]
+foundational_projection_marker = sys.argv[8]
+support_preflight_projection_marker = sys.argv[9]
+selected_check_scope_projection_marker = sys.argv[10]
+one_look_topology_marker = sys.argv[11]
+terminal_truth_bridge_surface_marker = sys.argv[12]
+terminal_truth_bridge_case_marker = sys.argv[13]
+active_runtime_terminal_truth_class_marker = sys.argv[14]
 text = path.read_text(encoding="utf-8")
 text = text.replace("`v1.6.21`", "`v1.6.20`")
 text = text.replace("fleet-scope closure matrix", "fleet matrix")
@@ -95,6 +119,8 @@ text = text.replace("summary_terminal_truth_boundary", "summary boundary aggrega
 text = text.replace("one_look.health_report_experience_writeback_projection_status", "one_look.health_projection_status")
 text = text.replace(repo_global_dynamic_one_look_marker, "one_look.repo_global_drift_marker")
 text = text.replace(repo_global_projection_marker, "repo_global_projection=one_look.executable_surface_runtime_literal_lock_status|one_look.repo_global_drift_marker")
+text = text.replace(repo_global_checked_count_marker, "one_look.repo_global_checked_identity_count")
+text = text.replace(repo_global_topology_probe_marker, "scripts/ci/run_repo_global_closure_topology_probes_ci.sh")
 text = text.replace("one_look.required_gate_bundle_report_selection_mode", "one_look.required_gate_bundle_selection_mode")
 text = text.replace("three_plane.required_gate_bundle_report_selection_mode", "three_plane.required_gate_bundle_selection_mode")
 text = text.replace("resume_capture_mode=stable_prewrite_snapshot", "resume_capture_mode=resume_snapshot")
@@ -121,6 +147,11 @@ text = text.replace(
     "release_readiness_one_look_family_order=foundational|governance_probe",
 )
 text = text.replace(
+    terminal_truth_bridge_surface_marker,
+    "terminal_truth_bridge_surface=one_look.identity_terminal_truth_cleanliness_status",
+)
+text = text.replace(terminal_truth_bridge_case_marker, "terminal_truth_bridge_case=review_required_execution")
+text = text.replace(
     active_runtime_projection_marker,
     "active_runtime_projection=one_look.identity_codex_launcher_status",
 )
@@ -137,7 +168,7 @@ if python3 "${REPO_ROOT}/scripts/validate_v16x_release_closure_summary.py" --rep
   exit 1
 fi
 
-python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${foundational_projection_marker}" "${support_preflight_projection_marker}" "${selected_check_scope_projection_marker}" "${one_look_topology_marker}" "${active_runtime_terminal_truth_class_marker}"
+python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${release_cloud_evidence_projection_marker}" "${foundational_projection_marker}" "${support_preflight_projection_marker}" "${selected_check_scope_projection_marker}" "${one_look_topology_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${active_runtime_terminal_truth_class_marker}"
 import json
 import sys
 from pathlib import Path
@@ -171,6 +202,12 @@ if expected_repo_global_one_look_reason not in reasons:
 expected_repo_global_projection_reason = f"summary_doc_missing_outer_surface_e2e_marker:{sys.argv[4]}"
 if expected_repo_global_projection_reason not in reasons:
     raise SystemExit("negative release-closure summary must detect repo-global closure projection literal drift")
+expected_repo_global_checked_count_reason = f"summary_doc_missing_outer_surface_e2e_marker:{sys.argv[5]}"
+if expected_repo_global_checked_count_reason not in reasons:
+    raise SystemExit("negative release-closure summary must detect repo-global proof-strength companion drift")
+expected_repo_global_topology_reason = f"summary_doc_missing_outer_surface_e2e_marker:{sys.argv[6]}"
+if expected_repo_global_topology_reason not in reasons:
+    raise SystemExit("negative release-closure summary must detect repo-global topology-proof lane drift")
 if "summary_doc_missing_full_scan_required_gate_projection_marker:three_plane.required_gate_bundle_report_selection_mode" not in reasons:
     raise SystemExit("negative release-closure summary must detect full-scan required-gate projection drift")
 if "summary_doc_missing_release_readiness_lifecycle_marker:one_look.required_gate_bundle_report_selection_mode" not in reasons:
@@ -181,25 +218,31 @@ if "summary_doc_missing_release_readiness_lifecycle_marker:caller cwd" not in re
     raise SystemExit("negative release-closure summary must detect continuation cwd-anchor drift")
 if "summary_doc_missing_workspace_runtime_closure_command_convergence_marker:scripts/run_workspace_runtime_closure_checks.py" not in reasons:
     raise SystemExit("negative release-closure summary must detect workspace-runtime closure runner drift")
-expected_active_runtime_projection_reason = f"summary_doc_missing_active_runtime_closure_projection_marker:{sys.argv[5]}"
+expected_active_runtime_projection_reason = f"summary_doc_missing_active_runtime_closure_projection_marker:{sys.argv[7]}"
 if expected_active_runtime_projection_reason not in reasons:
     raise SystemExit("negative release-closure summary must detect active-runtime closure projection drift")
-expected_release_cloud_evidence_reason = f"summary_doc_missing_release_readiness_release_cloud_evidence_marker:{sys.argv[6]}"
+expected_release_cloud_evidence_reason = f"summary_doc_missing_release_readiness_release_cloud_evidence_marker:{sys.argv[8]}"
 if expected_release_cloud_evidence_reason not in reasons:
     raise SystemExit("negative release-closure summary must detect release-cloud evidence projection drift")
-expected_foundational_reason = f"summary_doc_missing_release_readiness_foundational_marker:{sys.argv[7]}"
+expected_foundational_reason = f"summary_doc_missing_release_readiness_foundational_marker:{sys.argv[9]}"
 if expected_foundational_reason not in reasons:
     raise SystemExit("negative release-closure summary must detect foundational one-look drift")
-expected_support_preflight_reason = f"summary_doc_missing_release_readiness_support_preflight_marker:{sys.argv[8]}"
+expected_support_preflight_reason = f"summary_doc_missing_release_readiness_support_preflight_marker:{sys.argv[10]}"
 if expected_support_preflight_reason not in reasons:
     raise SystemExit("negative release-closure summary must detect support-preflight one-look drift")
-expected_selected_check_scope_reason = f"summary_doc_missing_release_readiness_selected_check_scope_marker:{sys.argv[9]}"
+expected_selected_check_scope_reason = f"summary_doc_missing_release_readiness_selected_check_scope_marker:{sys.argv[11]}"
 if expected_selected_check_scope_reason not in reasons:
     raise SystemExit("negative release-closure summary must detect selected-check scope one-look drift")
-expected_one_look_topology_reason = f"summary_doc_missing_release_readiness_one_look_topology_marker:{sys.argv[10]}"
+expected_one_look_topology_reason = f"summary_doc_missing_release_readiness_one_look_topology_marker:{sys.argv[12]}"
 if expected_one_look_topology_reason not in reasons:
     raise SystemExit("negative release-closure summary must detect one-look topology drift")
-expected_active_runtime_detail_reason = f"summary_doc_missing_active_runtime_closure_projection_marker:{sys.argv[11]}"
+expected_terminal_truth_bridge_surface_reason = f"summary_doc_missing_release_readiness_terminal_truth_bridge_marker:{sys.argv[13]}"
+if expected_terminal_truth_bridge_surface_reason not in reasons:
+    raise SystemExit("negative release-closure summary must detect terminal-truth bridge surface drift")
+expected_terminal_truth_bridge_case_reason = f"summary_doc_missing_release_readiness_terminal_truth_bridge_marker:{sys.argv[14]}"
+if expected_terminal_truth_bridge_case_reason not in reasons:
+    raise SystemExit("negative release-closure summary must detect terminal-truth bridge case drift")
+expected_active_runtime_detail_reason = f"summary_doc_missing_active_runtime_closure_projection_marker:{sys.argv[15]}"
 if expected_active_runtime_detail_reason not in reasons:
     raise SystemExit("negative release-closure summary must detect active-runtime companion detail drift")
 PY
