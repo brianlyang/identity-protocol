@@ -13,7 +13,7 @@ from root_contract_anchor_checks_common import (
     evaluate_root_doc_anchor_checks,
     root_doc_anchor_checks_from_doc,
 )
-from root_contract_row_validation_common import validate_contract_rows
+from root_contract_row_validation_common import validate_contract_row_batches
 from root_corpus_governance_common import find_missing_markers, load_root_corpus_registry, root_corpus_entries_from_registry
 from root_design_question_closure_common import (
     STATUS_FAIL_REQUIRED,
@@ -21,7 +21,7 @@ from root_design_question_closure_common import (
     load_root_design_question_closure,
     question_closure_rows_from_doc,
 )
-from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_family
+from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 from root_stream_design_admissibility_common import load_root_stream_design_admissibility, required_question_rows_from_doc
 
 STATUS_KEY = "protocol_root_design_question_closure_status"
@@ -231,25 +231,29 @@ def main() -> int:
             error_code = ERR_REGISTRY
 
     if not stale_reasons:
-        validate_contract_rows(
-            actual_rows=closure_rows,
-            expected_rows=EXPECTED_QUESTION_CLOSURE_ROWS,
+        validate_contract_row_batches(
+            batches=(
+                {
+                    "actual_rows": closure_rows,
+                    "expected_rows": EXPECTED_QUESTION_CLOSURE_ROWS,
+                    "field_name": "required_question_closure_rows",
+                    "id_attr": "question_id",
+                    "compare_fields": (
+                        "philosophy_marker",
+                        "admissibility_question_id",
+                        "admissibility_normative_focus",
+                        "target_component_id",
+                        "target_current_file",
+                        "target_validator_script",
+                        "target_status_key",
+                        "target_contract_file",
+                    ),
+                    "non_contiguous_reason": "question_order_non_contiguous",
+                    "extra_reason": "unexpected_rows",
+                },
+            ),
             structure_violations=structure_violations,
             support_violations=structure_violations,
-            field_name="required_question_closure_rows",
-            id_attr="question_id",
-            compare_fields=(
-                "philosophy_marker",
-                "admissibility_question_id",
-                "admissibility_normative_focus",
-                "target_component_id",
-                "target_current_file",
-                "target_validator_script",
-                "target_status_key",
-                "target_contract_file",
-            ),
-            non_contiguous_reason="question_order_non_contiguous",
-            extra_reason="unexpected_rows",
         )
 
         row_map = {row.question_id: row for row in closure_rows}
@@ -411,26 +415,26 @@ def main() -> int:
     if stale_reasons or structure_violations or closure_violations or root_doc_anchor_violations:
         status = STATUS_FAIL_REQUIRED
 
-    row_family_projection_rows = [
-        project_row_family(
-            family_id="required_question_closure_rows",
-            member_id_key="question_id",
-            actual_rows=closure_rows,
-            expected_rows=EXPECTED_QUESTION_CLOSURE_ROWS,
-            id_attr="question_id",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
+    row_family_projection_rows = project_row_families(
+        families=(
+            {
+                "family_id": "required_question_closure_rows",
+                "member_id_key": "question_id",
+                "actual_rows": closure_rows,
+                "expected_rows": EXPECTED_QUESTION_CLOSURE_ROWS,
+                "id_attr": "question_id",
+            },
+            {
+                "family_id": "question_status_rows",
+                "member_id_key": "question_id",
+                "actual_rows": _status_rows(question_status_rows),
+                "expected_rows": EXPECTED_QUESTION_CLOSURE_ROWS,
+                "id_attr": "question_id",
+            },
         ),
-        project_row_family(
-            family_id="question_status_rows",
-            member_id_key="question_id",
-            actual_rows=_status_rows(question_status_rows),
-            expected_rows=EXPECTED_QUESTION_CLOSURE_ROWS,
-            id_attr="question_id",
-            pass_status=STATUS_PASS_REQUIRED,
-            fail_status=STATUS_FAIL_REQUIRED,
-        ),
-    ]
+        pass_status=STATUS_PASS_REQUIRED,
+        fail_status=STATUS_FAIL_REQUIRED,
+    )
 
     payload = {
         STATUS_KEY: status,
