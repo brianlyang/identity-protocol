@@ -31,6 +31,11 @@ active_runtime_projection_marker="$(
     "release_readiness_active_runtime_closure_projection_common" \
     "RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_PROJECTION_MARKER"
 )"
+post_closure_adjudication_order_marker="$(
+  resolve_python_module_expression \
+    "release_readiness_post_closure_adjudication_common" \
+    "RELEASE_READINESS_POST_CLOSURE_ADJUDICATION_ORDER_MARKER"
+)"
 terminal_truth_bridge_surface_marker="$(
   resolve_python_module_expression \
     "release_readiness_terminal_truth_bridge_common" \
@@ -66,7 +71,7 @@ python3 "${REPO_ROOT}/scripts/probe_shadow_fixture_common.py" \
   --copy-file docs/review/protocol-remediation-audit-ledger-v1.6x-release-closure.md \
   --json-only > /dev/null
 
-python3 - <<'PY' "${SHADOW_ROOT}/docs/governance/identity-v1.6x-release-closure-governance.md" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${terminal_truth_bridge_probe_marker}" "${active_runtime_terminal_truth_class_marker}"
+python3 - <<'PY' "${SHADOW_ROOT}/docs/governance/identity-v1.6x-release-closure-governance.md" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${terminal_truth_bridge_probe_marker}" "${active_runtime_terminal_truth_class_marker}" "${post_closure_adjudication_order_marker}"
 from pathlib import Path
 import sys
 
@@ -79,6 +84,7 @@ terminal_truth_bridge_surface_marker = sys.argv[6]
 terminal_truth_bridge_case_marker = sys.argv[7]
 terminal_truth_bridge_probe_marker = sys.argv[8]
 active_runtime_terminal_truth_class_marker = sys.argv[9]
+post_closure_adjudication_order_marker = sys.argv[10]
 text = path.read_text(encoding="utf-8")
 text = text.replace("`ISSUE-001` through `ISSUE-039`", "`ISSUE-001` through `ISSUE-038`")
 text = text.replace("`v1.6.21`", "`v1.6.20`")
@@ -106,6 +112,10 @@ text = text.replace(
 text = text.replace(terminal_truth_bridge_case_marker, "terminal_truth_bridge_case=review_required_execution")
 text = text.replace(f"{terminal_truth_bridge_probe_marker}|", "")
 text = text.replace(
+    post_closure_adjudication_order_marker,
+    "release_readiness_post_closure_adjudication_order=runtime_summary_surface_governance|terminal_truth_bridge",
+)
+text = text.replace(
     active_runtime_projection_marker,
     "active_runtime_projection=one_look.identity_codex_launcher_status",
 )
@@ -122,7 +132,7 @@ if python3 "${REPO_ROOT}/scripts/validate_v16x_release_closure_boundary.py" --re
   exit 1
 fi
 
-python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${terminal_truth_bridge_probe_marker}" "${active_runtime_terminal_truth_class_marker}"
+python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}" "${repo_global_projection_marker}" "${repo_global_checked_count_marker}" "${repo_global_topology_probe_marker}" "${active_runtime_projection_marker}" "${terminal_truth_bridge_surface_marker}" "${terminal_truth_bridge_case_marker}" "${terminal_truth_bridge_probe_marker}" "${active_runtime_terminal_truth_class_marker}" "${post_closure_adjudication_order_marker}"
 import json
 import sys
 from pathlib import Path
@@ -187,6 +197,13 @@ if "governance_doc_governance_probe_projection_line_not_canonical" not in reason
 expected_active_runtime_detail_reason = f"governance_doc_missing_active_runtime_closure_projection_marker:{active_runtime_terminal_truth_class_marker}"
 if expected_active_runtime_detail_reason not in reasons:
     raise SystemExit("negative release-closure boundary must detect active-runtime companion detail drift")
+expected_post_closure_adjudication_reason = (
+    f"governance_doc_missing_post_closure_adjudication_marker:{sys.argv[11]}"
+)
+if expected_post_closure_adjudication_reason not in reasons:
+    raise SystemExit(
+        "negative release-closure boundary must detect post-closure adjudication-order drift"
+    )
 PY
 
 echo "[PASS] v1.6.x release closure boundary probes passed"
