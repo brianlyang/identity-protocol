@@ -20,11 +20,13 @@ from root_corpus_question_routing_common import (
     STATUS_FAIL_REQUIRED,
     STATUS_PASS_REQUIRED,
     adjudication_redirect_from_doc,
+    entry_summary_stages_from_doc,
     entry_question_projections_from_doc,
     gateway_question_projections_from_doc,
     load_root_corpus_question_routing,
     question_class_profiles_from_doc,
     question_routing_anchor_checks_from_doc,
+    readme_entry_summary_surface,
 )
 from root_row_family_projection_common import aggregate_row_family_status, project_root_contract_support_projection, project_row_families
 
@@ -114,6 +116,40 @@ EXPECTED_TERMINAL_MACHINE_SURFACES = (
     "runtime_state",
     "receipts",
 )
+EXPECTED_ENTRY_SUMMARY_STAGES = {
+    "bottom theory first": {
+        "order": 1,
+        "bound_question_classes": ("generative_why",),
+        "required_markers": (
+            "read `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md` to understand the bottom theory.",
+        ),
+        "terminal_machine_surfaces": (),
+    },
+    "constitutions next": {
+        "order": 2,
+        "bound_question_classes": ("frozen_protocol_law", "frozen_runtime_law"),
+        "required_markers": (
+            "read `IDENTITY_PROTOCOL.md` and `IDENTITY_RUNTIME.md` to understand protocol and runtime constitutions.",
+        ),
+        "terminal_machine_surfaces": (),
+    },
+    "relevant root contract after that": {
+        "order": 3,
+        "bound_question_classes": ("frozen_domain_contract_law",),
+        "required_markers": (
+            "read the relevant root contract file for the concrete domain being executed.",
+        ),
+        "terminal_machine_surfaces": (),
+    },
+    "machine-consumed verdict surfaces last": {
+        "order": 4,
+        "bound_question_classes": ("current_turn_legality",),
+        "required_markers": (
+            "read mappings, validators, probes, runtime state, and receipts for the final machine-consumed verdict.",
+        ),
+        "terminal_machine_surfaces": EXPECTED_TERMINAL_MACHINE_SURFACES,
+    },
+}
 EXPECTED_FORBIDDEN_ROOT_CLASSES = (
     "bottom_theory",
     "root_index",
@@ -128,11 +164,15 @@ EXPECTED_ROOT_DOC_ANCHOR_CHECKS = {
         "## Root question-routing discipline",
         "current-turn legality question must never terminate in philosophy text, README text, or frozen contract prose alone.",
         "gateway-mediated refreezing or projection keeps the question class governed by the gateway target layer:",
+        "## Machine-world entry summary",
+        "That is the canonical reading order for this directory.",
     ),
     "identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md": (
         "### Question class and answer surface must stay paired",
         "No layer should answer a question that belongs to a different layer.",
         "Gateway-mediated refreezing or projection must preserve the question class of its governed target layer rather than inheriting a new answer class from incoming motivation.",
+        "Required question-class-profile, root-entry-question-projection, entry-summary-stage, and gateway-question-projection families must remain explicit as separate machine-readable row families.",
+        "The machine world must not finalize question-routing legality while required question-class, entry-summary-stage, or route identity drift remains known only internally.",
     ),
     "identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md": (
         "## Runtime adjudication boundary",
@@ -261,9 +301,11 @@ def main() -> int:
 
     anchor_checks = question_routing_anchor_checks_from_doc(routing_doc) if routing_doc else ()
     question_profiles = question_class_profiles_from_doc(routing_doc) if routing_doc else ()
+    entry_summary_stages = entry_summary_stages_from_doc(routing_doc) if routing_doc else ()
     entry_projections = entry_question_projections_from_doc(routing_doc) if routing_doc else ()
     gateway_question_projections = gateway_question_projections_from_doc(routing_doc) if routing_doc else ()
     adjudication_redirect = adjudication_redirect_from_doc(routing_doc) if routing_doc else adjudication_redirect_from_doc({})
+    entry_summary_surface = readme_entry_summary_surface(repo_root)
     registry_entries = root_corpus_entries_from_registry(registry_doc) if registry_doc else ()
     reading_rows = reading_order_rows_from_doc(ordering_doc) if ordering_doc else ()
     authority_entry_projections = entry_authority_projections_from_doc(authority_doc) if authority_doc else ()
@@ -311,6 +353,9 @@ def main() -> int:
         if not question_profiles:
             stale_reasons.append("root_corpus_question_routing_profiles_missing")
             error_code = ERR_REGISTRY
+        if not entry_summary_stages:
+            stale_reasons.append("root_corpus_question_routing_entry_summary_stages_missing")
+            error_code = ERR_REGISTRY
         if not entry_projections:
             stale_reasons.append("root_corpus_question_routing_entry_projection_missing")
             error_code = ERR_REGISTRY
@@ -337,6 +382,7 @@ def main() -> int:
     registry_entry_law_bearing_map = {entry.rel_path: entry.law_bearing for entry in registry_entries}
     registry_classes = sorted({entry.corpus_class for entry in registry_entries})
     question_profile_map = {row.question_class: row for row in question_profiles}
+    entry_summary_stage_map = {row.stage_label: row for row in entry_summary_stages}
     entry_projection_map = {row.rel_path: row for row in entry_projections}
     gateway_question_projection_map = {row.gateway_class: row for row in gateway_question_projections}
     gateway_effect_target_map = {row.gateway_class: row for row in gateway_effect_targets}
@@ -380,6 +426,17 @@ def main() -> int:
         )
         append_membership_delta_violations(
             structure_violations,
+            field_name="entry_summary_stages",
+            expected_ids=EXPECTED_ENTRY_SUMMARY_STAGES,
+            actual_ids=entry_summary_stage_map,
+            payload_key="stage_labels",
+            missing_reason="missing_entry_summary_stages",
+            extra_reason="extra_entry_summary_stages",
+            duplicate_reason="duplicate_entry_summary_stage",
+            actual_total_count=len(entry_summary_stages),
+        )
+        append_membership_delta_violations(
+            structure_violations,
             field_name="gateway_question_projection",
             expected_ids=gateway_effect_target_map,
             actual_ids=gateway_question_projection_map,
@@ -388,6 +445,17 @@ def main() -> int:
             extra_reason="extra_gateway_classes",
             duplicate_reason="duplicate_gateway_class",
             actual_total_count=len(gateway_question_projections),
+        )
+        append_membership_delta_violations(
+            structure_violations,
+            field_name="entry_summary_stage_surface",
+            expected_ids=EXPECTED_ENTRY_SUMMARY_STAGES,
+            actual_ids={row.stage_label: row for row in entry_summary_surface.rows},
+            payload_key="stage_labels",
+            missing_reason="missing_entry_summary_surface_stages",
+            extra_reason="extra_entry_summary_surface_stages",
+            duplicate_reason="duplicate_entry_summary_surface_stage",
+            actual_total_count=len(entry_summary_surface.rows),
         )
 
         for row in question_profiles:
@@ -431,6 +499,92 @@ def main() -> int:
                         "question_class": row.question_class,
                         "expected": bool(expected["root_entry_required"]),
                         "actual": bool(row.root_entry_required),
+                    }
+                )
+
+        stage_orders = [row.order for row in entry_summary_stages]
+        stage_labels = [row.stage_label for row in entry_summary_stages]
+        surface_orders = [row.order for row in entry_summary_surface.rows]
+        surface_labels = [row.stage_label for row in entry_summary_surface.rows]
+        expected_stage_labels = list(EXPECTED_ENTRY_SUMMARY_STAGES.keys())
+        expected_stage_orders = [
+            int(stage["order"]) for stage in EXPECTED_ENTRY_SUMMARY_STAGES.values()
+        ]
+        if len(set(stage_orders)) != len(stage_orders) or sorted(stage_orders) != list(range(1, len(stage_orders) + 1)):
+            structure_violations.append(
+                {"field": "entry_summary_stages", "reason": "stage_order_non_contiguous"}
+            )
+        if len(set(stage_labels)) != len(stage_labels):
+            structure_violations.append(
+                {"field": "entry_summary_stages", "reason": "duplicate_stage_label"}
+            )
+        if surface_orders and (
+            len(set(surface_orders)) != len(surface_orders)
+            or sorted(surface_orders) != list(range(1, len(surface_orders) + 1))
+        ):
+            structure_violations.append(
+                {"field": "entry_summary_stage_surface", "reason": "stage_order_non_contiguous"}
+            )
+        if surface_labels and tuple(surface_labels) != tuple(expected_stage_labels):
+            routing_violations.append(
+                {
+                    "field": "entry_summary_stage_surface",
+                    "reason": "entry_summary_surface_order_mismatch",
+                    "expected": expected_stage_labels,
+                    "actual": surface_labels,
+                }
+            )
+        if surface_orders and tuple(surface_orders) != tuple(expected_stage_orders):
+            routing_violations.append(
+                {
+                    "field": "entry_summary_stage_surface",
+                    "reason": "entry_summary_surface_stage_order_mismatch",
+                    "expected": expected_stage_orders,
+                    "actual": surface_orders,
+                }
+            )
+        for stage_label, expected in EXPECTED_ENTRY_SUMMARY_STAGES.items():
+            stage_row = entry_summary_stage_map.get(stage_label)
+            if stage_row is None:
+                continue
+            if stage_row.order != int(expected["order"]):
+                routing_violations.append(
+                    {
+                        "field": "entry_summary_stages",
+                        "reason": "stage_order_mismatch",
+                        "stage_label": stage_label,
+                        "expected": int(expected["order"]),
+                        "actual": stage_row.order,
+                    }
+                )
+            if tuple(stage_row.bound_question_classes) != tuple(expected["bound_question_classes"]):
+                routing_violations.append(
+                    {
+                        "field": "entry_summary_stages",
+                        "reason": "bound_question_classes_mismatch",
+                        "stage_label": stage_label,
+                        "expected": list(expected["bound_question_classes"]),
+                        "actual": list(stage_row.bound_question_classes),
+                    }
+                )
+            if tuple(stage_row.terminal_machine_surfaces) != tuple(expected["terminal_machine_surfaces"]):
+                routing_violations.append(
+                    {
+                        "field": "entry_summary_stages",
+                        "reason": "terminal_machine_surfaces_mismatch",
+                        "stage_label": stage_label,
+                        "expected": list(expected["terminal_machine_surfaces"]),
+                        "actual": list(stage_row.terminal_machine_surfaces),
+                    }
+                )
+            if tuple(stage_row.required_markers) != tuple(expected["required_markers"]):
+                routing_violations.append(
+                    {
+                        "field": "entry_summary_stages",
+                        "reason": "required_markers_mismatch",
+                        "stage_label": stage_label,
+                        "expected": list(expected["required_markers"]),
+                        "actual": list(stage_row.required_markers),
                     }
                 )
 
@@ -630,6 +784,42 @@ def main() -> int:
                     "reason": "machine_registry_directory_must_not_be_forbidden_for_current_turn_legality",
                 }
             )
+        stage_surface_map = {row.stage_label: row for row in entry_summary_surface.rows}
+        for reason in entry_summary_surface.extraction_violations:
+            structure_violations.append(
+                {
+                    "field": "entry_summary_stage_surface",
+                    "reason": f"entry_summary_surface_{reason}",
+                }
+            )
+        for stage_label, expected in EXPECTED_ENTRY_SUMMARY_STAGES.items():
+            surface_row = stage_surface_map.get(stage_label)
+            if surface_row is None:
+                continue
+            surface_text = "\n".join(surface_row.body_lines)
+            for marker in expected["required_markers"]:
+                if marker not in surface_text:
+                    routing_violations.append(
+                        {
+                            "field": "entry_summary_stage_surface",
+                            "reason": "required_marker_missing",
+                            "stage_label": stage_label,
+                            "marker": marker,
+                        }
+                    )
+        terminal_surface_stage = entry_summary_stage_map.get("machine-consumed verdict surfaces last")
+        if terminal_surface_stage is not None and tuple(terminal_surface_stage.terminal_machine_surfaces) != tuple(
+            adjudication_redirect.terminal_machine_surfaces
+        ):
+            routing_violations.append(
+                {
+                    "field": "entry_summary_stages",
+                    "reason": "terminal_machine_surfaces_not_aligned_with_adjudication_redirect",
+                    "stage_label": terminal_surface_stage.stage_label,
+                    "expected": list(adjudication_redirect.terminal_machine_surfaces),
+                    "actual": list(terminal_surface_stage.terminal_machine_surfaces),
+                }
+            )
 
         anchor_violations.extend(
             evaluate_root_doc_anchor_checks(
@@ -666,6 +856,20 @@ def main() -> int:
                 "id_attr": "rel_path",
             },
             {
+                "family_id": "entry_summary_stages",
+                "member_id_key": "stage_label",
+                "actual_rows": entry_summary_stages,
+                "expected_rows": {stage_label: {} for stage_label in EXPECTED_ENTRY_SUMMARY_STAGES},
+                "id_attr": "stage_label",
+            },
+            {
+                "family_id": "entry_summary_stage_surface",
+                "member_id_key": "stage_label",
+                "actual_rows": entry_summary_surface.rows,
+                "expected_rows": {stage_label: {} for stage_label in EXPECTED_ENTRY_SUMMARY_STAGES},
+                "id_attr": "stage_label",
+            },
+            {
                 "family_id": "gateway_question_projection",
                 "member_id_key": "gateway_class",
                 "actual_rows": gateway_question_projections,
@@ -691,6 +895,7 @@ def main() -> int:
         "root_index_entry": root_index_entry,
         "question_routing_anchor_check_count": len(anchor_checks),
         "question_class_profile_count": len(question_profiles),
+        "entry_summary_stage_count": len(entry_summary_stages),
         "entry_question_projection_count": len(entry_projections),
         "gateway_question_projection_count": len(gateway_question_projections),
         **project_root_contract_support_projection(
@@ -718,6 +923,16 @@ def main() -> int:
             }
             for row in entry_projections
         ],
+        "entry_summary_stages": [
+            {
+                "order": row.order,
+                "stage_label": row.stage_label,
+                "bound_question_classes": list(row.bound_question_classes),
+                "terminal_machine_surfaces": list(row.terminal_machine_surfaces),
+                "required_markers": list(row.required_markers),
+            }
+            for row in sorted(entry_summary_stages, key=lambda item: item.order)
+        ],
         "gateway_question_projection": [
             {
                 "gateway_class": row.gateway_class,
@@ -729,6 +944,19 @@ def main() -> int:
             }
             for row in gateway_question_projections
         ],
+        "entry_summary_stage_surface": {
+            "rel_path": entry_summary_surface.rel_path,
+            "entry_count": len(entry_summary_surface.rows),
+            "entries": [
+                {
+                    "order": row.order,
+                    "stage_label": row.stage_label,
+                    "body_lines": list(row.body_lines),
+                }
+                for row in entry_summary_surface.rows
+            ],
+            "extraction_violations": list(entry_summary_surface.extraction_violations),
+        },
         "adjudication_redirect": {
             "question_class": adjudication_redirect.question_class,
             "terminal_machine_surfaces": list(adjudication_redirect.terminal_machine_surfaces),

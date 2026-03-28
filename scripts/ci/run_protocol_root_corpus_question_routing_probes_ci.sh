@@ -37,7 +37,7 @@ assert payload["protocol_root_corpus_question_routing_status"] == "PASS_REQUIRED
 assert payload["root_doc_anchor_check_count"] == 18, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
 assert payload["adjudication_redirect"]["question_class"] == "current_turn_legality", payload
-assert payload["question_routing_row_family_count"] == 3, payload
+assert payload["question_routing_row_family_count"] == 5, payload
 assert payload["question_routing_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["question_routing_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
@@ -46,12 +46,59 @@ assert all(
     "current_turn_legality" not in row["question_classes"]
     for row in payload["entry_question_projection"]
 ), payload
+assert payload["entry_summary_stage_count"] == 4, payload
+assert payload["entry_summary_stage_surface"]["entry_count"] == 4, payload
+assert any(row["family_id"] == "entry_summary_stages" for row in payload["row_family_projection_rows"]), payload
+assert any(row["family_id"] == "entry_summary_stage_surface" for row in payload["row_family_projection_rows"]), payload
 assert {row["gateway_class"]: row["question_class"] for row in payload["gateway_question_projection"]} == {
     "constitution": "frozen_protocol_law",
     "runtime_constitution": "frozen_runtime_law",
     "root_contract": "frozen_domain_contract_law",
     "machine_registry_directory": "registry_resolution",
 }, payload
+PY
+
+SUMMARY_STAGE_REPO="${TMP_ROOT}/summary-stage-drift-repo"
+mirror_repo "${SUMMARY_STAGE_REPO}"
+python3 - <<'PY' "${SUMMARY_STAGE_REPO}/identity/protocol/mappings/root-corpus-question-routing.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+for row in doc["entry_summary_stages"]:
+    if row.get("stage_label") == "machine-consumed verdict surfaces last":
+        row["terminal_machine_surfaces"] = ["mappings", "validators", "probes", "runtime_state"]
+        break
+else:
+    raise SystemExit("expected machine-consumed verdict stage not found")
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+SUMMARY_STAGE_JSON="${TMP_ROOT}/summary-stage-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_question_routing.py" \
+  --repo-root "${SUMMARY_STAGE_REPO}" \
+  --json-only >"${SUMMARY_STAGE_JSON}"; then
+  echo "[FAIL] root corpus question-routing validator unexpectedly passed entry-summary terminal-surface drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SUMMARY_STAGE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_question_routing_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCQR-003", payload
+assert any(
+    reason in payload["stale_reasons"]
+    for reason in (
+        "routing_violation:entry_summary_stages:terminal_machine_surfaces_mismatch",
+        "routing_violation:entry_summary_stages:terminal_machine_surfaces_not_aligned_with_adjudication_redirect",
+    )
+), payload
 PY
 
 MISSING_PROFILE_REPO="${TMP_ROOT}/missing-profile-repo"
@@ -182,6 +229,50 @@ assert entry_row["coverage_status"] == "PASS_REQUIRED", payload
 assert entry_row["identity_projection_status"] == "PASS_REQUIRED", payload
 assert gateway_row["coverage_status"] == "PASS_REQUIRED", payload
 assert gateway_row["identity_projection_status"] == "PASS_REQUIRED", payload
+PY
+
+SUMMARY_SURFACE_REPO="${TMP_ROOT}/summary-surface-drift-repo"
+mirror_repo "${SUMMARY_SURFACE_REPO}"
+python3 - <<'PY' "${SUMMARY_SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "2. **constitutions next**"
+new = "2. **constitutional files next**"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+SUMMARY_SURFACE_JSON="${TMP_ROOT}/summary-surface-drift.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_question_routing.py" \
+  --repo-root "${SUMMARY_SURFACE_REPO}" \
+  --json-only >"${SUMMARY_SURFACE_JSON}"; then
+  echo "[FAIL] root corpus question-routing validator unexpectedly passed entry-summary surface label drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${SUMMARY_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_question_routing_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCQR-002", payload
+assert any(
+    "routing_violation:entry_summary_stage_surface:entry_summary_surface_order_mismatch" == reason
+    for reason in payload["stale_reasons"]
+), payload
+surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "entry_summary_stage_surface"
+)
+assert "constitutions next" in surface_row["missing_ids"], payload
+assert "constitutional files next" in surface_row["unexpected_ids"], payload
+assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 ROOT_ENTRY_REPO="${TMP_ROOT}/root-entry-drift-repo"

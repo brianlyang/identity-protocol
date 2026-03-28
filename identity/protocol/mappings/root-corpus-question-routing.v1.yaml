@@ -24,6 +24,8 @@ question_routing_anchor_checks:
   - current-turn legality question must never terminate in philosophy text, README
     text, or frozen contract prose alone.
   - 'gateway-mediated refreezing or projection keeps the question class governed by the gateway target layer:'
+  - '## Machine-world entry summary'
+  - That is the canonical reading order for this directory.
 - rel_path: identity/protocol/IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md
   required_markers:
   - '### Question class and answer surface must stay paired'
@@ -31,6 +33,12 @@ question_routing_anchor_checks:
   - Gateway-mediated refreezing or projection must preserve the question class
     of its governed target layer rather than inheriting a new answer class from
     incoming motivation.
+  - Required question-class-profile, root-entry-question-projection,
+    entry-summary-stage, and gateway-question-projection families must remain
+    explicit as separate machine-readable row families.
+  - The machine world must not finalize question-routing legality while required
+    question-class, entry-summary-stage, or route identity drift remains known
+    only internally.
 - rel_path: identity/protocol/MACHINE_LAW_PRIMACY_CONTRACT.md
   required_markers:
   - '## Runtime adjudication boundary'
@@ -148,6 +156,40 @@ question_class_profiles:
   answer_mode: redirect_to_machine_enforcement
   current_turn_authority_allowed: true
   root_entry_required: false
+entry_summary_stages:
+- order: 1
+  stage_label: bottom theory first
+  bound_question_classes:
+  - generative_why
+  required_markers:
+  - read `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md` to understand the bottom theory.
+- order: 2
+  stage_label: constitutions next
+  bound_question_classes:
+  - frozen_protocol_law
+  - frozen_runtime_law
+  required_markers:
+  - read `IDENTITY_PROTOCOL.md` and `IDENTITY_RUNTIME.md` to understand protocol
+    and runtime constitutions.
+- order: 3
+  stage_label: relevant root contract after that
+  bound_question_classes:
+  - frozen_domain_contract_law
+  required_markers:
+  - read the relevant root contract file for the concrete domain being executed.
+- order: 4
+  stage_label: machine-consumed verdict surfaces last
+  bound_question_classes:
+  - current_turn_legality
+  terminal_machine_surfaces:
+  - mappings
+  - validators
+  - probes
+  - runtime_state
+  - receipts
+  required_markers:
+  - read mappings, validators, probes, runtime state, and receipts for the final
+    machine-consumed verdict.
 entry_question_projection:
 - rel_path: identity/protocol/README.md
   question_classes:

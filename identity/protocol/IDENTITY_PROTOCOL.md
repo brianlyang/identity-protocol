@@ -233,10 +233,10 @@ implicit.
 
 ## Root question-routing completeness boundary
 
-1. Question-routing law must remain machine-readable as separate question-class-profile, root-entry-question-projection, and gateway-question-projection row families.
+1. Question-routing law must remain machine-readable as separate question-class-profile, root-entry-question-projection, entry-summary-stage, and gateway-question-projection row families.
 2. Aggregate row-family counts are insufficient on their own; expected row-family total and emitted row-family total must remain congruent under machine-readable coverage completeness.
-3. Expected row identity set and emitted row identity set for each question-routing family must also remain explicit; question-class or route identity drift may not be collapsed into summary-only counts.
-4. Protocol legality must not finalize question-routing legality while missing or unexpected question-class or route identities remain known only inside validator logic.
+3. Expected row identity set and emitted row identity set for each question-routing family must also remain explicit; question-class, entry-summary-stage, or route identity drift may not be collapsed into summary-only counts.
+4. Protocol legality must not finalize question-routing legality while missing or unexpected question-class, entry-summary-stage, or route identities remain known only inside validator logic.
 5. Fail-close question-routing output must preserve missing/unexpected row identity projection rather than hiding drift behind aggregate-count shorthand or generic structure failure.
 
 ## Root design-question closure completeness boundary

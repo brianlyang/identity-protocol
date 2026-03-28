@@ -1353,9 +1353,13 @@ When root protocol files are authored or updated, the following guardrails must 
 
 If a machine-governed participant enters `identity/protocol/` and needs the minimum correct path:
 
-1. read `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md` to understand the bottom theory;
-2. read `IDENTITY_PROTOCOL.md` and `IDENTITY_RUNTIME.md` to understand protocol and runtime constitutions;
-3. read the relevant root contract file for the concrete domain being executed;
-4. read mappings / governance / validators / runtime truth sources for the final machine-consumed verdict.
+1. **bottom theory first**
+   - read `IDENTITY_PROTOCOL_DESIGN_PHILOSOPHY.md` to understand the bottom theory.
+2. **constitutions next**
+   - read `IDENTITY_PROTOCOL.md` and `IDENTITY_RUNTIME.md` to understand protocol and runtime constitutions.
+3. **relevant root contract after that**
+   - read the relevant root contract file for the concrete domain being executed.
+4. **machine-consumed verdict surfaces last**
+   - read mappings, validators, probes, runtime state, and receipts for the final machine-consumed verdict.
 
 That is the canonical reading order for this directory.
