@@ -14,8 +14,14 @@ from governed_runtime_summary_surface_common import (
 from full_scan_required_gate_bundle_projection_common import (
     FULL_SCAN_REQUIRED_GATE_BUNDLE_SURFACE_CONSTRAINTS,
 )
+from health_report_experience_writeback_projection_common import (
+    RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_SURFACE_CONSTRAINTS,
+)
 from projection_profile_exclusion_scope_common import (
     PROJECTION_PROFILE_EXCLUSION_SURFACE_CONSTRAINTS,
+)
+from release_cloud_evidence_projection_common import (
+    RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_SURFACE_CONSTRAINTS,
 )
 from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
@@ -40,6 +46,9 @@ from release_readiness_runtime_closure_convergence_common import (
     RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS,
     RELEASE_READINESS_WORKSPACE_RUNTIME_CLOSURE_COMMAND_CONVERGENCE_MARKERS,
 )
+from terminal_truth_boundary_projection_common import (
+    RELEASE_READINESS_TERMINAL_TRUTH_BOUNDARY_SURFACE_CONSTRAINTS,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -52,6 +61,7 @@ class ScriptBindingSpec:
     script_rel: str
     surface_id: str
     required_tokens: tuple[str, ...]
+    enforcement_any_tokens: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -75,6 +85,22 @@ SCRIPT_BINDINGS: tuple[ScriptBindingSpec, ...] = (
             "build_scope_excluded_required_gate_bundle_summary(",
             '"scripts/validate_executable_surface_runtime_literal_lock.py"',
             '"executable_surface_runtime_literal_lock"',
+        ),
+        enforcement_any_tokens=("--summary-out", "summary_out"),
+    ),
+    ScriptBindingSpec(
+        name="release_readiness_one_look_projection_common",
+        script_rel="scripts/release_readiness_one_look_projection_common.py",
+        surface_id="release_readiness_summary",
+        required_tokens=(
+            "build_release_readiness_one_look_core_projection(",
+            "apply_release_readiness_release_cloud_evidence_one_look(",
+            "apply_release_readiness_terminal_truth_boundary_one_look(",
+            "apply_release_readiness_health_report_experience_writeback_one_look(",
+            "apply_release_readiness_required_gate_bundle_one_look(",
+            "apply_release_readiness_repo_global_closure_one_look(",
+            "apply_release_readiness_active_runtime_closure_one_look(",
+            "apply_release_readiness_governance_probe_one_look(",
         ),
     ),
     ScriptBindingSpec(
@@ -213,6 +239,7 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             "scripts/ci/run_release_plane_context_resolution_probes_ci.sh",
             "scripts/ci/run_active_execution_report_pointer_locality_probes_ci.sh",
             *RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
@@ -249,6 +276,7 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             "scripts/ci/run_release_plane_context_resolution_probes_ci.sh",
             "scripts/ci/run_active_execution_report_pointer_locality_probes_ci.sh",
             *RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
@@ -286,6 +314,7 @@ DOC_ANCHORS: tuple[DocAnchorSpec, ...] = (
             "scripts/ci/run_release_plane_context_resolution_probes_ci.sh",
             "scripts/ci/run_active_execution_report_pointer_locality_probes_ci.sh",
             *RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
+            *RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS,
             *RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
@@ -404,8 +433,13 @@ SURFACE_PAYLOAD_MARKERS: dict[str, tuple[str, ...]] = {
         "continuation_surface=scripts/run_release_readiness_continuation.py",
         "continuation_inner_resolution_anchor=protocol_owned_repo_root_not_caller_cwd",
         "continuation_forbidden_forward_flags=--summary-out,--resume-from-summary,--max-command-sequence-checks",
+        *RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
+        *RELEASE_READINESS_RELEASE_CLOUD_EVIDENCE_SURFACE_CONSTRAINTS,
+        *RELEASE_READINESS_TERMINAL_TRUTH_BOUNDARY_SURFACE_CONSTRAINTS,
+        *RELEASE_READINESS_HEALTH_REPORT_EXPERIENCE_WRITEBACK_SURFACE_CONSTRAINTS,
         *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_PROJECTION_SURFACE_CONSTRAINTS,
         *RELEASE_READINESS_REQUIRED_GATE_BUNDLE_SCOPE_SURFACE_CONSTRAINTS,
+        *RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
         *RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
         *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
         *RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS,
@@ -439,8 +473,8 @@ def _validate_script_bindings(repo_root: Path) -> tuple[str, list[dict[str, Any]
         path = (repo_root / spec.script_rel).resolve()
         text = _read_text(path)
         enforced = True
-        if spec.surface_id == "release_readiness_summary":
-            enforced = "--summary-out" in text or "summary_out" in text
+        if spec.enforcement_any_tokens:
+            enforced = any(token in text for token in spec.enforcement_any_tokens)
         missing_tokens = [token for token in spec.required_tokens if token not in text] if enforced else []
         row = {
             "name": spec.name,
@@ -448,6 +482,7 @@ def _validate_script_bindings(repo_root: Path) -> tuple[str, list[dict[str, Any]
             "surface_id": spec.surface_id,
             "exists": path.exists(),
             "enforced": enforced,
+            "enforcement_any_tokens": list(spec.enforcement_any_tokens),
             "missing_tokens": missing_tokens,
         }
         rows.append(row)
