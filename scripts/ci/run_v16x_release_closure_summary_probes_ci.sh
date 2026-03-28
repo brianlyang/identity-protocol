@@ -5,10 +5,22 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 TMP_ROOT="$(mktemp -d)"
 trap 'rm -rf "${TMP_ROOT}"' EXIT
+export PROBE_FIXTURE_REPO_ROOT="${REPO_ROOT}"
+source "${REPO_ROOT}/scripts/probe_fixture_shell_common.sh"
 
 POSITIVE_JSON="${TMP_ROOT}/positive.json"
 NEGATIVE_JSON="${TMP_ROOT}/negative.json"
 SHADOW_ROOT="${TMP_ROOT}/shadow-repo"
+repo_global_dynamic_one_look_marker="$(
+  resolve_python_module_expression \
+    "release_readiness_repo_global_closure_projection_common" \
+    "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_ONE_LOOK_MARKERS[-1]"
+)"
+repo_global_projection_marker="$(
+  resolve_python_module_expression \
+    "release_readiness_repo_global_closure_projection_common" \
+    "RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER"
+)"
 
 printf '[RUN] positive release-closure summary validation\n'
 python3 "${REPO_ROOT}/scripts/validate_v16x_release_closure_summary.py" --repo-root "${REPO_ROOT}" --json-only > "${POSITIVE_JSON}"
@@ -26,18 +38,21 @@ python3 "${REPO_ROOT}/scripts/probe_shadow_fixture_common.py" \
   --copy-file docs/release/identity-v1.6x-release-closure-summary.md \
   --json-only > /dev/null
 
-python3 - <<'PY' "${SHADOW_ROOT}/docs/release/identity-v1.6x-release-closure-summary.md"
+python3 - <<'PY' "${SHADOW_ROOT}/docs/release/identity-v1.6x-release-closure-summary.md" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}"
 from pathlib import Path
 import sys
 
 path = Path(sys.argv[1]).resolve()
+repo_global_dynamic_one_look_marker = sys.argv[2]
+repo_global_projection_marker = sys.argv[3]
 text = path.read_text(encoding="utf-8")
 text = text.replace("`v1.6.21`", "`v1.6.20`")
 text = text.replace("fleet-scope closure matrix", "fleet matrix")
 text = text.replace("repair success != clean terminal truth", "repair success means clean terminal truth")
 text = text.replace("summary_terminal_truth_boundary", "summary boundary aggregate")
 text = text.replace("one_look.health_report_experience_writeback_projection_status", "one_look.health_projection_status")
-text = text.replace("one_look.runtime_file_boundary_governance_status", "one_look.runtime_file_boundary_status")
+text = text.replace(repo_global_dynamic_one_look_marker, "one_look.repo_global_drift_marker")
+text = text.replace(repo_global_projection_marker, "repo_global_projection=one_look.executable_surface_runtime_literal_lock_status|one_look.repo_global_drift_marker")
 text = text.replace("one_look.required_gate_bundle_report_selection_mode", "one_look.required_gate_bundle_selection_mode")
 text = text.replace("three_plane.required_gate_bundle_report_selection_mode", "three_plane.required_gate_bundle_selection_mode")
 text = text.replace("resume_capture_mode=stable_prewrite_snapshot", "resume_capture_mode=resume_snapshot")
@@ -60,7 +75,7 @@ if python3 "${REPO_ROOT}/scripts/validate_v16x_release_closure_summary.py" --rep
   exit 1
 fi
 
-python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}"
+python3 - <<'PY' "${POSITIVE_JSON}" "${NEGATIVE_JSON}" "${repo_global_dynamic_one_look_marker}" "${repo_global_projection_marker}"
 import json
 import sys
 from pathlib import Path
@@ -88,8 +103,12 @@ if "summary_doc_missing_outer_surface_e2e_marker:summary_terminal_truth_boundary
     raise SystemExit("negative release-closure summary must detect outer-surface e2e marker drift")
 if "summary_doc_missing_release_readiness_health_projection_marker:one_look.health_report_experience_writeback_projection_status" not in reasons:
     raise SystemExit("negative release-closure summary must detect release-readiness health projection drift")
-if "summary_doc_missing_outer_surface_e2e_marker:one_look.runtime_file_boundary_governance_status" not in reasons:
-    raise SystemExit("negative release-closure summary must detect runtime-shadow repo-global projection drift")
+expected_repo_global_one_look_reason = f"summary_doc_missing_outer_surface_e2e_marker:{sys.argv[3]}"
+if expected_repo_global_one_look_reason not in reasons:
+    raise SystemExit("negative release-closure summary must detect shared repo-global one-look projection drift")
+expected_repo_global_projection_reason = f"summary_doc_missing_outer_surface_e2e_marker:{sys.argv[4]}"
+if expected_repo_global_projection_reason not in reasons:
+    raise SystemExit("negative release-closure summary must detect repo-global closure projection literal drift")
 if "summary_doc_missing_full_scan_required_gate_projection_marker:three_plane.required_gate_bundle_report_selection_mode" not in reasons:
     raise SystemExit("negative release-closure summary must detect full-scan required-gate projection drift")
 if "summary_doc_missing_release_readiness_lifecycle_marker:one_look.required_gate_bundle_report_selection_mode" not in reasons:

@@ -33,8 +33,7 @@ from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
 )
 from release_readiness_repo_global_closure_projection_common import (
-    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_CHECKED_IDENTITY_COUNT_FIELDS,
-    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OWNER_LANES,
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OUTER_SURFACE_E2E_MARKERS,
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER,
 )
 from release_readiness_runtime_closure_convergence_common import (
@@ -56,20 +55,7 @@ REQUIRED_OUTER_SURFACE_E2E_MARKERS = (
     "three_plane_terminal_truth_boundary_projection",
     "summary_terminal_truth_boundary",
     "one_look.terminal_truth_boundary_projection_status",
-    "scripts/validate_executable_surface_runtime_literal_lock.py",
-    "one_look.executable_surface_runtime_literal_lock_status",
-    "one_look.runtime_file_boundary_governance_status",
-    "one_look.issue_register_consistency_status",
-    "one_look.protocol_broadcast_doc_control_status",
-    "one_look.protocol_governed_subdomain_doc_control_registry_status",
-    "one_look.identity_codex_launcher_migration_closure_status",
-    "one_look.identity_broadcast_migration_closure_status",
-    "one_look.identity_communication_transport_closure_status",
-    "one_look.unique_entry_contract_migration_closure_status",
-    "one_look.version_baseline_migration_closure_status",
-    *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_CHECKED_IDENTITY_COUNT_FIELDS,
-    *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OWNER_LANES,
-    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_PROJECTION_MARKER,
+    *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OUTER_SURFACE_E2E_MARKERS,
 )
 REQUIRED_RELEASE_READINESS_HEALTH_PROJECTION_MARKERS = (
     "scripts/ci/run_release_readiness_health_projection_probes_ci.sh",

@@ -59,6 +59,23 @@
     if repo-global projection order/literal disappears while companion owner
     lanes still remain present.
 
+- **release-summary shared repo-global one-look absorption hardening**:
+  - added shared repo-global one-look marker exports in
+    `scripts/release_readiness_repo_global_closure_projection_common.py` so
+    summary/boundary consumers can import the bounded projection field set
+    rather than re-listing individual `one_look.*` literals.
+  - `scripts/validate_v16x_release_closure_summary.py` now consumes the shared
+    repo-global outer-surface marker bundle, closing the gap where future
+    repo-global closure lane additions could require hand-updated per-field
+    literals before the summary validator noticed drift.
+  - `scripts/ci/run_v16x_release_closure_summary_probes_ci.sh` now resolves the
+    repo-global one-look marker/projection literals from the shared module and
+    proves fail-close when either the shared one-look marker or the bounded
+    `repo_global_closure_projection=...` literal drifts out of the summary doc.
+  - release-closure governance/review docs now freeze the same interpretation:
+    governed summary validation must absorb the shared repo-global one-look
+    bundle rather than relying on a locally maintained partial field list.
+
 - **nested gateway wrapper timeout budget propagation**:
   - hardened `scripts/gateway_wrapper_enforcement.py` so pack-local nested
     ingress/session wrapper subprocesses inherit the stronger timeout profile of
