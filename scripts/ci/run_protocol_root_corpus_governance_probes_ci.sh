@@ -34,7 +34,7 @@ payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert payload["protocol_root_corpus_governance_status"] == "PASS_REQUIRED", payload
 assert payload["root_doc_anchor_check_count"] == 4, payload
 assert payload["root_doc_anchor_status"] == "PASS_REQUIRED", payload
-assert payload["governance_row_family_count"] == 5, payload
+assert payload["governance_row_family_count"] == 7, payload
 assert payload["governance_row_coverage_status"] == "PASS_REQUIRED", payload
 assert payload["governance_row_identity_projection_status"] == "PASS_REQUIRED", payload
 assert all(row["coverage_status"] == "PASS_REQUIRED" for row in payload["row_family_projection_rows"]), payload
@@ -44,8 +44,12 @@ assert "root_contract" in payload["corpus_class_profile_ids"], payload
 assert "business_domain_example" in payload["forbidden_content_class_ids"], payload
 assert payload["root_index_class_projection_count"] == 6, payload
 assert payload["root_index_class_projection_surface"]["entry_count"] == 6, payload
+assert payload["root_maintenance_guardrail_count"] == 5, payload
+assert payload["root_maintenance_guardrail_surface"]["entry_count"] == 5, payload
 assert any(row["family_id"] == "root_index_class_projections" for row in payload["row_family_projection_rows"]), payload
 assert any(row["family_id"] == "root_index_class_projection_surface" for row in payload["row_family_projection_rows"]), payload
+assert any(row["family_id"] == "root_maintenance_guardrails" for row in payload["row_family_projection_rows"]), payload
+assert any(row["family_id"] == "root_maintenance_guardrail_surface" for row in payload["row_family_projection_rows"]), payload
 PY
 
 PROFILE_REPO="${TMP_ROOT}/missing-profile-repo"
@@ -96,6 +100,56 @@ assert profile_row["missing_ids"] == ["root_contract"], payload
 assert profile_row["unexpected_ids"] == [], payload
 assert profile_row["coverage_status"] == "FAIL_REQUIRED", payload
 assert profile_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+PY
+
+GUARDRAIL_REGISTRY_REPO="${TMP_ROOT}/guardrail-registry-repo"
+mirror_repo "${GUARDRAIL_REGISTRY_REPO}"
+python3 - <<'PY' "${GUARDRAIL_REGISTRY_REPO}/identity/protocol/mappings/root-corpus-registry.v1.yaml"
+import pathlib
+import sys
+import yaml
+
+path = pathlib.Path(sys.argv[1])
+doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+doc["root_maintenance_guardrails"] = [
+    row for row in doc["root_maintenance_guardrails"]
+    if row.get("guardrail_label") != "root-corpus admission must be machine-governed"
+]
+path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+PY
+
+GUARDRAIL_REGISTRY_JSON="${TMP_ROOT}/guardrail-registry.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" \
+  --repo-root "${GUARDRAIL_REGISTRY_REPO}" \
+  --json-only >"${GUARDRAIL_REGISTRY_JSON}"; then
+  echo "[FAIL] root corpus governance validator unexpectedly passed after removing root maintenance guardrail row"
+  exit 1
+fi
+
+python3 - <<'PY' "${GUARDRAIL_REGISTRY_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_governance_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCG-002", payload
+assert any(
+    row["field"] == "root_maintenance_guardrails"
+    and row["reason"] == "missing_root_maintenance_guardrails"
+    and "root-corpus admission must be machine-governed" in row.get("guardrail_labels", [])
+    for row in payload["structure_violations"]
+), payload
+guardrail_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "root_maintenance_guardrails"
+)
+assert guardrail_row["expected_count"] == 5, payload
+assert guardrail_row["actual_count"] == 4, payload
+assert guardrail_row["missing_ids"] == ["root-corpus admission must be machine-governed"], payload
+assert guardrail_row["unexpected_ids"] == [], payload
+assert guardrail_row["coverage_status"] == "FAIL_REQUIRED", payload
+assert guardrail_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 PY
 
 PROJECTION_BINDING_REPO="${TMP_ROOT}/projection-binding-repo"
@@ -252,6 +306,58 @@ assert surface_row["coverage_status"] == "PASS_REQUIRED", payload
 assert surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
 assert "constitutions" in surface_row["missing_ids"], payload
 assert "constitutional files" in surface_row["unexpected_ids"], payload
+PY
+
+GUARDRAIL_SURFACE_REPO="${TMP_ROOT}/guardrail-surface-repo"
+mirror_repo "${GUARDRAIL_SURFACE_REPO}"
+python3 - <<'PY' "${GUARDRAIL_SURFACE_REPO}/identity/protocol/README.md"
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+old = "2. **machine verdict is adjudication, not philosophy source**"
+new = "2. **machine verdict is adjudication, not ontology source**"
+assert old in text, text
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+PY
+
+GUARDRAIL_SURFACE_JSON="${TMP_ROOT}/guardrail-surface.json"
+if python3 "${ROOT}/scripts/validate_protocol_root_corpus_governance.py" \
+  --repo-root "${GUARDRAIL_SURFACE_REPO}" \
+  --json-only >"${GUARDRAIL_SURFACE_JSON}"; then
+  echo "[FAIL] root corpus governance validator unexpectedly passed after maintenance-guardrail surface label drift"
+  exit 1
+fi
+
+python3 - <<'PY' "${GUARDRAIL_SURFACE_JSON}"
+import json
+import pathlib
+import sys
+
+payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert payload["protocol_root_corpus_governance_status"] == "FAIL_REQUIRED", payload
+assert payload["error_code"] == "IP-RCG-002", payload
+assert any(
+    row["field"] == "root_maintenance_guardrail_surface"
+    and row["reason"] == "missing_root_maintenance_guardrail_labels"
+    and "machine verdict is adjudication, not philosophy source" in row.get("guardrail_labels", [])
+    for row in payload["structure_violations"]
+), payload
+assert any(
+    row["field"] == "root_maintenance_guardrail_surface"
+    and row["reason"] == "extra_root_maintenance_guardrail_labels"
+    and "machine verdict is adjudication, not ontology source" in row.get("guardrail_labels", [])
+    for row in payload["structure_violations"]
+), payload
+guardrail_surface_row = next(
+    row for row in payload["row_family_projection_rows"]
+    if row["family_id"] == "root_maintenance_guardrail_surface"
+)
+assert guardrail_surface_row["coverage_status"] == "PASS_REQUIRED", payload
+assert guardrail_surface_row["identity_projection_status"] == "FAIL_REQUIRED", payload
+assert "machine verdict is adjudication, not philosophy source" in guardrail_surface_row["missing_ids"], payload
+assert "machine verdict is adjudication, not ontology source" in guardrail_surface_row["unexpected_ids"], payload
 PY
 
 MARKER_REPO="${TMP_ROOT}/missing-marker-repo"
