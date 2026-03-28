@@ -9,6 +9,11 @@ from typing import Any
 import yaml
 from repo_root_resolution_common import resolve_repo_root
 from registry_alias_control_plane_common import STREAM_DOC_REGISTRY_CURRENT, resolve_current_yaml_alias
+from runtime_shadow_repo_boundary_common import (
+    PROTOCOL_REPO_RUNTIME_SHADOW_IGNORE_PATTERNS,
+    PROTOCOL_REPO_RUNTIME_SHADOW_SELECTOR_REQUIRED_TOKENS,
+    load_gitignore_patterns,
+)
 
 from protocol_infra_contract import (
     HOST_GATEWAY_DEFAULT_EGRESS_WRAPPER,
@@ -29,6 +34,8 @@ ERR_BOUNDARY = "IP-RFILE-BDRY-001"
 DEFAULT_GOV_DOC = "docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md"
 DEFAULT_REVIEW_DOC = "docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md"
 DEFAULT_PROTOCOL_OVERVIEW_DOC = "identity/protocol/IDENTITY_PROTOCOL.md"
+DEFAULT_GITIGNORE_PATH = ".gitignore"
+DEFAULT_PROJECT_RUNTIME_SELECTOR_SCRIPT = "scripts/use_project_identity_runtime.sh"
 DEFAULT_STREAM_REGISTRY = STREAM_DOC_REGISTRY_CURRENT
 DEFAULT_SEMANTIC_REGISTRY = "identity/protocol/mappings/semantic-term-registry.current.yaml"
 TRACKED_COMPILED_BRIEF_ARTIFACT_TERM = "tracked_compiled_brief_artifact"
@@ -61,6 +68,8 @@ def main() -> int:
     ap.add_argument("--governance-doc", default=DEFAULT_GOV_DOC)
     ap.add_argument("--review-doc", default=DEFAULT_REVIEW_DOC)
     ap.add_argument("--protocol-overview-doc", default=DEFAULT_PROTOCOL_OVERVIEW_DOC)
+    ap.add_argument("--gitignore-path", default=DEFAULT_GITIGNORE_PATH)
+    ap.add_argument("--runtime-selector-script", default=DEFAULT_PROJECT_RUNTIME_SELECTOR_SCRIPT)
     ap.add_argument("--stream-registry", default=DEFAULT_STREAM_REGISTRY)
     ap.add_argument("--semantic-registry", default=DEFAULT_SEMANTIC_REGISTRY)
     ap.add_argument("--json-only", action="store_true")
@@ -70,6 +79,8 @@ def main() -> int:
     governance_doc = (repo_root / str(args.governance_doc)).resolve()
     review_doc = (repo_root / str(args.review_doc)).resolve()
     protocol_overview_doc = (repo_root / str(args.protocol_overview_doc)).resolve()
+    gitignore_path = (repo_root / str(args.gitignore_path)).resolve()
+    runtime_selector_script = (repo_root / str(args.runtime_selector_script)).resolve()
     stream_registry_path, stream_registry_active_file, stream_registry_alias_error = resolve_current_yaml_alias(
         repo_root, str(args.stream_registry)
     )
@@ -83,6 +94,8 @@ def main() -> int:
         "governance_doc": str(governance_doc),
         "review_doc": str(review_doc),
         "protocol_overview_doc": str(protocol_overview_doc),
+        "gitignore_path": str(gitignore_path),
+        "runtime_selector_script": str(runtime_selector_script),
         "stream_registry_path": str(stream_registry_path),
         "stream_registry_active_file": stream_registry_active_file,
         "stream_registry_alias_error": stream_registry_alias_error,
@@ -100,6 +113,8 @@ def main() -> int:
         "governance_doc_missing_tokens": [],
         "review_doc_missing_tokens": [],
         "protocol_overview_missing_tokens": [],
+        "gitignore_missing_patterns": [],
+        "runtime_selector_missing_tokens": [],
         "missing_terms": [],
         "stream_registry_violations": [],
         "stale_reasons": [],
@@ -121,6 +136,8 @@ def main() -> int:
             ("governance_doc_missing", governance_doc),
             ("review_doc_missing", review_doc),
             ("protocol_overview_doc_missing", protocol_overview_doc),
+            ("gitignore_missing", gitignore_path),
+            ("runtime_selector_script_missing", runtime_selector_script),
         )
         if not path.exists() or not path.is_file()
     ]
@@ -136,6 +153,8 @@ def main() -> int:
     governance_text = governance_doc.read_text(encoding="utf-8", errors="ignore")
     review_text = review_doc.read_text(encoding="utf-8", errors="ignore")
     protocol_overview_text = protocol_overview_doc.read_text(encoding="utf-8", errors="ignore")
+    gitignore_patterns = load_gitignore_patterns(gitignore_path)
+    runtime_selector_text = runtime_selector_script.read_text(encoding="utf-8", errors="ignore")
     stream_doc = _load_yaml(stream_registry_path)
     semantic_doc = _load_yaml(semantic_registry_path)
 
@@ -171,6 +190,14 @@ def main() -> int:
         "not ordinary runtime evidence/log artifact",
         "not instance-autonomous runtime state",
         "source-first",
+        ".gitignore",
+        ".identity/",
+        ".identity-protocol/",
+        ".codex/",
+        ".tmp/",
+        ".IDENTITY.run__*.md",
+        "local runtime shadow",
+        "scripts/use_project_identity_runtime.sh",
         INSTANCE_OWNED_TECHNICAL_DEBT_TERM,
         INSTANCE_CLEAN_PROOF_TERM,
         PROTOCOL_RESIDUAL_ISSUE_TERM,
@@ -190,6 +217,14 @@ def main() -> int:
         "identity/runtime/IDENTITY_COMPILED.md",
         "governed generated artifact",
         "direct manual semantic editing",
+        ".gitignore",
+        ".identity/",
+        ".identity-protocol/",
+        ".codex/",
+        ".tmp/",
+        ".IDENTITY.run__*.md",
+        "local runtime shadow",
+        "scripts/use_project_identity_runtime.sh",
         INSTANCE_OWNED_TECHNICAL_DEBT_TERM,
         INSTANCE_CLEAN_PROOF_TERM,
         PROTOCOL_RESIDUAL_ISSUE_TERM,
@@ -217,6 +252,18 @@ def main() -> int:
         stale_reasons.append("review_doc_missing_required_tokens")
     if payload["protocol_overview_missing_tokens"]:
         stale_reasons.append("protocol_overview_missing_required_tokens")
+
+    payload["gitignore_missing_patterns"] = [
+        pattern for pattern in PROTOCOL_REPO_RUNTIME_SHADOW_IGNORE_PATTERNS if pattern not in gitignore_patterns
+    ]
+    if payload["gitignore_missing_patterns"]:
+        stale_reasons.append("gitignore_missing_runtime_shadow_ignore_patterns")
+
+    payload["runtime_selector_missing_tokens"] = _missing_tokens(
+        runtime_selector_text, list(PROTOCOL_REPO_RUNTIME_SHADOW_SELECTOR_REQUIRED_TOKENS)
+    )
+    if payload["runtime_selector_missing_tokens"]:
+        stale_reasons.append("runtime_selector_missing_parent_runtime_shadow_tokens")
 
     semantic_terms = semantic_doc.get("terms") if isinstance(semantic_doc, dict) else []
     canonical_terms = {

@@ -303,6 +303,22 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
    - launcher convergence remains closed on its own lane;
    - future cleanup must extend this validator/repair family rather than reintroducing weaker resolver logic or launcher-semantic drift.
 
+### 10.4 Addendum (2026-03-28): nested protocol-repo runtime shadow boundary
+
+1. When `identity-protocol-local` is checked out under a parent workspace, authoritative runtime remains the parent
+   workspace `.identity/`, not repo-root `.identity/` inside the nested protocol checkout.
+2. Repo-root `.identity/`, `.identity-protocol/`, `.codex/`, `.tmp/`, and `.IDENTITY.run__*.md` are local runtime
+   shadow / scratch surfaces and must remain unversioned through `.gitignore`.
+3. `scripts/use_project_identity_runtime.sh` must prefer the parent project root when the protocol repo is checked
+   out as a subdirectory; this keeps runtime artifacts outside protocol_root and avoids `IP-PATH-001` boundary
+   failures.
+4. Repo-root `.identity/` inside the nested protocol checkout may exist only as non-authoritative local runtime
+   shadow / local runtime shadow, probe scratch, or compatibility workspace residue; it must not be promoted to current-turn runtime
+   authority or version-controlled evidence.
+5. `scripts/validate_runtime_file_boundary_governance.py` must fail-close if the nested protocol checkout loses the
+   `.gitignore` runtime-shadow ignore floor or if `scripts/use_project_identity_runtime.sh` stops projecting the
+   parent-project runtime selection boundary.
+
 ## 11) References
 
 1. `docs/governance/identity-host-unique-channel-governance-v1.6.6.md`

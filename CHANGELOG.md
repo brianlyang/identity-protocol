@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+- **nested protocol-repo runtime shadow boundary hardening**:
+  - extended runtime-file governance so nested protocol-repo runtime residue is
+    now treated as an explicit local runtime shadow boundary instead of an
+    accidental ungoverned worktree side effect.
+  - `.gitignore` now ignores repo-root `.identity/` alongside the existing
+    runtime shadow scratch set:
+    - `.identity/`
+    - `.identity-protocol/`
+    - `.codex/`
+    - `.tmp/`
+    - `.IDENTITY.run__*.md`
+  - added shared boundary helper + validator enforcement:
+    - `scripts/runtime_shadow_repo_boundary_common.py`
+    - `scripts/validate_runtime_file_boundary_governance.py`
+    - fail-close if nested protocol checkout loses runtime-shadow ignore
+      patterns or if `scripts/use_project_identity_runtime.sh` stops projecting
+      the parent-project runtime preference that keeps runtime artifacts outside
+      protocol_root
+  - added replay surface:
+    - `scripts/ci/run_protocol_repo_runtime_shadow_boundary_probes_ci.sh`
+    - proves positive boundary closure and negative fail-close when `.identity/`
+      is no longer ignored or the parent-runtime selector tokens drift
+  - governance/review docs now freeze the same interpretation:
+    - authoritative runtime stays at parent workspace `.identity/` when the
+      protocol repo is nested
+    - repo-root `.identity/` is shadow scratch only and must never become
+      current-turn runtime authority or version-controlled evidence
+
 - **nested gateway wrapper timeout budget propagation**:
   - hardened `scripts/gateway_wrapper_enforcement.py` so pack-local nested
     ingress/session wrapper subprocesses inherit the stronger timeout profile of

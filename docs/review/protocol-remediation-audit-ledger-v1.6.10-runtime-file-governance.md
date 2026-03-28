@@ -282,6 +282,19 @@ Interpretation contract:
    - launcher semantics remain closed;
    - raw runtime-catalog metadata hygiene is a separate fail-close lane;
    - future raw-row cleanup must not be misreported as resolver or launcher-semantic debt.
+
+### 10.8 Nested protocol-repo runtime shadow boundary (2026-03-28)
+
+1. Review freeze: when the protocol repo is nested under a parent workspace, authoritative runtime stays at the
+   parent workspace `.identity/`; repo-root `.identity/` is shadow scratch only.
+2. `.gitignore` must ignore `.identity/`, `.identity-protocol/`, `.codex/`, `.tmp/`, and `.IDENTITY.run__*.md`
+   so repo-local runtime shadow cannot pollute the tracked worktree.
+3. `scripts/use_project_identity_runtime.sh` is the parent-project selector that keeps runtime artifacts outside
+   protocol_root when the protocol repo is checked out as a subdirectory.
+4. `scripts/validate_runtime_file_boundary_governance.py` now fail-closes missing runtime-shadow ignore patterns
+   and missing parent-project boundary semantics in the runtime selector script.
+5. Negative replay must stay red-as-expected when `.identity/` disappears from `.gitignore` or when the selector
+   script drops the parent-project preference tokens.
 ## 2026-03-20 Closure Addendum - temp-path and compatibility-pointer terminology
 
 - `ISSUE-006` review verdict: `PASS_REQUIRED` once `scripts/validate_runtime_temp_path_contract.py` proves repaired live temp/probe surfaces no longer hardcode `/tmp` or raw probe `mktemp`.

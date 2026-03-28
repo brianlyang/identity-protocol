@@ -1,4 +1,5 @@
 # Local runtime instance storage (outside repo by default)
+.identity/
 .identity-protocol/
 .codex/
 .tmp/
