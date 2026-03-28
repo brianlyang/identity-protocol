@@ -33,6 +33,9 @@ from release_readiness_one_look_projection_common import (
 from release_readiness_selected_check_scope_common import (
     build_release_readiness_selected_check_scope_one_look_projection,
 )
+from release_readiness_support_preflight_projection_common import (
+    build_release_readiness_support_preflight_one_look_projection,
+)
 from release_readiness_repo_global_closure_projection_common import (
     RELEASE_READINESS_REPO_GLOBAL_ACTIVE_RUNTIME_SUMMARY_KEYS,
     RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
@@ -151,6 +154,11 @@ expected_targeted_subset_one_look = build_release_readiness_one_look_projection(
     summary_targeted_subset_excluded
 )
 assert summary_targeted_subset_excluded['one_look'] == expected_targeted_subset_one_look, summary_targeted_subset_excluded
+expected_support_preflight_one_look = build_release_readiness_support_preflight_one_look_projection(
+    summary_targeted_subset_excluded
+)
+for field_name, expected_value in expected_support_preflight_one_look.items():
+    assert summary_targeted_subset_excluded['one_look'][field_name] == expected_value, summary_targeted_subset_excluded
 expected_selected_check_scope_one_look = build_release_readiness_selected_check_scope_one_look_projection(
     summary_targeted_subset_excluded['selected_check_scope_projection']
 )
@@ -364,6 +372,11 @@ expected_release_projection_one_look = build_release_readiness_one_look_projecti
     summary_release_projection
 )
 assert summary_release_projection['one_look'] == expected_release_projection_one_look, summary_release_projection
+expected_release_support_preflight_one_look = build_release_readiness_support_preflight_one_look_projection(
+    summary_release_projection
+)
+for field_name, expected_value in expected_release_support_preflight_one_look.items():
+    assert summary_release_projection['one_look'][field_name] == expected_value, summary_release_projection
 expected_release_cloud_one_look = build_release_readiness_release_cloud_evidence_one_look_projection(
     summary_release_projection['release_plane_cloud_evidence'],
     summary_release_projection['release_cloud_evidence_adapter'],

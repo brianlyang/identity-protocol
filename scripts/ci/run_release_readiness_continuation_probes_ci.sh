@@ -27,12 +27,16 @@ from release_readiness_repo_global_closure_projection_common import (
 from release_readiness_selected_check_scope_common import (
     RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
 )
+from release_readiness_support_preflight_projection_common import (
+    RELEASE_READINESS_SUPPORT_PREFLIGHT_SURFACE_CONSTRAINTS,
+)
 
 surface = build_governed_runtime_summary_surface_payload("release_readiness_summary")
 constraints = tuple(surface.get("operational_constraints") or [])
 missing = [
     marker
     for marker in (
+        *RELEASE_READINESS_SUPPORT_PREFLIGHT_SURFACE_CONSTRAINTS,
         *RELEASE_READINESS_SELECTED_CHECK_SCOPE_SURFACE_CONSTRAINTS,
         *RELEASE_READINESS_GOVERNANCE_PROBE_SURFACE_CONSTRAINTS,
         *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
