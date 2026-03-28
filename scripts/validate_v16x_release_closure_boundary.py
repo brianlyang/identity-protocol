@@ -29,8 +29,7 @@ from release_readiness_active_runtime_closure_projection_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_CLOSURE_SURFACE_CONSTRAINTS,
 )
 from release_readiness_repo_global_closure_projection_common import (
-    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_CHECKED_IDENTITY_COUNT_FIELDS,
-    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OWNER_LANES,
+    RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
 )
 from release_readiness_runtime_closure_convergence_common import (
     RELEASE_READINESS_ACTIVE_RUNTIME_PACK_CLOSURE_CONVERGENCE_MARKERS,
@@ -46,9 +45,8 @@ REQUIRED_OUTER_SURFACE_E2E_BOUNDARY_MARKERS = (
     "terminal_truth_boundary_projection",
     "summary_terminal_truth_boundary",
 )
-REQUIRED_REPO_GLOBAL_CLOSURE_OWNER_LANE_MARKERS = RELEASE_READINESS_REPO_GLOBAL_CLOSURE_OWNER_LANES
-REQUIRED_REPO_GLOBAL_CLOSURE_PROOF_STRENGTH_MARKERS = (
-    *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_CHECKED_IDENTITY_COUNT_FIELDS,
+REQUIRED_REPO_GLOBAL_CLOSURE_BOUNDARY_MARKERS = (
+    *RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS,
 )
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -141,14 +139,9 @@ def main() -> int:
                 stale_reasons.append(
                     f"{label}_missing_active_runtime_closure_projection_marker:{marker}"
                 )
-        for marker in REQUIRED_REPO_GLOBAL_CLOSURE_OWNER_LANE_MARKERS:
+        for marker in REQUIRED_REPO_GLOBAL_CLOSURE_BOUNDARY_MARKERS:
             if marker not in text:
-                stale_reasons.append(f"{label}_missing_repo_global_closure_owner_lane_marker:{marker}")
-        for marker in REQUIRED_REPO_GLOBAL_CLOSURE_PROOF_STRENGTH_MARKERS:
-            if marker not in text:
-                stale_reasons.append(
-                    f"{label}_missing_repo_global_closure_proof_strength_marker:{marker}"
-                )
+                stale_reasons.append(f"{label}_missing_repo_global_closure_boundary_marker:{marker}")
         stale_reasons.extend(collect_release_closure_narrative_stale_reasons(text, label=label))
         for marker in RELEASE_READINESS_TRANSPORT_FLEET_CLOSURE_CONVERGENCE_MARKERS:
             if marker not in text:

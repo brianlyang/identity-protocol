@@ -45,6 +45,20 @@
   - release-summary/runtime-summary probes now fail-close if the new one-look
     projection literal drifts out of the governed summary surface.
 
+- **release-closure repo-global boundary validator strengthening**:
+  - upgraded `scripts/validate_v16x_release_closure_boundary.py` so the
+    governance/review boundary lane now consumes the full shared
+    `RELEASE_READINESS_REPO_GLOBAL_CLOSURE_SURFACE_CONSTRAINTS` bundle rather
+    than only partial owner-lane/proof-strength subsets.
+  - `scripts/ci/run_v16x_release_closure_boundary_probes_ci.sh` now proves
+    negative fail-close when the bounded
+    `repo_global_closure_projection=one_look.executable_surface_runtime_literal_lock_status|...`
+    literal itself drifts out of the governance surface.
+  - release-closure governance/review docs now freeze that stronger
+    interpretation explicitly, so release-boundary validation cannot stay green
+    if repo-global projection order/literal disappears while companion owner
+    lanes still remain present.
+
 - **nested gateway wrapper timeout budget propagation**:
   - hardened `scripts/gateway_wrapper_enforcement.py` so pack-local nested
     ingress/session wrapper subprocesses inherit the stronger timeout profile of
