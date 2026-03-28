@@ -59,6 +59,8 @@ PREFERRED_PRIMITIVE_BY_NAME: dict[str, dict[str, str]] = {
     for primitive_name, primitive_contract in primitive_contracts.items()
 }
 
+PLACEHOLDER_ASSIGNMENT_MODES = frozenset({"initializer_empty_list"})
+
 
 def root_validator_paths(repo_root: Path) -> tuple[Path, ...]:
     return tuple(sorted((repo_root / "scripts").glob("validate_protocol_root_*.py")))
@@ -79,10 +81,20 @@ def _is_empty_list_initializer(node: ast.AST) -> bool:
     return False
 
 
+def _is_effective_row_family_projection_assignment(row: dict[str, Any]) -> bool:
+    assignment_mode = str(row.get("assignment_mode") or "").strip()
+    return assignment_mode not in PLACEHOLDER_ASSIGNMENT_MODES
+
+
 def _scan_root_validator_file(
     repo_root: Path,
     path: Path,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+) -> tuple[
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+]:
     rel_path = _rel_path(repo_root, path)
     try:
         text = path.read_text(encoding="utf-8")
@@ -278,6 +290,8 @@ def _scan_root_validator_file(
             "target": "row_family_projection_rows",
             "assignment_mode": "",
             "binding": "",
+            "assignment_role": "",
+            "violation": False,
         }
         if _is_empty_list_initializer(value):
             assignment_row["assignment_mode"] = "initializer_empty_list"
@@ -297,30 +311,67 @@ def _scan_root_validator_file(
                 assignment_row["module"] = primitive_contract["module"]
             else:
                 assignment_row["assignment_mode"] = "non_shared_call"
-                violations.append(
-                    {
-                        "rel_path": rel_path,
-                        "reason": "row_family_projection_assignment_not_shared_call",
-                        "lineno": assignment_row["lineno"],
-                        "primitive_class": "row_family_projection",
-                        "preferred_primitive": "project_row_families",
-                        "binding": binding,
-                    }
-                )
         else:
             assignment_row["assignment_mode"] = f"non_call_{type(value).__name__}"
             assignment_row["binding"] = type(value).__name__
+        row_family_projection_assignment_rows.append(assignment_row)
+
+    row_family_projection_assignment_rows.sort(
+        key=lambda row: int(row.get("lineno", 0) or 0)
+    )
+    effective_assignment_indices = [
+        index
+        for index, row in enumerate(row_family_projection_assignment_rows)
+        if _is_effective_row_family_projection_assignment(row)
+    ]
+    if effective_assignment_indices:
+        effective_assignment_index = effective_assignment_indices[-1]
+        for index, row in enumerate(row_family_projection_assignment_rows):
+            if index < effective_assignment_index:
+                row["assignment_role"] = (
+                    "superseded_assignment"
+                    if _is_effective_row_family_projection_assignment(row)
+                    else "prebinding_placeholder"
+                )
+            elif index == effective_assignment_index:
+                row["assignment_role"] = "effective_assignment"
+            else:
+                row["assignment_role"] = "post_effective_assignment"
+
+        effective_row = row_family_projection_assignment_rows[effective_assignment_index]
+        assignment_mode = str(effective_row.get("assignment_mode") or "").strip()
+        if assignment_mode != "shared_primitive_call":
+            effective_row["violation"] = True
             violations.append(
                 {
                     "rel_path": rel_path,
-                    "reason": "row_family_projection_assignment_not_call",
-                    "lineno": assignment_row["lineno"],
+                    "reason": (
+                        "row_family_projection_effective_assignment_not_shared_call"
+                        if assignment_mode == "non_shared_call"
+                        else "row_family_projection_effective_assignment_not_call"
+                    ),
+                    "lineno": int(effective_row.get("lineno", 0) or 0),
                     "primitive_class": "row_family_projection",
                     "preferred_primitive": "project_row_families",
-                    "binding": assignment_row["binding"],
+                    "binding": str(effective_row.get("binding") or "").strip(),
                 }
             )
-        row_family_projection_assignment_rows.append(assignment_row)
+    elif row_family_projection_assignment_rows:
+        effective_row = row_family_projection_assignment_rows[-1]
+        for row in row_family_projection_assignment_rows[:-1]:
+            row["assignment_role"] = "prebinding_placeholder"
+        effective_row["assignment_role"] = "missing_effective_assignment"
+        effective_row["violation"] = True
+        violations.append(
+            {
+                "rel_path": rel_path,
+                "reason": "row_family_projection_missing_effective_assignment",
+                "lineno": int(effective_row.get("lineno", 0) or 0),
+                "primitive_class": "row_family_projection",
+                "preferred_primitive": "project_row_families",
+                "binding": str(effective_row.get("binding") or "").strip(),
+            }
+        )
 
     return (
         violations,
@@ -367,12 +418,11 @@ def scan_root_validator_shared_primitive_adoption(repo_root: Path) -> dict[str, 
             adoption_class_counts.get(primitive_class, 0) + 1
         )
 
-    row_family_projection_assignment_violation_count = sum(
-        1
+    row_family_projection_assignment_violation_rows = [
+        row
         for row in row_family_projection_assignment_rows
-        if str(row.get("assignment_mode") or "").strip()
-        not in {"shared_primitive_call", "initializer_empty_list"}
-    )
+        if bool(row.get("violation"))
+    ]
 
     return {
         "root_validator_count": len(validator_paths),
@@ -404,7 +454,10 @@ def scan_root_validator_shared_primitive_adoption(repo_root: Path) -> dict[str, 
         "row_family_projection_assignment_count": len(
             row_family_projection_assignment_rows
         ),
-        "row_family_projection_assignment_violation_count": (
-            row_family_projection_assignment_violation_count
+        "row_family_projection_assignment_violation_rows": (
+            row_family_projection_assignment_violation_rows
+        ),
+        "row_family_projection_assignment_violation_count": len(
+            row_family_projection_assignment_violation_rows
         ),
     }
