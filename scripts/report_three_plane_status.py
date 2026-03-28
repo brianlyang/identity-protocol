@@ -21,7 +21,7 @@ from health_report_experience_writeback_projection_common import (
     default_health_report_dir,
     resolve_identity_health_report_for_execution_report,
 )
-from primary_execution_report_common import latest_primary_execution_report_from_roots, prompt_file_sha
+from primary_execution_report_common import latest_prompt_bound_primary_execution_report_from_roots
 from protocol_infra_contract import (
     build_required_gate_bundle_cmd as build_required_gate_bundle_cmd_shared,
     CANONICAL_FINAL_EMIT_SCRIPT,
@@ -915,12 +915,12 @@ def _detect_session_lane_lock(
 
 def _latest_report(identity_id: str, identity_home: str = "", preferred_pack: str = "") -> Path | None:
     roots: list[Path] = []
-    preferred_prompt_sha = ""
+    explicit_pack_root: Path | None = None
     if preferred_pack.strip():
         pack = Path(preferred_pack).expanduser().resolve()
+        explicit_pack_root = pack
         roots.append(pack / "runtime" / "reports")
         roots.append(pack / "runtime")
-        preferred_prompt_sha = prompt_file_sha(pack / "IDENTITY_PROMPT.md")
     roots.extend(
         [
             named_temp_root("identity-upgrade-reports"),
@@ -930,12 +930,12 @@ def _latest_report(identity_id: str, identity_home: str = "", preferred_pack: st
     if identity_home.strip():
         identity_home_path = Path(identity_home).expanduser().resolve()
         roots.append(identity_home_path)
-        if not preferred_prompt_sha:
-            preferred_prompt_sha = prompt_file_sha(identity_home_path / "IDENTITY_PROMPT.md")
-    return latest_primary_execution_report_from_roots(
+        if explicit_pack_root is None:
+            explicit_pack_root = identity_home_path
+    return latest_prompt_bound_primary_execution_report_from_roots(
         roots,
         identity_id,
-        preferred_prompt_sha=preferred_prompt_sha,
+        explicit_pack_root=explicit_pack_root,
     )
 
 

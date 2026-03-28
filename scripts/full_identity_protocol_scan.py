@@ -33,7 +33,7 @@ from health_report_experience_writeback_projection_common import (
     HEALTH_REPORT_EXPERIENCE_WRITEBACK_CLOSURE_EXCLUDED_AREA,
     build_health_report_experience_writeback_closure_summary_skeleton,
 )
-from primary_execution_report_common import latest_primary_execution_report_from_roots, prompt_file_sha
+from primary_execution_report_common import latest_prompt_bound_primary_execution_report_from_roots
 from projection_profile_exclusion_scope_common import build_projection_profile_exclusion_payload
 from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
@@ -1134,11 +1134,16 @@ def _build_host_visible_post_check_metrics(
     }
 
 
-def _latest_runtime_report(identity_id: str, report_dir: Path, *, preferred_prompt_sha: str = "") -> Path | None:
-    return latest_primary_execution_report_from_roots(
+def _latest_runtime_report(
+    identity_id: str,
+    report_dir: Path,
+    *,
+    explicit_pack_root: Path | None = None,
+) -> Path | None:
+    return latest_prompt_bound_primary_execution_report_from_roots(
         [report_dir],
         identity_id,
-        preferred_prompt_sha=preferred_prompt_sha,
+        explicit_pack_root=explicit_pack_root,
     )
 
 
@@ -4448,7 +4453,7 @@ def main() -> int:
                 latest_report = _latest_runtime_report(
                     iid,
                     runtime_report_dir_path,
-                    preferred_prompt_sha=prompt_file_sha(runtime_pack_root / "IDENTITY_PROMPT.md"),
+                    explicit_pack_root=runtime_pack_root,
                 )
                 if latest_report:
                     cap_report_cmd = [

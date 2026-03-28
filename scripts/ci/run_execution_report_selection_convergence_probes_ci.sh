@@ -235,6 +235,8 @@ report_payload = {
     "identity_id": identity_id,
     "catalog_path": str(local_catalog),
     "resolved_pack_path": str(pack_root),
+    "protocol_mode": "mode_a_shared",
+    "all_ok": True,
     "identity_prompt_path": str(prompt_path),
     "identity_prompt_sha256": _sha256(prompt_path),
     "identity_prompt_bytes": int(prompt_path.stat().st_size),
@@ -520,6 +522,22 @@ repair_postexec_rc, repair_postexec_payload = _run_json_with_rc(
 prompt_activation_after_stdout = _run_ok(prompt_activation_cmd, cwd=repo_root)
 prompt_lifecycle_after_stdout = _run_ok(prompt_lifecycle_cmd, cwd=repo_root)
 permission_after_stdout = _run_ok(permission_cmd, cwd=repo_root)
+mode_promotion_payload = _run_json(
+    [
+        sys.executable,
+        str(repo_root / "scripts" / "validate_identity_mode_promotion_arbitration.py"),
+        "--identity-id",
+        identity_id,
+        "--repo-catalog",
+        str(repo_catalog),
+        "--local-catalog",
+        str(local_catalog),
+        "--changed-file",
+        f"identity/{identity_id}/CURRENT_TASK.json",
+        "--json-only",
+    ],
+    cwd=repo_root,
+)
 
 selected_freshness = str(freshness_payload.get("report_selected_path", "")).strip()
 selected_baseline = str(baseline_payload.get("report_selected_path", "")).strip()
@@ -546,6 +564,7 @@ selected_permission_after = _selected_report_path_from_ok_stdout(
     permission_after_stdout,
     "[OK] permission state validated:",
 )
+selected_mode_promotion = str(mode_promotion_payload.get("report_selected_path", "")).strip()
 expected = str(report_path)
 
 assert selected_freshness == expected, {
@@ -637,6 +656,16 @@ assert selected_permission_after == expected, {
     "expected": expected,
     "stdout": permission_after_stdout,
 }
+assert selected_mode_promotion == expected, {
+    "case": "mode_promotion_arbitration_preserves_prompt_sha_preference",
+    "selected": selected_mode_promotion,
+    "expected": expected,
+    "payload": mode_promotion_payload,
+}
+assert str(mode_promotion_payload.get("mode_promotion_arbitration_status", "")).strip() == "PASS_REQUIRED", {
+    "case": "mode_promotion_arbitration_returns_machine_pass_status",
+    "payload": mode_promotion_payload,
+}
 assert preferred_selected == report_path, {
     "case": "shared_primitive_prefers_prompt_matching_report",
     "selected": str(preferred_selected) if preferred_selected is not None else "",
@@ -666,7 +695,7 @@ assert repair_postexec_rc in {0, 1}, {
 assert "[OK] identity prompt activation validated:" in prompt_activation_stdout, prompt_activation_stdout
 assert "[OK] prompt lifecycle validated:" in prompt_lifecycle_stdout, prompt_lifecycle_stdout
 assert "[OK] permission state validated:" in permission_stdout, permission_stdout
-assert selected_freshness == selected_baseline == selected_run_id == selected_locator == selected_experience == selected_three_plane == selected_three_plane_after == selected_scan == selected_scan_after == selected_search_root_locator_after == selected_pack_locator_after == selected_prompt_activation_after == selected_prompt_lifecycle_after == selected_permission_after == selected_repair_prompt == selected_repair_postexec, {
+assert selected_freshness == selected_baseline == selected_run_id == selected_locator == selected_experience == selected_three_plane == selected_three_plane_after == selected_scan == selected_scan_after == selected_search_root_locator_after == selected_pack_locator_after == selected_prompt_activation_after == selected_prompt_lifecycle_after == selected_permission_after == selected_mode_promotion == selected_repair_prompt == selected_repair_postexec, {
     "case": "selection_convergence",
     "freshness": selected_freshness,
     "baseline": selected_baseline,
@@ -682,6 +711,7 @@ assert selected_freshness == selected_baseline == selected_run_id == selected_lo
     "prompt_activation_after": selected_prompt_activation_after,
     "prompt_lifecycle_after": selected_prompt_lifecycle_after,
     "permission_after": selected_permission_after,
+    "mode_promotion_after": selected_mode_promotion,
     "repair_prompt_runtime_state": selected_repair_prompt,
     "repair_post_execution_mandatory": selected_repair_postexec,
 }
@@ -709,6 +739,8 @@ print(
             "prompt_activation_prompt_sha_selected_report": selected_prompt_activation_after,
             "prompt_lifecycle_prompt_sha_selected_report": selected_prompt_lifecycle_after,
             "permission_state_prompt_sha_selected_report": selected_permission_after,
+            "mode_promotion_prompt_sha_selected_report": selected_mode_promotion,
+            "mode_promotion_arbitration_status": mode_promotion_payload.get("mode_promotion_arbitration_status", ""),
             "repair_prompt_runtime_state_selected_report": selected_repair_prompt,
             "repair_prompt_runtime_state_rc": repair_prompt_rc,
             "repair_post_execution_mandatory_selected_report": selected_repair_postexec,
