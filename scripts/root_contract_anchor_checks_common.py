@@ -81,6 +81,24 @@ def validate_expected_root_doc_anchor_checks(
     return reasons
 
 
+def append_expected_root_doc_anchor_stale_reasons(
+    stale_reasons: list[str],
+    anchor_checks: Iterable[RootDocAnchorCheck],
+    expected_anchor_checks: Mapping[str, tuple[str, ...]],
+    *,
+    stale_reason_prefix: str,
+) -> bool:
+    reasons = validate_expected_root_doc_anchor_checks(
+        anchor_checks,
+        expected_anchor_checks,
+        stale_reason_prefix=stale_reason_prefix,
+    )
+    if not reasons:
+        return False
+    stale_reasons.extend(reasons)
+    return True
+
+
 def evaluate_root_doc_anchor_checks(
     repo_root: Path,
     anchor_checks: Iterable[RootDocAnchorCheck],
